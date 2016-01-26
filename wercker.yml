@@ -1,0 +1,27 @@
+box: golang
+dev:
+  steps:
+    - internal/watch:
+        code: |
+          go build ./...
+          ./source
+        reload: true
+# Build definition
+build:
+  # The steps that will be executed on build
+  steps:
+
+    # golint step!
+    - wercker/golint
+
+    # Build the project
+    - script:
+        name: go build
+        code: |
+          go build ./...
+
+    # Test the project
+    - script:
+        name: go test
+        code: |
+          go test ./...
