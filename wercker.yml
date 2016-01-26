@@ -20,4 +20,9 @@ build:
     - script:
         name: test
         code: |
-         make test
+          make test
+
+    - script:
+        name: trigger xlang tests
+        code: |
+          make trigger-xlang-tests
