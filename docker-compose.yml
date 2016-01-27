@@ -1,5 +1,5 @@
 xlang:
-    # image: yarpc/xlang-tests
+    # image: yarpc/xlang
     image: hello-world
     links:
         - yarpc-go
