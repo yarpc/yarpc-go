@@ -4,5 +4,7 @@ services:
     - docker
 
 script:
-    docker-compose build
-    docker-compose run xlang
+    #docker-compose build
+    #docker-compose run xlang
+    docker -v
+    docker-compose -v
