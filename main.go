@@ -1,21 +1,17 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
+	"runtime"
 )
 
-func CityHandler(res http.ResponseWriter, req *http.Request) {
-	data, _ := json.Marshal("{'cities':'San Francisco, Amsterdam, Berlin, New York','Tokyo'}")
-	res.Header().Set("Content-Type", "application/json; charset=utf-8")
-	res.Write(data)
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hello world, I'm running on %s with an %s CPU ", runtime.GOOS, runtime.GOARCH)
+
 }
 
 func main() {
-	http.HandleFunc("/cities.json", CityHandler)
-	err := http.ListenAndServe(":5000", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
+	http.HandleFunc("/", indexHandler)
+	http.ListenAndServe(":8080", nil)
 }
