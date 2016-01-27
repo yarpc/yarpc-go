@@ -10,7 +10,7 @@ install:
 
 script:
     - make test
-    - docker-compose run xlang
+    - make xlang
 
 # TODO after_success:
 # publish container to docker registry

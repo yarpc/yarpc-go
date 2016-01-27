@@ -9,3 +9,8 @@ install:
 .PHONY: test
 test:
 	go test ./...
+
+
+.PHONY: xlang
+xlang:
+	docker-compose run xlang
