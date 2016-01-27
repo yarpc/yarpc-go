@@ -7,4 +7,5 @@ script:
     #docker-compose build
     #docker-compose run xlang
     docker -v
-    docker-compose -v
+    /usr/local/bin/docker-compose -v
+    echo $PATH
