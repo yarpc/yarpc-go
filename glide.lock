@@ -1,0 +1,15 @@
+hash: 88dc344b0adfb3965539ed9663a2d446dedc35c86815de5f0f984ade410e6b75
+updated: 2016-01-28T10:45:03.75891036-08:00
+imports:
+- name: golang.org/x/crypto
+  version: 1f22c0103821b9390939b6776727195525381532
+  repo: https://golang.org/x/crypto
+- name: golang.org/x/net
+  version: 04b9de9b512f58addf28c9853d50ebef61c3953e
+  subpackages:
+  - /context
+  - context/ctxhttp
+- name: golang.org/x/text
+  version: 6d3c22c4525a4da167968fa2479be5524d2e8bd0
+  repo: https://golang.org/x/text
+devImports: []

@@ -1,0 +1,6 @@
+package: github.com/yarpc/yarpc-go
+import:
+- package: golang.org/x/net
+  subpackages:
+  - /context
+  - context/ctxhttp

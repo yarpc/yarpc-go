@@ -1,1 +1,1 @@
-package xlang
+package main
