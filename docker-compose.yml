@@ -5,6 +5,10 @@ xlang:
         - yarpc-java
         - yarpc-python
         - yarpc-node
+    environment:
+        - XLANG_CLIENTS=yarpc-go,yarpc-java,yarpc-python,yarpc-node
+        - XLANG_SERVERS=yarpc-go,yarpc-java,yarpc-python,yarpc-node
+        - XLANG_BEHAVIORS=call,not_found
 
 yarpc-go:
     build: .
@@ -12,19 +16,16 @@ yarpc-go:
         - 8080
 
 yarpc-java:
-    # image: yarpc/yarpc-java
-    image: tutum/hello-world
+    image: breerly/hello-server
     ports:
-        - 80
+        - 8080
 
 yarpc-python:
-    # image: yarpc/yarpc-python
-    image: tutum/hello-world
+    image: breerly/hello-server
     ports:
-        - 80
+        - 8080
 
 yarpc-node:
-    # image: yarpc/yarpc-node
-    image: tutum/hello-world
+    image: breerly/hello-server
     ports:
-        - 80
+        - 8080
