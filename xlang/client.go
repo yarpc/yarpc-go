@@ -1,4 +1,4 @@
-package xlang
+package main
 
 import (
 	"fmt"
