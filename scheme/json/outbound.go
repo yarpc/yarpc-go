@@ -21,6 +21,10 @@
 package json
 
 import (
+	"bytes"
+	"encoding/json"
+
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -28,10 +32,61 @@ import (
 
 // Client TODO
 type Client interface {
-	Call(ctx context.Context, procedure string, request interface{}, response interface{})
+	// Call performs an outbound JSON request.
+	//
+	// responseOut is a pointer to a value that can be filled with
+	// json.Unmarshal.
+	Call(ctx context.Context, req *Request, responseOut interface{}) error
 }
 
-// New TODO
+// Request represents an outbound JSON request.
+type Request struct {
+	// Name of the procedure being called.
+	Procedure string
+
+	// Request metadata
+	Meta yarpc.Meta
+
+	// Request body. This may be any type that can be serialized by
+	// json.Marshal.
+	Body interface{}
+}
+
+// New builds a new JSON client.
 func New(t transport.Outbound) Client {
+	return jsonClient{t}
+}
+
+type jsonClient struct {
+	t transport.Outbound
+}
+
+func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interface{}) error {
+	encoded, err := json.Marshal(req.Body)
+	if err != nil {
+		// TODO error type
+		return err
+	}
+
+	treq := transport.Request{
+		Procedure: req.Procedure,
+		Headers:   req.Meta.Headers(),
+		Body:      bytes.NewReader(encoded),
+	}
+
+	tres, err := c.t.Call(ctx, &treq)
+	if err != nil {
+		return err
+	}
+
+	dec := json.NewDecoder(tres.Body)
+	if err := dec.Decode(responseOut); err != nil {
+		return err
+	}
+
+	if err := tres.Body.Close(); err != nil {
+		return err
+	}
+
 	return nil
 }

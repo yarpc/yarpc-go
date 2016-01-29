@@ -24,6 +24,7 @@ import "io"
 
 // Request is the low level request representation.
 type Request struct {
-	Headers map[string]string
-	Body    io.Reader
+	Procedure string
+	Headers   map[string]string
+	Body      io.Reader
 }

@@ -24,3 +24,18 @@ package yarpc
 type Meta interface {
 	Headers() map[string]string
 }
+
+type meta struct {
+	headers map[string]string
+}
+
+func (m meta) Headers() map[string]string {
+	return m.headers
+}
+
+// NewMeta constructs a new Meta object with the given headers.
+func NewMeta(hs map[string]string) Meta {
+	// TODO determine if this is how we want to expose meta construction to
+	// users.
+	return meta{hs}
+}

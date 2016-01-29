@@ -4,3 +4,6 @@ import:
   subpackages:
   - /context
   - context/ctxhttp
+- package: github.com/stretchr/testify
+  subpackages:
+  - /assert

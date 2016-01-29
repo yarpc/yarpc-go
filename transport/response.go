@@ -24,5 +24,6 @@ import "io"
 
 // Response is the low level response representation.
 type Response struct {
-	Body io.ReadCloser
+	Headers map[string]string
+	Body    io.ReadCloser
 }

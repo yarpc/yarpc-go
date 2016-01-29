@@ -22,7 +22,7 @@ package transport
 
 import "golang.org/x/net/context"
 
-// Handler handles a single transport-level.
+// Handler handles a single transport-level request.
 type Handler interface {
 	Handle(ctx context.Context, req *Request) (*Response, error)
 }
