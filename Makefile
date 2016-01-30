@@ -16,3 +16,12 @@ test:
 .PHONY: xlang
 xlang:
 	docker-compose run xlang
+
+
+.PHONY: xlang-fresh
+xlang-fresh:
+	docker-compose kill
+	docker-compose rm --force
+	docker-compose pull
+	docker-compose build
+	docker-compose run xlang
