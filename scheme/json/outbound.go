@@ -36,7 +36,9 @@ type Client interface {
 	//
 	// responseOut is a pointer to a value that can be filled with
 	// json.Unmarshal.
-	Call(ctx context.Context, req *Request, responseOut interface{}) error
+	//
+	// Returns the response metadata or an error if the request failed.
+	Call(ctx context.Context, req *Request, responseOut interface{}) (yarpc.Meta, error)
 }
 
 // Request represents an outbound JSON request.
@@ -61,11 +63,11 @@ type jsonClient struct {
 	t transport.Outbound
 }
 
-func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interface{}) error {
+func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interface{}) (yarpc.Meta, error) {
 	encoded, err := json.Marshal(req.Body)
 	if err != nil {
 		// TODO error type
-		return err
+		return nil, err
 	}
 
 	treq := transport.Request{
@@ -76,17 +78,17 @@ func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interfac
 
 	tres, err := c.t.Call(ctx, &treq)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dec := json.NewDecoder(tres.Body)
 	if err := dec.Decode(responseOut); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := tres.Body.Close(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return yarpc.NewMeta(tres.Headers), nil
 }

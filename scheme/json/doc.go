@@ -18,28 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
-
-// Meta TODO
-type Meta interface {
-	Headers() map[string]string
-}
-
-type meta struct {
-	headers map[string]string
-}
-
-func (m meta) Headers() map[string]string {
-	return m.headers
-}
-
-// NewMeta constructs a new Meta object with the given headers.
-func NewMeta(hs map[string]string) Meta {
-	if hs == nil {
-		return nil
-	}
-
-	// TODO determine if this is how we want to expose meta construction to
-	// users.
-	return meta{hs}
-}
+// Package json provides the JSON scheme for YARPC.
+//
+// To make outbound requests using this scheme,
+//
+// 	client := json.New(outbound)
+// 	var response GetValueResponse
+// 	resmeta, err := client.Call(
+// 		ctx,
+// 		&json.Request{
+// 			Procedure: "getValue",
+// 			Meta: meta,
+// 			Body: &GetValueRequest{...},
+// 		},
+// 		&response,
+// 	)
+//
+// To register a JSON procedure, define functions in the format,
+//
+// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
+//
+// Where '$request' and '$response' are either pointers to structs
+// representing your request and response objects, or map[string]interface{}.
+//
+// Use the Register and Procedure functions to register the procedures with a
+// Registry.
+//
+// 	json.Register(r, json.Procedure("getValue", GetValue))
+// 	json.Register(r, json.Procedure("setValue", SetValue))
+//
+package json
