@@ -35,10 +35,6 @@ func (m meta) Headers() map[string]string {
 
 // NewMeta constructs a new Meta object with the given headers.
 func NewMeta(hs map[string]string) Meta {
-	if hs == nil {
-		return nil
-	}
-
 	// TODO determine if this is how we want to expose meta construction to
 	// users.
 	return meta{hs}

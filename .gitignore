@@ -1,8 +1,7 @@
-/vendor
-/node_modules
+vendor
+node_modules
 *.o
 *.a
 *.so
 *.exe
-*.test
 *.prof

@@ -41,28 +41,28 @@ var (
 type Registrant interface {
 	// Gets a mapping from procedure name to the handler for that procedure for
 	// all procedures provided by this registrant.
-	GetHandlers() map[string]interface{}
+	getHandlers() map[string]interface{}
 }
 
-// registrant is a simple Registrant that has a hard-coded list of handlers.
-type registrant struct {
-	handlers map[string]interface{}
+// procedure is a simple Registrant that has a single procedure.
+type procedure struct {
+	Name    string
+	Handler interface{}
 }
 
-func (r registrant) GetHandlers() map[string]interface{} {
-	return r.handlers
+func (p procedure) getHandlers() map[string]interface{} {
+	return map[string]interface{}{p.Name: p.Handler}
 }
 
-// Procedure builds a Registrant with a single procedure in it.
-//
-// handler must be a function with a signature similar to,
+// Procedure builds a Registrant with a single procedure in it. handler must
+// be a function with a signature similar to,
 //
 // 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
 //
 // Where $request and $response are a map[string]interface{} or pointers to
 // structs.
 func Procedure(name string, handler interface{}) Registrant {
-	return registrant{handlers: map[string]interface{}{name: handler}}
+	return procedure{Name: name, Handler: handler}
 }
 
 // Register registers the procedures defined by the given JSON registrant with
@@ -76,7 +76,7 @@ func Procedure(name string, handler interface{}) Registrant {
 // Where $request and $response are a map[string]interface{} or pointers to
 // structs.
 func Register(reg transport.Registry, registrant Registrant) {
-	for name, handler := range registrant.GetHandlers() {
+	for name, handler := range registrant.getHandlers() {
 		reg.Register(name, wrapHandler(name, handler))
 	}
 }
