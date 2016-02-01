@@ -18,12 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
-
-import "io"
-
-// Response is the low level response representation.
-type Response struct {
-	Headers map[string]string
-	Body    io.ReadCloser
-}
+// Package json provides the JSON scheme for YARPC.
+//
+// To make outbound requests using this scheme,
+//
+// 	client := json.New(outbound)
+// 	var response GetValueResponse
+// 	resmeta, err := client.Call(
+// 		ctx,
+// 		&json.Request{
+// 			Procedure: "getValue",
+// 			Meta: meta,
+// 			Body: &GetValueRequest{...},
+// 		},
+// 		&response,
+// 	)
+//
+// To register a JSON procedure, define functions in the format,
+//
+// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
+//
+// Where '$request' and '$response' are either pointers to structs
+// representing your request and response objects, or map[string]interface{}.
+//
+// Use the Register and Procedure functions to register the procedures with a
+// Registry.
+//
+// 	json.Register(r, json.Procedure("getValue", GetValue))
+// 	json.Register(r, json.Procedure("setValue", SetValue))
+//
+package json

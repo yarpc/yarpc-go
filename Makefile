@@ -1,5 +1,8 @@
 project := yarpc-go
 
+.PHONY: build
+build:
+	GO15VENDOREXPERIMENT=1 go build `glide novendor`
 
 .PHONY: install
 install:

@@ -65,5 +65,7 @@ func main() {
 		},
 	})
 
-	json.Register(yarpc, handler{items: make(map[string]string)})
+	handler := handler{items: make(map[string]string)}
+	json.Register(yarpc, json.Procedure("get", handler.Get))
+	json.Register(yarpc, json.Procedure("set", handler.Set))
 }

@@ -21,8 +21,12 @@
 package json
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"reflect"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -30,15 +34,71 @@ import (
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
 // Handler.
+//
+// The wrapped function must already be in the correct format:
+//
+// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
 type jsonHandler struct {
-	RequestType  reflect.Type
-	ResponseType reflect.Type
-	Handler      interface{}
+	reader  requestReader
+	handler reflect.Value
 }
 
-func (j jsonHandler) Handle(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	// TODO read req.Body into a $RequestType
-	// TODO call j.Handler
-	// TODO write the response to res.Body
-	return nil, nil
+func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	req, err := h.reader.Read(json.NewDecoder(treq.Body))
+	if err != nil {
+		return nil, err
+	}
+
+	results := h.handler.Call([]reflect.Value{
+		reflect.ValueOf(ctx),
+		reflect.ValueOf(yarpc.NewMeta(treq.Headers)),
+		req,
+	})
+
+	if err := results[2].Interface(); err != nil {
+		// TODO proper error types
+		return nil, err.(error)
+	}
+
+	var headers map[string]string
+	if meta := results[1].Interface(); meta != nil {
+		headers = meta.(yarpc.Meta).Headers()
+	}
+
+	body, err := json.Marshal(results[0].Interface())
+	if err != nil {
+		// TODO proper error types
+		return nil, err
+	}
+
+	return &transport.Response{
+		Headers: headers,
+		Body:    ioutil.NopCloser(bytes.NewReader(body)),
+	}, nil
+}
+
+// requestReader is used to parse a JSON request argument from a JSON decoder.
+type requestReader interface {
+	Read(*json.Decoder) (reflect.Value, error)
+}
+
+type structReader struct {
+	// Type of the struct (not a pointer to the struct)
+	Type reflect.Type
+}
+
+func (r structReader) Read(d *json.Decoder) (reflect.Value, error) {
+	value := reflect.New(r.Type)
+	err := d.Decode(value.Interface())
+	return value, err
+}
+
+type mapReader struct {
+	Type reflect.Type // Type of the map
+}
+
+func (r mapReader) Read(d *json.Decoder) (reflect.Value, error) {
+	value := reflect.New(r.Type)
+	err := d.Decode(value.Interface())
+	return value.Elem(), err
 }

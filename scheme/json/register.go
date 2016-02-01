@@ -41,54 +41,70 @@ var (
 type Registrant interface {
 	// Gets a mapping from procedure name to the handler for that procedure for
 	// all procedures provided by this registrant.
-	//
-	// Handlers must have a signature similar to the following or the system
-	// will panic.
-	//
-	// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
-	//
-	// Where $request and $response are a map[string]interface{} or pointers to
-	// structs.
-	GetHandlers() map[string]interface{}
+	getHandlers() map[string]interface{}
 }
 
-// registrant is a simple Registrant that has a hard-coded list of handlers.
-type registrant struct {
-	handlers map[string]interface{}
+// procedure is a simple Registrant that has a single procedure.
+type procedure struct {
+	Name    string
+	Handler interface{}
 }
 
-func (r registrant) GetHandlers() map[string]interface{} {
-	return r.handlers
+func (p procedure) getHandlers() map[string]interface{} {
+	return map[string]interface{}{p.Name: p.Handler}
 }
 
-// Procedure builds a Registrant with a single procedure in it.
-//
-// handler must be a function with a signature similar to,
+// Procedure builds a Registrant with a single procedure in it. handler must
+// be a function with a signature similar to,
 //
 // 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
 //
 // Where $request and $response are a map[string]interface{} or pointers to
 // structs.
 func Procedure(name string, handler interface{}) Registrant {
-	return registrant{handlers: map[string]interface{}{name: handler}}
+	return procedure{Name: name, Handler: handler}
 }
 
 // Register registers the procedures defined by the given JSON registrant with
-// the given YARPC.
+// the given registry.
+//
+// Handlers must have a signature similar to the following or the system will
+// panic.
+//
+// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
+//
+// Where $request and $response are a map[string]interface{} or pointers to
+// structs.
 func Register(reg transport.Registry, registrant Registrant) {
-	for name, handler := range registrant.GetHandlers() {
-		reqType, resType := verifySignature(name, reflect.TypeOf(handler))
-		reg.Register(name, jsonHandler{
-			RequestType:  reqType,
-			ResponseType: resType,
-			Handler:      handler,
-		})
+	for name, handler := range registrant.getHandlers() {
+		reg.Register(name, wrapHandler(name, handler))
+	}
+}
+
+// wrapHandler takes a valid JSON handler function and converts it into a
+// transport.Handler.
+func wrapHandler(name string, handler interface{}) transport.Handler {
+	reqType := verifySignature(name, reflect.TypeOf(handler))
+
+	var r requestReader
+	if reqType.Kind() == reflect.Map {
+		r = mapReader{reqType}
+	} else {
+		// struct ptr
+		r = structReader{reqType.Elem()}
+	}
+
+	return jsonHandler{
+		reader:  r,
+		handler: reflect.ValueOf(handler),
 	}
 }
 
 // verifySignature verifies that the given type matches what we expect from
 // JSON handlers and returns the request and response types.
-func verifySignature(n string, t reflect.Type) (reflect.Type, reflect.Type) {
+//
+// Returns the request type.
+func verifySignature(n string, t reflect.Type) reflect.Type {
 	if t.Kind() != reflect.Func {
 		panic(fmt.Sprintf(
 			"handler for %q is not a function but a %v", n, t.Kind(),
@@ -144,7 +160,7 @@ func verifySignature(n string, t reflect.Type) (reflect.Type, reflect.Type) {
 		))
 	}
 
-	return reqType, resType
+	return reqType
 }
 
 // isValidReqResType checks if the given type is a pointer to a struct or a
