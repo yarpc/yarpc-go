@@ -18,27 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package sync
 
-// Inbound is a transport that knows how to receive requests for procedure
-// calls.
-type Inbound interface {
-	// Serve starts accepting new requests and dispatches them to the given
-	// Handler.
-	//
-	// The function MUST block while the Inbound is running. The caller is
-	// responsible for running it concurrently if necessary.
-	//
-	// An error may be returned if the Inbound failed to start up.
-	//
-	// Implementations may assume that this function is called at most once.
-	Serve(handler Handler) error
+import "sync"
 
-	// Close the inbound and stop accepting new requests.
-	//
-	// This MAY block while the server drains ongoing requests.
-	Close() error
+// ErrorWaiter is similar to a WaitGroup except it allows collecting failures
+// from subtasks.
+type ErrorWaiter struct {
+	wait   sync.WaitGroup
+	lock   sync.Mutex
+	errors []error
+}
 
-	// TODO some way for the inbound to expose the host and port it's
-	// listening on
+// Submit submits a task for executino on the ErrorWaiter.
+//
+// The function returns immediately.
+func (ew *ErrorWaiter) Submit(f func() error) {
+	ew.wait.Add(1)
+	go func() {
+		defer ew.wait.Done()
+		err := f()
+		if err != nil {
+			ew.lock.Lock()
+			ew.errors = append(ew.errors, err)
+			ew.lock.Unlock()
+		}
+	}()
+}
+
+// Wait waits until all submitted tasks have finished and returns a list of
+// all errors that occurred during task execution in no particular order.
+func (ew *ErrorWaiter) Wait() []error {
+	ew.wait.Wait()
+	return ew.errors
 }

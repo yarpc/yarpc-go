@@ -21,11 +21,12 @@
 package main
 
 import (
+	"log"
+
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/scheme/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
-	"github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"golang.org/x/net/context"
 )
@@ -43,24 +44,17 @@ func (h handler) Set(ctx context.Context, meta yarpc.Meta, req *SetRequest) (*Se
 	return &SetResponse{}, nil, nil
 }
 
-func (h handler) GetHandlers() map[string]interface{} {
-	return map[string]interface{}{
-		"get": h.Get,
-		"set": h.Set,
-	}
-}
-
 func main() {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "myService",
 		Inbounds: []transport.Inbound{
-			http.Inbound{},
-			tchannel.Inbound{},
+			http.Inbound(":8080"),
+			// TODO tchannel.Inbound{},
 		},
 		Outbounds: map[string]transport.Outbounds{
 			"moe": {
 				http.Outbound("http://localhost:8080"),
-				tchannel.Outbound("localhost:4040"),
+				// TODO tchannel.Outbound("localhost:4040"),
 			},
 		},
 	})
@@ -68,4 +62,9 @@ func main() {
 	handler := handler{items: make(map[string]string)}
 	json.Register(yarpc, json.Procedure("get", handler.Get))
 	json.Register(yarpc, json.Procedure("set", handler.Set))
+
+	err := yarpc.Serve()
+	if err != nil {
+		log.Fatalln(err)
+	}
 }

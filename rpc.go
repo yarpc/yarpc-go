@@ -20,25 +20,116 @@
 
 package yarpc
 
-import "github.com/yarpc/yarpc-go/transport"
+import (
+	"fmt"
+
+	"github.com/yarpc/yarpc-go/sync"
+	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
+)
 
 // RPC TODO
 type RPC interface {
+	transport.Handler
 	transport.Registry
 
 	// Retrieves a new Outbound transport that will make requests to the given
 	// service.
+	//
+	// This panics if the given service is unknown.
 	Channel(service string) transport.Outbound
+	// TODO do we really want to panic on unknown services?
+
+	// Starts the RPC allowing it to accept and processing new incoming
+	// requests.
+	//
+	// Blocks until the RPC is stopped.
+	Serve() error
+
+	// Closes the RPC. No new requests will be accepted.
+	//
+	// Blocks until the RPC has stopped.
+	Close() error
 }
 
-// Config TODO
+// Config specifies the parameters of a new RPC constructed via New.
 type Config struct {
+	Name      string
+	Inbounds  []transport.Inbound
+	Outbounds map[string]transport.Outbounds
+
+	// TODO FallbackHandler for catch-all endpoints
+}
+
+// New builds a new RPC using the specified configuration.
+func New(cfg Config) RPC {
+	return rpc{
+		Name:      cfg.Name,
+		Registry:  make(transport.MapRegistry),
+		Inbounds:  cfg.Inbounds,
+		Outbounds: cfg.Outbounds,
+	}
+}
+
+// rpc is the standard RPC implementation.
+//
+// It allows use of multiple Inbounds and Outbounds together.
+type rpc struct {
+	transport.Registry
+
 	Name      string
 	Inbounds  []transport.Inbound
 	Outbounds map[string]transport.Outbounds
 }
 
-// New TODO
-func New(cfg Config) RPC {
-	return nil // TODO
+func (r rpc) Channel(service string) transport.Outbound {
+	if outs, ok := r.Outbounds[service]; ok {
+		// we can eventually write an outbound that load balances between
+		// known outbounds for a service.
+		return outs[0]
+	}
+	panic(fmt.Sprintf("unknown service %q", service))
+}
+
+func (r rpc) Serve() error {
+	callServe := func(i transport.Inbound) func() error {
+		return func() error {
+			return i.Serve(r)
+		}
+	}
+
+	var wait sync.ErrorWaiter
+	for _, i := range r.Inbounds {
+		wait.Submit(callServe(i))
+	}
+
+	errors := wait.Wait()
+	if len(errors) > 0 {
+		return errorGroup{Errors: errors}
+	}
+
+	return nil
+}
+
+func (r rpc) Handle(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	h, err := r.GetHandler(req.Procedure)
+	if err != nil {
+		return nil, err
+	}
+	return h.Handle(ctx, req)
+}
+
+func (r rpc) Close() error {
+	var wait sync.ErrorWaiter
+	for _, i := range r.Inbounds {
+		wait.Submit(i.Close)
+	}
+
+	errors := wait.Wait()
+	if len(errors) > 0 {
+		return errorGroup{Errors: errors}
+	}
+
+	return nil
 }

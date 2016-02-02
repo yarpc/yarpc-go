@@ -46,7 +46,7 @@ type jsonHandler struct {
 func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	req, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return nil, err
+		return nil, unmarshalError{Reason: err}
 	}
 
 	results := h.handler.Call([]reflect.Value{
@@ -67,8 +67,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request) (*tran
 
 	body, err := json.Marshal(results[0].Interface())
 	if err != nil {
-		// TODO proper error types
-		return nil, err
+		return nil, marshalError{Reason: err}
 	}
 
 	return &transport.Response{

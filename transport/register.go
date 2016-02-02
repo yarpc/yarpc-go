@@ -20,7 +20,11 @@
 
 package transport
 
-import "golang.org/x/net/context"
+import (
+	"fmt"
+
+	"golang.org/x/net/context"
+)
 
 // Handler handles a single transport-level request.
 type Handler interface {
@@ -33,6 +37,35 @@ type Registry interface {
 	// Registers a procedure with this registry.
 	Register(procedure string, handler Handler)
 
-	// Gets the handler for the given procedure.
+	// Gets the handler for the given procedure. An UnknownProcedureErr may be
+	// returned if the handler does not exist.
 	GetHandler(procedure string) (Handler, error)
+}
+
+// UnknownProcedureErr is returned if a procedure that is not known was
+// requested.
+type UnknownProcedureErr struct {
+	Name string
+}
+
+func (e UnknownProcedureErr) Error() string {
+	return fmt.Sprintf("unknown procedure %q", e.Name)
+}
+
+// MapRegistry is a Registry that maintains a map of the registered
+// procedures.
+type MapRegistry map[string]Handler
+
+// Register registers the procedure with the MapRegistry.
+func (m MapRegistry) Register(procedure string, handler Handler) {
+	m[procedure] = handler
+}
+
+// GetHandler retrieves the Handler for the given Procedure or raises an
+// UnknownProcedureErr.
+func (m MapRegistry) GetHandler(procedure string) (Handler, error) {
+	if h, ok := m[procedure]; ok {
+		return h, nil
+	}
+	return nil, UnknownProcedureErr{procedure}
 }
