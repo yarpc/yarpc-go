@@ -66,8 +66,7 @@ type jsonClient struct {
 func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interface{}) (yarpc.Meta, error) {
 	encoded, err := json.Marshal(req.Body)
 	if err != nil {
-		// TODO error type
-		return nil, err
+		return nil, marshalError{Reason: err}
 	}
 
 	treq := transport.Request{
@@ -83,7 +82,7 @@ func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interfac
 
 	dec := json.NewDecoder(tres.Body)
 	if err := dec.Decode(responseOut); err != nil {
-		return nil, err
+		return nil, unmarshalError{Reason: err}
 	}
 
 	if err := tres.Body.Close(); err != nil {

@@ -54,8 +54,9 @@ func (h httpOutbound) Call(ctx context.Context, req *transport.Request) (*transp
 		return nil, err
 	}
 
-	// TODO where does the procedure go?
+	// TODO throw an error if caller tried to use our ProcedureHeader.
 	request.Header = toHTTPHeader(req.Headers, nil)
+	request.Header.Set(ProcedureHeader, req.Procedure)
 	response, err := ctxhttp.Do(ctx, h.Client, request)
 	if err != nil {
 		return nil, err
