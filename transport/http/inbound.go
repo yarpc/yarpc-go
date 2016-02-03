@@ -20,7 +20,76 @@
 
 package http
 
-// Inbound TODO
-type Inbound struct {
-	// TODO
+import (
+	"io"
+	"net"
+	"net/http"
+
+	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
+)
+
+// Inbound builds a new HTTP inbound that listens on the given address.
+func Inbound(addr string) transport.Inbound {
+	return &httpInbound{addr: addr}
+}
+
+type httpInbound struct {
+	addr     string
+	listener net.Listener
+}
+
+func (i *httpInbound) Serve(h transport.Handler) error {
+	var err error
+	i.listener, err = net.Listen("tcp", i.addr)
+	if err != nil {
+		return err
+	}
+
+	server := &http.Server{Addr: i.addr, Handler: httpHandler{h}}
+	return server.Serve(i.listener)
+	// TODO Handle connection close errors
+}
+
+func (i *httpInbound) Close() error {
+	return i.listener.Close()
+}
+
+// httpHandler adapts a transport.Handler into a handler for net/http.
+type httpHandler struct {
+	Handler transport.Handler
+}
+
+func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// TODO Procedure name
+
+	if req.Method != "POST" {
+		http.NotFound(w, req)
+	}
+
+	defer req.Body.Close()
+	treq := &transport.Request{
+		// Procedure: TODO
+		Headers: fromHTTPHeader(req.Header, nil),
+		Body:    req.Body,
+	}
+
+	tres, err := h.Handler.Handle(
+		context.TODO(), // TODO
+		treq,
+	)
+	if err != nil {
+		// TODO structured responses?
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	toHTTPHeader(tres.Headers, w.Header())
+
+	defer tres.Body.Close()
+	if _, err := io.Copy(w, tres.Body); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

@@ -20,7 +20,22 @@
 
 package transport
 
-// Inbound TODO
+// Inbound is a transport that knows how to receive requests for procedure
+// calls.
 type Inbound interface {
-	// TODO
+	// Serve starts accepting new requests and dispatches them to the given
+	// Handler.
+	//
+	// The function MUST block while the Inbound is running. The caller is
+	// responsible for running it concurrently if necessary.
+	//
+	// An error may be returned if the Inbound failed to start up.
+	//
+	// Implementations may assume that this function is called at most once.
+	Serve(handler Handler) error
+
+	// Close the inbound and stop accepting new requests.
+	//
+	// This MAY block while the server drains ongoing requests.
+	Close() error
 }

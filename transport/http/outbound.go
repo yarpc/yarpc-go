@@ -21,6 +21,8 @@
 package http
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/yarpc/yarpc-go/transport"
@@ -29,12 +31,13 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
-// Outbound TODO
+// Outbound builds a new HTTP outbound that sends requests to the given URL.
 func Outbound(url string) transport.Outbound {
 	return httpOutbound{URL: url}
 }
 
-// OutboundWithClient TODO
+// OutboundWithClient builds a new HTTP outbound that sends requests to the
+// given URL using the given HTTP client.
 func OutboundWithClient(url string, client *http.Client) transport.Outbound {
 	return httpOutbound{Client: client, URL: url}
 }
@@ -51,17 +54,30 @@ func (h httpOutbound) Call(ctx context.Context, req *transport.Request) (*transp
 		return nil, err
 	}
 
-	headers := make(map[string][]string, len(req.Headers))
-	for k, v := range req.Headers {
-		headers[k] = []string{v}
-	}
-	request.Header = headers
-
-	_, err = ctxhttp.Do(ctx, h.Client, request)
+	// TODO where does the procedure go?
+	request.Header = toHTTPHeader(req.Headers, nil)
+	response, err := ctxhttp.Do(ctx, h.Client, request)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO
-	return nil, nil
+	// TODO 300 redirects?
+	if response.StatusCode < 200 || response.StatusCode >= 400 {
+		contents, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err // TODO error type
+		}
+
+		if err := response.Body.Close(); err != nil {
+			return nil, err // TODO error type
+		}
+
+		// TODO error type
+		return nil, fmt.Errorf("request %v failed: %v: %v", request, response.Status, contents)
+	}
+
+	return &transport.Response{
+		Headers: fromHTTPHeader(response.Header, nil),
+		Body:    response.Body,
+	}, nil
 }

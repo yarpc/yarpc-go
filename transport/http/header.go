@@ -18,17 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package http
 
-import "golang.org/x/net/context"
+import "net/http"
 
-// Outbounds is a collection of Outbound transports.
-type Outbounds []Outbound
+// toHTTPHeader converts transport headers into HTTP headers.
+//
+// Headers are read from 'from' and written to 'to'. The final header
+// collection is returned.
+//
+// If 'to' is nil, a new map will be assigned.
+func toHTTPHeader(from map[string]string, to http.Header) http.Header {
+	if to == nil {
+		to = make(http.Header)
+	}
+	for k, v := range from {
+		to.Add(k, v)
+	}
+	return to
+}
 
-// Outbound is a transport that knows how to send requests for procedure
-// calls.
-type Outbound interface {
-	// Call sends the given request through this transport and returns its
-	// response.
-	Call(ctx context.Context, request *Request) (*Response, error)
+// fromHTTPHeader converts HTTP headers to transport headers.
+//
+// Headers are read from 'from' and written to 'to'. The final header
+// collection is returned.
+//
+// If 'to' is nil, a new map will be assigned.
+func fromHTTPHeader(from http.Header, to map[string]string) map[string]string {
+	if to == nil {
+		to = make(map[string]string)
+	}
+
+	for k := range from {
+		to[k] = from.Get(k)
+		// undefined behavior for multiple occurrences of the same header
+		// TODO figure out which headers we are actually allowing in here
+		// TODO figure out header scheme for headers that are exposed like this
+	}
+	return to
 }
