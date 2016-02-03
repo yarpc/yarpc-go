@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/scheme/json"
+	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 
