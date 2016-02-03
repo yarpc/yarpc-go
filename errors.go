@@ -18,27 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package yarpc
 
-// Inbound is a transport that knows how to receive requests for procedure
-// calls.
-type Inbound interface {
-	// Serve starts accepting new requests and dispatches them to the given
-	// Handler.
-	//
-	// The function MUST block while the Inbound is running. The caller is
-	// responsible for running it concurrently if necessary.
-	//
-	// An error may be returned if the Inbound failed to start up.
-	//
-	// Implementations may assume that this function is called at most once.
-	Serve(handler Handler) error
+import "strings"
 
-	// Close the inbound and stop accepting new requests.
-	//
-	// This MAY block while the server drains ongoing requests.
-	Close() error
+// errorGroup represents a collection of errors.
+type errorGroup struct {
+	Errors []error
+}
 
-	// TODO some way for the inbound to expose the host and port it's
-	// listening on
+func (e errorGroup) Error() string {
+	messages := []string{"the following errors occurred:"}
+	for _, err := range e.Errors {
+		messages = append(messages, err.Error())
+	}
+	return strings.Join(messages, "\n\t")
 }

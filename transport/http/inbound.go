@@ -53,6 +53,9 @@ func (i *httpInbound) Serve(h transport.Handler) error {
 }
 
 func (i *httpInbound) Close() error {
+	if i.listener == nil {
+		return nil
+	}
 	return i.listener.Close()
 }
 
@@ -62,17 +65,23 @@ type httpHandler struct {
 }
 
 func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// TODO Procedure name
-
 	if req.Method != "POST" {
 		http.NotFound(w, req)
 	}
 
 	defer req.Body.Close()
+
+	procedure := req.Header.Get(ProcedureHeader)
+	if len(procedure) == 0 {
+		http.Error(w, "procedure name is required", http.StatusBadRequest)
+		return
+	}
+	req.Header.Del(ProcedureHeader)
+
 	treq := &transport.Request{
-		// Procedure: TODO
-		Headers: fromHTTPHeader(req.Header, nil),
-		Body:    req.Body,
+		Procedure: procedure,
+		Headers:   fromHTTPHeader(req.Header, nil),
+		Body:      req.Body,
 	}
 
 	tres, err := h.Handler.Handle(
@@ -81,6 +90,7 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	)
 	if err != nil {
 		// TODO structured responses?
+		err = internalError{Reason: err}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

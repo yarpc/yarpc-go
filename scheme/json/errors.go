@@ -18,27 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package json
 
-// Inbound is a transport that knows how to receive requests for procedure
-// calls.
-type Inbound interface {
-	// Serve starts accepting new requests and dispatches them to the given
-	// Handler.
-	//
-	// The function MUST block while the Inbound is running. The caller is
-	// responsible for running it concurrently if necessary.
-	//
-	// An error may be returned if the Inbound failed to start up.
-	//
-	// Implementations may assume that this function is called at most once.
-	Serve(handler Handler) error
+import "fmt"
 
-	// Close the inbound and stop accepting new requests.
-	//
-	// This MAY block while the server drains ongoing requests.
-	Close() error
+// unmarshalError is raised when there's an error parsing JSON input.
+type unmarshalError struct {
+	Reason error
+}
 
-	// TODO some way for the inbound to expose the host and port it's
-	// listening on
+func (e unmarshalError) Error() string {
+	return fmt.Sprintf("failed to parse JSON: %v", e.Reason)
+}
+
+// marshalError is raised when there's an error serializing to JSON.
+type marshalError struct {
+	Reason error
+}
+
+func (e marshalError) Error() string {
+	return fmt.Sprintf("failed to write JSON: %v", e.Reason)
+}
+
+// IsEncodingError returns true if the given error is an error encountered
+// while trying to serialize or deserialize JSON.
+func IsEncodingError(e error) bool {
+	switch e.(type) {
+	case marshalError, unmarshalError:
+		return true
+	default:
+		return false
+	}
 }
