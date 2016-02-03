@@ -69,9 +69,14 @@ func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interfac
 		return nil, marshalError{Reason: err}
 	}
 
+	var headers map[string]string
+	if req.Meta != nil {
+		headers = req.Meta.Headers()
+	}
+
 	treq := transport.Request{
 		Procedure: req.Procedure,
-		Headers:   req.Meta.Headers(),
+		Headers:   headers,
 		Body:      bytes.NewReader(encoded),
 	}
 
