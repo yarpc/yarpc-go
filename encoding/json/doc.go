@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package json provides the JSON scheme for YARPC.
+// Package json provides the JSON encoding for YARPC.
 //
-// To make outbound requests using this scheme,
+// To make outbound requests using this encoding,
 //
 // 	client := json.New(outbound)
 // 	var response GetValueResponse
