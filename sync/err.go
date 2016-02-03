@@ -37,8 +37,7 @@ func (ew *ErrorWaiter) Submit(f func() error) {
 	ew.wait.Add(1)
 	go func() {
 		defer ew.wait.Done()
-		err := f()
-		if err != nil {
+		if err := f(); err != nil {
 			ew.lock.Lock()
 			ew.errors = append(ew.errors, err)
 			ew.lock.Unlock()

@@ -30,7 +30,7 @@ type errorGroup struct {
 func (e errorGroup) Error() string {
 	messages := []string{"the following errors occurred:"}
 	for _, err := range e.Errors {
-		messages = append(messages, "\t"+err.Error())
+		messages = append(messages, err.Error())
 	}
-	return strings.Join(messages, "\n")
+	return strings.Join(messages, "\n\t")
 }

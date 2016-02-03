@@ -104,8 +104,7 @@ func (r rpc) Serve() error {
 		wait.Submit(callServe(i))
 	}
 
-	errors := wait.Wait()
-	if len(errors) > 0 {
+	if errors := wait.Wait(); len(errors) > 0 {
 		return errorGroup{Errors: errors}
 	}
 
@@ -126,8 +125,7 @@ func (r rpc) Close() error {
 		wait.Submit(i.Close)
 	}
 
-	errors := wait.Wait()
-	if len(errors) > 0 {
+	if errors := wait.Wait(); len(errors) > 0 {
 		return errorGroup{Errors: errors}
 	}
 
