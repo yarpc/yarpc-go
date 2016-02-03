@@ -25,9 +25,9 @@ import (
 	"net"
 	"net/http"
 
-	"golang.org/x/net/context"
-
 	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
 )
 
 // Inbound builds a new HTTP inbound that listens on the given address.
@@ -63,6 +63,10 @@ type httpHandler struct {
 
 func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// TODO Procedure name
+
+	if req.Method != "POST" {
+		http.NotFound(w, req)
+	}
 
 	defer req.Body.Close()
 	treq := &transport.Request{

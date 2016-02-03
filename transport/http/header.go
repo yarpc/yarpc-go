@@ -33,7 +33,7 @@ func toHTTPHeader(from map[string]string, to http.Header) http.Header {
 		to = make(http.Header)
 	}
 	for k, v := range from {
-		to[k] = []string{v}
+		to.Add(k, v)
 	}
 	return to
 }
@@ -49,13 +49,11 @@ func fromHTTPHeader(from http.Header, to map[string]string) map[string]string {
 		to = make(map[string]string)
 	}
 
-	for k, vs := range from {
-		for _, v := range vs {
-			to[k] = v
-			// undefined behavior for multiple occurrences of the same header
-			// TODO figure out which headers we are actually allowing in here
-			// TODO figure out header scheme for headers that are exposed like this
-		}
+	for k := range from {
+		to[k] = from.Get(k)
+		// undefined behavior for multiple occurrences of the same header
+		// TODO figure out which headers we are actually allowing in here
+		// TODO figure out header scheme for headers that are exposed like this
 	}
 	return to
 }
