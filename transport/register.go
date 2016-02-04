@@ -61,7 +61,7 @@ func (m MapRegistry) Register(procedure string, handler Handler) {
 	m[procedure] = handler
 }
 
-// GetHandler retrieves the Handler for the given Procedure or raises an
+// GetHandler retrieves the Handler for the given Procedure or returns an
 // UnknownProcedureErr.
 func (m MapRegistry) GetHandler(procedure string) (Handler, error) {
 	if h, ok := m[procedure]; ok {

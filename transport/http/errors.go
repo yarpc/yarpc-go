@@ -22,7 +22,8 @@ package http
 
 import "fmt"
 
-// internalError is raised when an HTTP handler raises an unexpected error.
+// internalError is returned when an HTTP handler fails with an unexpected
+// error.
 type internalError struct {
 	Reason error
 }
