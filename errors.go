@@ -28,7 +28,8 @@ type errorGroup struct {
 }
 
 func (e errorGroup) Error() string {
-	messages := []string{"the following errors occurred:"}
+	messages := make([]string, 0, len(e.Errors)+1)
+	messages = append(messages, "the following errors occurred:")
 	for _, err := range e.Errors {
 		messages = append(messages, err.Error())
 	}

@@ -22,7 +22,7 @@ package json
 
 import "fmt"
 
-// unmarshalError is raised when there's an error parsing JSON input.
+// unmarshalError is returned when there's an error parsing JSON input.
 type unmarshalError struct {
 	Reason error
 }
@@ -31,7 +31,7 @@ func (e unmarshalError) Error() string {
 	return fmt.Sprintf("failed to parse JSON: %v", e.Reason)
 }
 
-// marshalError is raised when there's an error serializing to JSON.
+// marshalError is returned when there's an error serializing to JSON.
 type marshalError struct {
 	Reason error
 }

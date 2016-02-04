@@ -30,7 +30,7 @@ type ErrorWaiter struct {
 	errors []error
 }
 
-// Submit submits a task for executino on the ErrorWaiter.
+// Submit submits a task for execution on the ErrorWaiter.
 //
 // The function returns immediately.
 func (ew *ErrorWaiter) Submit(f func() error) {
