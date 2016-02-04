@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"testing"
 
 	"github.com/yarpc/yarpc-go"
@@ -25,17 +26,19 @@ type simpleResponse struct {
 }
 
 func TestHandleStructSuccess(t *testing.T) {
-	h := wrapHandler(
-		"foo",
-		func(_ context.Context, _ yarpc.Meta, r *simpleRequest) (*simpleResponse, yarpc.Meta, error) {
-			assert.Equal(t, "foo", r.Name)
-			assert.Equal(t, map[string]int32{"bar": 42}, r.Attributes)
+	h := func(_ context.Context, _ yarpc.Meta, r *simpleRequest) (*simpleResponse, yarpc.Meta, error) {
+		assert.Equal(t, "foo", r.Name)
+		assert.Equal(t, map[string]int32{"bar": 42}, r.Attributes)
 
-			return &simpleResponse{Success: true}, nil, nil
-		},
-	)
+		return &simpleResponse{Success: true}, nil, nil
+	}
 
-	res, err := h.Handle(context.Background(), &transport.Request{
+	handler := jsonHandler{
+		reader:  structReader{reflect.TypeOf(simpleRequest{})},
+		handler: reflect.ValueOf(h),
+	}
+
+	res, err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
 	})
@@ -51,19 +54,19 @@ func TestHandleStructSuccess(t *testing.T) {
 }
 
 func TestHandleMapSuccess(t *testing.T) {
-	h := wrapHandler(
-		"foo",
-		func(_ context.Context, _ yarpc.Meta, r map[string]interface{}) (map[string]string, yarpc.Meta, error) {
-			// 42.0 instead of 42 because json.Decode defaults to float64 for
-			// numbers.
-			assert.Equal(t, 42.0, r["foo"])
-			assert.Equal(t, []interface{}{"a", "b", "c"}, r["bar"])
+	h := func(_ context.Context, _ yarpc.Meta, r map[string]interface{}) (map[string]string, yarpc.Meta, error) {
+		assert.Equal(t, 42.0, r["foo"])
+		assert.Equal(t, []interface{}{"a", "b", "c"}, r["bar"])
 
-			return map[string]string{"success": "true"}, nil, nil
-		},
-	)
+		return map[string]string{"success": "true"}, nil, nil
+	}
 
-	res, err := h.Handle(context.Background(), &transport.Request{
+	handler := jsonHandler{
+		reader:  mapReader{reflect.TypeOf(make(map[string]interface{}))},
+		handler: reflect.ValueOf(h),
+	}
+
+	res, err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
 	})
