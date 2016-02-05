@@ -18,47 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package main
 
 import (
-	"github.com/yarpc/yarpc-go/transport"
+	"fmt"
 
-	"github.com/thriftrw/thriftrw-go/protocol"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/http"
+
 	"golang.org/x/net/context"
 )
 
-// Handler represents a Thrift request handler.
-type Handler interface {
-	Handle(ctx context.Context, req *Request) (*Response, error)
+type handler struct {
+	items map[string]string
 }
 
-// HandlerFunc is a convenience type alias for functions that implement that act as Handlers.
-type HandlerFunc func(context.Context, *Request) (*Response, error)
+func (h handler) GetValue(ctx context.Context, meta yarpc.Meta, key string) (string, yarpc.Meta, error) {
+	if value, ok := h.items[key]; ok {
+		return value, nil, nil
+	}
 
-// Handle forwards the request to the underlying function.
-func (f HandlerFunc) Handle(ctx context.Context, req *Request) (*Response, error) {
-	return f(ctx, req)
+	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
 }
 
-// Service represents a Thrift service implementation.
-type Service interface {
-	// Name of the Thrift service.
-	Name() string
-
-	// Protocol to use for requests and responses of this service.
-	Protocol() protocol.Protocol
-
-	// Map of method name to Handler for all methods of this service.
-	Handlers() map[string]Handler
+func (h handler) SetValue(ctx context.Context, meta yarpc.Meta, key string, value string) (yarpc.Meta, error) {
+	h.items[key] = value
+	return nil, nil
 }
 
-// Register registers the handlers for the methods of the given service with the
-// given Registry.
-func Register(registry transport.Registry, service Service) {
-	name := service.Name()
-	proto := service.Protocol()
-	for method, h := range service.Handlers() {
-		handler := thriftHandler{Handler: h, Protocol: proto}
-		registry.Register(procedureName(name, method), handler)
+func main() {
+	yarpc := yarpc.New(yarpc.Config{
+		Name:     "keyvalue",
+		Inbounds: []transport.Inbound{http.Inbound(":8080")},
+	})
+
+	handler := handler{items: make(map[string]string)}
+	thrift.Register(yarpc, keyvalue.NewKeyValueHandler(handler))
+
+	if err := yarpc.Start(); err != nil {
+		fmt.Println("error:", err.Error())
 	}
 }
