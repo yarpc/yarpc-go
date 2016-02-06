@@ -67,11 +67,8 @@ func main() {
 			http.Inbound(":8080"),
 			// TODO tchannel.Inbound{},
 		},
-		Outbounds: map[string]transport.Outbounds{
-			"moe": {
-				http.Outbound("http://localhost:8080"),
-				// TODO tchannel.Outbound("localhost:4040"),
-			},
+		Outbounds: map[string]transport.Outbound{
+			"moe": http.Outbound("http://localhost:8080"),
 		},
 	})
 

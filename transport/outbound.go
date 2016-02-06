@@ -22,9 +22,6 @@ package transport
 
 import "golang.org/x/net/context"
 
-// Outbounds is a collection of Outbound transports.
-type Outbounds []Outbound
-
 // Outbound is a transport that knows how to send requests for procedure
 // calls.
 type Outbound interface {

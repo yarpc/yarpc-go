@@ -57,7 +57,7 @@ type RPC interface {
 type Config struct {
 	Name      string
 	Inbounds  []transport.Inbound
-	Outbounds map[string]transport.Outbounds
+	Outbounds map[string]transport.Outbound
 
 	// TODO FallbackHandler for catch-all endpoints
 }
@@ -80,14 +80,14 @@ type rpc struct {
 
 	Name      string
 	Inbounds  []transport.Inbound
-	Outbounds map[string]transport.Outbounds
+	Outbounds map[string]transport.Outbound
 }
 
 func (r rpc) Channel(service string) transport.Outbound {
-	if outs, ok := r.Outbounds[service]; ok {
+	if out, ok := r.Outbounds[service]; ok {
 		// we can eventually write an outbound that load balances between
 		// known outbounds for a service.
-		return outs[0]
+		return out
 	}
 	panic(fmt.Sprintf("unknown service %q", service))
 }
