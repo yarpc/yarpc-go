@@ -79,7 +79,7 @@ func main() {
 	json.Register(yarpc, json.Procedure("get", handler.Get))
 	json.Register(yarpc, json.Procedure("set", handler.Set))
 
-	if err := yarpc.Serve(); err != nil {
+	if err := yarpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 	}
 }
