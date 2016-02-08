@@ -57,7 +57,7 @@ type RPC interface {
 type Config struct {
 	Name      string
 	Inbounds  []transport.Inbound
-	Outbounds map[string]transport.Outbound
+	Outbounds transport.Outbounds
 
 	// TODO FallbackHandler for catch-all endpoints
 }
@@ -80,7 +80,7 @@ type rpc struct {
 
 	Name      string
 	Inbounds  []transport.Inbound
-	Outbounds map[string]transport.Outbound
+	Outbounds transport.Outbounds
 }
 
 func (r rpc) Channel(service string) transport.Outbound {
