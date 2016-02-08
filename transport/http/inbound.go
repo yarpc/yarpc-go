@@ -40,7 +40,7 @@ type httpInbound struct {
 	listener net.Listener
 }
 
-func (i *httpInbound) Serve(h transport.Handler) error {
+func (i *httpInbound) Start(h transport.Handler) error {
 	var err error
 	i.listener, err = net.Listen("tcp", i.addr)
 	if err != nil {
@@ -52,7 +52,7 @@ func (i *httpInbound) Serve(h transport.Handler) error {
 	// TODO Handle connection close errors
 }
 
-func (i *httpInbound) Close() error {
+func (i *httpInbound) Stop() error {
 	if i.listener == nil {
 		return nil
 	}

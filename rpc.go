@@ -95,7 +95,7 @@ func (r rpc) Channel(service string) transport.Outbound {
 func (r rpc) Start() error {
 	callServe := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Serve(r)
+			return i.Start(r)
 		}
 	}
 
@@ -122,7 +122,7 @@ func (r rpc) Handle(ctx context.Context, req *transport.Request) (*transport.Res
 func (r rpc) Stop() error {
 	var wait sync.ErrorWaiter
 	for _, i := range r.Inbounds {
-		wait.Submit(i.Close)
+		wait.Submit(i.Stop)
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
