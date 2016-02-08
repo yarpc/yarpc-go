@@ -29,3 +29,6 @@ type Outbound interface {
 	// response.
 	Call(ctx context.Context, request *Request) (*Response, error)
 }
+
+// Outbounds is a map of service name to Outbound for that service.
+type Outbounds map[string]Outbound

@@ -74,7 +74,7 @@ func set(ctx context.Context, c json.Client, k string, v string) error {
 func main() {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue-client",
-		Outbounds: map[string]transport.Outbound{
+		Outbounds: transport.Outbounds{
 			"keyvalue": http.Outbound("http://localhost:8080"),
 		},
 	})
