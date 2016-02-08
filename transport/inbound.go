@@ -23,8 +23,7 @@ package transport
 // Inbound is a transport that knows how to receive requests for procedure
 // calls.
 type Inbound interface {
-	// Serve starts accepting new requests and dispatches them to the given
-	// Handler.
+	// Starts accepting new requests and dispatches them to the given Handler.
 	//
 	// The function MUST block while the Inbound is running. The caller is
 	// responsible for running it concurrently if necessary.
@@ -32,12 +31,12 @@ type Inbound interface {
 	// An error may be returned if the Inbound failed to start up.
 	//
 	// Implementations may assume that this function is called at most once.
-	Serve(handler Handler) error
+	Start(handler Handler) error
 
-	// Close the inbound and stop accepting new requests.
+	// Stops the inbound. No new requests will be processed.
 	//
 	// This MAY block while the server drains ongoing requests.
-	Close() error
+	Stop() error
 
 	// TODO some way for the inbound to expose the host and port it's
 	// listening on

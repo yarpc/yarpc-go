@@ -45,12 +45,12 @@ type RPC interface {
 	// requests.
 	//
 	// Blocks until the RPC is stopped.
-	Serve() error
+	Start() error
 
-	// Closes the RPC. No new requests will be accepted.
+	// Stops the RPC. No new requests will be accepted.
 	//
 	// Blocks until the RPC has stopped.
-	Close() error
+	Stop() error
 }
 
 // Config specifies the parameters of a new RPC constructed via New.
@@ -92,10 +92,10 @@ func (r rpc) Channel(service string) transport.Outbound {
 	panic(fmt.Sprintf("unknown service %q", service))
 }
 
-func (r rpc) Serve() error {
+func (r rpc) Start() error {
 	callServe := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Serve(r)
+			return i.Start(r)
 		}
 	}
 
@@ -119,10 +119,10 @@ func (r rpc) Handle(ctx context.Context, req *transport.Request) (*transport.Res
 	return h.Handle(ctx, req)
 }
 
-func (r rpc) Close() error {
+func (r rpc) Stop() error {
 	var wait sync.ErrorWaiter
 	for _, i := range r.Inbounds {
-		wait.Submit(i.Close)
+		wait.Submit(i.Stop)
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
