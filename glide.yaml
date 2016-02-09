@@ -7,3 +7,5 @@ import:
 - package: github.com/stretchr/testify
   subpackages:
   - /assert
+  - /require
+- package: github.com/thriftrw/thriftrw-go

@@ -18,19 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package main
 
 import (
-	"io"
-	"time"
+	"fmt"
+
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/http"
+
+	"golang.org/x/net/context"
 )
 
-// Request is the low level request representation.
-type Request struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Headers   map[string]string
-	Body      io.Reader
-	TTL       time.Duration
+type handler struct {
+	items map[string]string
+}
+
+func (h handler) GetValue(ctx context.Context, meta yarpc.Meta, key string) (string, yarpc.Meta, error) {
+	if value, ok := h.items[key]; ok {
+		return value, nil, nil
+	}
+
+	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
+}
+
+func (h handler) SetValue(ctx context.Context, meta yarpc.Meta, key string, value string) (yarpc.Meta, error) {
+	h.items[key] = value
+	return nil, nil
+}
+
+func main() {
+	yarpc := yarpc.New(yarpc.Config{
+		Name:     "keyvalue",
+		Inbounds: []transport.Inbound{http.Inbound(":8080")},
+	})
+
+	handler := handler{items: make(map[string]string)}
+	thrift.Register(yarpc, keyvalue.NewKeyValueHandler(handler))
+
+	if err := yarpc.Start(); err != nil {
+		fmt.Println("error:", err.Error())
+	}
 }

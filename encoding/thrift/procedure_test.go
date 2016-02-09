@@ -18,19 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package thrift
 
 import (
-	"io"
-	"time"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// Request is the low level request representation.
-type Request struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Headers   map[string]string
-	Body      io.Reader
-	TTL       time.Duration
+func TestProcedureSplitEmpty(t *testing.T) {
+	s, m := splitProcedure("")
+	assert.Equal(t, "", s)
+	assert.Equal(t, "", m)
+}
+
+func TestProcedureNameAndSplit(t *testing.T) {
+	tests := []struct {
+		Procedure string
+		Service   string
+		Method    string
+	}{
+		{"foo::bar", "foo", "bar"},
+		{"::bar", "", "bar"},
+		{"foo::", "foo", ""},
+		{"::", "", ""},
+	}
+
+	for _, tt := range tests {
+		assert.Equal(t, tt.Procedure, procedureName(tt.Service, tt.Method))
+
+		s, m := splitProcedure(tt.Procedure)
+		assert.Equal(t, tt.Service, s)
+		assert.Equal(t, tt.Method, m)
+	}
 }

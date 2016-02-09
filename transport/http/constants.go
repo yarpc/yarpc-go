@@ -20,8 +20,18 @@
 
 package http
 
-// ProcedureHeader is the header used by the HTTP outbound to send and receive
-// the procedure name.
-const ProcedureHeader = "YARPC-Procedure"
+const (
+	// CallerHeader is the HTTP header used to indiate the service doing the calling
+	CallerHeader = "YARPC-Caller"
+
+	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
+	TTLMSHeader = "YARPC-TTLms"
+
+	// ProcedureHeader is the HTTP header used to indicate the procedure
+	ProcedureHeader = "YARPC-Procedure"
+
+	// ServiceHeader is the HTTP header used to indicate the service
+	ServiceHeader = "YARPC-Service"
+)
 
 // TODO Make consistent with other languages^

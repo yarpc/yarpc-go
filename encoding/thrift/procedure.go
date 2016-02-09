@@ -18,19 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package thrift
 
 import (
-	"io"
-	"time"
+	"fmt"
+	"strings"
 )
 
-// Request is the low level request representation.
-type Request struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Headers   map[string]string
-	Body      io.Reader
-	TTL       time.Duration
+// procedureName gets the procedure name we should use for a Thrift method with
+// the given service and name.
+func procedureName(service, method string) string {
+	return fmt.Sprintf("%s::%s", service, method)
+}
+
+// splitProcedure splits the given procedure name into the Thrift service name
+// and method.
+func splitProcedure(proc string) (service, method string) {
+	parts := strings.SplitN(proc, "::", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
+	}
+	return parts[0], parts[1]
 }

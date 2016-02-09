@@ -18,19 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package thrift
 
 import (
-	"io"
-	"time"
+	"github.com/yarpc/yarpc-go"
+
+	"github.com/thriftrw/thriftrw-go/wire"
 )
 
-// Request is the low level request representation.
-type Request struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Headers   map[string]string
-	Body      io.Reader
-	TTL       time.Duration
+// Response represents a raw Thrift response.
+type Response struct {
+	// Metadata for the response.
+	Meta yarpc.Meta
+
+	// Body of the Thrift response in a protocol-agnostic format.
+	Body wire.Value
+
+	// TODO: Handle REPLY/EXCEPTION for response envelopes
 }

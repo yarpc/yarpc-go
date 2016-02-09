@@ -1,31 +1,24 @@
-xlang:
-    image: yarpc/xlang
-    links:
-        - yarpc-go
-        - yarpc-java
-        - yarpc-python
-        - yarpc-node
-    environment:
-        - XLANG_CLIENTS=yarpc-go,yarpc-java,yarpc-python,yarpc-node
-        - XLANG_DIMENSION_SERVER=yarpc-go,yarpc-java,yarpc-python,yarpc-node
-        - XLANG_DIMENSION_BEHAVIOR=call,not_found
+version: '2'
 
-yarpc-go:
-    build: .
-    ports:
-        - 8080
+services:
+    crossdock:
+        image: yarpc/crossdock
+        links:
+            - yarpc-go
+            - yarpc-node
+        environment:
+            - CROSSDOCK_CLIENTS=yarpc-go,yarpc-node
+            - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-node
+            - CROSSDOCK_AXIS_BEHAVIOR=echo
 
-yarpc-java:
-    image: breerly/hello-server
-    ports:
-        - 8080
+    yarpc-go:
+        build: .
+        ports:
+            - 8080
+            - 8081
 
-yarpc-python:
-    image: breerly/hello-server
-    ports:
-        - 8080
-
-yarpc-node:
-    image: breerly/hello-server
-    ports:
-        - 8080
+    yarpc-node:
+        image: yarpc/yarpc-node
+        ports:
+            - 8080
+            - 8081

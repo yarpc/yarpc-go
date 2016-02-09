@@ -28,48 +28,12 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 
 	"golang.org/x/net/context"
 )
-
-type GetRequest struct {
-	Key string `json:"key"`
-}
-
-type GetResponse struct {
-	Value string `json:"value"`
-}
-
-type SetRequest struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type SetResponse struct {
-}
-
-func get(ctx context.Context, c json.Client, k string) (string, error) {
-	var response GetResponse
-	_, err := c.Call(
-		ctx,
-		&json.Request{Service: "keyvalue", Caller: "keyvalue-client", Procedure: "get", Body: &GetRequest{Key: k}},
-		&response,
-	)
-	return response.Value, err
-}
-
-func set(ctx context.Context, c json.Client, k string, v string) error {
-	var response SetResponse
-	_, err := c.Call(
-		ctx,
-		&json.Request{Service: "keyvalue", Caller: "keyvalue-client", Procedure: "set", Body: &SetRequest{Key: k, Value: v}},
-		&response,
-	)
-	return err
-}
 
 func main() {
 	yarpc := yarpc.New(yarpc.Config{
@@ -79,7 +43,7 @@ func main() {
 		},
 	})
 
-	client := json.New(yarpc.Channel("keyvalue"))
+	client := keyvalue.NewKeyValueClient(yarpc.Channel("keyvalue"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()
@@ -103,7 +67,7 @@ func main() {
 			key := args[0]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if value, err := get(ctx, client, key); err != nil {
+			if value, _, err := client.GetValue(ctx, nil, key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -118,8 +82,8 @@ func main() {
 			key, value := args[0], args[1]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if err := set(ctx, client, key, value); err != nil {
-				fmt.Println("set %q = %q failed: %v", key, value, err.Error())
+			if _, err := client.SetValue(ctx, nil, key, value); err != nil {
+				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue
 

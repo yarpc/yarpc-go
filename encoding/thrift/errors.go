@@ -18,19 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package thrift
 
-import (
-	"io"
-	"time"
-)
+import "fmt"
 
-// Request is the low level request representation.
-type Request struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Headers   map[string]string
-	Body      io.Reader
-	TTL       time.Duration
+// encodeError is returned when there's an error serializing to Thrift.
+type encodeError struct {
+	Reason error
 }
+
+func (e encodeError) Error() string {
+	return fmt.Sprintf("failed to write Thrift: %v", e.Reason)
+}
+
+// decodeError is returned when there's an error deserializing from Thrift.
+type decodeError struct {
+	Reason error
+}
+
+func (e decodeError) Error() string {
+	return fmt.Sprintf("failed to read Thrift: %v", e.Reason)
+}
+
+// IsEncodingError returns true if the given error is an error encountered
+// while trying to serialize or deserialize JSON.
+func IsEncodingError(e error) bool {
+	switch e.(type) {
+	case encodeError, decodeError:
+		return true
+	default:
+		return false
+	}
+}
+
+// TODO(abg): Unify json and thrift encoding errors?

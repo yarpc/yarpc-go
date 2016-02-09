@@ -1,33 +1,48 @@
-project := yarpc-go
+PACKAGES := $(shell glide novendor)
 
 export GO15VENDOREXPERIMENT=1
 
 
 .PHONY: build
 build:
-	go build `glide novendor`
+	go build $(PACKAGES)
+
 
 .PHONY: install
 install:
 	glide --version || go get github.com/Masterminds/glide
 	glide install
-	go build `glide novendor`
 
 
 .PHONY: test
 test:
-	go test `glide novendor`
+	go test $(PACKAGES)
 
 
-.PHONY: xlang
-xlang:
-	docker-compose run xlang
+.PHONY: crossdock
+crossdock:
+	docker-compose kill yarpc-go
+	docker-compose rm -f yarpc-go
+	docker-compose build yarpc-go
+	docker-compose run crossdock
 
 
-.PHONY: xlang-fresh
-xlang-fresh:
+.PHONY: crossdock-fresh
+crossdock-fresh: install
 	docker-compose kill
 	docker-compose rm --force
 	docker-compose pull
 	docker-compose build
-	docker-compose run xlang
+	docker-compose run crossdock
+
+
+.PHONY: install_ci
+install_ci: install
+	go get github.com/axw/gocov/gocov
+	go get github.com/mattn/goveralls
+	go get golang.org/x/tools/cmd/cover
+
+
+.PHONY: test_ci
+test_ci:
+	goveralls -service=travis-ci -v $(PACKAGES)

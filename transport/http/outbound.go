@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -56,7 +57,11 @@ func (h httpOutbound) Call(ctx context.Context, req *transport.Request) (*transp
 
 	// TODO throw an error if caller tried to use our ProcedureHeader.
 	request.Header = toHTTPHeader(req.Headers, nil)
+	request.Header.Set(CallerHeader, req.Caller)
+	request.Header.Set(ServiceHeader, req.Service)
 	request.Header.Set(ProcedureHeader, req.Procedure)
+	request.Header.Set(TTLMSHeader, fmt.Sprintf("%d", req.TTL/time.Millisecond))
+
 	response, err := ctxhttp.Do(ctx, h.Client, request)
 	if err != nil {
 		return nil, err
