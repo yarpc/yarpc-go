@@ -23,7 +23,7 @@ package thrift
 import (
 	"github.com/yarpc/yarpc-go/transport"
 
-	"github.com/uber/thriftrw-go/protocol"
+	"github.com/thriftrw/thriftrw-go/protocol"
 	"golang.org/x/net/context"
 )
 

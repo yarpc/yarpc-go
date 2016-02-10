@@ -27,8 +27,8 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"github.com/uber/thriftrw-go/protocol"
-	"github.com/uber/thriftrw-go/wire"
+	"github.com/thriftrw/thriftrw-go/protocol"
+	"github.com/thriftrw/thriftrw-go/wire"
 	"golang.org/x/net/context"
 )
 

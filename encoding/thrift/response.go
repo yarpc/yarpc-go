@@ -23,7 +23,7 @@ package thrift
 import (
 	"github.com/yarpc/yarpc-go"
 
-	"github.com/uber/thriftrw-go/wire"
+	"github.com/thriftrw/thriftrw-go/wire"
 )
 
 // Response represents a raw Thrift response.

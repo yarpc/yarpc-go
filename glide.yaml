@@ -8,4 +8,4 @@ import:
   subpackages:
   - /assert
   - /require
-- package: github.com/uber/thriftrw-go
+- package: github.com/thriftrw/thriftrw-go
