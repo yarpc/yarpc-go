@@ -59,7 +59,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request) (*tr
 		headers = res.Meta.Headers()
 	}
 
-	buffer := bytes.Buffer{}
+	var buffer bytes.Buffer
 	if err := t.Protocol.Encode(res.Body, &buffer); err != nil {
 		return nil, encodeError{Reason: err}
 	}

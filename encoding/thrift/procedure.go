@@ -27,13 +27,13 @@ import (
 
 // procedureName gets the procedure name we should use for a Thrift method with
 // the given service and name.
-func procedureName(service string, method string) string {
+func procedureName(service, method string) string {
 	return fmt.Sprintf("%s::%s", service, method)
 }
 
 // splitProcedure splits the given procedure name into the Thrift service name
 // and method.
-func splitProcedure(proc string) (string, string) {
+func splitProcedure(proc string) (service, method string) {
 	parts := strings.SplitN(proc, "::", 2)
 	return parts[0], parts[1]
 }

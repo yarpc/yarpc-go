@@ -35,7 +35,7 @@ import (
 // Client is a generic Thrift client. It speaks in raw Thrift payloads. The code
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
-	Call(ctx context.Context, methon string, r *Request) (*Response, yarpc.Meta, error)
+	Call(ctx context.Context, method string, r *Request) (*Response, yarpc.Meta, error)
 }
 
 // Config contains the configuration for the Client.
@@ -113,8 +113,7 @@ func (t thriftClient) Call(ctx context.Context, method string, r *Request) (*Res
 	// TODO don't store this in memory. Use a ResponseWriter-like interface for
 	// underlying transport.
 	var buffer bytes.Buffer
-	err := t.p.Encode(r.Body, &buffer)
-	if err != nil {
+	if err := t.p.Encode(r.Body, &buffer); err != nil {
 		return nil, nil, encodeError{Reason: err}
 	}
 
