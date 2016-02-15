@@ -42,7 +42,6 @@ type keyValueClient struct {
 func NewKeyValueClient(t transport.Outbound) KeyValue {
 	return keyValueClient{
 		client: thrift.New(thrift.Config{
-			Service:  "KeyValue",
 			Outbound: t,
 			Protocol: protocol.Binary,
 		}),
@@ -51,9 +50,11 @@ func NewKeyValueClient(t transport.Outbound) KeyValue {
 
 func (k keyValueClient) GetValue(ctx context.Context, meta yarpc.Meta, key string) (string, yarpc.Meta, error) {
 	args := GetValueArgs{Key: key}
-	res, resmeta, err := k.client.Call(ctx, "getValue", &thrift.Request{
-		Meta: meta,
-		Body: args.ToWire(),
+	res, resmeta, err := k.client.Call(ctx, &thrift.Request{
+		Service: "KeyValue",
+		Method:  "getValue",
+		Meta:    meta,
+		Body:    args.ToWire(),
 	})
 	if err != nil {
 		return "", nil, err
@@ -72,9 +73,11 @@ func (k keyValueClient) GetValue(ctx context.Context, meta yarpc.Meta, key strin
 
 func (k keyValueClient) SetValue(ctx context.Context, meta yarpc.Meta, key string, value string) (yarpc.Meta, error) {
 	args := SetValueArgs{Key: key, Value: value}
-	res, resmeta, err := k.client.Call(ctx, "setValue", &thrift.Request{
-		Meta: meta,
-		Body: args.ToWire(),
+	res, resmeta, err := k.client.Call(ctx, &thrift.Request{
+		Service: "KeyValue",
+		Method:  "setValue",
+		Meta:    meta,
+		Body:    args.ToWire(),
 	})
 
 	if err != nil {

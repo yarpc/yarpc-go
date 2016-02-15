@@ -28,6 +28,9 @@ import (
 
 // Request represents a raw Thrift request.
 type Request struct {
+	// Name of the Thrift service and method.
+	Service, Method string
+
 	// Metadata for the request.
 	Meta yarpc.Meta
 

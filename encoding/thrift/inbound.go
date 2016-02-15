@@ -49,9 +49,12 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request) (*tr
 		return nil, decodeError{Reason: err}
 	}
 
+	service, method := splitProcedure(treq.Procedure)
 	res, err := t.Handler.Handle(ctx, &Request{
-		Meta: yarpc.NewMeta(treq.Headers),
-		Body: value,
+		Service: service,
+		Method:  method,
+		Meta:    yarpc.NewMeta(treq.Headers),
+		Body:    value,
 	})
 
 	var headers map[string]string

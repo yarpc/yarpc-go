@@ -35,14 +35,11 @@ import (
 // Client is a generic Thrift client. It speaks in raw Thrift payloads. The code
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
-	Call(ctx context.Context, method string, r *Request) (*Response, yarpc.Meta, error)
+	Call(ctx context.Context, r *Request) (*Response, yarpc.Meta, error)
 }
 
 // Config contains the configuration for the Client.
 type Config struct {
-	// Name of the Thrift service.
-	Service string
-
 	// Outbound through which requests will be sent. Required.
 	Outbound transport.Outbound
 
@@ -57,7 +54,6 @@ func New(c Config) Client {
 	//
 	// 	func New(t transport.Outbound) *MyServiceClient {
 	// 		c := thrift.New(thrift.Config{
-	// 			Service: "MyService",
 	// 			Outbound: t,
 	// 			Protocol: protocol.Binary,
 	// 		})
@@ -73,26 +69,25 @@ func New(c Config) Client {
 	}
 
 	return thriftClient{
-		p:       p,
-		t:       c.Outbound,
-		service: c.Service,
+		p: p,
+		t: c.Outbound,
 	}
 }
 
 type thriftClient struct {
 	t transport.Outbound
 	p protocol.Protocol
-
-	service string
 }
 
-func (t thriftClient) Call(ctx context.Context, method string, r *Request) (*Response, yarpc.Meta, error) {
+func (t thriftClient) Call(ctx context.Context, r *Request) (*Response, yarpc.Meta, error) {
 	// Code generated for Thrift client calls will probable be something like
 	// this:
 	//
 	// 	func (c *MyServiceClient) someMethod(ctx context.Context, m yarpc.Meta, arg1 Arg1Type, arg2Type) (returnValue, yarpc.Meta, error) {
 	// 		args := someMethodArgs{arg1: arg1, arg2: arg2}
-	// 		resp, m, err := c.client.Call(ctx, "someMethod", &thrift.Request{
+	// 		resp, m, err := c.client.Call(ctx, &thrift.Request{
+	// 			Service: "MyService",
+	// 			Method: "someMethod",
 	// 			Meta: m,
 	// 			Body: args.ToWire(),
 	// 		})
@@ -123,7 +118,7 @@ func (t thriftClient) Call(ctx context.Context, method string, r *Request) (*Res
 	}
 
 	tres, err := t.t.Call(ctx, &transport.Request{
-		Procedure: procedureName(t.service, method),
+		Procedure: procedureName(r.Service, r.Method),
 		Headers:   headers,
 		Body:      &buffer,
 	})
