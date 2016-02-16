@@ -26,6 +26,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestProcedureSplitEmpty(t *testing.T) {
+	s, m := splitProcedure("")
+	assert.Equal(t, "", s)
+	assert.Equal(t, "", m)
+}
+
 func TestProcedureNameAndSplit(t *testing.T) {
 	tests := []struct {
 		Procedure string

@@ -35,5 +35,8 @@ func procedureName(service, method string) string {
 // and method.
 func splitProcedure(proc string) (service, method string) {
 	parts := strings.SplitN(proc, "::", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
+	}
 	return parts[0], parts[1]
 }
