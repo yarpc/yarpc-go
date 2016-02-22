@@ -34,7 +34,6 @@ install:
 script:
   - make test_ci
   - make crossdock
-  - rm -rf vendor/*
 
 after_success:
   - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
