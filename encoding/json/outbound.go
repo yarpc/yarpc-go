@@ -23,6 +23,7 @@ package json
 import (
 	"bytes"
 	"encoding/json"
+	"time"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
@@ -43,6 +44,13 @@ type Client interface {
 
 // Request represents an outbound JSON request.
 type Request struct {
+
+	// Caller is the name of the service doing the calling.
+	Caller string
+
+	// Name of the service being called.
+	Service string
+
 	// Name of the procedure being called.
 	Procedure string
 
@@ -52,6 +60,9 @@ type Request struct {
 	// Request body. This may be any type that can be serialized by
 	// json.Marshal.
 	Body interface{}
+
+	// TTL is the ttl in ms
+	TTL time.Duration
 }
 
 // New builds a new JSON client.
@@ -75,9 +86,12 @@ func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interfac
 	}
 
 	treq := transport.Request{
+		Caller:    req.Caller,  // TODO get this from somewhere smarter
+		Service:   req.Service, // TODO get from c.t if possible
 		Procedure: req.Procedure,
 		Headers:   headers,
 		Body:      bytes.NewReader(encoded),
+		TTL:       req.TTL, // TODO consider default
 	}
 
 	tres, err := c.t.Call(ctx, &treq)

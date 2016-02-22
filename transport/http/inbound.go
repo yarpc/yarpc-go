@@ -24,6 +24,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -71,6 +73,20 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	defer req.Body.Close()
 
+	caller := req.Header.Get(CallerHeader)
+	if len(caller) == 0 {
+		http.Error(w, "caller name is required", http.StatusBadRequest)
+		return
+	}
+	req.Header.Del(CallerHeader)
+
+	service := req.Header.Get(ServiceHeader)
+	if len(service) == 0 {
+		http.Error(w, "service name is required", http.StatusBadRequest)
+		return
+	}
+	req.Header.Del(ServiceHeader)
+
 	procedure := req.Header.Get(ProcedureHeader)
 	if len(procedure) == 0 {
 		http.Error(w, "procedure name is required", http.StatusBadRequest)
@@ -78,10 +94,25 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	req.Header.Del(ProcedureHeader)
 
+	strttlms := req.Header.Get(TTLMSHeader)
+	if len(strttlms) == 0 {
+		http.Error(w, "ttlms name is required", http.StatusBadRequest)
+		return
+	}
+	req.Header.Del(TTLMSHeader)
+	ttlms, err := strconv.Atoi(strttlms)
+	if err != nil {
+		http.Error(w, "ttlms must be an int", http.StatusBadRequest)
+		return
+	}
+
 	treq := &transport.Request{
+		Caller:    caller,
+		Service:   service,
 		Procedure: procedure,
 		Headers:   fromHTTPHeader(req.Header, nil),
 		Body:      req.Body,
+		TTL:       time.Duration(ttlms) * time.Millisecond,
 	}
 
 	tres, err := h.Handler.Handle(

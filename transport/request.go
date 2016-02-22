@@ -20,11 +20,17 @@
 
 package transport
 
-import "io"
+import (
+	"io"
+	"time"
+)
 
 // Request is the low level request representation.
 type Request struct {
+	Caller    string
+	Service   string
 	Procedure string
 	Headers   map[string]string
 	Body      io.Reader
+	TTL       time.Duration
 }
