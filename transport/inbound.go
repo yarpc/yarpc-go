@@ -25,12 +25,10 @@ package transport
 type Inbound interface {
 	// Starts accepting new requests and dispatches them to the given Handler.
 	//
-	// The function MUST block while the Inbound is running. The caller is
-	// responsible for running it concurrently if necessary.
+	// The function MUST return immediately, although it SHOULD block until
+	// the inbound is ready to start accepting new requests.
 	//
-	// An error may be returned if the Inbound failed to start up.
-	//
-	// Implementations may assume that this function is called at most once.
+	// Implementations can assume that this function is called at most once.
 	Start(handler Handler) error
 
 	// Stops the inbound. No new requests will be processed.

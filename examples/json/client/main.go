@@ -75,7 +75,7 @@ func main() {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue-client",
 		Outbounds: transport.Outbounds{
-			"keyvalue": http.Outbound("http://localhost:8080"),
+			"keyvalue": http.NewOutbound("http://localhost:8080"),
 		},
 	})
 

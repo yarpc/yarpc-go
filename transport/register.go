@@ -26,6 +26,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Note: Until golang/mock#4 is fixed, imports in the generated code have to
+// be fixed by hand. They use vendor/* import paths rather than direct.
+
+//go:generate mockgen -destination=testing/register.go -package=test_transport github.com/yarpc/yarpc-go/transport Handler
+
 // Handler handles a single transport-level request.
 type Handler interface {
 	Handle(ctx context.Context, req *Request) (*Response, error)

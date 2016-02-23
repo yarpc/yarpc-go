@@ -2,10 +2,13 @@ package: github.com/yarpc/yarpc-go
 import:
 - package: golang.org/x/net
   subpackages:
-  - /context
+  - context
   - context/ctxhttp
 - package: github.com/stretchr/testify
   subpackages:
-  - /assert
-  - /require
+  - assert
+  - require
 - package: github.com/thriftrw/thriftrw-go
+- package: github.com/golang/mock
+  subpackages:
+  - gomock

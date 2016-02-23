@@ -14,7 +14,7 @@ func StartServerUnderTest() {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
-			http.Inbound(":8081"),
+			http.NewInbound(":8081"),
 		},
 	})
 

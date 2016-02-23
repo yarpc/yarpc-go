@@ -64,11 +64,11 @@ func main() {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
-			http.Inbound(":8080"),
+			http.NewInbound(":8080"),
 			// TODO tchannel.Inbound{},
 		},
 		Outbounds: transport.Outbounds{
-			"moe": http.Outbound("http://localhost:8080"),
+			"moe": http.NewOutbound("http://localhost:8080"),
 		},
 	})
 
