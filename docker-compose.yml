@@ -6,9 +6,10 @@ services:
         links:
             - yarpc-go
             - yarpc-node
+            - yarpc-java
         environment:
-            - CROSSDOCK_CLIENTS=yarpc-go,yarpc-node
-            - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-node
+            - CROSSDOCK_CLIENTS=yarpc-go,yarpc-node,yarpc-java
+            - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-node,yarpc-java
             - CROSSDOCK_AXIS_BEHAVIOR=echo
 
     yarpc-go:
@@ -19,6 +20,12 @@ services:
 
     yarpc-node:
         image: yarpc/yarpc-node
+        ports:
+            - 8080
+            - 8081
+
+    yarpc-java:
+        image: yarpc/yarpc-java
         ports:
             - 8080
             - 8081
