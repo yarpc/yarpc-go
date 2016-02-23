@@ -22,7 +22,7 @@ func EchoBehavior(addr string) Result {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "client",
 		Outbounds: transport.Outbounds{
-			"yarpc-test": http.Outbound(fmt.Sprintf("http://%v:8081", addr)),
+			"yarpc-test": http.NewOutbound(fmt.Sprintf("http://%v:8081", addr)),
 		},
 	})
 	client := json.New(yarpc.Channel("yarpc-test"))

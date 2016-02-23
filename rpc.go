@@ -44,7 +44,7 @@ type RPC interface {
 	// Starts the RPC allowing it to accept and processing new incoming
 	// requests.
 	//
-	// Blocks until the RPC is stopped.
+	// Blocks until the RPC is ready to start accepting new requests.
 	Start() error
 
 	// Stops the RPC. No new requests will be accepted.

@@ -52,7 +52,7 @@ func (h handler) SetValue(ctx context.Context, meta yarpc.Meta, key string, valu
 func main() {
 	yarpc := yarpc.New(yarpc.Config{
 		Name:     "keyvalue",
-		Inbounds: []transport.Inbound{http.Inbound(":8080")},
+		Inbounds: []transport.Inbound{http.NewInbound(":8080")},
 	})
 
 	handler := handler{items: make(map[string]string)}

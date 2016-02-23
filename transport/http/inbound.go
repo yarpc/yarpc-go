@@ -32,8 +32,19 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Inbound builds a new HTTP inbound that listens on the given address.
-func Inbound(addr string) transport.Inbound {
+// Inbound represents an HTTP Inbound. It is the same as the transport Inbound
+// except it exposes the address on which the system is listening for
+// connections.
+type Inbound interface {
+	transport.Inbound
+
+	// Address on which the server is listening. Returns nil if Start has not
+	// been called yet.
+	Addr() net.Addr
+}
+
+// NewInbound builds a new HTTP inbound that listens on the given address.
+func NewInbound(addr string) Inbound {
 	return &httpInbound{addr: addr}
 }
 
@@ -49,16 +60,26 @@ func (i *httpInbound) Start(h transport.Handler) error {
 		return err
 	}
 
-	server := &http.Server{Addr: i.addr, Handler: httpHandler{h}}
-	return server.Serve(i.listener)
-	// TODO Handle connection close errors
+	i.addr = i.listener.Addr().String() // in case it changed
+	server := &http.Server{Handler: httpHandler{h}}
+	go server.Serve(i.listener)
+	return nil
 }
 
 func (i *httpInbound) Stop() error {
 	if i.listener == nil {
 		return nil
 	}
-	return i.listener.Close()
+	err := i.listener.Close()
+	i.listener = nil
+	return err
+}
+
+func (i *httpInbound) Addr() net.Addr {
+	if i.listener == nil {
+		return nil
+	}
+	return i.listener.Addr()
 }
 
 // httpHandler adapts a transport.Handler into a handler for net/http.

@@ -32,14 +32,15 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
-// Outbound builds a new HTTP outbound that sends requests to the given URL.
-func Outbound(url string) transport.Outbound {
+// NewOutbound builds a new HTTP outbound that sends requests to the given
+// URL.
+func NewOutbound(url string) transport.Outbound {
 	return httpOutbound{URL: url}
 }
 
-// OutboundWithClient builds a new HTTP outbound that sends requests to the
+// NewOutboundWithClient builds a new HTTP outbound that sends requests to the
 // given URL using the given HTTP client.
-func OutboundWithClient(url string, client *http.Client) transport.Outbound {
+func NewOutboundWithClient(url string, client *http.Client) transport.Outbound {
 	return httpOutbound{Client: client, URL: url}
 }
 
