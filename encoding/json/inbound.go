@@ -21,9 +21,7 @@
 package json
 
 import (
-	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"reflect"
 
 	"github.com/yarpc/yarpc-go"
@@ -43,10 +41,10 @@ type jsonHandler struct {
 	handler reflect.Value
 }
 
-func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	req, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return nil, unmarshalError{Reason: err}
+		return unmarshalError{Reason: err}
 	}
 
 	results := h.handler.Call([]reflect.Value{
@@ -57,23 +55,19 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request) (*tran
 
 	if err := results[2].Interface(); err != nil {
 		// TODO proper error types
-		return nil, err.(error)
+		return err.(error)
 	}
 
-	var headers map[string]string
 	if meta := results[1].Interface(); meta != nil {
-		headers = meta.(yarpc.Meta).Headers()
+		rw.AddHeaders(meta.(yarpc.Meta).Headers())
 	}
 
-	body, err := json.Marshal(results[0].Interface())
-	if err != nil {
-		return nil, marshalError{Reason: err}
+	result := results[0].Interface()
+	if err := json.NewEncoder(rw).Encode(result); err != nil {
+		return marshalError{Reason: err}
 	}
 
-	return &transport.Response{
-		Headers: headers,
-		Body:    ioutil.NopCloser(bytes.NewReader(body)),
-	}, nil
+	return nil
 }
 
 // requestReader is used to parse a JSON request argument from a JSON decoder.

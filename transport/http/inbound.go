@@ -21,7 +21,6 @@
 package http
 
 import (
-	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -136,22 +135,28 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		TTL:       time.Duration(ttlms) * time.Millisecond,
 	}
 
-	tres, err := h.Handler.Handle(
-		context.TODO(), // TODO
-		treq,
-	)
+	err = h.Handler.Handle(context.TODO(), treq, newResponseWriter(w))
 	if err != nil {
 		// TODO structured responses?
 		err = internalError{Reason: err}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
 
-	toHTTPHeader(tres.Headers, w.Header())
+// responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
+type responseWriter struct {
+	w http.ResponseWriter
+}
 
-	defer tres.Body.Close()
-	if _, err := io.Copy(w, tres.Body); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+func newResponseWriter(w http.ResponseWriter) responseWriter {
+	return responseWriter{w: w}
+}
+
+func (rw responseWriter) Write(s []byte) (int, error) {
+	return rw.w.Write(s)
+}
+
+func (rw responseWriter) AddHeaders(h transport.Headers) {
+	toHTTPHeader(h, rw.w.Header())
 }

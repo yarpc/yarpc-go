@@ -30,7 +30,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/yarpc/yarpc-go/transport"
-	test_trans "github.com/yarpc/yarpc-go/transport/testing"
+	ttrans "github.com/yarpc/yarpc-go/transport/testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +42,7 @@ func TestRoundTrip(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	// start the inbound with a mock handler
-	h := test_trans.NewMockHandler(mockCtrl)
+	h := ttrans.NewMockHandler(mockCtrl)
 	i := NewInbound("127.0.0.1:0")
 	require.NoError(t, i.Start(h), "failed to Start()")
 	defer i.Stop()
@@ -56,22 +56,26 @@ func TestRoundTrip(t *testing.T) {
 		TTL:       200 * time.Millisecond, // TODO use default
 	}
 
-	response := &transport.Response{
-		Headers: map[string]string{"status": "ok"},
-		Body:    ioutil.NopCloser(bytes.NewReader([]byte("hello, world"))),
-	}
-
-	// Need to build the response matcher before the response is consumed
-	// because otherwise we won't be able to read from response.Body again.
-	responseMatcher := test_trans.NewResponseMatcher(t, response)
-
+	// Expect a call with the given request and write the respons.
 	h.EXPECT().Handle(
-		gomock.Any(), test_trans.NewRequestMatcher(t, request),
-	).Return(response, nil)
+		gomock.Any(), ttrans.NewRequestMatcher(t, request), gomock.Any(),
+	).Do(
+		func(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) {
+			rw.AddHeaders(transport.Headers{"status": "ok"})
+			if _, err := rw.Write([]byte("hello, world")); err != nil {
+				panic(fmt.Sprintf("unexpected error: %v", err))
+			}
+		},
+	).Return(nil)
 
 	o := NewOutbound(fmt.Sprintf("http://%v/", i.Addr().String()))
 	res, err := o.Call(context.TODO(), request)
+
 	if assert.NoError(t, err) {
+		responseMatcher := ttrans.NewResponseMatcher(t, &transport.Response{
+			Headers: transport.Headers{"status": "ok"},
+			Body:    ioutil.NopCloser(bytes.NewReader([]byte("hello, world"))),
+		})
 		assert.True(t, responseMatcher.Matches(res))
 	}
 }

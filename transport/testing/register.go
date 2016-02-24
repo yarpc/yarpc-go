@@ -30,13 +30,12 @@ func (_m *MockHandler) EXPECT() *_MockHandlerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockHandler) Handle(_param0 context.Context, _param1 *transport.Request) (*transport.Response, error) {
-	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1)
-	ret0, _ := ret[0].(*transport.Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+func (_m *MockHandler) Handle(_param0 context.Context, _param1 *transport.Request, _param2 transport.ResponseWriter) error {
+	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1, _param2)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-func (_mr *_MockHandlerRecorder) Handle(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Handle", arg0, arg1)
+func (_mr *_MockHandlerRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Handle", arg0, arg1, arg2)
 }
