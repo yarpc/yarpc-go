@@ -35,8 +35,6 @@ func EchoBehavior(addr string) Result {
 		ctx,
 		// TODO get Service from client
 		&json.Request{
-			Caller:    "client",
-			Service:   "yarpc-test",
 			Procedure: "echo",
 			Body:      &server.EchoRequest{Token: token},
 			TTL:       3 * time.Second,

@@ -40,8 +40,8 @@ type Client interface {
 
 // Config contains the configuration for the Client.
 type Config struct {
-	// Outbound through which requests will be sent. Required.
-	Outbound transport.Outbound
+	// Channel through which requests will be sent. Required.
+	Channel transport.Channel
 
 	// Thrift encoding protocol. Defaults to Binary if nil.
 	Protocol protocol.Protocol
@@ -69,14 +69,18 @@ func New(c Config) Client {
 	}
 
 	return thriftClient{
-		p: p,
-		t: c.Outbound,
+		p:       p,
+		t:       c.Channel.Outbound,
+		caller:  c.Channel.Caller,
+		service: c.Channel.Service,
 	}
 }
 
 type thriftClient struct {
 	t transport.Outbound
 	p protocol.Protocol
+
+	caller, service string
 }
 
 func (t thriftClient) Call(ctx context.Context, r *Request) (*Response, yarpc.Meta, error) {
@@ -118,9 +122,12 @@ func (t thriftClient) Call(ctx context.Context, r *Request) (*Response, yarpc.Me
 	}
 
 	tres, err := t.t.Call(ctx, &transport.Request{
+		Caller:    t.caller,
+		Service:   t.service,
 		Procedure: procedureName(r.Service, r.Method),
 		Headers:   headers,
 		Body:      &buffer,
+		// TTL: TODO,
 	})
 	if err != nil {
 		return nil, nil, err

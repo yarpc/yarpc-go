@@ -55,7 +55,7 @@ func get(ctx context.Context, c json.Client, k string) (string, error) {
 	var response GetResponse
 	_, err := c.Call(
 		ctx,
-		&json.Request{Service: "keyvalue", Caller: "keyvalue-client", Procedure: "get", Body: &GetRequest{Key: k}},
+		&json.Request{Procedure: "get", Body: &GetRequest{Key: k}},
 		&response,
 	)
 	return response.Value, err
@@ -65,7 +65,7 @@ func set(ctx context.Context, c json.Client, k string, v string) error {
 	var response SetResponse
 	_, err := c.Call(
 		ctx,
-		&json.Request{Service: "keyvalue", Caller: "keyvalue-client", Procedure: "set", Body: &SetRequest{Key: k, Value: v}},
+		&json.Request{Procedure: "set", Body: &SetRequest{Key: k, Value: v}},
 		&response,
 	)
 	return err
