@@ -20,21 +20,23 @@
 
 package yarpc
 
+import "github.com/yarpc/yarpc-go/transport"
+
 // Meta TODO
 type Meta interface {
-	Headers() map[string]string
+	Headers() transport.Headers
 }
 
 type meta struct {
-	headers map[string]string
+	headers transport.Headers
 }
 
-func (m meta) Headers() map[string]string {
+func (m meta) Headers() transport.Headers {
 	return m.headers
 }
 
 // NewMeta constructs a new Meta object with the given headers.
-func NewMeta(hs map[string]string) Meta {
+func NewMeta(hs transport.Headers) Meta {
 	// TODO determine if this is how we want to expose meta construction to
 	// users.
 	return meta{hs}

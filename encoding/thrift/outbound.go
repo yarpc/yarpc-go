@@ -112,7 +112,7 @@ func (t thriftClient) Call(ctx context.Context, r *Request) (*Response, yarpc.Me
 		return nil, nil, encodeError{Reason: err}
 	}
 
-	var headers map[string]string
+	var headers transport.Headers
 	if r.Meta != nil {
 		headers = r.Meta.Headers()
 	}

@@ -51,7 +51,7 @@ func TestRoundTrip(t *testing.T) {
 		Caller:    "testclient",
 		Service:   "mockservice",
 		Procedure: "hello",
-		Headers:   map[string]string{"Token": "1234"},
+		Headers:   transport.Headers{"token": "1234"},
 		Body:      bytes.NewReader([]byte("world")),
 		TTL:       200 * time.Millisecond, // TODO use default
 	}

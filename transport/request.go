@@ -30,7 +30,7 @@ type Request struct {
 	Caller    string
 	Service   string
 	Procedure string
-	Headers   map[string]string
+	Headers   Headers
 	Body      io.Reader
 	TTL       time.Duration
 }

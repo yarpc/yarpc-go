@@ -80,7 +80,7 @@ func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interfac
 		return nil, marshalError{Reason: err}
 	}
 
-	var headers map[string]string
+	var headers transport.Headers
 	if req.Meta != nil {
 		headers = req.Meta.Headers()
 	}
