@@ -18,8 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package transport
 
-// Response TODO
-type Response interface {
+import "strings"
+
+// Headers represents YARPC headers.
+//
+// Header keys are case insensitive and duplicates are disallowed.
+type Headers map[string]string
+
+// NewHeaders builds a new Headers map from the given key-value pair.
+//
+// Use this instead of Headers(m).
+func NewHeaders(m map[string]string) Headers {
+	headers := make(Headers, len(m))
+	for k, v := range m {
+		headers.Set(k, v)
+	}
+	return headers
+}
+
+// Set sets the given header key to the given value.
+func (h Headers) Set(k, v string) {
+	h[strings.ToLower(k)] = v
+}
+
+// Get the header with the given name. Returns false if a match was not found.
+func (h Headers) Get(k string) (string, bool) {
+	if v, ok := h[strings.ToLower(k)]; ok {
+		return v, true
+	}
+	return "", false
+}
+
+// Del deletes the header with the given name.
+func (h Headers) Del(k string) {
+	delete(h, strings.ToLower(k))
 }

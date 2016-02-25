@@ -119,16 +119,10 @@ func (m RequestMatcher) String() string {
 }
 
 // checkSuperSet checks if the items in l are all also present in r.
-func checkSuperSet(l, r map[string]string) error {
-	// TODO Figure out if headers are case sensitive?
-	rLower := make(map[string]string, len(r))
-	for k, v := range r {
-		rLower[strings.ToLower(k)] = v
-	}
-
+func checkSuperSet(l, r transport.Headers) error {
 	missing := make([]string, 0, len(l))
 	for k, vl := range l {
-		vr, ok := rLower[strings.ToLower(k)]
+		vr, ok := r.Get(k)
 		if !ok || vr != vl {
 			missing = append(missing, k)
 		}

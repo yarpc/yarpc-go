@@ -20,7 +20,11 @@
 
 package http
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/yarpc/yarpc-go/transport"
+)
 
 // toHTTPHeader converts transport headers into HTTP headers.
 //
@@ -28,7 +32,7 @@ import "net/http"
 // collection is returned.
 //
 // If 'to' is nil, a new map will be assigned.
-func toHTTPHeader(from map[string]string, to http.Header) http.Header {
+func toHTTPHeader(from transport.Headers, to http.Header) http.Header {
 	if to == nil {
 		to = make(http.Header)
 	}
@@ -44,13 +48,13 @@ func toHTTPHeader(from map[string]string, to http.Header) http.Header {
 // collection is returned.
 //
 // If 'to' is nil, a new map will be assigned.
-func fromHTTPHeader(from http.Header, to map[string]string) map[string]string {
+func fromHTTPHeader(from http.Header, to transport.Headers) transport.Headers {
 	if to == nil {
-		to = make(map[string]string)
+		to = make(transport.Headers)
 	}
 
 	for k := range from {
-		to[k] = from.Get(k)
+		to.Set(k, from.Get(k))
 		// undefined behavior for multiple occurrences of the same header
 		// TODO figure out which headers we are actually allowing in here
 		// TODO figure out header scheme for headers that are exposed like this
