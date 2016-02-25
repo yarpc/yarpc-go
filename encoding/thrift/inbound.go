@@ -38,15 +38,15 @@ type thriftHandler struct {
 	Protocol protocol.Protocol
 }
 
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	body, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	value, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
 	if err != nil {
-		return nil, decodeError{Reason: err}
+		return decodeError{Reason: err}
 	}
 
 	service, method := splitProcedure(treq.Procedure)
@@ -57,18 +57,13 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request) (*tr
 		Body:    value,
 	})
 
-	var headers map[string]string
 	if res.Meta != nil {
-		headers = res.Meta.Headers()
+		rw.AddHeaders(res.Meta.Headers())
 	}
 
-	var buffer bytes.Buffer
-	if err := t.Protocol.Encode(res.Body, &buffer); err != nil {
-		return nil, encodeError{Reason: err}
+	if err := t.Protocol.Encode(res.Body, rw); err != nil {
+		return encodeError{Reason: err}
 	}
 
-	// TODO change transport to use ResponseWriter-like API to avoid coying like
-	// this.
-	rbody := ioutil.NopCloser(&buffer)
-	return &transport.Response{Headers: headers, Body: rbody}, nil
+	return nil
 }

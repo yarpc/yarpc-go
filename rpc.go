@@ -111,12 +111,12 @@ func (r rpc) Start() error {
 	return nil
 }
 
-func (r rpc) Handle(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (r rpc) Handle(ctx context.Context, req *transport.Request, rw transport.ResponseWriter) error {
 	h, err := r.GetHandler(req.Procedure)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return h.Handle(ctx, req)
+	return h.Handle(ctx, req, rw)
 }
 
 func (r rpc) Stop() error {

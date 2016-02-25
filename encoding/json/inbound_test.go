@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"reflect"
 	"testing"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,17 +38,15 @@ func TestHandleStructSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	res, err := handler.Handle(context.Background(), &transport.Request{
+	resw := new(transporttest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
-	})
-	require.NoError(t, err)
-
-	body, err := ioutil.ReadAll(res.Body)
+	}, resw)
 	require.NoError(t, err)
 
 	var response simpleResponse
-	require.NoError(t, json.Unmarshal(body, &response))
+	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
 
 	assert.Equal(t, simpleResponse{Success: true}, response)
 }
@@ -66,17 +64,15 @@ func TestHandleMapSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	res, err := handler.Handle(context.Background(), &transport.Request{
+	resw := new(transporttest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
-	})
-	require.NoError(t, err)
-
-	body, err := ioutil.ReadAll(res.Body)
+	}, resw)
 	require.NoError(t, err)
 
 	var response struct{ Success string }
-	require.NoError(t, json.Unmarshal(body, &response))
+	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
 	assert.Equal(t, "true", response.Success)
 }
 

@@ -24,6 +24,15 @@ import "io"
 
 // Response is the low level response representation.
 type Response struct {
-	Headers map[string]string
+	Headers Headers
 	Body    io.ReadCloser
+}
+
+// ResponseWriter allows Handlers to write responses in a streaming fashion.
+type ResponseWriter interface {
+	io.Writer
+
+	// AddHeaders adds the given headers to the response. If called, this must
+	// be called before any invocation of Write().
+	AddHeaders(Headers)
 }

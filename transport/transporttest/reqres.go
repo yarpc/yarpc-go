@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package test_transport
+package transporttest
 
 import (
 	"bytes"
@@ -182,4 +182,23 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 	}
 
 	return true
+}
+
+// FakeResponseWriter is a ResponseWriter that records the headers and the body
+// written to it.
+type FakeResponseWriter struct {
+	Headers transport.Headers
+	Body    bytes.Buffer
+}
+
+// AddHeaders for FakeResponseWriter.
+func (fw *FakeResponseWriter) AddHeaders(h transport.Headers) {
+	for k, v := range h {
+		fw.Headers.Set(k, v)
+	}
+}
+
+// Write for FakeResponseWriter.
+func (fw *FakeResponseWriter) Write(s []byte) (int, error) {
+	return fw.Body.Write(s)
 }
