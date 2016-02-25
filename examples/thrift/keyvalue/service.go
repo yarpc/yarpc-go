@@ -39,10 +39,10 @@ type keyValueClient struct {
 	client thrift.Client
 }
 
-func NewKeyValueClient(t transport.Outbound) KeyValue {
+func NewKeyValueClient(c transport.Channel) KeyValue {
 	return keyValueClient{
 		client: thrift.New(thrift.Config{
-			Outbound: t,
+			Channel:  c,
 			Protocol: protocol.Binary,
 		}),
 	}

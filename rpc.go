@@ -38,8 +38,7 @@ type RPC interface {
 	// service.
 	//
 	// This panics if the given service is unknown.
-	Channel(service string) transport.Outbound
-	// TODO do we really want to panic on unknown services?
+	Channel(service string) transport.Channel
 
 	// Starts the RPC allowing it to accept and processing new incoming
 	// requests.
@@ -64,6 +63,9 @@ type Config struct {
 
 // New builds a new RPC using the specified configuration.
 func New(cfg Config) RPC {
+	if cfg.Name == "" {
+		panic("a service name is required")
+	}
 	return rpc{
 		Name:      cfg.Name,
 		Registry:  make(transport.MapRegistry),
@@ -83,11 +85,19 @@ type rpc struct {
 	Outbounds transport.Outbounds
 }
 
-func (r rpc) Channel(service string) transport.Outbound {
+func (r rpc) Channel(service string) transport.Channel {
+	// TODO keep map[string]*Channel instead of Outbound when New is called. The
+	// channels will allow persisting service-specific settings like "always
+	// use this TTL for this service."
+
 	if out, ok := r.Outbounds[service]; ok {
 		// we can eventually write an outbound that load balances between
 		// known outbounds for a service.
-		return out
+		return transport.Channel{
+			Outbound: out,
+			Caller:   r.Name,
+			Service:  service,
+		}
 	}
 	panic(fmt.Sprintf("unknown service %q", service))
 }

@@ -44,13 +44,6 @@ type Client interface {
 
 // Request represents an outbound JSON request.
 type Request struct {
-
-	// Caller is the name of the service doing the calling.
-	Caller string
-
-	// Name of the service being called.
-	Service string
-
 	// Name of the procedure being called.
 	Procedure string
 
@@ -66,12 +59,18 @@ type Request struct {
 }
 
 // New builds a new JSON client.
-func New(t transport.Outbound) Client {
-	return jsonClient{t}
+func New(c transport.Channel) Client {
+	return jsonClient{
+		t:       c.Outbound,
+		caller:  c.Caller,
+		service: c.Service,
+	}
 }
 
 type jsonClient struct {
 	t transport.Outbound
+
+	caller, service string
 }
 
 func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interface{}) (yarpc.Meta, error) {
@@ -86,8 +85,8 @@ func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interfac
 	}
 
 	treq := transport.Request{
-		Caller:    req.Caller,  // TODO get this from somewhere smarter
-		Service:   req.Service, // TODO get from c.t if possible
+		Caller:    c.caller,
+		Service:   c.service,
 		Procedure: req.Procedure,
 		Headers:   headers,
 		Body:      bytes.NewReader(encoded),
