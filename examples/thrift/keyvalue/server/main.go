@@ -28,15 +28,13 @@ import (
 	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
-
-	"golang.org/x/net/context"
 )
 
 type handler struct {
 	items map[string]string
 }
 
-func (h handler) GetValue(ctx context.Context, meta yarpc.Meta, key string) (string, yarpc.Meta, error) {
+func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
 	if value, ok := h.items[key]; ok {
 		return value, nil, nil
 	}
@@ -44,7 +42,7 @@ func (h handler) GetValue(ctx context.Context, meta yarpc.Meta, key string) (str
 	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
 }
 
-func (h handler) SetValue(ctx context.Context, meta yarpc.Meta, key string, value string) (yarpc.Meta, error) {
+func (h handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
 	h.items[key] = value
 	return nil, nil
 }
@@ -61,4 +59,6 @@ func main() {
 	if err := yarpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 	}
+
+	select {} // block forever
 }

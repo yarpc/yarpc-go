@@ -24,15 +24,14 @@ package keyvalue
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/yarpc/yarpc-go"
+	"github.com/thriftrw/thriftrw-go/wire"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
-	"golang.org/x/net/context"
 )
 
 type KeyValue interface {
-	GetValue(ctx context.Context, meta yarpc.Meta, key string) (string, yarpc.Meta, error)
-	SetValue(ctx context.Context, meta yarpc.Meta, key string, value string) (yarpc.Meta, error)
+	GetValue(req *thrift.Request, key string) (string, *thrift.Response, error)
+	SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error)
 }
 
 type keyValueClient struct {
@@ -42,54 +41,45 @@ type keyValueClient struct {
 func NewKeyValueClient(c transport.Channel) KeyValue {
 	return keyValueClient{
 		client: thrift.New(thrift.Config{
+			Service:  "KeyValue",
 			Channel:  c,
 			Protocol: protocol.Binary,
 		}),
 	}
 }
 
-func (k keyValueClient) GetValue(ctx context.Context, meta yarpc.Meta, key string) (string, yarpc.Meta, error) {
+func (k keyValueClient) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
 	args := GetValueArgs{Key: key}
-	res, resmeta, err := k.client.Call(ctx, &thrift.Request{
-		Service: "KeyValue",
-		Method:  "getValue",
-		Meta:    meta,
-		Body:    args.ToWire(),
-	})
+	resBody, res, err := k.client.Call("getValue", req, args.ToWire())
 	if err != nil {
-		return "", nil, err
+		return "", res, err
 	}
 
-	result, err := _GetValueResult_Read(res.Body)
+	result, err := _GetValueResult_Read(resBody)
 	if err != nil {
-		return "", nil, err
+		return "", res, err
 	}
 
 	if result.DoesNotExist != nil {
-		return "", resmeta, result.DoesNotExist
+		return "", res, result.DoesNotExist
 	}
-	return *result.Success, resmeta, nil
+	return *result.Success, res, nil
 }
 
-func (k keyValueClient) SetValue(ctx context.Context, meta yarpc.Meta, key string, value string) (yarpc.Meta, error) {
+func (k keyValueClient) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
 	args := SetValueArgs{Key: key, Value: value}
-	res, resmeta, err := k.client.Call(ctx, &thrift.Request{
-		Service: "KeyValue",
-		Method:  "setValue",
-		Meta:    meta,
-		Body:    args.ToWire(),
-	})
+	resBody, res, err := k.client.Call("setValue", req, args.ToWire())
 
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
-	_, err = _SetValueResult_Read(res.Body)
+	_, err = _SetValueResult_Read(resBody)
 	if err != nil {
-		return resmeta, err
+		return res, err
 	}
 
-	return resmeta, nil
+	return res, nil
 }
 
 type KeyValueHandler struct {
@@ -115,13 +105,13 @@ func (k KeyValueHandler) Handlers() map[string]thrift.Handler {
 	}
 }
 
-func (k KeyValueHandler) GetValueHandler(ctx context.Context, req *thrift.Request) (*thrift.Response, error) {
+func (k KeyValueHandler) GetValueHandler(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
 	var args GetValueArgs
-	if err := args.FromWire(req.Body); err != nil {
-		return nil, err
+	if err := args.FromWire(body); err != nil {
+		return wire.Value{}, nil, err
 	}
 
-	success, meta, err := k.impl.GetValue(ctx, req.Meta, args.Key)
+	success, res, err := k.impl.GetValue(req, args.Key)
 
 	var result GetValueResult
 	if err == nil {
@@ -129,24 +119,24 @@ func (k KeyValueHandler) GetValueHandler(ctx context.Context, req *thrift.Reques
 	} else if v, ok := err.(*ResourceDoesNotExist); ok {
 		result.DoesNotExist = v
 	} else {
-		return nil, err
+		return wire.Value{}, nil, err
 	}
 
-	return &thrift.Response{Meta: meta, Body: result.ToWire()}, nil
+	return result.ToWire(), res, nil
 }
 
-func (k KeyValueHandler) SetValueHandler(ctx context.Context, req *thrift.Request) (*thrift.Response, error) {
+func (k KeyValueHandler) SetValueHandler(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
 	var args SetValueArgs
-	if err := args.FromWire(req.Body); err != nil {
-		return nil, err
+	if err := args.FromWire(body); err != nil {
+		return wire.Value{}, nil, err
 	}
 
-	meta, err := k.impl.SetValue(ctx, req.Meta, args.Key, args.Value)
+	res, err := k.impl.SetValue(req, args.Key, args.Value)
 
 	var result SetValueResult
 	if err != nil {
-		return nil, err
+		return wire.Value{}, nil, err
 	}
 
-	return &thrift.Response{Meta: meta, Body: result.ToWire()}, nil
+	return result.ToWire(), res, nil
 }

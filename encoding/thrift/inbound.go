@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"io/ioutil"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
@@ -44,24 +43,22 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		return err
 	}
 
-	value, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
+	reqBody, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
 	if err != nil {
 		return decodeError{Reason: err}
 	}
 
-	service, method := splitProcedure(treq.Procedure)
-	res, err := t.Handler.Handle(ctx, &Request{
-		Service: service,
-		Method:  method,
-		Meta:    yarpc.NewMeta(treq.Headers),
-		Body:    value,
-	})
+	resBody, response, err := t.Handler.Handle(&Request{
+		Context: ctx,
+		Headers: treq.Headers,
+		TTL:     treq.TTL,
+	}, reqBody)
 
-	if res.Meta != nil {
-		rw.AddHeaders(res.Meta.Headers())
+	if response != nil {
+		rw.AddHeaders(response.Headers)
 	}
 
-	if err := t.Protocol.Encode(res.Body, rw); err != nil {
+	if err := t.Protocol.Encode(resBody, rw); err != nil {
 		return encodeError{Reason: err}
 	}
 
