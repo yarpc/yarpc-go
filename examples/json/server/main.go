@@ -22,13 +22,12 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
-
-	"golang.org/x/net/context"
 )
 
 type GetRequest struct {
@@ -51,12 +50,12 @@ type handler struct {
 	items map[string]string
 }
 
-func (h handler) Get(ctx context.Context, meta yarpc.Meta, req *GetRequest) (*GetResponse, yarpc.Meta, error) {
-	return &GetResponse{Value: h.items[req.Key]}, nil, nil
+func (h handler) Get(req *json.Request, body *GetRequest) (*GetResponse, *json.Response, error) {
+	return &GetResponse{Value: h.items[body.Key]}, nil, nil
 }
 
-func (h handler) Set(ctx context.Context, meta yarpc.Meta, req *SetRequest) (*SetResponse, yarpc.Meta, error) {
-	h.items[req.Key] = req.Value
+func (h handler) Set(req *json.Request, body *SetRequest) (*SetResponse, *json.Response, error) {
+	h.items[body.Key] = body.Value
 	return &SetResponse{}, nil, nil
 }
 
@@ -78,5 +77,8 @@ func main() {
 
 	if err := yarpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
+		os.Exit(1)
 	}
+
+	select {}
 }

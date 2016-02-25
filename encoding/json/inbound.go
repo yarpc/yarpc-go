@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -35,31 +34,34 @@ import (
 //
 // The wrapped function must already be in the correct format:
 //
-// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
+// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
 type jsonHandler struct {
 	reader  requestReader
 	handler reflect.Value
 }
 
 func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	req, err := h.reader.Read(json.NewDecoder(treq.Body))
+	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
 		return unmarshalError{Reason: err}
 	}
 
-	results := h.handler.Call([]reflect.Value{
-		reflect.ValueOf(ctx),
-		reflect.ValueOf(yarpc.NewMeta(treq.Headers)),
-		req,
-	})
+	request := Request{
+		Context:   ctx,
+		Procedure: treq.Procedure,
+		Headers:   treq.Headers,
+		TTL:       treq.TTL,
+	}
+
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(&request), reqBody})
 
 	if err := results[2].Interface(); err != nil {
 		// TODO proper error types
 		return err.(error)
 	}
 
-	if meta := results[1].Interface(); meta != nil {
-		rw.AddHeaders(meta.(yarpc.Meta).Headers())
+	if response := results[1].Interface().(*Response); response != nil {
+		rw.AddHeaders(response.Headers)
 	}
 
 	result := results[0].Interface()

@@ -34,5 +34,7 @@ type ResponseWriter interface {
 
 	// AddHeaders adds the given headers to the response. If called, this must
 	// be called before any invocation of Write().
+	//
+	// This MUST NOT panic if Headers is nil.
 	AddHeaders(Headers)
 }

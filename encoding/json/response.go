@@ -18,32 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package json provides the JSON encoding for YARPC.
-//
-// To make outbound requests using this encoding,
-//
-// 	client := json.New(outbound)
-// 	var response GetValueResponse
-// 	resBody, response, err := client.Call(
-// 		&json.Request{
-// 			Context: ctx,
-// 			Procedure: "getValue",
-// 		},
-// 		&GetValueRequest{...},
-// 		&response,
-// 	)
-//
-// To register a JSON procedure, define functions in the format,
-//
-// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
-//
-// Where '$reqBody' and '$resBody' are either pointers to structs representing
-// your request and response objects, or map[string]interface{}.
-//
-// Use the Register and Procedure functions to register the procedures with a
-// Registry.
-//
-// 	json.Register(r, json.Procedure("getValue", GetValue))
-// 	json.Register(r, json.Procedure("setValue", SetValue))
-//
 package json
+
+import "github.com/yarpc/yarpc-go/transport"
+
+// Response is a JSON response without the body.
+type Response struct {
+	Headers transport.Headers
+
+	// TODO Response context?
+}

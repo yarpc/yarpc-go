@@ -23,39 +23,19 @@ package json
 import (
 	"bytes"
 	"encoding/json"
-	"time"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
 )
 
-// Client TODO
+// Client makes JSON requests to a single service.
 type Client interface {
 	// Call performs an outbound JSON request.
 	//
-	// responseOut is a pointer to a value that can be filled with
+	// resBodyOut is a pointer to a value that can be filled with
 	// json.Unmarshal.
 	//
-	// Returns the response metadata or an error if the request failed.
-	Call(ctx context.Context, req *Request, responseOut interface{}) (yarpc.Meta, error)
-}
-
-// Request represents an outbound JSON request.
-type Request struct {
-	// Name of the procedure being called.
-	Procedure string
-
-	// Request metadata
-	Meta yarpc.Meta
-
-	// Request body. This may be any type that can be serialized by
-	// json.Marshal.
-	Body interface{}
-
-	// TTL is the ttl in ms
-	TTL time.Duration
+	// Returns the response or an error if the request failed.
+	Call(req *Request, reqBody interface{}, resBodyOut interface{}) (*Response, error)
 }
 
 // New builds a new JSON client.
@@ -73,33 +53,28 @@ type jsonClient struct {
 	caller, service string
 }
 
-func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interface{}) (yarpc.Meta, error) {
-	encoded, err := json.Marshal(req.Body)
+func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface{}) (*Response, error) {
+	encoded, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, marshalError{Reason: err}
-	}
-
-	var headers transport.Headers
-	if req.Meta != nil {
-		headers = req.Meta.Headers()
 	}
 
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
 		Procedure: req.Procedure,
-		Headers:   headers,
+		Headers:   req.Headers,
 		Body:      bytes.NewReader(encoded),
-		TTL:       req.TTL, // TODO consider default
+		TTL:       req.TTL, // TODO use default from channel
 	}
 
-	tres, err := c.t.Call(ctx, &treq)
+	tres, err := c.t.Call(req.Context, &treq)
 	if err != nil {
 		return nil, err
 	}
 
 	dec := json.NewDecoder(tres.Body)
-	if err := dec.Decode(responseOut); err != nil {
+	if err := dec.Decode(resBodyOut); err != nil {
 		return nil, unmarshalError{Reason: err}
 	}
 
@@ -107,5 +82,5 @@ func (c jsonClient) Call(ctx context.Context, req *Request, responseOut interfac
 		return nil, err
 	}
 
-	return yarpc.NewMeta(tres.Headers), nil
+	return &Response{Headers: tres.Headers}, nil
 }

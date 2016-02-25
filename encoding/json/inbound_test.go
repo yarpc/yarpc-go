@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -26,9 +25,10 @@ type simpleResponse struct {
 }
 
 func TestHandleStructSuccess(t *testing.T) {
-	h := func(_ context.Context, _ yarpc.Meta, r *simpleRequest) (*simpleResponse, yarpc.Meta, error) {
-		assert.Equal(t, "foo", r.Name)
-		assert.Equal(t, map[string]int32{"bar": 42}, r.Attributes)
+	h := func(r *Request, body *simpleRequest) (*simpleResponse, *Response, error) {
+		assert.Equal(t, "simpleCall", r.Procedure)
+		assert.Equal(t, "foo", body.Name)
+		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
 
 		return &simpleResponse{Success: true}, nil, nil
 	}
@@ -40,7 +40,7 @@ func TestHandleStructSuccess(t *testing.T) {
 
 	resw := new(transporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &transport.Request{
-		Procedure: "foo",
+		Procedure: "simpleCall",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
 	}, resw)
 	require.NoError(t, err)
@@ -52,9 +52,9 @@ func TestHandleStructSuccess(t *testing.T) {
 }
 
 func TestHandleMapSuccess(t *testing.T) {
-	h := func(_ context.Context, _ yarpc.Meta, r map[string]interface{}) (map[string]string, yarpc.Meta, error) {
-		assert.Equal(t, 42.0, r["foo"])
-		assert.Equal(t, []interface{}{"a", "b", "c"}, r["bar"])
+	h := func(_ *Request, body map[string]interface{}) (map[string]string, *Response, error) {
+		assert.Equal(t, 42.0, body["foo"])
+		assert.Equal(t, []interface{}{"a", "b", "c"}, body["bar"])
 
 		return map[string]string{"success": "true"}, nil, nil
 	}
@@ -74,6 +74,27 @@ func TestHandleMapSuccess(t *testing.T) {
 	var response struct{ Success string }
 	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
 	assert.Equal(t, "true", response.Success)
+}
+
+func TestHandleSuccessWithResponseHeaders(t *testing.T) {
+	h := func(*Request, *simpleRequest) (*simpleResponse, *Response, error) {
+		response := &Response{Headers: transport.Headers{"foo": "bar"}}
+		return &simpleResponse{Success: true}, response, nil
+	}
+
+	handler := jsonHandler{
+		reader:  structReader{reflect.TypeOf(simpleRequest{})},
+		handler: reflect.ValueOf(h),
+	}
+
+	resw := new(transporttest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &transport.Request{
+		Procedure: "simpleCall",
+		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
+	}, resw)
+	require.NoError(t, err)
+
+	assert.Equal(t, transport.Headers{"foo": "bar"}, resw.Headers)
 }
 
 func jsonBody(s string) io.Reader {

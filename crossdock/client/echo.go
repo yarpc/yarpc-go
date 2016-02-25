@@ -32,13 +32,8 @@ func EchoBehavior(addr string) Result {
 	token := randString(5)
 
 	_, err := client.Call(
-		ctx,
-		// TODO get Service from client
-		&json.Request{
-			Procedure: "echo",
-			Body:      &server.EchoRequest{Token: token},
-			TTL:       3 * time.Second,
-		},
+		&json.Request{Context: ctx, Procedure: "echo", TTL: 3 * time.Second},
+		&server.EchoRequest{Token: token},
 		&response,
 	)
 

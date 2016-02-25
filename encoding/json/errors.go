@@ -37,7 +37,7 @@ type marshalError struct {
 }
 
 func (e marshalError) Error() string {
-	return fmt.Sprintf("failed to write JSON: %v", e.Reason)
+	return fmt.Sprintf("failed to serialize JSON: %v", e.Reason)
 }
 
 // IsEncodingError returns true if the given error is an error encountered
