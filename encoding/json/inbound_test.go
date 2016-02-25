@@ -9,7 +9,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/testing"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +38,7 @@ func TestHandleStructSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(test_transport.FakeResponseWriter)
+	resw := new(transporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
@@ -64,7 +64,7 @@ func TestHandleMapSuccess(t *testing.T) {
 		handler: reflect.ValueOf(h),
 	}
 
-	resw := new(test_transport.FakeResponseWriter)
+	resw := new(transporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),

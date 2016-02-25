@@ -30,7 +30,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/yarpc/yarpc-go/transport"
-	ttrans "github.com/yarpc/yarpc-go/transport/testing"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +42,7 @@ func TestRoundTrip(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	// start the inbound with a mock handler
-	h := ttrans.NewMockHandler(mockCtrl)
+	h := transporttest.NewMockHandler(mockCtrl)
 	i := NewInbound("127.0.0.1:0")
 	require.NoError(t, i.Start(h), "failed to Start()")
 	defer i.Stop()
@@ -58,7 +58,7 @@ func TestRoundTrip(t *testing.T) {
 
 	// Expect a call with the given request and write the respons.
 	h.EXPECT().Handle(
-		gomock.Any(), ttrans.NewRequestMatcher(t, request), gomock.Any(),
+		gomock.Any(), transporttest.NewRequestMatcher(t, request), gomock.Any(),
 	).Do(
 		func(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) {
 			rw.AddHeaders(transport.Headers{"status": "ok"})
@@ -72,10 +72,11 @@ func TestRoundTrip(t *testing.T) {
 	res, err := o.Call(context.TODO(), request)
 
 	if assert.NoError(t, err) {
-		responseMatcher := ttrans.NewResponseMatcher(t, &transport.Response{
+		response := &transport.Response{
 			Headers: transport.Headers{"status": "ok"},
 			Body:    ioutil.NopCloser(bytes.NewReader([]byte("hello, world"))),
-		})
+		}
+		responseMatcher := transporttest.NewResponseMatcher(t, response)
 		assert.True(t, responseMatcher.Matches(res))
 	}
 }
