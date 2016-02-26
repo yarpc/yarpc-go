@@ -18,24 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package raw
 
-const (
-	// CallerHeader is the HTTP header used to indiate the service doing the calling
-	CallerHeader = "YARPC-Caller"
+import "github.com/yarpc/yarpc-go/transport"
 
-	// EncodingHeader is the HTTP header used to specify the name of the
-	// encoding.
-	EncodingHeader = "YARPC-Encoding"
-
-	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
-	TTLMSHeader = "YARPC-TTLms"
-
-	// ProcedureHeader is the HTTP header used to indicate the procedure
-	ProcedureHeader = "YARPC-Procedure"
-
-	// ServiceHeader is the HTTP header used to indicate the service
-	ServiceHeader = "YARPC-Service"
-)
-
-// TODO Make consistent with other languages^
+// Encoding is the name of this encoding.
+const Encoding transport.Encoding = "raw"
