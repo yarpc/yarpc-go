@@ -18,31 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package raw
 
-import (
-	"time"
+import "github.com/yarpc/yarpc-go/transport"
 
-	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
-)
-
-// Request is a JSON request without the body.
-type Request struct {
-	Context context.Context
-
-	// Name of the procedure being called.
-	Procedure string
-
-	// Request headers
-	Headers transport.Headers
-
-	// TTL is the amount of time in which this request is expected to finish.
-	TTL time.Duration
+// Registrant is used for types that define or know about different Raw
+// procedures.
+type Registrant interface {
+	// Gets a mapping from procedure name to the Handler for that procedure
+	// for all procedures provided by the registrant.
+	getHandlers() map[string]Handler
 }
 
-// Note: The shape of this request object is extremely similar to the
-// raw.Request object, but since we can't unify all the Request objects
-// (thrift.Request is very different), each encoding will have its own Request
-// object.
+// Handler implements a single procedure.
+type Handler interface {
+	Handle(req *Request, body []byte) ([]byte, *Response, error)
+}
+
+// procedure is a registrant with a single handler.
+type procedure struct {
+	Name    string
+	Handler Handler
+}
+
+func (p procedure) getHandlers() map[string]Handler {
+	return map[string]Handler{p.Name: p.Handler}
+}
+
+// Procedure builds a Registrant with a single procedure in it.
+func Procedure(name string, handler Handler) Registrant {
+	return procedure{Name: name, Handler: handler}
+}
+
+// Register registers the procedures defined by the given Registrant with the
+// given Registry.
+func Register(reg transport.Registry, registrant Registrant) {
+	for name, handler := range registrant.getHandlers() {
+		reg.Register(name, rawHandler{handler})
+	}
+}

@@ -18,31 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
-
-import (
-	"time"
-
-	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
-)
-
-// Request is a JSON request without the body.
-type Request struct {
-	Context context.Context
-
-	// Name of the procedure being called.
-	Procedure string
-
-	// Request headers
-	Headers transport.Headers
-
-	// TTL is the amount of time in which this request is expected to finish.
-	TTL time.Duration
-}
-
-// Note: The shape of this request object is extremely similar to the
-// raw.Request object, but since we can't unify all the Request objects
-// (thrift.Request is very different), each encoding will have its own Request
-// object.
+// Package raw provides the raw encoding for YARPC.
+//
+// To make outbound requests,
+//
+// 	client := raw.New(channel)
+// 	resBody, response, err := client.Call(
+// 		&raw.Request{
+// 			Context: ctx,
+// 			Procedure: "submit",
+// 		},
+// 		[]byte{1, 2, 3},
+// 	)
+//
+// To register a raw procedure, define a Registrant or use Procedure to make a
+// single-function Registrant, and register it with Register.
+//
+// 	func Submit(req *raw.Request, reqBody []byte) ([]byte, *raw.Response, error) {
+// 		// ...
+// 	}
+//
+// 	raw.Register(rpc, raw.Procedure("submit", Submit))
+package raw

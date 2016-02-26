@@ -18,31 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package raw
 
 import (
-	"time"
+	"io/ioutil"
 
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
 
-// Request is a JSON request without the body.
-type Request struct {
-	Context context.Context
-
-	// Name of the procedure being called.
-	Procedure string
-
-	// Request headers
-	Headers transport.Headers
-
-	// TTL is the amount of time in which this request is expected to finish.
-	TTL time.Duration
+// rawHandler adapts a Handler into a transport.Handler
+type rawHandler struct {
+	h Handler
 }
 
-// Note: The shape of this request object is extremely similar to the
-// raw.Request object, but since we can't unify all the Request objects
-// (thrift.Request is very different), each encoding will have its own Request
-// object.
+func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+	reqBody, err := ioutil.ReadAll(treq.Body)
+	if err != nil {
+		return err
+	}
+
+	request := Request{
+		Context:   ctx,
+		Procedure: treq.Procedure,
+		Headers:   treq.Headers,
+		TTL:       treq.TTL,
+	}
+
+	resBody, res, err := r.h.Handle(&request, reqBody)
+	if err != nil {
+		return err
+	}
+
+	if res != nil {
+		rw.AddHeaders(res.Headers)
+	}
+
+	if _, err := rw.Write(resBody); err != nil {
+		return err
+	}
+
+	return nil
+}

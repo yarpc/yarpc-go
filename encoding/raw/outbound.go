@@ -18,31 +18,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package raw
 
 import (
-	"time"
+	"bytes"
+	"io/ioutil"
 
 	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
 )
 
-// Request is a JSON request without the body.
-type Request struct {
-	Context context.Context
-
-	// Name of the procedure being called.
-	Procedure string
-
-	// Request headers
-	Headers transport.Headers
-
-	// TTL is the amount of time in which this request is expected to finish.
-	TTL time.Duration
+// Client makes Raw requests to a single service.
+type Client interface {
+	// Call performs an outbound Raw request.
+	Call(req *Request, body []byte) ([]byte, *Response, error)
 }
 
-// Note: The shape of this request object is extremely similar to the
-// raw.Request object, but since we can't unify all the Request objects
-// (thrift.Request is very different), each encoding will have its own Request
-// object.
+// New builds a new Raw client.
+func New(c transport.Channel) Client {
+	return rawClient{
+		t:       c.Outbound,
+		caller:  c.Caller,
+		service: c.Service,
+		// TODO channel-level TTLs
+	}
+}
+
+type rawClient struct {
+	t transport.Outbound
+
+	caller, service string
+}
+
+func (c rawClient) Call(req *Request, body []byte) ([]byte, *Response, error) {
+	treq := transport.Request{
+		Caller:    c.caller,
+		Service:   c.service,
+		Procedure: req.Procedure,
+		Headers:   req.Headers,
+		Body:      bytes.NewReader(body),
+		TTL:       req.TTL, // TODO use default from channel
+	}
+
+	tres, err := c.t.Call(req.Context, &treq)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tres.Body.Close()
+
+	resBody, err := ioutil.ReadAll(tres.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resBody, &Response{Headers: tres.Headers}, nil
+}
