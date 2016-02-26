@@ -1,9 +1,6 @@
 package server
 
-import (
-	"github.com/yarpc/yarpc-go"
-	"golang.org/x/net/context"
-)
+import "github.com/yarpc/yarpc-go/encoding/json"
 
 // EchoRequest contains a message to echo
 type EchoRequest struct {
@@ -16,6 +13,6 @@ type EchoResponse struct {
 }
 
 // Echo echoes an EchoResponse
-func Echo(ctx context.Context, meta yarpc.Meta, req *EchoRequest) (*EchoResponse, yarpc.Meta, error) {
-	return &EchoResponse{Token: req.Token}, nil, nil
+func Echo(req *json.Request, body *EchoRequest) (*EchoResponse, *json.Response, error) {
+	return &EchoResponse{Token: body.Token}, nil, nil
 }

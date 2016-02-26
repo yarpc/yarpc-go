@@ -18,26 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package json
 
-import "github.com/yarpc/yarpc-go/transport"
+import (
+	"time"
 
-// Meta TODO
-type Meta interface {
-	Headers() transport.Headers
-}
+	"github.com/yarpc/yarpc-go/transport"
 
-type meta struct {
-	headers transport.Headers
-}
+	"golang.org/x/net/context"
+)
 
-func (m meta) Headers() transport.Headers {
-	return m.headers
-}
+// Request is a JSON request without the body.
+type Request struct {
+	Context context.Context
 
-// NewMeta constructs a new Meta object with the given headers.
-func NewMeta(hs transport.Headers) Meta {
-	// TODO determine if this is how we want to expose meta construction to
-	// users.
-	return meta{hs}
+	// Name of the procedure being called.
+	Procedure string
+
+	// Request headers
+	Headers transport.Headers
+
+	// TTL is the amount of time in which this request is expected to finish.
+	TTL time.Duration
 }

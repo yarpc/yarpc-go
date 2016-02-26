@@ -193,6 +193,9 @@ type FakeResponseWriter struct {
 
 // AddHeaders for FakeResponseWriter.
 func (fw *FakeResponseWriter) AddHeaders(h transport.Headers) {
+	if fw.Headers == nil {
+		fw.Headers = make(transport.Headers)
+	}
 	for k, v := range h {
 		fw.Headers.Set(k, v)
 	}

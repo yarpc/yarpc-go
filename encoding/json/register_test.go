@@ -3,10 +3,7 @@ package json
 import (
 	"testing"
 
-	"github.com/yarpc/yarpc-go"
-
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 func TestWrapHandlerInvalid(t *testing.T) {
@@ -17,37 +14,31 @@ func TestWrapHandlerInvalid(t *testing.T) {
 		{"empty", func() {}},
 		{
 			"wrong-response",
-			func(context.Context, yarpc.Meta, map[string]interface{}) (yarpc.Meta, error) {
+			func(*Request, map[string]interface{}) (*Response, error) {
 				return nil, nil
 			},
 		},
 		{
-			"wrong-context",
-			func(string, yarpc.Meta, *struct{}) (*struct{}, yarpc.Meta, error) {
-				return nil, nil, nil
-			},
-		},
-		{
-			"wrong-meta",
-			func(context.Context, string, *struct{}) (*struct{}, yarpc.Meta, error) {
+			"wrong-request",
+			func(string, *struct{}) (*struct{}, *Response, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-req",
-			func(context.Context, yarpc.Meta, struct{}) (*struct{}, yarpc.Meta, error) {
+			func(*Request, struct{}) (*struct{}, *Response, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-res",
-			func(context.Context, yarpc.Meta, *struct{}) (struct{}, yarpc.Meta, error) {
+			func(*Request, *struct{}) (struct{}, *Response, error) {
 				return struct{}{}, nil, nil
 			},
 		},
 		{
 			"non-string-key",
-			func(context.Context, yarpc.Meta, map[int32]interface{}) (*struct{}, yarpc.Meta, error) {
+			func(*Request, map[int32]interface{}) (*struct{}, *Response, error) {
 				return nil, nil, nil
 			},
 		},
@@ -67,19 +58,19 @@ func TestWrapHandlerValid(t *testing.T) {
 	}{
 		{
 			"foo",
-			func(context.Context, yarpc.Meta, *struct{}) (*struct{}, yarpc.Meta, error) {
+			func(*Request, *struct{}) (*struct{}, *Response, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"bar",
-			func(context.Context, yarpc.Meta, map[string]interface{}) (*struct{}, yarpc.Meta, error) {
+			func(*Request, map[string]interface{}) (*struct{}, *Response, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"baz",
-			func(context.Context, yarpc.Meta, map[string]interface{}) (map[string]interface{}, yarpc.Meta, error) {
+			func(*Request, map[string]interface{}) (map[string]interface{}, *Response, error) {
 				return nil, nil, nil
 			},
 		},

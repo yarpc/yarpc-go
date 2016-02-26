@@ -24,22 +24,25 @@ import (
 	"bytes"
 	"io/ioutil"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"golang.org/x/net/context"
 )
 
 // Client is a generic Thrift client. It speaks in raw Thrift payloads. The code
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
-	Call(ctx context.Context, r *Request) (*Response, yarpc.Meta, error)
+	// Call the given Thrift method.
+	Call(method string, req *Request, body wire.Value) (wire.Value, *Response, error)
 }
 
 // Config contains the configuration for the Client.
 type Config struct {
+	// Name of the Thrift service. This is the name used in the Thrift file
+	// with the 'service' keyword.
+	Service string
+
 	// Channel through which requests will be sent. Required.
 	Channel transport.Channel
 
@@ -54,6 +57,7 @@ func New(c Config) Client {
 	//
 	// 	func New(t transport.Outbound) *MyServiceClient {
 	// 		c := thrift.New(thrift.Config{
+	// 			Service: "MyService",
 	// 			Outbound: t,
 	// 			Protocol: protocol.Binary,
 	// 		})
@@ -69,10 +73,11 @@ func New(c Config) Client {
 	}
 
 	return thriftClient{
-		p:       p,
-		t:       c.Channel.Outbound,
-		caller:  c.Channel.Caller,
-		service: c.Channel.Service,
+		p:             p,
+		t:             c.Channel.Outbound,
+		caller:        c.Channel.Caller,
+		service:       c.Channel.Service,
+		thriftService: c.Service,
 	}
 }
 
@@ -80,70 +85,62 @@ type thriftClient struct {
 	t transport.Outbound
 	p protocol.Protocol
 
+	// name of the Thrift service
+	thriftService string
+
+	// names of the services making the requests and receiving it.
 	caller, service string
 }
 
-func (t thriftClient) Call(ctx context.Context, r *Request) (*Response, yarpc.Meta, error) {
-	// Code generated for Thrift client calls will probable be something like
+func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wire.Value, *Response, error) {
+	// Code generated for Thrift client calls will probably be something like
 	// this:
 	//
-	// 	func (c *MyServiceClient) someMethod(ctx context.Context, m yarpc.Meta, arg1 Arg1Type, arg2Type) (returnValue, yarpc.Meta, error) {
+	// 	func (c *MyServiceClient) someMethod(req *thrift.Request, arg1 Arg1Type, arg2Type) (returnValue, *thrift.Response, error) {
 	// 		args := someMethodArgs{arg1: arg1, arg2: arg2}
-	// 		resp, m, err := c.client.Call(ctx, &thrift.Request{
-	// 			Service: "MyService",
-	// 			Method: "someMethod",
-	// 			Meta: m,
-	// 			Body: args.ToWire(),
-	// 		})
-	// 		if err != nil { return nil, m, err }
-	// 		if resp.Exception1 != nil {
-	// 			return nil, m, resp.Exception1
+	// 		resBody, res, err := c.client.Call("someMethod", req, args.ToWire())
+	// 		if err != nil { return nil, res, err }
+	// 		if resBody.Exception1 != nil {
+	// 			return nil, res, resBody.Exception1
 	// 		}
-	// 		if resp.Exception2 != nil {
-	// 			return nil, m, resp.Exception2
+	// 		if resBody.Exception2 != nil {
+	// 			return nil, res, resBody.Exception2
 	// 		}
-	// 		if resp.Success != nil {
-	// 			return resp.Succ, m, nil
+	// 		if resBody.Success != nil {
+	// 			return resp.Succ, res, nil
 	// 		}
 	// 		// TODO: Throw an error here because we expected a non-void return
 	// 		// but we got neither an exception, nor a return value.
 	// 	}
 
-	// TODO don't store this in memory. Use a ResponseWriter-like interface for
-	// underlying transport.
 	var buffer bytes.Buffer
-	if err := t.p.Encode(r.Body, &buffer); err != nil {
-		return nil, nil, encodeError{Reason: err}
+	if err := c.p.Encode(reqBody, &buffer); err != nil {
+		return wire.Value{}, nil, encodeError{Reason: err}
 	}
 
-	var headers transport.Headers
-	if r.Meta != nil {
-		headers = r.Meta.Headers()
-	}
-
-	tres, err := t.t.Call(ctx, &transport.Request{
-		Caller:    t.caller,
-		Service:   t.service,
-		Procedure: procedureName(r.Service, r.Method),
-		Headers:   headers,
+	treq := transport.Request{
+		Caller:    c.caller,
+		Service:   c.service,
+		Procedure: procedureName(c.thriftService, method),
+		Headers:   req.Headers,
 		Body:      &buffer,
-		// TTL: TODO,
-	})
+		TTL:       req.TTL,
+	}
+	tres, err := c.t.Call(req.Context, &treq)
 	if err != nil {
-		return nil, nil, err
+		return wire.Value{}, nil, err
 	}
 
 	defer tres.Body.Close()
 	payload, err := ioutil.ReadAll(tres.Body)
 	if err != nil {
-		return nil, nil, err
+		return wire.Value{}, nil, err
 	}
 
-	res, err := t.p.Decode(bytes.NewReader(payload), wire.TStruct)
+	resBody, err := c.p.Decode(bytes.NewReader(payload), wire.TStruct)
 	if err != nil {
-		return nil, nil, decodeError{Reason: err}
+		return wire.Value{}, nil, decodeError{Reason: err}
 	}
 
-	meta := yarpc.NewMeta(tres.Headers)
-	return &Response{Body: res}, meta, nil
+	return resBody, &Response{Headers: tres.Headers}, nil
 }

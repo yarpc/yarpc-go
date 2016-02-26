@@ -24,22 +24,21 @@
 //
 // 	client := json.New(outbound)
 // 	var response GetValueResponse
-// 	resmeta, err := client.Call(
-// 		ctx,
+// 	resBody, response, err := client.Call(
 // 		&json.Request{
+// 			Context: ctx,
 // 			Procedure: "getValue",
-// 			Meta: meta,
-// 			Body: &GetValueRequest{...},
 // 		},
+// 		&GetValueRequest{...},
 // 		&response,
 // 	)
 //
 // To register a JSON procedure, define functions in the format,
 //
-// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
+// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
 //
-// Where '$request' and '$response' are either pointers to structs
-// representing your request and response objects, or map[string]interface{}.
+// Where '$reqBody' and '$resBody' are either pointers to structs representing
+// your request and response objects, or map[string]interface{}.
 //
 // Use the Register and Procedure functions to register the procedures with a
 // Registry.

@@ -20,19 +20,12 @@
 
 package thrift
 
-import (
-	"github.com/yarpc/yarpc-go"
-
-	"github.com/thriftrw/thriftrw-go/wire"
-)
+import "github.com/yarpc/yarpc-go/transport"
 
 // Response represents a raw Thrift response.
 type Response struct {
-	// Metadata for the response.
-	Meta yarpc.Meta
-
-	// Body of the Thrift response in a protocol-agnostic format.
-	Body wire.Value
+	// Response headers
+	Headers transport.Headers
 
 	// TODO: Handle REPLY/EXCEPTION for response envelopes
 }

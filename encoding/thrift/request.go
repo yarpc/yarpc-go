@@ -21,19 +21,20 @@
 package thrift
 
 import (
-	"github.com/yarpc/yarpc-go"
+	"time"
 
-	"github.com/thriftrw/thriftrw-go/wire"
+	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
 )
 
 // Request represents a raw Thrift request.
 type Request struct {
-	// Name of the Thrift service and method.
-	Service, Method string
+	Context context.Context
 
-	// Metadata for the request.
-	Meta yarpc.Meta
+	// Request headers
+	Headers transport.Headers
 
-	// Body of the Thrift request in a protocol-agnostic format.
-	Body wire.Value
+	// TTL is the amount of time in which this request is expected to finish.
+	TTL time.Duration
 }

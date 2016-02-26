@@ -18,49 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package json
 
-import (
-	"bytes"
-	"io/ioutil"
+import "github.com/yarpc/yarpc-go/transport"
 
-	"github.com/yarpc/yarpc-go/transport"
+// Response is a JSON response without the body.
+type Response struct {
+	Headers transport.Headers
 
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
-	"golang.org/x/net/context"
-)
-
-// thriftHandler wraps a Thrift Handler into a transport.Handler
-type thriftHandler struct {
-	Handler  Handler
-	Protocol protocol.Protocol
-}
-
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	body, err := ioutil.ReadAll(treq.Body)
-	if err != nil {
-		return err
-	}
-
-	reqBody, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
-	if err != nil {
-		return decodeError{Reason: err}
-	}
-
-	resBody, response, err := t.Handler.Handle(&Request{
-		Context: ctx,
-		Headers: treq.Headers,
-		TTL:     treq.TTL,
-	}, reqBody)
-
-	if response != nil {
-		rw.AddHeaders(response.Headers)
-	}
-
-	if err := t.Protocol.Encode(resBody, rw); err != nil {
-		return encodeError{Reason: err}
-	}
-
-	return nil
+	// TODO Response context?
 }

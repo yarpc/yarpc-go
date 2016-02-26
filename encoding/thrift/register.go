@@ -24,20 +24,20 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
-	"golang.org/x/net/context"
+	"github.com/thriftrw/thriftrw-go/wire"
 )
 
 // Handler represents a Thrift request handler.
 type Handler interface {
-	Handle(ctx context.Context, req *Request) (*Response, error)
+	Handle(req *Request, body wire.Value) (wire.Value, *Response, error)
 }
 
 // HandlerFunc is a convenience type alias for functions that implement that act as Handlers.
-type HandlerFunc func(context.Context, *Request) (*Response, error)
+type HandlerFunc func(*Request, wire.Value) (wire.Value, *Response, error)
 
 // Handle forwards the request to the underlying function.
-func (f HandlerFunc) Handle(ctx context.Context, req *Request) (*Response, error) {
-	return f(ctx, req)
+func (f HandlerFunc) Handle(req *Request, body wire.Value) (wire.Value, *Response, error) {
+	return f(req, body)
 }
 
 // Service represents a Thrift service implementation.

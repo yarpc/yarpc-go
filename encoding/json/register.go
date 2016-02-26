@@ -24,16 +24,13 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
 )
 
 var (
-	_contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
-	_metaType    = reflect.TypeOf((*yarpc.Meta)(nil)).Elem()
-	_errorType   = reflect.TypeOf((*error)(nil)).Elem()
+	_requestType  = reflect.TypeOf((*Request)(nil))
+	_responseType = reflect.TypeOf((*Response)(nil))
+	_errorType    = reflect.TypeOf((*error)(nil)).Elem()
 )
 
 // Registrant is used for types that define or know about different JSON
@@ -57,9 +54,9 @@ func (p procedure) getHandlers() map[string]interface{} {
 // Procedure builds a Registrant with a single procedure in it. handler must
 // be a function with a signature similar to,
 //
-// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
+// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
 //
-// Where $request and $response are a map[string]interface{} or pointers to
+// Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
 func Procedure(name string, handler interface{}) Registrant {
 	return procedure{Name: name, Handler: handler}
@@ -71,9 +68,9 @@ func Procedure(name string, handler interface{}) Registrant {
 // Handlers must have a signature similar to the following or the system will
 // panic.
 //
-// 	f(context.Context, yarpc.Meta, req $request) ($response, yarpc.Meta, error)
+// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
 //
-// Where $request and $response are a map[string]interface{} or pointers to
+// Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
 func Register(reg transport.Registry, registrant Registrant) {
 	for name, handler := range registrant.getHandlers() {
@@ -84,14 +81,14 @@ func Register(reg transport.Registry, registrant Registrant) {
 // wrapHandler takes a valid JSON handler function and converts it into a
 // transport.Handler.
 func wrapHandler(name string, handler interface{}) transport.Handler {
-	reqType := verifySignature(name, reflect.TypeOf(handler))
+	reqBodyType := verifySignature(name, reflect.TypeOf(handler))
 
 	var r requestReader
-	if reqType.Kind() == reflect.Map {
-		r = mapReader{reqType}
+	if reqBodyType.Kind() == reflect.Map {
+		r = mapReader{reqBodyType}
 	} else {
 		// struct ptr
-		r = structReader{reqType.Elem()}
+		r = structReader{reqBodyType.Elem()}
 	}
 
 	return jsonHandler{
@@ -111,9 +108,9 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		))
 	}
 
-	if t.NumIn() != 3 {
+	if t.NumIn() != 2 {
 		panic(fmt.Sprintf(
-			"expected handler for %q to have 3 arguments but it had %v",
+			"expected handler for %q to have 2 arguments but it had %v",
 			n, t.NumIn(),
 		))
 	}
@@ -125,42 +122,41 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		))
 	}
 
-	if t.In(0) != _contextType || t.In(1) != _metaType {
+	if t.In(0) != _requestType {
 		panic(fmt.Sprintf(
-			"the first two arguments of the handler for %q must be "+
-				"context.Context and yarpc.Meta, and not: %v, %v",
-			n, t.In(0), t.In(1),
+			"the first argument of the handler for %q must be of type "+
+				"*json.Request, and not: %v", n, t.In(0),
 		))
 	}
 
-	if t.Out(1) != _metaType || t.Out(2) != _errorType {
+	if t.Out(1) != _responseType || t.Out(2) != _errorType {
 		panic(fmt.Sprintf(
-			"the last two results of the handler for %q must be "+
-				"yarpc.Meta and error, and not: %v, %v",
+			"the last two results of the handler for %q must be of type "+
+				"*json.Response and error, and not: %v, %v",
 			n, t.Out(1), t.Out(2),
 		))
 	}
 
-	reqType := t.In(2)
-	resType := t.Out(0)
+	reqBodyType := t.In(1)
+	resBodyType := t.Out(0)
 
-	if !isValidReqResType(reqType) {
+	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the third argument of the handler for %q must be "+
+			"the second argument of the handler for %q must be "+
 				"a struct pointer or a map[string]interface{}, and not: %v",
-			n, reqType,
+			n, reqBodyType,
 		))
 	}
 
-	if !isValidReqResType(resType) {
+	if !isValidReqResType(resBodyType) {
 		panic(fmt.Sprintf(
 			"the first result of the handler for %q must be "+
 				"a struct pointer or a map[string]interface{}, and not: %v",
-			n, resType,
+			n, resBodyType,
 		))
 	}
 
-	return reqType
+	return reqBodyType
 }
 
 // isValidReqResType checks if the given type is a pointer to a struct or a
