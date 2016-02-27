@@ -23,14 +23,14 @@
 // To make outbound requests using this encoding,
 //
 // 	client := json.New(outbound)
-// 	var response GetValueResponse
-// 	resBody, response, err := client.Call(
+// 	var resBody GetValueResponse
+// 	response, err := client.Call(
 // 		&json.Request{
 // 			Context: ctx,
 // 			Procedure: "getValue",
 // 		},
 // 		&GetValueRequest{...},
-// 		&response,
+// 		&resBody,
 // 	)
 //
 // To register a JSON procedure, define functions in the format,

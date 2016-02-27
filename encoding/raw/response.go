@@ -18,31 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package raw
 
-import (
-	"time"
+import "github.com/yarpc/yarpc-go/transport"
 
-	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
-)
-
-// Request is a JSON request without the body.
-type Request struct {
-	Context context.Context
-
-	// Name of the procedure being called.
-	Procedure string
-
-	// Request headers
+// Response is a Raw response without the body.
+type Response struct {
 	Headers transport.Headers
 
-	// TTL is the amount of time in which this request is expected to finish.
-	TTL time.Duration
+	// TODO Response context?
 }
-
-// Note: The shape of this request object is extremely similar to the
-// raw.Request object, but since we can't unify all the Request objects
-// (thrift.Request is very different), each encoding will have its own Request
-// object.
