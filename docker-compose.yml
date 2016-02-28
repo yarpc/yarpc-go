@@ -5,9 +5,10 @@ services:
         image: yarpc/crossdock:v2
         links:
             - yarpc-go
+            - yarpc-python
         environment:
-            - CROSSDOCK_CLIENTS=yarpc-go
-            - CROSSDOCK_AXIS_SERVER=yarpc-go
+            - CROSSDOCK_CLIENTS=yarpc-go,yarpc-python
+            - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-python
             - CROSSDOCK_AXIS_BEHAVIOR=echo
 
     yarpc-go:
@@ -29,7 +30,7 @@ services:
             - 8081
 
     yarpc-python:
-        image: yarpc/yarpc-python
+        image: yarpc/yarpc-python:crossdock-v2
         ports:
             - 8080
             - 8081
