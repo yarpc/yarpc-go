@@ -6,10 +6,9 @@ services:
         links:
             - yarpc-go
             - yarpc-python
-            - yarpc-node
         environment:
-            - CROSSDOCK_CLIENTS=yarpc-go,yarpc-python,yarpc-node
-            - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-python,yarpc-node
+            - CROSSDOCK_CLIENTS=yarpc-go,yarpc-python
+            - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-python
             - CROSSDOCK_AXIS_BEHAVIOR=echo
 
     yarpc-go:
