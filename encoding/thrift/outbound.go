@@ -121,6 +121,7 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
+		Encoding:  Encoding,
 		Procedure: procedureName(c.thriftService, method),
 		Headers:   req.Headers,
 		Body:      &buffer,

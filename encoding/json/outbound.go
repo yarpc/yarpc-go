@@ -62,6 +62,7 @@ func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
+		Encoding:  Encoding,
 		Procedure: req.Procedure,
 		Headers:   req.Headers,
 		Body:      bytes.NewReader(encoded),
