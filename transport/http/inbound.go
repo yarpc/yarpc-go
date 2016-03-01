@@ -44,15 +44,15 @@ type Inbound interface {
 
 // NewInbound builds a new HTTP inbound that listens on the given address.
 func NewInbound(addr string) Inbound {
-	return &httpInbound{addr: addr}
+	return &inbound{addr: addr}
 }
 
-type httpInbound struct {
+type inbound struct {
 	addr     string
 	listener net.Listener
 }
 
-func (i *httpInbound) Start(h transport.Handler) error {
+func (i *inbound) Start(h transport.Handler) error {
 	var err error
 	i.listener, err = net.Listen("tcp", i.addr)
 	if err != nil {
@@ -60,12 +60,12 @@ func (i *httpInbound) Start(h transport.Handler) error {
 	}
 
 	i.addr = i.listener.Addr().String() // in case it changed
-	server := &http.Server{Handler: httpHandler{h}}
+	server := &http.Server{Handler: handler{h}}
 	go server.Serve(i.listener)
 	return nil
 }
 
-func (i *httpInbound) Stop() error {
+func (i *inbound) Stop() error {
 	if i.listener == nil {
 		return nil
 	}
@@ -74,7 +74,7 @@ func (i *httpInbound) Stop() error {
 	return err
 }
 
-func (i *httpInbound) Addr() net.Addr {
+func (i *inbound) Addr() net.Addr {
 	if i.listener == nil {
 		return nil
 	}
@@ -82,11 +82,11 @@ func (i *httpInbound) Addr() net.Addr {
 }
 
 // httpHandler adapts a transport.Handler into a handler for net/http.
-type httpHandler struct {
+type handler struct {
 	Handler transport.Handler
 }
 
-func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.NotFound(w, req)
 	}
