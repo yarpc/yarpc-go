@@ -1,38 +1,26 @@
-hash: 52c52a317660631476dc44f2973fe2a3c535a9ab19345a689a26af4f4e7b6675
-updated: 2016-02-22T13:11:52.429319627-08:00
+hash: 672ef6a9d191e20f5fc1e1f0ac53bb00bda74d8245b4326671c2fddf99823045
+updated: 2016-03-01T09:53:48.86061185-08:00
 imports:
-- name: github.com/davecgh/go-spew
-  version: 2df174808ee097f90d259e432cc04442cf60be21
-  subpackages:
-  - spew
 - name: github.com/golang/mock
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
-- name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
-  subpackages:
-  - difflib
-- name: github.com/stretchr/objx
-  version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
   version: 9f9027faeb0dad515336ed2f28317f9f8f527ab4
   subpackages:
   - assert
   - require
-  - http
-  - mock
 - name: github.com/thriftrw/thriftrw-go
   version: fa2079dcd5e7f71ecd4a1af10a428b1e21f5bf75
   subpackages:
   - protocol
   - wire
-  - compile
-  - gen
   - protocol/binary
-  - ast
-  - idl
-  - idl/internal
+- name: github.com/uber/tchannel-go
+  version: b74290b0ad588b181d51f7e20dbb7b2b07c6de1e
+  subpackages:
+  - tnet
+  - typed
 - name: golang.org/x/net
   version: 04b9de9b512f58addf28c9853d50ebef61c3953e
   subpackages:
