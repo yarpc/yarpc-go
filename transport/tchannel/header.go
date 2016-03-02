@@ -39,7 +39,7 @@ import (
 func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, error)) (transport.Headers, error) {
 	if format == tchannel.JSON {
 		// JSON is special
-		headers := make(transport.Headers)
+		var headers transport.Headers
 		err := tchannel.NewArgReader(getReader()).ReadJSON(&headers)
 		return headers, err
 	}
@@ -112,15 +112,15 @@ func encodeHeaders(hs transport.Headers) []byte {
 	i := 2
 	binary.BigEndian.PutUint16(out, uint16(len(hs))) // nh:2
 	for k, v := range hs {
-		i += _putStr16([]byte(k), out[i:]) // k~2
-		i += _putStr16([]byte(v), out[i:]) // v~2
+		i += _putStr16(k, out[i:]) // k~2
+		i += _putStr16(v, out[i:]) // v~2
 	}
 
 	return out
 }
 
 // _putStr16 writes the bytes `in` into `out` using the encoding `s~2`.
-func _putStr16(in []byte, out []byte) int {
+func _putStr16(in string, out []byte) int {
 	binary.BigEndian.PutUint16(out, uint16(len(in)))
 	return copy(out[2:], in) + 2
 }
