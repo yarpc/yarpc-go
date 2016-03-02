@@ -22,29 +22,88 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
+	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
+	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
 
+type GetRequest struct {
+	Key string `json:"key"`
+}
+
+type GetResponse struct {
+	Value string `json:"value"`
+}
+
+type SetRequest struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type SetResponse struct {
+}
+
+func get(ctx context.Context, c json.Client, k string) (string, error) {
+	var response GetResponse
+	_, err := c.Call(
+		&json.Request{Procedure: "get", Context: ctx},
+		&GetRequest{Key: k},
+		&response,
+	)
+	return response.Value, err
+}
+
+func set(ctx context.Context, c json.Client, k string, v string) error {
+	var response SetResponse
+	_, err := c.Call(
+		&json.Request{Procedure: "set", Context: ctx},
+		&SetRequest{Key: k, Value: v},
+		&response,
+	)
+	return err
+}
+
 func main() {
+	outboundName := ""
+	flag.StringVar(
+		&outboundName,
+		"outbound", "", "name of the outbound to use (http/tchannel)",
+	)
+
+	flag.Parse()
+
+	var outbound transport.Outbound
+	switch strings.ToLower(outboundName) {
+	case "http":
+		outbound = http.NewOutbound("http://localhost:8080")
+	case "tchannel":
+		channel, err := tchannel.NewChannel("keyvalue-client", nil)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		outbound = tch.NewOutbound(channel, tch.HostPort("localhost:4040"))
+	default:
+		log.Fatalf("invalid outbound: %q\n", outboundName)
+	}
+
 	rpc := yarpc.New(yarpc.Config{
-		Name: "keyvalue-client",
-		Outbounds: transport.Outbounds{
-			"keyvalue": http.NewOutbound("http://localhost:8080"),
-		},
+		Name:      "keyvalue-client",
+		Outbounds: transport.Outbounds{"keyvalue": outbound},
 	})
 
-	client := keyvalue.NewKeyValueClient(rpc.Channel("keyvalue"))
+	client := json.New(rpc.Channel("keyvalue"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()
@@ -68,7 +127,7 @@ func main() {
 			key := args[0]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if value, _, err := client.GetValue(&thrift.Request{Context: ctx}, key); err != nil {
+			if value, err := get(ctx, client, key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -83,8 +142,8 @@ func main() {
 			key, value := args[0], args[1]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if _, err := client.SetValue(&thrift.Request{Context: ctx}, key, value); err != nil {
-				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
+			if err := set(ctx, client, key, value); err != nil {
+				fmt.Println("set %q = %q failed: %v", key, value, err.Error())
 			}
 			continue
 

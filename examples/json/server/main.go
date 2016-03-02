@@ -80,9 +80,7 @@ func main() {
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(channel, tch.ListenAddr(":4040")),
-		},
-		Outbounds: transport.Outbounds{
-			"moe": http.NewOutbound("http://localhost:8080"),
+			http.NewInbound(":8080"),
 		},
 	})
 

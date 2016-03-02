@@ -22,69 +22,62 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"sync"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 )
-
-type GetRequest struct {
-	Key string `json:"key"`
-}
-
-type GetResponse struct {
-	Value string `json:"value"`
-}
-
-type SetRequest struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type SetResponse struct {
-}
 
 type handler struct {
 	lock  *sync.RWMutex
 	items map[string]string
 }
 
-func (h handler) Get(req *json.Request, body *GetRequest) (*GetResponse, *json.Response, error) {
+func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
 	h.lock.RLock()
-	result := &GetResponse{Value: h.items[body.Key]}
-	h.lock.RUnlock()
-	return result, nil, nil
+	defer h.lock.RUnlock()
+
+	if value, ok := h.items[key]; ok {
+		return value, nil, nil
+	}
+
+	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
 }
 
-func (h handler) Set(req *json.Request, body *SetRequest) (*SetResponse, *json.Response, error) {
+func (h handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
 	h.lock.Lock()
-	h.items[body.Key] = body.Value
+	h.items[key] = value
 	h.lock.Unlock()
-	return &SetResponse{}, nil, nil
+	return nil, nil
 }
 
 func main() {
+	channel, err := tchannel.NewChannel("keyvalue", nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	rpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
+			tch.NewInbound(channel, tch.ListenAddr(":4040")),
 			http.NewInbound(":8080"),
-		},
-		Outbounds: transport.Outbounds{
-			"moe": http.NewOutbound("http://localhost:8080"),
 		},
 	})
 
 	handler := handler{items: make(map[string]string), lock: &sync.RWMutex{}}
-	json.Register(rpc, json.Procedure("get", handler.Get))
-	json.Register(rpc, json.Procedure("set", handler.Set))
+	thrift.Register(rpc, keyvalue.NewKeyValueHandler(handler))
 
 	if err := rpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
-		os.Exit(1)
 	}
 
-	select {}
+	select {} // block forever
 }
