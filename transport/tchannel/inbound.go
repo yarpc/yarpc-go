@@ -159,6 +159,7 @@ func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 }
 
 type responseWriter struct {
+	failedWith   error
 	bodyWriter   tchannel.ArgWriter
 	format       tchannel.Format
 	headers      transport.Headers
@@ -184,10 +185,14 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
+	if rw.failedWith != nil {
+		return 0, rw.failedWith
+	}
+
 	if !rw.wroteHeaders {
 		rw.wroteHeaders = true
-		err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer)
-		if err != nil {
+		if err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer); err != nil {
+			rw.failedWith = err
 			return 0, err
 		}
 	}
@@ -196,6 +201,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 		var err error
 		rw.bodyWriter, err = rw.response.Arg3Writer()
 		if err != nil {
+			rw.failedWith = err
 			return 0, err
 		}
 	}
