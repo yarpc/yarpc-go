@@ -126,9 +126,15 @@ func (h httpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Optional headers:
+
+	encoding := req.Header.Get(EncodingHeader)
+	req.Header.Del(EncodingHeader)
+
 	treq := &transport.Request{
 		Caller:    caller,
 		Service:   service,
+		Encoding:  transport.Encoding(encoding),
 		Procedure: procedure,
 		Headers:   fromHTTPHeader(req.Header, nil),
 		Body:      req.Body,

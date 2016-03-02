@@ -53,6 +53,7 @@ func (c rawClient) Call(req *Request, body []byte) ([]byte, *Response, error) {
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
+		Encoding:  Encoding,
 		Procedure: req.Procedure,
 		Headers:   req.Headers,
 		Body:      bytes.NewReader(body),

@@ -63,6 +63,11 @@ func (h httpOutbound) Call(ctx context.Context, req *transport.Request) (*transp
 	request.Header.Set(ProcedureHeader, req.Procedure)
 	request.Header.Set(TTLMSHeader, fmt.Sprintf("%d", req.TTL/time.Millisecond))
 
+	encoding := string(req.Encoding)
+	if encoding != "" {
+		request.Header.Set(EncodingHeader, encoding)
+	}
+
 	response, err := ctxhttp.Do(ctx, h.Client, request)
 	if err != nil {
 		return nil, err

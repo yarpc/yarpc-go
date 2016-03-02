@@ -29,8 +29,12 @@ import (
 type Request struct {
 	Caller    string
 	Service   string
+	Encoding  Encoding
 	Procedure string
 	Headers   Headers
 	Body      io.Reader
 	TTL       time.Duration
 }
+
+// Encoding represents an encoding format for requests.
+type Encoding string
