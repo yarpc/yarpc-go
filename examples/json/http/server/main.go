@@ -22,43 +22,63 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
+	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 )
+
+type GetRequest struct {
+	Key string `json:"key"`
+}
+
+type GetResponse struct {
+	Value string `json:"value"`
+}
+
+type SetRequest struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type SetResponse struct {
+}
 
 type handler struct {
 	items map[string]string
 }
 
-func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
-	if value, ok := h.items[key]; ok {
-		return value, nil, nil
-	}
-
-	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
+func (h handler) Get(req *json.Request, body *GetRequest) (*GetResponse, *json.Response, error) {
+	return &GetResponse{Value: h.items[body.Key]}, nil, nil
 }
 
-func (h handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
-	h.items[key] = value
-	return nil, nil
+func (h handler) Set(req *json.Request, body *SetRequest) (*SetResponse, *json.Response, error) {
+	h.items[body.Key] = body.Value
+	return &SetResponse{}, nil, nil
 }
 
 func main() {
-	yarpc := yarpc.New(yarpc.Config{
-		Name:     "keyvalue",
-		Inbounds: []transport.Inbound{http.NewInbound(":8080")},
+	rpc := yarpc.New(yarpc.Config{
+		Name: "keyvalue",
+		Inbounds: []transport.Inbound{
+			http.NewInbound(":8080"),
+			// TODO tchannel.Inbound{},
+		},
+		Outbounds: transport.Outbounds{
+			"moe": http.NewOutbound("http://localhost:8080"),
+		},
 	})
 
 	handler := handler{items: make(map[string]string)}
-	thrift.Register(yarpc, keyvalue.NewKeyValueHandler(handler))
+	json.Register(rpc, json.Procedure("get", handler.Get))
+	json.Register(rpc, json.Procedure("set", handler.Set))
 
-	if err := yarpc.Start(); err != nil {
+	if err := rpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
+		os.Exit(1)
 	}
 
-	select {} // block forever
+	select {}
 }

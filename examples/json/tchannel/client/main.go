@@ -23,6 +23,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -30,8 +31,9 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
+	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
 
@@ -72,14 +74,19 @@ func set(ctx context.Context, c json.Client, k string, v string) error {
 }
 
 func main() {
-	yarpc := yarpc.New(yarpc.Config{
+	channel, err := tchannel.NewChannel("keyvalue-client", nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	rpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue-client",
 		Outbounds: transport.Outbounds{
-			"keyvalue": http.NewOutbound("http://localhost:8080"),
+			"keyvalue": tch.NewOutbound(channel, tch.HostPort("localhost:4040")),
 		},
 	})
 
-	client := json.New(yarpc.Channel("keyvalue"))
+	client := json.New(rpc.Channel("keyvalue"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()

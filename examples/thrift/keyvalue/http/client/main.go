@@ -37,14 +37,14 @@ import (
 )
 
 func main() {
-	yarpc := yarpc.New(yarpc.Config{
+	rpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue-client",
 		Outbounds: transport.Outbounds{
 			"keyvalue": http.NewOutbound("http://localhost:8080"),
 		},
 	})
 
-	client := keyvalue.NewKeyValueClient(yarpc.Channel("keyvalue"))
+	client := keyvalue.NewKeyValueClient(rpc.Channel("keyvalue"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()
