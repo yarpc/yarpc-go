@@ -23,6 +23,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/json"
@@ -47,15 +48,21 @@ type SetResponse struct {
 }
 
 type handler struct {
+	lock  *sync.RWMutex
 	items map[string]string
 }
 
 func (h handler) Get(req *json.Request, body *GetRequest) (*GetResponse, *json.Response, error) {
-	return &GetResponse{Value: h.items[body.Key]}, nil, nil
+	h.lock.RLock()
+	result := &GetResponse{Value: h.items[body.Key]}
+	h.lock.RUnlock()
+	return result, nil, nil
 }
 
 func (h handler) Set(req *json.Request, body *SetRequest) (*SetResponse, *json.Response, error) {
+	h.lock.Lock()
 	h.items[body.Key] = body.Value
+	h.lock.Unlock()
 	return &SetResponse{}, nil, nil
 }
 
@@ -64,14 +71,13 @@ func main() {
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8080"),
-			// TODO tchannel.Inbound{},
 		},
 		Outbounds: transport.Outbounds{
 			"moe": http.NewOutbound("http://localhost:8080"),
 		},
 	})
 
-	handler := handler{items: make(map[string]string)}
+	handler := handler{items: make(map[string]string), lock: &sync.RWMutex{}}
 	json.Register(rpc, json.Procedure("get", handler.Get))
 	json.Register(rpc, json.Procedure("set", handler.Set))
 

@@ -22,6 +22,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
@@ -31,10 +32,14 @@ import (
 )
 
 type handler struct {
+	lock  *sync.RWMutex
 	items map[string]string
 }
 
 func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
+
 	if value, ok := h.items[key]; ok {
 		return value, nil, nil
 	}
@@ -43,7 +48,9 @@ func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Resp
 }
 
 func (h handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
+	h.lock.Lock()
 	h.items[key] = value
+	h.lock.Unlock()
 	return nil, nil
 }
 
@@ -53,7 +60,7 @@ func main() {
 		Inbounds: []transport.Inbound{http.NewInbound(":8080")},
 	})
 
-	handler := handler{items: make(map[string]string)}
+	handler := handler{items: make(map[string]string), lock: &sync.RWMutex{}}
 	thrift.Register(rpc, keyvalue.NewKeyValueHandler(handler))
 
 	if err := rpc.Start(); err != nil {
