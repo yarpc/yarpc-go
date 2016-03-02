@@ -79,7 +79,13 @@ func (i *inbound) Start(h transport.Handler) error {
 
 	addr := i.addr
 	if addr == "" {
-		addr = ":0"
+		listenIP, err := tchannel.ListenIP()
+		if err != nil {
+			return err
+		}
+
+		addr = listenIP.String() + ":0"
+		// TODO(abg): Find a way to export this to users
 	}
 
 	var err error
