@@ -36,13 +36,14 @@ import (
 )
 
 type handler struct {
-	lock  *sync.RWMutex
+	sync.RWMutex
+
 	items map[string]string
 }
 
-func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
+func (h *handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
+	h.RLock()
+	defer h.RUnlock()
 
 	if value, ok := h.items[key]; ok {
 		return value, nil, nil
@@ -51,10 +52,10 @@ func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Resp
 	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
 }
 
-func (h handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
-	h.lock.Lock()
+func (h *handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
+	h.Lock()
 	h.items[key] = value
-	h.lock.Unlock()
+	h.Unlock()
 	return nil, nil
 }
 
@@ -72,8 +73,8 @@ func main() {
 		},
 	})
 
-	handler := handler{items: make(map[string]string), lock: &sync.RWMutex{}}
-	thrift.Register(rpc, keyvalue.NewKeyValueHandler(handler))
+	handler := handler{items: make(map[string]string)}
+	thrift.Register(rpc, keyvalue.NewKeyValueHandler(&handler))
 
 	if err := rpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())

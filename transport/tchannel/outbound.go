@@ -66,24 +66,33 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
 
-	var ch *tchannel.SubChannel
-	if o.HostPort != "" {
-		// We use an isolated subchannel when a HostPort is given so that this
-		// hostport doesn't leak into the global peer list.
-		ch = o.Channel.GetSubChannel(req.Service, tchannel.Isolated)
-		// TODO(abg): Is this the best way to do this?
-		ch.Peers().Add(o.HostPort)
-	} else {
-		ch = o.Channel.GetSubChannel(req.Service)
-	}
+	var call *tchannel.OutboundCall
+	var err error
 
 	format := tchannel.Format(req.Encoding)
+	callOptions := tchannel.CallOptions{Format: format}
+	if o.HostPort != "" {
+		// If the hostport is given, we use the BeginCall on the channel
+		// instead of the subchannel.
+		call, err = o.Channel.BeginCall(
+			// TODO(abg): Set TimeoutPerAttempt in the context's retry options if
+			// TTL is set.
+			ctx,
+			o.HostPort,
+			req.Service,
+			req.Procedure,
+			&callOptions,
+		)
+	} else {
+		call, err = o.Channel.GetSubChannel(req.Service).BeginCall(
+			// TODO(abg): Set TimeoutPerAttempt in the context's retry options if
+			// TTL is set.
+			ctx,
+			req.Procedure,
+			&callOptions,
+		)
+	}
 
-	call, err := ch.BeginCall(
-		ctx, // TODO(abg): req.TTL what do
-		req.Procedure,
-		&tchannel.CallOptions{Format: format},
-	)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +101,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		return nil, err
 	}
 
-	if err := _writeBody(req.Body, call); err != nil {
+	if err := writeBody(req.Body, call); err != nil {
 		return nil, err
 	}
 
@@ -113,7 +122,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	return &transport.Response{Headers: headers, Body: resBody}, nil
 }
 
-func _writeBody(body io.Reader, call *tchannel.OutboundCall) error {
+func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 	w, err := call.Arg3Writer()
 	if err != nil {
 		return err
