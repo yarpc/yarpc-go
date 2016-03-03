@@ -35,23 +35,22 @@ import (
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
 func NewOutbound(url string) transport.Outbound {
-	return httpOutbound{URL: url}
+	return outbound{URL: url}
 }
 
 // NewOutboundWithClient builds a new HTTP outbound that sends requests to the
 // given URL using the given HTTP client.
 func NewOutboundWithClient(url string, client *http.Client) transport.Outbound {
-	return httpOutbound{Client: client, URL: url}
+	return outbound{Client: client, URL: url}
 }
 
-type httpOutbound struct {
-	*http.Client
-
-	URL string
+type outbound struct {
+	Client *http.Client
+	URL    string
 }
 
-func (h httpOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	request, err := http.NewRequest("POST", h.URL, req.Body)
+func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	request, err := http.NewRequest("POST", o.URL, req.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,7 @@ func (h httpOutbound) Call(ctx context.Context, req *transport.Request) (*transp
 		request.Header.Set(EncodingHeader, encoding)
 	}
 
-	response, err := ctxhttp.Do(ctx, h.Client, request)
+	response, err := ctxhttp.Do(ctx, o.Client, request)
 	if err != nil {
 		return nil, err
 	}

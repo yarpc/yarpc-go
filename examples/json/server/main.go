@@ -22,12 +22,17 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"sync"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 )
 
 type GetRequest struct {
@@ -47,35 +52,45 @@ type SetResponse struct {
 }
 
 type handler struct {
+	sync.RWMutex
+
 	items map[string]string
 }
 
-func (h handler) Get(req *json.Request, body *GetRequest) (*GetResponse, *json.Response, error) {
-	return &GetResponse{Value: h.items[body.Key]}, nil, nil
+func (h *handler) Get(req *json.Request, body *GetRequest) (*GetResponse, *json.Response, error) {
+	h.RLock()
+	result := &GetResponse{Value: h.items[body.Key]}
+	h.RUnlock()
+	return result, nil, nil
 }
 
-func (h handler) Set(req *json.Request, body *SetRequest) (*SetResponse, *json.Response, error) {
+func (h *handler) Set(req *json.Request, body *SetRequest) (*SetResponse, *json.Response, error) {
+	h.Lock()
 	h.items[body.Key] = body.Value
+	h.Unlock()
 	return &SetResponse{}, nil, nil
 }
 
 func main() {
-	yarpc := yarpc.New(yarpc.Config{
+	channel, err := tchannel.NewChannel("keyvalue", nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	rpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
+			tch.NewInbound(channel, tch.ListenAddr(":4040")),
 			http.NewInbound(":8080"),
-			// TODO tchannel.Inbound{},
-		},
-		Outbounds: transport.Outbounds{
-			"moe": http.NewOutbound("http://localhost:8080"),
 		},
 	})
 
 	handler := handler{items: make(map[string]string)}
-	json.Register(yarpc, json.Procedure("get", handler.Get))
-	json.Register(yarpc, json.Procedure("set", handler.Set))
 
-	if err := yarpc.Start(); err != nil {
+	json.Register(rpc, json.Procedure("get", handler.Get))
+	json.Register(rpc, json.Procedure("set", handler.Set))
+
+	if err := rpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 		os.Exit(1)
 	}

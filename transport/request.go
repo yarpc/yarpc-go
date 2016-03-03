@@ -27,13 +27,26 @@ import (
 
 // Request is the low level request representation.
 type Request struct {
-	Caller    string
-	Service   string
-	Encoding  Encoding
+	// Name of the service making the request.
+	Caller string
+
+	// Name of the service to which the request is being made.
+	Service string
+
+	// Name of the encoding used for the request body.
+	Encoding Encoding
+
+	// Amount of time within which this request must finish.
+	TTL time.Duration
+
+	// Name of the procedure being called.
 	Procedure string
-	Headers   Headers
-	Body      io.Reader
-	TTL       time.Duration
+
+	// Headers for the request.
+	Headers Headers
+
+	// Request payload.
+	Body io.Reader
 }
 
 // Encoding represents an encoding format for requests.

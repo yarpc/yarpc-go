@@ -22,19 +22,29 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"sync"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 )
 
 type handler struct {
+	sync.RWMutex
+
 	items map[string]string
 }
 
-func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
+func (h *handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
+	h.RLock()
+	defer h.RUnlock()
+
 	if value, ok := h.items[key]; ok {
 		return value, nil, nil
 	}
@@ -42,21 +52,31 @@ func (h handler) GetValue(req *thrift.Request, key string) (string, *thrift.Resp
 	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
 }
 
-func (h handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
+func (h *handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
+	h.Lock()
 	h.items[key] = value
+	h.Unlock()
 	return nil, nil
 }
 
 func main() {
-	yarpc := yarpc.New(yarpc.Config{
-		Name:     "keyvalue",
-		Inbounds: []transport.Inbound{http.NewInbound(":8080")},
+	channel, err := tchannel.NewChannel("keyvalue", nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	rpc := yarpc.New(yarpc.Config{
+		Name: "keyvalue",
+		Inbounds: []transport.Inbound{
+			tch.NewInbound(channel, tch.ListenAddr(":4040")),
+			http.NewInbound(":8080"),
+		},
 	})
 
 	handler := handler{items: make(map[string]string)}
-	thrift.Register(yarpc, keyvalue.NewKeyValueHandler(handler))
+	thrift.Register(rpc, keyvalue.NewKeyValueHandler(&handler))
 
-	if err := yarpc.Start(); err != nil {
+	if err := rpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 	}
 
