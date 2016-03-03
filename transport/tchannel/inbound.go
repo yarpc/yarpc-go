@@ -72,11 +72,13 @@ func (i *inbound) Start(h transport.Handler) error {
 	i.ch.GetSubChannel(i.ch.ServiceName()).SetHandler(handler{h})
 
 	if i.ch.State() == tchannel.ChannelListening {
-		// Already listening. Don't need to do anything besides setting up the
-		// handler.
+		// Channel.Start() was called before RPC.Start(). We still want to
+		// update the Handler and what i.addr means, but nothing else.
+		i.addr = i.listener.Addr().String()
 		return nil
 	}
 
+	// Default to ListenIP if addr wasn't given.
 	addr := i.addr
 	if addr == "" {
 		listenIP, err := tchannel.ListenIP()
@@ -87,6 +89,9 @@ func (i *inbound) Start(h transport.Handler) error {
 		addr = listenIP.String() + ":0"
 		// TODO(abg): Find a way to export this to users
 	}
+
+	// TODO(abg): If addr was just the port (":4040"), we want to use
+	// ListenIP() + ":4040" rather than just ":4040".
 
 	var err error
 	i.listener, err = net.Listen("tcp", addr)

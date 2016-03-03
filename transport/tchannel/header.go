@@ -87,7 +87,7 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 	for i := 0; i < int(count) && reader.Err() == nil; i++ {
 		k := reader.ReadLen16String()
 		v := reader.ReadLen16String()
-		headers[k] = v
+		headers.Set(k, v)
 	}
 
 	return headers, reader.Err()
@@ -97,7 +97,7 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 //
 // 	nh:2 (k~2 v~2){nh}
 func encodeHeaders(hs transport.Headers) []byte {
-	if hs == nil || len(hs) == 0 {
+	if len(hs) == 0 {
 		return []byte{0, 0} // nh = 2
 	}
 
