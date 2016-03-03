@@ -144,7 +144,7 @@ func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 	defer body.Close()
 
 	rw := newResponseWriter(call)
-	defer rw.Close()
+	defer rw.Close() // TODO(abg): log if this errors
 
 	treq := &transport.Request{
 		Caller:    call.CallerName(),
@@ -214,9 +214,12 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	return rw.bodyWriter.Write(s)
 }
 
-func (rw *responseWriter) Close() {
+func (rw *responseWriter) Close() error {
 	if rw.bodyWriter != nil {
-		rw.bodyWriter.Close()
-		rw.bodyWriter = nil
+		return rw.bodyWriter.Close()
 	}
+	if rw.failedWith != nil {
+		return rw.failedWith
+	}
+	return nil
 }
