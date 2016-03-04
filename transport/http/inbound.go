@@ -89,6 +89,7 @@ type handler struct {
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.NotFound(w, req)
+		return
 	}
 
 	defer req.Body.Close()
@@ -116,7 +117,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	strttlms := req.Header.Get(TTLMSHeader)
 	if len(strttlms) == 0 {
-		http.Error(w, "ttlms name is required", http.StatusBadRequest)
+		http.Error(w, "ttlms is required", http.StatusBadRequest)
 		return
 	}
 	req.Header.Del(TTLMSHeader)
