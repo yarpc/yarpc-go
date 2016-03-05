@@ -74,7 +74,7 @@ func (i *inbound) Start(h transport.Handler) error {
 	if i.ch.State() == tchannel.ChannelListening {
 		// Channel.Start() was called before RPC.Start(). We still want to
 		// update the Handler and what i.addr means, but nothing else.
-		i.addr = i.listener.Addr().String()
+		i.addr = i.ch.PeerInfo().HostPort
 		return nil
 	}
 
