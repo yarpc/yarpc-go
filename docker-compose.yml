@@ -2,7 +2,7 @@ version: '2'
 
 services:
     crossdock:
-        image: yarpc/crossdock:v2
+        image: yarpc/crossdock
         links:
             - yarpc-go
             - yarpc-node
@@ -20,19 +20,19 @@ services:
             - 8081
 
     yarpc-node:
-        image: yarpc/yarpc-node:crossdock-v2
+        image: yarpc/yarpc-node
         ports:
             - 8080
             - 8081
 
     yarpc-java:
-        image: yarpc/yarpc-java:crossdock-v2
+        image: yarpc/yarpc-java
         ports:
             - 8080
             - 8081
 
     yarpc-python:
-        image: yarpc/yarpc-python:crossdock-v2
+        image: yarpc/yarpc-python
         ports:
             - 8080
             - 8081
