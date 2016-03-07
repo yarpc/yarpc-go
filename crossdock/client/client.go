@@ -1,39 +1,47 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
 
-// TestCaseHandler drives the test suite as instructed by Crossdock
-func TestCaseHandler(w http.ResponseWriter, r *http.Request) {
+// Start begins a blocking Crossdock client
+func Start() {
+	http.HandleFunc("/", testCaseHandler)
+	http.ListenAndServe(":8080", nil)
+}
+
+func testCaseHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "HEAD" {
+		return
+	}
 	behavior := r.FormValue("behavior")
 	server := r.FormValue("server")
-
-	if behavior == "" || server == "" {
-		fmt.Fprint(w, "handler is ready, please send behavior and server params")
-		return
-	}
-
 	switch behavior {
 	case "echo":
-		PrintResult(w, EchoBehavior(server))
-		return
+		fmt.Fprintf(w, respond(EchoBehavior(server)))
+	default:
+		res, _ := json.Marshal(response{{Status: skipped, Output: "Not implemented"}})
+		fmt.Fprintf(w, string(res))
 	}
 }
 
-// Result contains the result of a behavior's execution
-type Result struct {
-	Passed  bool
-	Message string
+const passed = "passed"
+const skipped = "skipped"
+const failed = "failed"
+
+type response []subResponse
+type subResponse struct {
+	Status string `json:"status"`
+	Output string `json:"output"`
 }
 
-// PrintResult writes tap to w for a given Result
-func PrintResult(w http.ResponseWriter, result Result) {
-	tap := "not ok"
-	if result.Passed == true {
-		tap = "ok"
+func respond(output string, err error) string {
+	if err != nil {
+		s, _ := json.Marshal(response{{Status: failed, Output: err.Error()}})
+		return string(s)
 	}
-	message := fmt.Sprintf("%v - %v", tap, result.Message)
-	fmt.Fprint(w, message)
+	s, _ := json.Marshal(response{{Status: passed, Output: output}})
+	return string(s)
 }

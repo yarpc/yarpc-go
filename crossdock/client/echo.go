@@ -18,7 +18,7 @@ import (
 )
 
 // EchoBehavior asserts that a server response is the same as the request
-func EchoBehavior(addr string) Result {
+func EchoBehavior(addr string) (string, error) {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "client",
 		Outbounds: transport.Outbounds{
@@ -38,21 +38,13 @@ func EchoBehavior(addr string) Result {
 	)
 
 	if err != nil {
-		return Result{
-			Passed:  false,
-			Message: fmt.Sprintf("Got err: %v", err),
-		}
+		return "", fmt.Errorf("Got err: %v", err)
 	}
 	if response.Token != token {
-		return Result{
-			Passed:  false,
-			Message: fmt.Sprintf("Got %v, wanted %v", response.Token, token),
-		}
+		return "", fmt.Errorf("Got %v, wanted %v", response.Token, token)
 	}
-	return Result{
-		Passed:  true,
-		Message: fmt.Sprintf("Server said: %v", response.Token),
-	}
+
+	return fmt.Sprintf("Server said: %v", response.Token), nil
 }
 
 func randString(length int64) string {

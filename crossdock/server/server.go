@@ -9,8 +9,8 @@ import (
 	"github.com/yarpc/yarpc-go/transport/http"
 )
 
-// StartServerUnderTest starts the test server that clients will make requests to
-func StartServerUnderTest() {
+// Start starts the test server that clients will make requests to
+func Start() {
 	yarpc := yarpc.New(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
