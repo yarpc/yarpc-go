@@ -1,5 +1,5 @@
 hash: 672ef6a9d191e20f5fc1e1f0ac53bb00bda74d8245b4326671c2fddf99823045
-updated: 2016-03-01T09:53:48.86061185-08:00
+updated: 2016-03-07T12:38:16.774674074-08:00
 imports:
 - name: github.com/golang/mock
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
@@ -17,7 +17,7 @@ imports:
   - wire
   - protocol/binary
 - name: github.com/uber/tchannel-go
-  version: b74290b0ad588b181d51f7e20dbb7b2b07c6de1e
+  version: 7c19f22ebc511caa55133e458d8a22f1dbfdb981
   subpackages:
   - tnet
   - typed
