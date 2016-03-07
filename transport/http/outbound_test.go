@@ -22,6 +22,7 @@ package http
 
 import (
 	"bytes"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,8 +32,52 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 )
+
+func TestCallSuccess(t *testing.T) {
+	successServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			defer req.Body.Close()
+
+			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
+			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
+			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
+			assert.Equal(t, "1000", req.Header.Get(TTLMSHeader))
+			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+
+			body, err := ioutil.ReadAll(req.Body)
+			if assert.NoError(t, err) {
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			w.Header().Set("foo", "bar")
+			_, err = w.Write([]byte("great success"))
+			assert.NoError(t, err)
+		},
+	))
+	defer successServer.Close()
+
+	out := NewOutbound(successServer.URL)
+	res, err := out.Call(context.TODO(), &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  raw.Encoding,
+		TTL:       time.Second,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte("world")),
+	})
+
+	require.NoError(t, err)
+	defer res.Body.Close()
+
+	assert.Equal(t, "bar", res.Headers.Get("foo"))
+	body, err := ioutil.ReadAll(res.Body)
+	if assert.NoError(t, err) {
+		assert.Equal(t, []byte("great success"), body)
+	}
+}
 
 func TestCallFailures(t *testing.T) {
 	notFoundServer := httptest.NewServer(http.NotFoundHandler())

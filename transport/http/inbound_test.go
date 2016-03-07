@@ -188,3 +188,21 @@ func headerCopyWithout(headers http.Header, names ...string) http.Header {
 
 	return newHeaders
 }
+
+func TestResponseWriter(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	writer := newResponseWriter(recorder)
+
+	headers := transport.NewHeaders(map[string]string{
+		"foo":       "bar",
+		"shard-key": "123",
+	})
+	writer.AddHeaders(headers)
+
+	_, err := writer.Write([]byte("hello"))
+	require.NoError(t, err)
+
+	assert.Equal(t, "bar", recorder.Header().Get("foo"))
+	assert.Equal(t, "123", recorder.Header().Get("shard-key"))
+	assert.Equal(t, "hello", recorder.Body.String())
+}
