@@ -135,8 +135,8 @@ func (m RequestMatcher) String() string {
 func checkSuperSet(l, r transport.Headers) error {
 	missing := make([]string, 0, len(l))
 	for k, vl := range l {
-		vr, ok := r.Get(k)
-		if !ok || vr != vl {
+		vr := r.Get(k)
+		if vr != vl {
 			missing = append(missing, k)
 		}
 	}
