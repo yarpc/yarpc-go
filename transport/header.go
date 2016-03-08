@@ -31,6 +31,9 @@ type Headers map[string]string
 //
 // Use this instead of Headers(m).
 func NewHeaders(m map[string]string) Headers {
+	if m == nil {
+		return nil
+	}
 	headers := make(Headers, len(m))
 	for k, v := range m {
 		headers.Set(k, v)
@@ -39,16 +42,25 @@ func NewHeaders(m map[string]string) Headers {
 }
 
 // Set sets the given header key to the given value.
+//
+// Note that empty strings are not valid header values. If the value is empty,
+// the header will be deleted.
 func (h Headers) Set(k, v string) {
+	if v == "" {
+		h.Del(k)
+		return
+	}
+
 	h[strings.ToLower(k)] = v
 }
 
-// Get the header with the given name. Returns false if a match was not found.
-func (h Headers) Get(k string) (string, bool) {
+// Get the header with the given name. Returns an empty string if a match is
+// not found.
+func (h Headers) Get(k string) string {
 	if v, ok := h[strings.ToLower(k)]; ok {
-		return v, true
+		return v
 	}
-	return "", false
+	return ""
 }
 
 // Del deletes the header with the given name.
