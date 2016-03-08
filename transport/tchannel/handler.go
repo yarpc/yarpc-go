@@ -167,15 +167,20 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 		}
 	}
 
-	return rw.bodyWriter.Write(s)
+	n, err := rw.bodyWriter.Write(s)
+	if err != nil {
+		rw.failedWith = err
+	}
+	return n, err
 }
 
 func (rw *responseWriter) Close() error {
+	var err error
 	if rw.bodyWriter != nil {
-		return rw.bodyWriter.Close()
+		err = rw.bodyWriter.Close()
 	}
 	if rw.failedWith != nil {
 		return rw.failedWith
 	}
-	return nil
+	return err
 }
