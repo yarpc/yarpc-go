@@ -36,12 +36,11 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
 	if req.Method != "POST" {
 		http.NotFound(w, req)
 		return
 	}
-
-	defer req.Body.Close()
 
 	caller := req.Header.Get(CallerHeader)
 	if len(caller) == 0 {
