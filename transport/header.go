@@ -31,6 +31,9 @@ type Headers map[string]string
 //
 // Use this instead of Headers(m).
 func NewHeaders(m map[string]string) Headers {
+	if m == nil {
+		return nil
+	}
 	headers := make(Headers, len(m))
 	for k, v := range m {
 		headers.Set(k, v)
