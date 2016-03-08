@@ -29,18 +29,42 @@ import (
 	"golang.org/x/net/context"
 )
 
-// inboundCall is an interface similiar tchannel.InboundCall.
+// inboundCall provides an interface similiar tchannel.InboundCall.
 //
 // We use it instead of *tchannel.InboundCall because tchannel.InboundCall is
 // not an interface, so we have little control over its behavior in tests.
 type inboundCall interface {
+	ServiceName() string
+	CallerName() string
+	MethodString() string
+	Format() tchannel.Format
+
 	Arg2Reader() (tchannel.ArgReader, error)
 	Arg3Reader() (tchannel.ArgReader, error)
-	CallerName() string
-	Format() tchannel.Format
-	MethodString() string
-	Response() *tchannel.InboundCallResponse
-	ServiceName() string
+
+	Response() inboundCallResponse
+}
+
+// inboundCallResponse provides an interface similar to
+// tchannel.InboundCallResponse.
+//
+// Its purpose is the same as inboundCall: Make it easier to test functions
+// that consume InboundCallResponse without having control of
+// InboundCallResponse's behavior.
+type inboundCallResponse interface {
+	Arg2Writer() (tchannel.ArgWriter, error)
+	Arg3Writer() (tchannel.ArgWriter, error)
+	SendSystemError(err error) error
+}
+
+// tchannelCall wraps a TChannel InboundCall into an inboundCall.
+//
+// We need to do this so that we can change the return type of call.Response()
+// to match inboundCall's Response().
+type tchannelCall struct{ *tchannel.InboundCall }
+
+func (c tchannelCall) Response() inboundCallResponse {
+	return c.InboundCall.Response()
 }
 
 // handler wraps a transport.Handler into a TChannel Handler.
@@ -49,7 +73,7 @@ type handler struct {
 }
 
 func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
-	h.handle(ctx, call)
+	h.handle(ctx, tchannelCall{call})
 }
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
@@ -99,7 +123,7 @@ type responseWriter struct {
 	bodyWriter   tchannel.ArgWriter
 	format       tchannel.Format
 	headers      transport.Headers
-	response     *tchannel.InboundCallResponse
+	response     inboundCallResponse
 	wroteHeaders bool
 }
 
@@ -128,6 +152,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	if !rw.wroteHeaders {
 		rw.wroteHeaders = true
 		if err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer); err != nil {
+			// TODO(abg): wrap this and the Arg3Writer error in something.
 			rw.failedWith = err
 			return 0, err
 		}
