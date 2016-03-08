@@ -84,7 +84,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		}
 
 		// TODO error type
-		return nil, fmt.Errorf("request %v failed: %v: %v", request, response.Status, contents)
+		return nil, fmt.Errorf("request %v failed: %v: %s", request, response.Status, contents)
 	}
 
 	return &transport.Response{
