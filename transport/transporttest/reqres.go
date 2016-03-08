@@ -48,7 +48,7 @@ type RequestMatcher struct {
 	req  *transport.Request
 	body []byte
 
-	// Amount of variation allowed when comparing TTLs. Defaults to 5
+	// Maximum amount of variation allowed when comparing TTLs. Defaults to 5
 	// milliseconds.
 	TTLDelta time.Duration
 }
@@ -103,7 +103,11 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
-	if l.TTL-r.TTL > m.TTLDelta {
+	ttlDiff := l.TTL - r.TTL
+	if ttlDiff < 0 {
+		ttlDiff = -ttlDiff
+	}
+	if ttlDiff > m.TTLDelta {
 		m.t.Logf("TTL mismatch: %v != %v", l.TTL, r.TTL)
 		return false
 	}
