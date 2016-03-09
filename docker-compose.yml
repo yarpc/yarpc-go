@@ -2,7 +2,7 @@ version: '2'
 
 services:
     crossdock:
-        image: yarpc/crossdock
+        image: yarpc/crossdock:behavior-axes
         links:
             - yarpc-go
             - yarpc-node
@@ -11,7 +11,14 @@ services:
         environment:
             - CROSSDOCK_CLIENTS=yarpc-go,yarpc-node,yarpc-java,yarpc-python
             - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-node,yarpc-java,yarpc-python
-            - CROSSDOCK_AXIS_BEHAVIOR=echo
+            - CROSSDOCK_AXIS_BEHAVIOR=echo # ,raw,json,thrift
+            # - CROSSDOCK_AXIS_TRANSPORT=http,tchannel
+            # - CROSSDOCK_AXIS_ENCODING=raw,json,thrift
+            # - CROSSDOCK_BEHAVIORS=echo
+            # - CROSSDOCK_BEHAVIOR_ECHO=server
+            # - CROSSDOCK_BEHAVIOR_RAW=server,transport
+            # - CROSSDOCK_BEHAVIOR_JSON=server,transport
+            # - CROSSDOCK_BEHAVIOR_THRIFT=server,transport
 
     yarpc-go:
         build: .
@@ -19,16 +26,16 @@ services:
             - "8080-8082"
 
     yarpc-node:
-        image: yarpc/yarpc-node
+        image: yarpc/yarpc-node:crossdock-echo-behaviors
         ports:
             - "8080-8082"
 
     yarpc-java:
-        image: yarpc/yarpc-java
+        image: yarpc/yarpc-java:crossdock-echo-behaviors
         ports:
             - "8080-8082"
 
     yarpc-python:
-        image: yarpc/yarpc-python
+        image: yarpc/yarpc-python:crossdock-echo-behaviors
         ports:
             - "8080-8082"
