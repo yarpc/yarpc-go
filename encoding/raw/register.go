@@ -31,9 +31,7 @@ type Registrant interface {
 }
 
 // Handler implements a single procedure.
-type Handler interface {
-	Handle(req *Request, body []byte) ([]byte, *Response, error)
-}
+type Handler func(*Request, []byte) ([]byte, *Response, error)
 
 // procedure is a registrant with a single handler.
 type procedure struct {

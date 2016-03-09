@@ -46,7 +46,7 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 		TTL:       treq.TTL,
 	}
 
-	resBody, res, err := r.h.Handle(&request, reqBody)
+	resBody, res, err := r.h(&request, reqBody)
 	if err != nil {
 		return err
 	}
