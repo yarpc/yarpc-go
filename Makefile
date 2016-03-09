@@ -19,6 +19,13 @@ test:
 	go test $(PACKAGES)
 
 
+# This is not part of the regular test target because we don't want to slow it
+# down.
+.PHONY: test-examples
+test-examples:
+	make -C examples
+
+
 .PHONY: crossdock
 crossdock:
 	docker-compose kill yarpc-go
@@ -46,3 +53,4 @@ install_ci: install
 .PHONY: test_ci
 test_ci:
 	goveralls -service=travis-ci -v $(PACKAGES)
+	make -C examples
