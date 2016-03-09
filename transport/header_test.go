@@ -18,61 +18,65 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package transport
 
 import (
-	"net"
-	"net/http"
+	"testing"
 
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/stretchr/testify/assert"
 )
 
-// Inbound represents an HTTP Inbound. It is the same as the transport Inbound
-// except it exposes the address on which the system is listening for
-// connections.
-type Inbound interface {
-	transport.Inbound
-
-	// Address on which the server is listening. Returns nil if Start has not
-	// been called yet.
-	Addr() net.Addr
-}
-
-// NewInbound builds a new HTTP inbound that listens on the given address.
-func NewInbound(addr string) Inbound {
-	return &inbound{addr: addr}
-}
-
-type inbound struct {
-	addr     string
-	listener net.Listener
-}
-
-func (i *inbound) Start(h transport.Handler) error {
-	var err error
-	i.listener, err = net.Listen("tcp", i.addr)
-	if err != nil {
-		return err
+func TestNewHeaders(t *testing.T) {
+	tests := []struct {
+		headers  map[string]string
+		matches  map[string]string
+		failures []string
+	}{
+		{
+			nil,
+			map[string]string{},
+			[]string{"foo"},
+		},
+		{
+			map[string]string{
+				"Foo": "Bar",
+				"Baz": "qux",
+			},
+			map[string]string{
+				"foo": "Bar",
+				"Foo": "Bar",
+				"FOO": "Bar",
+				"baz": "qux",
+				"Baz": "qux",
+				"BaZ": "qux",
+			},
+			[]string{"bar"},
+		},
+		{
+			map[string]string{
+				"foo": "bar",
+				"baz": "",
+			},
+			map[string]string{
+				"foo": "bar",
+				"baz": "",
+				"Baz": "",
+			},
+			[]string{"qux"},
+		},
 	}
 
-	i.addr = i.listener.Addr().String() // in case it changed
-	server := &http.Server{Handler: handler{h}}
-	go server.Serve(i.listener)
-	return nil
-}
-
-func (i *inbound) Stop() error {
-	if i.listener == nil {
-		return nil
+	for _, tt := range tests {
+		headers := NewHeaders(tt.headers)
+		for k, v := range tt.matches {
+			vg, ok := headers.Get(k)
+			assert.True(t, ok, "expected true for %q", k)
+			assert.Equal(t, v, vg, "value mismatch for %q", k)
+		}
+		for _, k := range tt.failures {
+			v, ok := headers.Get(k)
+			assert.False(t, ok, "expected false for %q", k)
+			assert.Equal(t, "", v, "expected empty string for %q", k)
+		}
 	}
-	err := i.listener.Close()
-	i.listener = nil
-	return err
-}
-
-func (i *inbound) Addr() net.Addr {
-	if i.listener == nil {
-		return nil
-	}
-	return i.listener.Addr()
 }

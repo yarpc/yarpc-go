@@ -26,9 +26,13 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
 )
+
+// DefaultTTLDelta is the default TTLDelta used by RequestMatchers.
+const DefaultTTLDelta = 5 * time.Millisecond
 
 // RequestMatcher may be used in gomock argument lists to assert that two
 // requests match.
@@ -43,6 +47,10 @@ type RequestMatcher struct {
 	t    *testing.T
 	req  *transport.Request
 	body []byte
+
+	// Maximum amount of variation allowed when comparing TTLs. Defaults to 5
+	// milliseconds.
+	TTLDelta time.Duration
 }
 
 // NewRequestMatcher constructs a new RequestMatcher from the given testing.T
@@ -59,7 +67,7 @@ func NewRequestMatcher(t *testing.T, r *transport.Request) RequestMatcher {
 	// restore a copy of the body so that the caller can still use the request
 	// object
 	r.Body = bytes.NewReader(body)
-	return RequestMatcher{t: t, req: r, body: body}
+	return RequestMatcher{t: t, req: r, body: body, TTLDelta: DefaultTTLDelta}
 }
 
 // TODO: Headers like User-Agent, Content-Length, etc. make their way to the
@@ -95,7 +103,11 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
-	if l.TTL != r.TTL {
+	ttlDiff := l.TTL - r.TTL
+	if ttlDiff < 0 {
+		ttlDiff = -ttlDiff
+	}
+	if ttlDiff > m.TTLDelta {
 		m.t.Logf("TTL mismatch: %v != %v", l.TTL, r.TTL)
 		return false
 	}
