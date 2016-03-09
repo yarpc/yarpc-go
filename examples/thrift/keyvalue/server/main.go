@@ -68,8 +68,8 @@ func main() {
 	rpc := yarpc.New(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
-			tch.NewInbound(channel, tch.ListenAddr(":4040")),
-			http.NewInbound(":8080"),
+			tch.NewInbound(channel, tch.ListenAddr(":28941")),
+			http.NewInbound(":24034"),
 		},
 	})
 

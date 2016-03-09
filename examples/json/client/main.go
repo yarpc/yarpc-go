@@ -87,13 +87,13 @@ func main() {
 	var outbound transport.Outbound
 	switch strings.ToLower(outboundName) {
 	case "http":
-		outbound = http.NewOutbound("http://localhost:8080")
+		outbound = http.NewOutbound("http://localhost:24034")
 	case "tchannel":
 		channel, err := tchannel.NewChannel("keyvalue-client", nil)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		outbound = tch.NewOutbound(channel, tch.HostPort("localhost:4040"))
+		outbound = tch.NewOutbound(channel, tch.HostPort("localhost:28941"))
 	default:
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}
