@@ -9,6 +9,7 @@ The trap ensures background processes are killed on exit.
 Test code:
 
   $ $TESTDIR/keyvalue/server/server &
+  $ sleep 0.250
   $ $TESTDIR/keyvalue/client/client -outbound=$TRANSPORT << INPUT
   > get foo
   > set foo bar
