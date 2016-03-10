@@ -2,25 +2,34 @@ package server
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 )
 
 // Start starts the test server that clients will make requests to
 func Start() {
-	yarpc := yarpc.New(yarpc.Config{
+	ch, err := tchannel.NewChannel("yarpc-test", nil)
+	if err != nil {
+		log.Fatalln("couldn't create tchannel: %v", err)
+	}
+
+	rpc := yarpc.New(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8081"),
+			tch.NewInbound(ch, tch.ListenAddr(":8082")),
 		},
 	})
 
-	json.Register(yarpc, json.Procedure("echo", Echo))
+	Register(rpc)
 
-	if err := yarpc.Start(); err != nil {
+	if err := rpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 	}
 }

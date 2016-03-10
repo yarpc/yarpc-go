@@ -9,13 +9,17 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/server"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 
 	"golang.org/x/net/context"
 )
+
+// Echo contains a message to echo
+type Echo struct {
+	Token string `json:"token"`
+}
 
 // EchoBehavior asserts that a server response is the same as the request
 func EchoBehavior(addr string) (string, error) {
@@ -28,12 +32,12 @@ func EchoBehavior(addr string) (string, error) {
 	client := json.New(yarpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
 
-	var response server.EchoResponse
+	var response Echo
 	token := randString(5)
 
 	_, err := client.Call(
 		&json.Request{Context: ctx, Procedure: "echo", TTL: 3 * time.Second},
-		&server.EchoRequest{Token: token},
+		&Echo{Token: token},
 		&response,
 	)
 
