@@ -2,46 +2,42 @@ package client
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
 // Start begins a blocking Crossdock client
 func Start() {
-	http.HandleFunc("/", testCaseHandler)
+	http.HandleFunc("/", behaviorRequestHandler)
 	http.ListenAndServe(":8080", nil)
 }
 
-func testCaseHandler(w http.ResponseWriter, r *http.Request) {
+func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "HEAD" {
 		return
 	}
-	behavior := r.FormValue("behavior")
-	server := r.FormValue("server")
-	switch behavior {
-	case "echo":
-		fmt.Fprintf(w, respond(EchoBehavior(server)))
+
+	// All behaviors will eventually contribute to this behavior's output.
+	bt := BehaviorTester{Params: httpParams{Request: r}}
+	v := bt.Param("behavior")
+	switch v {
+	case "raw", "json", "thrift":
+		runEchoBehavior(&bt, v)
 	default:
-		res, _ := json.Marshal(response{{Status: skipped, Output: "Not implemented"}})
-		fmt.Fprintf(w, string(res))
+		bt.NewBehavior(BasicEntryBuilder).Skipf("unknown behavior %v", v)
+	}
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(bt.Entries); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-const passed = "passed"
-const skipped = "skipped"
-const failed = "failed"
-
-type response []subResponse
-type subResponse struct {
-	Status string `json:"status"`
-	Output string `json:"output"`
+// httpParams provides access to behavior parameters that are stored inside an
+// HTTP request.
+type httpParams struct {
+	Request *http.Request
 }
 
-func respond(output string, err error) string {
-	if err != nil {
-		s, _ := json.Marshal(response{{Status: failed, Output: err.Error()}})
-		return string(s)
-	}
-	s, _ := json.Marshal(response{{Status: passed, Output: output}})
-	return string(s)
+func (h httpParams) Param(name string) string {
+	return h.Request.FormValue(name)
 }
