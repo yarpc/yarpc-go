@@ -31,7 +31,7 @@ crossdock:
 	docker-compose kill yarpc-go
 	docker-compose rm -f yarpc-go
 	docker-compose build yarpc-go
-	docker-compose up
+	docker-compose run crossdock
 
 
 .PHONY: crossdock-fresh
