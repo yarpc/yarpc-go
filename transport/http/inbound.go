@@ -38,14 +38,32 @@ type Inbound interface {
 	Addr() net.Addr
 }
 
+// InboundOption is an option for an HTTP inbound.
+type InboundOption func(*inbound)
+
+// Mux specifies the ServeMux that the HTTP server should use and the pattern
+// under which the YARPC endpoint should be registered.
+func Mux(pattern string, mux *http.ServeMux) InboundOption {
+	return func(i *inbound) {
+		i.mux = mux
+		i.muxPattern = pattern
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address.
-func NewInbound(addr string) Inbound {
-	return &inbound{addr: addr}
+func NewInbound(addr string, opts ...InboundOption) Inbound {
+	i := &inbound{addr: addr}
+	for _, opt := range opts {
+		opt(i)
+	}
+	return i
 }
 
 type inbound struct {
-	addr     string
-	listener net.Listener
+	addr       string
+	mux        *http.ServeMux
+	muxPattern string
+	listener   net.Listener
 }
 
 func (i *inbound) Start(h transport.Handler) error {
@@ -55,8 +73,14 @@ func (i *inbound) Start(h transport.Handler) error {
 		return err
 	}
 
+	var httpHandler http.Handler = handler{h}
+	if i.mux != nil {
+		i.mux.Handle(i.muxPattern, httpHandler)
+		httpHandler = i.mux
+	}
+
 	i.addr = i.listener.Addr().String() // in case it changed
-	server := &http.Server{Handler: handler{h}}
+	server := &http.Server{Handler: httpHandler}
 	go server.Serve(i.listener)
 	return nil
 }
