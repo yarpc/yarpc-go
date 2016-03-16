@@ -52,5 +52,7 @@ install_ci: install
 
 .PHONY: test_ci
 test_ci:
-	goveralls -service=travis-ci -v $(PACKAGES)
+        # @see https://github.com/mattn/goveralls/issues/68
+	#goveralls -service=travis-ci -v $(PACKAGES)
+	go test -v $(PACKAGES)
 	make -C examples
