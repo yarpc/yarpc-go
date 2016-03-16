@@ -12,12 +12,6 @@ services:
             - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-java,yarpc-node
             - CROSSDOCK_AXIS_BEHAVIOR=raw,json,thrift
             - CROSSDOCK_AXIS_TRANSPORT=http,tchannel
-            - CROSSDOCK_AXIS_ENCODING=raw,json,thrift
-            # - CROSSDOCK_BEHAVIORS=echo
-            # - CROSSDOCK_BEHAVIOR_ECHO=server
-            # - CROSSDOCK_BEHAVIOR_RAW=server,transport
-            # - CROSSDOCK_BEHAVIOR_JSON=server,transport
-            # - CROSSDOCK_BEHAVIOR_THRIFT=server,transport
 
     yarpc-go:
         build: .
