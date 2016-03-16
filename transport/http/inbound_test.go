@@ -22,7 +22,6 @@ package http
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -64,12 +63,12 @@ func TestInboundMux(t *testing.T) {
 		w.Write([]byte("healthy"))
 	})
 
-	i := NewInbound(":0", Mux("/rpc/v1", mux))
+	i := NewInbound(":8080", Mux("/rpc/v1", mux))
 	h := transporttest.NewMockHandler(mockCtrl)
 	require.NoError(t, i.Start(h))
 	defer i.Stop()
 
-	addr := fmt.Sprintf("http://%v/", i.Addr().String())
+	addr := "http://127.0.0.1:8080/"
 	resp, err := http.Get(addr + "health")
 	if assert.NoError(t, err, "/health failed") {
 		defer resp.Body.Close()
