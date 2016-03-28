@@ -28,9 +28,9 @@ test-examples:
 
 .PHONY: crossdock
 crossdock:
-	docker-compose kill yarpc-go
-	docker-compose rm -f yarpc-go
-	docker-compose build yarpc-go
+	docker-compose kill go
+	docker-compose rm -f go
+	docker-compose build go
 	docker-compose run crossdock
 
 
