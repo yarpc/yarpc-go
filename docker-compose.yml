@@ -8,8 +8,9 @@ services:
             - node
             - java
             - python
+            - python-sync
         environment:
-            - CROSSDOCK_CLIENTS=go,node,java,python
+            - CROSSDOCK_CLIENTS=go,node,java,python,python-sync
             - CROSSDOCK_AXIS_SERVER=go,node,java,python
             - CROSSDOCK_AXIS_BEHAVIOR=echo
 
@@ -36,3 +37,11 @@ services:
         ports:
             - 8080
             - 8081
+
+    python-sync:
+        image: yarpc/yarpc-python
+        ports:
+            - 8080
+        environment:
+            - SYNC=1
+
