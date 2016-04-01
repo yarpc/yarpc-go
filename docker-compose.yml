@@ -10,8 +10,8 @@ services:
             - python
             - python-sync
         environment:
-            - CROSSDOCK_CLIENTS=yarpc-go,yarpc-java,yarpc-node,python,python-sync
-            - CROSSDOCK_AXIS_SERVER=yarpc-go,yarpc-java,yarpc-node,python
+            - CROSSDOCK_CLIENTS=go,java,node,python,python-sync
+            - CROSSDOCK_AXIS_SERVER=go,java,node,python
             - CROSSDOCK_AXIS_BEHAVIOR=raw,json,thrift
             - CROSSDOCK_AXIS_TRANSPORT=http,tchannel
 
