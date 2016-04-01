@@ -21,12 +21,19 @@
 package http
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
 	"testing"
 
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 )
 
 func TestInboundStartAndStop(t *testing.T) {
@@ -45,4 +52,62 @@ func TestInboundStopWithoutStarting(t *testing.T) {
 	i := NewInbound(":8000")
 	assert.Nil(t, i.Addr())
 	assert.NoError(t, i.Stop())
+}
+
+func TestInboundMux(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("healthy"))
+	})
+
+	i := NewInbound(":8080", Mux("/rpc/v1", mux))
+	h := transporttest.NewMockHandler(mockCtrl)
+	require.NoError(t, i.Start(h))
+	defer i.Stop()
+
+	addr := "http://127.0.0.1:8080/"
+	resp, err := http.Get(addr + "health")
+	if assert.NoError(t, err, "/health failed") {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if assert.NoError(t, err, "/health body read error") {
+			assert.Equal(t, "healthy", string(body), "/health body mismatch")
+		}
+	}
+
+	// this should fail
+	o := NewOutbound(addr)
+	_, err = o.Call(context.Background(), &transport.Request{
+		Caller:    "foo",
+		Service:   "bar",
+		Procedure: "hello",
+		Encoding:  raw.Encoding,
+		Body:      bytes.NewReader([]byte("derp")),
+	})
+
+	if assert.Error(t, err, "RPC call to / should have failed") {
+		assert.Contains(t, err.Error(), "404")
+		assert.Contains(t, err.Error(), "page not found")
+	}
+
+	o = NewOutbound(addr + "rpc/v1")
+	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	res, err := o.Call(context.Background(), &transport.Request{
+		Caller:    "foo",
+		Service:   "bar",
+		Procedure: "hello",
+		Encoding:  raw.Encoding,
+		Body:      bytes.NewReader([]byte("derp")),
+	})
+
+	if assert.NoError(t, err, "expected rpc request to succeed") {
+		defer res.Body.Close()
+		s, err := ioutil.ReadAll(res.Body)
+		if assert.NoError(t, err) {
+			assert.Empty(t, s)
+		}
+	}
 }
