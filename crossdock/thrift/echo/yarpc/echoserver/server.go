@@ -18,39 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package echoserver
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoserver"
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/thriftrw/thriftrw-go/protocol"
+	"github.com/thriftrw/thriftrw-go/wire"
+	echot "github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
 )
 
-// Register the different endpoints of the TestSubject with the given
-// Registry.
-func Register(reg transport.Registry) {
-	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(reg, json.Procedure("echo", EchoJSON))
-	thrift.Register(reg, echoserver.New(EchoThrift{}))
+type Interface interface {
+	Echo(req *thrift.Request, ping *echot.Ping) (*echot.Pong, *thrift.Response, error)
 }
 
-// EchoRaw implements the echo/raw procedure.
-func EchoRaw(req *raw.Request, body []byte) ([]byte, *raw.Response, error) {
-	return body, nil, nil
+type Handler struct{ impl Interface }
+
+func New(impl Interface) Handler {
+	return Handler{impl}
 }
 
-// EchoJSON implements the echo procedure.
-func EchoJSON(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
-	return body, nil, nil
+func (Handler) Name() string {
+	return "Echo"
 }
 
-// EchoThrift implements the Thrift Echo service.
-type EchoThrift struct{}
+func (Handler) Protocol() protocol.Protocol {
+	return protocol.Binary
+}
 
-// Echo endpoint for the Echo service.
-func (EchoThrift) Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error) {
-	return &echo.Pong{Boop: ping.Beep}, nil, nil
+func (h Handler) Handlers() map[string]thrift.Handler {
+	return map[string]thrift.Handler{
+		"echo": thrift.HandlerFunc(h.Echo),
+	}
+}
+
+func (h Handler) Echo(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+	var args echo.EchoArgs
+	if err := args.FromWire(body); err != nil {
+		return wire.Value{}, nil, err
+	}
+
+	success, res, err := h.impl.Echo(req, args.Ping)
+	result, err := echo.EchoHelper.WrapResponse(success, err)
+	return result.ToWire(), res, err
 }
