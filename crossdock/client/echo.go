@@ -31,6 +31,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
@@ -195,7 +196,7 @@ func EchoJSON(b Behavior, rpc yarpc.RPC) {
 
 // EchoThrift implements the 'thrift' behavior.
 func EchoThrift(b Behavior, rpc yarpc.RPC) {
-	client := echo.NewEchoClient(rpc.Channel("yarpc-test"))
+	client := echoclient.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := randString(5)

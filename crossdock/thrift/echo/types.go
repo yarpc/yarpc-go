@@ -22,25 +22,29 @@
 
 package echo
 
-import "github.com/thriftrw/thriftrw-go/wire"
+import (
+	"fmt"
+	"github.com/thriftrw/thriftrw-go/wire"
+	"strings"
+)
 
 type Ping struct{ Beep string }
 
 func (v *Ping) ToWire() wire.Value {
-	var fs [1]wire.Field
+	var fields [1]wire.Field
 	i := 0
-	fs[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Beep)}
+	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Beep)}
 	i++
-	return wire.NewValueStruct(wire.Struct{Fields: fs[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
 }
 
 func (v *Ping) FromWire(w wire.Value) error {
 	var err error
-	for _, f := range w.GetStruct().Fields {
-		switch f.ID {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
 		case 1:
-			if f.Value.Type() == wire.TBinary {
-				v.Beep, err = f.Value.GetString(), error(nil)
+			if field.Value.Type() == wire.TBinary {
+				v.Beep, err = field.Value.GetString(), error(nil)
 				if err != nil {
 					return err
 				}
@@ -50,29 +54,31 @@ func (v *Ping) FromWire(w wire.Value) error {
 	return nil
 }
 
-func _Ping_Read(w wire.Value) (*Ping, error) {
-	var v Ping
-	err := v.FromWire(w)
-	return &v, err
+func (v *Ping) String() string {
+	var fields [1]string
+	i := 0
+	fields[i] = fmt.Sprintf("Beep: %v", v.Beep)
+	i++
+	return fmt.Sprintf("Ping{%v}", strings.Join(fields[:i], ", "))
 }
 
 type Pong struct{ Boop string }
 
 func (v *Pong) ToWire() wire.Value {
-	var fs [1]wire.Field
+	var fields [1]wire.Field
 	i := 0
-	fs[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Boop)}
+	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Boop)}
 	i++
-	return wire.NewValueStruct(wire.Struct{Fields: fs[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
 }
 
 func (v *Pong) FromWire(w wire.Value) error {
 	var err error
-	for _, f := range w.GetStruct().Fields {
-		switch f.ID {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
 		case 1:
-			if f.Value.Type() == wire.TBinary {
-				v.Boop, err = f.Value.GetString(), error(nil)
+			if field.Value.Type() == wire.TBinary {
+				v.Boop, err = field.Value.GetString(), error(nil)
 				if err != nil {
 					return err
 				}
@@ -82,8 +88,10 @@ func (v *Pong) FromWire(w wire.Value) error {
 	return nil
 }
 
-func _Pong_Read(w wire.Value) (*Pong, error) {
-	var v Pong
-	err := v.FromWire(w)
-	return &v, err
+func (v *Pong) String() string {
+	var fields [1]string
+	i := 0
+	fields[i] = fmt.Sprintf("Boop: %v", v.Boop)
+	i++
+	return fmt.Sprintf("Pong{%v}", strings.Join(fields[:i], ", "))
 }
