@@ -17,6 +17,6 @@ Test code:
   > set baz qux
   > get baz
   > INPUT
-  get "foo" failed: "foo" does not exist
+  get "foo" failed: ResourceDoesNotExist{Key: foo}
   foo = bar
   baz = qux
