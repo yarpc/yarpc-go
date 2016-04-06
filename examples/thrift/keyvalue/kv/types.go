@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package kv
 
 import (
 	"fmt"
@@ -28,25 +28,39 @@ import (
 	"strings"
 )
 
-type Ping struct {
-	Beep string `json:"beep"`
+type ResourceDoesNotExist struct {
+	Key     string  `json:"key"`
+	Message *string `json:"message,omitempty"`
 }
 
-func (v *Ping) ToWire() wire.Value {
-	var fields [1]wire.Field
+func (v *ResourceDoesNotExist) ToWire() wire.Value {
+	var fields [2]wire.Field
 	i := 0
-	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Beep)}
+	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Key)}
 	i++
+	if v.Message != nil {
+		fields[i] = wire.Field{ID: 2, Value: wire.NewValueString(*(v.Message))}
+		i++
+	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
 }
 
-func (v *Ping) FromWire(w wire.Value) error {
+func (v *ResourceDoesNotExist) FromWire(w wire.Value) error {
 	var err error
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TBinary {
-				v.Beep, err = field.Value.GetString(), error(nil)
+				v.Key, err = field.Value.GetString(), error(nil)
+				if err != nil {
+					return err
+				}
+			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Message = &x
 				if err != nil {
 					return err
 				}
@@ -56,46 +70,18 @@ func (v *Ping) FromWire(w wire.Value) error {
 	return nil
 }
 
-func (v *Ping) String() string {
-	var fields [1]string
+func (v *ResourceDoesNotExist) String() string {
+	var fields [2]string
 	i := 0
-	fields[i] = fmt.Sprintf("Beep: %v", v.Beep)
+	fields[i] = fmt.Sprintf("Key: %v", v.Key)
 	i++
-	return fmt.Sprintf("Ping{%v}", strings.Join(fields[:i], ", "))
-}
-
-type Pong struct {
-	Boop string `json:"boop"`
-}
-
-func (v *Pong) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
-	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Boop)}
-	i++
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
-}
-
-func (v *Pong) FromWire(w wire.Value) error {
-	var err error
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 1:
-			if field.Value.Type() == wire.TBinary {
-				v.Boop, err = field.Value.GetString(), error(nil)
-				if err != nil {
-					return err
-				}
-			}
-		}
+	if v.Message != nil {
+		fields[i] = fmt.Sprintf("Message: %v", *(v.Message))
+		i++
 	}
-	return nil
+	return fmt.Sprintf("ResourceDoesNotExist{%v}", strings.Join(fields[:i], ", "))
 }
 
-func (v *Pong) String() string {
-	var fields [1]string
-	i := 0
-	fields[i] = fmt.Sprintf("Boop: %v", v.Boop)
-	i++
-	return fmt.Sprintf("Pong{%v}", strings.Join(fields[:i], ", "))
+func (v *ResourceDoesNotExist) Error() string {
+	return v.String()
 }

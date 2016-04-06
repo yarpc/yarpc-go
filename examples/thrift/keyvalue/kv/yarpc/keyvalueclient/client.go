@@ -20,38 +20,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echoclient
+package keyvalueclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/service/keyvalue"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
 type Interface interface {
-	Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error)
+	GetValue(req *thrift.Request, key *string) (string, *thrift.Response, error)
+	SetValue(req *thrift.Request, key *string, value *string) (*thrift.Response, error)
 }
 
 func New(c transport.Channel) Interface {
-	return client{c: thrift.New(thrift.Config{Service: "Echo", Channel: c, Protocol: protocol.Binary})}
+	return client{c: thrift.New(thrift.Config{Service: "KeyValue", Channel: c, Protocol: protocol.Binary})}
 }
 
 type client struct{ c thrift.Client }
 
-func (c client) Echo(req *thrift.Request, ping *echo.Ping) (success *echo.Pong, res *thrift.Response, err error) {
-	args := echo2.EchoHelper.Args(ping)
+func (c client) GetValue(req *thrift.Request, key *string) (success string, res *thrift.Response, err error) {
+	args := keyvalue.GetValueHelper.Args(key)
 	var body wire.Value
-	body, res, err = c.c.Call("echo", req, args.ToWire())
+	body, res, err = c.c.Call("getValue", req, args.ToWire())
 	if err != nil {
 		return
 	}
-	var result echo2.EchoResult
+	var result keyvalue.GetValueResult
 	if err = result.FromWire(body); err != nil {
 		return
 	}
-	success, err = echo2.EchoHelper.UnwrapResponse(&result)
+	success, err = keyvalue.GetValueHelper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) SetValue(req *thrift.Request, key *string, value *string) (res *thrift.Response, err error) {
+	args := keyvalue.SetValueHelper.Args(key, value)
+	var body wire.Value
+	body, res, err = c.c.Call("setValue", req, args.ToWire())
+	if err != nil {
+		return
+	}
+	var result keyvalue.SetValueResult
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+	err = keyvalue.SetValueHelper.UnwrapResponse(&result)
 	return
 }

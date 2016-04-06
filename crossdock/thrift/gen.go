@@ -20,4 +20,4 @@
 
 package echo_generator
 
-//go:generate thriftrw-go echo.thrift
+//go:generate thriftrw-go -yarpc echo.thrift

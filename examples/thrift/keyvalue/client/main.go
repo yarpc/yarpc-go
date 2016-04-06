@@ -31,7 +31,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
@@ -68,7 +68,7 @@ func main() {
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
 	})
 
-	client := keyvalue.NewKeyValueClient(rpc.Channel("keyvalue"))
+	client := keyvalueclient.New(rpc.Channel("keyvalue"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()
@@ -92,7 +92,7 @@ func main() {
 			key := args[0]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if value, _, err := client.GetValue(&thrift.Request{Context: ctx}, key); err != nil {
+			if value, _, err := client.GetValue(&thrift.Request{Context: ctx}, &key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -107,7 +107,7 @@ func main() {
 			key, value := args[0], args[1]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if _, err := client.SetValue(&thrift.Request{Context: ctx}, key, value); err != nil {
+			if _, err := client.SetValue(&thrift.Request{Context: ctx}, &key, &value); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue

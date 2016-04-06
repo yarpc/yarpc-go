@@ -30,7 +30,9 @@ import (
 	"strings"
 )
 
-type EchoArgs struct{ Ping *echo.Ping }
+type EchoArgs struct {
+	Ping *echo.Ping `json:"ping,omitempty"`
+}
 
 func (v *EchoArgs) ToWire() wire.Value {
 	var fields [1]wire.Field
@@ -74,7 +76,9 @@ func (v *EchoArgs) String() string {
 	return fmt.Sprintf("EchoArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
-type EchoResult struct{ Success *echo.Pong }
+type EchoResult struct {
+	Success *echo.Pong `json:"success,omitempty"`
+}
 
 func (v *EchoResult) ToWire() wire.Value {
 	var fields [1]wire.Field

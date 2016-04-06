@@ -27,7 +27,8 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/yarpc/keyvalueserver"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
@@ -41,20 +42,20 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) GetValue(req *thrift.Request, key string) (string, *thrift.Response, error) {
+func (h *handler) GetValue(req *thrift.Request, key *string) (string, *thrift.Response, error) {
 	h.RLock()
 	defer h.RUnlock()
 
-	if value, ok := h.items[key]; ok {
+	if value, ok := h.items[*key]; ok {
 		return value, nil, nil
 	}
 
-	return "", nil, &keyvalue.ResourceDoesNotExist{Key: key}
+	return "", nil, &kv.ResourceDoesNotExist{Key: *key}
 }
 
-func (h *handler) SetValue(req *thrift.Request, key string, value string) (*thrift.Response, error) {
+func (h *handler) SetValue(req *thrift.Request, key *string, value *string) (*thrift.Response, error) {
 	h.Lock()
-	h.items[key] = value
+	h.items[*key] = *value
 	h.Unlock()
 	return nil, nil
 }
@@ -74,7 +75,7 @@ func main() {
 	})
 
 	handler := handler{items: make(map[string]string)}
-	thrift.Register(rpc, keyvalue.NewKeyValueHandler(&handler))
+	thrift.Register(rpc, keyvalueserver.New(&handler))
 
 	if err := rpc.Start(); err != nil {
 		fmt.Println("error:", err.Error())
