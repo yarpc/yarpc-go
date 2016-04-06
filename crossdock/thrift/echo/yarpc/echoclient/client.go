@@ -24,6 +24,7 @@ package echoclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"github.com/thriftrw/thriftrw-go/wire"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
@@ -40,16 +41,17 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error) {
+func (c client) Echo(req *thrift.Request, ping *echo.Ping) (success *echo.Pong, res *thrift.Response, err error) {
 	args := echo2.EchoHelper.Args(ping)
-	body, res, err := c.c.Call("echo", req, args.ToWire())
+	var body wire.Value
+	body, res, err = c.c.Call("echo", req, args.ToWire())
 	if err != nil {
-		return nil, res, err
+		return
 	}
 	var result echo2.EchoResult
-	if err := result.FromWire(body); err != nil {
-		return nil, res, err
+	if err = result.FromWire(body); err != nil {
+		return
 	}
-	success, err := echo2.EchoHelper.UnwrapResponse(&result)
-	return success, res, err
+	success, err = echo2.EchoHelper.UnwrapResponse(&result)
+	return
 }

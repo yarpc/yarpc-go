@@ -24,6 +24,7 @@ package keyvalueclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"github.com/thriftrw/thriftrw-go/wire"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/service/keyvalue"
 	"github.com/yarpc/yarpc-go/transport"
@@ -40,29 +41,32 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) GetValue(req *thrift.Request, key *string) (string, *thrift.Response, error) {
+func (c client) GetValue(req *thrift.Request, key *string) (success string, res *thrift.Response, err error) {
 	args := keyvalue.GetValueHelper.Args(key)
-	body, res, err := c.c.Call("getValue", req, args.ToWire())
+	var body wire.Value
+	body, res, err = c.c.Call("getValue", req, args.ToWire())
 	if err != nil {
-		return "", res, err
+		return
 	}
 	var result keyvalue.GetValueResult
-	if err := result.FromWire(body); err != nil {
-		return "", res, err
+	if err = result.FromWire(body); err != nil {
+		return
 	}
-	success, err := keyvalue.GetValueHelper.UnwrapResponse(&result)
-	return success, res, err
+	success, err = keyvalue.GetValueHelper.UnwrapResponse(&result)
+	return
 }
 
-func (c client) SetValue(req *thrift.Request, key *string, value *string) (*thrift.Response, error) {
+func (c client) SetValue(req *thrift.Request, key *string, value *string) (res *thrift.Response, err error) {
 	args := keyvalue.SetValueHelper.Args(key, value)
-	body, res, err := c.c.Call("setValue", req, args.ToWire())
+	var body wire.Value
+	body, res, err = c.c.Call("setValue", req, args.ToWire())
 	if err != nil {
-		return res, err
+		return
 	}
 	var result keyvalue.SetValueResult
-	if err := result.FromWire(body); err != nil {
-		return res, err
+	if err = result.FromWire(body); err != nil {
+		return
 	}
-	return res, keyvalue.SetValueHelper.UnwrapResponse(&result)
+	err = keyvalue.SetValueHelper.UnwrapResponse(&result)
+	return
 }
