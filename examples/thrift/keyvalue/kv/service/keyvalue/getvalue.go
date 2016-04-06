@@ -30,7 +30,9 @@ import (
 	"strings"
 )
 
-type GetValueArgs struct{ Key *string }
+type GetValueArgs struct {
+	Key *string `json:"key,omitempty"`
+}
 
 func (v *GetValueArgs) ToWire() wire.Value {
 	var fields [1]wire.Field
@@ -71,8 +73,8 @@ func (v *GetValueArgs) String() string {
 }
 
 type GetValueResult struct {
-	Success      *string
-	DoesNotExist *kv.ResourceDoesNotExist
+	Success      *string                  `json:"success,omitempty"`
+	DoesNotExist *kv.ResourceDoesNotExist `json:"doesNotExist,omitempty"`
 }
 
 func (v *GetValueResult) ToWire() wire.Value {

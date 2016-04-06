@@ -29,8 +29,8 @@ import (
 )
 
 type SetValueArgs struct {
-	Key   *string
-	Value *string
+	Key   *string `json:"key,omitempty"`
+	Value *string `json:"value,omitempty"`
 }
 
 func (v *SetValueArgs) ToWire() wire.Value {

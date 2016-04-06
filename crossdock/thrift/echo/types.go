@@ -28,7 +28,9 @@ import (
 	"strings"
 )
 
-type Ping struct{ Beep string }
+type Ping struct {
+	Beep string `json:"beep"`
+}
 
 func (v *Ping) ToWire() wire.Value {
 	var fields [1]wire.Field
@@ -62,7 +64,9 @@ func (v *Ping) String() string {
 	return fmt.Sprintf("Ping{%v}", strings.Join(fields[:i], ", "))
 }
 
-type Pong struct{ Boop string }
+type Pong struct {
+	Boop string `json:"boop"`
+}
 
 func (v *Pong) ToWire() wire.Value {
 	var fields [1]wire.Field

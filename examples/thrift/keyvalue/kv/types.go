@@ -29,8 +29,8 @@ import (
 )
 
 type ResourceDoesNotExist struct {
-	Key     string
-	Message *string
+	Key     string  `json:"key"`
+	Message *string `json:"message,omitempty"`
 }
 
 func (v *ResourceDoesNotExist) ToWire() wire.Value {
