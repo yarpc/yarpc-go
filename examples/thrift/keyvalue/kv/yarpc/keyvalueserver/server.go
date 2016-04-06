@@ -64,12 +64,12 @@ func (h handler) GetValue(req *thrift.Request, body wire.Value) (wire.Value, *th
 	return result.ToWire(), res, err
 }
 
-func (h handler) SetValue(req2 *thrift.Request, body2 wire.Value) (wire.Value, *thrift.Response, error) {
-	var args2 keyvalue.SetValueArgs
-	if err := args2.FromWire(body2); err != nil {
+func (h handler) SetValue(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+	var args keyvalue.SetValueArgs
+	if err := args.FromWire(body); err != nil {
 		return wire.Value{}, nil, err
 	}
-	res2, err := h.impl.SetValue(req2, args2.Key, args2.Value)
-	result2, err := keyvalue.SetValueHelper.WrapResponse(err)
-	return result2.ToWire(), res2, err
+	res, err := h.impl.SetValue(req, args.Key, args.Value)
+	result, err := keyvalue.SetValueHelper.WrapResponse(err)
+	return result.ToWire(), res, err
 }
