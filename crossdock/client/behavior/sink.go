@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package behavior
 
 import (
 	"encoding/json"
@@ -26,27 +26,6 @@ import (
 	"io"
 	"runtime"
 )
-
-// Status represents the result of running a behavior.
-type Status string
-
-// Different valid Statuses.
-const (
-	Passed  Status = "passed"
-	Skipped        = "skipped"
-	Failed         = "failed"
-)
-
-// Entry is the most basic form of an entry for a behavior test.
-type Entry struct {
-	Status Status `json:"status"`
-	Output string `json:"output"`
-}
-
-// Params provides access to the behavior parameters.
-type Params interface {
-	Param(name string) string
-}
 
 // Sink records the result of calling different behaviors.
 type Sink interface {
@@ -75,7 +54,7 @@ func Errorf(s Sink, format string, args ...interface{}) {
 	})
 }
 
-// Failf records a failed test and stops executing the current behavior.
+// Fatalf records a failed test and stops executing the current behavior.
 //
 // This may be used to stop executing in case of irrecoverable errors.
 func Fatalf(s Sink, format string, args ...interface{}) {
@@ -98,15 +77,16 @@ func Successf(s Sink, format string, args ...interface{}) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-// entrySink is a sink that keeps track of entries in-order
-type entrySink struct{ entries []interface{} }
+// EntrySink is a sink that keeps track of entries in-order
+type EntrySink struct{ entries []interface{} }
 
-func (e *entrySink) Put(v interface{}) {
+// Put an entry into the EntrySink.
+func (e *EntrySink) Put(v interface{}) {
 	e.entries = append(e.entries, v)
 }
 
 // WriteJSON writes the recorded entries to the given Writer.
-func (e *entrySink) WriteJSON(w io.Writer) error {
+func (e *EntrySink) WriteJSON(w io.Writer) error {
 	enc := json.NewEncoder(w)
 	return enc.Encode(e.entries)
 }

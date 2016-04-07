@@ -18,53 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package behavior
 
-import (
-	"net/http"
+// Run the given function inside a behavior context.
+//
+// Functions like Fatalf won't work if the behavior is not executed inside a
+// Run context.
+func Run(f func()) {
+	done := make(chan struct{})
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-)
+	// We run the function inside a goroutine so that Fatalf can simply call
+	// runtime.Goexit to stop execution.
+	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
 
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
-}
+		f()
+	}()
 
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
-	}
-
-	var s behavior.EntrySink
-	behavior.Run(func() { dispatch(&s, httpParams{r}) })
-	if err := s.WriteJSON(w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param("behavior")
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
+	<-done
 }

@@ -18,53 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package behavior
 
-import (
-	"net/http"
+// Status represents the result of running a behavior.
+type Status string
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
+// Different valid Statuses.
+const (
+	Passed  Status = "passed"
+	Skipped        = "skipped"
+	Failed         = "failed"
 )
 
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
-}
-
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
-	}
-
-	var s behavior.EntrySink
-	behavior.Run(func() { dispatch(&s, httpParams{r}) })
-	if err := s.WriteJSON(w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param("behavior")
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
+// Entry is the most basic form of a test result.
+//
+// Each behavior can emit one or more entries.
+type Entry struct {
+	Status Status `json:"status"`
+	Output string `json:"output"`
 }

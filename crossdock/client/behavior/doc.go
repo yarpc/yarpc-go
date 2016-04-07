@@ -18,53 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
-
-import (
-	"net/http"
-
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-)
-
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
-}
-
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
-	}
-
-	var s behavior.EntrySink
-	behavior.Run(func() { dispatch(&s, httpParams{r}) })
-	if err := s.WriteJSON(w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param("behavior")
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
-}
+// Package behavior implements the machinery for writing behaviors in a way
+// similar to unit tests.
+//
+// 	func MyBehavior(s behavior.Sink, p behavior.Params) {
+// 		if p.Param("something") != "foo" {
+// 			behavior.Failf(s, "expected foo, got %v", p.Param("something"))
+// 		}
+// 		behavior.Successf(s, "success")
+// 	}
+//
+// 	behavior.Run(func() {
+// 		MyBehavior(someSink, someParams)
+// 	})
+package behavior
