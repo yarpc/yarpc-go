@@ -43,94 +43,53 @@ import (
 	"golang.org/x/net/context"
 )
 
-// echoEntry is an entry emitted by the Echo behavior.
+// echoEntry is an entry emitted by the echo behaviors.
 type echoEntry struct {
-	BasicEntry
+	Entry
 
 	Transport string `json:"transport"`
 	Encoding  string `json:"encoding"`
 	Server    string `json:"server"`
 }
 
-type echoEntryBuilder struct {
+type echoSink struct {
+	Sink
+
 	Transport string
 	Encoding  string
 	Server    string
 }
 
-func (b echoEntryBuilder) Skip(reason string) interface{} {
-	return echoEntry{
-		BasicEntry: BasicEntryBuilder.Skip(reason).(BasicEntry),
-		Transport:  b.Transport,
-		Encoding:   b.Encoding,
-		Server:     b.Server,
-	}
-}
-
-func (b echoEntryBuilder) Fail(message string) interface{} {
-	return echoEntry{
-		BasicEntry: BasicEntryBuilder.Fail(message).(BasicEntry),
-		Transport:  b.Transport,
-		Encoding:   b.Encoding,
-		Server:     b.Server,
-	}
-}
-
-func (b echoEntryBuilder) Pass(output string) interface{} {
-	return echoEntry{
-		BasicEntry: BasicEntryBuilder.Pass(output).(BasicEntry),
-		Transport:  b.Transport,
-		Encoding:   b.Encoding,
-		Server:     b.Server,
-	}
-}
-
-func runEchoBehavior(bt *BehaviorTester, encoding string) {
-	server := bt.Param("server")
-	trans := bt.Param("transport")
-	rpc := createRPC(bt.NewBehavior(BasicEntryBuilder), server, trans)
-	if rpc == nil {
-		return // already logged a failure with the Behavior.
-	}
-
-	// Echo-specific Behavior used to actually make the call.
-	b := bt.NewBehavior(echoEntryBuilder{
-		Transport: trans,
-		Encoding:  encoding,
-		Server:    server,
+func (s echoSink) Put(e interface{}) {
+	s.Sink.Put(echoEntry{
+		Entry:     e.(Entry),
+		Transport: s.Transport,
+		Encoding:  s.Encoding,
+		Server:    s.Server,
 	})
-	switch encoding {
-	case "raw":
-		EchoRaw(b, rpc)
-	case "json":
-		EchoJSON(b, rpc)
-	case "thrift":
-		EchoThrift(b, rpc)
-	default:
-		b.Failf("unknown encoding %q", encoding)
-	}
 }
 
-func createRPC(b Behavior, server, trans string) yarpc.RPC {
+// createRPC creates an RPC from the given parameters or fails the whole
+// behavior.
+func createRPC(s Sink, p Params) yarpc.RPC {
+	server := p.Param("server")
 	if server == "" {
-		b.Fail("server is required")
-		return nil
+		Fatalf(s, "server is required")
 	}
 
 	var outbound transport.Outbound
+	trans := p.Param("transport")
 	switch trans {
 	case "http":
 		outbound = http.NewOutbound(fmt.Sprintf("http://%s:8081", server))
 	case "tchannel":
 		ch, err := tchannel.NewChannel("yarpc-test", nil)
 		if err != nil {
-			b.Failf("couldn't create tchannel: %v", err)
-			return nil
+			Fatalf(s, "couldn't create tchannel: %v", err)
 		}
 		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
 	default:
-		b.Failf("unknown transport %q", trans)
-		return nil
+		Fatalf(s, "unknown transport %q", trans)
 	}
 
 	return yarpc.New(yarpc.Config{
@@ -139,8 +98,22 @@ func createRPC(b Behavior, server, trans string) yarpc.RPC {
 	})
 }
 
+// createEchoSink wraps a Sink to have transport, encoding, and server
+// information.
+func createEchoSink(encoding string, s Sink, p Params) Sink {
+	return echoSink{
+		Sink:      s,
+		Transport: p.Param("transport"),
+		Encoding:  encoding,
+		Server:    p.Param("server"),
+	}
+}
+
 // EchoRaw implements the 'raw' behavior.
-func EchoRaw(b Behavior, rpc yarpc.RPC) {
+func EchoRaw(s Sink, p Params) {
+	s = createEchoSink("raw", s, p)
+	rpc := createRPC(s, p)
+
 	client := raw.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
@@ -151,16 +124,14 @@ func EchoRaw(b Behavior, rpc yarpc.RPC) {
 	}, token)
 
 	if err != nil {
-		b.Failf("call to echo/raw failed: %v", err)
-		return
+		Fatalf(s, "call to echo/raw failed: %v", err)
 	}
 
 	if !bytes.Equal(token, resBody) {
-		b.Failf("expected %v, got %v", token, resBody)
-		return
+		Fatalf(s, "expected %v, got %v", token, resBody)
 	}
 
-	b.Passf("server said: %v", resBody)
+	Successf(s, "server said: %v", resBody)
 }
 
 // jsonEcho contains an echo request or response for the JSON echo endpoint.
@@ -169,7 +140,10 @@ type jsonEcho struct {
 }
 
 // EchoJSON implements the 'json' behavior.
-func EchoJSON(b Behavior, rpc yarpc.RPC) {
+func EchoJSON(s Sink, p Params) {
+	s = createEchoSink("json", s, p)
+	rpc := createRPC(s, p)
+
 	client := json.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
@@ -182,20 +156,21 @@ func EchoJSON(b Behavior, rpc yarpc.RPC) {
 	)
 
 	if err != nil {
-		b.Failf("call to echo failed: %v", err)
-		return
+		Fatalf(s, "call to echo failed: %v", err)
 	}
 
 	if response.Token != token {
-		b.Failf("expected %v, got %v", token, response.Token)
-		return
+		Fatalf(s, "expected %v, got %v", token, response.Token)
 	}
 
-	b.Passf("server said: %v", response.Token)
+	Successf(s, "server said: %v", response.Token)
 }
 
 // EchoThrift implements the 'thrift' behavior.
-func EchoThrift(b Behavior, rpc yarpc.RPC) {
+func EchoThrift(s Sink, p Params) {
+	s = createEchoSink("thrift", s, p)
+	rpc := createRPC(s, p)
+
 	client := echoclient.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
@@ -206,16 +181,14 @@ func EchoThrift(b Behavior, rpc yarpc.RPC) {
 	)
 
 	if err != nil {
-		b.Failf("call to Echo::echo failed: %v", err)
-		return
+		Fatalf(s, "call to Echo::echo failed: %v", err)
 	}
 
 	if token != pong.Boop {
-		b.Failf("expected %v, got %v", token, pong.Boop)
-		return
+		Fatalf(s, "expected %v, got %v", token, pong.Boop)
 	}
 
-	b.Passf("server said: %v", pong.Boop)
+	Successf(s, "server said: %v", pong.Boop)
 }
 
 func randBytes(length int) []byte {

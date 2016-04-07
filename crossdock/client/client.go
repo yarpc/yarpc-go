@@ -20,10 +20,7 @@
 
 package client
 
-import (
-	"encoding/json"
-	"net/http"
-)
+import "net/http"
 
 // Start begins a blocking Crossdock client
 func Start() {
@@ -36,19 +33,34 @@ func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// All behaviors will eventually contribute to this behavior's output.
-	bt := BehaviorTester{Params: httpParams{Request: r}}
-	v := bt.Param("behavior")
-	switch v {
-	case "raw", "json", "thrift":
-		runEchoBehavior(&bt, v)
-	default:
-		bt.NewBehavior(BasicEntryBuilder).Skipf("unknown behavior %v", v)
-	}
+	var s entrySink
 
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(bt.Entries); err != nil {
+	// We run the behaviors inside a goroutine so that we can use Failf to
+	// stop executing at any time.
+	done := make(chan struct{})
+	go dispatch(&s, httpParams{r}, done)
+	<-done
+
+	if err := s.WriteJSON(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func dispatch(s Sink, ps Params, done chan<- struct{}) {
+	defer func() {
+		done <- struct{}{}
+	}()
+
+	v := ps.Param("behavior")
+	switch v {
+	case "raw":
+		EchoRaw(s, ps)
+	case "json":
+		EchoJSON(s, ps)
+	case "thrift":
+		EchoThrift(s, ps)
+	default:
+		Skipf(s, "unknown behavior %q", v)
 	}
 }
 
