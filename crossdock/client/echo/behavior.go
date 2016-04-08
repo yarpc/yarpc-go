@@ -64,22 +64,22 @@ func (s echoSink) Put(e interface{}) {
 func createEchoSink(encoding string, s behavior.Sink, p behavior.Params) behavior.Sink {
 	return echoSink{
 		Sink:      s,
-		Transport: p.Param("transport"),
+		Transport: p.Param(TransportParam),
 		Encoding:  encoding,
-		Server:    p.Param("server"),
+		Server:    p.Param(ServerParam),
 	}
 }
 
 // createRPC creates an RPC from the given parameters or fails the whole
 // behavior.
 func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
-	server := p.Param("server")
+	server := p.Param(ServerParam)
 	if server == "" {
 		behavior.Fatalf(s, "server is required")
 	}
 
 	var outbound transport.Outbound
-	trans := p.Param("transport")
+	trans := p.Param(TransportParam)
 	switch trans {
 	case "http":
 		outbound = http.NewOutbound(fmt.Sprintf("http://%s:8081", server))
