@@ -30,10 +30,7 @@ func Run(f func()) {
 	// We run the function inside a goroutine so that Fatalf can simply call
 	// runtime.Goexit to stop execution.
 	go func() {
-		defer func() {
-			done <- struct{}{}
-		}()
-
+		defer close(done)
 		f()
 	}()
 
