@@ -2,7 +2,7 @@ version: '2'
 
 services:
     crossdock:
-        image: yarpc/crossdock
+        image: yarpc/crossdock:behavior-axes
         links:
             - go
             - node
@@ -10,10 +10,15 @@ services:
             - python
             - python-sync
         environment:
-            - CROSSDOCK_CLIENTS=go,java,node,python,python-sync
-            - CROSSDOCK_AXIS_SERVER=go,java,node,python
-            - CROSSDOCK_AXIS_BEHAVIOR=raw,json,thrift
+            - CROSSDOCK_WAIT_FOR=go,node,java,python
+
+            - CROSSDOCK_AXIS_CLIENT=go,node,java,python,python-sync
+            - CROSSDOCK_AXIS_SERVER=go,node,java,python
             - CROSSDOCK_AXIS_TRANSPORT=http,tchannel
+
+            - CROSSDOCK_BEHAVIOR_RAW=client,server,transport
+            - CROSSDOCK_BEHAVIOR_JSON=client,server,transport
+            - CROSSDOCK_BEHAVIOR_THRIFT=client,server,transport
 
     go:
         build: .
