@@ -84,7 +84,7 @@ func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
 	case "http":
 		outbound = http.NewOutbound(fmt.Sprintf("http://%s:8081", server))
 	case "tchannel":
-		ch, err := tchannel.NewChannel("yarpc-test", nil)
+		ch, err := tchannel.NewChannel("client", nil)
 		if err != nil {
 			behavior.Fatalf(s, "couldn't create tchannel: %v", err)
 		}
