@@ -35,7 +35,7 @@ import (
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
 func NewOutbound(url string) transport.Outbound {
-	return outbound{URL: url}
+	return NewOutboundWithClient(url, nil)
 }
 
 // NewOutboundWithClient builds a new HTTP outbound that sends requests to the
