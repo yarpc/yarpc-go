@@ -20,19 +20,28 @@
 
 package behavior
 
-// Run the given function inside a behavior context.
+// Run the given function inside a behavior context and return the entries
+// logged by it.
 //
 // Functions like Fatalf won't work if the behavior is not executed inside a
 // Run context.
-func Run(f func()) {
+func Run(f func(Sink)) []interface{} {
+	var s entrySink
 	done := make(chan struct{})
 
 	// We run the function inside a goroutine so that Fatalf can simply call
 	// runtime.Goexit to stop execution.
 	go func() {
-		defer close(done)
-		f()
+		defer func() {
+			if err := recover(); err != nil {
+				Errorf(&s, "%v", err)
+			}
+			close(done)
+		}()
+
+		f(&s)
 	}()
 
 	<-done
+	return s.entries
 }

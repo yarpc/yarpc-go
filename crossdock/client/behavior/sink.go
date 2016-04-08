@@ -21,9 +21,7 @@
 package behavior
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"runtime"
 )
 
@@ -77,16 +75,10 @@ func Successf(s Sink, format string, args ...interface{}) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-// EntrySink is a sink that keeps track of entries in-order
-type EntrySink struct{ entries []interface{} }
+// entrySink is a sink that keeps track of entries in-order
+type entrySink struct{ entries []interface{} }
 
 // Put an entry into the EntrySink.
-func (e *EntrySink) Put(v interface{}) {
+func (e *entrySink) Put(v interface{}) {
 	e.entries = append(e.entries, v)
-}
-
-// WriteJSON writes the recorded entries to the given Writer.
-func (e *EntrySink) WriteJSON(w io.Writer) error {
-	enc := json.NewEncoder(w)
-	return enc.Encode(e.entries)
 }

@@ -21,6 +21,7 @@
 package client
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
@@ -38,9 +39,12 @@ func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var s behavior.EntrySink
-	behavior.Run(func() { dispatch(&s, httpParams{r}) })
-	if err := s.WriteJSON(w); err != nil {
+	entries := behavior.Run(func(s behavior.Sink) {
+		dispatch(s, httpParams{r})
+	})
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(entries); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
