@@ -21,21 +21,19 @@
 package random
 
 import (
-	"crypto/rand"
-	"encoding/base64"
-	"io"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// Bytes generates the given number of random bytes.
-func Bytes(length int) []byte {
-	out := make([]byte, length)
-	if _, err := io.ReadFull(rand.Reader, out); err != nil {
-		panic(err)
-	}
-	return out
+func TestBytes(t *testing.T) {
+	assert.Equal(t, []byte{}, Bytes(0))
+	assert.Len(t, Bytes(1), 1)
+	assert.Len(t, Bytes(10), 10)
 }
 
-// String generates a random string of the given size.
-func String(length int) string {
-	return base64.RawStdEncoding.EncodeToString(Bytes(length))[:length]
+func TestString(t *testing.T) {
+	assert.Equal(t, "", String(0))
+	assert.Len(t, String(1), 1)
+	assert.Len(t, String(10), 10)
 }
