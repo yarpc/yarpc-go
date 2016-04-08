@@ -26,8 +26,8 @@ type Status string
 // Different valid Statuses.
 const (
 	Passed  Status = "passed"
-	Skipped        = "skipped"
-	Failed         = "failed"
+	Skipped Status = "skipped"
+	Failed  Status = "failed"
 )
 
 // Entry is the most basic form of a test result.
