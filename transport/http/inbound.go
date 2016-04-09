@@ -52,7 +52,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 
 // NewInbound builds a new HTTP inbound that listens on the given address.
 func NewInbound(addr string, opts ...InboundOption) Inbound {
-	i := &inbound{addr: addr}
+	i := &inbound{addr: addr, done: make(chan struct{})}
 	for _, opt := range opts {
 		opt(i)
 	}
@@ -64,6 +64,7 @@ type inbound struct {
 	mux        *http.ServeMux
 	muxPattern string
 	listener   net.Listener
+	done       chan struct{}
 }
 
 func (i *inbound) Start(h transport.Handler) error {
@@ -73,7 +74,7 @@ func (i *inbound) Start(h transport.Handler) error {
 		return err
 	}
 
-	var httpHandler http.Handler = handler{h}
+	var httpHandler http.Handler = handler{Handler: h}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
 		httpHandler = i.mux
@@ -81,7 +82,11 @@ func (i *inbound) Start(h transport.Handler) error {
 
 	i.addr = i.listener.Addr().String() // in case it changed
 	server := &http.Server{Handler: httpHandler}
-	go server.Serve(i.listener)
+	go func(l net.Listener, done chan<- struct{}) {
+		// serve always returns an error
+		_ = server.Serve(l)
+		close(done)
+	}(i.listener, i.done)
 	return nil
 }
 
@@ -91,6 +96,7 @@ func (i *inbound) Stop() error {
 	}
 	err := i.listener.Close()
 	i.listener = nil
+	<-i.done
 	return err
 }
 
