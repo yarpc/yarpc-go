@@ -50,7 +50,6 @@ func JSON(s behavior.Sink, p behavior.Params) {
 		&jsonEcho{Token: token},
 		&response,
 	)
-
 	if err != nil {
 		behavior.Fatalf(s, "call to echo failed: %v", err)
 	}

@@ -45,7 +45,6 @@ func Thrift(s behavior.Sink, p behavior.Params) {
 		&thrift.Request{Context: ctx},
 		&echo.Ping{Beep: token},
 	)
-
 	if err != nil {
 		behavior.Fatalf(s, "call to Echo::echo failed: %v", err)
 	}
