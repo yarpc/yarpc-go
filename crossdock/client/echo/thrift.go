@@ -18,57 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package echo
 
 import (
-	"encoding/json"
-	"net/http"
+	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
+
+	"golang.org/x/net/context"
 )
 
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
-}
+// Thrift implements the 'thrift' behavior.
+func Thrift(s behavior.Sink, p behavior.Params) {
+	s = createEchoSink("thrift", s, p)
+	rpc := createRPC(s, p)
 
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
+	client := echoclient.New(rpc.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+	token := random.String(5)
+	pong, _, err := client.Echo(
+		&thrift.Request{Context: ctx},
+		&echo.Ping{Beep: token},
+	)
+	if err != nil {
+		behavior.Fatalf(s, "call to Echo::echo failed: %v", err)
 	}
 
-	entries := behavior.Run(func(s behavior.Sink) {
-		dispatch(s, httpParams{r})
-	})
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(entries); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if token != pong.Boop {
+		behavior.Fatalf(s, "expected %v, got %v", token, pong.Boop)
 	}
-}
 
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param(BehaviorParam)
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
+	behavior.Successf(s, "server said: %v", pong.Boop)
 }

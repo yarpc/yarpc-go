@@ -18,57 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package random
 
 import (
-	"encoding/json"
-	"net/http"
+	"testing"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
+	"github.com/stretchr/testify/assert"
 )
 
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
+func TestBytes(t *testing.T) {
+	assert.Equal(t, []byte{}, Bytes(0))
+	assert.Len(t, Bytes(1), 1)
+	assert.Len(t, Bytes(10), 10)
 }
 
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
-	}
-
-	entries := behavior.Run(func(s behavior.Sink) {
-		dispatch(s, httpParams{r})
-	})
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(entries); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param(BehaviorParam)
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
+func TestString(t *testing.T) {
+	assert.Equal(t, "", String(0))
+	assert.Len(t, String(1), 1)
+	assert.Len(t, String(10), 10)
 }

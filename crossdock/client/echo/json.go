@@ -18,57 +18,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package echo
 
 import (
-	"encoding/json"
-	"net/http"
+	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/encoding/json"
+
+	"golang.org/x/net/context"
 )
 
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
+// jsonEcho contains an echo request or response for the JSON echo endpoint.
+type jsonEcho struct {
+	Token string `json:"token"`
 }
 
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
+// JSON implements the 'json' behavior.
+func JSON(s behavior.Sink, p behavior.Params) {
+	s = createEchoSink("json", s, p)
+	rpc := createRPC(s, p)
+
+	client := json.New(rpc.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+	var response jsonEcho
+	token := random.String(5)
+	_, err := client.Call(
+		&json.Request{Context: ctx, Procedure: "echo"},
+		&jsonEcho{Token: token},
+		&response,
+	)
+	if err != nil {
+		behavior.Fatalf(s, "call to echo failed: %v", err)
 	}
 
-	entries := behavior.Run(func(s behavior.Sink) {
-		dispatch(s, httpParams{r})
-	})
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(entries); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if response.Token != token {
+		behavior.Fatalf(s, "expected %v, got %v", token, response.Token)
 	}
-}
 
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param(BehaviorParam)
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
+	behavior.Successf(s, "server said: %v", response.Token)
 }

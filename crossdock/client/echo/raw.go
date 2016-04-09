@@ -18,57 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package echo
 
 import (
-	"encoding/json"
-	"net/http"
+	"bytes"
+	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+
+	"golang.org/x/net/context"
 )
 
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
-}
+// Raw implements the 'raw' behavior.
+func Raw(s behavior.Sink, p behavior.Params) {
+	s = createEchoSink("raw", s, p)
+	rpc := createRPC(s, p)
 
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
+	client := raw.New(rpc.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+	token := random.Bytes(5)
+	resBody, _, err := client.Call(&raw.Request{
+		Context:   ctx,
+		Procedure: "echo/raw",
+	}, token)
+
+	if err != nil {
+		behavior.Fatalf(s, "call to echo/raw failed: %v", err)
 	}
 
-	entries := behavior.Run(func(s behavior.Sink) {
-		dispatch(s, httpParams{r})
-	})
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(entries); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if !bytes.Equal(token, resBody) {
+		behavior.Fatalf(s, "expected %v, got %v", token, resBody)
 	}
-}
 
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param(BehaviorParam)
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
+	behavior.Successf(s, "server said: %v", resBody)
 }
