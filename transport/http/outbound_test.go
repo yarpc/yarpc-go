@@ -46,6 +46,8 @@ func TestCallSuccess(t *testing.T) {
 			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
 			assert.Equal(t, "1000", req.Header.Get(TTLMSHeader))
 			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+			assert.Equal(t,
+				"application/octet-stream", req.Header.Get("Content-Type"))
 
 			body, err := ioutil.ReadAll(req.Body)
 			if assert.NoError(t, err) {
