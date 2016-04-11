@@ -61,6 +61,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	request.Header.Set(ServiceHeader, req.Service)
 	request.Header.Set(ProcedureHeader, req.Procedure)
 	request.Header.Set(TTLMSHeader, fmt.Sprintf("%d", req.TTL/time.Millisecond))
+	request.Header.Set("Content-Type", "application/octet-stream")
 
 	encoding := string(req.Encoding)
 	if encoding != "" {
