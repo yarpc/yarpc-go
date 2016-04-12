@@ -30,11 +30,9 @@ import (
 
 func TestEchoSink(t *testing.T) {
 	tests := []struct {
-		server    string
-		transport string
-		encoding  string
-		f         func(behavior.Sink)
-		entry     echoEntry
+		server, transport, encoding string
+		act                         func(behavior.Sink)
+		entry                       echoEntry
 	}{
 		{
 			"localhost", "tchannel", "json",
@@ -89,7 +87,7 @@ func TestEchoSink(t *testing.T) {
 				"server":    tt.server,
 				"transport": tt.transport,
 			})
-			tt.f(es)
+			tt.act(es)
 		})
 
 		if assert.Len(t, entries, 1) {
