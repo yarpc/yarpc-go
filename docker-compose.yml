@@ -10,7 +10,7 @@ services:
             - python
             - python-sync
         environment:
-            - CROSSDOCK_WAIT_FOR=go,node,java,python
+            - CROSSDOCK_WAIT_FOR=go,node,java,python,python-sync
 
             - CROSSDOCK_AXIS_CLIENT=go,node,java,python,python-sync
             - CROSSDOCK_AXIS_SERVER=go,node,java,python
