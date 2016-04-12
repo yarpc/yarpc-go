@@ -22,11 +22,12 @@ package echo
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
+	ht "github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
@@ -82,7 +83,14 @@ func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
 	trans := p.Param(TransportParam)
 	switch trans {
 	case "http":
-		outbound = http.NewOutbound(fmt.Sprintf("http://%s:8081", server))
+		// Go HTTP servers have keep-alive enabled by default. If we re-use
+		// HTTP clients, the same connection will be used to make requests.
+		// This is undesirable during tests because we want to isolate the
+		// different test requests. Additionally, keep-alive causes the test
+		// server to continue listening on the existing connection for some
+		// time after we close the listener.
+		cl := &http.Client{Transport: new(http.Transport)}
+		outbound = ht.NewOutboundWithClient(fmt.Sprintf("http://%s:8081", server), cl)
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
 		if err != nil {

@@ -26,3 +26,11 @@ type Params interface {
 	// parameter is unknown.
 	Param(name string) string
 }
+
+// ParamsFromMap constructs a Params object from the given map.
+type ParamsFromMap map[string]string
+
+// Param for ParamsFromMap.
+func (m ParamsFromMap) Param(name string) string {
+	return m[name]
+}
