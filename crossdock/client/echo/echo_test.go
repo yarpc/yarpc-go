@@ -70,7 +70,6 @@ func TestEchoBehaviors(t *testing.T) {
 	tests := []struct {
 		encname  string
 		register func(yarpc.RPC)
-		// registerInvalid func(yarpc.RPC)
 		behavior func(behavior.Sink, behavior.Params)
 
 		// expectations: one of these must be set
@@ -168,9 +167,7 @@ func TestEchoBehaviors(t *testing.T) {
 
 			entries := behavior.Run(func(s behavior.Sink) {
 				err := rpc.Start()
-				assert.NoError(t, err,
-					"failed to start RPC for %v, %v", trans.name, tt.encname)
-				if err == nil {
+				if assert.NoError(t, err, "failed to start RPC for %v, %v", trans.name, tt.encname) {
 					defer rpc.Stop()
 					tt.behavior(s, params)
 				}
