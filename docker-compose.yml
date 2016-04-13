@@ -10,15 +10,15 @@ services:
             - python
             - python-sync
         environment:
-            - CROSSDOCK_WAIT_FOR=go,node,java,python,python-sync
+            - WAIT_FOR=go,node,java,python,python-sync
 
-            - CROSSDOCK_AXIS_CLIENT=go,node,java,python,python-sync
-            - CROSSDOCK_AXIS_SERVER=go,node,java,python
-            - CROSSDOCK_AXIS_TRANSPORT=http,tchannel
+            - AXIS_CLIENT=go,node,java,python,python-sync
+            - AXIS_SERVER=go,node,java,python
+            - AXIS_TRANSPORT=http,tchannel
 
-            - CROSSDOCK_BEHAVIOR_RAW=client,server,transport
-            - CROSSDOCK_BEHAVIOR_JSON=client,server,transport
-            - CROSSDOCK_BEHAVIOR_THRIFT=client,server,transport
+            - BEHAVIOR_RAW=client,server,transport
+            - BEHAVIOR_JSON=client,server,transport
+            - BEHAVIOR_THRIFT=client,server,transport
 
     go:
         build: .
