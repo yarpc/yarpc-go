@@ -10,10 +10,10 @@ services:
             - python
             - python-sync
         environment:
-            - WAIT_FOR=go,node,java,python,python-sync
+            - WAIT_FOR=go
 
-            - AXIS_CLIENT=go,node,java,python,python-sync
-            - AXIS_SERVER=go,node,java,python
+            - AXIS_CLIENT=go
+            - AXIS_SERVER=go
             - AXIS_TRANSPORT=http,tchannel
 
             - BEHAVIOR_RAW=client,server,transport
