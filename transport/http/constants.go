@@ -22,20 +22,20 @@ package http
 
 const (
 	// CallerHeader is the HTTP header used to indiate the service doing the calling
-	CallerHeader = "YARPC-Caller"
+	CallerHeader = "RPC-Caller"
 
 	// EncodingHeader is the HTTP header used to specify the name of the
 	// encoding.
-	EncodingHeader = "YARPC-Encoding"
+	EncodingHeader = "RPC-Encoding"
 
 	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
-	TTLMSHeader = "YARPC-TTLms"
+	TTLMSHeader = "RPC-TTLms"
 
 	// ProcedureHeader is the HTTP header used to indicate the procedure
-	ProcedureHeader = "YARPC-Procedure"
+	ProcedureHeader = "RPC-Procedure"
 
 	// ServiceHeader is the HTTP header used to indicate the service
-	ServiceHeader = "YARPC-Service"
+	ServiceHeader = "RPC-Service"
 )
 
 // TODO Make consistent with other languages^
