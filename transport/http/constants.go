@@ -29,7 +29,7 @@ const (
 	EncodingHeader = "RPC-Encoding"
 
 	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
-	TTLMSHeader = "RPC-Context-TTL-MS"
+	TTLMSHeader = "Context-TTL-MS"
 
 	// ProcedureHeader is the HTTP header used to indicate the procedure
 	ProcedureHeader = "RPC-Procedure"
