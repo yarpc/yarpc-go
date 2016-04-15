@@ -26,22 +26,22 @@ services:
             - "8080-8082"
 
     node:
-        image: yarpc/yarpc-node:use-rpc-prefix
+        image: yarpc/yarpc-node
         ports:
             - "8080-8082"
 
     java:
-        image: yarpc/yarpc-java:use-rpc-prefix
+        image: yarpc/yarpc-java
         ports:
             - "8080-8082"
 
     python:
-        image: yarpc/yarpc-python:use-rpc-prefix
+        image: yarpc/yarpc-python
         ports:
             - "8080:8082"
 
     python-sync:
-        image: yarpc/yarpc-python:use-rpc-prefix
+        image: yarpc/yarpc-python
         ports:
             - 8080
         environment:
