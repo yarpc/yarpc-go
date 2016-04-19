@@ -5,3 +5,4 @@ node_modules
 *.so
 *.exe
 *.prof
+/cover
