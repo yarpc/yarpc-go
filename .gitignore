@@ -6,3 +6,4 @@ node_modules
 *.exe
 *.prof
 /cover
+/cover.html
