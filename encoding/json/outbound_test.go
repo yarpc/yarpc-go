@@ -48,7 +48,6 @@ func TestCall(t *testing.T) {
 		procedure       string
 		headers         transport.Headers
 		body            interface{}
-		returnHeaders   transport.Headers
 		encodedRequest  string
 		encodedResponse string
 
@@ -88,7 +87,6 @@ func TestCall(t *testing.T) {
 		{
 			procedure:       "requestHeaders",
 			headers:         transport.Headers{"user-id": "42"},
-			returnHeaders:   transport.Headers{"success": "true"},
 			body:            map[string]interface{}{},
 			encodedRequest:  "{}",
 			encodedResponse: "{}",
@@ -120,7 +118,7 @@ func TestCall(t *testing.T) {
 				&transport.Response{
 					Body: ioutil.NopCloser(
 						bytes.NewReader([]byte(tt.encodedResponse))),
-					Headers: tt.returnHeaders,
+					Headers: tt.wantHeaders,
 				}, nil)
 		}
 
