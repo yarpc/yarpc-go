@@ -22,6 +22,8 @@ package transport
 
 import "golang.org/x/net/context"
 
+//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest github.com/yarpc/yarpc-go/transport Outbound
+
 // Outbound is a transport that knows how to send requests for procedure
 // calls.
 type Outbound interface {
