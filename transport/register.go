@@ -29,7 +29,7 @@ import (
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=testing/register.go -package=transporttest github.com/yarpc/yarpc-go/transport Handler
+//go:generate mockgen -destination=transporttest/register.go -package=transporttest github.com/yarpc/yarpc-go/transport Handler
 
 // Handler handles a single transport-level request.
 type Handler interface {
