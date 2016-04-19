@@ -37,6 +37,7 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 	reqBody, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
 		return err
+		// TODO should this count as an encoding error of some kind?
 	}
 
 	request := Request{
