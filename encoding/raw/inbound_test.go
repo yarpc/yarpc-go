@@ -67,7 +67,7 @@ func TestRawHandler(t *testing.T) {
 			procedure: "bar",
 			bodyChunks: [][]byte{
 				{1, 2, 3},
-				nil,
+				nil, // triggers a read error
 				{4, 5, 6},
 			},
 			handler: handlerNotCalled,
