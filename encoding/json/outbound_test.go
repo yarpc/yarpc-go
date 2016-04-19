@@ -55,9 +55,10 @@ func TestCall(t *testing.T) {
 		noCall bool
 
 		// Either want, or wantType and wantErr must be set.
-		want     interface{}  // expected response body
-		wantType reflect.Type // type of response body
-		wantErr  string       // error message
+		want        interface{} // expected response body
+		wantHeaders transport.Headers
+		wantType    reflect.Type // type of response body
+		wantErr     string       // error message
 	}{
 		{
 			procedure:       "foo",
@@ -83,6 +84,15 @@ func TestCall(t *testing.T) {
 			wantErr:   "failed to serialize JSON",
 			// TODO make error message consistent with other languages
 		},
+		{
+			procedure:       "requestHeaders",
+			headers:         transport.Headers{"user-id": "42"},
+			body:            map[string]interface{}{},
+			encodedRequest:  "{}",
+			encodedResponse: "{}",
+			want:            map[string]interface{}{},
+			wantHeaders:     transport.Headers{"success": "true"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -101,12 +111,15 @@ func TestCall(t *testing.T) {
 						Service:   service,
 						Procedure: tt.procedure,
 						Encoding:  Encoding,
+						Headers:   tt.headers,
 						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
 					}),
 			).Return(
-				&transport.Response{Body: ioutil.NopCloser(
-					bytes.NewReader([]byte(tt.encodedResponse)),
-				)}, nil)
+				&transport.Response{
+					Body: ioutil.NopCloser(
+						bytes.NewReader([]byte(tt.encodedResponse))),
+					Headers: tt.wantHeaders,
+				}, nil)
 		}
 
 		var wantType reflect.Type
@@ -118,7 +131,7 @@ func TestCall(t *testing.T) {
 		}
 		resBody := reflect.Zero(wantType).Interface()
 
-		_, err := client.Call(&Request{
+		res, err := client.Call(&Request{
 			Context:   context.TODO(), // TODO
 			Procedure: tt.procedure,
 			Headers:   tt.headers,
@@ -131,6 +144,7 @@ func TestCall(t *testing.T) {
 			}
 		} else {
 			if assert.NoError(t, err) {
+				assert.Equal(t, tt.wantHeaders, res.Headers)
 				assert.Equal(t, tt.want, resBody)
 			}
 		}
