@@ -22,7 +22,7 @@
 //
 // To make outbound requests using this encoding,
 //
-// 	client := json.New(outbound)
+// 	client := json.New(channel)
 // 	var resBody GetValueResponse
 // 	response, err := client.Call(
 // 		&json.Request{
