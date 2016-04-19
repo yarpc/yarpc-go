@@ -19,6 +19,12 @@ test:
 	go test $(PACKAGES)
 
 
+.PHONY: cover
+cover:
+	./scripts/cover.sh $(shell go list $(PACKAGES))
+	go tool cover -html=cover.out -o cover.html
+
+
 # This is not part of the regular test target because we don't want to slow it
 # down.
 .PHONY: test-examples
@@ -45,14 +51,11 @@ crossdock-fresh: install
 
 .PHONY: install_ci
 install_ci: install
-	go get github.com/axw/gocov/gocov
+	go get github.com/wadey/gocovmerge
 	go get github.com/mattn/goveralls
 	go get golang.org/x/tools/cmd/cover
 
 
 .PHONY: test_ci
 test_ci:
-        # @see https://github.com/mattn/goveralls/issues/68
-	#goveralls -service=travis-ci -v $(PACKAGES)
-	go test -v $(PACKAGES)
-	make -C examples
+	./scripts/cover.sh $(shell go list $(PACKAGES))
