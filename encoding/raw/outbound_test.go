@@ -25,11 +25,12 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go/testutils/testreader"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/transporttest"
 	"golang.org/x/net/context"
 )
 
