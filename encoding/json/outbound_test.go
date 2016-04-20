@@ -73,16 +73,14 @@ func TestCall(t *testing.T) {
 			encodedRequest:  `[1,2,3]`,
 			encodedResponse: `invalid JSON`,
 			wantType:        _typeOfMapInterface,
-			wantErr:         "failed to parse JSON",
-			// TODO make error message consistent with other languages
+			wantErr:         `failed to decode "json" response body for procedure "bar" of service "service"`,
 		},
 		{
 			procedure: "baz",
 			body:      func() {}, // funcs cannot be json.Marshal'ed
 			noCall:    true,
 			wantType:  _typeOfMapInterface,
-			wantErr:   "failed to serialize JSON",
-			// TODO make error message consistent with other languages
+			wantErr:   `failed to encode "json" request body for procedure "baz" of service "service"`,
 		},
 		{
 			procedure:       "requestHeaders",

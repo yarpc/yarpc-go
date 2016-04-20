@@ -22,10 +22,12 @@ package tchannel
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
@@ -44,6 +46,7 @@ func TestHandlerFailures(t *testing.T) {
 		call   *fakeInboundCall
 		expect func(*transporttest.MockHandler)
 		msgs   []string
+		status tchannel.SystemErrCode
 	}{
 		{
 			desc: "no timeout on context",
@@ -56,7 +59,8 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			msgs: []string{"timeout required"},
+			msgs:   []string{"timeout required"},
+			status: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "arg2 reader error",
@@ -68,7 +72,11 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    nil,
 				arg3:    []byte{0x00},
 			},
-			msgs: []string{"failed to read headers"},
+			msgs: []string{
+				`BadRequest: failed to decode "raw" request headers for`,
+				`procedure "hello" of service "foo" from caller "bar"`,
+			},
+			status: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "arg2 parse error",
@@ -80,7 +88,11 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte("{not valid JSON}"),
 				arg3:    []byte{0x00},
 			},
-			msgs: []string{"failed to read headers"},
+			msgs: []string{
+				`BadRequest: failed to decode "json" request headers for`,
+				`procedure "hello" of service "foo" from caller "bar"`,
+			},
+			status: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "arg3 reader error",
@@ -92,7 +104,10 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    nil,
 			},
-			msgs: []string{"failed to read body"},
+			msgs: []string{
+				`Unexpected: error for procedure "hello" of service "foo"`,
+			},
+			status: tchannel.ErrCodeUnexpected,
 		},
 		{
 			desc: "internal error",
@@ -120,8 +135,45 @@ func TestHandlerFailures(t *testing.T) {
 				).Return(fmt.Errorf("great sadness"))
 			},
 			msgs: []string{
-				`Unexpected: error for procedure "hello" of service "foo": great sadness`,
+				`Unexpected: error for procedure "hello" of service "foo":`,
+				"great sadness",
 			},
+			status: tchannel.ErrCodeUnexpected,
+		},
+		{
+			desc: "arg3 encode error",
+			call: &fakeInboundCall{
+				service: "foo",
+				caller:  "bar",
+				method:  "hello",
+				format:  tchannel.JSON,
+				arg2:    []byte("{}"),
+				arg3:    []byte("{}"),
+			},
+			expect: func(h *transporttest.MockHandler) {
+				req := &transport.Request{
+					Caller:    "bar",
+					Service:   "foo",
+					Encoding:  json.Encoding,
+					TTL:       time.Second,
+					Procedure: "hello",
+					Body:      bytes.NewReader([]byte("{}")),
+				}
+				h.EXPECT().Handle(
+					gomock.Any(),
+					transporttest.NewRequestMatcher(t, req),
+					gomock.Any(),
+				).Return(
+					transport.ResponseBodyEncodeError(req, errors.New(
+						"serialization derp",
+					)))
+			},
+			msgs: []string{
+				`Unexpected: failed to encode "json" response body for`,
+				`procedure "hello" of service "foo" from caller "bar":`,
+				`serialization derp`,
+			},
+			status: tchannel.ErrCodeUnexpected,
 		},
 	}
 
@@ -140,13 +192,17 @@ func TestHandlerFailures(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.call.resp = resp
 
-		h := handler{thandler}
-		h.handle(ctx, tt.call)
-		require.Error(t, resp.systemErr, "expected error for %q", tt.desc)
+		handler{thandler}.handle(ctx, tt.call)
+		err := resp.systemErr
+		require.Error(t, err, "expected error for %q", tt.desc)
+
+		systemErr, isSystemErr := err.(tchannel.SystemError)
+		require.True(t, isSystemErr, "expected %v for %q to be a system error", err, tt.desc)
+		assert.Equal(t, tt.status, systemErr.Code(), tt.desc)
 
 		for _, msg := range tt.msgs {
 			assert.Contains(
-				t, resp.systemErr.Error(), msg,
+				t, err.Error(), msg,
 				"error should contain message for %q", tt.desc)
 		}
 
@@ -223,7 +279,7 @@ func TestResponseWriter(t *testing.T) {
 		resp := newResponseRecorder()
 		call.resp = resp
 
-		w := newResponseWriter(call)
+		w := newResponseWriter(new(transport.Request), call)
 		tt.apply(w)
 		assert.NoError(t, w.Close())
 
@@ -235,7 +291,7 @@ func TestResponseWriter(t *testing.T) {
 
 func TestResponseWriterAddHeadersAfterWrite(t *testing.T) {
 	call := &fakeInboundCall{format: tchannel.Raw, resp: newResponseRecorder()}
-	w := newResponseWriter(call)
+	w := newResponseWriter(new(transport.Request), call)
 	w.Write([]byte("foo"))
 	assert.Panics(t, func() {
 		w.AddHeaders(transport.Headers{"foo": "bar"})
@@ -265,10 +321,12 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newResponseWriter(&fakeInboundCall{
-			format: tchannel.Raw,
-			resp:   resp,
-		})
+		w := newResponseWriter(
+			new(transport.Request),
+			&fakeInboundCall{
+				format: tchannel.Raw,
+				resp:   resp,
+			})
 		_, err := w.Write([]byte("foo"))
 		assert.Error(t, err)
 		for _, msg := range tt.messages {
