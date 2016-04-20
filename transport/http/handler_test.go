@@ -62,35 +62,35 @@ func TestHandlerFailures(t *testing.T) {
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			"caller name is required",
+			"BadRequest: missing caller name",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			"service name is required",
+			"BadRequest: missing service name",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			"procedure name is required",
+			"BadRequest: missing procedure name",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			"ttlms is required",
+			"BadRequest: missing TTL",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			"ttlms must be an int",
+			`BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer`,
 		},
 	}
 
