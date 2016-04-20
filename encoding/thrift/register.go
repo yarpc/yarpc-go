@@ -59,6 +59,6 @@ func Register(registry transport.Registry, service Service) {
 	proto := service.Protocol()
 	for method, h := range service.Handlers() {
 		handler := thriftHandler{Handler: h, Protocol: proto}
-		registry.Register(procedureName(name, method), handler)
+		registry.Register("", procedureName(name, method), handler)
 	}
 }

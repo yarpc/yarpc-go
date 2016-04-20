@@ -42,7 +42,10 @@ func Thrift(s behavior.Sink, p behavior.Params) {
 
 	token := random.String(5)
 	pong, _, err := client.Echo(
-		&thrift.Request{Context: ctx},
+		&thrift.Request{
+			Context: ctx,
+			TTL:     time.Second, // TODO context already has timeout; use that
+		},
 		&echo.Ping{Beep: token},
 	)
 	if err != nil {

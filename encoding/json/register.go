@@ -74,7 +74,7 @@ func Procedure(name string, handler interface{}) Registrant {
 // structs.
 func Register(reg transport.Registry, registrant Registrant) {
 	for name, handler := range registrant.getHandlers() {
-		reg.Register(name, wrapHandler(name, handler))
+		reg.Register("", name, wrapHandler(name, handler))
 	}
 }
 
