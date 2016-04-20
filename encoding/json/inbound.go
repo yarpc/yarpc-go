@@ -41,9 +41,12 @@ type jsonHandler struct {
 }
 
 func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+	treq.Encoding = Encoding
+	// TODO(abg): Should we fail requests if Rpc-Encoding does not match?
+
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return unmarshalError{Reason: err}
+		return transport.RequestBodyDecodeError(treq, err)
 	}
 
 	request := Request{
@@ -66,7 +69,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 
 	result := results[0].Interface()
 	if err := json.NewEncoder(rw).Encode(result); err != nil {
-		return marshalError{Reason: err}
+		return transport.ResponseBodyEncodeError(treq, err)
 	}
 
 	return nil

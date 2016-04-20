@@ -38,6 +38,9 @@ type thriftHandler struct {
 }
 
 func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+	treq.Encoding = Encoding
+	// TODO(abg): Should we fail requests if Rpc-Encoding does not match?
+
 	body, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
 		return err
@@ -45,7 +48,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 
 	reqBody, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
 	if err != nil {
-		return decodeError{Reason: err}
+		return transport.RequestBodyDecodeError(treq, err)
 	}
 
 	resBody, response, err := t.Handler.Handle(&Request{
@@ -59,7 +62,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 	}
 
 	if err := t.Protocol.Encode(resBody, rw); err != nil {
-		return encodeError{Reason: err}
+		return transport.ResponseBodyEncodeError(treq, err)
 	}
 
 	return nil

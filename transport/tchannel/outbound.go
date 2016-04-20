@@ -98,7 +98,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	if err := writeHeaders(format, req.Headers, call.Arg2Writer); err != nil {
-		return nil, err
+		return nil, transport.RequestHeadersEncodeError(req, err)
 	}
 
 	if err := writeBody(req.Body, call); err != nil {
@@ -111,7 +111,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
-		return nil, err
+		return nil, transport.RequestHeadersDecodeError(req, err)
 	}
 
 	resBody, err := res.Arg3Reader()

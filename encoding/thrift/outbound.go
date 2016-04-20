@@ -113,20 +113,21 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 	// 		// but we got neither an exception, nor a return value.
 	// 	}
 
-	var buffer bytes.Buffer
-	if err := c.p.Encode(reqBody, &buffer); err != nil {
-		return wire.Value{}, nil, encodeError{Reason: err}
-	}
-
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
 		Encoding:  Encoding,
 		Procedure: procedureName(c.thriftService, method),
 		Headers:   req.Headers,
-		Body:      &buffer,
 		TTL:       req.TTL,
 	}
+
+	var buffer bytes.Buffer
+	if err := c.p.Encode(reqBody, &buffer); err != nil {
+		return wire.Value{}, nil, transport.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = &buffer
 	tres, err := c.t.Call(req.Context, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
@@ -140,7 +141,7 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 
 	resBody, err := c.p.Decode(bytes.NewReader(payload), wire.TStruct)
 	if err != nil {
-		return wire.Value{}, nil, decodeError{Reason: err}
+		return wire.Value{}, nil, transport.ResponseBodyDecodeError(&treq, err)
 	}
 
 	return resBody, &Response{Headers: tres.Headers}, nil
