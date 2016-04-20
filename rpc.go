@@ -68,7 +68,7 @@ func New(cfg Config) RPC {
 	}
 	return rpc{
 		Name:      cfg.Name,
-		Registry:  make(transport.MapRegistry),
+		Registry:  transport.NewMapRegistry(cfg.Name),
 		Inbounds:  cfg.Inbounds,
 		Outbounds: cfg.Outbounds,
 	}
@@ -122,7 +122,7 @@ func (r rpc) Start() error {
 }
 
 func (r rpc) Handle(ctx context.Context, req *transport.Request, rw transport.ResponseWriter) error {
-	h, err := r.GetHandler(req.Procedure)
+	h, err := r.GetHandler(req.Service, req.Procedure)
 	if err != nil {
 		return err
 	}

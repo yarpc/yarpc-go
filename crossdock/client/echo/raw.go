@@ -43,6 +43,7 @@ func Raw(s behavior.Sink, p behavior.Params) {
 	resBody, _, err := client.Call(&raw.Request{
 		Context:   ctx,
 		Procedure: "echo/raw",
+		TTL:       time.Second, // TODO context already has timeout; use that
 	}, token)
 
 	if err != nil {

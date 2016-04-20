@@ -20,11 +20,7 @@
 
 package transport
 
-import (
-	"fmt"
-
-	"golang.org/x/net/context"
-)
+import "golang.org/x/net/context"
 
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
@@ -33,44 +29,76 @@ import (
 
 // Handler handles a single transport-level request.
 type Handler interface {
+	// Handle the given request, writing the response to the given
+	// ResponseWriter.
+	//
+	// An error may be returned in case of failures. BadRequestError must be
+	// returned for invalid requests. All other failures are treated as
+	// UnexpectedErrors.
 	Handle(ctx context.Context, req *Request, resw ResponseWriter) error
 }
 
 // Registry maintains and provides access to a collection of procedures and
 // their handlers.
 type Registry interface {
-	// Registers a procedure with this registry.
-	Register(procedure string, handler Handler)
+	// Registers a procedure with this registry under the given service name.
+	//
+	// service may be empty to indicate that the default service name should
+	// be used.
+	Register(service, procedure string, handler Handler)
 
-	// Gets the handler for the given procedure. An UnknownProcedureErr may be
-	// returned if the handler does not exist.
-	GetHandler(procedure string) (Handler, error)
-}
-
-// UnknownProcedureErr is returned if a procedure that is not known was
-// requested.
-type UnknownProcedureErr struct {
-	Name string
-}
-
-func (e UnknownProcedureErr) Error() string {
-	return fmt.Sprintf("unknown procedure %q", e.Name)
+	// Gets the handler for the given service, procedure tuple. An
+	// UnrecognizedProcedureError will be returned if the handler does not
+	// exist.
+	//
+	// service may be empty to indicate that the default service name should
+	// be used.
+	GetHandler(service, procedure string) (Handler, error)
 }
 
 // MapRegistry is a Registry that maintains a map of the registered
 // procedures.
-type MapRegistry map[string]Handler
+type MapRegistry struct {
+	defaultService string
+	entries        map[registryEntry]Handler
+}
+
+type registryEntry struct {
+	Service, Procedure string
+}
+
+// NewMapRegistry builds a new MapRegistry that uses the given name as the
+// default service name.
+func NewMapRegistry(defaultService string) MapRegistry {
+	return MapRegistry{
+		defaultService: defaultService,
+		entries:        make(map[registryEntry]Handler),
+	}
+}
 
 // Register registers the procedure with the MapRegistry.
-func (m MapRegistry) Register(procedure string, handler Handler) {
-	m[procedure] = handler
+func (m MapRegistry) Register(service, procedure string, handler Handler) {
+	if service == "" {
+		service = m.defaultService
+	}
+
+	m.entries[registryEntry{service, procedure}] = handler
 }
 
 // GetHandler retrieves the Handler for the given Procedure or returns an
 // UnknownProcedureErr.
-func (m MapRegistry) GetHandler(procedure string) (Handler, error) {
-	if h, ok := m[procedure]; ok {
+func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
+	if service == "" {
+		service = m.defaultService
+	}
+
+	if h, ok := m.entries[registryEntry{service, procedure}]; ok {
 		return h, nil
 	}
-	return nil, UnknownProcedureErr{procedure}
+	return nil, BadRequestError{
+		Reason: UnrecognizedProcedureError{
+			Service:   service,
+			Procedure: procedure,
+		},
+	}
 }

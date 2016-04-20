@@ -52,6 +52,6 @@ func Procedure(name string, handler Handler) Registrant {
 // given Registry.
 func Register(reg transport.Registry, registrant Registrant) {
 	for name, handler := range registrant.getHandlers() {
-		reg.Register(name, rawHandler{handler})
+		reg.Register("", name, rawHandler{handler})
 	}
 }

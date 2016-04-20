@@ -80,7 +80,7 @@ func TestEchoBehaviors(t *testing.T) {
 		{
 			encname:  "raw",
 			behavior: Raw,
-			failed:   `unknown procedure "echo/raw"`,
+			failed:   `BadRequest: unrecognized procedure "echo/raw" for service "yarpc-test"`,
 		},
 		{
 			encname:  "raw",
@@ -104,7 +104,7 @@ func TestEchoBehaviors(t *testing.T) {
 		{
 			encname:  "json",
 			behavior: JSON,
-			failed:   `unknown procedure "echo"`,
+			failed:   `BadRequest: unrecognized procedure "echo" for service "yarpc-test"`,
 		},
 		{
 			encname:  "json",
@@ -129,7 +129,7 @@ func TestEchoBehaviors(t *testing.T) {
 		{
 			encname:  "thrift",
 			behavior: Thrift,
-			failed:   `unknown procedure "Echo::echo"`,
+			failed:   `BadRequest: unrecognized procedure "Echo::echo" for service "yarpc-test"`,
 		},
 		{
 			encname:  "thrift",

@@ -18,49 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package transport_test
 
 import (
-	"time"
+	"testing"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
-	"golang.org/x/net/context"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
-// jsonEcho contains an echo request or response for the JSON echo endpoint.
-type jsonEcho struct {
-	Token string `json:"token"`
-}
+func TestMapRegistry(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-// JSON implements the 'json' behavior.
-func JSON(s behavior.Sink, p behavior.Params) {
-	s = createEchoSink("json", s, p)
-	rpc := createRPC(s, p)
+	m := transport.NewMapRegistry("myservice")
 
-	client := json.New(rpc.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	foo := transporttest.NewMockHandler(mockCtrl)
+	m.Register("", "foo", foo)
 
-	var response jsonEcho
-	token := random.String(5)
-	_, err := client.Call(
-		&json.Request{
-			Context:   ctx,
-			Procedure: "echo",
-			TTL:       time.Second, // TODO context already has timeout; use that
-		},
-		&jsonEcho{Token: token},
-		&response,
-	)
-	if err != nil {
-		behavior.Fatalf(s, "call to echo failed: %v", err)
+	bar := transporttest.NewMockHandler(mockCtrl)
+	m.Register("anotherservice", "bar", bar)
+
+	tests := []struct {
+		service, procedure string
+		want               transport.Handler
+	}{
+		{"myservice", "foo", foo},
+		{"", "foo", foo},
+		{"anotherservice", "foo", nil},
+		{"", "bar", nil},
+		{"myservice", "bar", nil},
+		{"anotherservice", "bar", bar},
 	}
 
-	if response.Token != token {
-		behavior.Fatalf(s, "expected %v, got %v", token, response.Token)
+	for _, tt := range tests {
+		got, err := m.GetHandler(tt.service, tt.procedure)
+		if tt.want != nil {
+			assert.NoError(t, err,
+				"GetHandler(%q, %q) failed", tt.service, tt.procedure)
+			assert.True(t, tt.want == got, // want == match, not deep equals
+				"GetHandler(%q, %q) did not match", tt.service, tt.procedure)
+		} else {
+			assert.Error(t, err)
+		}
 	}
-
-	behavior.Successf(s, "server said: %v", response.Token)
 }
