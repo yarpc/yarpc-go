@@ -23,6 +23,7 @@ package tchannel
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/uber/tchannel-go"
@@ -111,11 +112,26 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		TTL:       deadline.Sub(time.Now()),
 	}
 
-	if err := h.Handler.Handle(ctx, treq, rw); err != nil {
-		call.Response().SendSystemError(tchannel.NewSystemError(
-			tchannel.ErrCodeUnexpected, "internal error: %v", err))
+	treq, err = request.Validate(treq)
+	if err != nil {
+		err = transport.BadRequestError{Reason: err}
+		call.Response().SendSystemError(
+			tchannel.NewSystemError(tchannel.ErrCodeBadRequest, err.Error()))
 		return
 	}
+
+	err = h.Handler.Handle(ctx, treq, rw)
+	if err == nil {
+		return
+	}
+
+	err = transport.AsHandlerError(treq.Service, treq.Procedure, err)
+	status := tchannel.ErrCodeUnexpected
+	if _, ok := err.(transport.BadRequestError); ok {
+		status = tchannel.ErrCodeBadRequest
+	}
+	call.Response().SendSystemError(
+		tchannel.NewSystemError(status, err.Error()))
 }
 
 type responseWriter struct {

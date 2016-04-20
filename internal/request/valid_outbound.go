@@ -18,16 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package request
 
-import "fmt"
+import (
+	"github.com/yarpc/yarpc-go/transport"
 
-// internalError is returned when an HTTP handler fails with an unexpected
-// error.
-type internalError struct {
-	Reason error
-}
+	"golang.org/x/net/context"
+)
 
-func (e internalError) Error() string {
-	return fmt.Sprintf("internal service error: %v", e.Reason)
+// ValidatorOutbound wraps an Outbound to validate all outgoing requests.
+type ValidatorOutbound struct{ transport.Outbound }
+
+// Call performs the given request, failing early if the request is invalid.
+func (o ValidatorOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	request, err := Validate(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return o.Outbound.Call(ctx, request)
 }

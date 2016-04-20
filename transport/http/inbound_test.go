@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
@@ -80,12 +81,13 @@ func TestInboundMux(t *testing.T) {
 
 	// this should fail
 	o := NewOutbound(addr)
-	_, err = o.Call(context.Background(), &transport.Request{
+	_, err = o.Call(context.TODO(), &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
 		Body:      bytes.NewReader([]byte("derp")),
+		TTL:       time.Second,
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
@@ -95,12 +97,13 @@ func TestInboundMux(t *testing.T) {
 
 	o = NewOutbound(addr + "rpc/v1")
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	res, err := o.Call(context.Background(), &transport.Request{
+	res, err := o.Call(context.TODO(), &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
 		Body:      bytes.NewReader([]byte("derp")),
+		TTL:       time.Second,
 	})
 
 	if assert.NoError(t, err, "expected rpc request to succeed") {

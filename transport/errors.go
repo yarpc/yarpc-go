@@ -27,7 +27,7 @@ import (
 
 // AsHandlerError converts an error into a BadRequestError or UnexpectedError,
 // leaving it unchanged if it's already one of the two.
-func AsHandlerError(err error) error {
+func AsHandlerError(service, procedure string, err error) error {
 	if err == nil {
 		return err
 	}
@@ -36,7 +36,13 @@ func AsHandlerError(err error) error {
 	case BadRequestError, UnexpectedError:
 		return err
 	default:
-		return UnexpectedError{Reason: err}
+		return UnexpectedError{
+			Reason: ProcedureFailedError{
+				Service:   service,
+				Procedure: procedure,
+				Reason:    err,
+			},
+		}
 	}
 }
 
@@ -107,4 +113,17 @@ type UnrecognizedProcedureError struct {
 
 func (e UnrecognizedProcedureError) Error() string {
 	return fmt.Sprintf(`unrecognized procedure %q for service %q`, e.Procedure, e.Service)
+}
+
+// ProcedureFailedError is a failure to execute a procedure due to an
+// unexpected error.
+type ProcedureFailedError struct {
+	Service   string
+	Procedure string
+	Reason    error
+}
+
+func (e ProcedureFailedError) Error() string {
+	return fmt.Sprintf(`error for procedure %q of service %q: %v`,
+		e.Procedure, e.Service, e.Reason)
 }

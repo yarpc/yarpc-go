@@ -119,7 +119,9 @@ func TestHandlerFailures(t *testing.T) {
 					), gomock.Any(),
 				).Return(fmt.Errorf("great sadness"))
 			},
-			msgs: []string{"internal error", "great sadness"},
+			msgs: []string{
+				`Unexpected: error for procedure "hello" of service "foo": great sadness`,
+			},
 		},
 	}
 
