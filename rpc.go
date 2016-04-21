@@ -21,8 +21,6 @@
 package yarpc
 
 import (
-	"fmt"
-
 	"github.com/yarpc/yarpc-go/sync"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -99,7 +97,7 @@ func (r rpc) Channel(service string) transport.Channel {
 			Service:  service,
 		}
 	}
-	panic(fmt.Sprintf("unknown service %q", service))
+	panic(noOutboundForService{Service: service})
 }
 
 func (r rpc) Start() error {

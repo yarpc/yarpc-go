@@ -20,7 +20,10 @@
 
 package yarpc
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // errorGroup represents a collection of errors.
 type errorGroup struct {
@@ -34,4 +37,12 @@ func (e errorGroup) Error() string {
 		messages = append(messages, err.Error())
 	}
 	return strings.Join(messages, "\n\t")
+}
+
+type noOutboundForService struct {
+	Service string
+}
+
+func (e noOutboundForService) Error() string {
+	return fmt.Sprintf("no configured outbound transport for service %q", e.Service)
 }
