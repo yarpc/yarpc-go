@@ -28,6 +28,7 @@ import (
 // Sink records the result of calling different behaviors.
 type Sink interface {
 	Put(interface{})
+	FailNow()
 }
 
 // Skipf records a skipped test.
@@ -57,9 +58,7 @@ func Errorf(s Sink, format string, args ...interface{}) {
 // This may be used to stop executing in case of irrecoverable errors.
 func Fatalf(s Sink, format string, args ...interface{}) {
 	Errorf(s, format, args...)
-
-	// Exit this goroutine and call any deferred functions
-	runtime.Goexit()
+	s.FailNow()
 }
 
 // Successf records a successful test.
@@ -77,6 +76,11 @@ func Successf(s Sink, format string, args ...interface{}) {
 
 // entrySink is a sink that keeps track of entries in-order
 type entrySink struct{ entries []interface{} }
+
+func (e *entrySink) FailNow() {
+	// Exit this goroutine and call any deferred functions
+	runtime.Goexit()
+}
 
 // Put an entry into the EntrySink.
 func (e *entrySink) Put(v interface{}) {
