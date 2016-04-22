@@ -48,13 +48,7 @@ func Thrift(s behavior.Sink, p behavior.Params) {
 		},
 		&echo.Ping{Beep: token},
 	)
-	if err != nil {
-		behavior.Fatalf(s, "call to Echo::echo failed: %v", err)
-	}
 
-	if token != pong.Boop {
-		behavior.Fatalf(s, "expected %v, got %v", token, pong.Boop)
-	}
-
-	behavior.Successf(s, "server said: %v", pong.Boop)
+	behavior.Fatals(s).NoError(err, "call to Echo::echo failed: %v", err)
+	behavior.Assert(s).Equal(token, pong.Boop, "server said: %v", pong.Boop)
 }

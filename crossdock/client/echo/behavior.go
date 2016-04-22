@@ -74,10 +74,10 @@ func createEchoSink(encoding string, s behavior.Sink, p behavior.Params) behavio
 // createRPC creates an RPC from the given parameters or fails the whole
 // behavior.
 func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
+	fatals := behavior.Fatals(s)
+
 	server := p.Param(ServerParam)
-	if server == "" {
-		behavior.Fatalf(s, "server is required")
-	}
+	fatals.NotEmpty(server, "server is required")
 
 	var outbound transport.Outbound
 	trans := p.Param(TransportParam)
@@ -93,12 +93,10 @@ func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
 		outbound = ht.NewOutboundWithClient(fmt.Sprintf("http://%s:8081", server), cl)
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
-		if err != nil {
-			behavior.Fatalf(s, "couldn't create tchannel: %v", err)
-		}
+		fatals.NoError(err, "couldn't create tchannel")
 		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
 	default:
-		behavior.Fatalf(s, "unknown transport %q", trans)
+		fatals.True(false, "unknown transport %q", trans)
 	}
 
 	return yarpc.New(yarpc.Config{
