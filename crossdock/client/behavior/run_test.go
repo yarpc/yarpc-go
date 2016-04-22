@@ -28,28 +28,25 @@ import (
 
 func TestRunRecordsFailureOnFatal(t *testing.T) {
 	tests := []struct {
-		f func(Sink)
-		e []interface{}
+		f      func(Sink)
+		output string
 	}{
 		{
 			func(s Sink) { Fatalf(s, "great sadness") },
-			[]interface{}{Entry{
-				Status: Failed,
-				Output: "great sadness",
-			}},
+			"great sadness",
 		},
 		{
 			func(s Sink) { panic("aaaahh") },
-			[]interface{}{Entry{
-				Status: Failed,
-				Output: "aaaahh",
-			}},
+			"aaaahh",
 		},
 	}
 
 	for _, tt := range tests {
 		entries := Run(tt.f)
-		assert.Equal(t, tt.e, entries)
+		assert.Len(t, entries, 1)
+		entry := entries[0].(Entry)
+		assert.Equal(t, Failed, entry.Status)
+		assert.Contains(t, entry.Output, tt.output)
 	}
 
 }
