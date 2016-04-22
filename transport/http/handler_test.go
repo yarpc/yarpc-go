@@ -76,7 +76,7 @@ func TestHandlerFailures(t *testing.T) {
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			"BadRequest: missing procedure name",
+			"BadRequest: missing procedure",
 		},
 		{
 			&http.Request{
