@@ -90,6 +90,11 @@ func (e MissingParametersError) Error() string {
 		return s
 	}
 
+	if len(ps) == 2 {
+		s += fmt.Sprintf("%s and %s", ps[0], ps[1])
+		return s
+	}
+
 	s += strings.Join(ps[:len(ps)-1], ", ")
 	s += fmt.Sprintf(", and %s", ps[len(ps)-1])
 	return s

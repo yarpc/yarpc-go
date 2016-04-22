@@ -37,7 +37,7 @@ func TestMissingParameters(t *testing.T) {
 		},
 		{
 			[]string{"x", "y"},
-			"missing x, and y",
+			"missing x and y",
 		},
 		{
 			[]string{"x", "y", "z"},
