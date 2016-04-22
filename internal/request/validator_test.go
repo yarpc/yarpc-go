@@ -84,9 +84,9 @@ func TestValidator(t *testing.T) {
 				TTL:     time.Second,
 			},
 			wantErr: transport.MissingParametersError{
-				Parameters: []string{"procedure name"},
+				Parameters: []string{"procedure"},
 			},
-			wantMessage: "missing procedure name",
+			wantMessage: "missing procedure",
 		},
 		{
 			req: &transport.Request{
@@ -103,10 +103,10 @@ func TestValidator(t *testing.T) {
 			req: &transport.Request{},
 			wantErr: transport.MissingParametersError{
 				Parameters: []string{
-					"service name", "procedure name", "caller name", "TTL",
+					"service name", "procedure", "caller name", "TTL",
 				},
 			},
-			wantMessage: "missing service name, procedure name, caller name, and TTL",
+			wantMessage: "missing service name, procedure, caller name, and TTL",
 		},
 		{
 			req: &transport.Request{

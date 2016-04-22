@@ -81,7 +81,7 @@ func (v *Validator) Validate() (*transport.Request, error) {
 		missingParams = append(missingParams, "service name")
 	}
 	if v.Request.Procedure == "" {
-		missingParams = append(missingParams, "procedure name")
+		missingParams = append(missingParams, "procedure")
 	}
 	if v.Request.Caller == "" {
 		missingParams = append(missingParams, "caller name")
