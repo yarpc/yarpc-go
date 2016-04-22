@@ -20,6 +20,8 @@
 
 package behavior
 
+import "runtime/debug"
+
 // Run the given function inside a behavior context and return the entries
 // logged by it.
 //
@@ -34,7 +36,7 @@ func Run(f func(Sink)) []interface{} {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				Errorf(&s, "%v", err)
+				Errorf(&s, "%v\n%s", err, string(debug.Stack()))
 			}
 			close(done)
 		}()
