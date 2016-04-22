@@ -69,7 +69,7 @@ type UnexpectedError struct {
 }
 
 func (e UnexpectedError) Error() string {
-	return "Unexpected: " + e.Reason.Error()
+	return "UnexpectedError: " + e.Reason.Error()
 	// TODO were we planning on dropping these prefixes?
 }
 
