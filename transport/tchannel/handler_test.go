@@ -105,7 +105,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg3:    nil,
 			},
 			msgs: []string{
-				`Unexpected: error for procedure "hello" of service "foo"`,
+				`UnexpectedError: error for procedure "hello" of service "foo"`,
 			},
 			status: tchannel.ErrCodeUnexpected,
 		},
@@ -135,7 +135,7 @@ func TestHandlerFailures(t *testing.T) {
 				).Return(fmt.Errorf("great sadness"))
 			},
 			msgs: []string{
-				`Unexpected: error for procedure "hello" of service "foo":`,
+				`UnexpectedError: error for procedure "hello" of service "foo":`,
 				"great sadness",
 			},
 			status: tchannel.ErrCodeUnexpected,
@@ -169,7 +169,7 @@ func TestHandlerFailures(t *testing.T) {
 					)))
 			},
 			msgs: []string{
-				`Unexpected: failed to encode "json" response body for`,
+				`UnexpectedError: failed to encode "json" response body for`,
 				`procedure "hello" of service "foo" from caller "bar":`,
 				`serialization derp`,
 			},
