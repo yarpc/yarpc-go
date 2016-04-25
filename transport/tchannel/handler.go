@@ -23,6 +23,7 @@ package tchannel
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -113,7 +114,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 
 	headers, err := readHeaders(call.Format(), call.Arg2Reader)
 	if err != nil {
-		return transport.RequestHeadersDecodeError(treq, err)
+		return encoding.RequestHeadersDecodeError(treq, err)
 	}
 	treq.Headers = headers
 
@@ -171,7 +172,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	if !rw.wroteHeaders {
 		rw.wroteHeaders = true
 		if err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer); err != nil {
-			err = transport.ResponseHeadersEncodeError(rw.treq, err)
+			err = encoding.ResponseHeadersEncodeError(rw.treq, err)
 			rw.failedWith = err
 			return 0, err
 		}

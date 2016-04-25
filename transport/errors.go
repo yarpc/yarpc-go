@@ -20,10 +20,11 @@
 
 package transport
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
+
+type handlerError interface {
+	AsHandlerError() error
+}
 
 // AsHandlerError converts an error into a BadRequestError or UnexpectedError,
 // leaving it unchanged if it's already one of the two.
@@ -33,14 +34,8 @@ func AsHandlerError(service, procedure string, err error) error {
 	}
 
 	switch e := err.(type) {
-	case BadRequestError, UnexpectedError:
-		return err
-	case serverEncodingError:
-		if e.IsResponse {
-			// Error encoding the response
-			return UnexpectedError{Reason: err}
-		}
-		return BadRequestError{Reason: err}
+	case handlerError:
+		return e.AsHandlerError()
 	default:
 		return UnexpectedError{
 			Reason: procedureFailedError{
@@ -60,8 +55,10 @@ type BadRequestError struct {
 
 func (e BadRequestError) Error() string {
 	return "BadRequest: " + e.Reason.Error()
-	// TODO were we planning on dropping these prefixes?
 }
+
+// AsHandlerError on a BadRequestError returns the error as-is.
+func (e BadRequestError) AsHandlerError() error { return e }
 
 // UnexpectedError is a failure to process a request for an unexpected reason.
 type UnexpectedError struct {
@@ -70,8 +67,10 @@ type UnexpectedError struct {
 
 func (e UnexpectedError) Error() string {
 	return "UnexpectedError: " + e.Reason.Error()
-	// TODO were we planning on dropping these prefixes?
 }
+
+// AsHandlerError on an UnexpectedError returns the error as-is.
+func (e UnexpectedError) AsHandlerError() error { return e }
 
 //////////////////////////////////////////////////////////////////////////////
 // Private errors
@@ -98,151 +97,4 @@ type procedureFailedError struct {
 func (e procedureFailedError) Error() string {
 	return fmt.Sprintf(`error for procedure %q of service %q: %v`,
 		e.Procedure, e.Service, e.Reason)
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// {Request, Response} {Body, Headers} {Encoding, Decoding} errors
-
-type serverEncodingError struct {
-	Encoding  Encoding
-	Caller    string
-	Service   string
-	Procedure string
-	Reason    error
-
-	// These parameters control whether the error is for a request or a response,
-	// and whether it's for a header or body.
-
-	IsResponse bool
-	IsHeader   bool
-}
-
-func (e serverEncodingError) Error() string {
-	parts := []string{"failed to"}
-	if e.IsResponse {
-		parts = append(parts, fmt.Sprintf("encode %q response", string(e.Encoding)))
-	} else {
-		parts = append(parts, fmt.Sprintf("decode %q request", string(e.Encoding)))
-	}
-	if e.IsHeader {
-		parts = append(parts, "headers")
-	} else {
-		parts = append(parts, "body")
-	}
-	parts = append(parts,
-		fmt.Sprintf("for procedure %q of service %q from caller %q: %v",
-			e.Procedure, e.Service, e.Caller, e.Reason))
-	return strings.Join(parts, " ")
-}
-
-func newServerEncodingError(req *Request, err error) serverEncodingError {
-	return serverEncodingError{
-		Encoding:  req.Encoding,
-		Caller:    req.Caller,
-		Service:   req.Service,
-		Procedure: req.Procedure,
-		Reason:    err,
-	}
-}
-
-// RequestBodyDecodeError builds an error that represents a failure to decode
-// the request body.
-func RequestBodyDecodeError(req *Request, err error) error {
-	return newServerEncodingError(req, err)
-}
-
-// ResponseBodyEncodeError builds an error that represents a failure to encode
-// the response body.
-func ResponseBodyEncodeError(req *Request, err error) error {
-	e := newServerEncodingError(req, err)
-	e.IsResponse = true
-	return e
-}
-
-// RequestHeadersDecodeError builds an error that represents a failure to
-// decode the request headers.
-func RequestHeadersDecodeError(req *Request, err error) error {
-	e := newServerEncodingError(req, err)
-	e.IsHeader = true
-	return e
-}
-
-// ResponseHeadersEncodeError builds an error that represents a failure to
-// encode the response headers.
-func ResponseHeadersEncodeError(req *Request, err error) error {
-	e := newServerEncodingError(req, err)
-	e.IsResponse = true
-	e.IsHeader = true
-	return e
-}
-
-type clientEncodingError struct {
-	Encoding  Encoding
-	Service   string
-	Procedure string
-	Reason    error
-
-	// These parameters control whether the error is for a request or a response,
-	// and whether it's for a header or body.
-
-	IsResponse bool
-	IsHeader   bool
-}
-
-func (e clientEncodingError) Error() string {
-	parts := []string{"failed to"}
-	if e.IsResponse {
-		parts = append(parts, fmt.Sprintf("decode %q response", string(e.Encoding)))
-	} else {
-		parts = append(parts, fmt.Sprintf("encode %q request", string(e.Encoding)))
-	}
-	if e.IsHeader {
-		parts = append(parts, "headers")
-	} else {
-		parts = append(parts, "body")
-	}
-	parts = append(parts,
-		fmt.Sprintf("for procedure %q of service %q: %v",
-			e.Procedure, e.Service, e.Reason))
-	return strings.Join(parts, " ")
-}
-
-func newClientEncodingError(req *Request, err error) clientEncodingError {
-	return clientEncodingError{
-		Encoding:  req.Encoding,
-		Service:   req.Service,
-		Procedure: req.Procedure,
-		Reason:    err,
-	}
-}
-
-// RequestBodyEncodeError builds an error that represents a failure to encode
-// the request body.
-func RequestBodyEncodeError(req *Request, err error) error {
-	return newClientEncodingError(req, err)
-}
-
-// ResponseBodyDecodeError builds an error that represents a failure to decode
-// the response body.
-func ResponseBodyDecodeError(req *Request, err error) error {
-	e := newClientEncodingError(req, err)
-	e.IsResponse = true
-	return e
-}
-
-// RequestHeadersEncodeError builds an error that represents a failure to
-// encode the request headers.
-func RequestHeadersEncodeError(req *Request, err error) error {
-	e := newClientEncodingError(req, err)
-	e.IsHeader = true
-	return e
-}
-
-// ResponseHeadersDecodeError builds an error that represents a failure to
-// decode the response headers.
-func ResponseHeadersDecodeError(req *Request, err error) error {
-	e := newClientEncodingError(req, err)
-	e.IsHeader = true
-	e.IsResponse = true
-	return e
 }

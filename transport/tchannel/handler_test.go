@@ -29,6 +29,7 @@ import (
 
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -164,7 +165,7 @@ func TestHandlerFailures(t *testing.T) {
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Return(
-					transport.ResponseBodyEncodeError(req, errors.New(
+					encoding.ResponseBodyEncodeError(req, errors.New(
 						"serialization derp",
 					)))
 			},
