@@ -60,7 +60,7 @@ func (e serverEncodingError) Error() string {
 }
 
 // AsHandlerError converts this error into a handler-level error.
-func (e serverEncodingError) AsHandlerError() error {
+func (e serverEncodingError) AsHandlerError() transport.HandlerError {
 	if e.IsResponse {
 		return transport.UnexpectedError{Reason: e}
 	}

@@ -36,7 +36,7 @@ type missingParametersError struct {
 	Parameters []string
 }
 
-func (e missingParametersError) AsHandlerError() error {
+func (e missingParametersError) AsHandlerError() transport.HandlerError {
 	return transport.BadRequestError{Reason: e}
 }
 
@@ -66,7 +66,7 @@ type invalidTTLError struct {
 	TTL       string
 }
 
-func (e invalidTTLError) AsHandlerError() error {
+func (e invalidTTLError) AsHandlerError() transport.HandlerError {
 	return transport.BadRequestError{Reason: e}
 }
 
