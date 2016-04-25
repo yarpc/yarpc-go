@@ -23,6 +23,8 @@ package request
 import (
 	"fmt"
 	"strings"
+
+	"github.com/yarpc/yarpc-go/transport"
 )
 
 // missingParametersError is a failure to process a request because it was
@@ -32,6 +34,10 @@ type missingParametersError struct {
 	//
 	// Precondition: len(Parameters) > 0
 	Parameters []string
+}
+
+func (e missingParametersError) AsHandlerError() error {
+	return transport.BadRequestError{Reason: e}
 }
 
 func (e missingParametersError) Error() string {
@@ -58,6 +64,10 @@ type invalidTTLError struct {
 	Service   string
 	Procedure string
 	TTL       string
+}
+
+func (e invalidTTLError) AsHandlerError() error {
+	return transport.BadRequestError{Reason: e}
 }
 
 func (e invalidTTLError) Error() string {

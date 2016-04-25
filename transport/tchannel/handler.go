@@ -130,7 +130,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 
 	treq, err = request.Validate(treq)
 	if err != nil {
-		return transport.BadRequestError{Reason: err}
+		return err
 	}
 
 	return h.Handler.Handle(ctx, treq, rw)
