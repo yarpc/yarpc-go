@@ -43,7 +43,7 @@ func AsHandlerError(service, procedure string, err error) error {
 		return BadRequestError{Reason: err}
 	default:
 		return UnexpectedError{
-			Reason: ProcedureFailedError{
+			Reason: procedureFailedError{
 				Service:   service,
 				Procedure: procedure,
 				Reason:    err,
@@ -73,68 +73,29 @@ func (e UnexpectedError) Error() string {
 	// TODO were we planning on dropping these prefixes?
 }
 
-// MissingParametersError is a failure to process a request because it was
-// missing required parameters.
-type MissingParametersError struct {
-	// Names of the missing parameters.
-	//
-	// Precondition: len(Parameters) > 0
-	Parameters []string
-}
+//////////////////////////////////////////////////////////////////////////////
+// Private errors
 
-func (e MissingParametersError) Error() string {
-	s := "missing "
-	ps := e.Parameters
-	if len(ps) == 1 {
-		s += ps[0]
-		return s
-	}
-
-	if len(ps) == 2 {
-		s += fmt.Sprintf("%s and %s", ps[0], ps[1])
-		return s
-	}
-
-	s += strings.Join(ps[:len(ps)-1], ", ")
-	s += fmt.Sprintf(", and %s", ps[len(ps)-1])
-	return s
-}
-
-// InvalidTTLError is a failure to process a request because the TTL was in an
-// invalid format.
-type InvalidTTLError struct {
-	Service   string
-	Procedure string
-	TTL       string
-}
-
-func (e InvalidTTLError) Error() string {
-	return fmt.Sprintf(
-		`invalid TTL %q for procedure %q of service %q: must be positive integer`,
-		e.TTL, e.Procedure, e.Service,
-	)
-}
-
-// UnrecognizedProcedureError is a failure to process a request because the
+// unrecognizedProcedureError is a failure to process a request because the
 // procedure and/or service name was unrecognized.
-type UnrecognizedProcedureError struct {
+type unrecognizedProcedureError struct {
 	Service   string
 	Procedure string
 }
 
-func (e UnrecognizedProcedureError) Error() string {
+func (e unrecognizedProcedureError) Error() string {
 	return fmt.Sprintf(`unrecognized procedure %q for service %q`, e.Procedure, e.Service)
 }
 
-// ProcedureFailedError is a failure to execute a procedure due to an
+// procedureFailedError is a failure to execute a procedure due to an
 // unexpected error.
-type ProcedureFailedError struct {
+type procedureFailedError struct {
 	Service   string
 	Procedure string
 	Reason    error
 }
 
-func (e ProcedureFailedError) Error() string {
+func (e procedureFailedError) Error() string {
 	return fmt.Sprintf(`error for procedure %q of service %q: %v`,
 		e.Procedure, e.Service, e.Reason)
 }
