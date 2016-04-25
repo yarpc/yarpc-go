@@ -61,7 +61,7 @@ func TestValidator(t *testing.T) {
 				TTL:       time.Second,
 				Procedure: "hello",
 			},
-			wantErr: transport.MissingParametersError{
+			wantErr: missingParametersError{
 				Parameters: []string{"caller name"},
 			},
 			wantMessage: "missing caller name",
@@ -72,7 +72,7 @@ func TestValidator(t *testing.T) {
 				TTL:       time.Second,
 				Procedure: "hello",
 			},
-			wantErr: transport.MissingParametersError{
+			wantErr: missingParametersError{
 				Parameters: []string{"service name"},
 			},
 			wantMessage: "missing service name",
@@ -83,7 +83,7 @@ func TestValidator(t *testing.T) {
 				Service: "service",
 				TTL:     time.Second,
 			},
-			wantErr: transport.MissingParametersError{
+			wantErr: missingParametersError{
 				Parameters: []string{"procedure"},
 			},
 			wantMessage: "missing procedure",
@@ -94,14 +94,14 @@ func TestValidator(t *testing.T) {
 				Service:   "service",
 				Procedure: "hello",
 			},
-			wantErr: transport.MissingParametersError{
+			wantErr: missingParametersError{
 				Parameters: []string{"TTL"},
 			},
 			wantMessage: "missing TTL",
 		},
 		{
 			req: &transport.Request{},
-			wantErr: transport.MissingParametersError{
+			wantErr: missingParametersError{
 				Parameters: []string{
 					"service name", "procedure", "caller name", "TTL",
 				},
@@ -116,7 +116,7 @@ func TestValidator(t *testing.T) {
 				TTL:       -1 * time.Second,
 				Procedure: "hello",
 			},
-			wantErr: transport.InvalidTTLError{
+			wantErr: invalidTTLError{
 				Service:   "service",
 				Procedure: "hello",
 				TTL:       "-1000",
@@ -131,7 +131,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 			},
 			ttl: "-1000",
-			wantErr: transport.InvalidTTLError{
+			wantErr: invalidTTLError{
 				Service:   "service",
 				Procedure: "hello",
 				TTL:       "-1000",
@@ -146,7 +146,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 			},
 			ttl: "not an integer",
-			wantErr: transport.InvalidTTLError{
+			wantErr: invalidTTLError{
 				Service:   "service",
 				Procedure: "hello",
 				TTL:       "not an integer",

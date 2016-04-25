@@ -56,7 +56,7 @@ func (v *Validator) ParseTTL(ttl string) {
 
 	ttlms, err := strconv.Atoi(ttl)
 	if err != nil {
-		v.err = transport.InvalidTTLError{
+		v.err = invalidTTLError{
 			Service:   v.Request.Service,
 			Procedure: v.Request.Procedure,
 			TTL:       ttl,
@@ -90,12 +90,12 @@ func (v *Validator) Validate() (*transport.Request, error) {
 		missingParams = append(missingParams, "TTL")
 	}
 	if len(missingParams) > 0 {
-		return nil, transport.MissingParametersError{Parameters: missingParams}
+		return nil, missingParametersError{Parameters: missingParams}
 	}
 
 	// negative TTLs are invalid
 	if v.Request.TTL < 0 {
-		return nil, transport.InvalidTTLError{
+		return nil, invalidTTLError{
 			Service:   v.Request.Service,
 			Procedure: v.Request.Procedure,
 			TTL:       fmt.Sprint(int64(v.Request.TTL / time.Millisecond)),
