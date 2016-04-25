@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -46,7 +47,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return transport.RequestBodyDecodeError(treq, err)
+		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
 	request := Request{
@@ -69,7 +70,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 
 	result := results[0].Interface()
 	if err := json.NewEncoder(rw).Encode(result); err != nil {
-		return transport.ResponseBodyEncodeError(treq, err)
+		return encoding.ResponseBodyEncodeError(treq, err)
 	}
 
 	return nil

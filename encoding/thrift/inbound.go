@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
@@ -48,7 +49,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 
 	reqBody, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
 	if err != nil {
-		return transport.RequestBodyDecodeError(treq, err)
+		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
 	resBody, response, err := t.Handler.Handle(&Request{
@@ -62,7 +63,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 	}
 
 	if err := t.Protocol.Encode(resBody, rw); err != nil {
-		return transport.ResponseBodyEncodeError(treq, err)
+		return encoding.ResponseBodyEncodeError(treq, err)
 	}
 
 	return nil
