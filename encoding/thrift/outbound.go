@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
@@ -124,7 +125,7 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 
 	var buffer bytes.Buffer
 	if err := c.p.Encode(reqBody, &buffer); err != nil {
-		return wire.Value{}, nil, transport.RequestBodyEncodeError(&treq, err)
+		return wire.Value{}, nil, encoding.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = &buffer
@@ -141,7 +142,7 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 
 	resBody, err := c.p.Decode(bytes.NewReader(payload), wire.TStruct)
 	if err != nil {
-		return wire.Value{}, nil, transport.ResponseBodyDecodeError(&treq, err)
+		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
 	return resBody, &Response{Headers: tres.Headers}, nil

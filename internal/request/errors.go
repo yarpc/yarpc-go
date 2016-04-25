@@ -18,35 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package request
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"fmt"
+	"strings"
 )
 
-func TestMissingParameters(t *testing.T) {
-	tests := []struct {
-		params []string
-		want   string
-	}{
-		{
-			[]string{"x"},
-			"missing x",
-		},
-		{
-			[]string{"x", "y"},
-			"missing x and y",
-		},
-		{
-			[]string{"x", "y", "z"},
-			"missing x, y, and z",
-		},
+// missingParametersError is a failure to process a request because it was
+// missing required parameters.
+type missingParametersError struct {
+	// Names of the missing parameters.
+	//
+	// Precondition: len(Parameters) > 0
+	Parameters []string
+}
+
+func (e missingParametersError) Error() string {
+	s := "missing "
+	ps := e.Parameters
+	if len(ps) == 1 {
+		s += ps[0]
+		return s
 	}
 
-	for _, tt := range tests {
-		err := MissingParametersError{tt.params}
-		assert.Equal(t, tt.want, err.Error())
+	if len(ps) == 2 {
+		s += fmt.Sprintf("%s and %s", ps[0], ps[1])
+		return s
 	}
+
+	s += strings.Join(ps[:len(ps)-1], ", ")
+	s += fmt.Sprintf(", and %s", ps[len(ps)-1])
+	return s
+}
+
+// invalidTTLError is a failure to process a request because the TTL was in an
+// invalid format.
+type invalidTTLError struct {
+	Service   string
+	Procedure string
+	TTL       string
+}
+
+func (e invalidTTLError) Error() string {
+	return fmt.Sprintf(
+		`invalid TTL %q for procedure %q of service %q: must be positive integer`,
+		e.TTL, e.Procedure, e.Service,
+	)
 }

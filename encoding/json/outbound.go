@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -65,7 +66,7 @@ func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, transport.RequestBodyEncodeError(&treq, err)
+		return nil, encoding.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(encoded)
@@ -76,7 +77,7 @@ func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface
 
 	dec := json.NewDecoder(tres.Body)
 	if err := dec.Decode(resBodyOut); err != nil {
-		return nil, transport.ResponseBodyDecodeError(&treq, err)
+		return nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
 	if err := tres.Body.Close(); err != nil {
