@@ -233,7 +233,11 @@ func Run(s behavior.Sink, ps behavior.Params) {
 				"%s: response body should be informative error", tt.name)
 		}
 		if tt.wantBodyStartsWith != "" {
-			body := res.Body[:len(tt.wantBodyStartsWith)]
+			i := len(tt.wantBodyStartsWith)
+			if i > len(res.Body) {
+				i = len(res.Body)
+			}
+			body := res.Body[:i]
 			assert.Equal(tt.wantBodyStartsWith, body,
 				"%s: response body should be informative error", tt.name)
 		}
