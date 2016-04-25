@@ -47,11 +47,15 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	service := req.Header.Get(ServiceHeader)
+	procedure := req.Header.Get(ProcedureHeader)
+
 	err := h.callHandler(w, req)
 	if err == nil {
 		return
 	}
 
+	err = transport.AsHandlerError(service, procedure, err)
 	status := http.StatusInternalServerError
 	if _, ok := err.(transport.BadRequestError); ok {
 		status = http.StatusBadRequest
@@ -73,14 +77,10 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 	v.ParseTTL(popHeader(req.Header, TTLMSHeader))
 	treq, err := v.Validate()
 	if err != nil {
-		return transport.BadRequestError{Reason: err}
+		return err
 	}
 
-	err = h.Handler.Handle(context.TODO(), treq, newResponseWriter(w))
-	if err != nil {
-		err = transport.AsHandlerError(treq.Service, treq.Procedure, err)
-	}
-	return err
+	return h.Handler.Handle(context.TODO(), treq, newResponseWriter(w))
 }
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.

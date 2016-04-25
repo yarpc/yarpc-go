@@ -95,10 +95,8 @@ func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
 	if h, ok := m.entries[registryEntry{service, procedure}]; ok {
 		return h, nil
 	}
-	return nil, BadRequestError{
-		Reason: unrecognizedProcedureError{
-			Service:   service,
-			Procedure: procedure,
-		},
+	return nil, unrecognizedProcedureError{
+		Service:   service,
+		Procedure: procedure,
 	}
 }
