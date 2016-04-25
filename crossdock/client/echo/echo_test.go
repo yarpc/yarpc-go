@@ -91,7 +91,7 @@ func TestEchoBehaviors(t *testing.T) {
 						return []byte("lol"), nil, nil
 					}))
 			},
-			failed: "got [108 111 108]",
+			failed: "server said: [108 111 108]",
 		},
 		{
 			encname:  "raw",
@@ -116,7 +116,7 @@ func TestEchoBehaviors(t *testing.T) {
 						return map[string]interface{}{"token": "invalid"}, nil, nil
 					}))
 			},
-			failed: "got invalid",
+			failed: "server said: invalid",
 		},
 		{
 			encname:  "json",
@@ -137,7 +137,7 @@ func TestEchoBehaviors(t *testing.T) {
 			register: func(rpc yarpc.RPC) {
 				thrift.Register(rpc, echoserver.New(invalidThriftEcho{}))
 			},
-			failed: "got derp",
+			failed: "server said: derp",
 		},
 		{
 			encname:  "thrift",

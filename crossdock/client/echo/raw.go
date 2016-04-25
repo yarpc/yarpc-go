@@ -46,13 +46,6 @@ func Raw(s behavior.Sink, p behavior.Params) {
 		TTL:       time.Second, // TODO context already has timeout; use that
 	}, token)
 
-	if err != nil {
-		behavior.Fatalf(s, "call to echo/raw failed: %v", err)
-	}
-
-	if !bytes.Equal(token, resBody) {
-		behavior.Fatalf(s, "expected %v, got %v", token, resBody)
-	}
-
-	behavior.Successf(s, "server said: %v", resBody)
+	behavior.Fatals(s).NoError(err, "call to echo/raw failed: %v", err)
+	behavior.Assert(s).True(bytes.Equal(token, resBody), "server said: %v", resBody)
 }

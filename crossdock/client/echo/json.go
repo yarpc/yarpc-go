@@ -54,13 +54,6 @@ func JSON(s behavior.Sink, p behavior.Params) {
 		&jsonEcho{Token: token},
 		&response,
 	)
-	if err != nil {
-		behavior.Fatalf(s, "call to echo failed: %v", err)
-	}
-
-	if response.Token != token {
-		behavior.Fatalf(s, "expected %v, got %v", token, response.Token)
-	}
-
-	behavior.Successf(s, "server said: %v", response.Token)
+	behavior.Fatals(s).NoError(err, "call to echo failed: %v", err)
+	behavior.Assert(s).Equal(token, response.Token, "server said: %v", response.Token)
 }
