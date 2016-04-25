@@ -126,6 +126,19 @@ func Run(s behavior.Sink, ps behavior.Params) {
 				"caller name, and TTL\n",
 		},
 		{
+			name: "wrong service",
+			headers: transport.Headers{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "not-yarpc-test",
+				"RPC-Procedure":  "echo",
+				"Context-TTL-MS": "100",
+			},
+			body:       `{"token":"10"}`,
+			wantStatus: 400,
+			wantBody: `BadRequest: unrecognized procedure ` +
+				`"echo" for service "not-yarpc-test"` + "\n",
+		},
+		{
 			name: "no procedure",
 			headers: transport.Headers{
 				"RPC-Service": "yarpc-test",
