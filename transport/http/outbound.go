@@ -84,7 +84,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		}
 
 		// Trim the trailing newline from HTTP error messages
-		if contents[len(contents)-1] == '\n' {
+		if len(contents) > 0 && contents[len(contents)-1] == '\n' {
 			contents = contents[:len(contents)-1]
 		}
 		message := string(contents)
