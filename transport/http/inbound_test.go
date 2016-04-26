@@ -91,8 +91,7 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
-		assert.Contains(t, err.Error(), "404")
-		assert.Contains(t, err.Error(), "page not found")
+		assert.Equal(t, err.Error(), "404 page not found")
 	}
 
 	o = NewOutbound(addr + "rpc/v1")

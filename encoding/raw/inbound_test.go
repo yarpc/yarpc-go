@@ -117,7 +117,7 @@ func TestRawHandler(t *testing.T) {
 
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), tt.wantErr)
+				assert.Equal(t, err.Error(), tt.wantErr)
 			}
 		} else {
 			if assert.NoError(t, err) {
