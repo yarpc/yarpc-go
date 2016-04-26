@@ -22,17 +22,23 @@ package transport
 
 import "fmt"
 
-// The general error hierarchy we have is:
+// The general hierarchy we have is:
 //
-// BadRequestError
-//  |- localBadRequestError: Used as-is to send a 400 level failure.
-//  |- remoteBadRequestError: Causes a localUnexpectedError.
-// UnexpectedError
-//  |- localUnexpectedError: Used as-is to send a 500 level failure.
-//  |- remoteUnexpectedError: Causes a new localUnexpectedError.
+// 	BadRequestError                 HandlerError
+// 	 |                                        |
+// 	 +--------> localBadRequestError <--------+
+// 	 |                                        |
+// 	 +--------> remoteBadRequestError         |
+// 	                                          |
+// 	UnexpectedError                           |
+// 	 |                                        |
+// 	 +--------> localUnexpectedError <--------+
+// 	 |
+// 	 +--------> remoteUnexpectedError
 //
-// Only the local versions of the error types are HandlerErrors. The remote
-// versions need to be converted using AsHandlerError.
+// Only the local versions of the error types are HandlerErrors. If a Handler
+// returns one of the remote versions, they will be wrapped in a new
+// UnexpectedError.
 
 // HandlerError represents error types that can be returned from a Handler
 // that the Inbound implementation MUST handle.
