@@ -22,6 +22,18 @@ package transport
 
 import "fmt"
 
+// The general error hierarchy we have is:
+//
+// BadRequestError
+//  |- localBadRequestError: Used as-is to send a 400 level failure.
+//  |- remoteBadRequestError: Causes a localUnexpectedError.
+// UnexpectedError
+//  |- localUnexpectedError: Used as-is to send a 500 level failure.
+//  |- remoteUnexpectedError: Causes a new localUnexpectedError.
+//
+// Only the local versions of the error types are HandlerErrors. The remote
+// versions need to be converted using AsHandlerError.
+
 // HandlerError represents error types that can be returned from a Handler
 // that the Inbound implementation MUST handle.
 //
@@ -31,8 +43,6 @@ import "fmt"
 type HandlerError interface {
 	error
 
-	// private function because we want control over which types are valid
-	// HandlerErrors.
 	handlerError()
 }
 
@@ -61,44 +71,106 @@ func AsHandlerError(service, procedure string, err error) error {
 	}
 }
 
-// isHandlerError may be mixed into types which are valid HandlerErrors.
-type isHandlerError struct{}
-
-func (isHandlerError) handlerError() {}
-
 //////////////////////////////////////////////////////////////////////////////
 
 // BadRequestError is a failure to process a request because the request was
 // invalid.
-type BadRequestError struct {
-	isHandlerError
+type BadRequestError interface {
+	error
 
+	badRequestError()
+}
+
+type localBadRequestError struct {
 	Reason error
 }
 
-func (e BadRequestError) Error() string {
+var _ BadRequestError = localBadRequestError{}
+var _ HandlerError = localBadRequestError{}
+
+// LocalBadRequestError wraps the given error into a BadRequestError.
+//
+// It represents a local failure while processing an invalid request.
+func LocalBadRequestError(err error) HandlerError {
+	return localBadRequestError{Reason: err}
+}
+
+func (localBadRequestError) handlerError()    {}
+func (localBadRequestError) badRequestError() {}
+
+func (e localBadRequestError) Error() string {
 	return "BadRequest: " + e.Reason.Error()
 }
 
-// AsHandlerError on a BadRequestError returns the error as-is.
-func (e BadRequestError) AsHandlerError() HandlerError { return e }
+type remoteBadRequestError struct {
+	Message string
+}
+
+var _ BadRequestError = remoteBadRequestError{}
+
+// RemoteBadRequestError builds a new BadRequestError with the given message.
+//
+// It represents a BadRequest failure from a remote service.
+func RemoteBadRequestError(message string) BadRequestError {
+	return remoteBadRequestError{Message: message}
+}
+
+func (remoteBadRequestError) badRequestError() {}
+
+func (e remoteBadRequestError) Error() string {
+	return e.Message
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 // UnexpectedError is a failure to process a request for an unexpected reason.
-type UnexpectedError struct {
-	isHandlerError
+type UnexpectedError interface {
+	error
 
+	unexpectedError()
+}
+
+type localUnexpectedError struct {
 	Reason error
 }
 
-func (e UnexpectedError) Error() string {
+var _ UnexpectedError = localUnexpectedError{}
+var _ HandlerError = localUnexpectedError{}
+
+// LocalUnexpectedError wraps the given error into an UnexpectedError.
+//
+// It represens a local failure while processing a request.
+func LocalUnexpectedError(err error) HandlerError {
+	return localUnexpectedError{Reason: err}
+}
+
+func (localUnexpectedError) handlerError()    {}
+func (localUnexpectedError) unexpectedError() {}
+
+func (e localUnexpectedError) Error() string {
 	return "UnexpectedError: " + e.Reason.Error()
 }
 
-// AsHandlerError on an UnexpectedError returns the error as-is.
-func (e UnexpectedError) AsHandlerError() HandlerError { return e }
+type remoteUnexpectedError struct {
+	Message string
+}
+
+var _ UnexpectedError = remoteUnexpectedError{}
+
+// RemoteUnexpectedError builds a new UnexpectedError with the given message.
+//
+// It represents an UnexpectedError from a remote service.
+func RemoteUnexpectedError(message string) UnexpectedError {
+	return remoteUnexpectedError{Message: message}
+}
+
+func (remoteUnexpectedError) unexpectedError() {}
+
+func (e remoteUnexpectedError) Error() string {
+	return e.Message
+}
 
 //////////////////////////////////////////////////////////////////////////////
-// Private errors
 
 // unrecognizedProcedureError is a failure to process a request because the
 // procedure and/or service name was unrecognized.
@@ -112,7 +184,7 @@ func (e unrecognizedProcedureError) Error() string {
 }
 
 func (e unrecognizedProcedureError) AsHandlerError() HandlerError {
-	return BadRequestError{Reason: e}
+	return LocalBadRequestError(e)
 }
 
 // procedureFailedError is a failure to execute a procedure due to an
@@ -129,5 +201,5 @@ func (e procedureFailedError) Error() string {
 }
 
 func (e procedureFailedError) AsHandlerError() HandlerError {
-	return UnexpectedError{Reason: e}
+	return LocalUnexpectedError(e)
 }
