@@ -76,15 +76,18 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	if response.StatusCode < 200 || response.StatusCode >= 400 {
 		contents, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return nil, err // TODO error type
+			return nil, err
 		}
 
 		if err := response.Body.Close(); err != nil {
-			return nil, err // TODO error type
+			return nil, err
 		}
 
-		// TODO error type
-		return nil, fmt.Errorf("request %v failed: %v: %s", request, response.Status, contents)
+		if response.StatusCode < 500 {
+			return nil, transport.RemoteBadRequestError(string(contents))
+		}
+
+		return nil, transport.RemoteUnexpectedError(string(contents))
 	}
 
 	return &transport.Response{
