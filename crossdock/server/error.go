@@ -21,20 +21,19 @@
 package server
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoserver"
+	"fmt"
+
 	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
 )
 
-// Register the different endpoints of the TestSubject with the given
-// Registry.
-func Register(reg transport.Registry) {
-	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(reg, json.Procedure("echo", EchoJSON))
-	thrift.Register(reg, echoserver.New(EchoThrift{}))
+// UnexpectedError fails with an unexpected error.
+func UnexpectedError(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+	return nil, nil, fmt.Errorf("error")
+}
 
-	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
-	json.Register(reg, json.Procedure("bad-response", BadResponse))
+// BadResponse returns an object that's not a valid JSON response.
+func BadResponse(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+	// func is not serializable
+	result := map[string]interface{}{"foo": func() {}}
+	return result, nil, nil
 }

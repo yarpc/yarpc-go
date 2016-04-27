@@ -18,23 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package errors
 
-import (
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoserver"
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
+// Names of parameter keys for the behavior.
+const (
+	ServerParam = "server"
 )
-
-// Register the different endpoints of the TestSubject with the given
-// Registry.
-func Register(reg transport.Registry) {
-	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(reg, json.Procedure("echo", EchoJSON))
-	thrift.Register(reg, echoserver.New(EchoThrift{}))
-
-	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
-	json.Register(reg, json.Procedure("bad-response", BadResponse))
-}

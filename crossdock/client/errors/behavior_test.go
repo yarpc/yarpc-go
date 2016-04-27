@@ -18,60 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package errors
 
 import (
-	"encoding/json"
-	"net/http"
+	"testing"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-	"github.com/yarpc/yarpc-go/crossdock/client/errors"
+	"github.com/yarpc/yarpc-go/crossdock/server"
+	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/http"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
-}
-
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		return
-	}
-
-	entries := behavior.Run(func(s behavior.Sink) {
-		dispatch(s, httpParams{r})
+func TestRun(t *testing.T) {
+	rpc := yarpc.New(yarpc.Config{
+		Name:     "yarpc-test",
+		Inbounds: []transport.Inbound{http.NewInbound(":8081")},
 	})
 
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(entries); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	json.Register(rpc, json.Procedure("echo", server.EchoJSON))
+	json.Register(rpc, json.Procedure("unexpected-error", server.UnexpectedError))
+	json.Register(rpc, json.Procedure("bad-response", server.BadResponse))
+
+	require.NoError(t, rpc.Start(), "failed to start RPC server")
+	defer rpc.Stop()
+
+	params := behavior.ParamsFromMap{"server": "localhost"}
+	entries := behavior.Run(func(s behavior.Sink) {
+		Run(s, params)
+	})
+
+	for _, entry := range entries {
+		e := entry.(behavior.Entry)
+		assert.Equal(t, behavior.Passed, e.Status, e.Output)
 	}
-}
-
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param(BehaviorParam)
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	case "errors":
-		errors.Run(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
-	}
-}
-
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
 }
