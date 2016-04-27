@@ -15,7 +15,7 @@ services:
             - AXIS_CLIENT=go,node # ,java,python,python-sync
             - AXIS_SERVER=go,node # ,java,python
             - AXIS_TRANSPORT=http,tchannel
-            - AXIS_ERRORS=go # ,node,java
+            - AXIS_ERRORS=go,node
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
