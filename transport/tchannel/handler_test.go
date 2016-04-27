@@ -327,7 +327,8 @@ func TestResponseWriterFailure(t *testing.T) {
 			&fakeInboundCall{
 				format: tchannel.Raw,
 				resp:   resp,
-			})
+			},
+		)
 		_, err := w.Write([]byte("foo"))
 		assert.Error(t, err)
 		for _, msg := range tt.messages {
