@@ -88,6 +88,12 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			&http.Request{
 				Method: "POST",
+			},
+			"BadRequest: missing service name, procedure, caller name, and TTL\n",
+		},
+		{
+			&http.Request{
+				Method: "POST",
 				Header: headersWithBadTTL,
 			},
 			`BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
