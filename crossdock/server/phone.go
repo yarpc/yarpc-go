@@ -22,7 +22,6 @@ package server
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/yarpc/yarpc-go/encoding/json"
@@ -55,10 +54,7 @@ type PhoneResponse struct {
 func Phone(req *json.Request, body *PhoneRequest) (*PhoneResponse, *json.Response, error) {
 	// TODO(abg): Support other transports
 	t := body.Transport.HTTP
-	outbound := ht.NewOutboundWithClient(
-		fmt.Sprintf("http://%s:%d", t.Host, t.Port),
-		&http.Client{Transport: new(http.Transport)},
-	)
+	outbound := ht.NewOutbound(fmt.Sprintf("http://%s:%d", t.Host, t.Port))
 	client := json.New(transport.Channel{
 		Caller:   "yarpc-test", // TODO use req.Service,
 		Service:  body.Service,
