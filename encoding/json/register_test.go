@@ -74,6 +74,12 @@ func TestWrapHandlerValid(t *testing.T) {
 				return nil, nil, nil
 			},
 		},
+		{
+			"qux",
+			func(*Request, interface{}) (map[string]interface{}, *Response, error) {
+				return nil, nil, nil
+			},
+		},
 	}
 
 	for _, tt := range tests {

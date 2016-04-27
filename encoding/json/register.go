@@ -28,9 +28,10 @@ import (
 )
 
 var (
-	_requestType  = reflect.TypeOf((*Request)(nil))
-	_responseType = reflect.TypeOf((*Response)(nil))
-	_errorType    = reflect.TypeOf((*error)(nil)).Elem()
+	_requestType        = reflect.TypeOf((*Request)(nil))
+	_responseType       = reflect.TypeOf((*Response)(nil))
+	_errorType          = reflect.TypeOf((*error)(nil)).Elem()
+	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
 // Registrant is used for types that define or know about different JSON
@@ -84,7 +85,9 @@ func wrapHandler(name string, handler interface{}) transport.Handler {
 	reqBodyType := verifySignature(name, reflect.TypeOf(handler))
 
 	var r requestReader
-	if reqBodyType.Kind() == reflect.Map {
+	if reqBodyType == _interfaceEmptyType {
+		r = ifaceEmptyReader{}
+	} else if reqBodyType.Kind() == reflect.Map {
 		r = mapReader{reqBodyType}
 	} else {
 		// struct ptr
@@ -143,7 +146,7 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
 			"the second argument of the handler for %q must be "+
-				"a struct pointer or a map[string]interface{}, and not: %v",
+				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
 		))
 	}
@@ -151,7 +154,7 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 	if !isValidReqResType(resBodyType) {
 		panic(fmt.Sprintf(
 			"the first result of the handler for %q must be "+
-				"a struct pointer or a map[string]interface{}, and not: %v",
+				"a struct pointer, a map[string]interface{}, or interface{], and not: %v",
 			n, resBodyType,
 		))
 	}
@@ -159,9 +162,10 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 	return reqBodyType
 }
 
-// isValidReqResType checks if the given type is a pointer to a struct or a
-// map[string]interface{}.
+// isValidReqResType checks if the given type is a pointer to a struct, a
+// map[string]interface{}, or a interface{}.
 func isValidReqResType(t reflect.Type) bool {
-	return (t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct) ||
+	return (t == _interfaceEmptyType) ||
+		(t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct) ||
 		(t.Kind() == reflect.Map && t.Key().Kind() == reflect.String)
 }

@@ -76,6 +76,23 @@ func TestHandleMapSuccess(t *testing.T) {
 	assert.Equal(t, "true", response.Success)
 }
 
+func TestHandleInterfaceEmptySuccess(t *testing.T) {
+	h := func(_ *Request, body interface{}) (interface{}, *Response, error) {
+		return body, nil, nil
+	}
+
+	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
+
+	resw := new(transporttest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &transport.Request{
+		Procedure: "foo",
+		Body:      jsonBody(`["a", "b", "c"]`),
+	}, resw)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `["a", "b", "c"]`, resw.Body.String())
+}
+
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	h := func(*Request, *simpleRequest) (*simpleResponse, *Response, error) {
 		response := &Response{Headers: transport.Headers{"foo": "bar"}}
