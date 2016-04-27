@@ -97,3 +97,11 @@ func (r mapReader) Read(d *json.Decoder) (reflect.Value, error) {
 	err := d.Decode(value.Interface())
 	return value.Elem(), err
 }
+
+type ifaceEmptyReader struct{}
+
+func (ifaceEmptyReader) Read(d *json.Decoder) (reflect.Value, error) {
+	value := reflect.New(_interfaceEmptyType)
+	err := d.Decode(value.Interface())
+	return value.Elem(), err
+}
