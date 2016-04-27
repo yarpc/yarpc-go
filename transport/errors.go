@@ -129,7 +129,9 @@ func (e remoteBadRequestError) Error() string {
 
 //////////////////////////////////////////////////////////////////////////////
 
-// UnexpectedError is a failure to process a request for an unexpected reason.
+// UnexpectedError is a server failure due to unhandled errors. This can be
+// caused if the remote server panics while processing the request or fails to
+// handle any other errors.
 type UnexpectedError interface {
 	error
 
