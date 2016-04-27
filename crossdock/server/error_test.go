@@ -18,37 +18,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package server
 
-import "fmt"
+import (
+	j "encoding/json"
+	"testing"
 
-// encodeError is returned when there's an error serializing to Thrift.
-type encodeError struct {
-	Reason error
+	"github.com/yarpc/yarpc-go/encoding/json"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+)
+
+func TestUnexpectedError(t *testing.T) {
+	_, _, err := UnexpectedError(
+		&json.Request{
+			Context:   context.Background(),
+			Procedure: "unexpected-error",
+		},
+		map[string]interface{}{},
+	)
+	assert.Error(t, err)
+	assert.Equal(t, "error", err.Error())
 }
 
-func (e encodeError) Error() string {
-	return fmt.Sprintf("failed to write Thrift: %v", e.Reason)
+func TestBadResponse(t *testing.T) {
+	result, _, err := BadResponse(
+		&json.Request{
+			Context:   context.Background(),
+			Procedure: "bad-response",
+		},
+		map[string]interface{}{},
+	)
+	assert.NoError(t, err)
+	_, err = j.Marshal(result)
+	assert.Error(t, err, "expected serialization to fail")
 }
-
-// decodeError is returned when there's an error deserializing from Thrift.
-type decodeError struct {
-	Reason error
-}
-
-func (e decodeError) Error() string {
-	return fmt.Sprintf("failed to read Thrift: %v", e.Reason)
-}
-
-// IsEncodingError returns true if the given error is an error encountered
-// while trying to serialize or deserialize JSON.
-func IsEncodingError(e error) bool {
-	switch e.(type) {
-	case encodeError, decodeError:
-		return true
-	default:
-		return false
-	}
-}
-
-// TODO(abg): Unify json and thrift encoding errors?

@@ -20,91 +20,114 @@
 
 package transport
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
-// AsHandlerError converts an error into a BadRequestError or UnexpectedError,
-// leaving it unchanged if it's already one of the two.
-func AsHandlerError(err error) error {
+// HandlerError represents error types that can be returned from a Handler
+// that the Inbound implementation MUST handle.
+//
+// Currently, this includes BadRequestError and UnexpectedError only. Error
+// types which know how to convert themselves into BadRequestError or
+// UnexpectedError may provide a `AsHandlerError() HandlerError` method.
+type HandlerError interface {
+	error
+
+	// private function because we want control over which types are valid
+	// HandlerErrors.
+	handlerError()
+}
+
+type asHandlerError interface {
+	AsHandlerError() HandlerError
+}
+
+// AsHandlerError converts an error into a HandlerError, leaving it unchanged
+// if it is already one.
+func AsHandlerError(service, procedure string, err error) error {
 	if err == nil {
 		return err
 	}
 
-	switch err.(type) {
-	case BadRequestError, UnexpectedError:
-		return err
+	switch e := err.(type) {
+	case HandlerError:
+		return e
+	case asHandlerError:
+		return e.AsHandlerError()
 	default:
-		return UnexpectedError{Reason: err}
+		return procedureFailedError{
+			Service:   service,
+			Procedure: procedure,
+			Reason:    err,
+		}.AsHandlerError()
 	}
 }
+
+// isHandlerError may be mixed into types which are valid HandlerErrors.
+type isHandlerError struct{}
+
+func (isHandlerError) handlerError() {}
+
+//////////////////////////////////////////////////////////////////////////////
 
 // BadRequestError is a failure to process a request because the request was
 // invalid.
 type BadRequestError struct {
+	isHandlerError
+
 	Reason error
 }
 
 func (e BadRequestError) Error() string {
 	return "BadRequest: " + e.Reason.Error()
-	// TODO were we planning on dropping these prefixes?
 }
+
+// AsHandlerError on a BadRequestError returns the error as-is.
+func (e BadRequestError) AsHandlerError() HandlerError { return e }
 
 // UnexpectedError is a failure to process a request for an unexpected reason.
 type UnexpectedError struct {
+	isHandlerError
+
 	Reason error
 }
 
 func (e UnexpectedError) Error() string {
-	return "Unexpected: " + e.Reason.Error()
-	// TODO were we planning on dropping these prefixes?
+	return "UnexpectedError: " + e.Reason.Error()
 }
 
-// MissingParametersError is a failure to process a request because it was
-// missing required parameters.
-type MissingParametersError struct {
-	// Names of the missing parameters.
-	//
-	// Precondition: len(Parameters) > 0
-	Parameters []string
-}
+// AsHandlerError on an UnexpectedError returns the error as-is.
+func (e UnexpectedError) AsHandlerError() HandlerError { return e }
 
-func (e MissingParametersError) Error() string {
-	s := "missing "
-	ps := e.Parameters
-	if len(ps) == 1 {
-		s += ps[0]
-		return s
-	}
+//////////////////////////////////////////////////////////////////////////////
+// Private errors
 
-	s += strings.Join(ps[:len(ps)-1], ", ")
-	s += fmt.Sprintf(", and %s", ps[len(ps)-1])
-	return s
-}
-
-// InvalidTTLError is a failure to process a request because the TTL was in an
-// invalid format.
-type InvalidTTLError struct {
-	Service   string
-	Procedure string
-	TTL       string
-}
-
-func (e InvalidTTLError) Error() string {
-	return fmt.Sprintf(
-		`invalid TTL %q for procedure %q of service %q: must be positive integer`,
-		e.TTL, e.Procedure, e.Service,
-	)
-}
-
-// UnrecognizedProcedureError is a failure to process a request because the
+// unrecognizedProcedureError is a failure to process a request because the
 // procedure and/or service name was unrecognized.
-type UnrecognizedProcedureError struct {
+type unrecognizedProcedureError struct {
 	Service   string
 	Procedure string
 }
 
-func (e UnrecognizedProcedureError) Error() string {
+func (e unrecognizedProcedureError) Error() string {
 	return fmt.Sprintf(`unrecognized procedure %q for service %q`, e.Procedure, e.Service)
+}
+
+func (e unrecognizedProcedureError) AsHandlerError() HandlerError {
+	return BadRequestError{Reason: e}
+}
+
+// procedureFailedError is a failure to execute a procedure due to an
+// unexpected error.
+type procedureFailedError struct {
+	Service   string
+	Procedure string
+	Reason    error
+}
+
+func (e procedureFailedError) Error() string {
+	return fmt.Sprintf(`error for procedure %q of service %q: %v`,
+		e.Procedure, e.Service, e.Reason)
+}
+
+func (e procedureFailedError) AsHandlerError() HandlerError {
+	return UnexpectedError{Reason: e}
 }

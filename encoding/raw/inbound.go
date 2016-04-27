@@ -34,6 +34,9 @@ type rawHandler struct {
 }
 
 func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+	treq.Encoding = Encoding
+	// TODO(abg): Should we fail requests if Rpc-Encoding does not match?
+
 	reqBody, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
 		return err

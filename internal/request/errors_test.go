@@ -18,53 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package request
 
 import (
-	"bytes"
-	"io/ioutil"
+	"testing"
 
-	"github.com/yarpc/yarpc-go/internal/encoding"
-	"github.com/yarpc/yarpc-go/transport"
-
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
-	"golang.org/x/net/context"
+	"github.com/stretchr/testify/assert"
 )
 
-// thriftHandler wraps a Thrift Handler into a transport.Handler
-type thriftHandler struct {
-	Handler  Handler
-	Protocol protocol.Protocol
-}
-
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	treq.Encoding = Encoding
-	// TODO(abg): Should we fail requests if Rpc-Encoding does not match?
-
-	body, err := ioutil.ReadAll(treq.Body)
-	if err != nil {
-		return err
+func TestMissingParameters(t *testing.T) {
+	tests := []struct {
+		params []string
+		want   string
+	}{
+		{
+			[]string{"x"},
+			"missing x",
+		},
+		{
+			[]string{"x", "y"},
+			"missing x and y",
+		},
+		{
+			[]string{"x", "y", "z"},
+			"missing x, y, and z",
+		},
 	}
 
-	reqBody, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
-	if err != nil {
-		return encoding.RequestBodyDecodeError(treq, err)
+	for _, tt := range tests {
+		err := missingParametersError{tt.params}
+		assert.Equal(t, tt.want, err.Error())
 	}
-
-	resBody, response, err := t.Handler.Handle(&Request{
-		Context: ctx,
-		Headers: treq.Headers,
-		TTL:     treq.TTL,
-	}, reqBody)
-
-	if response != nil {
-		rw.AddHeaders(response.Headers)
-	}
-
-	if err := t.Protocol.Encode(resBody, rw); err != nil {
-		return encoding.ResponseBodyEncodeError(treq, err)
-	}
-
-	return nil
 }

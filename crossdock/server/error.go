@@ -18,53 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package server
 
 import (
-	"bytes"
-	"io/ioutil"
+	"fmt"
 
-	"github.com/yarpc/yarpc-go/internal/encoding"
-	"github.com/yarpc/yarpc-go/transport"
-
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
-	"golang.org/x/net/context"
+	"github.com/yarpc/yarpc-go/encoding/json"
 )
 
-// thriftHandler wraps a Thrift Handler into a transport.Handler
-type thriftHandler struct {
-	Handler  Handler
-	Protocol protocol.Protocol
+// UnexpectedError fails with an unexpected error.
+func UnexpectedError(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+	return nil, nil, fmt.Errorf("error")
 }
 
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	treq.Encoding = Encoding
-	// TODO(abg): Should we fail requests if Rpc-Encoding does not match?
-
-	body, err := ioutil.ReadAll(treq.Body)
-	if err != nil {
-		return err
-	}
-
-	reqBody, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
-	if err != nil {
-		return encoding.RequestBodyDecodeError(treq, err)
-	}
-
-	resBody, response, err := t.Handler.Handle(&Request{
-		Context: ctx,
-		Headers: treq.Headers,
-		TTL:     treq.TTL,
-	}, reqBody)
-
-	if response != nil {
-		rw.AddHeaders(response.Headers)
-	}
-
-	if err := t.Protocol.Encode(resBody, rw); err != nil {
-		return encoding.ResponseBodyEncodeError(treq, err)
-	}
-
-	return nil
+// BadResponse returns an object that's not a valid JSON response.
+func BadResponse(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+	// func is not serializable
+	result := map[string]interface{}{"foo": func() {}}
+	return result, nil, nil
 }

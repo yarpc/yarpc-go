@@ -23,6 +23,7 @@ package tchannel
 import (
 	"io"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/uber/tchannel-go"
@@ -98,7 +99,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	if err := writeHeaders(format, req.Headers, call.Arg2Writer); err != nil {
-		return nil, err
+		return nil, encoding.RequestHeadersEncodeError(req, err)
 	}
 
 	if err := writeBody(req.Body, call); err != nil {
@@ -111,7 +112,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
-		return nil, err
+		return nil, encoding.RequestHeadersDecodeError(req, err)
 	}
 
 	resBody, err := res.Arg3Reader()

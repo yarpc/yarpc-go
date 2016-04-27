@@ -21,8 +21,7 @@
 package yarpc
 
 import (
-	"fmt"
-
+	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/sync"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -94,12 +93,12 @@ func (r rpc) Channel(service string) transport.Channel {
 		// we can eventually write an outbound that load balances between
 		// known outbounds for a service.
 		return transport.Channel{
-			Outbound: out,
+			Outbound: request.ValidatorOutbound{out},
 			Caller:   r.Name,
 			Service:  service,
 		}
 	}
-	panic(fmt.Sprintf("unknown service %q", service))
+	panic(noOutboundForService{Service: service})
 }
 
 func (r rpc) Start() error {

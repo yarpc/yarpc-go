@@ -22,13 +22,18 @@ package http
 
 import (
 	"net/http"
-	"strconv"
-	"time"
 
+	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
+
+func popHeader(h http.Header, n string) string {
+	v := h.Get(n)
+	h.Del(n)
+	return v
+}
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
@@ -42,61 +47,40 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	caller := req.Header.Get(CallerHeader)
-	if len(caller) == 0 {
-		http.Error(w, "caller name is required", http.StatusBadRequest)
-		return
-	}
-	req.Header.Del(CallerHeader)
-
 	service := req.Header.Get(ServiceHeader)
-	if len(service) == 0 {
-		http.Error(w, "service name is required", http.StatusBadRequest)
-		return
-	}
-	req.Header.Del(ServiceHeader)
-
 	procedure := req.Header.Get(ProcedureHeader)
-	if len(procedure) == 0 {
-		http.Error(w, "procedure name is required", http.StatusBadRequest)
-		return
-	}
-	req.Header.Del(ProcedureHeader)
 
-	strttlms := req.Header.Get(TTLMSHeader)
-	if len(strttlms) == 0 {
-		http.Error(w, "ttlms is required", http.StatusBadRequest)
-		return
-	}
-	req.Header.Del(TTLMSHeader)
-	ttlms, err := strconv.Atoi(strttlms)
-	if err != nil {
-		http.Error(w, "ttlms must be an int", http.StatusBadRequest)
+	err := h.callHandler(w, req)
+	if err == nil {
 		return
 	}
 
-	// Optional headers:
+	err = transport.AsHandlerError(service, procedure, err)
+	status := http.StatusInternalServerError
+	if _, ok := err.(transport.BadRequestError); ok {
+		status = http.StatusBadRequest
+	}
+	http.Error(w, err.Error(), status)
+}
 
-	encoding := req.Header.Get(EncodingHeader)
-	req.Header.Del(EncodingHeader)
-
+func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 	treq := &transport.Request{
-		Caller:    caller,
-		Service:   service,
-		Encoding:  transport.Encoding(encoding),
-		Procedure: procedure,
+		Caller:    popHeader(req.Header, CallerHeader),
+		Service:   popHeader(req.Header, ServiceHeader),
+		Procedure: popHeader(req.Header, ProcedureHeader),
+		Encoding:  transport.Encoding(popHeader(req.Header, EncodingHeader)),
 		Headers:   fromHTTPHeader(req.Header, nil),
 		Body:      req.Body,
-		TTL:       time.Duration(ttlms) * time.Millisecond,
 	}
 
-	err = h.Handler.Handle(context.TODO(), treq, newResponseWriter(w))
+	v := request.Validator{Request: treq}
+	v.ParseTTL(popHeader(req.Header, TTLMSHeader))
+	treq, err := v.Validate()
 	if err != nil {
-		// TODO structured responses?
-		err = internalError{Reason: err}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
+
+	return h.Handler.Handle(context.TODO(), treq, newResponseWriter(w))
 }
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.

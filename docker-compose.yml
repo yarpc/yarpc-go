@@ -10,15 +10,17 @@ services:
             - python
             - python-sync
         environment:
-            - WAIT_FOR=go,node,java,python,python-sync
+            - WAIT_FOR=go,node # ,java,python,python-sync
 
-            - AXIS_CLIENT=go,node,java,python,python-sync
-            - AXIS_SERVER=go,node,java,python
+            - AXIS_CLIENT=go,node # ,java,python,python-sync
+            - AXIS_SERVER=go,node # ,java,python
             - AXIS_TRANSPORT=http,tchannel
+            - AXIS_ERRORS=go # ,node,java
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
             - BEHAVIOR_THRIFT=client,server,transport
+            - BEHAVIOR_ERRORS=errors,server
 
     go:
         build: .
@@ -26,12 +28,12 @@ services:
             - "8080-8082"
 
     node:
-        image: yarpc/yarpc-node
+        image: yarpc/yarpc-node:crossdock-errors
         ports:
             - "8080-8082"
 
     java:
-        image: yarpc/yarpc-java
+        image: yarpc/yarpc-java:crossdock-errors
         ports:
             - "8080-8082"
 

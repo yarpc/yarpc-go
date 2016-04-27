@@ -18,35 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package errors
 
-import "fmt"
-
-// unmarshalError is returned when there's an error parsing JSON input.
-type unmarshalError struct {
-	Reason error
-}
-
-func (e unmarshalError) Error() string {
-	return fmt.Sprintf("failed to parse JSON: %v", e.Reason)
-}
-
-// marshalError is returned when there's an error serializing to JSON.
-type marshalError struct {
-	Reason error
-}
-
-func (e marshalError) Error() string {
-	return fmt.Sprintf("failed to serialize JSON: %v", e.Reason)
-}
-
-// IsEncodingError returns true if the given error is an error encountered
-// while trying to serialize or deserialize JSON.
-func IsEncodingError(e error) bool {
-	switch e.(type) {
-	case marshalError, unmarshalError:
-		return true
-	default:
-		return false
-	}
-}
+// Names of parameter keys for the behavior.
+const (
+	ServerParam = "server"
+)

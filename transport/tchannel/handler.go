@@ -23,6 +23,8 @@ package tchannel
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
+	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/uber/tchannel-go"
@@ -77,48 +79,65 @@ func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 }
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
+	err := h.callHandler(ctx, call)
+	if err == nil {
+		return
+	}
+
+	if _, ok := err.(tchannel.SystemError); ok {
+		call.Response().SendSystemError(err)
+		return
+	}
+
+	err = transport.AsHandlerError(call.ServiceName(), call.MethodString(), err)
+	status := tchannel.ErrCodeUnexpected
+	if _, ok := err.(transport.BadRequestError); ok {
+		status = tchannel.ErrCodeBadRequest
+	}
+
+	call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
+}
+
+func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		call.Response().SendSystemError(tchannel.ErrTimeoutRequired)
-		return
+		return tchannel.ErrTimeoutRequired
 	}
-
-	headers, err := readHeaders(call.Format(), call.Arg2Reader)
-	if err != nil {
-		call.Response().SendSystemError(tchannel.NewSystemError(
-			tchannel.ErrCodeUnexpected, "failed to read headers: %v", err))
-		return
-	}
-
-	body, err := call.Arg3Reader()
-	if err != nil {
-		call.Response().SendSystemError(tchannel.NewSystemError(
-			tchannel.ErrCodeUnexpected, "failed to read body: %v", err))
-		return
-	}
-	defer body.Close()
-
-	rw := newResponseWriter(call)
-	defer rw.Close() // TODO(abg): log if this errors
 
 	treq := &transport.Request{
 		Caller:    call.CallerName(),
 		Service:   call.ServiceName(),
 		Encoding:  transport.Encoding(call.Format()),
 		Procedure: call.MethodString(),
-		Headers:   headers,
-		Body:      body,
 		TTL:       deadline.Sub(time.Now()),
 	}
 
-	if err := h.Handler.Handle(ctx, treq, rw); err != nil {
-		call.Response().SendSystemError(tchannel.NewSystemError(
-			tchannel.ErrCodeUnexpected, "internal error: %v", err))
-		return
+	headers, err := readHeaders(call.Format(), call.Arg2Reader)
+	if err != nil {
+		return encoding.RequestHeadersDecodeError(treq, err)
 	}
+	treq.Headers = headers
+
+	body, err := call.Arg3Reader()
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+	treq.Body = body
+
+	rw := newResponseWriter(treq, call)
+	defer rw.Close() // TODO(abg): log if this errors
+
+	treq, err = request.Validate(treq)
+	if err != nil {
+		return err
+	}
+
+	return h.Handler.Handle(ctx, treq, rw)
 }
 
 type responseWriter struct {
+	treq         *transport.Request
 	failedWith   error
 	bodyWriter   tchannel.ArgWriter
 	format       tchannel.Format
@@ -127,8 +146,9 @@ type responseWriter struct {
 	wroteHeaders bool
 }
 
-func newResponseWriter(call inboundCall) *responseWriter {
+func newResponseWriter(treq *transport.Request, call inboundCall) *responseWriter {
 	return &responseWriter{
+		treq:     treq,
 		response: call.Response(),
 		headers:  make(transport.Headers),
 		format:   call.Format(),
@@ -152,7 +172,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	if !rw.wroteHeaders {
 		rw.wroteHeaders = true
 		if err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer); err != nil {
-			// TODO(abg): wrap this and the Arg3Writer error in something.
+			err = encoding.ResponseHeadersEncodeError(rw.treq, err)
 			rw.failedWith = err
 			return 0, err
 		}

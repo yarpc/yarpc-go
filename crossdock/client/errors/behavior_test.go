@@ -18,35 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package errors
 
 import (
 	"testing"
 
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/server"
+	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/http"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestMissingParameters(t *testing.T) {
-	tests := []struct {
-		params []string
-		want   string
-	}{
-		{
-			[]string{"x"},
-			"missing x",
-		},
-		{
-			[]string{"x", "y"},
-			"missing x, and y",
-		},
-		{
-			[]string{"x", "y", "z"},
-			"missing x, y, and z",
-		},
-	}
+func TestRun(t *testing.T) {
+	rpc := yarpc.New(yarpc.Config{
+		Name:     "yarpc-test",
+		Inbounds: []transport.Inbound{http.NewInbound(":8081")},
+	})
 
-	for _, tt := range tests {
-		err := MissingParametersError{tt.params}
-		assert.Equal(t, tt.want, err.Error())
+	json.Register(rpc, json.Procedure("echo", server.EchoJSON))
+	json.Register(rpc, json.Procedure("unexpected-error", server.UnexpectedError))
+	json.Register(rpc, json.Procedure("bad-response", server.BadResponse))
+
+	require.NoError(t, rpc.Start(), "failed to start RPC server")
+	defer rpc.Stop()
+
+	params := behavior.ParamsFromMap{"server": "localhost"}
+	entries := behavior.Run(func(s behavior.Sink) {
+		Run(s, params)
+	})
+
+	for _, entry := range entries {
+		e := entry.(behavior.Entry)
+		assert.Equal(t, behavior.Passed, e.Status, e.Output)
 	}
 }

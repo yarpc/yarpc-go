@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -54,21 +55,21 @@ type jsonClient struct {
 }
 
 func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface{}) (*Response, error) {
-	encoded, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, marshalError{Reason: err}
-	}
-
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
 		Encoding:  Encoding,
 		Procedure: req.Procedure,
 		Headers:   req.Headers,
-		Body:      bytes.NewReader(encoded),
 		TTL:       req.TTL, // TODO use default from channel
 	}
 
+	encoded, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, encoding.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = bytes.NewReader(encoded)
 	tres, err := c.t.Call(req.Context, &treq)
 	if err != nil {
 		return nil, err
@@ -76,7 +77,7 @@ func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface
 
 	dec := json.NewDecoder(tres.Body)
 	if err := dec.Decode(resBodyOut); err != nil {
-		return nil, unmarshalError{Reason: err}
+		return nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
 	if err := tres.Body.Close(); err != nil {
