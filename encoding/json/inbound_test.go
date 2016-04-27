@@ -86,11 +86,11 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 	resw := new(transporttest.FakeResponseWriter)
 	err := handler.Handle(context.Background(), &transport.Request{
 		Procedure: "foo",
-		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
+		Body:      jsonBody(`["a", "b", "c"]`),
 	}, resw)
 	require.NoError(t, err)
 
-	assert.JSONEq(t, `{"foo": 42, "bar": ["a", "b", "c"]}`, resw.Body.String())
+	assert.JSONEq(t, `["a", "b", "c"]`, resw.Body.String())
 }
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
