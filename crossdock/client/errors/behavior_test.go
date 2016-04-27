@@ -26,7 +26,6 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/server"
-	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 
@@ -40,10 +39,7 @@ func TestRun(t *testing.T) {
 		Inbounds: []transport.Inbound{http.NewInbound(":8081")},
 	})
 
-	json.Register(rpc, json.Procedure("echo", server.EchoJSON))
-	json.Register(rpc, json.Procedure("unexpected-error", server.UnexpectedError))
-	json.Register(rpc, json.Procedure("bad-response", server.BadResponse))
-
+	server.Register(rpc)
 	require.NoError(t, rpc.Start(), "failed to start RPC server")
 	defer rpc.Stop()
 

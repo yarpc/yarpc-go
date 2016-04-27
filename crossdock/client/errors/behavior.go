@@ -235,6 +235,43 @@ func Run(s behavior.Sink, ps behavior.Params) {
 				`body for procedure "bad-response" of service "yarpc-test" ` +
 				`from caller "yarpc-test":`,
 		},
+		{
+			name: "remote bad request",
+			headers: transport.Headers{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "yarpc-test",
+				"RPC-Procedure":  "phone",
+				"Context-TTL-MS": "100",
+			},
+			body: `{
+				"service": "yarpc-test",
+				"procedure": "Echo::echo",
+				"body": "not a Thrift payload",
+				"transport": {"http": {"host": "` + ps.Param(ServerParam) + `", "port": 8081}}
+			}`,
+			wantStatus: 500,
+			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
+				`BadRequest: failed to decode "thrift" request body for procedure "Echo::echo" ` +
+				`of service "yarpc-test" from caller "yarpc-test": `,
+		},
+		{
+			name: "remote unexpected error",
+			headers: transport.Headers{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "yarpc-test",
+				"RPC-Procedure":  "phone",
+				"Context-TTL-MS": "100",
+			},
+			body: `{
+				"service": "yarpc-test",
+				"procedure": "unexpected-error",
+				"body": "{}",
+				"transport": {"http": {"host": "` + ps.Param(ServerParam) + `", "port": 8081}}
+			}`,
+			wantStatus: 500,
+			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
+				`UnexpectedError: error for procedure "unexpected-error" of service "yarpc-test": error` + "\n",
+		},
 	}
 
 	for _, tt := range tests {
