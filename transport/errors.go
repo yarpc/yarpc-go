@@ -108,23 +108,21 @@ func (e localBadRequestError) Error() string {
 	return "BadRequest: " + e.Reason.Error()
 }
 
-type remoteBadRequestError struct {
-	Message string
-}
+type remoteBadRequestError string
 
-var _ BadRequestError = remoteBadRequestError{}
+var _ BadRequestError = remoteBadRequestError("")
 
 // RemoteBadRequestError builds a new BadRequestError with the given message.
 //
 // It represents a BadRequest failure from a remote service.
 func RemoteBadRequestError(message string) BadRequestError {
-	return remoteBadRequestError{Message: message}
+	return remoteBadRequestError(message)
 }
 
 func (remoteBadRequestError) badRequestError() {}
 
 func (e remoteBadRequestError) Error() string {
-	return e.Message
+	return string(e)
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -159,23 +157,21 @@ func (e localUnexpectedError) Error() string {
 	return "UnexpectedError: " + e.Reason.Error()
 }
 
-type remoteUnexpectedError struct {
-	Message string
-}
+type remoteUnexpectedError string
 
-var _ UnexpectedError = remoteUnexpectedError{}
+var _ UnexpectedError = remoteUnexpectedError("")
 
 // RemoteUnexpectedError builds a new UnexpectedError with the given message.
 //
 // It represents an UnexpectedError from a remote service.
 func RemoteUnexpectedError(message string) UnexpectedError {
-	return remoteUnexpectedError{Message: message}
+	return remoteUnexpectedError(message)
 }
 
 func (remoteUnexpectedError) unexpectedError() {}
 
 func (e remoteUnexpectedError) Error() string {
-	return e.Message
+	return string(e)
 }
 
 //////////////////////////////////////////////////////////////////////////////

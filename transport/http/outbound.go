@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
@@ -84,10 +85,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		}
 
 		// Trim the trailing newline from HTTP error messages
-		if len(contents) > 0 && contents[len(contents)-1] == '\n' {
-			contents = contents[:len(contents)-1]
-		}
-		message := string(contents)
+		message := strings.TrimSuffix(string(contents), "\n")
 
 		if response.StatusCode < 500 {
 			return nil, transport.RemoteBadRequestError(message)
