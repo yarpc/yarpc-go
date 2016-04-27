@@ -86,7 +86,7 @@ func (m MapRegistry) Register(service, procedure string, handler Handler) {
 }
 
 // GetHandler retrieves the Handler for the given Procedure or returns an
-// UnknownProcedureErr.
+// error.
 func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
 	if service == "" {
 		service = m.defaultService
