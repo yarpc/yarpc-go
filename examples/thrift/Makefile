@@ -1,4 +1,4 @@
 .PHONY: all
 all:
-	cd keyvalue/client; go build
-	cd keyvalue/server; go build
+	cd keyvalue/client; go build -i
+	cd keyvalue/server; go build -i
