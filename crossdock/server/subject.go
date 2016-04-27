@@ -37,4 +37,5 @@ func Register(reg transport.Registry) {
 
 	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
 	json.Register(reg, json.Procedure("bad-response", BadResponse))
+	json.Register(reg, json.Procedure("phone", Phone))
 }
