@@ -28,6 +28,9 @@ import (
 )
 
 func TestErrorWaiter(t *testing.T) {
+	one := errors.New("1")
+	two := errors.New("2")
+
 	tests := []struct {
 		desc string
 		errs []error
@@ -50,17 +53,22 @@ func TestErrorWaiter(t *testing.T) {
 		},
 		{
 			"single error",
-			[]error{nil, errors.New("1"), nil},
-			[]error{errors.New("1")},
+			[]error{nil, one, nil},
+			[]error{one},
 		},
 		{
 			"multiple errors",
-			[]error{nil, errors.New("1"), errors.New("2"), nil},
-			[]error{errors.New("1"), errors.New("2")},
+			[]error{nil, one, two, nil},
+			[]error{one, two},
 		},
 	}
 
 	for _, tt := range tests {
+		want := make(map[error]struct{})
+		for _, err := range tt.want {
+			want[err] = struct{}{}
+		}
+
 		var ew ErrorWaiter
 		for _, err := range tt.errs {
 			// Need to create a local variable to make sure that the correct
@@ -70,6 +78,11 @@ func TestErrorWaiter(t *testing.T) {
 			ew.Submit(func() error { return errLocal })
 		}
 
-		assert.Equal(t, tt.want, ew.Wait(), tt.desc)
+		got := make(map[error]struct{})
+		for _, err := range ew.Wait() {
+			got[err] = struct{}{}
+		}
+
+		assert.Equal(t, want, got, tt.desc)
 	}
 }
