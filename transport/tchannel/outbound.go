@@ -145,13 +145,9 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 
 func fromSystemError(err tchannel.SystemError) error {
 	switch err.Code() {
-	case tchannel.ErrCodeBadRequest:
+	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
 		return transport.RemoteBadRequestError(err.Message())
-	case tchannel.ErrCodeUnexpected:
-		return transport.RemoteUnexpectedError(err.Message())
 	default:
-		return err
-		// TODO(abg): How to handle other error codes?
-		// https://github.com/yarpc/yarpc/issues/54
+		return transport.RemoteUnexpectedError(err.Message())
 	}
 }
