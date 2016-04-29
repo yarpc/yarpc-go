@@ -22,20 +22,24 @@ package http
 
 const (
 	// CallerHeader is the HTTP header used to indiate the service doing the calling
-	CallerHeader = "RPC-Caller"
+	CallerHeader = "Rpc-Caller"
 
 	// EncodingHeader is the HTTP header used to specify the name of the
 	// encoding.
-	EncodingHeader = "RPC-Encoding"
+	EncodingHeader = "Rpc-Encoding"
 
 	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
 	TTLMSHeader = "Context-TTL-MS"
 
 	// ProcedureHeader is the HTTP header used to indicate the procedure
-	ProcedureHeader = "RPC-Procedure"
+	ProcedureHeader = "Rpc-Procedure"
 
 	// ServiceHeader is the HTTP header used to indicate the service
-	ServiceHeader = "RPC-Service"
+	ServiceHeader = "Rpc-Service"
+
+	// ApplicationHeaderPrefix is the prefix added to application headers over
+	// the wire.
+	ApplicationHeaderPrefix = "Rpc-Header-"
 )
 
 // TODO Make consistent with other languages^

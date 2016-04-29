@@ -52,7 +52,7 @@ func TestCallSuccess(t *testing.T) {
 				assert.Equal(t, []byte("world"), body)
 			}
 
-			w.Header().Set("foo", "bar")
+			w.Header().Set("rpc-header-foo", "bar")
 			_, err = w.Write([]byte("great success"))
 			assert.NoError(t, err)
 		},

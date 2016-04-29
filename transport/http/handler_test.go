@@ -187,7 +187,7 @@ func TestResponseWriter(t *testing.T) {
 	_, err := writer.Write([]byte("hello"))
 	require.NoError(t, err)
 
-	assert.Equal(t, "bar", recorder.Header().Get("foo"))
-	assert.Equal(t, "123", recorder.Header().Get("shard-key"))
+	assert.Equal(t, "bar", recorder.Header().Get("rpc-header-foo"))
+	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
 	assert.Equal(t, "hello", recorder.Body.String())
 }
