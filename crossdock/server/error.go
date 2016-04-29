@@ -27,7 +27,7 @@ import (
 )
 
 // UnexpectedError fails with an unexpected error.
-func UnexpectedError(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+func UnexpectedError(req *json.Request, body interface{}) (interface{}, *json.Response, error) {
 	return nil, nil, fmt.Errorf("error")
 }
 

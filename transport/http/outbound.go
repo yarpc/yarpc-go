@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
@@ -72,23 +73,29 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		return nil, err
 	}
 
-	// TODO 300 redirects?
-	if response.StatusCode < 200 || response.StatusCode >= 400 {
-		contents, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return nil, err // TODO error type
-		}
-
-		if err := response.Body.Close(); err != nil {
-			return nil, err // TODO error type
-		}
-
-		// TODO error type
-		return nil, fmt.Errorf("request %v failed: %v: %s", request, response.Status, contents)
+	if response.StatusCode >= 200 && response.StatusCode < 300 {
+		return &transport.Response{
+			Headers: fromHTTPHeader(response.Header, nil),
+			Body:    response.Body,
+		}, nil
 	}
 
-	return &transport.Response{
-		Headers: fromHTTPHeader(response.Header, nil),
-		Body:    response.Body,
-	}, nil
+	// TODO Behavior for 300-range status codes is undefined
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := response.Body.Close(); err != nil {
+		return nil, err
+	}
+
+	// Trim the trailing newline from HTTP error messages
+	message := strings.TrimSuffix(string(contents), "\n")
+
+	if response.StatusCode >= 400 && response.StatusCode < 500 {
+		return nil, transport.RemoteBadRequestError(message)
+	}
+
+	return nil, transport.RemoteUnexpectedError(message)
 }

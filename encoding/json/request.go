@@ -32,6 +32,8 @@ import (
 type Request struct {
 	Context context.Context
 
+	// TODO(abg): Expose service name
+
 	// Name of the procedure being called.
 	Procedure string
 

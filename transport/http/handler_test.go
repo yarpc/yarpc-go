@@ -56,41 +56,47 @@ func TestHandlerFailures(t *testing.T) {
 		req *http.Request
 		msg string
 	}{
-		{&http.Request{Method: "GET"}, "not found"},
+		{&http.Request{Method: "GET"}, "404 page not found\n"},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			"BadRequest: missing caller name",
+			"BadRequest: missing caller name\n",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			"BadRequest: missing service name",
+			"BadRequest: missing service name\n",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			"BadRequest: missing procedure",
+			"BadRequest: missing procedure\n",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			"BadRequest: missing TTL",
+			"BadRequest: missing TTL\n",
+		},
+		{
+			&http.Request{
+				Method: "POST",
+			},
+			"BadRequest: missing service name, procedure, caller name, and TTL\n",
 		},
 		{
 			&http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			`BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer`,
+			`BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
 		},
 	}
 
@@ -106,7 +112,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		code := rw.Code
 		assert.True(t, code >= 400 && code < 500, "expected 400 level code")
-		assert.Contains(t, rw.Body.String(), tt.msg)
+		assert.Equal(t, rw.Body.String(), tt.msg)
 	}
 }
 
@@ -148,7 +154,9 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 	code := httpResponse.Code
 	assert.True(t, code >= 500 && code < 600, "expected 500 level response")
-	assert.Contains(t, httpResponse.Body.String(), "great sadness")
+	assert.Equal(t,
+		`UnexpectedError: error for procedure "hello" of service "fake": great sadness`+"\n",
+		httpResponse.Body.String())
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

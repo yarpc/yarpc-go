@@ -97,7 +97,7 @@ func TestCallFailures(t *testing.T) {
 	}{
 		{"not a URL", []string{"unsupported protocol scheme"}},
 		{notFoundServer.URL, []string{"404", "page not found"}},
-		{internalErrorServer.URL, []string{"500", "great sadness"}},
+		{internalErrorServer.URL, []string{"great sadness"}},
 	}
 
 	for _, tt := range tests {

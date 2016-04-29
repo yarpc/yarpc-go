@@ -99,6 +99,8 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	if err := writeHeaders(format, req.Headers, call.Arg2Writer); err != nil {
+		// TODO(abg): This will wrap IO errors while writing headers as encode
+		// errors. We should fix that.
 		return nil, encoding.RequestHeadersEncodeError(req, err)
 	}
 
@@ -107,16 +109,21 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	res := call.Response()
-
-	// TODO(abg): handle errors
-
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
-		return nil, encoding.RequestHeadersDecodeError(req, err)
+		if err, ok := err.(tchannel.SystemError); ok {
+			return nil, fromSystemError(err)
+		}
+		// TODO(abg): This will wrap IO errors while reading headers as decode
+		// errors. We should fix that.
+		return nil, encoding.ResponseHeadersDecodeError(req, err)
 	}
 
 	resBody, err := res.Arg3Reader()
 	if err != nil {
+		if err, ok := err.(tchannel.SystemError); ok {
+			return nil, fromSystemError(err)
+		}
 		return nil, err
 	}
 
@@ -134,4 +141,13 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 	}
 
 	return w.Close()
+}
+
+func fromSystemError(err tchannel.SystemError) error {
+	switch err.Code() {
+	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
+		return transport.RemoteBadRequestError(err.Message())
+	default:
+		return transport.RemoteUnexpectedError(err.Message())
+	}
 }

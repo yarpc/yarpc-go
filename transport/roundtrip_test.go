@@ -22,6 +22,7 @@ package transport_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -96,53 +97,133 @@ func (tt tchannelTransport) WithHandler(h transport.Handler, f func(transport.Ou
 }
 
 func TestSimpleRoundTrip(t *testing.T) {
-	tests := []roundTripTransport{
+	transports := []roundTripTransport{
 		httpTransport{t},
 		tchannelTransport{t},
 	}
 
-	getRequest := func() *transport.Request {
-		return &transport.Request{
-			Caller:    testCaller,
-			Service:   testService,
-			Procedure: "hello",
-			Encoding:  raw.Encoding,
-			Headers:   transport.Headers{"token": "1234"},
-			TTL:       200 * time.Millisecond, // TODO use default
-			Body:      bytes.NewReader([]byte("world")),
-		}
+	tests := []struct {
+		requestHeaders  transport.Headers
+		requestBody     string
+		responseHeaders transport.Headers
+		responseBody    string
+		responseError   error
+
+		wantError func(error)
+	}{
+		{
+			requestHeaders:  transport.Headers{"token": "1234"},
+			requestBody:     "world",
+			responseHeaders: transport.Headers{"status": "ok"},
+			responseBody:    "hello, world",
+		},
+		{
+			requestBody:   "foo",
+			responseError: transport.LocalUnexpectedError(errors.New("great sadness")),
+			wantError: func(err error) {
+				assert.Implements(t, (*transport.UnexpectedError)(nil), err)
+				assert.Equal(t, "UnexpectedError: great sadness", err.Error())
+			},
+		},
+		{
+			requestBody:   "bar",
+			responseError: transport.LocalBadRequestError(errors.New("missing service name")),
+			wantError: func(err error) {
+				assert.Implements(t, (*transport.BadRequestError)(nil), err)
+				assert.Equal(t, "BadRequest: missing service name", err.Error())
+			},
+		},
+		{
+			requestBody: "baz",
+			responseError: transport.RemoteUnexpectedError(
+				`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
+			),
+			wantError: func(err error) {
+				assert.Implements(t, (*transport.UnexpectedError)(nil), err)
+				assert.Equal(t,
+					`UnexpectedError: error for procedure "hello" of service "testService": `+
+						`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
+					err.Error())
+			},
+		},
+		{
+			requestBody: "qux",
+			responseError: transport.RemoteBadRequestError(
+				`BadRequest: unrecognized procedure "echo" for service "derp"`,
+			),
+			wantError: func(err error) {
+				assert.Implements(t, (*transport.UnexpectedError)(nil), err)
+				assert.Equal(t,
+					`UnexpectedError: error for procedure "hello" of service "testService": `+
+						`BadRequest: unrecognized procedure "echo" for service "derp"`,
+					err.Error())
+			},
+		},
 	}
-
-	requestMatcher := transporttest.NewRequestMatcher(t, getRequest())
-
-	// Matches the response that we send from the fake handler
-	responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
-		Headers: transport.Headers{"status": "ok"},
-		Body:    ioutil.NopCloser(bytes.NewReader([]byte("hello, world"))),
-	})
-
-	h := handlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
-		assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
-
-		w.AddHeaders(transport.Headers{"status": "ok"})
-		_, err := w.Write([]byte("hello, world"))
-		assert.NoError(t, err, "failed to write response for %v", r)
-
-		return err
-	})
 
 	rootCtx := context.Background()
 	for _, tt := range tests {
-		ctx, _ := context.WithTimeout(rootCtx, 200*time.Millisecond)
-		// TODO(abg): should be picked up from TTL if unspecified
+		for _, trans := range transports {
+			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
+				Caller:    testCaller,
+				Service:   testService,
+				Procedure: "hello",
+				Encoding:  raw.Encoding,
+				Headers:   tt.requestHeaders,
+				TTL:       200 * time.Millisecond, // TODO use default
+				Body:      bytes.NewReader([]byte(tt.requestBody)),
+			})
 
-		tt.WithHandler(h, func(o transport.Outbound) {
-			res, err := o.Call(ctx, getRequest())
-			if assert.NoError(t, err, "%T: call failed: %v", tt, err) {
-				assert.True(
-					t, responseMatcher.Matches(res),
-					"%T: response mismatch", tt)
-			}
-		})
+			handler := handlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
+				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
+
+				if tt.responseError != nil {
+					return tt.responseError
+				}
+
+				if len(tt.responseHeaders) > 0 {
+					w.AddHeaders(tt.responseHeaders)
+				}
+
+				_, err := w.Write([]byte(tt.responseBody))
+				assert.NoError(t, err, "failed to write response for %v", r)
+				return err
+			})
+
+			ctx, _ := context.WithTimeout(rootCtx, 200*time.Millisecond)
+			// TODO(abg): should be picked up from TTL if unspecified
+
+			trans.WithHandler(handler, func(o transport.Outbound) {
+				res, err := o.Call(ctx, &transport.Request{
+					Caller:    testCaller,
+					Service:   testService,
+					Procedure: "hello",
+					Encoding:  raw.Encoding,
+					Headers:   tt.requestHeaders,
+					TTL:       200 * time.Millisecond, // TODO use default
+					Body:      bytes.NewReader([]byte(tt.requestBody)),
+				})
+
+				if tt.wantError != nil {
+					if assert.Error(t, err, "%T: expected error, got %v", trans, res) {
+						tt.wantError(err)
+
+						// none of the errors returned by Call can be valid
+						// Handler errors.
+						_, ok := err.(transport.HandlerError)
+						assert.False(t, ok, "%T: %T must not be a HandlerError", trans, err)
+					}
+				} else {
+					responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
+						Headers: tt.responseHeaders,
+						Body:    ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
+					})
+
+					if assert.NoError(t, err, "%T: call failed", trans) {
+						assert.True(t, responseMatcher.Matches(res), "%T: response mismatch", trans)
+					}
+				}
+			})
+		}
 	}
 }
