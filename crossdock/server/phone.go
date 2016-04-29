@@ -21,6 +21,7 @@
 package server
 
 import (
+	js "encoding/json"
 	"fmt"
 	"time"
 
@@ -40,14 +41,14 @@ type PhoneRequest struct {
 			Port int    `json:"port"`
 		} `json:"http"`
 	} `json:"transport"`
-	Body interface{} `json:"body"`
+	Body *js.RawMessage `json:"body"`
 }
 
 // PhoneResponse is the response of a Phone request.
 type PhoneResponse struct {
-	Service   string      `json:"service"`
-	Procedure string      `json:"procedure"`
-	Body      interface{} `json:"body"`
+	Service   string         `json:"service"`
+	Procedure string         `json:"procedure"`
+	Body      *js.RawMessage `json:"body"`
 }
 
 // Phone implements the phone procedure
