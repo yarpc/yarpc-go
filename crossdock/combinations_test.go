@@ -18,38 +18,68 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package errors
+package main
 
 import (
 	"testing"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/server"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
-
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestRun(t *testing.T) {
-	rpc := yarpc.New(yarpc.Config{
-		Name:     "yarpc-test",
-		Inbounds: []transport.Inbound{http.NewInbound(":8081")},
-	})
+func TestCombinations(t *testing.T) {
+	tests := []struct {
+		axes map[string][]string
+		want []map[string]string
+	}{
+		{
+			axes: nil,
+			want: nil,
+		},
+		{
+			axes: map[string][]string{},
+			want: nil,
+		},
+		{
+			axes: map[string][]string{
+				"x": {"1", "2"},
+			},
+			want: []map[string]string{
+				{"x": "1"},
+				{"x": "2"},
+			},
+		},
+		{
+			axes: map[string][]string{
+				"x": {"1", "2"},
+				"y": {"3", "4"},
+			},
+			want: []map[string]string{
+				{"x": "1", "y": "3"},
+				{"x": "2", "y": "3"},
+				{"x": "1", "y": "4"},
+				{"x": "2", "y": "4"},
+			},
+		},
+		{
+			axes: map[string][]string{
+				"x": {"1", "2"},
+				"y": {"3", "4"},
+				"z": {"5", "6"},
+			},
+			want: []map[string]string{
+				{"x": "1", "y": "3", "z": "5"},
+				{"x": "2", "y": "3", "z": "5"},
+				{"x": "1", "y": "4", "z": "5"},
+				{"x": "2", "y": "4", "z": "5"},
+				{"x": "1", "y": "3", "z": "6"},
+				{"x": "2", "y": "3", "z": "6"},
+				{"x": "1", "y": "4", "z": "6"},
+				{"x": "2", "y": "4", "z": "6"},
+			},
+		},
+	}
 
-	server.Register(rpc)
-	require.NoError(t, rpc.Start(), "failed to start RPC server")
-	defer rpc.Stop()
-
-	params := behavior.ParamsFromMap{"server": "localhost"}
-	entries := behavior.Run(func(s behavior.Sink) {
-		Run(s, params)
-	})
-
-	for _, entry := range entries {
-		e := entry.(behavior.Entry)
-		assert.Equal(t, behavior.Passed, e.Status, e.Output)
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, combinations(tt.axes))
 	}
 }
