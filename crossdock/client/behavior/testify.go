@@ -37,6 +37,14 @@ func Assert(s Sink) Assertions {
 	return sinkAssertions{s, assert.New(sinkTestingT{s})}
 }
 
+// Checks builds an Assertions object that writes failures to the given sink.
+//
+// This is the same as Assert except that nothing is written to the sink in
+// case of success.
+func Checks(s Sink) Assertions {
+	return assert.New(sinkTestingT{s})
+}
+
 // Require builds an Assertions object that writes success or failure to the
 // given sink. In case of failure, it also stops executing the current
 // behavior.

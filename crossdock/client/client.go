@@ -27,6 +27,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
+	"github.com/yarpc/yarpc-go/crossdock/client/headers"
 )
 
 // Start begins a blocking Crossdock client
@@ -61,6 +62,8 @@ func dispatch(s behavior.Sink, ps behavior.Params) {
 		echo.Thrift(s, ps)
 	case "errors":
 		errors.Run(s, ps)
+	case "headers":
+		headers.Run(s, ps)
 	default:
 		behavior.Skipf(s, "unknown behavior %q", v)
 	}
