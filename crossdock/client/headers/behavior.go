@@ -96,11 +96,15 @@ func Run(s behavior.Sink, ps behavior.Params) {
 			"varying casing",
 			transport.Headers{"ToKeN1": token1, "tOkEn2": token2},
 			transport.Headers{"token1": token1, "token2": token2},
+			// TODO(abg): Do we expect to get back the same casing or
+			// normalized?
 		},
 		{
 			"http header conflict",
 			transport.Headers{"Rpc-Procedure": "does not exist"},
 			transport.Headers{"rpc-procedure": "does not exist"},
+			// TODO(abg): Do we expect to get back the same casing or
+			// normalized?
 		},
 	}
 
