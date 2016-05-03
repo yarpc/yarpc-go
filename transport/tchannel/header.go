@@ -41,9 +41,9 @@ import (
 func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, error)) (transport.Headers, error) {
 	if format == tchannel.JSON {
 		// JSON is special
-		var headers transport.Headers
+		var headers map[string]string
 		err := tchannel.NewArgReader(getReader()).ReadJSON(&headers)
-		return headers, err
+		return transport.NewHeaders(headers), err
 		// ^headers will never be nil
 	}
 
