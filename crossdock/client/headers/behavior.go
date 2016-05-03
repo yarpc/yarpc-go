@@ -158,9 +158,8 @@ type headerCaller interface {
 type rawCaller struct{ c raw.Client }
 
 func (c rawCaller) Call(h transport.Headers) (transport.Headers, error) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	_, res, err := c.c.Call(&raw.Request{
-		Context:   ctx,
+		Context:   newTestContext(),
 		Headers:   h,
 		Procedure: "echo/raw",
 		TTL:       time.Second, // TODO context contains the timeout
@@ -175,11 +174,9 @@ func (c rawCaller) Call(h transport.Headers) (transport.Headers, error) {
 type jsonCaller struct{ c json.Client }
 
 func (c jsonCaller) Call(h transport.Headers) (transport.Headers, error) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-
 	var resBody interface{}
 	res, err := c.c.Call(&json.Request{
-		Context:   ctx,
+		Context:   newTestContext(),
 		Headers:   h,
 		Procedure: "echo",
 		TTL:       time.Second, // TODO context contains the timeout
@@ -194,9 +191,8 @@ func (c jsonCaller) Call(h transport.Headers) (transport.Headers, error) {
 type thriftCaller struct{ c echoclient.Interface }
 
 func (c thriftCaller) Call(h transport.Headers) (transport.Headers, error) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	_, res, err := c.c.Echo(&thrift.Request{
-		Context: ctx,
+		Context: newTestContext(),
 		Headers: h,
 		TTL:     time.Second,
 	}, &echo.Ping{Beep: "hello"})
@@ -205,4 +201,9 @@ func (c thriftCaller) Call(h transport.Headers) (transport.Headers, error) {
 		return nil, err
 	}
 	return res.Headers, nil
+}
+
+func newTestContext() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	return ctx
 }
