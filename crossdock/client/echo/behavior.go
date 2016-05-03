@@ -96,7 +96,7 @@ func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
 		fatals.NoError(err, "couldn't create tchannel")
 		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
 	default:
-		fatals.True(false, "unknown transport %q", trans)
+		fatals.Fail("", "unknown transport %q", trans)
 	}
 
 	return yarpc.New(yarpc.Config{
