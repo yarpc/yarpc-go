@@ -136,6 +136,11 @@ func Run(s behavior.Sink, ps behavior.Params) {
 			transport.Headers{"Rpc-Procedure": "does not exist"},
 			transport.Headers{"rpc-procedure": "does not exist"},
 		},
+		{
+			"mixed case value",
+			transport.Headers{"token": "MIXED case Value"},
+			transport.Headers{"token": "MIXED case Value"},
+		},
 	}
 
 	for _, tt := range tests {
