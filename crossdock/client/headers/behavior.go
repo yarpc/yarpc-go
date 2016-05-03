@@ -35,19 +35,53 @@ import (
 	"golang.org/x/net/context"
 )
 
+// headersEntry is an entry emitted by the headers behavior.
+type headersEntry struct {
+	behavior.Entry
+
+	Transport string `json:"transport"`
+	Encoding  string `json:"encoding"`
+	Server    string `json:"server"`
+}
+
+// headersSink wraps a sink to emit headersEntry entries.
+type headersSink struct {
+	behavior.Sink
+
+	Transport string
+	Encoding  string
+	Server    string
+}
+
+func (s headersSink) Put(e interface{}) {
+	s.Sink.Put(headersEntry{
+		Entry:     e.(behavior.Entry),
+		Transport: s.Transport,
+		Encoding:  s.Encoding,
+		Server:    s.Server,
+	})
+}
+
+func createHeadersSink(s behavior.Sink, ps behavior.Params) behavior.Sink {
+	return headersSink{
+		Sink:      s,
+		Transport: ps.Param(TransportParam),
+		Encoding:  ps.Param(EncodingParam),
+		Server:    ps.Param(ServerParam),
+	}
+}
+
 // Run runs the headers behavior
 func Run(s behavior.Sink, ps behavior.Params) {
+	s = createHeadersSink(s, ps)
+	rpc := createRPC(s, ps)
+
 	fatals := behavior.Fatals(s)
 	assert := behavior.Assert(s)
 	checks := behavior.Checks(s)
 
-	rpc := createRPC(s, ps)
-
-	encoding := ps.Param(EncodingParam)
-	fatals.NotEmpty(encoding, "encoding is required")
-
 	var caller headerCaller
-
+	encoding := ps.Param(EncodingParam)
 	switch encoding {
 	case "raw":
 		caller = rawCaller{raw.New(rpc.Channel("yarpc-test"))}
