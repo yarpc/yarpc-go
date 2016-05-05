@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package headers
 
 import (
 	"fmt"
@@ -32,44 +32,6 @@ import (
 
 	"github.com/uber/tchannel-go"
 )
-
-// echoEntry is an entry emitted by the echo behaviors.
-type echoEntry struct {
-	behavior.Entry
-
-	Transport string `json:"transport"`
-	Encoding  string `json:"encoding"`
-	Server    string `json:"server"`
-}
-
-// echoSink wraps a sink to emit echoEntry entries instead.
-type echoSink struct {
-	behavior.Sink
-
-	Transport string
-	Encoding  string
-	Server    string
-}
-
-func (s echoSink) Put(e interface{}) {
-	s.Sink.Put(echoEntry{
-		Entry:     e.(behavior.Entry),
-		Transport: s.Transport,
-		Encoding:  s.Encoding,
-		Server:    s.Server,
-	})
-}
-
-// createEchoSink wraps a Sink to have transport, encoding, and server
-// information.
-func createEchoSink(encoding string, s behavior.Sink, p behavior.Params) behavior.Sink {
-	return echoSink{
-		Sink:      s,
-		Transport: p.Param(TransportParam),
-		Encoding:  encoding,
-		Server:    p.Param(ServerParam),
-	}
-}
 
 // createRPC creates an RPC from the given parameters or fails the whole
 // behavior.

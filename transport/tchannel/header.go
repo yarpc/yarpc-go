@@ -36,12 +36,15 @@ import (
 // OutboundCallResponse.
 //
 // If the format is JSON, the headers are expected to be JSON encoded.
+//
+// This function always returns a non-nil Headers object in case of success.
 func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, error)) (transport.Headers, error) {
 	if format == tchannel.JSON {
 		// JSON is special
-		var headers transport.Headers
+		var headers map[string]string
 		err := tchannel.NewArgReader(getReader()).ReadJSON(&headers)
-		return headers, err
+		return transport.NewHeaders(headers), err
+		// ^headers will never be nil
 	}
 
 	r, err := getReader()
@@ -52,6 +55,11 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 	headers, err := decodeHeaders(r)
 	if err != nil {
 		return nil, err
+	}
+
+	// normalize headers to an empty map if nil
+	if headers == nil {
+		headers = make(transport.Headers)
 	}
 
 	return headers, r.Close()

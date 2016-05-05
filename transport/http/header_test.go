@@ -40,8 +40,8 @@ func TestHeaders(t *testing.T) {
 				"foo-bar": "hello",
 			},
 			http.Header{
-				"Foo":     []string{"bar"},
-				"Foo-Bar": []string{"hello"},
+				"Rpc-Header-Foo":     []string{"bar"},
+				"Rpc-Header-Foo-Bar": []string{"hello"},
 			},
 		},
 	}

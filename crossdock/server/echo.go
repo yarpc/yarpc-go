@@ -29,12 +29,12 @@ import (
 
 // EchoRaw implements the echo/raw procedure.
 func EchoRaw(req *raw.Request, body []byte) ([]byte, *raw.Response, error) {
-	return body, nil, nil
+	return body, &raw.Response{Headers: req.Headers}, nil
 }
 
 // EchoJSON implements the echo procedure.
 func EchoJSON(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
-	return body, nil, nil
+	return body, &json.Response{Headers: req.Headers}, nil
 }
 
 // EchoThrift implements the Thrift Echo service.
@@ -42,5 +42,5 @@ type EchoThrift struct{}
 
 // Echo endpoint for the Echo service.
 func (EchoThrift) Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error) {
-	return &echo.Pong{Boop: ping.Beep}, nil, nil
+	return &echo.Pong{Boop: ping.Beep}, &thrift.Response{Headers: req.Headers}, nil
 }

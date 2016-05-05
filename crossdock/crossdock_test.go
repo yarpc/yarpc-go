@@ -84,6 +84,13 @@ func TestCrossdock(t *testing.T) {
 		{
 			name: "errors",
 		},
+		{
+			name: "headers",
+			axes: axes{
+				"transport": []string{"http", "tchannel"},
+				"encoding":  []string{"raw", "json", "thrift"},
+			},
+		},
 	}
 
 	for _, bb := range behaviors {

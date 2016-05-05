@@ -22,6 +22,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/yarpc/yarpc-go/transport"
 )
@@ -37,7 +38,7 @@ func toHTTPHeader(from transport.Headers, to http.Header) http.Header {
 		to = make(http.Header)
 	}
 	for k, v := range from {
-		to.Add(k, v)
+		to.Add(ApplicationHeaderPrefix+k, v)
 	}
 	return to
 }
@@ -54,10 +55,12 @@ func fromHTTPHeader(from http.Header, to transport.Headers) transport.Headers {
 	}
 
 	for k := range from {
-		to.Set(k, from.Get(k))
-		// undefined behavior for multiple occurrences of the same header
-		// TODO figure out which headers we are actually allowing in here
-		// TODO figure out header scheme for headers that are exposed like this
+		if strings.HasPrefix(k, ApplicationHeaderPrefix) {
+			realK := k[len(ApplicationHeaderPrefix):]
+			to.Set(realK, from.Get(k))
+		}
+		// Note: undefined behavior for multiple occurrences of the same
+		// header
 	}
 	return to
 }
