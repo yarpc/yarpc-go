@@ -32,7 +32,7 @@ services:
             - "8080-8082"
 
     node:
-        image: yarpc/yarpc-node:crossdock-headers
+        image: yarpc/yarpc-node
         ports:
             - "8080-8082"
 
