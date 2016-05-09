@@ -10,10 +10,10 @@ services:
             - python
             - python-sync
         environment:
-            - WAIT_FOR=go,node # ,java,python,python-sync
+            - WAIT_FOR=go,node,java,python,python-sync
 
-            - AXIS_CLIENT=go,node # ,java,python,python-sync
-            - AXIS_SERVER=go,node # ,java,python
+            - AXIS_CLIENT=go,node,java,python,python-sync
+            - AXIS_SERVER=go,node,java,python
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
             # - AXIS_ERRORS=go,node
@@ -37,7 +37,7 @@ services:
             - "8080-8082"
 
     java:
-        image: yarpc/yarpc-java:crossdock-errors
+        image: yarpc/yarpc-java
         ports:
             - "8080-8082"
 
@@ -52,4 +52,3 @@ services:
             - 8080
         environment:
             - SYNC=1
-
