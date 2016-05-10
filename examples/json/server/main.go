@@ -35,20 +35,20 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-type GetRequest struct {
+type getRequest struct {
 	Key string `json:"key"`
 }
 
-type GetResponse struct {
+type getResponse struct {
 	Value string `json:"value"`
 }
 
-type SetRequest struct {
+type setRequest struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-type SetResponse struct {
+type setResponse struct {
 }
 
 type handler struct {
@@ -57,18 +57,18 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) Get(req *json.Request, body *GetRequest) (*GetResponse, *json.Response, error) {
+func (h *handler) Get(req *json.Request, body *getRequest) (*getResponse, *json.Response, error) {
 	h.RLock()
-	result := &GetResponse{Value: h.items[body.Key]}
+	result := &getResponse{Value: h.items[body.Key]}
 	h.RUnlock()
 	return result, nil, nil
 }
 
-func (h *handler) Set(req *json.Request, body *SetRequest) (*SetResponse, *json.Response, error) {
+func (h *handler) Set(req *json.Request, body *setRequest) (*setResponse, *json.Response, error) {
 	h.Lock()
 	h.items[body.Key] = body.Value
 	h.Unlock()
-	return &SetResponse{}, nil, nil
+	return &setResponse{}, nil, nil
 }
 
 func main() {

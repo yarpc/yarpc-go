@@ -39,45 +39,45 @@ import (
 	"golang.org/x/net/context"
 )
 
-type GetRequest struct {
+type getRequest struct {
 	Key string `json:"key"`
 }
 
-type GetResponse struct {
+type getResponse struct {
 	Value string `json:"value"`
 }
 
-type SetRequest struct {
+type setRequest struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-type SetResponse struct {
+type setResponse struct {
 }
 
 func get(ctx context.Context, c json.Client, k string) (string, error) {
-	var response GetResponse
+	var response getResponse
 	_, err := c.Call(
 		&json.Request{
 			Procedure: "get",
 			Context:   ctx,
 			TTL:       100 * time.Millisecond, // TODO(abg): use context TTL
 		},
-		&GetRequest{Key: k},
+		&getRequest{Key: k},
 		&response,
 	)
 	return response.Value, err
 }
 
 func set(ctx context.Context, c json.Client, k string, v string) error {
-	var response SetResponse
+	var response setResponse
 	_, err := c.Call(
 		&json.Request{
 			Procedure: "set",
 			Context:   ctx,
 			TTL:       100 * time.Millisecond, // TODO(abg): use context TTL
 		},
-		&SetRequest{Key: k, Value: v},
+		&setRequest{Key: k, Value: v},
 		&response,
 	)
 	return err
@@ -151,7 +151,7 @@ func main() {
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			if err := set(ctx, client, key, value); err != nil {
-				fmt.Println("set %q = %q failed: %v", key, value, err.Error())
+				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue
 
