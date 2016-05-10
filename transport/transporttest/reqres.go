@@ -32,7 +32,7 @@ import (
 )
 
 // DefaultTTLDelta is the default TTLDelta used by RequestMatchers.
-const DefaultTTLDelta = 5 * time.Millisecond
+const DefaultTTLDelta = 10 * time.Millisecond
 
 // RequestMatcher may be used in gomock argument lists to assert that two
 // requests match.
