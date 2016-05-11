@@ -23,30 +23,52 @@ package transport
 import "golang.org/x/net/context"
 
 // Interceptor defines a transport-level middleware for Inbounds.
+//
+// Interceptors MAY
+//
+// - change the context
+// - change the request
+// - call the ResponseWriter
+// - modify the response body by wrapping the ResponseWriter
+// - handle the returned error
+// - call the given handler zero or more times
+//
+// Interceptors MUST be thread-safe.
+//
+// Interceptors are re-used across requests and MAY be called multiple times for
+// the same request.
 type Interceptor interface {
-	Apply(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error
+	Apply(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error
 }
 
 // NopInterceptor is a interceptor that does not do anything special. It
 // simply calls the underlying Handler.
 var NopInterceptor Interceptor = nopInterceptor{}
 
-// ApplyInterceptor wraps the given Handler with the given Interceptors
-// in-order.
+// ApplyInterceptor applies the given Interceptor to the given Handler.
 func ApplyInterceptor(h Handler, i Interceptor) Handler {
 	return interceptedHandler{h: h, i: i}
+}
+
+// InterceptorFunc adapts a function into an Interceptor.
+type InterceptorFunc func(context.Context, *Request, ResponseWriter, Handler) error
+
+// Apply for InterceptorFunc
+func (f InterceptorFunc) Apply(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error {
+	return f(ctx, req, resw, h)
 }
 
 // ChainInterceptors combines the given interceptors in-order into a single
 // Interceptor.
 func ChainInterceptors(interceptors ...Interceptor) Interceptor {
-	if len(interceptors) == 0 {
+	switch len(interceptors) {
+	case 0:
 		return NopInterceptor
-	}
-	if len(interceptors) == 1 {
+	case 1:
 		return interceptors[0]
+	default:
+		return interceptorChain(interceptors)
 	}
-	return interceptorChain(interceptors)
 }
 
 type interceptedHandler struct {
@@ -67,28 +89,25 @@ func (nopInterceptor) Apply(ctx context.Context, req *Request, resw ResponseWrit
 type interceptorChain []Interceptor
 
 func (ic interceptorChain) Apply(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
-	ix := interceptorChainExec{
+	return interceptorChainExec{
 		Chain: []Interceptor(ic),
-		Index: 0,
 		Final: handler,
-	}
-	return ix.Handle(ctx, req, resw)
+	}.Handle(ctx, req, resw)
 }
 
 // interceptorChainExec adapts a series of interceptors into a Handler. It is
 // scoped to a single request to the Handler and is not thread-safe.
 type interceptorChainExec struct {
 	Chain []Interceptor
-	Index int
 	Final Handler
 }
 
-func (ix *interceptorChainExec) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
-	i := ix.Index
-	if i == len(ix.Chain) {
+func (ix interceptorChainExec) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
+	if len(ix.Chain) == 0 {
 		return ix.Final.Handle(ctx, req, resw)
 	}
-
-	ix.Index++
-	return ix.Chain[i].Apply(ctx, req, resw, ix)
+	return ix.Chain[0].Apply(ctx, req, resw, interceptorChainExec{
+		Chain: ix.Chain[1:],
+		Final: ix.Final,
+	})
 }

@@ -23,6 +23,22 @@ package transport
 import "golang.org/x/net/context"
 
 // Filter defines transport-level middleware for Outbounds.
+//
+// Filters MAY
+//
+// - change the context
+// - change the request
+// - change the returned response
+// - handle the returned error
+// - call the given outbound zero or more times
+//
+// Filters MUST
+//
+// - always return a non-nil Response or error.
+// - be thread-safe
+//
+// Filters are re-used across requests and MAY be called multiple times on the
+// same request.
 type Filter interface {
 	Apply(ctx context.Context, request *Request, out Outbound) (*Response, error)
 }
@@ -31,20 +47,29 @@ type Filter interface {
 // the underlying Outbound.
 var NopFilter Filter = nopFilter{}
 
-// ApplyFilter wraps the given Outbound with the given Filters in-order.
+// ApplyFilter applies the given Filter to the given Outbound.
 func ApplyFilter(o Outbound, f Filter) Outbound {
 	return filteredOutbound{o: o, f: f}
 }
 
+// FilterFunc adapts a function into a Filter.
+type FilterFunc func(context.Context, *Request, Outbound) (*Response, error)
+
+// Apply for FilterFunc
+func (f FilterFunc) Apply(ctx context.Context, request *Request, out Outbound) (*Response, error) {
+	return f(ctx, request, out)
+}
+
 // ChainFilters combines the given filters in-order into a single Filter.
 func ChainFilters(filters ...Filter) Filter {
-	if len(filters) == 0 {
+	switch len(filters) {
+	case 0:
 		return NopFilter
-	}
-	if len(filters) == 1 {
+	case 1:
 		return filters[0]
+	default:
+		return filterChain(filters)
 	}
-	return filterChain(filters)
 }
 
 type filteredOutbound struct {
@@ -66,28 +91,25 @@ func (nopFilter) Apply(ctx context.Context, request *Request, out Outbound) (*Re
 type filterChain []Filter
 
 func (fc filterChain) Apply(ctx context.Context, request *Request, out Outbound) (*Response, error) {
-	cx := filterChainExec{
+	return filterChainExec{
 		Chain: []Filter(fc),
-		Index: 0,
 		Final: out,
-	}
-	return cx.Call(ctx, request)
+	}.Call(ctx, request)
 }
 
 // filterChainExec adapts a series of filters into an Outbound. It is scoped to
 // a single call of an Outbound and is not thread-safe.
 type filterChainExec struct {
 	Chain []Filter
-	Index int
 	Final Outbound
 }
 
-func (cx *filterChainExec) Call(ctx context.Context, request *Request) (*Response, error) {
-	i := cx.Index
-	if i == len(cx.Chain) {
+func (cx filterChainExec) Call(ctx context.Context, request *Request) (*Response, error) {
+	if len(cx.Chain) == 0 {
 		return cx.Final.Call(ctx, request)
 	}
-
-	cx.Index++
-	return cx.Chain[i].Apply(ctx, request, cx)
+	return cx.Chain[0].Apply(ctx, request, filterChainExec{
+		Chain: cx.Chain[1:],
+		Final: cx.Final,
+	})
 }
