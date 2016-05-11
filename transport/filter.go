@@ -40,7 +40,7 @@ import "golang.org/x/net/context"
 // Filters are re-used across requests and MAY be called multiple times on the
 // same request.
 type Filter interface {
-	Apply(ctx context.Context, request *Request, out Outbound) (*Response, error)
+	Call(ctx context.Context, request *Request, out Outbound) (*Response, error)
 }
 
 // NopFilter is a filter that does not do anything special. It simply calls
@@ -55,8 +55,8 @@ func ApplyFilter(o Outbound, f Filter) Outbound {
 // FilterFunc adapts a function into a Filter.
 type FilterFunc func(context.Context, *Request, Outbound) (*Response, error)
 
-// Apply for FilterFunc
-func (f FilterFunc) Apply(ctx context.Context, request *Request, out Outbound) (*Response, error) {
+// Call for FilterFunc.
+func (f FilterFunc) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
 	return f(ctx, request, out)
 }
 
@@ -78,19 +78,19 @@ type filteredOutbound struct {
 }
 
 func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
-	return fo.f.Apply(ctx, request, fo.o)
+	return fo.f.Call(ctx, request, fo.o)
 }
 
 type nopFilter struct{}
 
-func (nopFilter) Apply(ctx context.Context, request *Request, out Outbound) (*Response, error) {
+func (nopFilter) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
 	return out.Call(ctx, request)
 }
 
 // filterChain combines a series of filters into a single Filter.
 type filterChain []Filter
 
-func (fc filterChain) Apply(ctx context.Context, request *Request, out Outbound) (*Response, error) {
+func (fc filterChain) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
 	return filterChainExec{
 		Chain: []Filter(fc),
 		Final: out,
@@ -108,7 +108,7 @@ func (cx filterChainExec) Call(ctx context.Context, request *Request) (*Response
 	if len(cx.Chain) == 0 {
 		return cx.Final.Call(ctx, request)
 	}
-	return cx.Chain[0].Apply(ctx, request, filterChainExec{
+	return cx.Chain[0].Call(ctx, request, filterChainExec{
 		Chain: cx.Chain[1:],
 		Final: cx.Final,
 	})

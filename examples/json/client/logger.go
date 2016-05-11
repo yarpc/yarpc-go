@@ -30,7 +30,7 @@ import (
 
 type requestLogFilter struct{}
 
-func (requestLogFilter) Apply(
+func (requestLogFilter) Call(
 	ctx context.Context, request *transport.Request, out transport.Outbound) (*transport.Response, error) {
 	fmt.Printf("sending a request to %q\n", request.Procedure)
 	return out.Call(ctx, request)

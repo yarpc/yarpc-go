@@ -38,7 +38,7 @@ import "golang.org/x/net/context"
 // Interceptors are re-used across requests and MAY be called multiple times for
 // the same request.
 type Interceptor interface {
-	Apply(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error
+	Handle(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error
 }
 
 // NopInterceptor is a interceptor that does not do anything special. It
@@ -53,8 +53,8 @@ func ApplyInterceptor(h Handler, i Interceptor) Handler {
 // InterceptorFunc adapts a function into an Interceptor.
 type InterceptorFunc func(context.Context, *Request, ResponseWriter, Handler) error
 
-// Apply for InterceptorFunc
-func (f InterceptorFunc) Apply(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error {
+// Handle for InterceptorFunc
+func (f InterceptorFunc) Handle(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error {
 	return f(ctx, req, resw, h)
 }
 
@@ -77,18 +77,18 @@ type interceptedHandler struct {
 }
 
 func (h interceptedHandler) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
-	return h.i.Apply(ctx, req, resw, h.h)
+	return h.i.Handle(ctx, req, resw, h.h)
 }
 
 type nopInterceptor struct{}
 
-func (nopInterceptor) Apply(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
+func (nopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
 	return handler.Handle(ctx, req, resw)
 }
 
 type interceptorChain []Interceptor
 
-func (ic interceptorChain) Apply(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
+func (ic interceptorChain) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
 	return interceptorChainExec{
 		Chain: []Interceptor(ic),
 		Final: handler,
@@ -106,7 +106,7 @@ func (ix interceptorChainExec) Handle(ctx context.Context, req *Request, resw Re
 	if len(ix.Chain) == 0 {
 		return ix.Final.Handle(ctx, req, resw)
 	}
-	return ix.Chain[0].Apply(ctx, req, resw, interceptorChainExec{
+	return ix.Chain[0].Handle(ctx, req, resw, interceptorChainExec{
 		Chain: ix.Chain[1:],
 		Final: ix.Final,
 	})

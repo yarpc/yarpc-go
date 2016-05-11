@@ -30,7 +30,7 @@ import (
 
 type requestLogInterceptor struct{}
 
-func (requestLogInterceptor) Apply(
+func (requestLogInterceptor) Handle(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.Handler) error {
 	fmt.Printf("received a request to %q\n", req.Procedure)
 	return handler.Handle(ctx, req, resw)
