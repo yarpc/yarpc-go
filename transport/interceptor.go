@@ -47,6 +47,9 @@ var NopInterceptor Interceptor = nopInterceptor{}
 
 // ApplyInterceptor applies the given Interceptor to the given Handler.
 func ApplyInterceptor(h Handler, i Interceptor) Handler {
+	if i == nil {
+		return h
+	}
 	return interceptedHandler{h: h, i: i}
 }
 

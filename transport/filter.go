@@ -49,6 +49,9 @@ var NopFilter Filter = nopFilter{}
 
 // ApplyFilter applies the given Filter to the given Outbound.
 func ApplyFilter(o Outbound, f Filter) Outbound {
+	if f == nil {
+		return o
+	}
 	return filteredOutbound{o: o, f: f}
 }
 
