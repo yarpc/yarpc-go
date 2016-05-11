@@ -60,18 +60,6 @@ func (f FilterFunc) Call(ctx context.Context, request *Request, out Outbound) (*
 	return f(ctx, request, out)
 }
 
-// ChainFilters combines the given filters in-order into a single Filter.
-func ChainFilters(filters ...Filter) Filter {
-	switch len(filters) {
-	case 0:
-		return NopFilter
-	case 1:
-		return filters[0]
-	default:
-		return filterChain(filters)
-	}
-}
-
 type filteredOutbound struct {
 	o Outbound
 	f Filter
@@ -85,31 +73,4 @@ type nopFilter struct{}
 
 func (nopFilter) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
 	return out.Call(ctx, request)
-}
-
-// filterChain combines a series of filters into a single Filter.
-type filterChain []Filter
-
-func (fc filterChain) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
-	return filterChainExec{
-		Chain: []Filter(fc),
-		Final: out,
-	}.Call(ctx, request)
-}
-
-// filterChainExec adapts a series of filters into an Outbound. It is scoped to
-// a single call of an Outbound and is not thread-safe.
-type filterChainExec struct {
-	Chain []Filter
-	Final Outbound
-}
-
-func (cx filterChainExec) Call(ctx context.Context, request *Request) (*Response, error) {
-	if len(cx.Chain) == 0 {
-		return cx.Final.Call(ctx, request)
-	}
-	return cx.Chain[0].Call(ctx, request, filterChainExec{
-		Chain: cx.Chain[1:],
-		Final: cx.Final,
-	})
 }

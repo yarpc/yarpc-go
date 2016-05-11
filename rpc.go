@@ -51,20 +51,16 @@ type RPC interface {
 	Stop() error
 }
 
-// Filters is a collection of transport-level Filters.
-type Filters []transport.Filter
-
-// Interceptors is a collection of transport-level Interceptors.
-type Interceptors []transport.Interceptor
-
 // Config specifies the parameters of a new RPC constructed via New.
 type Config struct {
 	Name      string
 	Inbounds  []transport.Inbound
 	Outbounds transport.Outbounds
 
-	Filters      Filters
-	Interceptors Interceptors
+	// Filter and Interceptor that will be applied to all outgoing and incoming
+	// requests respectively.
+	Filter      transport.Filter
+	Interceptor transport.Interceptor
 
 	// TODO FallbackHandler for catch-all endpoints
 }
@@ -75,15 +71,13 @@ func New(cfg Config) RPC {
 		panic("a service name is required")
 	}
 
-	filters := []transport.Filter(cfg.Filters)
-	interceptors := []transport.Interceptor(cfg.Interceptors)
 	return rpc{
 		Name:        cfg.Name,
 		Registry:    transport.NewMapRegistry(cfg.Name),
 		Inbounds:    cfg.Inbounds,
 		Outbounds:   cfg.Outbounds,
-		Filter:      transport.ChainFilters(filters...),
-		Interceptor: transport.ChainInterceptors(interceptors...),
+		Filter:      cfg.Filter,
+		Interceptor: cfg.Interceptor,
 	}
 }
 

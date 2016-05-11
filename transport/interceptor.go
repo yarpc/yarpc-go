@@ -58,19 +58,6 @@ func (f InterceptorFunc) Handle(ctx context.Context, req *Request, resw Response
 	return f(ctx, req, resw, h)
 }
 
-// ChainInterceptors combines the given interceptors in-order into a single
-// Interceptor.
-func ChainInterceptors(interceptors ...Interceptor) Interceptor {
-	switch len(interceptors) {
-	case 0:
-		return NopInterceptor
-	case 1:
-		return interceptors[0]
-	default:
-		return interceptorChain(interceptors)
-	}
-}
-
 type interceptedHandler struct {
 	h Handler
 	i Interceptor
@@ -84,30 +71,4 @@ type nopInterceptor struct{}
 
 func (nopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
 	return handler.Handle(ctx, req, resw)
-}
-
-type interceptorChain []Interceptor
-
-func (ic interceptorChain) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
-	return interceptorChainExec{
-		Chain: []Interceptor(ic),
-		Final: handler,
-	}.Handle(ctx, req, resw)
-}
-
-// interceptorChainExec adapts a series of interceptors into a Handler. It is
-// scoped to a single request to the Handler and is not thread-safe.
-type interceptorChainExec struct {
-	Chain []Interceptor
-	Final Handler
-}
-
-func (ix interceptorChainExec) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
-	if len(ix.Chain) == 0 {
-		return ix.Final.Handle(ctx, req, resw)
-	}
-	return ix.Chain[0].Handle(ctx, req, resw, interceptorChainExec{
-		Chain: ix.Chain[1:],
-		Final: ix.Final,
-	})
 }
