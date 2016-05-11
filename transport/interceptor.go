@@ -27,8 +27,8 @@ type Interceptor interface {
 	Apply(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error
 }
 
-// NopInterceptor is a filter that does not do anything special. It simply
-// calls the underlying Handler.
+// NopInterceptor is a interceptor that does not do anything special. It
+// simply calls the underlying Handler.
 var NopInterceptor Interceptor = nopInterceptor{}
 
 // ApplyInterceptor wraps the given Handler with the given Interceptors
@@ -75,8 +75,8 @@ func (ic interceptorChain) Apply(ctx context.Context, req *Request, resw Respons
 	return ix.Handle(ctx, req, resw)
 }
 
-// filterChainExec adapts a series of filters into a Handler. It is scoped to
-// a single request to the Handler and is not thread-safe.
+// interceptorChainExec adapts a series of interceptors into a Handler. It is
+// scoped to a single request to the Handler and is not thread-safe.
 type interceptorChainExec struct {
 	Chain []Interceptor
 	Index int
