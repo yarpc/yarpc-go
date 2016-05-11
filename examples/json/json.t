@@ -17,6 +17,16 @@ Test code:
   > set baz qux
   > get baz
   > INPUT
+  sending a request to "get"
+  received a request to "get"
   foo = 
+  sending a request to "set"
+  received a request to "set"
+  sending a request to "get"
+  received a request to "get"
   foo = bar
+  sending a request to "set"
+  received a request to "set"
+  sending a request to "get"
+  received a request to "get"
   baz = qux

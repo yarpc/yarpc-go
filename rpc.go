@@ -57,6 +57,11 @@ type Config struct {
 	Inbounds  []transport.Inbound
 	Outbounds transport.Outbounds
 
+	// Filter and Interceptor that will be applied to all outgoing and incoming
+	// requests respectively.
+	Filter      transport.Filter
+	Interceptor transport.Interceptor
+
 	// TODO FallbackHandler for catch-all endpoints
 }
 
@@ -65,11 +70,14 @@ func New(cfg Config) RPC {
 	if cfg.Name == "" {
 		panic("a service name is required")
 	}
+
 	return rpc{
-		Name:      cfg.Name,
-		Registry:  transport.NewMapRegistry(cfg.Name),
-		Inbounds:  cfg.Inbounds,
-		Outbounds: cfg.Outbounds,
+		Name:        cfg.Name,
+		Registry:    transport.NewMapRegistry(cfg.Name),
+		Inbounds:    cfg.Inbounds,
+		Outbounds:   cfg.Outbounds,
+		Filter:      cfg.Filter,
+		Interceptor: cfg.Interceptor,
 	}
 }
 
@@ -79,9 +87,11 @@ func New(cfg Config) RPC {
 type rpc struct {
 	transport.Registry
 
-	Name      string
-	Inbounds  []transport.Inbound
-	Outbounds transport.Outbounds
+	Name        string
+	Inbounds    []transport.Inbound
+	Outbounds   transport.Outbounds
+	Filter      transport.Filter
+	Interceptor transport.Interceptor
 }
 
 func (r rpc) Channel(service string) transport.Channel {
@@ -92,8 +102,9 @@ func (r rpc) Channel(service string) transport.Channel {
 	if out, ok := r.Outbounds[service]; ok {
 		// we can eventually write an outbound that load balances between
 		// known outbounds for a service.
+		out = transport.ApplyFilter(out, r.Filter)
 		return transport.Channel{
-			Outbound: request.ValidatorOutbound{out},
+			Outbound: request.ValidatorOutbound{Outbound: out},
 			Caller:   r.Name,
 			Service:  service,
 		}
@@ -118,6 +129,11 @@ func (r rpc) Start() error {
 	}
 
 	return nil
+}
+
+func (r rpc) Register(service, procedure string, handler transport.Handler) {
+	handler = transport.ApplyInterceptor(handler, r.Interceptor)
+	r.Registry.Register(service, procedure, handler)
 }
 
 func (r rpc) Handle(ctx context.Context, req *transport.Request, rw transport.ResponseWriter) error {
