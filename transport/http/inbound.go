@@ -65,7 +65,7 @@ type inbound struct {
 	mux        *http.ServeMux
 	muxPattern string
 	listener   net.Listener
-	stopping   uint32
+	stopped    uint32
 	done       chan error
 }
 
@@ -85,9 +85,9 @@ func (i *inbound) Start(h transport.Handler) error {
 	i.addr = i.listener.Addr().String() // in case it changed
 	server := &http.Server{Handler: httpHandler}
 	go func(l net.Listener, done chan<- error) {
-		// an error while stopping is expected
+		// an error once stopped is expected
 		err := server.Serve(l)
-		if atomic.LoadUint32(&i.stopping) == 0 {
+		if atomic.LoadUint32(&i.stopped) == 0 {
 			done <- err
 		} else {
 			done <- nil
@@ -97,7 +97,7 @@ func (i *inbound) Start(h transport.Handler) error {
 }
 
 func (i *inbound) Stop() error {
-	if !atomic.CompareAndSwapUint32(&i.stopping, 0, 1) {
+	if !atomic.CompareAndSwapUint32(&i.stopped, 0, 1) {
 		return nil
 	}
 
