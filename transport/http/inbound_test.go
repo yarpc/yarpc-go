@@ -46,6 +46,7 @@ func TestStartAddrInUse(t *testing.T) {
 	i2 := NewInbound(i1.Addr().String())
 	err := i2.Start(new(transporttest.MockHandler))
 
+	require.Error(t, err)
 	oe, ok := err.(*net.OpError)
 	assert.True(t, ok && oe.Op == "listen", "expected a listen error")
 	if ok {
@@ -53,7 +54,6 @@ func TestStartAddrInUse(t *testing.T) {
 		assert.True(t, ok && se.Syscall == "bind" && se.Err == syscall.EADDRINUSE, "expected a EADDRINUSE bind error")
 	}
 
-	assert.Error(t, err)
 	assert.NoError(t, i1.Stop())
 }
 
