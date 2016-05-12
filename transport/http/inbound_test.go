@@ -23,7 +23,10 @@ package http
 import (
 	"bytes"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -36,6 +39,23 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 )
+
+func TestStartAddrInUse(t *testing.T) {
+	i1 := NewInbound(":0")
+	require.NoError(t, i1.Start(new(transporttest.MockHandler)))
+	i2 := NewInbound(i1.Addr().String())
+	err := i2.Start(new(transporttest.MockHandler))
+
+	oe, ok := err.(*net.OpError)
+	assert.True(t, ok && oe.Op == "listen", "expected a listen error")
+	if ok {
+		se, ok := oe.Err.(*os.SyscallError)
+		assert.True(t, ok && se.Syscall == "bind" && se.Err == syscall.EADDRINUSE, "expected a EADDRINUSE bind error")
+	}
+
+	assert.Error(t, err)
+	assert.NoError(t, i1.Stop())
+}
 
 func TestInboundStartAndStop(t *testing.T) {
 	i := NewInbound(":0")
