@@ -16,15 +16,13 @@ services:
             - AXIS_SERVER=go,node,java,python
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
-            # - AXIS_ERRORS=go,node
-            # ^ TODO: uncomment when other languages' error branch is merged
+            - AXIS_ERRORS=go,node
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
             - BEHAVIOR_THRIFT=client,server,transport
             - BEHAVIOR_HEADERS=client,server,transport,encoding
-            # - BEHAVIOR_ERRORS=errors,server
-            # ^ TODO: uncomment when other languages' error branch is merged
+            - BEHAVIOR_ERRORS=errors,server
 
     go:
         build: .
