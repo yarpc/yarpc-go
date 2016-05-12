@@ -55,9 +55,6 @@ func TestChain(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	before := &countInterceptor{}
-	after := &countInterceptor{}
-
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	req := &transport.Request{
 		Caller:    "somecaller",
@@ -74,6 +71,8 @@ func TestChain(t *testing.T) {
 		h.EXPECT().Handle(ctx, req, resw).Return(errors.New("great sadness")),
 	).Return(nil)
 
+	before := &countInterceptor{}
+	after := &countInterceptor{}
 	err := transport.ApplyInterceptor(
 		h, Chain(before, retryInterceptor, after),
 	).Handle(ctx, req, resw)

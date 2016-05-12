@@ -57,9 +57,6 @@ func TestChain(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	before := &countFilter{}
-	after := &countFilter{}
-
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	req := &transport.Request{
 		Caller:    "somecaller",
@@ -78,11 +75,13 @@ func TestChain(t *testing.T) {
 		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
 	).Return(res, nil)
 
+	before := &countFilter{}
+	after := &countFilter{}
 	gotRes, err := transport.ApplyFilter(
 		o, Chain(before, retryFilter, after)).Call(ctx, req)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")
-	assert.Equal(t, 2, after.Count, "expected outer filter to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner filter to be called twice")
 	assert.Equal(t, res, gotRes, "expected response to match")
 }
