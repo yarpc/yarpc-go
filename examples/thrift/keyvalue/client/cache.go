@@ -30,39 +30,42 @@ import (
 	"golang.org/x/net/context"
 )
 
+// CacheFilter is a filter
+type CacheFilter interface {
+	transport.Filter
+
+	Invalidate()
+}
+
 type entry struct {
 	Headers transport.Headers
 	Body    []byte
 }
 
-type cacheFilter struct {
-	data map[string]entry
+type cacheFilter map[string]entry
 
-	// procedure which invalidates the whole cache when called
-	invalidateProc string
+// NewCacheFilter builds a new CacheFilter.
+func NewCacheFilter() CacheFilter {
+	cache := make(cacheFilter)
+	return &cache
 }
 
-func newCacheFilter(invalidate string) transport.Filter {
-	return &cacheFilter{
-		data:           make(map[string]entry),
-		invalidateProc: invalidate,
-	}
+func (c *cacheFilter) Invalidate() {
+	fmt.Println("invalidating")
+	*c = make(cacheFilter)
 }
 
 func (c *cacheFilter) Call(ctx context.Context, request *transport.Request, out transport.Outbound) (*transport.Response, error) {
-	if request.Procedure == c.invalidateProc {
-		fmt.Println("cache invalidate")
-		c.data = make(map[string]entry)
-		return out.Call(ctx, request)
-	}
+	data := *c
 
+	// Read the entire request body to match against the cache
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		return nil, err
 	}
 	request.Body = ioutil.NopCloser(bytes.NewReader(body))
 
-	if v, ok := c.data[string(body)]; ok {
+	if v, ok := data[string(body)]; ok {
 		fmt.Println("cache hit")
 		return &transport.Response{
 			Headers: v.Headers,
@@ -82,7 +85,7 @@ func (c *cacheFilter) Call(ctx context.Context, request *transport.Request, out 
 		return nil, err
 	}
 
-	c.data[string(body)] = entry{Headers: res.Headers, Body: resBody}
+	data[string(body)] = entry{Headers: res.Headers, Body: resBody}
 	res.Body = ioutil.NopCloser(bytes.NewReader(resBody))
 	return res, nil
 }

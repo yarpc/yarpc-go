@@ -63,10 +63,11 @@ func main() {
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}
 
+	cache := NewCacheFilter()
 	rpc := yarpc.New(yarpc.Config{
 		Name:      "keyvalue-client",
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
-		Filter:    newCacheFilter("KeyValue::setValue"),
+		Filter:    cache,
 	})
 
 	client := keyvalueclient.New(rpc.Channel("keyvalue"))
@@ -110,6 +111,7 @@ func main() {
 			}
 			key, value := args[0], args[1]
 
+			cache.Invalidate()
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			if _, err := client.SetValue(&thrift.Request{
 				Context: ctx,

@@ -25,12 +25,14 @@ Test code:
   get "foo" failed: ResourceDoesNotExist{Key: foo}
   cache hit
   get "foo" failed: ResourceDoesNotExist{Key: foo}
-  cache invalidate
+  invalidating
+  cache miss
   cache miss
   foo = bar
   cache hit
   foo = bar
-  cache invalidate
+  invalidating
+  cache miss
   cache miss
   baz = qux
   cache miss
