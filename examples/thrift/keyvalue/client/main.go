@@ -66,6 +66,7 @@ func main() {
 	rpc := yarpc.New(yarpc.Config{
 		Name:      "keyvalue-client",
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
+		Filter:    newCacheFilter("KeyValue::setValue"),
 	})
 
 	client := keyvalueclient.New(rpc.Channel("keyvalue"))
