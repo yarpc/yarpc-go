@@ -57,6 +57,15 @@ func TestStartAddrInUse(t *testing.T) {
 	assert.NoError(t, i1.Stop())
 }
 
+func TestNilAddrAfterStop(t *testing.T) {
+	i := NewInbound(":0")
+	require.NoError(t, i.Start(new(transporttest.MockHandler)))
+	assert.NotEqual(t, ":0", i.Addr().String())
+	assert.NotNil(t, i.Addr())
+	assert.NoError(t, i.Stop())
+	assert.Nil(t, i.Addr())
+}
+
 func TestInboundStartAndStop(t *testing.T) {
 	i := NewInbound(":0")
 	require.NoError(t, i.Start(new(transporttest.MockHandler)))
