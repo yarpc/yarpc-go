@@ -36,14 +36,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-var retryFilter = transport.FilterFunc(
-	func(ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
-		res, err := o.Call(ctx, req)
-		if err != nil {
-			res, err = o.Call(ctx, req)
-		}
-		return res, err
-	})
+var retryFilter transport.FilterFunc = func(
+	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
+	res, err := o.Call(ctx, req)
+	if err != nil {
+		res, err = o.Call(ctx, req)
+	}
+	return res, err
+}
 
 type countFilter struct{ Count int }
 

@@ -35,13 +35,13 @@ import (
 	"golang.org/x/net/context"
 )
 
-var retryInterceptor = transport.InterceptorFunc(
-	func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
-		if err := h.Handle(ctx, req, resw); err != nil {
-			return h.Handle(ctx, req, resw)
-		}
-		return nil
-	})
+var retryInterceptor transport.InterceptorFunc = func(
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+	if err := h.Handle(ctx, req, resw); err != nil {
+		return h.Handle(ctx, req, resw)
+	}
+	return nil
+}
 
 type countInterceptor struct{ Count int }
 
