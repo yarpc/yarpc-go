@@ -106,10 +106,11 @@ func (i *inbound) Stop() error {
 	}
 	closeErr := i.listener.Close()
 	i.listener = nil
-	if err := <-i.done; err != nil {
-		return err
+	serveErr := <-i.done
+	if closeErr != nil {
+		return closeErr
 	}
-	return closeErr
+	return serveErr
 }
 
 func (i *inbound) Addr() net.Addr {
