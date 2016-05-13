@@ -23,6 +23,7 @@ package http
 import (
 	"net"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/yarpc/yarpc-go/transport"
 )
@@ -52,7 +53,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 
 // NewInbound builds a new HTTP inbound that listens on the given address.
 func NewInbound(addr string, opts ...InboundOption) Inbound {
-	i := &inbound{addr: addr, done: make(chan struct{})}
+	i := &inbound{addr: addr, done: make(chan error, 1)}
 	for _, opt := range opts {
 		opt(i)
 	}
@@ -64,7 +65,8 @@ type inbound struct {
 	mux        *http.ServeMux
 	muxPattern string
 	listener   net.Listener
-	done       chan struct{}
+	stopped    uint32
+	done       chan error
 }
 
 func (i *inbound) Start(h transport.Handler) error {
@@ -82,22 +84,33 @@ func (i *inbound) Start(h transport.Handler) error {
 
 	i.addr = i.listener.Addr().String() // in case it changed
 	server := &http.Server{Handler: httpHandler}
-	go func(l net.Listener, done chan<- struct{}) {
-		// serve always returns an error
-		_ = server.Serve(l)
-		close(done)
+	go func(l net.Listener, done chan<- error) {
+		// an error once stopped is expected
+		err := server.Serve(l)
+		if atomic.LoadUint32(&i.stopped) == 0 {
+			done <- err
+		} else {
+			done <- nil
+		}
 	}(i.listener, i.done)
 	return nil
 }
 
 func (i *inbound) Stop() error {
+	if !atomic.CompareAndSwapUint32(&i.stopped, 0, 1) {
+		return nil
+	}
+
 	if i.listener == nil {
 		return nil
 	}
-	err := i.listener.Close()
+	closeErr := i.listener.Close()
 	i.listener = nil
-	<-i.done
-	return err
+	serveErr := <-i.done
+	if closeErr != nil {
+		return closeErr
+	}
+	return serveErr
 }
 
 func (i *inbound) Addr() net.Addr {
