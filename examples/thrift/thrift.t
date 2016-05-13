@@ -12,11 +12,30 @@ Test code:
   $ sleep 0.250
   $ $TESTDIR/keyvalue/client/client -outbound=$TRANSPORT << INPUT
   > get foo
+  > get foo
   > set foo bar
+  > get foo
   > get foo
   > set baz qux
   > get baz
+  > get foo
+  > get baz
   > INPUT
+  cache miss
   get "foo" failed: ResourceDoesNotExist{Key: foo}
+  cache hit
+  get "foo" failed: ResourceDoesNotExist{Key: foo}
+  invalidating
+  cache miss
+  cache miss
   foo = bar
+  cache hit
+  foo = bar
+  invalidating
+  cache miss
+  cache miss
+  baz = qux
+  cache miss
+  foo = bar
+  cache hit
   baz = qux
