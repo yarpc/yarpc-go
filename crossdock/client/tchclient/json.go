@@ -18,29 +18,49 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tchclient
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"time"
+
+	"github.com/uber/tchannel-go/json"
+
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
 )
 
-// EchoRaw implements the echo/raw procedure.
-func EchoRaw(req *raw.Request, body []byte) ([]byte, *raw.Response, error) {
-	return body, &raw.Response{Headers: req.Headers}, nil
+func runJSON(s behavior.Sink, call call) {
+	assert := behavior.Assert(s)
+	checks := behavior.Checks(s)
+
+	headers := map[string]string{
+		"hello": "json",
+	}
+	token := random.String(5)
+
+	resp, respHeaders, err := jsonCall(call, headers, token)
+
+	if checks.NoError(err, "json: call failed") {
+		assert.Equal(token, resp.Token, "body echoed")
+		assert.Equal(headers, respHeaders, "headers echoed")
+	}
+
 }
 
-// EchoJSON implements the echo procedure.
-func EchoJSON(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
-	return body, &json.Response{Headers: req.Headers}, nil
+type jsonResp struct {
+	Token string `json:"token"`
 }
 
-// EchoThrift implements the Thrift Echo service.
-type EchoThrift struct{}
+func jsonCall(call call, headers map[string]string, token string) (jsonResp, map[string]string, error) {
+	peer := call.Channel.Peers().Add(call.ServerHostPort)
 
-// Echo endpoint for the Echo service.
-func (EchoThrift) Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error) {
-	return &echo.Pong{Boop: ping.Beep}, &thrift.Response{Headers: req.Headers}, nil
+	ctx, cancel := json.NewContext(time.Second)
+	ctx = json.WithHeaders(ctx, headers)
+	defer cancel()
+
+	var response jsonResp
+
+	err := json.CallPeer(ctx, peer, serverName, "echo", &jsonResp{Token: token}, &response)
+
+	return response, ctx.ResponseHeaders(), err
 }

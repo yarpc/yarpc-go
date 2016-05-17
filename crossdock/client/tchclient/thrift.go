@@ -18,24 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tchclient
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoserver"
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
+	"time"
+
+	"github.com/uber/tchannel-go/thrift"
+
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 )
 
-// Register the different endpoints of the TestSubject with the given
-// Registry.
-func Register(reg transport.Registry) {
-	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(reg, json.Procedure("echo", EchoJSON))
-	thrift.Register(reg, echoserver.New(EchoThrift{}))
+func runThrift(s behavior.Sink, call call) {
+	assert := behavior.Assert(s)
+	checks := behavior.Checks(s)
 
-	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
-	json.Register(reg, json.Procedure("bad-response", BadResponse))
-	json.Register(reg, json.Procedure("phone", Phone))
+	headers := map[string]string{
+		"hello": "thrift",
+	}
+	token := random.String(5)
+
+	resp, respHeaders, err := thriftCall(call, headers, token)
+
+	if checks.NoError(err, "thrift: call failed") {
+		assert.Equal(token, resp.Boop, "body echoed")
+		assert.Equal(headers, respHeaders, "headers echoed")
+	}
+}
+
+func thriftCall(call call, headers map[string]string, token string) (*echo.Pong, map[string]string, error) {
+	call.Channel.Peers().Add(call.ServerHostPort)
+
+	ctx, cancel := thrift.NewContext(time.Second)
+	ctx = thrift.WithHeaders(ctx, headers)
+	defer cancel()
+
+	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
+	pong, err := client.Echo(ctx, &echo.Ping{Beep: token})
+
+	return pong, ctx.ResponseHeaders(), err
 }
