@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"testing"
+	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
@@ -29,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
+	"github.com/uber/tchannel-go/json"
 )
 
 func TestInboundStartNew(t *testing.T) {
@@ -95,4 +97,32 @@ func TestInboundInvalidAddress(t *testing.T) {
 	require.NoError(t, err)
 	i := NewInbound(ch, ListenAddr("not valid"))
 	assert.Error(t, i.Start(new(transporttest.MockHandler)))
+}
+
+func TestInboundExistingMethods(t *testing.T) {
+	// Create a channel with an existing "echo" method.
+	ch, err := tchannel.NewChannel("foo", nil)
+	require.NoError(t, err)
+	json.Register(ch, json.Handlers{
+		"echo": func(ctx json.Context, req map[string]string) (map[string]string, error) {
+			return req, nil
+		},
+	}, nil)
+
+	i := NewInbound(ch)
+	require.NoError(t, i.Start(new(transporttest.MockHandler)))
+	defer i.Stop()
+
+	// Make a call to the "echo" method which should call our pre-registered method.
+	ctx, cancel := json.NewContext(time.Second)
+	defer cancel()
+
+	var resp map[string]string
+	arg := map[string]string{"k": "v"}
+
+	svc := ch.ServiceName()
+	peer := ch.Peers().GetOrAdd(ch.PeerInfo().HostPort)
+	err = json.CallPeer(ctx, peer, svc, "echo", arg, &resp)
+	require.NoError(t, err, "Call failed")
+	assert.Equal(t, arg, resp, "Response mismatch")
 }

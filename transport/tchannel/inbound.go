@@ -41,6 +41,8 @@ func ListenAddr(addr string) InboundOption {
 }
 
 // NewInbound builds a new TChannel inbound from the given Channel.
+// Existing methods registered on the channel remain registered and
+// are preferred when a call is received.
 func NewInbound(ch *tchannel.Channel, opts ...InboundOption) transport.Inbound {
 	i := &inbound{ch: ch}
 	for _, opt := range opts {
@@ -56,7 +58,9 @@ type inbound struct {
 }
 
 func (i *inbound) Start(h transport.Handler) error {
-	i.ch.GetSubChannel(i.ch.ServiceName()).SetHandler(handler{h})
+	sc := i.ch.GetSubChannel(i.ch.ServiceName())
+	existing := sc.GetHandlers()
+	sc.SetHandler(handler{existing, h})
 
 	if i.ch.State() == tchannel.ChannelListening {
 		// Channel.Start() was called before RPC.Start(). We still want to
