@@ -193,7 +193,7 @@ func TestHandlerFailures(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.call.resp = resp
 
-		handler{thandler}.handle(ctx, tt.call)
+		handler{nil, thandler}.handle(ctx, tt.call)
 		err := resp.systemErr
 		require.Error(t, err, "expected error for %q", tt.desc)
 

@@ -1,15 +1,21 @@
 package: github.com/yarpc/yarpc-go
 import:
 - package: golang.org/x/net
+  version: master
   subpackages:
   - context
   - context/ctxhttp
 - package: github.com/stretchr/testify
+  version: master
   subpackages:
   - assert
   - require
 - package: github.com/thriftrw/thriftrw-go
+  version: master
 - package: github.com/golang/mock
+  version: master
   subpackages:
   - gomock
 - package: github.com/uber/tchannel-go
+  # TODO: Change this to master once SubChannel.GetHandlers() is available to master.
+  version: dev

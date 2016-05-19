@@ -71,10 +71,16 @@ func (c tchannelCall) Response() inboundCallResponse {
 
 // handler wraps a transport.Handler into a TChannel Handler.
 type handler struct {
-	Handler transport.Handler
+	existing map[string]tchannel.Handler
+	Handler  transport.Handler
 }
 
 func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
+	if m, ok := h.existing[call.MethodString()]; ok {
+		m.Handle(ctx, call)
+		return
+	}
+
 	h.handle(ctx, tchannelCall{call})
 }
 
