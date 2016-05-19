@@ -1,8 +1,8 @@
-hash: 672ef6a9d191e20f5fc1e1f0ac53bb00bda74d8245b4326671c2fddf99823045
-updated: 2016-04-22T14:51:18.938752258-07:00
+hash: 7d6d74172f119bd6119d5e7657a8dd1fd732562685eb953d54d2566e40d67a5c
+updated: 2016-05-19T10:37:57.413800851-07:00
 imports:
 - name: github.com/davecgh/go-spew
-  version: 2df174808ee097f90d259e432cc04442cf60be21
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -14,23 +14,26 @@ imports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 9f9027faeb0dad515336ed2f28317f9f8f527ab4
+  version: 6cb3b85ef5a0efef77caef88363ec4d4b5c0976d
   subpackages:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: fa2079dcd5e7f71ecd4a1af10a428b1e21f5bf75
+  version: 228cb2a82bf886b81b532a4e975258a27cc71083
   subpackages:
   - wire
   - protocol
   - protocol/binary
 - name: github.com/uber/tchannel-go
-  version: 7c19f22ebc511caa55133e458d8a22f1dbfdb981
+  version: 1e3d3705581f8f9c1356e2966bc90782243b516d
   subpackages:
+  - atomic
+  - relay
   - tnet
+  - trand
   - typed
 - name: golang.org/x/net
-  version: 04b9de9b512f58addf28c9853d50ebef61c3953e
+  version: 5916dcb167ed985a5b9e6871fbfd74848a4c170b
   subpackages:
   - context
   - context/ctxhttp
