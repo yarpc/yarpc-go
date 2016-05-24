@@ -23,6 +23,7 @@ services:
             - BEHAVIOR_THRIFT=client,server,transport
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - BEHAVIOR_ERRORS=errors,server
+            - BEHAVIOR_TCHCLIENT=client,server,encoding
 
     go:
         build: .
