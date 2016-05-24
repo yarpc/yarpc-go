@@ -33,14 +33,22 @@ type TestBinaryArgs struct {
 	Thing []byte `json:"thing"`
 }
 
-func (v *TestBinaryArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestBinaryArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Thing != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueBinary(v.Thing)}
+		w, err = wire.NewValueBinary(v.Thing), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestBinaryArgs) FromWire(w wire.Value) error {
@@ -69,18 +77,37 @@ func (v *TestBinaryArgs) String() string {
 	return fmt.Sprintf("TestBinaryArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestBinaryArgs) MethodName() string {
+	return "testBinary"
+}
+
+func (v *TestBinaryArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestBinaryResult struct {
 	Success []byte `json:"success"`
 }
 
-func (v *TestBinaryResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestBinaryResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: wire.NewValueBinary(v.Success)}
+		w, err = wire.NewValueBinary(v.Success), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestBinaryResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestBinaryResult) FromWire(w wire.Value) error {
@@ -96,6 +123,13 @@ func (v *TestBinaryResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestBinaryResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -107,6 +141,14 @@ func (v *TestBinaryResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestBinaryResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestBinaryResult) MethodName() string {
+	return "testBinary"
+}
+
+func (v *TestBinaryResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestBinaryHelper = struct {

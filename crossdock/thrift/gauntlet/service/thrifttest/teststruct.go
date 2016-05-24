@@ -34,14 +34,22 @@ type TestStructArgs struct {
 	Thing *gauntlet.Xtruct `json:"thing,omitempty"`
 }
 
-func (v *TestStructArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestStructArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Thing != nil {
-		fields[i] = wire.Field{ID: 1, Value: v.Thing.ToWire()}
+		w, err = v.Thing.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestStructArgs) FromWire(w wire.Value) error {
@@ -70,18 +78,37 @@ func (v *TestStructArgs) String() string {
 	return fmt.Sprintf("TestStructArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestStructArgs) MethodName() string {
+	return "testStruct"
+}
+
+func (v *TestStructArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestStructResult struct {
 	Success *gauntlet.Xtruct `json:"success,omitempty"`
 }
 
-func (v *TestStructResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestStructResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: v.Success.ToWire()}
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestStructResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestStructResult) FromWire(w wire.Value) error {
@@ -97,6 +124,13 @@ func (v *TestStructResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestStructResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -108,6 +142,14 @@ func (v *TestStructResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestStructResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestStructResult) MethodName() string {
+	return "testStruct"
+}
+
+func (v *TestStructResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestStructHelper = struct {

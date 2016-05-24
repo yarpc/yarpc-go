@@ -35,18 +35,30 @@ type TestMultiExceptionArgs struct {
 	Arg1 *string `json:"arg1,omitempty"`
 }
 
-func (v *TestMultiExceptionArgs) ToWire() wire.Value {
-	var fields [2]wire.Field
-	i := 0
+func (v *TestMultiExceptionArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Arg0 != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(*(v.Arg0))}
+		w, err = wire.NewValueString(*(v.Arg0)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
 	if v.Arg1 != nil {
-		fields[i] = wire.Field{ID: 2, Value: wire.NewValueString(*(v.Arg1))}
+		w, err = wire.NewValueString(*(v.Arg1)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestMultiExceptionArgs) FromWire(w wire.Value) error {
@@ -90,28 +102,55 @@ func (v *TestMultiExceptionArgs) String() string {
 	return fmt.Sprintf("TestMultiExceptionArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestMultiExceptionArgs) MethodName() string {
+	return "testMultiException"
+}
+
+func (v *TestMultiExceptionArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestMultiExceptionResult struct {
 	Success *gauntlet.Xtruct    `json:"success,omitempty"`
 	Err1    *gauntlet.Xception  `json:"err1,omitempty"`
 	Err2    *gauntlet.Xception2 `json:"err2,omitempty"`
 }
 
-func (v *TestMultiExceptionResult) ToWire() wire.Value {
-	var fields [3]wire.Field
-	i := 0
+func (v *TestMultiExceptionResult) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: v.Success.ToWire()}
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
 	if v.Err1 != nil {
-		fields[i] = wire.Field{ID: 1, Value: v.Err1.ToWire()}
+		w, err = v.Err1.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
 	if v.Err2 != nil {
-		fields[i] = wire.Field{ID: 2, Value: v.Err2.ToWire()}
+		w, err = v.Err2.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestMultiExceptionResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _Xception2_Read(w wire.Value) (*gauntlet.Xception2, error) {
@@ -147,6 +186,19 @@ func (v *TestMultiExceptionResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.Err1 != nil {
+		count++
+	}
+	if v.Err2 != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestMultiExceptionResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -166,6 +218,14 @@ func (v *TestMultiExceptionResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestMultiExceptionResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestMultiExceptionResult) MethodName() string {
+	return "testMultiException"
+}
+
+func (v *TestMultiExceptionResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestMultiExceptionHelper = struct {

@@ -24,4 +24,4 @@ package gauntlet
 
 
 
-const MyNumberz Numberz = nil
+const MyNumberz Numberz = NumberzOne

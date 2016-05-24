@@ -37,7 +37,15 @@ type _Map_I32_I32_MapItemList map[int32]int32
 
 func (m _Map_I32_I32_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
-		err := f(wire.MapItem{Key: wire.NewValueI32(k), Value: wire.NewValueI32(v)})
+		kw, err := wire.NewValueI32(k), error(nil)
+		if err != nil {
+			return err
+		}
+		vw, err := wire.NewValueI32(v), error(nil)
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
 		if err != nil {
 			return err
 		}
@@ -48,14 +56,22 @@ func (m _Map_I32_I32_MapItemList) ForEach(f func(wire.MapItem) error) error {
 func (m _Map_I32_I32_MapItemList) Close() {
 }
 
-func (v *TestMapArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestMapArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Thing != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v.Thing), Items: _Map_I32_I32_MapItemList(v.Thing)})}
+		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v.Thing), Items: _Map_I32_I32_MapItemList(v.Thing)}), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _Map_I32_I32_Read(m wire.Map) (map[int32]int32, error) {
@@ -108,18 +124,37 @@ func (v *TestMapArgs) String() string {
 	return fmt.Sprintf("TestMapArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestMapArgs) MethodName() string {
+	return "testMap"
+}
+
+func (v *TestMapArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestMapResult struct {
 	Success map[int32]int32 `json:"success"`
 }
 
-func (v *TestMapResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestMapResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v.Success), Items: _Map_I32_I32_MapItemList(v.Success)})}
+		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v.Success), Items: _Map_I32_I32_MapItemList(v.Success)}), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestMapResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestMapResult) FromWire(w wire.Value) error {
@@ -135,6 +170,13 @@ func (v *TestMapResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestMapResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -146,6 +188,14 @@ func (v *TestMapResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestMapResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestMapResult) MethodName() string {
+	return "testMap"
+}
+
+func (v *TestMapResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestMapHelper = struct {

@@ -23,6 +23,7 @@
 package echo
 
 import (
+	"errors"
 	"fmt"
 	"github.com/thriftrw/thriftrw-go/wire"
 	"strings"
@@ -32,16 +33,25 @@ type Ping struct {
 	Beep string `json:"beep"`
 }
 
-func (v *Ping) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
-	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Beep)}
+func (v *Ping) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	w, err = wire.NewValueString(v.Beep), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 1, Value: w}
 	i++
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *Ping) FromWire(w wire.Value) error {
 	var err error
+	beepIsSet := false
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
@@ -50,8 +60,12 @@ func (v *Ping) FromWire(w wire.Value) error {
 				if err != nil {
 					return err
 				}
+				beepIsSet = true
 			}
 		}
+	}
+	if !beepIsSet {
+		return errors.New("field Beep of Ping is required")
 	}
 	return nil
 }
@@ -68,16 +82,25 @@ type Pong struct {
 	Boop string `json:"boop"`
 }
 
-func (v *Pong) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
-	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Boop)}
+func (v *Pong) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	w, err = wire.NewValueString(v.Boop), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 1, Value: w}
 	i++
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *Pong) FromWire(w wire.Value) error {
 	var err error
+	boopIsSet := false
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
@@ -86,8 +109,12 @@ func (v *Pong) FromWire(w wire.Value) error {
 				if err != nil {
 					return err
 				}
+				boopIsSet = true
 			}
 		}
+	}
+	if !boopIsSet {
+		return errors.New("field Boop of Pong is required")
 	}
 	return nil
 }

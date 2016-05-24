@@ -30,10 +30,12 @@ import (
 
 type BlahBlahArgs struct{}
 
-func (v *BlahBlahArgs) ToWire() wire.Value {
-	var fields [0]wire.Field
-	i := 0
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+func (v *BlahBlahArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *BlahBlahArgs) FromWire(w wire.Value) error {
@@ -50,12 +52,22 @@ func (v *BlahBlahArgs) String() string {
 	return fmt.Sprintf("BlahBlahArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *BlahBlahArgs) MethodName() string {
+	return "blahBlah"
+}
+
+func (v *BlahBlahArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type BlahBlahResult struct{}
 
-func (v *BlahBlahResult) ToWire() wire.Value {
-	var fields [0]wire.Field
-	i := 0
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+func (v *BlahBlahResult) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *BlahBlahResult) FromWire(w wire.Value) error {
@@ -70,6 +82,14 @@ func (v *BlahBlahResult) String() string {
 	var fields [0]string
 	i := 0
 	return fmt.Sprintf("BlahBlahResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *BlahBlahResult) MethodName() string {
+	return "blahBlah"
+}
+
+func (v *BlahBlahResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var BlahBlahHelper = struct {

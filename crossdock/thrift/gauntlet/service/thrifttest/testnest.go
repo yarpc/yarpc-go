@@ -34,14 +34,22 @@ type TestNestArgs struct {
 	Thing *gauntlet.Xtruct2 `json:"thing,omitempty"`
 }
 
-func (v *TestNestArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestNestArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Thing != nil {
-		fields[i] = wire.Field{ID: 1, Value: v.Thing.ToWire()}
+		w, err = v.Thing.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _Xtruct2_Read(w wire.Value) (*gauntlet.Xtruct2, error) {
@@ -76,18 +84,37 @@ func (v *TestNestArgs) String() string {
 	return fmt.Sprintf("TestNestArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestNestArgs) MethodName() string {
+	return "testNest"
+}
+
+func (v *TestNestArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestNestResult struct {
 	Success *gauntlet.Xtruct2 `json:"success,omitempty"`
 }
 
-func (v *TestNestResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestNestResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: v.Success.ToWire()}
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestNestResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestNestResult) FromWire(w wire.Value) error {
@@ -103,6 +130,13 @@ func (v *TestNestResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestNestResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -114,6 +148,14 @@ func (v *TestNestResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestNestResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestNestResult) MethodName() string {
+	return "testNest"
+}
+
+func (v *TestNestResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestNestHelper = struct {

@@ -37,7 +37,11 @@ type _List_I32_ValueList []int32
 
 func (v _List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		err := f(wire.NewValueI32(x))
+		w, err := wire.NewValueI32(x), error(nil)
+		if err != nil {
+			return err
+		}
+		err = f(w)
 		if err != nil {
 			return err
 		}
@@ -48,14 +52,22 @@ func (v _List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 func (v _List_I32_ValueList) Close() {
 }
 
-func (v *TestListArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestListArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Thing != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Thing), Items: _List_I32_ValueList(v.Thing)})}
+		w, err = wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Thing), Items: _List_I32_ValueList(v.Thing)}), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _List_I32_Read(l wire.List) ([]int32, error) {
@@ -101,18 +113,37 @@ func (v *TestListArgs) String() string {
 	return fmt.Sprintf("TestListArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestListArgs) MethodName() string {
+	return "testList"
+}
+
+func (v *TestListArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestListResult struct {
 	Success []int32 `json:"success"`
 }
 
-func (v *TestListResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestListResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Success), Items: _List_I32_ValueList(v.Success)})}
+		w, err = wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Success), Items: _List_I32_ValueList(v.Success)}), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestListResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestListResult) FromWire(w wire.Value) error {
@@ -128,6 +159,13 @@ func (v *TestListResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestListResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -139,6 +177,14 @@ func (v *TestListResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestListResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestListResult) MethodName() string {
+	return "testList"
+}
+
+func (v *TestListResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestListHelper = struct {

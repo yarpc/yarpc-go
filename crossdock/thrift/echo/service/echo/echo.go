@@ -34,14 +34,22 @@ type EchoArgs struct {
 	Ping *echo.Ping `json:"ping,omitempty"`
 }
 
-func (v *EchoArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *EchoArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Ping != nil {
-		fields[i] = wire.Field{ID: 1, Value: v.Ping.ToWire()}
+		w, err = v.Ping.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _Ping_Read(w wire.Value) (*echo.Ping, error) {
@@ -76,18 +84,37 @@ func (v *EchoArgs) String() string {
 	return fmt.Sprintf("EchoArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *EchoArgs) MethodName() string {
+	return "echo"
+}
+
+func (v *EchoArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type EchoResult struct {
 	Success *echo.Pong `json:"success,omitempty"`
 }
 
-func (v *EchoResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *EchoResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: v.Success.ToWire()}
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("EchoResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _Pong_Read(w wire.Value) (*echo.Pong, error) {
@@ -109,6 +136,13 @@ func (v *EchoResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("EchoResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -120,6 +154,14 @@ func (v *EchoResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("EchoResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *EchoResult) MethodName() string {
+	return "echo"
+}
+
+func (v *EchoResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var EchoHelper = struct {

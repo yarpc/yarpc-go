@@ -43,8 +43,13 @@ type client struct{ c thrift.Client }
 
 func (c client) BlahBlah(req *thrift.Request) (res *thrift.Response, err error) {
 	args := secondservice.BlahBlahHelper.Args()
+	var w wire.Value
+	w, err = args.ToWire()
+	if err != nil {
+		return
+	}
 	var body wire.Value
-	body, res, err = c.c.Call("blahBlah", req, args.ToWire())
+	body, res, err = c.c.Call("blahBlah", req, w)
 	if err != nil {
 		return
 	}
@@ -58,8 +63,13 @@ func (c client) BlahBlah(req *thrift.Request) (res *thrift.Response, err error) 
 
 func (c client) SecondtestString(req *thrift.Request, thing *string) (success string, res *thrift.Response, err error) {
 	args := secondservice.SecondtestStringHelper.Args(thing)
+	var w wire.Value
+	w, err = args.ToWire()
+	if err != nil {
+		return
+	}
 	var body wire.Value
-	body, res, err = c.c.Call("secondtestString", req, args.ToWire())
+	body, res, err = c.c.Call("secondtestString", req, w)
 	if err != nil {
 		return
 	}

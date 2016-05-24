@@ -34,14 +34,22 @@ type TestInsanityArgs struct {
 	Argument *gauntlet.Insanity `json:"argument,omitempty"`
 }
 
-func (v *TestInsanityArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestInsanityArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Argument != nil {
-		fields[i] = wire.Field{ID: 1, Value: v.Argument.ToWire()}
+		w, err = v.Argument.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _Insanity_Read(w wire.Value) (*gauntlet.Insanity, error) {
@@ -76,6 +84,14 @@ func (v *TestInsanityArgs) String() string {
 	return fmt.Sprintf("TestInsanityArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestInsanityArgs) MethodName() string {
+	return "testInsanity"
+}
+
+func (v *TestInsanityArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestInsanityResult struct {
 	Success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity `json:"success"`
 }
@@ -84,7 +100,15 @@ type _Map_Numberz_Insanity_MapItemList map[gauntlet.Numberz]*gauntlet.Insanity
 
 func (m _Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
-		err := f(wire.MapItem{Key: k.ToWire(), Value: v.ToWire()})
+		kw, err := k.ToWire()
+		if err != nil {
+			return err
+		}
+		vw, err := v.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
 		if err != nil {
 			return err
 		}
@@ -99,7 +123,15 @@ type _Map_UserId_Map_Numberz_Insanity_MapItemList map[gauntlet.UserId]map[gauntl
 
 func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
-		err := f(wire.MapItem{Key: k.ToWire(), Value: wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TStruct, Size: len(v), Items: _Map_Numberz_Insanity_MapItemList(v)})})
+		kw, err := k.ToWire()
+		if err != nil {
+			return err
+		}
+		vw, err := wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TStruct, Size: len(v), Items: _Map_Numberz_Insanity_MapItemList(v)}), error(nil)
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
 		if err != nil {
 			return err
 		}
@@ -110,14 +142,25 @@ func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapIte
 func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) Close() {
 }
 
-func (v *TestInsanityResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestInsanityResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: wire.NewValueMap(wire.Map{KeyType: wire.TI64, ValueType: wire.TMap, Size: len(v.Success), Items: _Map_UserId_Map_Numberz_Insanity_MapItemList(v.Success)})}
+		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI64, ValueType: wire.TMap, Size: len(v.Success), Items: _Map_UserId_Map_Numberz_Insanity_MapItemList(v.Success)}), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestInsanityResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _UserId_Read(w wire.Value) (gauntlet.UserId, error) {
@@ -187,6 +230,13 @@ func (v *TestInsanityResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestInsanityResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -198,6 +248,14 @@ func (v *TestInsanityResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestInsanityResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestInsanityResult) MethodName() string {
+	return "testInsanity"
+}
+
+func (v *TestInsanityResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestInsanityHelper = struct {

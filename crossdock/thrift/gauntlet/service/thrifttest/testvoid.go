@@ -30,10 +30,12 @@ import (
 
 type TestVoidArgs struct{}
 
-func (v *TestVoidArgs) ToWire() wire.Value {
-	var fields [0]wire.Field
-	i := 0
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+func (v *TestVoidArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestVoidArgs) FromWire(w wire.Value) error {
@@ -50,12 +52,22 @@ func (v *TestVoidArgs) String() string {
 	return fmt.Sprintf("TestVoidArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestVoidArgs) MethodName() string {
+	return "testVoid"
+}
+
+func (v *TestVoidArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestVoidResult struct{}
 
-func (v *TestVoidResult) ToWire() wire.Value {
-	var fields [0]wire.Field
-	i := 0
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+func (v *TestVoidResult) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestVoidResult) FromWire(w wire.Value) error {
@@ -70,6 +82,14 @@ func (v *TestVoidResult) String() string {
 	var fields [0]string
 	i := 0
 	return fmt.Sprintf("TestVoidResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestVoidResult) MethodName() string {
+	return "testVoid"
+}
+
+func (v *TestVoidResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestVoidHelper = struct {

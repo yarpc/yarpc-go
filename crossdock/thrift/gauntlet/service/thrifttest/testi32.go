@@ -33,14 +33,22 @@ type TestI32Args struct {
 	Thing *int32 `json:"thing,omitempty"`
 }
 
-func (v *TestI32Args) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestI32Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Thing != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueI32(*(v.Thing))}
+		w, err = wire.NewValueI32(*(v.Thing)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestI32Args) FromWire(w wire.Value) error {
@@ -71,18 +79,37 @@ func (v *TestI32Args) String() string {
 	return fmt.Sprintf("TestI32Args{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestI32Args) MethodName() string {
+	return "testI32"
+}
+
+func (v *TestI32Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestI32Result struct {
 	Success *int32 `json:"success,omitempty"`
 }
 
-func (v *TestI32Result) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestI32Result) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: wire.NewValueI32(*(v.Success))}
+		w, err = wire.NewValueI32(*(v.Success)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("TestI32Result should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestI32Result) FromWire(w wire.Value) error {
@@ -100,6 +127,13 @@ func (v *TestI32Result) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("TestI32Result should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -111,6 +145,14 @@ func (v *TestI32Result) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestI32Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestI32Result) MethodName() string {
+	return "testI32"
+}
+
+func (v *TestI32Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestI32Helper = struct {

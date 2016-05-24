@@ -34,14 +34,22 @@ type TestExceptionArgs struct {
 	Arg *string `json:"arg,omitempty"`
 }
 
-func (v *TestExceptionArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestExceptionArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Arg != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(*(v.Arg))}
+		w, err = wire.NewValueString(*(v.Arg)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *TestExceptionArgs) FromWire(w wire.Value) error {
@@ -72,18 +80,37 @@ func (v *TestExceptionArgs) String() string {
 	return fmt.Sprintf("TestExceptionArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *TestExceptionArgs) MethodName() string {
+	return "testException"
+}
+
+func (v *TestExceptionArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type TestExceptionResult struct {
 	Err1 *gauntlet.Xception `json:"err1,omitempty"`
 }
 
-func (v *TestExceptionResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *TestExceptionResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Err1 != nil {
-		fields[i] = wire.Field{ID: 1, Value: v.Err1.ToWire()}
+		w, err = v.Err1.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i > 1 {
+		return wire.Value{}, fmt.Errorf("TestExceptionResult should have at most one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _Xception_Read(w wire.Value) (*gauntlet.Xception, error) {
@@ -105,6 +132,13 @@ func (v *TestExceptionResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Err1 != nil {
+		count++
+	}
+	if count > 1 {
+		return fmt.Errorf("TestExceptionResult should have at most one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -116,6 +150,14 @@ func (v *TestExceptionResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("TestExceptionResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestExceptionResult) MethodName() string {
+	return "testException"
+}
+
+func (v *TestExceptionResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var TestExceptionHelper = struct {

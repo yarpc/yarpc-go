@@ -61,7 +61,11 @@ func (h handler) BlahBlah(req *thrift.Request, body wire.Value) (wire.Value, *th
 	}
 	res, err := h.impl.BlahBlah(req)
 	result, err := secondservice.BlahBlahHelper.WrapResponse(err)
-	return result.ToWire(), res, err
+	var w wire.Value
+	if err == nil {
+		w, err = result.ToWire()
+	}
+	return w, res, err
 }
 
 func (h handler) SecondtestString(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
@@ -71,5 +75,9 @@ func (h handler) SecondtestString(req *thrift.Request, body wire.Value) (wire.Va
 	}
 	success, res, err := h.impl.SecondtestString(req, args.Thing)
 	result, err := secondservice.SecondtestStringHelper.WrapResponse(success, err)
-	return result.ToWire(), res, err
+	var w wire.Value
+	if err == nil {
+		w, err = result.ToWire()
+	}
+	return w, res, err
 }

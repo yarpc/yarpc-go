@@ -43,8 +43,13 @@ type client struct{ c thrift.Client }
 
 func (c client) Echo(req *thrift.Request, ping *echo.Ping) (success *echo.Pong, res *thrift.Response, err error) {
 	args := echo2.EchoHelper.Args(ping)
+	var w wire.Value
+	w, err = args.ToWire()
+	if err != nil {
+		return
+	}
 	var body wire.Value
-	body, res, err = c.c.Call("echo", req, args.ToWire())
+	body, res, err = c.c.Call("echo", req, w)
 	if err != nil {
 		return
 	}

@@ -61,5 +61,9 @@ func (h handler) Echo(req *thrift.Request, body wire.Value) (wire.Value, *thrift
 	}
 	success, res, err := h.impl.Echo(req, args.Ping)
 	result, err := echo2.EchoHelper.WrapResponse(success, err)
-	return result.ToWire(), res, err
+	var w wire.Value
+	if err == nil {
+		w, err = result.ToWire()
+	}
+	return w, res, err
 }

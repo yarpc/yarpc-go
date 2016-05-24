@@ -33,14 +33,22 @@ type SecondtestStringArgs struct {
 	Thing *string `json:"thing,omitempty"`
 }
 
-func (v *SecondtestStringArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *SecondtestStringArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Thing != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(*(v.Thing))}
+		w, err = wire.NewValueString(*(v.Thing)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *SecondtestStringArgs) FromWire(w wire.Value) error {
@@ -71,18 +79,37 @@ func (v *SecondtestStringArgs) String() string {
 	return fmt.Sprintf("SecondtestStringArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *SecondtestStringArgs) MethodName() string {
+	return "secondtestString"
+}
+
+func (v *SecondtestStringArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type SecondtestStringResult struct {
 	Success *string `json:"success,omitempty"`
 }
 
-func (v *SecondtestStringResult) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *SecondtestStringResult) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: wire.NewValueString(*(v.Success))}
+		w, err = wire.NewValueString(*(v.Success)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("SecondtestStringResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *SecondtestStringResult) FromWire(w wire.Value) error {
@@ -100,6 +127,13 @@ func (v *SecondtestStringResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("SecondtestStringResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -111,6 +145,14 @@ func (v *SecondtestStringResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("SecondtestStringResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *SecondtestStringResult) MethodName() string {
+	return "secondtestString"
+}
+
+func (v *SecondtestStringResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var SecondtestStringHelper = struct {
