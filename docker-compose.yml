@@ -27,22 +27,22 @@ services:
     go:
         build: .
         ports:
-            - "8080-8082"
+            - "8080-8083"
 
     node:
         image: yarpc/yarpc-node
         ports:
-            - "8080-8082"
+            - "8080-8083"
 
     java:
         image: yarpc/yarpc-java
         ports:
-            - "8080-8082"
+            - "8080-8083"
 
     python:
         image: yarpc/yarpc-python
         ports:
-            - "8080:8082"
+            - "8080-8083"
 
     python-sync:
         image: yarpc/yarpc-python
