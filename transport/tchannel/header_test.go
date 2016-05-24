@@ -46,7 +46,7 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 				0x00, 0x05, // length = 5
 				'h', 'e', 'l', 'l', 'o',
 
-				0x00, 0x05, // lengtth = 5
+				0x00, 0x05, // length = 5
 				'w', 'o', 'r', 'l', 'd',
 			},
 			map[string]string{"hello": "world"},

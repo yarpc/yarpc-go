@@ -23,26 +23,28 @@ services:
             - BEHAVIOR_THRIFT=client,server,transport
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - BEHAVIOR_ERRORS=errors,server
+            - BEHAVIOR_TCHCLIENT=client,server,encoding
+            - BEHAVIOR_TCHSERVER=client,server,encoding
 
     go:
         build: .
         ports:
-            - "8080-8082"
+            - "8080-8083"
 
     node:
         image: yarpc/yarpc-node
         ports:
-            - "8080-8082"
+            - "8080-8083"
 
     java:
         image: yarpc/yarpc-java
         ports:
-            - "8080-8082"
+            - "8080-8083"
 
     python:
         image: yarpc/yarpc-python
         ports:
-            - "8080:8082"
+            - "8080-8083"
 
     python-sync:
         image: yarpc/yarpc-python

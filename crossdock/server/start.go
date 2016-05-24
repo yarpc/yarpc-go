@@ -21,47 +21,18 @@
 package server
 
 import (
-	"fmt"
-	"log"
-
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
-	tch "github.com/yarpc/yarpc-go/transport/tchannel"
-
-	"github.com/uber/tchannel-go"
+	"github.com/yarpc/yarpc-go/crossdock/server/tch"
+	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
 )
 
-var rpc yarpc.RPC
-
-// Start starts the test server that clients will make requests to
+// Start starts all required Crossdock test servers
 func Start() {
-	ch, err := tchannel.NewChannel("yarpc-test", nil)
-	if err != nil {
-		log.Fatalln("couldn't create tchannel: %v", err)
-	}
-
-	rpc = yarpc.New(yarpc.Config{
-		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
-			http.NewInbound(":8081"),
-			tch.NewInbound(ch, tch.ListenAddr(":8082")),
-		},
-	})
-
-	Register(rpc)
-
-	if err := rpc.Start(); err != nil {
-		fmt.Println("error:", err.Error())
-	}
+	yarpc.Start()
+	tch.Start()
 }
 
-// Stop stops running the RPC test subject
+// Stop stops all required Crossdock test servers
 func Stop() {
-	if rpc == nil {
-		return
-	}
-	if err := rpc.Stop(); err != nil {
-		fmt.Println("failed to stop:", err.Error())
-	}
+	yarpc.Stop()
+	tch.Stop()
 }

@@ -32,6 +32,12 @@ test-examples:
 	make -C examples
 
 
+.PHONY: clean
+clean:
+	docker-compose kill
+	docker-compose rm -f -a
+
+
 .PHONY: crossdock
 crossdock:
 	docker-compose kill go
