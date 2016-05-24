@@ -21,19 +21,15 @@
 package server
 
 import (
-	"fmt"
-
-	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
 )
 
-// UnexpectedError fails with an unexpected error.
-func UnexpectedError(req *json.Request, body interface{}) (interface{}, *json.Response, error) {
-	return nil, nil, fmt.Errorf("error")
+// Start starts all required Crossdock test servers
+func Start() {
+	yarpc.Start()
 }
 
-// BadResponse returns an object that's not a valid JSON response.
-func BadResponse(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
-	// func is not serializable
-	result := map[string]interface{}{"foo": func() {}}
-	return result, nil, nil
+// Stop stops all required Crossdock test servers
+func Stop() {
+	yarpc.Stop()
 }

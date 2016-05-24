@@ -18,50 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package yarpc
 
 import (
-	"fmt"
-	"log"
-
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
-	tch "github.com/yarpc/yarpc-go/transport/tchannel"
-
-	"github.com/uber/tchannel-go"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 )
 
-var rpc yarpc.RPC
-
-// Start starts the test server that clients will make requests to
-func Start() {
-	ch, err := tchannel.NewChannel("yarpc-test", nil)
-	if err != nil {
-		log.Fatalln("couldn't create tchannel: %v", err)
-	}
-
-	rpc = yarpc.New(yarpc.Config{
-		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
-			http.NewInbound(":8081"),
-			tch.NewInbound(ch, tch.ListenAddr(":8082")),
-		},
-	})
-
-	Register(rpc)
-
-	if err := rpc.Start(); err != nil {
-		fmt.Println("error:", err.Error())
-	}
+// EchoRaw implements the echo/raw procedure.
+func EchoRaw(req *raw.Request, body []byte) ([]byte, *raw.Response, error) {
+	return body, &raw.Response{Headers: req.Headers}, nil
 }
 
-// Stop stops running the RPC test subject
-func Stop() {
-	if rpc == nil {
-		return
-	}
-	if err := rpc.Stop(); err != nil {
-		fmt.Println("failed to stop:", err.Error())
-	}
+// EchoJSON implements the echo procedure.
+func EchoJSON(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+	return body, &json.Response{Headers: req.Headers}, nil
+}
+
+// EchoThrift implements the Thrift Echo service.
+type EchoThrift struct{}
+
+// Echo endpoint for the Echo service.
+func (EchoThrift) Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error) {
+	return &echo.Pong{Boop: ping.Beep}, &thrift.Response{Headers: req.Headers}, nil
 }
