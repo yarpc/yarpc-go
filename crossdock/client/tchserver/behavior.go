@@ -18,21 +18,55 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tchserver
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/server/tch"
-	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+	"fmt"
+
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/transport"
+
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-}
+// TODO move params up so all behaviors use the same ones
+const encodingParam = "encoding"
+const serverParam = "server"
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
+const serverPort = 8083
+const serverName = "tchannel-server"
+
+// Run executes the tchserver test
+func Run(s behavior.Sink, ps behavior.Params) {
+	fatals := behavior.Fatals(s)
+
+	encoding := ps.Param(encodingParam)
+	server := ps.Param(serverParam)
+	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
+
+	ch, err := tchannel.NewChannel("yarpc-client", nil)
+	if err != nil {
+		fatals.Fail("Could not create channel!", err)
+	}
+
+	rpc := yarpc.New(yarpc.Config{
+		Name: "yarpc-client",
+		Outbounds: transport.Outbounds{
+			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+		},
+	})
+
+	switch encoding {
+	case "raw":
+		runRaw(s, rpc)
+	case "json":
+		runJSON(s, rpc)
+	case "thrift":
+		runThrift(s, rpc)
+	default:
+		fatals.Fail("", "unknown encoding %q", encoding)
+	}
 }

@@ -24,6 +24,7 @@ services:
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - BEHAVIOR_ERRORS=errors,server
             - BEHAVIOR_TCHCLIENT=client,server,encoding
+            - BEHAVIOR_TCHSERVER=client,server,encoding
 
     go:
         build: .
