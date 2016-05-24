@@ -125,7 +125,7 @@ func (r rpc) Start() error {
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
-		return errorGroup{Errors: errors}
+		return errorGroup(errors)
 	}
 
 	return nil
@@ -151,7 +151,7 @@ func (r rpc) Stop() error {
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
-		return errorGroup{Errors: errors}
+		return errorGroup(errors)
 	}
 
 	return nil

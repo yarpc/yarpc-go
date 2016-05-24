@@ -26,14 +26,12 @@ import (
 )
 
 // errorGroup represents a collection of errors.
-type errorGroup struct {
-	Errors []error
-}
+type errorGroup []error
 
 func (e errorGroup) Error() string {
-	messages := make([]string, 0, len(e.Errors)+1)
+	messages := make([]string, 0, len(e)+1)
 	messages = append(messages, "the following errors occurred:")
-	for _, err := range e.Errors {
+	for _, err := range e {
 		messages = append(messages, err.Error())
 	}
 	return strings.Join(messages, "\n\t")
