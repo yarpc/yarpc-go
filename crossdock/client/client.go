@@ -22,6 +22,7 @@ package client
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
@@ -33,7 +34,7 @@ import (
 // Start begins a blocking Crossdock client
 func Start() {
 	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
