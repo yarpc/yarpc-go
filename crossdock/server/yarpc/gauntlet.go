@@ -21,6 +21,8 @@
 package yarpc
 
 import (
+	"errors"
+
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 )
@@ -50,8 +52,9 @@ func (thriftTest) TestException(req *thrift.Request, arg *string) (*thrift.Respo
 		code := int32(1001)
 		return nil, &gauntlet.Xception{ErrorCode: &code, Message: arg}
 	case "TException":
-		// TODO raise TException once we support it. Meanwhile, fallthrough.
-		fallthrough
+		// TODO raise TException once we support it. Meanwhile, return an
+		// unexpected exception.
+		return nil, errors.New("great sadness")
 	default:
 		return &thrift.Response{Headers: req.Headers}, nil
 	}
