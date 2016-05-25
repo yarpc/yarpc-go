@@ -18,22 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tchserver
 
 import (
 	"fmt"
 
-	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/transport"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 )
 
-// UnexpectedError fails with an unexpected error.
-func UnexpectedError(req *json.Request, body interface{}) (interface{}, *json.Response, error) {
-	return nil, nil, fmt.Errorf("error")
-}
+const (
+	serverPort = 8083
+	serverName = "tchannel-server"
+)
 
-// BadResponse returns an object that's not a valid JSON response.
-func BadResponse(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
-	// func is not serializable
-	result := map[string]interface{}{"foo": func() {}}
-	return result, nil, nil
+// Run executes the tchserver test
+func Run(s behavior.Sink, ps behavior.Params) {
+	fatals := behavior.Fatals(s)
+
+	encoding := ps.Param(params.Encoding)
+	server := ps.Param(params.Server)
+	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
+
+	ch, err := tchannel.NewChannel("yarpc-client", nil)
+	fatals.NoError(err, "could not create channel")
+
+	rpc := yarpc.New(yarpc.Config{
+		Name: "yarpc-client",
+		Outbounds: transport.Outbounds{
+			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+		},
+	})
+
+	switch encoding {
+	case "raw":
+		runRaw(s, rpc)
+	case "json":
+		runJSON(s, rpc)
+	case "thrift":
+		runThrift(s, rpc)
+	default:
+		fatals.Fail("", "unknown encoding %q", encoding)
+	}
 }

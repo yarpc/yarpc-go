@@ -18,10 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package params
 
-// Names of parameter keys for the behavior.
+// Params used by behaviors
 const (
-	TransportParam = "transport"
-	ServerParam    = "server"
+	Encoding  = "encoding"
+	Server    = "server"
+	Transport = "transport"
 )
