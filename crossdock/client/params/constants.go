@@ -18,9 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package params
 
-// Different parameter keys used by the system
+// Params used by behaviors
 const (
-	BehaviorParam = "behavior"
+	Encoding  = "encoding"
+	Server    = "server"
+	Transport = "transport"
 )

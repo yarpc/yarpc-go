@@ -32,6 +32,9 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
 )
 
+// BehaviorParam is the url param representing the test to run
+const BehaviorParam = "behavior"
+
 // Start begins a blocking Crossdock client
 func Start() {
 	http.HandleFunc("/", behaviorRequestHandler)

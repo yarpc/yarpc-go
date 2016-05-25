@@ -24,15 +24,15 @@ import (
 	"fmt"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 
 	"github.com/uber/tchannel-go"
 )
 
-const encodingParam = "encoding"
-const serverParam = "server"
-
-const serverPort = 8082
-const serverName = "yarpc-test"
+const (
+	serverPort = 8082
+	serverName = "yarpc-test"
+)
 
 var log = tchannel.SimpleLogger
 
@@ -40,8 +40,8 @@ var log = tchannel.SimpleLogger
 func Run(s behavior.Sink, ps behavior.Params) {
 	fatals := behavior.Fatals(s)
 
-	encoding := ps.Param(encodingParam)
-	server := ps.Param(serverParam)
+	encoding := ps.Param(params.Encoding)
+	server := ps.Param(params.Server)
 	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
 
 	ch, err := tchannel.NewChannel("tchannel-client", nil)

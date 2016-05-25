@@ -26,6 +26,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 	ht "github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
@@ -38,11 +39,11 @@ import (
 func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
 	fatals := behavior.Fatals(s)
 
-	server := p.Param(ServerParam)
+	server := p.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
 	var outbound transport.Outbound
-	trans := p.Param(TransportParam)
+	trans := p.Param(params.Transport)
 	switch trans {
 	case "http":
 		// Go HTTP servers have keep-alive enabled by default. If we re-use
