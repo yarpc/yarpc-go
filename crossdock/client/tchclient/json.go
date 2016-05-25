@@ -23,10 +23,10 @@ package tchclient
 import (
 	"time"
 
-	"github.com/uber/tchannel-go/json"
-
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
+
+	"github.com/uber/tchannel-go/json"
 )
 
 func runJSON(s behavior.Sink, call call) {

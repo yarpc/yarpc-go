@@ -23,9 +23,9 @@ package tchclient
 import (
 	"fmt"
 
-	"github.com/uber/tchannel-go"
-
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+
+	"github.com/uber/tchannel-go"
 )
 
 const encodingParam = "encoding"

@@ -23,11 +23,11 @@ package tchclient
 import (
 	"time"
 
-	"github.com/uber/tchannel-go/thrift"
-
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+
+	"github.com/uber/tchannel-go/thrift"
 )
 
 func runThrift(s behavior.Sink, call call) {

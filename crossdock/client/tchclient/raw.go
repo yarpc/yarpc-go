@@ -23,11 +23,11 @@ package tchclient
 import (
 	"time"
 
-	"github.com/uber/tchannel-go/raw"
-	"golang.org/x/net/context"
-
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
+
+	"github.com/uber/tchannel-go/raw"
+	"golang.org/x/net/context"
 )
 
 func runRaw(s behavior.Sink, call call) {
