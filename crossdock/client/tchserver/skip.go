@@ -18,21 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tchserver
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/server/tch"
-	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+	"net"
+
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-}
-
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
+// skipOnConnRefused will mark the test as skipped if we get ECONNREFUSED.
+// This just means that the server we are hitting has not yet implemented a
+// pure TCH server at port 8083. This is OK, Go is the only one who has done it this.
+func skipOnConnRefused(s behavior.Sink, err error) bool {
+	switch err.(type) {
+	case *net.OpError:
+		behavior.Skipf(s, "tchannel server not implemented: %v", err)
+		return true
+	}
+	return false
 }

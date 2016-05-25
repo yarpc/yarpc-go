@@ -30,6 +30,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
 	"github.com/yarpc/yarpc-go/crossdock/client/headers"
 	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
+	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
 )
 
 // BehaviorParam is the url param representing the test to run
@@ -71,6 +72,8 @@ func dispatch(s behavior.Sink, ps behavior.Params) {
 		headers.Run(s, ps)
 	case "tchclient":
 		tchclient.Run(s, ps)
+	case "tchserver":
+		tchserver.Run(s, ps)
 	default:
 		behavior.Skipf(s, "unknown behavior %q", v)
 	}

@@ -18,21 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tch
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/server/tch"
-	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+
+	"github.com/uber/tchannel-go/json"
+	"github.com/uber/tchannel-go/raw"
+	"github.com/uber/tchannel-go/thrift"
+	"golang.org/x/net/context"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
+type echoRawHandler struct{}
+
+func (echoRawHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return &raw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
 }
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
+func (echoRawHandler) OnError(ctx context.Context, err error) {
+	onError(ctx, err)
+}
+
+func echoJSONHandler(ctx json.Context, body map[string]interface{}) (map[string]interface{}, error) {
+	ctx.SetResponseHeaders(ctx.Headers())
+	return body, nil
+}
+
+type echoThriftHandler struct{}
+
+func (h *echoThriftHandler) Echo(ctx thrift.Context, ping *echo.Ping) (*echo.Pong, error) {
+	ctx.SetResponseHeaders(ctx.Headers())
+	return &echo.Pong{Boop: ping.Beep}, nil
 }
