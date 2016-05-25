@@ -142,13 +142,11 @@ func call(t *testing.T, args url.Values) {
 	u, err := url.Parse("http://127.0.0.1:8080")
 	require.NoError(t, err, "failed to parse URL")
 
-	u.RawQuery = args.Encode()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	u.RawQuery = args.Encode()
 	log.Println("GET", u.String())
-
 	res, err := ctxhttp.Get(ctx, nil, u.String())
 
 	require.NoError(t, err, "request %v failed", args)
