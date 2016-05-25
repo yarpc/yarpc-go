@@ -30,9 +30,11 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 )
 
-var log = tchannel.SimpleLogger
-var ch *tchannel.Channel
-var hostPort = ":8083"
+var (
+	log      = tchannel.SimpleLogger
+	ch       *tchannel.Channel
+	hostPort = ":8083"
+)
 
 // Start starts the tch testing server
 func Start() {

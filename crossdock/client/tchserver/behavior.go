@@ -47,7 +47,7 @@ func Run(s behavior.Sink, ps behavior.Params) {
 
 	ch, err := tchannel.NewChannel("yarpc-client", nil)
 	if err != nil {
-		fatals.Fail("Could not create channel!", err)
+		fatals.NoError(err, "could not create channel")
 	}
 
 	rpc := yarpc.New(yarpc.Config{
