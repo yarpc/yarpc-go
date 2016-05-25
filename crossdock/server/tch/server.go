@@ -18,50 +18,55 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tch
 
 import (
-	"fmt"
-	"log"
-
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
-	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+	"golang.org/x/net/context"
 
 	"github.com/uber/tchannel-go"
+	"github.com/uber/tchannel-go/json"
+	"github.com/uber/tchannel-go/raw"
+	"github.com/uber/tchannel-go/thrift"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 )
 
-var rpc yarpc.RPC
+var (
+	log      = tchannel.SimpleLogger
+	ch       *tchannel.Channel
+	hostPort = ":8083"
+)
 
-// Start starts the test server that clients will make requests to
+// Start starts the tch testing server
 func Start() {
-	ch, err := tchannel.NewChannel("yarpc-test", nil)
+	ch, err := tchannel.NewChannel("tchannel-server", &tchannel.ChannelOptions{Logger: tchannel.SimpleLogger})
 	if err != nil {
-		log.Fatalln("couldn't create tchannel: %v", err)
+		log.WithFields(tchannel.ErrField(err)).Fatal("Couldn't create new channel.")
 	}
 
-	rpc = yarpc.New(yarpc.Config{
-		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
-			http.NewInbound(":8081"),
-			tch.NewInbound(ch, tch.ListenAddr(":8082")),
-		},
-	})
+	register(ch)
 
-	Register(rpc)
-
-	if err := rpc.Start(); err != nil {
-		fmt.Println("error:", err.Error())
+	if err := ch.ListenAndServe(hostPort); err != nil {
+		log.WithFields(
+			tchannel.LogField{Key: "hostPort", Value: hostPort},
+			tchannel.ErrField(err),
+		).Fatal("Couldn't listen.")
 	}
 }
 
-// Stop stops running the RPC test subject
+// Stop stops the tch testing server
 func Stop() {
-	if rpc == nil {
-		return
+	if ch != nil {
+		ch.Close()
 	}
-	if err := rpc.Stop(); err != nil {
-		fmt.Println("failed to stop:", err.Error())
-	}
+}
+
+// Register the different endpoints of the test subject
+func register(ch *tchannel.Channel) {
+	ch.Register(raw.Wrap(echoRawHandler{}), "echo/raw")
+	json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError)
+	thrift.NewServer(ch).Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
+}
+
+func onError(ctx context.Context, err error) {
+	log.WithFields(tchannel.ErrField(err)).Fatal("onError handler triggered.")
 }

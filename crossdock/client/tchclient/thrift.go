@@ -18,9 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package tchclient
 
-// Different parameter keys used by the system
-const (
-	BehaviorParam = "behavior"
+import (
+	"time"
+
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+
+	"github.com/uber/tchannel-go/thrift"
 )
+
+func runThrift(s behavior.Sink, call call) {
+	assert := behavior.Assert(s)
+	checks := behavior.Checks(s)
+
+	headers := map[string]string{
+		"hello": "thrift",
+	}
+	token := random.String(5)
+
+	resp, respHeaders, err := thriftCall(call, headers, token)
+	if checks.NoError(err, "thrift: call failed") {
+		assert.Equal(token, resp.Boop, "body echoed")
+		assert.Equal(headers, respHeaders, "headers echoed")
+	}
+}
+
+func thriftCall(call call, headers map[string]string, token string) (*echo.Pong, map[string]string, error) {
+	call.Channel.Peers().Add(call.ServerHostPort)
+
+	ctx, cancel := thrift.NewContext(time.Second)
+	ctx = thrift.WithHeaders(ctx, headers)
+	defer cancel()
+
+	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
+	pong, err := client.Echo(ctx, &echo.Ping{Beep: token})
+	return pong, ctx.ResponseHeaders(), err
+}

@@ -18,7 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package server
 
-//go:generate thriftrw-go -yarpc echo.thrift
-//go:generate thrift-gen --generateThrift --inputFile echo.thrift
+import (
+	"github.com/yarpc/yarpc-go/crossdock/server/tch"
+	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+)
+
+// Start starts all required Crossdock test servers
+func Start() {
+	tch.Start()
+	yarpc.Start()
+}
+
+// Stop stops all required Crossdock test servers
+func Stop() {
+	tch.Stop()
+	yarpc.Stop()
+}
