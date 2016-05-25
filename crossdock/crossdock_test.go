@@ -27,12 +27,12 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
-
-	"github.com/stretchr/testify/require"
 	"github.com/yarpc/yarpc-go/crossdock/client"
 	"github.com/yarpc/yarpc-go/crossdock/server"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 const clientURL = "http://127.0.0.1:8080"
@@ -61,6 +61,7 @@ func TestCrossdock(t *testing.T) {
 	}{
 		{
 			name: "raw",
+
 			axes: axes{"transport": []string{"http", "tchannel"}},
 		},
 		{
@@ -115,6 +116,7 @@ func TestCrossdock(t *testing.T) {
 
 func wait(t *testing.T) {
 	attempts := 0
+	ctx := context.Background()
 	for {
 		if attempts > 9 {
 			t.Fatalf("could not talk to client in %d attempts", attempts)
@@ -122,7 +124,7 @@ func wait(t *testing.T) {
 
 		attempts++
 
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 
 		log.Println("HEAD", clientURL)
