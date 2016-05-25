@@ -134,6 +134,7 @@ func wait(t *testing.T) {
 		log.Println(err, "- sleeping for", sleepFor)
 		time.Sleep(sleepFor)
 	}
+
 	t.Fatalf("could not talk to client in %d attempts", totalAttempts)
 }
 
