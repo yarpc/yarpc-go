@@ -35,7 +35,7 @@ import (
 // Thrift implements the 'thrift' behavior.
 func Thrift(s behavior.Sink, p behavior.Params) {
 	s = createEchoSink("thrift", s, p)
-	rpc := createRPC(s, p)
+	rpc := behavior.CreateRPC(s, p)
 
 	client := echoclient.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)

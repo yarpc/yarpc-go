@@ -18,42 +18,59 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package behavior
 
 import (
-	"time"
+	"testing"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/encoding/json"
-
-	"golang.org/x/net/context"
+	"github.com/stretchr/testify/assert"
 )
 
-// jsonEcho contains an echo request or response for the JSON echo endpoint.
-type jsonEcho struct {
-	Token string `json:"token"`
-}
-
-// JSON implements the 'json' behavior.
-func JSON(s behavior.Sink, p behavior.Params) {
-	s = createEchoSink("json", s, p)
-	rpc := behavior.CreateRPC(s, p)
-
-	client := json.New(rpc.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-
-	var response jsonEcho
-	token := random.String(5)
-	_, err := client.Call(
-		&json.Request{
-			Context:   ctx,
-			Procedure: "echo",
-			TTL:       time.Second, // TODO context already has timeout; use that
+func TestCreateRPC(t *testing.T) {
+	tests := []struct {
+		p      Params
+		errOut string
+	}{
+		{
+			ParamsFromMap{"server": "localhost"},
+			`unknown transport ""`,
 		},
-		&jsonEcho{Token: token},
-		&response,
-	)
-	behavior.Fatals(s).NoError(err, "call to echo failed: %v", err)
-	behavior.Assert(s).Equal(token, response.Token, "server said: %v", response.Token)
+		{
+			ParamsFromMap{"transport": "http"},
+			"server is required",
+		},
+		{
+			ParamsFromMap{"server": "localhost", "transport": "foo"},
+			`unknown transport "foo"`,
+		},
+		{
+			p: ParamsFromMap{
+				"server":    "localhost",
+				"transport": "http",
+			},
+		},
+		{
+			p: ParamsFromMap{
+				"server":    "localhost",
+				"transport": "tchannel",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		entries := Run(func(s Sink) {
+			rpc := CreateRPC(s, tt.p)
+
+			// should get here only if the request succeeded
+			ch := rpc.Channel("yarpc-test")
+			assert.Equal(t, "client", ch.Caller)
+			assert.Equal(t, "yarpc-test", ch.Service)
+		})
+
+		if tt.errOut != "" && assert.Len(t, entries, 1) {
+			e := entries[0].(Entry)
+			assert.Equal(t, Failed, e.Status)
+			assert.Contains(t, e.Output, tt.errOut)
+		}
+	}
 }

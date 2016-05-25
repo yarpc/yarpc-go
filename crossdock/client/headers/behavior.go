@@ -75,7 +75,7 @@ func createHeadersSink(s behavior.Sink, ps behavior.Params) behavior.Sink {
 // Run runs the headers behavior
 func Run(s behavior.Sink, ps behavior.Params) {
 	s = createHeadersSink(s, ps)
-	rpc := createRPC(s, ps)
+	rpc := behavior.CreateRPC(s, ps)
 
 	fatals := behavior.Fatals(s)
 	assert := behavior.Assert(s)

@@ -18,14 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package headers
+package behavior
 
 import (
 	"fmt"
 	"net/http"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 	ht "github.com/yarpc/yarpc-go/transport/http"
@@ -34,10 +33,10 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// createRPC creates an RPC from the given parameters or fails the whole
+// CreateRPC creates an RPC from the given parameters or fails the whole
 // behavior.
-func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
-	fatals := behavior.Fatals(s)
+func CreateRPC(s Sink, p Params) yarpc.RPC {
+	fatals := Fatals(s)
 
 	server := p.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
