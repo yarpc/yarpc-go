@@ -31,7 +31,7 @@ import (
 )
 
 var log = tchannel.SimpleLogger
-var ch tchannel.Channel
+var ch *tchannel.Channel
 var hostPort = ":8083"
 
 // Start starts the tch testing server
@@ -53,10 +53,9 @@ func Start() {
 
 // Stop stops the tch testing server
 func Stop() {
-	// TODO commented for now because this causes:
-	// panic: runtime error: invalid memory address or nil pointer dereference [recovered]
-	//   panic: runtime error: invalid memory address or nil pointer dereference
-	// ch.Close()
+	if ch != nil {
+		ch.Close()
+	}
 }
 
 // Register the different endpoints of the test subject
