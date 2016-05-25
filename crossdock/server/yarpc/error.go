@@ -18,29 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package yarpc
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"fmt"
+
 	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 )
 
-// EchoRaw implements the echo/raw procedure.
-func EchoRaw(req *raw.Request, body []byte) ([]byte, *raw.Response, error) {
-	return body, &raw.Response{Headers: req.Headers}, nil
+// UnexpectedError fails with an unexpected error.
+func UnexpectedError(req *json.Request, body interface{}) (interface{}, *json.Response, error) {
+	return nil, nil, fmt.Errorf("error")
 }
 
-// EchoJSON implements the echo procedure.
-func EchoJSON(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
-	return body, &json.Response{Headers: req.Headers}, nil
-}
-
-// EchoThrift implements the Thrift Echo service.
-type EchoThrift struct{}
-
-// Echo endpoint for the Echo service.
-func (EchoThrift) Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error) {
-	return &echo.Pong{Boop: ping.Beep}, &thrift.Response{Headers: req.Headers}, nil
+// BadResponse returns an object that's not a valid JSON response.
+func BadResponse(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+	// func is not serializable
+	result := map[string]interface{}{"foo": func() {}}
+	return result, nil, nil
 }

@@ -22,18 +22,24 @@ package client
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
 	"github.com/yarpc/yarpc-go/crossdock/client/headers"
+	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
+	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
 )
+
+// BehaviorParam is the url param representing the test to run
+const BehaviorParam = "behavior"
 
 // Start begins a blocking Crossdock client
 func Start() {
 	http.HandleFunc("/", behaviorRequestHandler)
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +70,10 @@ func dispatch(s behavior.Sink, ps behavior.Params) {
 		errors.Run(s, ps)
 	case "headers":
 		headers.Run(s, ps)
+	case "tchclient":
+		tchclient.Run(s, ps)
+	case "tchserver":
+		tchserver.Run(s, ps)
 	default:
 		behavior.Skipf(s, "unknown behavior %q", v)
 	}

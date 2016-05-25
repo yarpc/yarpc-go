@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -74,7 +75,7 @@ func (h httpClient) Call(s behavior.Sink, hs transport.Headers, body string) htt
 func buildHTTPClient(s behavior.Sink, ps behavior.Params) httpClient {
 	fatals := behavior.Fatals(s)
 
-	server := ps.Param(ServerParam)
+	server := ps.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
 	url, err := url.Parse(fmt.Sprintf("http://%s:8081", server))
@@ -247,7 +248,7 @@ func Run(s behavior.Sink, ps behavior.Params) {
 				"service": "yarpc-test",
 				"procedure": "Echo::echo",
 				"body": "not a Thrift payload",
-				"transport": {"http": {"host": "` + ps.Param(ServerParam) + `", "port": 8081}}
+				"transport": {"http": {"host": "` + ps.Param(params.Server) + `", "port": 8081}}
 			}`,
 			wantStatus: 500,
 			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
@@ -266,7 +267,7 @@ func Run(s behavior.Sink, ps behavior.Params) {
 				"service": "yarpc-test",
 				"procedure": "unexpected-error",
 				"body": "{}",
-				"transport": {"http": {"host": "` + ps.Param(ServerParam) + `", "port": 8081}}
+				"transport": {"http": {"host": "` + ps.Param(params.Server) + `", "port": 8081}}
 			}`,
 			wantStatus: 500,
 			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +

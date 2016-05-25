@@ -26,6 +26,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 	ht "github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
@@ -65,9 +66,9 @@ func (s echoSink) Put(e interface{}) {
 func createEchoSink(encoding string, s behavior.Sink, p behavior.Params) behavior.Sink {
 	return echoSink{
 		Sink:      s,
-		Transport: p.Param(TransportParam),
+		Transport: p.Param(params.Transport),
 		Encoding:  encoding,
-		Server:    p.Param(ServerParam),
+		Server:    p.Param(params.Server),
 	}
 }
 
@@ -76,11 +77,11 @@ func createEchoSink(encoding string, s behavior.Sink, p behavior.Params) behavio
 func createRPC(s behavior.Sink, p behavior.Params) yarpc.RPC {
 	fatals := behavior.Fatals(s)
 
-	server := p.Param(ServerParam)
+	server := p.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
 	var outbound transport.Outbound
-	trans := p.Param(TransportParam)
+	trans := p.Param(params.Transport)
 	switch trans {
 	case "http":
 		// Go HTTP servers have keep-alive enabled by default. If we re-use

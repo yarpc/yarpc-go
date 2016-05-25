@@ -22,7 +22,7 @@ package main
 
 import (
 	"encoding/json"
-	"net/http"
+	"log"
 	"net/url"
 	"testing"
 	"time"
@@ -31,7 +31,11 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/server"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
+
+const clientURL = "http://127.0.0.1:8080"
 
 type result struct {
 	Status string `json:"status"`
@@ -41,23 +45,9 @@ type result struct {
 func TestCrossdock(t *testing.T) {
 	server.Start()
 	defer server.Stop()
-
 	go client.Start()
 
-	attempts := 0
-	for {
-		if attempts > 9 {
-			t.Fatalf("could not talk to client in %d attempts", attempts)
-		}
-
-		attempts++
-		_, err := http.Head("http://127.0.0.1:8080")
-		if err == nil {
-			break
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
+	wait(t)
 
 	type params map[string]string
 	type axes map[string][]string
@@ -71,6 +61,7 @@ func TestCrossdock(t *testing.T) {
 	}{
 		{
 			name: "raw",
+
 			axes: axes{"transport": []string{"http", "tchannel"}},
 		},
 		{
@@ -89,6 +80,18 @@ func TestCrossdock(t *testing.T) {
 			axes: axes{
 				"transport": []string{"http", "tchannel"},
 				"encoding":  []string{"raw", "json", "thrift"},
+			},
+		},
+		{
+			name: "tchclient",
+			axes: axes{
+				"encoding": []string{"raw", "json", "thrift"},
+			},
+		},
+		{
+			name: "tchserver",
+			axes: axes{
+				"encoding": []string{"raw", "json", "thrift"},
 			},
 		},
 	}
@@ -123,12 +126,40 @@ func TestCrossdock(t *testing.T) {
 	}
 }
 
+func wait(t *testing.T) {
+	totalAttempts := 10
+	ctx := context.Background()
+
+	for attempts := 0; attempts < totalAttempts; attempts++ {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+
+		log.Println("HEAD", clientURL)
+		_, err := ctxhttp.Head(ctx, nil, clientURL)
+		if err == nil {
+			log.Println("Client is ready, beginning test...")
+			return
+		}
+
+		sleepFor := 100 * time.Millisecond
+		log.Println(err, "- sleeping for", sleepFor)
+		time.Sleep(sleepFor)
+	}
+
+	t.Fatalf("could not talk to client in %d attempts", totalAttempts)
+}
+
 func call(t *testing.T, args url.Values) {
 	u, err := url.Parse("http://127.0.0.1:8080")
 	require.NoError(t, err, "failed to parse URL")
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	u.RawQuery = args.Encode()
-	res, err := http.Get(u.String())
+	log.Println("GET", u.String())
+	res, err := ctxhttp.Get(ctx, nil, u.String())
+
 	require.NoError(t, err, "request %v failed", args)
 	defer res.Body.Close()
 

@@ -18,24 +18,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package yarpc
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoserver"
+	j "encoding/json"
+	"testing"
+
 	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 )
 
-// Register the different endpoints of the TestSubject with the given
-// Registry.
-func Register(reg transport.Registry) {
-	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(reg, json.Procedure("echo", EchoJSON))
-	thrift.Register(reg, echoserver.New(EchoThrift{}))
+func TestUnexpectedError(t *testing.T) {
+	_, _, err := UnexpectedError(
+		&json.Request{
+			Context:   context.Background(),
+			Procedure: "unexpected-error",
+		},
+		map[string]interface{}{},
+	)
+	assert.Error(t, err)
+	assert.Equal(t, "error", err.Error())
+}
 
-	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
-	json.Register(reg, json.Procedure("bad-response", BadResponse))
-	json.Register(reg, json.Procedure("phone", Phone))
+func TestBadResponse(t *testing.T) {
+	result, _, err := BadResponse(
+		&json.Request{
+			Context:   context.Background(),
+			Procedure: "bad-response",
+		},
+		map[string]interface{}{},
+	)
+	assert.NoError(t, err)
+	_, err = j.Marshal(result)
+	assert.Error(t, err, "expected serialization to fail")
 }
