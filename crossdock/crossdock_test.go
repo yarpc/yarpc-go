@@ -123,7 +123,6 @@ func wait(t *testing.T) {
 		defer cancel()
 
 		log.Println("HEAD", clientURL)
-
 		_, err := ctxhttp.Head(ctx, nil, clientURL)
 		if err == nil {
 			log.Println("Client is ready, beginning test...")
