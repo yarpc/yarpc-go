@@ -23,11 +23,11 @@ package tchclient
 import (
 	"time"
 
-	"github.com/uber/tchannel-go/raw"
-	"golang.org/x/net/context"
-
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
+
+	"github.com/uber/tchannel-go/raw"
+	"golang.org/x/net/context"
 )
 
 func runRaw(s behavior.Sink, call call) {
@@ -44,7 +44,6 @@ func runRaw(s behavior.Sink, call call) {
 	token := random.Bytes(5)
 
 	resp, respHeaders, err := rawCall(call, headers, token)
-
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resp, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
@@ -56,8 +55,13 @@ func rawCall(call call, headers []byte, token []byte) ([]byte, []byte, error) {
 	defer cancel()
 
 	arg2, arg3, _, err := raw.Call(
-		ctx, call.Channel, call.ServerHostPort, serverName, "echo/raw", headers, token,
+		ctx,
+		call.Channel,
+		call.ServerHostPort,
+		serverName,
+		"echo/raw",
+		headers,
+		token,
 	)
-
 	return arg3, arg2, err
 }

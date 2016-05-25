@@ -23,10 +23,10 @@ package tchclient
 import (
 	"time"
 
-	"github.com/uber/tchannel-go/json"
-
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
+
+	"github.com/uber/tchannel-go/json"
 )
 
 func runJSON(s behavior.Sink, call call) {
@@ -39,12 +39,10 @@ func runJSON(s behavior.Sink, call call) {
 	token := random.String(5)
 
 	resp, respHeaders, err := jsonCall(call, headers, token)
-
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resp.Token, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
-
 }
 
 type jsonResp struct {
@@ -59,8 +57,6 @@ func jsonCall(call call, headers map[string]string, token string) (jsonResp, map
 	defer cancel()
 
 	var response jsonResp
-
 	err := json.CallPeer(ctx, peer, serverName, "echo", &jsonResp{Token: token}, &response)
-
 	return response, ctx.ResponseHeaders(), err
 }

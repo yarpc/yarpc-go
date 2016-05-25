@@ -23,11 +23,11 @@ package tchclient
 import (
 	"time"
 
-	"github.com/uber/tchannel-go/thrift"
-
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+
+	"github.com/uber/tchannel-go/thrift"
 )
 
 func runThrift(s behavior.Sink, call call) {
@@ -40,7 +40,6 @@ func runThrift(s behavior.Sink, call call) {
 	token := random.String(5)
 
 	resp, respHeaders, err := thriftCall(call, headers, token)
-
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resp.Boop, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
@@ -56,6 +55,5 @@ func thriftCall(call call, headers map[string]string, token string) (*echo.Pong,
 
 	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
 	pong, err := client.Echo(ctx, &echo.Ping{Beep: token})
-
 	return pong, ctx.ResponseHeaders(), err
 }

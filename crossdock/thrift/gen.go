@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo_generator
+package thrift
 
 //go:generate thriftrw-go -yarpc echo.thrift
+//go:generate thrift-gen --generateThrift --inputFile echo.thrift

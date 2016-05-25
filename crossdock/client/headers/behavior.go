@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
@@ -65,9 +66,9 @@ func (s headersSink) Put(e interface{}) {
 func createHeadersSink(s behavior.Sink, ps behavior.Params) behavior.Sink {
 	return headersSink{
 		Sink:      s,
-		Transport: ps.Param(TransportParam),
-		Encoding:  ps.Param(EncodingParam),
-		Server:    ps.Param(ServerParam),
+		Transport: ps.Param(params.Transport),
+		Encoding:  ps.Param(params.Encoding),
+		Server:    ps.Param(params.Server),
 	}
 }
 
@@ -81,7 +82,7 @@ func Run(s behavior.Sink, ps behavior.Params) {
 	checks := behavior.Checks(s)
 
 	var caller headerCaller
-	encoding := ps.Param(EncodingParam)
+	encoding := ps.Param(params.Encoding)
 	switch encoding {
 	case "raw":
 		caller = rawCaller{raw.New(rpc.Channel("yarpc-test"))}
