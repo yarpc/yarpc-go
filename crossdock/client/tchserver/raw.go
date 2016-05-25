@@ -43,11 +43,9 @@ func runRaw(s behavior.Sink, rpc yarpc.RPC) {
 	token := random.Bytes(5)
 
 	resBody, resMeta, err := rawCall(rpc, headers, token)
-
 	if skipOnConnRefused(s, err) {
 		return
 	}
-
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resBody, "body echoed")
 		assert.Equal(headers, resMeta.Headers, "headers echoed")
@@ -67,8 +65,6 @@ func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *r
 		Headers:   headers,
 		TTL:       time.Second,
 	}
-
 	resBody, resMeta, err := client.Call(reqMeta, token)
-
 	return resBody, resMeta, err
 }

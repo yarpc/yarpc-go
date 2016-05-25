@@ -42,11 +42,9 @@ func runJSON(s behavior.Sink, rpc yarpc.RPC) {
 	token := random.String(5)
 
 	resBody, resMeta, err := jsonCall(rpc, headers, token)
-
 	if skipOnConnRefused(s, err) {
 		return
 	}
-
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resBody, "body echoed")
 		assert.Equal(headers, resMeta.Headers, "headers echoed")
@@ -73,6 +71,5 @@ func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *
 
 	var resBody jsonEcho
 	resMeta, err := client.Call(reqMeta, reqBody, &resBody)
-
 	return resBody.Token, resMeta, err
 }

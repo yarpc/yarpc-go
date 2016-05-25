@@ -44,11 +44,9 @@ func runThrift(s behavior.Sink, rpc yarpc.RPC) {
 	token := random.String(5)
 
 	resBody, resMeta, err := thriftCall(rpc, headers, token)
-
 	if skipOnConnRefused(s, err) {
 		return
 	}
-
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resBody, "body echoed")
 		assert.Equal(headers, resMeta.Headers, "headers echoed")
@@ -69,10 +67,8 @@ func thriftCall(rpc yarpc.RPC, headers transport.Headers, token string) (string,
 	ping := &echo.Ping{Beep: token}
 
 	resBody, resMeta, err := client.Echo(reqMeta, ping)
-
 	if err != nil {
 		return "", nil, err
 	}
-
 	return resBody.Boop, resMeta, err
 }
