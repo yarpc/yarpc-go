@@ -26,6 +26,8 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoserver"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/secondserviceserver"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestserver"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
@@ -74,6 +76,8 @@ func register(rpc transport.Registry) {
 	raw.Register(rpc, raw.Procedure("echo/raw", EchoRaw))
 	json.Register(rpc, json.Procedure("echo", EchoJSON))
 	thrift.Register(rpc, echoserver.New(EchoThrift{}))
+	thrift.Register(rpc, thrifttestserver.New(thriftTest{}))
+	thrift.Register(rpc, secondserviceserver.New(secondService{}))
 
 	json.Register(rpc, json.Procedure("unexpected-error", UnexpectedError))
 	json.Register(rpc, json.Procedure("bad-response", BadResponse))
