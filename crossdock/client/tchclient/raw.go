@@ -18,21 +18,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tchclient
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/server/tch"
-	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+	"time"
+
+	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+
+	"github.com/uber/tchannel-go/raw"
+	"golang.org/x/net/context"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
+func runRaw(s behavior.Sink, call call) {
+	assert := behavior.Assert(s)
+	checks := behavior.Checks(s)
+
+	headers := []byte{
+		0x00, 0x01, // 1 header
+		0x00, 0x05, // length = 5
+		'h', 'e', 'l', 'l', 'o',
+		0x00, 0x03, // length = 3
+		'r', 'a', 'w',
+	}
+	token := random.Bytes(5)
+
+	resp, respHeaders, err := rawCall(call, headers, token)
+	if checks.NoError(err, "raw: call failed") {
+		assert.Equal(token, resp, "body echoed")
+		assert.Equal(headers, respHeaders, "headers echoed")
+	}
 }
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
+func rawCall(call call, headers []byte, token []byte) ([]byte, []byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	arg2, arg3, _, err := raw.Call(
+		ctx,
+		call.Channel,
+		call.ServerHostPort,
+		serverName,
+		"echo/raw",
+		headers,
+		token,
+	)
+	return arg3, arg2, err
 }

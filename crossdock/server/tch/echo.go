@@ -18,11 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package headers
+package tch
 
-// Names of parameter keys for the behavior.
-const (
-	EncodingParam  = "encoding"
-	ServerParam    = "server"
-	TransportParam = "transport"
+import (
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+
+	"github.com/uber/tchannel-go/json"
+	"github.com/uber/tchannel-go/raw"
+	"github.com/uber/tchannel-go/thrift"
+	"golang.org/x/net/context"
 )
+
+type echoRawHandler struct{}
+
+func (echoRawHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return &raw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
+}
+
+func (echoRawHandler) OnError(ctx context.Context, err error) {
+	onError(ctx, err)
+}
+
+func echoJSONHandler(ctx json.Context, body map[string]interface{}) (map[string]interface{}, error) {
+	ctx.SetResponseHeaders(ctx.Headers())
+	return body, nil
+}
+
+type echoThriftHandler struct{}
+
+func (h *echoThriftHandler) Echo(ctx thrift.Context, ping *echo.Ping) (*echo.Pong, error) {
+	ctx.SetResponseHeaders(ctx.Headers())
+	return &echo.Pong{Boop: ping.Beep}, nil
+}
