@@ -30,6 +30,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
+
 	"golang.org/x/net/context"
 )
 

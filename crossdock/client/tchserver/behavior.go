@@ -27,7 +27,6 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
-
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
