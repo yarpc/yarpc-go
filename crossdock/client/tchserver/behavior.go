@@ -25,6 +25,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
@@ -32,19 +33,17 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// TODO move params up so all behaviors use the same ones
-const encodingParam = "encoding"
-const serverParam = "server"
-
-const serverPort = 8083
-const serverName = "tchannel-server"
+const (
+	serverPort = 8083
+	serverName = "tchannel-server"
+)
 
 // Run executes the tchserver test
 func Run(s behavior.Sink, ps behavior.Params) {
 	fatals := behavior.Fatals(s)
 
-	encoding := ps.Param(encodingParam)
-	server := ps.Param(serverParam)
+	encoding := ps.Param(params.Encoding)
+	server := ps.Param(params.Server)
 	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
 
 	ch, err := tchannel.NewChannel("yarpc-client", nil)
