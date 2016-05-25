@@ -39,7 +39,6 @@ func runJSON(s behavior.Sink, call call) {
 	token := random.String(5)
 
 	resp, respHeaders, err := jsonCall(call, headers, token)
-
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resp.Token, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
@@ -59,8 +58,6 @@ func jsonCall(call call, headers map[string]string, token string) (jsonResp, map
 	defer cancel()
 
 	var response jsonResp
-
 	err := json.CallPeer(ctx, peer, serverName, "echo", &jsonResp{Token: token}, &response)
-
 	return response, ctx.ResponseHeaders(), err
 }
