@@ -2247,6 +2247,25 @@ func (v *Numberz) FromWire(w wire.Value) error {
 	return nil
 }
 
+func (v Numberz) String() string {
+	w := int32(v)
+	switch w {
+	case 1:
+		return "One"
+	case 2:
+		return "Two"
+	case 3:
+		return "Three"
+	case 5:
+		return "Five"
+	case 6:
+		return "Six"
+	case 8:
+		return "Eight"
+	}
+	return fmt.Sprintf("Numberz(%d)", w)
+}
+
 type OneField struct {
 	Field *EmptyStruct `json:"field,omitempty"`
 }
