@@ -46,7 +46,7 @@ func Run(s behavior.Sink, ps behavior.Params) {
 
 	ch, err := tchannel.NewChannel("tchannel-client", nil)
 	if err != nil {
-		fatals.Fail("Could not create channel!", err)
+		fatals.NoError(err, "Could not create channel")
 	}
 
 	call := call{Channel: ch, ServerHostPort: serverHostPort}
