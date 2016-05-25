@@ -18,10 +18,9 @@ for pkg in "$@"; do
 		if [[ -n "$filter" ]]; then
 			filter="$filter, "
 		fi
-		filter="\"$pkg\": true"
+		filter="$filter\"$pkg\": true"
 	fi
 done
-
 
 i=0
 for pkg in "$@"; do
