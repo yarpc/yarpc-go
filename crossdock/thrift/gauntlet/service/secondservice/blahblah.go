@@ -20,109 +20,102 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package secondservice
 
 import (
-	"errors"
 	"fmt"
 	"github.com/thriftrw/thriftrw-go/wire"
 	"strings"
 )
 
-type Ping struct {
-	Beep string `json:"beep"`
-}
+type BlahBlahArgs struct{}
 
-func (v *Ping) ToWire() (wire.Value, error) {
+func (v *BlahBlahArgs) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [0]wire.Field
 		i      int = 0
-		w      wire.Value
-		err    error
 	)
-	w, err = wire.NewValueString(v.Beep), error(nil)
-	if err != nil {
-		return w, err
-	}
-	fields[i] = wire.Field{ID: 1, Value: w}
-	i++
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func (v *Ping) FromWire(w wire.Value) error {
-	var err error
-	beepIsSet := false
+func (v *BlahBlahArgs) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
-		case 1:
-			if field.Value.Type() == wire.TBinary {
-				v.Beep, err = field.Value.GetString(), error(nil)
-				if err != nil {
-					return err
-				}
-				beepIsSet = true
-			}
 		}
-	}
-	if !beepIsSet {
-		return errors.New("field Beep of Ping is required")
 	}
 	return nil
 }
 
-func (v *Ping) String() string {
-	var fields [1]string
+func (v *BlahBlahArgs) String() string {
+	var fields [0]string
 	i := 0
-	fields[i] = fmt.Sprintf("Beep: %v", v.Beep)
-	i++
-	return fmt.Sprintf("Ping{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("BlahBlahArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
-type Pong struct {
-	Boop string `json:"boop"`
+func (v *BlahBlahArgs) MethodName() string {
+	return "blahBlah"
 }
 
-func (v *Pong) ToWire() (wire.Value, error) {
+func (v *BlahBlahArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+type BlahBlahResult struct{}
+
+func (v *BlahBlahResult) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [0]wire.Field
 		i      int = 0
-		w      wire.Value
-		err    error
 	)
-	w, err = wire.NewValueString(v.Boop), error(nil)
-	if err != nil {
-		return w, err
-	}
-	fields[i] = wire.Field{ID: 1, Value: w}
-	i++
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func (v *Pong) FromWire(w wire.Value) error {
-	var err error
-	boopIsSet := false
+func (v *BlahBlahResult) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
-		case 1:
-			if field.Value.Type() == wire.TBinary {
-				v.Boop, err = field.Value.GetString(), error(nil)
-				if err != nil {
-					return err
-				}
-				boopIsSet = true
-			}
 		}
-	}
-	if !boopIsSet {
-		return errors.New("field Boop of Pong is required")
 	}
 	return nil
 }
 
-func (v *Pong) String() string {
-	var fields [1]string
+func (v *BlahBlahResult) String() string {
+	var fields [0]string
 	i := 0
-	fields[i] = fmt.Sprintf("Boop: %v", v.Boop)
-	i++
-	return fmt.Sprintf("Pong{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("BlahBlahResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *BlahBlahResult) MethodName() string {
+	return "blahBlah"
+}
+
+func (v *BlahBlahResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+var BlahBlahHelper = struct {
+	IsException    func(error) bool
+	Args           func() *BlahBlahArgs
+	WrapResponse   func(error) (*BlahBlahResult, error)
+	UnwrapResponse func(*BlahBlahResult) error
+}{}
+
+func init() {
+	BlahBlahHelper.IsException = func(err error) bool {
+		switch err.(type) {
+		default:
+			return false
+		}
+	}
+	BlahBlahHelper.Args = func() *BlahBlahArgs {
+		return &BlahBlahArgs{}
+	}
+	BlahBlahHelper.WrapResponse = func(err error) (*BlahBlahResult, error) {
+		if err == nil {
+			return &BlahBlahResult{}, nil
+		}
+		return nil, err
+	}
+	BlahBlahHelper.UnwrapResponse = func(result *BlahBlahResult) (err error) {
+		return
+	}
 }

@@ -20,43 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echoclient
+package gauntlet
 
-import (
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
-)
 
-type Interface interface {
-	Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error)
-}
 
-func New(c transport.Channel) Interface {
-	return client{c: thrift.New(thrift.Config{Service: "Echo", Channel: c, Protocol: protocol.Binary})}
-}
-
-type client struct{ c thrift.Client }
-
-func (c client) Echo(req *thrift.Request, ping *echo.Ping) (success *echo.Pong, res *thrift.Response, err error) {
-	args := echo2.EchoHelper.Args(ping)
-	var w wire.Value
-	w, err = args.ToWire()
-	if err != nil {
-		return
-	}
-	var body wire.Value
-	body, res, err = c.c.Call("echo", req, w)
-	if err != nil {
-		return
-	}
-	var result echo2.EchoResult
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-	success, err = echo2.EchoHelper.UnwrapResponse(&result)
-	return
-}
+const MyNumberz Numberz = NumberzOne

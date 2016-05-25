@@ -20,29 +20,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package thrifttest
 
 import (
 	"errors"
 	"fmt"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"strings"
 )
 
-type EchoArgs struct {
-	Ping *echo.Ping `json:"ping,omitempty"`
+type TestI64Args struct {
+	Thing *int64 `json:"thing,omitempty"`
 }
 
-func (v *EchoArgs) ToWire() (wire.Value, error) {
+func (v *TestI64Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
-	if v.Ping != nil {
-		w, err = v.Ping.ToWire()
+	if v.Thing != nil {
+		w, err = wire.NewValueI64(*(v.Thing)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -52,19 +51,15 @@ func (v *EchoArgs) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Ping_Read(w wire.Value) (*echo.Ping, error) {
-	var v echo.Ping
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func (v *EchoArgs) FromWire(w wire.Value) error {
+func (v *TestI64Args) FromWire(w wire.Value) error {
 	var err error
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
-			if field.Value.Type() == wire.TStruct {
-				v.Ping, err = _Ping_Read(field.Value)
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Thing = &x
 				if err != nil {
 					return err
 				}
@@ -74,29 +69,29 @@ func (v *EchoArgs) FromWire(w wire.Value) error {
 	return nil
 }
 
-func (v *EchoArgs) String() string {
+func (v *TestI64Args) String() string {
 	var fields [1]string
 	i := 0
-	if v.Ping != nil {
-		fields[i] = fmt.Sprintf("Ping: %v", v.Ping)
+	if v.Thing != nil {
+		fields[i] = fmt.Sprintf("Thing: %v", *(v.Thing))
 		i++
 	}
-	return fmt.Sprintf("EchoArgs{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("TestI64Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-func (v *EchoArgs) MethodName() string {
-	return "echo"
+func (v *TestI64Args) MethodName() string {
+	return "testI64"
 }
 
-func (v *EchoArgs) EnvelopeType() wire.EnvelopeType {
+func (v *TestI64Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-type EchoResult struct {
-	Success *echo.Pong `json:"success,omitempty"`
+type TestI64Result struct {
+	Success *int64 `json:"success,omitempty"`
 }
 
-func (v *EchoResult) ToWire() (wire.Value, error) {
+func (v *TestI64Result) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -104,7 +99,7 @@ func (v *EchoResult) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Success != nil {
-		w, err = v.Success.ToWire()
+		w, err = wire.NewValueI64(*(v.Success)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -112,24 +107,20 @@ func (v *EchoResult) ToWire() (wire.Value, error) {
 		i++
 	}
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("EchoResult should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("TestI64Result should have exactly one field: got %v fields", i)
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Pong_Read(w wire.Value) (*echo.Pong, error) {
-	var v echo.Pong
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func (v *EchoResult) FromWire(w wire.Value) error {
+func (v *TestI64Result) FromWire(w wire.Value) error {
 	var err error
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 0:
-			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _Pong_Read(field.Value)
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Success = &x
 				if err != nil {
 					return err
 				}
@@ -141,55 +132,55 @@ func (v *EchoResult) FromWire(w wire.Value) error {
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("EchoResult should have exactly one field: got %v fields", count)
+		return fmt.Errorf("TestI64Result should have exactly one field: got %v fields", count)
 	}
 	return nil
 }
 
-func (v *EchoResult) String() string {
+func (v *TestI64Result) String() string {
 	var fields [1]string
 	i := 0
 	if v.Success != nil {
-		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		fields[i] = fmt.Sprintf("Success: %v", *(v.Success))
 		i++
 	}
-	return fmt.Sprintf("EchoResult{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("TestI64Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-func (v *EchoResult) MethodName() string {
-	return "echo"
+func (v *TestI64Result) MethodName() string {
+	return "testI64"
 }
 
-func (v *EchoResult) EnvelopeType() wire.EnvelopeType {
+func (v *TestI64Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
-var EchoHelper = struct {
+var TestI64Helper = struct {
 	IsException    func(error) bool
-	Args           func(ping *echo.Ping) *EchoArgs
-	WrapResponse   func(*echo.Pong, error) (*EchoResult, error)
-	UnwrapResponse func(*EchoResult) (*echo.Pong, error)
+	Args           func(thing *int64) *TestI64Args
+	WrapResponse   func(int64, error) (*TestI64Result, error)
+	UnwrapResponse func(*TestI64Result) (int64, error)
 }{}
 
 func init() {
-	EchoHelper.IsException = func(err error) bool {
+	TestI64Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		default:
 			return false
 		}
 	}
-	EchoHelper.Args = func(ping *echo.Ping) *EchoArgs {
-		return &EchoArgs{Ping: ping}
+	TestI64Helper.Args = func(thing *int64) *TestI64Args {
+		return &TestI64Args{Thing: thing}
 	}
-	EchoHelper.WrapResponse = func(success *echo.Pong, err error) (*EchoResult, error) {
+	TestI64Helper.WrapResponse = func(success int64, err error) (*TestI64Result, error) {
 		if err == nil {
-			return &EchoResult{Success: success}, nil
+			return &TestI64Result{Success: &success}, nil
 		}
 		return nil, err
 	}
-	EchoHelper.UnwrapResponse = func(result *EchoResult) (success *echo.Pong, err error) {
+	TestI64Helper.UnwrapResponse = func(result *TestI64Result) (success int64, err error) {
 		if result.Success != nil {
-			success = result.Success
+			success = *result.Success
 			return
 		}
 		err = errors.New("expected a non-void result")

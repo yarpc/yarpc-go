@@ -21,4 +21,9 @@
 package thrift
 
 //go:generate thriftrw-go -yarpc echo.thrift
+//go:generate thriftrw-go -yarpc gauntlet.thrift
 //go:generate thrift-gen --generateThrift --inputFile echo.thrift
+
+// Run this last
+
+//go:generate ../../scripts/updateLicenses.sh

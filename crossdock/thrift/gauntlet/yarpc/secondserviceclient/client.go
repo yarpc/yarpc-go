@@ -20,43 +20,63 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echoclient
+package secondserviceclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/service/secondservice"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
 type Interface interface {
-	Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error)
+	BlahBlah(req *thrift.Request) (*thrift.Response, error)
+	SecondtestString(req *thrift.Request, thing *string) (string, *thrift.Response, error)
 }
 
 func New(c transport.Channel) Interface {
-	return client{c: thrift.New(thrift.Config{Service: "Echo", Channel: c, Protocol: protocol.Binary})}
+	return client{c: thrift.New(thrift.Config{Service: "SecondService", Channel: c, Protocol: protocol.Binary})}
 }
 
 type client struct{ c thrift.Client }
 
-func (c client) Echo(req *thrift.Request, ping *echo.Ping) (success *echo.Pong, res *thrift.Response, err error) {
-	args := echo2.EchoHelper.Args(ping)
+func (c client) BlahBlah(req *thrift.Request) (res *thrift.Response, err error) {
+	args := secondservice.BlahBlahHelper.Args()
 	var w wire.Value
 	w, err = args.ToWire()
 	if err != nil {
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("echo", req, w)
+	body, res, err = c.c.Call("blahBlah", req, w)
 	if err != nil {
 		return
 	}
-	var result echo2.EchoResult
+	var result secondservice.BlahBlahResult
 	if err = result.FromWire(body); err != nil {
 		return
 	}
-	success, err = echo2.EchoHelper.UnwrapResponse(&result)
+	err = secondservice.BlahBlahHelper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) SecondtestString(req *thrift.Request, thing *string) (success string, res *thrift.Response, err error) {
+	args := secondservice.SecondtestStringHelper.Args(thing)
+	var w wire.Value
+	w, err = args.ToWire()
+	if err != nil {
+		return
+	}
+	var body wire.Value
+	body, res, err = c.c.Call("secondtestString", req, w)
+	if err != nil {
+		return
+	}
+	var result secondservice.SecondtestStringResult
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+	success, err = secondservice.SecondtestStringHelper.UnwrapResponse(&result)
 	return
 }

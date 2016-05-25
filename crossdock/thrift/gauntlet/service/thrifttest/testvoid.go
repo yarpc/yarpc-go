@@ -20,109 +20,102 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package thrifttest
 
 import (
-	"errors"
 	"fmt"
 	"github.com/thriftrw/thriftrw-go/wire"
 	"strings"
 )
 
-type Ping struct {
-	Beep string `json:"beep"`
-}
+type TestVoidArgs struct{}
 
-func (v *Ping) ToWire() (wire.Value, error) {
+func (v *TestVoidArgs) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [0]wire.Field
 		i      int = 0
-		w      wire.Value
-		err    error
 	)
-	w, err = wire.NewValueString(v.Beep), error(nil)
-	if err != nil {
-		return w, err
-	}
-	fields[i] = wire.Field{ID: 1, Value: w}
-	i++
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func (v *Ping) FromWire(w wire.Value) error {
-	var err error
-	beepIsSet := false
+func (v *TestVoidArgs) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
-		case 1:
-			if field.Value.Type() == wire.TBinary {
-				v.Beep, err = field.Value.GetString(), error(nil)
-				if err != nil {
-					return err
-				}
-				beepIsSet = true
-			}
 		}
-	}
-	if !beepIsSet {
-		return errors.New("field Beep of Ping is required")
 	}
 	return nil
 }
 
-func (v *Ping) String() string {
-	var fields [1]string
+func (v *TestVoidArgs) String() string {
+	var fields [0]string
 	i := 0
-	fields[i] = fmt.Sprintf("Beep: %v", v.Beep)
-	i++
-	return fmt.Sprintf("Ping{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("TestVoidArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
-type Pong struct {
-	Boop string `json:"boop"`
+func (v *TestVoidArgs) MethodName() string {
+	return "testVoid"
 }
 
-func (v *Pong) ToWire() (wire.Value, error) {
+func (v *TestVoidArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+type TestVoidResult struct{}
+
+func (v *TestVoidResult) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [0]wire.Field
 		i      int = 0
-		w      wire.Value
-		err    error
 	)
-	w, err = wire.NewValueString(v.Boop), error(nil)
-	if err != nil {
-		return w, err
-	}
-	fields[i] = wire.Field{ID: 1, Value: w}
-	i++
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func (v *Pong) FromWire(w wire.Value) error {
-	var err error
-	boopIsSet := false
+func (v *TestVoidResult) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
-		case 1:
-			if field.Value.Type() == wire.TBinary {
-				v.Boop, err = field.Value.GetString(), error(nil)
-				if err != nil {
-					return err
-				}
-				boopIsSet = true
-			}
 		}
-	}
-	if !boopIsSet {
-		return errors.New("field Boop of Pong is required")
 	}
 	return nil
 }
 
-func (v *Pong) String() string {
-	var fields [1]string
+func (v *TestVoidResult) String() string {
+	var fields [0]string
 	i := 0
-	fields[i] = fmt.Sprintf("Boop: %v", v.Boop)
-	i++
-	return fmt.Sprintf("Pong{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("TestVoidResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TestVoidResult) MethodName() string {
+	return "testVoid"
+}
+
+func (v *TestVoidResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+var TestVoidHelper = struct {
+	IsException    func(error) bool
+	Args           func() *TestVoidArgs
+	WrapResponse   func(error) (*TestVoidResult, error)
+	UnwrapResponse func(*TestVoidResult) error
+}{}
+
+func init() {
+	TestVoidHelper.IsException = func(err error) bool {
+		switch err.(type) {
+		default:
+			return false
+		}
+	}
+	TestVoidHelper.Args = func() *TestVoidArgs {
+		return &TestVoidArgs{}
+	}
+	TestVoidHelper.WrapResponse = func(err error) (*TestVoidResult, error) {
+		if err == nil {
+			return &TestVoidResult{}, nil
+		}
+		return nil, err
+	}
+	TestVoidHelper.UnwrapResponse = func(result *TestVoidResult) (err error) {
+		return
+	}
 }
