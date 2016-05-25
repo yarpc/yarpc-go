@@ -43,7 +43,6 @@ func runJSON(s behavior.Sink, call call) {
 		assert.Equal(token, resp.Token, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
-
 }
 
 type jsonResp struct {
