@@ -46,9 +46,7 @@ func Run(s behavior.Sink, ps behavior.Params) {
 	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
 
 	ch, err := tchannel.NewChannel("yarpc-client", nil)
-	if err != nil {
-		fatals.NoError(err, "could not create channel")
-	}
+	fatals.NoError(err, "could not create channel")
 
 	rpc := yarpc.New(yarpc.Config{
 		Name: "yarpc-client",
