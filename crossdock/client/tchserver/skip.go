@@ -21,53 +21,19 @@
 package tchserver
 
 import (
-	"time"
+	"net"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/transport"
-	"golang.org/x/net/context"
 )
 
-func runRaw(s behavior.Sink, rpc yarpc.RPC) {
-	assert := behavior.Assert(s)
-	checks := behavior.Checks(s)
-
-	// TODO headers should be at yarpc, not transport
-	headers := transport.Headers{
-		"hello": "raw",
+// skipOnConnRefused will mark the test as skipped if we get ECONNREFUSED.
+// This just means that the server we are hitting has not yet implemented a
+// pure TCH server at port 8083. This is OK, Go is the only one who has done it this.
+func skipOnConnRefused(s behavior.Sink, err error) bool {
+	switch err.(type) {
+	case *net.OpError:
+		behavior.Skipf(s, "tchannel server not implemented: %v", err)
+		return true
 	}
-	token := random.Bytes(5)
-
-	resBody, resMeta, err := rawCall(rpc, headers, token)
-
-	if skipOnConnRefused(s, err) {
-		return
-	}
-
-	if checks.NoError(err, "raw: call failed") {
-		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers, "headers echoed")
-	}
-}
-
-func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *raw.Response, error) {
-	client := raw.New(rpc.Channel(serverName))
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	// TODO rename to raw.ReqMeta
-	reqMeta := &raw.Request{
-		Context:   ctx,
-		Procedure: "echo/raw",
-		Headers:   headers,
-		TTL:       time.Second,
-	}
-
-	resBody, resMeta, err := client.Call(reqMeta, token)
-
-	return resBody, resMeta, err
+	return false
 }

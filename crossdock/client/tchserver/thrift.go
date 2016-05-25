@@ -21,7 +21,6 @@
 package tchserver
 
 import (
-	"net"
 	"time"
 
 	"github.com/yarpc/yarpc-go"
@@ -45,9 +44,7 @@ func runThrift(s behavior.Sink, rpc yarpc.RPC) {
 
 	resBody, resMeta, err := thriftCall(rpc, headers, token)
 
-	switch err.(type) {
-	case *net.OpError:
-		behavior.Skipf(s, "tchannel server not implemented: %v", err)
+	if skipOnConnRefused(s, err) {
 		return
 	}
 
