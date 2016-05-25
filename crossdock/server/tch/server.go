@@ -25,7 +25,7 @@ import (
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/json"
-	"github.com/uber/tchannel-go/testutils"
+	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 )
@@ -62,21 +62,11 @@ func Stop() {
 
 // Register the different endpoints of the test subject
 func register(ch *tchannel.Channel) {
-	var onError = func(ctx context.Context, err error) {
-		log.WithFields(tchannel.ErrField(err)).Fatal("onError handler triggered.")
-	}
+	ch.Register(raw.Wrap(echoRawHandler{}), "echo/raw")
+	json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError)
+	thrift.NewServer(ch).Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
+}
 
-	// raw endpoints
-	// TODO how not to use testutils?
-	// TODO how to reuse onError here?
-	testutils.RegisterFunc(ch, "echo/raw", echoRawHandler)
-
-	// json endpoints
-	json.Register(ch, json.Handlers{
-		"echo": echoJSONHandler}, onError,
-	)
-
-	// thrift endpoints
-	thserver := thrift.NewServer(ch)
-	thserver.Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
+func onError(ctx context.Context, err error) {
+	log.WithFields(tchannel.ErrField(err)).Fatal("onError handler triggered.")
 }

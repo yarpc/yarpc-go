@@ -21,16 +21,22 @@
 package tch
 
 import (
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+
 	"github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
 	"golang.org/x/net/context"
-
-	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 )
 
-func echoRawHandler(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+type echoRawHandler struct{}
+
+func (echoRawHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	return &raw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
+}
+
+func (echoRawHandler) OnError(ctx context.Context, err error) {
+	onError(ctx, err)
 }
 
 func echoJSONHandler(ctx json.Context, body map[string]interface{}) (map[string]interface{}, error) {
