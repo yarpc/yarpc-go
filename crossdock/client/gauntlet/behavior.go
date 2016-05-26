@@ -352,6 +352,17 @@ func Run(s behavior.Sink, ps behavior.Params) {
 			function: "TestVoid",
 			give:     []interface{}{},
 		},
+		{
+			service:  "SecondService",
+			function: "BlahBlah",
+			give:     []interface{}{},
+		},
+		{
+			service:  "SecondService",
+			function: "SecondtestString",
+			give:     []interface{}{stringp("hello")},
+			want:     "hello",
+		},
 	}
 
 	for _, tt := range tests {
@@ -432,7 +443,7 @@ func buildClient(s behavior.Sink, desc string, service string, channel transport
 	case "SecondService":
 		return reflect.ValueOf(secondserviceclient.New(channel))
 	default:
-		behavior.Assert(s).Fail("", "%v: unknown thrift service", desc)
+		behavior.Fatals(s).Fail("", "%v: unknown thrift service", desc)
 		return reflect.Value{} // we'll never actually get here
 	}
 }
