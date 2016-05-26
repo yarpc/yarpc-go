@@ -23,7 +23,7 @@ package tchclient
 import (
 	"fmt"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 
 	"github.com/uber/tchannel-go"
@@ -37,8 +37,8 @@ const (
 var log = tchannel.SimpleLogger
 
 // Run executes the tchclient test
-func Run(s behavior.Sink, ps behavior.Params) {
-	fatals := behavior.Fatals(s)
+func Run(s crossdock.Sink, ps crossdock.Params) {
+	fatals := crossdock.Fatals(s)
 
 	encoding := ps.Param(params.Encoding)
 	server := ps.Param(params.Server)

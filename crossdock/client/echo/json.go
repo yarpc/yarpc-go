@@ -23,6 +23,7 @@ package echo
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/encoding/json"
@@ -36,7 +37,7 @@ type jsonEcho struct {
 }
 
 // JSON implements the 'json' behavior.
-func JSON(s behavior.Sink, p behavior.Params) {
+func JSON(s crossdock.Sink, p crossdock.Params) {
 	s = createEchoSink("json", s, p)
 	rpc := behavior.CreateRPC(s, p)
 
@@ -54,6 +55,6 @@ func JSON(s behavior.Sink, p behavior.Params) {
 		&jsonEcho{Token: token},
 		&response,
 	)
-	behavior.Fatals(s).NoError(err, "call to echo failed: %v", err)
-	behavior.Assert(s).Equal(token, response.Token, "server said: %v", response.Token)
+	crossdock.Fatals(s).NoError(err, "call to echo failed: %v", err)
+	crossdock.Assert(s).Equal(token, response.Token, "server said: %v", response.Token)
 }

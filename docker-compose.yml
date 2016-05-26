@@ -17,6 +17,7 @@ services:
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
             - AXIS_ERRORS=go,node
+            - AXIS_GAUNTLET=go
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
@@ -25,6 +26,7 @@ services:
             - BEHAVIOR_ERRORS=errors,server
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - BEHAVIOR_TCHSERVER=client,server,encoding
+            - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
 
     go:
         build: .

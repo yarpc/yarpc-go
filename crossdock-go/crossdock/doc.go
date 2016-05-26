@@ -34,4 +34,4 @@
 // 	entries := behavior.Run(func(s Sink) {
 // 		MyBehavior(s, someParams)
 // 	})
-package behavior
+package crossdock

@@ -23,6 +23,7 @@ package headers
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
@@ -38,7 +39,7 @@ import (
 
 // headersEntry is an entry emitted by the headers behavior.
 type headersEntry struct {
-	behavior.Entry
+	crossdock.Entry
 
 	Transport string `json:"transport"`
 	Encoding  string `json:"encoding"`
@@ -47,7 +48,7 @@ type headersEntry struct {
 
 // headersSink wraps a sink to emit headersEntry entries.
 type headersSink struct {
-	behavior.Sink
+	crossdock.Sink
 
 	Transport string
 	Encoding  string
@@ -56,14 +57,14 @@ type headersSink struct {
 
 func (s headersSink) Put(e interface{}) {
 	s.Sink.Put(headersEntry{
-		Entry:     e.(behavior.Entry),
+		Entry:     e.(crossdock.Entry),
 		Transport: s.Transport,
 		Encoding:  s.Encoding,
 		Server:    s.Server,
 	})
 }
 
-func createHeadersSink(s behavior.Sink, ps behavior.Params) behavior.Sink {
+func createHeadersSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
 	return headersSink{
 		Sink:      s,
 		Transport: ps.Param(params.Transport),
@@ -73,13 +74,13 @@ func createHeadersSink(s behavior.Sink, ps behavior.Params) behavior.Sink {
 }
 
 // Run runs the headers behavior
-func Run(s behavior.Sink, ps behavior.Params) {
+func Run(s crossdock.Sink, ps crossdock.Params) {
 	s = createHeadersSink(s, ps)
 	rpc := behavior.CreateRPC(s, ps)
 
-	fatals := behavior.Fatals(s)
-	assert := behavior.Assert(s)
-	checks := behavior.Checks(s)
+	fatals := crossdock.Fatals(s)
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
 	var caller headerCaller
 	encoding := ps.Param(params.Encoding)

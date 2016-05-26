@@ -21,13 +21,13 @@
 package echo
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 )
 
 // echoEntry is an entry emitted by the echo behaviors.
 type echoEntry struct {
-	behavior.Entry
+	crossdock.Entry
 
 	Transport string `json:"transport"`
 	Encoding  string `json:"encoding"`
@@ -36,7 +36,7 @@ type echoEntry struct {
 
 // echoSink wraps a sink to emit echoEntry entries instead.
 type echoSink struct {
-	behavior.Sink
+	crossdock.Sink
 
 	Transport string
 	Encoding  string
@@ -45,7 +45,7 @@ type echoSink struct {
 
 func (s echoSink) Put(e interface{}) {
 	s.Sink.Put(echoEntry{
-		Entry:     e.(behavior.Entry),
+		Entry:     e.(crossdock.Entry),
 		Transport: s.Transport,
 		Encoding:  s.Encoding,
 		Server:    s.Server,
@@ -54,7 +54,7 @@ func (s echoSink) Put(e interface{}) {
 
 // createEchoSink wraps a Sink to have transport, encoding, and server
 // information.
-func createEchoSink(encoding string, s behavior.Sink, p behavior.Params) behavior.Sink {
+func createEchoSink(encoding string, s crossdock.Sink, p crossdock.Params) crossdock.Sink {
 	return echoSink{
 		Sink:      s,
 		Transport: p.Param(params.Transport),
