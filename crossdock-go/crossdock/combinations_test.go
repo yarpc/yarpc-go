@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package crossdock
 
 import (
 	"testing"
@@ -80,6 +80,6 @@ func TestCombinations(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, combinations(tt.axes))
+		assert.Equal(t, tt.want, Combinations(tt.axes))
 	}
 }

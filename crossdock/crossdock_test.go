@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client"
 	"github.com/yarpc/yarpc-go/crossdock/server"
 
@@ -109,7 +110,7 @@ func TestCrossdock(t *testing.T) {
 			continue
 		}
 
-		for _, entry := range combinations(bb.axes) {
+		for _, entry := range crossdock.Combinations(bb.axes) {
 			entryArgs := url.Values{}
 			for k := range args {
 				entryArgs.Set(k, args.Get(k))
