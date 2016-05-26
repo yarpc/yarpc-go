@@ -18,22 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package behavior
+package crossdock
 
-// Status represents the result of running a behavior.
-type Status string
+import "runtime/debug"
 
-// Different valid Statuses.
-const (
-	Passed  Status = "passed"
-	Skipped Status = "skipped"
-	Failed  Status = "failed"
-)
-
-// Entry is the most basic form of a test result.
+// Run the given function inside a behavior context and return the entries
+// logged by it.
 //
-// Each behavior can emit one or more entries.
-type Entry struct {
-	Status Status `json:"status"`
-	Output string `json:"output"`
+// Functions like Fatalf won't work if the behavior is not executed inside a
+// Run context.
+func Run(f func(Sink)) []interface{} {
+	var s entrySink
+	done := make(chan struct{})
+
+	// We run the function inside a goroutine so that Fatalf can simply call
+	// runtime.Goexit to stop execution.
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				Errorf(&s, "%v\n%s", err, string(debug.Stack()))
+			}
+			close(done)
+		}()
+
+		f(&s)
+	}()
+
+	<-done
+	return s.entries
 }

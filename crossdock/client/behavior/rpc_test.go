@@ -24,33 +24,34 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 )
 
 func TestCreateRPC(t *testing.T) {
 	tests := []struct {
-		p      Params
+		p      crossdock.Params
 		errOut string
 	}{
 		{
-			ParamsFromMap{"server": "localhost"},
+			crossdock.ParamsFromMap{"server": "localhost"},
 			`unknown transport ""`,
 		},
 		{
-			ParamsFromMap{"transport": "http"},
+			crossdock.ParamsFromMap{"transport": "http"},
 			"server is required",
 		},
 		{
-			ParamsFromMap{"server": "localhost", "transport": "foo"},
+			crossdock.ParamsFromMap{"server": "localhost", "transport": "foo"},
 			`unknown transport "foo"`,
 		},
 		{
-			p: ParamsFromMap{
+			p: crossdock.ParamsFromMap{
 				"server":    "localhost",
 				"transport": "http",
 			},
 		},
 		{
-			p: ParamsFromMap{
+			p: crossdock.ParamsFromMap{
 				"server":    "localhost",
 				"transport": "tchannel",
 			},
@@ -58,7 +59,7 @@ func TestCreateRPC(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		entries := Run(func(s Sink) {
+		entries := crossdock.Run(func(s crossdock.Sink) {
 			rpc := CreateRPC(s, tt.p)
 
 			// should get here only if the request succeeded
@@ -68,8 +69,8 @@ func TestCreateRPC(t *testing.T) {
 		})
 
 		if tt.errOut != "" && assert.Len(t, entries, 1) {
-			e := entries[0].(Entry)
-			assert.Equal(t, Failed, e.Status)
+			e := entries[0].(crossdock.Entry)
+			assert.Equal(t, crossdock.Failed, e.Status)
 			assert.Contains(t, e.Output, tt.errOut)
 		}
 	}

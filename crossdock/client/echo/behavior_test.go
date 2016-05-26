@@ -23,7 +23,7 @@ package echo
 import (
 	"testing"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -31,17 +31,17 @@ import (
 func TestEchoSink(t *testing.T) {
 	tests := []struct {
 		server, transport, encoding string
-		act                         func(behavior.Sink)
+		act                         func(crossdock.Sink)
 		entry                       echoEntry
 	}{
 		{
 			"localhost", "tchannel", "json",
-			func(s behavior.Sink) {
-				behavior.Successf(s, "it worked!")
+			func(s crossdock.Sink) {
+				crossdock.Successf(s, "it worked!")
 			},
 			echoEntry{
-				Entry: behavior.Entry{
-					Status: behavior.Passed,
+				Entry: crossdock.Entry{
+					Status: crossdock.Passed,
 					Output: "it worked!",
 				},
 				Transport: "tchannel",
@@ -51,12 +51,12 @@ func TestEchoSink(t *testing.T) {
 		},
 		{
 			"localhost", "http", "thrift",
-			func(s behavior.Sink) {
-				behavior.Skipf(s, "what even is")
+			func(s crossdock.Sink) {
+				crossdock.Skipf(s, "what even is")
 			},
 			echoEntry{
-				Entry: behavior.Entry{
-					Status: behavior.Skipped,
+				Entry: crossdock.Entry{
+					Status: crossdock.Skipped,
 					Output: "what even is",
 				},
 				Transport: "http",
@@ -66,12 +66,12 @@ func TestEchoSink(t *testing.T) {
 		},
 		{
 			"localhost", "http", "raw",
-			func(s behavior.Sink) {
-				behavior.Fatalf(s, "great sadness")
+			func(s crossdock.Sink) {
+				crossdock.Fatalf(s, "great sadness")
 			},
 			echoEntry{
-				Entry: behavior.Entry{
-					Status: behavior.Failed,
+				Entry: crossdock.Entry{
+					Status: crossdock.Failed,
 					Output: "great sadness",
 				},
 				Transport: "http",
@@ -82,8 +82,8 @@ func TestEchoSink(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		entries := behavior.Run(func(s behavior.Sink) {
-			es := createEchoSink(tt.encoding, s, behavior.ParamsFromMap{
+		entries := crossdock.Run(func(s crossdock.Sink) {
+			es := createEchoSink(tt.encoding, s, crossdock.ParamsFromMap{
 				"server":    tt.server,
 				"transport": tt.transport,
 			})

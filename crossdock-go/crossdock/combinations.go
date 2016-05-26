@@ -18,14 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package crossdock
 
 import "sort"
 
-// combinations takes a map from axis name to list of values for that axis and
+// Combinations takes a map from axis name to list of values for that axis and
 // returns a collection of entries which contain all combinations of each axis
 // value with every other axis' values.
-func combinations(axes map[string][]string) []map[string]string {
+func Combinations(axes map[string][]string) []map[string]string {
 	// sort the names to get deterministic ordering
 	names := make([]string, 0, len(axes))
 	for name := range axes {

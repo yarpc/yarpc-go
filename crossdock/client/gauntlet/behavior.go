@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
@@ -38,14 +39,14 @@ import (
 )
 
 type gauntletEntry struct {
-	behavior.Entry
+	crossdock.Entry
 
 	Transport string `json:"transport"`
 	Server    string `json:"server"`
 }
 
 type gauntletSink struct {
-	behavior.Sink
+	crossdock.Sink
 
 	Transport string
 	Server    string
@@ -53,13 +54,13 @@ type gauntletSink struct {
 
 func (s gauntletSink) Put(e interface{}) {
 	s.Sink.Put(gauntletEntry{
-		Entry:     e.(behavior.Entry),
+		Entry:     e.(crossdock.Entry),
 		Transport: s.Transport,
 		Server:    s.Server,
 	})
 }
 
-func createGauntletSink(s behavior.Sink, ps behavior.Params) behavior.Sink {
+func createGauntletSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
 	return gauntletSink{
 		Sink:      s,
 		Transport: ps.Param(params.Transport),
@@ -68,10 +69,10 @@ func createGauntletSink(s behavior.Sink, ps behavior.Params) behavior.Sink {
 }
 
 // Run executes the thriftgauntlet behavior.
-func Run(s behavior.Sink, ps behavior.Params) {
+func Run(s crossdock.Sink, ps crossdock.Params) {
 	s = createGauntletSink(s, ps)
-	assert := behavior.Assert(s)
-	checks := behavior.Checks(s)
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
 	rpc := behavior.CreateRPC(s, ps)
 
@@ -401,7 +402,7 @@ func Run(s behavior.Sink, ps behavior.Params) {
 
 		got, err := extractCallResponse(s, desc, f.Call(args))
 		if isUnrecognizedProcedure(err) {
-			behavior.Skipf(s, "%v: procedure not defined", desc)
+			crossdock.Skipf(s, "%v: procedure not defined", desc)
 			continue
 		}
 
@@ -436,19 +437,19 @@ func isUnrecognizedProcedure(err error) bool {
 	return false
 }
 
-func buildClient(s behavior.Sink, desc string, service string, channel transport.Channel) reflect.Value {
+func buildClient(s crossdock.Sink, desc string, service string, channel transport.Channel) reflect.Value {
 	switch service {
 	case "", "ThriftTest":
 		return reflect.ValueOf(thrifttestclient.New(channel))
 	case "SecondService":
 		return reflect.ValueOf(secondserviceclient.New(channel))
 	default:
-		behavior.Fatals(s).Fail("", "%v: unknown thrift service", desc)
+		crossdock.Fatals(s).Fail("", "%v: unknown thrift service", desc)
 		return reflect.Value{} // we'll never actually get here
 	}
 }
 
-func extractCallResponse(s behavior.Sink, desc string, returns []reflect.Value) (interface{}, error) {
+func extractCallResponse(s crossdock.Sink, desc string, returns []reflect.Value) (interface{}, error) {
 	var (
 		err error
 		got interface{}
@@ -467,15 +468,15 @@ func extractCallResponse(s behavior.Sink, desc string, returns []reflect.Value) 
 			err = e.(error)
 		}
 	default:
-		behavior.Assert(s).Fail("",
+		crossdock.Assert(s).Fail("",
 			"%v: received unexpected number of return values: %v", desc, returns)
 	}
 
 	return got, err
 }
 
-func buildArgs(s behavior.Sink, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
-	check := behavior.Checks(s)
+func buildArgs(s crossdock.Sink, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
+	check := crossdock.Checks(s)
 	wantIn := len(give) + 1
 	if !check.Equal(wantIn, ft.NumIn(), "%v: should accept %d arguments", desc, wantIn) {
 		return nil, false

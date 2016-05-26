@@ -18,50 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchclient
+package crossdock
 
 import (
+	"log"
+	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-
-	"github.com/uber/tchannel-go/raw"
 	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
-func runRaw(s crossdock.Sink, call call) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+// Wait sends attempts HEAD requests to url
+func Wait(t *testing.T, url string, attempts int) {
+	ctx := context.Background()
 
-	headers := []byte{
-		0x00, 0x01, // 1 header
-		0x00, 0x05, // length = 5
-		'h', 'e', 'l', 'l', 'o',
-		0x00, 0x03, // length = 3
-		'r', 'a', 'w',
+	for a := 0; a < attempts; a++ {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+
+		log.Println("HEAD", url)
+		_, err := ctxhttp.Head(ctx, nil, url)
+		if err == nil {
+			log.Println("Client is ready, beginning test...")
+			return
+		}
+
+		sleepFor := 100 * time.Millisecond
+		log.Println(err, "- sleeping for", sleepFor)
+		time.Sleep(sleepFor)
 	}
-	token := random.Bytes(5)
 
-	resp, respHeaders, err := rawCall(call, headers, token)
-	if checks.NoError(err, "raw: call failed") {
-		assert.Equal(token, resp, "body echoed")
-		assert.Equal(headers, respHeaders, "headers echoed")
-	}
-}
-
-func rawCall(call call, headers []byte, token []byte) ([]byte, []byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	arg2, arg3, _, err := raw.Call(
-		ctx,
-		call.Channel,
-		call.ServerHostPort,
-		serverName,
-		"echo/raw",
-		headers,
-		token,
-	)
-	return arg3, arg2, err
+	t.Fatalf("could not talk to client in %d attempts", attempts)
 }

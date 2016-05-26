@@ -18,50 +18,52 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchclient
+package crossdock
 
 import (
+	"encoding/json"
+	"log"
+	"net/url"
+	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-
-	"github.com/uber/tchannel-go/raw"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
-func runRaw(s crossdock.Sink, call call) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+// Call makes a GET request to the client
+func Call(t *testing.T, clientURL string, behavior string, args url.Values) {
+	args.Set("behavior", behavior)
+	u, err := url.Parse(clientURL)
+	require.NoError(t, err, "failed to parse URL")
 
-	headers := []byte{
-		0x00, 0x01, // 1 header
-		0x00, 0x05, // length = 5
-		'h', 'e', 'l', 'l', 'o',
-		0x00, 0x03, // length = 3
-		'r', 'a', 'w',
-	}
-	token := random.Bytes(5)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	resp, respHeaders, err := rawCall(call, headers, token)
-	if checks.NoError(err, "raw: call failed") {
-		assert.Equal(token, resp, "body echoed")
-		assert.Equal(headers, respHeaders, "headers echoed")
+	u.RawQuery = args.Encode()
+	log.Println("GET", u.String())
+	res, err := ctxhttp.Get(ctx, nil, u.String())
+
+	require.NoError(t, err, "request %v failed", args)
+	defer res.Body.Close()
+
+	var results Results
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&results),
+		"failed to decode response for %v", args)
+
+	for _, result := range results {
+		if result.Status != "passed" && result.Status != "skipped" {
+			t.Errorf("request %v failed: %s", args, result.Output)
+		}
 	}
 }
 
-func rawCall(call call, headers []byte, token []byte) ([]byte, []byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+// Results represents the response of an entire test
+type Results []Result
 
-	arg2, arg3, _, err := raw.Call(
-		ctx,
-		call.Channel,
-		call.ServerHostPort,
-		serverName,
-		"echo/raw",
-		headers,
-		token,
-	)
-	return arg3, arg2, err
+// Result represents one of many results in a test run
+type Result struct {
+	Status string `json:"status"`
+	Output string `json:"output"`
 }

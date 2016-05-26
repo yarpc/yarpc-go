@@ -21,33 +21,21 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
 	"net/url"
 	"testing"
-	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock/client"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/server"
-
-	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
 )
 
 const clientURL = "http://127.0.0.1:8080"
 
-type result struct {
-	Status string `json:"status"`
-	Output string `json:"output"`
-}
-
 func TestCrossdock(t *testing.T) {
 	server.Start()
 	defer server.Stop()
-	go client.Start()
+	go crossdock.Start(dispatch)
 
-	wait(t)
+	crossdock.Wait(t, clientURL, 10)
 
 	type params map[string]string
 	type axes map[string][]string
@@ -105,17 +93,16 @@ func TestCrossdock(t *testing.T) {
 	for _, bb := range behaviors {
 
 		args := url.Values{}
-		args.Set("behavior", bb.name)
 		for k, v := range defaultParams {
 			args.Set(k, v)
 		}
 
 		if len(bb.axes) == 0 {
-			call(t, args)
+			crossdock.Call(t, clientURL, bb.name, args)
 			continue
 		}
 
-		for _, entry := range combinations(bb.axes) {
+		for _, entry := range crossdock.Combinations(bb.axes) {
 			entryArgs := url.Values{}
 			for k := range args {
 				entryArgs.Set(k, args.Get(k))
@@ -127,55 +114,7 @@ func TestCrossdock(t *testing.T) {
 				entryArgs.Set(k, v)
 			}
 
-			call(t, entryArgs)
-		}
-	}
-}
-
-func wait(t *testing.T) {
-	totalAttempts := 10
-	ctx := context.Background()
-
-	for attempts := 0; attempts < totalAttempts; attempts++ {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-
-		log.Println("HEAD", clientURL)
-		_, err := ctxhttp.Head(ctx, nil, clientURL)
-		if err == nil {
-			log.Println("Client is ready, beginning test...")
-			return
-		}
-
-		sleepFor := 100 * time.Millisecond
-		log.Println(err, "- sleeping for", sleepFor)
-		time.Sleep(sleepFor)
-	}
-
-	t.Fatalf("could not talk to client in %d attempts", totalAttempts)
-}
-
-func call(t *testing.T, args url.Values) {
-	u, err := url.Parse("http://127.0.0.1:8080")
-	require.NoError(t, err, "failed to parse URL")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	u.RawQuery = args.Encode()
-	log.Println("GET", u.String())
-	res, err := ctxhttp.Get(ctx, nil, u.String())
-
-	require.NoError(t, err, "request %v failed", args)
-	defer res.Body.Close()
-
-	var results []result
-	require.NoError(t, json.NewDecoder(res.Body).Decode(&results),
-		"failed to decode response for %v", args)
-
-	for _, result := range results {
-		if result.Status != "passed" && result.Status != "skipped" {
-			t.Errorf("request %v failed: %s", args, result.Output)
+			crossdock.Call(t, clientURL, bb.name, entryArgs)
 		}
 	}
 }
