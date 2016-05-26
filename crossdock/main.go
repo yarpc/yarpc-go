@@ -21,11 +21,38 @@
 package main
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/client"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
+	b "github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock/client/echo"
+	"github.com/yarpc/yarpc-go/crossdock/client/errors"
+	"github.com/yarpc/yarpc-go/crossdock/client/headers"
+	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
+	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
 	"github.com/yarpc/yarpc-go/crossdock/server"
 )
 
 func main() {
 	server.Start()
-	client.Start()
+	crossdock.Start(dispatch)
+}
+
+func dispatch(s b.Sink, behavior string, ps b.Params) {
+	switch behavior {
+	case "raw":
+		echo.Raw(s, ps)
+	case "json":
+		echo.JSON(s, ps)
+	case "thrift":
+		echo.Thrift(s, ps)
+	case "errors":
+		errors.Run(s, ps)
+	case "headers":
+		headers.Run(s, ps)
+	case "tchclient":
+		tchclient.Run(s, ps)
+	case "tchserver":
+		tchserver.Run(s, ps)
+	default:
+		b.Skipf(s, "unknown behavior %q", behavior)
+	}
 }

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package crossdock
 
 import (
 	"encoding/json"
@@ -26,56 +26,37 @@ import (
 	"net/http"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-	"github.com/yarpc/yarpc-go/crossdock/client/errors"
-	"github.com/yarpc/yarpc-go/crossdock/client/headers"
-	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
-	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
 )
 
 // BehaviorParam is the url param representing the test to run
 const BehaviorParam = "behavior"
 
+// Dispatcher is a func that runs when the Crossdock client receives a request
+type Dispatcher func(s behavior.Sink, behavior string, ps behavior.Params)
+
 // Start begins a blocking Crossdock client
-func Start() {
-	http.HandleFunc("/", behaviorRequestHandler)
+func Start(dispatcher Dispatcher) {
+	http.Handle("/", requestHandler{dispatcher: dispatcher})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func behaviorRequestHandler(w http.ResponseWriter, r *http.Request) {
+type requestHandler struct {
+	dispatcher Dispatcher
+}
+
+func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "HEAD" {
 		return
 	}
 
+	params := httpParams{r}
 	entries := behavior.Run(func(s behavior.Sink) {
-		dispatch(s, httpParams{r})
+		h.dispatcher(s, params.Param("behavior"), params)
 	})
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(entries); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func dispatch(s behavior.Sink, ps behavior.Params) {
-	v := ps.Param(BehaviorParam)
-	switch v {
-	case "raw":
-		echo.Raw(s, ps)
-	case "json":
-		echo.JSON(s, ps)
-	case "thrift":
-		echo.Thrift(s, ps)
-	case "errors":
-		errors.Run(s, ps)
-	case "headers":
-		headers.Run(s, ps)
-	case "tchclient":
-		tchclient.Run(s, ps)
-	case "tchserver":
-		tchserver.Run(s, ps)
-	default:
-		behavior.Skipf(s, "unknown behavior %q", v)
 	}
 }
 
