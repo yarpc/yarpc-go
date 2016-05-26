@@ -57,6 +57,9 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		Headers: treq.Headers,
 		TTL:     treq.TTL,
 	}, reqBody)
+	if err != nil {
+		return err
+	}
 
 	if response != nil {
 		rw.AddHeaders(response.Headers)
