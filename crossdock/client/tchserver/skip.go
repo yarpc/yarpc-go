@@ -23,7 +23,7 @@ package tchserver
 import (
 	"net"
 
-	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
+	"github.com/yarpc/yarpc-go/crossdock-go"
 )
 
 // skipOnConnRefused will mark the test as skipped if we get ECONNREFUSED.

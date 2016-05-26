@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
+	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
