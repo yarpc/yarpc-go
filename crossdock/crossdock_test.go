@@ -48,7 +48,7 @@ func TestCrossdock(t *testing.T) {
 	defer server.Stop()
 	go client.Start()
 
-	wait(t)
+	crossdock.Wait(t, clientURL, 10)
 
 	type params map[string]string
 	type axes map[string][]string
@@ -125,29 +125,6 @@ func TestCrossdock(t *testing.T) {
 			call(t, entryArgs)
 		}
 	}
-}
-
-func wait(t *testing.T) {
-	totalAttempts := 10
-	ctx := context.Background()
-
-	for attempts := 0; attempts < totalAttempts; attempts++ {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-
-		log.Println("HEAD", clientURL)
-		_, err := ctxhttp.Head(ctx, nil, clientURL)
-		if err == nil {
-			log.Println("Client is ready, beginning test...")
-			return
-		}
-
-		sleepFor := 100 * time.Millisecond
-		log.Println(err, "- sleeping for", sleepFor)
-		time.Sleep(sleepFor)
-	}
-
-	t.Fatalf("could not talk to client in %d attempts", totalAttempts)
 }
 
 func call(t *testing.T, args url.Values) {
