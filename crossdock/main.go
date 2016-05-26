@@ -24,6 +24,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
+	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/client/headers"
 	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
 	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
@@ -51,6 +52,8 @@ func dispatch(s crossdock.Sink, behavior string, ps crossdock.Params) {
 		tchclient.Run(s, ps)
 	case "tchserver":
 		tchserver.Run(s, ps)
+	case "thriftgauntlet":
+		gauntlet.Run(s, ps)
 	default:
 		crossdock.Skipf(s, "unknown behavior %q", behavior)
 	}
