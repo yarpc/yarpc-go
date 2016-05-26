@@ -21,7 +21,7 @@
 package echo
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
+	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 )
 

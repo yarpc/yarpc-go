@@ -21,7 +21,7 @@
 package main
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
+	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"

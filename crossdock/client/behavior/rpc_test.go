@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
+	"github.com/yarpc/yarpc-go/crossdock-go"
 )
 
 func TestCreateRPC(t *testing.T) {
