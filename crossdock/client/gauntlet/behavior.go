@@ -74,7 +74,6 @@ func Run(s behavior.Sink, ps behavior.Params) {
 	checks := behavior.Checks(s)
 
 	rpc := behavior.CreateRPC(s, ps)
-	channel := rpc.Channel("yarpc-test")
 
 	bytesToken := random.Bytes(10)
 	tests := []struct {
@@ -370,30 +369,10 @@ func Run(s behavior.Sink, ps behavior.Params) {
 			desc = tt.service + ": " + desc
 		}
 
-		var client reflect.Value
-		switch tt.service {
-		case "", "ThriftTest":
-			client = reflect.ValueOf(thrifttestclient.New(channel))
-		case "SecondService":
-			client = reflect.ValueOf(secondserviceclient.New(channel))
-		default:
-			assert.Fail("", "%v: unknown thrift service", desc)
-		}
-
+		client := buildClient(s, desc, tt.service, rpc.Channel("yarpc-test"))
 		f := client.MethodByName(tt.function)
 		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
 			continue
-		}
-		ft := f.Type()
-
-		if !checks.Equal(1+len(tt.give), ft.NumIn(), "%v: should accept %d arguments", desc, 1+len(tt.give)) {
-			continue
-		}
-
-		if tt.want != nil {
-			if !checks.Equal(3, ft.NumOut(), "%v: should return 3 values", desc) {
-				continue
-			}
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -403,52 +382,16 @@ func Run(s behavior.Sink, ps behavior.Params) {
 		}
 
 		args := []reflect.Value{reflect.ValueOf(&req)}
-		for i, v := range tt.give {
-			var val reflect.Value
-			vt := ft.In(i + 1)
-			if v == nil {
-				// nil is an invalid argument to ValueOf. For nil, use the zero
-				// value for that argument.
-				val = reflect.Zero(vt)
-			} else {
-				val = reflect.ValueOf(v)
-			}
-			if !checks.Equal(vt, val.Type(), "%v: argument %v type mismatch", desc, i) {
-				continue
-			}
-			args = append(args, val)
+		if give, ok := buildArgs(s, desc, f.Type(), tt.give); ok {
+			args = append(args, give...)
+		} else {
+			continue
 		}
 
-		var (
-			returns = f.Call(args)
-			err     error
-			got     interface{}
-		)
-
-		switch len(returns) {
-		case 2:
-			e := returns[1].Interface()
-			if e != nil {
-				err = e.(error)
-			}
-		case 3:
-			got = returns[0].Interface()
-			e := returns[2].Interface()
-			if e != nil {
-				err = e.(error)
-			}
-		default:
-			assert.Fail("",
-				"%v: received unexpected number of return values: %v", desc, returns)
-		}
-
-		if _, isBadRequest := err.(transport.BadRequestError); isBadRequest {
-			// TODO: Once all other languages implement the gauntlet test
-			// subject, we can remove this check.
-			if strings.Contains(err.Error(), "unrecognized procedure") {
-				behavior.Skipf(s, "%v: procedure not defined", desc)
-				continue
-			}
+		got, err := extractCallResponse(s, desc, f.Call(args))
+		if isUnrecognizedProcedure(err) {
+			behavior.Skipf(s, "%v: procedure not defined", desc)
+			continue
 		}
 
 		if tt.wantError != nil || tt.wantErrorLike != "" {
@@ -473,9 +416,81 @@ func Run(s behavior.Sink, ps behavior.Params) {
 	}
 }
 
-func boolp(x bool) *bool         { return &x }
+func isUnrecognizedProcedure(err error) bool {
+	if _, isBadRequest := err.(transport.BadRequestError); isBadRequest {
+		// TODO: Once all other languages implement the gauntlet test
+		// subject, we can remove this check.
+		return strings.Contains(err.Error(), "unrecognized procedure")
+	}
+	return false
+}
+
+func buildClient(s behavior.Sink, desc string, service string, channel transport.Channel) reflect.Value {
+	switch service {
+	case "", "ThriftTest":
+		return reflect.ValueOf(thrifttestclient.New(channel))
+	case "SecondService":
+		return reflect.ValueOf(secondserviceclient.New(channel))
+	default:
+		behavior.Assert(s).Fail("", "%v: unknown thrift service", desc)
+		return reflect.Value{} // we'll never actually get here
+	}
+}
+
+func extractCallResponse(s behavior.Sink, desc string, returns []reflect.Value) (interface{}, error) {
+	var (
+		err error
+		got interface{}
+	)
+
+	switch len(returns) {
+	case 2:
+		e := returns[1].Interface()
+		if e != nil {
+			err = e.(error)
+		}
+	case 3:
+		got = returns[0].Interface()
+		e := returns[2].Interface()
+		if e != nil {
+			err = e.(error)
+		}
+	default:
+		behavior.Assert(s).Fail("",
+			"%v: received unexpected number of return values: %v", desc, returns)
+	}
+
+	return got, err
+}
+
+func buildArgs(s behavior.Sink, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
+	check := behavior.Checks(s)
+	wantIn := len(give) + 1
+	if !check.Equal(wantIn, ft.NumIn(), "%v: should accept %d arguments", desc, wantIn) {
+		return nil, false
+	}
+
+	var args []reflect.Value
+	for i, v := range give {
+		var val reflect.Value
+		vt := ft.In(i + 1)
+		if v == nil {
+			// nil is an invalid argument to ValueOf. For nil, use the zero
+			// value for that argument.
+			val = reflect.Zero(vt)
+		} else {
+			val = reflect.ValueOf(v)
+		}
+		if !check.Equal(vt, val.Type(), "%v: argument %v type mismatch", desc, i) {
+			return nil, false
+		}
+		args = append(args, val)
+	}
+
+	return args, true
+}
+
 func bytep(x int8) *int8         { return &x }
-func int16p(x int16) *int16      { return &x }
 func int32p(x int32) *int32      { return &x }
 func int64p(x int64) *int64      { return &x }
 func doublep(x float64) *float64 { return &x }
