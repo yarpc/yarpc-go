@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
@@ -34,9 +34,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runThrift(s behavior.Sink, rpc yarpc.RPC) {
-	assert := behavior.Assert(s)
-	checks := behavior.Checks(s)
+func runThrift(s crossdock.Sink, rpc yarpc.RPC) {
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
 	headers := transport.Headers{
 		"hello": "thrift",

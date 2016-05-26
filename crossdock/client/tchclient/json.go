@@ -23,15 +23,15 @@ package tchclient
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 
 	"github.com/uber/tchannel-go/json"
 )
 
-func runJSON(s behavior.Sink, call call) {
-	assert := behavior.Assert(s)
-	checks := behavior.Checks(s)
+func runJSON(s crossdock.Sink, call call) {
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
 	headers := map[string]string{
 		"hello": "json",

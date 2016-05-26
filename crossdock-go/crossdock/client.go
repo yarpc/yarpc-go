@@ -24,15 +24,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 )
 
 // BehaviorParam is the url param representing the test to run
 const BehaviorParam = "behavior"
 
 // Dispatcher is a func that runs when the Crossdock client receives a request
-type Dispatcher func(s behavior.Sink, behavior string, ps behavior.Params)
+type Dispatcher func(s Sink, behavior string, ps Params)
 
 // Start begins a blocking Crossdock client
 func Start(dispatcher Dispatcher) {
@@ -50,7 +48,7 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := httpParams{r}
-	entries := behavior.Run(func(s behavior.Sink) {
+	entries := Run(func(s Sink) {
 		h.dispatcher(s, params.Param("behavior"), params)
 	})
 

@@ -18,19 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package behavior
+// Package behavior implements the machinery for writing behaviors in a way
+// similar to unit tests.
+//
+// 	func MyBehavior(s behavior.Sink, p behavior.Params) {
+// 		if p.Param("something") != "foo" {
+// 			behavior.Failf(s, "expected foo, got %v", p.Param("something"))
+// 		}
+// 		behavior.Successf(s, "success")
+// 	}
+//
+// Sinks can be obtained using the Run function. Sinks are not valid outside
+// the Run context.
+//
+// 	entries := behavior.Run(func(s Sink) {
+// 		MyBehavior(s, someParams)
+// 	})
 
-// Params provides access to the behavior parameters.
-type Params interface {
-	// Returns the value of the given parameter or an empty string if the
-	// parameter is unknown.
-	Param(name string) string
-}
-
-// ParamsFromMap constructs a Params object from the given map.
-type ParamsFromMap map[string]string
-
-// Param for ParamsFromMap.
-func (m ParamsFromMap) Param(name string) string {
-	return m[name]
-}
+package crossdock

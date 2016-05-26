@@ -24,7 +24,7 @@ import (
 	"fmt"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
@@ -38,8 +38,8 @@ const (
 )
 
 // Run executes the tchserver test
-func Run(s behavior.Sink, ps behavior.Params) {
-	fatals := behavior.Fatals(s)
+func Run(s crossdock.Sink, ps crossdock.Params) {
+	fatals := crossdock.Fatals(s)
 
 	encoding := ps.Param(params.Encoding)
 	server := ps.Param(params.Server)

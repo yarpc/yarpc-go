@@ -23,16 +23,16 @@ package tchclient
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 
 	"github.com/uber/tchannel-go/thrift"
 )
 
-func runThrift(s behavior.Sink, call call) {
-	assert := behavior.Assert(s)
-	checks := behavior.Checks(s)
+func runThrift(s crossdock.Sink, call call) {
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
 	headers := map[string]string{
 		"hello": "thrift",

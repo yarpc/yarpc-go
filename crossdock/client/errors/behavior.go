@@ -27,7 +27,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 )
@@ -42,8 +42,8 @@ type httpResponse struct {
 	Status int
 }
 
-func (h httpClient) Call(s behavior.Sink, hs transport.Headers, body string) httpResponse {
-	fatals := behavior.Fatals(s)
+func (h httpClient) Call(s crossdock.Sink, hs transport.Headers, body string) httpResponse {
+	fatals := crossdock.Fatals(s)
 
 	req := http.Request{
 		Method:        "POST",
@@ -72,8 +72,8 @@ func (h httpClient) Call(s behavior.Sink, hs transport.Headers, body string) htt
 	}
 }
 
-func buildHTTPClient(s behavior.Sink, ps behavior.Params) httpClient {
-	fatals := behavior.Fatals(s)
+func buildHTTPClient(s crossdock.Sink, ps crossdock.Params) httpClient {
+	fatals := crossdock.Fatals(s)
 
 	server := ps.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
@@ -88,9 +88,9 @@ func buildHTTPClient(s behavior.Sink, ps behavior.Params) httpClient {
 }
 
 // Run runs the errors behavior.
-func Run(s behavior.Sink, ps behavior.Params) {
+func Run(s crossdock.Sink, ps crossdock.Params) {
 	client := buildHTTPClient(s, ps)
-	assert := behavior.Assert(s)
+	assert := crossdock.Assert(s)
 
 	// one valid request before we throw the errors at it
 	res := client.Call(s, transport.Headers{
