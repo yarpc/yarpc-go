@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
-	"github.com/yarpc/yarpc-go/crossdock/client"
 	"github.com/yarpc/yarpc-go/crossdock/server"
 )
 
@@ -34,7 +33,7 @@ const clientURL = "http://127.0.0.1:8080"
 func TestCrossdock(t *testing.T) {
 	server.Start()
 	defer server.Stop()
-	go client.Start()
+	go crossdock.Start(dispatch)
 
 	crossdock.Wait(t, clientURL, 10)
 
@@ -81,6 +80,12 @@ func TestCrossdock(t *testing.T) {
 			name: "tchserver",
 			axes: axes{
 				"encoding": []string{"raw", "json", "thrift"},
+			},
+		},
+		{
+			name: "thriftgauntlet",
+			axes: axes{
+				"transport": []string{"http", "tchannel"},
 			},
 		},
 	}

@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/encoding/raw"
@@ -32,7 +33,7 @@ import (
 )
 
 // Raw implements the 'raw' behavior.
-func Raw(s behavior.Sink, p behavior.Params) {
+func Raw(s crossdock.Sink, p crossdock.Params) {
 	s = createEchoSink("raw", s, p)
 	rpc := behavior.CreateRPC(s, p)
 
@@ -46,6 +47,6 @@ func Raw(s behavior.Sink, p behavior.Params) {
 		TTL:       time.Second, // TODO context already has timeout; use that
 	}, token)
 
-	behavior.Fatals(s).NoError(err, "call to echo/raw failed: %v", err)
-	behavior.Assert(s).True(bytes.Equal(token, resBody), "server said: %v", resBody)
+	crossdock.Fatals(s).NoError(err, "call to echo/raw failed: %v", err)
+	crossdock.Assert(s).True(bytes.Equal(token, resBody), "server said: %v", resBody)
 }

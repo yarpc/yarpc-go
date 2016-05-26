@@ -23,6 +23,7 @@ package echo
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
@@ -33,7 +34,7 @@ import (
 )
 
 // Thrift implements the 'thrift' behavior.
-func Thrift(s behavior.Sink, p behavior.Params) {
+func Thrift(s crossdock.Sink, p crossdock.Params) {
 	s = createEchoSink("thrift", s, p)
 	rpc := behavior.CreateRPC(s, p)
 
@@ -49,6 +50,6 @@ func Thrift(s behavior.Sink, p behavior.Params) {
 		&echo.Ping{Beep: token},
 	)
 
-	behavior.Fatals(s).NoError(err, "call to Echo::echo failed: %v", err)
-	behavior.Assert(s).Equal(token, pong.Boop, "server said: %v", pong.Boop)
+	crossdock.Fatals(s).NoError(err, "call to Echo::echo failed: %v", err)
+	crossdock.Assert(s).Equal(token, pong.Boop, "server said: %v", pong.Boop)
 }

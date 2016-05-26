@@ -25,6 +25,7 @@ import (
 	"net/http"
 
 	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 	ht "github.com/yarpc/yarpc-go/transport/http"
@@ -35,8 +36,8 @@ import (
 
 // CreateRPC creates an RPC from the given parameters or fails the whole
 // behavior.
-func CreateRPC(s Sink, p Params) yarpc.RPC {
-	fatals := Fatals(s)
+func CreateRPC(s crossdock.Sink, p crossdock.Params) yarpc.RPC {
+	fatals := crossdock.Fatals(s)
 
 	server := p.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")

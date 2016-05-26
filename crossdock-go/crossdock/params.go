@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package behavior
+package crossdock
 
 // Params provides access to the behavior parameters.
 type Params interface {

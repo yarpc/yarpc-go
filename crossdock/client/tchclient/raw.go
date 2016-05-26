@@ -23,16 +23,16 @@ package tchclient
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
+	"github.com/yarpc/yarpc-go/crossdock-go/crossdock"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 
 	"github.com/uber/tchannel-go/raw"
 	"golang.org/x/net/context"
 )
 
-func runRaw(s behavior.Sink, call call) {
-	assert := behavior.Assert(s)
-	checks := behavior.Checks(s)
+func runRaw(s crossdock.Sink, call call) {
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
 	headers := []byte{
 		0x00, 0x01, // 1 header
