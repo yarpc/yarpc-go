@@ -34,7 +34,7 @@ import (
 // Raw implements the 'raw' behavior.
 func Raw(s behavior.Sink, p behavior.Params) {
 	s = createEchoSink("raw", s, p)
-	rpc := createRPC(s, p)
+	rpc := behavior.CreateRPC(s, p)
 
 	client := raw.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
