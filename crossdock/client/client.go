@@ -28,6 +28,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
+	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/client/headers"
 	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
 	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
@@ -66,6 +67,8 @@ func dispatch(s behavior.Sink, ps behavior.Params) {
 		echo.JSON(s, ps)
 	case "thrift":
 		echo.Thrift(s, ps)
+	case "thriftgauntlet":
+		gauntlet.Run(s, ps)
 	case "errors":
 		errors.Run(s, ps)
 	case "headers":
