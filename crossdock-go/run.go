@@ -28,7 +28,7 @@ import "runtime/debug"
 // Functions like Fatalf won't work if the behavior is not executed inside a
 // Run context.
 func Run(f func(T)) []interface{} {
-	var s entrySink
+	var t entryT
 	done := make(chan struct{})
 
 	// We run the function inside a goroutine so that Fatalf can simply call
@@ -36,14 +36,14 @@ func Run(f func(T)) []interface{} {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				Errorf(&s, "%v\n%s", err, string(debug.Stack()))
+				Errorf(&t, "%v\n%s", err, string(debug.Stack()))
 			}
 			close(done)
 		}()
 
-		f(&s)
+		f(&t)
 	}()
 
 	<-done
-	return s.entries
+	return t.entries
 }

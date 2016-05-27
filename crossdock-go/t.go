@@ -35,8 +35,8 @@ type T interface {
 //
 // This may be called multiple times if multiple tests inside a behavior were
 // skipped.
-func Skipf(s T, format string, args ...interface{}) {
-	s.Put(Entry{
+func Skipf(t T, format string, args ...interface{}) {
+	t.Put(Entry{
 		Status: Skipped,
 		Output: fmt.Sprintf(format, args...),
 	})
@@ -46,8 +46,8 @@ func Skipf(s T, format string, args ...interface{}) {
 //
 // This may be called multiple times if multiple tests inside a behavior
 // failed.
-func Errorf(s T, format string, args ...interface{}) {
-	s.Put(Entry{
+func Errorf(t T, format string, args ...interface{}) {
+	t.Put(Entry{
 		Status: Failed,
 		Output: fmt.Sprintf(format, args...),
 	})
@@ -56,17 +56,17 @@ func Errorf(s T, format string, args ...interface{}) {
 // Fatalf records a failed test and stops executing the current behavior.
 //
 // This may be used to stop executing in case of irrecoverable errors.
-func Fatalf(s T, format string, args ...interface{}) {
-	Errorf(s, format, args...)
-	s.FailNow()
+func Fatalf(t T, format string, args ...interface{}) {
+	Errorf(t, format, args...)
+	t.FailNow()
 }
 
 // Successf records a successful test.
 //
 // This may be called multiple times for multiple successful tests inside a
 // behavior.
-func Successf(s T, format string, args ...interface{}) {
-	s.Put(Entry{
+func Successf(t T, format string, args ...interface{}) {
+	t.Put(Entry{
 		Status: Passed,
 		Output: fmt.Sprintf(format, args...),
 	})
@@ -74,15 +74,15 @@ func Successf(s T, format string, args ...interface{}) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-// entrySink is a sink that keeps track of entries in-order
-type entrySink struct{ entries []interface{} }
+// entryT is a sink that keeps track of entries in-order
+type entryT struct{ entries []interface{} }
 
-func (e *entrySink) FailNow() {
+func (*entryT) FailNow() {
 	// Exit this goroutine and call any deferred functions
 	runtime.Goexit()
 }
 
 // Put an entry into the EntrySink.
-func (e *entrySink) Put(v interface{}) {
-	e.entries = append(e.entries, v)
+func (t *entryT) Put(v interface{}) {
+	t.entries = append(t.entries, v)
 }

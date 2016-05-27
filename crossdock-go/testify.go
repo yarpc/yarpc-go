@@ -33,16 +33,16 @@ import (
 //
 // Each assertion made with the Assertions object will result in either a
 // failure or a success being written to the sink.
-func Assert(s T) Assertions {
-	return sinkAssertions{s, assert.New(sinkTestingT{s})}
+func Assert(t T) Assertions {
+	return sinkAssertions{t, assert.New(sinkTestingT{t})}
 }
 
 // Checks builds an Assertions object that writes failures to the given sink.
 //
 // This is the same as Assert except that nothing is written to the sink in
 // case of success.
-func Checks(s T) Assertions {
-	return assert.New(sinkTestingT{s})
+func Checks(t T) Assertions {
+	return assert.New(sinkTestingT{t})
 }
 
 // Require builds an Assertions object that writes success or failure to the
@@ -51,27 +51,27 @@ func Checks(s T) Assertions {
 //
 // Each assertion made with the Assertions object will result in either a
 // failure or a success being written to the sink.
-func Require(s T) Assertions {
-	return sinkAssertions{s, requireAssertions{require.New(sinkTestingT{s})}}
+func Require(t T) Assertions {
+	return sinkAssertions{t, requireAssertions{require.New(sinkTestingT{t})}}
 }
 
 // Fatals builds an Assertions object similar to Require, except that success
 // cases are not written to the Sink, only failures are.
 //
 // Behavior exception stops after the first failure.
-func Fatals(s T) Assertions {
-	return requireAssertions{require.New(sinkTestingT{s})}
+func Fatals(t T) Assertions {
+	return requireAssertions{require.New(sinkTestingT{t})}
 }
 
 // sinkTestingT adapts a Sink into an {require,assert}.TestingT
-type sinkTestingT struct{ s T }
+type sinkTestingT struct{ t T }
 
-func (st sinkTestingT) FailNow() { st.s.FailNow() }
+func (st sinkTestingT) FailNow() { st.t.FailNow() }
 
 func (st sinkTestingT) Errorf(format string, args ...interface{}) {
 	// We need to prepend a newline because the error message from testify
 	// always includes a \r at the start.
-	Errorf(st.s, "\n"+format, args...)
+	Errorf(st.t, "\n"+format, args...)
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -130,7 +130,7 @@ func formatMsgAndArgs(msgAndArgs []interface{}) string {
 type sinkAssertions struct {
 	// We need to wrap assert rather than using it as-is because we need to
 	// log success messages.
-	s T
+	t T
 	a Assertions
 }
 
@@ -138,7 +138,7 @@ var _ Assertions = (*sinkAssertions)(nil)
 
 func (sa sinkAssertions) Condition(comp assert.Comparison, msgAndArgs ...interface{}) bool {
 	if sa.a.Condition(comp, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -146,7 +146,7 @@ func (sa sinkAssertions) Condition(comp assert.Comparison, msgAndArgs ...interfa
 
 func (sa sinkAssertions) Contains(s interface{}, contains interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Contains(s, contains, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -154,7 +154,7 @@ func (sa sinkAssertions) Contains(s interface{}, contains interface{}, msgAndArg
 
 func (sa sinkAssertions) Empty(object interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Empty(object, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -162,7 +162,7 @@ func (sa sinkAssertions) Empty(object interface{}, msgAndArgs ...interface{}) bo
 
 func (sa sinkAssertions) Equal(expected interface{}, actual interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Equal(expected, actual, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -170,7 +170,7 @@ func (sa sinkAssertions) Equal(expected interface{}, actual interface{}, msgAndA
 
 func (sa sinkAssertions) EqualError(theError error, errString string, msgAndArgs ...interface{}) bool {
 	if sa.a.EqualError(theError, errString, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -178,7 +178,7 @@ func (sa sinkAssertions) EqualError(theError error, errString string, msgAndArgs
 
 func (sa sinkAssertions) EqualValues(expected interface{}, actual interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.EqualValues(expected, actual, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -186,7 +186,7 @@ func (sa sinkAssertions) EqualValues(expected interface{}, actual interface{}, m
 
 func (sa sinkAssertions) Error(err error, msgAndArgs ...interface{}) bool {
 	if sa.a.Error(err, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -194,7 +194,7 @@ func (sa sinkAssertions) Error(err error, msgAndArgs ...interface{}) bool {
 
 func (sa sinkAssertions) Exactly(expected interface{}, actual interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Exactly(expected, actual, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -202,7 +202,7 @@ func (sa sinkAssertions) Exactly(expected interface{}, actual interface{}, msgAn
 
 func (sa sinkAssertions) Fail(failureMessage string, msgAndArgs ...interface{}) bool {
 	if sa.a.Fail(failureMessage, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -210,7 +210,7 @@ func (sa sinkAssertions) Fail(failureMessage string, msgAndArgs ...interface{}) 
 
 func (sa sinkAssertions) FailNow(failureMessage string, msgAndArgs ...interface{}) bool {
 	if sa.a.FailNow(failureMessage, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -218,7 +218,7 @@ func (sa sinkAssertions) FailNow(failureMessage string, msgAndArgs ...interface{
 
 func (sa sinkAssertions) False(value bool, msgAndArgs ...interface{}) bool {
 	if sa.a.False(value, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -226,7 +226,7 @@ func (sa sinkAssertions) False(value bool, msgAndArgs ...interface{}) bool {
 
 func (sa sinkAssertions) Implements(interfaceObject interface{}, object interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Implements(interfaceObject, object, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -234,7 +234,7 @@ func (sa sinkAssertions) Implements(interfaceObject interface{}, object interfac
 
 func (sa sinkAssertions) InDelta(expected interface{}, actual interface{}, delta float64, msgAndArgs ...interface{}) bool {
 	if sa.a.InDelta(expected, actual, delta, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -242,7 +242,7 @@ func (sa sinkAssertions) InDelta(expected interface{}, actual interface{}, delta
 
 func (sa sinkAssertions) InDeltaSlice(expected interface{}, actual interface{}, delta float64, msgAndArgs ...interface{}) bool {
 	if sa.a.InDeltaSlice(expected, actual, delta, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -250,7 +250,7 @@ func (sa sinkAssertions) InDeltaSlice(expected interface{}, actual interface{}, 
 
 func (sa sinkAssertions) InEpsilon(expected interface{}, actual interface{}, epsilon float64, msgAndArgs ...interface{}) bool {
 	if sa.a.InEpsilon(expected, actual, epsilon, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -258,7 +258,7 @@ func (sa sinkAssertions) InEpsilon(expected interface{}, actual interface{}, eps
 
 func (sa sinkAssertions) InEpsilonSlice(expected interface{}, actual interface{}, delta float64, msgAndArgs ...interface{}) bool {
 	if sa.a.InEpsilonSlice(expected, actual, delta, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -266,7 +266,7 @@ func (sa sinkAssertions) InEpsilonSlice(expected interface{}, actual interface{}
 
 func (sa sinkAssertions) IsType(expectedType interface{}, object interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.IsType(expectedType, object, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -274,7 +274,7 @@ func (sa sinkAssertions) IsType(expectedType interface{}, object interface{}, ms
 
 func (sa sinkAssertions) JSONEq(expected string, actual string, msgAndArgs ...interface{}) bool {
 	if sa.a.JSONEq(expected, actual, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -282,7 +282,7 @@ func (sa sinkAssertions) JSONEq(expected string, actual string, msgAndArgs ...in
 
 func (sa sinkAssertions) Len(object interface{}, length int, msgAndArgs ...interface{}) bool {
 	if sa.a.Len(object, length, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -290,7 +290,7 @@ func (sa sinkAssertions) Len(object interface{}, length int, msgAndArgs ...inter
 
 func (sa sinkAssertions) Nil(object interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Nil(object, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -298,7 +298,7 @@ func (sa sinkAssertions) Nil(object interface{}, msgAndArgs ...interface{}) bool
 
 func (sa sinkAssertions) NoError(err error, msgAndArgs ...interface{}) bool {
 	if sa.a.NoError(err, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -306,7 +306,7 @@ func (sa sinkAssertions) NoError(err error, msgAndArgs ...interface{}) bool {
 
 func (sa sinkAssertions) NotContains(s interface{}, contains interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.NotContains(s, contains, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -314,7 +314,7 @@ func (sa sinkAssertions) NotContains(s interface{}, contains interface{}, msgAnd
 
 func (sa sinkAssertions) NotEmpty(object interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.NotEmpty(object, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -322,7 +322,7 @@ func (sa sinkAssertions) NotEmpty(object interface{}, msgAndArgs ...interface{})
 
 func (sa sinkAssertions) NotEqual(expected interface{}, actual interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.NotEqual(expected, actual, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -330,7 +330,7 @@ func (sa sinkAssertions) NotEqual(expected interface{}, actual interface{}, msgA
 
 func (sa sinkAssertions) NotNil(object interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.NotNil(object, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -338,7 +338,7 @@ func (sa sinkAssertions) NotNil(object interface{}, msgAndArgs ...interface{}) b
 
 func (sa sinkAssertions) NotPanics(f assert.PanicTestFunc, msgAndArgs ...interface{}) bool {
 	if sa.a.NotPanics(f, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -346,7 +346,7 @@ func (sa sinkAssertions) NotPanics(f assert.PanicTestFunc, msgAndArgs ...interfa
 
 func (sa sinkAssertions) NotRegexp(rx interface{}, str interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.NotRegexp(rx, str, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -354,7 +354,7 @@ func (sa sinkAssertions) NotRegexp(rx interface{}, str interface{}, msgAndArgs .
 
 func (sa sinkAssertions) NotZero(i interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.NotZero(i, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -362,7 +362,7 @@ func (sa sinkAssertions) NotZero(i interface{}, msgAndArgs ...interface{}) bool 
 
 func (sa sinkAssertions) Panics(f assert.PanicTestFunc, msgAndArgs ...interface{}) bool {
 	if sa.a.Panics(f, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -370,7 +370,7 @@ func (sa sinkAssertions) Panics(f assert.PanicTestFunc, msgAndArgs ...interface{
 
 func (sa sinkAssertions) Regexp(rx interface{}, str interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Regexp(rx, str, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -378,7 +378,7 @@ func (sa sinkAssertions) Regexp(rx interface{}, str interface{}, msgAndArgs ...i
 
 func (sa sinkAssertions) True(value bool, msgAndArgs ...interface{}) bool {
 	if sa.a.True(value, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -386,7 +386,7 @@ func (sa sinkAssertions) True(value bool, msgAndArgs ...interface{}) bool {
 
 func (sa sinkAssertions) WithinDuration(expected time.Time, actual time.Time, delta time.Duration, msgAndArgs ...interface{}) bool {
 	if sa.a.WithinDuration(expected, actual, delta, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
@@ -394,7 +394,7 @@ func (sa sinkAssertions) WithinDuration(expected time.Time, actual time.Time, de
 
 func (sa sinkAssertions) Zero(i interface{}, msgAndArgs ...interface{}) bool {
 	if sa.a.Zero(i, msgAndArgs...) {
-		Successf(sa.s, formatMsgAndArgs(msgAndArgs))
+		Successf(sa.t, formatMsgAndArgs(msgAndArgs))
 		return true
 	}
 	return false
