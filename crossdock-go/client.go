@@ -47,7 +47,7 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "HEAD" {
 		return
 	}
-	params := extractParams(r.Form)
+	params := extractParams(r.URL.Query())
 	entries := Run(params, h.dispatcher)
 
 	enc := json.NewEncoder(w)
@@ -57,7 +57,8 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // extractParams returns a map of params from url values
-func extractParams(p url.Values) (params Params) {
+func extractParams(p url.Values) Params {
+	params := Params{}
 	for k, l := range p {
 		for _, v := range l {
 			params[k] = v
