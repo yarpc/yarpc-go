@@ -34,29 +34,29 @@ type echoEntry struct {
 	Server    string `json:"server"`
 }
 
-// echoSink wraps a sink to emit echoEntry entries instead.
-type echoSink struct {
-	crossdock.Sink
+// echoT wraps a sink to emit echoEntry entries instead.
+type echoT struct {
+	crossdock.T
 
 	Transport string
 	Encoding  string
 	Server    string
 }
 
-func (s echoSink) Put(e interface{}) {
-	s.Sink.Put(echoEntry{
+func (t echoT) Put(e interface{}) {
+	t.T.Put(echoEntry{
 		Entry:     e.(crossdock.Entry),
-		Transport: s.Transport,
-		Encoding:  s.Encoding,
-		Server:    s.Server,
+		Transport: t.Transport,
+		Encoding:  t.Encoding,
+		Server:    t.Server,
 	})
 }
 
-// createEchoSink wraps a Sink to have transport, encoding, and server
+// createEchoT wraps a Sink to have transport, encoding, and server
 // information.
-func createEchoSink(encoding string, s crossdock.Sink, p crossdock.Params) crossdock.Sink {
-	return echoSink{
-		Sink:      s,
+func createEchoT(encoding string, t crossdock.T, p crossdock.Params) crossdock.T {
+	return echoT{
+		T:         t,
 		Transport: p.Param(params.Transport),
 		Encoding:  encoding,
 		Server:    p.Param(params.Server),

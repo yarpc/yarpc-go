@@ -37,9 +37,9 @@ type jsonEcho struct {
 }
 
 // JSON implements the 'json' behavior.
-func JSON(s crossdock.Sink, p crossdock.Params) {
-	s = createEchoSink("json", s, p)
-	rpc := rpc.Create(s, p)
+func JSON(t crossdock.T, p crossdock.Params) {
+	t = createEchoT("json", t, p)
+	rpc := rpc.Create(t, p)
 
 	client := json.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -55,6 +55,6 @@ func JSON(s crossdock.Sink, p crossdock.Params) {
 		&jsonEcho{Token: token},
 		&response,
 	)
-	crossdock.Fatals(s).NoError(err, "call to echo failed: %v", err)
-	crossdock.Assert(s).Equal(token, response.Token, "server said: %v", response.Token)
+	crossdock.Fatals(t).NoError(err, "call to echo failed: %v", err)
+	crossdock.Assert(t).Equal(token, response.Token, "server said: %v", response.Token)
 }

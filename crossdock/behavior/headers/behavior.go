@@ -46,27 +46,27 @@ type headersEntry struct {
 	Server    string `json:"server"`
 }
 
-// headersSink wraps a sink to emit headersEntry entries.
-type headersSink struct {
-	crossdock.Sink
+// headersT wraps a sink to emit headersEntry entries.
+type headersT struct {
+	crossdock.T
 
 	Transport string
 	Encoding  string
 	Server    string
 }
 
-func (s headersSink) Put(e interface{}) {
-	s.Sink.Put(headersEntry{
+func (t headersT) Put(e interface{}) {
+	t.T.Put(headersEntry{
 		Entry:     e.(crossdock.Entry),
-		Transport: s.Transport,
-		Encoding:  s.Encoding,
-		Server:    s.Server,
+		Transport: t.Transport,
+		Encoding:  t.Encoding,
+		Server:    t.Server,
 	})
 }
 
-func createHeadersSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
-	return headersSink{
-		Sink:      s,
+func createHeadersT(t crossdock.T, ps crossdock.Params) crossdock.T {
+	return headersT{
+		T:         t,
 		Transport: ps.Param(params.Transport),
 		Encoding:  ps.Param(params.Encoding),
 		Server:    ps.Param(params.Server),
@@ -74,13 +74,13 @@ func createHeadersSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
 }
 
 // Run runs the headers behavior
-func Run(s crossdock.Sink, ps crossdock.Params) {
-	s = createHeadersSink(s, ps)
-	rpc := rpc.Create(s, ps)
+func Run(t crossdock.T, ps crossdock.Params) {
+	t = createHeadersT(t, ps)
+	rpc := rpc.Create(t, ps)
 
-	fatals := crossdock.Fatals(s)
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+	fatals := crossdock.Fatals(t)
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
 	var caller headerCaller
 	encoding := ps.Param(params.Encoding)

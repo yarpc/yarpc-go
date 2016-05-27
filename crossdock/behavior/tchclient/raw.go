@@ -30,9 +30,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runRaw(s crossdock.Sink, call call) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+func runRaw(t crossdock.T, call call) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
 	headers := []byte{
 		0x00, 0x01, // 1 header

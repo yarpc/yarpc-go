@@ -34,10 +34,9 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// Create creates an RPC from the given parameters or fails the whole
-// behavior.
-func Create(s crossdock.Sink, p crossdock.Params) yarpc.RPC {
-	fatals := crossdock.Fatals(s)
+// Create creates an RPC from the given parameters or fails the whole behavior.
+func Create(t crossdock.T, p crossdock.Params) yarpc.RPC {
+	fatals := crossdock.Fatals(t)
 
 	server := p.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")

@@ -34,9 +34,9 @@ import (
 )
 
 // Thrift implements the 'thrift' behavior.
-func Thrift(s crossdock.Sink, p crossdock.Params) {
-	s = createEchoSink("thrift", s, p)
-	rpc := rpc.Create(s, p)
+func Thrift(t crossdock.T, p crossdock.Params) {
+	t = createEchoT("thrift", t, p)
+	rpc := rpc.Create(t, p)
 
 	client := echoclient.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -50,6 +50,6 @@ func Thrift(s crossdock.Sink, p crossdock.Params) {
 		&echo.Ping{Beep: token},
 	)
 
-	crossdock.Fatals(s).NoError(err, "call to Echo::echo failed: %v", err)
-	crossdock.Assert(s).Equal(token, pong.Boop, "server said: %v", pong.Boop)
+	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
+	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)
 }

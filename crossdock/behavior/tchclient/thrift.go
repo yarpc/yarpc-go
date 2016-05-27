@@ -30,9 +30,9 @@ import (
 	"github.com/uber/tchannel-go/thrift"
 )
 
-func runThrift(s crossdock.Sink, call call) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+func runThrift(t crossdock.T, call call) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
 	headers := map[string]string{
 		"hello": "thrift",

@@ -30,7 +30,7 @@ import (
 const BehaviorParam = "behavior"
 
 // Dispatcher is a func that runs when the Crossdock client receives a request
-type Dispatcher func(s Sink, behavior string, ps Params)
+type Dispatcher func(t T, behavior string, ps Params)
 
 // Start begins a blocking Crossdock client
 func Start(dispatcher Dispatcher) {
@@ -48,8 +48,8 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := httpParams{r}
-	entries := Run(func(s Sink) {
-		h.dispatcher(s, params.Param("behavior"), params)
+	entries := Run(func(t T) {
+		h.dispatcher(t, params.Param("behavior"), params)
 	})
 
 	enc := json.NewEncoder(w)

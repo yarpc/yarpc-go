@@ -33,9 +33,9 @@ import (
 )
 
 // Raw implements the 'raw' behavior.
-func Raw(s crossdock.Sink, p crossdock.Params) {
-	s = createEchoSink("raw", s, p)
-	rpc := rpc.Create(s, p)
+func Raw(t crossdock.T, p crossdock.Params) {
+	t = createEchoT("raw", t, p)
+	rpc := rpc.Create(t, p)
 
 	client := raw.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -47,6 +47,6 @@ func Raw(s crossdock.Sink, p crossdock.Params) {
 		TTL:       time.Second, // TODO context already has timeout; use that
 	}, token)
 
-	crossdock.Fatals(s).NoError(err, "call to echo/raw failed: %v", err)
-	crossdock.Assert(s).True(bytes.Equal(token, resBody), "server said: %v", resBody)
+	crossdock.Fatals(t).NoError(err, "call to echo/raw failed: %v", err)
+	crossdock.Assert(t).True(bytes.Equal(token, resBody), "server said: %v", resBody)
 }

@@ -29,9 +29,9 @@ import (
 	"github.com/uber/tchannel-go/json"
 )
 
-func runJSON(s crossdock.Sink, call call) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+func runJSON(t crossdock.T, call call) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
 	headers := map[string]string{
 		"hello": "json",

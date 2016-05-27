@@ -32,9 +32,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runJSON(s crossdock.Sink, rpc yarpc.RPC) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+func runJSON(t crossdock.T, rpc yarpc.RPC) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
 	headers := transport.Headers{
 		"hello": "json",
@@ -42,7 +42,7 @@ func runJSON(s crossdock.Sink, rpc yarpc.RPC) {
 	token := random.String(5)
 
 	resBody, resMeta, err := jsonCall(rpc, headers, token)
-	if skipOnConnRefused(s, err) {
+	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "json: call failed") {

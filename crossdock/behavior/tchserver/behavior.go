@@ -38,8 +38,8 @@ const (
 )
 
 // Run executes the tchserver test
-func Run(s crossdock.Sink, ps crossdock.Params) {
-	fatals := crossdock.Fatals(s)
+func Run(t crossdock.T, ps crossdock.Params) {
+	fatals := crossdock.Fatals(t)
 
 	encoding := ps.Param(params.Encoding)
 	server := ps.Param(params.Server)
@@ -57,11 +57,11 @@ func Run(s crossdock.Sink, ps crossdock.Params) {
 
 	switch encoding {
 	case "raw":
-		runRaw(s, rpc)
+		runRaw(t, rpc)
 	case "json":
-		runJSON(s, rpc)
+		runJSON(t, rpc)
 	case "thrift":
-		runThrift(s, rpc)
+		runThrift(t, rpc)
 	default:
 		fatals.Fail("", "unknown encoding %q", encoding)
 	}

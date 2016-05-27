@@ -29,10 +29,10 @@ import (
 // skipOnConnRefused will mark the test as skipped if we get ECONNREFUSED.
 // This just means that the server we are hitting has not yet implemented a
 // pure TCH server at port 8083. This is OK, Go is the only one who has done it this.
-func skipOnConnRefused(s crossdock.Sink, err error) bool {
+func skipOnConnRefused(t crossdock.T, err error) bool {
 	switch err.(type) {
 	case *net.OpError:
-		crossdock.Skipf(s, "tchannel server not implemented: %v", err)
+		crossdock.Skipf(t, "tchannel server not implemented: %v", err)
 		return true
 	}
 	return false

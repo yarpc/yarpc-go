@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package behavior implements the machinery for writing behaviors in a way
+// Package crossdock implements the machinery for writing behaviors in a way
 // similar to unit tests.
 //
 // 	func MyBehavior(s behavior.Sink, p behavior.Params) {

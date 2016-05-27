@@ -42,8 +42,8 @@ type httpResponse struct {
 	Status int
 }
 
-func (h httpClient) Call(s crossdock.Sink, hs transport.Headers, body string) httpResponse {
-	fatals := crossdock.Fatals(s)
+func (h httpClient) Call(t crossdock.T, hs transport.Headers, body string) httpResponse {
+	fatals := crossdock.Fatals(t)
 
 	req := http.Request{
 		Method:        "POST",
@@ -72,8 +72,8 @@ func (h httpClient) Call(s crossdock.Sink, hs transport.Headers, body string) ht
 	}
 }
 
-func buildHTTPClient(s crossdock.Sink, ps crossdock.Params) httpClient {
-	fatals := crossdock.Fatals(s)
+func buildHTTPClient(t crossdock.T, ps crossdock.Params) httpClient {
+	fatals := crossdock.Fatals(t)
 
 	server := ps.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
@@ -88,12 +88,12 @@ func buildHTTPClient(s crossdock.Sink, ps crossdock.Params) httpClient {
 }
 
 // Run runs the errors behavior.
-func Run(s crossdock.Sink, ps crossdock.Params) {
-	client := buildHTTPClient(s, ps)
-	assert := crossdock.Assert(s)
+func Run(t crossdock.T, ps crossdock.Params) {
+	client := buildHTTPClient(t, ps)
+	assert := crossdock.Assert(t)
 
 	// one valid request before we throw the errors at it
-	res := client.Call(s, transport.Headers{
+	res := client.Call(t, transport.Headers{
 		"RPC-Caller":     "yarpc-test",
 		"RPC-Service":    "yarpc-test",
 		"RPC-Procedure":  "echo",
@@ -276,7 +276,7 @@ func Run(s crossdock.Sink, ps crossdock.Params) {
 	}
 
 	for _, tt := range tests {
-		res := client.Call(s, tt.headers, tt.body)
+		res := client.Call(t, tt.headers, tt.body)
 		assert.Equal(tt.wantStatus, res.Status,
 			"%s: should respond with status %d", tt.name, tt.wantStatus)
 		if tt.wantBody != "" {
