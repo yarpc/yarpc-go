@@ -37,8 +37,8 @@ const (
 var log = tchannel.SimpleLogger
 
 // Run executes the tchclient test
-func Run(s crossdock.T, ps crossdock.Params) {
-	fatals := crossdock.Fatals(s)
+func Run(t crossdock.T, ps crossdock.Params) {
+	fatals := crossdock.Fatals(t)
 
 	encoding := ps.Param(params.Encoding)
 	server := ps.Param(params.Server)
@@ -51,11 +51,11 @@ func Run(s crossdock.T, ps crossdock.Params) {
 
 	switch encoding {
 	case "raw":
-		runRaw(s, call)
+		runRaw(t, call)
 	case "json":
-		runJSON(s, call)
+		runJSON(t, call)
 	case "thrift":
-		runThrift(s, call)
+		runThrift(t, call)
 	default:
 		fatals.Fail("", "unknown encoding %q", encoding)
 	}

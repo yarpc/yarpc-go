@@ -32,9 +32,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runRaw(s crossdock.T, rpc yarpc.RPC) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+func runRaw(t crossdock.T, rpc yarpc.RPC) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
 	// TODO headers should be at yarpc, not transport
 	headers := transport.Headers{
@@ -43,7 +43,7 @@ func runRaw(s crossdock.T, rpc yarpc.RPC) {
 	token := random.Bytes(5)
 
 	resBody, resMeta, err := rawCall(rpc, headers, token)
-	if skipOnConnRefused(s, err) {
+	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "raw: call failed") {

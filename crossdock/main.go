@@ -36,25 +36,25 @@ func main() {
 	crossdock.Start(dispatch)
 }
 
-func dispatch(s crossdock.T, behavior string, ps crossdock.Params) {
+func dispatch(t crossdock.T, behavior string, ps crossdock.Params) {
 	switch behavior {
 	case "raw":
-		echo.Raw(s, ps)
+		echo.Raw(t, ps)
 	case "json":
-		echo.JSON(s, ps)
+		echo.JSON(t, ps)
 	case "thrift":
-		echo.Thrift(s, ps)
+		echo.Thrift(t, ps)
 	case "errors":
-		errors.Run(s, ps)
+		errors.Run(t, ps)
 	case "headers":
-		headers.Run(s, ps)
+		headers.Run(t, ps)
 	case "tchclient":
-		tchclient.Run(s, ps)
+		tchclient.Run(t, ps)
 	case "tchserver":
-		tchserver.Run(s, ps)
+		tchserver.Run(t, ps)
 	case "thriftgauntlet":
-		gauntlet.Run(s, ps)
+		gauntlet.Run(t, ps)
 	default:
-		crossdock.Skipf(s, "unknown behavior %q", behavior)
+		crossdock.Skipf(t, "unknown behavior %q", behavior)
 	}
 }
