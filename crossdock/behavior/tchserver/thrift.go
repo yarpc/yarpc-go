@@ -34,9 +34,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runThrift(s crossdock.T, rpc yarpc.RPC) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+func runThrift(t crossdock.T, rpc yarpc.RPC) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
 	headers := transport.Headers{
 		"hello": "thrift",
@@ -44,7 +44,7 @@ func runThrift(s crossdock.T, rpc yarpc.RPC) {
 	token := random.String(5)
 
 	resBody, resMeta, err := thriftCall(rpc, headers, token)
-	if skipOnConnRefused(s, err) {
+	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "thrift: call failed") {

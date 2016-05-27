@@ -27,8 +27,14 @@ import "runtime/debug"
 //
 // Functions like Fatalf won't work if the behavior is not executed inside a
 // Run context.
-func Run(f func(T)) []interface{} {
-	var t entryT
+func Run(params Params, f func(T)) []interface{} {
+	behavior := params[BehaviorParam]
+	delete(params, BehaviorParam)
+	t := entryT{
+		params:   params,
+		behavior: behavior,
+	}
+
 	done := make(chan struct{})
 
 	// We run the function inside a goroutine so that Fatalf can simply call

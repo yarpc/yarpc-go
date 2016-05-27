@@ -24,13 +24,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 // BehaviorParam is the url param representing the test to run
 const BehaviorParam = "behavior"
 
 // Dispatcher is a func that runs when the Crossdock client receives a request
-type Dispatcher func(t T, behavior string, ps Params)
+type Dispatcher func(t T)
 
 // Start begins a blocking Crossdock client
 func Start(dispatcher Dispatcher) {
@@ -46,11 +47,8 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "HEAD" {
 		return
 	}
-
-	params := httpParams{r}
-	entries := Run(func(t T) {
-		h.dispatcher(t, params.Param("behavior"), params)
-	})
+	params := extractParams(r.URL.Query())
+	entries := Run(params, h.dispatcher)
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(entries); err != nil {
@@ -58,12 +56,13 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// httpParams provides access to behavior parameters that are stored inside an
-// HTTP request.
-type httpParams struct {
-	Request *http.Request
-}
-
-func (h httpParams) Param(name string) string {
-	return h.Request.FormValue(name)
+// extractParams returns a map of params from url values
+func extractParams(p url.Values) Params {
+	params := Params{}
+	for k, l := range p {
+		for _, v := range l {
+			params[k] = v
+		}
+	}
+	return params
 }

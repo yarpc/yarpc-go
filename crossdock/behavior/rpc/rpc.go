@@ -35,14 +35,14 @@ import (
 )
 
 // Create creates an RPC from the given parameters or fails the whole behavior.
-func Create(t crossdock.T, p crossdock.Params) yarpc.RPC {
+func Create(t crossdock.T) yarpc.RPC {
 	fatals := crossdock.Fatals(t)
 
-	server := p.Param(params.Server)
+	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
 	var outbound transport.Outbound
-	trans := p.Param(params.Transport)
+	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
 		// Go HTTP servers have keep-alive enabled by default. If we re-use

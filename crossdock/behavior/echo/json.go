@@ -37,9 +37,9 @@ type jsonEcho struct {
 }
 
 // JSON implements the 'json' behavior.
-func JSON(t crossdock.T, p crossdock.Params) {
-	t = createEchoT("json", t, p)
-	rpc := rpc.Create(t, p)
+func JSON(t crossdock.T) {
+	t = createEchoT("json", t)
+	rpc := rpc.Create(t)
 
 	client := json.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)

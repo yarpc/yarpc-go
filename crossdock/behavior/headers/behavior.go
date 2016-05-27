@@ -64,26 +64,26 @@ func (t headersT) Put(e interface{}) {
 	})
 }
 
-func createHeadersT(t crossdock.T, ps crossdock.Params) crossdock.T {
+func createHeadersT(t crossdock.T) crossdock.T {
 	return headersT{
 		T:         t,
-		Transport: ps.Param(params.Transport),
-		Encoding:  ps.Param(params.Encoding),
-		Server:    ps.Param(params.Server),
+		Transport: t.Param(params.Transport),
+		Encoding:  t.Param(params.Encoding),
+		Server:    t.Param(params.Server),
 	}
 }
 
 // Run runs the headers behavior
-func Run(t crossdock.T, ps crossdock.Params) {
-	t = createHeadersT(t, ps)
-	rpc := rpc.Create(t, ps)
+func Run(t crossdock.T) {
+	t = createHeadersT(t)
+	rpc := rpc.Create(t)
 
 	fatals := crossdock.Fatals(t)
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
 	var caller headerCaller
-	encoding := ps.Param(params.Encoding)
+	encoding := t.Param(params.Encoding)
 	switch encoding {
 	case "raw":
 		caller = rawCaller{raw.New(rpc.Channel("yarpc-test"))}

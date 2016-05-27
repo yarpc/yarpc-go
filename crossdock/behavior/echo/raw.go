@@ -33,9 +33,9 @@ import (
 )
 
 // Raw implements the 'raw' behavior.
-func Raw(t crossdock.T, p crossdock.Params) {
-	t = createEchoT("raw", t, p)
-	rpc := rpc.Create(t, p)
+func Raw(t crossdock.T) {
+	t = createEchoT("raw", t)
+	rpc := rpc.Create(t)
 
 	client := raw.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)

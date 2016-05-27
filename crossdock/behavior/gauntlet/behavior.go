@@ -60,21 +60,21 @@ func (t gauntletT) Put(e interface{}) {
 	})
 }
 
-func createGauntletT(t crossdock.T, ps crossdock.Params) crossdock.T {
+func createGauntletT(t crossdock.T) crossdock.T {
 	return gauntletT{
 		T:         t,
-		Transport: ps.Param(params.Transport),
-		Server:    ps.Param(params.Server),
+		Transport: t.Param(params.Transport),
+		Server:    t.Param(params.Server),
 	}
 }
 
 // Run executes the thriftgauntlet behavior.
-func Run(t crossdock.T, ps crossdock.Params) {
-	t = createGauntletT(t, ps)
+func Run(t crossdock.T) {
+	t = createGauntletT(t)
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	rpc := rpc.Create(t, ps)
+	rpc := rpc.Create(t)
 
 	bytesToken := random.Bytes(10)
 	tests := []struct {

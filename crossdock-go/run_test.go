@@ -42,7 +42,7 @@ func TestRunRecordsFailureOnFatal(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		entries := Run(tt.f)
+		entries := Run(nil, tt.f)
 		assert.Len(t, entries, 1)
 		entry := entries[0].(Entry)
 		assert.Equal(t, Failed, entry.Status)

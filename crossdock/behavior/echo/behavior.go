@@ -54,11 +54,11 @@ func (t echoT) Put(e interface{}) {
 
 // createEchoT wraps a Sink to have transport, encoding, and server
 // information.
-func createEchoT(encoding string, t crossdock.T, p crossdock.Params) crossdock.T {
+func createEchoT(encoding string, t crossdock.T) crossdock.T {
 	return echoT{
 		T:         t,
-		Transport: p.Param(params.Transport),
+		Transport: t.Param(params.Transport),
 		Encoding:  encoding,
-		Server:    p.Param(params.Server),
+		Server:    t.Param(params.Server),
 	}
 }
