@@ -34,9 +34,9 @@ import (
 )
 
 // Thrift implements the 'thrift' behavior.
-func Thrift(t crossdock.T, p crossdock.Params) {
-	t = createEchoT("thrift", t, p)
-	rpc := rpc.Create(t, p)
+func Thrift(t crossdock.T) {
+	t = createEchoT("thrift", t)
+	rpc := rpc.Create(t)
 
 	client := echoclient.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)

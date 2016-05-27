@@ -29,7 +29,14 @@ import (
 type T interface {
 	Put(interface{})
 	FailNow()
+
+	Behavior() string
+	Param(key string) string
+	SetParams(params Params)
 }
+
+// Params represents args to a test
+type Params map[string]string
 
 // Skipf records a skipped test.
 //
@@ -75,7 +82,12 @@ func Successf(t T, format string, args ...interface{}) {
 //////////////////////////////////////////////////////////////////////////////
 
 // entryT is a sink that keeps track of entries in-order
-type entryT struct{ entries []interface{} }
+type entryT struct {
+	behavior string
+	params   Params
+
+	entries []interface{}
+}
 
 func (*entryT) FailNow() {
 	// Exit this goroutine and call any deferred functions
@@ -85,4 +97,21 @@ func (*entryT) FailNow() {
 // Put an entry into the EntrySink.
 func (t *entryT) Put(v interface{}) {
 	t.entries = append(t.entries, v)
+}
+
+// Param gets a key out of the params map
+func (t entryT) Param(key string) string {
+	return t.params[key]
+}
+
+// SetParams updates the params on the T
+func (t *entryT) SetParams(params Params) {
+	t.behavior = params[BehaviorParam]
+	delete(params, BehaviorParam)
+
+	t.params = params
+}
+
+func (t entryT) Behavior() string {
+	return t.behavior
 }

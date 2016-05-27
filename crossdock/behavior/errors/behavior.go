@@ -72,10 +72,10 @@ func (h httpClient) Call(t crossdock.T, hs transport.Headers, body string) httpR
 	}
 }
 
-func buildHTTPClient(t crossdock.T, ps crossdock.Params) httpClient {
+func buildHTTPClient(t crossdock.T) httpClient {
 	fatals := crossdock.Fatals(t)
 
-	server := ps.Param(params.Server)
+	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
 	url, err := url.Parse(fmt.Sprintf("http://%s:8081", server))
@@ -88,8 +88,8 @@ func buildHTTPClient(t crossdock.T, ps crossdock.Params) httpClient {
 }
 
 // Run runs the errors behavior.
-func Run(t crossdock.T, ps crossdock.Params) {
-	client := buildHTTPClient(t, ps)
+func Run(t crossdock.T) {
+	client := buildHTTPClient(t)
 	assert := crossdock.Assert(t)
 
 	// one valid request before we throw the errors at it
@@ -248,7 +248,7 @@ func Run(t crossdock.T, ps crossdock.Params) {
 				"service": "yarpc-test",
 				"procedure": "Echo::echo",
 				"body": "not a Thrift payload",
-				"transport": {"http": {"host": "` + ps.Param(params.Server) + `", "port": 8081}}
+				"transport": {"http": {"host": "` + t.Param(params.Server) + `", "port": 8081}}
 			}`,
 			wantStatus: 500,
 			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
@@ -267,7 +267,7 @@ func Run(t crossdock.T, ps crossdock.Params) {
 				"service": "yarpc-test",
 				"procedure": "unexpected-error",
 				"body": "{}",
-				"transport": {"http": {"host": "` + ps.Param(params.Server) + `", "port": 8081}}
+				"transport": {"http": {"host": "` + t.Param(params.Server) + `", "port": 8081}}
 			}`,
 			wantStatus: 500,
 			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +

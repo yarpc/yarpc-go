@@ -37,11 +37,11 @@ const (
 var log = tchannel.SimpleLogger
 
 // Run executes the tchclient test
-func Run(t crossdock.T, ps crossdock.Params) {
+func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)
 
-	encoding := ps.Param(params.Encoding)
-	server := ps.Param(params.Server)
+	encoding := t.Param(params.Encoding)
+	server := t.Param(params.Server)
 	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
 
 	ch, err := tchannel.NewChannel("tchannel-client", nil)

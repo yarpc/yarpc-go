@@ -29,29 +29,29 @@ import (
 
 func TestCreate(t *testing.T) {
 	tests := []struct {
-		p      crossdock.Params
+		params crossdock.Params
 		errOut string
 	}{
 		{
-			crossdock.ParamsFromMap{"server": "localhost"},
+			crossdock.Params{"server": "localhost"},
 			`unknown transport ""`,
 		},
 		{
-			crossdock.ParamsFromMap{"transport": "http"},
+			crossdock.Params{"transport": "http"},
 			"server is required",
 		},
 		{
-			crossdock.ParamsFromMap{"server": "localhost", "transport": "foo"},
+			crossdock.Params{"server": "localhost", "transport": "foo"},
 			`unknown transport "foo"`,
 		},
 		{
-			p: crossdock.ParamsFromMap{
+			params: crossdock.Params{
 				"server":    "localhost",
 				"transport": "http",
 			},
 		},
 		{
-			p: crossdock.ParamsFromMap{
+			params: crossdock.Params{
 				"server":    "localhost",
 				"transport": "tchannel",
 			},
@@ -59,8 +59,9 @@ func TestCreate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		entries := crossdock.Run(func(s crossdock.T) {
-			rpc := Create(s, tt.p)
+		entries := crossdock.Run(func(ct crossdock.T) {
+			ct.SetParams(tt.params)
+			rpc := Create(ct)
 
 			// should get here only if the request succeeded
 			ch := rpc.Channel("yarpc-test")
