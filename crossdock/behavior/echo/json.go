@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
 	"github.com/yarpc/yarpc-go/encoding/json"
 
 	"golang.org/x/net/context"
@@ -39,7 +39,7 @@ type jsonEcho struct {
 // JSON implements the 'json' behavior.
 func JSON(s crossdock.Sink, p crossdock.Params) {
 	s = createEchoSink("json", s, p)
-	rpc := behavior.CreateRPC(s, p)
+	rpc := rpc.Create(s, p)
 
 	client := json.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)

@@ -18,38 +18,58 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package tchserver
 
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
 
-// Thrift implements the 'thrift' behavior.
-func Thrift(s crossdock.Sink, p crossdock.Params) {
-	s = createEchoSink("thrift", s, p)
-	rpc := behavior.CreateRPC(s, p)
+func runJSON(s crossdock.Sink, rpc yarpc.RPC) {
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
-	client := echoclient.New(rpc.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-
+	headers := transport.Headers{
+		"hello": "json",
+	}
 	token := random.String(5)
-	pong, _, err := client.Echo(
-		&thrift.Request{
-			Context: ctx,
-			TTL:     time.Second, // TODO context already has timeout; use that
-		},
-		&echo.Ping{Beep: token},
-	)
 
-	crossdock.Fatals(s).NoError(err, "call to Echo::echo failed: %v", err)
-	crossdock.Assert(s).Equal(token, pong.Boop, "server said: %v", pong.Boop)
+	resBody, resMeta, err := jsonCall(rpc, headers, token)
+	if skipOnConnRefused(s, err) {
+		return
+	}
+	if checks.NoError(err, "json: call failed") {
+		assert.Equal(token, resBody, "body echoed")
+		assert.Equal(headers, resMeta.Headers, "headers echoed")
+	}
+}
+
+type jsonEcho struct {
+	Token string `json:"token"`
+}
+
+func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *json.Response, error) {
+	client := json.New(rpc.Channel(serverName))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	reqMeta := &json.Request{
+		Context:   ctx,
+		Procedure: "echo",
+		TTL:       time.Second,
+		Headers:   headers,
+	}
+	reqBody := &jsonEcho{Token: token}
+
+	var resBody jsonEcho
+	resMeta, err := client.Call(reqMeta, reqBody, &resBody)
+	return resBody.Token, resMeta, err
 }

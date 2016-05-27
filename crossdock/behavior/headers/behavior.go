@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 	"github.com/yarpc/yarpc-go/encoding/json"
@@ -76,7 +76,7 @@ func createHeadersSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
 // Run runs the headers behavior
 func Run(s crossdock.Sink, ps crossdock.Params) {
 	s = createHeadersSink(s, ps)
-	rpc := behavior.CreateRPC(s, ps)
+	rpc := rpc.Create(s, ps)
 
 	fatals := crossdock.Fatals(s)
 	assert := crossdock.Assert(s)

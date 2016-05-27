@@ -18,35 +18,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package tchserver
 
 import (
-	"bytes"
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
 	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
 
-// Raw implements the 'raw' behavior.
-func Raw(s crossdock.Sink, p crossdock.Params) {
-	s = createEchoSink("raw", s, p)
-	rpc := behavior.CreateRPC(s, p)
+func runRaw(s crossdock.Sink, rpc yarpc.RPC) {
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
-	client := raw.New(rpc.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-
+	// TODO headers should be at yarpc, not transport
+	headers := transport.Headers{
+		"hello": "raw",
+	}
 	token := random.Bytes(5)
-	resBody, _, err := client.Call(&raw.Request{
+
+	resBody, resMeta, err := rawCall(rpc, headers, token)
+	if skipOnConnRefused(s, err) {
+		return
+	}
+	if checks.NoError(err, "raw: call failed") {
+		assert.Equal(token, resBody, "body echoed")
+		assert.Equal(headers, resMeta.Headers, "headers echoed")
+	}
+}
+
+func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *raw.Response, error) {
+	client := raw.New(rpc.Channel(serverName))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	// TODO rename to raw.ReqMeta
+	reqMeta := &raw.Request{
 		Context:   ctx,
 		Procedure: "echo/raw",
-		TTL:       time.Second, // TODO context already has timeout; use that
-	}, token)
-
-	crossdock.Fatals(s).NoError(err, "call to echo/raw failed: %v", err)
-	crossdock.Assert(s).True(bytes.Equal(token, resBody), "server said: %v", resBody)
+		Headers:   headers,
+		TTL:       time.Second,
+	}
+	resBody, resMeta, err := client.Call(reqMeta, token)
+	return resBody, resMeta, err
 }

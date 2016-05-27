@@ -24,44 +24,39 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
 
-	"github.com/uber/tchannel-go/raw"
-	"golang.org/x/net/context"
+	"github.com/uber/tchannel-go/json"
 )
 
-func runRaw(s crossdock.Sink, call call) {
+func runJSON(s crossdock.Sink, call call) {
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
 
-	headers := []byte{
-		0x00, 0x01, // 1 header
-		0x00, 0x05, // length = 5
-		'h', 'e', 'l', 'l', 'o',
-		0x00, 0x03, // length = 3
-		'r', 'a', 'w',
+	headers := map[string]string{
+		"hello": "json",
 	}
-	token := random.Bytes(5)
+	token := random.String(5)
 
-	resp, respHeaders, err := rawCall(call, headers, token)
-	if checks.NoError(err, "raw: call failed") {
-		assert.Equal(token, resp, "body echoed")
+	resp, respHeaders, err := jsonCall(call, headers, token)
+	if checks.NoError(err, "json: call failed") {
+		assert.Equal(token, resp.Token, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 }
 
-func rawCall(call call, headers []byte, token []byte) ([]byte, []byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+type jsonResp struct {
+	Token string `json:"token"`
+}
+
+func jsonCall(call call, headers map[string]string, token string) (jsonResp, map[string]string, error) {
+	peer := call.Channel.Peers().Add(call.ServerHostPort)
+
+	ctx, cancel := json.NewContext(time.Second)
+	ctx = json.WithHeaders(ctx, headers)
 	defer cancel()
 
-	arg2, arg3, _, err := raw.Call(
-		ctx,
-		call.Channel,
-		call.ServerHostPort,
-		serverName,
-		"echo/raw",
-		headers,
-		token,
-	)
-	return arg3, arg2, err
+	var response jsonResp
+	err := json.CallPeer(ctx, peer, serverName, "echo", &jsonResp{Token: token}, &response)
+	return response, ctx.ResponseHeaders(), err
 }

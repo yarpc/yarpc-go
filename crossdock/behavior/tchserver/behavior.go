@@ -18,45 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchclient
+package tchserver
 
 import (
-	"time"
+	"fmt"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
+	"github.com/yarpc/yarpc-go/transport"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
-	"github.com/uber/tchannel-go/json"
+	"github.com/uber/tchannel-go"
 )
 
-func runJSON(s crossdock.Sink, call call) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+const (
+	serverPort = 8083
+	serverName = "tchannel-server"
+)
 
-	headers := map[string]string{
-		"hello": "json",
+// Run executes the tchserver test
+func Run(s crossdock.Sink, ps crossdock.Params) {
+	fatals := crossdock.Fatals(s)
+
+	encoding := ps.Param(params.Encoding)
+	server := ps.Param(params.Server)
+	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
+
+	ch, err := tchannel.NewChannel("yarpc-client", nil)
+	fatals.NoError(err, "could not create channel")
+
+	rpc := yarpc.New(yarpc.Config{
+		Name: "yarpc-client",
+		Outbounds: transport.Outbounds{
+			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+		},
+	})
+
+	switch encoding {
+	case "raw":
+		runRaw(s, rpc)
+	case "json":
+		runJSON(s, rpc)
+	case "thrift":
+		runThrift(s, rpc)
+	default:
+		fatals.Fail("", "unknown encoding %q", encoding)
 	}
-	token := random.String(5)
-
-	resp, respHeaders, err := jsonCall(call, headers, token)
-	if checks.NoError(err, "json: call failed") {
-		assert.Equal(token, resp.Token, "body echoed")
-		assert.Equal(headers, respHeaders, "headers echoed")
-	}
-}
-
-type jsonResp struct {
-	Token string `json:"token"`
-}
-
-func jsonCall(call call, headers map[string]string, token string) (jsonResp, map[string]string, error) {
-	peer := call.Channel.Peers().Add(call.ServerHostPort)
-
-	ctx, cancel := json.NewContext(time.Second)
-	ctx = json.WithHeaders(ctx, headers)
-	defer cancel()
-
-	var response jsonResp
-	err := json.CallPeer(ctx, peer, serverName, "echo", &jsonResp{Token: token}, &response)
-	return response, ctx.ResponseHeaders(), err
 }

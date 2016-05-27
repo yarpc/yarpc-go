@@ -18,42 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchclient
+package echo
 
 import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 
-	"github.com/uber/tchannel-go/thrift"
+	"golang.org/x/net/context"
 )
 
-func runThrift(s crossdock.Sink, call call) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+// Thrift implements the 'thrift' behavior.
+func Thrift(s crossdock.Sink, p crossdock.Params) {
+	s = createEchoSink("thrift", s, p)
+	rpc := rpc.Create(s, p)
 
-	headers := map[string]string{
-		"hello": "thrift",
-	}
+	client := echoclient.New(rpc.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
 	token := random.String(5)
+	pong, _, err := client.Echo(
+		&thrift.Request{
+			Context: ctx,
+			TTL:     time.Second, // TODO context already has timeout; use that
+		},
+		&echo.Ping{Beep: token},
+	)
 
-	resp, respHeaders, err := thriftCall(call, headers, token)
-	if checks.NoError(err, "thrift: call failed") {
-		assert.Equal(token, resp.Boop, "body echoed")
-		assert.Equal(headers, respHeaders, "headers echoed")
-	}
-}
-
-func thriftCall(call call, headers map[string]string, token string) (*echo.Pong, map[string]string, error) {
-	call.Channel.Peers().Add(call.ServerHostPort)
-
-	ctx, cancel := thrift.NewContext(time.Second)
-	ctx = thrift.WithHeaders(ctx, headers)
-	defer cancel()
-
-	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
-	pong, err := client.Echo(ctx, &echo.Ping{Beep: token})
-	return pong, ctx.ResponseHeaders(), err
+	crossdock.Fatals(s).NoError(err, "call to Echo::echo failed: %v", err)
+	crossdock.Assert(s).Equal(token, pong.Boop, "server said: %v", pong.Boop)
 }

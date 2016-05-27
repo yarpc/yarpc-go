@@ -18,47 +18,60 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package rpc
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
 )
 
-// echoEntry is an entry emitted by the echo behaviors.
-type echoEntry struct {
-	crossdock.Entry
+func TestCreate(t *testing.T) {
+	tests := []struct {
+		p      crossdock.Params
+		errOut string
+	}{
+		{
+			crossdock.ParamsFromMap{"server": "localhost"},
+			`unknown transport ""`,
+		},
+		{
+			crossdock.ParamsFromMap{"transport": "http"},
+			"server is required",
+		},
+		{
+			crossdock.ParamsFromMap{"server": "localhost", "transport": "foo"},
+			`unknown transport "foo"`,
+		},
+		{
+			p: crossdock.ParamsFromMap{
+				"server":    "localhost",
+				"transport": "http",
+			},
+		},
+		{
+			p: crossdock.ParamsFromMap{
+				"server":    "localhost",
+				"transport": "tchannel",
+			},
+		},
+	}
 
-	Transport string `json:"transport"`
-	Encoding  string `json:"encoding"`
-	Server    string `json:"server"`
-}
+	for _, tt := range tests {
+		entries := crossdock.Run(func(s crossdock.Sink) {
+			rpc := Create(s, tt.p)
 
-// echoSink wraps a sink to emit echoEntry entries instead.
-type echoSink struct {
-	crossdock.Sink
+			// should get here only if the request succeeded
+			ch := rpc.Channel("yarpc-test")
+			assert.Equal(t, "client", ch.Caller)
+			assert.Equal(t, "yarpc-test", ch.Service)
+		})
 
-	Transport string
-	Encoding  string
-	Server    string
-}
-
-func (s echoSink) Put(e interface{}) {
-	s.Sink.Put(echoEntry{
-		Entry:     e.(crossdock.Entry),
-		Transport: s.Transport,
-		Encoding:  s.Encoding,
-		Server:    s.Server,
-	})
-}
-
-// createEchoSink wraps a Sink to have transport, encoding, and server
-// information.
-func createEchoSink(encoding string, s crossdock.Sink, p crossdock.Params) crossdock.Sink {
-	return echoSink{
-		Sink:      s,
-		Transport: p.Param(params.Transport),
-		Encoding:  encoding,
-		Server:    p.Param(params.Server),
+		if tt.errOut != "" && assert.Len(t, entries, 1) {
+			e := entries[0].(crossdock.Entry)
+			assert.Equal(t, crossdock.Failed, e.Status)
+			assert.Contains(t, e.Output, tt.errOut)
+		}
 	}
 }

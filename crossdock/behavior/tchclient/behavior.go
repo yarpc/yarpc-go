@@ -18,60 +18,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package behavior
+package tchclient
 
 import (
-	"testing"
+	"fmt"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/yarpc/yarpc-go/crossdock-go"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
+
+	"github.com/uber/tchannel-go"
 )
 
-func TestCreateRPC(t *testing.T) {
-	tests := []struct {
-		p      crossdock.Params
-		errOut string
-	}{
-		{
-			crossdock.ParamsFromMap{"server": "localhost"},
-			`unknown transport ""`,
-		},
-		{
-			crossdock.ParamsFromMap{"transport": "http"},
-			"server is required",
-		},
-		{
-			crossdock.ParamsFromMap{"server": "localhost", "transport": "foo"},
-			`unknown transport "foo"`,
-		},
-		{
-			p: crossdock.ParamsFromMap{
-				"server":    "localhost",
-				"transport": "http",
-			},
-		},
-		{
-			p: crossdock.ParamsFromMap{
-				"server":    "localhost",
-				"transport": "tchannel",
-			},
-		},
+const (
+	serverPort = 8082
+	serverName = "yarpc-test"
+)
+
+var log = tchannel.SimpleLogger
+
+// Run executes the tchclient test
+func Run(s crossdock.Sink, ps crossdock.Params) {
+	fatals := crossdock.Fatals(s)
+
+	encoding := ps.Param(params.Encoding)
+	server := ps.Param(params.Server)
+	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
+
+	ch, err := tchannel.NewChannel("tchannel-client", nil)
+	fatals.NoError(err, "Could not create channel")
+
+	call := call{Channel: ch, ServerHostPort: serverHostPort}
+
+	switch encoding {
+	case "raw":
+		runRaw(s, call)
+	case "json":
+		runJSON(s, call)
+	case "thrift":
+		runThrift(s, call)
+	default:
+		fatals.Fail("", "unknown encoding %q", encoding)
 	}
+}
 
-	for _, tt := range tests {
-		entries := crossdock.Run(func(s crossdock.Sink) {
-			rpc := CreateRPC(s, tt.p)
-
-			// should get here only if the request succeeded
-			ch := rpc.Channel("yarpc-test")
-			assert.Equal(t, "client", ch.Caller)
-			assert.Equal(t, "yarpc-test", ch.Service)
-		})
-
-		if tt.errOut != "" && assert.Len(t, entries, 1) {
-			e := entries[0].(crossdock.Entry)
-			assert.Equal(t, crossdock.Failed, e.Status)
-			assert.Contains(t, e.Output, tt.errOut)
-		}
-	}
+// call contains the details needed for each tchannel scheme
+// to make an outbound call. Because the way you connect is not uniform
+// between schemes, it's not enough to just add a peer and go.
+type call struct {
+	Channel        *tchannel.Channel
+	ServerHostPort string
 }
