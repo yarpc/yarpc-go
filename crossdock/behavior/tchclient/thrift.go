@@ -21,50 +21,39 @@
 package tchclient
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 
-	"github.com/uber/tchannel-go"
+	"github.com/uber/tchannel-go/thrift"
 )
 
-const (
-	serverPort = 8082
-	serverName = "yarpc-test"
-)
+func runThrift(s crossdock.Sink, call call) {
+	assert := crossdock.Assert(s)
+	checks := crossdock.Checks(s)
 
-var log = tchannel.SimpleLogger
+	headers := map[string]string{
+		"hello": "thrift",
+	}
+	token := random.String(5)
 
-// Run executes the tchclient test
-func Run(s crossdock.Sink, ps crossdock.Params) {
-	fatals := crossdock.Fatals(s)
-
-	encoding := ps.Param(params.Encoding)
-	server := ps.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
-
-	ch, err := tchannel.NewChannel("tchannel-client", nil)
-	fatals.NoError(err, "Could not create channel")
-
-	call := call{Channel: ch, ServerHostPort: serverHostPort}
-
-	switch encoding {
-	case "raw":
-		runRaw(s, call)
-	case "json":
-		runJSON(s, call)
-	case "thrift":
-		runThrift(s, call)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
+	resp, respHeaders, err := thriftCall(call, headers, token)
+	if checks.NoError(err, "thrift: call failed") {
+		assert.Equal(token, resp.Boop, "body echoed")
+		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 }
 
-// call contains the details needed for each tchannel scheme
-// to make an outbound call. Because the way you connect is not uniform
-// between schemes, it's not enough to just add a peer and go.
-type call struct {
-	Channel        *tchannel.Channel
-	ServerHostPort string
+func thriftCall(call call, headers map[string]string, token string) (*echo.Pong, map[string]string, error) {
+	call.Channel.Peers().Add(call.ServerHostPort)
+
+	ctx, cancel := thrift.NewContext(time.Second)
+	ctx = thrift.WithHeaders(ctx, headers)
+	defer cancel()
+
+	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
+	pong, err := client.Echo(ctx, &echo.Ping{Beep: token})
+	return pong, ctx.ResponseHeaders(), err
 }

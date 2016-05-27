@@ -28,7 +28,7 @@ import (
 	"strings"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
 	"github.com/yarpc/yarpc-go/transport"
 )
 

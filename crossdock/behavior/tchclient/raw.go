@@ -18,53 +18,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package tchclient
 
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
 
+	"github.com/uber/tchannel-go/raw"
 	"golang.org/x/net/context"
 )
 
-func runRaw(s crossdock.Sink, rpc yarpc.RPC) {
+func runRaw(s crossdock.Sink, call call) {
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
 
-	// TODO headers should be at yarpc, not transport
-	headers := transport.Headers{
-		"hello": "raw",
+	headers := []byte{
+		0x00, 0x01, // 1 header
+		0x00, 0x05, // length = 5
+		'h', 'e', 'l', 'l', 'o',
+		0x00, 0x03, // length = 3
+		'r', 'a', 'w',
 	}
 	token := random.Bytes(5)
 
-	resBody, resMeta, err := rawCall(rpc, headers, token)
-	if skipOnConnRefused(s, err) {
-		return
-	}
+	resp, respHeaders, err := rawCall(call, headers, token)
 	if checks.NoError(err, "raw: call failed") {
-		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers, "headers echoed")
+		assert.Equal(token, resp, "body echoed")
+		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 }
 
-func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *raw.Response, error) {
-	client := raw.New(rpc.Channel(serverName))
-
+func rawCall(call call, headers []byte, token []byte) ([]byte, []byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	// TODO rename to raw.ReqMeta
-	reqMeta := &raw.Request{
-		Context:   ctx,
-		Procedure: "echo/raw",
-		Headers:   headers,
-		TTL:       time.Second,
-	}
-	resBody, resMeta, err := client.Call(reqMeta, token)
-	return resBody, resMeta, err
+	arg2, arg3, _, err := raw.Call(
+		ctx,
+		call.Channel,
+		call.ServerHostPort,
+		serverName,
+		"echo/raw",
+		headers,
+		token,
+	)
+	return arg3, arg2, err
 }

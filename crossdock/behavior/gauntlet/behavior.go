@@ -26,9 +26,9 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/behavior"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
@@ -74,7 +74,7 @@ func Run(s crossdock.Sink, ps crossdock.Params) {
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
 
-	rpc := behavior.CreateRPC(s, ps)
+	rpc := rpc.Create(s, ps)
 
 	bytesToken := random.Bytes(10)
 	tests := []struct {

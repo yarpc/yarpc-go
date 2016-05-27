@@ -18,51 +18,52 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package rpc
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
 	"github.com/yarpc/yarpc-go/transport"
+	ht "github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
 )
 
-const (
-	serverPort = 8083
-	serverName = "tchannel-server"
-)
-
-// Run executes the tchserver test
-func Run(s crossdock.Sink, ps crossdock.Params) {
+// Create creates an RPC from the given parameters or fails the whole
+// behavior.
+func Create(s crossdock.Sink, p crossdock.Params) yarpc.RPC {
 	fatals := crossdock.Fatals(s)
 
-	encoding := ps.Param(params.Encoding)
-	server := ps.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
+	server := p.Param(params.Server)
+	fatals.NotEmpty(server, "server is required")
 
-	ch, err := tchannel.NewChannel("yarpc-client", nil)
-	fatals.NoError(err, "could not create channel")
-
-	rpc := yarpc.New(yarpc.Config{
-		Name: "yarpc-client",
-		Outbounds: transport.Outbounds{
-			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
-		},
-	})
-
-	switch encoding {
-	case "raw":
-		runRaw(s, rpc)
-	case "json":
-		runJSON(s, rpc)
-	case "thrift":
-		runThrift(s, rpc)
+	var outbound transport.Outbound
+	trans := p.Param(params.Transport)
+	switch trans {
+	case "http":
+		// Go HTTP servers have keep-alive enabled by default. If we re-use
+		// HTTP clients, the same connection will be used to make requests.
+		// This is undesirable during tests because we want to isolate the
+		// different test requests. Additionally, keep-alive causes the test
+		// server to continue listening on the existing connection for some
+		// time after we close the listener.
+		cl := &http.Client{Transport: new(http.Transport)}
+		outbound = ht.NewOutboundWithClient(fmt.Sprintf("http://%s:8081", server), cl)
+	case "tchannel":
+		ch, err := tchannel.NewChannel("client", nil)
+		fatals.NoError(err, "couldn't create tchannel")
+		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
 	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
+		fatals.Fail("", "unknown transport %q", trans)
 	}
+
+	return yarpc.New(yarpc.Config{
+		Name:      "client",
+		Outbounds: transport.Outbounds{"yarpc-test": outbound},
+	})
 }

@@ -18,58 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package echo
 
 import (
+	"bytes"
 	"time"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
+	"github.com/yarpc/yarpc-go/encoding/raw"
 
 	"golang.org/x/net/context"
 )
 
-func runJSON(s crossdock.Sink, rpc yarpc.RPC) {
-	assert := crossdock.Assert(s)
-	checks := crossdock.Checks(s)
+// Raw implements the 'raw' behavior.
+func Raw(s crossdock.Sink, p crossdock.Params) {
+	s = createEchoSink("raw", s, p)
+	rpc := rpc.Create(s, p)
 
-	headers := transport.Headers{
-		"hello": "json",
-	}
-	token := random.String(5)
+	client := raw.New(rpc.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
-	resBody, resMeta, err := jsonCall(rpc, headers, token)
-	if skipOnConnRefused(s, err) {
-		return
-	}
-	if checks.NoError(err, "json: call failed") {
-		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers, "headers echoed")
-	}
-}
-
-type jsonEcho struct {
-	Token string `json:"token"`
-}
-
-func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *json.Response, error) {
-	client := json.New(rpc.Channel(serverName))
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	reqMeta := &json.Request{
+	token := random.Bytes(5)
+	resBody, _, err := client.Call(&raw.Request{
 		Context:   ctx,
-		Procedure: "echo",
-		TTL:       time.Second,
-		Headers:   headers,
-	}
-	reqBody := &jsonEcho{Token: token}
+		Procedure: "echo/raw",
+		TTL:       time.Second, // TODO context already has timeout; use that
+	}, token)
 
-	var resBody jsonEcho
-	resMeta, err := client.Call(reqMeta, reqBody, &resBody)
-	return resBody.Token, resMeta, err
+	crossdock.Fatals(s).NoError(err, "call to echo/raw failed: %v", err)
+	crossdock.Assert(s).True(bytes.Equal(token, resBody), "server said: %v", resBody)
 }
