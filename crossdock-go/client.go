@@ -61,7 +61,7 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // extractParams returns a map of params from url values
-func extractParams(p url.Values) (params map[string]string) {
+func extractParams(p url.Values) (params Params) {
 	for k, l := range p {
 		for _, v := range l {
 			params[k] = v
