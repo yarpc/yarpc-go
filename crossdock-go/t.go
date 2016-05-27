@@ -103,14 +103,7 @@ func (t entryT) Param(key string) string {
 	return t.params[key]
 }
 
-// SetParams updates the params on the T
-func (t *entryT) SetParams(params Params) {
-	t.behavior = params[BehaviorParam]
-	delete(params, BehaviorParam)
-
-	t.params = params
-}
-
+// Behavior returns the test to dispatch on
 func (t entryT) Behavior() string {
 	return t.behavior
 }
