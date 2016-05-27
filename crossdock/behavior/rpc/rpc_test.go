@@ -59,8 +59,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		entries := crossdock.Run(func(ct crossdock.T) {
-			ct.SetParams(tt.params)
+		entries := crossdock.Run(tt.params, func(ct crossdock.T) {
 			rpc := Create(ct)
 
 			// should get here only if the request succeeded

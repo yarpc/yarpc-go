@@ -47,12 +47,8 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "HEAD" {
 		return
 	}
-
-	entries := Run(func(t T) {
-		params := extractParams(r.Form)
-		t.SetParams(params)
-		h.dispatcher(t)
-	})
+	params := extractParams(r.Form)
+	entries := Run(params, h.dispatcher)
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(entries); err != nil {

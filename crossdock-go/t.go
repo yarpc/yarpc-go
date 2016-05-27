@@ -32,7 +32,6 @@ type T interface {
 
 	Behavior() string
 	Param(key string) string
-	SetParams(params Params)
 }
 
 // Params represents args to a test
