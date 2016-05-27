@@ -42,7 +42,7 @@ type httpResponse struct {
 	Status int
 }
 
-func (h httpClient) Call(s crossdock.Sink, hs transport.Headers, body string) httpResponse {
+func (h httpClient) Call(s crossdock.T, hs transport.Headers, body string) httpResponse {
 	fatals := crossdock.Fatals(s)
 
 	req := http.Request{
@@ -72,7 +72,7 @@ func (h httpClient) Call(s crossdock.Sink, hs transport.Headers, body string) ht
 	}
 }
 
-func buildHTTPClient(s crossdock.Sink, ps crossdock.Params) httpClient {
+func buildHTTPClient(s crossdock.T, ps crossdock.Params) httpClient {
 	fatals := crossdock.Fatals(s)
 
 	server := ps.Param(params.Server)
@@ -88,7 +88,7 @@ func buildHTTPClient(s crossdock.Sink, ps crossdock.Params) httpClient {
 }
 
 // Run runs the errors behavior.
-func Run(s crossdock.Sink, ps crossdock.Params) {
+func Run(s crossdock.T, ps crossdock.Params) {
 	client := buildHTTPClient(s, ps)
 	assert := crossdock.Assert(s)
 

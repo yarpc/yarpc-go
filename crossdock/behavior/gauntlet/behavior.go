@@ -46,30 +46,30 @@ type gauntletEntry struct {
 }
 
 type gauntletSink struct {
-	crossdock.Sink
+	crossdock.T
 
 	Transport string
 	Server    string
 }
 
 func (s gauntletSink) Put(e interface{}) {
-	s.Sink.Put(gauntletEntry{
+	s.T.Put(gauntletEntry{
 		Entry:     e.(crossdock.Entry),
 		Transport: s.Transport,
 		Server:    s.Server,
 	})
 }
 
-func createGauntletSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
+func createGauntletSink(s crossdock.T, ps crossdock.Params) crossdock.T {
 	return gauntletSink{
-		Sink:      s,
+		T:         s,
 		Transport: ps.Param(params.Transport),
 		Server:    ps.Param(params.Server),
 	}
 }
 
 // Run executes the thriftgauntlet behavior.
-func Run(s crossdock.Sink, ps crossdock.Params) {
+func Run(s crossdock.T, ps crossdock.Params) {
 	s = createGauntletSink(s, ps)
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
@@ -437,7 +437,7 @@ func isUnrecognizedProcedure(err error) bool {
 	return false
 }
 
-func buildClient(s crossdock.Sink, desc string, service string, channel transport.Channel) reflect.Value {
+func buildClient(s crossdock.T, desc string, service string, channel transport.Channel) reflect.Value {
 	switch service {
 	case "", "ThriftTest":
 		return reflect.ValueOf(thrifttestclient.New(channel))
@@ -449,7 +449,7 @@ func buildClient(s crossdock.Sink, desc string, service string, channel transpor
 	}
 }
 
-func extractCallResponse(s crossdock.Sink, desc string, returns []reflect.Value) (interface{}, error) {
+func extractCallResponse(s crossdock.T, desc string, returns []reflect.Value) (interface{}, error) {
 	var (
 		err error
 		got interface{}
@@ -475,7 +475,7 @@ func extractCallResponse(s crossdock.Sink, desc string, returns []reflect.Value)
 	return got, err
 }
 
-func buildArgs(s crossdock.Sink, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
+func buildArgs(s crossdock.T, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
 	check := crossdock.Checks(s)
 	wantIn := len(give) + 1
 	if !check.Equal(wantIn, ft.NumIn(), "%v: should accept %d arguments", desc, wantIn) {

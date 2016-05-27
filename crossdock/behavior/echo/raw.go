@@ -33,7 +33,7 @@ import (
 )
 
 // Raw implements the 'raw' behavior.
-func Raw(s crossdock.Sink, p crossdock.Params) {
+func Raw(s crossdock.T, p crossdock.Params) {
 	s = createEchoSink("raw", s, p)
 	rpc := rpc.Create(s, p)
 

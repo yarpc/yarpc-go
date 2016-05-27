@@ -31,12 +31,12 @@ import (
 func TestEchoSink(t *testing.T) {
 	tests := []struct {
 		server, transport, encoding string
-		act                         func(crossdock.Sink)
+		act                         func(crossdock.T)
 		entry                       echoEntry
 	}{
 		{
 			"localhost", "tchannel", "json",
-			func(s crossdock.Sink) {
+			func(s crossdock.T) {
 				crossdock.Successf(s, "it worked!")
 			},
 			echoEntry{
@@ -51,7 +51,7 @@ func TestEchoSink(t *testing.T) {
 		},
 		{
 			"localhost", "http", "thrift",
-			func(s crossdock.Sink) {
+			func(s crossdock.T) {
 				crossdock.Skipf(s, "what even is")
 			},
 			echoEntry{
@@ -66,7 +66,7 @@ func TestEchoSink(t *testing.T) {
 		},
 		{
 			"localhost", "http", "raw",
-			func(s crossdock.Sink) {
+			func(s crossdock.T) {
 				crossdock.Fatalf(s, "great sadness")
 			},
 			echoEntry{
@@ -82,7 +82,7 @@ func TestEchoSink(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		entries := crossdock.Run(func(s crossdock.Sink) {
+		entries := crossdock.Run(func(s crossdock.T) {
 			es := createEchoSink(tt.encoding, s, crossdock.ParamsFromMap{
 				"server":    tt.server,
 				"transport": tt.transport,

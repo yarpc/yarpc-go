@@ -25,8 +25,8 @@ import (
 	"runtime"
 )
 
-// Sink records the result of calling different behaviors.
-type Sink interface {
+// T records the result of calling different behaviors.
+type T interface {
 	Put(interface{})
 	FailNow()
 }
@@ -35,7 +35,7 @@ type Sink interface {
 //
 // This may be called multiple times if multiple tests inside a behavior were
 // skipped.
-func Skipf(s Sink, format string, args ...interface{}) {
+func Skipf(s T, format string, args ...interface{}) {
 	s.Put(Entry{
 		Status: Skipped,
 		Output: fmt.Sprintf(format, args...),
@@ -46,7 +46,7 @@ func Skipf(s Sink, format string, args ...interface{}) {
 //
 // This may be called multiple times if multiple tests inside a behavior
 // failed.
-func Errorf(s Sink, format string, args ...interface{}) {
+func Errorf(s T, format string, args ...interface{}) {
 	s.Put(Entry{
 		Status: Failed,
 		Output: fmt.Sprintf(format, args...),
@@ -56,7 +56,7 @@ func Errorf(s Sink, format string, args ...interface{}) {
 // Fatalf records a failed test and stops executing the current behavior.
 //
 // This may be used to stop executing in case of irrecoverable errors.
-func Fatalf(s Sink, format string, args ...interface{}) {
+func Fatalf(s T, format string, args ...interface{}) {
 	Errorf(s, format, args...)
 	s.FailNow()
 }
@@ -65,7 +65,7 @@ func Fatalf(s Sink, format string, args ...interface{}) {
 //
 // This may be called multiple times for multiple successful tests inside a
 // behavior.
-func Successf(s Sink, format string, args ...interface{}) {
+func Successf(s T, format string, args ...interface{}) {
 	s.Put(Entry{
 		Status: Passed,
 		Output: fmt.Sprintf(format, args...),

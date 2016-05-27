@@ -32,7 +32,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runJSON(s crossdock.Sink, rpc yarpc.RPC) {
+func runJSON(s crossdock.T, rpc yarpc.RPC) {
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
 

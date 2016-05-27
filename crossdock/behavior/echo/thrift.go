@@ -34,7 +34,7 @@ import (
 )
 
 // Thrift implements the 'thrift' behavior.
-func Thrift(s crossdock.Sink, p crossdock.Params) {
+func Thrift(s crossdock.T, p crossdock.Params) {
 	s = createEchoSink("thrift", s, p)
 	rpc := rpc.Create(s, p)
 

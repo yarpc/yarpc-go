@@ -30,7 +30,7 @@ import (
 	"github.com/uber/tchannel-go/thrift"
 )
 
-func runThrift(s crossdock.Sink, call call) {
+func runThrift(s crossdock.T, call call) {
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
 

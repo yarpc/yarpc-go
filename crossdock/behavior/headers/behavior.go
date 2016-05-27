@@ -48,7 +48,7 @@ type headersEntry struct {
 
 // headersSink wraps a sink to emit headersEntry entries.
 type headersSink struct {
-	crossdock.Sink
+	crossdock.T
 
 	Transport string
 	Encoding  string
@@ -56,7 +56,7 @@ type headersSink struct {
 }
 
 func (s headersSink) Put(e interface{}) {
-	s.Sink.Put(headersEntry{
+	s.T.Put(headersEntry{
 		Entry:     e.(crossdock.Entry),
 		Transport: s.Transport,
 		Encoding:  s.Encoding,
@@ -64,9 +64,9 @@ func (s headersSink) Put(e interface{}) {
 	})
 }
 
-func createHeadersSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
+func createHeadersSink(s crossdock.T, ps crossdock.Params) crossdock.T {
 	return headersSink{
-		Sink:      s,
+		T:         s,
 		Transport: ps.Param(params.Transport),
 		Encoding:  ps.Param(params.Encoding),
 		Server:    ps.Param(params.Server),
@@ -74,7 +74,7 @@ func createHeadersSink(s crossdock.Sink, ps crossdock.Params) crossdock.Sink {
 }
 
 // Run runs the headers behavior
-func Run(s crossdock.Sink, ps crossdock.Params) {
+func Run(s crossdock.T, ps crossdock.Params) {
 	s = createHeadersSink(s, ps)
 	rpc := rpc.Create(s, ps)
 

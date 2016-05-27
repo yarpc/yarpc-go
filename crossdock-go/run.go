@@ -27,7 +27,7 @@ import "runtime/debug"
 //
 // Functions like Fatalf won't work if the behavior is not executed inside a
 // Run context.
-func Run(f func(Sink)) []interface{} {
+func Run(f func(T)) []interface{} {
 	var s entrySink
 	done := make(chan struct{})
 

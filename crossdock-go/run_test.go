@@ -28,15 +28,15 @@ import (
 
 func TestRunRecordsFailureOnFatal(t *testing.T) {
 	tests := []struct {
-		f      func(Sink)
+		f      func(T)
 		output string
 	}{
 		{
-			func(s Sink) { Fatalf(s, "great sadness") },
+			func(s T) { Fatalf(s, "great sadness") },
 			"great sadness",
 		},
 		{
-			func(s Sink) { panic("aaaahh") },
+			func(s T) { panic("aaaahh") },
 			"aaaahh",
 		},
 	}

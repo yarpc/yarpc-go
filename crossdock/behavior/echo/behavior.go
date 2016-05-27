@@ -36,7 +36,7 @@ type echoEntry struct {
 
 // echoSink wraps a sink to emit echoEntry entries instead.
 type echoSink struct {
-	crossdock.Sink
+	crossdock.T
 
 	Transport string
 	Encoding  string
@@ -44,7 +44,7 @@ type echoSink struct {
 }
 
 func (s echoSink) Put(e interface{}) {
-	s.Sink.Put(echoEntry{
+	s.T.Put(echoEntry{
 		Entry:     e.(crossdock.Entry),
 		Transport: s.Transport,
 		Encoding:  s.Encoding,
@@ -54,9 +54,9 @@ func (s echoSink) Put(e interface{}) {
 
 // createEchoSink wraps a Sink to have transport, encoding, and server
 // information.
-func createEchoSink(encoding string, s crossdock.Sink, p crossdock.Params) crossdock.Sink {
+func createEchoSink(encoding string, s crossdock.T, p crossdock.Params) crossdock.T {
 	return echoSink{
-		Sink:      s,
+		T:         s,
 		Transport: p.Param(params.Transport),
 		Encoding:  encoding,
 		Server:    p.Param(params.Server),

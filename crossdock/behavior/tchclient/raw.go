@@ -30,7 +30,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runRaw(s crossdock.Sink, call call) {
+func runRaw(s crossdock.T, call call) {
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
 

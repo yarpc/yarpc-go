@@ -38,7 +38,7 @@ const (
 )
 
 // Run executes the tchserver test
-func Run(s crossdock.Sink, ps crossdock.Params) {
+func Run(s crossdock.T, ps crossdock.Params) {
 	fatals := crossdock.Fatals(s)
 
 	encoding := ps.Param(params.Encoding)

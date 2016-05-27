@@ -29,7 +29,7 @@ import (
 	"github.com/uber/tchannel-go/json"
 )
 
-func runJSON(s crossdock.Sink, call call) {
+func runJSON(s crossdock.T, call call) {
 	assert := crossdock.Assert(s)
 	checks := crossdock.Checks(s)
 

@@ -33,7 +33,7 @@ import (
 //
 // Each assertion made with the Assertions object will result in either a
 // failure or a success being written to the sink.
-func Assert(s Sink) Assertions {
+func Assert(s T) Assertions {
 	return sinkAssertions{s, assert.New(sinkTestingT{s})}
 }
 
@@ -41,7 +41,7 @@ func Assert(s Sink) Assertions {
 //
 // This is the same as Assert except that nothing is written to the sink in
 // case of success.
-func Checks(s Sink) Assertions {
+func Checks(s T) Assertions {
 	return assert.New(sinkTestingT{s})
 }
 
@@ -51,7 +51,7 @@ func Checks(s Sink) Assertions {
 //
 // Each assertion made with the Assertions object will result in either a
 // failure or a success being written to the sink.
-func Require(s Sink) Assertions {
+func Require(s T) Assertions {
 	return sinkAssertions{s, requireAssertions{require.New(sinkTestingT{s})}}
 }
 
@@ -59,12 +59,12 @@ func Require(s Sink) Assertions {
 // cases are not written to the Sink, only failures are.
 //
 // Behavior exception stops after the first failure.
-func Fatals(s Sink) Assertions {
+func Fatals(s T) Assertions {
 	return requireAssertions{require.New(sinkTestingT{s})}
 }
 
 // sinkTestingT adapts a Sink into an {require,assert}.TestingT
-type sinkTestingT struct{ s Sink }
+type sinkTestingT struct{ s T }
 
 func (st sinkTestingT) FailNow() { st.s.FailNow() }
 
@@ -130,7 +130,7 @@ func formatMsgAndArgs(msgAndArgs []interface{}) string {
 type sinkAssertions struct {
 	// We need to wrap assert rather than using it as-is because we need to
 	// log success messages.
-	s Sink
+	s T
 	a Assertions
 }
 

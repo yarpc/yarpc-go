@@ -37,7 +37,7 @@ type jsonEcho struct {
 }
 
 // JSON implements the 'json' behavior.
-func JSON(s crossdock.Sink, p crossdock.Params) {
+func JSON(s crossdock.T, p crossdock.Params) {
 	s = createEchoSink("json", s, p)
 	rpc := rpc.Create(s, p)
 

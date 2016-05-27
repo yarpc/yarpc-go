@@ -36,7 +36,7 @@ func main() {
 	crossdock.Start(dispatch)
 }
 
-func dispatch(s crossdock.Sink, behavior string, ps crossdock.Params) {
+func dispatch(s crossdock.T, behavior string, ps crossdock.Params) {
 	switch behavior {
 	case "raw":
 		echo.Raw(s, ps)

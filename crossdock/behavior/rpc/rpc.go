@@ -36,7 +36,7 @@ import (
 
 // Create creates an RPC from the given parameters or fails the whole
 // behavior.
-func Create(s crossdock.Sink, p crossdock.Params) yarpc.RPC {
+func Create(s crossdock.T, p crossdock.Params) yarpc.RPC {
 	fatals := crossdock.Fatals(s)
 
 	server := p.Param(params.Server)
