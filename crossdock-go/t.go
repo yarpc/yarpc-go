@@ -27,21 +27,54 @@ import (
 
 // T records the result of calling different behaviors.
 type T interface {
-	Put(interface{})
-	FailNow()
-
 	Behavior() string
 	Param(key string) string
+
+	Put(interface{})
+
+	FailNow()
+	Errorf(format string, args ...interface{})
+	Skipf(format string, args ...interface{})
+	Successf(format string, args ...interface{})
+	Fatalf(format string, args ...interface{})
 }
 
 // Params represents args to a test
 type Params map[string]string
 
+// entryT is a sink that keeps track of entries in-order
+type entryT struct {
+	behavior string
+	params   Params
+
+	entries []interface{}
+}
+
+// Behavior returns the test to dispatch on
+func (t entryT) Behavior() string {
+	return t.behavior
+}
+
+// Param gets a key out of the params map
+func (t entryT) Param(key string) string {
+	return t.params[key]
+}
+
+// Put an entry into the EntrySink.
+func (t *entryT) Put(v interface{}) {
+	t.entries = append(t.entries, v)
+}
+
+func (*entryT) FailNow() {
+	// Exit this goroutine and call any deferred functions
+	runtime.Goexit()
+}
+
 // Skipf records a skipped test.
 //
 // This may be called multiple times if multiple tests inside a behavior were
 // skipped.
-func Skipf(t T, format string, args ...interface{}) {
+func (t *entryT) Skipf(format string, args ...interface{}) {
 	t.Put(Entry{
 		Status: Skipped,
 		Output: fmt.Sprintf(format, args...),
@@ -52,58 +85,26 @@ func Skipf(t T, format string, args ...interface{}) {
 //
 // This may be called multiple times if multiple tests inside a behavior
 // failed.
-func Errorf(t T, format string, args ...interface{}) {
+func (t *entryT) Errorf(format string, args ...interface{}) {
 	t.Put(Entry{
 		Status: Failed,
 		Output: fmt.Sprintf(format, args...),
 	})
 }
 
-// Fatalf records a failed test and stops executing the current behavior.
-//
-// This may be used to stop executing in case of irrecoverable errors.
-func Fatalf(t T, format string, args ...interface{}) {
-	Errorf(t, format, args...)
-	t.FailNow()
-}
-
 // Successf records a successful test.
 //
 // This may be called multiple times for multiple successful tests inside a
 // behavior.
-func Successf(t T, format string, args ...interface{}) {
+func (t *entryT) Successf(format string, args ...interface{}) {
 	t.Put(Entry{
 		Status: Passed,
 		Output: fmt.Sprintf(format, args...),
 	})
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-// entryT is a sink that keeps track of entries in-order
-type entryT struct {
-	behavior string
-	params   Params
-
-	entries []interface{}
-}
-
-func (*entryT) FailNow() {
-	// Exit this goroutine and call any deferred functions
-	runtime.Goexit()
-}
-
-// Put an entry into the EntrySink.
-func (t *entryT) Put(v interface{}) {
-	t.entries = append(t.entries, v)
-}
-
-// Param gets a key out of the params map
-func (t entryT) Param(key string) string {
-	return t.params[key]
-}
-
-// Behavior returns the test to dispatch on
-func (t entryT) Behavior() string {
-	return t.behavior
+// Fatalf records a failed test and fails immediately
+func (t *entryT) Fatalf(format string, args ...interface{}) {
+	t.Errorf(format, args...)
+	t.FailNow()
 }

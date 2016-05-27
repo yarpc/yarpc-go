@@ -42,7 +42,7 @@ func Run(params Params, f func(T)) []interface{} {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				Errorf(&t, "%v\n%s", err, string(debug.Stack()))
+				t.Errorf("%v\n%s", err, string(debug.Stack()))
 			}
 			close(done)
 		}()

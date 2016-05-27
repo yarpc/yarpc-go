@@ -32,7 +32,7 @@ func TestRunRecordsFailureOnFatal(t *testing.T) {
 		output string
 	}{
 		{
-			func(s T) { Fatalf(s, "great sadness") },
+			func(ct T) { ct.Fatalf("great sadness") },
 			"great sadness",
 		},
 		{

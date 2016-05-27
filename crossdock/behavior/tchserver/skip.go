@@ -32,7 +32,7 @@ import (
 func skipOnConnRefused(t crossdock.T, err error) bool {
 	switch err.(type) {
 	case *net.OpError:
-		crossdock.Skipf(t, "tchannel server not implemented: %v", err)
+		t.Skipf("tchannel server not implemented: %v", err)
 		return true
 	}
 	return false

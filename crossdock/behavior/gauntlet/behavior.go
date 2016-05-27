@@ -402,7 +402,7 @@ func Run(t crossdock.T) {
 
 		got, err := extractCallResponse(t, desc, f.Call(args))
 		if isUnrecognizedProcedure(err) {
-			crossdock.Skipf(t, "%v: procedure not defined", desc)
+			t.Skipf("%v: procedure not defined", desc)
 			continue
 		}
 
