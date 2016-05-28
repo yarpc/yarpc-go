@@ -18,38 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package client
 
 import (
-	"time"
-
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-
-	"golang.org/x/net/context"
+	"github.com/yarpc/yarpc-go/crossdock/client/echo"
+	"github.com/yarpc/yarpc-go/crossdock/client/errors"
+	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
+	"github.com/yarpc/yarpc-go/crossdock/client/headers"
+	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
+	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
 )
 
-// Thrift implements the 'thrift' behavior.
-func Thrift(t crossdock.T) {
-	t = createEchoT("thrift", t)
-	rpc := rpc.Create(t)
+var behaviors = crossdock.Behaviors{
+	"json":           echo.JSON,
+	"thrift":         echo.Thrift,
+	"headers":        headers.Run,
+	"errors":         errors.Run,
+	"tchclient":      tchclient.Run,
+	"tchserver":      tchserver.Run,
+	"thriftgauntlet": gauntlet.Run,
+}
 
-	client := echoclient.New(rpc.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-
-	token := random.String(5)
-	pong, _, err := client.Echo(
-		&thrift.Request{
-			Context: ctx,
-			TTL:     time.Second, // TODO context already has timeout; use that
-		},
-		&echo.Ping{Beep: token},
-	)
-
-	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
-	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)
+// Start registers behaviors and begins the Crossdock client
+func Start() {
+	crossdock.Start(behaviors)
 }

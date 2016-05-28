@@ -18,47 +18,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package tchserver
 
 import (
+	"time"
+
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
 )
 
-// echoEntry is an entry emitted by the echo behaviors.
-type echoEntry struct {
-	crossdock.Entry
+func runRaw(t crossdock.T, rpc yarpc.RPC) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
-	Transport string `json:"transport"`
-	Encoding  string `json:"encoding"`
-	Server    string `json:"server"`
-}
-
-// echoT wraps a sink to emit echoEntry entries instead.
-type echoT struct {
-	crossdock.T
-
-	Transport string
-	Encoding  string
-	Server    string
-}
-
-func (t echoT) Put(e interface{}) {
-	t.T.Put(echoEntry{
-		Entry:     e.(crossdock.Entry),
-		Transport: t.Transport,
-		Encoding:  t.Encoding,
-		Server:    t.Server,
-	})
-}
-
-// createEchoT wraps a Sink to have transport, encoding, and server
-// information.
-func createEchoT(encoding string, t crossdock.T) crossdock.T {
-	return echoT{
-		T:         t,
-		Transport: t.Param(params.Transport),
-		Encoding:  encoding,
-		Server:    t.Param(params.Server),
+	// TODO headers should be at yarpc, not transport
+	headers := transport.Headers{
+		"hello": "raw",
 	}
+	token := random.Bytes(5)
+
+	resBody, resMeta, err := rawCall(rpc, headers, token)
+	if skipOnConnRefused(t, err) {
+		return
+	}
+	if checks.NoError(err, "raw: call failed") {
+		assert.Equal(token, resBody, "body echoed")
+		assert.Equal(headers, resMeta.Headers, "headers echoed")
+	}
+}
+
+func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *raw.Response, error) {
+	client := raw.New(rpc.Channel(serverName))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	// TODO rename to raw.ReqMeta
+	reqMeta := &raw.Request{
+		Context:   ctx,
+		Procedure: "echo/raw",
+		Headers:   headers,
+		TTL:       time.Second,
+	}
+	resBody, resMeta, err := client.Call(reqMeta, token)
+	return resBody, resMeta, err
 }

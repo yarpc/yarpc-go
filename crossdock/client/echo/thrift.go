@@ -21,32 +21,35 @@
 package echo
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
-	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 
 	"golang.org/x/net/context"
 )
 
-// Raw implements the 'raw' behavior.
-func Raw(t crossdock.T) {
-	t = createEchoT("raw", t)
+// Thrift implements the 'thrift' behavior.
+func Thrift(t crossdock.T) {
+	t = createEchoT("thrift", t)
 	rpc := rpc.Create(t)
 
-	client := raw.New(rpc.Channel("yarpc-test"))
+	client := echoclient.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
-	token := random.Bytes(5)
-	resBody, _, err := client.Call(&raw.Request{
-		Context:   ctx,
-		Procedure: "echo/raw",
-		TTL:       time.Second, // TODO context already has timeout; use that
-	}, token)
+	token := random.String(5)
+	pong, _, err := client.Echo(
+		&thrift.Request{
+			Context: ctx,
+			TTL:     time.Second, // TODO context already has timeout; use that
+		},
+		&echo.Ping{Beep: token},
+	)
 
-	crossdock.Fatals(t).NoError(err, "call to echo/raw failed: %v", err)
-	crossdock.Assert(t).True(bytes.Equal(token, resBody), "server said: %v", resBody)
+	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
+	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)
 }

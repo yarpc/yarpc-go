@@ -26,9 +26,9 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/rpc"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestclient"

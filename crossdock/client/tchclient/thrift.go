@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 
 	"github.com/uber/tchannel-go/thrift"

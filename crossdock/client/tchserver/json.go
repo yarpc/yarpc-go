@@ -21,48 +21,55 @@
 package tchserver
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
-	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
-	"github.com/uber/tchannel-go"
+	"golang.org/x/net/context"
 )
 
-const (
-	serverPort = 8083
-	serverName = "tchannel-server"
-)
+func runJSON(t crossdock.T, rpc yarpc.RPC) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
 
-// Run executes the tchserver test
-func Run(t crossdock.T) {
-	fatals := crossdock.Fatals(t)
-
-	encoding := t.Param(params.Encoding)
-	server := t.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
-
-	ch, err := tchannel.NewChannel("yarpc-client", nil)
-	fatals.NoError(err, "could not create channel")
-
-	rpc := yarpc.New(yarpc.Config{
-		Name: "yarpc-client",
-		Outbounds: transport.Outbounds{
-			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
-		},
-	})
-
-	switch encoding {
-	case "raw":
-		runRaw(t, rpc)
-	case "json":
-		runJSON(t, rpc)
-	case "thrift":
-		runThrift(t, rpc)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
+	headers := transport.Headers{
+		"hello": "json",
 	}
+	token := random.String(5)
+
+	resBody, resMeta, err := jsonCall(rpc, headers, token)
+	if skipOnConnRefused(t, err) {
+		return
+	}
+	if checks.NoError(err, "json: call failed") {
+		assert.Equal(token, resBody, "body echoed")
+		assert.Equal(headers, resMeta.Headers, "headers echoed")
+	}
+}
+
+type jsonEcho struct {
+	Token string `json:"token"`
+}
+
+func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *json.Response, error) {
+	client := json.New(rpc.Channel(serverName))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	reqMeta := &json.Request{
+		Context:   ctx,
+		Procedure: "echo",
+		TTL:       time.Second,
+		Headers:   headers,
+	}
+	reqBody := &jsonEcho{Token: token}
+
+	var resBody jsonEcho
+	resMeta, err := client.Call(reqMeta, reqBody, &resBody)
+	return resBody.Token, resMeta, err
 }
