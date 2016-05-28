@@ -27,20 +27,23 @@ import (
 	"net/url"
 )
 
+// BehaviorFunc executes a set of tests against T
+type BehaviorFunc func(t T)
+
+// Behaviors is a map of BehaviorFuncs to dispatch to
+type Behaviors map[string]BehaviorFunc
+
 // BehaviorParam is the url param representing the test to run
 const BehaviorParam = "behavior"
 
-// Dispatcher is a func that runs when the Crossdock client receives a request
-type Dispatcher func(t T)
-
 // Start begins a blocking Crossdock client
-func Start(dispatcher Dispatcher) {
-	http.Handle("/", requestHandler{dispatcher: dispatcher})
+func Start(behaviors Behaviors) {
+	http.Handle("/", requestHandler{behaviors: behaviors})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 type requestHandler struct {
-	dispatcher Dispatcher
+	behaviors Behaviors
 }
 
 func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +51,14 @@ func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	params := extractParams(r.URL.Query())
-	entries := Run(params, h.dispatcher)
+	entries := Run(params, func(t T) {
+		behavior := h.behaviors[t.Behavior()]
+		if behavior == nil {
+			t.Skipf("unknown behavior %q", t.Behavior())
+			return
+		}
+		behavior(t)
+	})
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(entries); err != nil {
