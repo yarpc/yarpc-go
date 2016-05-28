@@ -33,7 +33,7 @@ const clientURL = "http://127.0.0.1:8080"
 func TestCrossdock(t *testing.T) {
 	server.Start()
 	defer server.Stop()
-	go crossdock.Start(dispatch)
+	go crossdock.Start(behaviors)
 
 	crossdock.Wait(t, clientURL, 10)
 

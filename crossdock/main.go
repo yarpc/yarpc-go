@@ -31,30 +31,18 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/server"
 )
 
-func main() {
-	server.Start()
-	crossdock.Start(dispatch)
+var behaviors = crossdock.Behaviors{
+	"raw":            echo.Raw,
+	"json":           echo.JSON,
+	"thrift":         echo.Thrift,
+	"headers":        headers.Run,
+	"errors":         errors.Run,
+	"tchclient":      tchclient.Run,
+	"tchserver":      tchserver.Run,
+	"thriftgauntlet": gauntlet.Run,
 }
 
-func dispatch(t crossdock.T) {
-	switch t.Behavior() {
-	case "raw":
-		echo.Raw(t)
-	case "json":
-		echo.JSON(t)
-	case "thrift":
-		echo.Thrift(t)
-	case "errors":
-		errors.Run(t)
-	case "headers":
-		headers.Run(t)
-	case "tchclient":
-		tchclient.Run(t)
-	case "tchserver":
-		tchserver.Run(t)
-	case "thriftgauntlet":
-		gauntlet.Run(t)
-	default:
-		t.Skipf("unknown behavior %q", t.Behavior())
-	}
+func main() {
+	server.Start()
+	crossdock.Start(behaviors)
 }
