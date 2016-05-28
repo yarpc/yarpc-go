@@ -18,45 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchclient
+package echo
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
+	"github.com/yarpc/yarpc-go/encoding/raw"
 
-	"github.com/uber/tchannel-go/json"
+	"golang.org/x/net/context"
 )
 
-func runJSON(t crossdock.T, call call) {
-	assert := crossdock.Assert(t)
-	checks := crossdock.Checks(t)
+// Raw implements the 'raw' behavior.
+func Raw(t crossdock.T) {
+	t = createEchoT("raw", t)
+	rpc := rpc.Create(t)
 
-	headers := map[string]string{
-		"hello": "json",
-	}
-	token := random.String(5)
+	client := raw.New(rpc.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
-	resp, respHeaders, err := jsonCall(call, headers, token)
-	if checks.NoError(err, "json: call failed") {
-		assert.Equal(token, resp.Token, "body echoed")
-		assert.Equal(headers, respHeaders, "headers echoed")
-	}
-}
+	token := random.Bytes(5)
+	resBody, _, err := client.Call(&raw.Request{
+		Context:   ctx,
+		Procedure: "echo/raw",
+		TTL:       time.Second, // TODO context already has timeout; use that
+	}, token)
 
-type jsonResp struct {
-	Token string `json:"token"`
-}
-
-func jsonCall(call call, headers map[string]string, token string) (jsonResp, map[string]string, error) {
-	peer := call.Channel.Peers().Add(call.ServerHostPort)
-
-	ctx, cancel := json.NewContext(time.Second)
-	ctx = json.WithHeaders(ctx, headers)
-	defer cancel()
-
-	var response jsonResp
-	err := json.CallPeer(ctx, peer, serverName, "echo", &jsonResp{Token: token}, &response)
-	return response, ctx.ResponseHeaders(), err
+	crossdock.Fatals(t).NoError(err, "call to echo/raw failed: %v", err)
+	crossdock.Assert(t).True(bytes.Equal(token, resBody), "server said: %v", resBody)
 }

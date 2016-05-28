@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
+	"github.com/yarpc/yarpc-go/crossdock/client"
 	"github.com/yarpc/yarpc-go/crossdock/server"
 )
 
@@ -33,7 +34,7 @@ const clientURL = "http://127.0.0.1:8080"
 func TestCrossdock(t *testing.T) {
 	server.Start()
 	defer server.Stop()
-	go crossdock.Start(behaviors)
+	go client.Start()
 
 	crossdock.Wait(t, clientURL, 10)
 

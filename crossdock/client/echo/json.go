@@ -18,53 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchclient
+package echo
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
+	"github.com/yarpc/yarpc-go/encoding/json"
 
-	"github.com/uber/tchannel-go"
+	"golang.org/x/net/context"
 )
 
-const (
-	serverPort = 8082
-	serverName = "yarpc-test"
-)
-
-var log = tchannel.SimpleLogger
-
-// Run executes the tchclient test
-func Run(t crossdock.T) {
-	fatals := crossdock.Fatals(t)
-
-	encoding := t.Param(params.Encoding)
-	server := t.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
-
-	ch, err := tchannel.NewChannel("tchannel-client", nil)
-	fatals.NoError(err, "Could not create channel")
-
-	call := call{Channel: ch, ServerHostPort: serverHostPort}
-
-	switch encoding {
-	case "raw":
-		runRaw(t, call)
-	case "json":
-		runJSON(t, call)
-	case "thrift":
-		runThrift(t, call)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
-	}
+// jsonEcho contains an echo request or response for the JSON echo endpoint.
+type jsonEcho struct {
+	Token string `json:"token"`
 }
 
-// call contains the details needed for each tchannel scheme
-// to make an outbound call. Because the way you connect is not uniform
-// between schemes, it's not enough to just add a peer and go.
-type call struct {
-	Channel        *tchannel.Channel
-	ServerHostPort string
+// JSON implements the 'json' behavior.
+func JSON(t crossdock.T) {
+	t = createEchoT("json", t)
+	rpc := rpc.Create(t)
+
+	client := json.New(rpc.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+	var response jsonEcho
+	token := random.String(5)
+	_, err := client.Call(
+		&json.Request{
+			Context:   ctx,
+			Procedure: "echo",
+			TTL:       time.Second, // TODO context already has timeout; use that
+		},
+		&jsonEcho{Token: token},
+		&response,
+	)
+	crossdock.Fatals(t).NoError(err, "call to echo failed: %v", err)
+	crossdock.Assert(t).Equal(token, response.Token, "server said: %v", response.Token)
 }

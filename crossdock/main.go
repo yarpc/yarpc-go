@@ -21,28 +21,11 @@
 package main
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/echo"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/errors"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/gauntlet"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/headers"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/tchclient"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/tchserver"
+	"github.com/yarpc/yarpc-go/crossdock/client"
 	"github.com/yarpc/yarpc-go/crossdock/server"
 )
 
-var behaviors = crossdock.Behaviors{
-	"raw":            echo.Raw,
-	"json":           echo.JSON,
-	"thrift":         echo.Thrift,
-	"headers":        headers.Run,
-	"errors":         errors.Run,
-	"tchclient":      tchclient.Run,
-	"tchserver":      tchserver.Run,
-	"thriftgauntlet": gauntlet.Run,
-}
-
 func main() {
 	server.Start()
-	crossdock.Start(behaviors)
+	client.Start()
 }

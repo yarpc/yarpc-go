@@ -18,57 +18,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package tchclient
 
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/behavior/random"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
 
+	"github.com/uber/tchannel-go/raw"
 	"golang.org/x/net/context"
 )
 
-func runThrift(t crossdock.T, rpc yarpc.RPC) {
+func runRaw(t crossdock.T, call call) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	headers := transport.Headers{
-		"hello": "thrift",
+	headers := []byte{
+		0x00, 0x01, // 1 header
+		0x00, 0x05, // length = 5
+		'h', 'e', 'l', 'l', 'o',
+		0x00, 0x03, // length = 3
+		'r', 'a', 'w',
 	}
-	token := random.String(5)
+	token := random.Bytes(5)
 
-	resBody, resMeta, err := thriftCall(rpc, headers, token)
-	if skipOnConnRefused(t, err) {
-		return
-	}
-	if checks.NoError(err, "thrift: call failed") {
-		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers, "headers echoed")
+	resp, respHeaders, err := rawCall(call, headers, token)
+	if checks.NoError(err, "raw: call failed") {
+		assert.Equal(token, resp, "body echoed")
+		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 }
 
-func thriftCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *thrift.Response, error) {
-	client := echoclient.New(rpc.Channel(serverName))
-
+func rawCall(call call, headers []byte, token []byte) ([]byte, []byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := &thrift.Request{
-		Context: ctx,
-		TTL:     time.Second,
-		Headers: headers,
-	}
-	ping := &echo.Ping{Beep: token}
-
-	resBody, resMeta, err := client.Echo(reqMeta, ping)
-	if err != nil {
-		return "", nil, err
-	}
-	return resBody.Boop, resMeta, err
+	arg2, arg3, _, err := raw.Call(
+		ctx,
+		call.Channel,
+		call.ServerHostPort,
+		serverName,
+		"echo/raw",
+		headers,
+		token,
+	)
+	return arg3, arg2, err
 }
