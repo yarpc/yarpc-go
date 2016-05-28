@@ -55,6 +55,6 @@ func dispatch(t crossdock.T) {
 	case "thriftgauntlet":
 		gauntlet.Run(t)
 	default:
-		crossdock.Skipf(t, "unknown behavior %q", t.Behavior())
+		t.Skipf("unknown behavior %q", t.Behavior())
 	}
 }
