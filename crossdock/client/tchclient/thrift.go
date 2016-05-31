@@ -81,6 +81,11 @@ func runGauntlet(t crossdock.T, call call) {
 			Want:     bytesToken,
 		},
 		{
+			Function: "TestByte",
+			Give:     []interface{}{int8(42)},
+			Want:     int8(42),
+		},
+		{
 			Function: "TestString",
 			Give:     []interface{}{token},
 			Want:     token,
