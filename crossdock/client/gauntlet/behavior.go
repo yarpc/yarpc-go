@@ -395,7 +395,6 @@ func Run(t crossdock.T) {
 			t.Skipf("%v: procedure not defined", desc)
 			continue
 		}
-
 		Assert(t, tt, desc, got, err)
 	}
 }

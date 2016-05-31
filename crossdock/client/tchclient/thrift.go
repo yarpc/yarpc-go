@@ -72,8 +72,14 @@ func runGauntlet(t crossdock.T, call call) {
 		"hello": "gauntlet",
 	}
 	token := random.String(5)
+	bytesToken := random.Bytes(1)
 
 	tests := []gauntlet.TT{
+		{
+			Function: "TestBinary",
+			Give:     []interface{}{bytesToken},
+			Want:     bytesToken,
+		},
 		{
 			Function: "TestString",
 			Give:     []interface{}{token},
