@@ -91,6 +91,12 @@ func runGauntlet(t crossdock.T, call call) {
 			Want:     float64(12.34),
 		},
 		{
+			Function: "TestEnum",
+			Details:  "MyNumberz",
+			Give:     []interface{}{gauntlet_apache.Numberz(gauntlet_apache.MyNumberz)},
+			Want:     gauntlet_apache.Numberz(gauntlet_apache.MyNumberz),
+		},
+		{
 			Function: "TestString",
 			Give:     []interface{}{token},
 			Want:     token,
