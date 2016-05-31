@@ -93,8 +93,16 @@ func runGauntlet(t crossdock.T, call call) {
 		{
 			Function: "TestEnum",
 			Details:  "MyNumberz",
-			Give:     []interface{}{gauntlet_apache.Numberz(gauntlet_apache.MyNumberz)},
-			Want:     gauntlet_apache.Numberz(gauntlet_apache.MyNumberz),
+			// Needing to cast to Numberz, since MyNumberz doesnt have a type for some reason,
+			// this is odd since gauntlet_apche.Numberz_THREE has a type of Numberz already
+			Give: []interface{}{gauntlet_apache.Numberz(gauntlet_apache.MyNumberz)},
+			Want: gauntlet_apache.Numberz(gauntlet_apache.MyNumberz),
+		},
+		{
+			Function: "TestEnum",
+			Details:  "NumberzThree",
+			Give:     []interface{}{gauntlet_apache.Numberz_THREE},
+			Want:     gauntlet_apache.Numberz_THREE,
 		},
 		{
 			Function: "TestString",
