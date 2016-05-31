@@ -23,6 +23,7 @@ package thrift
 //go:generate thriftrw-go -yarpc echo.thrift
 //go:generate thriftrw-go -yarpc gauntlet.thrift
 //go:generate thrift-gen --generateThrift --inputFile echo.thrift
+//go:generate thrift-gen --generateThrift --inputFile gauntlet_apache.thrift
 
 // Run this last
 
