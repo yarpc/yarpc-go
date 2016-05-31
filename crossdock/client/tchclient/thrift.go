@@ -105,6 +105,12 @@ func runGauntlet(t crossdock.T, call call) {
 			Want:     gauntlet_apache.Numberz_THREE,
 		},
 		{
+			Function: "TestEnum",
+			Details:  "unrecognized Numberz",
+			Give:     []interface{}{gauntlet_apache.Numberz(42)},
+			Want:     gauntlet_apache.Numberz(42),
+		},
+		{
 			Function: "TestString",
 			Give:     []interface{}{token},
 			Want:     token,
