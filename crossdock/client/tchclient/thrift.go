@@ -21,9 +21,11 @@
 package tchclient
 
 import (
+	"reflect"
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
+	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
@@ -63,23 +65,90 @@ func thriftCall(call call, headers map[string]string, token string) (*echo.Pong,
 }
 
 func runGauntlet(t crossdock.T, call call) {
-	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
+	// TODO assert headers
 	headers := map[string]string{
-		"hello": "thrift",
+		"hello": "gauntlet",
 	}
 	token := random.String(5)
 
-	client := gauntlet_apache.NewTChanThriftTestClient(thrift.NewClient(call.Channel, serverName, nil))
-
-	ctx, cancel := thrift.NewContext(time.Second)
-	ctx = thrift.WithHeaders(ctx, headers)
-	defer cancel()
-
-	resp, err := client.TestString(ctx, token)
-	if checks.NoError(err, "thrift: call failed") {
-		assert.Equal(token, resp, "body echoed")
-		assert.Equal(headers, ctx.ResponseHeaders(), "headers echoed")
+	tests := []gauntlet.TT{
+		{
+			Function: "TestString",
+			Give:     []interface{}{token},
+			Want:     token,
+		},
 	}
+
+	for _, tt := range tests {
+		desc := gauntlet.BuildDesc(tt)
+
+		client := buildClient(t, desc, tt.Service, thrift.NewClient(call.Channel, serverName, nil))
+		f := client.MethodByName(tt.Function)
+		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
+			continue
+		}
+
+		ctx, cancel := thrift.NewContext(time.Second)
+		ctx = thrift.WithHeaders(ctx, headers)
+		defer cancel()
+
+		args := []reflect.Value{reflect.ValueOf(ctx)}
+		if give, ok := gauntlet.BuildArgs(t, desc, f.Type(), tt.Give); ok {
+			args = append(args, give...)
+		} else {
+			continue
+		}
+
+		got, err := extractCallResponse(t, desc, f.Call(args))
+		if isUnrecognizedProcedure(err) {
+			t.Skipf("%v: procedure not defined", desc)
+			continue
+		}
+		gauntlet.Assert(t, tt, desc, got, err)
+	}
+}
+
+func buildClient(t crossdock.T, desc string, service string, client thrift.TChanClient) reflect.Value {
+	switch service {
+	case "", "ThriftTest":
+		return reflect.ValueOf(gauntlet_apache.NewTChanThriftTestClient(client))
+	case "SecondService":
+		return reflect.ValueOf(gauntlet_apache.NewTChanSecondServiceClient(client))
+	default:
+		crossdock.Fatals(t).Fail("", "%v: unknown thrift service", desc)
+		return reflect.Value{} // we'll never actually get here
+	}
+}
+
+// TODO implement this
+func isUnrecognizedProcedure(err error) bool {
+	return false
+}
+
+func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (interface{}, error) {
+	var (
+		err error
+		got interface{}
+	)
+
+	switch len(returns) {
+	case 1:
+		e := returns[0].Interface()
+		if e != nil {
+			err = e.(error)
+		}
+	case 2:
+		got = returns[0].Interface()
+		e := returns[1].Interface()
+		if e != nil {
+			err = e.(error)
+		}
+	default:
+		crossdock.Assert(t).Fail("",
+			"%v: received unexpected number of return values: %v", desc, returns)
+	}
+
+	return got, err
 }
