@@ -26,6 +26,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 
 	"github.com/uber/tchannel-go/thrift"
 )
@@ -39,21 +40,46 @@ func runThrift(t crossdock.T, call call) {
 	}
 	token := random.String(5)
 
+	call.Channel.Peers().Add(call.ServerHostPort)
+
 	resp, respHeaders, err := thriftCall(call, headers, token)
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resp.Boop, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
+
+	runGauntlet(t, call)
 }
 
 func thriftCall(call call, headers map[string]string, token string) (*echo.Pong, map[string]string, error) {
-	call.Channel.Peers().Add(call.ServerHostPort)
+	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
 
 	ctx, cancel := thrift.NewContext(time.Second)
 	ctx = thrift.WithHeaders(ctx, headers)
 	defer cancel()
 
-	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
 	pong, err := client.Echo(ctx, &echo.Ping{Beep: token})
 	return pong, ctx.ResponseHeaders(), err
+}
+
+func runGauntlet(t crossdock.T, call call) {
+	assert := crossdock.Assert(t)
+	checks := crossdock.Checks(t)
+
+	headers := map[string]string{
+		"hello": "thrift",
+	}
+	token := random.String(5)
+
+	client := gauntlet_apache.NewTChanThriftTestClient(thrift.NewClient(call.Channel, serverName, nil))
+
+	ctx, cancel := thrift.NewContext(time.Second)
+	ctx = thrift.WithHeaders(ctx, headers)
+	defer cancel()
+
+	resp, err := client.TestString(ctx, token)
+	if checks.NoError(err, "thrift: call failed") {
+		assert.Equal(token, resp, "body echoed")
+		assert.Equal(headers, ctx.ResponseHeaders(), "headers echoed")
+	}
 }
