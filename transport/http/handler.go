@@ -80,7 +80,10 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		return err
 	}
 
-	return h.Handler.Handle(context.TODO(), treq, newResponseWriter(w))
+	ctx, cancel := context.WithTimeout(context.Background(), treq.TTL)
+	defer cancel()
+	// TODO capture and handle panic
+	return h.Handler.Handle(ctx, treq, newResponseWriter(w))
 }
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.

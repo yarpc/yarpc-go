@@ -38,6 +38,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestHandlerSucces(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	headers := make(http.Header)
+	headers.Set(CallerHeader, "moe")
+	headers.Set(EncodingHeader, "raw")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set(ProcedureHeader, "nyuck")
+	headers.Set(ServiceHeader, "curly")
+
+	rpcHandler := transporttest.NewMockHandler(mockCtrl)
+	httpHandler := handler{rpcHandler}
+
+	rpcHandler.EXPECT().Handle(
+		transporttest.NewContextMatcher(t, time.Second),
+		transporttest.NewRequestMatcher(
+			t, &transport.Request{
+				Caller:    "moe",
+				Service:   "curly",
+				Encoding:  raw.Encoding,
+				TTL:       time.Second,
+				Procedure: "nyuck",
+				Body:      bytes.NewReader([]byte("Nyuck Nyuck")),
+			},
+		),
+		gomock.Any(),
+	).Return(nil)
+
+	req := &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   ioutil.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
+	}
+	rw := httptest.NewRecorder()
+	httpHandler.ServeHTTP(rw, req)
+	code := rw.Code
+	assert.Equal(t, code, 200, "expected 200 code")
+	assert.Equal(t, rw.Body.String(), "")
+}
+
 func TestHandlerFailures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -135,7 +176,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
-		gomock.Any(),
+		transporttest.NewContextMatcher(t, time.Second),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "somecaller",
@@ -145,7 +186,8 @@ func TestHandlerInternalFailure(t *testing.T) {
 				Procedure: "hello",
 				Body:      bytes.NewReader([]byte{}),
 			},
-		), gomock.Any(),
+		),
+		gomock.Any(),
 	).Return(fmt.Errorf("great sadness"))
 
 	httpHandler := handler{rpcHandler}
