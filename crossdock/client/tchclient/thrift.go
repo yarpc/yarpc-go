@@ -111,6 +111,35 @@ func runGauntlet(t crossdock.T, call call) {
 			Want:     gauntlet_apache.Numberz(42),
 		},
 		{
+			// TODO getting nil instead of Xception right now
+			// notice flags=0x00 - we're not setting the right flags from yarpc server:
+			//
+			// ts=1464736607.995 session=19 127.0.0.1:65132 <-- 127.0.0.1:8082 frame=2 type=0x04 Ok
+			// CALL RESPONSE id=0x0002 (2) flags=0x00
+			// headers
+			//   as: thrift
+			// tracing: spanid=0,0 parentid=0,0 traceid=0,0 flags=0x00
+			// args[0]
+			//   00:                                          empty
+			// args[1]
+			//   00: 0000                                     ..
+			// args[2]
+			//   00: 0c00 0108 0001 0000 03e9 0b00 0200 0000  ................
+			//   10: 0858 6365 7074 696f 6e00 00              .Xception..
+			// arg3 as thrift
+			//   { '1':
+			//     { '1': 1001,
+			//       '2': 'Xception' } }
+			//
+			Function: "TestException",
+			Details:  "Xception",
+			Give:     []interface{}{"Xception"},
+			WantError: &gauntlet_apache.Xception{
+				ErrorCode: int32p(1001),
+				Message:   stringp("Xception"),
+			},
+		},
+		{
 			Function: "TestString",
 			Give:     []interface{}{token},
 			Want:     token,
@@ -149,9 +178,11 @@ func runGauntlet(t crossdock.T, call call) {
 func buildClient(t crossdock.T, desc string, service string, client thrift.TChanClient) reflect.Value {
 	switch service {
 	case "", "ThriftTest":
-		return reflect.ValueOf(gauntlet_apache.NewTChanThriftTestClient(client))
+		client := gauntlet_apache.NewTChanThriftTestClient(client)
+		return reflect.ValueOf(client)
 	case "SecondService":
-		return reflect.ValueOf(gauntlet_apache.NewTChanSecondServiceClient(client))
+		client := gauntlet_apache.NewTChanSecondServiceClient(client)
+		return reflect.ValueOf(client)
 	default:
 		crossdock.Fatals(t).Fail("", "%v: unknown thrift service", desc)
 		return reflect.Value{} // we'll never actually get here
@@ -188,3 +219,10 @@ func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (i
 
 	return got, err
 }
+
+// TODO these are reusable from gauntlet/behavior.go
+func bytep(x int8) *int8         { return &x }
+func int32p(x int32) *int32      { return &x }
+func int64p(x int64) *int64      { return &x }
+func doublep(x float64) *float64 { return &x }
+func stringp(x string) *string   { return &x }
