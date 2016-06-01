@@ -27,6 +27,7 @@ import (
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/ptr"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
@@ -68,105 +69,107 @@ func createGauntletT(t crossdock.T) crossdock.T {
 	}
 }
 
+// TT is the gauntlets table test struct
+type TT struct {
+	Service  string        // thrift service name; defaults to ThriftTest
+	Function string        // name of the Go function on the client
+	Details  string        // optional extra details about what this test does
+	Give     []interface{} // arguments besides thrift.Request
+
+	Want          interface{} // expected response; nil for void
+	WantError     error       // expected error
+	WantErrorLike string      // for just matching error messages
+}
+
 // Run executes the thriftgauntlet behavior.
 func Run(t crossdock.T) {
 	t = createGauntletT(t)
-	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
 	rpc := rpc.Create(t)
 
 	bytesToken := random.Bytes(10)
-	tests := []struct {
-		service  string        // thrift service name; defaults to ThriftTest
-		function string        // name of the Go function on the client
-		details  string        // optional extra details about what this test does
-		give     []interface{} // arguments besides thrift.Request
-
-		want          interface{} // expected response; nil for void
-		wantError     error       // expected error
-		wantErrorLike string      // for just matching error messages
-	}{
+	tests := []TT{
 		{
-			function: "TestBinary",
-			give:     []interface{}{bytesToken},
-			want:     bytesToken,
+			Function: "TestBinary",
+			Give:     []interface{}{bytesToken},
+			Want:     bytesToken,
 		},
 		{
-			function: "TestByte",
-			give:     []interface{}{bytep(42)},
-			want:     int8(42),
+			Function: "TestByte",
+			Give:     []interface{}{ptr.Byte(42)},
+			Want:     int8(42),
 		},
 		{
-			function: "TestDouble",
-			give:     []interface{}{doublep(12.34)},
-			want:     float64(12.34),
+			Function: "TestDouble",
+			Give:     []interface{}{ptr.Double(12.34)},
+			Want:     float64(12.34),
 		},
 		{
-			function: "TestEnum",
-			details:  "MyNumberz",
-			give:     []interface{}{numberzp(gauntlet.MyNumberz)},
-			want:     gauntlet.MyNumberz,
+			Function: "TestEnum",
+			Details:  "MyNumberz",
+			Give:     []interface{}{numberzp(gauntlet.MyNumberz)},
+			Want:     gauntlet.MyNumberz,
 		},
 		{
-			function: "TestEnum",
-			details:  "NumberzThree",
-			give:     []interface{}{numberzp(gauntlet.NumberzThree)},
-			want:     gauntlet.NumberzThree,
+			Function: "TestEnum",
+			Details:  "NumberzThree",
+			Give:     []interface{}{numberzp(gauntlet.NumberzThree)},
+			Want:     gauntlet.NumberzThree,
 		},
 		{
-			function: "TestEnum",
-			details:  "unrecognized Numberz",
-			give:     []interface{}{numberzp(gauntlet.Numberz(42))},
-			want:     gauntlet.Numberz(42),
+			Function: "TestEnum",
+			Details:  "unrecognized Numberz",
+			Give:     []interface{}{numberzp(gauntlet.Numberz(42))},
+			Want:     gauntlet.Numberz(42),
 		},
 		{
-			function: "TestException",
-			details:  "Xception",
-			give:     []interface{}{stringp("Xception")},
-			wantError: &gauntlet.Xception{
-				ErrorCode: int32p(1001),
-				Message:   stringp("Xception"),
+			Function: "TestException",
+			Details:  "Xception",
+			Give:     []interface{}{ptr.String("Xception")},
+			WantError: &gauntlet.Xception{
+				ErrorCode: ptr.Int32(1001),
+				Message:   ptr.String("Xception"),
 			},
 		},
 		{
-			function:      "TestException",
-			details:       "TException",
-			give:          []interface{}{stringp("TException")},
-			wantErrorLike: `UnexpectedError: error for procedure "ThriftTest::testException" of service "yarpc-test": great sadness`,
+			Function:      "TestException",
+			Details:       "TException",
+			Give:          []interface{}{ptr.String("TException")},
+			WantErrorLike: `UnexpectedError: error for procedure "ThriftTest::testException" of service "yarpc-test": great sadness`,
 		},
 		{
-			function: "TestException",
-			details:  "no error",
-			give:     []interface{}{stringp("yolo")},
+			Function: "TestException",
+			Details:  "no error",
+			Give:     []interface{}{ptr.String("yolo")},
 		},
 		{
-			function: "TestI32",
-			give:     []interface{}{int32p(123)},
-			want:     int32(123),
+			Function: "TestI32",
+			Give:     []interface{}{ptr.Int32(123)},
+			Want:     int32(123),
 		},
 		{
-			function: "TestI64",
-			give:     []interface{}{int64p(18934714)},
-			want:     int64(18934714),
+			Function: "TestI64",
+			Give:     []interface{}{ptr.Int64(18934714)},
+			Want:     int64(18934714),
 		},
 		{
-			function: "TestInsanity",
-			give: []interface{}{
+			Function: "TestInsanity",
+			Give: []interface{}{
 				&gauntlet.Insanity{
 					UserMap: map[gauntlet.Numberz]gauntlet.UserId{
 						gauntlet.NumberzThree: gauntlet.UserId(100),
 						gauntlet.Numberz(100): gauntlet.UserId(200),
 					},
 					Xtructs: []*gauntlet.Xtruct{
-						{StringThing: stringp("0")},
-						{ByteThing: bytep(1)},
-						{I32Thing: int32p(2)},
-						{I64Thing: int64p(3)},
+						{StringThing: ptr.String("0")},
+						{ByteThing: ptr.Byte(1)},
+						{I32Thing: ptr.Int32(2)},
+						{I64Thing: ptr.Int64(3)},
 					},
 				},
 			},
-			want: map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity{
+			Want: map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity{
 				1: {
 					gauntlet.NumberzTwo: &gauntlet.Insanity{
 						UserMap: map[gauntlet.Numberz]gauntlet.UserId{
@@ -174,10 +177,10 @@ func Run(t crossdock.T) {
 							gauntlet.Numberz(100): gauntlet.UserId(200),
 						},
 						Xtructs: []*gauntlet.Xtruct{
-							{StringThing: stringp("0")},
-							{ByteThing: bytep(1)},
-							{I32Thing: int32p(2)},
-							{I64Thing: int64p(3)},
+							{StringThing: ptr.String("0")},
+							{ByteThing: ptr.Byte(1)},
+							{I32Thing: ptr.Int32(2)},
+							{I64Thing: ptr.Int64(3)},
 						},
 					},
 					gauntlet.NumberzThree: &gauntlet.Insanity{
@@ -186,10 +189,10 @@ func Run(t crossdock.T) {
 							gauntlet.Numberz(100): gauntlet.UserId(200),
 						},
 						Xtructs: []*gauntlet.Xtruct{
-							{StringThing: stringp("0")},
-							{ByteThing: bytep(1)},
-							{I32Thing: int32p(2)},
-							{I64Thing: int64p(3)},
+							{StringThing: ptr.String("0")},
+							{ByteThing: ptr.Byte(1)},
+							{I32Thing: ptr.Int32(2)},
+							{I64Thing: ptr.Int64(3)},
 						},
 					},
 				},
@@ -199,19 +202,19 @@ func Run(t crossdock.T) {
 			},
 		},
 		{
-			function: "TestList",
-			give:     []interface{}{[]int32{1, 2, 3}},
-			want:     []int32{1, 2, 3},
+			Function: "TestList",
+			Give:     []interface{}{[]int32{1, 2, 3}},
+			Want:     []int32{1, 2, 3},
 		},
 		{
-			function: "TestMap",
-			give:     []interface{}{map[int32]int32{1: 2, 3: 4, 5: 6}},
-			want:     map[int32]int32{1: 2, 3: 4, 5: 6},
+			Function: "TestMap",
+			Give:     []interface{}{map[int32]int32{1: 2, 3: 4, 5: 6}},
+			Want:     map[int32]int32{1: 2, 3: 4, 5: 6},
 		},
 		{
-			function: "TestMapMap",
-			give:     []interface{}{int32p(42)},
-			want: map[int32]map[int32]int32{
+			Function: "TestMapMap",
+			Give:     []interface{}{ptr.Int32(42)},
+			Want: map[int32]map[int32]int32{
 				-4: {
 					-4: -4,
 					-3: -3,
@@ -227,74 +230,74 @@ func Run(t crossdock.T) {
 			},
 		},
 		{
-			function: "TestMulti",
-			give: []interface{}{
-				bytep(100),
-				int32p(200),
-				int64p(300),
+			Function: "TestMulti",
+			Give: []interface{}{
+				ptr.Byte(100),
+				ptr.Int32(200),
+				ptr.Int64(300),
 				map[int16]string{1: "1", 2: "2", 3: "3"},
 				numberzp(gauntlet.NumberzEight),
 				useridp(42),
 			},
-			want: &gauntlet.Xtruct{
-				StringThing: stringp("Hello2"),
-				ByteThing:   bytep(100),
-				I32Thing:    int32p(200),
-				I64Thing:    int64p(300),
+			Want: &gauntlet.Xtruct{
+				StringThing: ptr.String("Hello2"),
+				ByteThing:   ptr.Byte(100),
+				I32Thing:    ptr.Int32(200),
+				I64Thing:    ptr.Int64(300),
 			},
 		},
 		{
-			function: "TestMultiException",
-			details:  "Xception",
-			give:     []interface{}{stringp("Xception"), stringp("foo")},
-			wantError: &gauntlet.Xception{
-				ErrorCode: int32p(1001),
-				Message:   stringp("This is an Xception"),
+			Function: "TestMultiException",
+			Details:  "Xception",
+			Give:     []interface{}{ptr.String("Xception"), ptr.String("foo")},
+			WantError: &gauntlet.Xception{
+				ErrorCode: ptr.Int32(1001),
+				Message:   ptr.String("This is an Xception"),
 			},
 		},
 		{
-			function: "TestMultiException",
-			details:  "Xception2",
-			give:     []interface{}{stringp("Xception2"), stringp("foo")},
-			wantError: &gauntlet.Xception2{
-				ErrorCode:   int32p(2002),
-				StructThing: &gauntlet.Xtruct{StringThing: stringp("foo")},
+			Function: "TestMultiException",
+			Details:  "Xception2",
+			Give:     []interface{}{ptr.String("Xception2"), ptr.String("foo")},
+			WantError: &gauntlet.Xception2{
+				ErrorCode:   ptr.Int32(2002),
+				StructThing: &gauntlet.Xtruct{StringThing: ptr.String("foo")},
 			},
 		},
 		{
-			function: "TestMultiException",
-			details:  "no error",
-			give:     []interface{}{stringp("hello"), stringp("foo")},
-			want:     &gauntlet.Xtruct{StringThing: stringp("foo")},
+			Function: "TestMultiException",
+			Details:  "no error",
+			Give:     []interface{}{ptr.String("hello"), ptr.String("foo")},
+			Want:     &gauntlet.Xtruct{StringThing: ptr.String("foo")},
 		},
 		{
-			function: "TestNest",
-			give: []interface{}{
+			Function: "TestNest",
+			Give: []interface{}{
 				&gauntlet.Xtruct2{
-					ByteThing: bytep(-1),
-					I32Thing:  int32p(-1234),
+					ByteThing: ptr.Byte(-1),
+					I32Thing:  ptr.Int32(-1234),
 					StructThing: &gauntlet.Xtruct{
-						StringThing: stringp("0"),
-						ByteThing:   bytep(1),
-						I32Thing:    int32p(2),
-						I64Thing:    int64p(3),
+						StringThing: ptr.String("0"),
+						ByteThing:   ptr.Byte(1),
+						I32Thing:    ptr.Int32(2),
+						I64Thing:    ptr.Int64(3),
 					},
 				},
 			},
-			want: &gauntlet.Xtruct2{
-				ByteThing: bytep(-1),
-				I32Thing:  int32p(-1234),
+			Want: &gauntlet.Xtruct2{
+				ByteThing: ptr.Byte(-1),
+				I32Thing:  ptr.Int32(-1234),
 				StructThing: &gauntlet.Xtruct{
-					StringThing: stringp("0"),
-					ByteThing:   bytep(1),
-					I32Thing:    int32p(2),
-					I64Thing:    int64p(3),
+					StringThing: ptr.String("0"),
+					ByteThing:   ptr.Byte(1),
+					I32Thing:    ptr.Int32(2),
+					I64Thing:    ptr.Int64(3),
 				},
 			},
 		},
 		{
-			function: "TestSet",
-			give: []interface{}{
+			Function: "TestSet",
+			Give: []interface{}{
 				map[int32]struct{}{
 					1:  struct{}{},
 					2:  struct{}{},
@@ -302,7 +305,7 @@ func Run(t crossdock.T) {
 					-2: struct{}{},
 				},
 			},
-			want: map[int32]struct{}{
+			Want: map[int32]struct{}{
 				1:  struct{}{},
 				2:  struct{}{},
 				-1: struct{}{},
@@ -310,79 +313,67 @@ func Run(t crossdock.T) {
 			},
 		},
 		{
-			function: "TestString",
-			give:     []interface{}{stringp("hello")},
-			want:     "hello",
+			Function: "TestString",
+			Give:     []interface{}{ptr.String("hello")},
+			Want:     "hello",
 		},
 		{
-			function: "TestStringMap",
-			give: []interface{}{
+			Function: "TestStringMap",
+			Give: []interface{}{
 				map[string]string{
 					"foo":   "bar",
 					"hello": "world",
 				},
 			},
-			want: map[string]string{
+			Want: map[string]string{
 				"foo":   "bar",
 				"hello": "world",
 			},
 		},
 		{
-			function: "TestStruct",
-			give: []interface{}{
+			Function: "TestStruct",
+			Give: []interface{}{
 				&gauntlet.Xtruct{
-					StringThing: stringp("0"),
-					ByteThing:   bytep(1),
-					I32Thing:    int32p(2),
-					I64Thing:    int64p(3),
+					StringThing: ptr.String("0"),
+					ByteThing:   ptr.Byte(1),
+					I32Thing:    ptr.Int32(2),
+					I64Thing:    ptr.Int64(3),
 				},
 			},
-			want: &gauntlet.Xtruct{
-				StringThing: stringp("0"),
-				ByteThing:   bytep(1),
-				I32Thing:    int32p(2),
-				I64Thing:    int64p(3),
+			Want: &gauntlet.Xtruct{
+				StringThing: ptr.String("0"),
+				ByteThing:   ptr.Byte(1),
+				I32Thing:    ptr.Int32(2),
+				I64Thing:    ptr.Int64(3),
 			},
 		},
 		{
-			function: "TestTypedef",
-			give:     []interface{}{useridp(42)},
-			want:     gauntlet.UserId(42),
+			Function: "TestTypedef",
+			Give:     []interface{}{useridp(42)},
+			Want:     gauntlet.UserId(42),
 		},
 		{
-			function: "TestVoid",
-			give:     []interface{}{},
+			Function: "TestVoid",
+			Give:     []interface{}{},
 		},
 		{
-			service:  "SecondService",
-			function: "BlahBlah",
-			give:     []interface{}{},
+			Service:  "SecondService",
+			Function: "BlahBlah",
+			Give:     []interface{}{},
 		},
 		{
-			service:  "SecondService",
-			function: "SecondtestString",
-			give:     []interface{}{stringp("hello")},
-			want:     "hello",
+			Service:  "SecondService",
+			Function: "SecondtestString",
+			Give:     []interface{}{ptr.String("hello")},
+			Want:     "hello",
 		},
 	}
 
 	for _, tt := range tests {
-		// We log in one of the following formats,
-		//
-		// $function: $message
-		// $function: $description: $message
-		// $service: $function: $message
-		// $service: $function: $description: $message
-		desc := tt.function
-		if tt.details != "" {
-			desc = desc + ": " + tt.details
-		}
-		if tt.service != "" {
-			desc = tt.service + ": " + desc
-		}
+		desc := BuildDesc(tt)
 
-		client := buildClient(t, desc, tt.service, rpc.Channel("yarpc-test"))
-		f := client.MethodByName(tt.function)
+		client := buildClient(t, desc, tt.Service, rpc.Channel("yarpc-test"))
+		f := client.MethodByName(tt.Function)
 		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
 			continue
 		}
@@ -394,7 +385,7 @@ func Run(t crossdock.T) {
 		}
 
 		args := []reflect.Value{reflect.ValueOf(&req)}
-		if give, ok := buildArgs(t, desc, f.Type(), tt.give); ok {
+		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give); ok {
 			args = append(args, give...)
 		} else {
 			continue
@@ -405,77 +396,46 @@ func Run(t crossdock.T) {
 			t.Skipf("%v: procedure not defined", desc)
 			continue
 		}
-
-		if tt.wantError != nil || tt.wantErrorLike != "" {
-			if !checks.Error(err, "%v: expected failure but got: %v", desc, got) {
-				continue
-			}
-			if tt.wantError != nil {
-				assert.Equal(tt.wantError, err, "%v: server returned error: %v", desc, err)
-			}
-			if tt.wantErrorLike != "" {
-				assert.Contains(err.Error(), tt.wantErrorLike, "%v: server returned error: %v", desc, err)
-			}
-		} else {
-			if !checks.NoError(err, "%v: call failed", desc) {
-				continue
-			}
-
-			if tt.want != nil {
-				assert.Equal(tt.want, got, "%v: server returned: %v", desc, got)
-			}
-		}
+		Assert(t, tt, desc, got, err)
 	}
 }
 
-func isUnrecognizedProcedure(err error) bool {
-	if _, isBadRequest := err.(transport.BadRequestError); isBadRequest {
-		// TODO: Once all other languages implement the gauntlet test
-		// subject, we can remove this check.
-		return strings.Contains(err.Error(), "unrecognized procedure")
+// BuildDesc creates a logging string for the test
+//
+// We log in one of the following formats,
+//
+// $Function: $message
+// $Function: $description: $message
+// $Service: $function: $message
+// $Service: $function: $description: $message
+//
+func BuildDesc(tt TT) string {
+	desc := tt.Function
+	if tt.Details != "" {
+		desc = desc + ": " + tt.Details
 	}
-	return false
+	if tt.Service != "" {
+		desc = tt.Service + ": " + desc
+	}
+	return desc
 }
 
 func buildClient(t crossdock.T, desc string, service string, channel transport.Channel) reflect.Value {
 	switch service {
 	case "", "ThriftTest":
-		return reflect.ValueOf(thrifttestclient.New(channel))
+		client := thrifttestclient.New(channel)
+		return reflect.ValueOf(client)
 	case "SecondService":
-		return reflect.ValueOf(secondserviceclient.New(channel))
+		client := secondserviceclient.New(channel)
+		return reflect.ValueOf(client)
 	default:
 		crossdock.Fatals(t).Fail("", "%v: unknown thrift service", desc)
 		return reflect.Value{} // we'll never actually get here
 	}
 }
 
-func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (interface{}, error) {
-	var (
-		err error
-		got interface{}
-	)
-
-	switch len(returns) {
-	case 2:
-		e := returns[1].Interface()
-		if e != nil {
-			err = e.(error)
-		}
-	case 3:
-		got = returns[0].Interface()
-		e := returns[2].Interface()
-		if e != nil {
-			err = e.(error)
-		}
-	default:
-		crossdock.Assert(t).Fail("",
-			"%v: received unexpected number of return values: %v", desc, returns)
-	}
-
-	return got, err
-}
-
-func buildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
+// BuildArgs creates an args slice than can be used to make a f.Call(args)
+func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
 	check := crossdock.Checks(t)
 	wantIn := len(give) + 1
 	if !check.Equal(wantIn, ft.NumIn(), "%v: should accept %d arguments", desc, wantIn) {
@@ -502,11 +462,59 @@ func buildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}) 
 	return args, true
 }
 
-func bytep(x int8) *int8         { return &x }
-func int32p(x int32) *int32      { return &x }
-func int64p(x int64) *int64      { return &x }
-func doublep(x float64) *float64 { return &x }
-func stringp(x string) *string   { return &x }
+func isUnrecognizedProcedure(err error) bool {
+	if _, isBadRequest := err.(transport.BadRequestError); isBadRequest {
+		// TODO: Once all other languages implement the gauntlet test
+		// subject, we can remove this check.
+		return strings.Contains(err.Error(), "unrecognized procedure")
+	}
+	return false
+}
+
+func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (got interface{}, err error) {
+	switch len(returns) {
+	case 2:
+		e := returns[1].Interface()
+		if e != nil {
+			err = e.(error)
+		}
+	case 3:
+		got = returns[0].Interface()
+		e := returns[2].Interface()
+		if e != nil {
+			err = e.(error)
+		}
+	default:
+		crossdock.Assert(t).Fail("",
+			"%v: received unexpected number of return values: %v", desc, returns)
+	}
+	return got, err
+}
+
+// Assert verifies the call response against TT
+func Assert(t crossdock.T, tt TT, desc string, got interface{}, err error) {
+	checks := crossdock.Checks(t)
+	assert := crossdock.Assert(t)
+
+	if tt.WantError != nil || tt.WantErrorLike != "" {
+		if !checks.Error(err, "%v: expected failure but got: %v", desc, got) {
+			return
+		}
+		if tt.WantError != nil {
+			assert.Equal(tt.WantError, err, "%v: server returned error: %v", desc, err)
+		}
+		if tt.WantErrorLike != "" {
+			assert.Contains(err.Error(), tt.WantErrorLike, "%v: server returned error: %v", desc, err)
+		}
+	} else {
+		if !checks.NoError(err, "%v: call failed", desc) {
+			return
+		}
+		if tt.Want != nil {
+			assert.Equal(tt.Want, got, "%v: server returned: %v", desc, got)
+		}
+	}
+}
 
 func numberzp(x gauntlet.Numberz) *gauntlet.Numberz { return &x }
 func useridp(x gauntlet.UserId) *gauntlet.UserId    { return &x }
