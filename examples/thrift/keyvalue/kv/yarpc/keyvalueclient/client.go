@@ -43,8 +43,13 @@ type client struct{ c thrift.Client }
 
 func (c client) GetValue(req *thrift.Request, key *string) (success string, res *thrift.Response, err error) {
 	args := keyvalue.GetValueHelper.Args(key)
+	var w wire.Value
+	w, err = args.ToWire()
+	if err != nil {
+		return
+	}
 	var body wire.Value
-	body, res, err = c.c.Call("getValue", req, args.ToWire())
+	body, res, err = c.c.Call("getValue", req, w)
 	if err != nil {
 		return
 	}
@@ -58,8 +63,13 @@ func (c client) GetValue(req *thrift.Request, key *string) (success string, res 
 
 func (c client) SetValue(req *thrift.Request, key *string, value *string) (res *thrift.Response, err error) {
 	args := keyvalue.SetValueHelper.Args(key, value)
+	var w wire.Value
+	w, err = args.ToWire()
+	if err != nil {
+		return
+	}
 	var body wire.Value
-	body, res, err = c.c.Call("setValue", req, args.ToWire())
+	body, res, err = c.c.Call("setValue", req, w)
 	if err != nil {
 		return
 	}

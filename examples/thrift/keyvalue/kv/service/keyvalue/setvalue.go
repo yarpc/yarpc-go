@@ -33,18 +33,30 @@ type SetValueArgs struct {
 	Value *string `json:"value,omitempty"`
 }
 
-func (v *SetValueArgs) ToWire() wire.Value {
-	var fields [2]wire.Field
-	i := 0
+func (v *SetValueArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Key != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(*(v.Key))}
+		w, err = wire.NewValueString(*(v.Key)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
 	if v.Value != nil {
-		fields[i] = wire.Field{ID: 2, Value: wire.NewValueString(*(v.Value))}
+		w, err = wire.NewValueString(*(v.Value)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *SetValueArgs) FromWire(w wire.Value) error {
@@ -88,12 +100,22 @@ func (v *SetValueArgs) String() string {
 	return fmt.Sprintf("SetValueArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *SetValueArgs) MethodName() string {
+	return "setValue"
+}
+
+func (v *SetValueArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type SetValueResult struct{}
 
-func (v *SetValueResult) ToWire() wire.Value {
-	var fields [0]wire.Field
-	i := 0
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+func (v *SetValueResult) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *SetValueResult) FromWire(w wire.Value) error {
@@ -108,6 +130,14 @@ func (v *SetValueResult) String() string {
 	var fields [0]string
 	i := 0
 	return fmt.Sprintf("SetValueResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *SetValueResult) MethodName() string {
+	return "setValue"
+}
+
+func (v *SetValueResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var SetValueHelper = struct {
