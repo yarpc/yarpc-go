@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pointer
+package ptr
 
 // Byte converts an int8 to a pointer
 func Byte(x int8) *int8 {
