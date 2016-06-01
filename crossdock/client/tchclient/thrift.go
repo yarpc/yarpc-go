@@ -275,6 +275,10 @@ func runGauntlet(t crossdock.T, call call) {
 			Give:     []interface{}{gauntlet_apache.UserId(42)},
 			Want:     gauntlet_apache.UserId(42),
 		},
+		{
+			Function: "TestVoid",
+			Give:     []interface{}{},
+		},
 	}
 
 	for _, tt := range tests {
