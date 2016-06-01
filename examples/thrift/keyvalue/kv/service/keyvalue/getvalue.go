@@ -34,14 +34,22 @@ type GetValueArgs struct {
 	Key *string `json:"key,omitempty"`
 }
 
-func (v *GetValueArgs) ToWire() wire.Value {
-	var fields [1]wire.Field
-	i := 0
+func (v *GetValueArgs) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Key != nil {
-		fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(*(v.Key))}
+		w, err = wire.NewValueString(*(v.Key)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *GetValueArgs) FromWire(w wire.Value) error {
@@ -72,23 +80,46 @@ func (v *GetValueArgs) String() string {
 	return fmt.Sprintf("GetValueArgs{%v}", strings.Join(fields[:i], ", "))
 }
 
+func (v *GetValueArgs) MethodName() string {
+	return "getValue"
+}
+
+func (v *GetValueArgs) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
 type GetValueResult struct {
 	Success      *string                  `json:"success,omitempty"`
 	DoesNotExist *kv.ResourceDoesNotExist `json:"doesNotExist,omitempty"`
 }
 
-func (v *GetValueResult) ToWire() wire.Value {
-	var fields [2]wire.Field
-	i := 0
+func (v *GetValueResult) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
 	if v.Success != nil {
-		fields[i] = wire.Field{ID: 0, Value: wire.NewValueString(*(v.Success))}
+		w, err = wire.NewValueString(*(v.Success)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
 		i++
 	}
 	if v.DoesNotExist != nil {
-		fields[i] = wire.Field{ID: 1, Value: v.DoesNotExist.ToWire()}
+		w, err = v.DoesNotExist.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("GetValueResult should have exactly one field: got %v fields", i)
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func _ResourceDoesNotExist_Read(w wire.Value) (*kv.ResourceDoesNotExist, error) {
@@ -119,6 +150,16 @@ func (v *GetValueResult) FromWire(w wire.Value) error {
 			}
 		}
 	}
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.DoesNotExist != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("GetValueResult should have exactly one field: got %v fields", count)
+	}
 	return nil
 }
 
@@ -134,6 +175,14 @@ func (v *GetValueResult) String() string {
 		i++
 	}
 	return fmt.Sprintf("GetValueResult{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *GetValueResult) MethodName() string {
+	return "getValue"
+}
+
+func (v *GetValueResult) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
 }
 
 var GetValueHelper = struct {

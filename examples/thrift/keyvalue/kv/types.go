@@ -23,6 +23,7 @@
 package kv
 
 import (
+	"errors"
 	"fmt"
 	"github.com/thriftrw/thriftrw-go/wire"
 	"strings"
@@ -33,20 +34,33 @@ type ResourceDoesNotExist struct {
 	Message *string `json:"message,omitempty"`
 }
 
-func (v *ResourceDoesNotExist) ToWire() wire.Value {
-	var fields [2]wire.Field
-	i := 0
-	fields[i] = wire.Field{ID: 1, Value: wire.NewValueString(v.Key)}
+func (v *ResourceDoesNotExist) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	w, err = wire.NewValueString(v.Key), error(nil)
+	if err != nil {
+		return w, err
+	}
+	fields[i] = wire.Field{ID: 1, Value: w}
 	i++
 	if v.Message != nil {
-		fields[i] = wire.Field{ID: 2, Value: wire.NewValueString(*(v.Message))}
+		w, err = wire.NewValueString(*(v.Message)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]})
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
 func (v *ResourceDoesNotExist) FromWire(w wire.Value) error {
 	var err error
+	keyIsSet := false
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
@@ -55,6 +69,7 @@ func (v *ResourceDoesNotExist) FromWire(w wire.Value) error {
 				if err != nil {
 					return err
 				}
+				keyIsSet = true
 			}
 		case 2:
 			if field.Value.Type() == wire.TBinary {
@@ -66,6 +81,9 @@ func (v *ResourceDoesNotExist) FromWire(w wire.Value) error {
 				}
 			}
 		}
+	}
+	if !keyIsSet {
+		return errors.New("field Key of ResourceDoesNotExist is required")
 	}
 	return nil
 }

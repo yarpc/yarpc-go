@@ -61,7 +61,11 @@ func (h handler) GetValue(req *thrift.Request, body wire.Value) (wire.Value, *th
 	}
 	success, res, err := h.impl.GetValue(req, args.Key)
 	result, err := keyvalue.GetValueHelper.WrapResponse(success, err)
-	return result.ToWire(), res, err
+	var w wire.Value
+	if err == nil {
+		w, err = result.ToWire()
+	}
+	return w, res, err
 }
 
 func (h handler) SetValue(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
@@ -71,5 +75,9 @@ func (h handler) SetValue(req *thrift.Request, body wire.Value) (wire.Value, *th
 	}
 	res, err := h.impl.SetValue(req, args.Key, args.Value)
 	result, err := keyvalue.SetValueHelper.WrapResponse(err)
-	return result.ToWire(), res, err
+	var w wire.Value
+	if err == nil {
+		w, err = result.ToWire()
+	}
+	return w, res, err
 }
