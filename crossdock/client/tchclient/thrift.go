@@ -149,6 +149,12 @@ func runGauntlet(t crossdock.T, call call) {
 			Give:     []interface{}{token},
 			Want:     token,
 		},
+		// TODO insanity
+		{
+			Function: "TestList",
+			Give:     []interface{}{[]int32{1, 2, 3}},
+			Want:     []int32{1, 2, 3},
+		},
 	}
 
 	for _, tt := range tests {
