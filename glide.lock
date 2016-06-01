@@ -1,8 +1,8 @@
 hash: 7d6d74172f119bd6119d5e7657a8dd1fd732562685eb953d54d2566e40d67a5c
-updated: 2016-06-01T13:19:29.450829711-07:00
+updated: 2016-06-01T13:47:40.562568603-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 839b9320a813c53fe1143a5b518d4e1f522d49d2
+  version: 39a09ac5e49481d39dd1bcb6757ffe182e3df20a
   subpackages:
   - lib/go/thrift
 - name: github.com/davecgh/go-spew
@@ -23,13 +23,13 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: a56d6ba23cc89101d2dec87786cf5ab47eb351d0
+  version: 1a4c425a84e10edac0b36e560942ce3f5aec0405
   subpackages:
   - wire
   - protocol
   - protocol/binary
 - name: github.com/uber/tchannel-go
-  version: 471bf0636d54ad601972ed01855c7afb44346a52
+  version: 60271b8a888a861316825f12833c28e31f1cbd0d
   subpackages:
   - json
   - raw
@@ -41,7 +41,7 @@ imports:
   - typed
   - thrift/gen-go/meta
 - name: golang.org/x/net
-  version: 0c607074acd38c5f23d1344dfe74c977464d1257
+  version: c4c3ea71919de159c9e246d7be66deb7f0a39a58
   subpackages:
   - context
   - context/ctxhttp

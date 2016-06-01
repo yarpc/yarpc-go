@@ -53,7 +53,19 @@ func (m _Map_String_String_MapItemList) ForEach(f func(wire.MapItem) error) erro
 	return nil
 }
 
-func (m _Map_String_String_MapItemList) Close() {
+func (m _Map_String_String_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_String_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_String_MapItemList) ValueType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_String_MapItemList) Close() {
 }
 
 func (v *TestStringMapArgs) ToWire() (wire.Value, error) {
@@ -64,7 +76,7 @@ func (v *TestStringMapArgs) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Thing != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TBinary, ValueType: wire.TBinary, Size: len(v.Thing), Items: _Map_String_String_MapItemList(v.Thing)}), error(nil)
+		w, err = wire.NewValueMap(_Map_String_String_MapItemList(v.Thing)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -74,15 +86,15 @@ func (v *TestStringMapArgs) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Map_String_String_Read(m wire.Map) (map[string]string, error) {
-	if m.KeyType != wire.TBinary {
+func _Map_String_String_Read(m wire.MapItemList) (map[string]string, error) {
+	if m.KeyType() != wire.TBinary {
 		return nil, nil
 	}
-	if m.ValueType != wire.TBinary {
+	if m.ValueType() != wire.TBinary {
 		return nil, nil
 	}
-	o := make(map[string]string, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[string]string, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetString(), error(nil)
 		if err != nil {
 			return err
@@ -94,7 +106,7 @@ func _Map_String_String_Read(m wire.Map) (map[string]string, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
@@ -144,7 +156,7 @@ func (v *TestStringMapResult) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Success != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TBinary, ValueType: wire.TBinary, Size: len(v.Success), Items: _Map_String_String_MapItemList(v.Success)}), error(nil)
+		w, err = wire.NewValueMap(_Map_String_String_MapItemList(v.Success)), error(nil)
 		if err != nil {
 			return w, err
 		}

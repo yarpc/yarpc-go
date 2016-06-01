@@ -294,7 +294,15 @@ func (v _Set_Insanity_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _Set_Insanity_ValueList) Close() {
+func (v _Set_Insanity_ValueList) Size() int {
+	return len(v)
+}
+
+func (_Set_Insanity_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Set_Insanity_ValueList) Close() {
 }
 
 type _Set_I32_ValueList map[int32]struct{}
@@ -313,7 +321,15 @@ func (v _Set_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _Set_I32_ValueList) Close() {
+func (v _Set_I32_ValueList) Size() int {
+	return len(v)
+}
+
+func (_Set_I32_ValueList) ValueType() wire.Type {
+	return wire.TI32
+}
+
+func (_Set_I32_ValueList) Close() {
 }
 
 type _Map_Insanity_String_MapItemList []struct {
@@ -341,7 +357,19 @@ func (m _Map_Insanity_String_MapItemList) ForEach(f func(wire.MapItem) error) er
 	return nil
 }
 
-func (m _Map_Insanity_String_MapItemList) Close() {
+func (m _Map_Insanity_String_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_Insanity_String_MapItemList) KeyType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_Insanity_String_MapItemList) ValueType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_Insanity_String_MapItemList) Close() {
 }
 
 type _List_Map_Insanity_String_ValueList [][]struct {
@@ -351,7 +379,7 @@ type _List_Map_Insanity_String_ValueList [][]struct {
 
 func (v _List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueMap(wire.Map{KeyType: wire.TStruct, ValueType: wire.TBinary, Size: len(x), Items: _Map_Insanity_String_MapItemList(x)}), error(nil)
+		w, err := wire.NewValueMap(_Map_Insanity_String_MapItemList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -363,7 +391,15 @@ func (v _List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) error) e
 	return nil
 }
 
-func (v _List_Map_Insanity_String_ValueList) Close() {
+func (v _List_Map_Insanity_String_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_Map_Insanity_String_ValueList) ValueType() wire.Type {
+	return wire.TMap
+}
+
+func (_List_Map_Insanity_String_ValueList) Close() {
 }
 
 type _Set_List_Map_Insanity_String_ValueList [][][]struct {
@@ -373,7 +409,7 @@ type _Set_List_Map_Insanity_String_ValueList [][][]struct {
 
 func (v _Set_List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueList(wire.List{ValueType: wire.TMap, Size: len(x), Items: _List_Map_Insanity_String_ValueList(x)}), error(nil)
+		w, err := wire.NewValueList(_List_Map_Insanity_String_ValueList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -385,7 +421,15 @@ func (v _Set_List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) erro
 	return nil
 }
 
-func (v _Set_List_Map_Insanity_String_ValueList) Close() {
+func (v _Set_List_Map_Insanity_String_ValueList) Size() int {
+	return len(v)
+}
+
+func (_Set_List_Map_Insanity_String_ValueList) ValueType() wire.Type {
+	return wire.TList
+}
+
+func (_Set_List_Map_Insanity_String_ValueList) Close() {
 }
 
 type _Map_I32_Set_List_Map_Insanity_String_MapItemList map[int32][][][]struct {
@@ -399,7 +443,7 @@ func (m _Map_I32_Set_List_Map_Insanity_String_MapItemList) ForEach(f func(wire.M
 		if err != nil {
 			return err
 		}
-		vw, err := wire.NewValueSet(wire.Set{ValueType: wire.TList, Size: len(v), Items: _Set_List_Map_Insanity_String_ValueList(v)}), error(nil)
+		vw, err := wire.NewValueSet(_Set_List_Map_Insanity_String_ValueList(v)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -411,7 +455,19 @@ func (m _Map_I32_Set_List_Map_Insanity_String_MapItemList) ForEach(f func(wire.M
 	return nil
 }
 
-func (m _Map_I32_Set_List_Map_Insanity_String_MapItemList) Close() {
+func (m _Map_I32_Set_List_Map_Insanity_String_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_I32_Set_List_Map_Insanity_String_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_Set_List_Map_Insanity_String_MapItemList) ValueType() wire.Type {
+	return wire.TSet
+}
+
+func (_Map_I32_Set_List_Map_Insanity_String_MapItemList) Close() {
 }
 
 type _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList []struct {
@@ -426,11 +482,11 @@ func (m _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) ForEach(f
 	for _, i := range m {
 		k := i.Key
 		v := i.Value
-		kw, err := wire.NewValueSet(wire.Set{ValueType: wire.TI32, Size: len(k), Items: _Set_I32_ValueList(k)}), error(nil)
+		kw, err := wire.NewValueSet(_Set_I32_ValueList(k)), error(nil)
 		if err != nil {
 			return err
 		}
-		vw, err := wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TSet, Size: len(v), Items: _Map_I32_Set_List_Map_Insanity_String_MapItemList(v)}), error(nil)
+		vw, err := wire.NewValueMap(_Map_I32_Set_List_Map_Insanity_String_MapItemList(v)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -442,7 +498,19 @@ func (m _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) ForEach(f
 	return nil
 }
 
-func (m _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) Close() {
+func (m _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) KeyType() wire.Type {
+	return wire.TSet
+}
+
+func (_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) ValueType() wire.Type {
+	return wire.TMap
+}
+
+func (_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) Close() {
 }
 
 type _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList [][]struct {
@@ -455,7 +523,7 @@ type _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList [][]struct
 
 func (v _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueMap(wire.Map{KeyType: wire.TSet, ValueType: wire.TMap, Size: len(x), Items: _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList(x)}), error(nil)
+		w, err := wire.NewValueMap(_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -467,7 +535,15 @@ func (v _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList) ForEac
 	return nil
 }
 
-func (v _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList) Close() {
+func (v _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList) ValueType() wire.Type {
+	return wire.TMap
+}
+
+func (_List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList) Close() {
 }
 
 func (v *CrazyNesting) ToWire() (wire.Value, error) {
@@ -486,7 +562,7 @@ func (v *CrazyNesting) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.SetField != nil {
-		w, err = wire.NewValueSet(wire.Set{ValueType: wire.TStruct, Size: len(v.SetField), Items: _Set_Insanity_ValueList(v.SetField)}), error(nil)
+		w, err = wire.NewValueSet(_Set_Insanity_ValueList(v.SetField)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -496,7 +572,7 @@ func (v *CrazyNesting) ToWire() (wire.Value, error) {
 	if v.ListField == nil {
 		return w, errors.New("field ListField of CrazyNesting is required")
 	}
-	w, err = wire.NewValueList(wire.List{ValueType: wire.TMap, Size: len(v.ListField), Items: _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList(v.ListField)}), error(nil)
+	w, err = wire.NewValueList(_List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList(v.ListField)), error(nil)
 	if err != nil {
 		return w, err
 	}
@@ -519,12 +595,12 @@ func _Insanity_Read(w wire.Value) (*Insanity, error) {
 	return &v, err
 }
 
-func _Set_Insanity_Read(s wire.Set) ([]*Insanity, error) {
-	if s.ValueType != wire.TStruct {
+func _Set_Insanity_Read(s wire.ValueList) ([]*Insanity, error) {
+	if s.ValueType() != wire.TStruct {
 		return nil, nil
 	}
-	o := make([]*Insanity, 0, s.Size)
-	err := s.Items.ForEach(func(x wire.Value) error {
+	o := make([]*Insanity, 0, s.Size())
+	err := s.ForEach(func(x wire.Value) error {
 		i, err := _Insanity_Read(x)
 		if err != nil {
 			return err
@@ -532,16 +608,16 @@ func _Set_Insanity_Read(s wire.Set) ([]*Insanity, error) {
 		o = append(o, i)
 		return nil
 	})
-	s.Items.Close()
+	s.Close()
 	return o, err
 }
 
-func _Set_I32_Read(s wire.Set) (map[int32]struct{}, error) {
-	if s.ValueType != wire.TI32 {
+func _Set_I32_Read(s wire.ValueList) (map[int32]struct{}, error) {
+	if s.ValueType() != wire.TI32 {
 		return nil, nil
 	}
-	o := make(map[int32]struct{}, s.Size)
-	err := s.Items.ForEach(func(x wire.Value) error {
+	o := make(map[int32]struct{}, s.Size())
+	err := s.ForEach(func(x wire.Value) error {
 		i, err := x.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -549,25 +625,25 @@ func _Set_I32_Read(s wire.Set) (map[int32]struct{}, error) {
 		o[i] = struct{}{}
 		return nil
 	})
-	s.Items.Close()
+	s.Close()
 	return o, err
 }
 
-func _Map_Insanity_String_Read(m wire.Map) ([]struct {
+func _Map_Insanity_String_Read(m wire.MapItemList) ([]struct {
 	Key   *Insanity
 	Value string
 }, error) {
-	if m.KeyType != wire.TStruct {
+	if m.KeyType() != wire.TStruct {
 		return nil, nil
 	}
-	if m.ValueType != wire.TBinary {
+	if m.ValueType() != wire.TBinary {
 		return nil, nil
 	}
 	o := make([]struct {
 		Key   *Insanity
 		Value string
-	}, 0, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	}, 0, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := _Insanity_Read(x.Key)
 		if err != nil {
 			return err
@@ -582,22 +658,22 @@ func _Map_Insanity_String_Read(m wire.Map) ([]struct {
 		}{k, v})
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
-func _List_Map_Insanity_String_Read(l wire.List) ([][]struct {
+func _List_Map_Insanity_String_Read(l wire.ValueList) ([][]struct {
 	Key   *Insanity
 	Value string
 }, error) {
-	if l.ValueType != wire.TMap {
+	if l.ValueType() != wire.TMap {
 		return nil, nil
 	}
 	o := make([][]struct {
 		Key   *Insanity
 		Value string
-	}, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	}, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _Map_Insanity_String_Read(x.GetMap())
 		if err != nil {
 			return err
@@ -605,22 +681,22 @@ func _List_Map_Insanity_String_Read(l wire.List) ([][]struct {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
-func _Set_List_Map_Insanity_String_Read(s wire.Set) ([][][]struct {
+func _Set_List_Map_Insanity_String_Read(s wire.ValueList) ([][][]struct {
 	Key   *Insanity
 	Value string
 }, error) {
-	if s.ValueType != wire.TList {
+	if s.ValueType() != wire.TList {
 		return nil, nil
 	}
 	o := make([][][]struct {
 		Key   *Insanity
 		Value string
-	}, 0, s.Size)
-	err := s.Items.ForEach(func(x wire.Value) error {
+	}, 0, s.Size())
+	err := s.ForEach(func(x wire.Value) error {
 		i, err := _List_Map_Insanity_String_Read(x.GetList())
 		if err != nil {
 			return err
@@ -628,25 +704,25 @@ func _Set_List_Map_Insanity_String_Read(s wire.Set) ([][][]struct {
 		o = append(o, i)
 		return nil
 	})
-	s.Items.Close()
+	s.Close()
 	return o, err
 }
 
-func _Map_I32_Set_List_Map_Insanity_String_Read(m wire.Map) (map[int32][][][]struct {
+func _Map_I32_Set_List_Map_Insanity_String_Read(m wire.MapItemList) (map[int32][][][]struct {
 	Key   *Insanity
 	Value string
 }, error) {
-	if m.KeyType != wire.TI32 {
+	if m.KeyType() != wire.TI32 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TSet {
+	if m.ValueType() != wire.TSet {
 		return nil, nil
 	}
 	o := make(map[int32][][][]struct {
 		Key   *Insanity
 		Value string
-	}, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	}, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -658,21 +734,21 @@ func _Map_I32_Set_List_Map_Insanity_String_Read(m wire.Map) (map[int32][][][]str
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
-func _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(m wire.Map) ([]struct {
+func _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(m wire.MapItemList) ([]struct {
 	Key   map[int32]struct{}
 	Value map[int32][][][]struct {
 		Key   *Insanity
 		Value string
 	}
 }, error) {
-	if m.KeyType != wire.TSet {
+	if m.KeyType() != wire.TSet {
 		return nil, nil
 	}
-	if m.ValueType != wire.TMap {
+	if m.ValueType() != wire.TMap {
 		return nil, nil
 	}
 	o := make([]struct {
@@ -681,8 +757,8 @@ func _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(m wire.Map) ([]struc
 			Key   *Insanity
 			Value string
 		}
-	}, 0, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	}, 0, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := _Set_I32_Read(x.Key.GetSet())
 		if err != nil {
 			return err
@@ -700,18 +776,18 @@ func _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(m wire.Map) ([]struc
 		}{k, v})
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
-func _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(l wire.List) ([][]struct {
+func _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(l wire.ValueList) ([][]struct {
 	Key   map[int32]struct{}
 	Value map[int32][][][]struct {
 		Key   *Insanity
 		Value string
 	}
 }, error) {
-	if l.ValueType != wire.TMap {
+	if l.ValueType() != wire.TMap {
 		return nil, nil
 	}
 	o := make([][]struct {
@@ -720,8 +796,8 @@ func _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(l wire.List) ([
 			Key   *Insanity
 			Value string
 		}
-	}, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	}, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(x.GetMap())
 		if err != nil {
 			return err
@@ -729,7 +805,7 @@ func _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_Read(l wire.List) ([
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -845,7 +921,19 @@ func (m _Map_String_String_MapItemList) ForEach(f func(wire.MapItem) error) erro
 	return nil
 }
 
-func (m _Map_String_String_MapItemList) Close() {
+func (m _Map_String_String_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_String_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_String_MapItemList) ValueType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_String_MapItemList) Close() {
 }
 
 func (v *GuessProtocolStruct) ToWire() (wire.Value, error) {
@@ -856,7 +944,7 @@ func (v *GuessProtocolStruct) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.MapField != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TBinary, ValueType: wire.TBinary, Size: len(v.MapField), Items: _Map_String_String_MapItemList(v.MapField)}), error(nil)
+		w, err = wire.NewValueMap(_Map_String_String_MapItemList(v.MapField)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -866,15 +954,15 @@ func (v *GuessProtocolStruct) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Map_String_String_Read(m wire.Map) (map[string]string, error) {
-	if m.KeyType != wire.TBinary {
+func _Map_String_String_Read(m wire.MapItemList) (map[string]string, error) {
+	if m.KeyType() != wire.TBinary {
 		return nil, nil
 	}
-	if m.ValueType != wire.TBinary {
+	if m.ValueType() != wire.TBinary {
 		return nil, nil
 	}
-	o := make(map[string]string, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[string]string, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetString(), error(nil)
 		if err != nil {
 			return err
@@ -886,7 +974,7 @@ func _Map_String_String_Read(m wire.Map) (map[string]string, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
@@ -941,7 +1029,19 @@ func (m _Map_Numberz_UserId_MapItemList) ForEach(f func(wire.MapItem) error) err
 	return nil
 }
 
-func (m _Map_Numberz_UserId_MapItemList) Close() {
+func (m _Map_Numberz_UserId_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_Numberz_UserId_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_Numberz_UserId_MapItemList) ValueType() wire.Type {
+	return wire.TI64
+}
+
+func (_Map_Numberz_UserId_MapItemList) Close() {
 }
 
 type _List_Xtruct_ValueList []*Xtruct
@@ -960,7 +1060,15 @@ func (v _List_Xtruct_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_Xtruct_ValueList) Close() {
+func (v _List_Xtruct_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_Xtruct_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_Xtruct_ValueList) Close() {
 }
 
 func (v *Insanity) ToWire() (wire.Value, error) {
@@ -971,7 +1079,7 @@ func (v *Insanity) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.UserMap != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI64, Size: len(v.UserMap), Items: _Map_Numberz_UserId_MapItemList(v.UserMap)}), error(nil)
+		w, err = wire.NewValueMap(_Map_Numberz_UserId_MapItemList(v.UserMap)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -979,7 +1087,7 @@ func (v *Insanity) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Xtructs != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TStruct, Size: len(v.Xtructs), Items: _List_Xtruct_ValueList(v.Xtructs)}), error(nil)
+		w, err = wire.NewValueList(_List_Xtruct_ValueList(v.Xtructs)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1001,15 +1109,15 @@ func _UserId_Read(w wire.Value) (UserId, error) {
 	return x, err
 }
 
-func _Map_Numberz_UserId_Read(m wire.Map) (map[Numberz]UserId, error) {
-	if m.KeyType != wire.TI32 {
+func _Map_Numberz_UserId_Read(m wire.MapItemList) (map[Numberz]UserId, error) {
+	if m.KeyType() != wire.TI32 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TI64 {
+	if m.ValueType() != wire.TI64 {
 		return nil, nil
 	}
-	o := make(map[Numberz]UserId, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[Numberz]UserId, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := _Numberz_Read(x.Key)
 		if err != nil {
 			return err
@@ -1021,7 +1129,7 @@ func _Map_Numberz_UserId_Read(m wire.Map) (map[Numberz]UserId, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
@@ -1031,12 +1139,12 @@ func _Xtruct_Read(w wire.Value) (*Xtruct, error) {
 	return &v, err
 }
 
-func _List_Xtruct_Read(l wire.List) ([]*Xtruct, error) {
-	if l.ValueType != wire.TStruct {
+func _List_Xtruct_Read(l wire.ValueList) ([]*Xtruct, error) {
+	if l.ValueType() != wire.TStruct {
 		return nil, nil
 	}
-	o := make([]*Xtruct, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([]*Xtruct, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _Xtruct_Read(x)
 		if err != nil {
 			return err
@@ -1044,7 +1152,7 @@ func _List_Xtruct_Read(l wire.List) ([]*Xtruct, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -1114,7 +1222,15 @@ func (v _Set_String_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _Set_String_ValueList) Close() {
+func (v _Set_String_ValueList) Size() int {
+	return len(v)
+}
+
+func (_Set_String_ValueList) ValueType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Set_String_ValueList) Close() {
 }
 
 type _List_I32_ValueList []int32
@@ -1133,7 +1249,15 @@ func (v _List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_I32_ValueList) Close() {
+func (v _List_I32_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_I32_ValueList) ValueType() wire.Type {
+	return wire.TI32
+}
+
+func (_List_I32_ValueList) Close() {
 }
 
 func (v *LargeDeltas) ToWire() (wire.Value, error) {
@@ -1200,7 +1324,7 @@ func (v *LargeDeltas) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.ASet2500 != nil {
-		w, err = wire.NewValueSet(wire.Set{ValueType: wire.TBinary, Size: len(v.ASet2500), Items: _Set_String_ValueList(v.ASet2500)}), error(nil)
+		w, err = wire.NewValueSet(_Set_String_ValueList(v.ASet2500)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1216,7 +1340,7 @@ func (v *LargeDeltas) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.BigNumbers != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.BigNumbers), Items: _List_I32_ValueList(v.BigNumbers)}), error(nil)
+		w, err = wire.NewValueList(_List_I32_ValueList(v.BigNumbers)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1238,12 +1362,12 @@ func _VersioningTestV2_Read(w wire.Value) (*VersioningTestV2, error) {
 	return &v, err
 }
 
-func _Set_String_Read(s wire.Set) (map[string]struct{}, error) {
-	if s.ValueType != wire.TBinary {
+func _Set_String_Read(s wire.ValueList) (map[string]struct{}, error) {
+	if s.ValueType() != wire.TBinary {
 		return nil, nil
 	}
-	o := make(map[string]struct{}, s.Size)
-	err := s.Items.ForEach(func(x wire.Value) error {
+	o := make(map[string]struct{}, s.Size())
+	err := s.ForEach(func(x wire.Value) error {
 		i, err := x.GetString(), error(nil)
 		if err != nil {
 			return err
@@ -1251,16 +1375,16 @@ func _Set_String_Read(s wire.Set) (map[string]struct{}, error) {
 		o[i] = struct{}{}
 		return nil
 	})
-	s.Items.Close()
+	s.Close()
 	return o, err
 }
 
-func _List_I32_Read(l wire.List) ([]int32, error) {
-	if l.ValueType != wire.TI32 {
+func _List_I32_Read(l wire.ValueList) ([]int32, error) {
+	if l.ValueType() != wire.TI32 {
 		return nil, nil
 	}
-	o := make([]int32, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([]int32, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := x.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -1268,7 +1392,7 @@ func _List_I32_Read(l wire.List) ([]int32, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -1421,7 +1545,15 @@ func (v _List_Bonk_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_Bonk_ValueList) Close() {
+func (v _List_Bonk_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_Bonk_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_Bonk_ValueList) Close() {
 }
 
 func (v *ListBonks) ToWire() (wire.Value, error) {
@@ -1432,7 +1564,7 @@ func (v *ListBonks) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Bonk != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TStruct, Size: len(v.Bonk), Items: _List_Bonk_ValueList(v.Bonk)}), error(nil)
+		w, err = wire.NewValueList(_List_Bonk_ValueList(v.Bonk)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1448,12 +1580,12 @@ func _Bonk_Read(w wire.Value) (*Bonk, error) {
 	return &v, err
 }
 
-func _List_Bonk_Read(l wire.List) ([]*Bonk, error) {
-	if l.ValueType != wire.TStruct {
+func _List_Bonk_Read(l wire.ValueList) ([]*Bonk, error) {
+	if l.ValueType() != wire.TStruct {
 		return nil, nil
 	}
-	o := make([]*Bonk, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([]*Bonk, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _Bonk_Read(x)
 		if err != nil {
 			return err
@@ -1461,7 +1593,7 @@ func _List_Bonk_Read(l wire.List) ([]*Bonk, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -1504,7 +1636,7 @@ func (v *ListTypeVersioningV1) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Myints != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Myints), Items: _List_I32_ValueList(v.Myints)}), error(nil)
+		w, err = wire.NewValueList(_List_I32_ValueList(v.Myints)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1582,7 +1714,15 @@ func (v _List_String_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_String_ValueList) Close() {
+func (v _List_String_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_String_ValueList) ValueType() wire.Type {
+	return wire.TBinary
+}
+
+func (_List_String_ValueList) Close() {
 }
 
 func (v *ListTypeVersioningV2) ToWire() (wire.Value, error) {
@@ -1593,7 +1733,7 @@ func (v *ListTypeVersioningV2) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Strings != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TBinary, Size: len(v.Strings), Items: _List_String_ValueList(v.Strings)}), error(nil)
+		w, err = wire.NewValueList(_List_String_ValueList(v.Strings)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1611,12 +1751,12 @@ func (v *ListTypeVersioningV2) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _List_String_Read(l wire.List) ([]string, error) {
-	if l.ValueType != wire.TBinary {
+func _List_String_Read(l wire.ValueList) ([]string, error) {
+	if l.ValueType() != wire.TBinary {
 		return nil, nil
 	}
-	o := make([]string, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([]string, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := x.GetString(), error(nil)
 		if err != nil {
 			return err
@@ -1624,7 +1764,7 @@ func _List_String_Read(l wire.List) ([]string, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -1687,18 +1827,30 @@ func (m _Map_String_Bonk_MapItemList) ForEach(f func(wire.MapItem) error) error 
 	return nil
 }
 
-func (m _Map_String_Bonk_MapItemList) Close() {
+func (m _Map_String_Bonk_MapItemList) Size() int {
+	return len(m)
 }
 
-func _Map_String_Bonk_Read(m wire.Map) (map[string]*Bonk, error) {
-	if m.KeyType != wire.TBinary {
+func (_Map_String_Bonk_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_Bonk_MapItemList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_String_Bonk_MapItemList) Close() {
+}
+
+func _Map_String_Bonk_Read(m wire.MapItemList) (map[string]*Bonk, error) {
+	if m.KeyType() != wire.TBinary {
 		return nil, nil
 	}
-	if m.ValueType != wire.TStruct {
+	if m.ValueType() != wire.TStruct {
 		return nil, nil
 	}
-	o := make(map[string]*Bonk, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[string]*Bonk, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetString(), error(nil)
 		if err != nil {
 			return err
@@ -1710,7 +1862,7 @@ func _Map_String_Bonk_Read(m wire.Map) (map[string]*Bonk, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
@@ -1718,7 +1870,7 @@ type MapType map[string]*Bonk
 
 func (v MapType) ToWire() (wire.Value, error) {
 	x := (map[string]*Bonk)(v)
-	return wire.NewValueMap(wire.Map{KeyType: wire.TBinary, ValueType: wire.TStruct, Size: len(x), Items: _Map_String_Bonk_MapItemList(x)}), error(nil)
+	return wire.NewValueMap(_Map_String_Bonk_MapItemList(x)), error(nil)
 }
 
 func (v MapType) String() string {
@@ -1740,7 +1892,7 @@ type _List_List_Bonk_ValueList [][]*Bonk
 
 func (v _List_List_Bonk_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueList(wire.List{ValueType: wire.TStruct, Size: len(x), Items: _List_Bonk_ValueList(x)}), error(nil)
+		w, err := wire.NewValueList(_List_Bonk_ValueList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -1752,14 +1904,22 @@ func (v _List_List_Bonk_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_List_Bonk_ValueList) Close() {
+func (v _List_List_Bonk_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_List_Bonk_ValueList) ValueType() wire.Type {
+	return wire.TList
+}
+
+func (_List_List_Bonk_ValueList) Close() {
 }
 
 type _List_List_List_Bonk_ValueList [][][]*Bonk
 
 func (v _List_List_List_Bonk_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueList(wire.List{ValueType: wire.TList, Size: len(x), Items: _List_List_Bonk_ValueList(x)}), error(nil)
+		w, err := wire.NewValueList(_List_List_Bonk_ValueList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -1771,7 +1931,15 @@ func (v _List_List_List_Bonk_ValueList) ForEach(f func(wire.Value) error) error 
 	return nil
 }
 
-func (v _List_List_List_Bonk_ValueList) Close() {
+func (v _List_List_List_Bonk_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_List_List_Bonk_ValueList) ValueType() wire.Type {
+	return wire.TList
+}
+
+func (_List_List_List_Bonk_ValueList) Close() {
 }
 
 func (v *NestedListsBonk) ToWire() (wire.Value, error) {
@@ -1782,7 +1950,7 @@ func (v *NestedListsBonk) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Bonk != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TList, Size: len(v.Bonk), Items: _List_List_List_Bonk_ValueList(v.Bonk)}), error(nil)
+		w, err = wire.NewValueList(_List_List_List_Bonk_ValueList(v.Bonk)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1792,12 +1960,12 @@ func (v *NestedListsBonk) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _List_List_Bonk_Read(l wire.List) ([][]*Bonk, error) {
-	if l.ValueType != wire.TList {
+func _List_List_Bonk_Read(l wire.ValueList) ([][]*Bonk, error) {
+	if l.ValueType() != wire.TList {
 		return nil, nil
 	}
-	o := make([][]*Bonk, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([][]*Bonk, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _List_Bonk_Read(x.GetList())
 		if err != nil {
 			return err
@@ -1805,16 +1973,16 @@ func _List_List_Bonk_Read(l wire.List) ([][]*Bonk, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
-func _List_List_List_Bonk_Read(l wire.List) ([][][]*Bonk, error) {
-	if l.ValueType != wire.TList {
+func _List_List_List_Bonk_Read(l wire.ValueList) ([][][]*Bonk, error) {
+	if l.ValueType() != wire.TList {
 		return nil, nil
 	}
-	o := make([][][]*Bonk, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([][][]*Bonk, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _List_List_Bonk_Read(x.GetList())
 		if err != nil {
 			return err
@@ -1822,7 +1990,7 @@ func _List_List_List_Bonk_Read(l wire.List) ([][][]*Bonk, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -1860,7 +2028,7 @@ type _List_List_I32_ValueList [][]int32
 
 func (v _List_List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(x), Items: _List_I32_ValueList(x)}), error(nil)
+		w, err := wire.NewValueList(_List_I32_ValueList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -1872,7 +2040,15 @@ func (v _List_List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_List_I32_ValueList) Close() {
+func (v _List_List_I32_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_List_I32_ValueList) ValueType() wire.Type {
+	return wire.TList
+}
+
+func (_List_List_I32_ValueList) Close() {
 }
 
 func (v *NestedListsI32x2) ToWire() (wire.Value, error) {
@@ -1883,7 +2059,7 @@ func (v *NestedListsI32x2) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Integerlist != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TList, Size: len(v.Integerlist), Items: _List_List_I32_ValueList(v.Integerlist)}), error(nil)
+		w, err = wire.NewValueList(_List_List_I32_ValueList(v.Integerlist)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1893,12 +2069,12 @@ func (v *NestedListsI32x2) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _List_List_I32_Read(l wire.List) ([][]int32, error) {
-	if l.ValueType != wire.TList {
+func _List_List_I32_Read(l wire.ValueList) ([][]int32, error) {
+	if l.ValueType() != wire.TList {
 		return nil, nil
 	}
-	o := make([][]int32, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([][]int32, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _List_I32_Read(x.GetList())
 		if err != nil {
 			return err
@@ -1906,7 +2082,7 @@ func _List_List_I32_Read(l wire.List) ([][]int32, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -1944,7 +2120,7 @@ type _List_List_List_I32_ValueList [][][]int32
 
 func (v _List_List_List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueList(wire.List{ValueType: wire.TList, Size: len(x), Items: _List_List_I32_ValueList(x)}), error(nil)
+		w, err := wire.NewValueList(_List_List_I32_ValueList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -1956,7 +2132,15 @@ func (v _List_List_List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_List_List_I32_ValueList) Close() {
+func (v _List_List_List_I32_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_List_List_I32_ValueList) ValueType() wire.Type {
+	return wire.TList
+}
+
+func (_List_List_List_I32_ValueList) Close() {
 }
 
 func (v *NestedListsI32x3) ToWire() (wire.Value, error) {
@@ -1967,7 +2151,7 @@ func (v *NestedListsI32x3) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Integerlist != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TList, Size: len(v.Integerlist), Items: _List_List_List_I32_ValueList(v.Integerlist)}), error(nil)
+		w, err = wire.NewValueList(_List_List_List_I32_ValueList(v.Integerlist)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1977,12 +2161,12 @@ func (v *NestedListsI32x3) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _List_List_List_I32_Read(l wire.List) ([][][]int32, error) {
-	if l.ValueType != wire.TList {
+func _List_List_List_I32_Read(l wire.ValueList) ([][][]int32, error) {
+	if l.ValueType() != wire.TList {
 		return nil, nil
 	}
-	o := make([][][]int32, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([][][]int32, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _List_List_I32_Read(x.GetList())
 		if err != nil {
 			return err
@@ -1990,7 +2174,7 @@ func _List_List_List_I32_Read(l wire.List) ([][][]int32, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -2030,7 +2214,7 @@ type _List_Set_I32_ValueList []map[int32]struct{}
 
 func (v _List_Set_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueSet(wire.Set{ValueType: wire.TI32, Size: len(x), Items: _Set_I32_ValueList(x)}), error(nil)
+		w, err := wire.NewValueSet(_Set_I32_ValueList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -2042,7 +2226,15 @@ func (v _List_Set_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_Set_I32_ValueList) Close() {
+func (v _List_Set_I32_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_Set_I32_ValueList) ValueType() wire.Type {
+	return wire.TSet
+}
+
+func (_List_Set_I32_ValueList) Close() {
 }
 
 type _Map_I32_Set_String_MapItemList map[int32]map[string]struct{}
@@ -2053,7 +2245,7 @@ func (m _Map_I32_Set_String_MapItemList) ForEach(f func(wire.MapItem) error) err
 		if err != nil {
 			return err
 		}
-		vw, err := wire.NewValueSet(wire.Set{ValueType: wire.TBinary, Size: len(v), Items: _Set_String_ValueList(v)}), error(nil)
+		vw, err := wire.NewValueSet(_Set_String_ValueList(v)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -2065,14 +2257,26 @@ func (m _Map_I32_Set_String_MapItemList) ForEach(f func(wire.MapItem) error) err
 	return nil
 }
 
-func (m _Map_I32_Set_String_MapItemList) Close() {
+func (m _Map_I32_Set_String_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_I32_Set_String_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_Set_String_MapItemList) ValueType() wire.Type {
+	return wire.TSet
+}
+
+func (_Map_I32_Set_String_MapItemList) Close() {
 }
 
 type _List_Map_I32_Set_String_ValueList []map[int32]map[string]struct{}
 
 func (v _List_Map_I32_Set_String_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
-		w, err := wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TSet, Size: len(x), Items: _Map_I32_Set_String_MapItemList(x)}), error(nil)
+		w, err := wire.NewValueMap(_Map_I32_Set_String_MapItemList(x)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -2084,7 +2288,15 @@ func (v _List_Map_I32_Set_String_ValueList) ForEach(f func(wire.Value) error) er
 	return nil
 }
 
-func (v _List_Map_I32_Set_String_ValueList) Close() {
+func (v _List_Map_I32_Set_String_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_Map_I32_Set_String_ValueList) ValueType() wire.Type {
+	return wire.TMap
+}
+
+func (_List_Map_I32_Set_String_ValueList) Close() {
 }
 
 func (v *NestedMixedx2) ToWire() (wire.Value, error) {
@@ -2095,7 +2307,7 @@ func (v *NestedMixedx2) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.IntSetList != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TSet, Size: len(v.IntSetList), Items: _List_Set_I32_ValueList(v.IntSetList)}), error(nil)
+		w, err = wire.NewValueList(_List_Set_I32_ValueList(v.IntSetList)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -2103,7 +2315,7 @@ func (v *NestedMixedx2) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.MapIntStrset != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TSet, Size: len(v.MapIntStrset), Items: _Map_I32_Set_String_MapItemList(v.MapIntStrset)}), error(nil)
+		w, err = wire.NewValueMap(_Map_I32_Set_String_MapItemList(v.MapIntStrset)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -2111,7 +2323,7 @@ func (v *NestedMixedx2) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.MapIntStrsetList != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TMap, Size: len(v.MapIntStrsetList), Items: _List_Map_I32_Set_String_ValueList(v.MapIntStrsetList)}), error(nil)
+		w, err = wire.NewValueList(_List_Map_I32_Set_String_ValueList(v.MapIntStrsetList)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -2121,12 +2333,12 @@ func (v *NestedMixedx2) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _List_Set_I32_Read(l wire.List) ([]map[int32]struct{}, error) {
-	if l.ValueType != wire.TSet {
+func _List_Set_I32_Read(l wire.ValueList) ([]map[int32]struct{}, error) {
+	if l.ValueType() != wire.TSet {
 		return nil, nil
 	}
-	o := make([]map[int32]struct{}, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([]map[int32]struct{}, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _Set_I32_Read(x.GetSet())
 		if err != nil {
 			return err
@@ -2134,19 +2346,19 @@ func _List_Set_I32_Read(l wire.List) ([]map[int32]struct{}, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
-func _Map_I32_Set_String_Read(m wire.Map) (map[int32]map[string]struct{}, error) {
-	if m.KeyType != wire.TI32 {
+func _Map_I32_Set_String_Read(m wire.MapItemList) (map[int32]map[string]struct{}, error) {
+	if m.KeyType() != wire.TI32 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TSet {
+	if m.ValueType() != wire.TSet {
 		return nil, nil
 	}
-	o := make(map[int32]map[string]struct{}, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[int32]map[string]struct{}, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -2158,16 +2370,16 @@ func _Map_I32_Set_String_Read(m wire.Map) (map[int32]map[string]struct{}, error)
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
-func _List_Map_I32_Set_String_Read(l wire.List) ([]map[int32]map[string]struct{}, error) {
-	if l.ValueType != wire.TMap {
+func _List_Map_I32_Set_String_Read(l wire.ValueList) ([]map[int32]map[string]struct{}, error) {
+	if l.ValueType() != wire.TMap {
 		return nil, nil
 	}
-	o := make([]map[int32]map[string]struct{}, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([]map[int32]map[string]struct{}, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := _Map_I32_Set_String_Read(x.GetMap())
 		if err != nil {
 			return err
@@ -2175,7 +2387,7 @@ func _List_Map_I32_Set_String_Read(l wire.List) ([]map[int32]map[string]struct{}
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -2594,7 +2806,19 @@ func (m _Map_I32_I32_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	return nil
 }
 
-func (m _Map_I32_I32_MapItemList) Close() {
+func (m _Map_I32_I32_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_I32_I32_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_I32_MapItemList) ValueType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_I32_MapItemList) Close() {
 }
 
 func (v *VersioningTestV2) ToWire() (wire.Value, error) {
@@ -2661,7 +2885,7 @@ func (v *VersioningTestV2) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Newlist != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Newlist), Items: _List_I32_ValueList(v.Newlist)}), error(nil)
+		w, err = wire.NewValueList(_List_I32_ValueList(v.Newlist)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -2669,7 +2893,7 @@ func (v *VersioningTestV2) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Newset != nil {
-		w, err = wire.NewValueSet(wire.Set{ValueType: wire.TI32, Size: len(v.Newset), Items: _Set_I32_ValueList(v.Newset)}), error(nil)
+		w, err = wire.NewValueSet(_Set_I32_ValueList(v.Newset)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -2677,7 +2901,7 @@ func (v *VersioningTestV2) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Newmap != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v.Newmap), Items: _Map_I32_I32_MapItemList(v.Newmap)}), error(nil)
+		w, err = wire.NewValueMap(_Map_I32_I32_MapItemList(v.Newmap)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -2703,15 +2927,15 @@ func (v *VersioningTestV2) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Map_I32_I32_Read(m wire.Map) (map[int32]int32, error) {
-	if m.KeyType != wire.TI32 {
+func _Map_I32_I32_Read(m wire.MapItemList) (map[int32]int32, error) {
+	if m.KeyType() != wire.TI32 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TI32 {
+	if m.ValueType() != wire.TI32 {
 		return nil, nil
 	}
-	o := make(map[int32]int32, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[int32]int32, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -2723,7 +2947,7 @@ func _Map_I32_I32_Read(m wire.Map) (map[int32]int32, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 

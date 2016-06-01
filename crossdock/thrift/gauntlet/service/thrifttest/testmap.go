@@ -53,7 +53,19 @@ func (m _Map_I32_I32_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	return nil
 }
 
-func (m _Map_I32_I32_MapItemList) Close() {
+func (m _Map_I32_I32_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_I32_I32_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_I32_MapItemList) ValueType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_I32_MapItemList) Close() {
 }
 
 func (v *TestMapArgs) ToWire() (wire.Value, error) {
@@ -64,7 +76,7 @@ func (v *TestMapArgs) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Thing != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v.Thing), Items: _Map_I32_I32_MapItemList(v.Thing)}), error(nil)
+		w, err = wire.NewValueMap(_Map_I32_I32_MapItemList(v.Thing)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -74,15 +86,15 @@ func (v *TestMapArgs) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Map_I32_I32_Read(m wire.Map) (map[int32]int32, error) {
-	if m.KeyType != wire.TI32 {
+func _Map_I32_I32_Read(m wire.MapItemList) (map[int32]int32, error) {
+	if m.KeyType() != wire.TI32 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TI32 {
+	if m.ValueType() != wire.TI32 {
 		return nil, nil
 	}
-	o := make(map[int32]int32, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[int32]int32, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -94,7 +106,7 @@ func _Map_I32_I32_Read(m wire.Map) (map[int32]int32, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
@@ -144,7 +156,7 @@ func (v *TestMapResult) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Success != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v.Success), Items: _Map_I32_I32_MapItemList(v.Success)}), error(nil)
+		w, err = wire.NewValueMap(_Map_I32_I32_MapItemList(v.Success)), error(nil)
 		if err != nil {
 			return w, err
 		}

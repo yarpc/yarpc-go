@@ -99,7 +99,7 @@ func (m _Map_I32_Map_I32_I32_MapItemList) ForEach(f func(wire.MapItem) error) er
 		if err != nil {
 			return err
 		}
-		vw, err := wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TI32, Size: len(v), Items: _Map_I32_I32_MapItemList(v)}), error(nil)
+		vw, err := wire.NewValueMap(_Map_I32_I32_MapItemList(v)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,19 @@ func (m _Map_I32_Map_I32_I32_MapItemList) ForEach(f func(wire.MapItem) error) er
 	return nil
 }
 
-func (m _Map_I32_Map_I32_I32_MapItemList) Close() {
+func (m _Map_I32_Map_I32_I32_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_I32_Map_I32_I32_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_I32_Map_I32_I32_MapItemList) ValueType() wire.Type {
+	return wire.TMap
+}
+
+func (_Map_I32_Map_I32_I32_MapItemList) Close() {
 }
 
 func (v *TestMapMapResult) ToWire() (wire.Value, error) {
@@ -122,7 +134,7 @@ func (v *TestMapMapResult) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Success != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TMap, Size: len(v.Success), Items: _Map_I32_Map_I32_I32_MapItemList(v.Success)}), error(nil)
+		w, err = wire.NewValueMap(_Map_I32_Map_I32_I32_MapItemList(v.Success)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -135,15 +147,15 @@ func (v *TestMapMapResult) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Map_I32_Map_I32_I32_Read(m wire.Map) (map[int32]map[int32]int32, error) {
-	if m.KeyType != wire.TI32 {
+func _Map_I32_Map_I32_I32_Read(m wire.MapItemList) (map[int32]map[int32]int32, error) {
+	if m.KeyType() != wire.TI32 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TMap {
+	if m.ValueType() != wire.TMap {
 		return nil, nil
 	}
-	o := make(map[int32]map[int32]int32, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[int32]map[int32]int32, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -155,7 +167,7 @@ func _Map_I32_Map_I32_I32_Read(m wire.Map) (map[int32]map[int32]int32, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
