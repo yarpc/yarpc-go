@@ -69,10 +69,6 @@ func thriftCall(call call, headers map[string]string, token string) (*echo.Pong,
 func runGauntlet(t crossdock.T, call call) {
 	checks := crossdock.Checks(t)
 
-	// TODO assert headers
-	headers := map[string]string{
-		"hello": "gauntlet",
-	}
 	token := random.String(5)
 	bytesToken := random.Bytes(1)
 
@@ -357,7 +353,6 @@ func runGauntlet(t crossdock.T, call call) {
 		}
 
 		ctx, cancel := thrift.NewContext(time.Second)
-		ctx = thrift.WithHeaders(ctx, headers)
 		defer cancel()
 
 		args := []reflect.Value{reflect.ValueOf(ctx)}
