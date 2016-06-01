@@ -54,16 +54,19 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) Echo(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) Echo(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args echo2.EchoArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.Echo(req, args.Ping)
+	hadError := err != nil
 	result, err := echo2.EchoHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }

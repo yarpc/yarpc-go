@@ -54,30 +54,36 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) GetValue(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) GetValue(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args keyvalue.GetValueArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.GetValue(req, args.Key)
+	hadError := err != nil
 	result, err := keyvalue.GetValueHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) SetValue(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) SetValue(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args keyvalue.SetValueArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	res, err := h.impl.SetValue(req, args.Key, args.Value)
+	hadError := err != nil
 	result, err := keyvalue.SetValueHelper.WrapResponse(err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
