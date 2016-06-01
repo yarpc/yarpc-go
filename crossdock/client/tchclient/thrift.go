@@ -140,6 +140,11 @@ func runGauntlet(t crossdock.T, call call) {
 			Want:     int32(123),
 		},
 		{
+			Function: "TestI64",
+			Give:     []interface{}{int64(18934714)},
+			Want:     int64(18934714),
+		},
+		{
 			Function: "TestString",
 			Give:     []interface{}{token},
 			Want:     token,
