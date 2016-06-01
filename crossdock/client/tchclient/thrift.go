@@ -253,6 +253,23 @@ func runGauntlet(t crossdock.T, call call) {
 				"hello": "world",
 			},
 		},
+		{
+			Function: "TestStruct",
+			Give: []interface{}{
+				&gauntlet_apache.Xtruct{
+					StringThing: stringp("0"),
+					ByteThing:   bytep(1),
+					I32Thing:    int32p(2),
+					I64Thing:    int64p(3),
+				},
+			},
+			Want: &gauntlet_apache.Xtruct{
+				StringThing: stringp("0"),
+				ByteThing:   bytep(1),
+				I32Thing:    int32p(2),
+				I64Thing:    int64p(3),
+			},
+		},
 	}
 
 	for _, tt := range tests {
