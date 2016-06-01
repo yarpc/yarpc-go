@@ -155,6 +155,11 @@ func runGauntlet(t crossdock.T, call call) {
 			Give:     []interface{}{[]int32{1, 2, 3}},
 			Want:     []int32{1, 2, 3},
 		},
+		{
+			Function: "TestMap",
+			Give:     []interface{}{map[int32]int32{1: 2, 3: 4, 5: 6}},
+			Want:     map[int32]int32{1: 2, 3: 4, 5: 6},
+		},
 	}
 
 	for _, tt := range tests {
