@@ -116,7 +116,19 @@ func (m _Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapItem) error) e
 	return nil
 }
 
-func (m _Map_Numberz_Insanity_MapItemList) Close() {
+func (m _Map_Numberz_Insanity_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_Numberz_Insanity_MapItemList) KeyType() wire.Type {
+	return wire.TI32
+}
+
+func (_Map_Numberz_Insanity_MapItemList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_Numberz_Insanity_MapItemList) Close() {
 }
 
 type _Map_UserId_Map_Numberz_Insanity_MapItemList map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity
@@ -127,7 +139,7 @@ func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapIte
 		if err != nil {
 			return err
 		}
-		vw, err := wire.NewValueMap(wire.Map{KeyType: wire.TI32, ValueType: wire.TStruct, Size: len(v), Items: _Map_Numberz_Insanity_MapItemList(v)}), error(nil)
+		vw, err := wire.NewValueMap(_Map_Numberz_Insanity_MapItemList(v)), error(nil)
 		if err != nil {
 			return err
 		}
@@ -139,7 +151,19 @@ func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapIte
 	return nil
 }
 
-func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) Close() {
+func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_UserId_Map_Numberz_Insanity_MapItemList) KeyType() wire.Type {
+	return wire.TI64
+}
+
+func (_Map_UserId_Map_Numberz_Insanity_MapItemList) ValueType() wire.Type {
+	return wire.TMap
+}
+
+func (_Map_UserId_Map_Numberz_Insanity_MapItemList) Close() {
 }
 
 func (v *TestInsanityResult) ToWire() (wire.Value, error) {
@@ -150,7 +174,7 @@ func (v *TestInsanityResult) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Success != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI64, ValueType: wire.TMap, Size: len(v.Success), Items: _Map_UserId_Map_Numberz_Insanity_MapItemList(v.Success)}), error(nil)
+		w, err = wire.NewValueMap(_Map_UserId_Map_Numberz_Insanity_MapItemList(v.Success)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -169,15 +193,15 @@ func _UserId_Read(w wire.Value) (gauntlet.UserId, error) {
 	return x, err
 }
 
-func _Map_Numberz_Insanity_Read(m wire.Map) (map[gauntlet.Numberz]*gauntlet.Insanity, error) {
-	if m.KeyType != wire.TI32 {
+func _Map_Numberz_Insanity_Read(m wire.MapItemList) (map[gauntlet.Numberz]*gauntlet.Insanity, error) {
+	if m.KeyType() != wire.TI32 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TStruct {
+	if m.ValueType() != wire.TStruct {
 		return nil, nil
 	}
-	o := make(map[gauntlet.Numberz]*gauntlet.Insanity, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[gauntlet.Numberz]*gauntlet.Insanity, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := _Numberz_Read(x.Key)
 		if err != nil {
 			return err
@@ -189,19 +213,19 @@ func _Map_Numberz_Insanity_Read(m wire.Map) (map[gauntlet.Numberz]*gauntlet.Insa
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
-func _Map_UserId_Map_Numberz_Insanity_Read(m wire.Map) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, error) {
-	if m.KeyType != wire.TI64 {
+func _Map_UserId_Map_Numberz_Insanity_Read(m wire.MapItemList) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, error) {
+	if m.KeyType() != wire.TI64 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TMap {
+	if m.ValueType() != wire.TMap {
 		return nil, nil
 	}
-	o := make(map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := _UserId_Read(x.Key)
 		if err != nil {
 			return err
@@ -213,7 +237,7 @@ func _Map_UserId_Map_Numberz_Insanity_Read(m wire.Map) (map[gauntlet.UserId]map[
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 

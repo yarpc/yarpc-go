@@ -49,7 +49,15 @@ func (v _List_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _List_I32_ValueList) Close() {
+func (v _List_I32_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_I32_ValueList) ValueType() wire.Type {
+	return wire.TI32
+}
+
+func (_List_I32_ValueList) Close() {
 }
 
 func (v *TestListArgs) ToWire() (wire.Value, error) {
@@ -60,7 +68,7 @@ func (v *TestListArgs) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Thing != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Thing), Items: _List_I32_ValueList(v.Thing)}), error(nil)
+		w, err = wire.NewValueList(_List_I32_ValueList(v.Thing)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -70,12 +78,12 @@ func (v *TestListArgs) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _List_I32_Read(l wire.List) ([]int32, error) {
-	if l.ValueType != wire.TI32 {
+func _List_I32_Read(l wire.ValueList) ([]int32, error) {
+	if l.ValueType() != wire.TI32 {
 		return nil, nil
 	}
-	o := make([]int32, 0, l.Size)
-	err := l.Items.ForEach(func(x wire.Value) error {
+	o := make([]int32, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
 		i, err := x.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -83,7 +91,7 @@ func _List_I32_Read(l wire.List) ([]int32, error) {
 		o = append(o, i)
 		return nil
 	})
-	l.Items.Close()
+	l.Close()
 	return o, err
 }
 
@@ -133,7 +141,7 @@ func (v *TestListResult) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Success != nil {
-		w, err = wire.NewValueList(wire.List{ValueType: wire.TI32, Size: len(v.Success), Items: _List_I32_ValueList(v.Success)}), error(nil)
+		w, err = wire.NewValueList(_List_I32_ValueList(v.Success)), error(nil)
 		if err != nil {
 			return w, err
 		}

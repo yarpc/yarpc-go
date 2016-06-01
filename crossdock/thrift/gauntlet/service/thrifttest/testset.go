@@ -49,7 +49,15 @@ func (v _Set_I32_ValueList) ForEach(f func(wire.Value) error) error {
 	return nil
 }
 
-func (v _Set_I32_ValueList) Close() {
+func (v _Set_I32_ValueList) Size() int {
+	return len(v)
+}
+
+func (_Set_I32_ValueList) ValueType() wire.Type {
+	return wire.TI32
+}
+
+func (_Set_I32_ValueList) Close() {
 }
 
 func (v *TestSetArgs) ToWire() (wire.Value, error) {
@@ -60,7 +68,7 @@ func (v *TestSetArgs) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Thing != nil {
-		w, err = wire.NewValueSet(wire.Set{ValueType: wire.TI32, Size: len(v.Thing), Items: _Set_I32_ValueList(v.Thing)}), error(nil)
+		w, err = wire.NewValueSet(_Set_I32_ValueList(v.Thing)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -70,12 +78,12 @@ func (v *TestSetArgs) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Set_I32_Read(s wire.Set) (map[int32]struct{}, error) {
-	if s.ValueType != wire.TI32 {
+func _Set_I32_Read(s wire.ValueList) (map[int32]struct{}, error) {
+	if s.ValueType() != wire.TI32 {
 		return nil, nil
 	}
-	o := make(map[int32]struct{}, s.Size)
-	err := s.Items.ForEach(func(x wire.Value) error {
+	o := make(map[int32]struct{}, s.Size())
+	err := s.ForEach(func(x wire.Value) error {
 		i, err := x.GetI32(), error(nil)
 		if err != nil {
 			return err
@@ -83,7 +91,7 @@ func _Set_I32_Read(s wire.Set) (map[int32]struct{}, error) {
 		o[i] = struct{}{}
 		return nil
 	})
-	s.Items.Close()
+	s.Close()
 	return o, err
 }
 
@@ -133,7 +141,7 @@ func (v *TestSetResult) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.Success != nil {
-		w, err = wire.NewValueSet(wire.Set{ValueType: wire.TI32, Size: len(v.Success), Items: _Set_I32_ValueList(v.Success)}), error(nil)
+		w, err = wire.NewValueSet(_Set_I32_ValueList(v.Success)), error(nil)
 		if err != nil {
 			return w, err
 		}
