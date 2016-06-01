@@ -471,12 +471,7 @@ func isUnrecognizedProcedure(err error) bool {
 	return false
 }
 
-func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (interface{}, error) {
-	var (
-		err error
-		got interface{}
-	)
-
+func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (got interface{}, err error) {
 	switch len(returns) {
 	case 2:
 		e := returns[1].Interface()
@@ -493,7 +488,6 @@ func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (i
 		crossdock.Assert(t).Fail("",
 			"%v: received unexpected number of return values: %v", desc, returns)
 	}
-
 	return got, err
 }
 
