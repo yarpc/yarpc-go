@@ -27,7 +27,6 @@ import (
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
-	"github.com/yarpc/yarpc-go/crossdock/client/ptr"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
@@ -36,6 +35,7 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/thriftrw/thriftrw-go/ptr"
 	"golang.org/x/net/context"
 )
 
@@ -97,12 +97,12 @@ func Run(t crossdock.T) {
 		},
 		{
 			Function: "TestByte",
-			Give:     []interface{}{ptr.Byte(42)},
+			Give:     []interface{}{ptr.Int8(42)},
 			Want:     int8(42),
 		},
 		{
 			Function: "TestDouble",
-			Give:     []interface{}{ptr.Double(12.34)},
+			Give:     []interface{}{ptr.Float64(12.34)},
 			Want:     float64(12.34),
 		},
 		{
@@ -163,7 +163,7 @@ func Run(t crossdock.T) {
 					},
 					Xtructs: []*gauntlet.Xtruct{
 						{StringThing: ptr.String("0")},
-						{ByteThing: ptr.Byte(1)},
+						{ByteThing: ptr.Int8(1)},
 						{I32Thing: ptr.Int32(2)},
 						{I64Thing: ptr.Int64(3)},
 					},
@@ -178,7 +178,7 @@ func Run(t crossdock.T) {
 						},
 						Xtructs: []*gauntlet.Xtruct{
 							{StringThing: ptr.String("0")},
-							{ByteThing: ptr.Byte(1)},
+							{ByteThing: ptr.Int8(1)},
 							{I32Thing: ptr.Int32(2)},
 							{I64Thing: ptr.Int64(3)},
 						},
@@ -190,7 +190,7 @@ func Run(t crossdock.T) {
 						},
 						Xtructs: []*gauntlet.Xtruct{
 							{StringThing: ptr.String("0")},
-							{ByteThing: ptr.Byte(1)},
+							{ByteThing: ptr.Int8(1)},
 							{I32Thing: ptr.Int32(2)},
 							{I64Thing: ptr.Int64(3)},
 						},
@@ -232,7 +232,7 @@ func Run(t crossdock.T) {
 		{
 			Function: "TestMulti",
 			Give: []interface{}{
-				ptr.Byte(100),
+				ptr.Int8(100),
 				ptr.Int32(200),
 				ptr.Int64(300),
 				map[int16]string{1: "1", 2: "2", 3: "3"},
@@ -241,7 +241,7 @@ func Run(t crossdock.T) {
 			},
 			Want: &gauntlet.Xtruct{
 				StringThing: ptr.String("Hello2"),
-				ByteThing:   ptr.Byte(100),
+				ByteThing:   ptr.Int8(100),
 				I32Thing:    ptr.Int32(200),
 				I64Thing:    ptr.Int64(300),
 			},
@@ -274,22 +274,22 @@ func Run(t crossdock.T) {
 			Function: "TestNest",
 			Give: []interface{}{
 				&gauntlet.Xtruct2{
-					ByteThing: ptr.Byte(-1),
+					ByteThing: ptr.Int8(-1),
 					I32Thing:  ptr.Int32(-1234),
 					StructThing: &gauntlet.Xtruct{
 						StringThing: ptr.String("0"),
-						ByteThing:   ptr.Byte(1),
+						ByteThing:   ptr.Int8(1),
 						I32Thing:    ptr.Int32(2),
 						I64Thing:    ptr.Int64(3),
 					},
 				},
 			},
 			Want: &gauntlet.Xtruct2{
-				ByteThing: ptr.Byte(-1),
+				ByteThing: ptr.Int8(-1),
 				I32Thing:  ptr.Int32(-1234),
 				StructThing: &gauntlet.Xtruct{
 					StringThing: ptr.String("0"),
-					ByteThing:   ptr.Byte(1),
+					ByteThing:   ptr.Int8(1),
 					I32Thing:    ptr.Int32(2),
 					I64Thing:    ptr.Int64(3),
 				},
@@ -335,14 +335,14 @@ func Run(t crossdock.T) {
 			Give: []interface{}{
 				&gauntlet.Xtruct{
 					StringThing: ptr.String("0"),
-					ByteThing:   ptr.Byte(1),
+					ByteThing:   ptr.Int8(1),
 					I32Thing:    ptr.Int32(2),
 					I64Thing:    ptr.Int64(3),
 				},
 			},
 			Want: &gauntlet.Xtruct{
 				StringThing: ptr.String("0"),
-				ByteThing:   ptr.Byte(1),
+				ByteThing:   ptr.Int8(1),
 				I32Thing:    ptr.Int32(2),
 				I64Thing:    ptr.Int64(3),
 			},

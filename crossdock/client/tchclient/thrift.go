@@ -27,11 +27,11 @@ import (
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
-	"github.com/yarpc/yarpc-go/crossdock/client/ptr"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 
+	"github.com/thriftrw/thriftrw-go/ptr"
 	"github.com/uber/tchannel-go/thrift"
 )
 
@@ -148,7 +148,7 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 					},
 					Xtructs: []*gauntlet_apache.Xtruct{
 						{StringThing: ptr.String("0")},
-						{ByteThing: ptr.Byte(1)},
+						{ByteThing: ptr.Int8(1)},
 						{I32Thing: ptr.Int32(2)},
 						{I64Thing: ptr.Int64(3)},
 					},
@@ -163,7 +163,7 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 						},
 						Xtructs: []*gauntlet_apache.Xtruct{
 							{StringThing: ptr.String("0")},
-							{ByteThing: ptr.Byte(1)},
+							{ByteThing: ptr.Int8(1)},
 							{I32Thing: ptr.Int32(2)},
 							{I64Thing: ptr.Int64(3)},
 						},
@@ -175,7 +175,7 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 						},
 						Xtructs: []*gauntlet_apache.Xtruct{
 							{StringThing: ptr.String("0")},
-							{ByteThing: ptr.Byte(1)},
+							{ByteThing: ptr.Int8(1)},
 							{I32Thing: ptr.Int32(2)},
 							{I64Thing: ptr.Int64(3)},
 						},
@@ -226,7 +226,7 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 			},
 			Want: &gauntlet_apache.Xtruct{
 				StringThing: ptr.String("Hello2"),
-				ByteThing:   ptr.Byte(100),
+				ByteThing:   ptr.Int8(100),
 				I32Thing:    ptr.Int32(200),
 				I64Thing:    ptr.Int64(300),
 			},
@@ -243,22 +243,22 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 			Function: "TestNest",
 			Give: []interface{}{
 				&gauntlet_apache.Xtruct2{
-					ByteThing: ptr.Byte(-1),
+					ByteThing: ptr.Int8(-1),
 					I32Thing:  ptr.Int32(-1234),
 					StructThing: &gauntlet_apache.Xtruct{
 						StringThing: ptr.String("0"),
-						ByteThing:   ptr.Byte(1),
+						ByteThing:   ptr.Int8(1),
 						I32Thing:    ptr.Int32(2),
 						I64Thing:    ptr.Int64(3),
 					},
 				},
 			},
 			Want: &gauntlet_apache.Xtruct2{
-				ByteThing: ptr.Byte(-1),
+				ByteThing: ptr.Int8(-1),
 				I32Thing:  ptr.Int32(-1234),
 				StructThing: &gauntlet_apache.Xtruct{
 					StringThing: ptr.String("0"),
-					ByteThing:   ptr.Byte(1),
+					ByteThing:   ptr.Int8(1),
 					I32Thing:    ptr.Int32(2),
 					I64Thing:    ptr.Int64(3),
 				},
@@ -304,14 +304,14 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 			Give: []interface{}{
 				&gauntlet_apache.Xtruct{
 					StringThing: ptr.String("0"),
-					ByteThing:   ptr.Byte(1),
+					ByteThing:   ptr.Int8(1),
 					I32Thing:    ptr.Int32(2),
 					I64Thing:    ptr.Int64(3),
 				},
 			},
 			Want: &gauntlet_apache.Xtruct{
 				StringThing: ptr.String("0"),
-				ByteThing:   ptr.Byte(1),
+				ByteThing:   ptr.Int8(1),
 				I32Thing:    ptr.Int32(2),
 				I64Thing:    ptr.Int64(3),
 			},
