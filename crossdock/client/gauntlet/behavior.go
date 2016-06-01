@@ -27,6 +27,7 @@ import (
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/pointer"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
@@ -96,12 +97,12 @@ func Run(t crossdock.T) {
 		},
 		{
 			Function: "TestByte",
-			Give:     []interface{}{bytep(42)},
+			Give:     []interface{}{pointer.Byte(42)},
 			Want:     int8(42),
 		},
 		{
 			Function: "TestDouble",
-			Give:     []interface{}{doublep(12.34)},
+			Give:     []interface{}{pointer.Double(12.34)},
 			Want:     float64(12.34),
 		},
 		{
@@ -125,31 +126,31 @@ func Run(t crossdock.T) {
 		{
 			Function: "TestException",
 			Details:  "Xception",
-			Give:     []interface{}{stringp("Xception")},
+			Give:     []interface{}{pointer.String("Xception")},
 			WantError: &gauntlet.Xception{
-				ErrorCode: int32p(1001),
-				Message:   stringp("Xception"),
+				ErrorCode: pointer.Int32(1001),
+				Message:   pointer.String("Xception"),
 			},
 		},
 		{
 			Function:      "TestException",
 			Details:       "TException",
-			Give:          []interface{}{stringp("TException")},
+			Give:          []interface{}{pointer.String("TException")},
 			WantErrorLike: `UnexpectedError: error for procedure "ThriftTest::testException" of service "yarpc-test": great sadness`,
 		},
 		{
 			Function: "TestException",
 			Details:  "no error",
-			Give:     []interface{}{stringp("yolo")},
+			Give:     []interface{}{pointer.String("yolo")},
 		},
 		{
 			Function: "TestI32",
-			Give:     []interface{}{int32p(123)},
+			Give:     []interface{}{pointer.Int32(123)},
 			Want:     int32(123),
 		},
 		{
 			Function: "TestI64",
-			Give:     []interface{}{int64p(18934714)},
+			Give:     []interface{}{pointer.Int64(18934714)},
 			Want:     int64(18934714),
 		},
 		{
@@ -161,10 +162,10 @@ func Run(t crossdock.T) {
 						gauntlet.Numberz(100): gauntlet.UserId(200),
 					},
 					Xtructs: []*gauntlet.Xtruct{
-						{StringThing: stringp("0")},
-						{ByteThing: bytep(1)},
-						{I32Thing: int32p(2)},
-						{I64Thing: int64p(3)},
+						{StringThing: pointer.String("0")},
+						{ByteThing: pointer.Byte(1)},
+						{I32Thing: pointer.Int32(2)},
+						{I64Thing: pointer.Int64(3)},
 					},
 				},
 			},
@@ -176,10 +177,10 @@ func Run(t crossdock.T) {
 							gauntlet.Numberz(100): gauntlet.UserId(200),
 						},
 						Xtructs: []*gauntlet.Xtruct{
-							{StringThing: stringp("0")},
-							{ByteThing: bytep(1)},
-							{I32Thing: int32p(2)},
-							{I64Thing: int64p(3)},
+							{StringThing: pointer.String("0")},
+							{ByteThing: pointer.Byte(1)},
+							{I32Thing: pointer.Int32(2)},
+							{I64Thing: pointer.Int64(3)},
 						},
 					},
 					gauntlet.NumberzThree: &gauntlet.Insanity{
@@ -188,10 +189,10 @@ func Run(t crossdock.T) {
 							gauntlet.Numberz(100): gauntlet.UserId(200),
 						},
 						Xtructs: []*gauntlet.Xtruct{
-							{StringThing: stringp("0")},
-							{ByteThing: bytep(1)},
-							{I32Thing: int32p(2)},
-							{I64Thing: int64p(3)},
+							{StringThing: pointer.String("0")},
+							{ByteThing: pointer.Byte(1)},
+							{I32Thing: pointer.Int32(2)},
+							{I64Thing: pointer.Int64(3)},
 						},
 					},
 				},
@@ -212,7 +213,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			Function: "TestMapMap",
-			Give:     []interface{}{int32p(42)},
+			Give:     []interface{}{pointer.Int32(42)},
 			Want: map[int32]map[int32]int32{
 				-4: {
 					-4: -4,
@@ -231,66 +232,66 @@ func Run(t crossdock.T) {
 		{
 			Function: "TestMulti",
 			Give: []interface{}{
-				bytep(100),
-				int32p(200),
-				int64p(300),
+				pointer.Byte(100),
+				pointer.Int32(200),
+				pointer.Int64(300),
 				map[int16]string{1: "1", 2: "2", 3: "3"},
 				numberzp(gauntlet.NumberzEight),
 				useridp(42),
 			},
 			Want: &gauntlet.Xtruct{
-				StringThing: stringp("Hello2"),
-				ByteThing:   bytep(100),
-				I32Thing:    int32p(200),
-				I64Thing:    int64p(300),
+				StringThing: pointer.String("Hello2"),
+				ByteThing:   pointer.Byte(100),
+				I32Thing:    pointer.Int32(200),
+				I64Thing:    pointer.Int64(300),
 			},
 		},
 		{
 			Function: "TestMultiException",
 			Details:  "Xception",
-			Give:     []interface{}{stringp("Xception"), stringp("foo")},
+			Give:     []interface{}{pointer.String("Xception"), pointer.String("foo")},
 			WantError: &gauntlet.Xception{
-				ErrorCode: int32p(1001),
-				Message:   stringp("This is an Xception"),
+				ErrorCode: pointer.Int32(1001),
+				Message:   pointer.String("This is an Xception"),
 			},
 		},
 		{
 			Function: "TestMultiException",
 			Details:  "Xception2",
-			Give:     []interface{}{stringp("Xception2"), stringp("foo")},
+			Give:     []interface{}{pointer.String("Xception2"), pointer.String("foo")},
 			WantError: &gauntlet.Xception2{
-				ErrorCode:   int32p(2002),
-				StructThing: &gauntlet.Xtruct{StringThing: stringp("foo")},
+				ErrorCode:   pointer.Int32(2002),
+				StructThing: &gauntlet.Xtruct{StringThing: pointer.String("foo")},
 			},
 		},
 		{
 			Function: "TestMultiException",
 			Details:  "no error",
-			Give:     []interface{}{stringp("hello"), stringp("foo")},
-			Want:     &gauntlet.Xtruct{StringThing: stringp("foo")},
+			Give:     []interface{}{pointer.String("hello"), pointer.String("foo")},
+			Want:     &gauntlet.Xtruct{StringThing: pointer.String("foo")},
 		},
 		{
 			Function: "TestNest",
 			Give: []interface{}{
 				&gauntlet.Xtruct2{
-					ByteThing: bytep(-1),
-					I32Thing:  int32p(-1234),
+					ByteThing: pointer.Byte(-1),
+					I32Thing:  pointer.Int32(-1234),
 					StructThing: &gauntlet.Xtruct{
-						StringThing: stringp("0"),
-						ByteThing:   bytep(1),
-						I32Thing:    int32p(2),
-						I64Thing:    int64p(3),
+						StringThing: pointer.String("0"),
+						ByteThing:   pointer.Byte(1),
+						I32Thing:    pointer.Int32(2),
+						I64Thing:    pointer.Int64(3),
 					},
 				},
 			},
 			Want: &gauntlet.Xtruct2{
-				ByteThing: bytep(-1),
-				I32Thing:  int32p(-1234),
+				ByteThing: pointer.Byte(-1),
+				I32Thing:  pointer.Int32(-1234),
 				StructThing: &gauntlet.Xtruct{
-					StringThing: stringp("0"),
-					ByteThing:   bytep(1),
-					I32Thing:    int32p(2),
-					I64Thing:    int64p(3),
+					StringThing: pointer.String("0"),
+					ByteThing:   pointer.Byte(1),
+					I32Thing:    pointer.Int32(2),
+					I64Thing:    pointer.Int64(3),
 				},
 			},
 		},
@@ -313,7 +314,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			Function: "TestString",
-			Give:     []interface{}{stringp("hello")},
+			Give:     []interface{}{pointer.String("hello")},
 			Want:     "hello",
 		},
 		{
@@ -333,17 +334,17 @@ func Run(t crossdock.T) {
 			Function: "TestStruct",
 			Give: []interface{}{
 				&gauntlet.Xtruct{
-					StringThing: stringp("0"),
-					ByteThing:   bytep(1),
-					I32Thing:    int32p(2),
-					I64Thing:    int64p(3),
+					StringThing: pointer.String("0"),
+					ByteThing:   pointer.Byte(1),
+					I32Thing:    pointer.Int32(2),
+					I64Thing:    pointer.Int64(3),
 				},
 			},
 			Want: &gauntlet.Xtruct{
-				StringThing: stringp("0"),
-				ByteThing:   bytep(1),
-				I32Thing:    int32p(2),
-				I64Thing:    int64p(3),
+				StringThing: pointer.String("0"),
+				ByteThing:   pointer.Byte(1),
+				I32Thing:    pointer.Int32(2),
+				I64Thing:    pointer.Int64(3),
 			},
 		},
 		{
@@ -363,7 +364,7 @@ func Run(t crossdock.T) {
 		{
 			Service:  "SecondService",
 			Function: "SecondtestString",
-			Give:     []interface{}{stringp("hello")},
+			Give:     []interface{}{pointer.String("hello")},
 			Want:     "hello",
 		},
 	}
@@ -520,12 +521,6 @@ func Assert(t crossdock.T, tt TT, desc string, got interface{}, err error) {
 		}
 	}
 }
-
-func bytep(x int8) *int8         { return &x }
-func int32p(x int32) *int32      { return &x }
-func int64p(x int64) *int64      { return &x }
-func doublep(x float64) *float64 { return &x }
-func stringp(x string) *string   { return &x }
 
 func numberzp(x gauntlet.Numberz) *gauntlet.Numberz { return &x }
 func useridp(x gauntlet.UserId) *gauntlet.UserId    { return &x }

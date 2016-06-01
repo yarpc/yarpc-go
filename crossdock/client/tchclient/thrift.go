@@ -27,6 +27,7 @@ import (
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
+	"github.com/yarpc/yarpc-go/crossdock/client/pointer"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
@@ -119,8 +120,8 @@ func runGauntlet(t crossdock.T, call call) {
 		//  Details:  "Xception",
 		//  Give:     []interface{}{"Xception"},
 		//  WantError: &gauntlet_apache.Xception{
-		//    ErrorCode: int32p(1001),
-		//    Message:   stringp("Xception"),
+		//    ErrorCode: pointer.Int32(1001),
+		//    Message:   pointer.String("Xception"),
 		//  },
 		//},
 		{
@@ -154,10 +155,10 @@ func runGauntlet(t crossdock.T, call call) {
 						gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
 					},
 					Xtructs: []*gauntlet_apache.Xtruct{
-						{StringThing: stringp("0")},
-						{ByteThing: bytep(1)},
-						{I32Thing: int32p(2)},
-						{I64Thing: int64p(3)},
+						{StringThing: pointer.String("0")},
+						{ByteThing: pointer.Byte(1)},
+						{I32Thing: pointer.Int32(2)},
+						{I64Thing: pointer.Int64(3)},
 					},
 				},
 			},
@@ -169,10 +170,10 @@ func runGauntlet(t crossdock.T, call call) {
 							gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
 						},
 						Xtructs: []*gauntlet_apache.Xtruct{
-							{StringThing: stringp("0")},
-							{ByteThing: bytep(1)},
-							{I32Thing: int32p(2)},
-							{I64Thing: int64p(3)},
+							{StringThing: pointer.String("0")},
+							{ByteThing: pointer.Byte(1)},
+							{I32Thing: pointer.Int32(2)},
+							{I64Thing: pointer.Int64(3)},
 						},
 					},
 					gauntlet_apache.Numberz_THREE: &gauntlet_apache.Insanity{
@@ -181,10 +182,10 @@ func runGauntlet(t crossdock.T, call call) {
 							gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
 						},
 						Xtructs: []*gauntlet_apache.Xtruct{
-							{StringThing: stringp("0")},
-							{ByteThing: bytep(1)},
-							{I32Thing: int32p(2)},
-							{I64Thing: int64p(3)},
+							{StringThing: pointer.String("0")},
+							{ByteThing: pointer.Byte(1)},
+							{I32Thing: pointer.Int32(2)},
+							{I64Thing: pointer.Int64(3)},
 						},
 					},
 				},
@@ -232,10 +233,10 @@ func runGauntlet(t crossdock.T, call call) {
 				gauntlet_apache.UserId(42),
 			},
 			Want: &gauntlet_apache.Xtruct{
-				StringThing: stringp("Hello2"),
-				ByteThing:   bytep(100),
-				I32Thing:    int32p(200),
-				I64Thing:    int64p(300),
+				StringThing: pointer.String("Hello2"),
+				ByteThing:   pointer.Byte(100),
+				I32Thing:    pointer.Int32(200),
+				I64Thing:    pointer.Int64(300),
 			},
 		},
 		// TODO TestMultiException Xception & Xception2
@@ -244,30 +245,30 @@ func runGauntlet(t crossdock.T, call call) {
 			Function: "TestMultiException",
 			Details:  "no error",
 			Give:     []interface{}{"hello", "foo"},
-			Want:     &gauntlet_apache.Xtruct{StringThing: stringp("foo")},
+			Want:     &gauntlet_apache.Xtruct{StringThing: pointer.String("foo")},
 		},
 		{
 			Function: "TestNest",
 			Give: []interface{}{
 				&gauntlet_apache.Xtruct2{
-					ByteThing: bytep(-1),
-					I32Thing:  int32p(-1234),
+					ByteThing: pointer.Byte(-1),
+					I32Thing:  pointer.Int32(-1234),
 					StructThing: &gauntlet_apache.Xtruct{
-						StringThing: stringp("0"),
-						ByteThing:   bytep(1),
-						I32Thing:    int32p(2),
-						I64Thing:    int64p(3),
+						StringThing: pointer.String("0"),
+						ByteThing:   pointer.Byte(1),
+						I32Thing:    pointer.Int32(2),
+						I64Thing:    pointer.Int64(3),
 					},
 				},
 			},
 			Want: &gauntlet_apache.Xtruct2{
-				ByteThing: bytep(-1),
-				I32Thing:  int32p(-1234),
+				ByteThing: pointer.Byte(-1),
+				I32Thing:  pointer.Int32(-1234),
 				StructThing: &gauntlet_apache.Xtruct{
-					StringThing: stringp("0"),
-					ByteThing:   bytep(1),
-					I32Thing:    int32p(2),
-					I64Thing:    int64p(3),
+					StringThing: pointer.String("0"),
+					ByteThing:   pointer.Byte(1),
+					I32Thing:    pointer.Int32(2),
+					I64Thing:    pointer.Int64(3),
 				},
 			},
 		},
@@ -310,17 +311,17 @@ func runGauntlet(t crossdock.T, call call) {
 			Function: "TestStruct",
 			Give: []interface{}{
 				&gauntlet_apache.Xtruct{
-					StringThing: stringp("0"),
-					ByteThing:   bytep(1),
-					I32Thing:    int32p(2),
-					I64Thing:    int64p(3),
+					StringThing: pointer.String("0"),
+					ByteThing:   pointer.Byte(1),
+					I32Thing:    pointer.Int32(2),
+					I64Thing:    pointer.Int64(3),
 				},
 			},
 			Want: &gauntlet_apache.Xtruct{
-				StringThing: stringp("0"),
-				ByteThing:   bytep(1),
-				I32Thing:    int32p(2),
-				I64Thing:    int64p(3),
+				StringThing: pointer.String("0"),
+				ByteThing:   pointer.Byte(1),
+				I32Thing:    pointer.Int32(2),
+				I64Thing:    pointer.Int64(3),
 			},
 		},
 		{
@@ -422,10 +423,3 @@ func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (i
 
 	return got, err
 }
-
-// TODO these are reusable from gauntlet/behavior.go
-func bytep(x int8) *int8         { return &x }
-func int32p(x int32) *int32      { return &x }
-func int64p(x int64) *int64      { return &x }
-func doublep(x float64) *float64 { return &x }
-func stringp(x string) *string   { return &x }
