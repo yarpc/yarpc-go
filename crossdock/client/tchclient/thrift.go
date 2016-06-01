@@ -239,7 +239,12 @@ func runGauntlet(t crossdock.T, call call) {
 		},
 		// TODO TestMultiException Xception
 		// TODO TestMultiException Xception2
-		// TODO TestMultiException no error
+		{
+			Function: "TestMultiException",
+			Details:  "no error",
+			Give:     []interface{}{"hello", "foo"},
+			Want:     &gauntlet_apache.Xtruct{StringThing: stringp("foo")},
+		},
 		{
 			Function: "TestNest",
 			Give: []interface{}{
