@@ -279,6 +279,18 @@ func runGauntlet(t crossdock.T, call call) {
 			Function: "TestVoid",
 			Give:     []interface{}{},
 		},
+		{
+			Service:  "SecondService",
+			Function: "BlahBlah",
+			Give:     []interface{}{},
+			// TODO no Want here?
+		},
+		{
+			Service:  "SecondService",
+			Function: "SecondtestString",
+			Give:     []interface{}{"hello"},
+			Want:     "hello",
+		},
 	}
 
 	for _, tt := range tests {
