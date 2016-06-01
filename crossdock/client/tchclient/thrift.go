@@ -391,6 +391,9 @@ func buildClient(t crossdock.T, desc string, service string, client thrift.TChan
 
 // TODO once other servers implement the gauntlet, this func should be removed
 func isUnrecognizedProcedure(err error) bool {
+	if err == nil {
+		return false
+	}
 	return strings.Contains(err.Error(), "unrecognized procedure")
 }
 
