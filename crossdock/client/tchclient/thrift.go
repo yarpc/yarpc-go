@@ -219,6 +219,23 @@ func runGauntlet(t crossdock.T, call call) {
 			},
 		},
 		{
+			Function: "TestSet",
+			Give: []interface{}{
+				map[int32]bool{
+					1:  true,
+					2:  true,
+					-1: true,
+					-2: true,
+				},
+			},
+			Want: map[int32]bool{
+				1:  true,
+				2:  true,
+				-1: true,
+				-2: true,
+			},
+		},
+		{
 			Function: "TestString",
 			Give:     []interface{}{token},
 			Want:     token,
