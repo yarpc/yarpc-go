@@ -59,7 +59,19 @@ func (m _Map_I16_String_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	return nil
 }
 
-func (m _Map_I16_String_MapItemList) Close() {
+func (m _Map_I16_String_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_I16_String_MapItemList) KeyType() wire.Type {
+	return wire.TI16
+}
+
+func (_Map_I16_String_MapItemList) ValueType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_I16_String_MapItemList) Close() {
 }
 
 func (v *TestMultiArgs) ToWire() (wire.Value, error) {
@@ -94,7 +106,7 @@ func (v *TestMultiArgs) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Arg3 != nil {
-		w, err = wire.NewValueMap(wire.Map{KeyType: wire.TI16, ValueType: wire.TBinary, Size: len(v.Arg3), Items: _Map_I16_String_MapItemList(v.Arg3)}), error(nil)
+		w, err = wire.NewValueMap(_Map_I16_String_MapItemList(v.Arg3)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -120,15 +132,15 @@ func (v *TestMultiArgs) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _Map_I16_String_Read(m wire.Map) (map[int16]string, error) {
-	if m.KeyType != wire.TI16 {
+func _Map_I16_String_Read(m wire.MapItemList) (map[int16]string, error) {
+	if m.KeyType() != wire.TI16 {
 		return nil, nil
 	}
-	if m.ValueType != wire.TBinary {
+	if m.ValueType() != wire.TBinary {
 		return nil, nil
 	}
-	o := make(map[int16]string, m.Size)
-	err := m.Items.ForEach(func(x wire.MapItem) error {
+	o := make(map[int16]string, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
 		k, err := x.Key.GetI16(), error(nil)
 		if err != nil {
 			return err
@@ -140,7 +152,7 @@ func _Map_I16_String_Read(m wire.Map) (map[int16]string, error) {
 		o[k] = v
 		return nil
 	})
-	m.Items.Close()
+	m.Close()
 	return o, err
 }
 
