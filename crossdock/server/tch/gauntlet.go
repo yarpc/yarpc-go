@@ -190,3 +190,15 @@ func (thriftTestHandler) TestMultiException(ctx thrift.Context, arg0 string, arg
 		return structThing, nil
 	}
 }
+
+type secondServiceHandler struct{}
+
+func (secondServiceHandler) BlahBlah(ctx thrift.Context) error {
+	ctx.SetResponseHeaders(ctx.Headers())
+	return nil
+}
+
+func (secondServiceHandler) SecondtestString(ctx thrift.Context, thing string) (string, error) {
+	ctx.SetResponseHeaders(ctx.Headers())
+	return thing, nil
+}

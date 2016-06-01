@@ -67,6 +67,7 @@ func register(ch *tchannel.Channel) {
 	json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError)
 	thrift.NewServer(ch).Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
 	thrift.NewServer(ch).Register(gauntlet_apache.NewTChanThriftTestServer(&thriftTestHandler{}))
+	thrift.NewServer(ch).Register(gauntlet_apache.NewTChanSecondServiceServer(&secondServiceHandler{}))
 }
 
 func onError(ctx context.Context, err error) {
