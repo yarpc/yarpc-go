@@ -73,282 +73,342 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) TestBinary(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestBinary(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestBinaryArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestBinary(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestBinaryHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestByte(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestByte(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestByteArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestByte(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestByteHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestDouble(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestDouble(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestDoubleArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestDouble(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestDoubleHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestEnum(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestEnum(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestEnumArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestEnum(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestEnumHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestException(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestException(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestExceptionArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	res, err := h.impl.TestException(req, args.Arg)
+	hadError := err != nil
 	result, err := thrifttest.TestExceptionHelper.WrapResponse(err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestI32(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestI32(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestI32Args
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestI32(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestI32Helper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestI64(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestI64(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestI64Args
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestI64(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestI64Helper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestInsanity(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestInsanity(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestInsanityArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestInsanity(req, args.Argument)
+	hadError := err != nil
 	result, err := thrifttest.TestInsanityHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestList(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestList(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestListArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestList(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestListHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestMap(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestMap(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestMapArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestMap(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestMapHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestMapMap(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestMapMap(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestMapMapArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestMapMap(req, args.Hello)
+	hadError := err != nil
 	result, err := thrifttest.TestMapMapHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestMulti(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestMulti(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestMultiArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestMulti(req, args.Arg0, args.Arg1, args.Arg2, args.Arg3, args.Arg4, args.Arg5)
+	hadError := err != nil
 	result, err := thrifttest.TestMultiHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestMultiException(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestMultiException(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestMultiExceptionArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestMultiException(req, args.Arg0, args.Arg1)
+	hadError := err != nil
 	result, err := thrifttest.TestMultiExceptionHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestNest(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestNest(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestNestArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestNest(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestNestHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestSet(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestSet(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestSetArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestSet(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestSetHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestString(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestString(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestStringArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestString(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestStringHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestStringMap(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestStringMap(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestStringMapArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestStringMap(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestStringMapHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestStruct(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestStruct(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestStructArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestStruct(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestStructHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestTypedef(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestTypedef(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestTypedefArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	success, res, err := h.impl.TestTypedef(req, args.Thing)
+	hadError := err != nil
 	result, err := thrifttest.TestTypedefHelper.WrapResponse(success, err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
 
-func (h handler) TestVoid(req *thrift.Request, body wire.Value) (wire.Value, *thrift.Response, error) {
+func (h handler) TestVoid(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
 	var args thrifttest.TestVoidArgs
 	if err := args.FromWire(body); err != nil {
-		return wire.Value{}, nil, err
+		return thrift.TResponse{}, err
 	}
 	res, err := h.impl.TestVoid(req)
+	hadError := err != nil
 	result, err := thrifttest.TestVoidHelper.WrapResponse(err)
-	var w wire.Value
+	var response thrift.TResponse
 	if err == nil {
-		w, err = result.ToWire()
+		response.IsApplicationError = hadError
+		response.Response = res
+		response.Body, err = result.ToWire()
 	}
-	return w, res, err
+	return response, err
 }
