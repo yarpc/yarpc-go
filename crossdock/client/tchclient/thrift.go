@@ -240,6 +240,19 @@ func runGauntlet(t crossdock.T, call call) {
 			Give:     []interface{}{token},
 			Want:     token,
 		},
+		{
+			Function: "TestStringMap",
+			Give: []interface{}{
+				map[string]string{
+					"foo":   "bar",
+					"hello": "world",
+				},
+			},
+			Want: map[string]string{
+				"foo":   "bar",
+				"hello": "world",
+			},
+		},
 	}
 
 	for _, tt := range tests {
