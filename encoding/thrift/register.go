@@ -27,16 +27,23 @@ import (
 	"github.com/thriftrw/thriftrw-go/wire"
 )
 
+// TResponse contains the response from a generated Thrift handler.
+type TResponse struct { // TODO(abg): Rename to Response
+	Body               wire.Value
+	Response           *Response // TODO(abg): Rename to ResMeta
+	IsApplicationError bool
+}
+
 // Handler represents a Thrift request handler.
 type Handler interface {
-	Handle(req *Request, body wire.Value) (wire.Value, *Response, error)
+	Handle(req *Request, body wire.Value) (TResponse, error)
 }
 
 // HandlerFunc is a convenience type alias for functions that implement that act as Handlers.
-type HandlerFunc func(*Request, wire.Value) (wire.Value, *Response, error)
+type HandlerFunc func(*Request, wire.Value) (TResponse, error)
 
 // Handle forwards the request to the underlying function.
-func (f HandlerFunc) Handle(req *Request, body wire.Value) (wire.Value, *Response, error) {
+func (f HandlerFunc) Handle(req *Request, body wire.Value) (TResponse, error) {
 	return f(req, body)
 }
 
