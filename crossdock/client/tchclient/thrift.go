@@ -156,11 +156,6 @@ func runGauntlet(t crossdock.T, call call) {
 			Want:     map[int32]int32{1: 2, 3: 4, 5: 6},
 		},
 		{
-			Function: "TestString",
-			Give:     []interface{}{token},
-			Want:     token,
-		},
-		{
 			Function: "TestMapMap",
 			Give:     []interface{}{int32(42)},
 			Want: map[int32]map[int32]int32{
@@ -194,6 +189,39 @@ func runGauntlet(t crossdock.T, call call) {
 				I32Thing:    int32p(200),
 				I64Thing:    int64p(300),
 			},
+		},
+		// TODO TestMultiException Xception
+		// TODO TestMultiException Xception2
+		// TODO TestMultiException no error
+		{
+			Function: "TestNest",
+			Give: []interface{}{
+				&gauntlet_apache.Xtruct2{
+					ByteThing: bytep(-1),
+					I32Thing:  int32p(-1234),
+					StructThing: &gauntlet_apache.Xtruct{
+						StringThing: stringp("0"),
+						ByteThing:   bytep(1),
+						I32Thing:    int32p(2),
+						I64Thing:    int64p(3),
+					},
+				},
+			},
+			Want: &gauntlet_apache.Xtruct2{
+				ByteThing: bytep(-1),
+				I32Thing:  int32p(-1234),
+				StructThing: &gauntlet_apache.Xtruct{
+					StringThing: stringp("0"),
+					ByteThing:   bytep(1),
+					I32Thing:    int32p(2),
+					I64Thing:    int64p(3),
+				},
+			},
+		},
+		{
+			Function: "TestString",
+			Give:     []interface{}{token},
+			Want:     token,
 		},
 	}
 
