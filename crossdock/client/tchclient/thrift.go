@@ -44,19 +44,19 @@ func runThrift(t crossdock.T, call call) {
 	}
 	token := random.String(5)
 
-	call.Channel.Peers().Add(call.ServerHostPort)
+	client := thrift.NewClient(call.Channel, serverName, &thrift.ClientOptions{HostPort: call.ServerHostPort})
 
-	resp, respHeaders, err := thriftCall(call, headers, token)
+	resp, respHeaders, err := thriftCall(client, headers, token)
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resp.Boop, "body echoed")
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 
-	runGauntlet(t, call)
+	runGauntlet(t, client)
 }
 
-func thriftCall(call call, headers map[string]string, token string) (*echo.Pong, map[string]string, error) {
-	client := echo.NewTChanEchoClient(thrift.NewClient(call.Channel, serverName, nil))
+func thriftCall(clientt thrift.TChanClient, headers map[string]string, token string) (*echo.Pong, map[string]string, error) {
+	client := echo.NewTChanEchoClient(clientt)
 
 	ctx, cancel := thrift.NewContext(time.Second)
 	ctx = thrift.WithHeaders(ctx, headers)
@@ -66,7 +66,7 @@ func thriftCall(call call, headers map[string]string, token string) (*echo.Pong,
 	return pong, ctx.ResponseHeaders(), err
 }
 
-func runGauntlet(t crossdock.T, call call) {
+func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 	checks := crossdock.Checks(t)
 
 	token := random.String(5)
@@ -341,7 +341,7 @@ func runGauntlet(t crossdock.T, call call) {
 	for _, tt := range tests {
 		desc := gauntlet.BuildDesc(tt)
 
-		client := buildClient(t, desc, tt.Service, thrift.NewClient(call.Channel, serverName, nil))
+		client := buildClient(t, desc, tt.Service, clientt)
 		f := client.MethodByName(tt.Function)
 		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
 			continue
