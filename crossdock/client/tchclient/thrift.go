@@ -144,7 +144,54 @@ func runGauntlet(t crossdock.T, call call) {
 			Give:     []interface{}{int64(18934714)},
 			Want:     int64(18934714),
 		},
-		// TODO insanity
+		{
+			Function: "TestInsanity",
+			Give: []interface{}{
+				&gauntlet_apache.Insanity{
+					UserMap: map[gauntlet_apache.Numberz]gauntlet_apache.UserId{
+						gauntlet_apache.Numberz_THREE: gauntlet_apache.UserId(100),
+						gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
+					},
+					Xtructs: []*gauntlet_apache.Xtruct{
+						{StringThing: stringp("0")},
+						{ByteThing: bytep(1)},
+						{I32Thing: int32p(2)},
+						{I64Thing: int64p(3)},
+					},
+				},
+			},
+			Want: map[gauntlet_apache.UserId]map[gauntlet_apache.Numberz]*gauntlet_apache.Insanity{
+				1: {
+					gauntlet_apache.Numberz_TWO: &gauntlet_apache.Insanity{
+						UserMap: map[gauntlet_apache.Numberz]gauntlet_apache.UserId{
+							gauntlet_apache.Numberz_THREE: gauntlet_apache.UserId(100),
+							gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
+						},
+						Xtructs: []*gauntlet_apache.Xtruct{
+							{StringThing: stringp("0")},
+							{ByteThing: bytep(1)},
+							{I32Thing: int32p(2)},
+							{I64Thing: int64p(3)},
+						},
+					},
+					gauntlet_apache.Numberz_THREE: &gauntlet_apache.Insanity{
+						UserMap: map[gauntlet_apache.Numberz]gauntlet_apache.UserId{
+							gauntlet_apache.Numberz_THREE: gauntlet_apache.UserId(100),
+							gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
+						},
+						Xtructs: []*gauntlet_apache.Xtruct{
+							{StringThing: stringp("0")},
+							{ByteThing: bytep(1)},
+							{I32Thing: int32p(2)},
+							{I64Thing: int64p(3)},
+						},
+					},
+				},
+				2: {
+					gauntlet_apache.Numberz_SIX: &gauntlet_apache.Insanity{},
+				},
+			},
+		},
 		{
 			Function: "TestList",
 			Give:     []interface{}{[]int32{1, 2, 3}},
