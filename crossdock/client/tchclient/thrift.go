@@ -270,6 +270,11 @@ func runGauntlet(t crossdock.T, call call) {
 				I64Thing:    int64p(3),
 			},
 		},
+		{
+			Function: "TestTypedef",
+			Give:     []interface{}{gauntlet_apache.UserId(42)},
+			Want:     gauntlet_apache.UserId(42),
+		},
 	}
 
 	for _, tt := range tests {
