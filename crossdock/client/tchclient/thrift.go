@@ -178,6 +178,23 @@ func runGauntlet(t crossdock.T, call call) {
 				},
 			},
 		},
+		{
+			Function: "TestMulti",
+			Give: []interface{}{
+				int8(100),
+				int32(200),
+				int64(300),
+				map[int16]string{1: "1", 2: "2", 3: "3"},
+				gauntlet_apache.Numberz_EIGHT,
+				gauntlet_apache.UserId(42),
+			},
+			Want: &gauntlet_apache.Xtruct{
+				StringThing: stringp("Hello2"),
+				ByteThing:   bytep(100),
+				I32Thing:    int32p(200),
+				I64Thing:    int64p(300),
+			},
+		},
 	}
 
 	for _, tt := range tests {
