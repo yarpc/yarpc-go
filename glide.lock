@@ -1,5 +1,5 @@
 hash: 7d6d74172f119bd6119d5e7657a8dd1fd732562685eb953d54d2566e40d67a5c
-updated: 2016-05-25T13:07:11.76242-07:00
+updated: 2016-06-01T13:19:29.450829711-07:00
 imports:
 - name: github.com/apache/thrift
   version: 839b9320a813c53fe1143a5b518d4e1f522d49d2
@@ -14,7 +14,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
@@ -23,7 +23,7 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 2e1547beb68bcb58c47c83b98b65f3eced6da749
+  version: a56d6ba23cc89101d2dec87786cf5ab47eb351d0
   subpackages:
   - wire
   - protocol
