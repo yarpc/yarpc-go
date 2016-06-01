@@ -80,8 +80,9 @@ func (i *fakeInboundCall) Arg3Reader() (tchannel.ArgReader, error) {
 //
 // The recorder will throw an error if arg2 or arg3 are set to nil.
 type responseRecorder struct {
-	arg2, arg3 *bufferArgWriter
-	systemErr  error
+	arg2, arg3       *bufferArgWriter
+	systemErr        error
+	applicationError bool
 }
 
 func newResponseRecorder() *responseRecorder {
@@ -107,5 +108,10 @@ func (rr *responseRecorder) Arg3Writer() (tchannel.ArgWriter, error) {
 
 func (rr *responseRecorder) SendSystemError(err error) error {
 	rr.systemErr = err
+	return nil
+}
+
+func (rr *responseRecorder) SetApplicationError() error {
+	rr.applicationError = true
 	return nil
 }

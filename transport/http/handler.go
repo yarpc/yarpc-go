@@ -99,3 +99,7 @@ func (rw responseWriter) Write(s []byte) (int, error) {
 func (rw responseWriter) AddHeaders(h transport.Headers) {
 	toHTTPHeader(h, rw.w.Header())
 }
+
+func (responseWriter) SetApplicationError() {
+	// Nothing to do.
+}

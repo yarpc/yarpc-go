@@ -213,10 +213,11 @@ func TestHandlerFailures(t *testing.T) {
 
 func TestResponseWriter(t *testing.T) {
 	tests := []struct {
-		format tchannel.Format
-		apply  func(*responseWriter)
-		arg2   []byte
-		arg3   []byte
+		format           tchannel.Format
+		apply            func(*responseWriter)
+		arg2             []byte
+		arg3             []byte
+		applicationError bool
 	}{
 		{
 			format: tchannel.Raw,
@@ -273,6 +274,17 @@ func TestResponseWriter(t *testing.T) {
 			arg2: []byte("{}\n"),
 			arg3: []byte("{}"),
 		},
+		{
+			format: tchannel.Raw,
+			apply: func(w *responseWriter) {
+				w.SetApplicationError()
+				_, err := w.Write([]byte("hello"))
+				require.NoError(t, err)
+			},
+			arg2:             []byte{0x00, 0x00},
+			arg3:             []byte("hello"),
+			applicationError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -287,6 +299,10 @@ func TestResponseWriter(t *testing.T) {
 		assert.Nil(t, resp.systemErr)
 		assert.Equal(t, tt.arg2, resp.arg2.Bytes())
 		assert.Equal(t, tt.arg3, resp.arg3.Bytes())
+
+		if tt.applicationError {
+			assert.True(t, resp.applicationError, "expected an application error")
+		}
 	}
 }
 

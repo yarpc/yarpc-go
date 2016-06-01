@@ -27,4 +27,7 @@ type Response struct {
 	Headers transport.Headers
 
 	// TODO Response context?
+
+	// TODO Allow users to specify that this JSON response contains an
+	// application error.
 }
