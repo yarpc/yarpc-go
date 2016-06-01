@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
@@ -57,6 +58,7 @@ type inboundCallResponse interface {
 	Arg2Writer() (tchannel.ArgWriter, error)
 	Arg3Writer() (tchannel.ArgWriter, error)
 	SendSystemError(err error) error
+	SetApplicationError() error
 }
 
 // tchannelCall wraps a TChannel InboundCall into an inboundCall.
@@ -167,6 +169,16 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	}
 	for k, v := range h {
 		rw.headers.Set(k, v)
+	}
+}
+
+func (rw *responseWriter) SetApplicationError() {
+	if rw.wroteHeaders {
+		panic("SetApplicationError() cannot be called after calling Write().")
+	}
+	err := rw.response.SetApplicationError()
+	if err != nil {
+		panic(fmt.Sprintf("SetApplicationError() failed: %v", err))
 	}
 }
 

@@ -32,9 +32,14 @@ type Response struct {
 type ResponseWriter interface {
 	io.Writer
 
-	// AddHeaders adds the given headers to the response. If called, this must
+	// AddHeaders adds the given headers to the response. If called, this MUST
 	// be called before any invocation of Write().
 	//
 	// This MUST NOT panic if Headers is nil.
 	AddHeaders(Headers)
+
+	// SetApplicationError specifies that this response contains an
+	// application error. If called, this MUST be called before any invocation
+	// of Write().
+	SetApplicationError()
 }
