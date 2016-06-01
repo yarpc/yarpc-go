@@ -144,11 +144,6 @@ func runGauntlet(t crossdock.T, call call) {
 			Give:     []interface{}{int64(18934714)},
 			Want:     int64(18934714),
 		},
-		{
-			Function: "TestString",
-			Give:     []interface{}{token},
-			Want:     token,
-		},
 		// TODO insanity
 		{
 			Function: "TestList",
@@ -159,6 +154,29 @@ func runGauntlet(t crossdock.T, call call) {
 			Function: "TestMap",
 			Give:     []interface{}{map[int32]int32{1: 2, 3: 4, 5: 6}},
 			Want:     map[int32]int32{1: 2, 3: 4, 5: 6},
+		},
+		{
+			Function: "TestString",
+			Give:     []interface{}{token},
+			Want:     token,
+		},
+		{
+			Function: "TestMapMap",
+			Give:     []interface{}{int32(42)},
+			Want: map[int32]map[int32]int32{
+				-4: {
+					-4: -4,
+					-3: -3,
+					-2: -2,
+					-1: -1,
+				},
+				4: {
+					1: 1,
+					2: 2,
+					3: 3,
+					4: 4,
+				},
+			},
 		},
 	}
 
