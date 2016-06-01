@@ -22,6 +22,7 @@ package tchclient
 
 import (
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
@@ -388,9 +389,9 @@ func buildClient(t crossdock.T, desc string, service string, client thrift.TChan
 	}
 }
 
-// TODO implement this
+// TODO once other servers implement the gauntlet, this func should be removed
 func isUnrecognizedProcedure(err error) bool {
-	return false
+	return strings.Contains(err.Error(), "unrecognized procedure")
 }
 
 func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (interface{}, error) {
