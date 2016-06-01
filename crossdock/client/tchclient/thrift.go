@@ -237,8 +237,8 @@ func runGauntlet(t crossdock.T, call call) {
 				I64Thing:    int64p(300),
 			},
 		},
-		// TODO TestMultiException Xception
-		// TODO TestMultiException Xception2
+		// TODO TestMultiException Xception & Xception2
+		// @see https://github.com/yarpc/yarpc-go/issues/163
 		{
 			Function: "TestMultiException",
 			Details:  "no error",
