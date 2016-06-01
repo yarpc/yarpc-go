@@ -106,17 +106,15 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 			Give:     []interface{}{gauntlet_apache.Numberz(42)},
 			Want:     gauntlet_apache.Numberz(42),
 		},
-		// TODO getting nil instead of Xception right now
-		// @see https://github.com/yarpc/yarpc-go/issues/163
-		//{
-		//  Function: "TestException",
-		//  Details:  "Xception",
-		//  Give:     []interface{}{"Xception"},
-		//  WantError: &gauntlet_apache.Xception{
-		//    ErrorCode: ptr.Int32(1001),
-		//    Message:   ptr.String("Xception"),
-		//  },
-		//},
+		{
+			Function: "TestException",
+			Details:  "Xception",
+			Give:     []interface{}{"Xception"},
+			WantError: &gauntlet_apache.Xception{
+				ErrorCode: ptr.Int32(1001),
+				Message:   ptr.String("Xception"),
+			},
+		},
 		{
 			Function:      "TestException",
 			Details:       "TException",
@@ -231,8 +229,24 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 				I64Thing:    ptr.Int64(300),
 			},
 		},
-		// TODO TestMultiException Xception & Xception2
-		// @see https://github.com/yarpc/yarpc-go/issues/163
+		{
+			Function: "TestMultiException",
+			Details:  "Xception",
+			Give:     []interface{}{"Xception", "foo"},
+			WantError: &gauntlet_apache.Xception{
+				ErrorCode: ptr.Int32(1001),
+				Message:   ptr.String("This is an Xception"),
+			},
+		},
+		{
+			Function: "TestMultiException",
+			Details:  "Xception2",
+			Give:     []interface{}{"Xception2", "foo"},
+			WantError: &gauntlet_apache.Xception2{
+				ErrorCode:   ptr.Int32(2002),
+				StructThing: &gauntlet_apache.Xtruct{StringThing: ptr.String("foo")},
+			},
+		},
 		{
 			Function: "TestMultiException",
 			Details:  "no error",
