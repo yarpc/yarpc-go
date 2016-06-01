@@ -123,6 +123,12 @@ func runGauntlet(t crossdock.T, call call) {
 		//  },
 		//},
 		{
+			Function:      "TestException",
+			Details:       "TException",
+			Give:          []interface{}{"TException"},
+			WantErrorLike: `UnexpectedError: error for procedure "ThriftTest::testException" of service "yarpc-test": great sadness`,
+		},
+		{
 			Function: "TestString",
 			Give:     []interface{}{token},
 			Want:     token,
