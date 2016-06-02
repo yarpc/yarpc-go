@@ -30,8 +30,8 @@ import (
 )
 
 type Interface interface {
-	BlahBlah(req *thrift.Request) (*thrift.Response, error)
-	SecondtestString(req *thrift.Request, thing *string) (string, *thrift.Response, error)
+	BlahBlah(reqMeta *thrift.ReqMeta) (*thrift.ResMeta, error)
+	SecondtestString(reqMeta *thrift.ReqMeta, thing *string) (string, *thrift.ResMeta, error)
 }
 
 func New(impl Interface) thrift.Service {
@@ -54,35 +54,35 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) BlahBlah(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
+func (h handler) BlahBlah(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args secondservice.BlahBlahArgs
 	if err := args.FromWire(body); err != nil {
-		return thrift.TResponse{}, err
+		return thrift.Response{}, err
 	}
-	res, err := h.impl.BlahBlah(req)
+	resMeta, err := h.impl.BlahBlah(reqMeta)
 	hadError := err != nil
 	result, err := secondservice.BlahBlahHelper.WrapResponse(err)
-	var response thrift.TResponse
+	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Response = res
+		response.ResMeta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
 }
 
-func (h handler) SecondtestString(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
+func (h handler) SecondtestString(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args secondservice.SecondtestStringArgs
 	if err := args.FromWire(body); err != nil {
-		return thrift.TResponse{}, err
+		return thrift.Response{}, err
 	}
-	success, res, err := h.impl.SecondtestString(req, args.Thing)
+	success, resMeta, err := h.impl.SecondtestString(reqMeta, args.Thing)
 	hadError := err != nil
 	result, err := secondservice.SecondtestStringHelper.WrapResponse(success, err)
-	var response thrift.TResponse
+	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Response = res
+		response.ResMeta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err

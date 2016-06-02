@@ -30,23 +30,23 @@ import (
 // thriftTest implements the ThriftTest service.
 type thriftTest struct{}
 
-func (thriftTest) TestBinary(req *thrift.Request, thing []byte) ([]byte, *thrift.Response, error) {
-	return thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestBinary(req *thrift.ReqMeta, thing []byte) ([]byte, *thrift.ResMeta, error) {
+	return thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestByte(req *thrift.Request, thing *int8) (int8, *thrift.Response, error) {
-	return *thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestByte(req *thrift.ReqMeta, thing *int8) (int8, *thrift.ResMeta, error) {
+	return *thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestDouble(req *thrift.Request, thing *float64) (float64, *thrift.Response, error) {
-	return *thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestDouble(req *thrift.ReqMeta, thing *float64) (float64, *thrift.ResMeta, error) {
+	return *thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestEnum(req *thrift.Request, thing *gauntlet.Numberz) (gauntlet.Numberz, *thrift.Response, error) {
-	return *thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestEnum(req *thrift.ReqMeta, thing *gauntlet.Numberz) (gauntlet.Numberz, *thrift.ResMeta, error) {
+	return *thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestException(req *thrift.Request, arg *string) (*thrift.Response, error) {
+func (thriftTest) TestException(req *thrift.ReqMeta, arg *string) (*thrift.ResMeta, error) {
 	switch *arg {
 	case "Xception":
 		code := int32(1001)
@@ -56,19 +56,19 @@ func (thriftTest) TestException(req *thrift.Request, arg *string) (*thrift.Respo
 		// unexpected exception.
 		return nil, errors.New("great sadness")
 	default:
-		return &thrift.Response{Headers: req.Headers}, nil
+		return &thrift.ResMeta{Headers: req.Headers}, nil
 	}
 }
 
-func (thriftTest) TestI32(req *thrift.Request, thing *int32) (int32, *thrift.Response, error) {
-	return *thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestI32(req *thrift.ReqMeta, thing *int32) (int32, *thrift.ResMeta, error) {
+	return *thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestI64(req *thrift.Request, thing *int64) (int64, *thrift.Response, error) {
-	return *thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestI64(req *thrift.ReqMeta, thing *int64) (int64, *thrift.ResMeta, error) {
+	return *thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestInsanity(req *thrift.Request, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, *thrift.Response, error) {
+func (thriftTest) TestInsanity(req *thrift.ReqMeta, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, *thrift.ResMeta, error) {
 	result := map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity{
 		1: {
 			gauntlet.NumberzTwo:   argument,
@@ -78,18 +78,18 @@ func (thriftTest) TestInsanity(req *thrift.Request, argument *gauntlet.Insanity)
 			gauntlet.NumberzSix: &gauntlet.Insanity{},
 		},
 	}
-	return result, &thrift.Response{Headers: req.Headers}, nil
+	return result, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestList(req *thrift.Request, thing []int32) ([]int32, *thrift.Response, error) {
-	return thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestList(req *thrift.ReqMeta, thing []int32) ([]int32, *thrift.ResMeta, error) {
+	return thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestMap(req *thrift.Request, thing map[int32]int32) (map[int32]int32, *thrift.Response, error) {
-	return thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestMap(req *thrift.ReqMeta, thing map[int32]int32) (map[int32]int32, *thrift.ResMeta, error) {
+	return thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestMapMap(req *thrift.Request, hello *int32) (map[int32]map[int32]int32, *thrift.Response, error) {
+func (thriftTest) TestMapMap(req *thrift.ReqMeta, hello *int32) (map[int32]map[int32]int32, *thrift.ResMeta, error) {
 	result := map[int32]map[int32]int32{
 		-4: {
 			-4: -4,
@@ -104,10 +104,10 @@ func (thriftTest) TestMapMap(req *thrift.Request, hello *int32) (map[int32]map[i
 			4: 4,
 		},
 	}
-	return result, &thrift.Response{Headers: req.Headers}, nil
+	return result, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestMulti(req *thrift.Request, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, *thrift.Response, error) {
+func (thriftTest) TestMulti(req *thrift.ReqMeta, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, *thrift.ResMeta, error) {
 	hello := "Hello2"
 	result := &gauntlet.Xtruct{
 		StringThing: &hello,
@@ -115,10 +115,10 @@ func (thriftTest) TestMulti(req *thrift.Request, arg0 *int8, arg1 *int32, arg2 *
 		I32Thing:    arg1,
 		I64Thing:    arg2,
 	}
-	return result, &thrift.Response{Headers: req.Headers}, nil
+	return result, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestMultiException(req *thrift.Request, arg0 *string, arg1 *string) (*gauntlet.Xtruct, *thrift.Response, error) {
+func (thriftTest) TestMultiException(req *thrift.ReqMeta, arg0 *string, arg1 *string) (*gauntlet.Xtruct, *thrift.ResMeta, error) {
 	structThing := &gauntlet.Xtruct{StringThing: arg1}
 	switch *arg0 {
 	case "Xception":
@@ -132,34 +132,34 @@ func (thriftTest) TestMultiException(req *thrift.Request, arg0 *string, arg1 *st
 			StructThing: structThing,
 		}
 	default:
-		return structThing, &thrift.Response{Headers: req.Headers}, nil
+		return structThing, &thrift.ResMeta{Headers: req.Headers}, nil
 	}
 }
 
-func (thriftTest) TestNest(req *thrift.Request, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, *thrift.Response, error) {
-	return thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestNest(req *thrift.ReqMeta, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, *thrift.ResMeta, error) {
+	return thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestSet(req *thrift.Request, thing map[int32]struct{}) (map[int32]struct{}, *thrift.Response, error) {
-	return thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestSet(req *thrift.ReqMeta, thing map[int32]struct{}) (map[int32]struct{}, *thrift.ResMeta, error) {
+	return thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestString(req *thrift.Request, thing *string) (string, *thrift.Response, error) {
-	return *thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestString(req *thrift.ReqMeta, thing *string) (string, *thrift.ResMeta, error) {
+	return *thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestStringMap(req *thrift.Request, thing map[string]string) (map[string]string, *thrift.Response, error) {
-	return thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestStringMap(req *thrift.ReqMeta, thing map[string]string) (map[string]string, *thrift.ResMeta, error) {
+	return thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestStruct(req *thrift.Request, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, *thrift.Response, error) {
-	return thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestStruct(req *thrift.ReqMeta, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, *thrift.ResMeta, error) {
+	return thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestTypedef(req *thrift.Request, thing *gauntlet.UserId) (gauntlet.UserId, *thrift.Response, error) {
-	return *thing, &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestTypedef(req *thrift.ReqMeta, thing *gauntlet.UserId) (gauntlet.UserId, *thrift.ResMeta, error) {
+	return *thing, &thrift.ResMeta{Headers: req.Headers}, nil
 }
 
-func (thriftTest) TestVoid(req *thrift.Request) (*thrift.Response, error) {
-	return &thrift.Response{Headers: req.Headers}, nil
+func (thriftTest) TestVoid(req *thrift.ReqMeta) (*thrift.ResMeta, error) {
+	return &thrift.ResMeta{Headers: req.Headers}, nil
 }

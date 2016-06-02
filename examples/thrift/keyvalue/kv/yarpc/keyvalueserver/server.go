@@ -30,8 +30,8 @@ import (
 )
 
 type Interface interface {
-	GetValue(req *thrift.Request, key *string) (string, *thrift.Response, error)
-	SetValue(req *thrift.Request, key *string, value *string) (*thrift.Response, error)
+	GetValue(reqMeta *thrift.ReqMeta, key *string) (string, *thrift.ResMeta, error)
+	SetValue(reqMeta *thrift.ReqMeta, key *string, value *string) (*thrift.ResMeta, error)
 }
 
 func New(impl Interface) thrift.Service {
@@ -54,35 +54,35 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) GetValue(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
+func (h handler) GetValue(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args keyvalue.GetValueArgs
 	if err := args.FromWire(body); err != nil {
-		return thrift.TResponse{}, err
+		return thrift.Response{}, err
 	}
-	success, res, err := h.impl.GetValue(req, args.Key)
+	success, resMeta, err := h.impl.GetValue(reqMeta, args.Key)
 	hadError := err != nil
 	result, err := keyvalue.GetValueHelper.WrapResponse(success, err)
-	var response thrift.TResponse
+	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Response = res
+		response.ResMeta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
 }
 
-func (h handler) SetValue(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
+func (h handler) SetValue(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args keyvalue.SetValueArgs
 	if err := args.FromWire(body); err != nil {
-		return thrift.TResponse{}, err
+		return thrift.Response{}, err
 	}
-	res, err := h.impl.SetValue(req, args.Key, args.Value)
+	resMeta, err := h.impl.SetValue(reqMeta, args.Key, args.Value)
 	hadError := err != nil
 	result, err := keyvalue.SetValueHelper.WrapResponse(err)
-	var response thrift.TResponse
+	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Response = res
+		response.ResMeta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err

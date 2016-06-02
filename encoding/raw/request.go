@@ -28,8 +28,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Request is a Raw request without the body.
-type Request struct {
+// ReqMeta is a Raw request without the body.
+type ReqMeta struct {
 	Context context.Context
 
 	// Name of the procedure being called.
@@ -43,6 +43,6 @@ type Request struct {
 }
 
 // Note: The shape of this request object is extremely similar to the
-// json.Request object, but since we can't unify all the Request objects
-// (thrift.Request is very different), each encoding will have its own Request
+// json.ReqMeta object, but since we can't unify all the ReqMeta objects
+// (thrift.ReqMeta is very different), each encoding will have its own ReqMeta
 // object.

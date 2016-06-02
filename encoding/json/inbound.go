@@ -35,7 +35,7 @@ import (
 //
 // The wrapped function must already be in the correct format:
 //
-// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
+// 	f(reqMeta *json.ReqMeta, body $reqBody) ($resBody, *json.ResMeta, error)
 type jsonHandler struct {
 	reader  requestReader
 	handler reflect.Value
@@ -50,22 +50,22 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
-	request := Request{
+	reqMeta := ReqMeta{
 		Context:   ctx,
 		Procedure: treq.Procedure,
 		Headers:   treq.Headers,
 		TTL:       treq.TTL,
 	}
 
-	results := h.handler.Call([]reflect.Value{reflect.ValueOf(&request), reqBody})
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(&reqMeta), reqBody})
 
 	if err := results[2].Interface(); err != nil {
 		// TODO proper error types
 		return err.(error)
 	}
 
-	if response := results[1].Interface().(*Response); response != nil {
-		rw.AddHeaders(response.Headers)
+	if resMeta := results[1].Interface().(*ResMeta); resMeta != nil {
+		rw.AddHeaders(resMeta.Headers)
 	}
 
 	result := results[0].Interface()

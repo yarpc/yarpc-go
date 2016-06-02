@@ -160,7 +160,7 @@ type headerCaller interface {
 type rawCaller struct{ c raw.Client }
 
 func (c rawCaller) Call(h transport.Headers) (transport.Headers, error) {
-	_, res, err := c.c.Call(&raw.Request{
+	_, res, err := c.c.Call(&raw.ReqMeta{
 		Context:   newTestContext(),
 		Headers:   h,
 		Procedure: "echo/raw",
@@ -177,7 +177,7 @@ type jsonCaller struct{ c json.Client }
 
 func (c jsonCaller) Call(h transport.Headers) (transport.Headers, error) {
 	var resBody interface{}
-	res, err := c.c.Call(&json.Request{
+	res, err := c.c.Call(&json.ReqMeta{
 		Context:   newTestContext(),
 		Headers:   h,
 		Procedure: "echo",
@@ -193,7 +193,7 @@ func (c jsonCaller) Call(h transport.Headers) (transport.Headers, error) {
 type thriftCaller struct{ c echoclient.Interface }
 
 func (c thriftCaller) Call(h transport.Headers) (transport.Headers, error) {
-	_, res, err := c.c.Echo(&thrift.Request{
+	_, res, err := c.c.Echo(&thrift.ReqMeta{
 		Context: newTestContext(),
 		Headers: h,
 		TTL:     time.Second,

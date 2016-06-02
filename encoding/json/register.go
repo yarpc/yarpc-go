@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	_requestType        = reflect.TypeOf((*Request)(nil))
-	_responseType       = reflect.TypeOf((*Response)(nil))
+	_requestType        = reflect.TypeOf((*ReqMeta)(nil))
+	_responseType       = reflect.TypeOf((*ResMeta)(nil))
 	_errorType          = reflect.TypeOf((*error)(nil)).Elem()
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
@@ -55,7 +55,7 @@ func (p procedure) getHandlers() map[string]interface{} {
 // Procedure builds a Registrant with a single procedure in it. handler must
 // be a function with a signature similar to,
 //
-// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
+// 	f(reqMeta *json.ReqMeta, body $reqBody) ($resBody, *json.ResMeta, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
@@ -69,7 +69,7 @@ func Procedure(name string, handler interface{}) Registrant {
 // Handlers must have a signature similar to the following or the system will
 // panic.
 //
-// 	f(req *json.Request, body $reqBody) ($resBody, *json.Response, error)
+// 	f(reqMeta *json.ReqMeta, body $reqBody) ($resBody, *json.ResMeta, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
@@ -128,14 +128,14 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 	if t.In(0) != _requestType {
 		panic(fmt.Sprintf(
 			"the first argument of the handler for %q must be of type "+
-				"*json.Request, and not: %v", n, t.In(0),
+				"*json.ReqMeta, and not: %v", n, t.In(0),
 		))
 	}
 
 	if t.Out(1) != _responseType || t.Out(2) != _errorType {
 		panic(fmt.Sprintf(
 			"the last two results of the handler for %q must be of type "+
-				"*json.Response and error, and not: %v, %v",
+				"*json.ResMeta and error, and not: %v, %v",
 			n, t.Out(1), t.Out(2),
 		))
 	}

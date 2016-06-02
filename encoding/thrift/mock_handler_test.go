@@ -29,9 +29,9 @@ func (_m *MockHandler) EXPECT() *_MockHandlerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockHandler) Handle(_param0 *Request, _param1 wire.Value) (TResponse, error) {
+func (_m *MockHandler) Handle(_param0 *ReqMeta, _param1 wire.Value) (Response, error) {
 	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1)
-	ret0, _ := ret[0].(TResponse)
+	ret0, _ := ret[0].(Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

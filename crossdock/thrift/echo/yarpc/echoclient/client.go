@@ -32,7 +32,7 @@ import (
 )
 
 type Interface interface {
-	Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error)
+	Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (*echo.Pong, *thrift.ResMeta, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -41,7 +41,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) Echo(req *thrift.Request, ping *echo.Ping) (success *echo.Pong, res *thrift.Response, err error) {
+func (c client) Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (success *echo.Pong, resMeta *thrift.ResMeta, err error) {
 	args := echo2.EchoHelper.Args(ping)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -49,7 +49,7 @@ func (c client) Echo(req *thrift.Request, ping *echo.Ping) (success *echo.Pong, 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("echo", req, w)
+	body, resMeta, err = c.c.Call("echo", reqMeta, w)
 	if err != nil {
 		return
 	}

@@ -19,7 +19,7 @@ func TestEchoRaw(t *testing.T) {
 	ctx := context.Background()
 	quick.Check(func(headers transport.Headers, body []byte) bool {
 		ctx, _ := context.WithTimeout(ctx, time.Second)
-		resBody, res, err := EchoRaw(&raw.Request{
+		resBody, res, err := EchoRaw(&raw.ReqMeta{
 			Context:   ctx,
 			Headers:   headers,
 			Procedure: "echo/raw",
@@ -38,7 +38,7 @@ func TestEchoJSON(t *testing.T) {
 		}
 
 		ctx, _ := context.WithTimeout(ctx, time.Second)
-		resBody, res, err := EchoJSON(&json.Request{
+		resBody, res, err := EchoJSON(&json.ReqMeta{
 			Context:   ctx,
 			Headers:   headers,
 			Procedure: "echo",
@@ -56,7 +56,7 @@ func TestEchoThrift(t *testing.T) {
 
 		ping := &echo.Ping{Beep: beep}
 		ctx, _ := context.WithTimeout(ctx, time.Second)
-		pong, res, err := e.Echo(&thrift.Request{
+		pong, res, err := e.Echo(&thrift.ReqMeta{
 			Context: ctx,
 			Headers: headers,
 		}, ping)

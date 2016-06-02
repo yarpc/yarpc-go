@@ -43,20 +43,20 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 		// TODO should this count as an encoding error of some kind?
 	}
 
-	request := Request{
+	reqMeta := ReqMeta{
 		Context:   ctx,
 		Procedure: treq.Procedure,
 		Headers:   treq.Headers,
 		TTL:       treq.TTL,
 	}
 
-	resBody, res, err := r.h(&request, reqBody)
+	resBody, resMeta, err := r.h(&reqMeta, reqBody)
 	if err != nil {
 		return err
 	}
 
-	if res != nil {
-		rw.AddHeaders(res.Headers)
+	if resMeta != nil {
+		rw.AddHeaders(resMeta.Headers)
 	}
 
 	if _, err := rw.Write(resBody); err != nil {

@@ -32,26 +32,26 @@ import (
 )
 
 type Interface interface {
-	TestBinary(req *thrift.Request, thing []byte) ([]byte, *thrift.Response, error)
-	TestByte(req *thrift.Request, thing *int8) (int8, *thrift.Response, error)
-	TestDouble(req *thrift.Request, thing *float64) (float64, *thrift.Response, error)
-	TestEnum(req *thrift.Request, thing *gauntlet.Numberz) (gauntlet.Numberz, *thrift.Response, error)
-	TestException(req *thrift.Request, arg *string) (*thrift.Response, error)
-	TestI32(req *thrift.Request, thing *int32) (int32, *thrift.Response, error)
-	TestI64(req *thrift.Request, thing *int64) (int64, *thrift.Response, error)
-	TestInsanity(req *thrift.Request, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, *thrift.Response, error)
-	TestList(req *thrift.Request, thing []int32) ([]int32, *thrift.Response, error)
-	TestMap(req *thrift.Request, thing map[int32]int32) (map[int32]int32, *thrift.Response, error)
-	TestMapMap(req *thrift.Request, hello *int32) (map[int32]map[int32]int32, *thrift.Response, error)
-	TestMulti(req *thrift.Request, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, *thrift.Response, error)
-	TestMultiException(req *thrift.Request, arg0 *string, arg1 *string) (*gauntlet.Xtruct, *thrift.Response, error)
-	TestNest(req *thrift.Request, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, *thrift.Response, error)
-	TestSet(req *thrift.Request, thing map[int32]struct{}) (map[int32]struct{}, *thrift.Response, error)
-	TestString(req *thrift.Request, thing *string) (string, *thrift.Response, error)
-	TestStringMap(req *thrift.Request, thing map[string]string) (map[string]string, *thrift.Response, error)
-	TestStruct(req *thrift.Request, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, *thrift.Response, error)
-	TestTypedef(req *thrift.Request, thing *gauntlet.UserId) (gauntlet.UserId, *thrift.Response, error)
-	TestVoid(req *thrift.Request) (*thrift.Response, error)
+	TestBinary(reqMeta *thrift.ReqMeta, thing []byte) ([]byte, *thrift.ResMeta, error)
+	TestByte(reqMeta *thrift.ReqMeta, thing *int8) (int8, *thrift.ResMeta, error)
+	TestDouble(reqMeta *thrift.ReqMeta, thing *float64) (float64, *thrift.ResMeta, error)
+	TestEnum(reqMeta *thrift.ReqMeta, thing *gauntlet.Numberz) (gauntlet.Numberz, *thrift.ResMeta, error)
+	TestException(reqMeta *thrift.ReqMeta, arg *string) (*thrift.ResMeta, error)
+	TestI32(reqMeta *thrift.ReqMeta, thing *int32) (int32, *thrift.ResMeta, error)
+	TestI64(reqMeta *thrift.ReqMeta, thing *int64) (int64, *thrift.ResMeta, error)
+	TestInsanity(reqMeta *thrift.ReqMeta, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, *thrift.ResMeta, error)
+	TestList(reqMeta *thrift.ReqMeta, thing []int32) ([]int32, *thrift.ResMeta, error)
+	TestMap(reqMeta *thrift.ReqMeta, thing map[int32]int32) (map[int32]int32, *thrift.ResMeta, error)
+	TestMapMap(reqMeta *thrift.ReqMeta, hello *int32) (map[int32]map[int32]int32, *thrift.ResMeta, error)
+	TestMulti(reqMeta *thrift.ReqMeta, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, *thrift.ResMeta, error)
+	TestMultiException(reqMeta *thrift.ReqMeta, arg0 *string, arg1 *string) (*gauntlet.Xtruct, *thrift.ResMeta, error)
+	TestNest(reqMeta *thrift.ReqMeta, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, *thrift.ResMeta, error)
+	TestSet(reqMeta *thrift.ReqMeta, thing map[int32]struct{}) (map[int32]struct{}, *thrift.ResMeta, error)
+	TestString(reqMeta *thrift.ReqMeta, thing *string) (string, *thrift.ResMeta, error)
+	TestStringMap(reqMeta *thrift.ReqMeta, thing map[string]string) (map[string]string, *thrift.ResMeta, error)
+	TestStruct(reqMeta *thrift.ReqMeta, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, *thrift.ResMeta, error)
+	TestTypedef(reqMeta *thrift.ReqMeta, thing *gauntlet.UserId) (gauntlet.UserId, *thrift.ResMeta, error)
+	TestVoid(reqMeta *thrift.ReqMeta) (*thrift.ResMeta, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -60,7 +60,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) TestBinary(req *thrift.Request, thing []byte) (success []byte, res *thrift.Response, err error) {
+func (c client) TestBinary(reqMeta *thrift.ReqMeta, thing []byte) (success []byte, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestBinaryHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -68,7 +68,7 @@ func (c client) TestBinary(req *thrift.Request, thing []byte) (success []byte, r
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testBinary", req, w)
+	body, resMeta, err = c.c.Call("testBinary", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -80,7 +80,7 @@ func (c client) TestBinary(req *thrift.Request, thing []byte) (success []byte, r
 	return
 }
 
-func (c client) TestByte(req *thrift.Request, thing *int8) (success int8, res *thrift.Response, err error) {
+func (c client) TestByte(reqMeta *thrift.ReqMeta, thing *int8) (success int8, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestByteHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -88,7 +88,7 @@ func (c client) TestByte(req *thrift.Request, thing *int8) (success int8, res *t
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testByte", req, w)
+	body, resMeta, err = c.c.Call("testByte", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -100,7 +100,7 @@ func (c client) TestByte(req *thrift.Request, thing *int8) (success int8, res *t
 	return
 }
 
-func (c client) TestDouble(req *thrift.Request, thing *float64) (success float64, res *thrift.Response, err error) {
+func (c client) TestDouble(reqMeta *thrift.ReqMeta, thing *float64) (success float64, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestDoubleHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -108,7 +108,7 @@ func (c client) TestDouble(req *thrift.Request, thing *float64) (success float64
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testDouble", req, w)
+	body, resMeta, err = c.c.Call("testDouble", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -120,7 +120,7 @@ func (c client) TestDouble(req *thrift.Request, thing *float64) (success float64
 	return
 }
 
-func (c client) TestEnum(req *thrift.Request, thing *gauntlet.Numberz) (success gauntlet.Numberz, res *thrift.Response, err error) {
+func (c client) TestEnum(reqMeta *thrift.ReqMeta, thing *gauntlet.Numberz) (success gauntlet.Numberz, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestEnumHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -128,7 +128,7 @@ func (c client) TestEnum(req *thrift.Request, thing *gauntlet.Numberz) (success 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testEnum", req, w)
+	body, resMeta, err = c.c.Call("testEnum", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -140,7 +140,7 @@ func (c client) TestEnum(req *thrift.Request, thing *gauntlet.Numberz) (success 
 	return
 }
 
-func (c client) TestException(req *thrift.Request, arg *string) (res *thrift.Response, err error) {
+func (c client) TestException(reqMeta *thrift.ReqMeta, arg *string) (resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestExceptionHelper.Args(arg)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -148,7 +148,7 @@ func (c client) TestException(req *thrift.Request, arg *string) (res *thrift.Res
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testException", req, w)
+	body, resMeta, err = c.c.Call("testException", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -160,7 +160,7 @@ func (c client) TestException(req *thrift.Request, arg *string) (res *thrift.Res
 	return
 }
 
-func (c client) TestI32(req *thrift.Request, thing *int32) (success int32, res *thrift.Response, err error) {
+func (c client) TestI32(reqMeta *thrift.ReqMeta, thing *int32) (success int32, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestI32Helper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -168,7 +168,7 @@ func (c client) TestI32(req *thrift.Request, thing *int32) (success int32, res *
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testI32", req, w)
+	body, resMeta, err = c.c.Call("testI32", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -180,7 +180,7 @@ func (c client) TestI32(req *thrift.Request, thing *int32) (success int32, res *
 	return
 }
 
-func (c client) TestI64(req *thrift.Request, thing *int64) (success int64, res *thrift.Response, err error) {
+func (c client) TestI64(reqMeta *thrift.ReqMeta, thing *int64) (success int64, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestI64Helper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -188,7 +188,7 @@ func (c client) TestI64(req *thrift.Request, thing *int64) (success int64, res *
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testI64", req, w)
+	body, resMeta, err = c.c.Call("testI64", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -200,7 +200,7 @@ func (c client) TestI64(req *thrift.Request, thing *int64) (success int64, res *
 	return
 }
 
-func (c client) TestInsanity(req *thrift.Request, argument *gauntlet.Insanity) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, res *thrift.Response, err error) {
+func (c client) TestInsanity(reqMeta *thrift.ReqMeta, argument *gauntlet.Insanity) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestInsanityHelper.Args(argument)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -208,7 +208,7 @@ func (c client) TestInsanity(req *thrift.Request, argument *gauntlet.Insanity) (
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testInsanity", req, w)
+	body, resMeta, err = c.c.Call("testInsanity", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -220,7 +220,7 @@ func (c client) TestInsanity(req *thrift.Request, argument *gauntlet.Insanity) (
 	return
 }
 
-func (c client) TestList(req *thrift.Request, thing []int32) (success []int32, res *thrift.Response, err error) {
+func (c client) TestList(reqMeta *thrift.ReqMeta, thing []int32) (success []int32, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestListHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -228,7 +228,7 @@ func (c client) TestList(req *thrift.Request, thing []int32) (success []int32, r
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testList", req, w)
+	body, resMeta, err = c.c.Call("testList", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -240,7 +240,7 @@ func (c client) TestList(req *thrift.Request, thing []int32) (success []int32, r
 	return
 }
 
-func (c client) TestMap(req *thrift.Request, thing map[int32]int32) (success map[int32]int32, res *thrift.Response, err error) {
+func (c client) TestMap(reqMeta *thrift.ReqMeta, thing map[int32]int32) (success map[int32]int32, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestMapHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -248,7 +248,7 @@ func (c client) TestMap(req *thrift.Request, thing map[int32]int32) (success map
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testMap", req, w)
+	body, resMeta, err = c.c.Call("testMap", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -260,7 +260,7 @@ func (c client) TestMap(req *thrift.Request, thing map[int32]int32) (success map
 	return
 }
 
-func (c client) TestMapMap(req *thrift.Request, hello *int32) (success map[int32]map[int32]int32, res *thrift.Response, err error) {
+func (c client) TestMapMap(reqMeta *thrift.ReqMeta, hello *int32) (success map[int32]map[int32]int32, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestMapMapHelper.Args(hello)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -268,7 +268,7 @@ func (c client) TestMapMap(req *thrift.Request, hello *int32) (success map[int32
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testMapMap", req, w)
+	body, resMeta, err = c.c.Call("testMapMap", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -280,7 +280,7 @@ func (c client) TestMapMap(req *thrift.Request, hello *int32) (success map[int32
 	return
 }
 
-func (c client) TestMulti(req *thrift.Request, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (success *gauntlet.Xtruct, res *thrift.Response, err error) {
+func (c client) TestMulti(reqMeta *thrift.ReqMeta, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (success *gauntlet.Xtruct, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestMultiHelper.Args(arg0, arg1, arg2, arg3, arg4, arg5)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -288,7 +288,7 @@ func (c client) TestMulti(req *thrift.Request, arg0 *int8, arg1 *int32, arg2 *in
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testMulti", req, w)
+	body, resMeta, err = c.c.Call("testMulti", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -300,7 +300,7 @@ func (c client) TestMulti(req *thrift.Request, arg0 *int8, arg1 *int32, arg2 *in
 	return
 }
 
-func (c client) TestMultiException(req *thrift.Request, arg0 *string, arg1 *string) (success *gauntlet.Xtruct, res *thrift.Response, err error) {
+func (c client) TestMultiException(reqMeta *thrift.ReqMeta, arg0 *string, arg1 *string) (success *gauntlet.Xtruct, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestMultiExceptionHelper.Args(arg0, arg1)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -308,7 +308,7 @@ func (c client) TestMultiException(req *thrift.Request, arg0 *string, arg1 *stri
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testMultiException", req, w)
+	body, resMeta, err = c.c.Call("testMultiException", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -320,7 +320,7 @@ func (c client) TestMultiException(req *thrift.Request, arg0 *string, arg1 *stri
 	return
 }
 
-func (c client) TestNest(req *thrift.Request, thing *gauntlet.Xtruct2) (success *gauntlet.Xtruct2, res *thrift.Response, err error) {
+func (c client) TestNest(reqMeta *thrift.ReqMeta, thing *gauntlet.Xtruct2) (success *gauntlet.Xtruct2, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestNestHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -328,7 +328,7 @@ func (c client) TestNest(req *thrift.Request, thing *gauntlet.Xtruct2) (success 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testNest", req, w)
+	body, resMeta, err = c.c.Call("testNest", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -340,7 +340,7 @@ func (c client) TestNest(req *thrift.Request, thing *gauntlet.Xtruct2) (success 
 	return
 }
 
-func (c client) TestSet(req *thrift.Request, thing map[int32]struct{}) (success map[int32]struct{}, res *thrift.Response, err error) {
+func (c client) TestSet(reqMeta *thrift.ReqMeta, thing map[int32]struct{}) (success map[int32]struct{}, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestSetHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -348,7 +348,7 @@ func (c client) TestSet(req *thrift.Request, thing map[int32]struct{}) (success 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testSet", req, w)
+	body, resMeta, err = c.c.Call("testSet", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -360,7 +360,7 @@ func (c client) TestSet(req *thrift.Request, thing map[int32]struct{}) (success 
 	return
 }
 
-func (c client) TestString(req *thrift.Request, thing *string) (success string, res *thrift.Response, err error) {
+func (c client) TestString(reqMeta *thrift.ReqMeta, thing *string) (success string, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestStringHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -368,7 +368,7 @@ func (c client) TestString(req *thrift.Request, thing *string) (success string, 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testString", req, w)
+	body, resMeta, err = c.c.Call("testString", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -380,7 +380,7 @@ func (c client) TestString(req *thrift.Request, thing *string) (success string, 
 	return
 }
 
-func (c client) TestStringMap(req *thrift.Request, thing map[string]string) (success map[string]string, res *thrift.Response, err error) {
+func (c client) TestStringMap(reqMeta *thrift.ReqMeta, thing map[string]string) (success map[string]string, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestStringMapHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -388,7 +388,7 @@ func (c client) TestStringMap(req *thrift.Request, thing map[string]string) (suc
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testStringMap", req, w)
+	body, resMeta, err = c.c.Call("testStringMap", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -400,7 +400,7 @@ func (c client) TestStringMap(req *thrift.Request, thing map[string]string) (suc
 	return
 }
 
-func (c client) TestStruct(req *thrift.Request, thing *gauntlet.Xtruct) (success *gauntlet.Xtruct, res *thrift.Response, err error) {
+func (c client) TestStruct(reqMeta *thrift.ReqMeta, thing *gauntlet.Xtruct) (success *gauntlet.Xtruct, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestStructHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -408,7 +408,7 @@ func (c client) TestStruct(req *thrift.Request, thing *gauntlet.Xtruct) (success
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testStruct", req, w)
+	body, resMeta, err = c.c.Call("testStruct", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -420,7 +420,7 @@ func (c client) TestStruct(req *thrift.Request, thing *gauntlet.Xtruct) (success
 	return
 }
 
-func (c client) TestTypedef(req *thrift.Request, thing *gauntlet.UserId) (success gauntlet.UserId, res *thrift.Response, err error) {
+func (c client) TestTypedef(reqMeta *thrift.ReqMeta, thing *gauntlet.UserId) (success gauntlet.UserId, resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestTypedefHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -428,7 +428,7 @@ func (c client) TestTypedef(req *thrift.Request, thing *gauntlet.UserId) (succes
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testTypedef", req, w)
+	body, resMeta, err = c.c.Call("testTypedef", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -440,7 +440,7 @@ func (c client) TestTypedef(req *thrift.Request, thing *gauntlet.UserId) (succes
 	return
 }
 
-func (c client) TestVoid(req *thrift.Request) (res *thrift.Response, err error) {
+func (c client) TestVoid(reqMeta *thrift.ReqMeta) (resMeta *thrift.ResMeta, err error) {
 	args := thrifttest.TestVoidHelper.Args()
 	var w wire.Value
 	w, err = args.ToWire()
@@ -448,7 +448,7 @@ func (c client) TestVoid(req *thrift.Request) (res *thrift.Response, err error) 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("testVoid", req, w)
+	body, resMeta, err = c.c.Call("testVoid", reqMeta, w)
 	if err != nil {
 		return
 	}

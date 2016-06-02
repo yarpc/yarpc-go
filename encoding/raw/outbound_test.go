@@ -102,7 +102,7 @@ func TestCall(t *testing.T) {
 				Headers: tt.wantHeaders,
 			}, nil)
 
-		resBody, res, err := client.Call(&Request{
+		resBody, res, err := client.Call(&ReqMeta{
 			Context:   context.TODO(), // TODO
 			Procedure: tt.procedure,
 			Headers:   tt.headers,

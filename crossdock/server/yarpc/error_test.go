@@ -32,7 +32,7 @@ import (
 
 func TestUnexpectedError(t *testing.T) {
 	_, _, err := UnexpectedError(
-		&json.Request{
+		&json.ReqMeta{
 			Context:   context.Background(),
 			Procedure: "unexpected-error",
 		},
@@ -44,7 +44,7 @@ func TestUnexpectedError(t *testing.T) {
 
 func TestBadResponse(t *testing.T) {
 	result, _, err := BadResponse(
-		&json.Request{
+		&json.ReqMeta{
 			Context:   context.Background(),
 			Procedure: "bad-response",
 		},

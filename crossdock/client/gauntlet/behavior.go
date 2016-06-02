@@ -74,7 +74,7 @@ type TT struct {
 	Service  string        // thrift service name; defaults to ThriftTest
 	Function string        // name of the Go function on the client
 	Details  string        // optional extra details about what this test does
-	Give     []interface{} // arguments besides thrift.Request
+	Give     []interface{} // arguments besides thrift.ReqMeta
 
 	Want          interface{} // expected response; nil for void
 	WantError     error       // expected error
@@ -379,7 +379,7 @@ func Run(t crossdock.T) {
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		req := thrift.Request{
+		req := thrift.ReqMeta{
 			Context: ctx,
 			TTL:     time.Second, // TODO context TTL should be enough
 		}

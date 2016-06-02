@@ -47,7 +47,7 @@ func JSON(t crossdock.T) {
 	var response jsonEcho
 	token := random.String(5)
 	_, err := client.Call(
-		&json.Request{
+		&json.ReqMeta{
 			Context:   ctx,
 			Procedure: "echo",
 			TTL:       time.Second, // TODO context already has timeout; use that

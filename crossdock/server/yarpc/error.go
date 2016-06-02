@@ -27,12 +27,12 @@ import (
 )
 
 // UnexpectedError fails with an unexpected error.
-func UnexpectedError(req *json.Request, body interface{}) (interface{}, *json.Response, error) {
+func UnexpectedError(req *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
 	return nil, nil, fmt.Errorf("error")
 }
 
 // BadResponse returns an object that's not a valid JSON response.
-func BadResponse(req *json.Request, body map[string]interface{}) (map[string]interface{}, *json.Response, error) {
+func BadResponse(req *json.ReqMeta, body map[string]interface{}) (map[string]interface{}, *json.ResMeta, error) {
 	// func is not serializable
 	result := map[string]interface{}{"foo": func() {}}
 	return result, nil, nil

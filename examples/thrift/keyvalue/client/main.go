@@ -94,7 +94,7 @@ func main() {
 			key := args[0]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if value, _, err := client.GetValue(&thrift.Request{
+			if value, _, err := client.GetValue(&thrift.ReqMeta{
 				Context: ctx,
 				TTL:     100 * time.Millisecond, // TODO(abg): Use context TTL
 			}, &key); err != nil {
@@ -113,7 +113,7 @@ func main() {
 
 			cache.Invalidate()
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if _, err := client.SetValue(&thrift.Request{
+			if _, err := client.SetValue(&thrift.ReqMeta{
 				Context: ctx,
 				TTL:     100 * time.Millisecond, // TODO(abg): Use context TTL
 			}, &key, &value); err != nil {

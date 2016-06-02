@@ -53,13 +53,13 @@ func runThrift(t crossdock.T, rpc yarpc.RPC) {
 	}
 }
 
-func thriftCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *thrift.Response, error) {
+func thriftCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *thrift.ResMeta, error) {
 	client := echoclient.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := &thrift.Request{
+	reqMeta := &thrift.ReqMeta{
 		Context: ctx,
 		TTL:     time.Second,
 		Headers: headers,

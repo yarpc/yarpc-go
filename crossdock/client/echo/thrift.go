@@ -43,7 +43,7 @@ func Thrift(t crossdock.T) {
 
 	token := random.String(5)
 	pong, _, err := client.Echo(
-		&thrift.Request{
+		&thrift.ReqMeta{
 			Context: ctx,
 			TTL:     time.Second, // TODO context already has timeout; use that
 		},
