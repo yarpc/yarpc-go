@@ -31,8 +31,8 @@ import (
 )
 
 type Interface interface {
-	GetValue(req *thrift.Request, key *string) (string, *thrift.Response, error)
-	SetValue(req *thrift.Request, key *string, value *string) (*thrift.Response, error)
+	GetValue(reqMeta *thrift.ReqMeta, key *string) (string, *thrift.ResMeta, error)
+	SetValue(reqMeta *thrift.ReqMeta, key *string, value *string) (*thrift.ResMeta, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -41,7 +41,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) GetValue(req *thrift.Request, key *string) (success string, res *thrift.Response, err error) {
+func (c client) GetValue(reqMeta *thrift.ReqMeta, key *string) (success string, resMeta *thrift.ResMeta, err error) {
 	args := keyvalue.GetValueHelper.Args(key)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -49,7 +49,7 @@ func (c client) GetValue(req *thrift.Request, key *string) (success string, res 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("getValue", req, w)
+	body, resMeta, err = c.c.Call("getValue", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -61,7 +61,7 @@ func (c client) GetValue(req *thrift.Request, key *string) (success string, res 
 	return
 }
 
-func (c client) SetValue(req *thrift.Request, key *string, value *string) (res *thrift.Response, err error) {
+func (c client) SetValue(reqMeta *thrift.ReqMeta, key *string, value *string) (resMeta *thrift.ResMeta, err error) {
 	args := keyvalue.SetValueHelper.Args(key, value)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -69,7 +69,7 @@ func (c client) SetValue(req *thrift.Request, key *string, value *string) (res *
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("setValue", req, w)
+	body, resMeta, err = c.c.Call("setValue", reqMeta, w)
 	if err != nil {
 		return
 	}

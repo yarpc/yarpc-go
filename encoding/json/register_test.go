@@ -14,31 +14,31 @@ func TestWrapHandlerInvalid(t *testing.T) {
 		{"empty", func() {}},
 		{
 			"wrong-response",
-			func(*Request, map[string]interface{}) (*Response, error) {
+			func(*ReqMeta, map[string]interface{}) (*ResMeta, error) {
 				return nil, nil
 			},
 		},
 		{
 			"wrong-request",
-			func(string, *struct{}) (*struct{}, *Response, error) {
+			func(string, *struct{}) (*struct{}, *ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-req",
-			func(*Request, struct{}) (*struct{}, *Response, error) {
+			func(*ReqMeta, struct{}) (*struct{}, *ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-res",
-			func(*Request, *struct{}) (struct{}, *Response, error) {
+			func(*ReqMeta, *struct{}) (struct{}, *ResMeta, error) {
 				return struct{}{}, nil, nil
 			},
 		},
 		{
 			"non-string-key",
-			func(*Request, map[int32]interface{}) (*struct{}, *Response, error) {
+			func(*ReqMeta, map[int32]interface{}) (*struct{}, *ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
@@ -58,25 +58,25 @@ func TestWrapHandlerValid(t *testing.T) {
 	}{
 		{
 			"foo",
-			func(*Request, *struct{}) (*struct{}, *Response, error) {
+			func(*ReqMeta, *struct{}) (*struct{}, *ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"bar",
-			func(*Request, map[string]interface{}) (*struct{}, *Response, error) {
+			func(*ReqMeta, map[string]interface{}) (*struct{}, *ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"baz",
-			func(*Request, map[string]interface{}) (map[string]interface{}, *Response, error) {
+			func(*ReqMeta, map[string]interface{}) (map[string]interface{}, *ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"qux",
-			func(*Request, interface{}) (map[string]interface{}, *Response, error) {
+			func(*ReqMeta, interface{}) (map[string]interface{}, *ResMeta, error) {
 				return nil, nil, nil
 			},
 		},

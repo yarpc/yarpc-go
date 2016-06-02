@@ -52,23 +52,23 @@ type PhoneResponse struct {
 }
 
 // Phone implements the phone procedure
-func Phone(req *json.Request, body *PhoneRequest) (*PhoneResponse, *json.Response, error) {
+func Phone(reqMeta *json.ReqMeta, body *PhoneRequest) (*PhoneResponse, *json.ResMeta, error) {
 	// TODO(abg): Support other transports
 	t := body.Transport.HTTP
 	outbound := ht.NewOutbound(fmt.Sprintf("http://%s:%d", t.Host, t.Port))
 	client := json.New(transport.Channel{
-		Caller:   "yarpc-test", // TODO use req.Service,
+		Caller:   "yarpc-test", // TODO use reqMeta.Service,
 		Service:  body.Service,
 		Outbound: outbound,
 	})
 
 	resBody := PhoneResponse{
-		Service:   "yarpc-test", // TODO use req.Service
-		Procedure: req.Procedure,
+		Service:   "yarpc-test", // TODO use reqMeta.Service
+		Procedure: reqMeta.Procedure,
 	}
 
-	ctx, _ := context.WithTimeout(req.Context, 500*time.Millisecond)
-	_, err := client.Call(&json.Request{
+	ctx, _ := context.WithTimeout(reqMeta.Context, 500*time.Millisecond)
+	_, err := client.Call(&json.ReqMeta{
 		Context:   ctx,
 		Procedure: body.Procedure,
 		TTL:       500 * time.Millisecond, // TODO(abg): delete once context timeout is enforced/used

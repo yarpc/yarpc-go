@@ -77,7 +77,7 @@ type TT struct {
 	Service  string        // thrift service name; defaults to ThriftTest
 	Function string        // name of the Go function on the client
 	Details  string        // optional extra details about what this test does
-	Give     []interface{} // arguments besides thrift.Request
+	Give     []interface{} // arguments besides thrift.ReqMeta
 
 	Want          interface{} // expected response; nil for void
 	WantError     error       // expected error
@@ -385,12 +385,12 @@ func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		req := thrift.Request{
+		reqMeta := thrift.ReqMeta{
 			Context: ctx,
 			TTL:     time.Second, // TODO context TTL should be enough
 		}
 
-		args := []reflect.Value{reflect.ValueOf(&req)}
+		args := []reflect.Value{reflect.ValueOf(&reqMeta)}
 		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give); ok {
 			args = append(args, give...)
 		} else {

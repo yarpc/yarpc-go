@@ -28,8 +28,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Request is a JSON request without the body.
-type Request struct {
+// ReqMeta is a JSON request without the body.
+type ReqMeta struct {
 	Context context.Context
 
 	// TODO(abg): Expose service name
@@ -45,6 +45,6 @@ type Request struct {
 }
 
 // Note: The shape of this request object is extremely similar to the
-// raw.Request object, but since we can't unify all the Request objects
-// (thrift.Request is very different), each encoding will have its own Request
+// raw.ReqMeta object, but since we can't unify all the ReqMeta objects
+// (thrift.ReqMeta is very different), each encoding will have its own ReqMeta
 // object.

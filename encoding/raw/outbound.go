@@ -30,7 +30,7 @@ import (
 // Client makes Raw requests to a single service.
 type Client interface {
 	// Call performs an outbound Raw request.
-	Call(req *Request, body []byte) ([]byte, *Response, error)
+	Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error)
 }
 
 // New builds a new Raw client.
@@ -49,18 +49,18 @@ type rawClient struct {
 	caller, service string
 }
 
-func (c rawClient) Call(req *Request, body []byte) ([]byte, *Response, error) {
+func (c rawClient) Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
 		Encoding:  Encoding,
-		Procedure: req.Procedure,
-		Headers:   req.Headers,
+		Procedure: reqMeta.Procedure,
+		Headers:   reqMeta.Headers,
 		Body:      bytes.NewReader(body),
-		TTL:       req.TTL, // TODO use default from channel
+		TTL:       reqMeta.TTL, // TODO use default from channel
 	}
 
-	tres, err := c.t.Call(req.Context, &treq)
+	tres, err := c.t.Call(reqMeta.Context, &treq)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -71,5 +71,5 @@ func (c rawClient) Call(req *Request, body []byte) ([]byte, *Response, error) {
 		return nil, nil, err
 	}
 
-	return resBody, &Response{Headers: tres.Headers}, nil
+	return resBody, &ResMeta{Headers: tres.Headers}, nil
 }

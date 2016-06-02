@@ -35,7 +35,7 @@ import (
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
 	// Call the given Thrift method.
-	Call(method string, req *Request, body wire.Value) (wire.Value, *Response, error)
+	Call(method string, reqMeta *ReqMeta, body wire.Value) (wire.Value, *ResMeta, error)
 }
 
 // Config contains the configuration for the Client.
@@ -93,22 +93,22 @@ type thriftClient struct {
 	caller, service string
 }
 
-func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wire.Value, *Response, error) {
+func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) (wire.Value, *ResMeta, error) {
 	// Code generated for Thrift client calls will probably be something like
 	// this:
 	//
-	// 	func (c *MyServiceClient) someMethod(req *thrift.Request, arg1 Arg1Type, arg2Type) (returnValue, *thrift.Response, error) {
+	// 	func (c *MyServiceClient) someMethod(reqMeta *thrift.ReqMeta, arg1 Arg1Type, arg2Type) (returnValue, *thrift.ResMeta, error) {
 	// 		args := someMethodArgs{arg1: arg1, arg2: arg2}
-	// 		resBody, res, err := c.client.Call("someMethod", req, args.ToWire())
-	// 		if err != nil { return nil, res, err }
+	// 		resBody, resMeta, err := c.client.Call("someMethod", reqMeta, args.ToWire())
+	// 		if err != nil { return nil, resMeta, err }
 	// 		if resBody.Exception1 != nil {
-	// 			return nil, res, resBody.Exception1
+	// 			return nil, resMeta, resBody.Exception1
 	// 		}
 	// 		if resBody.Exception2 != nil {
-	// 			return nil, res, resBody.Exception2
+	// 			return nil, resMeta, resBody.Exception2
 	// 		}
 	// 		if resBody.Success != nil {
-	// 			return resp.Succ, res, nil
+	// 			return resp.Succ, resMeta, nil
 	// 		}
 	// 		// TODO: Throw an error here because we expected a non-void return
 	// 		// but we got neither an exception, nor a return value.
@@ -119,8 +119,8 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 		Service:   c.service,
 		Encoding:  Encoding,
 		Procedure: procedureName(c.thriftService, method),
-		Headers:   req.Headers,
-		TTL:       req.TTL,
+		Headers:   reqMeta.Headers,
+		TTL:       reqMeta.TTL,
 	}
 
 	var buffer bytes.Buffer
@@ -129,7 +129,7 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 	}
 
 	treq.Body = &buffer
-	tres, err := c.t.Call(req.Context, &treq)
+	tres, err := c.t.Call(reqMeta.Context, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
@@ -145,5 +145,5 @@ func (c thriftClient) Call(method string, req *Request, reqBody wire.Value) (wir
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
-	return resBody, &Response{Headers: tres.Headers}, nil
+	return resBody, &ResMeta{Headers: tres.Headers}, nil
 }

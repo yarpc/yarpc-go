@@ -28,8 +28,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Request represents a raw Thrift request.
-type Request struct {
+// ReqMeta represents a raw Thrift request.
+type ReqMeta struct {
 	Context context.Context
 
 	// Request headers

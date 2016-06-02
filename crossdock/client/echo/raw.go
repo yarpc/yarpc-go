@@ -41,7 +41,7 @@ func Raw(t crossdock.T) {
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := random.Bytes(5)
-	resBody, _, err := client.Call(&raw.Request{
+	resBody, _, err := client.Call(&raw.ReqMeta{
 		Context:   ctx,
 		Procedure: "echo/raw",
 		TTL:       time.Second, // TODO context already has timeout; use that

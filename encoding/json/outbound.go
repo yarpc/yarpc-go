@@ -36,7 +36,7 @@ type Client interface {
 	// json.Unmarshal.
 	//
 	// Returns the response or an error if the request failed.
-	Call(req *Request, reqBody interface{}, resBodyOut interface{}) (*Response, error)
+	Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut interface{}) (*ResMeta, error)
 }
 
 // New builds a new JSON client.
@@ -54,14 +54,14 @@ type jsonClient struct {
 	caller, service string
 }
 
-func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface{}) (*Response, error) {
+func (c jsonClient) Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut interface{}) (*ResMeta, error) {
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
 		Encoding:  Encoding,
-		Procedure: req.Procedure,
-		Headers:   req.Headers,
-		TTL:       req.TTL, // TODO use default from channel
+		Procedure: reqMeta.Procedure,
+		Headers:   reqMeta.Headers,
+		TTL:       reqMeta.TTL, // TODO use default from channel
 	}
 
 	encoded, err := json.Marshal(reqBody)
@@ -70,7 +70,7 @@ func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.t.Call(req.Context, &treq)
+	tres, err := c.t.Call(reqMeta.Context, &treq)
 	if err != nil {
 		return nil, err
 	}
@@ -84,5 +84,5 @@ func (c jsonClient) Call(req *Request, reqBody interface{}, resBodyOut interface
 		return nil, err
 	}
 
-	return &Response{Headers: tres.Headers}, nil
+	return &ResMeta{Headers: tres.Headers}, nil
 }

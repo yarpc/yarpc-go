@@ -63,9 +63,9 @@ func TestThriftHandler(t *testing.T) {
 
 		handler := NewMockHandler(mockCtrl)
 		handler.EXPECT().Handle(
-			&Request{Context: ctx, TTL: time.Second},
+			&ReqMeta{Context: ctx, TTL: time.Second},
 			requestBody,
-		).Return(TResponse{
+		).Return(Response{
 			Body:               wire.NewValueStruct(wire.Struct{}),
 			IsApplicationError: isApplicationError,
 		}, nil)

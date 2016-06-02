@@ -55,13 +55,13 @@ type jsonEcho struct {
 	Token string `json:"token"`
 }
 
-func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *json.Response, error) {
+func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *json.ResMeta, error) {
 	client := json.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := &json.Request{
+	reqMeta := &json.ReqMeta{
 		Context:   ctx,
 		Procedure: "echo",
 		TTL:       time.Second,

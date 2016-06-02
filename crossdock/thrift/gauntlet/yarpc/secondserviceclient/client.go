@@ -31,8 +31,8 @@ import (
 )
 
 type Interface interface {
-	BlahBlah(req *thrift.Request) (*thrift.Response, error)
-	SecondtestString(req *thrift.Request, thing *string) (string, *thrift.Response, error)
+	BlahBlah(reqMeta *thrift.ReqMeta) (*thrift.ResMeta, error)
+	SecondtestString(reqMeta *thrift.ReqMeta, thing *string) (string, *thrift.ResMeta, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -41,7 +41,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) BlahBlah(req *thrift.Request) (res *thrift.Response, err error) {
+func (c client) BlahBlah(reqMeta *thrift.ReqMeta) (resMeta *thrift.ResMeta, err error) {
 	args := secondservice.BlahBlahHelper.Args()
 	var w wire.Value
 	w, err = args.ToWire()
@@ -49,7 +49,7 @@ func (c client) BlahBlah(req *thrift.Request) (res *thrift.Response, err error) 
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("blahBlah", req, w)
+	body, resMeta, err = c.c.Call("blahBlah", reqMeta, w)
 	if err != nil {
 		return
 	}
@@ -61,7 +61,7 @@ func (c client) BlahBlah(req *thrift.Request) (res *thrift.Response, err error) 
 	return
 }
 
-func (c client) SecondtestString(req *thrift.Request, thing *string) (success string, res *thrift.Response, err error) {
+func (c client) SecondtestString(reqMeta *thrift.ReqMeta, thing *string) (success string, resMeta *thrift.ResMeta, err error) {
 	args := secondservice.SecondtestStringHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -69,7 +69,7 @@ func (c client) SecondtestString(req *thrift.Request, thing *string) (success st
 		return
 	}
 	var body wire.Value
-	body, res, err = c.c.Call("secondtestString", req, w)
+	body, resMeta, err = c.c.Call("secondtestString", reqMeta, w)
 	if err != nil {
 		return
 	}

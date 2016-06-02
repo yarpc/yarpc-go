@@ -31,7 +31,7 @@ import (
 )
 
 type Interface interface {
-	Echo(req *thrift.Request, ping *echo.Ping) (*echo.Pong, *thrift.Response, error)
+	Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (*echo.Pong, *thrift.ResMeta, error)
 }
 
 func New(impl Interface) thrift.Service {
@@ -54,18 +54,18 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) Echo(req *thrift.Request, body wire.Value) (thrift.TResponse, error) {
+func (h handler) Echo(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args echo2.EchoArgs
 	if err := args.FromWire(body); err != nil {
-		return thrift.TResponse{}, err
+		return thrift.Response{}, err
 	}
-	success, res, err := h.impl.Echo(req, args.Ping)
+	success, resMeta, err := h.impl.Echo(reqMeta, args.Ping)
 	hadError := err != nil
 	result, err := echo2.EchoHelper.WrapResponse(success, err)
-	var response thrift.TResponse
+	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Response = res
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err

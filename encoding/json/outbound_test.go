@@ -129,7 +129,7 @@ func TestCall(t *testing.T) {
 		}
 		resBody := reflect.Zero(wantType).Interface()
 
-		res, err := client.Call(&Request{
+		res, err := client.Call(&ReqMeta{
 			Context:   context.TODO(), // TODO
 			Procedure: tt.procedure,
 			Headers:   tt.headers,

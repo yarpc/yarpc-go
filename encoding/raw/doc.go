@@ -23,8 +23,8 @@
 // To make outbound requests,
 //
 // 	client := raw.New(channel)
-// 	resBody, response, err := client.Call(
-// 		&raw.Request{
+// 	resBody, resMeta, err := client.Call(
+// 		&raw.ReqMeta{
 // 			Context: ctx,
 // 			Procedure: "submit",
 // 		},
@@ -34,7 +34,7 @@
 // To register a raw procedure, define a Registrant or use Procedure to make a
 // single-function Registrant, and register it with Register.
 //
-// 	func Submit(req *raw.Request, reqBody []byte) ([]byte, *raw.Response, error) {
+// 	func Submit(reqMeta *raw.ReqMeta, reqBody []byte) ([]byte, *raw.ResMeta, error) {
 // 		// ...
 // 	}
 //

@@ -52,14 +52,14 @@ func runRaw(t crossdock.T, rpc yarpc.RPC) {
 	}
 }
 
-func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *raw.Response, error) {
+func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *raw.ResMeta, error) {
 	client := raw.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	// TODO rename to raw.ReqMeta
-	reqMeta := &raw.Request{
+	reqMeta := &raw.ReqMeta{
 		Context:   ctx,
 		Procedure: "echo/raw",
 		Headers:   headers,

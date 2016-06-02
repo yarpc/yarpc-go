@@ -58,7 +58,7 @@ type setResponse struct {
 func get(ctx context.Context, c json.Client, k string) (string, error) {
 	var response getResponse
 	_, err := c.Call(
-		&json.Request{
+		&json.ReqMeta{
 			Procedure: "get",
 			Context:   ctx,
 			TTL:       100 * time.Millisecond, // TODO(abg): use context TTL
@@ -72,7 +72,7 @@ func get(ctx context.Context, c json.Client, k string) (string, error) {
 func set(ctx context.Context, c json.Client, k string, v string) error {
 	var response setResponse
 	_, err := c.Call(
-		&json.Request{
+		&json.ReqMeta{
 			Procedure: "set",
 			Context:   ctx,
 			TTL:       100 * time.Millisecond, // TODO(abg): use context TTL

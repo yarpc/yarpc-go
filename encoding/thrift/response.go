@@ -20,12 +20,24 @@
 
 package thrift
 
-import "github.com/yarpc/yarpc-go/transport"
+import (
+	"github.com/yarpc/yarpc-go/transport"
 
-// Response represents a raw Thrift response.
-type Response struct {
+	"github.com/thriftrw/thriftrw-go/wire"
+)
+
+// ResMeta represents a raw Thrift response.
+type ResMeta struct {
 	// Response headers
 	Headers transport.Headers
 
 	// TODO: Handle REPLY/EXCEPTION for response envelopes
+}
+
+// Response contains the response from a generated Thrift handler.
+type Response struct {
+	Body wire.Value
+	Meta *ResMeta
+
+	IsApplicationError bool
 }

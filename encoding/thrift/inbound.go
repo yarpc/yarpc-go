@@ -52,7 +52,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
-	res, err := t.Handler.Handle(&Request{
+	res, err := t.Handler.Handle(&ReqMeta{
 		Context: ctx,
 		Headers: treq.Headers,
 		TTL:     treq.TTL,
@@ -65,9 +65,9 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		rw.SetApplicationError()
 	}
 
-	response := res.Response // TODO: Rename to reqMeta
-	if response != nil {
-		rw.AddHeaders(response.Headers)
+	resMeta := res.Meta
+	if resMeta != nil {
+		rw.AddHeaders(resMeta.Headers)
 	}
 
 	if err := t.Protocol.Encode(res.Body, rw); err != nil {

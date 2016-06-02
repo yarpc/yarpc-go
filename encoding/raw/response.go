@@ -22,8 +22,8 @@ package raw
 
 import "github.com/yarpc/yarpc-go/transport"
 
-// Response is a Raw response without the body.
-type Response struct {
+// ResMeta is a Raw response without the body.
+type ResMeta struct {
 	Headers transport.Headers
 
 	// TODO Response context?

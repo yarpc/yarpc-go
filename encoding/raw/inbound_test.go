@@ -35,9 +35,9 @@ import (
 func TestRawHandler(t *testing.T) {
 	// handler to use for test cases where the handler should not be called
 	handlerNotCalled :=
-		func(req *Request, body []byte) ([]byte, *Response, error) {
-			t.Errorf("unexpected call handle(%v, %v)", req, body)
-			return nil, nil, fmt.Errorf("unexpected call handle(%v, %v)", req, body)
+		func(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
+			t.Errorf("unexpected call handle(%v, %v)", reqMeta, body)
+			return nil, nil, fmt.Errorf("unexpected call handle(%v, %v)", reqMeta, body)
 		}
 
 	tests := []struct {
@@ -56,8 +56,8 @@ func TestRawHandler(t *testing.T) {
 				{1, 2, 3},
 				{4, 5, 6},
 			},
-			handler: func(req *Request, body []byte) ([]byte, *Response, error) {
-				assert.Equal(t, "foo", req.Procedure)
+			handler: func(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
+				assert.Equal(t, "foo", reqMeta.Procedure)
 				assert.Equal(t, []byte{1, 2, 3, 4, 5, 6}, body)
 				return []byte("hello"), nil, nil
 			},
@@ -77,7 +77,7 @@ func TestRawHandler(t *testing.T) {
 		{
 			procedure:  "baz",
 			bodyChunks: [][]byte{},
-			handler: func(req *Request, body []byte) ([]byte, *Response, error) {
+			handler: func(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
 				assert.Equal(t, []byte{}, body)
 				return nil, nil, fmt.Errorf("great sadness")
 			},
@@ -86,8 +86,8 @@ func TestRawHandler(t *testing.T) {
 		{
 			procedure:  "responseHeaders",
 			bodyChunks: [][]byte{},
-			handler: func(req *Request, body []byte) ([]byte, *Response, error) {
-				return []byte{}, &Response{
+			handler: func(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
+				return []byte{}, &ResMeta{
 					Headers: transport.Headers{"hello": "world"},
 				}, nil
 			},

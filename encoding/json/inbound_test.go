@@ -25,7 +25,7 @@ type simpleResponse struct {
 }
 
 func TestHandleStructSuccess(t *testing.T) {
-	h := func(r *Request, body *simpleRequest) (*simpleResponse, *Response, error) {
+	h := func(r *ReqMeta, body *simpleRequest) (*simpleResponse, *ResMeta, error) {
 		assert.Equal(t, "simpleCall", r.Procedure)
 		assert.Equal(t, "foo", body.Name)
 		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
@@ -52,7 +52,7 @@ func TestHandleStructSuccess(t *testing.T) {
 }
 
 func TestHandleMapSuccess(t *testing.T) {
-	h := func(_ *Request, body map[string]interface{}) (map[string]string, *Response, error) {
+	h := func(_ *ReqMeta, body map[string]interface{}) (map[string]string, *ResMeta, error) {
 		assert.Equal(t, 42.0, body["foo"])
 		assert.Equal(t, []interface{}{"a", "b", "c"}, body["bar"])
 
@@ -77,7 +77,7 @@ func TestHandleMapSuccess(t *testing.T) {
 }
 
 func TestHandleInterfaceEmptySuccess(t *testing.T) {
-	h := func(_ *Request, body interface{}) (interface{}, *Response, error) {
+	h := func(_ *ReqMeta, body interface{}) (interface{}, *ResMeta, error) {
 		return body, nil, nil
 	}
 
@@ -94,9 +94,9 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 }
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
-	h := func(*Request, *simpleRequest) (*simpleResponse, *Response, error) {
-		response := &Response{Headers: transport.Headers{"foo": "bar"}}
-		return &simpleResponse{Success: true}, response, nil
+	h := func(*ReqMeta, *simpleRequest) (*simpleResponse, *ResMeta, error) {
+		resMeta := &ResMeta{Headers: transport.Headers{"foo": "bar"}}
+		return &simpleResponse{Success: true}, resMeta, nil
 	}
 
 	handler := jsonHandler{
