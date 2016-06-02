@@ -167,7 +167,6 @@ func (thriftTestHandler) TestException(ctx thrift.Context, arg string) error {
 		code := int32(1001)
 		return &gauntlet_apache.Xception{ErrorCode: &code, Message: &arg}
 	case "TException":
-		// TODO is there something better I can raise here?
 		// unexpected exception.
 		return errors.New("great sadness")
 	default:
