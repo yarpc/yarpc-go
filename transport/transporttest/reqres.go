@@ -31,9 +31,6 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 )
 
-// DefaultTTLDelta is the default TTLDelta used by RequestMatchers.
-const DefaultTTLDelta = 10 * time.Millisecond
-
 // RequestMatcher may be used in gomock argument lists to assert that two
 // requests match.
 //
