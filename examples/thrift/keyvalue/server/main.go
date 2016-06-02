@@ -42,7 +42,7 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) GetValue(req *thrift.ReqMeta, key *string) (string, *thrift.ResMeta, error) {
+func (h *handler) GetValue(reqMeta *thrift.ReqMeta, key *string) (string, *thrift.ResMeta, error) {
 	h.RLock()
 	defer h.RUnlock()
 
@@ -53,7 +53,7 @@ func (h *handler) GetValue(req *thrift.ReqMeta, key *string) (string, *thrift.Re
 	return "", nil, &kv.ResourceDoesNotExist{Key: *key}
 }
 
-func (h *handler) SetValue(req *thrift.ReqMeta, key *string, value *string) (*thrift.ResMeta, error) {
+func (h *handler) SetValue(reqMeta *thrift.ReqMeta, key *string, value *string) (*thrift.ResMeta, error) {
 	h.Lock()
 	h.items[*key] = *value
 	h.Unlock()

@@ -28,19 +28,19 @@ import (
 )
 
 // EchoRaw implements the echo/raw procedure.
-func EchoRaw(req *raw.ReqMeta, body []byte) ([]byte, *raw.ResMeta, error) {
-	return body, &raw.ResMeta{Headers: req.Headers}, nil
+func EchoRaw(reqMeta *raw.ReqMeta, body []byte) ([]byte, *raw.ResMeta, error) {
+	return body, &raw.ResMeta{Headers: reqMeta.Headers}, nil
 }
 
 // EchoJSON implements the echo procedure.
-func EchoJSON(req *json.ReqMeta, body map[string]interface{}) (map[string]interface{}, *json.ResMeta, error) {
-	return body, &json.ResMeta{Headers: req.Headers}, nil
+func EchoJSON(reqMeta *json.ReqMeta, body map[string]interface{}) (map[string]interface{}, *json.ResMeta, error) {
+	return body, &json.ResMeta{Headers: reqMeta.Headers}, nil
 }
 
 // EchoThrift implements the Thrift Echo service.
 type EchoThrift struct{}
 
 // Echo endpoint for the Echo service.
-func (EchoThrift) Echo(req *thrift.ReqMeta, ping *echo.Ping) (*echo.Pong, *thrift.ResMeta, error) {
-	return &echo.Pong{Boop: ping.Beep}, &thrift.ResMeta{Headers: req.Headers}, nil
+func (EchoThrift) Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (*echo.Pong, *thrift.ResMeta, error) {
+	return &echo.Pong{Boop: ping.Beep}, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
 }

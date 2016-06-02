@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	_requestType        = reflect.TypeOf((*ReqMeta)(nil))
-	_responseType       = reflect.TypeOf((*ResMeta)(nil))
+	_reqMetaType        = reflect.TypeOf((*ReqMeta)(nil))
+	_resMetaType        = reflect.TypeOf((*ResMeta)(nil))
 	_errorType          = reflect.TypeOf((*error)(nil)).Elem()
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
@@ -125,14 +125,14 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		))
 	}
 
-	if t.In(0) != _requestType {
+	if t.In(0) != _reqMetaType {
 		panic(fmt.Sprintf(
 			"the first argument of the handler for %q must be of type "+
 				"*json.ReqMeta, and not: %v", n, t.In(0),
 		))
 	}
 
-	if t.Out(1) != _responseType || t.Out(2) != _errorType {
+	if t.Out(1) != _resMetaType || t.Out(2) != _errorType {
 		panic(fmt.Sprintf(
 			"the last two results of the handler for %q must be of type "+
 				"*json.ResMeta and error, and not: %v, %v",

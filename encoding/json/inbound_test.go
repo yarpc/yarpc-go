@@ -95,8 +95,8 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	h := func(*ReqMeta, *simpleRequest) (*simpleResponse, *ResMeta, error) {
-		response := &ResMeta{Headers: transport.Headers{"foo": "bar"}}
-		return &simpleResponse{Success: true}, response, nil
+		resMeta := &ResMeta{Headers: transport.Headers{"foo": "bar"}}
+		return &simpleResponse{Success: true}, resMeta, nil
 	}
 
 	handler := jsonHandler{

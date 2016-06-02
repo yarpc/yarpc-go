@@ -379,12 +379,12 @@ func Run(t crossdock.T) {
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		req := thrift.ReqMeta{
+		reqMeta := thrift.ReqMeta{
 			Context: ctx,
 			TTL:     time.Second, // TODO context TTL should be enough
 		}
 
-		args := []reflect.Value{reflect.ValueOf(&req)}
+		args := []reflect.Value{reflect.ValueOf(&reqMeta)}
 		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give); ok {
 			args = append(args, give...)
 		} else {
