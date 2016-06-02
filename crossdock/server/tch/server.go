@@ -28,6 +28,7 @@ import (
 	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 )
 
 var (
@@ -63,8 +64,13 @@ func Stop() {
 // Register the different endpoints of the test subject
 func register(ch *tchannel.Channel) {
 	ch.Register(raw.Wrap(echoRawHandler{}), "echo/raw")
+
 	json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError)
-	thrift.NewServer(ch).Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
+
+	tserver := thrift.NewServer(ch)
+	tserver.Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
+	tserver.Register(gauntlet_apache.NewTChanThriftTestServer(&thriftTestHandler{}))
+	tserver.Register(gauntlet_apache.NewTChanSecondServiceServer(&secondServiceHandler{}))
 }
 
 func onError(ctx context.Context, err error) {
