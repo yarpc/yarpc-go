@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
@@ -38,6 +39,8 @@ import (
 	"github.com/thriftrw/thriftrw-go/ptr"
 	"golang.org/x/net/context"
 )
+
+const serverName = "yarpc-test"
 
 type gauntletEntry struct {
 	crossdock.Entry
@@ -83,10 +86,13 @@ type TT struct {
 
 // Run executes the thriftgauntlet behavior.
 func Run(t crossdock.T) {
+	RunGauntlet(t, rpc.Create(t), serverName)
+}
+
+// RunGauntlet takes an rpc object and runs the gauntlet
+func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
 	t = createGauntletT(t)
 	checks := crossdock.Checks(t)
-
-	rpc := rpc.Create(t)
 
 	bytesToken := random.Bytes(10)
 	tests := []TT{
@@ -136,7 +142,7 @@ func Run(t crossdock.T) {
 			Function:      "TestException",
 			Details:       "TException",
 			Give:          []interface{}{ptr.String("TException")},
-			WantErrorLike: `UnexpectedError: error for procedure "ThriftTest::testException" of service "yarpc-test": great sadness`,
+			WantErrorLike: "great sadness",
 		},
 		{
 			Function: "TestException",
@@ -372,7 +378,7 @@ func Run(t crossdock.T) {
 	for _, tt := range tests {
 		desc := BuildDesc(tt)
 
-		client := buildClient(t, desc, tt.Service, rpc.Channel("yarpc-test"))
+		client := buildClient(t, desc, tt.Service, rpc.Channel(serverName))
 		f := client.MethodByName(tt.Function)
 		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
 			continue
