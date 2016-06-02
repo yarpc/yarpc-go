@@ -20,23 +20,10 @@
 
 package transport
 
-import "golang.org/x/net/context"
-
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
 //go:generate mockgen -destination=transporttest/register.go -package=transporttest github.com/yarpc/yarpc-go/transport Handler
-
-// Handler handles a single transport-level request.
-type Handler interface {
-	// Handle the given request, writing the response to the given
-	// ResponseWriter.
-	//
-	// An error may be returned in case of failures. BadRequestError must be
-	// returned for invalid requests. All other failures are treated as
-	// UnexpectedErrors.
-	Handle(ctx context.Context, req *Request, resw ResponseWriter) error
-}
 
 // Registry maintains and provides access to a collection of procedures and
 // their handlers.
