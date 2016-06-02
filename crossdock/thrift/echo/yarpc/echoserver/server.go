@@ -65,7 +65,7 @@ func (h handler) Echo(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err

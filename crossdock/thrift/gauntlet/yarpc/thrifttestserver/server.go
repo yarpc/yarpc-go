@@ -84,7 +84,7 @@ func (h handler) TestBinary(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Re
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -101,7 +101,7 @@ func (h handler) TestByte(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Resp
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -118,7 +118,7 @@ func (h handler) TestDouble(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Re
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -135,7 +135,7 @@ func (h handler) TestEnum(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Resp
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -152,7 +152,7 @@ func (h handler) TestException(reqMeta *thrift.ReqMeta, body wire.Value) (thrift
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -169,7 +169,7 @@ func (h handler) TestI32(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Respo
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -186,7 +186,7 @@ func (h handler) TestI64(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Respo
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -203,7 +203,7 @@ func (h handler) TestInsanity(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -220,7 +220,7 @@ func (h handler) TestList(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Resp
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -237,7 +237,7 @@ func (h handler) TestMap(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Respo
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -254,7 +254,7 @@ func (h handler) TestMapMap(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Re
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -271,7 +271,7 @@ func (h handler) TestMulti(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Res
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -288,7 +288,7 @@ func (h handler) TestMultiException(reqMeta *thrift.ReqMeta, body wire.Value) (t
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -305,7 +305,7 @@ func (h handler) TestNest(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Resp
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -322,7 +322,7 @@ func (h handler) TestSet(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Respo
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -339,7 +339,7 @@ func (h handler) TestString(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Re
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -356,7 +356,7 @@ func (h handler) TestStringMap(reqMeta *thrift.ReqMeta, body wire.Value) (thrift
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -373,7 +373,7 @@ func (h handler) TestStruct(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Re
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -390,7 +390,7 @@ func (h handler) TestTypedef(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.R
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -407,7 +407,7 @@ func (h handler) TestVoid(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Resp
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err

@@ -65,7 +65,7 @@ func (h handler) BlahBlah(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Resp
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
@@ -82,7 +82,7 @@ func (h handler) SecondtestString(reqMeta *thrift.ReqMeta, body wire.Value) (thr
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.ResMeta = resMeta
+		response.Meta = resMeta
 		response.Body, err = result.ToWire()
 	}
 	return response, err
