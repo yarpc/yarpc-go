@@ -21,37 +21,29 @@
 package yarpc
 
 import (
-	"github.com/yarpc/yarpc-go/internal/reqcontext"
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/internal/baggage"
 
 	"golang.org/x/net/context"
 )
 
-// WithHeaders returns a copy of the given context with the given context headers.
+// WithBaggage returns a copy of the context with the given baggage attached to
+// it.
 //
-// If the context already has headers on it, the given headers will be appended
-// to the context, overwriting any existing headers with conflicting names.
+// Baggage is a set of key-value pairs that are sent to all downstream requests
+// made with the returned context. Use this sparingly: all downstream services
+// that receive baggage in a request will propagate it to all outbound calls
+// made as a result of receiving that request.
 //
-// Note that context headers are propagated across multiple hops; all downstream
-// requests will be able to see these. Use the Headers field in ReqMeta for
-// single-hop headers.
-func WithHeaders(ctx context.Context, headers transport.Headers) context.Context {
-	return reqcontext.AddHeaders(ctx, headers)
+// If baggage with the same key is already attached to the context, it will be
+// overwritten in the new context. The parent context will always be left
+// unchanged.
+func WithBaggage(ctx context.Context, key, value string) context.Context {
+	return baggage.NewContext(ctx, key, value)
 }
 
-// HeadersFromContext returns a copy of the headers stored on the given context.
-//
-// An empty headers map is returned if the context does not have any headers
-// associated with it.
-//
-// Note: The returned headers map is a copy of the headers stored on the
-// context. Modifications to it won't be propagated.
-func HeadersFromContext(ctx context.Context) transport.Headers {
-	hs := make(transport.Headers)
-	if headers := reqcontext.GetHeaders(ctx); headers != nil {
-		for k, v := range headers {
-			hs.Set(k, v)
-		}
-	}
-	return hs
+// BaggageFromContext returns the baggage attached to the context with the given
+// key name. False is returned if baggage with the given name was not attached
+// to the context.
+func BaggageFromContext(ctx context.Context, key string) (value string, ok bool) {
+	return baggage.Get(ctx, key)
 }

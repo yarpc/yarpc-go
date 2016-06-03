@@ -23,65 +23,44 @@ package yarpc
 import (
 	"testing"
 
-	"github.com/yarpc/yarpc-go/transport"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/thriftrw/thriftrw-go/ptr"
 	"golang.org/x/net/context"
 )
 
 func TestContextHeaders(t *testing.T) {
 	tests := []struct {
 		ctx  context.Context
-		want transport.Headers
+		want map[string]*string
 	}{
 		{
 			context.Background(),
-			transport.Headers{},
+			map[string]*string{"foo": nil},
 		},
 		{
-			WithHeaders(context.Background(), transport.Headers{"foo": "bar"}),
-			transport.Headers{"foo": "bar"},
+			WithBaggage(context.Background(), "foo", "bar"),
+			map[string]*string{"foo": ptr.String("bar"), "baz": nil},
 		},
 		{
-			WithHeaders(
-				WithHeaders(
-					context.Background(),
-					transport.Headers{"foo": "bar"},
-				),
-				transport.Headers{"baz": "qux", "xy": "z"},
-			),
-			transport.Headers{"foo": "bar", "baz": "qux", "xy": "z"},
+			WithBaggage(WithBaggage(context.Background(), "foo", "bar"), "baz", "qux"),
+			map[string]*string{"foo": ptr.String("bar"), "baz": ptr.String("qux")},
 		},
 		{
-			WithHeaders(
-				WithHeaders(
-					context.Background(),
-					transport.Headers{"foo": "bar"},
-				),
-				transport.Headers{"foo": "qux"},
-			),
-			transport.Headers{"foo": "qux"},
+			WithBaggage(WithBaggage(context.Background(), "foo", "bar"), "foo", "baz"),
+			map[string]*string{"foo": ptr.String("baz"), "bar": nil},
 		},
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, HeadersFromContext(tt.ctx))
+		for k, v := range tt.want {
+			got, ok := BaggageFromContext(tt.ctx, k)
+			if v != nil {
+				if assert.True(t, ok, "expected to find %v in baggage", k) {
+					assert.Equal(t, *v, got, "value fo %v did not match", k)
+				}
+			} else {
+				assert.False(t, ok, "did not expect to find %v in baggage", k)
+			}
+		}
 	}
-}
-
-func TestContextHeadersAreCopies(t *testing.T) {
-	ctx := WithHeaders(context.Background(), transport.Headers{"foo": "bar"})
-	assert.Equal(t, transport.Headers{"foo": "bar"}, HeadersFromContext(ctx))
-
-	HeadersFromContext(ctx)["foo"] = "not-bar"
-	assert.Equal(t, transport.Headers{"foo": "bar"}, HeadersFromContext(ctx))
-}
-
-func TestContextHeadersOriginalMapIsCopied(t *testing.T) {
-	hs := transport.Headers{"foo": "bar"}
-	ctx := WithHeaders(context.Background(), hs)
-	assert.Equal(t, transport.Headers{"foo": "bar"}, HeadersFromContext(ctx))
-
-	hs["foo"] = "not-bar"
-	assert.Equal(t, transport.Headers{"foo": "bar"}, HeadersFromContext(ctx))
 }
