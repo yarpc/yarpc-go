@@ -26,13 +26,15 @@ import (
 	"golang.org/x/net/context"
 )
 
+type contextHeadersKey struct{}
+
 // AddHeaders adds headers to the given context. Existing headers will be merged
 // with the new set, overwriting existing headers with conflicting names.
 func AddHeaders(ctx context.Context, headers transport.Headers) context.Context {
 	ctxHeaders := GetHeaders(ctx)
 	if ctxHeaders == nil {
 		ctxHeaders = make(transport.Headers, len(headers))
-		ctx = context.WithValue(ctx, contextHeadersKey, ctxHeaders)
+		ctx = context.WithValue(ctx, contextHeadersKey{}, ctxHeaders)
 	}
 
 	for k, v := range headers {
@@ -46,7 +48,7 @@ func AddHeaders(ctx context.Context, headers transport.Headers) context.Context 
 //
 // Changes to the returned transport.Headers will be retained on the context.
 func GetHeaders(ctx context.Context) transport.Headers {
-	hs, ok := ctx.Value(contextHeadersKey).(transport.Headers)
+	hs, ok := ctx.Value(contextHeadersKey{}).(transport.Headers)
 	if ok {
 		return hs
 	}
