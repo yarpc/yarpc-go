@@ -31,10 +31,12 @@ import (
 
 func TestHeaders(t *testing.T) {
 	tests := []struct {
+		prefix    string
 		transport transport.Headers
 		http      http.Header
 	}{
 		{
+			ApplicationHeaderPrefix,
 			transport.Headers{
 				"foo":     "bar",
 				"foo-bar": "hello",
@@ -47,8 +49,9 @@ func TestHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.transport, fromHTTPHeader(tt.http, nil))
-		assert.Equal(t, tt.http, toHTTPHeader(tt.transport, nil))
+		m := headerMapper{tt.prefix}
+		assert.Equal(t, tt.transport, m.FromHTTPHeaders(tt.http, nil))
+		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.transport, nil))
 	}
 }
 

@@ -27,40 +27,47 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 )
 
-// toHTTPHeader converts transport headers into HTTP headers.
+// headerConverter converts HTTP headers to and from transport headers.
+type headerMapper struct{ Prefix string }
+
+var (
+	applicationHeaders = headerMapper{ApplicationHeaderPrefix}
+	contextHeaders     = headerMapper{ContextHeaderPrefix}
+)
+
+// toHTTPHeaders converts application headers into transport headers.
 //
-// Headers are read from 'from' and written to 'to'. The final header
-// collection is returned.
+// Headers are read from 'from' and written to 'to'. The final header collection
+// is returned.
 //
 // If 'to' is nil, a new map will be assigned.
-func toHTTPHeader(from transport.Headers, to http.Header) http.Header {
+func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) http.Header {
 	if to == nil {
-		to = make(http.Header)
+		to = make(http.Header, len(from))
 	}
 	for k, v := range from {
-		to.Add(ApplicationHeaderPrefix+k, v)
+		to.Add(hm.Prefix+k, v)
 	}
 	return to
 }
 
-// fromHTTPHeader converts HTTP headers to transport headers.
+// fromHTTPHeaders converts HTTP headers to application headers.
 //
-// Headers are read from 'from' and written to 'to'. The final header
-// collection is returned.
+// Headers are read from 'from' and written to 'to'. The final header collection
+// is returned.
 //
 // If 'to' is nil, a new map will be assigned.
-func fromHTTPHeader(from http.Header, to transport.Headers) transport.Headers {
+func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
 	if to == nil {
-		to = make(transport.Headers)
+		to = make(transport.Headers, len(from))
 	}
 
 	for k := range from {
-		if strings.HasPrefix(k, ApplicationHeaderPrefix) {
-			realK := k[len(ApplicationHeaderPrefix):]
-			to.Set(realK, from.Get(k))
+		if strings.HasPrefix(k, hm.Prefix) {
+			key := k[len(hm.Prefix):]
+			to.Set(key, from.Get(k))
 		}
-		// Note: undefined behavior for multiple occurrences of the same
-		// header
+		// Note: undefined behavior for multiple occurrences of the same header
 	}
 	return to
 }

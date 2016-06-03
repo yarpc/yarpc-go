@@ -69,7 +69,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		Service:   popHeader(req.Header, ServiceHeader),
 		Procedure: popHeader(req.Header, ProcedureHeader),
 		Encoding:  transport.Encoding(popHeader(req.Header, EncodingHeader)),
-		Headers:   fromHTTPHeader(req.Header, nil),
+		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, nil),
 		Body:      req.Body,
 	}
 
@@ -100,7 +100,7 @@ func (rw responseWriter) Write(s []byte) (int, error) {
 }
 
 func (rw responseWriter) AddHeaders(h transport.Headers) {
-	toHTTPHeader(h, rw.w.Header())
+	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
 func (responseWriter) SetApplicationError() {
