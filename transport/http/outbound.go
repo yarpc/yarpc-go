@@ -56,8 +56,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		return nil, err
 	}
 
-	// TODO throw an error if caller tried to use our ProcedureHeader.
-	request.Header = toHTTPHeader(req.Headers, nil)
+	request.Header = applicationHeaders.ToHTTPHeaders(req.Headers, nil)
 	request.Header.Set(CallerHeader, req.Caller)
 	request.Header.Set(ServiceHeader, req.Service)
 	request.Header.Set(ProcedureHeader, req.Procedure)
@@ -75,7 +74,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return &transport.Response{
-			Headers: fromHTTPHeader(response.Header, nil),
+			Headers: applicationHeaders.FromHTTPHeaders(response.Header, nil),
 			Body:    response.Body,
 		}, nil
 	}

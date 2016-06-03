@@ -21,6 +21,15 @@
 package http
 
 const (
+	// ApplicationHeaderPrefix is the prefix added to application headers over
+	// the wire.
+	ApplicationHeaderPrefix = "Rpc-Header-"
+
+	// ContextHeaderPrefix is the prefix added to context headers over the wire.
+	ContextHeaderPrefix = "Context-"
+
+	// TODO(abg): Allow customizing header prefixes
+
 	// CallerHeader is the HTTP header used to indiate the service doing the calling
 	CallerHeader = "Rpc-Caller"
 
@@ -29,17 +38,11 @@ const (
 	EncodingHeader = "Rpc-Encoding"
 
 	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
-	TTLMSHeader = "Context-TTL-MS"
+	TTLMSHeader = ContextHeaderPrefix + "TTL-MS"
 
 	// ProcedureHeader is the HTTP header used to indicate the procedure
 	ProcedureHeader = "Rpc-Procedure"
 
 	// ServiceHeader is the HTTP header used to indicate the service
 	ServiceHeader = "Rpc-Service"
-
-	// ApplicationHeaderPrefix is the prefix added to application headers over
-	// the wire.
-	ApplicationHeaderPrefix = "Rpc-Header-"
 )
-
-// TODO Make consistent with other languages^
