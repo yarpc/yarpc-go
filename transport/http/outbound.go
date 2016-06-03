@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -65,6 +66,10 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	request.Header = applicationHeaders.ToHTTPHeaders(req.Headers, nil)
+	if hs := baggage.FromContext(ctx); hs != nil {
+		request.Header = baggageHeaders.ToHTTPHeaders(hs, request.Header)
+	}
+
 	request.Header.Set(CallerHeader, req.Caller)
 	request.Header.Set(ServiceHeader, req.Service)
 	request.Header.Set(ProcedureHeader, req.Procedure)
