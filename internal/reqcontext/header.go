@@ -30,7 +30,7 @@ import (
 // with the new set, overwriting existing headers with conflicting names.
 func AddHeaders(ctx context.Context, headers transport.Headers) context.Context {
 	ctxHeaders := GetHeaders(ctx)
-	if headers == nil {
+	if ctxHeaders == nil {
 		ctxHeaders = make(transport.Headers, len(headers))
 		ctx = context.WithValue(ctx, contextHeadersKey, ctxHeaders)
 	}
@@ -43,6 +43,8 @@ func AddHeaders(ctx context.Context, headers transport.Headers) context.Context 
 
 // GetHeaders returns the headers stored on the given context, or nil if the
 // context does not have headers associated with it.
+//
+// Changes to the returned transport.Headers will be retained on the context.
 func GetHeaders(ctx context.Context) transport.Headers {
 	hs, ok := ctx.Value(contextHeadersKey).(transport.Headers)
 	if ok {

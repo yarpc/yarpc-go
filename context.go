@@ -43,6 +43,9 @@ func WithHeaders(ctx context.Context, headers transport.Headers) context.Context
 //
 // An empty headers map is returned if the context does not have any headers
 // associated with it.
+//
+// Note: The returned headers map is a copy of the headers stored on the
+// context. Modifications to it won't be propagated.
 func HeadersFromContext(ctx context.Context) transport.Headers {
 	hs := make(transport.Headers)
 	if headers := reqcontext.GetHeaders(ctx); headers != nil {
