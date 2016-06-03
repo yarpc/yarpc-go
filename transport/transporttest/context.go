@@ -32,9 +32,10 @@ import (
 // within expected bounds: the current time, plus a TTL, plus or minus some
 // tolerance.
 type ContextMatcher struct {
-	t        *testing.T
-	ttl      time.Duration
-	ttlDelta time.Duration
+	t   *testing.T
+	ttl time.Duration
+
+	TTLDelta time.Duration
 }
 
 // NewContextMatcher creates a ContextMatcher for a testing context and an
@@ -43,7 +44,7 @@ func NewContextMatcher(t *testing.T, ttl time.Duration) *ContextMatcher {
 	return &ContextMatcher{
 		t:        t,
 		ttl:      ttl,
-		ttlDelta: DefaultTTLDelta,
+		TTLDelta: DefaultTTLDelta,
 	}
 }
 
@@ -64,8 +65,8 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 	}
 
 	ttl := d.Sub(time.Now())
-	maxTTL := c.ttl + c.ttlDelta
-	minTTL := c.ttl - c.ttlDelta
+	maxTTL := c.ttl + c.TTLDelta
+	minTTL := c.ttl - c.TTLDelta
 	if ttl > maxTTL || ttl < minTTL {
 		c.t.Logf("TTL out of expected bounds: %v < %v < %v", minTTL, ttl, maxTTL)
 		return false
@@ -75,5 +76,5 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 }
 
 func (c *ContextMatcher) String() string {
-	return fmt.Sprintf("ContextMatcher(TTL:%v±%v)", c.ttl, c.ttlDelta)
+	return fmt.Sprintf("ContextMatcher(TTL:%v±%v)", c.ttl, c.TTLDelta)
 }
