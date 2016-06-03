@@ -20,7 +20,10 @@
 
 package transport
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // The general hierarchy we have is:
 //
@@ -206,4 +209,33 @@ func (e procedureFailedError) Error() string {
 
 func (e procedureFailedError) AsHandlerError() HandlerError {
 	return LocalUnexpectedError(e)
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+type TimeoutError interface {
+	error
+
+	timeoutError()
+}
+
+type timeoutError struct {
+	Service   string
+	Procedure string
+	Duration  time.Duration
+}
+
+func NewTimeoutError(Service string, Procedure string, Duration time.Duration) timeoutError {
+	return timeoutError{
+		Service:   Service,
+		Procedure: Procedure,
+		Duration:  Duration,
+	}
+}
+
+func (e timeoutError) timeoutError() {}
+
+func (e timeoutError) Error() string {
+	return fmt.Sprintf(`timeout for procedure %q of service %q after %v`,
+		e.Procedure, e.Service, e.Duration)
 }

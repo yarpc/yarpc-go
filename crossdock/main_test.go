@@ -89,6 +89,12 @@ func TestCrossdock(t *testing.T) {
 				"transport": []string{"http", "tchannel"},
 			},
 		},
+		{
+			name: "outboundttl",
+			axes: axes{
+				"transport": []string{"http", "tchannel"},
+			},
+		},
 	}
 
 	for _, bb := range behaviors {
