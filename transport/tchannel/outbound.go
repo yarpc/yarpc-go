@@ -70,7 +70,13 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	var call *tchannel.OutboundCall
 	var err error
 
+	// Clamp context deadline
 	start := time.Now()
+	if req.TTL != 0 {
+		var cancel func()
+		ctx, cancel = context.WithDeadline(ctx, start.Add(req.TTL))
+		defer cancel()
+	}
 	deadline, _ := ctx.Deadline()
 
 	format := tchannel.Format(req.Encoding)

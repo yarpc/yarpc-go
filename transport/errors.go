@@ -213,6 +213,8 @@ func (e procedureFailedError) AsHandlerError() HandlerError {
 
 //////////////////////////////////////////////////////////////////////////////
 
+// TimeoutError indicates that an error occurred due to a context deadline over
+// the course of a request over any transport.
 type TimeoutError interface {
 	error
 
@@ -225,7 +227,9 @@ type timeoutError struct {
 	Duration  time.Duration
 }
 
-func NewTimeoutError(Service string, Procedure string, Duration time.Duration) timeoutError {
+// NewTimeoutError constructs an instance of a TimeoutError for the given
+// servier, procedure, and duration waited.
+func NewTimeoutError(Service string, Procedure string, Duration time.Duration) TimeoutError {
 	return timeoutError{
 		Service:   Service,
 		Procedure: Procedure,

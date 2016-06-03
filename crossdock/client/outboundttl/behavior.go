@@ -32,6 +32,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Run tests the behavior of any outbound transport to verify that it will
+// timeout if the server fails to respond in a timely fashion.
 func Run(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
@@ -41,14 +43,14 @@ func Run(t crossdock.T) {
 	_, _, err := ch.Call(&raw.ReqMeta{
 		Context:   newTestContext(),
 		Procedure: "sleep/raw",
-		TTL:       time.Millisecond * 100,
-	}, make([]byte, 0))
+		TTL:       100 * time.Millisecond,
+	}, nil)
 	fatals.Error(err, "expected a failure for timeout")
 
-	form := strings.HasPrefix(err.Error(), "timeout for procedure \"sleep/raw\" of service \"yarpc-test\" after")
+	form := strings.HasPrefix(err.Error(), `timeout for procedure "sleep/raw" of service "yarpc-test" after`)
 	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
 	_, ok := err.(transport.TimeoutError)
-	assert.True(ok, "transport should be a TimeoutError")
+	assert.True(ok, "transport should be a TimeoutError, got %T", err)
 }
 
 func newTestContext() context.Context {
