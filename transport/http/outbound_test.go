@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -78,6 +79,82 @@ func TestCallSuccess(t *testing.T) {
 	body, err := ioutil.ReadAll(res.Body)
 	if assert.NoError(t, err) {
 		assert.Equal(t, []byte("great success"), body)
+	}
+}
+
+func TestOutboundHeaders(t *testing.T) {
+	tests := []struct {
+		desc    string
+		context context.Context
+		headers transport.Headers
+
+		wantHeaders map[string]string
+	}{
+		{
+			desc:    "application headers",
+			headers: transport.Headers{"foo": "bar", "baz": "Qux"},
+			wantHeaders: map[string]string{
+				"Rpc-Header-Foo": "bar",
+				"Rpc-Header-Baz": "Qux",
+			},
+		},
+		{
+			desc: "baggage",
+			context: yarpc.WithBaggage(
+				yarpc.WithBaggage(context.Background(), "FOO", "bar"),
+				"baZ", "qUx",
+			),
+			wantHeaders: map[string]string{
+				"Context-Foo": "bar",
+				"Context-Baz": "qUx",
+			},
+		},
+		{
+			desc:    "application headers and baggage",
+			context: yarpc.WithBaggage(context.Background(), "foo", "bar"),
+			headers: transport.Headers{"foo": "baz"},
+			wantHeaders: map[string]string{
+				"Context-Foo":    "bar",
+				"Rpc-Header-Foo": "baz",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		server := httptest.NewServer(http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				defer r.Body.Close()
+				for k, v := range tt.wantHeaders {
+					assert.Equal(
+						t, v, r.Header.Get(k), "%v: header %v did not match", tt.desc, k)
+				}
+			},
+		))
+		defer server.Close()
+
+		ctx := tt.context
+		if ctx == nil {
+			ctx = context.TODO()
+		}
+
+		out := NewOutbound(server.URL)
+		res, err := out.Call(ctx, &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Headers:   tt.headers,
+			TTL:       time.Second, // TODO: delete
+			Procedure: "hello",
+			Body:      bytes.NewReader([]byte("world")),
+		})
+
+		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
+			continue
+		}
+
+		if !assert.NoError(t, res.Body.Close(), "%v: failed to close response body") {
+			continue
+		}
 	}
 }
 
