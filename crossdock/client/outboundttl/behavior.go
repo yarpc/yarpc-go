@@ -28,6 +28,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
+
 	"golang.org/x/net/context"
 )
 
