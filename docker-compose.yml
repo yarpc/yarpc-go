@@ -29,8 +29,6 @@ services:
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
             - BEHAVIOR_OUTBOUNDTTL=client,server,transport
 
-            - CALL_TIMEOUT=2
-
     go:
         build: .
         ports:
