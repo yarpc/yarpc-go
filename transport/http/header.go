@@ -62,9 +62,10 @@ func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) t
 		to = make(transport.Headers, len(from))
 	}
 
+	prefixLen := len(hm.Prefix)
 	for k := range from {
 		if strings.HasPrefix(k, hm.Prefix) {
-			key := k[len(hm.Prefix):]
+			key := k[prefixLen:]
 			to.Set(key, from.Get(k))
 		}
 		// Note: undefined behavior for multiple occurrences of the same header
