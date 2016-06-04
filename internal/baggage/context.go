@@ -33,10 +33,11 @@ type baggageKey struct{}
 //
 // The parent context's baggage is left intact.
 func NewContext(ctx context.Context, key, value string) context.Context {
-	baggage := make(transport.Headers)
+	hs := FromContext(ctx)
+	baggage := make(transport.Headers, len(hs)+1)
 
 	// Copy baggage already attached to the context.
-	if hs := FromContext(ctx); hs != nil {
+	if hs != nil {
 		for k, v := range hs {
 			baggage.Set(k, v)
 		}
@@ -58,12 +59,14 @@ func Get(ctx context.Context, key string) (value string, ok bool) {
 // NewContextWithHeaders is similar to NewContext except it attaches all
 // elements in the given headers map to the context.
 func NewContextWithHeaders(ctx context.Context, headers transport.Headers) context.Context {
+	hs := FromContext(ctx)
+
 	// This API is for use by Inbound implementations only. It's significantly
 	// cheaper than calling NewContext in a loop.
-	baggage := make(transport.Headers)
+	baggage := make(transport.Headers, len(hs)+len(headers))
 
 	// Copy baggage already attached to the context.
-	if hs := FromContext(ctx); hs != nil {
+	if hs != nil {
 		for k, v := range hs {
 			baggage.Set(k, v)
 		}
