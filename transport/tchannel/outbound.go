@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"io"
+	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
@@ -66,9 +67,17 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
-
 	var call *tchannel.OutboundCall
 	var err error
+
+	// Clamp context deadline
+	start := time.Now()
+	if req.TTL != 0 {
+		var cancel func()
+		ctx, cancel = context.WithDeadline(ctx, start.Add(req.TTL))
+		defer cancel()
+	}
+	deadline, _ := ctx.Deadline()
 
 	format := tchannel.Format(req.Encoding)
 	callOptions := tchannel.CallOptions{Format: format}
@@ -111,6 +120,9 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	res := call.Response()
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
+		if err == tchannel.ErrTimeout {
+			return nil, transport.NewTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
+		}
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)
 		}

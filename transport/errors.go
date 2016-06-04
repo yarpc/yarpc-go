@@ -20,7 +20,10 @@
 
 package transport
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // The general hierarchy we have is:
 //
@@ -206,4 +209,37 @@ func (e procedureFailedError) Error() string {
 
 func (e procedureFailedError) AsHandlerError() HandlerError {
 	return LocalUnexpectedError(e)
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+// TimeoutError indicates that an error occurred due to a context deadline over
+// the course of a request over any transport.
+type TimeoutError interface {
+	error
+
+	timeoutError()
+}
+
+type timeoutError struct {
+	Service   string
+	Procedure string
+	Duration  time.Duration
+}
+
+// NewTimeoutError constructs an instance of a TimeoutError for the given
+// service, procedure, and duration waited.
+func NewTimeoutError(Service string, Procedure string, Duration time.Duration) TimeoutError {
+	return timeoutError{
+		Service:   Service,
+		Procedure: Procedure,
+		Duration:  Duration,
+	}
+}
+
+func (e timeoutError) timeoutError() {}
+
+func (e timeoutError) Error() string {
+	return fmt.Sprintf(`timeout for procedure %q of service %q after %v`,
+		e.Procedure, e.Service, e.Duration)
 }

@@ -82,4 +82,6 @@ func register(rpc transport.Registry) {
 	json.Register(rpc, json.Procedure("unexpected-error", UnexpectedError))
 	json.Register(rpc, json.Procedure("bad-response", BadResponse))
 	json.Register(rpc, json.Procedure("phone", Phone))
+
+	raw.Register(rpc, raw.Procedure("sleep/raw", SleepRaw))
 }

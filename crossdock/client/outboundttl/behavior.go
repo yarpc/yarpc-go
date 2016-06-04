@@ -18,32 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package client
+package outboundttl
 
 import (
+	"strings"
+	"time"
+
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-	"github.com/yarpc/yarpc-go/crossdock/client/errors"
-	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
-	"github.com/yarpc/yarpc-go/crossdock/client/headers"
-	"github.com/yarpc/yarpc-go/crossdock/client/outboundttl"
-	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
-	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
+	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
 )
 
-var behaviors = crossdock.Behaviors{
-	"raw":            echo.Raw,
-	"json":           echo.JSON,
-	"thrift":         echo.Thrift,
-	"headers":        headers.Run,
-	"errors":         errors.Run,
-	"tchclient":      tchclient.Run,
-	"tchserver":      tchserver.Run,
-	"thriftgauntlet": gauntlet.Run,
-	"outboundttl":    outboundttl.Run,
+// Run tests the behavior of any outbound transport to verify that it will
+// timeout if the server fails to respond in a timely fashion.
+func Run(t crossdock.T) {
+	assert := crossdock.Assert(t)
+	fatals := crossdock.Fatals(t)
+
+	rpc := rpc.Create(t)
+	ch := raw.New(rpc.Channel("yarpc-test"))
+	_, _, err := ch.Call(&raw.ReqMeta{
+		Context:   newTestContext(),
+		Procedure: "sleep/raw",
+		TTL:       100 * time.Millisecond,
+	}, nil)
+	fatals.Error(err, "expected a failure for timeout")
+
+	form := strings.HasPrefix(err.Error(), `timeout for procedure "sleep/raw" of service "yarpc-test" after`)
+	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
+	_, ok := err.(transport.TimeoutError)
+	assert.True(ok, "error should be a TimeoutError, got %T", err)
 }
 
-// Start registers behaviors and begins the Crossdock client
-func Start() {
-	crossdock.Start(behaviors)
+func newTestContext() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	return ctx
 }

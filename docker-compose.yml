@@ -27,6 +27,7 @@ services:
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - BEHAVIOR_TCHSERVER=client,server,encoding
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
+            - BEHAVIOR_OUTBOUNDTTL=client,server,transport
 
     go:
         build: .

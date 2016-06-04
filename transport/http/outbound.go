@@ -51,6 +51,14 @@ type outbound struct {
 }
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	start := time.Now()
+	if req.TTL != 0 {
+		var cancel func()
+		ctx, cancel = context.WithDeadline(ctx, start.Add(req.TTL))
+		defer cancel()
+	}
+	deadline, _ := ctx.Deadline()
+
 	request, err := http.NewRequest("POST", o.URL, req.Body)
 	if err != nil {
 		return nil, err
@@ -69,6 +77,10 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	response, err := ctxhttp.Do(ctx, o.Client, request)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return nil, transport.NewTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
+		}
+
 		return nil, err
 	}
 
