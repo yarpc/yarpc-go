@@ -228,7 +228,7 @@ type timeoutError struct {
 }
 
 // NewTimeoutError constructs an instance of a TimeoutError for the given
-// servier, procedure, and duration waited.
+// service, procedure, and duration waited.
 func NewTimeoutError(Service string, Procedure string, Duration time.Duration) TimeoutError {
 	return timeoutError{
 		Service:   Service,

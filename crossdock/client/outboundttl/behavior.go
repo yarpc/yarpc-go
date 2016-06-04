@@ -50,7 +50,7 @@ func Run(t crossdock.T) {
 	form := strings.HasPrefix(err.Error(), `timeout for procedure "sleep/raw" of service "yarpc-test" after`)
 	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
 	_, ok := err.(transport.TimeoutError)
-	assert.True(ok, "transport should be a TimeoutError, got %T", err)
+	assert.True(ok, "error should be a TimeoutError, got %T", err)
 }
 
 func newTestContext() context.Context {
