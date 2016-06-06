@@ -25,6 +25,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yarpc/yarpc-go/internal/baggage"
+	"github.com/yarpc/yarpc-go/transport"
+
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 )
 
@@ -32,20 +36,40 @@ import (
 // within expected bounds: the current time, plus a TTL, plus or minus some
 // tolerance.
 type ContextMatcher struct {
-	t   *testing.T
-	ttl time.Duration
+	t       *testing.T
+	ttl     time.Duration
+	baggage transport.Headers
 
 	TTLDelta time.Duration
 }
 
-// NewContextMatcher creates a ContextMatcher for a testing context and an
-// expected TTL.
-func NewContextMatcher(t *testing.T, ttl time.Duration) *ContextMatcher {
-	return &ContextMatcher{
-		t:        t,
-		ttl:      ttl,
-		TTLDelta: DefaultTTLDelta,
+// ContextMatcherOption customizes the behavior of a ContextMatcher.
+type ContextMatcherOption func(*ContextMatcher)
+
+// ContextTTL requires that a Context have the given TTL on it, with a tolerance
+// of TTLDelta.
+func ContextTTL(ttl time.Duration) ContextMatcherOption {
+	return func(c *ContextMatcher) {
+		c.ttl = ttl
 	}
+}
+
+// ContextBaggage requires that the Context have the given baggage associated
+// with it.
+func ContextBaggage(b transport.Headers) ContextMatcherOption {
+	return func(c *ContextMatcher) {
+		c.baggage = b
+	}
+}
+
+// NewContextMatcher creates a ContextMatcher to verify properties about a
+// Context.
+func NewContextMatcher(t *testing.T, options ...ContextMatcherOption) *ContextMatcher {
+	matcher := &ContextMatcher{t: t, TTLDelta: DefaultTTLDelta}
+	for _, opt := range options {
+		opt(matcher)
+	}
+	return matcher
 }
 
 // Matches a context against an expected context, returning true only if the
@@ -54,22 +78,30 @@ func NewContextMatcher(t *testing.T, ttl time.Duration) *ContextMatcher {
 func (c *ContextMatcher) Matches(got interface{}) bool {
 	ctx, ok := got.(context.Context)
 	if !ok {
-		c.t.Logf("no context")
+		c.t.Logf("expected a Context but got a %T: %v", got, got)
 		return false
 	}
 
-	d, ok := ctx.Deadline()
-	if !ok {
-		c.t.Logf("no context deadline")
-		return false
+	if c.ttl != 0 {
+		d, ok := ctx.Deadline()
+		if !ok {
+			c.t.Logf(
+				"expected Context to have a TTL of %v but it has no deadline", c.ttl)
+			return false
+		}
+
+		ttl := d.Sub(time.Now())
+		maxTTL := c.ttl + c.TTLDelta
+		minTTL := c.ttl - c.TTLDelta
+		if ttl > maxTTL || ttl < minTTL {
+			c.t.Logf("TTL out of expected bounds: %v < %v < %v", minTTL, ttl, maxTTL)
+			return false
+		}
 	}
 
-	ttl := d.Sub(time.Now())
-	maxTTL := c.ttl + c.TTLDelta
-	minTTL := c.ttl - c.TTLDelta
-	if ttl > maxTTL || ttl < minTTL {
-		c.t.Logf("TTL out of expected bounds: %v < %v < %v", minTTL, ttl, maxTTL)
-		return false
+	if c.baggage != nil {
+		headers := baggage.FromContext(ctx)
+		assert.Equal(c.t, c.baggage, headers, "context baggage did not match")
 	}
 
 	return true
