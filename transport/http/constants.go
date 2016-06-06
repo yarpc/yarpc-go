@@ -25,8 +25,8 @@ const (
 	// the wire.
 	ApplicationHeaderPrefix = "Rpc-Header-"
 
-	// ContextHeaderPrefix is the prefix added to context headers over the wire.
-	ContextHeaderPrefix = "Context-"
+	// BaggageHeaderPrefix is the prefix added to context headers over the wire.
+	BaggageHeaderPrefix = "Context-"
 
 	// TODO(abg): Allow customizing header prefixes
 
@@ -38,7 +38,7 @@ const (
 	EncodingHeader = "Rpc-Encoding"
 
 	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
-	TTLMSHeader = ContextHeaderPrefix + "TTL-MS"
+	TTLMSHeader = BaggageHeaderPrefix + "TTL-MS"
 
 	// ProcedureHeader is the HTTP header used to indicate the procedure
 	ProcedureHeader = "Rpc-Procedure"

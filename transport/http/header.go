@@ -32,7 +32,7 @@ type headerMapper struct{ Prefix string }
 
 var (
 	applicationHeaders = headerMapper{ApplicationHeaderPrefix}
-	baggageHeaders     = headerMapper{ContextHeaderPrefix}
+	baggageHeaders     = headerMapper{BaggageHeaderPrefix}
 )
 
 // toHTTPHeaders converts application headers into transport headers.
