@@ -91,17 +91,17 @@ func TestHandlerHeaders(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	tests := []struct {
-		giveHeaders map[string]string // http headers to send
+		giveHeaders http.Header
 
 		wantTTL     time.Duration
 		wantHeaders transport.Headers
 		wantBaggage transport.Headers
 	}{
 		{
-			giveHeaders: map[string]string{
-				TTLMSHeader:      "1000",
-				"Rpc-Header-Foo": "bar",
-				"Context-Foo":    "Baz",
+			giveHeaders: http.Header{
+				TTLMSHeader:      {"1000"},
+				"Rpc-Header-Foo": {"bar"},
+				"Context-Foo":    {"Baz"},
 			},
 			wantTTL: time.Second,
 			wantHeaders: transport.Headers{
@@ -112,11 +112,11 @@ func TestHandlerHeaders(t *testing.T) {
 			},
 		},
 		{
-			giveHeaders: map[string]string{
-				TTLMSHeader:           "100",
-				"Rpc-Foo":             "ignored",
-				"ContextFoo":          "ignored",
-				"Context-Rpc-Service": "hello",
+			giveHeaders: http.Header{
+				TTLMSHeader:           {"100"},
+				"Rpc-Foo":             {"ignored"},
+				"ContextFoo":          {"ignored"},
+				"Context-Rpc-Service": {"hello"},
 			},
 			wantTTL:     100 * time.Millisecond,
 			wantHeaders: transport.Headers{},
@@ -145,8 +145,10 @@ func TestHandlerHeaders(t *testing.T) {
 		).Return(nil)
 
 		headers := http.Header{}
-		for k, v := range tt.giveHeaders {
-			headers.Set(k, v)
+		for k, vs := range tt.giveHeaders {
+			for _, v := range vs {
+				headers.Add(k, v)
+			}
 		}
 		headers.Set(CallerHeader, "caller")
 		headers.Set(ServiceHeader, "service")

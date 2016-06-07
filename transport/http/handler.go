@@ -85,8 +85,8 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		return err
 	}
 
-	if hs := baggageHeaders.FromHTTPHeaders(req.Header, nil); len(hs) > 0 {
-		ctx = baggage.NewContextWithHeaders(ctx, hs)
+	if headers := baggageHeaders.FromHTTPHeaders(req.Header, nil); len(headers) > 0 {
+		ctx = baggage.NewContextWithHeaders(ctx, headers)
 	}
 
 	// TODO capture and handle panic
