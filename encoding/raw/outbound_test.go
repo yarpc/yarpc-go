@@ -38,6 +38,8 @@ func TestCall(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	ctx := context.Background()
+
 	caller := "caller"
 	service := "service"
 
@@ -103,10 +105,9 @@ func TestCall(t *testing.T) {
 			}, nil)
 
 		resBody, res, err := client.Call(&ReqMeta{
-			Context:   context.TODO(), // TODO
+			Context:   ctx,
 			Procedure: tt.procedure,
 			Headers:   tt.headers,
-			// TTL: TODO
 		}, tt.body)
 
 		if tt.wantErr != "" {

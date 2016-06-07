@@ -96,7 +96,6 @@ func main() {
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			if value, _, err := client.GetValue(&thrift.ReqMeta{
 				Context: ctx,
-				TTL:     100 * time.Millisecond, // TODO(abg): Use context TTL
 			}, &key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
@@ -115,7 +114,6 @@ func main() {
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			if _, err := client.SetValue(&thrift.ReqMeta{
 				Context: ctx,
-				TTL:     100 * time.Millisecond, // TODO(abg): Use context TTL
 			}, &key, &value); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}

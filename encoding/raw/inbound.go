@@ -47,7 +47,6 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 		Context:   ctx,
 		Procedure: treq.Procedure,
 		Headers:   treq.Headers,
-		TTL:       treq.TTL,
 	}
 
 	resBody, resMeta, err := r.h(&reqMeta, reqBody)

@@ -63,7 +63,6 @@ func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *r
 		Context:   ctx,
 		Procedure: "echo/raw",
 		Headers:   headers,
-		TTL:       time.Second,
 	}
 	resBody, resMeta, err := client.Call(reqMeta, token)
 	return resBody, resMeta, err

@@ -64,7 +64,6 @@ func thriftCall(rpc yarpc.RPC, headers transport.Headers, token string) (string,
 
 	reqMeta := &thrift.ReqMeta{
 		Context: ctx,
-		TTL:     time.Second,
 		Headers: headers,
 	}
 	ping := &echo.Ping{Beep: token}

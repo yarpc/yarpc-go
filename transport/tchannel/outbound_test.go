@@ -97,12 +97,9 @@ func TestCallSuccess(t *testing.T) {
 		res, err := out.Call(
 			ctx,
 			&transport.Request{
-				Caller:   "caller",
-				Service:  "service",
-				Encoding: raw.Encoding,
-				// TODO(abg): test for TTL clamp down
-				// (https://github.com/yarpc/yarpc-go/issues/67)
-				TTL:       200 * time.Millisecond,
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
 				Procedure: "hello",
 				Body:      bytes.NewReader([]byte("world")),
 			},
@@ -178,12 +175,9 @@ func TestCallFailures(t *testing.T) {
 		_, err := out.Call(
 			ctx,
 			&transport.Request{
-				Caller:   "caller",
-				Service:  "service",
-				Encoding: raw.Encoding,
-				// TODO(abg): test for TTL clamp down
-				// (https://github.com/yarpc/yarpc-go/issues/67)
-				TTL:       200 * time.Millisecond,
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
 				Procedure: tt.procedure,
 				Body:      bytes.NewReader([]byte("sup")),
 			},

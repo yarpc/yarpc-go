@@ -50,7 +50,6 @@ func JSON(t crossdock.T) {
 		&json.ReqMeta{
 			Context:   ctx,
 			Procedure: "echo",
-			TTL:       time.Second, // TODO context already has timeout; use that
 		},
 		&jsonEcho{Token: token},
 		&response,

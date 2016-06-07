@@ -122,13 +122,12 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			expect: func(h *transporttest.MockHandler) {
 				h.EXPECT().Handle(
-					gomock.Any(),
+					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(
 						t, &transport.Request{
 							Caller:    "bar",
 							Service:   "foo",
 							Encoding:  raw.Encoding,
-							TTL:       time.Second,
 							Procedure: "hello",
 							Body:      bytes.NewReader([]byte{0x00}),
 						},
@@ -156,12 +155,11 @@ func TestHandlerFailures(t *testing.T) {
 					Caller:    "bar",
 					Service:   "foo",
 					Encoding:  json.Encoding,
-					TTL:       time.Second,
 					Procedure: "hello",
 					Body:      bytes.NewReader([]byte("{}")),
 				}
 				h.EXPECT().Handle(
-					gomock.Any(),
+					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Return(

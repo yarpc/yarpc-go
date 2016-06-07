@@ -55,7 +55,6 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 	res, err := t.Handler.Handle(&ReqMeta{
 		Context: ctx,
 		Headers: treq.Headers,
-		TTL:     treq.TTL,
 	}, reqBody)
 	if err != nil {
 		return err

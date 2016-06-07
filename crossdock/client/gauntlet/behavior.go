@@ -387,7 +387,6 @@ func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 		reqMeta := thrift.ReqMeta{
 			Context: ctx,
-			TTL:     time.Second, // TODO context TTL should be enough
 		}
 
 		args := []reflect.Value{reflect.ValueOf(&reqMeta)}

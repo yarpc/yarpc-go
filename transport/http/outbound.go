@@ -52,12 +52,8 @@ type outbound struct {
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	start := time.Now()
-	if req.TTL != 0 {
-		var cancel func()
-		ctx, cancel = context.WithDeadline(ctx, start.Add(req.TTL))
-		defer cancel()
-	}
 	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
 
 	request, err := http.NewRequest("POST", o.URL, req.Body)
 	if err != nil {
@@ -68,7 +64,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	request.Header.Set(CallerHeader, req.Caller)
 	request.Header.Set(ServiceHeader, req.Service)
 	request.Header.Set(ProcedureHeader, req.Procedure)
-	request.Header.Set(TTLMSHeader, fmt.Sprintf("%d", req.TTL/time.Millisecond))
+	request.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
 
 	encoding := string(req.Encoding)
 	if encoding != "" {

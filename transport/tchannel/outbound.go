@@ -70,14 +70,9 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	var call *tchannel.OutboundCall
 	var err error
 
-	// Clamp context deadline
 	start := time.Now()
-	if req.TTL != 0 {
-		var cancel func()
-		ctx, cancel = context.WithDeadline(ctx, start.Add(req.TTL))
-		defer cancel()
-	}
 	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
 
 	format := tchannel.Format(req.Encoding)
 	callOptions := tchannel.CallOptions{Format: format}
@@ -87,6 +82,8 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		call, err = o.Channel.BeginCall(
 			// TODO(abg): Set TimeoutPerAttempt in the context's retry options if
 			// TTL is set.
+			// (kris): Consider instead moving TimeoutPerAttempt to an outer
+			// layer, just clamp the context on outbound call.
 			ctx,
 			o.HostPort,
 			req.Service,
@@ -121,7 +118,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
 		if err == tchannel.ErrTimeout {
-			return nil, transport.NewTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
+			return nil, transport.NewTimeoutError(req.Service, req.Procedure, ttl)
 		}
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)

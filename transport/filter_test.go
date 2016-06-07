@@ -47,7 +47,6 @@ func TestNopFilter(t *testing.T) {
 		Caller:    "somecaller",
 		Service:   "someservice",
 		Encoding:  raw.Encoding,
-		TTL:       time.Second,
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}

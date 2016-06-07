@@ -38,12 +38,14 @@ func Run(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
 	rpc := rpc.Create(t)
 	ch := raw.New(rpc.Channel("yarpc-test"))
 	_, _, err := ch.Call(&raw.ReqMeta{
-		Context:   newTestContext(),
+		Context:   ctx,
 		Procedure: "sleep/raw",
-		TTL:       100 * time.Millisecond,
 	}, nil)
 	fatals.Error(err, "expected a failure for timeout")
 
@@ -56,9 +58,4 @@ func Run(t crossdock.T) {
 	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
 	_, ok := err.(transport.TimeoutError)
 	assert.True(ok, "error should be a TimeoutError, got %T", err)
-}
-
-func newTestContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	return ctx
 }

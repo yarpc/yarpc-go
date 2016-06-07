@@ -21,8 +21,6 @@
 package json
 
 import (
-	"time"
-
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -39,9 +37,6 @@ type ReqMeta struct {
 
 	// Request headers
 	Headers transport.Headers
-
-	// TTL is the amount of time in which this request is expected to finish.
-	TTL time.Duration
 }
 
 // Note: The shape of this request object is extremely similar to the

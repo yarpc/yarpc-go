@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
 )
 
 // Validator helps validate requests.
@@ -34,46 +36,59 @@ import (
 // 	v.ParseTTL(ttlstring)
 // 	request, err := v.Validate()
 type Validator struct {
-	Request *transport.Request
-	err     error
+	Request  *transport.Request
+	earlyErr error
+	lateErr  error
 }
 
 // Validate is a shortcut for the case where a request needs to be validated
 // without changing the TTL.
-func Validate(req *transport.Request) (*transport.Request, error) {
+func Validate(ctx context.Context, req *transport.Request) (*transport.Request, error) {
 	v := Validator{Request: req}
-	return v.Validate()
+	return v.Validate(ctx)
 }
 
-// ParseTTL parses the given TTL and updates the request's TTL value.
-func (v *Validator) ParseTTL(ttl string) {
+// ParseTTL takes a context parses the given TTL, clamping the context to that TTL
+// and as a side-effect, tracking any errors encountered while attempting to
+// parse and validate that TTL.
+func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, func()) {
 	if ttl == "" {
 		// The TTL is missing so set it to 0 and let Validate() fail with the
 		// correct error message.
-		v.Request.TTL = 0
-		return
+		return ctx, func() {}
 	}
 
 	ttlms, err := strconv.Atoi(ttl)
 	if err != nil {
-		v.err = invalidTTLError{
+		v.earlyErr = invalidTTLError{
 			Service:   v.Request.Service,
 			Procedure: v.Request.Procedure,
 			TTL:       ttl,
 		}
-		return
+		return ctx, func() {}
+	}
+	// negative TTLs are invalid
+	if ttlms < 0 {
+		v.lateErr = invalidTTLError{
+			Service:   v.Request.Service,
+			Procedure: v.Request.Procedure,
+			TTL:       fmt.Sprint(ttlms),
+		}
+		return ctx, func() {}
 	}
 
-	v.Request.TTL = time.Duration(ttlms) * time.Millisecond
+	return context.WithTimeout(ctx, time.Duration(ttlms)*time.Millisecond)
 }
 
 // Validate checks that the request inside this validator is valid and returns
 // either the validated request or an error.
-func (v *Validator) Validate() (*transport.Request, error) {
+func (v *Validator) Validate(ctx context.Context) (*transport.Request, error) {
 	// already failed
-	if v.err != nil {
-		return nil, v.err
+	if v.earlyErr != nil {
+		return nil, v.earlyErr
 	}
+
+	_, hasDeadline := ctx.Deadline()
 
 	// check missing params
 	var missingParams []string
@@ -86,20 +101,15 @@ func (v *Validator) Validate() (*transport.Request, error) {
 	if v.Request.Caller == "" {
 		missingParams = append(missingParams, "caller name")
 	}
-	if v.Request.TTL == 0 {
+	if !hasDeadline && v.lateErr == nil {
 		missingParams = append(missingParams, "TTL")
 	}
 	if len(missingParams) > 0 {
 		return nil, missingParametersError{Parameters: missingParams}
 	}
 
-	// negative TTLs are invalid
-	if v.Request.TTL < 0 {
-		return nil, invalidTTLError{
-			Service:   v.Request.Service,
-			Procedure: v.Request.Procedure,
-			TTL:       fmt.Sprint(int64(v.Request.TTL / time.Millisecond)),
-		}
+	if v.lateErr != nil {
+		return nil, v.lateErr
 	}
 
 	return v.Request, nil

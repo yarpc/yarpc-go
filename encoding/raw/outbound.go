@@ -50,6 +50,8 @@ type rawClient struct {
 }
 
 func (c rawClient) Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
+	// TODO clamp context deadline with channel-specific TTL
+
 	treq := transport.Request{
 		Caller:    c.caller,
 		Service:   c.service,
@@ -57,7 +59,6 @@ func (c rawClient) Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error)
 		Procedure: reqMeta.Procedure,
 		Headers:   reqMeta.Headers,
 		Body:      bytes.NewReader(body),
-		TTL:       reqMeta.TTL, // TODO use default from channel
 	}
 
 	tres, err := c.t.Call(reqMeta.Context, &treq)
