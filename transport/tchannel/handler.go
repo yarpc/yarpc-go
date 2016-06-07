@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/request"
@@ -107,7 +106,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 }
 
 func (h handler) callHandler(ctx context.Context, call inboundCall) error {
-	deadline, ok := ctx.Deadline()
+	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
 	}
@@ -117,7 +116,6 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 		Service:   call.ServiceName(),
 		Encoding:  transport.Encoding(call.Format()),
 		Procedure: call.MethodString(),
-		TTL:       deadline.Sub(time.Now()),
 	}
 
 	headers, err := readHeaders(call.Format(), call.Arg2Reader)
@@ -136,7 +134,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 	rw := newResponseWriter(treq, call)
 	defer rw.Close() // TODO(abg): log if this errors
 
-	treq, err = request.Validate(treq)
+	treq, err = request.Validate(ctx, treq)
 	if err != nil {
 		return err
 	}

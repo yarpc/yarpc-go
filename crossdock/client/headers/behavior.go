@@ -164,7 +164,6 @@ func (c rawCaller) Call(h transport.Headers) (transport.Headers, error) {
 		Context:   newTestContext(),
 		Headers:   h,
 		Procedure: "echo/raw",
-		TTL:       time.Second, // TODO context contains the timeout
 	}, []byte("hello"))
 
 	if err != nil {
@@ -181,7 +180,6 @@ func (c jsonCaller) Call(h transport.Headers) (transport.Headers, error) {
 		Context:   newTestContext(),
 		Headers:   h,
 		Procedure: "echo",
-		TTL:       time.Second, // TODO context contains the timeout
 	}, map[string]interface{}{}, &resBody)
 
 	if err != nil {
@@ -196,7 +194,6 @@ func (c thriftCaller) Call(h transport.Headers) (transport.Headers, error) {
 	_, res, err := c.c.Echo(&thrift.ReqMeta{
 		Context: newTestContext(),
 		Headers: h,
-		TTL:     time.Second,
 	}, &echo.Ping{Beep: "hello"})
 
 	if err != nil {

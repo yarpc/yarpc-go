@@ -71,7 +71,6 @@ func Phone(reqMeta *json.ReqMeta, body *PhoneRequest) (*PhoneResponse, *json.Res
 	_, err := client.Call(&json.ReqMeta{
 		Context:   ctx,
 		Procedure: body.Procedure,
-		TTL:       500 * time.Millisecond, // TODO(abg): delete once context timeout is enforced/used
 	}, body.Body, &resBody.Body)
 	if err != nil {
 		return nil, nil, err

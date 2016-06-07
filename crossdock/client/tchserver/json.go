@@ -64,7 +64,6 @@ func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *
 	reqMeta := &json.ReqMeta{
 		Context:   ctx,
 		Procedure: "echo",
-		TTL:       time.Second,
 		Headers:   headers,
 	}
 	reqBody := &jsonEcho{Token: token}

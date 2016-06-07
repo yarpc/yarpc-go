@@ -170,7 +170,6 @@ func TestSimpleRoundTrip(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
-				TTL:       200 * time.Millisecond, // TODO use default
 				Body:      bytes.NewReader([]byte(tt.requestBody)),
 			})
 
@@ -191,7 +190,6 @@ func TestSimpleRoundTrip(t *testing.T) {
 			})
 
 			ctx, _ := context.WithTimeout(rootCtx, 200*time.Millisecond)
-			// TODO(abg): should be picked up from TTL if unspecified
 
 			trans.WithHandler(handler, func(o transport.Outbound) {
 				res, err := o.Call(ctx, &transport.Request{
@@ -200,7 +198,6 @@ func TestSimpleRoundTrip(t *testing.T) {
 					Procedure: "hello",
 					Encoding:  raw.Encoding,
 					Headers:   tt.requestHeaders,
-					TTL:       200 * time.Millisecond, // TODO use default
 					Body:      bytes.NewReader([]byte(tt.requestBody)),
 				})
 

@@ -31,7 +31,7 @@ type ValidatorOutbound struct{ transport.Outbound }
 
 // Call performs the given request, failing early if the request is invalid.
 func (o ValidatorOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	request, err := Validate(request)
+	request, err := Validate(ctx, request)
 	if err != nil {
 		return nil, err
 	}

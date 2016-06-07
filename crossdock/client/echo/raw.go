@@ -44,7 +44,6 @@ func Raw(t crossdock.T) {
 	resBody, _, err := client.Call(&raw.ReqMeta{
 		Context:   ctx,
 		Procedure: "echo/raw",
-		TTL:       time.Second, // TODO context already has timeout; use that
 	}, token)
 
 	crossdock.Fatals(t).NoError(err, "call to echo/raw failed: %v", err)

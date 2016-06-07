@@ -54,7 +54,6 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 		Context:   ctx,
 		Procedure: treq.Procedure,
 		Headers:   treq.Headers,
-		TTL:       treq.TTL,
 	}
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(&reqMeta), reqBody})

@@ -20,10 +20,7 @@
 
 package transport
 
-import (
-	"io"
-	"time"
-)
+import "io"
 
 // Request is the low level request representation.
 type Request struct {
@@ -35,9 +32,6 @@ type Request struct {
 
 	// Name of the encoding used for the request body.
 	Encoding Encoding
-
-	// Amount of time within which this request must finish.
-	TTL time.Duration
 
 	// Name of the procedure being called.
 	Procedure string

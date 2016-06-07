@@ -63,7 +63,7 @@ func TestThriftHandler(t *testing.T) {
 
 		handler := NewMockHandler(mockCtrl)
 		handler.EXPECT().Handle(
-			&ReqMeta{Context: ctx, TTL: time.Second},
+			&ReqMeta{Context: ctx},
 			requestBody,
 		).Return(Response{
 			Body:               wire.NewValueStruct(wire.Struct{}),
@@ -77,7 +77,6 @@ func TestThriftHandler(t *testing.T) {
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  Encoding,
-			TTL:       time.Second,
 			Procedure: "MyService::someMethod",
 			Body:      bytes.NewReader([]byte("irrelevant")),
 		}, rw)

@@ -120,13 +120,14 @@ func TestInboundMux(t *testing.T) {
 
 	// this should fail
 	o := NewOutbound(addr)
-	_, err = o.Call(context.TODO(), &transport.Request{
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err = o.Call(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
 		Body:      bytes.NewReader([]byte("derp")),
-		TTL:       time.Second,
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
@@ -135,13 +136,12 @@ func TestInboundMux(t *testing.T) {
 
 	o = NewOutbound(addr + "rpc/v1")
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	res, err := o.Call(context.TODO(), &transport.Request{
+	res, err := o.Call(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
 		Body:      bytes.NewReader([]byte("derp")),
-		TTL:       time.Second,
 	})
 
 	if assert.NoError(t, err, "expected rpc request to succeed") {

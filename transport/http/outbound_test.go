@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -41,10 +42,14 @@ func TestCallSuccess(t *testing.T) {
 		func(w http.ResponseWriter, req *http.Request) {
 			defer req.Body.Close()
 
+			ttl := req.Header.Get(TTLMSHeader)
+			ttlms, err := strconv.Atoi(ttl)
+			assert.NoError(t, err, "can parse TTL header")
+			assert.InDelta(t, ttlms, 1000, 5, "ttl header within tolerance")
+
 			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
 			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
 			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
-			assert.Equal(t, "1000", req.Header.Get(TTLMSHeader))
 			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
 
 			body, err := ioutil.ReadAll(req.Body)
@@ -60,11 +65,12 @@ func TestCallSuccess(t *testing.T) {
 	defer successServer.Close()
 
 	out := NewOutbound(successServer.URL)
-	res, err := out.Call(context.TODO(), &transport.Request{
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	res, err := out.Call(ctx, &transport.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Encoding:  raw.Encoding,
-		TTL:       time.Second,
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte("world")),
 	})
@@ -102,11 +108,12 @@ func TestCallFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		out := NewOutboundWithClient(tt.url, http.DefaultClient)
-		_, err := out.Call(context.TODO(), &transport.Request{
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_, err := out.Call(ctx, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  raw.Encoding,
-			TTL:       time.Second,
 			Procedure: "wat",
 			Body:      bytes.NewReader([]byte("huh")),
 		})

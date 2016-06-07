@@ -27,12 +27,14 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 )
 
 func TestValidator(t *testing.T) {
 	tests := []struct {
 		req         *transport.Request
-		ttl         string // set to try parseTTL
+		ttl         time.Duration
+		ttlString   string // set to try parseTTL
 		wantErr     error
 		wantMessage string
 	}{
@@ -42,25 +44,25 @@ func TestValidator(t *testing.T) {
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  "raw",
-				TTL:       time.Second,
 				Procedure: "hello",
 			},
+			ttl: time.Second,
 		},
 		{
 			// encoding is not required
 			req: &transport.Request{
 				Caller:    "caller",
 				Service:   "service",
-				TTL:       time.Second,
 				Procedure: "hello",
 			},
+			ttl: time.Second,
 		},
 		{
 			req: &transport.Request{
 				Service:   "service",
-				TTL:       time.Second,
 				Procedure: "hello",
 			},
+			ttl: time.Second,
 			wantErr: missingParametersError{
 				Parameters: []string{"caller name"},
 			},
@@ -69,9 +71,9 @@ func TestValidator(t *testing.T) {
 		{
 			req: &transport.Request{
 				Caller:    "caller",
-				TTL:       time.Second,
 				Procedure: "hello",
 			},
+			ttl: time.Second,
 			wantErr: missingParametersError{
 				Parameters: []string{"service name"},
 			},
@@ -81,8 +83,8 @@ func TestValidator(t *testing.T) {
 			req: &transport.Request{
 				Caller:  "caller",
 				Service: "service",
-				TTL:     time.Second,
 			},
+			ttl: time.Second,
 			wantErr: missingParametersError{
 				Parameters: []string{"procedure"},
 			},
@@ -113,9 +115,9 @@ func TestValidator(t *testing.T) {
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  "raw",
-				TTL:       -1 * time.Second,
 				Procedure: "hello",
 			},
+			ttlString: "-1000",
 			wantErr: invalidTTLError{
 				Service:   "service",
 				Procedure: "hello",
@@ -130,22 +132,7 @@ func TestValidator(t *testing.T) {
 				Encoding:  "raw",
 				Procedure: "hello",
 			},
-			ttl: "-1000",
-			wantErr: invalidTTLError{
-				Service:   "service",
-				Procedure: "hello",
-				TTL:       "-1000",
-			},
-			wantMessage: `invalid TTL "-1000" for procedure "hello" of service "service": must be positive integer`,
-		},
-		{
-			req: &transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  "raw",
-				Procedure: "hello",
-			},
-			ttl: "not an integer",
+			ttlString: "not an integer",
 			wantErr: invalidTTLError{
 				Service:   "service",
 				Procedure: "hello",
@@ -157,14 +144,22 @@ func TestValidator(t *testing.T) {
 
 	for _, tt := range tests {
 		v := Validator{Request: tt.req}
-		if tt.ttl != "" {
-			v.ParseTTL(tt.ttl)
+
+		ctx := context.Background()
+		if tt.ttl != 0 {
+			var cancel func()
+			ctx, cancel = context.WithTimeout(ctx, tt.ttl)
+			defer cancel()
 		}
 
-		_, err := v.Validate()
+		if tt.ttlString != "" {
+			v.ParseTTL(ctx, tt.ttlString)
+		}
+
+		_, err := v.Validate(ctx)
 		if tt.wantErr != nil {
 			assert.Equal(t, tt.wantErr, err)
-			if tt.wantMessage != "" {
+			if tt.wantMessage != "" && err != nil {
 				assert.Equal(t, tt.wantMessage, err.Error())
 			}
 		} else {

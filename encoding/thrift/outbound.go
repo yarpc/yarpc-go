@@ -120,7 +120,6 @@ func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) 
 		Encoding:  Encoding,
 		Procedure: procedureName(c.thriftService, method),
 		Headers:   reqMeta.Headers,
-		TTL:       reqMeta.TTL,
 	}
 
 	var buffer bytes.Buffer
