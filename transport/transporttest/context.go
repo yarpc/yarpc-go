@@ -101,7 +101,9 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 
 	if c.baggage != nil {
 		headers := baggage.FromContext(ctx)
-		assert.Equal(c.t, c.baggage, headers, "context baggage did not match")
+		if !assert.Equal(c.t, c.baggage, headers, "context baggage did not match") {
+			return false
+		}
 	}
 
 	return true
