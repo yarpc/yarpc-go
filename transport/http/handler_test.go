@@ -48,12 +48,20 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(TTLMSHeader, "1000")
 	headers.Set(ProcedureHeader, "nyuck")
 	headers.Set(ServiceHeader, "curly")
+	headers.Set(BaggageHeaderPrefix+"Foo", "bar")
+	headers.Set(BaggageHeaderPrefix+"BAR", "baz")
 
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	httpHandler := handler{rpcHandler}
 
 	rpcHandler.EXPECT().Handle(
-		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
+		transporttest.NewContextMatcher(t,
+			transporttest.ContextTTL(time.Second),
+			transporttest.ContextBaggage(transport.Headers{
+				"foo": "bar",
+				"bar": "baz",
+			}),
+		),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "moe",
@@ -77,6 +85,85 @@ func TestHandlerSucces(t *testing.T) {
 	code := rw.Code
 	assert.Equal(t, code, 200, "expected 200 code")
 	assert.Equal(t, rw.Body.String(), "")
+}
+
+func TestHandlerHeaders(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		giveHeaders map[string]string // http headers to send
+
+		wantTTL     time.Duration
+		wantHeaders transport.Headers
+		wantBaggage transport.Headers
+	}{
+		{
+			giveHeaders: map[string]string{
+				TTLMSHeader:      "1000",
+				"Rpc-Header-Foo": "bar",
+				"Context-Foo":    "Baz",
+			},
+			wantTTL: time.Second,
+			wantHeaders: transport.Headers{
+				"foo": "bar",
+			},
+			wantBaggage: transport.Headers{
+				"foo": "Baz",
+			},
+		},
+		{
+			giveHeaders: map[string]string{
+				TTLMSHeader:           "100",
+				"Rpc-Foo":             "ignored",
+				"ContextFoo":          "ignored",
+				"Context-Rpc-Service": "hello",
+			},
+			wantTTL:     100 * time.Millisecond,
+			wantHeaders: transport.Headers{},
+			wantBaggage: transport.Headers{"rpc-service": "hello"},
+		},
+	}
+
+	for _, tt := range tests {
+		rpcHandler := transporttest.NewMockHandler(mockCtrl)
+		httpHandler := handler{rpcHandler}
+
+		rpcHandler.EXPECT().Handle(
+			transporttest.NewContextMatcher(t,
+				transporttest.ContextTTL(tt.wantTTL),
+				transporttest.ContextBaggage(tt.wantBaggage),
+			),
+			transporttest.NewRequestMatcher(t,
+				&transport.Request{
+					Caller:    "caller",
+					Service:   "service",
+					Encoding:  raw.Encoding,
+					TTL:       tt.wantTTL,
+					Procedure: "hello",
+					Body:      bytes.NewReader([]byte("world")),
+				}),
+			gomock.Any(),
+		).Return(nil)
+
+		headers := http.Header{}
+		for k, v := range tt.giveHeaders {
+			headers.Set(k, v)
+		}
+		headers.Set(CallerHeader, "caller")
+		headers.Set(ServiceHeader, "service")
+		headers.Set(EncodingHeader, "raw")
+		headers.Set(ProcedureHeader, "hello")
+
+		req := &http.Request{
+			Method: "POST",
+			Header: headers,
+			Body:   ioutil.NopCloser(bytes.NewReader([]byte("world"))),
+		}
+		rw := httptest.NewRecorder()
+		httpHandler.ServeHTTP(rw, req)
+		assert.Equal(t, 200, rw.Code, "expected 200 status code")
+	}
 }
 
 func TestHandlerFailures(t *testing.T) {
