@@ -27,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -95,8 +96,9 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
-	if err := checkSuperSet(l.Headers, r.Headers); err != nil {
-		m.t.Logf("Headers mismatch: %v != %v\n\t%v", l.Headers, r.Headers, err)
+	// len check to handle nil vs empty cases gracefully.
+	if len(l.Headers) != len(r.Headers) && !assert.Equal(m.t, l.Headers, r.Headers) {
+		m.t.Logf("Headers mismatch")
 		return false
 	}
 
