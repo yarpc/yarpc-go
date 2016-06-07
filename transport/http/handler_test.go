@@ -139,6 +139,7 @@ func TestHandlerHeaders(t *testing.T) {
 					Service:   "service",
 					Encoding:  raw.Encoding,
 					Procedure: "hello",
+					Headers:   tt.wantHeaders,
 					Body:      bytes.NewReader([]byte("world")),
 				}),
 			gomock.Any(),

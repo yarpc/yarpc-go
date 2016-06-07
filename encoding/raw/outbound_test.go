@@ -95,6 +95,7 @@ func TestCall(t *testing.T) {
 					Caller:    caller,
 					Service:   service,
 					Procedure: tt.procedure,
+					Headers:   tt.headers,
 					Encoding:  Encoding,
 					Body:      bytes.NewReader(tt.body),
 				}),
