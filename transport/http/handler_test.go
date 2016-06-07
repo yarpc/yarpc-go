@@ -138,7 +138,6 @@ func TestHandlerHeaders(t *testing.T) {
 					Caller:    "caller",
 					Service:   "service",
 					Encoding:  raw.Encoding,
-					TTL:       tt.wantTTL,
 					Procedure: "hello",
 					Body:      bytes.NewReader([]byte("world")),
 				}),

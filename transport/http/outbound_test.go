@@ -149,7 +149,6 @@ func TestOutboundHeaders(t *testing.T) {
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Headers:   tt.headers,
-			TTL:       time.Second, // TODO: delete
 			Procedure: "hello",
 			Body:      bytes.NewReader([]byte("world")),
 		})
