@@ -47,6 +47,11 @@ func Run(t crossdock.T) {
 	}, nil)
 	fatals.Error(err, "expected a failure for timeout")
 
+	if err, ok := err.(transport.BadRequestError); !ok {
+		t.Skipf("sleep/raw method not implemented: %v", err)
+		return
+	}
+
 	form := strings.HasPrefix(err.Error(), `timeout for procedure "sleep/raw" of service "yarpc-test" after`)
 	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
 	_, ok := err.(transport.TimeoutError)
