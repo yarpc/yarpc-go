@@ -42,12 +42,12 @@ func TestNopInterceptor(t *testing.T) {
 	h := transporttest.NewMockHandler(mockCtrl)
 	wrappedH := transport.ApplyInterceptor(h, transport.NopInterceptor)
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	req := &transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
 		Encoding:  raw.Encoding,
-		TTL:       time.Second,
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}

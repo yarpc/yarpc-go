@@ -26,7 +26,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/yarpc/yarpc-go/transport"
 )
@@ -44,10 +43,6 @@ type RequestMatcher struct {
 	t    *testing.T
 	req  *transport.Request
 	body []byte
-
-	// Maximum amount of variation allowed when comparing TTLs. Defaults to 5
-	// milliseconds.
-	TTLDelta time.Duration
 }
 
 // NewRequestMatcher constructs a new RequestMatcher from the given testing.T
@@ -64,7 +59,7 @@ func NewRequestMatcher(t *testing.T, r *transport.Request) RequestMatcher {
 	// restore a copy of the body so that the caller can still use the request
 	// object
 	r.Body = bytes.NewReader(body)
-	return RequestMatcher{t: t, req: r, body: body, TTLDelta: DefaultTTLDelta}
+	return RequestMatcher{t: t, req: r, body: body}
 }
 
 // TODO: Headers like User-Agent, Content-Length, etc. make their way to the
@@ -97,15 +92,6 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 
 	if l.Procedure != r.Procedure {
 		m.t.Logf("Procedure mismatch: %s != %s", l.Procedure, r.Procedure)
-		return false
-	}
-
-	ttlDiff := l.TTL - r.TTL
-	if ttlDiff < 0 {
-		ttlDiff = -ttlDiff
-	}
-	if ttlDiff > m.TTLDelta {
-		m.t.Logf("TTL mismatch: %v != %v", l.TTL, r.TTL)
 		return false
 	}
 

@@ -74,15 +74,16 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		Body:      req.Body,
 	}
 
+	ctx := context.Background()
+
 	v := request.Validator{Request: treq}
-	v.ParseTTL(popHeader(req.Header, TTLMSHeader))
-	treq, err := v.Validate()
+	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
+	defer cancel()
+
+	treq, err := v.Validate(ctx)
 	if err != nil {
 		return err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), treq.TTL)
-	defer cancel()
 
 	if hs := baggageHeaders.FromHTTPHeaders(req.Header, nil); len(hs) > 0 {
 		ctx = baggage.NewContextWithHeaders(ctx, hs)

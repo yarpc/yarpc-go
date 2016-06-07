@@ -61,7 +61,6 @@ func (c jsonClient) Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut inter
 		Encoding:  Encoding,
 		Procedure: reqMeta.Procedure,
 		Headers:   reqMeta.Headers,
-		TTL:       reqMeta.TTL, // TODO use default from channel
 	}
 
 	encoded, err := json.Marshal(reqBody)
