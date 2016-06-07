@@ -22,13 +22,50 @@ package tchannel
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
+	"strings"
 
+	"golang.org/x/net/context"
+
+	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/tchannel/internal"
 
 	"github.com/uber/tchannel-go"
 )
+
+// pullBaggage pulls the context headers from the given transport.Headers,
+// deleting them from the original headers map.
+func pullBaggage(headers transport.Headers) transport.Headers {
+	ctxheaders := make(transport.Headers)
+	prefix := strings.ToLower(BaggageHeaderPrefix)
+	prefixLen := len(prefix)
+	for k, v := range headers {
+		if strings.HasPrefix(k, prefix) {
+			key := k[prefixLen:]
+			ctxheaders.Set(key, v)
+			headers.Del(k)
+		}
+	}
+	return ctxheaders
+}
+
+// readRequestHeaders reads headers and baggage from an incoming request.
+func readRequestHeaders(
+	ctx context.Context,
+	format tchannel.Format,
+	getReader func() (tchannel.ArgReader, error),
+) (context.Context, transport.Headers, error) {
+	headers, err := readHeaders(format, getReader)
+	if err != nil {
+		return ctx, nil, err
+	}
+	if ctxheaders := pullBaggage(headers); ctxheaders != nil {
+		ctx = baggage.NewContextWithHeaders(ctx, ctxheaders)
+	}
+	return ctx, headers, nil
+}
 
 // readHeaders reads headers using the given function to get the arg reader.
 //
@@ -44,7 +81,6 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 		var headers map[string]string
 		err := tchannel.NewArgReader(getReader()).ReadJSON(&headers)
 		return transport.NewHeaders(headers), err
-		// ^headers will never be nil
 	}
 
 	r, err := getReader()
@@ -61,8 +97,36 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 	if headers == nil {
 		headers = make(transport.Headers)
 	}
-
 	return headers, r.Close()
+}
+
+func writeRequestHeaders(
+	ctx context.Context,
+	format tchannel.Format,
+	appheaders transport.Headers,
+	getWriter func() (tchannel.ArgWriter, error),
+) error {
+	ctxheaders := baggage.FromContext(ctx)
+	headers := make(transport.Headers, len(ctxheaders)+len(appheaders))
+
+	prefix := strings.ToLower(BaggageHeaderPrefix)
+	for k, v := range appheaders {
+		if strings.HasPrefix(k, prefix) {
+			return fmt.Errorf(
+				// TODO: create error type for this
+				"%q is an invalid header: application headers cannot start with %q",
+				k, BaggageHeaderPrefix)
+		}
+		headers.Set(k, v)
+	}
+
+	if ctxheaders != nil {
+		for k, v := range ctxheaders {
+			headers.Set(BaggageHeaderPrefix+k, v)
+		}
+	}
+
+	return writeHeaders(format, headers, getWriter)
 }
 
 // writeHeaders writes the given headers using the given function to get the
