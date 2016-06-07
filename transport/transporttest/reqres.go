@@ -96,7 +96,7 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
-	// != check to handle nil vs empty cases gracefully.
+	// len check to handle nil vs empty cases gracefully.
 	if len(l.Headers) != len(r.Headers) && !assert.Equal(m.t, l.Headers, r.Headers) {
 		m.t.Logf("Headers mismatch")
 		return false
