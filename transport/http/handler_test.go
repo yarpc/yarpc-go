@@ -53,7 +53,7 @@ func TestHandlerSucces(t *testing.T) {
 	httpHandler := handler{rpcHandler}
 
 	rpcHandler.EXPECT().Handle(
-		transporttest.NewContextMatcher(t, time.Second),
+		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "moe",
@@ -176,7 +176,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
-		transporttest.NewContextMatcher(t, time.Second),
+		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "somecaller",
