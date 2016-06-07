@@ -23,6 +23,7 @@ package http
 import (
 	"net/http"
 
+	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -82,6 +83,10 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 	treq, err := v.Validate(ctx)
 	if err != nil {
 		return err
+	}
+
+	if headers := baggageHeaders.FromHTTPHeaders(req.Header, nil); len(headers) > 0 {
+		ctx = baggage.NewContextWithHeaders(ctx, headers)
 	}
 
 	// TODO capture and handle panic
