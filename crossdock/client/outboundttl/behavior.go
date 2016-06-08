@@ -49,7 +49,7 @@ func Run(t crossdock.T) {
 	}, nil)
 	fatals.Error(err, "expected a failure for timeout")
 
-	if err, ok := err.(transport.BadRequestError); !ok {
+	if err, ok := err.(transport.BadRequestError); ok {
 		t.Skipf("sleep/raw method not implemented: %v", err)
 		return
 	}
