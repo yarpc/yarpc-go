@@ -124,7 +124,7 @@ func TestOutboundHeaders(t *testing.T) {
 			if ctx == nil {
 				ctx = context.Background()
 			}
-			ctx, _ = context.WithTimeout(ctx, 200*time.Millisecond)
+			ctx, _ = context.WithTimeout(ctx, time.Second)
 
 			res, err := out.Call(
 				ctx,
