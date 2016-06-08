@@ -24,10 +24,10 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -97,9 +97,11 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 	}
 
 	// len check to handle nil vs empty cases gracefully.
-	if len(l.Headers) != len(r.Headers) && !assert.Equal(m.t, l.Headers, r.Headers) {
-		m.t.Logf("Headers mismatch")
-		return false
+	if len(l.Headers) != len(r.Headers) {
+		if !reflect.DeepEqual(l.Headers, r.Headers) {
+			m.t.Logf("Headers did not match:\n\t   %v\n\t!= %v", l.Headers, r.Headers)
+			return false
+		}
 	}
 
 	rbody, err := ioutil.ReadAll(r.Body)
