@@ -57,10 +57,10 @@ func TestHandlerSucces(t *testing.T) {
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
-			transporttest.ContextBaggage(transport.Headers{
+			transporttest.ContextBaggage{
 				"foo": "bar",
 				"bar": "baz",
-			}),
+			},
 		),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
