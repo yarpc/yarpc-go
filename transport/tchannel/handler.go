@@ -118,7 +118,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 		Procedure: call.MethodString(),
 	}
 
-	headers, err := readHeaders(call.Format(), call.Arg2Reader)
+	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {
 		return encoding.RequestHeadersDecodeError(treq, err)
 	}

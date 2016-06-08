@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -47,6 +48,96 @@ var newOutbounds = []func(*tchannel.Channel, string) transport.Outbound{
 	},
 }
 
+func TestOutboundHeaders(t *testing.T) {
+	tests := []struct {
+		context context.Context
+		headers transport.Headers
+
+		wantHeaders []byte
+		wantError   string
+	}{
+		{
+			context: yarpc.WithBaggage(context.Background(), "FOO", "Bar"),
+			wantHeaders: []byte{
+				0x00, 0x01,
+				0x00, 0x0B, 'c', 'o', 'n', 't', 'e', 'x', 't', '-', 'f', 'o', 'o', // context-foo
+				0x00, 0x03, 'B', 'a', 'r',
+			},
+		},
+		{
+			headers: transport.Headers{"contextfoo": "bar"},
+			wantHeaders: []byte{
+				0x00, 0x01,
+				0x00, 0x0A, 'c', 'o', 'n', 't', 'e', 'x', 't', 'f', 'o', 'o',
+				0x00, 0x03, 'b', 'a', 'r',
+			},
+		},
+		{
+			headers: transport.Headers{"Foo": "bar"},
+			wantHeaders: []byte{
+				0x00, 0x01,
+				0x00, 0x03, 'f', 'o', 'o',
+				0x00, 0x03, 'b', 'a', 'r',
+			},
+		},
+		{
+			headers:   transport.Headers{"context-foo": "bar"},
+			wantError: `application headers cannot start with "Context-"`,
+		},
+	}
+
+	for _, tt := range tests {
+		server := testutils.NewServer(t, nil)
+		defer server.Close()
+		hostport := server.PeerInfo().HostPort
+
+		server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
+			func(ctx context.Context, call *tchannel.InboundCall) {
+				headers, body, err := readArgs(call)
+				if assert.NoError(t, err, "failed to read request") {
+					assert.Equal(t, tt.wantHeaders, headers, "headers did not match")
+					assert.Equal(t, []byte("world"), body)
+				}
+
+				err = writeArgs(call.Response(), []byte{0x00, 0x00}, []byte("bye!"))
+				assert.NoError(t, err, "failed to write response")
+			}))
+
+		for _, getOutbound := range newOutbounds {
+			out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+				ServiceName: "caller",
+			}), hostport)
+
+			ctx := tt.context
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			ctx, _ = context.WithTimeout(ctx, time.Second)
+
+			res, err := out.Call(
+				ctx,
+				&transport.Request{
+					Caller:    "caller",
+					Service:   "service",
+					Encoding:  raw.Encoding,
+					Procedure: "hello",
+					Headers:   tt.headers,
+					Body:      bytes.NewReader([]byte("world")),
+				},
+			)
+			if tt.wantError != "" {
+				if assert.Error(t, err, "expected error") {
+					assert.Contains(t, err.Error(), tt.wantError)
+				}
+			} else {
+				if assert.NoError(t, err, "call failed") {
+					defer res.Body.Close()
+				}
+			}
+		}
+	}
+}
+
 func TestCallSuccess(t *testing.T) {
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
@@ -59,15 +150,9 @@ func TestCallSuccess(t *testing.T) {
 			assert.Equal(t, tchannel.Raw, call.Format())
 			assert.Equal(t, "hello", call.MethodString())
 
-			var headers []byte
-			err := tchannel.NewArgReader(call.Arg2Reader()).Read(&headers)
-			if assert.NoError(t, err, "failed to read request headers") {
+			headers, body, err := readArgs(call)
+			if assert.NoError(t, err, "failed to read request") {
 				assert.Equal(t, []byte{0x00, 0x00}, headers)
-			}
-
-			var body []byte
-			err = tchannel.NewArgReader(call.Arg3Reader()).Read(&body)
-			if assert.NoError(t, err, "failed to read request body") {
 				assert.Equal(t, []byte("world"), body)
 			}
 
@@ -75,17 +160,13 @@ func TestCallSuccess(t *testing.T) {
 			assert.True(t, ok, "deadline expected")
 			assert.WithinDuration(t, time.Now(), dl, 200*time.Millisecond)
 
-			err = tchannel.NewArgWriter(call.Response().Arg2Writer()).
-				Write([]byte{
+			err = writeArgs(call.Response(),
+				[]byte{
 					0x00, 0x01,
 					0x00, 0x03, 'f', 'o', 'o',
 					0x00, 0x03, 'b', 'a', 'r',
-				})
-			assert.NoError(t, err, "failed to write headers")
-
-			err = tchannel.NewArgWriter(call.Response().Arg3Writer()).
-				Write([]byte("great success"))
-			assert.NoError(t, err, "failed to write body")
+				}, []byte("great success"))
+			assert.NoError(t, err, "failed to write response")
 		}))
 
 	for _, getOutbound := range newOutbounds {

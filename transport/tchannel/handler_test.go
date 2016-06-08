@@ -40,6 +40,72 @@ import (
 	"golang.org/x/net/context"
 )
 
+func TestHandlerErrors(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		format  tchannel.Format
+		headers []byte
+
+		wantHeaders transport.Headers
+		wantBaggage transport.Headers
+	}{
+		{
+			format:      tchannel.JSON,
+			headers:     []byte(`{"Rpc-Header-Foo": "bar", "context-foo": "Baz"}`),
+			wantHeaders: transport.Headers{"rpc-header-foo": "bar"},
+			wantBaggage: transport.Headers{"foo": "Baz"},
+		},
+		{
+			format: tchannel.Thrift,
+			headers: []byte{
+				0x00, 0x02, // 2 headers
+				0x00, 0x03, 'F', 'o', 'o', // Foo
+				0x00, 0x03, 'B', 'a', 'r', // Bar
+				0x00, 0x0B, 'C', 'o', 'n', 't', 'e', 'x', 't', '-', 'F', 'o', 'o', // Context-Foo
+				0x00, 0x03, 'B', 'a', 'z', // Baz
+			},
+			wantHeaders: transport.Headers{"foo": "Bar"},
+			wantBaggage: transport.Headers{"foo": "Baz"},
+		},
+	}
+
+	for _, tt := range tests {
+		rpcHandler := transporttest.NewMockHandler(mockCtrl)
+		tchHandler := handler{Handler: rpcHandler}
+
+		rpcHandler.EXPECT().Handle(
+			transporttest.NewContextMatcher(t, transporttest.ContextBaggage(tt.wantBaggage)),
+			transporttest.NewRequestMatcher(t,
+				&transport.Request{
+					Caller:    "caller",
+					Service:   "service",
+					Headers:   tt.wantHeaders,
+					Encoding:  transport.Encoding(tt.format),
+					Procedure: "hello",
+					Body:      bytes.NewReader([]byte("world")),
+				}),
+			gomock.Any(),
+		).Return(nil)
+
+		respRecorder := newResponseRecorder()
+
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		tchHandler.handle(ctx, &fakeInboundCall{
+			service: "service",
+			caller:  "caller",
+			format:  tt.format,
+			method:  "hello",
+			arg2:    tt.headers,
+			arg3:    []byte("world"),
+			resp:    respRecorder,
+		})
+
+		assert.NoError(t, respRecorder.systemErr, "did not expect an error")
+	}
+}
+
 func TestHandlerFailures(t *testing.T) {
 	tests := []struct {
 		desc   string

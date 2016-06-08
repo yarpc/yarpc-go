@@ -28,6 +28,24 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
+func readArgs(r tchannel.ArgReadable) (arg2, arg3 []byte, err error) {
+	err = tchannel.NewArgReader(r.Arg2Reader()).Read(&arg2)
+	if err != nil {
+		return
+	}
+
+	err = tchannel.NewArgReader(r.Arg3Reader()).Read(&arg3)
+	return
+}
+
+func writeArgs(w tchannel.ArgWritable, arg2, arg3 []byte) error {
+	if err := tchannel.NewArgWriter(w.Arg2Writer()).Write(arg2); err != nil {
+		return err
+	}
+
+	return tchannel.NewArgWriter(w.Arg3Writer()).Write(arg3)
+}
+
 // This file provides utilities to help test TChannel behavior used by
 // multiple tests.
 
