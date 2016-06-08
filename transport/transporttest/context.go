@@ -22,13 +22,13 @@ package transporttest
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 )
 
@@ -101,7 +101,8 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 
 	if c.baggage != nil {
 		headers := baggage.FromContext(ctx)
-		if !assert.Equal(c.t, c.baggage, headers, "context baggage did not match") {
+		if !reflect.DeepEqual(c.baggage, headers) {
+			c.t.Logf("Headers did not match:\n\t   %v (want)\n\t!= %v (got)", c.baggage, headers)
 			return false
 		}
 	}
