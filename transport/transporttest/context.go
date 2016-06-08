@@ -44,22 +44,24 @@ type ContextMatcher struct {
 }
 
 // ContextMatcherOption customizes the behavior of a ContextMatcher.
-type ContextMatcherOption func(*ContextMatcher)
+type ContextMatcherOption interface {
+	run(*ContextMatcher)
+}
 
-// ContextTTL requires that a Context have the given TTL on it, with a tolerance
-// of TTLDelta.
-func ContextTTL(ttl time.Duration) ContextMatcherOption {
-	return func(c *ContextMatcher) {
-		c.ttl = ttl
-	}
+// ContextTTL requires that a Context have the given TTL on it, with a
+// tolerance of TTLDelta.
+type ContextTTL time.Duration
+
+func (ttl ContextTTL) run(c *ContextMatcher) {
+	c.ttl = time.Duration(ttl)
 }
 
 // ContextBaggage requires that the Context have the given baggage associated
 // with it.
-func ContextBaggage(b transport.Headers) ContextMatcherOption {
-	return func(c *ContextMatcher) {
-		c.baggage = b
-	}
+type ContextBaggage transport.Headers
+
+func (b ContextBaggage) run(c *ContextMatcher) {
+	c.baggage = transport.Headers(b)
 }
 
 // NewContextMatcher creates a ContextMatcher to verify properties about a
@@ -67,7 +69,7 @@ func ContextBaggage(b transport.Headers) ContextMatcherOption {
 func NewContextMatcher(t *testing.T, options ...ContextMatcherOption) *ContextMatcher {
 	matcher := &ContextMatcher{t: t, TTLDelta: DefaultTTLDelta}
 	for _, opt := range options {
-		opt(matcher)
+		opt.run(matcher)
 	}
 	return matcher
 }
