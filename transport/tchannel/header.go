@@ -107,6 +107,7 @@ func writeRequestHeaders(
 ) error {
 	ctxHeaders := baggage.FromContext(ctx)
 	headers := make(transport.Headers, len(ctxHeaders)+len(appHeaders))
+	// TODO: zero-alloc version
 
 	prefix := strings.ToLower(BaggageHeaderPrefix)
 	for k, v := range appHeaders {
