@@ -26,13 +26,12 @@ import (
 	"io"
 	"strings"
 
-	"golang.org/x/net/context"
-
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/tchannel/internal"
 
 	"github.com/uber/tchannel-go"
+	"golang.org/x/net/context"
 )
 
 // pullBaggage pulls the context headers from the given transport.Headers,
