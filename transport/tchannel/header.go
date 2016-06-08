@@ -37,17 +37,17 @@ import (
 // pullBaggage pulls the context headers from the given transport.Headers,
 // deleting them from the original headers map.
 func pullBaggage(headers transport.Headers) transport.Headers {
-	ctxheaders := make(transport.Headers)
+	ctxHeaders := make(transport.Headers)
 	prefix := strings.ToLower(BaggageHeaderPrefix)
 	prefixLen := len(prefix)
 	for k, v := range headers {
 		if strings.HasPrefix(k, prefix) {
 			key := k[prefixLen:]
-			ctxheaders.Set(key, v)
+			ctxHeaders.Set(key, v)
 			headers.Del(k)
 		}
 	}
-	return ctxheaders
+	return ctxHeaders
 }
 
 // readRequestHeaders reads headers and baggage from an incoming request.
@@ -60,8 +60,8 @@ func readRequestHeaders(
 	if err != nil {
 		return ctx, nil, err
 	}
-	if ctxheaders := pullBaggage(headers); ctxheaders != nil {
-		ctx = baggage.NewContextWithHeaders(ctx, ctxheaders)
+	if ctxHeaders := pullBaggage(headers); len(ctxHeaders) > 0 {
+		ctx = baggage.NewContextWithHeaders(ctx, ctxHeaders)
 	}
 	return ctx, headers, nil
 }
@@ -102,14 +102,14 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 func writeRequestHeaders(
 	ctx context.Context,
 	format tchannel.Format,
-	appheaders transport.Headers,
+	appHeaders transport.Headers,
 	getWriter func() (tchannel.ArgWriter, error),
 ) error {
-	ctxheaders := baggage.FromContext(ctx)
-	headers := make(transport.Headers, len(ctxheaders)+len(appheaders))
+	ctxHeaders := baggage.FromContext(ctx)
+	headers := make(transport.Headers, len(ctxHeaders)+len(appHeaders))
 
 	prefix := strings.ToLower(BaggageHeaderPrefix)
-	for k, v := range appheaders {
+	for k, v := range appHeaders {
 		if strings.HasPrefix(k, prefix) {
 			return fmt.Errorf(
 				// TODO: create error type for this
@@ -119,8 +119,8 @@ func writeRequestHeaders(
 		headers.Set(k, v)
 	}
 
-	if ctxheaders != nil {
-		for k, v := range ctxheaders {
+	if len(ctxHeaders) > 0 {
+		for k, v := range ctxHeaders {
 			headers.Set(BaggageHeaderPrefix+k, v)
 		}
 	}
