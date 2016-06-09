@@ -83,7 +83,6 @@ func Phone(reqMeta *json.ReqMeta, body *PhoneRequest) (*PhoneResponse, *json.Res
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build TChannel: %v", err)
 		}
-
 		outbound = tch.NewOutbound(ch, tch.HostPort(hostport))
 	default:
 		return nil, nil, fmt.Errorf("unconfigured transport")
