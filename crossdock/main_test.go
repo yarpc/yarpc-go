@@ -95,6 +95,16 @@ func TestCrossdock(t *testing.T) {
 				"transport": []string{"http", "tchannel"},
 			},
 		},
+		{
+			name: "ctxpropagation",
+			axes: axes{
+				"transport": []string{"http", "tchannel"},
+			},
+			params: params{
+				"ctxserver": "127.0.0.1",
+				"ctxclient": "127.0.0.1",
+			},
+		},
 	}
 
 	for _, bb := range behaviors {

@@ -22,6 +22,7 @@ package client
 
 import (
 	"github.com/yarpc/yarpc-go/crossdock-go"
+	"github.com/yarpc/yarpc-go/crossdock/client/ctxpropagation"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
@@ -41,6 +42,7 @@ var behaviors = crossdock.Behaviors{
 	"tchserver":      tchserver.Run,
 	"thriftgauntlet": gauntlet.Run,
 	"outboundttl":    outboundttl.Run,
+	"ctxpropagation": ctxpropagation.Run,
 }
 
 // Start registers behaviors and begins the Crossdock client
