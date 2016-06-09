@@ -28,20 +28,36 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	ht "github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
 
+// HTTPTransport contains information about an HTTP transport.
+type HTTPTransport struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+// TChannelTransport contains information about a TChannel transport.
+type TChannelTransport struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+// TransportConfig contains the transport configuration for the phone request.
+type TransportConfig struct {
+	HTTP     *HTTPTransport     `json:"http"`
+	TChannel *TChannelTransport `json:"tchannel"`
+}
+
 // PhoneRequest is a request to make another request to a different service.
 type PhoneRequest struct {
-	Service   string `json:"service"`
-	Procedure string `json:"procedure"`
-	Transport struct {
-		HTTP struct {
-			Host string `json:"host"`
-			Port int    `json:"port"`
-		} `json:"http"`
-	} `json:"transport"`
-	Body *js.RawMessage `json:"body"`
+	Service   string          `json:"service"`
+	Procedure string          `json:"procedure"`
+	Transport TransportConfig `json:"transport"`
+	Body      *js.RawMessage  `json:"body"`
 }
 
 // PhoneResponse is the response of a Phone request.
@@ -53,9 +69,26 @@ type PhoneResponse struct {
 
 // Phone implements the phone procedure
 func Phone(reqMeta *json.ReqMeta, body *PhoneRequest) (*PhoneResponse, *json.ResMeta, error) {
-	// TODO(abg): Support other transports
-	t := body.Transport.HTTP
-	outbound := ht.NewOutbound(fmt.Sprintf("http://%s:%d", t.Host, t.Port))
+	var outbound transport.Outbound
+
+	switch {
+	case body.Transport.HTTP != nil:
+		t := body.Transport.HTTP
+		url := fmt.Sprintf("http://%s:%d", t.Host, t.Port)
+		outbound = ht.NewOutbound(url)
+	case body.Transport.TChannel != nil:
+		t := body.Transport.TChannel
+		hostport := fmt.Sprintf("%s:%d", t.Host, t.Port)
+		ch, err := tchannel.NewChannel("yarpc-test-client", nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build TChannel: %v", err)
+		}
+
+		outbound = tch.NewOutbound(ch, tch.HostPort(hostport))
+	default:
+		return nil, nil, fmt.Errorf("unconfigured transport")
+	}
+
 	client := json.New(transport.Channel{
 		Caller:   "yarpc-test", // TODO use reqMeta.Service,
 		Service:  body.Service,
