@@ -25,40 +25,10 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 )
 
-// echoEntry is an entry emitted by the echo behaviors.
-type echoEntry struct {
-	crossdock.Entry
-
-	Transport string `json:"transport"`
-	Encoding  string `json:"encoding"`
-	Server    string `json:"server"`
-}
-
-// echoT wraps a sink to emit echoEntry entries instead.
-type echoT struct {
-	crossdock.T
-
-	Transport string
-	Encoding  string
-	Server    string
-}
-
-func (t echoT) Put(e interface{}) {
-	t.T.Put(echoEntry{
-		Entry:     e.(crossdock.Entry),
-		Transport: t.Transport,
-		Encoding:  t.Encoding,
-		Server:    t.Server,
-	})
-}
-
-// createEchoT wraps a Sink to have transport, encoding, and server
-// information.
+// createEchoT tags the given T with the transport, encoding and server.
 func createEchoT(encoding string, t crossdock.T) crossdock.T {
-	return echoT{
-		T:         t,
-		Transport: t.Param(params.Transport),
-		Encoding:  encoding,
-		Server:    t.Param(params.Server),
-	}
+	t.Tag("transport", t.Param(params.Transport))
+	t.Tag("encoding", encoding)
+	t.Tag("server", t.Param(params.Server))
+	return t
 }

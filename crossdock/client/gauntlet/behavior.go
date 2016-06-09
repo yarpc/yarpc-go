@@ -42,34 +42,10 @@ import (
 
 const serverName = "yarpc-test"
 
-type gauntletEntry struct {
-	crossdock.Entry
-
-	Transport string `json:"transport"`
-	Server    string `json:"server"`
-}
-
-type gauntletT struct {
-	crossdock.T
-
-	Transport string
-	Server    string
-}
-
-func (t gauntletT) Put(e interface{}) {
-	t.T.Put(gauntletEntry{
-		Entry:     e.(crossdock.Entry),
-		Transport: t.Transport,
-		Server:    t.Server,
-	})
-}
-
 func createGauntletT(t crossdock.T) crossdock.T {
-	return gauntletT{
-		T:         t,
-		Transport: t.Param(params.Transport),
-		Server:    t.Param(params.Server),
-	}
+	t.Tag("transport", t.Param(params.Transport))
+	t.Tag("server", t.Param(params.Server))
+	return t
 }
 
 // TT is the gauntlets table test struct
@@ -376,6 +352,9 @@ func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
 	}
 
 	for _, tt := range tests {
+		t.Tag("service", tt.Service)
+		t.Tag("function", tt.Function)
+
 		desc := BuildDesc(tt)
 
 		client := buildClient(t, desc, tt.Service, rpc.Channel(serverName))

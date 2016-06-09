@@ -48,22 +48,18 @@ func Call(t *testing.T, clientURL string, behavior string, args url.Values) {
 	require.NoError(t, err, "request %v failed", args)
 	defer res.Body.Close()
 
-	var results Results
+	var results []Entry
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&results),
 		"failed to decode response for %v", args)
 
 	for _, result := range results {
-		if result.Status != "passed" && result.Status != "skipped" {
-			t.Errorf("request %v failed: %s", args, result.Output)
+		if result.Status() != Passed && result.Status() != Skipped {
+			output := result.Output()
+
+			delete(result, statusKey)
+			delete(result, outputKey)
+
+			t.Errorf("request %v failed: tags: %v; output: %s", args, result, output)
 		}
 	}
-}
-
-// Results represents the response of an entire test
-type Results []Result
-
-// Result represents one of many results in a test run
-type Result struct {
-	Status string `json:"status"`
-	Output string `json:"output"`
 }

@@ -20,6 +20,8 @@
 
 package crossdock
 
+import "fmt"
+
 // Status represents the result of running a behavior.
 type Status string
 
@@ -30,10 +32,31 @@ const (
 	Failed  Status = "failed"
 )
 
+const (
+	statusKey = "status"
+	outputKey = "output"
+)
+
 // Entry is the most basic form of a test result.
-//
-// Each behavior can emit one or more entries.
-type Entry struct {
-	Status Status `json:"status"`
-	Output string `json:"output"`
+type Entry map[string]interface{}
+
+// Status returns the Status stored in the Entry.
+func (e Entry) Status() Status {
+	switch v := e[statusKey].(type) {
+	case string:
+		return Status(v)
+	case Status:
+		return v
+	default:
+		panic(fmt.Sprintf("invalid status: %v", v))
+	}
+}
+
+// Output returns the output attached to the entry.
+func (e Entry) Output() string {
+	s, ok := e[outputKey].(string)
+	if ok {
+		return s
+	}
+	return ""
 }
