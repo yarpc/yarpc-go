@@ -37,40 +37,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-// headersEntry is an entry emitted by the headers behavior.
-type headersEntry struct {
-	crossdock.Entry
-
-	Transport string `json:"transport"`
-	Encoding  string `json:"encoding"`
-	Server    string `json:"server"`
-}
-
-// headersT wraps a sink to emit headersEntry entries.
-type headersT struct {
-	crossdock.T
-
-	Transport string
-	Encoding  string
-	Server    string
-}
-
-func (t headersT) Put(e interface{}) {
-	t.T.Put(headersEntry{
-		Entry:     e.(crossdock.Entry),
-		Transport: t.Transport,
-		Encoding:  t.Encoding,
-		Server:    t.Server,
-	})
-}
-
 func createHeadersT(t crossdock.T) crossdock.T {
-	return headersT{
-		T:         t,
-		Transport: t.Param(params.Transport),
-		Encoding:  t.Param(params.Encoding),
-		Server:    t.Param(params.Server),
-	}
+	t.Tag("transport", t.Param(params.Transport))
+	t.Tag("encoding", t.Param(params.Encoding))
+	t.Tag("server", t.Param(params.Server))
+	return t
 }
 
 // Run runs the headers behavior

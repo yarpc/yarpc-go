@@ -69,9 +69,9 @@ func TestCreate(t *testing.T) {
 		})
 
 		if tt.errOut != "" && assert.Len(t, entries, 1) {
-			e := entries[0].(crossdock.Entry)
-			assert.Equal(t, crossdock.Failed, e.Status)
-			assert.Contains(t, e.Output, tt.errOut)
+			e := entries[0]
+			assert.Equal(t, crossdock.Failed, e.Status())
+			assert.Contains(t, e.Output(), tt.errOut)
 		}
 	}
 }

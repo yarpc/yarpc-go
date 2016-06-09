@@ -28,15 +28,37 @@ import (
 // T records the result of calling different behaviors.
 type T interface {
 	Behavior() string
+
+	// Look up a behavior parameter.
 	Param(key string) string
 
-	Put(interface{})
+	// Tag adds the given key-value pair to all entries emitted by this T from
+	// this point onwards.
+	//
+	// If a key with the same name already exists, it will be overwritten.
+	// If value is empty, the tag will be deleted from all entries that follow.
+	//
+	// key MUST NOT be "stauts" or "output".
+	Tag(key, value string)
 
-	FailNow()
+	// Log a failure and continue running the behavior.
 	Errorf(format string, args ...interface{})
+
+	// Log a skipped test and continue running the behavior.
 	Skipf(format string, args ...interface{})
+
+	// Log a success and continue running the behavior.
 	Successf(format string, args ...interface{})
+
+	// Log a failure and stop executing this behavior immediately.
 	Fatalf(format string, args ...interface{})
+
+	// Stop executing this behavior immediately.
+	FailNow()
+
+	// Put logs an entry with the given status and output. Usually, you'll want
+	// to use Errorf, Skipf, Successf or Fatalf instead.
+	Put(status Status, output string)
 }
 
 // Params represents args to a test
@@ -46,8 +68,8 @@ type Params map[string]string
 type entryT struct {
 	behavior string
 	params   Params
-
-	entries []interface{}
+	tags     map[string]string
+	entries  []Entry
 }
 
 // Behavior returns the test to dispatch on
@@ -60,9 +82,31 @@ func (t entryT) Param(key string) string {
 	return t.params[key]
 }
 
-// Put an entry into the EntrySink.
-func (t *entryT) Put(v interface{}) {
-	t.entries = append(t.entries, v)
+func (t *entryT) Tag(key, value string) {
+	if key == statusKey || key == outputKey {
+		panic(fmt.Sprintf("tag %q is reserved", key))
+	}
+
+	if t.tags == nil {
+		t.tags = make(map[string]string)
+	}
+
+	if value == "" {
+		delete(t.tags, key)
+	} else {
+		t.tags[key] = value
+	}
+}
+
+func (t *entryT) Put(status Status, output string) {
+	e := make(Entry)
+	e[statusKey] = status
+	e[outputKey] = output
+	for k, v := range t.tags {
+		e[k] = v
+	}
+
+	t.entries = append(t.entries, e)
 }
 
 func (*entryT) FailNow() {
@@ -75,10 +119,7 @@ func (*entryT) FailNow() {
 // This may be called multiple times if multiple tests inside a behavior were
 // skipped.
 func (t *entryT) Skipf(format string, args ...interface{}) {
-	t.Put(Entry{
-		Status: Skipped,
-		Output: fmt.Sprintf(format, args...),
-	})
+	t.Put(Skipped, fmt.Sprintf(format, args...))
 }
 
 // Errorf records a failed test.
@@ -86,10 +127,7 @@ func (t *entryT) Skipf(format string, args ...interface{}) {
 // This may be called multiple times if multiple tests inside a behavior
 // failed.
 func (t *entryT) Errorf(format string, args ...interface{}) {
-	t.Put(Entry{
-		Status: Failed,
-		Output: fmt.Sprintf(format, args...),
-	})
+	t.Put(Failed, fmt.Sprintf(format, args...))
 }
 
 // Successf records a successful test.
@@ -97,10 +135,7 @@ func (t *entryT) Errorf(format string, args ...interface{}) {
 // This may be called multiple times for multiple successful tests inside a
 // behavior.
 func (t *entryT) Successf(format string, args ...interface{}) {
-	t.Put(Entry{
-		Status: Passed,
-		Output: fmt.Sprintf(format, args...),
-	})
+	t.Put(Passed, fmt.Sprintf(format, args...))
 }
 
 // Fatalf records a failed test and fails immediately

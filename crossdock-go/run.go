@@ -27,7 +27,7 @@ import "runtime/debug"
 //
 // Functions like Fatalf won't work if the behavior is not executed inside a
 // Run context.
-func Run(params Params, f func(T)) []interface{} {
+func Run(params Params, f func(T)) []Entry {
 	behavior := params[BehaviorParam]
 	delete(params, BehaviorParam)
 	t := entryT{
