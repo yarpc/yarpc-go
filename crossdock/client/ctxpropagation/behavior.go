@@ -39,82 +39,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-type handler interface {
-	Inject(json.Client, server.TransportConfig) // this is hacky but whatever
-	Handle(*json.ReqMeta, interface{}) (interface{}, *json.ResMeta, error)
-}
-
-func assertBaggageMatches(t crossdock.T, ctx context.Context, want transport.Headers) bool {
-	assert := crossdock.Assert(t)
-	got := baggage.FromContext(ctx)
-
-	if len(want) == 0 {
-		// len check to handle nil vs empty cases gracefully.
-		return assert.Empty(got, "baggage must be empty: %v", got)
-	}
-
-	return assert.Equal(want, got, "baggage must match")
-}
-
-// singleHopHandler provides a JSON handler which verifies that it receives the
-// specified baggage.
-type singleHopHandler struct {
-	t           crossdock.T
-	wantBaggage transport.Headers
-}
-
-func (h *singleHopHandler) Inject(json.Client, server.TransportConfig) {
-}
-
-func (h *singleHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
-	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
-	return map[string]interface{}{}, &json.ResMeta{Headers: reqMeta.Headers}, nil
-}
-
-// multiHopHandler provides a JSON handler which verfiies that it receives the
-// specified baggage, adds new baggage to the context, and makes a Phone request
-// to the Test Subject, requesting a call to a different procedure.
-type multiHopHandler struct {
-	t crossdock.T
-
-	phoneClient        json.Client
-	phoneCallTo        string
-	phoneCallTransport server.TransportConfig
-
-	addBaggage  transport.Headers
-	wantBaggage transport.Headers
-}
-
-func (h *multiHopHandler) Inject(c json.Client, tc server.TransportConfig) {
-	h.phoneClient = c
-	h.phoneCallTransport = tc
-}
-
-func (h *multiHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
-	if h.phoneClient == nil {
-		panic("call Inject() first")
-	}
-
-	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
-	for key, value := range h.addBaggage {
-		reqMeta.Context = yarpc.WithBaggage(reqMeta.Context, key, value)
-	}
-
-	var resp js.RawMessage
-	resMeta, err := h.phoneClient.Call(
-		&json.ReqMeta{
-			Procedure: "phone",
-			Headers:   reqMeta.Headers,
-			Context:   reqMeta.Context,
-		}, &server.PhoneRequest{
-			Service:   "ctxclient",
-			Procedure: h.phoneCallTo,
-			Transport: h.phoneCallTransport,
-			Body:      &js.RawMessage{'{', '}'},
-		}, &resp)
-	return map[string]interface{}{}, resMeta, err
-}
-
 // Run verifies that context is propagated across multiple hops.
 //
 // Behavior parameters:
@@ -270,6 +194,82 @@ func Run(t crossdock.T) {
 			checks.NoError(err, "%v: request failed", tt.desc)
 		}()
 	}
+}
+
+type handler interface {
+	Inject(json.Client, server.TransportConfig) // this is hacky but whatever
+	Handle(*json.ReqMeta, interface{}) (interface{}, *json.ResMeta, error)
+}
+
+func assertBaggageMatches(t crossdock.T, ctx context.Context, want transport.Headers) bool {
+	assert := crossdock.Assert(t)
+	got := baggage.FromContext(ctx)
+
+	if len(want) == 0 {
+		// len check to handle nil vs empty cases gracefully.
+		return assert.Empty(got, "baggage must be empty: %v", got)
+	}
+
+	return assert.Equal(want, got, "baggage must match")
+}
+
+// singleHopHandler provides a JSON handler which verifies that it receives the
+// specified baggage.
+type singleHopHandler struct {
+	t           crossdock.T
+	wantBaggage transport.Headers
+}
+
+func (h *singleHopHandler) Inject(json.Client, server.TransportConfig) {
+}
+
+func (h *singleHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
+	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
+	return map[string]interface{}{}, &json.ResMeta{Headers: reqMeta.Headers}, nil
+}
+
+// multiHopHandler provides a JSON handler which verfiies that it receives the
+// specified baggage, adds new baggage to the context, and makes a Phone request
+// to the Test Subject, requesting a call to a different procedure.
+type multiHopHandler struct {
+	t crossdock.T
+
+	phoneClient        json.Client
+	phoneCallTo        string
+	phoneCallTransport server.TransportConfig
+
+	addBaggage  transport.Headers
+	wantBaggage transport.Headers
+}
+
+func (h *multiHopHandler) Inject(c json.Client, tc server.TransportConfig) {
+	h.phoneClient = c
+	h.phoneCallTransport = tc
+}
+
+func (h *multiHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
+	if h.phoneClient == nil {
+		panic("call Inject() first")
+	}
+
+	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
+	for key, value := range h.addBaggage {
+		reqMeta.Context = yarpc.WithBaggage(reqMeta.Context, key, value)
+	}
+
+	var resp js.RawMessage
+	resMeta, err := h.phoneClient.Call(
+		&json.ReqMeta{
+			Procedure: "phone",
+			Headers:   reqMeta.Headers,
+			Context:   reqMeta.Context,
+		}, &server.PhoneRequest{
+			Service:   "ctxclient",
+			Procedure: h.phoneCallTo,
+			Transport: h.phoneCallTransport,
+			Body:      &js.RawMessage{'{', '}'},
+		}, &resp)
+	return map[string]interface{}{}, resMeta, err
 }
 
 func buildRPC(t crossdock.T, ch *tchannel.Channel) (rpc yarpc.RPC, tconfig server.TransportConfig) {
