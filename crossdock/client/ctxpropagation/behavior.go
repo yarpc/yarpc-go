@@ -171,7 +171,8 @@ func Run(t crossdock.T) {
 
 			jsonClient := json.New(rpc.Channel("yarpc-test"))
 			for name, handler := range tt.handlers {
-				handler.Inject(jsonClient, tconfig)
+				handler.SetClient(jsonClient)
+				handler.SetTransport(tconfig)
 				json.Register(rpc, json.Procedure(name, handler.Handle))
 			}
 
@@ -197,7 +198,8 @@ func Run(t crossdock.T) {
 }
 
 type handler interface {
-	Inject(json.Client, server.TransportConfig) // this is hacky but whatever
+	SetClient(json.Client)
+	SetTransport(server.TransportConfig)
 	Handle(*json.ReqMeta, interface{}) (interface{}, *json.ResMeta, error)
 }
 
@@ -220,8 +222,8 @@ type singleHopHandler struct {
 	wantBaggage transport.Headers
 }
 
-func (h *singleHopHandler) Inject(json.Client, server.TransportConfig) {
-}
+func (*singleHopHandler) SetClient(json.Client)               {}
+func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
 func (h *singleHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
 	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
@@ -242,14 +244,17 @@ type multiHopHandler struct {
 	wantBaggage transport.Headers
 }
 
-func (h *multiHopHandler) Inject(c json.Client, tc server.TransportConfig) {
+func (h *multiHopHandler) SetClient(c json.Client) {
 	h.phoneClient = c
+}
+
+func (h *multiHopHandler) SetTransport(tc server.TransportConfig) {
 	h.phoneCallTransport = tc
 }
 
 func (h *multiHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
 	if h.phoneClient == nil {
-		panic("call Inject() first")
+		panic("call SetClient() and SetTransport() first")
 	}
 
 	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
