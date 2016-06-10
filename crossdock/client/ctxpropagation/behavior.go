@@ -42,13 +42,17 @@ import (
 // Run verifies that context is propagated across multiple hops.
 //
 // Behavior parameters:
-// - server: Address of the crossdock test subject server.
+//
+// - ctxclient: Address of this client.
+// - ctxserver: Address of the crossdock test subject server.
 // - transport: The transport to make requests to the test subject with.
 //
-// This behavior sets up yet another server in-process which the Phone
-// procedure on the test subject is responsible for calling. Usually this
-// behavior will receive requests from the Phone procedure on a transport
-// different from the one used to call Phone.
+// This behavior sets up a server in-process which the Phone procedure on the
+// test subject is responsible for calling.
+//
+// Outgoing calls to the Phone procedure will be made using the transport
+// specified as a parameter, and incoming calls from the Phone procedure will
+// be received over a different transport.
 func Run(t crossdock.T) {
 	checks := crossdock.Checks(t)
 	assert := crossdock.Assert(t)
