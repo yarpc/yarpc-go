@@ -17,6 +17,8 @@ services:
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
             - AXIS_ERRORS=go,node
+            - AXIS_CTXCLIENT=go
+            - AXIS_CTXSERVER=go
             - AXIS_GAUNTLET=go
 
             - BEHAVIOR_RAW=client,server,transport
@@ -28,26 +30,27 @@ services:
             - BEHAVIOR_TCHSERVER=client,server,encoding
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
             - BEHAVIOR_OUTBOUNDTTL=client,server,transport
+            - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
 
     go:
         build: .
         ports:
-            - "8080-8083"
+            - "8080-8087"
 
     node:
         image: yarpc/yarpc-node
         ports:
-            - "8080-8083"
+            - "8080-8087"
 
     java:
         image: yarpc/yarpc-java
         ports:
-            - "8080-8083"
+            - "8080-8087"
 
     python:
         image: yarpc/yarpc-python
         ports:
-            - "8080-8083"
+            - "8080-8087"
 
     python-sync:
         image: yarpc/yarpc-python

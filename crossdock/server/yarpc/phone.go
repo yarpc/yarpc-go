@@ -23,6 +23,7 @@ package yarpc
 import (
 	js "encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/yarpc/yarpc-go/encoding/json"
@@ -73,9 +74,12 @@ func Phone(reqMeta *json.ReqMeta, body *PhoneRequest) (*PhoneResponse, *json.Res
 
 	switch {
 	case body.Transport.HTTP != nil:
+		cl := &http.Client{Transport: new(http.Transport)}
+		// ^See crossdock/client/rpc/rpc.go for explanation
+
 		t := body.Transport.HTTP
 		url := fmt.Sprintf("http://%s:%d", t.Host, t.Port)
-		outbound = ht.NewOutbound(url)
+		outbound = ht.NewOutboundWithClient(url, cl)
 	case body.Transport.TChannel != nil:
 		t := body.Transport.TChannel
 		hostport := fmt.Sprintf("%s:%d", t.Host, t.Port)
