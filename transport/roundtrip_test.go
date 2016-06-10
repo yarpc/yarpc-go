@@ -22,7 +22,6 @@ package transport_test
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -31,6 +30,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
@@ -119,27 +119,27 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 		{
 			requestBody:   "foo",
-			responseError: transport.LocalUnexpectedError(errors.New("great sadness")),
+			responseError: errors.LocalUnexpectedError(fmt.Errorf("great sadness")),
 			wantError: func(err error) {
-				assert.Implements(t, (*transport.UnexpectedError)(nil), err)
+				assert.True(t, transport.IsUnexpectedError(err), err)
 				assert.Equal(t, "UnexpectedError: great sadness", err.Error())
 			},
 		},
 		{
 			requestBody:   "bar",
-			responseError: transport.LocalBadRequestError(errors.New("missing service name")),
+			responseError: errors.LocalBadRequestError(fmt.Errorf("missing service name")),
 			wantError: func(err error) {
-				assert.Implements(t, (*transport.BadRequestError)(nil), err)
+				assert.True(t, transport.IsBadRequestError(err))
 				assert.Equal(t, "BadRequest: missing service name", err.Error())
 			},
 		},
 		{
 			requestBody: "baz",
-			responseError: transport.RemoteUnexpectedError(
+			responseError: errors.RemoteUnexpectedError(
 				`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
 			),
 			wantError: func(err error) {
-				assert.Implements(t, (*transport.UnexpectedError)(nil), err)
+				assert.True(t, transport.IsUnexpectedError(err))
 				assert.Equal(t,
 					`UnexpectedError: error for procedure "hello" of service "testService": `+
 						`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
@@ -148,11 +148,11 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 		{
 			requestBody: "qux",
-			responseError: transport.RemoteBadRequestError(
+			responseError: errors.RemoteBadRequestError(
 				`BadRequest: unrecognized procedure "echo" for service "derp"`,
 			),
 			wantError: func(err error) {
-				assert.Implements(t, (*transport.UnexpectedError)(nil), err)
+				assert.True(t, transport.IsUnexpectedError(err))
 				assert.Equal(t,
 					`UnexpectedError: error for procedure "hello" of service "testService": `+
 						`BadRequest: unrecognized procedure "echo" for service "derp"`,
@@ -207,7 +207,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 
 						// none of the errors returned by Call can be valid
 						// Handler errors.
-						_, ok := err.(transport.HandlerError)
+						_, ok := err.(errors.HandlerError)
 						assert.False(t, ok, "%T: %T must not be a HandlerError", trans, err)
 					}
 				} else {

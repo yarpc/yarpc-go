@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
+	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/uber/tchannel-go"
@@ -118,7 +119,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
 		if err == tchannel.ErrTimeout {
-			return nil, transport.NewTimeoutError(req.Service, req.Procedure, ttl)
+			return nil, errors.NewTimeoutError(req.Service, req.Procedure, ttl)
 		}
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)
@@ -155,8 +156,8 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 func fromSystemError(err tchannel.SystemError) error {
 	switch err.Code() {
 	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
-		return transport.RemoteBadRequestError(err.Message())
+		return errors.RemoteBadRequestError(err.Message())
 	default:
-		return transport.RemoteUnexpectedError(err.Message())
+		return errors.RemoteUnexpectedError(err.Message())
 	}
 }

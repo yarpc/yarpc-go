@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/baggage"
+	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -79,7 +80,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	response, err := ctxhttp.Do(ctx, o.Client, request)
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			return nil, transport.NewTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
+			return nil, errors.NewTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
 		}
 
 		return nil, err
@@ -106,8 +107,8 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	message := strings.TrimSuffix(string(contents), "\n")
 
 	if response.StatusCode >= 400 && response.StatusCode < 500 {
-		return nil, transport.RemoteBadRequestError(message)
+		return nil, errors.RemoteBadRequestError(message)
 	}
 
-	return nil, transport.RemoteUnexpectedError(message)
+	return nil, errors.RemoteUnexpectedError(message)
 }

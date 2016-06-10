@@ -18,28 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package errors
 
-import "github.com/yarpc/yarpc-go/internal/errors"
+import (
+	"fmt"
+	"time"
+)
 
-// IsBadRequestError returns true if the request could not be processed
-// because it was invalid.
-func IsBadRequestError(err error) bool {
-	_, ok := err.(errors.BadRequestError)
-	return ok
+// TimeoutError indicates that an error occurred due to a context deadline over
+// the course of a request over any transport.
+type TimeoutError interface {
+	error
+
+	timeoutError()
 }
 
-// IsUnexpectedError returns true if the server failed to process the request
-// because of an unhandled error.
-func IsUnexpectedError(err error) bool {
-	// TODO: Add "or it panicked while processing the request." to the doc when
-	// #111 is resolved.
-	_, ok := err.(errors.UnexpectedError)
-	return ok
+type timeoutError struct {
+	Service   string
+	Procedure string
+	Duration  time.Duration
 }
 
-// IsTimeoutError return strue if the given error is a TimeoutError.
-func IsTimeoutError(err error) bool {
-	_, ok := err.(errors.TimeoutError)
-	return ok
+// NewTimeoutError constructs an instance of a TimeoutError for the given
+// service, procedure, and duration waited.
+func NewTimeoutError(Service string, Procedure string, Duration time.Duration) TimeoutError {
+	return timeoutError{
+		Service:   Service,
+		Procedure: Procedure,
+		Duration:  Duration,
+	}
+}
+
+func (e timeoutError) timeoutError() {}
+
+func (e timeoutError) Error() string {
+	return fmt.Sprintf(`timeout for procedure %q of service %q after %v`,
+		e.Procedure, e.Service, e.Duration)
 }

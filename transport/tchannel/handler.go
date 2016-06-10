@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
+	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -96,9 +97,9 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		return
 	}
 
-	err = transport.AsHandlerError(call.ServiceName(), call.MethodString(), err)
+	err = errors.AsHandlerError(call.ServiceName(), call.MethodString(), err)
 	status := tchannel.ErrCodeUnexpected
-	if _, ok := err.(transport.BadRequestError); ok {
+	if transport.IsBadRequestError(err) {
 		status = tchannel.ErrCodeBadRequest
 	}
 

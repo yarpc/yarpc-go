@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	"github.com/yarpc/yarpc-go/internal/baggage"
+	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -56,9 +57,9 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = transport.AsHandlerError(service, procedure, err)
+	err = errors.AsHandlerError(service, procedure, err)
 	status := http.StatusInternalServerError
-	if _, ok := err.(transport.BadRequestError); ok {
+	if transport.IsBadRequestError(err) {
 		status = http.StatusBadRequest
 	}
 	http.Error(w, err.Error(), status)

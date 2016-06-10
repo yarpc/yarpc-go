@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/internal/errors"
 )
 
 // missingParametersError is a failure to process a request because it was
@@ -36,8 +36,8 @@ type missingParametersError struct {
 	Parameters []string
 }
 
-func (e missingParametersError) AsHandlerError() transport.HandlerError {
-	return transport.LocalBadRequestError(e)
+func (e missingParametersError) AsHandlerError() errors.HandlerError {
+	return errors.LocalBadRequestError(e)
 }
 
 func (e missingParametersError) Error() string {
@@ -66,8 +66,8 @@ type invalidTTLError struct {
 	TTL       string
 }
 
-func (e invalidTTLError) AsHandlerError() transport.HandlerError {
-	return transport.LocalBadRequestError(e)
+func (e invalidTTLError) AsHandlerError() errors.HandlerError {
+	return errors.LocalBadRequestError(e)
 }
 
 func (e invalidTTLError) Error() string {
