@@ -16,7 +16,8 @@ services:
             - AXIS_SERVER=go,node,java,python
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
-            - AXIS_ERRORS=go,node
+            - AXIS_ERRORSHTTPOUT=go,node
+            - AXIS_ERRORSTCHOUT=go
             - AXIS_CTXCLIENT=go
             - AXIS_CTXSERVER=go
             - AXIS_GAUNTLET=go
@@ -25,9 +26,19 @@ services:
             - BEHAVIOR_JSON=client,server,transport
             - BEHAVIOR_THRIFT=client,server,transport
             - BEHAVIOR_HEADERS=client,server,transport,encoding
-            - BEHAVIOR_ERRORS=errors,server
+            - BEHAVIOR_OUTBOUNDTTL=client,server,transport
+            # BEHAVIOR_INBOUNDTTL TODO
+
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - BEHAVIOR_TCHSERVER=client,server,encoding
+            # BEHAVIOR_HTTPCLIENT TODO
+            # BEHAVIOR_HTTPSERVER TODO
+
+            - BEHAVIOR_ERRORS=errorshttpout,server
+            # BEHAVIOR_ERRORSHTTPIN TODO
+            - BEHAVIOR_ERRORSTCHOUT=errorstchout,server
+            # BEHAVIOR_ERRORSTCHIN TODO
+
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
             - BEHAVIOR_OUTBOUNDTTL=client,server,transport
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport

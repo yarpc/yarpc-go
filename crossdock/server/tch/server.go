@@ -65,7 +65,9 @@ func Stop() {
 func register(ch *tchannel.Channel) {
 	ch.Register(raw.Wrap(echoRawHandler{}), "echo/raw")
 
-	json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError)
+	json.Register(ch, json.Handlers{
+		"echo": echoJSONHandler,
+	}, onError)
 
 	tserver := thrift.NewServer(ch)
 	tserver.Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
