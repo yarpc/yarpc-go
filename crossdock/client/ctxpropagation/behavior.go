@@ -47,8 +47,10 @@ type handler interface {
 func assertBaggageMatches(t crossdock.T, ctx context.Context, want transport.Headers) bool {
 	assert := crossdock.Assert(t)
 	got := baggage.FromContext(ctx)
-	if len(want) == 0 { // nils
-		return assert.Len(got, 0, "baggage must be empty: %v", got)
+
+	if len(want) == 0 {
+		// len check to handle nil vs empty cases gracefully.
+		return assert.Empty(got, "baggage must be empty: %v", got)
 	}
 
 	return assert.Equal(want, got, "baggage must match")
