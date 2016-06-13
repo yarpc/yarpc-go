@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -60,11 +61,11 @@ func (e serverEncodingError) Error() string {
 }
 
 // AsHandlerError converts this error into a handler-level error.
-func (e serverEncodingError) AsHandlerError() transport.HandlerError {
+func (e serverEncodingError) AsHandlerError() errors.HandlerError {
 	if e.IsResponse {
-		return transport.LocalUnexpectedError(e)
+		return errors.LocalUnexpectedError(e)
 	}
-	return transport.LocalBadRequestError(e)
+	return errors.LocalBadRequestError(e)
 }
 
 func newServerEncodingError(req *transport.Request, err error) serverEncodingError {

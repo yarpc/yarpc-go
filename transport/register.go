@@ -20,6 +20,8 @@
 
 package transport
 
+import "github.com/yarpc/yarpc-go/internal/errors"
+
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
@@ -82,7 +84,7 @@ func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
 	if h, ok := m.entries[registryEntry{service, procedure}]; ok {
 		return h, nil
 	}
-	return nil, unrecognizedProcedureError{
+	return nil, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
 	}

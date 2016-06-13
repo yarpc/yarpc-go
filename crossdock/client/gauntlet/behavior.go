@@ -447,7 +447,7 @@ func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}) 
 }
 
 func isUnrecognizedProcedure(err error) bool {
-	if _, isBadRequest := err.(transport.BadRequestError); isBadRequest {
+	if transport.IsBadRequestError(err) {
 		// TODO: Once all other languages implement the gauntlet test
 		// subject, we can remove this check.
 		return strings.Contains(err.Error(), "unrecognized procedure")
