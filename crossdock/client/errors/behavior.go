@@ -279,11 +279,10 @@ func Run(t crossdock.T) {
 
 	for _, tt := range tests {
 		res := client.Call(t, tt.headers, tt.body)
-		assert.Equal(tt.wantStatus, res.Status,
-			"%s: should respond with status %d", tt.name, tt.wantStatus)
+		t.Tag("scenario", tt.name)
+		assert.Equal(tt.wantStatus, res.Status, "should respond with expected status")
 		if tt.wantBody != "" {
-			assert.Equal(tt.wantBody, res.Body,
-				"%s: response body should be informative error", tt.name)
+			assert.Equal(tt.wantBody, res.Body, "response body should be informative error")
 		}
 		if tt.wantBodyStartsWith != "" {
 			i := len(tt.wantBodyStartsWith)
