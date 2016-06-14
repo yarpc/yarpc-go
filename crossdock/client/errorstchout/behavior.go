@@ -180,9 +180,7 @@ func Run(t crossdock.T) {
 			isAppErr := call.Response().ApplicationError()
 
 			err = tchannel.NewArgReader(call.Response().Arg3Reader()).Read(&res3)
-			if err != nil {
-				tt.validate(res3, isAppErr, err)
-			}
+			tt.validate(res3, isAppErr, err)
 		})(tt)
 	}
 }
