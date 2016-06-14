@@ -61,8 +61,8 @@ func Run(t crossdock.T) {
 					return
 				}
 				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(tchannel.ErrCodeBadRequest, code, "must produce bad request error")
 				assert.Contains(err.Error(), `failed to decode "json"`, "must mention failing to decode JSON in error message")
+				assert.Equal(tchannel.ErrCodeBadRequest, code, "must produce bad request error")
 			},
 		},
 		{
