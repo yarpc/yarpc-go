@@ -38,6 +38,7 @@ const (
 
 type test struct {
 	procedure string
+	headers   []byte
 	body      []byte
 	validate  func(res3 []byte, isAppExpr bool, err error)
 }
@@ -53,6 +54,7 @@ func Run(t crossdock.T) {
 		{
 			procedure: "echo",
 			body:      []byte{},
+			headers:   []byte("{}"),
 			validate: func(res3 []byte, isAppErr bool, err error) {
 				assert.False(isAppErr, "malformed body must not be application error")
 				err, ok := err.(tchannel.SystemError)
@@ -65,9 +67,11 @@ func Run(t crossdock.T) {
 				assert.Equal(tchannel.ErrCodeBadRequest, code, "must produce bad request error")
 			},
 		},
+		// TODO test invalid headers
 		{
 			procedure: "",
 			body:      []byte{},
+			headers:   []byte("{}"),
 			validate: func(res3 []byte, isAppErr bool, err error) {
 				assert.False(isAppErr, "missing procedure must not produce an application error")
 				err, ok := err.(tchannel.SystemError)
@@ -83,6 +87,7 @@ func Run(t crossdock.T) {
 		{
 			procedure: "no-such-procedure",
 			body:      []byte{},
+			headers:   []byte("{}"),
 			validate: func(res3 []byte, isAppErr bool, err error) {
 				assert.False(isAppErr, "no-such-procedure must not produce application error")
 				err, ok := err.(tchannel.SystemError)
@@ -98,6 +103,7 @@ func Run(t crossdock.T) {
 		{
 			procedure: "bad-response",
 			body:      []byte("{}"),
+			headers:   []byte("{}"),
 			validate: func(res3 []byte, isAppErr bool, err error) {
 				assert.False(isAppErr, "bad-response must not produce an application error")
 				err, ok := err.(tchannel.SystemError)
@@ -113,6 +119,7 @@ func Run(t crossdock.T) {
 		{
 			procedure: "unexpected-error",
 			body:      []byte("{}"),
+			headers:   []byte("{}"),
 			validate: func(res3 []byte, isAppErr bool, err error) {
 				assert.False(isAppErr, "unexpected-error procedure must not produce application error")
 				err, ok := err.(tchannel.SystemError)
@@ -133,7 +140,7 @@ func Run(t crossdock.T) {
 
 	for _, tt := range tests {
 		(func(tt test) {
-			var req2, res2, res3 []byte
+			var res2, res3 []byte
 			var headers map[string]string
 
 			ctx, cancel := json.NewContext(time.Second)
@@ -145,7 +152,7 @@ func Run(t crossdock.T) {
 			call, err := peer.BeginCall(ctx, serviceName, tt.procedure, &tchannel.CallOptions{Format: tchannel.Format(as)})
 			fatals.NoError(err, "Could not begin call")
 
-			err = tchannel.NewArgWriter(call.Arg2Writer()).Write(req2)
+			err = tchannel.NewArgWriter(call.Arg2Writer()).Write(tt.headers)
 			fatals.NoError(err, "Could not write request headers")
 
 			err = tchannel.NewArgWriter(call.Arg3Writer()).Write(tt.body)
