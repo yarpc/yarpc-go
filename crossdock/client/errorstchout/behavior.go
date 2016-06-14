@@ -140,7 +140,7 @@ func Run(t crossdock.T) {
 	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
 
 	ch, err := tchannel.NewChannel(serviceName, nil)
-	fatals.NoError(err, "Could not create channel")
+	fatals.NoError(err, "could not create channel")
 
 	peer := ch.Peers().Add(serverHostPort)
 
@@ -163,13 +163,13 @@ func Run(t crossdock.T) {
 				tt.procedure,
 				&tchannel.CallOptions{Format: tchannel.Format(as)},
 			)
-			fatals.NoError(err, "Could not begin call")
+			fatals.NoError(err, "could not begin call")
 
 			err = tchannel.NewArgWriter(call.Arg2Writer()).Write(tt.headers)
-			fatals.NoError(err, "Could not write request headers")
+			fatals.NoError(err, "could not write request headers")
 
 			err = tchannel.NewArgWriter(call.Arg3Writer()).Write(tt.body)
-			fatals.NoError(err, "Could not write request body")
+			fatals.NoError(err, "could not write request body")
 
 			err = tchannel.NewArgReader(call.Response().Arg2Reader()).Read(&res2)
 			if err != nil {
