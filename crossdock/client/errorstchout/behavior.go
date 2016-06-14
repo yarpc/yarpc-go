@@ -37,6 +37,7 @@ const (
 )
 
 type test struct {
+	name      string
 	procedure string
 	headers   []byte
 	body      []byte
@@ -52,6 +53,7 @@ func Run(t crossdock.T) {
 
 	tests := []test{
 		{
+			name:      "happy path",
 			procedure: "echo",
 			body:      []byte{},
 			headers:   []byte("{}"),
@@ -69,6 +71,7 @@ func Run(t crossdock.T) {
 		},
 		// TODO test invalid headers
 		{
+			name:      "missing procedure",
 			procedure: "",
 			body:      []byte{},
 			headers:   []byte("{}"),
@@ -85,6 +88,7 @@ func Run(t crossdock.T) {
 			},
 		},
 		{
+			name:      "invalid procedure",
 			procedure: "no-such-procedure",
 			body:      []byte{},
 			headers:   []byte("{}"),
@@ -101,6 +105,7 @@ func Run(t crossdock.T) {
 			},
 		},
 		{
+			name:      "bad response",
 			procedure: "bad-response",
 			body:      []byte("{}"),
 			headers:   []byte("{}"),
@@ -117,6 +122,7 @@ func Run(t crossdock.T) {
 			},
 		},
 		{
+			name:      "unexpected error",
 			procedure: "unexpected-error",
 			body:      []byte("{}"),
 			headers:   []byte("{}"),
@@ -143,13 +149,20 @@ func Run(t crossdock.T) {
 			var res2, res3 []byte
 			var headers map[string]string
 
+			t.Tag("case", tt.name)
+
 			ctx, cancel := json.NewContext(time.Second)
 			defer cancel()
 
 			ctx = json.WithHeaders(ctx, headers)
 
 			as := "json"
-			call, err := peer.BeginCall(ctx, serviceName, tt.procedure, &tchannel.CallOptions{Format: tchannel.Format(as)})
+			call, err := peer.BeginCall(
+				ctx,
+				serviceName,
+				tt.procedure,
+				&tchannel.CallOptions{Format: tchannel.Format(as)},
+			)
 			fatals.NoError(err, "Could not begin call")
 
 			err = tchannel.NewArgWriter(call.Arg2Writer()).Write(tt.headers)
