@@ -22,13 +22,13 @@ package errorstchout
 
 import (
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/json"
 	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
 )
 
 const (
@@ -49,7 +49,7 @@ func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)
 	assert := crossdock.Fatals(t)
 
-	tt := []test{
+	tests := []test{
 		{
 			procedure: "echo",
 			body:      []byte{},
@@ -61,8 +61,8 @@ func Run(t crossdock.T) {
 					return
 				}
 				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(code, tchannel.ErrCodeBadRequest, "must produce bad request error")
-				assert.True(strings.Contains(err.Error(), `failed to decode "json"`))
+				assert.Equal(tchannel.ErrCodeBadRequest, code, "must produce bad request error")
+				assert.Contains(err.Error(), `failed to decode "json"`, "must mention failing to decode JSON in error message")
 			},
 		},
 		{
@@ -76,8 +76,8 @@ func Run(t crossdock.T) {
 					return
 				}
 				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(code, tchannel.ErrCodeBadRequest, "missing procedure must produce bad request error")
-				assert.True(strings.Contains(err.Error(), "missing procedure"))
+				assert.Equal(tchannel.ErrCodeBadRequest, code, "missing procedure must produce bad request error")
+				assert.Contains(err.Error(), "missing procedure", "must mention missing procedure in error message")
 			},
 		},
 		{
@@ -91,8 +91,8 @@ func Run(t crossdock.T) {
 					return
 				}
 				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(code, tchannel.ErrCodeBadRequest, "must produce bad request error")
-				assert.True(strings.Contains(err.Error(), `unrecognized procedure "no-such-procedure"`))
+				assert.Equal(tchannel.ErrCodeBadRequest, code, "must produce bad request error")
+				assert.Contains(err.Error(), `unrecognized procedure "no-such-procedure"`, "must mention unrecongized procedure in error message")
 			},
 		},
 		{
@@ -106,8 +106,8 @@ func Run(t crossdock.T) {
 					return
 				}
 				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(code, tchannel.ErrCodeUnexpected, "bad-response must produce unexpected error")
-				assert.True(strings.Contains(err.Error(), `failed to encode "json"`), `got %s`, err.Error())
+				assert.Equal(tchannel.ErrCodeUnexpected, code, "bad-response must produce unexpected error")
+				assert.Contains(err.Error(), `failed to encode "json"`, "must mention failure to encode JSON in error message")
 			},
 		},
 		{
@@ -118,7 +118,7 @@ func Run(t crossdock.T) {
 				err, ok := err.(tchannel.SystemError)
 				assert.True(ok, "unexpected-error procedure must produce system error")
 				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(code, tchannel.ErrCodeUnexpected, "must produce transport error")
+				assert.Equal(tchannel.ErrCodeUnexpected, code, "must produce transport error")
 			},
 		},
 	}
@@ -131,41 +131,39 @@ func Run(t crossdock.T) {
 
 	peer := ch.Peers().Add(serverHostPort)
 
-	runTest := func(t test) {
-		var req2, res2, res3 []byte
-		var headers map[string]string
+	for _, tt := range tests {
+		(func(tt test) {
+			var req2, res2, res3 []byte
+			var headers map[string]string
 
-		ctx, cancel := json.NewContext(time.Second)
-		defer cancel()
+			ctx, cancel := json.NewContext(time.Second)
+			defer cancel()
 
-		ctx = json.WithHeaders(ctx, headers)
+			ctx = json.WithHeaders(ctx, headers)
 
-		as := "json"
-		call, err := peer.BeginCall(ctx, serviceName, t.procedure, &tchannel.CallOptions{Format: tchannel.Format(as)})
-		fatals.NoError(err, "Could not begin call")
+			as := "json"
+			call, err := peer.BeginCall(ctx, serviceName, tt.procedure, &tchannel.CallOptions{Format: tchannel.Format(as)})
+			fatals.NoError(err, "Could not begin call")
 
-		err = tchannel.NewArgWriter(call.Arg2Writer()).Write(req2)
-		fatals.NoError(err, "Could not write request headers")
+			err = tchannel.NewArgWriter(call.Arg2Writer()).Write(req2)
+			fatals.NoError(err, "Could not write request headers")
 
-		err = tchannel.NewArgWriter(call.Arg3Writer()).Write(t.body)
-		fatals.NoError(err, "Could not write request body")
+			err = tchannel.NewArgWriter(call.Arg3Writer()).Write(tt.body)
+			fatals.NoError(err, "Could not write request body")
 
-		err = tchannel.NewArgReader(call.Response().Arg2Reader()).Read(&res2)
-		if err != nil {
-			t.validate(res3, false, err)
-			return
-		}
+			err = tchannel.NewArgReader(call.Response().Arg2Reader()).Read(&res2)
+			if err != nil {
+				tt.validate(res3, false, err)
+				return
+			}
 
-		isAppErr := call.Response().ApplicationError()
+			isAppErr := call.Response().ApplicationError()
 
-		err = tchannel.NewArgReader(call.Response().Arg3Reader()).Read(&res3)
-		if err != nil {
-			t.validate(res3, isAppErr, err)
-			return
-		}
-	}
-
-	for _, t := range tt {
-		runTest(t)
+			err = tchannel.NewArgReader(call.Response().Arg3Reader()).Read(&res3)
+			if err != nil {
+				tt.validate(res3, isAppErr, err)
+				return
+			}
+		})(tt)
 	}
 }
