@@ -1,6 +1,6 @@
 Transport is required.
 
-  $ [[ -n "$TRANSPORT" ]] || (echo 'Please provide an $TRANSPORT' && exit 1)
+  $ [[ -n "$TRANSPORT" ]] || (echo 'Please provide a $TRANSPORT' && exit 1)
 
 The trap ensures background processes are killed on exit.
 
@@ -17,16 +17,16 @@ Test code:
   > set baz qux
   > get baz
   > INPUT
-  sending a request to "get"
-  received a request to "get"
+  sending request "get" to service "keyvalue" (encoding "json")
+  received a request to "get" from client "keyvalue-client" (encoding "json")
   foo = 
-  sending a request to "set"
-  received a request to "set"
-  sending a request to "get"
-  received a request to "get"
+  sending request "set" to service "keyvalue" (encoding "json")
+  received a request to "set" from client "keyvalue-client" (encoding "json")
+  sending request "get" to service "keyvalue" (encoding "json")
+  received a request to "get" from client "keyvalue-client" (encoding "json")
   foo = bar
-  sending a request to "set"
-  received a request to "set"
-  sending a request to "get"
-  received a request to "get"
+  sending request "set" to service "keyvalue" (encoding "json")
+  received a request to "set" from client "keyvalue-client" (encoding "json")
+  sending request "get" to service "keyvalue" (encoding "json")
+  received a request to "get" from client "keyvalue-client" (encoding "json")
   baz = qux

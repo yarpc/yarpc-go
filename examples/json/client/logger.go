@@ -32,6 +32,7 @@ type requestLogFilter struct{}
 
 func (requestLogFilter) Call(
 	ctx context.Context, request *transport.Request, out transport.Outbound) (*transport.Response, error) {
-	fmt.Printf("sending a request to %q\n", request.Procedure)
+	fmt.Printf("sending request %q to service %q (encoding %q)\n", request.Procedure,
+		request.Service, request.Encoding)
 	return out.Call(ctx, request)
 }
