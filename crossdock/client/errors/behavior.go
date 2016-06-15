@@ -87,7 +87,9 @@ func buildHTTPClient(t crossdock.T) httpClient {
 	}
 }
 
-// Run runs the errors behavior.
+// Run exercises a YARPC server with outbound HTTP requests from a rigged
+// client and validates behavior that might only be visible to an HTTP client
+// without the YARPC abstraction interposed, typically errors.
 func Run(t crossdock.T) {
 	client := buildHTTPClient(t)
 	assert := crossdock.Assert(t)
@@ -277,11 +279,10 @@ func Run(t crossdock.T) {
 
 	for _, tt := range tests {
 		res := client.Call(t, tt.headers, tt.body)
-		assert.Equal(tt.wantStatus, res.Status,
-			"%s: should respond with status %d", tt.name, tt.wantStatus)
+		t.Tag("scenario", tt.name)
+		assert.Equal(tt.wantStatus, res.Status, "should respond with expected status")
 		if tt.wantBody != "" {
-			assert.Equal(tt.wantBody, res.Body,
-				"%s: response body should be informative error", tt.name)
+			assert.Equal(tt.wantBody, res.Body, "response body should be informative error")
 		}
 		if tt.wantBodyStartsWith != "" {
 			i := len(tt.wantBodyStartsWith)

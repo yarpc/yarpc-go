@@ -25,6 +25,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/ctxpropagation"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
+	"github.com/yarpc/yarpc-go/crossdock/client/errorstchout"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/client/headers"
 	"github.com/yarpc/yarpc-go/crossdock/client/outboundttl"
@@ -38,6 +39,7 @@ var behaviors = crossdock.Behaviors{
 	"thrift":         echo.Thrift,
 	"headers":        headers.Run,
 	"errors":         errors.Run,
+	"errorstchout":   errorstchout.Run,
 	"tchclient":      tchclient.Run,
 	"tchserver":      tchserver.Run,
 	"thriftgauntlet": gauntlet.Run,
