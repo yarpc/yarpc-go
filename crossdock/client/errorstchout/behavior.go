@@ -60,6 +60,16 @@ func Run(t crossdock.T) {
 			validate: func(res3 []byte, isAppErr bool, err error) {
 				assert.NoError(err, "is not error")
 				assert.False(isAppErr, "malformed body must not be application error")
+			},
+		},
+		{
+			name:      "malformed body",
+			procedure: "echo",
+			body:      []byte(""),
+			headers:   []byte("{}"),
+			validate: func(res3 []byte, isAppErr bool, err error) {
+				assert.Error(err, "is error")
+				assert.False(isAppErr, "malformed body must not be application error")
 				err, ok := err.(tchannel.SystemError)
 				assert.True(ok, "malformed body must produce system error")
 				if !ok {
