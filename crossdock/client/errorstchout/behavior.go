@@ -187,7 +187,7 @@ func Run(t crossdock.T) {
 
 		err = tchannel.NewArgReader(call.Response().Arg2Reader()).Read(&res2)
 		isAppErr := call.Response().ApplicationError()
-		if err != nil {
+		if err == nil {
 			err = tchannel.NewArgReader(call.Response().Arg3Reader()).Read(&res3)
 		}
 
