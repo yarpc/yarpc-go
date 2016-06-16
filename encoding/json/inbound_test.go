@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -95,7 +96,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	h := func(*ReqMeta, *simpleRequest) (*simpleResponse, *ResMeta, error) {
-		resMeta := &ResMeta{Headers: transport.Headers{"foo": "bar"}}
+		resMeta := &ResMeta{Headers: yarpc.NewHeaders().With("foo", "bar")}
 		return &simpleResponse{Success: true}, resMeta, nil
 	}
 
@@ -111,7 +112,7 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	}, resw)
 	require.NoError(t, err)
 
-	assert.Equal(t, transport.Headers{"foo": "bar"}, resw.Headers)
+	assert.Equal(t, transport.NewHeaders().With("foo", "bar"), resw.Headers)
 }
 
 func jsonBody(s string) io.Reader {

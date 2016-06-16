@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 )
@@ -60,7 +61,7 @@ func (c jsonClient) Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut inter
 		Service:   c.service,
 		Encoding:  Encoding,
 		Procedure: reqMeta.Procedure,
-		Headers:   reqMeta.Headers,
+		Headers:   transport.Headers(reqMeta.Headers),
 	}
 
 	encoded, err := json.Marshal(reqBody)
@@ -83,5 +84,5 @@ func (c jsonClient) Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut inter
 		return nil, err
 	}
 
-	return &ResMeta{Headers: tres.Headers}, nil
+	return &ResMeta{Headers: yarpc.Headers(tres.Headers)}, nil
 }

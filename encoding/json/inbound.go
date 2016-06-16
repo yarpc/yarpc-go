@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -53,7 +54,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 	reqMeta := ReqMeta{
 		Context:   ctx,
 		Procedure: treq.Procedure,
-		Headers:   treq.Headers,
+		Headers:   yarpc.Headers(treq.Headers),
 	}
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(&reqMeta), reqBody})
@@ -64,7 +65,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 	}
 
 	if resMeta := results[1].Interface().(*ResMeta); resMeta != nil {
-		rw.AddHeaders(resMeta.Headers)
+		rw.AddHeaders(transport.Headers(resMeta.Headers))
 	}
 
 	result := results[0].Interface()

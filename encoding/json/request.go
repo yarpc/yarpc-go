@@ -21,7 +21,7 @@
 package json
 
 import (
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go"
 
 	"golang.org/x/net/context"
 )
@@ -36,7 +36,7 @@ type ReqMeta struct {
 	Procedure string
 
 	// Request headers
-	Headers transport.Headers
+	Headers yarpc.Headers
 }
 
 // Note: The shape of this request object is extremely similar to the

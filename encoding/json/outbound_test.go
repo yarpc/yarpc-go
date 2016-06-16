@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -48,7 +49,7 @@ func TestCall(t *testing.T) {
 
 	tests := []struct {
 		procedure       string
-		headers         transport.Headers
+		headers         yarpc.Headers
 		body            interface{}
 		encodedRequest  string
 		encodedResponse string
@@ -58,7 +59,7 @@ func TestCall(t *testing.T) {
 
 		// Either want, or wantType and wantErr must be set.
 		want        interface{} // expected response body
-		wantHeaders transport.Headers
+		wantHeaders yarpc.Headers
 		wantType    reflect.Type // type of response body
 		wantErr     string       // error message
 	}{
@@ -86,12 +87,12 @@ func TestCall(t *testing.T) {
 		},
 		{
 			procedure:       "requestHeaders",
-			headers:         transport.Headers{"user-id": "42"},
+			headers:         yarpc.NewHeaders().With("user-id", "42"),
 			body:            map[string]interface{}{},
 			encodedRequest:  "{}",
 			encodedResponse: "{}",
 			want:            map[string]interface{}{},
-			wantHeaders:     transport.Headers{"success": "true"},
+			wantHeaders:     yarpc.NewHeaders().With("success", "true"),
 		},
 	}
 
@@ -111,14 +112,14 @@ func TestCall(t *testing.T) {
 						Service:   service,
 						Procedure: tt.procedure,
 						Encoding:  Encoding,
-						Headers:   tt.headers,
+						Headers:   transport.Headers(tt.headers),
 						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
 					}),
 			).Return(
 				&transport.Response{
 					Body: ioutil.NopCloser(
 						bytes.NewReader([]byte(tt.encodedResponse))),
-					Headers: tt.wantHeaders,
+					Headers: transport.Headers(tt.wantHeaders),
 				}, nil)
 		}
 
