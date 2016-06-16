@@ -37,6 +37,7 @@ type ResponseWriter interface {
 	//
 	// This MUST NOT panic if Headers is nil.
 	AddHeaders(Headers)
+	// TODO(abg): Ability to set individual headers instead?
 
 	// SetApplicationError specifies that this response contains an
 	// application error. If called, this MUST be called before any invocation

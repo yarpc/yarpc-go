@@ -112,9 +112,9 @@ func TestSimpleRoundTrip(t *testing.T) {
 		wantError func(error)
 	}{
 		{
-			requestHeaders:  transport.Headers{"token": "1234"},
+			requestHeaders:  transport.NewHeaders().With("token", "1234"),
 			requestBody:     "world",
-			responseHeaders: transport.Headers{"status": "ok"},
+			responseHeaders: transport.NewHeaders().With("status", "ok"),
 			responseBody:    "hello, world",
 		},
 		{
@@ -180,7 +180,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					return tt.responseError
 				}
 
-				if len(tt.responseHeaders) > 0 {
+				if tt.responseHeaders.Len() > 0 {
 					w.AddHeaders(tt.responseHeaders)
 				}
 

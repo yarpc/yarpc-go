@@ -67,7 +67,7 @@ func TestNewHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		headers := NewHeaders(tt.headers)
+		headers := HeadersFromMap(tt.headers)
 		for k, v := range tt.matches {
 			vg, ok := headers.Get(k)
 			assert.True(t, ok, "expected true for %q", k)

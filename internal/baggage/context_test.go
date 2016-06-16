@@ -36,12 +36,14 @@ func (p pair) String() string {
 	return fmt.Sprintf("%q=%q", p.Key, p.Value)
 }
 
+type headers map[string]string
+
 // Actions must have only one attribute set
 type action struct {
-	add  *pair              // ctx = NewContext(ctx, key, value)
-	many *transport.Headers // NewContextWithHeaders(ctx, many)
-	get  *pair              // value == Get(ctx, key)
-	from *transport.Headers // FromContext(ctx) == from
+	add  *pair    // ctx = NewContext(ctx, key, value)
+	many *headers // NewContextWithHeaders(ctx, many)
+	get  *pair    // value == Get(ctx, key)
+	from *headers // FromContext(ctx) == from
 }
 
 func (a action) String() string {
@@ -60,20 +62,20 @@ func (a action) String() string {
 }
 
 func TestHeaders(t *testing.T) {
-	var nilHeaders transport.Headers
+	var nilHeaders headers
 
 	// Each test is a series of actions.
 	tests := [][]action{
 		{
 			{from: &nilHeaders},
 			{add: &pair{"foo", "bar"}},
-			{from: &transport.Headers{"foo": "bar"}},
+			{from: &headers{"foo": "bar"}},
 			{get: &pair{"foo", "bar"}},
 		},
 		{
 			{from: &nilHeaders},
-			{many: &transport.Headers{"foo": "bar", "baz": "qux"}},
-			{from: &transport.Headers{"foo": "bar", "baz": "qux"}},
+			{many: &headers{"foo": "bar", "baz": "qux"}},
+			{from: &headers{"foo": "bar", "baz": "qux"}},
 			{get: &pair{"foo", "bar"}},
 			{get: &pair{"baz", "qux"}},
 		},
@@ -81,16 +83,16 @@ func TestHeaders(t *testing.T) {
 			{from: &nilHeaders},
 			{add: &pair{"foo", "bar"}},
 			{add: &pair{"baz", "qux"}},
-			{from: &transport.Headers{"foo": "bar", "baz": "qux"}},
+			{from: &headers{"foo": "bar", "baz": "qux"}},
 			{get: &pair{"foo", "bar"}},
 			{get: &pair{"baz", "qux"}},
 		},
 		{
 			{from: &nilHeaders},
 			{add: &pair{"foo", "bar"}},
-			{from: &transport.Headers{"foo": "bar"}},
+			{from: &headers{"foo": "bar"}},
 			{add: &pair{"foo", ""}},
-			{from: &transport.Headers{"foo": ""}},
+			{from: &headers{"foo": ""}},
 			{get: &pair{"foo", ""}},
 		},
 	}
@@ -111,35 +113,43 @@ func TestHeaders(t *testing.T) {
 					assert.Equal(t, action.get.Value, value, "failed on: %v", ops)
 				}
 			case action.from != nil:
-				assert.Equal(t, *action.from, FromContext(ctx), "failed on: %v", ops)
+				from := transport.HeadersFromMap(*action.from)
+				assert.Equal(t, from, FromContext(ctx), "failed on: %v", ops)
 			}
 		}
 	}
 }
 
 func TestContextIsNotModified(t *testing.T) {
+	var emptyHeaders transport.Headers
+
 	root := context.Background()
-	assert.Nil(t, FromContext(root), "empty context must have no headers")
+	assert.Equal(t, emptyHeaders, FromContext(root),
+		"empty context must have no headers")
 
 	ctx1 := NewContext(root, "foo", "bar")
-	assert.Nil(t, FromContext(root), "empty context must have no headers")
-	assert.Equal(t, transport.Headers{"foo": "bar"}, FromContext(ctx1))
+	assert.Equal(t, emptyHeaders, FromContext(root),
+		"empty context must have no headers")
+	assert.Equal(t, transport.NewHeaders().With("foo", "bar"), FromContext(ctx1))
 
 	ctx2 := NewContext(ctx1, "baz", "qux")
-	assert.Nil(t, FromContext(root), "empty context must have no headers")
-	assert.Equal(t, transport.Headers{"foo": "bar"}, FromContext(ctx1))
-	assert.Equal(t, transport.Headers{"foo": "bar", "baz": "qux"}, FromContext(ctx2))
+	assert.Equal(t, emptyHeaders, FromContext(root),
+		"empty context must have no headers")
+	assert.Equal(t, transport.NewHeaders().With("foo", "bar"), FromContext(ctx1))
+	assert.Equal(t,
+		transport.NewHeaders().
+			With("foo", "bar").
+			With("baz", "qux"), FromContext(ctx2))
 
-	ctx3 := NewContextWithHeaders(ctx2, transport.Headers{
-		"hello": "world",
-		"foo":   "not-bar",
-	})
-	assert.Nil(t, FromContext(root), "empty context must have no headers")
-	assert.Equal(t, transport.Headers{"foo": "bar"}, FromContext(ctx1))
-	assert.Equal(t, transport.Headers{"foo": "bar", "baz": "qux"}, FromContext(ctx2))
-	assert.Equal(t, transport.Headers{
-		"foo":   "not-bar",
-		"baz":   "qux",
-		"hello": "world",
-	}, FromContext(ctx3))
+	ctx3 := NewContextWithHeaders(ctx2,
+		map[string]string{"hello": "world", "foo": "not-bar"})
+	assert.Equal(t, emptyHeaders, FromContext(root),
+		"empty context must have no headers")
+	assert.Equal(t, transport.NewHeaders().With("foo", "bar"), FromContext(ctx1))
+	assert.Equal(t, transport.NewHeaders().With("foo", "bar").With("baz", "qux"), FromContext(ctx2))
+	assert.Equal(t,
+		transport.NewHeaders().
+			With("foo", "not-bar").
+			With("baz", "qux").
+			With("hello", "world"), FromContext(ctx3))
 }

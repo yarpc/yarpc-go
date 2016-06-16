@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -59,7 +58,7 @@ func TestChain(t *testing.T) {
 	req := &transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  raw.Encoding,
+		Encoding:  transport.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
