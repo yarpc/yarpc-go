@@ -20,7 +20,10 @@
 
 package crossdock
 
-import "runtime/debug"
+import (
+	"runtime"
+	"runtime/debug"
+)
 
 // Run the given function inside a behavior context and return the entries
 // logged by it.
@@ -47,9 +50,31 @@ func Run(params Params, f func(T)) []Entry {
 			close(done)
 		}()
 
+		if runtime.Version() == "go1.5" {
+			// Gnarly workaround for https://github.com/golang/go/issues/12253
+			//
+			// In short: A bug in Go 1.5 causes a specific form of comparison
+			// (runtime.assertE2T2) to leave an invalid pointer on the stack instead
+			// of zeroing it out. Usually, this isn't a problem because the function
+			// returns afterwards. However, we're consistently hitting a case where
+			// another function call is causing the stack to be grown while the
+			// pointer is still invalid. The scanner responsible for copying the
+			// stack as part of growing it runs into the invalid pointer and
+			// crashes.
+			//
+			// To work around this, we grow the stack significantly beforehand to
+			// reduce the likelihood of another growth attempt while the pointer is
+			// invalid.
+			growStack([1024]int64{})
+		}
+
 		f(&t)
 	}()
 
 	<-done
 	return t.entries
+}
+
+func growStack([1024]int64) {
+	// Nothing to do
 }
