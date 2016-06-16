@@ -38,7 +38,7 @@ import (
 type ContextMatcher struct {
 	t       *testing.T
 	ttl     time.Duration
-	baggage transport.Headers
+	baggage *transport.Headers
 
 	TTLDelta time.Duration
 }
@@ -58,10 +58,11 @@ func (ttl ContextTTL) run(c *ContextMatcher) {
 
 // ContextBaggage requires that the Context have the given baggage associated
 // with it.
-type ContextBaggage transport.Headers
+type ContextBaggage map[string]string
 
 func (b ContextBaggage) run(c *ContextMatcher) {
-	c.baggage = transport.Headers(b)
+	h := transport.HeadersFromMap(b)
+	c.baggage = &h
 }
 
 // NewContextMatcher creates a ContextMatcher to verify properties about a
@@ -103,7 +104,7 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 
 	if c.baggage != nil {
 		headers := baggage.FromContext(ctx)
-		if !reflect.DeepEqual(c.baggage, headers) {
+		if !reflect.DeepEqual(*c.baggage, headers) {
 			c.t.Logf("Headers did not match:\n\t   %v (want)\n\t!= %v (got)", c.baggage, headers)
 			return false
 		}
