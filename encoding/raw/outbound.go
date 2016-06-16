@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -57,7 +58,7 @@ func (c rawClient) Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error)
 		Service:   c.service,
 		Encoding:  Encoding,
 		Procedure: reqMeta.Procedure,
-		Headers:   reqMeta.Headers,
+		Headers:   transport.Headers(reqMeta.Headers),
 		Body:      bytes.NewReader(body),
 	}
 
@@ -72,5 +73,5 @@ func (c rawClient) Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error)
 		return nil, nil, err
 	}
 
-	return resBody, &ResMeta{Headers: tres.Headers}, nil
+	return resBody, &ResMeta{Headers: yarpc.Headers(tres.Headers)}, nil
 }

@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -45,13 +46,13 @@ func TestCall(t *testing.T) {
 
 	tests := []struct {
 		procedure    string
-		headers      transport.Headers
+		headers      yarpc.Headers
 		body         []byte
 		responseBody [][]byte
 
 		want        []byte
 		wantErr     string
-		wantHeaders transport.Headers
+		wantHeaders yarpc.Headers
 	}{
 		{
 			procedure:    "foo",
@@ -67,11 +68,11 @@ func TestCall(t *testing.T) {
 		},
 		{
 			procedure:    "headers",
-			headers:      transport.Headers{"x": "y"},
+			headers:      yarpc.NewHeaders().With("x", "y"),
 			body:         []byte{},
 			responseBody: [][]byte{},
 			want:         []byte{},
-			wantHeaders:  transport.Headers{"a": "b"},
+			wantHeaders:  yarpc.NewHeaders().With("a", "b"),
 		},
 	}
 
@@ -95,14 +96,14 @@ func TestCall(t *testing.T) {
 					Caller:    caller,
 					Service:   service,
 					Procedure: tt.procedure,
-					Headers:   tt.headers,
+					Headers:   transport.Headers(tt.headers),
 					Encoding:  Encoding,
 					Body:      bytes.NewReader(tt.body),
 				}),
 		).Return(
 			&transport.Response{
 				Body:    ioutil.NopCloser(responseBody),
-				Headers: tt.wantHeaders,
+				Headers: transport.Headers(tt.wantHeaders),
 			}, nil)
 
 		resBody, res, err := client.Call(&ReqMeta{

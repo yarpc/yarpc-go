@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -88,10 +89,10 @@ func TestRawHandler(t *testing.T) {
 			bodyChunks: [][]byte{},
 			handler: func(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
 				return []byte{}, &ResMeta{
-					Headers: transport.Headers{"hello": "world"},
+					Headers: yarpc.NewHeaders().With("hello", "world"),
 				}, nil
 			},
-			wantHeaders: transport.Headers{"hello": "world"},
+			wantHeaders: transport.NewHeaders().With("hello", "world"),
 		},
 	}
 

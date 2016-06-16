@@ -23,6 +23,7 @@ package raw
 import (
 	"io/ioutil"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -46,7 +47,7 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 	reqMeta := ReqMeta{
 		Context:   ctx,
 		Procedure: treq.Procedure,
-		Headers:   treq.Headers,
+		Headers:   yarpc.Headers(treq.Headers),
 	}
 
 	resBody, resMeta, err := r.h(&reqMeta, reqBody)
@@ -55,7 +56,7 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 	}
 
 	if resMeta != nil {
-		rw.AddHeaders(resMeta.Headers)
+		rw.AddHeaders(transport.Headers(resMeta.Headers))
 	}
 
 	if _, err := rw.Write(resBody); err != nil {

@@ -20,11 +20,11 @@
 
 package raw
 
-import "github.com/yarpc/yarpc-go/transport"
+import "github.com/yarpc/yarpc-go"
 
 // ResMeta is a Raw response without the body.
 type ResMeta struct {
-	Headers transport.Headers
+	Headers yarpc.Headers
 
 	// TODO Response context?
 }
