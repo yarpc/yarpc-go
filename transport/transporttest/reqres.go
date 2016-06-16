@@ -203,11 +203,8 @@ func (fw *FakeResponseWriter) SetApplicationError() {
 
 // AddHeaders for FakeResponseWriter.
 func (fw *FakeResponseWriter) AddHeaders(h transport.Headers) {
-	if fw.Headers == nil {
-		fw.Headers = make(transport.Headers)
-	}
-	for k, v := range h {
-		fw.Headers.Set(k, v)
+	for k, v := range h.Items() {
+		fw.Headers = fw.Headers.With(k, v)
 	}
 }
 
