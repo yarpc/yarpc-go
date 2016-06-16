@@ -1,8 +1,8 @@
 hash: 7d6d74172f119bd6119d5e7657a8dd1fd732562685eb953d54d2566e40d67a5c
-updated: 2016-06-01T13:47:40.562568603-07:00
+updated: 2016-06-16T11:09:19.35257-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 39a09ac5e49481d39dd1bcb6757ffe182e3df20a
+  version: 7ea4a87fc5c03c072a8d52cc499f1b83cfaa927b
   subpackages:
   - lib/go/thrift
 - name: github.com/davecgh/go-spew
@@ -18,30 +18,32 @@ imports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 8d64eb7173c7753d6419fd4a9caf057398611364
+  version: d77da356e56a7428ad25149ca77381849a6a5232
   subpackages:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 1a4c425a84e10edac0b36e560942ce3f5aec0405
+  version: e96eff25b25410ce4fe8c6a1490b04a6c66449bf
   subpackages:
+  - ptr
   - wire
   - protocol
   - protocol/binary
+- name: github.com/uber-go/atomic
+  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber/tchannel-go
-  version: 60271b8a888a861316825f12833c28e31f1cbd0d
+  version: 14e4d1013a2d959a71b3105c5acf5b8f72e67425
   subpackages:
   - json
   - raw
   - thrift
-  - atomic
   - relay
   - tnet
   - trand
   - typed
   - thrift/gen-go/meta
 - name: golang.org/x/net
-  version: c4c3ea71919de159c9e246d7be66deb7f0a39a58
+  version: d7bf3545bb0dacf009c535b3d3fbf53ac0a339ab
   subpackages:
   - context
   - context/ctxhttp
