@@ -97,7 +97,7 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 	}
 
 	// len check to handle nil vs empty cases gracefully.
-	if len(l.Headers) != len(r.Headers) {
+	if l.Headers.Len() != r.Headers.Len() {
 		if !reflect.DeepEqual(l.Headers, r.Headers) {
 			m.t.Logf("Headers did not match:\n\t   %v\n\t!= %v", l.Headers, r.Headers)
 			return false
@@ -124,8 +124,8 @@ func (m RequestMatcher) String() string {
 
 // checkSuperSet checks if the items in l are all also present in r.
 func checkSuperSet(l, r transport.Headers) error {
-	missing := make([]string, 0, len(l))
-	for k, vl := range l {
+	missing := make([]string, 0, l.Len())
+	for k, vl := range l.Items() {
 		vr, ok := r.Get(k)
 		if !ok || vr != vl {
 			missing = append(missing, k)
