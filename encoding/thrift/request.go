@@ -21,7 +21,7 @@
 package thrift
 
 import (
-	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go"
 
 	"golang.org/x/net/context"
 )
@@ -31,5 +31,5 @@ type ReqMeta struct {
 	Context context.Context
 
 	// Request headers
-	Headers transport.Headers
+	Headers yarpc.Headers
 }

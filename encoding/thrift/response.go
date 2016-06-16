@@ -21,15 +21,14 @@
 package thrift
 
 import (
-	"github.com/yarpc/yarpc-go/transport"
-
 	"github.com/thriftrw/thriftrw-go/wire"
+	"github.com/yarpc/yarpc-go"
 )
 
 // ResMeta represents a raw Thrift response.
 type ResMeta struct {
 	// Response headers
-	Headers transport.Headers
+	Headers yarpc.Headers
 
 	// TODO: Handle REPLY/EXCEPTION for response envelopes
 }

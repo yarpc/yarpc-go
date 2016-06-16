@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -119,7 +120,7 @@ func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) 
 		Service:   c.service,
 		Encoding:  Encoding,
 		Procedure: procedureName(c.thriftService, method),
-		Headers:   reqMeta.Headers,
+		Headers:   transport.Headers(reqMeta.Headers),
 	}
 
 	var buffer bytes.Buffer
@@ -144,5 +145,5 @@ func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) 
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
-	return resBody, &ResMeta{Headers: tres.Headers}, nil
+	return resBody, &ResMeta{Headers: yarpc.Headers(tres.Headers)}, nil
 }

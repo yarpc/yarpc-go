@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -54,7 +55,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 
 	res, err := t.Handler.Handle(&ReqMeta{
 		Context: ctx,
-		Headers: treq.Headers,
+		Headers: yarpc.Headers(treq.Headers),
 	}, reqBody)
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 
 	resMeta := res.Meta
 	if resMeta != nil {
-		rw.AddHeaders(resMeta.Headers)
+		rw.AddHeaders(transport.Headers(resMeta.Headers))
 	}
 
 	if err := t.Protocol.Encode(res.Body, rw); err != nil {
