@@ -157,7 +157,6 @@ func newResponseWriter(treq *transport.Request, call inboundCall) *responseWrite
 	return &responseWriter{
 		treq:     treq,
 		response: call.Response(),
-		headers:  make(transport.Headers),
 		format:   call.Format(),
 	}
 }
@@ -166,8 +165,8 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	if rw.wroteHeaders {
 		panic("AddHeaders() cannot be called after calling Write().")
 	}
-	for k, v := range h {
-		rw.headers.Set(k, v)
+	for k, v := range h.Items() {
+		rw.headers = rw.headers.With(k, v)
 	}
 }
 

@@ -65,7 +65,7 @@ func TestOutboundHeaders(t *testing.T) {
 			},
 		},
 		{
-			headers: transport.Headers{"contextfoo": "bar"},
+			headers: transport.NewHeaders().With("contextfoo", "bar"),
 			wantHeaders: []byte{
 				0x00, 0x01,
 				0x00, 0x0A, 'c', 'o', 'n', 't', 'e', 'x', 't', 'f', 'o', 'o',
@@ -73,7 +73,7 @@ func TestOutboundHeaders(t *testing.T) {
 			},
 		},
 		{
-			headers: transport.Headers{"Foo": "bar"},
+			headers: transport.NewHeaders().With("Foo", "bar"),
 			wantHeaders: []byte{
 				0x00, 0x01,
 				0x00, 0x03, 'f', 'o', 'o',
@@ -81,7 +81,7 @@ func TestOutboundHeaders(t *testing.T) {
 			},
 		},
 		{
-			headers:   transport.Headers{"context-foo": "bar"},
+			headers:   transport.NewHeaders().With("context-foo", "bar"),
 			wantError: `application headers cannot start with "Context-"`,
 		},
 	}

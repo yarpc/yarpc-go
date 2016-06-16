@@ -48,14 +48,14 @@ func TestHandlerErrors(t *testing.T) {
 		format  tchannel.Format
 		headers []byte
 
-		wantHeaders transport.Headers
-		wantBaggage transport.Headers
+		wantHeaders map[string]string
+		wantBaggage map[string]string
 	}{
 		{
 			format:      tchannel.JSON,
 			headers:     []byte(`{"Rpc-Header-Foo": "bar", "context-foo": "Baz"}`),
-			wantHeaders: transport.Headers{"rpc-header-foo": "bar"},
-			wantBaggage: transport.Headers{"foo": "Baz"},
+			wantHeaders: map[string]string{"rpc-header-foo": "bar"},
+			wantBaggage: map[string]string{"foo": "Baz"},
 		},
 		{
 			format: tchannel.Thrift,
@@ -66,8 +66,8 @@ func TestHandlerErrors(t *testing.T) {
 				0x00, 0x0B, 'C', 'o', 'n', 't', 'e', 'x', 't', '-', 'F', 'o', 'o', // Context-Foo
 				0x00, 0x03, 'B', 'a', 'z', // Baz
 			},
-			wantHeaders: transport.Headers{"foo": "Bar"},
-			wantBaggage: transport.Headers{"foo": "Baz"},
+			wantHeaders: map[string]string{"foo": "Bar"},
+			wantBaggage: map[string]string{"foo": "Baz"},
 		},
 	}
 
@@ -81,7 +81,7 @@ func TestHandlerErrors(t *testing.T) {
 				&transport.Request{
 					Caller:    "caller",
 					Service:   "service",
-					Headers:   tt.wantHeaders,
+					Headers:   transport.HeadersFromMap(tt.wantHeaders),
 					Encoding:  transport.Encoding(tt.format),
 					Procedure: "hello",
 					Body:      bytes.NewReader([]byte("world")),
@@ -286,7 +286,7 @@ func TestResponseWriter(t *testing.T) {
 		{
 			format: tchannel.Raw,
 			apply: func(w *responseWriter) {
-				headers := transport.NewHeaders(map[string]string{"foo": "bar"})
+				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
 				w.AddHeaders(headers)
 				_, err := w.Write([]byte("hello "))
 				require.NoError(t, err)
@@ -314,7 +314,7 @@ func TestResponseWriter(t *testing.T) {
 		{
 			format: tchannel.JSON,
 			apply: func(w *responseWriter) {
-				headers := transport.NewHeaders(map[string]string{"foo": "bar"})
+				headers := transport.HeadersFromMap(map[string]string{"foo": "bar"})
 				w.AddHeaders(headers)
 
 				_, err := w.Write([]byte("{"))
@@ -375,7 +375,7 @@ func TestResponseWriterAddHeadersAfterWrite(t *testing.T) {
 	w := newResponseWriter(new(transport.Request), call)
 	w.Write([]byte("foo"))
 	assert.Panics(t, func() {
-		w.AddHeaders(transport.Headers{"foo": "bar"})
+		w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	})
 }
 

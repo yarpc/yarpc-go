@@ -36,14 +36,14 @@ import (
 
 // pullBaggage pulls the context headers from the given transport.Headers,
 // deleting them from the original headers map.
-func pullBaggage(headers transport.Headers) transport.Headers {
-	ctxHeaders := make(transport.Headers)
+func pullBaggage(headers transport.Headers) map[string]string {
+	ctxHeaders := make(map[string]string)
 	prefix := strings.ToLower(BaggageHeaderPrefix)
 	prefixLen := len(prefix)
-	for k, v := range headers {
+	for k, v := range headers.Items() {
 		if strings.HasPrefix(k, prefix) {
 			key := k[prefixLen:]
-			ctxHeaders.Set(key, v)
+			ctxHeaders[key] = v
 			headers.Del(k)
 		}
 	}
@@ -58,7 +58,7 @@ func readRequestHeaders(
 ) (context.Context, transport.Headers, error) {
 	headers, err := readHeaders(format, getReader)
 	if err != nil {
-		return ctx, nil, err
+		return ctx, headers, err
 	}
 	if ctxHeaders := pullBaggage(headers); len(ctxHeaders) > 0 {
 		ctx = baggage.NewContextWithHeaders(ctx, ctxHeaders)
@@ -79,23 +79,19 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 		// JSON is special
 		var headers map[string]string
 		err := tchannel.NewArgReader(getReader()).ReadJSON(&headers)
-		return transport.NewHeaders(headers), err
+		return transport.HeadersFromMap(headers), err
 	}
 
 	r, err := getReader()
 	if err != nil {
-		return nil, err
+		return transport.Headers{}, err
 	}
 
 	headers, err := decodeHeaders(r)
 	if err != nil {
-		return nil, err
+		return headers, err
 	}
 
-	// normalize headers to an empty map if nil
-	if headers == nil {
-		headers = make(transport.Headers)
-	}
 	return headers, r.Close()
 }
 
@@ -106,23 +102,23 @@ func writeRequestHeaders(
 	getWriter func() (tchannel.ArgWriter, error),
 ) error {
 	ctxHeaders := baggage.FromContext(ctx)
-	headers := make(transport.Headers, len(ctxHeaders)+len(appHeaders))
+	headers := transport.NewHeadersWithCapacity(ctxHeaders.Len() + appHeaders.Len())
 	// TODO: zero-alloc version
 
 	prefix := strings.ToLower(BaggageHeaderPrefix)
-	for k, v := range appHeaders {
+	for k, v := range appHeaders.Items() {
 		if strings.HasPrefix(k, prefix) {
 			return fmt.Errorf(
 				// TODO: create error type for this
 				"%q is an invalid header: application headers cannot start with %q",
 				k, BaggageHeaderPrefix)
 		}
-		headers.Set(k, v)
+		headers = headers.With(k, v)
 	}
 
-	if len(ctxHeaders) > 0 {
-		for k, v := range ctxHeaders {
-			headers.Set(BaggageHeaderPrefix+k, v)
+	if ctxHeaders.Len() > 0 {
+		for k, v := range ctxHeaders.Items() {
+			headers = headers.With(BaggageHeaderPrefix+k, v)
 		}
 	}
 
@@ -139,7 +135,7 @@ func writeRequestHeaders(
 func writeHeaders(format tchannel.Format, headers transport.Headers, getWriter func() (tchannel.ArgWriter, error)) error {
 	if format == tchannel.JSON {
 		// JSON is special
-		return tchannel.NewArgWriter(getWriter()).WriteJSON(headers)
+		return tchannel.NewArgWriter(getWriter()).WriteJSON(headers.Items())
 	}
 	return tchannel.NewArgWriter(getWriter()).Write(encodeHeaders(headers))
 }
@@ -152,14 +148,14 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 
 	count := reader.ReadUint16()
 	if count == 0 {
-		return nil, reader.Err()
+		return transport.Headers{}, reader.Err()
 	}
 
-	headers := make(transport.Headers, count)
+	headers := transport.NewHeadersWithCapacity(int(count))
 	for i := 0; i < int(count) && reader.Err() == nil; i++ {
 		k := reader.ReadLen16String()
 		v := reader.ReadLen16String()
-		headers.Set(k, v)
+		headers = headers.With(k, v)
 	}
 
 	return headers, reader.Err()
@@ -169,12 +165,12 @@ func decodeHeaders(r io.Reader) (transport.Headers, error) {
 //
 // 	nh:2 (k~2 v~2){nh}
 func encodeHeaders(hs transport.Headers) []byte {
-	if len(hs) == 0 {
+	if hs.Len() == 0 {
 		return []byte{0, 0} // nh = 2
 	}
 
 	size := 2 // nh:2
-	for k, v := range hs {
+	for k, v := range hs.Items() {
 		size += len(k) + 2 // k~2
 		size += len(v) + 2 // v~2
 	}
@@ -182,8 +178,8 @@ func encodeHeaders(hs transport.Headers) []byte {
 	out := make([]byte, size)
 
 	i := 2
-	binary.BigEndian.PutUint16(out, uint16(len(hs))) // nh:2
-	for k, v := range hs {
+	binary.BigEndian.PutUint16(out, uint16(hs.Len())) // nh:2
+	for k, v := range hs.Items() {
 		i += _putStr16(k, out[i:]) // k~2
 		i += _putStr16(v, out[i:]) // v~2
 	}

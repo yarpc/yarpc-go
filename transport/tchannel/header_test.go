@@ -54,7 +54,7 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		headers := transport.NewHeaders(tt.headers)
+		headers := transport.HeadersFromMap(tt.headers)
 		assert.Equal(t, tt.bytes, encodeHeaders(headers))
 
 		result, err := decodeHeaders(bytes.NewReader(tt.bytes))
@@ -128,7 +128,7 @@ func TestReadAndWriteHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		headers := transport.NewHeaders(tt.headers)
+		headers := transport.HeadersFromMap(tt.headers)
 
 		buffer := newBufferArgWriter()
 		err := writeHeaders(tt.format, headers, func() (tchannel.ArgWriter, error) {
@@ -138,7 +138,7 @@ func TestReadAndWriteHeaders(t *testing.T) {
 
 		// Result must match either tt.bytes or tt.orBytes.
 		if !bytes.Equal(tt.bytes, buffer.Bytes()) {
-			assert.Equal(t, tt.orBytes, buffer.Bytes())
+			assert.Equal(t, tt.orBytes, buffer.Bytes(), "failed for %v", tt.format)
 		}
 
 		result, err := readHeaders(tt.format, func() (tchannel.ArgReader, error) {
@@ -146,7 +146,7 @@ func TestReadAndWriteHeaders(t *testing.T) {
 			return tchannel.ArgReader(reader), nil
 		})
 		require.NoError(t, err)
-		assert.Equal(t, headers, result)
+		assert.Equal(t, headers, result, "failed for %v", tt.format)
 	}
 }
 
