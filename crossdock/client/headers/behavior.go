@@ -23,6 +23,7 @@ package headers
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
@@ -32,7 +33,6 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
@@ -71,48 +71,48 @@ func Run(t crossdock.T) {
 
 	tests := []struct {
 		desc string
-		give transport.Headers
-		want transport.Headers
+		give yarpc.Headers
+		want yarpc.Headers
 	}{
 		{
 			"valid headers",
-			transport.Headers{"token1": token1, "token2": token2},
-			transport.Headers{"token1": token1, "token2": token2},
+			yarpc.NewHeaders().With("token1", token1).With("token2", token2),
+			yarpc.NewHeaders().With("token1", token1).With("token2", token2),
 		},
 		{
 			"non-string values",
-			transport.Headers{"token": "42"},
-			transport.Headers{"token": "42"},
+			yarpc.NewHeaders().With("token", "42"),
+			yarpc.NewHeaders().With("token", "42"),
 		},
 		{
 			"empty strings",
-			transport.Headers{"token": ""},
-			transport.Headers{"token": ""},
+			yarpc.NewHeaders().With("token", ""),
+			yarpc.NewHeaders().With("token", ""),
 		},
 		{
 			"no headers",
-			nil,
-			transport.Headers{},
+			yarpc.Headers{},
+			yarpc.NewHeaders(),
 		},
 		{
 			"empty map",
-			transport.Headers{},
-			transport.Headers{},
+			yarpc.NewHeaders(),
+			yarpc.NewHeaders(),
 		},
 		{
 			"varying casing",
-			transport.Headers{"ToKeN1": token1, "tOkEn2": token2},
-			transport.Headers{"token1": token1, "token2": token2},
+			yarpc.NewHeaders().With("ToKeN1", token1).With("tOkEn2", token2),
+			yarpc.NewHeaders().With("token1", token1).With("token2", token2),
 		},
 		{
 			"http header conflict",
-			transport.Headers{"Rpc-Procedure": "does not exist"},
-			transport.Headers{"rpc-procedure": "does not exist"},
+			yarpc.NewHeaders().With("Rpc-Procedure", "does not exist"),
+			yarpc.NewHeaders().With("rpc-procedure", "does not exist"),
 		},
 		{
 			"mixed case value",
-			transport.Headers{"token": "MIXED case Value"},
-			transport.Headers{"token": "MIXED case Value"},
+			yarpc.NewHeaders().With("token", "MIXED case Value"),
+			yarpc.NewHeaders().With("token", "MIXED case Value"),
 		},
 	}
 
@@ -125,12 +125,12 @@ func Run(t crossdock.T) {
 }
 
 type headerCaller interface {
-	Call(transport.Headers) (transport.Headers, error)
+	Call(yarpc.Headers) (yarpc.Headers, error)
 }
 
 type rawCaller struct{ c raw.Client }
 
-func (c rawCaller) Call(h transport.Headers) (transport.Headers, error) {
+func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	_, res, err := c.c.Call(&raw.ReqMeta{
 		Context:   newTestContext(),
 		Headers:   h,
@@ -138,14 +138,14 @@ func (c rawCaller) Call(h transport.Headers) (transport.Headers, error) {
 	}, []byte("hello"))
 
 	if err != nil {
-		return nil, err
+		return yarpc.Headers{}, err
 	}
 	return res.Headers, nil
 }
 
 type jsonCaller struct{ c json.Client }
 
-func (c jsonCaller) Call(h transport.Headers) (transport.Headers, error) {
+func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	var resBody interface{}
 	res, err := c.c.Call(&json.ReqMeta{
 		Context:   newTestContext(),
@@ -154,21 +154,21 @@ func (c jsonCaller) Call(h transport.Headers) (transport.Headers, error) {
 	}, map[string]interface{}{}, &resBody)
 
 	if err != nil {
-		return nil, err
+		return yarpc.Headers{}, err
 	}
 	return res.Headers, nil
 }
 
 type thriftCaller struct{ c echoclient.Interface }
 
-func (c thriftCaller) Call(h transport.Headers) (transport.Headers, error) {
+func (c thriftCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	_, res, err := c.c.Echo(&thrift.ReqMeta{
 		Context: newTestContext(),
 		Headers: h,
 	}, &echo.Ping{Beep: "hello"})
 
 	if err != nil {
-		return nil, err
+		return yarpc.Headers{}, err
 	}
 	return res.Headers, nil
 }

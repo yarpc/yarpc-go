@@ -29,7 +29,6 @@ import (
 
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
-	"github.com/yarpc/yarpc-go/transport"
 )
 
 type httpClient struct {
@@ -42,7 +41,7 @@ type httpResponse struct {
 	Status int
 }
 
-func (h httpClient) Call(t crossdock.T, hs transport.Headers, body string) httpResponse {
+func (h httpClient) Call(t crossdock.T, hs map[string]string, body string) httpResponse {
 	fatals := crossdock.Fatals(t)
 
 	req := http.Request{
@@ -95,7 +94,7 @@ func Run(t crossdock.T) {
 	assert := crossdock.Assert(t)
 
 	// one valid request before we throw the errors at it
-	res := client.Call(t, transport.Headers{
+	res := client.Call(t, map[string]string{
 		"RPC-Caller":     "yarpc-test",
 		"RPC-Service":    "yarpc-test",
 		"RPC-Procedure":  "echo",
@@ -113,7 +112,7 @@ func Run(t crossdock.T) {
 
 	tests := []struct {
 		name    string
-		headers transport.Headers
+		headers map[string]string
 		body    string
 
 		wantStatus         int
@@ -122,7 +121,7 @@ func Run(t crossdock.T) {
 	}{
 		{
 			name:       "no service",
-			headers:    transport.Headers{},
+			headers:    map[string]string{},
 			body:       "{}",
 			wantStatus: 400,
 			wantBody: "BadRequest: missing service name, procedure, " +
@@ -130,7 +129,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "wrong service",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "not-yarpc-test",
 				"RPC-Procedure":  "echo",
@@ -143,7 +142,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "no procedure",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Service": "yarpc-test",
 			},
 			body:       "{}",
@@ -152,7 +151,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "no caller",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Service":   "yarpc-test",
 				"RPC-Procedure": "echo",
 			},
@@ -162,7 +161,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "no handler",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "no-such-procedure",
@@ -175,7 +174,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "no timeout",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":    "yarpc-test",
 				"RPC-Service":   "yarpc-test",
 				"RPC-Procedure": "echo",
@@ -186,7 +185,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "invalid timeout",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "echo",
@@ -199,7 +198,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "invalid request",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "echo",
@@ -213,7 +212,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "unexpected error",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "unexpected-error",
@@ -226,7 +225,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "bad response",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "bad-response",
@@ -240,7 +239,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "remote bad request",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "phone",
@@ -259,7 +258,7 @@ func Run(t crossdock.T) {
 		},
 		{
 			name: "remote unexpected error",
-			headers: transport.Headers{
+			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "phone",

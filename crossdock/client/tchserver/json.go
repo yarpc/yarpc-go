@@ -27,7 +27,6 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
@@ -36,9 +35,7 @@ func runJSON(t crossdock.T, rpc yarpc.RPC) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	headers := transport.Headers{
-		"hello": "json",
-	}
+	headers := yarpc.NewHeaders().With("hello", "json")
 	token := random.String(5)
 
 	resBody, resMeta, err := jsonCall(rpc, headers, token)
@@ -55,7 +52,7 @@ type jsonEcho struct {
 	Token string `json:"token"`
 }
 
-func jsonCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *json.ResMeta, error) {
+func jsonCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, *json.ResMeta, error) {
 	client := json.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

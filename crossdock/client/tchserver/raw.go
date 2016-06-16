@@ -27,7 +27,6 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
@@ -37,9 +36,7 @@ func runRaw(t crossdock.T, rpc yarpc.RPC) {
 	checks := crossdock.Checks(t)
 
 	// TODO headers should be at yarpc, not transport
-	headers := transport.Headers{
-		"hello": "raw",
-	}
+	headers := yarpc.NewHeaders().With("hello", "raw")
 	token := random.Bytes(5)
 
 	resBody, resMeta, err := rawCall(rpc, headers, token)
@@ -52,7 +49,7 @@ func runRaw(t crossdock.T, rpc yarpc.RPC) {
 	}
 }
 
-func rawCall(rpc yarpc.RPC, headers transport.Headers, token []byte) ([]byte, *raw.ResMeta, error) {
+func rawCall(rpc yarpc.RPC, headers yarpc.Headers, token []byte) ([]byte, *raw.ResMeta, error) {
 	client := raw.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

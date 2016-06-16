@@ -30,7 +30,6 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )
@@ -39,9 +38,7 @@ func runThrift(t crossdock.T, rpc yarpc.RPC) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	headers := transport.Headers{
-		"hello": "thrift",
-	}
+	headers := yarpc.NewHeaders().With("hello", "thrift")
 	token := random.String(5)
 
 	resBody, resMeta, err := thriftCall(rpc, headers, token)
@@ -56,7 +53,7 @@ func runThrift(t crossdock.T, rpc yarpc.RPC) {
 	gauntlet.RunGauntlet(t, rpc, serverName)
 }
 
-func thriftCall(rpc yarpc.RPC, headers transport.Headers, token string) (string, *thrift.ResMeta, error) {
+func thriftCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, *thrift.ResMeta, error) {
 	client := echoclient.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

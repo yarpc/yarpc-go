@@ -79,7 +79,7 @@ func Run(t crossdock.T) {
 			handlers: map[string]handler{
 				"hello": &singleHopHandler{
 					t:           t,
-					wantBaggage: transport.Headers{"token": "42"},
+					wantBaggage: transport.NewHeaders().With("token", "42"),
 				},
 			},
 		},
@@ -90,18 +90,18 @@ func Run(t crossdock.T) {
 				"one": &multiHopHandler{
 					t:           t,
 					phoneCallTo: "two",
-					addBaggage:  transport.Headers{"x": "1"},
+					addBaggage:  transport.NewHeaders().With("x", "1"),
 					wantBaggage: transport.Headers{},
 				},
 				"two": &multiHopHandler{
 					t:           t,
 					phoneCallTo: "three",
-					addBaggage:  transport.Headers{"y": "2"},
-					wantBaggage: transport.Headers{"x": "1"},
+					addBaggage:  transport.NewHeaders().With("y", "2"),
+					wantBaggage: transport.NewHeaders().With("x", "1"),
 				},
 				"three": &singleHopHandler{
 					t:           t,
-					wantBaggage: transport.Headers{"x": "1", "y": "2"},
+					wantBaggage: transport.NewHeaders().With("x", "1").With("y", "2"),
 				},
 			},
 		},
@@ -113,12 +113,12 @@ func Run(t crossdock.T) {
 				"one": &multiHopHandler{
 					t:           t,
 					phoneCallTo: "two",
-					addBaggage:  transport.Headers{"hello": "world"},
-					wantBaggage: transport.Headers{"token": "123"},
+					addBaggage:  transport.NewHeaders().With("hello", "world"),
+					wantBaggage: transport.NewHeaders().With("token", "123"),
 				},
 				"two": &singleHopHandler{
 					t:           t,
-					wantBaggage: transport.Headers{"token": "123", "hello": "world"},
+					wantBaggage: transport.NewHeaders().With("token", "123").With("hello", "world"),
 				},
 			},
 		},
@@ -130,18 +130,18 @@ func Run(t crossdock.T) {
 				"one": &multiHopHandler{
 					t:           t,
 					phoneCallTo: "two",
-					addBaggage:  transport.Headers{"x": "2", "y": "3"},
-					wantBaggage: transport.Headers{"x": "1"},
+					addBaggage:  transport.NewHeaders().With("x", "2").With("y", "3"),
+					wantBaggage: transport.NewHeaders().With("x", "1"),
 				},
 				"two": &multiHopHandler{
 					t:           t,
 					phoneCallTo: "three",
-					addBaggage:  transport.Headers{"y": "4"},
-					wantBaggage: transport.Headers{"x": "2", "y": "3"},
+					addBaggage:  transport.NewHeaders().With("y", "4"),
+					wantBaggage: transport.NewHeaders().With("x", "2").With("y", "3"),
 				},
 				"three": &singleHopHandler{
 					t:           t,
-					wantBaggage: transport.Headers{"x": "2", "y": "4"},
+					wantBaggage: transport.NewHeaders().With("x", "2").With("y", "4"),
 				},
 			},
 		},
@@ -211,9 +211,9 @@ func assertBaggageMatches(t crossdock.T, ctx context.Context, want transport.Hea
 	assert := crossdock.Assert(t)
 	got := baggage.FromContext(ctx)
 
-	if len(want) == 0 {
+	if want.Len() == 0 {
 		// len check to handle nil vs empty cases gracefully.
-		return assert.Empty(got, "baggage must be empty: %v", got)
+		return assert.Equal(0, got.Len(), "baggage must be empty: %v", got)
 	}
 
 	return assert.Equal(want, got, "baggage must match")
@@ -262,7 +262,7 @@ func (h *multiHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (inter
 	}
 
 	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
-	for key, value := range h.addBaggage {
+	for key, value := range h.addBaggage.Items() {
 		reqMeta.Context = yarpc.WithBaggage(reqMeta.Context, key, value)
 	}
 
