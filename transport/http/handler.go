@@ -71,7 +71,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		Service:   popHeader(req.Header, ServiceHeader),
 		Procedure: popHeader(req.Header, ProcedureHeader),
 		Encoding:  transport.Encoding(popHeader(req.Header, EncodingHeader)),
-		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, nil),
+		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Body:      req.Body,
 	}
 
@@ -86,8 +86,9 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		return err
 	}
 
-	if headers := baggageHeaders.FromHTTPHeaders(req.Header, nil); len(headers) > 0 {
-		ctx = baggage.NewContextWithHeaders(ctx, headers)
+	headers := baggageHeaders.FromHTTPHeaders(req.Header, transport.Headers{})
+	if headers.Len() > 0 {
+		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
 	// TODO capture and handle panic

@@ -98,7 +98,7 @@ func TestOutboundHeaders(t *testing.T) {
 	}{
 		{
 			desc:    "application headers",
-			headers: transport.Headers{"foo": "bar", "baz": "Qux"},
+			headers: transport.NewHeaders().With("foo", "bar").With("baz", "Qux"),
 			wantHeaders: map[string]string{
 				"Rpc-Header-Foo": "bar",
 				"Rpc-Header-Baz": "Qux",
@@ -118,7 +118,7 @@ func TestOutboundHeaders(t *testing.T) {
 		{
 			desc:    "application headers and baggage",
 			context: yarpc.WithBaggage(context.Background(), "foo", "bar"),
-			headers: transport.Headers{"foo": "baz"},
+			headers: transport.NewHeaders().With("foo", "baz"),
 			wantHeaders: map[string]string{
 				"Context-Foo":    "bar",
 				"Rpc-Header-Foo": "baz",

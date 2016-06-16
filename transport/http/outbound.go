@@ -63,7 +63,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	request.Header = applicationHeaders.ToHTTPHeaders(req.Headers, nil)
-	if hs := baggage.FromContext(ctx); hs != nil {
+	if hs := baggage.FromContext(ctx); hs.Len() > 0 {
 		request.Header = baggageHeaders.ToHTTPHeaders(hs, request.Header)
 	}
 
@@ -87,8 +87,10 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
+		appHeaders := applicationHeaders.FromHTTPHeaders(
+			response.Header, transport.NewHeaders())
 		return &transport.Response{
-			Headers: applicationHeaders.FromHTTPHeaders(response.Header, nil),
+			Headers: appHeaders,
 			Body:    response.Body,
 		}, nil
 	}

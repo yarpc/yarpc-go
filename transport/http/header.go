@@ -43,9 +43,9 @@ var (
 // If 'to' is nil, a new map will be assigned.
 func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) http.Header {
 	if to == nil {
-		to = make(http.Header, len(from))
+		to = make(http.Header, from.Len())
 	}
-	for k, v := range from {
+	for k, v := range from.Items() {
 		to.Add(hm.Prefix+k, v)
 	}
 	return to
@@ -58,15 +58,11 @@ func (hm headerMapper) ToHTTPHeaders(from transport.Headers, to http.Header) htt
 //
 // If 'to' is nil, a new map will be assigned.
 func (hm headerMapper) FromHTTPHeaders(from http.Header, to transport.Headers) transport.Headers {
-	if to == nil {
-		to = make(transport.Headers, len(from))
-	}
-
 	prefixLen := len(hm.Prefix)
 	for k := range from {
 		if strings.HasPrefix(k, hm.Prefix) {
 			key := k[prefixLen:]
-			to.Set(key, from.Get(k))
+			to = to.With(key, from.Get(k))
 		}
 		// Note: undefined behavior for multiple occurrences of the same header
 	}

@@ -37,10 +37,10 @@ func TestHeaders(t *testing.T) {
 	}{
 		{
 			ApplicationHeaderPrefix,
-			transport.Headers{
+			transport.HeadersFromMap(map[string]string{
 				"foo":     "bar",
 				"foo-bar": "hello",
-			},
+			}),
 			http.Header{
 				"Rpc-Header-Foo":     []string{"bar"},
 				"Rpc-Header-Foo-Bar": []string{"hello"},
@@ -50,7 +50,7 @@ func TestHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		m := headerMapper{tt.prefix}
-		assert.Equal(t, tt.transport, m.FromHTTPHeaders(tt.http, nil))
+		assert.Equal(t, tt.transport, m.FromHTTPHeaders(tt.http, transport.Headers{}))
 		assert.Equal(t, tt.http, m.ToHTTPHeaders(tt.transport, nil))
 	}
 }

@@ -94,8 +94,8 @@ func TestHandlerHeaders(t *testing.T) {
 		giveHeaders http.Header
 
 		wantTTL     time.Duration
-		wantHeaders transport.Headers
-		wantBaggage transport.Headers
+		wantHeaders map[string]string
+		wantBaggage map[string]string
 	}{
 		{
 			giveHeaders: http.Header{
@@ -104,10 +104,10 @@ func TestHandlerHeaders(t *testing.T) {
 				"Context-Foo":    {"Baz"},
 			},
 			wantTTL: time.Second,
-			wantHeaders: transport.Headers{
+			wantHeaders: map[string]string{
 				"foo": "bar",
 			},
-			wantBaggage: transport.Headers{
+			wantBaggage: map[string]string{
 				"foo": "Baz",
 			},
 		},
@@ -119,8 +119,8 @@ func TestHandlerHeaders(t *testing.T) {
 				"Context-Rpc-Service": {"hello"},
 			},
 			wantTTL:     100 * time.Millisecond,
-			wantHeaders: transport.Headers{},
-			wantBaggage: transport.Headers{"rpc-service": "hello"},
+			wantHeaders: map[string]string{},
+			wantBaggage: map[string]string{"rpc-service": "hello"},
 		},
 	}
 
@@ -139,7 +139,7 @@ func TestHandlerHeaders(t *testing.T) {
 					Service:   "service",
 					Encoding:  raw.Encoding,
 					Procedure: "hello",
-					Headers:   tt.wantHeaders,
+					Headers:   transport.HeadersFromMap(tt.wantHeaders),
 					Body:      bytes.NewReader([]byte("world")),
 				}),
 			gomock.Any(),
@@ -307,7 +307,7 @@ func TestResponseWriter(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	writer := newResponseWriter(recorder)
 
-	headers := transport.NewHeaders(map[string]string{
+	headers := transport.HeadersFromMap(map[string]string{
 		"foo":       "bar",
 		"shard-key": "123",
 	})
