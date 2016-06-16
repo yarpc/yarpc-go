@@ -34,46 +34,42 @@ type baggageKey struct{}
 // The parent context's baggage is left intact.
 func NewContext(ctx context.Context, key, value string) context.Context {
 	hs := FromContext(ctx)
-	baggage := make(transport.Headers, len(hs)+1)
+	baggage := transport.NewHeadersWithCapacity(hs.Len() + 1)
 
 	// Copy baggage already attached to the context.
-	if hs != nil {
-		for k, v := range hs {
-			baggage.Set(k, v)
+	if hs.Len() > 0 {
+		for k, v := range hs.Items() {
+			baggage = baggage.With(k, v)
 		}
 	}
 
-	baggage.Set(key, value)
+	baggage = baggage.With(key, value)
 	return context.WithValue(ctx, baggageKey{}, baggage)
 }
 
 // Get returns the baggage value attached to the context with the given key.
 func Get(ctx context.Context, key string) (value string, ok bool) {
-	hs := FromContext(ctx)
-	if hs == nil {
-		return "", false
-	}
-	return hs.Get(key)
+	return FromContext(ctx).Get(key)
 }
 
 // NewContextWithHeaders is similar to NewContext except it attaches all
 // elements in the given headers map to the context.
-func NewContextWithHeaders(ctx context.Context, headers transport.Headers) context.Context {
+func NewContextWithHeaders(ctx context.Context, headers map[string]string) context.Context {
 	hs := FromContext(ctx)
 
 	// This API is for use by Inbound implementations only. It's significantly
 	// cheaper than calling NewContext in a loop.
-	baggage := make(transport.Headers, len(hs)+len(headers))
+	baggage := transport.NewHeadersWithCapacity(hs.Len() + len(headers))
 
 	// Copy baggage already attached to the context.
-	if hs != nil {
-		for k, v := range hs {
-			baggage.Set(k, v)
+	if hs.Len() > 0 {
+		for k, v := range hs.Items() {
+			baggage = baggage.With(k, v)
 		}
 	}
 
 	for k, v := range headers {
-		baggage.Set(k, v)
+		baggage = baggage.With(k, v)
 	}
 
 	return context.WithValue(ctx, baggageKey{}, baggage)
@@ -84,7 +80,7 @@ func NewContextWithHeaders(ctx context.Context, headers transport.Headers) conte
 func FromContext(ctx context.Context) transport.Headers {
 	hs, ok := ctx.Value(baggageKey{}).(transport.Headers)
 	if !ok {
-		return nil
+		return transport.Headers{}
 	}
 	return hs
 }

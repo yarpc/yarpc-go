@@ -18,9 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package yarpc
 
-import "github.com/yarpc/yarpc-go/internal"
+import (
+	"sort"
+
+	"github.com/yarpc/yarpc-go/internal"
+)
 
 // CanonicalizeHeaderKey canonicalizes the given header key for storage into
 // the Headers map.
@@ -28,11 +32,8 @@ func CanonicalizeHeaderKey(k string) string {
 	return internal.CanonicalizeHeaderKey(k)
 }
 
-// Headers is the transport-level representation of application headers.
-//
-// Keys in the map MUST be canonicalized with CanonicalizeHeaderKey.
-//
-// You probably want to look at yarpc.Headers instead.
+// Headers defines application headers which will be sent over the wire to the
+// recipient of an RPC call.
 type Headers internal.Headers
 
 // NewHeaders builds a new Headers object.
@@ -40,31 +41,39 @@ func NewHeaders() Headers {
 	return Headers{}
 }
 
-// NewHeadersWithCapacity builds a new Headers object with the given capacity.
-func NewHeadersWithCapacity(capacity int) Headers {
-	return Headers(internal.NewHeadersWithCapacity(capacity))
-}
-
 // With returns a Headers object with the given key-value pair added to it.
-// The returned object MAY not point to the same Headers underlying data store
-// as the original Headers so the returned Headers MUST always be used instead
-// of the original object.
+// If a header with the same name already exists, it will be overwritten.
+//
+// This API is similar to Go's append function. The returned Headers object
+// MAY not point to the same underlying data store, so the returned value MUST
+// always be used in place of the original object.
+//
+// 	headers = headers.With("foo", "bar")
+//
+// This call may be chained to set multiple headers consecutively.
 //
 // 	headers = headers.With("foo", "bar").With("baz", "qux")
+//
+// Again, note that the returned Headers object MAY point to a new object. It
+// MAY also mutate the original object instead.
+//
+// 	h1 = NewHeaders().With("foo", "bar")
+// 	h2 = h1.With("baz", "qux")
+// 	h1.Get("baz")  // this MAY return "qux"
+//
 func (h Headers) With(k, v string) Headers {
 	return Headers(internal.Headers(h).With(k, v))
 }
 
-// Del deletes the header with the given name from the Headers map.
-//
-// This is a no-op if the key does not exist.
-func (h Headers) Del(k string) {
-	internal.Headers(h).Del(k)
-}
-
-// Get retrieves the value associated with the given header name.
+// Get retrieves the value associated with the given header key, and a
+// boolean indicating whether the key actually existed in the header map.
 func (h Headers) Get(k string) (string, bool) {
 	return internal.Headers(h).Get(k)
+}
+
+// Del deletes the given header key from the map.
+func (h Headers) Del(k string) {
+	internal.Headers(h).Del(k)
 }
 
 // Len returns the number of headers defined on this object.
@@ -72,24 +81,15 @@ func (h Headers) Len() int {
 	return internal.Headers(h).Len()
 }
 
-// Items returns the underlying map for this Headers map.
+// Keys returns a list of header keys defined on this Headers object.
 //
-// Keys in the map are normalized using CanonicalizeHeaderKey.
-//
-// The returned map MUST NOT be mutated.
-func (h Headers) Items() map[string]string {
-	return internal.Headers(h).Items()
-}
-
-// HeadersFromMap builds a new Headers object from the given map of header
-// key-value pairs.
-func HeadersFromMap(m map[string]string) Headers {
-	if len(m) == 0 {
-		return Headers{}
+// All items in the list will be normalized using CanonicalizeHeaderKey.
+func (h Headers) Keys() []string {
+	ih := internal.Headers(h)
+	keys := make([]string, 0, ih.Len())
+	for k := range ih.Items() {
+		keys = append(keys, k)
 	}
-	headers := NewHeadersWithCapacity(len(m))
-	for k, v := range m {
-		headers = headers.With(k, v)
-	}
-	return headers
+	sort.Strings(keys)
+	return keys
 }
