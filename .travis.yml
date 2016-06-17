@@ -35,7 +35,7 @@ install:
 script:
   - make test_ci
   - make test-examples
-  - travis_retry goveralls -coverprofile=cover.out -service=travis-ci
+  - travis_retry goveralls -coverprofile=cover.out -service=travis-ci || true
   - make crossdock
   - docker-compose logs
 
