@@ -48,6 +48,7 @@ type requestHandler struct {
 
 func (h requestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "HEAD" {
+		w.Header().Add("Content-Length", "0")
 		return
 	}
 	params := extractParams(r.URL.Query())
