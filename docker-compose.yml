@@ -2,6 +2,7 @@ version: '2'
 
 services:
     crossdock:
+        dns_search: .
         image: yarpc/crossdock
         links:
             - go
@@ -42,26 +43,31 @@ services:
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
 
     go:
+        dns_search: .
         build: .
         ports:
             - "8080-8087"
 
     node:
+        dns_search: .
         image: yarpc/yarpc-node
         ports:
             - "8080-8087"
 
     java:
+        dns_search: .
         image: yarpc/yarpc-java
         ports:
             - "8080-8087"
 
     python:
+        dns_search: .
         image: yarpc/yarpc-python
         ports:
             - "8080-8087"
 
     python-sync:
+        dns_search: .
         image: yarpc/yarpc-python
         ports:
             - 8080
