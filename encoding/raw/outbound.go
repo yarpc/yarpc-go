@@ -25,13 +25,14 @@ import (
 	"io/ioutil"
 
 	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
 // Client makes Raw requests to a single service.
 type Client interface {
 	// Call performs an outbound Raw request.
-	Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error)
+	Call(reqMeta yarpc.ReqMetaOut, body []byte) ([]byte, yarpc.ResMetaIn, error)
 }
 
 // New builds a new Raw client.
@@ -50,19 +51,16 @@ type rawClient struct {
 	caller, service string
 }
 
-func (c rawClient) Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error) {
-	// TODO clamp context deadline with channel-specific TTL
-
+func (c rawClient) Call(reqMeta yarpc.ReqMetaOut, body []byte) ([]byte, yarpc.ResMetaIn, error) {
 	treq := transport.Request{
-		Caller:    c.caller,
-		Service:   c.service,
-		Encoding:  Encoding,
-		Procedure: reqMeta.Procedure,
-		Headers:   transport.Headers(reqMeta.Headers),
-		Body:      bytes.NewReader(body),
+		Caller:   c.caller,
+		Service:  c.service,
+		Encoding: Encoding,
+		Body:     bytes.NewReader(body),
 	}
+	ctx := meta.ToTransportRequest(reqMeta, &treq)
 
-	tres, err := c.t.Call(reqMeta.Context, &treq)
+	tres, err := c.t.Call(ctx, &treq)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -73,5 +71,6 @@ func (c rawClient) Call(reqMeta *ReqMeta, body []byte) ([]byte, *ResMeta, error)
 		return nil, nil, err
 	}
 
-	return resBody, &ResMeta{Headers: yarpc.Headers(tres.Headers)}, nil
+	// TODO: when transport returns response context, use that here.
+	return resBody, meta.FromTransportResponse(ctx, tres), nil
 }

@@ -24,17 +24,14 @@
 //
 // 	client := raw.New(channel)
 // 	resBody, resMeta, err := client.Call(
-// 		&raw.ReqMeta{
-// 			Context: ctx,
-// 			Procedure: "submit",
-// 		},
+// 		yarpc.NewReqMeta(ctx).Procedure("submit"),
 // 		[]byte{1, 2, 3},
 // 	)
 //
 // To register a raw procedure, define a Registrant or use Procedure to make a
 // single-function Registrant, and register it with Register.
 //
-// 	func Submit(reqMeta *raw.ReqMeta, reqBody []byte) ([]byte, *raw.ResMeta, error) {
+// 	func Submit(reqMeta yarpc.ReqMeta, reqBody []byte) ([]byte, yarpc.ResMeta, error) {
 // 		// ...
 // 	}
 //

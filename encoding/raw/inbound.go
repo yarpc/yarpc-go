@@ -23,7 +23,7 @@ package raw
 import (
 	"io/ioutil"
 
-	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -41,22 +41,17 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 	reqBody, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
 		return err
-		// TODO should this count as an encoding error of some kind?
 	}
 
-	reqMeta := ReqMeta{
-		Context:   ctx,
-		Procedure: treq.Procedure,
-		Headers:   yarpc.Headers(treq.Headers),
-	}
-
-	resBody, resMeta, err := r.h(&reqMeta, reqBody)
+	reqMeta := meta.FromTransportRequest(ctx, treq)
+	resBody, resMeta, err := r.h(reqMeta, reqBody)
 	if err != nil {
 		return err
 	}
 
 	if resMeta != nil {
-		rw.AddHeaders(transport.Headers(resMeta.Headers))
+		_ = meta.ToTransportResponseWriter(resMeta, rw)
+		// TODO(abg): Propagate response context
 	}
 
 	if _, err := rw.Write(resBody); err != nil {
