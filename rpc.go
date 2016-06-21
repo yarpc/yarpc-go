@@ -39,6 +39,12 @@ type RPC interface {
 	// This panics if the given service is unknown.
 	Channel(service string) transport.Channel
 
+	// Inbounds returns a copy of the list of inbounds for this RPC object.
+	//
+	// The Inbounds will be returned in the same order that was used in the
+	// configuration.
+	Inbounds() []transport.Inbound
+
 	// Starts the RPC allowing it to accept and processing new incoming
 	// requests.
 	//
@@ -74,7 +80,7 @@ func New(cfg Config) RPC {
 	return rpc{
 		Name:        cfg.Name,
 		Registry:    transport.NewMapRegistry(cfg.Name),
-		Inbounds:    cfg.Inbounds,
+		inbounds:    cfg.Inbounds,
 		Outbounds:   cfg.Outbounds,
 		Filter:      cfg.Filter,
 		Interceptor: cfg.Interceptor,
@@ -88,10 +94,17 @@ type rpc struct {
 	transport.Registry
 
 	Name        string
-	Inbounds    []transport.Inbound
 	Outbounds   transport.Outbounds
 	Filter      transport.Filter
 	Interceptor transport.Interceptor
+
+	inbounds []transport.Inbound
+}
+
+func (r rpc) Inbounds() []transport.Inbound {
+	inbounds := make([]transport.Inbound, 0, len(r.inbounds))
+	inbounds = append(inbounds, r.inbounds...)
+	return inbounds
 }
 
 func (r rpc) Channel(service string) transport.Channel {
@@ -120,7 +133,7 @@ func (r rpc) Start() error {
 	}
 
 	var wait sync.ErrorWaiter
-	for _, i := range r.Inbounds {
+	for _, i := range r.inbounds {
 		wait.Submit(callServe(i))
 	}
 
@@ -146,7 +159,7 @@ func (r rpc) Handle(ctx context.Context, req *transport.Request, rw transport.Re
 
 func (r rpc) Stop() error {
 	var wait sync.ErrorWaiter
-	for _, i := range r.Inbounds {
+	for _, i := range r.inbounds {
 		wait.Submit(i.Stop)
 	}
 
