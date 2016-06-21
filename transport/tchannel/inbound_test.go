@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
@@ -35,11 +34,14 @@ import (
 
 func TestInboundStartNew(t *testing.T) {
 	tests := []struct {
-		withInbound func(*tchannel.Channel, func(transport.Inbound))
+		withInbound func(*tchannel.Channel, func(Inbound))
 	}{
 		{
-			func(ch *tchannel.Channel, f func(transport.Inbound)) {
+			func(ch *tchannel.Channel, f func(Inbound)) {
 				i := NewInbound(ch)
+				// Can't do Equal because we want to match the pointer, not a
+				// DeepEqual.
+				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start(new(transporttest.MockHandler)))
 				defer i.Stop()
 
@@ -47,8 +49,9 @@ func TestInboundStartNew(t *testing.T) {
 			},
 		},
 		{
-			func(ch *tchannel.Channel, f func(transport.Inbound)) {
+			func(ch *tchannel.Channel, f func(Inbound)) {
 				i := NewInbound(ch, ListenAddr(":0"))
+				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start(new(transporttest.MockHandler)))
 				defer i.Stop()
 
@@ -60,7 +63,7 @@ func TestInboundStartNew(t *testing.T) {
 	for _, tt := range tests {
 		ch, err := tchannel.NewChannel("foo", nil)
 		require.NoError(t, err)
-		tt.withInbound(ch, func(i transport.Inbound) {
+		tt.withInbound(ch, func(i Inbound) {
 			assert.Equal(t, tchannel.ChannelListening, ch.State())
 			assert.NoError(t, i.Stop())
 			assert.Equal(t, tchannel.ChannelClosed, ch.State())

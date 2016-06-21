@@ -28,6 +28,14 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
+// Inbound is a TChannel Inbound.
+type Inbound interface {
+	transport.Inbound
+
+	// Returns the underlying Channel for this Inbound.
+	Channel() *tchannel.Channel
+}
+
 // InboundOption configures Inbound.
 type InboundOption func(*inbound)
 
@@ -40,10 +48,10 @@ func ListenAddr(addr string) InboundOption {
 	return func(i *inbound) { i.addr = addr }
 }
 
-// NewInbound builds a new TChannel inbound from the given Channel.
-// Existing methods registered on the channel remain registered and
-// are preferred when a call is received.
-func NewInbound(ch *tchannel.Channel, opts ...InboundOption) transport.Inbound {
+// NewInbound builds a new TChannel inbound from the given Channel. Existing
+// methods registered on the channel remain registered and are preferred when
+// a call is received.
+func NewInbound(ch *tchannel.Channel, opts ...InboundOption) Inbound {
 	i := &inbound{ch: ch}
 	for _, opt := range opts {
 		opt(i)
@@ -55,6 +63,10 @@ type inbound struct {
 	ch       *tchannel.Channel
 	addr     string
 	listener net.Listener
+}
+
+func (i *inbound) Channel() *tchannel.Channel {
+	return i.ch
 }
 
 func (i *inbound) Start(h transport.Handler) error {
