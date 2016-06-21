@@ -25,18 +25,10 @@ import (
 	"github.com/yarpc/yarpc-go"
 )
 
-// ResMeta represents a raw Thrift response.
-type ResMeta struct {
-	// Response headers
-	Headers yarpc.Headers
-
-	// TODO: Handle REPLY/EXCEPTION for response envelopes
-}
-
 // Response contains the response from a generated Thrift handler.
 type Response struct {
 	Body wire.Value
-	Meta *ResMeta
+	Meta yarpc.ResMeta
 
 	IsApplicationError bool
 }

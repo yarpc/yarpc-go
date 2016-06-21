@@ -22,10 +22,13 @@ package thrift
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -63,7 +66,13 @@ func TestThriftHandler(t *testing.T) {
 
 		handler := NewMockHandler(mockCtrl)
 		handler.EXPECT().Handle(
-			&ReqMeta{Context: ctx},
+			fakeReqMeta{
+				context:   ctx,
+				caller:    "caller",
+				service:   "service",
+				encoding:  Encoding,
+				procedure: "MyService::someMethod",
+			},
 			requestBody,
 		).Return(Response{
 			Body:               wire.NewValueStruct(wire.Struct{}),
@@ -86,4 +95,46 @@ func TestThriftHandler(t *testing.T) {
 			"isApplicationError did not match")
 		assert.Equal(t, rw.Body.String(), "hello", "body did not match")
 	}
+}
+
+type fakeReqMeta struct {
+	context   context.Context
+	caller    string
+	service   string
+	procedure string
+	encoding  transport.Encoding
+	headers   yarpc.Headers
+}
+
+func (f fakeReqMeta) Matches(x interface{}) bool {
+	reqMeta, ok := x.(yarpc.ReqMeta)
+	if !ok {
+		return false
+	}
+
+	// TODO: log to testing.T on mismatch if test becomes more complex
+	if f.context != reqMeta.Context() {
+		return false
+	}
+
+	if f.caller != reqMeta.Caller() {
+		return false
+	}
+	if f.service != reqMeta.Service() {
+		return false
+	}
+	if f.procedure != reqMeta.Procedure() {
+		return false
+	}
+	if f.encoding != reqMeta.Encoding() {
+		return false
+	}
+	if !reflect.DeepEqual(f.headers, reqMeta.Headers()) {
+		return false
+	}
+	return true
+}
+
+func (f fakeReqMeta) String() string {
+	return fmt.Sprintf("%#v", f)
 }

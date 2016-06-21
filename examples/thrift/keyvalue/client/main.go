@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
@@ -94,9 +93,7 @@ func main() {
 			key := args[0]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if value, _, err := client.GetValue(&thrift.ReqMeta{
-				Context: ctx,
-			}, &key); err != nil {
+			if value, _, err := client.GetValue(yarpc.NewReqMeta(ctx), &key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -112,9 +109,7 @@ func main() {
 
 			cache.Invalidate()
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if _, err := client.SetValue(&thrift.ReqMeta{
-				Context: ctx,
-			}, &key, &value); err != nil {
+			if _, err := client.SetValue(yarpc.NewReqMeta(ctx), &key, &value); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue
