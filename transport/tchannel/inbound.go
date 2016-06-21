@@ -28,7 +28,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// Inbound represents a TChannel Inbound.
+// Inbound is a TChannel Inbound.
 type Inbound interface {
 	transport.Inbound
 
