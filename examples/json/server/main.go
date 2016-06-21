@@ -57,14 +57,14 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) Get(reqMeta *json.ReqMeta, body *getRequest) (*getResponse, *json.ResMeta, error) {
+func (h *handler) Get(reqMeta yarpc.ReqMeta, body *getRequest) (*getResponse, yarpc.ResMeta, error) {
 	h.RLock()
 	result := &getResponse{Value: h.items[body.Key]}
 	h.RUnlock()
 	return result, nil, nil
 }
 
-func (h *handler) Set(reqMeta *json.ReqMeta, body *setRequest) (*setResponse, *json.ResMeta, error) {
+func (h *handler) Set(reqMeta yarpc.ReqMeta, body *setRequest) (*setResponse, yarpc.ResMeta, error) {
 	h.Lock()
 	h.items[body.Key] = body.Value
 	h.Unlock()

@@ -25,17 +25,14 @@
 // 	client := json.New(channel)
 // 	var resBody GetValueResponse
 // 	resMeta, err := client.Call(
-// 		&json.ReqMeta{
-// 			Context: ctx,
-// 			Procedure: "getValue",
-// 		},
+// 		yarpc.NewReqMeta(ctx).Procedure("getValue"),
 // 		&GetValueRequest{...},
 // 		&resBody,
 // 	)
 //
 // To register a JSON procedure, define functions in the format,
 //
-// 	f(meta *json.ReqMeta, body $reqBody) ($resBody, *json.ResMeta, error)
+// 	f(meta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 //
 // Where '$reqBody' and '$resBody' are either pointers to structs representing
 // your request and response objects, or map[string]interface{}.

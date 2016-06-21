@@ -26,8 +26,8 @@ type simpleResponse struct {
 }
 
 func TestHandleStructSuccess(t *testing.T) {
-	h := func(r *ReqMeta, body *simpleRequest) (*simpleResponse, *ResMeta, error) {
-		assert.Equal(t, "simpleCall", r.Procedure)
+	h := func(r yarpc.ReqMeta, body *simpleRequest) (*simpleResponse, yarpc.ResMeta, error) {
+		assert.Equal(t, "simpleCall", r.Procedure())
 		assert.Equal(t, "foo", body.Name)
 		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
 
@@ -53,7 +53,7 @@ func TestHandleStructSuccess(t *testing.T) {
 }
 
 func TestHandleMapSuccess(t *testing.T) {
-	h := func(_ *ReqMeta, body map[string]interface{}) (map[string]string, *ResMeta, error) {
+	h := func(_ yarpc.ReqMeta, body map[string]interface{}) (map[string]string, yarpc.ResMeta, error) {
 		assert.Equal(t, 42.0, body["foo"])
 		assert.Equal(t, []interface{}{"a", "b", "c"}, body["bar"])
 
@@ -78,7 +78,7 @@ func TestHandleMapSuccess(t *testing.T) {
 }
 
 func TestHandleInterfaceEmptySuccess(t *testing.T) {
-	h := func(_ *ReqMeta, body interface{}) (interface{}, *ResMeta, error) {
+	h := func(_ yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
 		return body, nil, nil
 	}
 
@@ -95,8 +95,9 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 }
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
-	h := func(*ReqMeta, *simpleRequest) (*simpleResponse, *ResMeta, error) {
-		resMeta := &ResMeta{Headers: yarpc.NewHeaders().With("foo", "bar")}
+	h := func(r yarpc.ReqMeta, _ *simpleRequest) (*simpleResponse, yarpc.ResMeta, error) {
+		resMeta := yarpc.NewResMeta(r.Context()).
+			Headers(yarpc.NewHeaders().With("foo", "bar"))
 		return &simpleResponse{Success: true}, resMeta, nil
 	}
 

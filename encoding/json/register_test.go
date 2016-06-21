@@ -3,6 +3,8 @@ package json
 import (
 	"testing"
 
+	"github.com/yarpc/yarpc-go"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,31 +16,43 @@ func TestWrapHandlerInvalid(t *testing.T) {
 		{"empty", func() {}},
 		{
 			"wrong-response",
-			func(*ReqMeta, map[string]interface{}) (*ResMeta, error) {
+			func(yarpc.ReqMeta, map[string]interface{}) (yarpc.ResMeta, error) {
 				return nil, nil
 			},
 		},
 		{
 			"wrong-request",
-			func(string, *struct{}) (*struct{}, *ResMeta, error) {
+			func(string, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+				return nil, nil, nil
+			},
+		},
+		{
+			"wrong-req-meta",
+			func(yarpc.ReqMetaOut, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+				return nil, nil, nil
+			},
+		},
+		{
+			"wrong-res-meta",
+			func(yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.ResMetaIn, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-req",
-			func(*ReqMeta, struct{}) (*struct{}, *ResMeta, error) {
+			func(yarpc.ReqMeta, struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-res",
-			func(*ReqMeta, *struct{}) (struct{}, *ResMeta, error) {
+			func(yarpc.ReqMeta, *struct{}) (struct{}, yarpc.ResMeta, error) {
 				return struct{}{}, nil, nil
 			},
 		},
 		{
 			"non-string-key",
-			func(*ReqMeta, map[int32]interface{}) (*struct{}, *ResMeta, error) {
+			func(yarpc.ReqMeta, map[int32]interface{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
@@ -58,25 +72,25 @@ func TestWrapHandlerValid(t *testing.T) {
 	}{
 		{
 			"foo",
-			func(*ReqMeta, *struct{}) (*struct{}, *ResMeta, error) {
+			func(yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"bar",
-			func(*ReqMeta, map[string]interface{}) (*struct{}, *ResMeta, error) {
+			func(yarpc.ReqMeta, map[string]interface{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"baz",
-			func(*ReqMeta, map[string]interface{}) (map[string]interface{}, *ResMeta, error) {
+			func(yarpc.ReqMeta, map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"qux",
-			func(*ReqMeta, interface{}) (map[string]interface{}, *ResMeta, error) {
+			func(yarpc.ReqMeta, interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
