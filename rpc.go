@@ -102,8 +102,8 @@ type rpc struct {
 }
 
 func (r rpc) Inbounds() []transport.Inbound {
-	inbounds := make([]transport.Inbound, 0, len(r.inbounds))
-	inbounds = append(inbounds, r.inbounds...)
+	inbounds := make([]transport.Inbound, len(r.inbounds))
+	copy(inbounds, r.inbounds)
 	return inbounds
 }
 
