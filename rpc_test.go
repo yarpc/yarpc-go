@@ -32,39 +32,57 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-func TestInbounds(t *testing.T) {
+func basicRPC(t *testing.T) RPC {
 	ch, err := tchannel.NewChannel("test", nil)
 	require.NoError(t, err, "failed to create TChannel")
 
-	rpc := New(Config{
+	return New(Config{
 		Name: "test",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(ch, tch.ListenAddr(":0")),
 			http.NewInbound(":0"),
 		},
 	})
+}
 
-	// Must be a copy. Mutating shouldn't break the rest of the test.
-	{
-		inbounds := rpc.Inbounds()
-		require.Len(t, inbounds, 2, "expected two inbounds")
+func TestInboundsReturnsACopy(t *testing.T) {
+	rpc := basicRPC(t)
 
-		inbounds[0] = nil
-		inbounds[1] = nil
-	}
+	inbounds := rpc.Inbounds()
+	require.Len(t, inbounds, 2, "expected two inbounds")
+	assert.NotNil(t, inbounds[0], "must not be nil")
+	assert.NotNil(t, inbounds[1], "must not be nil")
+
+	// Mutate the list and verify that the next call still returns non-nil
+	// results.
+	inbounds[0] = nil
+	inbounds[1] = nil
+
+	inbounds = rpc.Inbounds()
+	require.Len(t, inbounds, 2, "expected two inbounds")
+	assert.NotNil(t, inbounds[0], "must not be nil")
+	assert.NotNil(t, inbounds[1], "must not be nil")
+}
+
+func TestInboundsOrderIsMaintained(t *testing.T) {
+	rpc := basicRPC(t)
 
 	// Order must be maintained
 	assert.Implements(t,
 		(*tch.Inbound)(nil), rpc.Inbounds()[0], "first inbound must be TChannel")
 	assert.Implements(t,
 		(*http.Inbound)(nil), rpc.Inbounds()[1], "second inbound must be HTTP")
+}
+
+func TestInboundsOrderAfterStart(t *testing.T) {
+	rpc := basicRPC(t)
 
 	require.NoError(t, rpc.Start(), "failed to start RPC")
 	defer rpc.Stop()
 
 	inbounds := rpc.Inbounds()
 
-	tchInbound := rpc.Inbounds()[0].(tch.Inbound)
+	tchInbound := inbounds[0].(tch.Inbound)
 	assert.NotEqual(t, "0.0.0.0:0", tchInbound.Channel().PeerInfo().HostPort)
 
 	httpInbound := inbounds[1].(http.Inbound)
