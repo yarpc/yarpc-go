@@ -160,16 +160,7 @@ func Run(t crossdock.T) {
 				}
 			}
 
-			// We need to build the channel here so that we can have it close in
-			// client-only cases.
-			//
-			// TODO: this shouldn't be an issue once Outbounds support a Close
-			// method.
-			ch, err := tchannel.NewChannel("ctxclient", nil)
-			fatals.NoError(err, "failed to create TChannel")
-			defer ch.Close()
-
-			rpc, tconfig := buildRPC(t, ch)
+			rpc, tconfig := buildRPC(t)
 			fatals.NoError(rpc.Start(), "%v: RPC failed to start", tt.desc)
 			defer rpc.Stop()
 
@@ -187,7 +178,7 @@ func Run(t crossdock.T) {
 			ctx, _ = context.WithTimeout(ctx, time.Second)
 
 			var resp js.RawMessage
-			_, err = jsonClient.Call(
+			_, err := jsonClient.Call(
 				&json.ReqMeta{Procedure: "phone", Context: ctx},
 				&server.PhoneRequest{
 					Service:   "ctxclient",
@@ -281,13 +272,17 @@ func (h *multiHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (inter
 	return map[string]interface{}{}, resMeta, err
 }
 
-func buildRPC(t crossdock.T, ch *tchannel.Channel) (rpc yarpc.RPC, tconfig server.TransportConfig) {
+func buildRPC(t crossdock.T) (rpc yarpc.RPC, tconfig server.TransportConfig) {
 	fatals := crossdock.Fatals(t)
 
 	self := t.Param("ctxclient")
 	subject := t.Param("ctxserver")
 	fatals.NotEmpty(self, "ctxclient is required")
 	fatals.NotEmpty(subject, "ctxserver is required")
+
+	// always need a TChannel
+	ch, err := tchannel.NewChannel("ctxclient", nil)
+	fatals.NoError(err, "failed to create TChannel")
 
 	var outbound transport.Outbound
 	switch trans := t.Param(params.Transport); trans {

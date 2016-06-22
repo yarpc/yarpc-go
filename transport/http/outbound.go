@@ -52,6 +52,14 @@ type outbound struct {
 	URL    string
 }
 
+func (o outbound) Start() error {
+	return nil // nothing to do
+}
+
+func (o outbound) Stop() error {
+	return nil // nothing to do
+}
+
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	start := time.Now()
 	deadline, _ := ctx.Deadline()

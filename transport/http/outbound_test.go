@@ -66,6 +66,9 @@ func TestCallSuccess(t *testing.T) {
 	defer successServer.Close()
 
 	out := NewOutbound(successServer.URL)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	res, err := out.Call(ctx, &transport.Request{
@@ -144,6 +147,9 @@ func TestOutboundHeaders(t *testing.T) {
 		}
 
 		out := NewOutbound(server.URL)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
+
 		res, err := out.Call(ctx, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
@@ -184,6 +190,9 @@ func TestCallFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		out := NewOutboundWithClient(tt.url, http.DefaultClient)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		_, err := out.Call(ctx, &transport.Request{

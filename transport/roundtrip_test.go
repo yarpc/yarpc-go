@@ -73,6 +73,8 @@ func (ht httpTransport) WithHandler(h transport.Handler, f func(transport.Outbou
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
+	require.NoError(ht.t, o.Start(), "failed to start outbound")
+	defer o.Stop()
 	f(o)
 }
 
@@ -91,6 +93,8 @@ func (tt tchannelTransport) WithHandler(h transport.Handler, f func(transport.Ou
 
 		client := testutils.NewClient(tt.t, clientOpts)
 		o := tch.NewOutbound(client, tch.HostPort(hostPort))
+		require.NoError(tt.t, o.Start(), "failed to start outbound")
+		defer o.Stop()
 
 		f(o)
 	})

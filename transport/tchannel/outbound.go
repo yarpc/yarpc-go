@@ -64,6 +64,17 @@ type outbound struct {
 	HostPort string
 }
 
+func (o outbound) Start() error {
+	// TODO: Should we create the connection to HostPort (if specified) here or
+	// wait for the first call?
+	return nil
+}
+
+func (o outbound) Stop() error {
+	o.Channel.Close()
+	return nil
+}
+
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when

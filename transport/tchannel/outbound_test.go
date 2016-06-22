@@ -31,6 +31,7 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
 	"golang.org/x/net/context"
@@ -107,6 +108,8 @@ func TestOutboundHeaders(t *testing.T) {
 			out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 				ServiceName: "caller",
 			}), hostport)
+			require.NoError(t, out.Start(), "failed to start outbound")
+			defer out.Stop()
 
 			ctx := tt.context
 			if ctx == nil {
@@ -173,6 +176,8 @@ func TestCallSuccess(t *testing.T) {
 		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), serverHostPort)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
 
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		res, err := out.Call(
@@ -251,6 +256,8 @@ func TestCallFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		out := tt.getOutbound(testutils.NewClient(t, nil), serverHostPort)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
 
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		_, err := out.Call(
