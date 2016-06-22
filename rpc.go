@@ -22,7 +22,7 @@ package yarpc
 
 import (
 	"github.com/yarpc/yarpc-go/internal/request"
-	"github.com/yarpc/yarpc-go/sync"
+	"github.com/yarpc/yarpc-go/internal/sync"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
