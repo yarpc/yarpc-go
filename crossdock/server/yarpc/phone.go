@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
 	ht "github.com/yarpc/yarpc-go/transport/http"
@@ -69,7 +70,7 @@ type PhoneResponse struct {
 }
 
 // Phone implements the phone procedure
-func Phone(reqMeta *json.ReqMeta, body *PhoneRequest) (*PhoneResponse, *json.ResMeta, error) {
+func Phone(reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
 	var outbound transport.Outbound
 
 	switch {
@@ -100,14 +101,14 @@ func Phone(reqMeta *json.ReqMeta, body *PhoneRequest) (*PhoneResponse, *json.Res
 
 	resBody := PhoneResponse{
 		Service:   "yarpc-test", // TODO use reqMeta.Service
-		Procedure: reqMeta.Procedure,
+		Procedure: reqMeta.Procedure(),
 	}
 
-	ctx, _ := context.WithTimeout(reqMeta.Context, 500*time.Millisecond)
-	_, err := client.Call(&json.ReqMeta{
-		Context:   ctx,
-		Procedure: body.Procedure,
-	}, body.Body, &resBody.Body)
+	ctx, _ := context.WithTimeout(reqMeta.Context(), 500*time.Millisecond)
+	_, err := client.Call(
+		yarpc.NewReqMeta(ctx).Procedure(body.Procedure),
+		body.Body,
+		&resBody.Body)
 	if err != nil {
 		return nil, nil, err
 	}

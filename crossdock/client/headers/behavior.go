@@ -32,7 +32,6 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 
 	"golang.org/x/net/context"
 )
@@ -131,46 +130,45 @@ type headerCaller interface {
 type rawCaller struct{ c raw.Client }
 
 func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
-	_, res, err := c.c.Call(&raw.ReqMeta{
-		Context:   newTestContext(),
-		Headers:   h,
-		Procedure: "echo/raw",
-	}, []byte("hello"))
+	_, res, err := c.c.Call(
+		yarpc.NewReqMeta(newTestContext()).
+			Headers(h).
+			Procedure("echo/raw"),
+		[]byte("hello"))
 
 	if err != nil {
 		return yarpc.Headers{}, err
 	}
-	return res.Headers, nil
+	return res.Headers(), nil
 }
 
 type jsonCaller struct{ c json.Client }
 
 func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	var resBody interface{}
-	res, err := c.c.Call(&json.ReqMeta{
-		Context:   newTestContext(),
-		Headers:   h,
-		Procedure: "echo",
-	}, map[string]interface{}{}, &resBody)
+	res, err := c.c.Call(
+		yarpc.NewReqMeta(newTestContext()).
+			Headers(h).
+			Procedure("echo"),
+		map[string]interface{}{}, &resBody)
 
 	if err != nil {
 		return yarpc.Headers{}, err
 	}
-	return res.Headers, nil
+	return res.Headers(), nil
 }
 
 type thriftCaller struct{ c echoclient.Interface }
 
 func (c thriftCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
-	_, res, err := c.c.Echo(&thrift.ReqMeta{
-		Context: newTestContext(),
-		Headers: h,
-	}, &echo.Ping{Beep: "hello"})
+	_, res, err := c.c.Echo(
+		yarpc.NewReqMeta(newTestContext()).Headers(h),
+		&echo.Ping{Beep: "hello"})
 
 	if err != nil {
 		return yarpc.Headers{}, err
 	}
-	return res.Headers, nil
+	return res.Headers(), nil
 }
 
 func newTestContext() context.Context {

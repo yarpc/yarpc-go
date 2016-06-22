@@ -23,16 +23,16 @@ package yarpc
 import (
 	"fmt"
 
-	"github.com/yarpc/yarpc-go/encoding/json"
+	"github.com/yarpc/yarpc-go"
 )
 
 // UnexpectedError fails with an unexpected error.
-func UnexpectedError(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
+func UnexpectedError(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
 	return nil, nil, fmt.Errorf("error")
 }
 
 // BadResponse returns an object that's not a valid JSON response.
-func BadResponse(reqMeta *json.ReqMeta, body map[string]interface{}) (map[string]interface{}, *json.ResMeta, error) {
+func BadResponse(reqMeta yarpc.ReqMeta, body map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
 	// func is not serializable
 	result := map[string]interface{}{"foo": func() {}}
 	return result, nil, nil

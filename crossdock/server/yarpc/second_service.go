@@ -20,15 +20,15 @@
 
 package yarpc
 
-import "github.com/yarpc/yarpc-go/encoding/thrift"
+import "github.com/yarpc/yarpc-go"
 
 // secondService implements the SecondService.
 type secondService struct{}
 
-func (secondService) BlahBlah(reqMeta *thrift.ReqMeta) (*thrift.ResMeta, error) {
+func (secondService) BlahBlah(reqMeta yarpc.ReqMeta) (yarpc.ResMeta, error) {
 	return nil, nil
 }
 
-func (secondService) SecondtestString(reqMeta *thrift.ReqMeta, thing *string) (string, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (secondService) SecondtestString(reqMeta yarpc.ReqMeta, thing *string) (string, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
