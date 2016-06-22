@@ -25,13 +25,14 @@ package echoserver
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
+	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 )
 
 type Interface interface {
-	Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (*echo.Pong, *thrift.ResMeta, error)
+	Echo(reqMeta yarpc.ReqMeta, ping *echo.Ping) (*echo.Pong, yarpc.ResMeta, error)
 }
 
 func New(impl Interface) thrift.Service {
@@ -54,7 +55,7 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) Echo(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) Echo(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args echo2.EchoArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err

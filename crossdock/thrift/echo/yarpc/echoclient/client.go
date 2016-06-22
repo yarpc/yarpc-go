@@ -25,6 +25,7 @@ package echoclient
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
+	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
@@ -32,7 +33,7 @@ import (
 )
 
 type Interface interface {
-	Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (*echo.Pong, *thrift.ResMeta, error)
+	Echo(reqMeta yarpc.ReqMetaOut, ping *echo.Ping) (*echo.Pong, yarpc.ResMetaIn, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -41,7 +42,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (success *echo.Pong, resMeta *thrift.ResMeta, err error) {
+func (c client) Echo(reqMeta yarpc.ReqMetaOut, ping *echo.Ping) (success *echo.Pong, resMeta yarpc.ResMetaIn, err error) {
 	args := echo2.EchoHelper.Args(ping)
 	var w wire.Value
 	w, err = args.ToWire()

@@ -25,13 +25,14 @@ package secondserviceserver
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
+	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/service/secondservice"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 )
 
 type Interface interface {
-	BlahBlah(reqMeta *thrift.ReqMeta) (*thrift.ResMeta, error)
-	SecondtestString(reqMeta *thrift.ReqMeta, thing *string) (string, *thrift.ResMeta, error)
+	BlahBlah(reqMeta yarpc.ReqMeta) (yarpc.ResMeta, error)
+	SecondtestString(reqMeta yarpc.ReqMeta, thing *string) (string, yarpc.ResMeta, error)
 }
 
 func New(impl Interface) thrift.Service {
@@ -54,7 +55,7 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) BlahBlah(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) BlahBlah(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args secondservice.BlahBlahArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
@@ -71,7 +72,7 @@ func (h handler) BlahBlah(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Resp
 	return response, err
 }
 
-func (h handler) SecondtestString(reqMeta *thrift.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) SecondtestString(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args secondservice.SecondtestStringArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
