@@ -280,7 +280,6 @@ func buildRPC(t crossdock.T) (rpc yarpc.RPC, tconfig server.TransportConfig) {
 	fatals.NotEmpty(self, "ctxclient is required")
 	fatals.NotEmpty(subject, "ctxserver is required")
 
-	// always need a TChannel
 	ch, err := tchannel.NewChannel("ctxclient", nil)
 	fatals.NoError(err, "failed to create TChannel")
 
