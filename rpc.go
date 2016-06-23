@@ -138,6 +138,7 @@ func (r rpc) Start() error {
 	}
 
 	for _, o := range r.Outbounds {
+		// TODO record the name of the service whose outbound failed
 		wait.Submit(o.Start)
 	}
 

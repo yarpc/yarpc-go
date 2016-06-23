@@ -21,12 +21,16 @@
 package yarpc
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
@@ -87,4 +91,182 @@ func TestInboundsOrderAfterStart(t *testing.T) {
 
 	httpInbound := inbounds[1].(http.Inbound)
 	assert.NotNil(t, httpInbound.Addr(), "expected an HTTP addr")
+}
+
+func TestStartStopFailures(t *testing.T) {
+	tests := []struct {
+		desc string
+
+		inbounds  func(*gomock.Controller) []transport.Inbound
+		outbounds func(*gomock.Controller) transport.Outbounds
+
+		wantStartErr string
+		wantStopErr  string
+	}{
+		{
+			desc: "all success",
+			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
+				inbounds := make([]transport.Inbound, 10)
+				for i := range inbounds {
+					in := transporttest.NewMockInbound(mockCtrl)
+					in.EXPECT().Start(gomock.Any()).Return(nil)
+					in.EXPECT().Stop().Return(nil)
+					inbounds[i] = in
+				}
+				return inbounds
+			},
+			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
+				outbounds := make(transport.Outbounds)
+				for i := 0; i < 10; i++ {
+					out := transporttest.NewMockOutbound(mockCtrl)
+					out.EXPECT().Start().Return(nil)
+					out.EXPECT().Stop().Return(nil)
+					outbounds[fmt.Sprintf("service-%v", i)] = out
+				}
+				return outbounds
+			},
+		},
+		{
+			desc: "inbound 6 start failure",
+			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
+				inbounds := make([]transport.Inbound, 10)
+				for i := range inbounds {
+					in := transporttest.NewMockInbound(mockCtrl)
+					if i == 6 {
+						in.EXPECT().Start(gomock.Any()).Return(errors.New("great sadness"))
+					} else {
+						in.EXPECT().Start(gomock.Any()).Return(nil)
+					}
+					// no Stop() because Start() failed
+					inbounds[i] = in
+				}
+				return inbounds
+			},
+			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
+				outbounds := make(transport.Outbounds)
+				for i := 0; i < 10; i++ {
+					out := transporttest.NewMockOutbound(mockCtrl)
+					out.EXPECT().Start().Return(nil)
+					outbounds[fmt.Sprintf("service-%v", i)] = out
+				}
+				return outbounds
+			},
+			wantStartErr: "great sadness",
+		},
+		{
+			desc: "inbound 7 stop failure",
+			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
+				inbounds := make([]transport.Inbound, 10)
+				for i := range inbounds {
+					in := transporttest.NewMockInbound(mockCtrl)
+					in.EXPECT().Start(gomock.Any()).Return(nil)
+					if i == 7 {
+						in.EXPECT().Stop().Return(errors.New("great sadness"))
+					} else {
+						in.EXPECT().Stop().Return(nil)
+					}
+					inbounds[i] = in
+				}
+				return inbounds
+			},
+			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
+				outbounds := make(transport.Outbounds)
+				for i := 0; i < 10; i++ {
+					out := transporttest.NewMockOutbound(mockCtrl)
+					out.EXPECT().Start().Return(nil)
+					out.EXPECT().Stop().Return(nil)
+					outbounds[fmt.Sprintf("service-%v", i)] = out
+				}
+				return outbounds
+			},
+			wantStopErr: "great sadness",
+		},
+		{
+			desc: "outbound 5 start failure",
+			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
+				inbounds := make([]transport.Inbound, 10)
+				for i := range inbounds {
+					in := transporttest.NewMockInbound(mockCtrl)
+					in.EXPECT().Start(gomock.Any()).Return(nil)
+					inbounds[i] = in
+				}
+				return inbounds
+			},
+			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
+				outbounds := make(transport.Outbounds)
+				for i := 0; i < 10; i++ {
+					out := transporttest.NewMockOutbound(mockCtrl)
+					if i == 5 {
+						out.EXPECT().Start().Return(errors.New("something went wrong"))
+					} else {
+						out.EXPECT().Start().Return(nil)
+					}
+					outbounds[fmt.Sprintf("service-%v", i)] = out
+				}
+				return outbounds
+			},
+			wantStartErr: "something went wrong",
+			// TODO: Include the name of the outbound in the error message
+		},
+		{
+			desc: "inbound 7 stop failure",
+			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
+				inbounds := make([]transport.Inbound, 10)
+				for i := range inbounds {
+					in := transporttest.NewMockInbound(mockCtrl)
+					in.EXPECT().Start(gomock.Any()).Return(nil)
+					in.EXPECT().Stop().Return(nil)
+					inbounds[i] = in
+				}
+				return inbounds
+			},
+			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
+				outbounds := make(transport.Outbounds)
+				for i := 0; i < 10; i++ {
+					out := transporttest.NewMockOutbound(mockCtrl)
+					out.EXPECT().Start().Return(nil)
+					if i == 7 {
+						out.EXPECT().Stop().Return(errors.New("something went wrong"))
+					} else {
+						out.EXPECT().Stop().Return(nil)
+					}
+					outbounds[fmt.Sprintf("service-%v", i)] = out
+				}
+				return outbounds
+			},
+			wantStopErr: "something went wrong",
+			// TODO: Include the name of the outbound in the error message
+		},
+	}
+
+	for _, tt := range tests {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		rpc := New(Config{
+			Name:      "test",
+			Inbounds:  tt.inbounds(mockCtrl),
+			Outbounds: tt.outbounds(mockCtrl),
+		})
+
+		err := rpc.Start()
+		if tt.wantStartErr != "" {
+			if assert.Error(t, err, "%v: expected Start() to fail", tt.desc) {
+				assert.Contains(t, err.Error(), tt.wantStartErr, tt.desc)
+			}
+			continue
+		}
+		if !assert.NoError(t, err, "%v: expected Start() to succeed", tt.desc) {
+			continue
+		}
+
+		err = rpc.Stop()
+		if tt.wantStopErr == "" {
+			assert.NoError(t, err, "%v: expected Stop() to succeed", tt.desc)
+			continue
+		}
+		if assert.Error(t, err, "%v: expected Stop() to fail", tt.desc) {
+			assert.Contains(t, err.Error(), tt.wantStopErr, tt.desc)
+		}
+	}
 }
