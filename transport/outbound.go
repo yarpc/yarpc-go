@@ -28,6 +28,10 @@ import "golang.org/x/net/context"
 // calls.
 type Outbound interface {
 	// Sets up the outbound to start making calls.
+	//
+	// This MUST block until the outbound is ready to start sending requests.
+	//
+	// Implementations can assume that this function is called at most once.
 	Start() error
 
 	// Stops the outbound, cleaning up any resources held by the Outbound.
@@ -35,6 +39,10 @@ type Outbound interface {
 
 	// Call sends the given request through this transport and returns its
 	// response.
+	//
+	// This MUST NOT be called before Start() has been called successfully. This
+	// MAY panic if called without calling Start(). This MUST be safe to call
+	// concurrently.
 	Call(ctx context.Context, request *Request) (*Response, error)
 }
 
