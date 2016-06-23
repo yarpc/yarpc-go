@@ -20,6 +20,8 @@
 
 package transport
 
+//go:generate mockgen -destination=transporttest/inbound.go -package=transporttest github.com/yarpc/yarpc-go/transport Inbound
+
 // Inbound is a transport that knows how to receive requests for procedure
 // calls.
 type Inbound interface {
