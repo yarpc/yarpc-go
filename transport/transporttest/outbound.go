@@ -60,3 +60,23 @@ func (_m *MockOutbound) Call(_param0 context.Context, _param1 *transport.Request
 func (_mr *_MockOutboundRecorder) Call(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Call", arg0, arg1)
 }
+
+func (_m *MockOutbound) Start() error {
+	ret := _m.ctrl.Call(_m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockOutboundRecorder) Start() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+}
+
+func (_m *MockOutbound) Stop() error {
+	ret := _m.ctrl.Call(_m, "Stop")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockOutboundRecorder) Stop() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+}

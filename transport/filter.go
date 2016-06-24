@@ -68,6 +68,14 @@ type filteredOutbound struct {
 	f Filter
 }
 
+func (fo filteredOutbound) Start() error {
+	return fo.o.Start()
+}
+
+func (fo filteredOutbound) Stop() error {
+	return fo.o.Stop()
+}
+
 func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
 	return fo.f.Call(ctx, request, fo.o)
 }

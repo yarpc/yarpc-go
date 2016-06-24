@@ -126,7 +126,7 @@ func (r rpc) Channel(service string) transport.Channel {
 }
 
 func (r rpc) Start() error {
-	callServe := func(i transport.Inbound) func() error {
+	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
 			return i.Start(r)
 		}
@@ -134,13 +134,17 @@ func (r rpc) Start() error {
 
 	var wait sync.ErrorWaiter
 	for _, i := range r.inbounds {
-		wait.Submit(callServe(i))
+		wait.Submit(startInbound(i))
+	}
+
+	for _, o := range r.Outbounds {
+		// TODO record the name of the service whose outbound failed
+		wait.Submit(o.Start)
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
 		return errorGroup(errors)
 	}
-
 	return nil
 }
 
@@ -161,6 +165,9 @@ func (r rpc) Stop() error {
 	var wait sync.ErrorWaiter
 	for _, i := range r.inbounds {
 		wait.Submit(i.Stop)
+	}
+	for _, o := range r.Outbounds {
+		wait.Submit(o.Stop)
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
