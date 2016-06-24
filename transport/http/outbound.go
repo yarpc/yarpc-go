@@ -31,8 +31,14 @@ import (
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/uber-go/atomic"
 	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
+)
+
+var (
+	errOutboundAlreadyStarted = errors.ErrOutboundAlreadyStarted("http.Outbound")
+	errOutboundNotStarted     = errors.ErrOutboundNotStarted("http.Outbound")
 )
 
 // NewOutbound builds a new HTTP outbound that sends requests to the given
@@ -44,23 +50,36 @@ func NewOutbound(url string) transport.Outbound {
 // NewOutboundWithClient builds a new HTTP outbound that sends requests to the
 // given URL using the given HTTP client.
 func NewOutboundWithClient(url string, client *http.Client) transport.Outbound {
-	return outbound{Client: client, URL: url}
+	// TODO: Use option pattern with varargs instead
+	return outbound{Client: client, URL: url, started: atomic.NewBool(false)}
 }
 
 type outbound struct {
-	Client *http.Client
-	URL    string
+	started *atomic.Bool
+	Client  *http.Client
+	URL     string
 }
 
 func (o outbound) Start() error {
-	return nil // nothing to do
+	if o.started.Swap(true) {
+		return errOutboundAlreadyStarted
+	}
+	return nil
 }
 
 func (o outbound) Stop() error {
-	return nil // nothing to do
+	if !o.started.Swap(false) {
+		return errOutboundNotStarted
+	}
+	return nil
 }
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+
 	start := time.Now()
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)

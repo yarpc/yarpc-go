@@ -18,53 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package errors
 
-import (
-	"fmt"
+import "fmt"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
-	"github.com/yarpc/yarpc-go/transport"
-	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+// ErrOutboundAlreadyStarted represents a failure because Start() was already
+// called on the outbound.
+type ErrOutboundAlreadyStarted string
 
-	"github.com/uber/tchannel-go"
-)
+func (e ErrOutboundAlreadyStarted) Error() string {
+	return fmt.Sprintf("%s has already been started", string(e))
+}
 
-const (
-	serverPort = 8083
-	serverName = "tchannel-server"
-)
+// ErrOutboundNotStarted represents a failure because Start() was not called
+// on an outbound or if Stop() was called.
+type ErrOutboundNotStarted string
 
-// Run executes the tchserver test
-func Run(t crossdock.T) {
-	fatals := crossdock.Fatals(t)
-
-	encoding := t.Param(params.Encoding)
-	server := t.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
-
-	ch, err := tchannel.NewChannel("yarpc-client", nil)
-	fatals.NoError(err, "could not create channel")
-
-	rpc := yarpc.New(yarpc.Config{
-		Name: "yarpc-client",
-		Outbounds: transport.Outbounds{
-			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
-		},
-	})
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
-
-	switch encoding {
-	case "raw":
-		runRaw(t, rpc)
-	case "json":
-		runJSON(t, rpc)
-	case "thrift":
-		runThrift(t, rpc)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
-	}
+func (e ErrOutboundNotStarted) Error() string {
+	return fmt.Sprintf("%s has not been started or was stopped", string(e))
 }

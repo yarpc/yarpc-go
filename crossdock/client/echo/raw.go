@@ -35,7 +35,11 @@ import (
 // Raw implements the 'raw' behavior.
 func Raw(t crossdock.T) {
 	t = createEchoT("raw", t)
+	fatals := crossdock.Fatals(t)
+
 	rpc := rpc.Create(t)
+	fatals.NoError(rpc.Start(), "could not start RPC")
+	defer rpc.Stop()
 
 	client := raw.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)

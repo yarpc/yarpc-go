@@ -42,6 +42,9 @@ func Run(t crossdock.T) {
 	defer cancel()
 
 	rpc := rpc.Create(t)
+	fatals.NoError(rpc.Start(), "could not start RPC")
+	defer rpc.Stop()
+
 	ch := raw.New(rpc.Channel("yarpc-test"))
 	_, _, err := ch.Call(&raw.ReqMeta{
 		Context:   ctx,

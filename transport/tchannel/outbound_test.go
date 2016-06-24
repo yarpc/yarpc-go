@@ -275,3 +275,57 @@ func TestCallFailures(t *testing.T) {
 		assert.Contains(t, err.Error(), tt.message)
 	}
 }
+
+func TestStartTwice(t *testing.T) {
+	for _, getOutbound := range newOutbounds {
+		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+			ServiceName: "caller",
+		}), "localhost:4040")
+		// TODO: If we change Start() to establish a connection to the host, this
+		// hostport will have to be changed to a real server.
+
+		if assert.NoError(t, out.Start()) {
+			err := out.Start()
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "tchannel.Outbound has already been started")
+		}
+	}
+}
+
+func TestStopWithoutStarting(t *testing.T) {
+	for _, getOutbound := range newOutbounds {
+		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+			ServiceName: "caller",
+		}), "localhost:4040")
+		// TODO: If we change Start() to establish a connection to the host, this
+		// hostport will have to be changed to a real server.
+
+		err := out.Stop()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "tchannel.Outbound has not been started")
+	}
+}
+
+func TestCallWithoutStarting(t *testing.T) {
+	for _, getOutbound := range newOutbounds {
+		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+			ServiceName: "caller",
+		}), "localhost:4040")
+		// TODO: If we change Start() to establish a connection to the host, this
+		// hostport will have to be changed to a real server.
+
+		assert.Panics(t, func() {
+			ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			out.Call(
+				ctx,
+				&transport.Request{
+					Caller:    "caller",
+					Service:   "service",
+					Encoding:  raw.Encoding,
+					Procedure: "foo",
+					Body:      bytes.NewReader([]byte("sup")),
+				},
+			)
+		})
+	}
+}

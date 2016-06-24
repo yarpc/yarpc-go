@@ -47,11 +47,14 @@ func createHeadersT(t crossdock.T) crossdock.T {
 // Run runs the headers behavior
 func Run(t crossdock.T) {
 	t = createHeadersT(t)
-	rpc := rpc.Create(t)
 
 	fatals := crossdock.Fatals(t)
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
+
+	rpc := rpc.Create(t)
+	fatals.NoError(rpc.Start(), "could not start RPC")
+	defer rpc.Stop()
 
 	var caller headerCaller
 	encoding := t.Param(params.Encoding)
