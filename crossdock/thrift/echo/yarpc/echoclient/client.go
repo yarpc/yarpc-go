@@ -44,13 +44,8 @@ type client struct{ c thrift.Client }
 
 func (c client) Echo(reqMeta yarpc.CallReqMeta, ping *echo.Ping) (success *echo.Pong, resMeta yarpc.CallResMeta, err error) {
 	args := echo2.EchoHelper.Args(ping)
-	var w wire.Value
-	w, err = args.ToWire()
-	if err != nil {
-		return
-	}
 	var body wire.Value
-	body, resMeta, err = c.c.Call("echo", reqMeta, w)
+	body, resMeta, err = c.c.Call(reqMeta, args)
 	if err != nil {
 		return
 	}

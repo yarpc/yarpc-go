@@ -44,13 +44,8 @@ type client struct{ c thrift.Client }
 
 func (c client) GetValue(reqMeta yarpc.CallReqMeta, key *string) (success string, resMeta yarpc.CallResMeta, err error) {
 	args := keyvalue.GetValueHelper.Args(key)
-	var w wire.Value
-	w, err = args.ToWire()
-	if err != nil {
-		return
-	}
 	var body wire.Value
-	body, resMeta, err = c.c.Call("getValue", reqMeta, w)
+	body, resMeta, err = c.c.Call(reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -64,13 +59,8 @@ func (c client) GetValue(reqMeta yarpc.CallReqMeta, key *string) (success string
 
 func (c client) SetValue(reqMeta yarpc.CallReqMeta, key *string, value *string) (resMeta yarpc.CallResMeta, err error) {
 	args := keyvalue.SetValueHelper.Args(key, value)
-	var w wire.Value
-	w, err = args.ToWire()
-	if err != nil {
-		return
-	}
 	var body wire.Value
-	body, resMeta, err = c.c.Call("setValue", reqMeta, w)
+	body, resMeta, err = c.c.Call(reqMeta, args)
 	if err != nil {
 		return
 	}

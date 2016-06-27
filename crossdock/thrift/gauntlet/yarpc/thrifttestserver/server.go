@@ -86,7 +86,7 @@ func (h handler) TestBinary(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Resp
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -103,7 +103,7 @@ func (h handler) TestByte(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -120,7 +120,7 @@ func (h handler) TestDouble(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Resp
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -137,7 +137,7 @@ func (h handler) TestEnum(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -154,7 +154,7 @@ func (h handler) TestException(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.R
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -171,7 +171,7 @@ func (h handler) TestI32(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respons
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -188,7 +188,7 @@ func (h handler) TestI64(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respons
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -205,7 +205,7 @@ func (h handler) TestInsanity(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Re
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -222,7 +222,7 @@ func (h handler) TestList(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -239,7 +239,7 @@ func (h handler) TestMap(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respons
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -256,7 +256,7 @@ func (h handler) TestMapMap(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Resp
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -273,7 +273,7 @@ func (h handler) TestMulti(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respo
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -290,7 +290,7 @@ func (h handler) TestMultiException(reqMeta yarpc.ReqMeta, body wire.Value) (thr
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -307,7 +307,7 @@ func (h handler) TestNest(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -324,7 +324,7 @@ func (h handler) TestSet(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respons
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -341,7 +341,7 @@ func (h handler) TestString(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Resp
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -358,7 +358,7 @@ func (h handler) TestStringMap(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.R
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -375,7 +375,7 @@ func (h handler) TestStruct(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Resp
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -392,7 +392,7 @@ func (h handler) TestTypedef(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Res
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -409,7 +409,7 @@ func (h handler) TestVoid(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }

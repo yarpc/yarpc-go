@@ -21,13 +21,14 @@
 package thrift
 
 import (
-	"github.com/thriftrw/thriftrw-go/wire"
 	"github.com/yarpc/yarpc-go"
+
+	"github.com/thriftrw/thriftrw-go/envelope"
 )
 
 // Response contains the response from a generated Thrift handler.
 type Response struct {
-	Body wire.Value
+	Body envelope.Enveloper
 	Meta yarpc.ResMeta
 
 	IsApplicationError bool
