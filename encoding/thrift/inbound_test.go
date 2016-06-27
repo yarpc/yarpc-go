@@ -75,7 +75,7 @@ func TestThriftHandler(t *testing.T) {
 			},
 			requestBody,
 		).Return(Response{
-			Body:               wire.NewValueStruct(wire.Struct{}),
+			Body:               emptyEnveloper{},
 			IsApplicationError: isApplicationError,
 		}, nil)
 
@@ -95,6 +95,20 @@ func TestThriftHandler(t *testing.T) {
 			"isApplicationError did not match")
 		assert.Equal(t, rw.Body.String(), "hello", "body did not match")
 	}
+}
+
+type emptyEnveloper struct{}
+
+func (emptyEnveloper) MethodName() string {
+	return "someMethod"
+}
+
+func (emptyEnveloper) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+func (emptyEnveloper) ToWire() (wire.Value, error) {
+	return wire.NewValueStruct(wire.Struct{}), nil
 }
 
 type fakeReqMeta struct {
