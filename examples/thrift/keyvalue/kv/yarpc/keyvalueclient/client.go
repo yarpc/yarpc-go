@@ -32,8 +32,8 @@ import (
 )
 
 type Interface interface {
-	GetValue(reqMeta yarpc.ReqMetaOut, key *string) (string, yarpc.ResMetaIn, error)
-	SetValue(reqMeta yarpc.ReqMetaOut, key *string, value *string) (yarpc.ResMetaIn, error)
+	GetValue(reqMeta yarpc.CallReqMeta, key *string) (string, yarpc.CallResMeta, error)
+	SetValue(reqMeta yarpc.CallReqMeta, key *string, value *string) (yarpc.CallResMeta, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -42,7 +42,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) GetValue(reqMeta yarpc.ReqMetaOut, key *string) (success string, resMeta yarpc.ResMetaIn, err error) {
+func (c client) GetValue(reqMeta yarpc.CallReqMeta, key *string) (success string, resMeta yarpc.CallResMeta, err error) {
 	args := keyvalue.GetValueHelper.Args(key)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -62,7 +62,7 @@ func (c client) GetValue(reqMeta yarpc.ReqMetaOut, key *string) (success string,
 	return
 }
 
-func (c client) SetValue(reqMeta yarpc.ReqMetaOut, key *string, value *string) (resMeta yarpc.ResMetaIn, err error) {
+func (c client) SetValue(reqMeta yarpc.CallReqMeta, key *string, value *string) (resMeta yarpc.CallResMeta, err error) {
 	args := keyvalue.SetValueHelper.Args(key, value)
 	var w wire.Value
 	w, err = args.ToWire()

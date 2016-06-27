@@ -37,7 +37,7 @@ import (
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
 	// Call the given Thrift method.
-	Call(method string, reqMeta yarpc.ReqMetaOut, body wire.Value) (wire.Value, yarpc.ResMetaIn, error)
+	Call(method string, reqMeta yarpc.CallReqMeta, body wire.Value) (wire.Value, yarpc.CallResMeta, error)
 }
 
 // Config contains the configuration for the Client.
@@ -95,11 +95,11 @@ type thriftClient struct {
 	caller, service string
 }
 
-func (c thriftClient) Call(method string, reqMeta yarpc.ReqMetaOut, reqBody wire.Value) (wire.Value, yarpc.ResMetaIn, error) {
+func (c thriftClient) Call(method string, reqMeta yarpc.CallReqMeta, reqBody wire.Value) (wire.Value, yarpc.CallResMeta, error) {
 	// Code generated for Thrift client calls will probably be something like
 	// this:
 	//
-	// 	func (c *MyServiceClient) someMethod(reqMeta yarpc.ReqMetaOut, arg1 Arg1Type, arg2Type) (returnValue, yarpc.ResMetaIn, error) {
+	// 	func (c *MyServiceClient) someMethod(reqMeta yarpc.CallReqMeta, arg1 Arg1Type, arg2Type) (returnValue, yarpc.CallResMeta, error) {
 	// 		args := someMethodArgs{arg1: arg1, arg2: arg2}
 	// 		resBody, resMeta, err := c.client.Call("someMethod", reqMeta, args.ToWire())
 	// 		if err != nil { return nil, resMeta, err }

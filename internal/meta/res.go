@@ -27,9 +27,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-// FromTransportResponse builds a ResMetaIn from a transport-level Response.
-func FromTransportResponse(ctx context.Context, res *transport.Response) yarpc.ResMetaIn {
-	return resMetaIn{ctx: ctx, res: res}
+// FromTransportResponse builds a CallResMeta from a transport-level Response.
+func FromTransportResponse(ctx context.Context, res *transport.Response) yarpc.CallResMeta {
+	return callResMeta{ctx: ctx, res: res}
 }
 
 // ToTransportResponseWriter fills the given transport response with
@@ -42,15 +42,15 @@ func ToTransportResponseWriter(resMeta yarpc.ResMeta, w transport.ResponseWriter
 	return resMeta.GetContext()
 }
 
-type resMetaIn struct {
+type callResMeta struct {
 	ctx context.Context
 	res *transport.Response
 }
 
-func (r resMetaIn) Context() context.Context {
+func (r callResMeta) Context() context.Context {
 	return r.ctx
 }
 
-func (r resMetaIn) Headers() yarpc.Headers {
+func (r callResMeta) Headers() yarpc.Headers {
 	return yarpc.Headers(r.res.Headers)
 }

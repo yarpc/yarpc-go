@@ -26,10 +26,10 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 )
 
-// ReqMetaOut contains information about an outgoing YARPC request.
-type ReqMetaOut interface {
-	Procedure(string) ReqMetaOut
-	Headers(Headers) ReqMetaOut
+// CallReqMeta contains information about an outgoing YARPC request.
+type CallReqMeta interface {
+	Procedure(string) CallReqMeta
+	Headers(Headers) CallReqMeta
 
 	GetContext() context.Context
 	GetProcedure() string
@@ -46,40 +46,40 @@ type ReqMeta interface {
 	Service() string
 }
 
-// NewReqMeta constructs a ReqMetaOut with the given Context.
+// NewReqMeta constructs a CallReqMeta with the given Context.
 //
 // The context MUST NOT be nil.
-func NewReqMeta(ctx context.Context) ReqMetaOut {
+func NewReqMeta(ctx context.Context) CallReqMeta {
 	if ctx == nil {
 		panic("invalid usage of ReqMeta: context cannot be nil")
 	}
-	return &reqMetaOut{ctx: ctx}
+	return &callReqMeta{ctx: ctx}
 }
 
-type reqMetaOut struct {
+type callReqMeta struct {
 	ctx       context.Context
 	procedure string
 	headers   Headers
 }
 
-func (r *reqMetaOut) Procedure(p string) ReqMetaOut {
+func (r *callReqMeta) Procedure(p string) CallReqMeta {
 	r.procedure = p
 	return r
 }
 
-func (r *reqMetaOut) Headers(h Headers) ReqMetaOut {
+func (r *callReqMeta) Headers(h Headers) CallReqMeta {
 	r.headers = h
 	return r
 }
 
-func (r *reqMetaOut) GetContext() context.Context {
+func (r *callReqMeta) GetContext() context.Context {
 	return r.ctx
 }
 
-func (r *reqMetaOut) GetProcedure() string {
+func (r *callReqMeta) GetProcedure() string {
 	return r.procedure
 }
 
-func (r *reqMetaOut) GetHeaders() Headers {
+func (r *callReqMeta) GetHeaders() Headers {
 	return r.headers
 }

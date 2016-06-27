@@ -38,7 +38,7 @@ type Client interface {
 	// json.Unmarshal.
 	//
 	// Returns the response or an error if the request failed.
-	Call(reqMeta yarpc.ReqMetaOut, reqBody interface{}, resBodyOut interface{}) (yarpc.ResMetaIn, error)
+	Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
 }
 
 // New builds a new JSON client.
@@ -56,7 +56,7 @@ type jsonClient struct {
 	caller, service string
 }
 
-func (c jsonClient) Call(reqMeta yarpc.ReqMetaOut, reqBody interface{}, resBodyOut interface{}) (yarpc.ResMetaIn, error) {
+func (c jsonClient) Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
 	treq := transport.Request{
 		Caller:   c.caller,
 		Service:  c.service,

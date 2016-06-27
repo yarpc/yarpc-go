@@ -32,8 +32,8 @@ import (
 )
 
 type Interface interface {
-	BlahBlah(reqMeta yarpc.ReqMetaOut) (yarpc.ResMetaIn, error)
-	SecondtestString(reqMeta yarpc.ReqMetaOut, thing *string) (string, yarpc.ResMetaIn, error)
+	BlahBlah(reqMeta yarpc.CallReqMeta) (yarpc.CallResMeta, error)
+	SecondtestString(reqMeta yarpc.CallReqMeta, thing *string) (string, yarpc.CallResMeta, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -42,7 +42,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) BlahBlah(reqMeta yarpc.ReqMetaOut) (resMeta yarpc.ResMetaIn, err error) {
+func (c client) BlahBlah(reqMeta yarpc.CallReqMeta) (resMeta yarpc.CallResMeta, err error) {
 	args := secondservice.BlahBlahHelper.Args()
 	var w wire.Value
 	w, err = args.ToWire()
@@ -62,7 +62,7 @@ func (c client) BlahBlah(reqMeta yarpc.ReqMetaOut) (resMeta yarpc.ResMetaIn, err
 	return
 }
 
-func (c client) SecondtestString(reqMeta yarpc.ReqMetaOut, thing *string) (success string, resMeta yarpc.ResMetaIn, err error) {
+func (c client) SecondtestString(reqMeta yarpc.CallReqMeta, thing *string) (success string, resMeta yarpc.CallResMeta, err error) {
 	args := secondservice.SecondtestStringHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()

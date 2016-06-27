@@ -30,8 +30,8 @@ type ResMeta interface {
 	GetHeaders() Headers
 }
 
-// ResMetaIn contains information about an incoming YARPC response.
-type ResMetaIn interface {
+// CallResMeta contains information about an incoming YARPC response.
+type CallResMeta interface {
 	Context() context.Context
 	Headers() Headers
 }

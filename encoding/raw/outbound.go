@@ -32,7 +32,7 @@ import (
 // Client makes Raw requests to a single service.
 type Client interface {
 	// Call performs an outbound Raw request.
-	Call(reqMeta yarpc.ReqMetaOut, body []byte) ([]byte, yarpc.ResMetaIn, error)
+	Call(reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
 }
 
 // New builds a new Raw client.
@@ -51,7 +51,7 @@ type rawClient struct {
 	caller, service string
 }
 
-func (c rawClient) Call(reqMeta yarpc.ReqMetaOut, body []byte) ([]byte, yarpc.ResMetaIn, error) {
+func (c rawClient) Call(reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
 	treq := transport.Request{
 		Caller:   c.caller,
 		Service:  c.service,

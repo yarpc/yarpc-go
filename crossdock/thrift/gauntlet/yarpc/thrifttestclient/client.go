@@ -33,26 +33,26 @@ import (
 )
 
 type Interface interface {
-	TestBinary(reqMeta yarpc.ReqMetaOut, thing []byte) ([]byte, yarpc.ResMetaIn, error)
-	TestByte(reqMeta yarpc.ReqMetaOut, thing *int8) (int8, yarpc.ResMetaIn, error)
-	TestDouble(reqMeta yarpc.ReqMetaOut, thing *float64) (float64, yarpc.ResMetaIn, error)
-	TestEnum(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Numberz) (gauntlet.Numberz, yarpc.ResMetaIn, error)
-	TestException(reqMeta yarpc.ReqMetaOut, arg *string) (yarpc.ResMetaIn, error)
-	TestI32(reqMeta yarpc.ReqMetaOut, thing *int32) (int32, yarpc.ResMetaIn, error)
-	TestI64(reqMeta yarpc.ReqMetaOut, thing *int64) (int64, yarpc.ResMetaIn, error)
-	TestInsanity(reqMeta yarpc.ReqMetaOut, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, yarpc.ResMetaIn, error)
-	TestList(reqMeta yarpc.ReqMetaOut, thing []int32) ([]int32, yarpc.ResMetaIn, error)
-	TestMap(reqMeta yarpc.ReqMetaOut, thing map[int32]int32) (map[int32]int32, yarpc.ResMetaIn, error)
-	TestMapMap(reqMeta yarpc.ReqMetaOut, hello *int32) (map[int32]map[int32]int32, yarpc.ResMetaIn, error)
-	TestMulti(reqMeta yarpc.ReqMetaOut, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, yarpc.ResMetaIn, error)
-	TestMultiException(reqMeta yarpc.ReqMetaOut, arg0 *string, arg1 *string) (*gauntlet.Xtruct, yarpc.ResMetaIn, error)
-	TestNest(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, yarpc.ResMetaIn, error)
-	TestSet(reqMeta yarpc.ReqMetaOut, thing map[int32]struct{}) (map[int32]struct{}, yarpc.ResMetaIn, error)
-	TestString(reqMeta yarpc.ReqMetaOut, thing *string) (string, yarpc.ResMetaIn, error)
-	TestStringMap(reqMeta yarpc.ReqMetaOut, thing map[string]string) (map[string]string, yarpc.ResMetaIn, error)
-	TestStruct(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, yarpc.ResMetaIn, error)
-	TestTypedef(reqMeta yarpc.ReqMetaOut, thing *gauntlet.UserId) (gauntlet.UserId, yarpc.ResMetaIn, error)
-	TestVoid(reqMeta yarpc.ReqMetaOut) (yarpc.ResMetaIn, error)
+	TestBinary(reqMeta yarpc.CallReqMeta, thing []byte) ([]byte, yarpc.CallResMeta, error)
+	TestByte(reqMeta yarpc.CallReqMeta, thing *int8) (int8, yarpc.CallResMeta, error)
+	TestDouble(reqMeta yarpc.CallReqMeta, thing *float64) (float64, yarpc.CallResMeta, error)
+	TestEnum(reqMeta yarpc.CallReqMeta, thing *gauntlet.Numberz) (gauntlet.Numberz, yarpc.CallResMeta, error)
+	TestException(reqMeta yarpc.CallReqMeta, arg *string) (yarpc.CallResMeta, error)
+	TestI32(reqMeta yarpc.CallReqMeta, thing *int32) (int32, yarpc.CallResMeta, error)
+	TestI64(reqMeta yarpc.CallReqMeta, thing *int64) (int64, yarpc.CallResMeta, error)
+	TestInsanity(reqMeta yarpc.CallReqMeta, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, yarpc.CallResMeta, error)
+	TestList(reqMeta yarpc.CallReqMeta, thing []int32) ([]int32, yarpc.CallResMeta, error)
+	TestMap(reqMeta yarpc.CallReqMeta, thing map[int32]int32) (map[int32]int32, yarpc.CallResMeta, error)
+	TestMapMap(reqMeta yarpc.CallReqMeta, hello *int32) (map[int32]map[int32]int32, yarpc.CallResMeta, error)
+	TestMulti(reqMeta yarpc.CallReqMeta, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, yarpc.CallResMeta, error)
+	TestMultiException(reqMeta yarpc.CallReqMeta, arg0 *string, arg1 *string) (*gauntlet.Xtruct, yarpc.CallResMeta, error)
+	TestNest(reqMeta yarpc.CallReqMeta, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, yarpc.CallResMeta, error)
+	TestSet(reqMeta yarpc.CallReqMeta, thing map[int32]struct{}) (map[int32]struct{}, yarpc.CallResMeta, error)
+	TestString(reqMeta yarpc.CallReqMeta, thing *string) (string, yarpc.CallResMeta, error)
+	TestStringMap(reqMeta yarpc.CallReqMeta, thing map[string]string) (map[string]string, yarpc.CallResMeta, error)
+	TestStruct(reqMeta yarpc.CallReqMeta, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, yarpc.CallResMeta, error)
+	TestTypedef(reqMeta yarpc.CallReqMeta, thing *gauntlet.UserId) (gauntlet.UserId, yarpc.CallResMeta, error)
+	TestVoid(reqMeta yarpc.CallReqMeta) (yarpc.CallResMeta, error)
 }
 
 func New(c transport.Channel) Interface {
@@ -61,7 +61,7 @@ func New(c transport.Channel) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) TestBinary(reqMeta yarpc.ReqMetaOut, thing []byte) (success []byte, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestBinary(reqMeta yarpc.CallReqMeta, thing []byte) (success []byte, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestBinaryHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -81,7 +81,7 @@ func (c client) TestBinary(reqMeta yarpc.ReqMetaOut, thing []byte) (success []by
 	return
 }
 
-func (c client) TestByte(reqMeta yarpc.ReqMetaOut, thing *int8) (success int8, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestByte(reqMeta yarpc.CallReqMeta, thing *int8) (success int8, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestByteHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -101,7 +101,7 @@ func (c client) TestByte(reqMeta yarpc.ReqMetaOut, thing *int8) (success int8, r
 	return
 }
 
-func (c client) TestDouble(reqMeta yarpc.ReqMetaOut, thing *float64) (success float64, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestDouble(reqMeta yarpc.CallReqMeta, thing *float64) (success float64, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestDoubleHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -121,7 +121,7 @@ func (c client) TestDouble(reqMeta yarpc.ReqMetaOut, thing *float64) (success fl
 	return
 }
 
-func (c client) TestEnum(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Numberz) (success gauntlet.Numberz, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestEnum(reqMeta yarpc.CallReqMeta, thing *gauntlet.Numberz) (success gauntlet.Numberz, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestEnumHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -141,7 +141,7 @@ func (c client) TestEnum(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Numberz) (suc
 	return
 }
 
-func (c client) TestException(reqMeta yarpc.ReqMetaOut, arg *string) (resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestException(reqMeta yarpc.CallReqMeta, arg *string) (resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestExceptionHelper.Args(arg)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -161,7 +161,7 @@ func (c client) TestException(reqMeta yarpc.ReqMetaOut, arg *string) (resMeta ya
 	return
 }
 
-func (c client) TestI32(reqMeta yarpc.ReqMetaOut, thing *int32) (success int32, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestI32(reqMeta yarpc.CallReqMeta, thing *int32) (success int32, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestI32Helper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -181,7 +181,7 @@ func (c client) TestI32(reqMeta yarpc.ReqMetaOut, thing *int32) (success int32, 
 	return
 }
 
-func (c client) TestI64(reqMeta yarpc.ReqMetaOut, thing *int64) (success int64, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestI64(reqMeta yarpc.CallReqMeta, thing *int64) (success int64, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestI64Helper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -201,7 +201,7 @@ func (c client) TestI64(reqMeta yarpc.ReqMetaOut, thing *int64) (success int64, 
 	return
 }
 
-func (c client) TestInsanity(reqMeta yarpc.ReqMetaOut, argument *gauntlet.Insanity) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestInsanity(reqMeta yarpc.CallReqMeta, argument *gauntlet.Insanity) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestInsanityHelper.Args(argument)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -221,7 +221,7 @@ func (c client) TestInsanity(reqMeta yarpc.ReqMetaOut, argument *gauntlet.Insani
 	return
 }
 
-func (c client) TestList(reqMeta yarpc.ReqMetaOut, thing []int32) (success []int32, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestList(reqMeta yarpc.CallReqMeta, thing []int32) (success []int32, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestListHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -241,7 +241,7 @@ func (c client) TestList(reqMeta yarpc.ReqMetaOut, thing []int32) (success []int
 	return
 }
 
-func (c client) TestMap(reqMeta yarpc.ReqMetaOut, thing map[int32]int32) (success map[int32]int32, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestMap(reqMeta yarpc.CallReqMeta, thing map[int32]int32) (success map[int32]int32, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestMapHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -261,7 +261,7 @@ func (c client) TestMap(reqMeta yarpc.ReqMetaOut, thing map[int32]int32) (succes
 	return
 }
 
-func (c client) TestMapMap(reqMeta yarpc.ReqMetaOut, hello *int32) (success map[int32]map[int32]int32, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestMapMap(reqMeta yarpc.CallReqMeta, hello *int32) (success map[int32]map[int32]int32, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestMapMapHelper.Args(hello)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -281,7 +281,7 @@ func (c client) TestMapMap(reqMeta yarpc.ReqMetaOut, hello *int32) (success map[
 	return
 }
 
-func (c client) TestMulti(reqMeta yarpc.ReqMetaOut, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (success *gauntlet.Xtruct, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestMulti(reqMeta yarpc.CallReqMeta, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (success *gauntlet.Xtruct, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestMultiHelper.Args(arg0, arg1, arg2, arg3, arg4, arg5)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -301,7 +301,7 @@ func (c client) TestMulti(reqMeta yarpc.ReqMetaOut, arg0 *int8, arg1 *int32, arg
 	return
 }
 
-func (c client) TestMultiException(reqMeta yarpc.ReqMetaOut, arg0 *string, arg1 *string) (success *gauntlet.Xtruct, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestMultiException(reqMeta yarpc.CallReqMeta, arg0 *string, arg1 *string) (success *gauntlet.Xtruct, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestMultiExceptionHelper.Args(arg0, arg1)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -321,7 +321,7 @@ func (c client) TestMultiException(reqMeta yarpc.ReqMetaOut, arg0 *string, arg1 
 	return
 }
 
-func (c client) TestNest(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Xtruct2) (success *gauntlet.Xtruct2, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestNest(reqMeta yarpc.CallReqMeta, thing *gauntlet.Xtruct2) (success *gauntlet.Xtruct2, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestNestHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -341,7 +341,7 @@ func (c client) TestNest(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Xtruct2) (suc
 	return
 }
 
-func (c client) TestSet(reqMeta yarpc.ReqMetaOut, thing map[int32]struct{}) (success map[int32]struct{}, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestSet(reqMeta yarpc.CallReqMeta, thing map[int32]struct{}) (success map[int32]struct{}, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestSetHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -361,7 +361,7 @@ func (c client) TestSet(reqMeta yarpc.ReqMetaOut, thing map[int32]struct{}) (suc
 	return
 }
 
-func (c client) TestString(reqMeta yarpc.ReqMetaOut, thing *string) (success string, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestString(reqMeta yarpc.CallReqMeta, thing *string) (success string, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestStringHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -381,7 +381,7 @@ func (c client) TestString(reqMeta yarpc.ReqMetaOut, thing *string) (success str
 	return
 }
 
-func (c client) TestStringMap(reqMeta yarpc.ReqMetaOut, thing map[string]string) (success map[string]string, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestStringMap(reqMeta yarpc.CallReqMeta, thing map[string]string) (success map[string]string, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestStringMapHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -401,7 +401,7 @@ func (c client) TestStringMap(reqMeta yarpc.ReqMetaOut, thing map[string]string)
 	return
 }
 
-func (c client) TestStruct(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Xtruct) (success *gauntlet.Xtruct, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestStruct(reqMeta yarpc.CallReqMeta, thing *gauntlet.Xtruct) (success *gauntlet.Xtruct, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestStructHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -421,7 +421,7 @@ func (c client) TestStruct(reqMeta yarpc.ReqMetaOut, thing *gauntlet.Xtruct) (su
 	return
 }
 
-func (c client) TestTypedef(reqMeta yarpc.ReqMetaOut, thing *gauntlet.UserId) (success gauntlet.UserId, resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestTypedef(reqMeta yarpc.CallReqMeta, thing *gauntlet.UserId) (success gauntlet.UserId, resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestTypedefHelper.Args(thing)
 	var w wire.Value
 	w, err = args.ToWire()
@@ -441,7 +441,7 @@ func (c client) TestTypedef(reqMeta yarpc.ReqMetaOut, thing *gauntlet.UserId) (s
 	return
 }
 
-func (c client) TestVoid(reqMeta yarpc.ReqMetaOut) (resMeta yarpc.ResMetaIn, err error) {
+func (c client) TestVoid(reqMeta yarpc.CallReqMeta) (resMeta yarpc.CallResMeta, err error) {
 	args := thrifttest.TestVoidHelper.Args()
 	var w wire.Value
 	w, err = args.ToWire()

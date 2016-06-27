@@ -28,13 +28,13 @@ func TestWrapHandlerInvalid(t *testing.T) {
 		},
 		{
 			"wrong-req-meta",
-			func(yarpc.ReqMetaOut, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+			func(yarpc.CallReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"wrong-res-meta",
-			func(yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.ResMetaIn, error) {
+			func(yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.CallResMeta, error) {
 				return nil, nil, nil
 			},
 		},

@@ -34,7 +34,7 @@ func FromTransportRequest(ctx context.Context, req *transport.Request) yarpc.Req
 
 // ToTransportRequest fills the given transport request with information from
 // the given ReqMeta. The Context associated with the ReqMeta is returned.
-func ToTransportRequest(reqMeta yarpc.ReqMetaOut, req *transport.Request) context.Context {
+func ToTransportRequest(reqMeta yarpc.CallReqMeta, req *transport.Request) context.Context {
 	req.Procedure = reqMeta.GetProcedure()
 	req.Headers = transport.Headers(reqMeta.GetHeaders())
 	return reqMeta.GetContext()

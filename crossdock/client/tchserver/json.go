@@ -52,7 +52,7 @@ type jsonEcho struct {
 	Token string `json:"token"`
 }
 
-func jsonCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, yarpc.ResMetaIn, error) {
+func jsonCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
 	client := json.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

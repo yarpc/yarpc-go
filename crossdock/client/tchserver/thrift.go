@@ -52,7 +52,7 @@ func runThrift(t crossdock.T, rpc yarpc.RPC) {
 	gauntlet.RunGauntlet(t, rpc, serverName)
 }
 
-func thriftCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, yarpc.ResMetaIn, error) {
+func thriftCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
 	client := echoclient.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
