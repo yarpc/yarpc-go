@@ -44,13 +44,8 @@ type client struct{ c thrift.Client }
 
 func (c client) BlahBlah(reqMeta yarpc.CallReqMeta) (resMeta yarpc.CallResMeta, err error) {
 	args := secondservice.BlahBlahHelper.Args()
-	var w wire.Value
-	w, err = args.ToWire()
-	if err != nil {
-		return
-	}
 	var body wire.Value
-	body, resMeta, err = c.c.Call("blahBlah", reqMeta, w)
+	body, resMeta, err = c.c.Call(reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -64,13 +59,8 @@ func (c client) BlahBlah(reqMeta yarpc.CallReqMeta) (resMeta yarpc.CallResMeta, 
 
 func (c client) SecondtestString(reqMeta yarpc.CallReqMeta, thing *string) (success string, resMeta yarpc.CallResMeta, err error) {
 	args := secondservice.SecondtestStringHelper.Args(thing)
-	var w wire.Value
-	w, err = args.ToWire()
-	if err != nil {
-		return
-	}
 	var body wire.Value
-	body, resMeta, err = c.c.Call("secondtestString", reqMeta, w)
+	body, resMeta, err = c.c.Call(reqMeta, args)
 	if err != nil {
 		return
 	}

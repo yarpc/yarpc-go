@@ -67,7 +67,7 @@ func (h handler) GetValue(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }
@@ -84,7 +84,7 @@ func (h handler) SetValue(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }

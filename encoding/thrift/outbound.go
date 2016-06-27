@@ -29,6 +29,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/thriftrw/thriftrw-go/envelope"
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
 )
@@ -37,7 +38,10 @@ import (
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
 	// Call the given Thrift method.
-	Call(method string, reqMeta yarpc.CallReqMeta, body wire.Value) (wire.Value, yarpc.CallResMeta, error)
+	Call(
+		reqMeta yarpc.CallReqMeta,
+		reqBody envelope.Enveloper,
+	) (wire.Value, yarpc.CallResMeta, error)
 }
 
 // Config contains the configuration for the Client.
@@ -95,27 +99,23 @@ type thriftClient struct {
 	caller, service string
 }
 
-func (c thriftClient) Call(method string, reqMeta yarpc.CallReqMeta, reqBody wire.Value) (wire.Value, yarpc.CallResMeta, error) {
+func (c thriftClient) Call(
+	reqMeta yarpc.CallReqMeta,
+	reqBody envelope.Enveloper,
+) (wire.Value, yarpc.CallResMeta, error) {
 	// Code generated for Thrift client calls will probably be something like
 	// this:
 	//
-	// 	func (c *MyServiceClient) someMethod(reqMeta yarpc.CallReqMeta, arg1 Arg1Type, arg2Type) (returnValue, yarpc.CallResMeta, error) {
-	// 		args := someMethodArgs{arg1: arg1, arg2: arg2}
-	// 		resBody, resMeta, err := c.client.Call("someMethod", reqMeta, args.ToWire())
-	// 		if err != nil { return nil, resMeta, err }
-	// 		if resBody.Exception1 != nil {
-	// 			return nil, resMeta, resBody.Exception1
+	// 	func (c *MyServiceClient) someMethod(reqMeta yarpc.CallReqMeta, arg1 Arg1Type, arg2 arg2Type) (returnValue, yarpc.CallResMeta, error) {
+	// 		args := myservice.SomeMethodHelper.Args(arg1, arg2)
+	// 		resBody, resMeta, err := c.client.Call(reqMeta, args)
+	// 		var result myservice.SomeMethodResult
+	// 		if err = result.FromWire(resBody); err != nil {
+	// 			return nil, resMeta, err
 	// 		}
-	// 		if resBody.Exception2 != nil {
-	// 			return nil, resMeta, resBody.Exception2
-	// 		}
-	// 		if resBody.Success != nil {
-	// 			return resp.Succ, resMeta, nil
-	// 		}
-	// 		// TODO: Throw an error here because we expected a non-void return
-	// 		// but we got neither an exception, nor a return value.
+	// 		success, err := myservice.SomeMethodHelper.UnwrapResponse(&result)
+	// 		return success, resMeta, err
 	// 	}
-
 	treq := transport.Request{
 		Caller:   c.caller,
 		Service:  c.service,
@@ -123,10 +123,14 @@ func (c thriftClient) Call(method string, reqMeta yarpc.CallReqMeta, reqBody wir
 	}
 	ctx := meta.ToTransportRequest(reqMeta, &treq)
 	// Always override the procedure name to the Thrift procedure name.
-	treq.Procedure = procedureName(c.thriftService, method)
+	treq.Procedure = procedureName(c.thriftService, reqBody.MethodName())
 
 	var buffer bytes.Buffer
-	if err := c.p.Encode(reqBody, &buffer); err != nil {
+	if value, err := reqBody.ToWire(); err != nil {
+		// ToWire validates the request. If it failed, we should return the error
+		// as-is because it's not an encoding error.
+		return wire.Value{}, nil, err
+	} else if err := c.p.Encode(value, &buffer); err != nil {
 		return wire.Value{}, nil, encoding.RequestBodyEncodeError(&treq, err)
 	}
 

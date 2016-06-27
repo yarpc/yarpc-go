@@ -67,7 +67,7 @@ func (h handler) Echo(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, 
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
-		response.Body, err = result.ToWire()
+		response.Body = result
 	}
 	return response, err
 }

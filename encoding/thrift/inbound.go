@@ -59,6 +59,11 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		return err
 	}
 
+	resBody, err := res.Body.ToWire()
+	if err != nil {
+		return err
+	}
+
 	if res.IsApplicationError {
 		rw.SetApplicationError()
 	}
@@ -69,7 +74,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		// TODO(abg): propagate response context
 	}
 
-	if err := t.Protocol.Encode(res.Body, rw); err != nil {
+	if err := t.Protocol.Encode(resBody, rw); err != nil {
 		return encoding.ResponseBodyEncodeError(treq, err)
 	}
 
