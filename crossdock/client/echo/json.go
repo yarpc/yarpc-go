@@ -23,6 +23,7 @@ package echo
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
@@ -47,10 +48,7 @@ func JSON(t crossdock.T) {
 	var response jsonEcho
 	token := random.String(5)
 	_, err := client.Call(
-		&json.ReqMeta{
-			Context:   ctx,
-			Procedure: "echo",
-		},
+		yarpc.NewReqMeta(ctx).Procedure("echo"),
 		&jsonEcho{Token: token},
 		&response,
 	)

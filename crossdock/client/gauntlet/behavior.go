@@ -33,7 +33,6 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/ptr"
@@ -53,7 +52,7 @@ type TT struct {
 	Service  string        // thrift service name; defaults to ThriftTest
 	Function string        // name of the Go function on the client
 	Details  string        // optional extra details about what this test does
-	Give     []interface{} // arguments besides thrift.ReqMeta
+	Give     []interface{} // arguments besides ReqMeta
 
 	Want          interface{} // expected response; nil for void
 	WantError     error       // expected error
@@ -364,11 +363,7 @@ func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		reqMeta := thrift.ReqMeta{
-			Context: ctx,
-		}
-
-		args := []reflect.Value{reflect.ValueOf(&reqMeta)}
+		args := []reflect.Value{reflect.ValueOf(yarpc.NewReqMeta(ctx))}
 		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give); ok {
 			args = append(args, give...)
 		} else {

@@ -44,7 +44,7 @@ func runJSON(t crossdock.T, rpc yarpc.RPC) {
 	}
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers, "headers echoed")
+		assert.Equal(headers, resMeta.Headers(), "headers echoed")
 	}
 }
 
@@ -52,17 +52,13 @@ type jsonEcho struct {
 	Token string `json:"token"`
 }
 
-func jsonCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, *json.ResMeta, error) {
+func jsonCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
 	client := json.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := &json.ReqMeta{
-		Context:   ctx,
-		Procedure: "echo",
-		Headers:   headers,
-	}
+	reqMeta := yarpc.NewReqMeta(ctx).Procedure("echo").Headers(headers)
 	reqBody := &jsonEcho{Token: token}
 
 	var resBody jsonEcho

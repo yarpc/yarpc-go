@@ -26,6 +26,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
+	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
@@ -36,7 +37,7 @@ import (
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
 	// Call the given Thrift method.
-	Call(method string, reqMeta *ReqMeta, body wire.Value) (wire.Value, *ResMeta, error)
+	Call(method string, reqMeta yarpc.CallReqMeta, body wire.Value) (wire.Value, yarpc.CallResMeta, error)
 }
 
 // Config contains the configuration for the Client.
@@ -94,11 +95,11 @@ type thriftClient struct {
 	caller, service string
 }
 
-func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) (wire.Value, *ResMeta, error) {
+func (c thriftClient) Call(method string, reqMeta yarpc.CallReqMeta, reqBody wire.Value) (wire.Value, yarpc.CallResMeta, error) {
 	// Code generated for Thrift client calls will probably be something like
 	// this:
 	//
-	// 	func (c *MyServiceClient) someMethod(reqMeta *thrift.ReqMeta, arg1 Arg1Type, arg2Type) (returnValue, *thrift.ResMeta, error) {
+	// 	func (c *MyServiceClient) someMethod(reqMeta yarpc.CallReqMeta, arg1 Arg1Type, arg2Type) (returnValue, yarpc.CallResMeta, error) {
 	// 		args := someMethodArgs{arg1: arg1, arg2: arg2}
 	// 		resBody, resMeta, err := c.client.Call("someMethod", reqMeta, args.ToWire())
 	// 		if err != nil { return nil, resMeta, err }
@@ -116,12 +117,13 @@ func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) 
 	// 	}
 
 	treq := transport.Request{
-		Caller:    c.caller,
-		Service:   c.service,
-		Encoding:  Encoding,
-		Procedure: procedureName(c.thriftService, method),
-		Headers:   transport.Headers(reqMeta.Headers),
+		Caller:   c.caller,
+		Service:  c.service,
+		Encoding: Encoding,
 	}
+	ctx := meta.ToTransportRequest(reqMeta, &treq)
+	// Always override the procedure name to the Thrift procedure name.
+	treq.Procedure = procedureName(c.thriftService, method)
 
 	var buffer bytes.Buffer
 	if err := c.p.Encode(reqBody, &buffer); err != nil {
@@ -129,7 +131,7 @@ func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) 
 	}
 
 	treq.Body = &buffer
-	tres, err := c.t.Call(reqMeta.Context, &treq)
+	tres, err := c.t.Call(ctx, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
@@ -145,5 +147,6 @@ func (c thriftClient) Call(method string, reqMeta *ReqMeta, reqBody wire.Value) 
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
-	return resBody, &ResMeta{Headers: yarpc.Headers(tres.Headers)}, nil
+	// TODO: when transport returns response context, use that here.
+	return resBody, meta.FromTransportResponse(ctx, tres), nil
 }

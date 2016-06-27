@@ -132,11 +132,13 @@ func TestCall(t *testing.T) {
 		}
 		resBody := reflect.Zero(wantType).Interface()
 
-		res, err := client.Call(&ReqMeta{
-			Context:   ctx,
-			Procedure: tt.procedure,
-			Headers:   tt.headers,
-		}, tt.body, &resBody)
+		res, err := client.Call(
+			yarpc.NewReqMeta(ctx).
+				Procedure(tt.procedure).
+				Headers(tt.headers),
+			tt.body,
+			&resBody,
+		)
 
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
@@ -144,7 +146,7 @@ func TestCall(t *testing.T) {
 			}
 		} else {
 			if assert.NoError(t, err) {
-				assert.Equal(t, tt.wantHeaders, res.Headers)
+				assert.Equal(t, tt.wantHeaders, res.Headers())
 				assert.Equal(t, tt.want, resBody)
 			}
 		}

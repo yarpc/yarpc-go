@@ -21,26 +21,27 @@
 package yarpc
 
 import (
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 )
 
 // EchoRaw implements the echo/raw procedure.
-func EchoRaw(reqMeta *raw.ReqMeta, body []byte) ([]byte, *raw.ResMeta, error) {
-	return body, &raw.ResMeta{Headers: reqMeta.Headers}, nil
+func EchoRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	return body, resMeta, nil
 }
 
 // EchoJSON implements the echo procedure.
-func EchoJSON(reqMeta *json.ReqMeta, body map[string]interface{}) (map[string]interface{}, *json.ResMeta, error) {
-	return body, &json.ResMeta{Headers: reqMeta.Headers}, nil
+func EchoJSON(reqMeta yarpc.ReqMeta, body map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
+	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	return body, resMeta, nil
 }
 
 // EchoThrift implements the Thrift Echo service.
 type EchoThrift struct{}
 
 // Echo endpoint for the Echo service.
-func (EchoThrift) Echo(reqMeta *thrift.ReqMeta, ping *echo.Ping) (*echo.Pong, *thrift.ResMeta, error) {
-	return &echo.Pong{Boop: ping.Beep}, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (EchoThrift) Echo(reqMeta yarpc.ReqMeta, ping *echo.Ping) (*echo.Pong, yarpc.ResMeta, error) {
+	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	return &echo.Pong{Boop: ping.Beep}, resMeta, nil
 }

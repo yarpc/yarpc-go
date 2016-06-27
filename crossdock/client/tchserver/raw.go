@@ -45,22 +45,17 @@ func runRaw(t crossdock.T, rpc yarpc.RPC) {
 	}
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers, "headers echoed")
+		assert.Equal(headers, resMeta.Headers(), "headers echoed")
 	}
 }
 
-func rawCall(rpc yarpc.RPC, headers yarpc.Headers, token []byte) ([]byte, *raw.ResMeta, error) {
+func rawCall(rpc yarpc.RPC, headers yarpc.Headers, token []byte) ([]byte, yarpc.CallResMeta, error) {
 	client := raw.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	// TODO rename to raw.ReqMeta
-	reqMeta := &raw.ReqMeta{
-		Context:   ctx,
-		Procedure: "echo/raw",
-		Headers:   headers,
-	}
+	reqMeta := yarpc.NewReqMeta(ctx).Procedure("echo/raw").Headers(headers)
 	resBody, resMeta, err := client.Call(reqMeta, token)
 	return resBody, resMeta, err
 }

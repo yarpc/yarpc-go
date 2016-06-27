@@ -23,30 +23,34 @@ package yarpc
 import (
 	"errors"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 )
+
+func resMetaFromReqMeta(reqMeta yarpc.ReqMeta) yarpc.ResMeta {
+	return yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+}
 
 // thriftTest implements the ThriftTest service.
 type thriftTest struct{}
 
-func (thriftTest) TestBinary(reqMeta *thrift.ReqMeta, thing []byte) ([]byte, *thrift.ResMeta, error) {
-	return thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestBinary(reqMeta yarpc.ReqMeta, thing []byte) ([]byte, yarpc.ResMeta, error) {
+	return thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestByte(reqMeta *thrift.ReqMeta, thing *int8) (int8, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestByte(reqMeta yarpc.ReqMeta, thing *int8) (int8, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestDouble(reqMeta *thrift.ReqMeta, thing *float64) (float64, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestDouble(reqMeta yarpc.ReqMeta, thing *float64) (float64, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestEnum(reqMeta *thrift.ReqMeta, thing *gauntlet.Numberz) (gauntlet.Numberz, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestEnum(reqMeta yarpc.ReqMeta, thing *gauntlet.Numberz) (gauntlet.Numberz, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestException(reqMeta *thrift.ReqMeta, arg *string) (*thrift.ResMeta, error) {
+func (thriftTest) TestException(reqMeta yarpc.ReqMeta, arg *string) (yarpc.ResMeta, error) {
 	switch *arg {
 	case "Xception":
 		code := int32(1001)
@@ -56,19 +60,19 @@ func (thriftTest) TestException(reqMeta *thrift.ReqMeta, arg *string) (*thrift.R
 		// unexpected exception.
 		return nil, errors.New("great sadness")
 	default:
-		return &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+		return resMetaFromReqMeta(reqMeta), nil
 	}
 }
 
-func (thriftTest) TestI32(reqMeta *thrift.ReqMeta, thing *int32) (int32, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestI32(reqMeta yarpc.ReqMeta, thing *int32) (int32, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestI64(reqMeta *thrift.ReqMeta, thing *int64) (int64, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestI64(reqMeta yarpc.ReqMeta, thing *int64) (int64, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestInsanity(reqMeta *thrift.ReqMeta, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, *thrift.ResMeta, error) {
+func (thriftTest) TestInsanity(reqMeta yarpc.ReqMeta, argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, yarpc.ResMeta, error) {
 	result := map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity{
 		1: {
 			gauntlet.NumberzTwo:   argument,
@@ -78,18 +82,18 @@ func (thriftTest) TestInsanity(reqMeta *thrift.ReqMeta, argument *gauntlet.Insan
 			gauntlet.NumberzSix: &gauntlet.Insanity{},
 		},
 	}
-	return result, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+	return result, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestList(reqMeta *thrift.ReqMeta, thing []int32) ([]int32, *thrift.ResMeta, error) {
-	return thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestList(reqMeta yarpc.ReqMeta, thing []int32) ([]int32, yarpc.ResMeta, error) {
+	return thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestMap(reqMeta *thrift.ReqMeta, thing map[int32]int32) (map[int32]int32, *thrift.ResMeta, error) {
-	return thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestMap(reqMeta yarpc.ReqMeta, thing map[int32]int32) (map[int32]int32, yarpc.ResMeta, error) {
+	return thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestMapMap(reqMeta *thrift.ReqMeta, hello *int32) (map[int32]map[int32]int32, *thrift.ResMeta, error) {
+func (thriftTest) TestMapMap(reqMeta yarpc.ReqMeta, hello *int32) (map[int32]map[int32]int32, yarpc.ResMeta, error) {
 	result := map[int32]map[int32]int32{
 		-4: {
 			-4: -4,
@@ -104,10 +108,10 @@ func (thriftTest) TestMapMap(reqMeta *thrift.ReqMeta, hello *int32) (map[int32]m
 			4: 4,
 		},
 	}
-	return result, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+	return result, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestMulti(reqMeta *thrift.ReqMeta, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, *thrift.ResMeta, error) {
+func (thriftTest) TestMulti(reqMeta yarpc.ReqMeta, arg0 *int8, arg1 *int32, arg2 *int64, arg3 map[int16]string, arg4 *gauntlet.Numberz, arg5 *gauntlet.UserId) (*gauntlet.Xtruct, yarpc.ResMeta, error) {
 	hello := "Hello2"
 	result := &gauntlet.Xtruct{
 		StringThing: &hello,
@@ -115,10 +119,10 @@ func (thriftTest) TestMulti(reqMeta *thrift.ReqMeta, arg0 *int8, arg1 *int32, ar
 		I32Thing:    arg1,
 		I64Thing:    arg2,
 	}
-	return result, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+	return result, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestMultiException(reqMeta *thrift.ReqMeta, arg0 *string, arg1 *string) (*gauntlet.Xtruct, *thrift.ResMeta, error) {
+func (thriftTest) TestMultiException(reqMeta yarpc.ReqMeta, arg0 *string, arg1 *string) (*gauntlet.Xtruct, yarpc.ResMeta, error) {
 	structThing := &gauntlet.Xtruct{StringThing: arg1}
 	switch *arg0 {
 	case "Xception":
@@ -132,34 +136,34 @@ func (thriftTest) TestMultiException(reqMeta *thrift.ReqMeta, arg0 *string, arg1
 			StructThing: structThing,
 		}
 	default:
-		return structThing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+		return structThing, resMetaFromReqMeta(reqMeta), nil
 	}
 }
 
-func (thriftTest) TestNest(reqMeta *thrift.ReqMeta, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, *thrift.ResMeta, error) {
-	return thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestNest(reqMeta yarpc.ReqMeta, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, yarpc.ResMeta, error) {
+	return thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestSet(reqMeta *thrift.ReqMeta, thing map[int32]struct{}) (map[int32]struct{}, *thrift.ResMeta, error) {
-	return thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestSet(reqMeta yarpc.ReqMeta, thing map[int32]struct{}) (map[int32]struct{}, yarpc.ResMeta, error) {
+	return thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestString(reqMeta *thrift.ReqMeta, thing *string) (string, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestString(reqMeta yarpc.ReqMeta, thing *string) (string, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestStringMap(reqMeta *thrift.ReqMeta, thing map[string]string) (map[string]string, *thrift.ResMeta, error) {
-	return thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestStringMap(reqMeta yarpc.ReqMeta, thing map[string]string) (map[string]string, yarpc.ResMeta, error) {
+	return thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestStruct(reqMeta *thrift.ReqMeta, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, *thrift.ResMeta, error) {
-	return thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestStruct(reqMeta yarpc.ReqMeta, thing *gauntlet.Xtruct) (*gauntlet.Xtruct, yarpc.ResMeta, error) {
+	return thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestTypedef(reqMeta *thrift.ReqMeta, thing *gauntlet.UserId) (gauntlet.UserId, *thrift.ResMeta, error) {
-	return *thing, &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestTypedef(reqMeta yarpc.ReqMeta, thing *gauntlet.UserId) (gauntlet.UserId, yarpc.ResMeta, error) {
+	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
 
-func (thriftTest) TestVoid(reqMeta *thrift.ReqMeta) (*thrift.ResMeta, error) {
-	return &thrift.ResMeta{Headers: reqMeta.Headers}, nil
+func (thriftTest) TestVoid(reqMeta yarpc.ReqMeta) (yarpc.ResMeta, error) {
+	return resMetaFromReqMeta(reqMeta), nil
 }

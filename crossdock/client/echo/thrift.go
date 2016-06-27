@@ -23,12 +23,12 @@ package echo
 import (
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 
 	"golang.org/x/net/context"
 )
@@ -43,9 +43,7 @@ func Thrift(t crossdock.T) {
 
 	token := random.String(5)
 	pong, _, err := client.Echo(
-		&thrift.ReqMeta{
-			Context: ctx,
-		},
+		yarpc.NewReqMeta(ctx),
 		&echo.Ping{Beep: token},
 	)
 

@@ -18,28 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package json
+package yarpc
 
-import (
-	"github.com/yarpc/yarpc-go"
+import "golang.org/x/net/context"
 
-	"golang.org/x/net/context"
-)
+// ResMeta contains information about an outgoing YARPC response.
+type ResMeta interface {
+	Headers(Headers) ResMeta
 
-// ReqMeta is a JSON request without the body.
-type ReqMeta struct {
-	Context context.Context
-
-	// TODO(abg): Expose service name
-
-	// Name of the procedure being called.
-	Procedure string
-
-	// Request headers
-	Headers yarpc.Headers
+	GetContext() context.Context
+	GetHeaders() Headers
 }
 
-// Note: The shape of this request object is extremely similar to the
-// raw.ReqMeta object, but since we can't unify all the ReqMeta objects
-// (thrift.ReqMeta is very different), each encoding will have its own ReqMeta
-// object.
+// CallResMeta contains information about an incoming YARPC response.
+type CallResMeta interface {
+	Context() context.Context
+	Headers() Headers
+}
+
+// NewResMeta constructs a ResMeta with the given Context.
+//
+// The context MUST NOT be nil.
+func NewResMeta(ctx context.Context) ResMeta {
+	if ctx == nil {
+		panic("invalid usage of ResMeta: context cannot be nil")
+	}
+	return &resMeta{ctx: ctx}
+}
+
+type resMeta struct {
+	ctx     context.Context
+	headers Headers
+}
+
+func (r *resMeta) Headers(h Headers) ResMeta {
+	r.headers = h
+	return r
+}
+
+func (r *resMeta) GetContext() context.Context {
+	return r.ctx
+}
+
+func (r *resMeta) GetHeaders() Headers {
+	return r.headers
+}

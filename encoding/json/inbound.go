@@ -26,6 +26,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
+	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
@@ -36,7 +37,7 @@ import (
 //
 // The wrapped function must already be in the correct format:
 //
-// 	f(reqMeta *json.ReqMeta, body $reqBody) ($resBody, *json.ResMeta, error)
+// 	f(reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 type jsonHandler struct {
 	reader  requestReader
 	handler reflect.Value
@@ -51,21 +52,17 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
-	reqMeta := ReqMeta{
-		Context:   ctx,
-		Procedure: treq.Procedure,
-		Headers:   yarpc.Headers(treq.Headers),
-	}
-
-	results := h.handler.Call([]reflect.Value{reflect.ValueOf(&reqMeta), reqBody})
+	reqMeta := meta.FromTransportRequest(ctx, treq)
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(reqMeta), reqBody})
 
 	if err := results[2].Interface(); err != nil {
-		// TODO proper error types
 		return err.(error)
 	}
 
-	if resMeta := results[1].Interface().(*ResMeta); resMeta != nil {
-		rw.AddHeaders(transport.Headers(resMeta.Headers))
+	if resMeta, ok := results[1].Interface().(yarpc.ResMeta); ok {
+		_ = meta.ToTransportResponseWriter(resMeta, rw)
+		// TODO(abg): once transports support response context, we'll have to
+		// propagate that here.
 	}
 
 	result := results[0].Interface()

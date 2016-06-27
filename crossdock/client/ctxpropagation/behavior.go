@@ -179,7 +179,7 @@ func Run(t crossdock.T) {
 
 			var resp js.RawMessage
 			_, err := jsonClient.Call(
-				&json.ReqMeta{Procedure: "phone", Context: ctx},
+				yarpc.NewReqMeta(ctx).Procedure("phone"),
 				&server.PhoneRequest{
 					Service:   "ctxclient",
 					Procedure: procedure,
@@ -195,7 +195,7 @@ func Run(t crossdock.T) {
 type handler interface {
 	SetClient(json.Client)
 	SetTransport(server.TransportConfig)
-	Handle(*json.ReqMeta, interface{}) (interface{}, *json.ResMeta, error)
+	Handle(yarpc.ReqMeta, interface{}) (interface{}, yarpc.ResMeta, error)
 }
 
 func assertBaggageMatches(t crossdock.T, ctx context.Context, want transport.Headers) bool {
@@ -220,9 +220,10 @@ type singleHopHandler struct {
 func (*singleHopHandler) SetClient(json.Client)               {}
 func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
-func (h *singleHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
-	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
-	return map[string]interface{}{}, &json.ResMeta{Headers: reqMeta.Headers}, nil
+func (h *singleHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+	assertBaggageMatches(h.t, reqMeta.Context(), h.wantBaggage)
+	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	return map[string]interface{}{}, resMeta, nil
 }
 
 // multiHopHandler provides a JSON handler which verfiies that it receives the
@@ -247,28 +248,31 @@ func (h *multiHopHandler) SetTransport(tc server.TransportConfig) {
 	h.phoneCallTransport = tc
 }
 
-func (h *multiHopHandler) Handle(reqMeta *json.ReqMeta, body interface{}) (interface{}, *json.ResMeta, error) {
+func (h *multiHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
 	if h.phoneClient == nil {
 		panic("call SetClient() and SetTransport() first")
 	}
 
-	assertBaggageMatches(h.t, reqMeta.Context, h.wantBaggage)
+	ctx := reqMeta.Context()
+	assertBaggageMatches(h.t, reqMeta.Context(), h.wantBaggage)
 	for key, value := range h.addBaggage.Items() {
-		reqMeta.Context = yarpc.WithBaggage(reqMeta.Context, key, value)
+		ctx = yarpc.WithBaggage(ctx, key, value)
 	}
 
 	var resp js.RawMessage
-	resMeta, err := h.phoneClient.Call(
-		&json.ReqMeta{
-			Procedure: "phone",
-			Headers:   reqMeta.Headers,
-			Context:   reqMeta.Context,
-		}, &server.PhoneRequest{
+	phoneResMeta, err := h.phoneClient.Call(
+		yarpc.NewReqMeta(ctx).
+			Procedure("phone").
+			Headers(reqMeta.Headers()),
+		&server.PhoneRequest{
 			Service:   "ctxclient",
 			Procedure: h.phoneCallTo,
 			Transport: h.phoneCallTransport,
 			Body:      &js.RawMessage{'{', '}'},
 		}, &resp)
+
+	resMeta := yarpc.NewResMeta(phoneResMeta.Context()).
+		Headers(phoneResMeta.Headers())
 	return map[string]interface{}{}, resMeta, err
 }
 

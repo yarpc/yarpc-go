@@ -21,6 +21,7 @@
 package thrift
 
 import (
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
@@ -29,14 +30,14 @@ import (
 
 // Handler represents a Thrift request handler.
 type Handler interface {
-	Handle(reqMeta *ReqMeta, body wire.Value) (Response, error)
+	Handle(reqMeta yarpc.ReqMeta, body wire.Value) (Response, error)
 }
 
 // HandlerFunc is a convenience type alias for functions that implement that act as Handlers.
-type HandlerFunc func(*ReqMeta, wire.Value) (Response, error)
+type HandlerFunc func(yarpc.ReqMeta, wire.Value) (Response, error)
 
 // Handle forwards the request to the underlying function.
-func (f HandlerFunc) Handle(reqMeta *ReqMeta, body wire.Value) (Response, error) {
+func (f HandlerFunc) Handle(reqMeta yarpc.ReqMeta, body wire.Value) (Response, error) {
 	return f(reqMeta, body)
 }
 

@@ -20,7 +20,10 @@
 
 package raw
 
-import "github.com/yarpc/yarpc-go/transport"
+import (
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/transport"
+)
 
 // Registrant is used for types that define or know about different Raw
 // procedures.
@@ -31,7 +34,7 @@ type Registrant interface {
 }
 
 // Handler implements a single procedure.
-type Handler func(*ReqMeta, []byte) ([]byte, *ResMeta, error)
+type Handler func(yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
 
 // procedure is a registrant with a single handler.
 type procedure struct {

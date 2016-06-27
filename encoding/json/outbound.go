@@ -26,6 +26,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
+	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -37,7 +38,7 @@ type Client interface {
 	// json.Unmarshal.
 	//
 	// Returns the response or an error if the request failed.
-	Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut interface{}) (*ResMeta, error)
+	Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
 }
 
 // New builds a new JSON client.
@@ -55,14 +56,13 @@ type jsonClient struct {
 	caller, service string
 }
 
-func (c jsonClient) Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut interface{}) (*ResMeta, error) {
+func (c jsonClient) Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
 	treq := transport.Request{
-		Caller:    c.caller,
-		Service:   c.service,
-		Encoding:  Encoding,
-		Procedure: reqMeta.Procedure,
-		Headers:   transport.Headers(reqMeta.Headers),
+		Caller:   c.caller,
+		Service:  c.service,
+		Encoding: Encoding,
 	}
+	ctx := meta.ToTransportRequest(reqMeta, &treq)
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
@@ -70,7 +70,9 @@ func (c jsonClient) Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut inter
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.t.Call(reqMeta.Context, &treq)
+	tres, err := c.t.Call(ctx, &treq)
+	// TODO: transport must return response context
+
 	if err != nil {
 		return nil, err
 	}
@@ -84,5 +86,6 @@ func (c jsonClient) Call(reqMeta *ReqMeta, reqBody interface{}, resBodyOut inter
 		return nil, err
 	}
 
-	return &ResMeta{Headers: yarpc.Headers(tres.Headers)}, nil
+	// TODO: when transport returns response context, use that here.
+	return meta.FromTransportResponse(ctx, tres), nil
 }

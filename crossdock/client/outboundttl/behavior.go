@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/encoding/raw"
@@ -43,10 +44,7 @@ func Run(t crossdock.T) {
 
 	rpc := rpc.Create(t)
 	ch := raw.New(rpc.Channel("yarpc-test"))
-	_, _, err := ch.Call(&raw.ReqMeta{
-		Context:   ctx,
-		Procedure: "sleep/raw",
-	}, nil)
+	_, _, err := ch.Call(yarpc.NewReqMeta(ctx).Procedure("sleep/raw"), nil)
 	fatals.Error(err, "expected a failure for timeout")
 
 	if transport.IsBadRequestError(err) {
