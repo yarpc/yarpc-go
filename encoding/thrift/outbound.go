@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/yarpc/yarpc-go"
@@ -80,7 +81,10 @@ func New(c Config) Client {
 	}
 
 	return thriftClient{
-		p:             p,
+		p: disableEnveloper{
+			Protocol: p,
+			Type:     wire.Reply, // we only decode replies
+		},
 		t:             c.Channel.Outbound,
 		caller:        c.Channel.Caller,
 		service:       c.Channel.Service,
@@ -125,12 +129,28 @@ func (c thriftClient) Call(
 	// Always override the procedure name to the Thrift procedure name.
 	treq.Procedure = procedureName(c.thriftService, reqBody.MethodName())
 
-	var buffer bytes.Buffer
-	if value, err := reqBody.ToWire(); err != nil {
+	value, err := reqBody.ToWire()
+	if err != nil {
 		// ToWire validates the request. If it failed, we should return the error
 		// as-is because it's not an encoding error.
 		return wire.Value{}, nil, err
-	} else if err := c.p.Encode(value, &buffer); err != nil {
+	}
+
+	reqEnvelopeType := reqBody.EnvelopeType()
+	if reqEnvelopeType != wire.Call {
+		return wire.Value{}, nil, encoding.RequestBodyEncodeError(
+			&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
+		)
+	}
+
+	var buffer bytes.Buffer
+	err = c.p.EncodeEnveloped(wire.Envelope{
+		Name:  reqBody.MethodName(),
+		Type:  reqEnvelopeType,
+		SeqID: 1, // don't care
+		Value: value,
+	}, &buffer)
+	if err != nil {
 		return wire.Value{}, nil, encoding.RequestBodyEncodeError(&treq, err)
 	}
 
@@ -146,11 +166,20 @@ func (c thriftClient) Call(
 		return wire.Value{}, nil, err
 	}
 
-	resBody, err := c.p.Decode(bytes.NewReader(payload), wire.TStruct)
+	envelope, err := c.p.DecodeEnveloped(bytes.NewReader(payload))
 	if err != nil {
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
-	// TODO: when transport returns response context, use that here.
-	return resBody, meta.FromTransportResponse(ctx, tres), nil
+	switch envelope.Type {
+	case wire.Reply:
+		// TODO(abg): when transport returns response context, use that here.
+		return envelope.Value, meta.FromTransportResponse(ctx, tres), nil
+	case wire.Exception:
+		// TODO(abg): What do we want to do with Thrift-level exceptions?
+		return wire.Value{}, nil, fmt.Errorf("TApplicationException: %v", envelope.Value)
+	default:
+		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(
+			&treq, errUnexpectedEnvelopeType(envelope.Type))
+	}
 }

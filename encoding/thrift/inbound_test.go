@@ -22,13 +22,10 @@ package thrift
 
 import (
 	"bytes"
-	"fmt"
 	"io"
-	"reflect"
 	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -43,43 +40,112 @@ import (
 //go:generate mockgen -destination=mock_protocol_test.go -package=thrift github.com/thriftrw/thriftrw-go/protocol Protocol
 
 func TestThriftHandler(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
 	requestBody := wire.NewValueStruct(wire.Struct{})
 	responseBody := wire.NewValueStruct(wire.Struct{})
 
-	proto := NewMockProtocol(mockCtrl)
+	tests := []struct {
+		giveEnvelope         *wire.Envelope    // envelope read off the wire
+		responseEnvelopeType wire.EnvelopeType // envelope type returned by handler
+		responseIsAppError   bool              // whether the handler encountered an application error
 
-	proto.EXPECT().Decode(gomock.Any(), wire.TStruct).
-		Return(requestBody, nil).AnyTimes()
+		wantEnvelope *wire.Envelope // envelope expected written to the wire
+		expectHandle bool           // whether an actual call to the handler is expected
+		wantError    string         // if non empty, an error is expected
+	}{
+		{
+			giveEnvelope: &wire.Envelope{
+				Name:  "someMethod",
+				SeqID: 42,
+				Type:  wire.Call,
+				Value: requestBody,
+			},
+			wantEnvelope: &wire.Envelope{
+				Name:  "someMethod",
+				SeqID: 42, // response seqID must match
+				Type:  wire.Reply,
+				Value: responseBody,
+			},
+			expectHandle:         true,
+			responseEnvelopeType: wire.Reply,
+		},
+		{
+			giveEnvelope: &wire.Envelope{
+				Name:  "someMethod",
+				SeqID: 42,
+				Type:  wire.Call,
+				Value: requestBody,
+			},
+			wantEnvelope: &wire.Envelope{
+				Name:  "someMethod",
+				SeqID: 42, // response seqID must match
+				Type:  wire.Reply,
+				Value: responseBody,
+			},
+			expectHandle:         true,
+			responseIsAppError:   true,
+			responseEnvelopeType: wire.Reply,
+		},
+		{
+			giveEnvelope: &wire.Envelope{
+				Name:  "someMethod",
+				SeqID: 42,
+				Type:  wire.Exception,
+				Value: requestBody,
+			},
+			wantError: `failed to decode "thrift" request body for procedure ` +
+				`"MyService::someMethod" of service "service" from caller "caller": ` +
+				"unexpected envelope type: Exception",
+		},
+		{
+			giveEnvelope: &wire.Envelope{
+				Name:  "someMethod",
+				SeqID: 42,
+				Type:  wire.Call,
+				Value: requestBody,
+			},
+			expectHandle:         true,
+			responseEnvelopeType: wire.OneWay,
+			wantError: `failed to encode "thrift" response body for procedure ` +
+				`"MyService::someMethod" of service "service" from caller "caller": ` +
+				"unexpected envelope type: OneWay",
+		},
+	}
 
-	proto.EXPECT().Encode(responseBody, gomock.Any()).
-		Do(func(_ wire.Value, w io.Writer) {
-			_, err := w.Write([]byte("hello"))
-			require.NoError(t, err, "Write() failed")
-		}).Return(nil).AnyTimes()
+	for _, tt := range tests {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
 
-	tests := []bool{true, false}
-	for _, isApplicationError := range tests {
+		proto := NewMockProtocol(mockCtrl)
+		if tt.giveEnvelope != nil {
+			proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(*tt.giveEnvelope, nil)
+		}
+		if tt.wantEnvelope != nil {
+			proto.EXPECT().EncodeEnveloped(*tt.wantEnvelope, gomock.Any()).
+				Do(func(_ wire.Envelope, w io.Writer) {
+					_, err := w.Write([]byte("hello"))
+					require.NoError(t, err, "Write() failed")
+				}).Return(nil)
+		}
+
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		handler := NewMockHandler(mockCtrl)
-		handler.EXPECT().Handle(
-			fakeReqMeta{
+		h := thriftHandler{Protocol: proto, Handler: handler}
+
+		if tt.expectHandle {
+			reqMeta := fakeReqMeta{
 				context:   ctx,
 				caller:    "caller",
 				service:   "service",
 				encoding:  Encoding,
 				procedure: "MyService::someMethod",
-			},
-			requestBody,
-		).Return(Response{
-			Body:               emptyEnveloper{},
-			IsApplicationError: isApplicationError,
-		}, nil)
-
-		h := thriftHandler{Handler: handler, Protocol: proto}
+			}
+			handler.EXPECT().Handle(reqMeta, requestBody).
+				Return(Response{
+					Body:               fakeEnveloper(tt.responseEnvelopeType),
+					IsApplicationError: tt.responseIsAppError,
+				}, nil)
+		}
 
 		rw := new(transporttest.FakeResponseWriter)
 		err := h.Handle(ctx, &transport.Request{
@@ -89,66 +155,16 @@ func TestThriftHandler(t *testing.T) {
 			Procedure: "MyService::someMethod",
 			Body:      bytes.NewReader([]byte("irrelevant")),
 		}, rw)
-		require.NoError(t, err, "request failed")
 
-		assert.Equal(t, isApplicationError, rw.IsApplicationError,
-			"isApplicationError did not match")
-		assert.Equal(t, rw.Body.String(), "hello", "body did not match")
+		if tt.wantError != "" {
+			if assert.Error(t, err, "expected an error") {
+				assert.Contains(t, err.Error(), tt.wantError)
+			}
+		} else {
+			assert.NoError(t, err, "expected no error")
+			assert.Equal(t, tt.responseIsAppError, rw.IsApplicationError,
+				"isApplicationError did not match")
+			assert.Equal(t, rw.Body.String(), "hello", "body did not match")
+		}
 	}
-}
-
-type emptyEnveloper struct{}
-
-func (emptyEnveloper) MethodName() string {
-	return "someMethod"
-}
-
-func (emptyEnveloper) EnvelopeType() wire.EnvelopeType {
-	return wire.Reply
-}
-
-func (emptyEnveloper) ToWire() (wire.Value, error) {
-	return wire.NewValueStruct(wire.Struct{}), nil
-}
-
-type fakeReqMeta struct {
-	context   context.Context
-	caller    string
-	service   string
-	procedure string
-	encoding  transport.Encoding
-	headers   yarpc.Headers
-}
-
-func (f fakeReqMeta) Matches(x interface{}) bool {
-	reqMeta, ok := x.(yarpc.ReqMeta)
-	if !ok {
-		return false
-	}
-
-	// TODO: log to testing.T on mismatch if test becomes more complex
-	if f.context != reqMeta.Context() {
-		return false
-	}
-
-	if f.caller != reqMeta.Caller() {
-		return false
-	}
-	if f.service != reqMeta.Service() {
-		return false
-	}
-	if f.procedure != reqMeta.Procedure() {
-		return false
-	}
-	if f.encoding != reqMeta.Encoding() {
-		return false
-	}
-	if !reflect.DeepEqual(f.headers, reqMeta.Headers()) {
-		return false
-	}
-	return true
-}
-
-func (f fakeReqMeta) String() string {
-	return fmt.Sprintf("%#v", f)
 }
