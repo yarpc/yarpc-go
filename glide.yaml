@@ -17,5 +17,6 @@ import:
   subpackages:
   - gomock
 - package: github.com/uber/tchannel-go
+  # TODO: Change this to master once SubChannel.GetHandlers() is available to master.
   version: dev
 - package: github.com/crossdock/crossdock-go
