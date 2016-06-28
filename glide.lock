@@ -1,23 +1,31 @@
 hash: 94bc00970e27b21e47810d384776f5967ee27ae9ad2ef89c2fb22342711a9df7
-updated: 2016-06-27T17:45:58.907271435-07:00
+updated: 2016-06-27T18:24:27.011711472-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 39a09ac5e49481d39dd1bcb6757ffe182e3df20a
+  version: 0e9fed1e12ed066865e46c6903782b2ef95f4650
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
   version: e53a1feb15cb012ae9b6691f1acdaa62b480cf92
+- name: github.com/davecgh/go-spew
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  subpackages:
+  - spew
 - name: github.com/golang/mock
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
 - name: github.com/stretchr/testify
-  version: 8d64eb7173c7753d6419fd4a9caf057398611364
+  version: d77da356e56a7428ad25149ca77381849a6a5232
   subpackages:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 1a4c425a84e10edac0b36e560942ce3f5aec0405
+  version: 6a46a23b8d110c099d76f87d4b548806ffab9614
   subpackages:
   - ptr
   - wire
@@ -25,24 +33,21 @@ imports:
   - envelope
   - protocol/binary
   - envelope/internal/exception
+- name: github.com/uber-go/atomic
+  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber/tchannel-go
-  version: 60271b8a888a861316825f12833c28e31f1cbd0d
+  version: f839ca3c2e50afc25beb3c67a1bdfb900351ced4
   subpackages:
   - json
   - raw
   - thrift
-  - atomic
   - relay
   - tnet
   - trand
   - typed
   - thrift/gen-go/meta
-- name: github.com/yarpc/yarpc-go
-  version: 34300cedc580739293b56bd619f263edd0c4fb7e
-  subpackages:
-  - crossdock-go
 - name: golang.org/x/net
-  version: c4c3ea71919de159c9e246d7be66deb7f0a39a58
+  version: 04557861f124410b768b1ba5bb3a91b705afbfc6
   subpackages:
   - context
   - context/ctxhttp
