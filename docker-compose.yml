@@ -2,8 +2,8 @@ version: '2'
 
 services:
     crossdock:
-        dns_search: .
         image: crossdock/crossdock
+        dns_search: .
         links:
             - go
             - node
