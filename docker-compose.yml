@@ -2,8 +2,8 @@ version: '2'
 
 services:
     crossdock:
+        image: crossdock/crossdock
         dns_search: .
-        image: yarpc/crossdock
         links:
             - go
             - node
