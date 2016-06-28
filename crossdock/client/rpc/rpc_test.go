@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/yarpc/yarpc-go/crossdock-go"
+	"github.com/crossdock/crossdock-go"
 )
 
 func TestCreate(t *testing.T) {

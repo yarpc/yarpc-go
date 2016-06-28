@@ -25,12 +25,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 
+	"github.com/crossdock/crossdock-go"
 	"github.com/thriftrw/thriftrw-go/ptr"
 	"github.com/uber/tchannel-go/thrift"
 )

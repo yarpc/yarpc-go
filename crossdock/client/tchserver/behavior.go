@@ -24,11 +24,11 @@ import (
 	"fmt"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
+	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go"
 )
 

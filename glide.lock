@@ -1,10 +1,12 @@
-hash: 7d6d74172f119bd6119d5e7657a8dd1fd732562685eb953d54d2566e40d67a5c
-updated: 2016-06-16T11:09:19.35257-07:00
+hash: 94bc00970e27b21e47810d384776f5967ee27ae9ad2ef89c2fb22342711a9df7
+updated: 2016-06-27T18:24:27.011711472-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 7ea4a87fc5c03c072a8d52cc499f1b83cfaa927b
+  version: 0e9fed1e12ed066865e46c6903782b2ef95f4650
   subpackages:
   - lib/go/thrift
+- name: github.com/crossdock/crossdock-go
+  version: e53a1feb15cb012ae9b6691f1acdaa62b480cf92
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
@@ -23,16 +25,18 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: e96eff25b25410ce4fe8c6a1490b04a6c66449bf
+  version: 6a46a23b8d110c099d76f87d4b548806ffab9614
   subpackages:
   - ptr
   - wire
   - protocol
+  - envelope
   - protocol/binary
+  - envelope/internal/exception
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber/tchannel-go
-  version: 14e4d1013a2d959a71b3105c5acf5b8f72e67425
+  version: f839ca3c2e50afc25beb3c67a1bdfb900351ced4
   subpackages:
   - json
   - raw
@@ -43,7 +47,7 @@ imports:
   - typed
   - thrift/gen-go/meta
 - name: golang.org/x/net
-  version: d7bf3545bb0dacf009c535b3d3fbf53ac0a339ab
+  version: 04557861f124410b768b1ba5bb3a91b705afbfc6
   subpackages:
   - context
   - context/ctxhttp

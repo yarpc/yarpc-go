@@ -24,11 +24,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/json"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 const (

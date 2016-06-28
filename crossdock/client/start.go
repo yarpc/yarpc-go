@@ -21,7 +21,6 @@
 package client
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/ctxpropagation"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errors"
@@ -31,6 +30,8 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/outboundttl"
 	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
 	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 var behaviors = crossdock.Behaviors{

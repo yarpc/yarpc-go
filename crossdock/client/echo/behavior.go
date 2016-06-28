@@ -21,8 +21,9 @@
 package echo
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 // createEchoT tags the given T with the transport, encoding and server.
