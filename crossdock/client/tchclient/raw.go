@@ -23,9 +23,9 @@ package tchclient
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 
+	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go/raw"
 	"golang.org/x/net/context"
 )

@@ -27,8 +27,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 type httpClient struct {

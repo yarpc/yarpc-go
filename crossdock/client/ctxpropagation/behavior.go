@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock-go"
+	"github.com/crossdock/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	server "github.com/yarpc/yarpc-go/crossdock/server/yarpc"
 	"github.com/yarpc/yarpc-go/encoding/json"

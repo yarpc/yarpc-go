@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
@@ -35,6 +34,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/crossdock/crossdock-go"
 	"github.com/thriftrw/thriftrw-go/ptr"
 	"golang.org/x/net/context"
 )

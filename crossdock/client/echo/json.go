@@ -24,11 +24,11 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/encoding/json"
 
+	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"
 )
 
