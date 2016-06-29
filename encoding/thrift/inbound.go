@@ -48,18 +48,29 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		return err
 	}
 
-	reqBody, err := t.Protocol.Decode(bytes.NewReader(body), wire.TStruct)
+	envelope, err := t.Protocol.DecodeEnveloped(bytes.NewReader(body))
 	if err != nil {
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
+	if envelope.Type != wire.Call {
+		return encoding.RequestBodyDecodeError(
+			treq, errUnexpectedEnvelopeType(envelope.Type))
+	}
+	// TODO(abg): Support oneway
+
 	reqMeta := meta.FromTransportRequest(ctx, treq)
-	res, err := t.Handler.Handle(reqMeta, reqBody)
+	res, err := t.Handler.Handle(reqMeta, envelope.Value)
 	if err != nil {
 		return err
 	}
 
-	resBody, err := res.Body.ToWire()
+	if resType := res.Body.EnvelopeType(); resType != wire.Reply {
+		return encoding.ResponseBodyEncodeError(
+			treq, errUnexpectedEnvelopeType(resType))
+	}
+
+	value, err := res.Body.ToWire()
 	if err != nil {
 		return err
 	}
@@ -74,7 +85,13 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		// TODO(abg): propagate response context
 	}
 
-	if err := t.Protocol.Encode(resBody, rw); err != nil {
+	err = t.Protocol.EncodeEnveloped(wire.Envelope{
+		Name:  res.Body.MethodName(),
+		Type:  res.Body.EnvelopeType(),
+		SeqID: envelope.SeqID,
+		Value: value,
+	}, rw)
+	if err != nil {
 		return encoding.ResponseBodyEncodeError(treq, err)
 	}
 
