@@ -208,3 +208,36 @@ func TestCallFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestStartTwice(t *testing.T) {
+	out := NewOutbound("http://localhost:9999")
+	if assert.NoError(t, out.Start()) {
+		err := out.Start()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "http.Outbound has already been started")
+	}
+}
+
+func TestStopWithoutStarting(t *testing.T) {
+	out := NewOutbound("http://localhost:9999")
+	err := out.Stop()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "http.Outbound has not been started")
+}
+
+func TestCallWithoutStarting(t *testing.T) {
+	out := NewOutbound("http://localhost:9999")
+	assert.Panics(t, func() {
+		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		out.Call(
+			ctx,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "foo",
+				Body:      bytes.NewReader([]byte("sup")),
+			},
+		)
+	})
+}

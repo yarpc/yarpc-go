@@ -68,6 +68,10 @@ func main() {
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
 		Filter:    cache,
 	})
+	if err := rpc.Start(); err != nil {
+		log.Fatalf("failed to start RPC: %v", err)
+	}
+	defer rpc.Stop()
 
 	client := keyvalueclient.New(rpc.Channel("keyvalue"))
 

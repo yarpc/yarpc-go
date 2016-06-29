@@ -40,7 +40,11 @@ type jsonEcho struct {
 // JSON implements the 'json' behavior.
 func JSON(t crossdock.T) {
 	t = createEchoT("json", t)
+	fatals := crossdock.Fatals(t)
+
 	rpc := rpc.Create(t)
+	fatals.NoError(rpc.Start(), "could not start RPC")
+	defer rpc.Stop()
 
 	client := json.New(rpc.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)

@@ -54,6 +54,8 @@ func Run(t crossdock.T) {
 			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
 		},
 	})
+	fatals.NoError(rpc.Start(), "could not start RPC")
+	defer rpc.Stop()
 
 	switch encoding {
 	case "raw":

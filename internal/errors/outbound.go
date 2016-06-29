@@ -18,38 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package errors
 
-import (
-	"bytes"
-	"time"
+import "fmt"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
-	"github.com/yarpc/yarpc-go/encoding/raw"
+// ErrOutboundAlreadyStarted represents a failure because Start() was already
+// called on the outbound.
+type ErrOutboundAlreadyStarted string
 
-	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
-)
+func (e ErrOutboundAlreadyStarted) Error() string {
+	return fmt.Sprintf("%s has already been started", string(e))
+}
 
-// Raw implements the 'raw' behavior.
-func Raw(t crossdock.T) {
-	t = createEchoT("raw", t)
-	fatals := crossdock.Fatals(t)
+// ErrOutboundNotStarted represents a failure because Start() was not called
+// on an outbound or if Stop() was called.
+type ErrOutboundNotStarted string
 
-	rpc := rpc.Create(t)
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
-
-	client := raw.New(rpc.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-
-	token := random.Bytes(5)
-	resBody, _, err := client.Call(
-		yarpc.NewReqMeta(ctx).Procedure("echo/raw"),
-		token)
-
-	crossdock.Fatals(t).NoError(err, "call to echo/raw failed: %v", err)
-	crossdock.Assert(t).True(bytes.Equal(token, resBody), "server said: %v", resBody)
+func (e ErrOutboundNotStarted) Error() string {
+	return fmt.Sprintf("%s has not been started or was stopped", string(e))
 }

@@ -28,8 +28,14 @@ import (
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/uber-go/atomic"
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
+)
+
+var (
+	errOutboundAlreadyStarted = errors.ErrOutboundAlreadyStarted("tchannel.Outbound")
+	errOutboundNotStarted     = errors.ErrOutboundNotStarted("tchannel.Outbound")
 )
 
 // OutboundOption configures Outbound.
@@ -49,7 +55,7 @@ func HostPort(hostPort string) OutboundOption {
 // NewOutbound builds a new TChannel outbound which uses the given Channel to
 // make requests.
 func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.Outbound {
-	o := outbound{Channel: ch}
+	o := outbound{Channel: ch, started: atomic.NewBool(false)}
 	for _, opt := range options {
 		opt(&o)
 	}
@@ -57,6 +63,7 @@ func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.Outb
 }
 
 type outbound struct {
+	started *atomic.Bool
 	Channel *tchannel.Channel
 
 	// If specified, this is the address to which the request will be made.
@@ -67,15 +74,26 @@ type outbound struct {
 func (o outbound) Start() error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
+	if o.started.Swap(true) {
+		return errOutboundAlreadyStarted
+	}
 	return nil
 }
 
 func (o outbound) Stop() error {
+	if !o.started.Swap(false) {
+		return errOutboundNotStarted
+	}
 	o.Channel.Close()
 	return nil
 }
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.

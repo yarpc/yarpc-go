@@ -107,6 +107,10 @@ func main() {
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
 		Filter:    yarpc.Filters(requestLogFilter{}),
 	})
+	if err := rpc.Start(); err != nil {
+		log.Fatalf("failed to start RPC: %v", err)
+	}
+	defer rpc.Stop()
 
 	client := json.New(rpc.Channel("keyvalue"))
 

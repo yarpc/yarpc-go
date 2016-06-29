@@ -61,7 +61,13 @@ type TT struct {
 
 // Run executes the thriftgauntlet behavior.
 func Run(t crossdock.T) {
-	RunGauntlet(t, rpc.Create(t), serverName)
+	fatals := crossdock.Fatals(t)
+
+	rpc := rpc.Create(t)
+	fatals.NoError(rpc.Start(), "could not start RPC")
+	defer rpc.Stop()
+
+	RunGauntlet(t, rpc, serverName)
 }
 
 // RunGauntlet takes an rpc object and runs the gauntlet

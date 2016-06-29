@@ -93,6 +93,11 @@ func Phone(reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.Res
 		return nil, nil, fmt.Errorf("unconfigured transport")
 	}
 
+	if err := outbound.Start(); err != nil {
+		return nil, nil, err
+	}
+	defer outbound.Stop()
+
 	client := json.New(transport.Channel{
 		Caller:   "yarpc-test", // TODO use reqMeta.Service,
 		Service:  body.Service,
