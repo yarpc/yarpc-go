@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 
 	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/encoding/thrift/internal"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
@@ -176,10 +177,29 @@ func (c thriftClient) Call(
 		// TODO(abg): when transport returns response context, use that here.
 		return envelope.Value, meta.FromTransportResponse(ctx, tres), nil
 	case wire.Exception:
-		// TODO(abg): What do we want to do with Thrift-level exceptions?
-		return wire.Value{}, nil, fmt.Errorf("TApplicationException: %v", envelope.Value)
+		var exc internal.TApplicationException
+		if err := exc.FromWire(envelope.Value); err != nil {
+			return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
+		}
+		return wire.Value{}, nil, thriftException{
+			Service:   treq.Service,
+			Procedure: treq.Procedure,
+			Reason:    &exc,
+		}
 	default:
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(
 			&treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
+}
+
+type thriftException struct {
+	Service   string
+	Procedure string
+	Reason    *internal.TApplicationException
+}
+
+func (e thriftException) Error() string {
+	return fmt.Sprintf(
+		"thrift request to procedure %q of service %q encountered an internal failure: %v",
+		e.Procedure, e.Service, e.Reason)
 }
