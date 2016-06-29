@@ -82,9 +82,14 @@ func TestClient(t *testing.T) {
 				Name:  "someMethod",
 				SeqID: 1,
 				Type:  wire.Exception,
-				Value: wire.NewValueStruct(wire.Struct{}),
+				Value: wire.NewValueStruct(wire.Struct{Fields: []wire.Field{
+					{ID: 1, Value: wire.NewValueString("great sadness")},
+					{ID: 2, Value: wire.NewValueI32(7)},
+				}}),
 			},
-			wantError: "TApplicationException: TStruct({})", // TODO: what do
+			wantError: `thrift request to procedure "MyService::someMethod" of ` +
+				`service "service" encountered an internal failure: ` +
+				"TApplicationException{Message: great sadness, Type: ProtocolError}",
 		},
 		{
 			giveRequestBody: fakeEnveloper(wire.Call),
