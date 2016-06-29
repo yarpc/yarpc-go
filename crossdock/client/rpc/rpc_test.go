@@ -23,8 +23,8 @@ package rpc
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/crossdock/crossdock-go"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreate(t *testing.T) {
