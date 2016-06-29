@@ -66,8 +66,8 @@ func TestEncodeAndDecodeHeaders(t *testing.T) {
 
 func TestDecodeHeaderErrors(t *testing.T) {
 	tests := [][]byte{
-		[]byte{0x00, 0x01},
-		[]byte{
+		{0x00, 0x01},
+		{
 			0x00, 0x01,
 			0x00, 0x02, 'a',
 			0x00, 0x01, 'b',

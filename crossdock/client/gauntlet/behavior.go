@@ -280,17 +280,17 @@ func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
 			Function: "TestSet",
 			Give: []interface{}{
 				map[int32]struct{}{
-					1:  struct{}{},
-					2:  struct{}{},
-					-1: struct{}{},
-					-2: struct{}{},
+					1:  {},
+					2:  {},
+					-1: {},
+					-2: {},
 				},
 			},
 			Want: map[int32]struct{}{
-				1:  struct{}{},
-				2:  struct{}{},
-				-1: struct{}{},
-				-2: struct{}{},
+				1:  {},
+				2:  {},
+				-1: {},
+				-2: {},
 			},
 		},
 		{
