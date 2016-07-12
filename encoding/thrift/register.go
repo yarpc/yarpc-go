@@ -57,12 +57,8 @@ type Service interface {
 // given Registry.
 func Register(registry transport.Registry, service Service) {
 	name := service.Name()
-	proto := disableEnveloper{
-		Protocol: service.Protocol(),
-		Type:     wire.Call, // we only decode requests
-	}
 	for method, h := range service.Handlers() {
-		handler := thriftHandler{Handler: h, Protocol: proto}
+		handler := thriftHandler{Handler: h, Protocol: service.Protocol()}
 		registry.Register("", procedureName(name, method), handler)
 	}
 }

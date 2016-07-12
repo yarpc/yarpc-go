@@ -23,6 +23,7 @@ package tchannel
 import (
 	"fmt"
 
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
@@ -162,7 +163,7 @@ func newResponseWriter(treq *transport.Request, call inboundCall) *responseWrite
 }
 
 func (*responseWriter) Options() (opts transport.Options) {
-	return opts
+	return thrift.DisableEnveloping(opts)
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {

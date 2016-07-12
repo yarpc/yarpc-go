@@ -81,11 +81,15 @@ func New(c Config) Client {
 		p = protocol.Binary
 	}
 
-	return thriftClient{
-		p: disableEnveloper{
+	if isEnvelopingDisabled(c.Channel.Outbound.Options()) {
+		p = disableEnveloper{
 			Protocol: p,
-			Type:     wire.Reply, // we only decode replies
-		},
+			Type:     wire.Reply, // we only decode replies with this instance
+		}
+	}
+
+	return thriftClient{
+		p:             p,
 		t:             c.Channel.Outbound,
 		caller:        c.Channel.Caller,
 		service:       c.Channel.Service,

@@ -48,7 +48,15 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		return err
 	}
 
-	envelope, err := t.Protocol.DecodeEnveloped(bytes.NewReader(body))
+	proto := t.Protocol
+	if isEnvelopingDisabled(rw.Options()) {
+		proto = disableEnveloper{
+			Protocol: proto,
+			Type:     wire.Call, // we only decode requests
+		}
+	}
+
+	envelope, err := proto.DecodeEnveloped(bytes.NewReader(body))
 	if err != nil {
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
@@ -85,7 +93,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		// TODO(abg): propagate response context
 	}
 
-	err = t.Protocol.EncodeEnveloped(wire.Envelope{
+	err = proto.EncodeEnveloped(wire.Envelope{
 		Name:  res.Body.MethodName(),
 		Type:  res.Body.EnvelopeType(),
 		SeqID: envelope.SeqID,
