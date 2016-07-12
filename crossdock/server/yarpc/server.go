@@ -72,16 +72,16 @@ func Stop() {
 	}
 }
 
-func register(rpc transport.Registry) {
-	raw.Register(rpc, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(rpc, json.Procedure("echo", EchoJSON))
-	thrift.Register(rpc, echoserver.New(EchoThrift{}))
-	thrift.Register(rpc, thrifttestserver.New(thriftTest{}))
-	thrift.Register(rpc, secondserviceserver.New(secondService{}))
+func register(reg transport.Registry) {
+	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
+	json.Register(reg, json.Procedure("echo", EchoJSON))
+	thrift.Register(reg, echoserver.New(EchoThrift{}))
+	thrift.Register(reg, thrifttestserver.New(thriftTest{}))
+	thrift.Register(reg, secondserviceserver.New(secondService{}))
 
-	json.Register(rpc, json.Procedure("unexpected-error", UnexpectedError))
-	json.Register(rpc, json.Procedure("bad-response", BadResponse))
-	json.Register(rpc, json.Procedure("phone", Phone))
+	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
+	json.Register(reg, json.Procedure("bad-response", BadResponse))
+	json.Register(reg, json.Procedure("phone", Phone))
 
-	raw.Register(rpc, raw.Procedure("sleep/raw", SleepRaw))
+	raw.Register(reg, raw.Procedure("sleep/raw", SleepRaw))
 }
