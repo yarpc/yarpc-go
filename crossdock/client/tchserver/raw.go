@@ -31,7 +31,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runRaw(t crossdock.T, rpc yarpc.Dispatcher) {
+func runRaw(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
@@ -39,7 +39,7 @@ func runRaw(t crossdock.T, rpc yarpc.Dispatcher) {
 	headers := yarpc.NewHeaders().With("hello", "raw")
 	token := random.Bytes(5)
 
-	resBody, resMeta, err := rawCall(rpc, headers, token)
+	resBody, resMeta, err := rawCall(dispatcher, headers, token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
@@ -49,8 +49,8 @@ func runRaw(t crossdock.T, rpc yarpc.Dispatcher) {
 	}
 }
 
-func rawCall(rpc yarpc.Dispatcher, headers yarpc.Headers, token []byte) ([]byte, yarpc.CallResMeta, error) {
-	client := raw.New(rpc.Channel(serverName))
+func rawCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token []byte) ([]byte, yarpc.CallResMeta, error) {
+	client := raw.New(dispatcher.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

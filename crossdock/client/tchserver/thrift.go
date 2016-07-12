@@ -33,14 +33,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runThrift(t crossdock.T, rpc yarpc.Dispatcher) {
+func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
 	headers := yarpc.NewHeaders().With("hello", "thrift")
 	token := random.String(5)
 
-	resBody, resMeta, err := thriftCall(rpc, headers, token)
+	resBody, resMeta, err := thriftCall(dispatcher, headers, token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
@@ -49,11 +49,11 @@ func runThrift(t crossdock.T, rpc yarpc.Dispatcher) {
 		assert.Equal(headers, resMeta.Headers(), "headers echoed")
 	}
 
-	gauntlet.RunGauntlet(t, rpc, serverName)
+	gauntlet.RunGauntlet(t, dispatcher, serverName)
 }
 
-func thriftCall(rpc yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
-	client := echoclient.New(rpc.Channel(serverName))
+func thriftCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+	client := echoclient.New(dispatcher.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

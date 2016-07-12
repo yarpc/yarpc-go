@@ -36,7 +36,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-func basicRPC(t *testing.T) Dispatcher {
+func basicDispatcher(t *testing.T) Dispatcher {
 	ch, err := tchannel.NewChannel("test", nil)
 	require.NoError(t, err, "failed to create TChannel")
 
@@ -50,9 +50,9 @@ func basicRPC(t *testing.T) Dispatcher {
 }
 
 func TestInboundsReturnsACopy(t *testing.T) {
-	rpc := basicRPC(t)
+	dispatcher := basicDispatcher(t)
 
-	inbounds := rpc.Inbounds()
+	inbounds := dispatcher.Inbounds()
 	require.Len(t, inbounds, 2, "expected two inbounds")
 	assert.NotNil(t, inbounds[0], "must not be nil")
 	assert.NotNil(t, inbounds[1], "must not be nil")
@@ -62,29 +62,29 @@ func TestInboundsReturnsACopy(t *testing.T) {
 	inbounds[0] = nil
 	inbounds[1] = nil
 
-	inbounds = rpc.Inbounds()
+	inbounds = dispatcher.Inbounds()
 	require.Len(t, inbounds, 2, "expected two inbounds")
 	assert.NotNil(t, inbounds[0], "must not be nil")
 	assert.NotNil(t, inbounds[1], "must not be nil")
 }
 
 func TestInboundsOrderIsMaintained(t *testing.T) {
-	rpc := basicRPC(t)
+	dispatcher := basicDispatcher(t)
 
 	// Order must be maintained
 	assert.Implements(t,
-		(*tch.Inbound)(nil), rpc.Inbounds()[0], "first inbound must be TChannel")
+		(*tch.Inbound)(nil), dispatcher.Inbounds()[0], "first inbound must be TChannel")
 	assert.Implements(t,
-		(*http.Inbound)(nil), rpc.Inbounds()[1], "second inbound must be HTTP")
+		(*http.Inbound)(nil), dispatcher.Inbounds()[1], "second inbound must be HTTP")
 }
 
 func TestInboundsOrderAfterStart(t *testing.T) {
-	rpc := basicRPC(t)
+	dispatcher := basicDispatcher(t)
 
-	require.NoError(t, rpc.Start(), "failed to start RPC")
-	defer rpc.Stop()
+	require.NoError(t, dispatcher.Start(), "failed to start RPC")
+	defer dispatcher.Stop()
 
-	inbounds := rpc.Inbounds()
+	inbounds := dispatcher.Inbounds()
 
 	tchInbound := inbounds[0].(tch.Inbound)
 	assert.NotEqual(t, "0.0.0.0:0", tchInbound.Channel().PeerInfo().HostPort)
@@ -243,13 +243,13 @@ func TestStartStopFailures(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		rpc := NewDispatcher(Config{
+		dispatcher := NewDispatcher(Config{
 			Name:      "test",
 			Inbounds:  tt.inbounds(mockCtrl),
 			Outbounds: tt.outbounds(mockCtrl),
 		})
 
-		err := rpc.Start()
+		err := dispatcher.Start()
 		if tt.wantStartErr != "" {
 			if assert.Error(t, err, "%v: expected Start() to fail", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantStartErr, tt.desc)
@@ -260,7 +260,7 @@ func TestStartStopFailures(t *testing.T) {
 			continue
 		}
 
-		err = rpc.Stop()
+		err = dispatcher.Stop()
 		if tt.wantStopErr == "" {
 			assert.NoError(t, err, "%v: expected Stop() to succeed", tt.desc)
 			continue

@@ -77,7 +77,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	rpc := yarpc.NewDispatcher(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(channel, tch.ListenAddr(":28941")),
@@ -88,10 +88,10 @@ func main() {
 
 	handler := handler{items: make(map[string]string)}
 
-	json.Register(rpc, json.Procedure("get", handler.Get))
-	json.Register(rpc, json.Procedure("set", handler.Set))
+	json.Register(dispatcher, json.Procedure("get", handler.Get))
+	json.Register(dispatcher, json.Procedure("set", handler.Set))
 
-	if err := rpc.Start(); err != nil {
+	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 		os.Exit(1)
 	}

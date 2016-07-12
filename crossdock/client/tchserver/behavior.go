@@ -48,22 +48,22 @@ func Run(t crossdock.T) {
 	ch, err := tchannel.NewChannel("yarpc-client", nil)
 	fatals.NoError(err, "could not create channel")
 
-	rpc := yarpc.NewDispatcher(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-client",
 		Outbounds: transport.Outbounds{
 			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
 		},
 	})
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
+	fatals.NoError(dispatcher.Start(), "could not start RPC")
+	defer dispatcher.Stop()
 
 	switch encoding {
 	case "raw":
-		runRaw(t, rpc)
+		runRaw(t, dispatcher)
 	case "json":
-		runJSON(t, rpc)
+		runJSON(t, dispatcher)
 	case "thrift":
-		runThrift(t, rpc)
+		runThrift(t, dispatcher)
 	default:
 		fatals.Fail("", "unknown encoding %q", encoding)
 	}
