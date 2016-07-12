@@ -71,7 +71,7 @@ func Run(t crossdock.T) {
 }
 
 // RunGauntlet takes an rpc object and runs the gauntlet
-func RunGauntlet(t crossdock.T, rpc yarpc.Dispatcher, serverName string) {
+func RunGauntlet(t crossdock.T, dispatcher yarpc.Dispatcher, serverName string) {
 	t = createGauntletT(t)
 	checks := crossdock.Checks(t)
 
@@ -362,7 +362,7 @@ func RunGauntlet(t crossdock.T, rpc yarpc.Dispatcher, serverName string) {
 
 		desc := BuildDesc(tt)
 
-		client := buildClient(t, desc, tt.Service, rpc.Channel(serverName))
+		client := buildClient(t, desc, tt.Service, dispatcher.Channel(serverName))
 		f := client.MethodByName(tt.Function)
 		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
 			continue

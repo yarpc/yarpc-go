@@ -160,7 +160,7 @@ func Run(t crossdock.T) {
 				}
 			}
 
-			rpc, tconfig := buildRPC(t)
+			rpc, tconfig := buildDispatcher(t)
 			fatals.NoError(rpc.Start(), "%v: RPC failed to start", tt.desc)
 			defer rpc.Stop()
 
@@ -276,7 +276,7 @@ func (h *multiHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (inter
 	return map[string]interface{}{}, resMeta, err
 }
 
-func buildRPC(t crossdock.T) (rpc yarpc.Dispatcher, tconfig server.TransportConfig) {
+func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server.TransportConfig) {
 	fatals := crossdock.Fatals(t)
 
 	self := t.Param("ctxclient")
@@ -299,7 +299,7 @@ func buildRPC(t crossdock.T) (rpc yarpc.Dispatcher, tconfig server.TransportConf
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	rpc = yarpc.NewDispatcher(yarpc.Config{
+	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "ctxclient",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(ch, tch.ListenAddr(":8087")),
@@ -308,5 +308,5 @@ func buildRPC(t crossdock.T) (rpc yarpc.Dispatcher, tconfig server.TransportConf
 		Outbounds: transport.Outbounds{"yarpc-test": outbound},
 	})
 
-	return rpc, tconfig
+	return dispatcher, tconfig
 }

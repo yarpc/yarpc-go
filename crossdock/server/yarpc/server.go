@@ -38,7 +38,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-var rpc yarpc.Dispatcher
+var dispatcher yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
@@ -47,7 +47,7 @@ func Start() {
 		log.Fatalln("couldn't create tchannel: %v", err)
 	}
 
-	rpc = yarpc.NewDispatcher(yarpc.Config{
+	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8081"),
@@ -55,19 +55,19 @@ func Start() {
 		},
 	})
 
-	register(rpc)
+	register(dispatcher)
 
-	if err := rpc.Start(); err != nil {
+	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 	}
 }
 
 // Stop stops running the RPC test subject
 func Stop() {
-	if rpc == nil {
+	if dispatcher == nil {
 		return
 	}
-	if err := rpc.Stop(); err != nil {
+	if err := dispatcher.Stop(); err != nil {
 		fmt.Println("failed to stop:", err.Error())
 	}
 }
