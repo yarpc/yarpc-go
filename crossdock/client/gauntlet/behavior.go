@@ -71,7 +71,7 @@ func Run(t crossdock.T) {
 }
 
 // RunGauntlet takes an rpc object and runs the gauntlet
-func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
+func RunGauntlet(t crossdock.T, rpc yarpc.Dispatcher, serverName string) {
 	t = createGauntletT(t)
 	checks := crossdock.Checks(t)
 

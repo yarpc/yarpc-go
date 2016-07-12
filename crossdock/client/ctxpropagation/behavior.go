@@ -276,7 +276,7 @@ func (h *multiHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (inter
 	return map[string]interface{}{}, resMeta, err
 }
 
-func buildRPC(t crossdock.T) (rpc yarpc.RPC, tconfig server.TransportConfig) {
+func buildRPC(t crossdock.T) (rpc yarpc.Dispatcher, tconfig server.TransportConfig) {
 	fatals := crossdock.Fatals(t)
 
 	self := t.Param("ctxclient")

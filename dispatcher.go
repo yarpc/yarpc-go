@@ -28,8 +28,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-// RPC TODO
-type RPC interface {
+// Dispatcher object is used to configure a YARPC application; it is used by
+// Clients to send RPCs, and by Procedures to recieve them. This object is what
+// enables an application to be transport-agnostic.
+type Dispatcher interface {
 	transport.Handler
 	transport.Registry
 
@@ -72,7 +74,7 @@ type Config struct {
 }
 
 // New builds a new RPC using the specified configuration.
-func New(cfg Config) RPC {
+func New(cfg Config) Dispatcher {
 	if cfg.Name == "" {
 		panic("a service name is required")
 	}

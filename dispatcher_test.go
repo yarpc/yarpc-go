@@ -36,7 +36,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-func basicRPC(t *testing.T) RPC {
+func basicRPC(t *testing.T) Dispatcher {
 	ch, err := tchannel.NewChannel("test", nil)
 	require.NoError(t, err, "failed to create TChannel")
 

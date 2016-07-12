@@ -33,7 +33,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runThrift(t crossdock.T, rpc yarpc.RPC) {
+func runThrift(t crossdock.T, rpc yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
@@ -52,7 +52,7 @@ func runThrift(t crossdock.T, rpc yarpc.RPC) {
 	gauntlet.RunGauntlet(t, rpc, serverName)
 }
 
-func thriftCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+func thriftCall(rpc yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
 	client := echoclient.New(rpc.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
