@@ -32,6 +32,11 @@ type Response struct {
 type ResponseWriter interface {
 	io.Writer
 
+	// Options for the request/response that this ResponseWriter is attached to.
+	Options() Options
+	// TODO(abg) Options should not be attached to the ResponseWriter. Instead
+	// they should be part of the Handle interface.
+
 	// AddHeaders adds the given headers to the response. If called, this MUST
 	// be called before any invocation of Write().
 	//

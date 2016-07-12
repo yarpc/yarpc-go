@@ -161,6 +161,10 @@ func newResponseWriter(treq *transport.Request, call inboundCall) *responseWrite
 	}
 }
 
+func (*responseWriter) Options() (opts transport.Options) {
+	return opts
+}
+
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	if rw.wroteHeaders {
 		panic("AddHeaders() cannot be called after calling Write().")

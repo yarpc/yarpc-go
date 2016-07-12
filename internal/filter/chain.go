@@ -63,6 +63,10 @@ func (x chainExec) Stop() error {
 	return x.Final.Stop()
 }
 
+func (x chainExec) Options() transport.Options {
+	return x.Final.Options()
+}
+
 func (x chainExec) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
 		return x.Final.Call(ctx, request)

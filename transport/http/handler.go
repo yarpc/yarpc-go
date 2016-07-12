@@ -108,6 +108,11 @@ func (rw responseWriter) Write(s []byte) (int, error) {
 	return rw.w.Write(s)
 }
 
+// Options for the HTTP transport.
+func (responseWriter) Options() (o transport.Options) {
+	return o
+}
+
 func (rw responseWriter) AddHeaders(h transport.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
