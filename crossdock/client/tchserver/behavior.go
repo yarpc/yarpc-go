@@ -48,7 +48,7 @@ func Run(t crossdock.T) {
 	ch, err := tchannel.NewChannel("yarpc-client", nil)
 	fatals.NoError(err, "could not create channel")
 
-	rpc := yarpc.New(yarpc.Config{
+	rpc := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-client",
 		Outbounds: transport.Outbounds{
 			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),

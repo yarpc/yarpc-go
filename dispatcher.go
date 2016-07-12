@@ -73,8 +73,8 @@ type Config struct {
 	// TODO FallbackHandler for catch-all endpoints
 }
 
-// New builds a new RPC using the specified configuration.
-func New(cfg Config) Dispatcher {
+// NewDispatcher builds a new Dispatcher using the specified Config.
+func NewDispatcher(cfg Config) Dispatcher {
 	if cfg.Name == "" {
 		panic("a service name is required")
 	}

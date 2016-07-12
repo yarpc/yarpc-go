@@ -77,7 +77,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	rpc := yarpc.New(yarpc.Config{
+	rpc := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(channel, tch.ListenAddr(":28941")),

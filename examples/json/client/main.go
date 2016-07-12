@@ -102,7 +102,7 @@ func main() {
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}
 
-	rpc := yarpc.New(yarpc.Config{
+	rpc := yarpc.NewDispatcher(yarpc.Config{
 		Name:      "keyvalue-client",
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
 		Filter:    yarpc.Filters(requestLogFilter{}),

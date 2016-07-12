@@ -63,7 +63,7 @@ func main() {
 	}
 
 	cache := NewCacheFilter()
-	rpc := yarpc.New(yarpc.Config{
+	rpc := yarpc.NewDispatcher(yarpc.Config{
 		Name:      "keyvalue-client",
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
 		Filter:    cache,

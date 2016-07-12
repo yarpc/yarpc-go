@@ -61,7 +61,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	return yarpc.New(yarpc.Config{
+	return yarpc.NewDispatcher(yarpc.Config{
 		Name:      "client",
 		Outbounds: transport.Outbounds{"yarpc-test": outbound},
 	})

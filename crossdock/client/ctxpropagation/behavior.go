@@ -299,7 +299,7 @@ func buildRPC(t crossdock.T) (rpc yarpc.Dispatcher, tconfig server.TransportConf
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	rpc = yarpc.New(yarpc.Config{
+	rpc = yarpc.NewDispatcher(yarpc.Config{
 		Name: "ctxclient",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(ch, tch.ListenAddr(":8087")),

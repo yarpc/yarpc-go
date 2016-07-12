@@ -40,7 +40,7 @@ func basicRPC(t *testing.T) Dispatcher {
 	ch, err := tchannel.NewChannel("test", nil)
 	require.NoError(t, err, "failed to create TChannel")
 
-	return New(Config{
+	return NewDispatcher(Config{
 		Name: "test",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(ch, tch.ListenAddr(":0")),
@@ -243,7 +243,7 @@ func TestStartStopFailures(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 
-		rpc := New(Config{
+		rpc := NewDispatcher(Config{
 			Name:      "test",
 			Inbounds:  tt.inbounds(mockCtrl),
 			Outbounds: tt.outbounds(mockCtrl),
