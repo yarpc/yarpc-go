@@ -81,7 +81,7 @@ func TestInboundsOrderIsMaintained(t *testing.T) {
 func TestInboundsOrderAfterStart(t *testing.T) {
 	dispatcher := basicDispatcher(t)
 
-	require.NoError(t, dispatcher.Start(), "failed to start RPC")
+	require.NoError(t, dispatcher.Start(), "failed to start Dispatcher")
 	defer dispatcher.Stop()
 
 	inbounds := dispatcher.Inbounds()

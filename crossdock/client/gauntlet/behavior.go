@@ -26,9 +26,9 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
@@ -63,11 +63,11 @@ type TT struct {
 func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)
 
-	rpc := rpc.Create(t)
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
 
-	RunGauntlet(t, rpc, serverName)
+	RunGauntlet(t, dispatcher, serverName)
 }
 
 // RunGauntlet takes an rpc object and runs the gauntlet

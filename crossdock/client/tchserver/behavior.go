@@ -54,7 +54,7 @@ func Run(t crossdock.T) {
 			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
 		},
 	})
-	fatals.NoError(dispatcher.Start(), "could not start RPC")
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
 	switch encoding {

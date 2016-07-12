@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 
@@ -38,11 +38,11 @@ func Thrift(t crossdock.T) {
 	t = createEchoT("thrift", t)
 	fatals := crossdock.Fatals(t)
 
-	rpc := rpc.Create(t)
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
 
-	client := echoclient.New(rpc.Channel("yarpc-test"))
+	client := echoclient.New(dispatcher.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := random.String(5)

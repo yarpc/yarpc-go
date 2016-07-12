@@ -108,7 +108,7 @@ func main() {
 		Filter:    yarpc.Filters(requestLogFilter{}),
 	})
 	if err := dispatcher.Start(); err != nil {
-		log.Fatalf("failed to start RPC: %v", err)
+		log.Fatalf("failed to start Dispatcher: %v", err)
 	}
 	defer dispatcher.Stop()
 
