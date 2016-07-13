@@ -155,12 +155,12 @@ func (d dispatcher) Register(service, procedure string, handler transport.Handle
 	d.Registry.Register(service, procedure, handler)
 }
 
-func (d dispatcher) Handle(ctx context.Context, req *transport.Request, rw transport.ResponseWriter) error {
+func (d dispatcher) Handle(ctx context.Context, opts transport.Options, req *transport.Request, rw transport.ResponseWriter) error {
 	h, err := d.GetHandler(req.Service, req.Procedure)
 	if err != nil {
 		return err
 	}
-	return h.Handle(ctx, req, rw)
+	return h.Handle(ctx, opts, req, rw)
 }
 
 func (d dispatcher) Stop() error {

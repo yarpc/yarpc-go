@@ -108,6 +108,7 @@ func TestRawHandler(t *testing.T) {
 
 		err := handler.Handle(
 			context.TODO(),
+			transport.Options{},
 			&transport.Request{
 				Procedure: tt.procedure,
 				Headers:   tt.headers,

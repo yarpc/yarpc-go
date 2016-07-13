@@ -31,8 +31,8 @@ import (
 type requestLogInterceptor struct{}
 
 func (requestLogInterceptor) Handle(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.Handler) error {
+	ctx context.Context, opts transport.Options, req *transport.Request, resw transport.ResponseWriter, handler transport.Handler) error {
 	fmt.Printf("received a request to %q from client %q (encoding %q)\n",
 		req.Procedure, req.Caller, req.Encoding)
-	return handler.Handle(ctx, req, resw)
+	return handler.Handle(ctx, opts, req, resw)
 }

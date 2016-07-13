@@ -35,9 +35,9 @@ import (
 )
 
 var retryInterceptor transport.InterceptorFunc = func(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
-	if err := h.Handle(ctx, req, resw); err != nil {
-		return h.Handle(ctx, req, resw)
+	ctx context.Context, opts transport.Options, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+	if err := h.Handle(ctx, opts, req, resw); err != nil {
+		return h.Handle(ctx, opts, req, resw)
 	}
 	return nil
 }
@@ -45,9 +45,9 @@ var retryInterceptor transport.InterceptorFunc = func(
 type countInterceptor struct{ Count int }
 
 func (c *countInterceptor) Handle(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+	ctx context.Context, opts transport.Options, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
 	c.Count++
-	return h.Handle(ctx, req, resw)
+	return h.Handle(ctx, opts, req, resw)
 }
 
 func TestChain(t *testing.T) {
@@ -64,16 +64,18 @@ func TestChain(t *testing.T) {
 	}
 	resw := new(transporttest.FakeResponseWriter)
 
+	var opts transport.Options
+
 	h := transporttest.NewMockHandler(mockCtrl)
-	h.EXPECT().Handle(ctx, req, resw).After(
-		h.EXPECT().Handle(ctx, req, resw).Return(errors.New("great sadness")),
+	h.EXPECT().Handle(ctx, opts, req, resw).After(
+		h.EXPECT().Handle(ctx, opts, req, resw).Return(errors.New("great sadness")),
 	).Return(nil)
 
 	before := &countInterceptor{}
 	after := &countInterceptor{}
 	err := transport.ApplyInterceptor(
 		h, Chain(before, retryInterceptor, after),
-	).Handle(ctx, req, resw)
+	).Handle(ctx, opts, req, resw)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
