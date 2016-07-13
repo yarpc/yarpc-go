@@ -36,8 +36,8 @@ type Interface interface {
 	SecondtestString(reqMeta yarpc.CallReqMeta, thing *string) (string, yarpc.CallResMeta, error)
 }
 
-func New(c transport.Channel) Interface {
-	return client{c: thrift.New(thrift.Config{Service: "SecondService", Channel: c, Protocol: protocol.Binary})}
+func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
+	return client{c: thrift.New(thrift.Config{Service: "SecondService", Channel: c, Protocol: protocol.Binary}, opts...)}
 }
 
 type client struct{ c thrift.Client }
