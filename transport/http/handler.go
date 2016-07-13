@@ -31,6 +31,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var httpOptions transport.Options
+
 func popHeader(h http.Header, n string) string {
 	v := h.Get(n)
 	h.Del(n)
@@ -92,7 +94,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 	}
 
 	// TODO capture and handle panic
-	return h.Handler.Handle(ctx, treq, newResponseWriter(w))
+	return h.Handler.Handle(ctx, httpOptions, treq, newResponseWriter(w))
 }
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
@@ -106,11 +108,6 @@ func newResponseWriter(w http.ResponseWriter) responseWriter {
 
 func (rw responseWriter) Write(s []byte) (int, error) {
 	return rw.w.Write(s)
-}
-
-// Options for the HTTP transport.
-func (responseWriter) Options() (o transport.Options) {
-	return o
 }
 
 func (rw responseWriter) AddHeaders(h transport.Headers) {

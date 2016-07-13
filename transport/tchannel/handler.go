@@ -33,6 +33,12 @@ import (
 	"golang.org/x/net/context"
 )
 
+var tchannelOptions transport.Options
+
+func init() {
+	tchannelOptions = thrift.DisableEnveloping(tchannelOptions)
+}
+
 // inboundCall provides an interface similiar tchannel.InboundCall.
 //
 // We use it instead of *tchannel.InboundCall because tchannel.InboundCall is
@@ -141,7 +147,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 		return err
 	}
 
-	return h.Handler.Handle(ctx, treq, rw)
+	return h.Handler.Handle(ctx, tchannelOptions, treq, rw)
 }
 
 type responseWriter struct {
@@ -160,10 +166,6 @@ func newResponseWriter(treq *transport.Request, call inboundCall) *responseWrite
 		response: call.Response(),
 		format:   call.Format(),
 	}
-}
-
-func (*responseWriter) Options() (opts transport.Options) {
-	return thrift.DisableEnveloping(opts)
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {

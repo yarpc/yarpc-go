@@ -62,6 +62,7 @@ func TestHandlerSucces(t *testing.T) {
 				"bar": "baz",
 			},
 		),
+		transport.Options{},
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "moe",
@@ -133,6 +134,7 @@ func TestHandlerHeaders(t *testing.T) {
 				transporttest.ContextTTL(tt.wantTTL),
 				transporttest.ContextBaggage(tt.wantBaggage),
 			),
+			transport.Options{},
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
 					Caller:    "caller",
@@ -265,6 +267,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
+		transport.Options{},
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "somecaller",
