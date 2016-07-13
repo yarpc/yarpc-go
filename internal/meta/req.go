@@ -21,6 +21,8 @@
 package meta
 
 import (
+	"log"
+
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -35,6 +37,9 @@ func FromTransportRequest(ctx context.Context, req *transport.Request) yarpc.Req
 // ToTransportRequest fills the given transport request with information from
 // the given ReqMeta. The Context associated with the ReqMeta is returned.
 func ToTransportRequest(reqMeta yarpc.CallReqMeta, req *transport.Request) context.Context {
+	if reqMeta == nil {
+		log.Panic("reqMeta must not be nil")
+	}
 	req.Procedure = reqMeta.GetProcedure()
 	req.Headers = transport.Headers(reqMeta.GetHeaders())
 	return reqMeta.GetContext()
