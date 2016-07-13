@@ -140,7 +140,7 @@ func TestInboundMux(t *testing.T) {
 	o = NewOutbound(addr + "rpc/v1")
 	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
-	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	res, err := o.Call(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",

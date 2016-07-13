@@ -148,7 +148,7 @@ func TestThriftHandler(t *testing.T) {
 		}
 
 		rw := new(transporttest.FakeResponseWriter)
-		err := h.Handle(ctx, &transport.Request{
+		err := h.Handle(ctx, transport.Options{}, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  Encoding,
