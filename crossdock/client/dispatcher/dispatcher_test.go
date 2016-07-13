@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package dispatcher
 
 import (
 	"testing"
@@ -60,10 +60,10 @@ func TestCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		entries := crossdock.Run(tt.params, func(ct crossdock.T) {
-			rpc := Create(ct)
+			dispatcher := Create(ct)
 
 			// should get here only if the request succeeded
-			ch := rpc.Channel("yarpc-test")
+			ch := dispatcher.Channel("yarpc-test")
 			assert.Equal(t, "client", ch.Caller)
 			assert.Equal(t, "yarpc-test", ch.Service)
 		})

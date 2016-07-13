@@ -28,8 +28,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-// RPC TODO
-type RPC interface {
+// Dispatcher object is used to configure a YARPC application; it is used by
+// Clients to send RPCs, and by Procedures to recieve them. This object is what
+// enables an application to be transport-agnostic.
+type Dispatcher interface {
 	transport.Handler
 	transport.Registry
 
@@ -71,13 +73,13 @@ type Config struct {
 	// TODO FallbackHandler for catch-all endpoints
 }
 
-// New builds a new RPC using the specified configuration.
-func New(cfg Config) RPC {
+// NewDispatcher builds a new Dispatcher using the specified Config.
+func NewDispatcher(cfg Config) Dispatcher {
 	if cfg.Name == "" {
 		panic("a service name is required")
 	}
 
-	return rpc{
+	return dispatcher{
 		Name:        cfg.Name,
 		Registry:    transport.NewMapRegistry(cfg.Name),
 		inbounds:    cfg.Inbounds,
@@ -87,10 +89,10 @@ func New(cfg Config) RPC {
 	}
 }
 
-// rpc is the standard RPC implementation.
+// dispatcher is the standard RPC implementation.
 //
 // It allows use of multiple Inbounds and Outbounds together.
-type rpc struct {
+type dispatcher struct {
 	transport.Registry
 
 	Name        string
@@ -101,43 +103,43 @@ type rpc struct {
 	inbounds []transport.Inbound
 }
 
-func (r rpc) Inbounds() []transport.Inbound {
-	inbounds := make([]transport.Inbound, len(r.inbounds))
-	copy(inbounds, r.inbounds)
+func (d dispatcher) Inbounds() []transport.Inbound {
+	inbounds := make([]transport.Inbound, len(d.inbounds))
+	copy(inbounds, d.inbounds)
 	return inbounds
 }
 
-func (r rpc) Channel(service string) transport.Channel {
+func (d dispatcher) Channel(service string) transport.Channel {
 	// TODO keep map[string]*Channel instead of Outbound when New is called. The
 	// channels will allow persisting service-specific settings like "always
 	// use this TTL for this service."
 
-	if out, ok := r.Outbounds[service]; ok {
+	if out, ok := d.Outbounds[service]; ok {
 		// we can eventually write an outbound that load balances between
 		// known outbounds for a service.
-		out = transport.ApplyFilter(out, r.Filter)
+		out = transport.ApplyFilter(out, d.Filter)
 		return transport.Channel{
 			Outbound: request.ValidatorOutbound{Outbound: out},
-			Caller:   r.Name,
+			Caller:   d.Name,
 			Service:  service,
 		}
 	}
 	panic(noOutboundForService{Service: service})
 }
 
-func (r rpc) Start() error {
+func (d dispatcher) Start() error {
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Start(r)
+			return i.Start(d)
 		}
 	}
 
 	var wait sync.ErrorWaiter
-	for _, i := range r.inbounds {
+	for _, i := range d.inbounds {
 		wait.Submit(startInbound(i))
 	}
 
-	for _, o := range r.Outbounds {
+	for _, o := range d.Outbounds {
 		// TODO record the name of the service whose outbound failed
 		wait.Submit(o.Start)
 	}
@@ -148,25 +150,25 @@ func (r rpc) Start() error {
 	return nil
 }
 
-func (r rpc) Register(service, procedure string, handler transport.Handler) {
-	handler = transport.ApplyInterceptor(handler, r.Interceptor)
-	r.Registry.Register(service, procedure, handler)
+func (d dispatcher) Register(service, procedure string, handler transport.Handler) {
+	handler = transport.ApplyInterceptor(handler, d.Interceptor)
+	d.Registry.Register(service, procedure, handler)
 }
 
-func (r rpc) Handle(ctx context.Context, req *transport.Request, rw transport.ResponseWriter) error {
-	h, err := r.GetHandler(req.Service, req.Procedure)
+func (d dispatcher) Handle(ctx context.Context, req *transport.Request, rw transport.ResponseWriter) error {
+	h, err := d.GetHandler(req.Service, req.Procedure)
 	if err != nil {
 		return err
 	}
 	return h.Handle(ctx, req, rw)
 }
 
-func (r rpc) Stop() error {
+func (d dispatcher) Stop() error {
 	var wait sync.ErrorWaiter
-	for _, i := range r.inbounds {
+	for _, i := range d.inbounds {
 		wait.Submit(i.Stop)
 	}
-	for _, o := range r.Outbounds {
+	for _, o := range d.Outbounds {
 		wait.Submit(o.Stop)
 	}
 

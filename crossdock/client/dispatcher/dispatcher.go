@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package dispatcher
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ import (
 )
 
 // Create creates an RPC from the given parameters or fails the whole behavior.
-func Create(t crossdock.T) yarpc.RPC {
+func Create(t crossdock.T) yarpc.Dispatcher {
 	fatals := crossdock.Fatals(t)
 
 	server := t.Param(params.Server)
@@ -61,7 +61,7 @@ func Create(t crossdock.T) yarpc.RPC {
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	return yarpc.New(yarpc.Config{
+	return yarpc.NewDispatcher(yarpc.Config{
 		Name:      "client",
 		Outbounds: transport.Outbounds{"yarpc-test": outbound},
 	})

@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
@@ -42,11 +42,11 @@ func JSON(t crossdock.T) {
 	t = createEchoT("json", t)
 	fatals := crossdock.Fatals(t)
 
-	rpc := rpc.Create(t)
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
 
-	client := json.New(rpc.Channel("yarpc-test"))
+	client := json.New(dispatcher.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	var response jsonEcho
