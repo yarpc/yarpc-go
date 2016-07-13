@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 	"github.com/yarpc/yarpc-go/encoding/json"
@@ -51,19 +51,19 @@ func Run(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	rpc := rpc.Create(t)
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
 
 	var caller headerCaller
 	encoding := t.Param(params.Encoding)
 	switch encoding {
 	case "raw":
-		caller = rawCaller{raw.New(rpc.Channel("yarpc-test"))}
+		caller = rawCaller{raw.New(dispatcher.Channel("yarpc-test"))}
 	case "json":
-		caller = jsonCaller{json.New(rpc.Channel("yarpc-test"))}
+		caller = jsonCaller{json.New(dispatcher.Channel("yarpc-test"))}
 	case "thrift":
-		caller = thriftCaller{echoclient.New(rpc.Channel("yarpc-test"))}
+		caller = thriftCaller{echoclient.New(dispatcher.Channel("yarpc-test"))}
 	default:
 		fatals.Fail("", "unknown encoding %q", encoding)
 	}

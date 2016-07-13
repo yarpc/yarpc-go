@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 
 	"github.com/crossdock/crossdock-go"
@@ -38,11 +38,11 @@ func Raw(t crossdock.T) {
 	t = createEchoT("raw", t)
 	fatals := crossdock.Fatals(t)
 
-	rpc := rpc.Create(t)
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
 
-	client := raw.New(rpc.Channel("yarpc-test"))
+	client := raw.New(dispatcher.Channel("yarpc-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := random.Bytes(5)

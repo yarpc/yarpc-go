@@ -66,7 +66,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	rpc := yarpc.New(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(channel, tch.ListenAddr(":28941")),
@@ -75,9 +75,9 @@ func main() {
 	})
 
 	handler := handler{items: make(map[string]string)}
-	thrift.Register(rpc, keyvalueserver.New(&handler))
+	thrift.Register(dispatcher, keyvalueserver.New(&handler))
 
-	if err := rpc.Start(); err != nil {
+	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 	}
 
