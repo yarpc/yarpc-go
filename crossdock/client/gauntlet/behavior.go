@@ -26,9 +26,9 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/client/rpc"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
@@ -63,15 +63,15 @@ type TT struct {
 func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)
 
-	rpc := rpc.Create(t)
-	fatals.NoError(rpc.Start(), "could not start RPC")
-	defer rpc.Stop()
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
 
-	RunGauntlet(t, rpc, serverName)
+	RunGauntlet(t, dispatcher, serverName)
 }
 
 // RunGauntlet takes an rpc object and runs the gauntlet
-func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
+func RunGauntlet(t crossdock.T, dispatcher yarpc.Dispatcher, serverName string) {
 	t = createGauntletT(t)
 	checks := crossdock.Checks(t)
 
@@ -362,7 +362,7 @@ func RunGauntlet(t crossdock.T, rpc yarpc.RPC, serverName string) {
 
 		desc := BuildDesc(tt)
 
-		client := buildClient(t, desc, tt.Service, rpc.Channel(serverName))
+		client := buildClient(t, desc, tt.Service, dispatcher.Channel(serverName))
 		f := client.MethodByName(tt.Function)
 		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
 			continue

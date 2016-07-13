@@ -63,17 +63,17 @@ func main() {
 	}
 
 	cache := NewCacheFilter()
-	rpc := yarpc.New(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:      "keyvalue-client",
 		Outbounds: transport.Outbounds{"keyvalue": outbound},
 		Filter:    cache,
 	})
-	if err := rpc.Start(); err != nil {
-		log.Fatalf("failed to start RPC: %v", err)
+	if err := dispatcher.Start(); err != nil {
+		log.Fatalf("failed to start Dispatcher: %v", err)
 	}
-	defer rpc.Stop()
+	defer dispatcher.Stop()
 
-	client := keyvalueclient.New(rpc.Channel("keyvalue"))
+	client := keyvalueclient.New(dispatcher.Channel("keyvalue"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()

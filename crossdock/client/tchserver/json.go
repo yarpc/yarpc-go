@@ -31,14 +31,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-func runJSON(t crossdock.T, rpc yarpc.RPC) {
+func runJSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
 	headers := yarpc.NewHeaders().With("hello", "json")
 	token := random.String(5)
 
-	resBody, resMeta, err := jsonCall(rpc, headers, token)
+	resBody, resMeta, err := jsonCall(dispatcher, headers, token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
@@ -52,8 +52,8 @@ type jsonEcho struct {
 	Token string `json:"token"`
 }
 
-func jsonCall(rpc yarpc.RPC, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
-	client := json.New(rpc.Channel(serverName))
+func jsonCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+	client := json.New(dispatcher.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

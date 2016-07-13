@@ -38,7 +38,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-var rpc yarpc.RPC
+var dispatcher yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
@@ -47,7 +47,7 @@ func Start() {
 		log.Fatalln("couldn't create tchannel: %v", err)
 	}
 
-	rpc = yarpc.New(yarpc.Config{
+	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8081"),
@@ -55,33 +55,33 @@ func Start() {
 		},
 	})
 
-	register(rpc)
+	register(dispatcher)
 
-	if err := rpc.Start(); err != nil {
+	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())
 	}
 }
 
 // Stop stops running the RPC test subject
 func Stop() {
-	if rpc == nil {
+	if dispatcher == nil {
 		return
 	}
-	if err := rpc.Stop(); err != nil {
+	if err := dispatcher.Stop(); err != nil {
 		fmt.Println("failed to stop:", err.Error())
 	}
 }
 
-func register(rpc transport.Registry) {
-	raw.Register(rpc, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(rpc, json.Procedure("echo", EchoJSON))
-	thrift.Register(rpc, echoserver.New(EchoThrift{}))
-	thrift.Register(rpc, thrifttestserver.New(thriftTest{}))
-	thrift.Register(rpc, secondserviceserver.New(secondService{}))
+func register(reg transport.Registry) {
+	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
+	json.Register(reg, json.Procedure("echo", EchoJSON))
+	thrift.Register(reg, echoserver.New(EchoThrift{}))
+	thrift.Register(reg, thrifttestserver.New(thriftTest{}))
+	thrift.Register(reg, secondserviceserver.New(secondService{}))
 
-	json.Register(rpc, json.Procedure("unexpected-error", UnexpectedError))
-	json.Register(rpc, json.Procedure("bad-response", BadResponse))
-	json.Register(rpc, json.Procedure("phone", Phone))
+	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
+	json.Register(reg, json.Procedure("bad-response", BadResponse))
+	json.Register(reg, json.Procedure("phone", Phone))
 
-	raw.Register(rpc, raw.Procedure("sleep/raw", SleepRaw))
+	raw.Register(reg, raw.Procedure("sleep/raw", SleepRaw))
 }

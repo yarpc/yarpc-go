@@ -35,5 +35,5 @@
 // 		// ...
 // 	}
 //
-// 	raw.Register(rpc, raw.Procedure("submit", Submit))
+// 	raw.Register(dispatcher, raw.Procedure("submit", Submit))
 package raw

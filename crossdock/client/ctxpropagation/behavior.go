@@ -160,15 +160,15 @@ func Run(t crossdock.T) {
 				}
 			}
 
-			rpc, tconfig := buildRPC(t)
-			fatals.NoError(rpc.Start(), "%v: RPC failed to start", tt.desc)
-			defer rpc.Stop()
+			dispatcher, tconfig := buildDispatcher(t)
+			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
+			defer dispatcher.Stop()
 
-			jsonClient := json.New(rpc.Channel("yarpc-test"))
+			jsonClient := json.New(dispatcher.Channel("yarpc-test"))
 			for name, handler := range tt.handlers {
 				handler.SetClient(jsonClient)
 				handler.SetTransport(tconfig)
-				json.Register(rpc, json.Procedure(name, handler.Handle))
+				json.Register(dispatcher, json.Procedure(name, handler.Handle))
 			}
 
 			ctx := context.Background()
@@ -276,7 +276,7 @@ func (h *multiHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (inter
 	return map[string]interface{}{}, resMeta, err
 }
 
-func buildRPC(t crossdock.T) (rpc yarpc.RPC, tconfig server.TransportConfig) {
+func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server.TransportConfig) {
 	fatals := crossdock.Fatals(t)
 
 	self := t.Param("ctxclient")
@@ -299,7 +299,7 @@ func buildRPC(t crossdock.T) (rpc yarpc.RPC, tconfig server.TransportConfig) {
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	rpc = yarpc.New(yarpc.Config{
+	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "ctxclient",
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(ch, tch.ListenAddr(":8087")),
@@ -308,5 +308,5 @@ func buildRPC(t crossdock.T) (rpc yarpc.RPC, tconfig server.TransportConfig) {
 		Outbounds: transport.Outbounds{"yarpc-test": outbound},
 	})
 
-	return rpc, tconfig
+	return dispatcher, tconfig
 }
