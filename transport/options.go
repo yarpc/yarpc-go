@@ -49,25 +49,27 @@ type Options struct {
 	data map[interface{}]interface{}
 }
 
-// With adds the given key-value pair to the option and returns the new
-// Options object.
+// With returns a copy of this Options object with the given key-value pair
+// added to it.
 //
 // The key should be a custom type to avoid conflicts with options of other
 // components.
 //
-// The returned object MAY not point to the same underlying data store as the
-// original Options so the returned Options MUST always be used instead of the
-// original.
-//
 // 	opts = opts.With(foo{}, bar)
 // 	opts = opts.With(baz{}, qux)
 //
-func (o Options) With(k, v interface{}) Options {
-	if o.data == nil {
-		o.data = make(map[interface{}]interface{})
+func (o Options) With(key, val interface{}) Options {
+	var data map[interface{}]interface{}
+	if o.data != nil {
+		data = make(map[interface{}]interface{}, len(o.data)+1)
+		for k, v := range o.data {
+			data[k] = v
+		}
+	} else {
+		data = make(map[interface{}]interface{})
 	}
-	o.data[k] = v
-	return o
+	data[key] = val
+	return Options{data}
 }
 
 // Get returns the value associated with the given key.
