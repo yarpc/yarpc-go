@@ -191,7 +191,7 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 // FakeResponseWriter is a ResponseWriter that records the headers and the body
 // written to it.
 type FakeResponseWriter struct {
-	Opts transport.Options // options to return from this repsonse writer
+	Opts transport.Options // options to return from this response writer
 
 	IsApplicationError bool
 	Headers            transport.Headers
