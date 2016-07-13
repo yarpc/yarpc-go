@@ -20,6 +20,8 @@
 
 package transport
 
+type optionsData map[interface{}]interface{}
+
 // Options act as an extension point for transports to configure behavior of
 // other parts of the system.
 //
@@ -46,7 +48,7 @@ package transport
 // Now the implementation of foo can use Options.Get to act differently based
 // on the outbound's options.
 type Options struct {
-	data map[interface{}]interface{}
+	data optionsData
 }
 
 // With returns a copy of this Options object with the given key-value pair
@@ -59,14 +61,14 @@ type Options struct {
 // 	opts = opts.With(baz{}, qux)
 //
 func (o Options) With(key, val interface{}) Options {
-	var data map[interface{}]interface{}
+	var data optionsData
 	if o.data != nil {
-		data = make(map[interface{}]interface{}, len(o.data)+1)
+		data = make(optionsData, len(o.data)+1)
 		for k, v := range o.data {
 			data[k] = v
 		}
 	} else {
-		data = make(map[interface{}]interface{})
+		data = make(optionsData)
 	}
 	data[key] = val
 	return Options{data}
