@@ -77,7 +77,7 @@ func TestHandlerErrors(t *testing.T) {
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t, transporttest.ContextBaggage(tt.wantBaggage)),
-			transport.Options{},
+			transportOptions,
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
 					Caller:    "caller",
@@ -190,7 +190,7 @@ func TestHandlerFailures(t *testing.T) {
 			expect: func(h *transporttest.MockHandler) {
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
-					transport.Options{},
+					transportOptions,
 					transporttest.NewRequestMatcher(
 						t, &transport.Request{
 							Caller:    "bar",
@@ -228,7 +228,7 @@ func TestHandlerFailures(t *testing.T) {
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
-					transport.Options{},
+					transportOptions,
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Return(

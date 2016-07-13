@@ -23,7 +23,6 @@ package tchannel
 import (
 	"fmt"
 
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
@@ -32,12 +31,6 @@ import (
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
-
-var tchannelOptions transport.Options
-
-func init() {
-	tchannelOptions = thrift.DisableEnveloping(tchannelOptions)
-}
 
 // inboundCall provides an interface similiar tchannel.InboundCall.
 //
@@ -147,7 +140,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 		return err
 	}
 
-	return h.Handler.Handle(ctx, tchannelOptions, treq, rw)
+	return h.Handler.Handle(ctx, transportOptions, treq, rw)
 }
 
 type responseWriter struct {

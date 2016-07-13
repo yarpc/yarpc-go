@@ -24,7 +24,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
@@ -89,8 +88,8 @@ func (o outbound) Stop() error {
 	return nil
 }
 
-func (outbound) Options() (opts transport.Options) {
-	return thrift.DisableEnveloping(opts)
+func (outbound) Options() transport.Options {
+	return transportOptions
 }
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
