@@ -24,15 +24,16 @@ import "github.com/yarpc/yarpc-go/transport"
 
 type optDisableEnveloping struct{}
 
-// DisableEnveloping disables enveloping on the given transport options.
+// DisableEnvelopingForTransport disables enveloping on the given transport
+// options.
 //
 // Use this from a transport implementation that wishes to disable Thrift
 // enveloping.
 //
 // 	func (myOutbound) Options() (o transport.Options) {
-// 		return thrift.DisableEnveloping(o)
+// 		return thrift.DisableEnvelopingForTransport(o)
 // 	}
-func DisableEnveloping(o transport.Options) transport.Options {
+func DisableEnvelopingForTransport(o transport.Options) transport.Options {
 	return o.With(optDisableEnveloping{}, true)
 }
 

@@ -26,4 +26,4 @@ import (
 )
 
 // Transport options for all TChannel requests.
-var transportOptions = thrift.DisableEnveloping(transport.Options{})
+var transportOptions = thrift.DisableEnvelopingForTransport(transport.Options{})
