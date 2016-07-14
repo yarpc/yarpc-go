@@ -39,7 +39,7 @@ type thriftHandler struct {
 	Protocol protocol.Protocol
 }
 
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+func (t thriftHandler) Handle(ctx context.Context, _ transport.Options, treq *transport.Request, rw transport.ResponseWriter) error {
 	treq.Encoding = Encoding
 	// TODO(abg): Should we fail requests if Rpc-Encoding does not match?
 

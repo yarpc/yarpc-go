@@ -88,6 +88,10 @@ func (o outbound) Stop() error {
 	return nil
 }
 
+func (outbound) Options() (opts transport.Options) {
+	return opts
+}
+
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this

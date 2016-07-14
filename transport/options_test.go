@@ -18,43 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport_test
+package transport
 
 import (
-	"bytes"
-	"errors"
 	"testing"
-	"time"
 
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/transporttest"
-
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
-func TestNopInterceptor(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+func TestOptionsIsImmutable(t *testing.T) {
+	type foo struct{}
+	type bar struct{}
 
-	h := transporttest.NewMockHandler(mockCtrl)
-	wrappedH := transport.ApplyInterceptor(h, transport.NopInterceptor)
+	var o Options
+	withFoo := o.With(foo{}, "foo")
+	withBar := o.With(bar{}, "bar")
+	withFooBar := withFoo.With(bar{}, "foobar")
 
-	var opts transport.Options
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	req := &transport.Request{
-		Caller:    "somecaller",
-		Service:   "someservice",
-		Encoding:  raw.Encoding,
-		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
+	_, ok := o.Get(foo{})
+	assert.False(t, ok, "did not expect to find foo{} in o")
+
+	_, ok = o.Get(bar{})
+	assert.False(t, ok, "did not expect to find bar{} in o")
+
+	_, ok = withFoo.Get(bar{})
+	assert.False(t, ok, "did not expect to find bar{} in withFoo")
+
+	_, ok = withBar.Get(foo{})
+	assert.False(t, ok, "did not expect to find foo{} in withBar")
+
+	if v, ok := withFoo.Get(foo{}); assert.True(t, ok, "expected foo{} in withFoo") {
+		assert.Equal(t, "foo", v, "withFoo[foo{}] did not match")
 	}
-	resw := new(transporttest.FakeResponseWriter)
-	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, opts, req, resw).Return(err)
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, opts, req, resw))
+	if v, ok := withBar.Get(bar{}); assert.True(t, ok, "expected bar{} in withBar") {
+		assert.Equal(t, "bar", v, "withBar[bar{}] did not match")
+	}
+
+	if v, ok := withFooBar.Get(foo{}); assert.True(t, ok, "expected foo{} in withFooBar") {
+		assert.Equal(t, "foo", v, "withFooBar[foo{}] did not match")
+	}
+
+	if v, ok := withFooBar.Get(bar{}); assert.True(t, ok, "expected bar{} in withFooBar") {
+		assert.Equal(t, "foobar", v, "withFooBar[bar{}] did not match")
+	}
 }

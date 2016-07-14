@@ -32,6 +32,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var tchannelOptions transport.Options
+
 // inboundCall provides an interface similiar tchannel.InboundCall.
 //
 // We use it instead of *tchannel.InboundCall because tchannel.InboundCall is
@@ -140,7 +142,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 		return err
 	}
 
-	return h.Handler.Handle(ctx, treq, rw)
+	return h.Handler.Handle(ctx, tchannelOptions, treq, rw)
 }
 
 type responseWriter struct {
