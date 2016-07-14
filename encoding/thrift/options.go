@@ -21,7 +21,7 @@
 package thrift
 
 type clientConfig struct {
-	// TODO: disableEnveloping bool
+	DisableEnveloping bool
 }
 
 // ClientOption customizes the behavior of a Thrift client.
@@ -30,7 +30,7 @@ type ClientOption interface {
 }
 
 type registerConfig struct {
-	// TODO: disableEnveloping bool
+	DisableEnveloping bool
 }
 
 // RegisterOption customizes the behavior of a Thrift handler during
@@ -43,4 +43,26 @@ type RegisterOption interface {
 type Option interface {
 	ClientOption
 	RegisterOption
+}
+
+// DisableEnveloping is an option that disables enveloping of Thrift requests
+// and responses.
+//
+// It may be specified on the client side when the client is constructed.
+//
+// 	client := myserviceclient.New(channel, thrift.DisableEnveloping)
+//
+// It may be specified on the server side when the handler is registered.
+//
+// 	thrift.Register(dispatch, myserviceserver.New(handler), thrift.DisableEnveloping)
+var DisableEnveloping Option = disableEnvelopingOption{}
+
+type disableEnvelopingOption struct{}
+
+func (disableEnvelopingOption) applyClientOption(c *clientConfig) {
+	c.DisableEnveloping = true
+}
+
+func (disableEnvelopingOption) applyRegisterOption(c *registerConfig) {
+	c.DisableEnveloping = true
 }

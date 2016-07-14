@@ -63,7 +63,7 @@ func TestDisableEnveloperEncode(t *testing.T) {
 		generate(&e.SeqID, rand)
 
 		var buffer bytes.Buffer
-		proto := disableEnveloper{protocol.Binary, wire.Reply}
+		proto := disableEnvelopingProtocol{protocol.Binary, wire.Reply}
 		if !assert.NoError(t, proto.EncodeEnveloped(e, &buffer)) {
 			continue
 		}
