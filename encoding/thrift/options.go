@@ -20,33 +20,8 @@
 
 package thrift
 
-import "github.com/yarpc/yarpc-go/transport"
-
-type optDisableEnveloping struct{}
-
-// DisableEnvelopingForTransport disables enveloping on the given transport
-// options.
-//
-// Use this from a transport implementation that wishes to disable Thrift
-// enveloping.
-//
-// 	func (myOutbound) Options() (o transport.Options) {
-// 		return thrift.DisableEnvelopingForTransport(o)
-// 	}
-func DisableEnvelopingForTransport(o transport.Options) transport.Options {
-	return o.With(optDisableEnveloping{}, true)
-}
-
-func isEnvelopingDisabled(o transport.Options) bool {
-	v, ok := o.Get(optDisableEnveloping{})
-	if !ok {
-		return false
-	}
-	return v.(bool)
-}
-
 type clientConfig struct {
-	// TODO: disableEnveloping bool
+	DisableEnveloping bool
 }
 
 // ClientOption customizes the behavior of a Thrift client.
@@ -55,7 +30,7 @@ type ClientOption interface {
 }
 
 type registerConfig struct {
-	// TODO: disableEnveloping bool
+	DisableEnveloping bool
 }
 
 // RegisterOption customizes the behavior of a Thrift handler during
@@ -68,4 +43,26 @@ type RegisterOption interface {
 type Option interface {
 	ClientOption
 	RegisterOption
+}
+
+// DisableEnveloping is an option that disables enveloping of Thrift requests
+// and responses.
+//
+// It may be specified on the client side when the client is constructed.
+//
+// 	client := myserviceclient.New(channel, thrift.DisableEnveloping)
+//
+// It may be specified on the server side when the handler is registered.
+//
+// 	thrift.Register(dispatch, myserviceserver.New(handler), thrift.DisableEnveloping)
+var DisableEnveloping Option = disableEnvelopingOption{}
+
+type disableEnvelopingOption struct{}
+
+func (disableEnvelopingOption) applyClientOption(c *clientConfig) {
+	c.DisableEnveloping = true
+}
+
+func (disableEnvelopingOption) applyRegisterOption(c *registerConfig) {
+	c.DisableEnveloping = true
 }

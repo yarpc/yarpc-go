@@ -64,12 +64,12 @@ func New(c Config, opts ...ClientOption) Client {
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
 	//
-	// 	func New(t transport.Outbound) *MyServiceClient {
+	// 	func New(t transport.Outbound, opts ...ClientOption) *MyServiceClient {
 	// 		c := thrift.New(thrift.Config{
 	// 			Service: "MyService",
 	// 			Outbound: t,
 	// 			Protocol: protocol.Binary,
-	// 		})
+	// 		}, opts...)
 	// 		return &MyServiceClient{client: c}
 	// 	}
 	//
@@ -86,8 +86,13 @@ func New(c Config, opts ...ClientOption) Client {
 		opt.applyClientOption(&cc)
 	}
 
-	if isEnvelopingDisabled(c.Channel.Outbound.Options()) {
-		p = disableEnveloper{
+	// We disable enveloping if either the client or the transport requires it.
+	if !cc.DisableEnveloping {
+		cc.DisableEnveloping = isEnvelopingDisabled(c.Channel.Outbound.Options())
+	}
+
+	if cc.DisableEnveloping {
+		p = disableEnvelopingProtocol{
 			Protocol: p,
 			Type:     wire.Reply, // we only decode replies with this instance
 		}

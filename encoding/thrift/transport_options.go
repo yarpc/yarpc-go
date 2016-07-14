@@ -20,38 +20,27 @@
 
 package thrift
 
-import (
-	"fmt"
-	"io"
+import "github.com/yarpc/yarpc-go/transport"
 
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
-)
+type transportDisableEnveloping struct{}
 
-type errUnexpectedEnvelopeType wire.EnvelopeType
-
-func (e errUnexpectedEnvelopeType) Error() string {
-	return fmt.Sprintf("unexpected envelope type: %v", wire.EnvelopeType(e))
+// DisableEnvelopingForTransport allows transport to disable Thrift request
+// and response enveloping.
+//
+// Use this from a transport implementation that wishes to disable Thrift
+// enveloping.
+//
+// 	func (myOutbound) Options() (o transport.Options) {
+// 		return thrift.DisableEnvelopingForTransport(o)
+// 	}
+func DisableEnvelopingForTransport(o transport.Options) transport.Options {
+	return o.With(transportDisableEnveloping{}, true)
 }
 
-// disableEnvelopingProtocol wraps a protocol to not envelope payloads.
-type disableEnvelopingProtocol struct {
-	protocol.Protocol
-
-	// EnvelopeType to use for decoded envelopes.
-	Type wire.EnvelopeType
-}
-
-func (ev disableEnvelopingProtocol) EncodeEnveloped(e wire.Envelope, w io.Writer) error {
-	return ev.Encode(e.Value, w)
-}
-
-func (ev disableEnvelopingProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelope, error) {
-	value, err := ev.Decode(r, wire.TStruct)
-	return wire.Envelope{
-		Name:  "", // we don't use the decoded name anywhere
-		Type:  ev.Type,
-		SeqID: 1,
-		Value: value,
-	}, err
+func isEnvelopingDisabled(o transport.Options) bool {
+	v, ok := o.Get(transportDisableEnveloping{})
+	if !ok {
+		return false
+	}
+	return v.(bool)
 }

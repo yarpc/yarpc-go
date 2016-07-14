@@ -35,8 +35,9 @@ import (
 
 // thriftHandler wraps a Thrift Handler into a transport.Handler
 type thriftHandler struct {
-	Handler  Handler
-	Protocol protocol.Protocol
+	Handler           Handler
+	Protocol          protocol.Protocol
+	DisableEnveloping bool
 }
 
 func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq *transport.Request, rw transport.ResponseWriter) error {
@@ -48,9 +49,10 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 		return err
 	}
 
+	// We disable enveloping if either the client or the transport requires it.
 	proto := t.Protocol
-	if isEnvelopingDisabled(opts) {
-		proto = disableEnveloper{
+	if t.DisableEnveloping || isEnvelopingDisabled(opts) {
+		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Call, // we only decode requests
 		}

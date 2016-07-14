@@ -63,7 +63,11 @@ func Register(registry transport.Registry, service Service, opts ...RegisterOpti
 
 	name := service.Name()
 	for method, h := range service.Handlers() {
-		handler := thriftHandler{Handler: h, Protocol: service.Protocol()}
+		handler := thriftHandler{
+			Handler:           h,
+			Protocol:          service.Protocol(),
+			DisableEnveloping: rc.DisableEnveloping,
+		}
 		registry.Register("", procedureName(name, method), handler)
 	}
 }
