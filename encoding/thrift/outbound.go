@@ -60,7 +60,7 @@ type Config struct {
 }
 
 // New creates a new Thrift client.
-func New(c Config) Client {
+func New(c Config, opts ...ClientOption) Client {
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
 	//
@@ -79,6 +79,11 @@ func New(c Config) Client {
 	p := c.Protocol
 	if p == nil {
 		p = protocol.Binary
+	}
+
+	var cc clientConfig
+	for _, opt := range opts {
+		opt.applyClientOption(&cc)
 	}
 
 	if isEnvelopingDisabled(c.Channel.Outbound.Options()) {

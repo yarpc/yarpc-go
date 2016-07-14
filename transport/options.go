@@ -61,14 +61,9 @@ type Options struct {
 // 	opts = opts.With(baz{}, qux)
 //
 func (o Options) With(key, val interface{}) Options {
-	var data optionsData
-	if o.data != nil {
-		data = make(optionsData, len(o.data)+1)
-		for k, v := range o.data {
-			data[k] = v
-		}
-	} else {
-		data = make(optionsData)
+	data := make(optionsData, len(o.data)+1)
+	for k, v := range o.data {
+		data[k] = v
 	}
 	data[key] = val
 	return Options{data}

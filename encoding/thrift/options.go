@@ -44,3 +44,28 @@ func isEnvelopingDisabled(o transport.Options) bool {
 	}
 	return v.(bool)
 }
+
+type clientConfig struct {
+	// TODO: disableEnveloping bool
+}
+
+// ClientOption customizes the behavior of a Thrift client.
+type ClientOption interface {
+	applyClientOption(*clientConfig)
+}
+
+type registerConfig struct {
+	// TODO: disableEnveloping bool
+}
+
+// RegisterOption customizes the behavior of a Thrift handler during
+// registration.
+type RegisterOption interface {
+	applyRegisterOption(*registerConfig)
+}
+
+// Option unifies options that apply to both, Thrift clients and handlers.
+type Option interface {
+	ClientOption
+	RegisterOption
+}
