@@ -34,7 +34,7 @@ import "github.com/yarpc/yarpc-go/transport"
 var DisableEnvelopingForTransport transport.Options
 
 func init() {
-	DisableEnvelopingForTransport = DisableEnvelopingForTransport.With(
+	DisableEnvelopingForTransport = transport.Options{}.With(
 		transportDisableEnveloping{}, true,
 	)
 }
