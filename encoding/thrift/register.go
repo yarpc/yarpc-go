@@ -58,7 +58,7 @@ type Service interface {
 func Register(registry transport.Registry, service Service, opts ...RegisterOption) {
 	var rc registerConfig
 	for _, opt := range opts {
-		opt.apply(&rc)
+		opt.applyRegisterOption(&rc)
 	}
 
 	name := service.Name()

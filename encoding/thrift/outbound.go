@@ -83,7 +83,7 @@ func New(c Config, opts ...ClientOption) Client {
 
 	var cc clientConfig
 	for _, opt := range opts {
-		opt.apply(&cc)
+		opt.applyClientOption(&cc)
 	}
 
 	return thriftClient{
