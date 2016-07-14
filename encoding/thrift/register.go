@@ -55,7 +55,12 @@ type Service interface {
 
 // Register registers the handlers for the methods of the given service with the
 // given Registry.
-func Register(registry transport.Registry, service Service) {
+func Register(registry transport.Registry, service Service, opts ...RegisterOption) {
+	var rc registerConfig
+	for _, opt := range opts {
+		opt.applyRegisterOption(&rc)
+	}
+
 	name := service.Name()
 	proto := disableEnveloper{
 		Protocol: service.Protocol(),
