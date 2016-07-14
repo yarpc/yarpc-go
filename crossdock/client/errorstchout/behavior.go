@@ -50,7 +50,7 @@ type test struct {
 // client without the YARPC abstraction interposed, typically errors.
 func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)
-	assert := crossdock.Fatals(t)
+	assert := crossdock.Assert(t)
 
 	tests := []test{
 		{
