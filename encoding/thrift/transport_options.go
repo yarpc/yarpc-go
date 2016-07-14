@@ -22,20 +22,24 @@ package thrift
 
 import "github.com/yarpc/yarpc-go/transport"
 
-type transportDisableEnveloping struct{}
-
-// DisableEnvelopingForTransport allows transport to disable Thrift request
+// DisableEnvelopingForTransport allows a transport to disable Thrift request
 // and response enveloping.
 //
 // Use this from a transport implementation that wishes to disable Thrift
 // enveloping.
 //
-// 	func (myOutbound) Options() (o transport.Options) {
-// 		return thrift.DisableEnvelopingForTransport(o)
+// 	func (myOutbound) Options() transport.Options {
+// 		return otherOptions.Merge(thrift.DisableEnvelopingForTransport)
 // 	}
-func DisableEnvelopingForTransport(o transport.Options) transport.Options {
-	return o.With(transportDisableEnveloping{}, true)
+var DisableEnvelopingForTransport transport.Options
+
+func init() {
+	DisableEnvelopingForTransport = DisableEnvelopingForTransport.With(
+		transportDisableEnveloping{}, true,
+	)
 }
+
+type transportDisableEnveloping struct{}
 
 func isEnvelopingDisabled(o transport.Options) bool {
 	v, ok := o.Get(transportDisableEnveloping{})

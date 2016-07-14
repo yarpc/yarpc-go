@@ -20,10 +20,7 @@
 
 package tchannel
 
-import (
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
-)
+import "github.com/yarpc/yarpc-go/encoding/thrift"
 
 // Transport options for all TChannel requests.
-var transportOptions = thrift.DisableEnvelopingForTransport(transport.Options{})
+var transportOptions = thrift.DisableEnvelopingForTransport
