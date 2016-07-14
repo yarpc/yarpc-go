@@ -26,7 +26,7 @@ type clientConfig struct {
 
 // ClientOption customizes the behavior of a Thrift client.
 type ClientOption struct {
-	f func(*clientConfig)
+	apply func(*clientConfig)
 }
 
 type registerConfig struct {
@@ -36,5 +36,5 @@ type registerConfig struct {
 // RegisterOption customizes the behavior of a Thrift handler during
 // registration.
 type RegisterOption struct {
-	f func(*registerConfig)
+	apply func(*registerConfig)
 }
