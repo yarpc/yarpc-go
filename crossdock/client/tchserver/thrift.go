@@ -28,6 +28,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"
@@ -53,7 +54,7 @@ func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 }
 
 func thriftCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
-	client := echoclient.New(dispatcher.Channel(serverName))
+	client := echoclient.New(dispatcher.Channel(serverName), thrift.DisableEnveloping)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

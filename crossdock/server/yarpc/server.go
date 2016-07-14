@@ -75,9 +75,9 @@ func Stop() {
 func register(reg transport.Registry) {
 	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
 	json.Register(reg, json.Procedure("echo", EchoJSON))
-	thrift.Register(reg, echoserver.New(EchoThrift{}))
-	thrift.Register(reg, thrifttestserver.New(thriftTest{}))
-	thrift.Register(reg, secondserviceserver.New(secondService{}))
+	thrift.Register(reg, echoserver.New(EchoThrift{}), thrift.DisableEnveloping)
+	thrift.Register(reg, thrifttestserver.New(thriftTest{}), thrift.DisableEnveloping)
+	thrift.Register(reg, secondserviceserver.New(secondService{}), thrift.DisableEnveloping)
 
 	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
 	json.Register(reg, json.Procedure("bad-response", BadResponse))
