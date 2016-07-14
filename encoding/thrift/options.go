@@ -25,7 +25,9 @@ type clientConfig struct {
 }
 
 // ClientOption customizes the behavior of a Thrift client.
-type ClientOption struct{ f func(*clientConfig) }
+type ClientOption struct {
+	f func(*clientConfig)
+}
 
 type registerConfig struct {
 	// TODO: disableEnveloping bool
@@ -33,4 +35,6 @@ type registerConfig struct {
 
 // RegisterOption customizes the behavior of a Thrift handler during
 // registration.
-type RegisterOption struct{ f func(*registerConfig) }
+type RegisterOption struct {
+	f func(*registerConfig)
+}
