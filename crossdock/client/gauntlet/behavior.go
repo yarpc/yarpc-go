@@ -407,6 +407,8 @@ func BuildDesc(tt TT) string {
 }
 
 func buildClient(t crossdock.T, desc string, service string, channel transport.Channel) reflect.Value {
+	// NOTE(abg): Enveloping is disabled in old cross-language tests until the
+	// other YARPC implementations catch up.
 	switch service {
 	case "", "ThriftTest":
 		client := thrifttestclient.New(channel, thrift.DisableEnveloping)

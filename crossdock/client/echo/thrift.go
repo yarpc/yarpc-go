@@ -43,6 +43,8 @@ func Thrift(t crossdock.T) {
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
+	// NOTE(abg): Enveloping is disabled in old cross-language tests until the
+	// other YARPC implementations catch up.
 	client := echoclient.New(dispatcher.Channel("yarpc-test"), thrift.DisableEnveloping)
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 

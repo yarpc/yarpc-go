@@ -64,6 +64,8 @@ func Run(t crossdock.T) {
 	case "json":
 		caller = jsonCaller{json.New(dispatcher.Channel("yarpc-test"))}
 	case "thrift":
+		// NOTE(abg): Enveloping is disabled in old cross-language tests until the
+		// other YARPC implementations catch up.
 		caller = thriftCaller{echoclient.New(dispatcher.Channel("yarpc-test"), thrift.DisableEnveloping)}
 	default:
 		fatals.Fail("", "unknown encoding %q", encoding)
