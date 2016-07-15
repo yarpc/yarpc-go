@@ -32,17 +32,15 @@ type optionsData map[interface{}]interface{}
 //
 // 	type bar struct{}
 //
-// 	func SetBar(opts transport.Options, v string) transport.Options {
-// 		return opts.With(bar{}, v)
+// 	func OptionFoo(v string) (o transport.Options) {
+// 		return o.With(bar{}, v)
 // 	}
 //
 // A transport that wishes to change behavior simply needs to provide an
-// Options object, calling foo.SetBar on it to customize behavior.
+// Options object, merging OptionFoo into it.
 //
 // 	func (myOutbound) Options() (opts transport.Options) {
-// 		opts = foo.SetBar(opts, "hello")
-// 		opts = baz.SetBaz(opts, false)
-// 		return opts
+// 		return opts.Merge(foo.OptionFoo("hello"), bar.OptionBar(false))
 // 	}
 //
 // Now the implementation of foo can use Options.Get to act differently based
@@ -76,4 +74,28 @@ func (o Options) Get(k interface{}) (interface{}, bool) {
 	}
 	v, ok := o.data[k]
 	return v, ok
+}
+
+// Merge returns a copy of an Options object with items from all the given
+// Options merged into it.
+//
+// Values in the rightmost Options object take precedence in case of
+// conflicts.
+func (o Options) Merge(others ...Options) Options {
+	length := len(o.data)
+	for _, other := range others {
+		length += len(other.data)
+	}
+
+	data := make(optionsData, length)
+	for k, v := range o.data {
+		data[k] = v
+	}
+	for _, other := range others {
+		for k, v := range other.data {
+			data[k] = v
+		}
+	}
+
+	return Options{data}
 }

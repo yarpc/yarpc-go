@@ -31,6 +31,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"
@@ -63,7 +64,9 @@ func Run(t crossdock.T) {
 	case "json":
 		caller = jsonCaller{json.New(dispatcher.Channel("yarpc-test"))}
 	case "thrift":
-		caller = thriftCaller{echoclient.New(dispatcher.Channel("yarpc-test"))}
+		// NOTE(abg): Enveloping is disabled in old cross-language tests until the
+		// other YARPC implementations catch up.
+		caller = thriftCaller{echoclient.New(dispatcher.Channel("yarpc-test"), thrift.DisableEnveloping)}
 	default:
 		fatals.Fail("", "unknown encoding %q", encoding)
 	}

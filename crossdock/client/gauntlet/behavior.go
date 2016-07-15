@@ -32,6 +32,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/crossdock/crossdock-go"
@@ -406,12 +407,14 @@ func BuildDesc(tt TT) string {
 }
 
 func buildClient(t crossdock.T, desc string, service string, channel transport.Channel) reflect.Value {
+	// NOTE(abg): Enveloping is disabled in old cross-language tests until the
+	// other YARPC implementations catch up.
 	switch service {
 	case "", "ThriftTest":
-		client := thrifttestclient.New(channel)
+		client := thrifttestclient.New(channel, thrift.DisableEnveloping)
 		return reflect.ValueOf(client)
 	case "SecondService":
-		client := secondserviceclient.New(channel)
+		client := secondserviceclient.New(channel, thrift.DisableEnveloping)
 		return reflect.ValueOf(client)
 	default:
 		crossdock.Fatals(t).Fail("", "%v: unknown thrift service", desc)

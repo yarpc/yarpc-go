@@ -62,12 +62,12 @@ func Register(registry transport.Registry, service Service, opts ...RegisterOpti
 	}
 
 	name := service.Name()
-	proto := disableEnveloper{
-		Protocol: service.Protocol(),
-		Type:     wire.Call, // we only decode requests
-	}
 	for method, h := range service.Handlers() {
-		handler := thriftHandler{Handler: h, Protocol: proto}
+		handler := thriftHandler{
+			Handler:           h,
+			Protocol:          service.Protocol(),
+			DisableEnveloping: rc.DisableEnveloping,
+		}
 		registry.Register("", procedureName(name, method), handler)
 	}
 }

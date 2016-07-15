@@ -18,13 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpc_test
 
 import (
 	"errors"
 	"fmt"
 	"testing"
 
+	. "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"

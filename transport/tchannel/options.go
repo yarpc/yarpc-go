@@ -18,40 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package tchannel
 
-import (
-	"fmt"
-	"io"
+import "github.com/yarpc/yarpc-go/encoding/thrift"
 
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
-)
-
-type errUnexpectedEnvelopeType wire.EnvelopeType
-
-func (e errUnexpectedEnvelopeType) Error() string {
-	return fmt.Sprintf("unexpected envelope type: %v", wire.EnvelopeType(e))
-}
-
-// disableEnvelopingProtocol wraps a protocol to not envelope payloads.
-type disableEnvelopingProtocol struct {
-	protocol.Protocol
-
-	// EnvelopeType to use for decoded envelopes.
-	Type wire.EnvelopeType
-}
-
-func (ev disableEnvelopingProtocol) EncodeEnveloped(e wire.Envelope, w io.Writer) error {
-	return ev.Encode(e.Value, w)
-}
-
-func (ev disableEnvelopingProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelope, error) {
-	value, err := ev.Decode(r, wire.TStruct)
-	return wire.Envelope{
-		Name:  "", // we don't use the decoded name anywhere
-		Type:  ev.Type,
-		SeqID: 1,
-		Value: value,
-	}, err
-}
+// Transport options for all TChannel requests.
+var transportOptions = thrift.DisableEnvelopingForTransport

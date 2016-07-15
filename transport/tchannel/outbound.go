@@ -88,8 +88,8 @@ func (o outbound) Stop() error {
 	return nil
 }
 
-func (outbound) Options() (opts transport.Options) {
-	return opts
+func (outbound) Options() transport.Options {
+	return transportOptions
 }
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
