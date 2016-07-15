@@ -111,7 +111,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	response, err := ctxhttp.Do(ctx, o.Client, request)
 	if err != nil {
-		if err == context.DeadlineExceeded {
+		if err == ctx.Err() {
 			return nil, errors.NewTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
 		}
 
