@@ -8,6 +8,13 @@ go:
   - 1.7rc1
   - tip
 
+matrix:
+  # 1.7rc1 and tip are expected to fail until
+  # https://github.com/golang/go/issues/16381 is resolved
+  allow_failures:
+    - go: 1.7rc1
+    - go: tip
+
 services:
   - docker
 
