@@ -1,5 +1,5 @@
 hash: 94bc00970e27b21e47810d384776f5967ee27ae9ad2ef89c2fb22342711a9df7
-updated: 2016-07-12T15:55:29.59725432-07:00
+updated: 2016-07-18T10:13:57.313265143-07:00
 imports:
 - name: github.com/apache/thrift
   version: 5a3f855b4e6882184f13c698855c877241144a12
@@ -47,7 +47,7 @@ imports:
   - typed
   - thrift/gen-go/meta
 - name: golang.org/x/net
-  version: f841c39de738b1d0df95b5a7187744f0e03d8112
+  version: 3797cd8864994d713d909eda5e61ede8683fdc12
   subpackages:
   - context
   - context/ctxhttp
