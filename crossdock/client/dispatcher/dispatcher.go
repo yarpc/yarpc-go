@@ -22,7 +22,6 @@ package dispatcher
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
@@ -45,14 +44,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
-		// Go HTTP servers have keep-alive enabled by default. If we re-use
-		// HTTP clients, the same connection will be used to make requests.
-		// This is undesirable during tests because we want to isolate the
-		// different test requests. Additionally, keep-alive causes the test
-		// server to continue listening on the existing connection for some
-		// time after we close the listener.
-		cl := &http.Client{Transport: new(http.Transport)}
-		outbound = ht.NewOutboundWithClient(fmt.Sprintf("http://%s:8081", server), cl)
+		outbound = ht.NewOutbound(fmt.Sprintf("http://%s:8081", server))
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")

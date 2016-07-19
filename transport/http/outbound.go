@@ -48,8 +48,14 @@ func NewOutbound(url string) transport.Outbound {
 }
 
 // NewOutboundWithClient builds a new HTTP outbound that sends requests to the
-// given URL using the given HTTP client.
+// given URL using the given HTTP client. If the client is nil, a new one is
+// assigned.
 func NewOutboundWithClient(url string, client *http.Client) transport.Outbound {
+	if client == nil {
+		// Instead of using a global client for all outbounds, we use an HTTP
+		// client per outbound if unspecified.
+		client = &http.Client{Transport: &http.Transport{}}
+	}
 	// TODO: Use option pattern with varargs instead
 	return outbound{Client: client, URL: url, started: atomic.NewBool(false)}
 }
