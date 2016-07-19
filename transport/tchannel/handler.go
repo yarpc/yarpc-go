@@ -92,6 +92,12 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		return
 	}
 
+	if err == context.DeadlineExceeded {
+		// We customize the error msg here for human & crossdock tests on the
+		// client side.
+		err = tchannel.NewSystemError(tchannel.ErrCodeTimeout, "remote timeout")
+	}
+
 	if _, ok := err.(tchannel.SystemError); ok {
 		call.Response().SendSystemError(err)
 		return

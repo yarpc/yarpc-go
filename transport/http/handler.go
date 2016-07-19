@@ -59,6 +59,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if err == context.DeadlineExceeded {
+		http.Error(w, "remote timeout", http.StatusGatewayTimeout)
+		return
+	}
+
 	err = errors.AsHandlerError(service, procedure, err)
 	status := http.StatusInternalServerError
 	if transport.IsBadRequestError(err) {

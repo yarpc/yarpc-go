@@ -38,9 +38,10 @@ services:
             # BEHAVIOR_HTTPCLIENT TODO
             # BEHAVIOR_HTTPSERVER TODO
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
-            - BEHAVIOR_OUTBOUNDTTL=client,server,transport
+            - BEHAVIOR_TIMEOUT=client,server,transport
             # BEHAVIOR_INBOUNDTTL TODO
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
+            - REPORT=compact
 
     go:
         dns_search: .

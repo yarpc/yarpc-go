@@ -37,21 +37,23 @@ type timeoutError struct {
 	Service   string
 	Procedure string
 	Duration  time.Duration
+	Message   string
 }
 
 // NewTimeoutError constructs an instance of a TimeoutError for the given
 // service, procedure, and duration waited.
-func NewTimeoutError(Service string, Procedure string, Duration time.Duration) TimeoutError {
+func NewTimeoutError(Service string, Procedure string, Duration time.Duration, Message string) TimeoutError {
 	return timeoutError{
 		Service:   Service,
 		Procedure: Procedure,
 		Duration:  Duration,
+		Message:   Message,
 	}
 }
 
 func (e timeoutError) timeoutError() {}
 
 func (e timeoutError) Error() string {
-	return fmt.Sprintf(`timeout for procedure %q of service %q after %v`,
-		e.Procedure, e.Service, e.Duration)
+	return fmt.Sprintf(`timeout for procedure %q of service %q after %v (%v)`,
+		e.Procedure, e.Service, e.Duration, e.Message)
 }

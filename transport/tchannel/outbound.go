@@ -106,7 +106,6 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	start := time.Now()
 	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
 
 	format := tchannel.Format(req.Encoding)
 	callOptions := tchannel.CallOptions{Format: format}
@@ -151,10 +150,11 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	res := call.Response()
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
-		if err == tchannel.ErrTimeout {
-			return nil, errors.NewTimeoutError(req.Service, req.Procedure, ttl)
-		}
 		if err, ok := err.(tchannel.SystemError); ok {
+			if err.Code() == tchannel.ErrCodeTimeout {
+				return nil, errors.NewTimeoutError(req.Service, req.Procedure,
+					deadline.Sub(start), err.Message())
+			}
 			return nil, fromSystemError(err)
 		}
 		// TODO(abg): This will wrap IO errors while reading headers as decode

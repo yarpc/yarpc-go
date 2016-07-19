@@ -87,4 +87,5 @@ func register(reg transport.Registry) {
 	json.Register(reg, json.Procedure("phone", Phone))
 
 	raw.Register(reg, raw.Procedure("sleep/raw", SleepRaw))
+	raw.Register(reg, raw.Procedure("timeoutshort/raw", TimeoutShortRaw))
 }

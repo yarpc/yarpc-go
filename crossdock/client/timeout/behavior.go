@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package outboundttl
+package timeout
 
 import (
 	"strings"
@@ -34,8 +34,15 @@ import (
 )
 
 // Run tests the behavior of any outbound transport to verify that it will
-// timeout if the server fails to respond in a timely fashion.
+// timeout if the server fails to respond in a timely fashion. If the server
+// respects the context deadline and returns a timeout error before the client
+// drops the call, we should have a similar behavior.
 func Run(t crossdock.T) {
+	localTimeout(t)
+	remoteTimeout(t)
+}
+
+func localTimeout(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
@@ -48,15 +55,49 @@ func Run(t crossdock.T) {
 
 	ch := raw.New(dispatcher.Channel("yarpc-test"))
 	_, _, err := ch.Call(yarpc.NewReqMeta(ctx).Procedure("sleep/raw"), nil)
-	fatals.Error(err, "expected a failure for timeout")
+	fatals.Error(err, "expected an error")
 
 	if transport.IsBadRequestError(err) {
 		t.Skipf("sleep/raw method not implemented: %v", err)
 		return
 	}
 
+	assert.True(transport.IsTimeoutError(err),
+		"expected a TimeoutError, got %T", err)
+
 	form := strings.HasPrefix(err.Error(), `timeout for procedure "sleep/raw" of service "yarpc-test" after`)
 	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
-	assert.True(
-		transport.IsTimeoutError(err), "error should be a TimeoutError, got %T", err)
+
+	form = strings.HasSuffix(err.Error(), `(timeout)`)
+	assert.True(form, "error message has expected suffix for timeouts, got %q", err.Error())
+}
+
+func remoteTimeout(t crossdock.T) {
+	assert := crossdock.Assert(t)
+	fatals := crossdock.Fatals(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
+
+	ch := raw.New(dispatcher.Channel("yarpc-test"))
+	_, _, err := ch.Call(yarpc.NewReqMeta(ctx).Procedure("timeoutshort/raw"), nil)
+	fatals.Error(err, "expected an error")
+
+	if transport.IsBadRequestError(err) {
+		t.Skipf("sleep/raw method not implemented: %v", err)
+		return
+	}
+
+	assert.True(transport.IsTimeoutError(err),
+		"expected a TimeoutError, got %T", err)
+
+	form := strings.HasPrefix(err.Error(), `timeout for procedure "timeoutshort/raw" of service "yarpc-test" after`)
+	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
+
+	form = strings.HasSuffix(err.Error(), `(remote timeout)`)
+	assert.True(form, "error message has expected suffix for timeouts, got %q", err.Error())
 }
