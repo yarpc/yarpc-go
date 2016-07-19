@@ -23,7 +23,6 @@ package http
 import (
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -71,18 +70,7 @@ func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
 
 	// Instead of using a global client for all outbounds, we use an HTTP
 	// client per outbound if unspecified.
-	client := &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: cfg.keepAlive,
-			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
+	client := buildClient(&cfg)
 
 	// TODO: Use option pattern with varargs instead
 	return outbound{Client: client, URL: url, started: atomic.NewBool(false)}
