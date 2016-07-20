@@ -18,43 +18,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package dispatcher
+// +build go1.6
+
+package http
 
 import (
-	"fmt"
-
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
-	"github.com/yarpc/yarpc-go/transport"
-	ht "github.com/yarpc/yarpc-go/transport/http"
-	tch "github.com/yarpc/yarpc-go/transport/tchannel"
-
-	"github.com/crossdock/crossdock-go"
-	"github.com/uber/tchannel-go"
+	"net"
+	"net/http"
+	"time"
 )
 
-// Create creates an RPC from the given parameters or fails the whole behavior.
-func Create(t crossdock.T) yarpc.Dispatcher {
-	fatals := crossdock.Fatals(t)
-
-	server := t.Param(params.Server)
-	fatals.NotEmpty(server, "server is required")
-
-	var outbound transport.Outbound
-	trans := t.Param(params.Transport)
-	switch trans {
-	case "http":
-		outbound = ht.NewOutbound(fmt.Sprintf("http://%s:8081", server))
-	case "tchannel":
-		ch, err := tchannel.NewChannel("client", nil)
-		fatals.NoError(err, "couldn't create tchannel")
-		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
-	default:
-		fatals.Fail("", "unknown transport %q", trans)
+func buildClient(cfg *outboundConfig) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			// options lifted from https://golang.org/src/net/http/transport.go
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: cfg.keepAlive,
+			}).Dial,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}
-
-	return yarpc.NewDispatcher(yarpc.Config{
-		Name:      "client",
-		Outbounds: transport.Outbounds{"yarpc-test": outbound},
-	})
 }

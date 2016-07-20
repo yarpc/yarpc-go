@@ -41,15 +41,37 @@ var (
 	errOutboundNotStarted     = errors.ErrOutboundNotStarted("http.Outbound")
 )
 
-// NewOutbound builds a new HTTP outbound that sends requests to the given
-// URL.
-func NewOutbound(url string) transport.Outbound {
-	return NewOutboundWithClient(url, nil)
+type outboundConfig struct {
+	keepAlive time.Duration
 }
 
-// NewOutboundWithClient builds a new HTTP outbound that sends requests to the
-// given URL using the given HTTP client.
-func NewOutboundWithClient(url string, client *http.Client) transport.Outbound {
+var defaultConfig = outboundConfig{keepAlive: 30 * time.Second}
+
+// OutboundOption customizes the behavior of an HTTP outbound.
+type OutboundOption func(*outboundConfig)
+
+// KeepAlive specifies the keep-alive period for the network connection. If
+// zero, keep-alives are disabled.
+//
+// Defaults to 30 seconds.
+func KeepAlive(t time.Duration) OutboundOption {
+	return func(c *outboundConfig) {
+		c.keepAlive = t
+	}
+}
+
+// NewOutbound builds a new HTTP outbound that sends requests to the given
+// URL.
+func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
+	cfg := defaultConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
+
+	// Instead of using a global client for all outbounds, we use an HTTP
+	// client per outbound if unspecified.
+	client := buildClient(&cfg)
+
 	// TODO: Use option pattern with varargs instead
 	return outbound{Client: client, URL: url, started: atomic.NewBool(false)}
 }

@@ -189,7 +189,7 @@ func TestCallFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		out := NewOutboundWithClient(tt.url, http.DefaultClient)
+		out := NewOutbound(tt.url)
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
