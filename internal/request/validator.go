@@ -104,6 +104,9 @@ func (v *Validator) Validate(ctx context.Context) (*transport.Request, error) {
 	if !hasDeadline && v.lateErr == nil {
 		missingParams = append(missingParams, "TTL")
 	}
+	if v.Request.Encoding == "" {
+		missingParams = append(missingParams, "encoding")
+	}
 	if len(missingParams) > 0 {
 		return nil, missingParametersError{Parameters: missingParams}
 	}

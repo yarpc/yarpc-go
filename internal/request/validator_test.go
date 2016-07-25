@@ -56,11 +56,16 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 			},
 			ttl: time.Second,
+			wantErr: missingParametersError{
+				Parameters: []string{"encoding"},
+			},
+			wantMessage: "missing encoding",
 		},
 		{
 			req: &transport.Request{
 				Service:   "service",
 				Procedure: "hello",
+				Encoding:  "raw",
 			},
 			ttl: time.Second,
 			wantErr: missingParametersError{
@@ -72,6 +77,7 @@ func TestValidator(t *testing.T) {
 			req: &transport.Request{
 				Caller:    "caller",
 				Procedure: "hello",
+				Encoding:  "raw",
 			},
 			ttl: time.Second,
 			wantErr: missingParametersError{
@@ -81,8 +87,9 @@ func TestValidator(t *testing.T) {
 		},
 		{
 			req: &transport.Request{
-				Caller:  "caller",
-				Service: "service",
+				Caller:   "caller",
+				Service:  "service",
+				Encoding: "raw",
 			},
 			ttl: time.Second,
 			wantErr: missingParametersError{
@@ -95,6 +102,7 @@ func TestValidator(t *testing.T) {
 				Caller:    "caller",
 				Service:   "service",
 				Procedure: "hello",
+				Encoding:  "raw",
 			},
 			wantErr: missingParametersError{
 				Parameters: []string{"TTL"},
@@ -105,10 +113,10 @@ func TestValidator(t *testing.T) {
 			req: &transport.Request{},
 			wantErr: missingParametersError{
 				Parameters: []string{
-					"service name", "procedure", "caller name", "TTL",
+					"service name", "procedure", "caller name", "TTL", "encoding",
 				},
 			},
-			wantMessage: "missing service name, procedure, caller name, and TTL",
+			wantMessage: "missing service name, procedure, caller name, TTL, and encoding",
 		},
 		{
 			req: &transport.Request{

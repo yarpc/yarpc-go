@@ -99,6 +99,7 @@ func Run(t crossdock.T) {
 		"RPC-Caller":     "yarpc-test",
 		"RPC-Service":    "yarpc-test",
 		"RPC-Procedure":  "echo",
+		"RPC-Encoding":   "json",
 		"Context-TTL-MS": "100",
 	}, `{"token":"10"}`)
 	assert.Equal(200, res.Status,
@@ -126,7 +127,7 @@ func Run(t crossdock.T) {
 			body:       "{}",
 			wantStatus: 400,
 			wantBody: "BadRequest: missing service name, procedure, " +
-				"caller name, and TTL\n",
+				"caller name, TTL, and encoding\n",
 		},
 		{
 			name: "wrong service",
@@ -134,6 +135,7 @@ func Run(t crossdock.T) {
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "not-yarpc-test",
 				"RPC-Procedure":  "echo",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "100",
 			},
 			body:       `{"token":"10"}`,
@@ -148,7 +150,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   "BadRequest: missing procedure, caller name, and TTL\n",
+			wantBody:   "BadRequest: missing procedure, caller name, TTL, and encoding\n",
 		},
 		{
 			name: "no caller",
@@ -158,7 +160,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   "BadRequest: missing caller name and TTL\n",
+			wantBody:   "BadRequest: missing caller name, TTL, and encoding\n",
 		},
 		{
 			name: "no handler",
@@ -166,6 +168,7 @@ func Run(t crossdock.T) {
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "no-such-procedure",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "100",
 			},
 			body:       "{}",
@@ -182,7 +185,19 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   "BadRequest: missing TTL\n",
+			wantBody:   "BadRequest: missing TTL and encoding\n",
+		},
+		{
+			name: "no encoding",
+			headers: map[string]string{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "yarpc-test",
+				"RPC-Procedure":  "echo",
+				"Context-TTL-MS": "100",
+			},
+			body:       "{}",
+			wantStatus: 400,
+			wantBody:   "BadRequest: missing encoding\n",
 		},
 		{
 			name: "invalid timeout",
@@ -190,6 +205,7 @@ func Run(t crossdock.T) {
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "echo",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "moo",
 			},
 			body:       "{}",
@@ -203,6 +219,7 @@ func Run(t crossdock.T) {
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "echo",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "100",
 			},
 			body:       "i am not json",
@@ -212,11 +229,27 @@ func Run(t crossdock.T) {
 				`caller "yarpc-test":`,
 		},
 		{
+			name: "encoding mismatch",
+			headers: map[string]string{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "yarpc-test",
+				"RPC-Procedure":  "echo",
+				"RPC-Encoding":   "thrift",
+				"Context-TTL-MS": "100",
+			},
+			body:       "{}",
+			wantStatus: 400,
+			wantBody: `BadRequest: failed to decode "json" request body ` +
+				`for procedure "echo" of service "yarpc-test" from ` +
+				`caller "yarpc-test": expected encoding "json" but got "thrift"` + "\n",
+		},
+		{
 			name: "unexpected error",
 			headers: map[string]string{
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "unexpected-error",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "100",
 			},
 			body:       "{}",
@@ -230,6 +263,7 @@ func Run(t crossdock.T) {
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "bad-response",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "100",
 			},
 			body:       "{}",
@@ -244,6 +278,7 @@ func Run(t crossdock.T) {
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "phone",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "100",
 			},
 			body: `{
@@ -263,6 +298,7 @@ func Run(t crossdock.T) {
 				"RPC-Caller":     "yarpc-test",
 				"RPC-Service":    "yarpc-test",
 				"RPC-Procedure":  "phone",
+				"RPC-Encoding":   "json",
 				"Context-TTL-MS": "100",
 			},
 			body: `{

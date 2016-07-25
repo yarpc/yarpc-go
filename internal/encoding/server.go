@@ -108,3 +108,29 @@ func ResponseHeadersEncodeError(req *transport.Request, err error) error {
 	e.IsHeader = true
 	return e
 }
+
+// Expect verifies that the given request has the given encoding or it returns
+// an error.
+func Expect(req *transport.Request, want transport.Encoding) error {
+	got := req.Encoding
+	if want == got {
+		return nil
+	}
+
+	return serverEncodingError{
+		Encoding:  want,
+		Caller:    req.Caller,
+		Service:   req.Service,
+		Procedure: req.Procedure,
+		Reason:    encodingMismatchError{Want: want, Got: got},
+	}
+}
+
+// encodingMismatchError represenst a encoding mismatch
+type encodingMismatchError struct {
+	Want, Got transport.Encoding
+}
+
+func (e encodingMismatchError) Error() string {
+	return fmt.Sprintf("expected encoding %q but got %q", e.Want, e.Got)
+}
