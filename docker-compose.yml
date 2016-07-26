@@ -13,11 +13,11 @@ services:
         environment:
             - WAIT_FOR=go,node,java,python,python-sync
 
-            - AXIS_CLIENT=go # ,node,java,python,python-sync
-            - AXIS_SERVER=go # ,node,java,python
+            - AXIS_CLIENT=go,node,python,python-sync # ,java
+            - AXIS_SERVER=go,node,python # ,java
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
-            - AXIS_ERRORSHTTPOUT=go # ,node
+            - AXIS_ERRORSHTTPOUT=go,node
             # AXIS_ERRORSHTTPIN TODO
             - AXIS_ERRORSTCHOUT=go
             # AXIS_ERRORSTCHIN TODO
@@ -50,7 +50,7 @@ services:
 
     node:
         dns_search: .
-        image: yarpc/yarpc-node
+        image: yarpc/yarpc-node:require-encoding
         ports:
             - "8080-8087"
 
@@ -62,13 +62,13 @@ services:
 
     python:
         dns_search: .
-        image: yarpc/yarpc-python
+        image: yarpc/yarpc-python:require-encoding
         ports:
             - "8080-8087"
 
     python-sync:
         dns_search: .
-        image: yarpc/yarpc-python
+        image: yarpc/yarpc-python:require-encoding
         ports:
             - 8080
         environment:
