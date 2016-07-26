@@ -13,11 +13,11 @@ services:
         environment:
             - WAIT_FOR=go,node,java,python,python-sync
 
-            - AXIS_CLIENT=go,node,java,python,python-sync
-            - AXIS_SERVER=go,node,java,python
+            - AXIS_CLIENT=go # ,node,java,python,python-sync
+            - AXIS_SERVER=go # ,node,java,python
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
-            - AXIS_ERRORSHTTPOUT=node,go
+            - AXIS_ERRORSHTTPOUT=go # ,node
             # AXIS_ERRORSHTTPIN TODO
             - AXIS_ERRORSTCHOUT=go
             # AXIS_ERRORSTCHIN TODO
