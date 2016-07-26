@@ -43,6 +43,7 @@ func TestHandleStructSuccess(t *testing.T) {
 	err := handler.Handle(context.Background(), transport.Options{},
 		&transport.Request{
 			Procedure: "simpleCall",
+			Encoding:  "json",
 			Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
 		}, resw)
 	require.NoError(t, err)
@@ -70,6 +71,7 @@ func TestHandleMapSuccess(t *testing.T) {
 	err := handler.Handle(context.Background(), transport.Options{},
 		&transport.Request{
 			Procedure: "foo",
+			Encoding:  "json",
 			Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
 		}, resw)
 	require.NoError(t, err)
@@ -90,6 +92,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 	err := handler.Handle(context.Background(), transport.Options{},
 		&transport.Request{
 			Procedure: "foo",
+			Encoding:  "json",
 			Body:      jsonBody(`["a", "b", "c"]`),
 		}, resw)
 	require.NoError(t, err)
@@ -113,6 +116,7 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	err := handler.Handle(context.Background(), transport.Options{},
 		&transport.Request{
 			Procedure: "simpleCall",
+			Encoding:  "json",
 			Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
 		}, resw)
 	require.NoError(t, err)
