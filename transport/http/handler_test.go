@@ -220,7 +220,7 @@ func TestHandlerFailures(t *testing.T) {
 			&http.Request{
 				Method: "POST",
 			},
-			"BadRequest: missing service name, procedure, caller name, and TTL\n",
+			"BadRequest: missing service name, procedure, caller name, TTL, and encoding\n",
 		},
 		{
 			&http.Request{

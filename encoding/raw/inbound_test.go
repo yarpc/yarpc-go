@@ -112,6 +112,7 @@ func TestRawHandler(t *testing.T) {
 			&transport.Request{
 				Procedure: tt.procedure,
 				Headers:   tt.headers,
+				Encoding:  "raw",
 				Body:      chunkReader,
 			},
 			resw,

@@ -23,6 +23,7 @@ package raw
 import (
 	"io/ioutil"
 
+	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -35,8 +36,9 @@ type rawHandler struct {
 }
 
 func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *transport.Request, rw transport.ResponseWriter) error {
-	treq.Encoding = Encoding
-	// TODO(abg): Should we fail requests if Rpc-Encoding does not match?
+	if err := encoding.Expect(treq, Encoding); err != nil {
+		return err
+	}
 
 	reqBody, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
