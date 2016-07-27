@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"io"
-	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
@@ -104,9 +103,6 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	var call *tchannel.OutboundCall
 	var err error
 
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-
 	format := tchannel.Format(req.Encoding)
 	callOptions := tchannel.CallOptions{Format: format}
 	if o.HostPort != "" {
@@ -151,10 +147,6 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
 		if err, ok := err.(tchannel.SystemError); ok {
-			if err.Code() == tchannel.ErrCodeTimeout {
-				return nil, errors.NewTimeoutError(req.Service, req.Procedure,
-					deadline.Sub(start), err.Message())
-			}
 			return nil, fromSystemError(err)
 		}
 		// TODO(abg): This will wrap IO errors while reading headers as decode
@@ -190,6 +182,8 @@ func fromSystemError(err tchannel.SystemError) error {
 	switch err.Code() {
 	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
 		return errors.RemoteBadRequestError(err.Message())
+	case tchannel.ErrCodeTimeout:
+		return errors.RemoteTimeoutError(err.Message())
 	default:
 		return errors.RemoteUnexpectedError(err.Message())
 	}

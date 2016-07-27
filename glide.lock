@@ -1,8 +1,8 @@
 hash: 94bc00970e27b21e47810d384776f5967ee27ae9ad2ef89c2fb22342711a9df7
-updated: 2016-07-18T10:13:57.313265143-07:00
+updated: 2016-07-29T16:32:42.53196792-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 5a3f855b4e6882184f13c698855c877241144a12
+  version: bcad91771b7f0bff28a1cac1981d7ef2b9bcef3c
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -25,7 +25,7 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 123f83ad638e1eff1f48ec69e6170feb12c4dc5c
+  version: 13abcf75760f008b6f92ee3185a9534e286b64a0
   subpackages:
   - ptr
   - wire
@@ -36,19 +36,23 @@ imports:
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber/tchannel-go
-  version: f9e40ff1212a2542e21d8b55510079aabac0cf66
+  version: 4006710b9a6e8aaa8e02d7d6d1e6a51253e9257f
   subpackages:
   - json
   - raw
   - thrift
+  - testutils/testreader
+  - testutils
   - relay
   - tnet
   - trand
   - typed
   - thrift/gen-go/meta
+  - relay/relaytest
+  - testutils/goroutines
 - name: golang.org/x/net
-  version: 3797cd8864994d713d909eda5e61ede8683fdc12
+  version: 6a513affb38dc9788b449d59ffed099b8de18fa0
   subpackages:
   - context
   - context/ctxhttp
-devImports: []
+testImports: []

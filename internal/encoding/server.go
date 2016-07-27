@@ -63,9 +63,9 @@ func (e serverEncodingError) Error() string {
 // AsHandlerError converts this error into a handler-level error.
 func (e serverEncodingError) AsHandlerError() errors.HandlerError {
 	if e.IsResponse {
-		return errors.LocalUnexpectedError(e)
+		return errors.HandlerUnexpectedError(e)
 	}
-	return errors.LocalBadRequestError(e)
+	return errors.HandlerBadRequestError(e)
 }
 
 func newServerEncodingError(req *transport.Request, err error) serverEncodingError {

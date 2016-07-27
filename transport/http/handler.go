@@ -22,6 +22,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/internal/errors"
@@ -59,15 +60,12 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err == context.DeadlineExceeded {
-		http.Error(w, "remote timeout", http.StatusGatewayTimeout)
-		return
-	}
-
 	err = errors.AsHandlerError(service, procedure, err)
 	status := http.StatusInternalServerError
 	if transport.IsBadRequestError(err) {
 		status = http.StatusBadRequest
+	} else if transport.IsTimeoutError(err) {
+		status = http.StatusGatewayTimeout
 	}
 	http.Error(w, err.Error(), status)
 }
@@ -98,8 +96,20 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
+	start := time.Now()
+
 	// TODO capture and handle panic
-	return h.Handler.Handle(ctx, httpOptions, treq, newResponseWriter(w))
+	err = h.Handler.Handle(ctx, httpOptions, treq, newResponseWriter(w))
+
+	// The handler is well behaved and stopped work on context deadline. We
+	// forward this information to the client diligently.
+	if err != nil && err == context.DeadlineExceeded && err == ctx.Err() {
+		deadline, _ := ctx.Deadline()
+		err = errors.HandlerTimeoutError(treq.Caller, treq.Service,
+			treq.Procedure, deadline.Sub(start))
+	}
+
+	return err
 }
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.

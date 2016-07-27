@@ -24,28 +24,38 @@ import "fmt"
 
 // The general hierarchy we have is:
 //
-// 	BadRequestError                 HandlerError
+// 	BadRequestError                   HandlerError
 // 	 |                                        |
-// 	 +--------> localBadRequestError <--------+
+// 	 +--------> handlerBadRequestError <------+
 // 	 |                                        |
 // 	 +--------> remoteBadRequestError         |
 // 	                                          |
 // 	UnexpectedError                           |
 // 	 |                                        |
-// 	 +--------> localUnexpectedError <--------+
+// 	 +--------> handlerUnexpectedError <------+
+// 	 |                                        |
+// 	 +--------> remoteUnexpectedError         |
+// 	                                          |
+// 	TimeoutError                              |
+// 	 |                                        |
+// 	 +--------> handlerTimeoutError <---------+
 // 	 |
-// 	 +--------> remoteUnexpectedError
+// 	 +--------> remoteTimeoutError
+//   |
+// 	 +--------> clientTimeoutError
 //
-// Only the local versions of the error types are HandlerErrors. If a Handler
-// returns one of the remote versions, they will be wrapped in a new
+// Only the handler versions of the error types are HandlerErrors. If a handler
+// returns one of the remote or client version, they will be wrapped in a new
 // UnexpectedError.
-
-// HandlerError represents error types that can be returned from a Handler
-// that the Inbound implementation MUST handle.
 //
-// Currently, this includes BadRequestError and UnexpectedError only. Error
-// types which know how to convert themselves into BadRequestError or
-// UnexpectedError may provide a `AsHandlerError() HandlerError` method.
+// HandlerError represents error types that can be returned from a handler that
+// the Inbound implementation MUST handle. The inbound implementation can then
+// returns the remote version of the error to the user.
+//
+// Currently, this includes BadRequestError, UnexpectedError and TimeoutError.
+// Error types which know how to convert themselves into BadRequestError,
+// UnexpectedError or TimeoutError may provide a `AsHandlerError()
+// HandlerError` method.
 type HandlerError interface {
 	error
 
@@ -90,7 +100,7 @@ func (e UnrecognizedProcedureError) Error() string {
 
 // AsHandlerError for UnrecognizedProcedureError.
 func (e UnrecognizedProcedureError) AsHandlerError() HandlerError {
-	return LocalBadRequestError(e)
+	return HandlerBadRequestError(e)
 }
 
 // ProcedureFailedError is a failure to execute a procedure due to an
@@ -108,5 +118,5 @@ func (e ProcedureFailedError) Error() string {
 
 // AsHandlerError for ProcedureFailedError.
 func (e ProcedureFailedError) AsHandlerError() HandlerError {
-	return LocalUnexpectedError(e)
+	return HandlerUnexpectedError(e)
 }

@@ -133,8 +133,8 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	response, err := ctxhttp.Do(ctx, o.Client, request)
 	if err != nil {
-		if err == context.DeadlineExceeded { // local timeout handling
-			return nil, errors.NewTimeoutError(req.Service, req.Procedure, deadline.Sub(start), "timeout")
+		if err == context.DeadlineExceeded {
+			return nil, errors.ClientTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
 		}
 
 		return nil, err
@@ -167,9 +167,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	if response.StatusCode == http.StatusGatewayTimeout {
-		// remote timeout handling
-		return nil, errors.NewTimeoutError(req.Service, req.Procedure,
-			deadline.Sub(start), message)
+		return nil, errors.RemoteTimeoutError(message)
 	}
 
 	return nil, errors.RemoteUnexpectedError(message)

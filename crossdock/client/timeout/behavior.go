@@ -26,6 +26,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -38,11 +39,11 @@ import (
 // respects the context deadline and returns a timeout error before the client
 // drops the call, we should have a similar behavior.
 func Run(t crossdock.T) {
-	localTimeout(t)
+	clientTimeout(t)
 	remoteTimeout(t)
 }
 
-func localTimeout(t crossdock.T) {
+func clientTimeout(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
@@ -62,14 +63,22 @@ func localTimeout(t crossdock.T) {
 		return
 	}
 
-	assert.True(transport.IsTimeoutError(err),
-		"expected a TimeoutError, got %T", err)
+	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
 
-	form := strings.HasPrefix(err.Error(), `timeout for procedure "sleep/raw" of service "yarpc-test" after`)
-	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
-
-	form = strings.HasSuffix(err.Error(), `(timeout)`)
-	assert.True(form, "error message has expected suffix for timeouts, got %q", err.Error())
+	trans := t.Param(params.Transport)
+	switch trans {
+	case "http":
+		form := strings.HasPrefix(err.Error(),
+			`client timeout for procedure "sleep/raw" of service "yarpc-test" after`)
+		assert.True(form, "should be a client timeout: %q", err.Error())
+	case "tchannel":
+		form := strings.HasPrefix(err.Error(), `remote timeout: timeout`)
+		assert.True(form,
+			"should be a remote timeout (we cant represent client timeout with tchannel): %q",
+			err.Error())
+	default:
+		fatals.Fail("", "unknown transport %q", trans)
+	}
 }
 
 func remoteTimeout(t crossdock.T) {
@@ -92,12 +101,9 @@ func remoteTimeout(t crossdock.T) {
 		return
 	}
 
-	assert.True(transport.IsTimeoutError(err),
-		"expected a TimeoutError, got %T", err)
+	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
 
-	form := strings.HasPrefix(err.Error(), `timeout for procedure "timeoutshort/raw" of service "yarpc-test" after`)
-	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
-
-	form = strings.HasSuffix(err.Error(), `(remote timeout)`)
-	assert.True(form, "error message has expected suffix for timeouts, got %q", err.Error())
+	form := strings.HasPrefix(err.Error(),
+		`remote timeout: handler timeout for procedure "timeoutshort/raw" of service "yarpc-test" from caller "client" after`)
+	assert.True(form, "should be a remote timeout: %q", err.Error())
 }
