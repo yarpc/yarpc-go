@@ -22,6 +22,7 @@ package errorstchout
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
@@ -39,6 +40,7 @@ const (
 
 type test struct {
 	name      string
+	encoding  string
 	procedure string
 	headers   []byte
 	body      []byte
@@ -150,6 +152,27 @@ func Run(t crossdock.T) {
 				assert.Equal(tchannel.ErrCodeUnexpected, code, "must produce transport error")
 			},
 		},
+		{
+			name:      "remote timeout error",
+			procedure: "waitfortimeout/raw",
+			body:      []byte("{}"),
+			headers:   []byte{0x0, 0x0},
+			encoding:  "raw",
+			validate: func(res3 []byte, isAppErr bool, err error) {
+				assert.Error(err, "is error")
+				assert.False(isAppErr, "waitfortimeout/raw procedure must not produce application error")
+				err, ok := err.(tchannel.SystemError)
+				assert.True(ok, "waitfortimeout/raw procedure must produce system error")
+				code := tchannel.GetSystemErrorCode(err)
+				if code == tchannel.ErrCodeBadRequest && strings.Contains(err.Error(),
+					`unrecognized procedure "waitfortimeout/raw" for service "yarpc-test"`) {
+					t.Skipf("waitfortimeout/raw not implemented: %v", err)
+					return
+				}
+				assert.Equal(tchannel.ErrCodeTimeout, code, "must produce timeout error")
+				assert.Contains(err.Error(), `handler timeout for procedure "waitfortimeout/raw" of service "yarpc-test" from caller "yarpc-test" after`, "must be a remote handler timeout")
+			},
+		},
 	}
 
 	server := t.Param(params.Server)
@@ -172,11 +195,16 @@ func Run(t crossdock.T) {
 
 		ctx = json.WithHeaders(ctx, headers)
 
+		encoding := "json"
+		if tt.encoding != "" {
+			encoding = tt.encoding
+		}
+
 		call, err := peer.BeginCall(
 			ctx,
 			serviceName,
 			tt.procedure,
-			&tchannel.CallOptions{Format: tchannel.Format("json")},
+			&tchannel.CallOptions{Format: tchannel.Format(encoding)},
 		)
 		fatals.NoError(err, "could not begin call")
 

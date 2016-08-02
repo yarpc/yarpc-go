@@ -40,7 +40,6 @@ import (
 // drops the call, we should have a similar behavior.
 func Run(t crossdock.T) {
 	clientTimeout(t)
-	remoteTimeout(t)
 }
 
 func clientTimeout(t crossdock.T) {
@@ -79,31 +78,4 @@ func clientTimeout(t crossdock.T) {
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
-}
-
-func remoteTimeout(t crossdock.T) {
-	assert := crossdock.Assert(t)
-	fatals := crossdock.Fatals(t)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	dispatcher := disp.Create(t)
-	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
-	defer dispatcher.Stop()
-
-	ch := raw.New(dispatcher.Channel("yarpc-test"))
-	_, _, err := ch.Call(yarpc.NewReqMeta(ctx).Procedure("timeoutshort/raw"), nil)
-	fatals.Error(err, "expected an error")
-
-	if transport.IsBadRequestError(err) {
-		t.Skipf("sleep/raw method not implemented: %v", err)
-		return
-	}
-
-	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
-
-	form := strings.HasPrefix(err.Error(),
-		`remote timeout: handler timeout for procedure "timeoutshort/raw" of service "yarpc-test" from caller "client" after`)
-	assert.True(form, "should be a remote timeout: %q", err.Error())
 }

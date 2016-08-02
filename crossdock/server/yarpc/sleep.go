@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/yarpc/yarpc-go"
 )
 
@@ -36,17 +34,14 @@ func SleepRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error)
 	return nil, nil, nil
 }
 
-// TimeoutShortRaw timeouts after half the time of the remaning context
-// deadline. This handler should fail with a Context timeout error, that yarpc
-// should forward to the caller.
-func TimeoutShortRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+// WaitForTimeoutRaw waits after the context deadline then returns the context
+// error. yarpc should interpret this as an handler timeout, which it turns
+// should be forwarded to the yarpc client as a remote timeout.
+func WaitForTimeoutRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
 	ctx := reqMeta.Context()
-	deadline, ok := ctx.Deadline()
-	if !ok {
+	if _, ok := ctx.Deadline(); !ok {
 		return nil, nil, fmt.Errorf("no deadline set in context")
 	}
-	timeout := (time.Now().Sub(deadline)) / 2
-	ctx, _ = context.WithTimeout(ctx, timeout)
 	select {
 	case <-ctx.Done():
 		return nil, nil, ctx.Err()

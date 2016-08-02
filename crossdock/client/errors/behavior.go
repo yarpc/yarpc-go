@@ -120,6 +120,7 @@ func Run(t crossdock.T) {
 		wantStatus         int
 		wantBody           string
 		wantBodyStartsWith string
+		skipStatus         int
 	}{
 		{
 			name:       "no service",
@@ -311,11 +312,29 @@ func Run(t crossdock.T) {
 			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
 				`UnexpectedError: error for procedure "unexpected-error" of service "yarpc-test": error` + "\n",
 		},
+		{
+			name: "remote timeout",
+			headers: map[string]string{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "yarpc-test",
+				"RPC-Procedure":  "waitfortimeout/raw",
+				"RPC-Encoding":   "raw",
+				"Context-TTL-MS": "100",
+			},
+			wantStatus: 504,
+			skipStatus: 400,
+			wantBodyStartsWith: `handler timeout for procedure "waitfortimeout/raw"` +
+				` of service "yarpc-test" from caller "yarpc-test" after`,
+		},
 	}
 
 	for _, tt := range tests {
 		res := client.Call(t, tt.headers, tt.body)
 		t.Tag("scenario", tt.name)
+		if res.Status == tt.skipStatus {
+			t.Skipf("waitfortimeout/raw method not implemented: %v", res.Body)
+			continue
+		}
 		assert.Equal(tt.wantStatus, res.Status, "should respond with expected status")
 		if tt.wantBody != "" {
 			assert.Equal(tt.wantBody, res.Body, "response body should be informative error")
