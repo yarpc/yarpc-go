@@ -179,7 +179,7 @@ func TestClient(t *testing.T) {
 
 		c := New(Config{
 			Service:  "MyService",
-			Channel:  transport.SimpleChannel("caller", "service", trans),
+			Channel:  transport.IdentityChannel("caller", "service", trans),
 			Protocol: proto,
 		})
 

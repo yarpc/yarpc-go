@@ -95,7 +95,7 @@ func Phone(reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.Res
 	defer outbound.Stop()
 
 	// TODO use reqMeta.Service for caller
-	client := json.New(transport.SimpleChannel("yarpc-test", body.Service, outbound))
+	client := json.New(transport.IdentityChannel("yarpc-test", body.Service, outbound))
 	resBody := PhoneResponse{
 		Service:   "yarpc-test", // TODO use reqMeta.Service
 		Procedure: reqMeta.Procedure(),

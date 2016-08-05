@@ -35,17 +35,18 @@ type Channel interface {
 	GetOutbound() Outbound
 }
 
-// SimpleChannel constructs a Channel which always returns the same outbound.
-func SimpleChannel(caller, service string, out Outbound) Channel {
-	return simpleChannel{caller: caller, service: service, outbound: out}
+// IdentityChannel constructs a simple Channel for the given caller-service pair
+// which always returns the given Outbound.
+func IdentityChannel(caller, service string, out Outbound) Channel {
+	return identityChannel{caller: caller, service: service, outbound: out}
 }
 
-type simpleChannel struct {
+type identityChannel struct {
 	caller   string
 	service  string
 	outbound Outbound
 }
 
-func (s simpleChannel) Caller() string        { return s.caller }
-func (s simpleChannel) Service() string       { return s.service }
-func (s simpleChannel) GetOutbound() Outbound { return s.outbound }
+func (s identityChannel) Caller() string        { return s.caller }
+func (s identityChannel) Service() string       { return s.service }
+func (s identityChannel) GetOutbound() Outbound { return s.outbound }
