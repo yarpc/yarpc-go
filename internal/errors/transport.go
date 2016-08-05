@@ -22,6 +22,8 @@ package errors
 
 import "fmt"
 
+// HandlerError represents handler errors on the handler side.
+//
 // The general hierarchy we have is:
 //
 // 	BadRequestError                   HandlerError

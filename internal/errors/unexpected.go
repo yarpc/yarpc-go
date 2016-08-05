@@ -43,7 +43,7 @@ func HandlerUnexpectedError(err error) HandlerError {
 	return handlerUnexpectedError{Reason: err}
 }
 
-func (handlerUnexpectedError) handlerError()      {}
+func (handlerUnexpectedError) handlerError()    {}
 func (handlerUnexpectedError) unexpectedError() {}
 
 func (e handlerUnexpectedError) Error() string {

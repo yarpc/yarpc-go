@@ -42,7 +42,7 @@ func HandlerBadRequestError(err error) HandlerError {
 	return handlerBadRequestError{Reason: err}
 }
 
-func (handlerBadRequestError) handlerError()      {}
+func (handlerBadRequestError) handlerError()    {}
 func (handlerBadRequestError) badRequestError() {}
 
 func (e handlerBadRequestError) Error() string {
