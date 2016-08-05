@@ -18,52 +18,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package raw
+package transport
 
-import (
-	"bytes"
-	"io/ioutil"
+// Channel scopes outbounds to a single caller-service pair.
+type Channel interface {
+	// Name of the service making the request.
+	Caller() string
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/internal/meta"
-	"github.com/yarpc/yarpc-go/transport"
-)
+	// Name of the service to which the request is being made.
+	Service() string
 
-// Client makes Raw requests to a single service.
-type Client interface {
-	// Call performs an outbound Raw request.
-	Call(reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	// Returns an outbound to send the request through.
+	//
+	// MAY be called multiple times for a request. MAY return different outbounds
+	// for each call. The returned outbound MUST have already been started.
+	GetOutbound() Outbound
 }
 
-// New builds a new Raw client.
-func New(c transport.Channel) Client {
-	return rawClient{ch: c}
+// SimpleChannel constructs a Channel which always returns the same outbound.
+func SimpleChannel(caller, service string, out Outbound) Channel {
+	return simpleChannel{caller: caller, service: service, outbound: out}
 }
 
-type rawClient struct {
-	ch transport.Channel
+type simpleChannel struct {
+	caller   string
+	service  string
+	outbound Outbound
 }
 
-func (c rawClient) Call(reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
-	treq := transport.Request{
-		Caller:   c.ch.Caller(),
-		Service:  c.ch.Service(),
-		Encoding: Encoding,
-		Body:     bytes.NewReader(body),
-	}
-	ctx := meta.ToTransportRequest(reqMeta, &treq)
-
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer tres.Body.Close()
-
-	resBody, err := ioutil.ReadAll(tres.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// TODO: when transport returns response context, use that here.
-	return resBody, meta.FromTransportResponse(ctx, tres), nil
-}
+func (s simpleChannel) Caller() string        { return s.caller }
+func (s simpleChannel) Service() string       { return s.service }
+func (s simpleChannel) GetOutbound() Outbound { return s.outbound }

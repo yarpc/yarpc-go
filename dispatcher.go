@@ -110,19 +110,10 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 }
 
 func (d dispatcher) Channel(service string) transport.Channel {
-	// TODO keep map[string]*Channel instead of Outbound when New is called. The
-	// channels will allow persisting service-specific settings like "always
-	// use this TTL for this service."
-
 	if out, ok := d.Outbounds[service]; ok {
-		// we can eventually write an outbound that load balances between
-		// known outbounds for a service.
 		out = transport.ApplyFilter(out, d.Filter)
-		return transport.Channel{
-			Outbound: request.ValidatorOutbound{Outbound: out},
-			Caller:   d.Name,
-			Service:  service,
-		}
+		out = request.ValidatorOutbound{Outbound: out}
+		return transport.SimpleChannel(d.Name, service, out)
 	}
 	panic(noOutboundForService{Service: service})
 }

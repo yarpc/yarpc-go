@@ -43,23 +43,17 @@ type Client interface {
 
 // New builds a new JSON client.
 func New(c transport.Channel) Client {
-	return jsonClient{
-		t:       c.Outbound,
-		caller:  c.Caller,
-		service: c.Service,
-	}
+	return jsonClient{ch: c}
 }
 
 type jsonClient struct {
-	t transport.Outbound
-
-	caller, service string
+	ch transport.Channel
 }
 
 func (c jsonClient) Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
 	treq := transport.Request{
-		Caller:   c.caller,
-		Service:  c.service,
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
 		Encoding: Encoding,
 	}
 	ctx := meta.ToTransportRequest(reqMeta, &treq)
@@ -70,7 +64,7 @@ func (c jsonClient) Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBody
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.t.Call(ctx, &treq)
+	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
 	// TODO: transport must return response context
 
 	if err != nil {
