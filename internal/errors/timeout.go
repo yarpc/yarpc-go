@@ -60,24 +60,18 @@ func (handlerTimeoutError) timeoutError() {}
 func (handlerTimeoutError) handlerError() {}
 
 func (e handlerTimeoutError) Error() string {
-	return fmt.Sprintf(`handler timeout for procedure %q of service %q from caller %q after %v`,
+	return fmt.Sprintf(`call to procedure %q of service %q from caller %q timed out after %v`,
 		e.Procedure, e.Service, e.Caller, e.Duration)
 }
 
-type remoteTimeoutError string
+// RemoteTimeoutError represents a TimeoutError from a remote handler.
+type RemoteTimeoutError string
 
-var _ TimeoutError = remoteTimeoutError("")
+var _ TimeoutError = RemoteTimeoutError("")
 
-// RemoteTimeoutError builds a new TimeoutError with the given message.
-//
-// It represents a TimeoutError from a remote handler.
-func RemoteTimeoutError(message string) error {
-	return remoteTimeoutError(message)
-}
+func (RemoteTimeoutError) timeoutError() {}
 
-func (remoteTimeoutError) timeoutError() {}
-
-func (e remoteTimeoutError) Error() string {
+func (e RemoteTimeoutError) Error() string {
 	return fmt.Sprintf(`remote timeout: %s`, string(e))
 }
 

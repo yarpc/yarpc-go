@@ -61,7 +61,6 @@ func hello(t crossdock.T, dispatcher yarpc.Dispatcher) {
 // timeout.
 func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
-	fatals := crossdock.Fatals(t)
 
 	headers := yarpc.NewHeaders()
 	token := random.Bytes(5)
@@ -70,7 +69,9 @@ func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	if skipOnConnRefused(t, err) {
 		return
 	}
-	fatals.Error(err, "expected an error")
+	if !assert.Error(err, "expected an error") {
+		return
+	}
 
 	if transport.IsBadRequestError(err) {
 		t.Skipf("handlertimeout/raw procedure not implemented: %v", err)
@@ -80,7 +81,7 @@ func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
 
 	form := strings.HasPrefix(err.Error(),
-		`remote timeout: handler timeout for procedure "handlertimeout/raw" of service "service" from caller "caller" after`)
+		`remote timeout: call to procedure "handlertimeout/raw" of service "service" from caller "caller" timed out after`)
 	assert.True(form, "must be a remote handler timeout: %q", err.Error())
 }
 

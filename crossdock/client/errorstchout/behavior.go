@@ -159,10 +159,14 @@ func Run(t crossdock.T) {
 			headers:   []byte{0x0, 0x0},
 			encoding:  "raw",
 			validate: func(res3 []byte, isAppErr bool, err error) {
-				assert.Error(err, "is error")
+				if !assert.Error(err, "request must fail") {
+					return
+				}
 				assert.False(isAppErr, "waitfortimeout/raw procedure must not produce application error")
 				err, ok := err.(tchannel.SystemError)
-				assert.True(ok, "waitfortimeout/raw procedure must produce system error")
+				if !assert.True(ok, "waitfortimeout/raw procedure must produce system error") {
+					return
+				}
 				code := tchannel.GetSystemErrorCode(err)
 				if code == tchannel.ErrCodeBadRequest && strings.Contains(err.Error(),
 					`unrecognized procedure "waitfortimeout/raw" for service "yarpc-test"`) {
@@ -170,7 +174,7 @@ func Run(t crossdock.T) {
 					return
 				}
 				assert.Equal(tchannel.ErrCodeTimeout, code, "must produce timeout error")
-				assert.Contains(err.Error(), `handler timeout for procedure "waitfortimeout/raw" of service "yarpc-test" from caller "yarpc-test" after`, "must be a remote handler timeout")
+				assert.Contains(err.Error(), `procedure "waitfortimeout/raw" of service "yarpc-test" from caller "yarpc-test" timed out after`, "must be a remote handler timeout")
 			},
 		},
 	}

@@ -103,7 +103,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 
 	// The handler is well behaved and stopped work on context deadline. We
 	// forward this information to the client diligently.
-	if err != nil && err == context.DeadlineExceeded && err == ctx.Err() {
+	if err == context.DeadlineExceeded && err == ctx.Err() {
 		deadline, _ := ctx.Deadline()
 		err = errors.HandlerTimeoutError(treq.Caller, treq.Service,
 			treq.Procedure, deadline.Sub(start))

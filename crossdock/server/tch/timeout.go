@@ -23,10 +23,11 @@ package tch
 import (
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/raw"
 	"github.com/yarpc/yarpc-go/internal/errors"
-	"golang.org/x/net/context"
 )
 
 // handlerTimeoutRawHandler returns a handler timeout to the client right away.

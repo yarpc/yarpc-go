@@ -323,8 +323,8 @@ func Run(t crossdock.T) {
 			},
 			wantStatus: 504,
 			skipStatus: 400,
-			wantBodyStartsWith: `handler timeout for procedure "waitfortimeout/raw"` +
-				` of service "yarpc-test" from caller "yarpc-test" after`,
+			wantBodyStartsWith: `call to procedure "waitfortimeout/raw"` +
+				` of service "yarpc-test" from caller "yarpc-test" timed out after`,
 		},
 	}
 
@@ -332,7 +332,7 @@ func Run(t crossdock.T) {
 		res := client.Call(t, tt.headers, tt.body)
 		t.Tag("scenario", tt.name)
 		if res.Status == tt.skipStatus {
-			t.Skipf("waitfortimeout/raw method not implemented: %v", res.Body)
+			t.Skipf("%q procedure not implemented: %v", tt.name, res.Body)
 			continue
 		}
 		assert.Equal(tt.wantStatus, res.Status, "should respond with expected status")
