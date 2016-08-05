@@ -64,10 +64,10 @@ func New(c Config, opts ...ClientOption) Client {
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
 	//
-	// 	func New(t transport.Outbound, opts ...ClientOption) *MyServiceClient {
+	// 	func New(ch transport.Channel, opts ...ClientOption) *MyServiceClient {
 	// 		c := thrift.New(thrift.Config{
 	// 			Service: "MyService",
-	// 			Outbound: t,
+	// 			Channel: ch,
 	// 			Protocol: protocol.Binary,
 	// 		}, opts...)
 	// 		return &MyServiceClient{client: c}
@@ -86,36 +86,21 @@ func New(c Config, opts ...ClientOption) Client {
 		opt.applyClientOption(&cc)
 	}
 
-	// We disable enveloping if either the client or the transport requires it.
-	if !cc.DisableEnveloping {
-		cc.DisableEnveloping = isEnvelopingDisabled(c.Channel.Outbound.Options())
-	}
-
-	if cc.DisableEnveloping {
-		p = disableEnvelopingProtocol{
-			Protocol: p,
-			Type:     wire.Reply, // we only decode replies with this instance
-		}
-	}
-
 	return thriftClient{
-		p:             p,
-		t:             c.Channel.Outbound,
-		caller:        c.Channel.Caller,
-		service:       c.Channel.Service,
-		thriftService: c.Service,
+		p:                 p,
+		ch:                c.Channel,
+		thriftService:     c.Service,
+		disableEnveloping: cc.DisableEnveloping,
 	}
 }
 
 type thriftClient struct {
-	t transport.Outbound
-	p protocol.Protocol
+	ch transport.Channel
+	p  protocol.Protocol
 
 	// name of the Thrift service
-	thriftService string
-
-	// names of the services making the requests and receiving it.
-	caller, service string
+	thriftService     string
+	disableEnveloping bool
 }
 
 func (c thriftClient) Call(
@@ -135,9 +120,23 @@ func (c thriftClient) Call(
 	// 		success, err := myservice.SomeMethodHelper.UnwrapResponse(&result)
 	// 		return success, resMeta, err
 	// 	}
+
+	out := c.ch.GetOutbound()
+
+	// We disable enveloping if either the client or the transport requires it.
+	disableEnveloping := c.disableEnveloping || isEnvelopingDisabled(out.Options())
+
+	proto := c.p
+	if disableEnveloping {
+		proto = disableEnvelopingProtocol{
+			Protocol: proto,
+			Type:     wire.Reply, // we only decode replies with this instance
+		}
+	}
+
 	treq := transport.Request{
-		Caller:   c.caller,
-		Service:  c.service,
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
 		Encoding: Encoding,
 	}
 	ctx := meta.ToTransportRequest(reqMeta, &treq)
@@ -159,7 +158,7 @@ func (c thriftClient) Call(
 	}
 
 	var buffer bytes.Buffer
-	err = c.p.EncodeEnveloped(wire.Envelope{
+	err = proto.EncodeEnveloped(wire.Envelope{
 		Name:  reqBody.MethodName(),
 		Type:  reqEnvelopeType,
 		SeqID: 1, // don't care
@@ -170,7 +169,7 @@ func (c thriftClient) Call(
 	}
 
 	treq.Body = &buffer
-	tres, err := c.t.Call(ctx, &treq)
+	tres, err := out.Call(ctx, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
@@ -181,7 +180,7 @@ func (c thriftClient) Call(
 		return wire.Value{}, nil, err
 	}
 
-	envelope, err := c.p.DecodeEnveloped(bytes.NewReader(payload))
+	envelope, err := proto.DecodeEnveloped(bytes.NewReader(payload))
 	if err != nil {
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
 	}

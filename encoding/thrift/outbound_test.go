@@ -39,16 +39,23 @@ import (
 	"golang.org/x/net/context"
 )
 
+func valueptr(v wire.Value) *wire.Value { return &v }
+
 func TestClient(t *testing.T) {
 	tests := []struct {
+		desc                 string
 		giveRequestBody      envelope.Enveloper // outgoing request body
-		giveResponseEnvelope *wire.Envelope     // returned response envelope
+		giveResponseEnvelope *wire.Envelope     // returned on DecodeEnveloped()
+		giveResponseBody     *wire.Value        // return on Decode()
+		transportOptions     transport.Options  // options for the outbound
 
 		expectCall          bool           // whether outbound.Call is expected
-		wantRequestEnvelope *wire.Envelope // expected envelope to encode
+		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
+		wantRequestBody     *wire.Value    // expect Encode(x)
 		wantError           string         // whether an error is expected
 	}{
 		{
+			desc:            "happy case",
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -65,11 +72,21 @@ func TestClient(t *testing.T) {
 			},
 		},
 		{
+			desc:             "happy case without enveloping",
+			giveRequestBody:  fakeEnveloper(wire.Call),
+			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
+			expectCall:       true,
+			giveResponseBody: valueptr(wire.NewValueStruct(wire.Struct{})),
+			transportOptions: DisableEnvelopingForTransport,
+		},
+		{
+			desc:            "wrong envelope type for request",
 			giveRequestBody: fakeEnveloper(wire.Reply),
 			wantError: `failed to encode "thrift" request body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Reply`,
 		},
 		{
+			desc:            "TApplicationException",
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -92,6 +109,7 @@ func TestClient(t *testing.T) {
 				"TApplicationException{Message: great sadness, Type: ProtocolError}",
 		},
 		{
+			desc:            "wrong envelope type for response",
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -116,6 +134,7 @@ func TestClient(t *testing.T) {
 		defer mockCtrl.Finish()
 
 		proto := NewMockProtocol(mockCtrl)
+
 		if tt.wantRequestEnvelope != nil {
 			proto.EXPECT().EncodeEnveloped(*tt.wantRequestEnvelope, gomock.Any()).
 				Do(func(_ wire.Envelope, w io.Writer) {
@@ -124,9 +143,18 @@ func TestClient(t *testing.T) {
 				}).Return(nil)
 		}
 
+		if tt.wantRequestBody != nil {
+			proto.EXPECT().Encode(*tt.wantRequestBody, gomock.Any()).
+				Do(func(_ wire.Value, w io.Writer) {
+					_, err := w.Write([]byte("irrelevant"))
+					require.NoError(t, err, "Write() failed")
+				}).Return(nil)
+		}
+
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		trans := transporttest.NewMockOutbound(mockCtrl)
+		trans.EXPECT().Options().Return(tt.transportOptions).AnyTimes()
 		if tt.expectCall {
 			trans.EXPECT().Call(ctx,
 				transporttest.NewRequestMatcher(t, &transport.Request{
@@ -145,21 +173,23 @@ func TestClient(t *testing.T) {
 			proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(*tt.giveResponseEnvelope, nil)
 		}
 
-		c := thriftClient{
-			t:             trans,
-			p:             proto,
-			thriftService: "MyService",
-			caller:        "caller",
-			service:       "service",
+		if tt.giveResponseBody != nil {
+			proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(*tt.giveResponseBody, nil)
 		}
+
+		c := New(Config{
+			Service:  "MyService",
+			Channel:  transport.IdentityChannel("caller", "service", trans),
+			Protocol: proto,
+		})
 
 		_, _, err := c.Call(yarpc.NewReqMeta(ctx), tt.giveRequestBody)
 		if tt.wantError != "" {
-			if assert.Error(t, err, "expected failure") {
-				assert.Contains(t, err.Error(), tt.wantError)
+			if assert.Error(t, err, "%v: expected failure", tt.desc) {
+				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)
 			}
 		} else {
-			assert.NoError(t, err, "expected success")
+			assert.NoError(t, err, "%v: expected success", tt.desc)
 		}
 	}
 }

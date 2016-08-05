@@ -51,18 +51,3 @@ type Outbound interface {
 
 // Outbounds is a map of service name to Outbound for that service.
 type Outbounds map[string]Outbound
-
-// Channel scopes an Outbound to a single caller-service pair.
-type Channel struct {
-	// Caller is the name of the service making the request.
-	Caller string
-
-	// Service is the name of the service to which the request is being made.
-	Service string
-
-	// Outbound is the transport used to send the request.
-	Outbound Outbound
-
-	// TODO: Can add caller-service-specific TTLs here. These can be inherited
-	//from the YARPC otherwise.
-}
