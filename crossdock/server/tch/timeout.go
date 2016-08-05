@@ -36,7 +36,7 @@ type handlerTimeoutRawHandler struct{}
 
 func (handlerTimeoutRawHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	start := time.Now()
-	var err error = errors.HandlerTimeoutError("caller", "service",
+	err := errors.HandlerTimeoutError("caller", "service",
 		"handlertimeout/raw", time.Now().Sub(start))
 	err = errors.AsHandlerError("service", "handlertimeout/raw", err)
 	err = tchannel.NewSystemError(tchannel.ErrCodeTimeout, err.Error())

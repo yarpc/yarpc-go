@@ -47,7 +47,7 @@ var _ HandlerError = handlerTimeoutError{}
 // HandlerTimeoutError constructs an instance of a TimeoutError representing
 // a timeout that occurred during the handler execution, with the caller,
 // service, procedure and duration waited.
-func HandlerTimeoutError(Caller string, Service string, Procedure string, Duration time.Duration) TimeoutError {
+func HandlerTimeoutError(Caller string, Service string, Procedure string, Duration time.Duration) error {
 	return handlerTimeoutError{
 		Caller:    Caller,
 		Service:   Service,
@@ -71,7 +71,7 @@ var _ TimeoutError = remoteTimeoutError("")
 // RemoteTimeoutError builds a new TimeoutError with the given message.
 //
 // It represents a TimeoutError from a remote handler.
-func RemoteTimeoutError(message string) TimeoutError {
+func RemoteTimeoutError(message string) error {
 	return remoteTimeoutError(message)
 }
 
@@ -93,7 +93,7 @@ var _ TimeoutError = clientTimeoutError{}
 // ClientTimeoutError constructs an instance of a TimeoutError representing
 // a timeout that occurred while the client was waiting during a request to a
 // remote handler. It includes the service, procedure and duration waited.
-func ClientTimeoutError(Service string, Procedure string, Duration time.Duration) TimeoutError {
+func ClientTimeoutError(Service string, Procedure string, Duration time.Duration) error {
 	return clientTimeoutError{
 		Service:   Service,
 		Procedure: Procedure,
