@@ -35,8 +35,8 @@ func SleepRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error)
 }
 
 // WaitForTimeoutRaw waits after the context deadline then returns the context
-// error. yarpc should interpret this as an handler timeout, which it turns
-// should be forwarded to the yarpc client as a remote timeout.
+// error. yarpc should interpret this as an handler timeout, which in turns
+// should be forwarded to the yarpc client as a remote handler timeout.
 func WaitForTimeoutRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
 	ctx := reqMeta.Context()
 	if _, ok := ctx.Deadline(); !ok {

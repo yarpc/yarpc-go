@@ -34,15 +34,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Run tests the behavior of any outbound transport to verify that it will
-// timeout if the server fails to respond in a timely fashion. If the server
-// respects the context deadline and returns a timeout error before the client
-// drops the call, we should have a similar behavior.
+// Run tests if a yarpc client returns correctly a client timeout error behind
+// the TimeoutError interface when the context deadline is reached while the
+// server is taking too long to respond.
 func Run(t crossdock.T) {
-	clientTimeout(t)
-}
-
-func clientTimeout(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 

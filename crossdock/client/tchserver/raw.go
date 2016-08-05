@@ -56,6 +56,9 @@ func hello(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	}
 }
 
+// remoteTimeout tests if a yarpc client returns a remote timeout error behind
+// the TimeoutError interface when a remote tchannel handler returns a handler
+// timeout.
 func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
