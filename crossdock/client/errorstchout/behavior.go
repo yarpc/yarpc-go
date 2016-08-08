@@ -22,7 +22,6 @@ package errorstchout
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
