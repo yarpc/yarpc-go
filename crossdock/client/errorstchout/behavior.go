@@ -152,31 +152,6 @@ func Run(t crossdock.T) {
 				assert.Equal(tchannel.ErrCodeUnexpected, code, "must produce transport error")
 			},
 		},
-		{
-			name:      "remote timeout error",
-			procedure: "waitfortimeout/raw",
-			body:      []byte("{}"),
-			headers:   []byte{0x0, 0x0},
-			encoding:  "raw",
-			validate: func(res3 []byte, isAppErr bool, err error) {
-				if !assert.Error(err, "request must fail") {
-					return
-				}
-				assert.False(isAppErr, "waitfortimeout/raw procedure must not produce application error")
-				err, ok := err.(tchannel.SystemError)
-				if !assert.True(ok, "waitfortimeout/raw procedure must produce system error") {
-					return
-				}
-				code := tchannel.GetSystemErrorCode(err)
-				if code == tchannel.ErrCodeBadRequest && strings.Contains(err.Error(),
-					`unrecognized procedure "waitfortimeout/raw" for service "yarpc-test"`) {
-					t.Skipf("waitfortimeout/raw not implemented: %v", err)
-					return
-				}
-				assert.Equal(tchannel.ErrCodeTimeout, code, "must produce timeout error")
-				assert.Contains(err.Error(), `procedure "waitfortimeout/raw" of service "yarpc-test" from caller "yarpc-test" timed out after`, "must be a remote handler timeout")
-			},
-		},
 	}
 
 	server := t.Param(params.Server)
