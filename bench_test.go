@@ -2,7 +2,6 @@ package yarpc_test
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	yhttp "github.com/yarpc/yarpc-go/transport/http"
 	ytchannel "github.com/yarpc/yarpc-go/transport/tchannel"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	traw "github.com/uber/tchannel-go/raw"
@@ -22,61 +22,58 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
+var _reqBody = []byte("hello")
+
 func yarpcEcho(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
 	return body, yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers()), nil
 }
 
-var httpEcho http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	hs := w.Header()
-	for k, vs := range r.Header {
-		for _, v := range vs {
-			hs.Set(k, v)
+func httpEcho(t testing.TB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		hs := w.Header()
+		for k, vs := range r.Header {
+			for _, v := range vs {
+				hs.Set(k, v)
+			}
 		}
-	}
 
-	_, err := io.Copy(w, r.Body)
-	if err != nil {
-		panic(fmt.Sprintf("HTTP handler failed: %v", err))
+		_, err := io.Copy(w, r.Body)
+		assert.NoError(t, err, "failed to write HTTP response body")
 	}
 }
 
-type tchannelEcho struct{ b *testing.B }
+type tchannelEcho struct{ t testing.TB }
 
 func (tchannelEcho) Handle(ctx context.Context, args *traw.Args) (*traw.Res, error) {
 	return &traw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
 }
 
 func (t tchannelEcho) OnError(ctx context.Context, err error) {
-	t.b.Fatalf("request failed: %v", err)
+	t.t.Fatalf("request failed: %v", err)
 }
 
-func withDispatcher(b *testing.B, cfg yarpc.Config, f func(yarpc.Dispatcher)) {
+func withDispatcher(t testing.TB, cfg yarpc.Config, f func(yarpc.Dispatcher)) {
 	d := yarpc.NewDispatcher(cfg)
-	require.NoError(b, d.Start(), "failed to start server")
+	require.NoError(t, d.Start(), "failed to start server")
 	defer d.Stop()
 
 	f(d)
 }
 
 func runYARPCClient(b *testing.B, c raw.Client) {
-	reqBody := []byte("hello")
 	for i := 0; i < b.N; i++ {
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		if _, _, err := c.Call(yarpc.NewReqMeta(ctx).Procedure("echo"), reqBody); err != nil {
-			b.Fatalf("request %d failed: %v", i+1, err)
-		}
+		_, _, err := c.Call(yarpc.NewReqMeta(ctx).Procedure("echo"), _reqBody)
+		require.NoError(b, err, "request %d failed", i+1)
 	}
 }
 
 func runHTTPClient(b *testing.B, c *http.Client, url string) {
-	reqBody := []byte("hello")
 	for i := 0; i < b.N; i++ {
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		req, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
-		if err != nil {
-			b.Fatalf("failed to build request %d: %v", i+1, err)
-		}
+		req, err := http.NewRequest("POST", url, bytes.NewReader(_reqBody))
+		require.NoError(b, err, "failed to build request %d", i+1)
 
 		req.Header.Add("Rpc-Caller", "http-client")
 		req.Header.Add("Rpc-Encoding", "raw")
@@ -85,34 +82,24 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 		req.Header.Add("Rpc-Service", "server")
 
 		res, err := ctxhttp.Do(ctx, c, req)
-		if err != nil {
-			b.Fatalf("request %d failed: %v", i+1, err)
-		}
+		require.NoError(b, err, "request %d failed", i+1)
 
-		if _, err := ioutil.ReadAll(res.Body); err != nil {
-			b.Fatalf("failed to read response %d: %v", i+1, err)
-		}
-
-		if err := res.Body.Close(); err != nil {
-			b.Fatalf("failed to read response %d: %v", i+1, err)
-		}
+		_, err = ioutil.ReadAll(res.Body)
+		require.NoError(b, err, "failed to read response %d", i+1)
+		require.NoError(b, res.Body.Close(), "failed to close response body %d", i+1)
 	}
 }
 
 func runTChannelClient(b *testing.B, c *tchannel.Channel, hostPort string) {
 	headers := []byte{0x00, 0x00} // TODO: YARPC TChannel should support empty arg2
-	reqBody := []byte("hello")
 	for i := 0; i < b.N; i++ {
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		call, err := c.BeginCall(ctx, hostPort, "server", "echo",
 			&tchannel.CallOptions{Format: tchannel.Raw})
-		if err != nil {
-			b.Fatalf("BeginCall %d failed: %v", i+1, err)
-		}
+		require.NoError(b, err, "BeginCall %v failed", i+1)
 
-		if _, _, _, err := traw.WriteArgs(call, headers, reqBody); err != nil {
-			b.Fatalf("request %d failed: %v", i+1, err)
-		}
+		_, _, _, err = traw.WriteArgs(call, headers, _reqBody)
+		require.NoError(b, err, "request %v failed", i+1)
 	}
 }
 
@@ -137,7 +124,7 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 }
 
 func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
-	go http.ListenAndServe(":8998", httpEcho)
+	go http.ListenAndServe(":8998", httpEcho(b))
 
 	clientCfg := yarpc.Config{
 		Name:      "client",
@@ -165,7 +152,7 @@ func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
 }
 
 func Benchmark_HTTP_NetHTTPToNetHTTP(b *testing.B) {
-	go http.ListenAndServe(":8997", httpEcho)
+	go http.ListenAndServe(":8997", httpEcho(b))
 
 	b.ResetTimer()
 	runHTTPClient(b, http.DefaultClient, "http://localhost:8997")
@@ -207,7 +194,7 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 	require.NoError(b, err, "failed to build server TChannel")
 	defer serverCh.Close()
 
-	serverCh.Register(traw.Wrap(tchannelEcho{b: b}), "echo")
+	serverCh.Register(traw.Wrap(tchannelEcho{t: b}), "echo")
 	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
 
 	clientCh, err := tchannel.NewChannel("client", nil)
@@ -252,7 +239,7 @@ func Benchmark_TChannel_TChannelToTChannel(b *testing.B) {
 	require.NoError(b, err, "failed to build server TChannel")
 	defer serverCh.Close()
 
-	serverCh.Register(traw.Wrap(tchannelEcho{b: b}), "echo")
+	serverCh.Register(traw.Wrap(tchannelEcho{t: b}), "echo")
 	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
 
 	clientCh, err := tchannel.NewChannel("client", nil)
