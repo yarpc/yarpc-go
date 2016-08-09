@@ -75,9 +75,9 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 		req, err := http.NewRequest("POST", url, bytes.NewReader(_reqBody))
 		require.NoError(b, err, "failed to build request %d", i+1)
 
+		req.Header.Add("Context-TTL-MS", "100")
 		req.Header.Add("Rpc-Caller", "http-client")
 		req.Header.Add("Rpc-Encoding", "raw")
-		req.Header.Add("Context-TTL-MS", "100")
 		req.Header.Add("Rpc-Procedure", "echo")
 		req.Header.Add("Rpc-Service", "server")
 
