@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -57,6 +58,20 @@ func withDispatcher(t testing.TB, cfg yarpc.Config, f func(yarpc.Dispatcher)) {
 	defer d.Stop()
 
 	f(d)
+}
+
+func withHTTPServer(t testing.TB, listenOn string, h http.Handler, f func()) {
+	l, err := net.Listen("tcp", listenOn)
+	require.NoError(t, err, "could not listen on %q", listenOn)
+
+	ch := make(chan struct{})
+	go func() {
+		http.Serve(l, h)
+		close(ch)
+	}()
+	f()
+	assert.NoError(t, l.Close(), "failed to stop listener on %q", listenOn)
+	<-ch // wait until server has stopped
 }
 
 func runYARPCClient(b *testing.B, c raw.Client) {
@@ -123,16 +138,16 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 }
 
 func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
-	go http.ListenAndServe(":8998", httpEcho(b))
-
 	clientCfg := yarpc.Config{
 		Name:      "client",
 		Outbounds: transport.Outbounds{"server": yhttp.NewOutbound("http://localhost:8998")},
 	}
 
-	withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
-		b.ResetTimer()
-		runYARPCClient(b, raw.New(client.Channel("server")))
+	withHTTPServer(b, ":8998", httpEcho(b), func() {
+		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+			b.ResetTimer()
+			runYARPCClient(b, raw.New(client.Channel("server")))
+		})
 	})
 }
 
@@ -151,10 +166,10 @@ func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
 }
 
 func Benchmark_HTTP_NetHTTPToNetHTTP(b *testing.B) {
-	go http.ListenAndServe(":8997", httpEcho(b))
-
-	b.ResetTimer()
-	runHTTPClient(b, http.DefaultClient, "http://localhost:8997")
+	withHTTPServer(b, ":8997", httpEcho(b), func() {
+		b.ResetTimer()
+		runHTTPClient(b, http.DefaultClient, "http://localhost:8997")
+	})
 }
 
 func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
