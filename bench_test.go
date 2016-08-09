@@ -33,9 +33,7 @@ func httpEcho(t testing.TB) http.HandlerFunc {
 		defer r.Body.Close()
 		hs := w.Header()
 		for k, vs := range r.Header {
-			for _, v := range vs {
-				hs.Set(k, v)
-			}
+			hs[k] = vs
 		}
 
 		_, err := io.Copy(w, r.Body)
@@ -75,12 +73,13 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 		req, err := http.NewRequest("POST", url, bytes.NewReader(_reqBody))
 		require.NoError(b, err, "failed to build request %d", i+1)
 
-		req.Header.Add("Context-TTL-MS", "100")
-		req.Header.Add("Rpc-Caller", "http-client")
-		req.Header.Add("Rpc-Encoding", "raw")
-		req.Header.Add("Rpc-Procedure", "echo")
-		req.Header.Add("Rpc-Service", "server")
-
+		req.Header = http.Header{
+			"Context-TTL-MS": {"100"},
+			"Rpc-Caller":     {"http-client"},
+			"Rpc-Encoding":   {"raw"},
+			"Rpc-Procedure":  {"echo"},
+			"Rpc-Service":    {"server"},
+		}
 		res, err := ctxhttp.Do(ctx, c, req)
 		require.NoError(b, err, "request %d failed", i+1)
 
