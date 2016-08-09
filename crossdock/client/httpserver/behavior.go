@@ -25,12 +25,13 @@ import (
 	"strings"
 	"time"
 
-	crossdock "github.com/crossdock/crossdock-go"
 	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 	ht "github.com/yarpc/yarpc-go/transport/http"
+
+	crossdock "github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"
 )
 
