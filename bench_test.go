@@ -1,0 +1,264 @@
+package yarpc_test
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
+	yhttp "github.com/yarpc/yarpc-go/transport/http"
+	ytchannel "github.com/yarpc/yarpc-go/transport/tchannel"
+
+	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel-go"
+	traw "github.com/uber/tchannel-go/raw"
+	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
+)
+
+func yarpcEcho(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+	return body, yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers()), nil
+}
+
+var httpEcho http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	hs := w.Header()
+	for k, vs := range r.Header {
+		for _, v := range vs {
+			hs.Set(k, v)
+		}
+	}
+
+	_, err := io.Copy(w, r.Body)
+	if err != nil {
+		panic(fmt.Sprintf("HTTP handler failed: %v", err))
+	}
+}
+
+type tchannelEcho struct{ b *testing.B }
+
+func (tchannelEcho) Handle(ctx context.Context, args *traw.Args) (*traw.Res, error) {
+	return &traw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
+}
+
+func (t tchannelEcho) OnError(ctx context.Context, err error) {
+	t.b.Fatalf("request failed: %v", err)
+}
+
+func withDispatcher(b *testing.B, cfg yarpc.Config, f func(yarpc.Dispatcher)) {
+	d := yarpc.NewDispatcher(cfg)
+	require.NoError(b, d.Start(), "failed to start server")
+	defer d.Stop()
+
+	f(d)
+}
+
+func runYARPCClient(b *testing.B, c raw.Client) {
+	reqBody := []byte("hello")
+	for i := 0; i < b.N; i++ {
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		if _, _, err := c.Call(yarpc.NewReqMeta(ctx).Procedure("echo"), reqBody); err != nil {
+			b.Fatalf("request %d failed: %v", i+1, err)
+		}
+	}
+}
+
+func runHTTPClient(b *testing.B, c *http.Client, url string) {
+	reqBody := []byte("hello")
+	for i := 0; i < b.N; i++ {
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		req, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
+		if err != nil {
+			b.Fatalf("failed to build request %d: %v", i+1, err)
+		}
+
+		req.Header.Add("Rpc-Caller", "http-client")
+		req.Header.Add("Rpc-Encoding", "raw")
+		req.Header.Add("Context-TTL-MS", "100")
+		req.Header.Add("Rpc-Procedure", "echo")
+		req.Header.Add("Rpc-Service", "server")
+
+		res, err := ctxhttp.Do(ctx, c, req)
+		if err != nil {
+			b.Fatalf("request %d failed: %v", i+1, err)
+		}
+
+		if _, err := ioutil.ReadAll(res.Body); err != nil {
+			b.Fatalf("failed to read response %d: %v", i+1, err)
+		}
+
+		if err := res.Body.Close(); err != nil {
+			b.Fatalf("failed to read response %d: %v", i+1, err)
+		}
+	}
+}
+
+func runTChannelClient(b *testing.B, c *tchannel.Channel, hostPort string) {
+	headers := []byte{0x00, 0x00} // TODO: YARPC TChannel should support empty arg2
+	reqBody := []byte("hello")
+	for i := 0; i < b.N; i++ {
+		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		call, err := c.BeginCall(ctx, hostPort, "server", "echo",
+			&tchannel.CallOptions{Format: tchannel.Raw})
+		if err != nil {
+			b.Fatalf("BeginCall %d failed: %v", i+1, err)
+		}
+
+		if _, _, _, err := traw.WriteArgs(call, headers, reqBody); err != nil {
+			b.Fatalf("request %d failed: %v", i+1, err)
+		}
+	}
+}
+
+func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
+	serverCfg := yarpc.Config{
+		Name:     "server",
+		Inbounds: []transport.Inbound{yhttp.NewInbound(":8999")},
+	}
+
+	clientCfg := yarpc.Config{
+		Name:      "client",
+		Outbounds: transport.Outbounds{"server": yhttp.NewOutbound("http://localhost:8999")},
+	}
+
+	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
+		raw.Register(server, raw.Procedure("echo", yarpcEcho))
+		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+			b.ResetTimer()
+			runYARPCClient(b, raw.New(client.Channel("server")))
+		})
+	})
+}
+
+func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
+	go http.ListenAndServe(":8998", httpEcho)
+
+	clientCfg := yarpc.Config{
+		Name:      "client",
+		Outbounds: transport.Outbounds{"server": yhttp.NewOutbound("http://localhost:8998")},
+	}
+
+	withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+		b.ResetTimer()
+		runYARPCClient(b, raw.New(client.Channel("server")))
+	})
+}
+
+func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
+	serverCfg := yarpc.Config{
+		Name:     "server",
+		Inbounds: []transport.Inbound{yhttp.NewInbound(":8996")},
+	}
+
+	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
+		raw.Register(server, raw.Procedure("echo", yarpcEcho))
+
+		b.ResetTimer()
+		runHTTPClient(b, http.DefaultClient, "http://localhost:8996")
+	})
+}
+
+func Benchmark_HTTP_NetHTTPToNetHTTP(b *testing.B) {
+	go http.ListenAndServe(":8997", httpEcho)
+
+	b.ResetTimer()
+	runHTTPClient(b, http.DefaultClient, "http://localhost:8997")
+}
+
+func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
+	serverCh, err := tchannel.NewChannel("server", nil)
+	require.NoError(b, err, "failed to build server TChannel")
+
+	serverCfg := yarpc.Config{
+		Name:     "server",
+		Inbounds: []transport.Inbound{ytchannel.NewInbound(serverCh)},
+	}
+
+	clientCh, err := tchannel.NewChannel("client", nil)
+	require.NoError(b, err, "failed to build client TChannel")
+
+	// no defer close on channels because YARPC will take care of that
+
+	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
+		raw.Register(server, raw.Procedure("echo", yarpcEcho))
+
+		// Need server already started to build client config
+		clientCfg := yarpc.Config{
+			Name: "client",
+			Outbounds: transport.Outbounds{
+				"server": ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+			},
+		}
+		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+			b.ResetTimer()
+			runYARPCClient(b, raw.New(client.Channel("server")))
+		})
+	})
+}
+
+func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
+	serverCh, err := tchannel.NewChannel("server", nil)
+	require.NoError(b, err, "failed to build server TChannel")
+	defer serverCh.Close()
+
+	serverCh.Register(traw.Wrap(tchannelEcho{b: b}), "echo")
+	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
+
+	clientCh, err := tchannel.NewChannel("client", nil)
+	require.NoError(b, err, "failed to build client TChannel")
+
+	clientCfg := yarpc.Config{
+		Name: "client",
+		Outbounds: transport.Outbounds{
+			"server": ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+		},
+	}
+
+	withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+		b.ResetTimer()
+		runYARPCClient(b, raw.New(client.Channel("server")))
+	})
+}
+
+func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
+	serverCh, err := tchannel.NewChannel("server", nil)
+	require.NoError(b, err, "failed to build server TChannel")
+
+	serverCfg := yarpc.Config{
+		Name:     "server",
+		Inbounds: []transport.Inbound{ytchannel.NewInbound(serverCh)},
+	}
+
+	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
+		raw.Register(server, raw.Procedure("echo", yarpcEcho))
+
+		clientCh, err := tchannel.NewChannel("client", nil)
+		require.NoError(b, err, "failed to build client TChannel")
+		defer clientCh.Close()
+
+		b.ResetTimer()
+		runTChannelClient(b, clientCh, serverCh.PeerInfo().HostPort)
+	})
+}
+
+func Benchmark_TChannel_TChannelToTChannel(b *testing.B) {
+	serverCh, err := tchannel.NewChannel("server", nil)
+	require.NoError(b, err, "failed to build server TChannel")
+	defer serverCh.Close()
+
+	serverCh.Register(traw.Wrap(tchannelEcho{b: b}), "echo")
+	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
+
+	clientCh, err := tchannel.NewChannel("client", nil)
+	require.NoError(b, err, "failed to build client TChannel")
+	defer clientCh.Close()
+
+	b.ResetTimer()
+	runTChannelClient(b, clientCh, serverCh.PeerInfo().HostPort)
+}
