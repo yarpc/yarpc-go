@@ -85,6 +85,7 @@ func register(reg transport.Registry) {
 	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
 	json.Register(reg, json.Procedure("bad-response", BadResponse))
 	json.Register(reg, json.Procedure("phone", Phone))
+	json.Register(reg, json.Procedure("sleep", Sleep))
 
 	raw.Register(reg, raw.Procedure("sleep/raw", SleepRaw))
 	raw.Register(reg, raw.Procedure("waitfortimeout/raw", WaitForTimeoutRaw))
