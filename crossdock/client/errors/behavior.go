@@ -342,7 +342,7 @@ func Run(t crossdock.T) {
 			body: `{
 				"service": "yarpc-test",
 				"procedure": "sleep",
-				"body": {},
+				"body": "unused",
 				"transport": {"http": {"host": "` + t.Param(params.Server) + `", "port": 8081}}
 			}`,
 			skipBody: `UnexpectedError: error for procedure "phone" of service` +
