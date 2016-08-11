@@ -1,12 +1,15 @@
-hash: 94bc00970e27b21e47810d384776f5967ee27ae9ad2ef89c2fb22342711a9df7
-updated: 2016-07-18T10:13:57.313265143-07:00
+hash: 4ea05eb1f0074f6397781fc25a850b9c3318558046d0e2ae8a17b4bcbe852a58
+updated: 2016-08-11T16:22:23.986797563-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 5a3f855b4e6882184f13c698855c877241144a12
+  version: 2007783e874d524a46b818598a45078448ecc53e
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
-  version: 9a20d202853d1322cb1d440821ff60dcebfb9323
+  version: 228792ab861c86f8900b2db0439577feef9ec9d8
+  subpackages:
+  - assert
+  - require
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
@@ -15,6 +18,14 @@ imports:
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
+- name: github.com/golang/protobuf
+  version: 2c1988e8c18d14b142c0b472624f71647cf39adb
+  subpackages:
+  - proto
+- name: github.com/opentracing/opentracing-go
+  version: 855519783f479520497c6b3445611b05fc42f009
+  subpackages:
+  - ext
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -25,7 +36,7 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 123f83ad638e1eff1f48ec69e6170feb12c4dc5c
+  version: 13abcf75760f008b6f92ee3185a9534e286b64a0
   subpackages:
   - ptr
   - wire
@@ -34,21 +45,41 @@ imports:
   - protocol/binary
   - envelope/internal/exception
 - name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+  version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
-  version: f9e40ff1212a2542e21d8b55510079aabac0cf66
+  version: 99f494da788eeefb062e564e490dfe9827e288dc
   subpackages:
   - json
   - raw
   - thrift
+  - testutils/testreader
+  - testutils
   - relay
   - tnet
   - trand
   - typed
   - thrift/gen-go/meta
+  - relay/relaytest
+  - testutils/goroutines
 - name: golang.org/x/net
-  version: 3797cd8864994d713d909eda5e61ede8683fdc12
+  version: 075e191f18186a8ff2becaf64478e30f4545cdad
   subpackages:
   - context
   - context/ctxhttp
-devImports: []
+  - http2
+  - trace
+  - http2/hpack
+  - lex/httplex
+  - internal/timeseries
+- name: google.golang.org/grpc
+  version: 13edeeffdea7a41d5aad96c28deb4c7bd01a9397
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - transport
+  - peer
+testImports: []
