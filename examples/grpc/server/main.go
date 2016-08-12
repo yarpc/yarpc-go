@@ -29,7 +29,6 @@ func handler(srv interface{}, ctx context.Context, dec func(interface{}) error, 
 		return nil, err
 	}
 	if interceptor == nil {
-		fmt.Println("interceptor==nil")
 		return srv.(service).Bar(ctx, &in) // &in
 	}
 	// TODO this path hasn't been exercised
