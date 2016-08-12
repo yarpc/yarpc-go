@@ -32,8 +32,11 @@ func (i *inbound) Start(h transport.Handler) error {
 		return err
 	}
 
+	// TODO need to get all supported encodings...
+	// TODO need to a get a list of all procedure names...
+
 	// TODO only 1 codec is supported at the moment, https://github.com/grpc/grpc-go/issues/803
-	s := grpc.NewServer(grpc.CustomCodec(rawCodec{}))
+	s := grpc.NewServer(grpc.CustomCodec(RawCodec{}))
 
 	// TODO should block until ready to accept requests
 	go s.Serve(lis)

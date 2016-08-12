@@ -5,8 +5,9 @@ import (
 	"log"
 	"net"
 
-	"golang.org/x/net/context"
+	gr "github.com/yarpc/yarpc-go/transport/grpc"
 
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -77,27 +78,7 @@ func main() {
 	}
 
 	// TODO only 1 codec is supported at the moment, https://github.com/grpc/grpc-go/issues/803
-	s := grpc.NewServer(grpc.CustomCodec(testCodec{}))
+	s := grpc.NewServer(grpc.CustomCodec(gr.RawCodec{}))
 	s.RegisterService(&serviceDesc, server{}) // @generated
 	s.Serve(lis)
-}
-
-// custom codec
-
-type testCodec struct {
-}
-
-func (testCodec) Marshal(v interface{}) ([]byte, error) {
-	fmt.Println("server.go-testCodec::Marshal")
-	return []byte(*(v.(*string))), nil
-}
-
-func (testCodec) Unmarshal(data []byte, v interface{}) error {
-	fmt.Println("server.go-testCodec::Unmarshal")
-	*(v.(*string)) = string(data)
-	return nil
-}
-
-func (testCodec) String() string {
-	return "test"
 }

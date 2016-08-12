@@ -76,7 +76,8 @@ func (i *inbound) Start(h transport.Handler) error {
 		return err
 	}
 
-	var httpHandler http.Handler = handler{Handler: h}
+	var httpHandler http.Handler
+	httpHandler = handler{Handler: h}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
 		httpHandler = i.mux

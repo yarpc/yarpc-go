@@ -1,17 +1,19 @@
 package grpc
 
-type rawCodec struct {
-}
+// RawCodec writes strings to/from the wire
+type RawCodec struct{}
 
-func (rawCodec) Marshal(v interface{}) ([]byte, error) {
+// Marshal takes a string pointer converts it to a byte sliced
+func (RawCodec) Marshal(v interface{}) ([]byte, error) {
 	return []byte(*(v.(*string))), nil
 }
 
-func (rawCodec) Unmarshal(data []byte, v interface{}) error {
+// Unmarshal takes a byte slice and writes it to v
+func (RawCodec) Unmarshal(data []byte, v interface{}) error {
 	*(v.(*string)) = string(data)
 	return nil
 }
 
-func (rawCodec) String() string {
+func (RawCodec) String() string {
 	return "raw"
 }

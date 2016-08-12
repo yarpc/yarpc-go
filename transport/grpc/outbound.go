@@ -22,7 +22,7 @@ type outbound struct {
 }
 
 func (o *outbound) Start() error {
-	conn, err := grpc.Dial(o.address, grpc.WithInsecure(), grpc.WithCodec(rawCodec{}))
+	conn, err := grpc.Dial(o.address, grpc.WithInsecure(), grpc.WithCodec(RawCodec{}))
 	if err != nil {
 		return err
 	}
