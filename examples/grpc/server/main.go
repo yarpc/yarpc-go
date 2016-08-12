@@ -63,9 +63,9 @@ type server struct{}
 
 func (server) Bar(ctx context.Context, in *string) (*string, error) {
 	fmt.Println("main.server::Bar")
-	res := "hiiii yarpc"
+	res := "server says hi"
 	if in != nil {
-		res = *in
+		res = fmt.Sprintf("server got request body: %s", *in)
 	}
 	return &res, nil
 }
