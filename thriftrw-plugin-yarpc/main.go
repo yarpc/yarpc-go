@@ -91,16 +91,16 @@ import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	/*EXTRA_IMPORTS*/
 	_<basename .Package> "<.Package>"
-	<if .ParentId>
-		<$parent := getService .ParentId>
-		"<(getModule $parent.ModuleId).Package>/yarpc/<lower $parent.Name>server"
+	<if .ParentID>
+		<$parent := getService .ParentID>
+		"<(getModule $parent.ModuleID).Package>/yarpc/<lower $parent.Name>server"
 	<end>
 )
 
 // Interface is the server-side interface for the <.Name> service.
 type Interface interface {
-	<if .ParentId>
-		<lower (getService .ParentId).Name>server.Interface
+	<if .ParentID>
+		<lower (getService .ParentID).Name>server.Interface
 	<end>
 
 	<range .Functions>
@@ -168,17 +168,17 @@ func (h handler) <.Name>(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respons
 `
 
 func generateServer(req *api.GenerateRequest, service *api.Service) (string, []byte, error) {
-	module := req.Modules[service.ModuleId]
+	module := req.Modules[service.ModuleID]
 	packageName := strings.ToLower(service.Name) + "server"
 	path := filepath.Join(module.Directory, "yarpc", packageName, "server.go")
 
 	extraImports := make(map[string]struct{})
 	tmpl, err := template.New("server").Delims("<", ">").Funcs(template.FuncMap{
-		"getModule": func(moduleId int32) *api.Module {
-			return req.Modules[moduleId]
+		"getModule": func(moduleID api.ModuleID) *api.Module {
+			return req.Modules[moduleID]
 		},
-		"getService": func(serviceId int32) *api.Service {
-			return req.Services[serviceId]
+		"getService": func(serviceID api.ServiceID) *api.Service {
+			return req.Services[serviceID]
 		},
 		"lower":      strings.ToLower,
 		"lowerFirst": lowerFirst,
@@ -210,16 +210,16 @@ import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	/*EXTRA_IMPORTS*/
 	_<basename .Package> "<.Package>"
-	<if .ParentId>
-		<$parent := getService .ParentId>
-		"<(getModule $parent.ModuleId).Package>/yarpc/<lower $parent.Name>client"
+	<if .ParentID>
+		<$parent := getService .ParentID>
+		"<(getModule $parent.ModuleID).Package>/yarpc/<lower $parent.Name>client"
 	<end>
 )
 
 // Interface is a client for the <.Name> service.
 type Interface interface {
-	<if .ParentId>
-		<lower (getService .ParentId).Name>client.Interface
+	<if .ParentID>
+		<lower (getService .ParentID).Name>client.Interface
 	<end>
 
 	<range .Functions>
@@ -273,17 +273,17 @@ func (c client) <.Name>(
 `
 
 func generateClient(req *api.GenerateRequest, service *api.Service) (string, []byte, error) {
-	module := req.Modules[service.ModuleId]
+	module := req.Modules[service.ModuleID]
 	packageName := strings.ToLower(service.Name) + "client"
 	path := filepath.Join(module.Directory, "yarpc", packageName, "client.go")
 
 	extraImports := make(map[string]struct{})
 	tmpl, err := template.New("client").Delims("<", ">").Funcs(template.FuncMap{
-		"getModule": func(moduleId int32) *api.Module {
-			return req.Modules[moduleId]
+		"getModule": func(moduleID api.ModuleID) *api.Module {
+			return req.Modules[moduleID]
 		},
-		"getService": func(serviceId int32) *api.Service {
-			return req.Services[serviceId]
+		"getService": func(serviceID api.ServiceID) *api.Service {
+			return req.Services[serviceID]
 		},
 		"lower":      strings.ToLower,
 		"lowerFirst": lowerFirst,
