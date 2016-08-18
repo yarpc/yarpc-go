@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"golang.org/x/net/context"
+	gr "github.com/yarpc/yarpc-go/transport/grpc"
 
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -14,7 +15,7 @@ const (
 )
 
 func main() {
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithCodec(testCodec{}))
+	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithCodec(gr.RawCodec{}))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -29,22 +30,4 @@ func main() {
 	}
 
 	fmt.Println("GOT RESP:", res)
-}
-
-type testCodec struct {
-}
-
-func (testCodec) Marshal(v interface{}) ([]byte, error) {
-	fmt.Println("client.go-testCodec::Marshal")
-	return []byte(*(v.(*string))), nil
-}
-
-func (testCodec) Unmarshal(data []byte, v interface{}) error {
-	fmt.Println("client.go-testCodec::Unmarshal")
-	*(v.(*string)) = string(data)
-	return nil
-}
-
-func (testCodec) String() string {
-	return "test"
 }
