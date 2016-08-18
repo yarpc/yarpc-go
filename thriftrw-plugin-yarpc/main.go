@@ -176,7 +176,7 @@ var templateOptions = []plugin.TemplateOption{
 
 type generator struct{}
 
-func (generator) Generate(req *api.GenerateRequest) (*api.GenerateResponse, error) {
+func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
 	files := make(map[string][]byte)
 	for _, serviceID := range req.RootServices {
 		service := req.Services[serviceID]
@@ -219,9 +219,9 @@ func (generator) Generate(req *api.GenerateRequest) (*api.GenerateResponse, erro
 		files[serverFilePath] = serverContents
 		files[clientFilePath] = clientContents
 	}
-	return &api.GenerateResponse{Files: files}, nil
+	return &api.GenerateServiceResponse{Files: files}, nil
 }
 
 func main() {
-	plugin.Main(&plugin.Plugin{Name: "yarpc", Generator: generator{}})
+	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: generator{}})
 }
