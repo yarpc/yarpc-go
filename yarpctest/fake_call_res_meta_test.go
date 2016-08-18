@@ -22,11 +22,9 @@ package yarpctest
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	yarpc "github.com/yarpc/yarpc-go"
-	"golang.org/x/net/context"
 )
 
 func TestResMeta(t *testing.T) {
@@ -50,11 +48,7 @@ func TestResMeta(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		reqMeta := tt.build(NewCallResMetaBuilder(ctx)).Build()
-		assert.Equal(t, ctx, reqMeta.Context())
+		reqMeta := tt.build(NewCallResMetaBuilder()).Build()
 		assert.Equal(t, tt.wantHeaders, reqMeta.Headers())
 	}
 }

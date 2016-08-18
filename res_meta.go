@@ -20,44 +20,29 @@
 
 package yarpc
 
-import "golang.org/x/net/context"
-
 // ResMeta contains information about an outgoing YARPC response.
 type ResMeta interface {
 	Headers(Headers) ResMeta
-
-	GetContext() context.Context
 	GetHeaders() Headers
 }
 
 // CallResMeta contains information about an incoming YARPC response.
 type CallResMeta interface {
-	Context() context.Context
 	Headers() Headers
 }
 
-// NewResMeta constructs a ResMeta with the given Context.
-//
-// The context MUST NOT be nil.
-func NewResMeta(ctx context.Context) ResMeta {
-	if ctx == nil {
-		panic("invalid usage of ResMeta: context cannot be nil")
-	}
-	return &resMeta{ctx: ctx}
+// NewResMeta constructs a ResMeta
+func NewResMeta() ResMeta {
+	return &resMeta{}
 }
 
 type resMeta struct {
-	ctx     context.Context
 	headers Headers
 }
 
 func (r *resMeta) Headers(h Headers) ResMeta {
 	r.headers = h
 	return r
-}
-
-func (r *resMeta) GetContext() context.Context {
-	return r.ctx
 }
 
 func (r *resMeta) GetHeaders() Headers {

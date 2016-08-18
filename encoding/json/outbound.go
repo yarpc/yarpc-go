@@ -65,7 +65,6 @@ func (c jsonClient) Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBody
 
 	treq.Body = bytes.NewReader(encoded)
 	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
-	// TODO: transport must return response context
 
 	if err != nil {
 		return nil, err
@@ -80,6 +79,5 @@ func (c jsonClient) Call(reqMeta yarpc.CallReqMeta, reqBody interface{}, resBody
 		return nil, err
 	}
 
-	// TODO: when transport returns response context, use that here.
-	return meta.FromTransportResponse(ctx, tres), nil
+	return meta.FromTransportResponse(tres), nil
 }

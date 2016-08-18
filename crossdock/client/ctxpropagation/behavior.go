@@ -222,7 +222,7 @@ func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
 func (h *singleHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
 	assertBaggageMatches(h.t, reqMeta.Context(), h.wantBaggage)
-	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	resMeta := yarpc.NewResMeta().Headers(reqMeta.Headers())
 	return map[string]interface{}{}, resMeta, nil
 }
 
@@ -271,8 +271,7 @@ func (h *multiHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (inter
 			Body:      &js.RawMessage{'{', '}'},
 		}, &resp)
 
-	resMeta := yarpc.NewResMeta(phoneResMeta.Context()).
-		Headers(phoneResMeta.Headers())
+	resMeta := yarpc.NewResMeta().Headers(phoneResMeta.Headers())
 	return map[string]interface{}{}, resMeta, err
 }
 

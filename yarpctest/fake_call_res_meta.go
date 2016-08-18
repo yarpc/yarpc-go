@@ -20,11 +20,7 @@
 
 package yarpctest
 
-import (
-	"github.com/yarpc/yarpc-go"
-
-	"golang.org/x/net/context"
-)
+import "github.com/yarpc/yarpc-go"
 
 // CallResMetaBuilder helps build fake yarpc.CallResMeta objects for testing.
 //
@@ -34,13 +30,12 @@ import (
 type CallResMetaBuilder struct {
 	singleUse
 
-	ctx     context.Context
 	headers yarpc.Headers
 }
 
 // NewCallResMetaBuilder builds a new fake ReqMeta for unit tests
-func NewCallResMetaBuilder(ctx context.Context) *CallResMetaBuilder {
-	return &CallResMetaBuilder{ctx: ctx}
+func NewCallResMetaBuilder() *CallResMetaBuilder {
+	return &CallResMetaBuilder{}
 }
 
 // Headers specifies the response headers for this CallResMeta.
@@ -61,10 +56,6 @@ func (f *CallResMetaBuilder) Build() yarpc.CallResMeta {
 }
 
 type fakeResMeta CallResMetaBuilder
-
-func (r fakeResMeta) Context() context.Context {
-	return CallResMetaBuilder(r).ctx
-}
 
 func (r fakeResMeta) Headers() yarpc.Headers {
 	return CallResMetaBuilder(r).headers

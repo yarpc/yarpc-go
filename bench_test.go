@@ -26,7 +26,7 @@ import (
 var _reqBody = []byte("hello")
 
 func yarpcEcho(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-	return body, yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers()), nil
+	return body, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
 }
 
 func httpEcho(t testing.TB) http.HandlerFunc {

@@ -64,6 +64,5 @@ func (c rawClient) Call(reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.C
 		return nil, nil, err
 	}
 
-	// TODO: when transport returns response context, use that here.
-	return resBody, meta.FromTransportResponse(ctx, tres), nil
+	return resBody, meta.FromTransportResponse(tres), nil
 }

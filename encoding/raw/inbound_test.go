@@ -88,8 +88,7 @@ func TestRawHandler(t *testing.T) {
 			procedure:  "responseHeaders",
 			bodyChunks: [][]byte{},
 			handler: func(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-				resMeta := yarpc.NewResMeta(reqMeta.Context()).
-					Headers(yarpc.NewHeaders().With("hello", "world"))
+				resMeta := yarpc.NewResMeta().Headers(yarpc.NewHeaders().With("hello", "world"))
 				return []byte{}, resMeta, nil
 			},
 			wantHeaders: transport.NewHeaders().With("hello", "world"),

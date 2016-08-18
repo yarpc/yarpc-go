@@ -52,8 +52,7 @@ func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *trans
 	}
 
 	if resMeta != nil {
-		_ = meta.ToTransportResponseWriter(resMeta, rw)
-		// TODO(abg): Propagate response context
+		meta.ToTransportResponseWriter(resMeta, rw)
 	}
 
 	if _, err := rw.Write(resBody); err != nil {

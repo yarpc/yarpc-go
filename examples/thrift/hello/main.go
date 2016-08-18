@@ -67,7 +67,7 @@ type helloHandler struct{}
 
 func (h helloHandler) Echo(reqMeta yarpc.ReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.ResMeta, error) {
 	return &hello.EchoResponse{Message: echo.Message, Count: echo.Count + 1},
-		yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers()),
+		yarpc.NewResMeta().Headers(reqMeta.Headers()),
 		nil
 }
 

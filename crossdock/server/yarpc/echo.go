@@ -27,13 +27,13 @@ import (
 
 // EchoRaw implements the echo/raw procedure.
 func EchoRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	resMeta := yarpc.NewResMeta().Headers(reqMeta.Headers())
 	return body, resMeta, nil
 }
 
 // EchoJSON implements the echo procedure.
 func EchoJSON(reqMeta yarpc.ReqMeta, body map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
-	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	resMeta := yarpc.NewResMeta().Headers(reqMeta.Headers())
 	return body, resMeta, nil
 }
 
@@ -42,6 +42,6 @@ type EchoThrift struct{}
 
 // Echo endpoint for the Echo service.
 func (EchoThrift) Echo(reqMeta yarpc.ReqMeta, ping *echo.Ping) (*echo.Pong, yarpc.ResMeta, error) {
-	resMeta := yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	resMeta := yarpc.NewResMeta().Headers(reqMeta.Headers())
 	return &echo.Pong{Boop: ping.Beep}, resMeta, nil
 }
