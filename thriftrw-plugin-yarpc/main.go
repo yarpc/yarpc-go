@@ -10,11 +10,6 @@ import (
 	"github.com/thriftrw/thriftrw-go/plugin/api"
 )
 
-func lowerFirst(s string) string {
-	head, headIndex := utf8.DecodeRuneInString(s)
-	return string(unicode.ToLower(head)) + string(s[headIndex:])
-}
-
 const serverTemplate = `
 <$pkgname := printf "%sserver" (lower .Service.Name)>
 package <$pkgname>
@@ -99,26 +94,6 @@ func (h handler) <.Name>(reqMeta <$yarpc>.ReqMeta, body <$wire>.Value) (<$thrift
 <end>
 `
 
-func generateServer(req *api.GenerateRequest, service *api.Service) (string, []byte, error) {
-	module := req.Modules[service.ModuleID]
-	packageName := strings.ToLower(service.Name) + "server"
-	path := filepath.Join(module.Directory, "yarpc", packageName, "server.go")
-
-	var parent *api.Service
-	if service.ParentID != nil {
-		parent = req.Services[*service.ParentID]
-	}
-
-	contents, err := plugin.GoFileFromTemplate(path, serverTemplate, struct {
-		Service *api.Service
-		Parent  *api.Service
-	}{Service: service, Parent: parent},
-		plugin.TemplateFunc("lower", strings.ToLower),
-		plugin.TemplateFunc("lowerFirst", lowerFirst),
-	)
-	return path, contents, err
-}
-
 const clientTemplate = `
 <$pkgname := printf "%sclient" (lower .Service.Name)>
 package <$pkgname>
@@ -189,24 +164,14 @@ func (c client) <.Name>(
 <end>
 `
 
-func generateClient(req *api.GenerateRequest, service *api.Service) (string, []byte, error) {
-	module := req.Modules[service.ModuleID]
-	packageName := strings.ToLower(service.Name) + "client"
-	path := filepath.Join(module.Directory, "yarpc", packageName, "client.go")
+func lowerFirst(s string) string {
+	head, headIndex := utf8.DecodeRuneInString(s)
+	return string(unicode.ToLower(head)) + string(s[headIndex:])
+}
 
-	var parent *api.Service
-	if service.ParentID != nil {
-		parent = req.Services[*service.ParentID]
-	}
-
-	contents, err := plugin.GoFileFromTemplate(path, clientTemplate, struct {
-		Service *api.Service
-		Parent  *api.Service
-	}{Service: service, Parent: parent},
-		plugin.TemplateFunc("lower", strings.ToLower),
-		plugin.TemplateFunc("lowerFirst", lowerFirst),
-	)
-	return path, contents, err
+var templateOptions = []plugin.TemplateOption{
+	plugin.TemplateFunc("lower", strings.ToLower),
+	plugin.TemplateFunc("lowerFirst", lowerFirst),
 }
 
 type generator struct{}
@@ -215,20 +180,44 @@ func (generator) Generate(req *api.GenerateRequest) (*api.GenerateResponse, erro
 	files := make(map[string][]byte)
 	for _, serviceID := range req.RootServices {
 		service := req.Services[serviceID]
+		module := req.Modules[service.ModuleID]
 
-		// .../yarpc/myserviceserver
-		path, body, err := generateServer(req, service)
+		var parent *api.Service
+		if service.ParentID != nil {
+			parent = req.Services[*service.ParentID]
+		}
+
+		templateData := struct {
+			Service *api.Service
+			Parent  *api.Service
+		}{Service: service, Parent: parent}
+
+		// kv.thrift => .../kv/yarpc
+		baseDir := filepath.Join(module.Directory, "yarpc")
+
+		serverPackageName := strings.ToLower(service.Name) + "server"
+		clientPackageName := strings.ToLower(service.Name) + "client"
+
+		// kv.thrift =>
+		//   .../yarpc/keyvalueserver/server.go
+		//   .../yarpc/keyvalueclient/client.go
+		serverFilePath := filepath.Join(baseDir, serverPackageName, "server.go")
+		clientFilePath := filepath.Join(baseDir, clientPackageName, "client.go")
+
+		serverContents, err := plugin.GoFileFromTemplate(
+			serverFilePath, serverTemplate, templateData, templateOptions...)
 		if err != nil {
 			return nil, err
 		}
-		files[path] = body
 
-		// .../yarpc/myserviceclient
-		path, body, err = generateClient(req, service)
+		clientContents, err := plugin.GoFileFromTemplate(
+			clientFilePath, clientTemplate, templateData, templateOptions...)
 		if err != nil {
 			return nil, err
 		}
-		files[path] = body
+
+		files[serverFilePath] = serverContents
+		files[clientFilePath] = clientContents
 	}
 	return &api.GenerateResponse{Files: files}, nil
 }
