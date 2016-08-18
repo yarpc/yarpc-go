@@ -1,13 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"html/template"
-	"log"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -21,130 +15,68 @@ func lowerFirst(s string) string {
 	return string(unicode.ToLower(head)) + string(s[headIndex:])
 }
 
-func formatType(t *api.Type, extraImports map[string]struct{}) string {
-	switch {
-	case t.SimpleType != nil:
-		switch *t.SimpleType {
-		case api.SimpleTypeBool:
-			return "bool"
-		case api.SimpleTypeByte:
-			return "byte"
-		case api.SimpleTypeInt8:
-			return "int8"
-		case api.SimpleTypeInt16:
-			return "int16"
-		case api.SimpleTypeInt32:
-			return "int32"
-		case api.SimpleTypeInt64:
-			return "int64"
-		case api.SimpleTypeFloat64:
-			return "float64"
-		case api.SimpleTypeString:
-			return "string"
-		case api.SimpleTypeStructEmpty:
-			return "struct{}"
-		default:
-			log.Fatalf("unknown simple type: %v", *t.SimpleType)
-		}
-	case t.SliceType != nil:
-		return "[]" + formatType(t.SliceType, extraImports)
-	case t.KeyValueSliceType != nil:
-		k := formatType(t.KeyValueSliceType.Left, extraImports)
-		v := formatType(t.KeyValueSliceType.Right, extraImports)
-		return fmt.Sprintf("[]struct{Key %v; Value %v}", k, v)
-	case t.MapType != nil:
-		k := formatType(t.MapType.Left, extraImports)
-		v := formatType(t.MapType.Right, extraImports)
-		return fmt.Sprintf("map[%v]%v", k, v)
-	case t.ReferenceType != nil:
-		extraImports[t.ReferenceType.Package] = struct{}{}
-		// TODO(abg): What if the base name doesn't match the package name?
-		return filepath.Base(t.ReferenceType.Package) + "." + t.ReferenceType.Name
-	case t.PointerType != nil:
-		return "*" + formatType(t.PointerType, extraImports)
-	default:
-		log.Fatalf("unknown type: %v", t)
-	}
-	return ""
-}
-
-// addExtraImports replaces the string "/*EXTRA_IMPORTS*/" with the given list
-// of imports in a deterministic order.
-func addExtraImports(src []byte, extraImports map[string]struct{}) []byte {
-	imports := make([]string, 0, len(extraImports))
-	for i := range extraImports {
-		imports = append(imports, strconv.Quote(i))
-	}
-	sort.Strings(imports)
-
-	out := strings.Replace(string(src), "/*EXTRA_IMPORTS*/", strings.Join(imports, "\n"), 1)
-	return []byte(out)
-}
-
 const serverTemplate = `
-package <lower .Name>server
+<$pkgname := printf "%sserver" (lower .Service.Name)>
+package <$pkgname>
 
-import (
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/thriftrw/thriftrw-go/wire"
-	"github.com/thriftrw/thriftrw-go/protocol"
-	/*EXTRA_IMPORTS*/
-	_<basename .Package> "<.Package>"
-	<if .ParentID>
-		<$parent := getService .ParentID>
-		"<(getModule $parent.ModuleID).Package>/yarpc/<lower $parent.Name>server"
-	<end>
-)
+<$yarpc 	 := import "github.com/yarpc/yarpc-go">
+<$thrift	 := import "github.com/yarpc/yarpc-go/encoding/thrift">
+<$protocol := import "github.com/thriftrw/thriftrw-go/protocol">
 
-// Interface is the server-side interface for the <.Name> service.
+// Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
-	<if .ParentID>
-		<lower (getService .ParentID).Name>server.Interface
+	<if .Parent>
+		<$parentPath := printf "%s/yarpc/%sserver" .Parent.Package (lower .Parent.Name)>
+		<import $parentPath>.Interface
 	<end>
 
-	<range .Functions>
+	<range .Service.Functions>
 		<.Name>(
-			reqMeta yarpc.ReqMeta, <range .Arguments>
+			reqMeta <$yarpc>.ReqMeta, <range .Arguments>
 			<lowerFirst .Name> <formatType .Type>,<end>
-		) <if .ReturnType> (<formatType .ReturnType>, yarpc.ResMeta, error)
-		<else> (yarpc.ResMeta, error)
+		) <if .ReturnType> (<formatType .ReturnType>, <$yarpc>.ResMeta, error)
+		<else> (<$yarpc>.ResMeta, error)
 		<end>
 	<end>
 }
 
-// New prepares an implementation of the <.Name> service for registration.
+// New prepares an implementation of the <.Service.Name> service for
+// registration.
 //
-// 	handler := <.Name>Handler{}
-// 	thrift.Register(dispatcher, <lower .Name>server.New(handler))
-func New(impl Interface) thrift.Service {
+// 	handler := <.Service.Name>Handler{}
+// 	thrift.Register(dispatcher, <$pkgname>.New(handler))
+func New(impl Interface) <$thrift>.Service {
 	return service{handler{impl}}
 }
 
 type service struct{ h handler }
 
 func (service) Name() string {
-	 return "<.Name>"
- }
-
-func (service) Protocol() protocol.Protocol {
-	return protocol.Binary
+	return "<.Service.Name>"
 }
 
-func (s service) Handlers() map[string]thrift.Handler {
-	return map[string]thrift.Handler{<range .Functions>
-			"<.ThriftName>": thrift.HandlerFunc(s.h.<.Name>),
+func (service) Protocol() <$protocol>.Protocol {
+	return <$protocol>.Binary
+}
+
+func (s service) Handlers() map[string]<$thrift>.Handler {
+	return map[string]<$thrift>.Handler{<range .Service.Functions>
+			"<.ThriftName>": <$thrift>.HandlerFunc(s.h.<.Name>),
 	<end>}
 }
 
 type handler struct{ impl Interface }
 
-<$servicePackage := printf "_%s" (basename .Package)>
-<range .Functions>
-func (h handler) <.Name>(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
+<$service := .Service>
+<range .Service.Functions>
+
+<$servicePackage := import $service.Package>
+<$wire := import "github.com/thriftrw/thriftrw-go/wire">
+
+func (h handler) <.Name>(reqMeta <$yarpc>.ReqMeta, body <$wire>.Value) (<$thrift>.Response, error) {
 	var args <$servicePackage>.<.Name>Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return <$thrift>.Response{}, err
 	}
 
 	<if .ReturnType>
@@ -156,7 +88,7 @@ func (h handler) <.Name>(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respons
 	hadError := err != nil
 	result, err := <$servicePackage>.<.Name>Helper.WrapResponse(<if .ReturnType>success,<end> err)
 
-	var response thrift.Response
+	var response <$thrift>.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Meta = resMeta
@@ -172,90 +104,75 @@ func generateServer(req *api.GenerateRequest, service *api.Service) (string, []b
 	packageName := strings.ToLower(service.Name) + "server"
 	path := filepath.Join(module.Directory, "yarpc", packageName, "server.go")
 
-	extraImports := make(map[string]struct{})
-	tmpl, err := template.New("server").Delims("<", ">").Funcs(template.FuncMap{
-		"getModule": func(moduleID api.ModuleID) *api.Module {
-			return req.Modules[moduleID]
-		},
-		"getService": func(serviceID api.ServiceID) *api.Service {
-			return req.Services[serviceID]
-		},
-		"lower":      strings.ToLower,
-		"lowerFirst": lowerFirst,
-		"basename":   filepath.Base,
-		"formatType": func(t *api.Type) string {
-			return formatType(t, extraImports)
-		},
-	}).Parse(serverTemplate)
-	if err != nil {
-		return path, nil, err
+	var parent *api.Service
+	if service.ParentID != nil {
+		parent = req.Services[*service.ParentID]
 	}
 
-	var buff bytes.Buffer
-	if err := tmpl.Execute(&buff, service); err != nil {
-		return "", nil, err
-	}
-
-	return path, addExtraImports(buff.Bytes(), extraImports), nil
+	contents, err := plugin.GoFileFromTemplate(path, serverTemplate, struct {
+		Service *api.Service
+		Parent  *api.Service
+	}{Service: service, Parent: parent},
+		plugin.TemplateFunc("lower", strings.ToLower),
+		plugin.TemplateFunc("lowerFirst", lowerFirst),
+	)
+	return path, contents, err
 }
 
 const clientTemplate = `
-package <lower .Name>client
+<$pkgname := printf "%sclient" (lower .Service.Name)>
+package <$pkgname>
 
-import (
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/thriftrw/thriftrw-go/wire"
-	"github.com/thriftrw/thriftrw-go/protocol"
-	/*EXTRA_IMPORTS*/
-	_<basename .Package> "<.Package>"
-	<if .ParentID>
-		<$parent := getService .ParentID>
-		"<(getModule $parent.ModuleID).Package>/yarpc/<lower $parent.Name>client"
-	<end>
-)
+<$yarpc     := import "github.com/yarpc/yarpc-go">
+<$transport := import "github.com/yarpc/yarpc-go/transport">
+<$thrift    := import "github.com/yarpc/yarpc-go/encoding/thrift">
+<$protocol  := import "github.com/thriftrw/thriftrw-go/protocol">
 
-// Interface is a client for the <.Name> service.
+// Interface is a client for the <.Service.Name> service.
 type Interface interface {
-	<if .ParentID>
-		<lower (getService .ParentID).Name>client.Interface
+	<if .Parent>
+		<$parentPath := printf "%s/yarpc/%sclient" .Parent.Package (lower .Parent.Name)>
+		<import $parentPath>.Interface
 	<end>
 
-	<range .Functions>
+	<range .Service.Functions>
 		<.Name>(
-			reqMeta yarpc.CallReqMeta, <range .Arguments>
+			reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 				<lowerFirst .Name> <formatType .Type>,<end>
-		) <if .ReturnType> (<formatType .ReturnType>, yarpc.CallResMeta, error)
-		<else> (yarpc.CallResMeta, error)
+		) <if .ReturnType> (<formatType .ReturnType>, <$yarpc>.CallResMeta, error)
+		<else> (<$yarpc>.CallResMeta, error)
 		<end>
 	<end>
 }
 
 </* TODO(abg): Pull the default routing name from a Thrift annotation? */>
 
-// New builds a new client for the <.Name> service.
+// New builds a new client for the <.Service.Name> service.
 //
-// 	client := <lower .Name>client.New(dispatcher.Channel("<lower .Name>"))
-func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
-	return client{c: thrift.New(thrift.Config{
-		Service: "<.Name>",
+// 	client := <$pkgname>.New(dispatcher.Channel("<lower .Service.Name>"))
+func New(c <$transport>.Channel, opts ...<$thrift>.ClientOption) Interface {
+	return client{c: <$thrift>.New(<$thrift>.Config{
+		Service: "<.Service.Name>",
 		Channel: c,
-		Protocol: protocol.Binary,
+		Protocol: <$protocol>.Binary,
 	}, opts...)}
 }
 
-type client struct{ c thrift.Client }
+type client struct{ c <$thrift>.Client }
 
-<$servicePackage := printf "_%s" (basename .Package)>
-<range .Functions>
+<$service := .Service>
+<range .Service.Functions>
+
+<$servicePackage := import $service.Package>
+<$wire := import "github.com/thriftrw/thriftrw-go/wire">
+
 func (c client) <.Name>(
-	reqMeta yarpc.CallReqMeta, <range .Arguments>
+	reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
-) (<if .ReturnType>success <formatType .ReturnType>,<end> resMeta yarpc.CallResMeta, err error) {
+) (<if .ReturnType>success <formatType .ReturnType>,<end> resMeta <$yarpc>.CallResMeta, err error) {
 	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
-	var body wire.Value
+	var body <$wire>.Value
 	body, resMeta, err = c.c.Call(reqMeta, args)
 	if err != nil {
 		return
@@ -277,31 +194,19 @@ func generateClient(req *api.GenerateRequest, service *api.Service) (string, []b
 	packageName := strings.ToLower(service.Name) + "client"
 	path := filepath.Join(module.Directory, "yarpc", packageName, "client.go")
 
-	extraImports := make(map[string]struct{})
-	tmpl, err := template.New("client").Delims("<", ">").Funcs(template.FuncMap{
-		"getModule": func(moduleID api.ModuleID) *api.Module {
-			return req.Modules[moduleID]
-		},
-		"getService": func(serviceID api.ServiceID) *api.Service {
-			return req.Services[serviceID]
-		},
-		"lower":      strings.ToLower,
-		"lowerFirst": lowerFirst,
-		"basename":   filepath.Base,
-		"formatType": func(t *api.Type) string {
-			return formatType(t, extraImports)
-		},
-	}).Parse(clientTemplate)
-	if err != nil {
-		return path, nil, err
+	var parent *api.Service
+	if service.ParentID != nil {
+		parent = req.Services[*service.ParentID]
 	}
 
-	var buff bytes.Buffer
-	if err := tmpl.Execute(&buff, service); err != nil {
-		return "", nil, err
-	}
-
-	return path, addExtraImports(buff.Bytes(), extraImports), nil
+	contents, err := plugin.GoFileFromTemplate(path, clientTemplate, struct {
+		Service *api.Service
+		Parent  *api.Service
+	}{Service: service, Parent: parent},
+		plugin.TemplateFunc("lower", strings.ToLower),
+		plugin.TemplateFunc("lowerFirst", lowerFirst),
+	)
+	return path, contents, err
 }
 
 type generator struct{}
