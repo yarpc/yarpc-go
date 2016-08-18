@@ -20,5 +20,5 @@
 
 package keyvalue
 
-//go:generate thriftrw-go -yarpc kv.thrift
+//go:generate thriftrw-go -plugins=yarpc kv.thrift
 //go:generate ../../../scripts/updateLicenses.sh
