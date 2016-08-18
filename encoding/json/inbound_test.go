@@ -102,8 +102,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	h := func(r yarpc.ReqMeta, _ *simpleRequest) (*simpleResponse, yarpc.ResMeta, error) {
-		resMeta := yarpc.NewResMeta(r.Context()).
-			Headers(yarpc.NewHeaders().With("foo", "bar"))
+		resMeta := yarpc.NewResMeta().Headers(yarpc.NewHeaders().With("foo", "bar"))
 		return &simpleResponse{Success: true}, resMeta, nil
 	}
 

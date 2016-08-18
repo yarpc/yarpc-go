@@ -92,8 +92,7 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 
 	resMeta := res.Meta
 	if resMeta != nil {
-		_ = meta.ToTransportResponseWriter(resMeta, rw)
-		// TODO(abg): propagate response context
+		meta.ToTransportResponseWriter(resMeta, rw)
 	}
 
 	err = proto.EncodeEnveloped(wire.Envelope{

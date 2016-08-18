@@ -23,32 +23,23 @@ package meta
 import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
 )
 
 // FromTransportResponse builds a CallResMeta from a transport-level Response.
-func FromTransportResponse(ctx context.Context, res *transport.Response) yarpc.CallResMeta {
-	return callResMeta{ctx: ctx, res: res}
+func FromTransportResponse(res *transport.Response) yarpc.CallResMeta {
+	return callResMeta{res: res}
 }
 
 // ToTransportResponseWriter fills the given transport response with
-// information from the given ResMeta. The Context associated with the ResMeta
-// is returned.
-func ToTransportResponseWriter(resMeta yarpc.ResMeta, w transport.ResponseWriter) context.Context {
+// information from the given ResMeta.
+func ToTransportResponseWriter(resMeta yarpc.ResMeta, w transport.ResponseWriter) {
 	if hs := resMeta.GetHeaders(); hs.Len() > 0 {
 		w.AddHeaders(transport.Headers(resMeta.GetHeaders()))
 	}
-	return resMeta.GetContext()
 }
 
 type callResMeta struct {
-	ctx context.Context
 	res *transport.Response
-}
-
-func (r callResMeta) Context() context.Context {
-	return r.ctx
 }
 
 func (r callResMeta) Headers() yarpc.Headers {

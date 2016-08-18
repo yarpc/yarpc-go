@@ -61,9 +61,7 @@ func (h jsonHandler) Handle(ctx context.Context, _ transport.Options, treq *tran
 	}
 
 	if resMeta, ok := results[1].Interface().(yarpc.ResMeta); ok {
-		_ = meta.ToTransportResponseWriter(resMeta, rw)
-		// TODO(abg): once transports support response context, we'll have to
-		// propagate that here.
+		meta.ToTransportResponseWriter(resMeta, rw)
 	}
 
 	result := results[0].Interface()

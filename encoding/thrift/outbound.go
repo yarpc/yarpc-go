@@ -187,8 +187,7 @@ func (c thriftClient) Call(
 
 	switch envelope.Type {
 	case wire.Reply:
-		// TODO(abg): when transport returns response context, use that here.
-		return envelope.Value, meta.FromTransportResponse(ctx, tres), nil
+		return envelope.Value, meta.FromTransportResponse(tres), nil
 	case wire.Exception:
 		var exc internal.TApplicationException
 		if err := exc.FromWire(envelope.Value); err != nil {

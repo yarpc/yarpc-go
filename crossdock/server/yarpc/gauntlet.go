@@ -28,7 +28,7 @@ import (
 )
 
 func resMetaFromReqMeta(reqMeta yarpc.ReqMeta) yarpc.ResMeta {
-	return yarpc.NewResMeta(reqMeta.Context()).Headers(reqMeta.Headers())
+	return yarpc.NewResMeta().Headers(reqMeta.Headers())
 }
 
 // thriftTest implements the ThriftTest service.
