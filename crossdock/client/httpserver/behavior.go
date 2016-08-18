@@ -76,6 +76,6 @@ func runRaw(t crossdock.T, disp yarpc.Dispatcher) {
 	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
 
 	form := strings.HasPrefix(err.Error(),
-		`remote timeout: call to procedure "handlertimeout/raw" of service "service" from caller "caller" timed out after`)
+		`Timeout: call to procedure "handlertimeout/raw" of service "service" from caller "caller" timed out after`)
 	assert.True(form, "must be a remote handler timeout: %q", err.Error())
 }

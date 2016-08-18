@@ -324,11 +324,11 @@ func Run(t crossdock.T) {
 			},
 			wantStatus: 504,
 			skipStatus: 400,
-			wantBodyStartsWith: `call to procedure "waitfortimeout/raw"` +
+			wantBodyStartsWith: `Timeout: call to procedure "waitfortimeout/raw"` +
 				` of service "yarpc-test" from caller "yarpc-test" timed out after`,
 		},
 		{
-			// We call sleep trough the proxy Phone.
+			// We call sleep through the proxy Phone.
 			// Phone will timeout waiting after Sleep, and yarpc should return an unexpected error.
 			// This verifies that we do not forward (aka bubble up) timeout errors.
 			name: "unexpected client timeout",

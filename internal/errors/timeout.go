@@ -60,7 +60,7 @@ func (handlerTimeoutError) timeoutError() {}
 func (handlerTimeoutError) handlerError() {}
 
 func (e handlerTimeoutError) Error() string {
-	return fmt.Sprintf(`call to procedure %q of service %q from caller %q timed out after %v`,
+	return fmt.Sprintf(`Timeout: call to procedure %q of service %q from caller %q timed out after %v`,
 		e.Procedure, e.Service, e.Caller, e.Duration)
 }
 
@@ -72,7 +72,7 @@ var _ TimeoutError = RemoteTimeoutError("")
 func (RemoteTimeoutError) timeoutError() {}
 
 func (e RemoteTimeoutError) Error() string {
-	return fmt.Sprintf(`remote timeout: %s`, string(e))
+	return string(e)
 }
 
 // clientTimeoutError represents a timeout on the client side.

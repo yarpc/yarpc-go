@@ -285,7 +285,7 @@ func TestHandlerFailures(t *testing.T) {
 				}).Return(context.DeadlineExceeded)
 			},
 			wantErrors: []string{
-				`tchannel error ErrCodeTimeout: call to procedure "waituntiltimeout" of service "foo" from caller "bar" timed out after `},
+				`tchannel error ErrCodeTimeout: Timeout: call to procedure "waituntiltimeout" of service "foo" from caller "bar" timed out after `},
 			wantStatus: tchannel.ErrCodeTimeout,
 		},
 	}
