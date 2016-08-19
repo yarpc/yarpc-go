@@ -11,7 +11,7 @@ import:
   - assert
   - require
 - package: github.com/thriftrw/thriftrw-go
-  version: master
+  version: plugin # TODO move back to master before merging
 - package: github.com/golang/mock
   version: master
   subpackages:
