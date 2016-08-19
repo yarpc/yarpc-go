@@ -4,9 +4,11 @@
 package thrift
 
 import (
+	yarpc "github.com/yarpc/yarpc-go"
+	"golang.org/x/net/context"
+
 	gomock "github.com/golang/mock/gomock"
-	wire "github.com/thriftrw/thriftrw-go/wire"
-	yarpc_go "github.com/yarpc/yarpc-go"
+	"github.com/thriftrw/thriftrw-go/wire"
 )
 
 // Mock of Handler interface
@@ -30,8 +32,8 @@ func (_m *MockHandler) EXPECT() *_MockHandlerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockHandler) Handle(_param0 yarpc_go.ReqMeta, _param1 wire.Value) (Response, error) {
-	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1)
+func (_m *MockHandler) Handle(_param0 context.Context, _param1 yarpc.ReqMeta, _param2 wire.Value) (Response, error) {
+	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1, _param2)
 	ret0, _ := ret[0].(Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1

@@ -28,7 +28,6 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/wire"
-	"golang.org/x/net/context"
 )
 
 type fakeEnveloper wire.EnvelopeType
@@ -46,7 +45,6 @@ func (fakeEnveloper) ToWire() (wire.Value, error) {
 }
 
 type fakeReqMeta struct {
-	context   context.Context
 	caller    string
 	service   string
 	procedure string
@@ -57,11 +55,6 @@ type fakeReqMeta struct {
 func (f fakeReqMeta) Matches(x interface{}) bool {
 	reqMeta, ok := x.(yarpc.ReqMeta)
 	if !ok {
-		return false
-	}
-
-	// TODO: log to testing.T on mismatch if test becomes more complex
-	if f.context != reqMeta.Context() {
 		return false
 	}
 

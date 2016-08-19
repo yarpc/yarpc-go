@@ -183,7 +183,8 @@ func TestClient(t *testing.T) {
 			Protocol: proto,
 		})
 
-		_, _, err := c.Call(yarpc.NewReqMeta(ctx), tt.giveRequestBody)
+		// TODO can we pass nil instead of reqmeta?
+		_, _, err := c.Call(ctx, yarpc.NewReqMeta(), tt.giveRequestBody)
 		if tt.wantError != "" {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)

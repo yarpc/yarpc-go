@@ -26,6 +26,7 @@ package transporttest
 import (
 	gomock "github.com/golang/mock/gomock"
 	transport "github.com/yarpc/yarpc-go/transport"
+
 	context "golang.org/x/net/context"
 )
 

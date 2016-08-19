@@ -45,8 +45,8 @@ func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *trans
 		return err
 	}
 
-	reqMeta := meta.FromTransportRequest(ctx, treq)
-	resBody, resMeta, err := r.h(reqMeta, reqBody)
+	reqMeta := meta.FromTransportRequest(treq)
+	resBody, resMeta, err := r.h(ctx, reqMeta, reqBody)
 	if err != nil {
 		return err
 	}

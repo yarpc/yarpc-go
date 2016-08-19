@@ -365,7 +365,7 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 		defer cancel()
 
 		args := []reflect.Value{reflect.ValueOf(ctx)}
-		if give, ok := gauntlet.BuildArgs(t, desc, f.Type(), tt.Give); ok {
+		if give, ok := gauntlet.BuildArgs(t, desc, f.Type(), tt.Give, 1); ok {
 			args = append(args, give...)
 		} else {
 			continue

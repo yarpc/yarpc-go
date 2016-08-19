@@ -65,7 +65,7 @@ func main() {
 
 type helloHandler struct{}
 
-func (h helloHandler) Echo(reqMeta yarpc.ReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.ResMeta, error) {
+func (h helloHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.ResMeta, error) {
 	return &hello.EchoResponse{Message: echo.Message, Count: echo.Count + 1},
 		yarpc.NewResMeta().Headers(reqMeta.Headers()),
 		nil
@@ -76,7 +76,8 @@ func call(client helloclient.Interface, message string) (*hello.EchoResponse, ya
 	defer cancel()
 
 	resBody, resMeta, err := client.Echo(
-		yarpc.NewReqMeta(ctx).Headers(yarpc.NewHeaders().With("from", "self")),
+		ctx,
+		yarpc.NewReqMeta().Headers(yarpc.NewHeaders().With("from", "self")),
 		&hello.EchoRequest{Message: message, Count: 1},
 	)
 	if err != nil {

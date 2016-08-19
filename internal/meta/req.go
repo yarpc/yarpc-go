@@ -23,34 +23,26 @@ package meta
 import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
 )
 
 // FromTransportRequest builds a ReqMeta from a transport-level Request.
-func FromTransportRequest(ctx context.Context, req *transport.Request) yarpc.ReqMeta {
-	return reqMeta{ctx: ctx, req: req}
+func FromTransportRequest(req *transport.Request) yarpc.ReqMeta {
+	return reqMeta{req: req}
 }
 
 // ToTransportRequest fills the given transport request with information from
-// the given ReqMeta. The Context associated with the ReqMeta is returned.
-func ToTransportRequest(reqMeta yarpc.CallReqMeta, req *transport.Request) context.Context {
+// the given ReqMeta.
+func ToTransportRequest(reqMeta yarpc.CallReqMeta, req *transport.Request) {
 	req.Procedure = reqMeta.GetProcedure()
 	req.Headers = transport.Headers(reqMeta.GetHeaders())
-	return reqMeta.GetContext()
 }
 
 type reqMeta struct {
-	ctx context.Context
 	req *transport.Request
 }
 
 func (r reqMeta) Caller() string {
 	return r.req.Caller
-}
-
-func (r reqMeta) Context() context.Context {
-	return r.ctx
 }
 
 func (r reqMeta) Encoding() transport.Encoding {

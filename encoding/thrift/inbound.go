@@ -70,8 +70,8 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 	}
 	// TODO(abg): Support oneway
 
-	reqMeta := meta.FromTransportRequest(ctx, treq)
-	res, err := t.Handler.Handle(reqMeta, envelope.Value)
+	reqMeta := meta.FromTransportRequest(treq)
+	res, err := t.Handler.Handle(ctx, reqMeta, envelope.Value)
 	if err != nil {
 		return err
 	}

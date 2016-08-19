@@ -370,8 +370,8 @@ func RunGauntlet(t crossdock.T, dispatcher yarpc.Dispatcher, serverName string) 
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		args := []reflect.Value{reflect.ValueOf(yarpc.NewReqMeta(ctx))}
-		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give); ok {
+		args := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(yarpc.NewReqMeta())}
+		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give, 2); ok {
 			args = append(args, give...)
 		} else {
 			continue
@@ -423,9 +423,9 @@ func buildClient(t crossdock.T, desc string, service string, channel transport.C
 }
 
 // BuildArgs creates an args slice than can be used to make a f.Call(args)
-func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}) (_ []reflect.Value, ok bool) {
+func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}, initialArgs int) (_ []reflect.Value, ok bool) {
 	check := crossdock.Checks(t)
-	wantIn := len(give) + 1
+	wantIn := len(give) + initialArgs // +2 for ctx and reqMeta
 	if !check.Equal(wantIn, ft.NumIn(), "%v: should accept %d arguments", desc, wantIn) {
 		return nil, false
 	}
@@ -433,7 +433,7 @@ func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}) 
 	var args []reflect.Value
 	for i, v := range give {
 		var val reflect.Value
-		vt := ft.In(i + 1)
+		vt := ft.In(i + initialArgs)
 		if v == nil {
 			// nil is an invalid argument to ValueOf. For nil, use the zero
 			// value for that argument.

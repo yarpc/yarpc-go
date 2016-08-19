@@ -179,7 +179,8 @@ func Run(t crossdock.T) {
 
 			var resp js.RawMessage
 			_, err := jsonClient.Call(
-				yarpc.NewReqMeta(ctx).Procedure("phone"),
+				ctx,
+				yarpc.NewReqMeta().Procedure("phone"),
 				&server.PhoneRequest{
 					Service:   "ctxclient",
 					Procedure: procedure,
@@ -195,7 +196,7 @@ func Run(t crossdock.T) {
 type handler interface {
 	SetClient(json.Client)
 	SetTransport(server.TransportConfig)
-	Handle(yarpc.ReqMeta, interface{}) (interface{}, yarpc.ResMeta, error)
+	Handle(context.Context, yarpc.ReqMeta, interface{}) (interface{}, yarpc.ResMeta, error)
 }
 
 func assertBaggageMatches(t crossdock.T, ctx context.Context, want transport.Headers) bool {
@@ -220,8 +221,8 @@ type singleHopHandler struct {
 func (*singleHopHandler) SetClient(json.Client)               {}
 func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
-func (h *singleHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
-	assertBaggageMatches(h.t, reqMeta.Context(), h.wantBaggage)
+func (h *singleHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+	assertBaggageMatches(h.t, ctx, h.wantBaggage)
 	resMeta := yarpc.NewResMeta().Headers(reqMeta.Headers())
 	return map[string]interface{}{}, resMeta, nil
 }
@@ -248,22 +249,20 @@ func (h *multiHopHandler) SetTransport(tc server.TransportConfig) {
 	h.phoneCallTransport = tc
 }
 
-func (h *multiHopHandler) Handle(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+func (h *multiHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
 	if h.phoneClient == nil {
 		panic("call SetClient() and SetTransport() first")
 	}
 
-	ctx := reqMeta.Context()
-	assertBaggageMatches(h.t, reqMeta.Context(), h.wantBaggage)
+	assertBaggageMatches(h.t, ctx, h.wantBaggage)
 	for key, value := range h.addBaggage.Items() {
 		ctx = yarpc.WithBaggage(ctx, key, value)
 	}
 
 	var resp js.RawMessage
 	phoneResMeta, err := h.phoneClient.Call(
-		yarpc.NewReqMeta(ctx).
-			Procedure("phone").
-			Headers(reqMeta.Headers()),
+		ctx,
+		yarpc.NewReqMeta().Procedure("phone").Headers(reqMeta.Headers()),
 		&server.PhoneRequest{
 			Service:   "ctxclient",
 			Procedure: h.phoneCallTo,

@@ -24,15 +24,17 @@ import (
 	"fmt"
 
 	"github.com/yarpc/yarpc-go"
+
+	"golang.org/x/net/context"
 )
 
 // UnexpectedError fails with an unexpected error.
-func UnexpectedError(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+func UnexpectedError(ctx context.Context, reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
 	return nil, nil, fmt.Errorf("error")
 }
 
 // BadResponse returns an object that's not a valid JSON response.
-func BadResponse(reqMeta yarpc.ReqMeta, body map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
+func BadResponse(ctx context.Context, reqMeta yarpc.ReqMeta, body map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
 	// func is not serializable
 	result := map[string]interface{}{"foo": func() {}}
 	return result, nil, nil

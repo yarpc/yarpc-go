@@ -137,9 +137,8 @@ type rawCaller struct{ c raw.Client }
 
 func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	_, res, err := c.c.Call(
-		yarpc.NewReqMeta(newTestContext()).
-			Headers(h).
-			Procedure("echo/raw"),
+		newTestContext(),
+		yarpc.NewReqMeta().Headers(h).Procedure("echo/raw"),
 		[]byte("hello"))
 
 	if err != nil {
@@ -153,9 +152,8 @@ type jsonCaller struct{ c json.Client }
 func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	var resBody interface{}
 	res, err := c.c.Call(
-		yarpc.NewReqMeta(newTestContext()).
-			Headers(h).
-			Procedure("echo"),
+		newTestContext(),
+		yarpc.NewReqMeta().Headers(h).Procedure("echo"),
 		map[string]interface{}{}, &resBody)
 
 	if err != nil {
@@ -168,7 +166,8 @@ type thriftCaller struct{ c echoclient.Interface }
 
 func (c thriftCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	_, res, err := c.c.Echo(
-		yarpc.NewReqMeta(newTestContext()).Headers(h),
+		newTestContext(),
+		yarpc.NewReqMeta().Headers(h),
 		&echo.Ping{Beep: "hello"})
 
 	if err != nil {

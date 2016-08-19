@@ -23,6 +23,8 @@ package raw
 import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
 )
 
 // Registrant is used for types that define or know about different Raw
@@ -34,7 +36,7 @@ type Registrant interface {
 }
 
 // Handler implements a single procedure.
-type Handler func(yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
+type Handler func(context.Context, yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
 
 // procedure is a registrant with a single handler.
 type procedure struct {

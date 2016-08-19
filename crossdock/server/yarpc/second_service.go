@@ -20,15 +20,19 @@
 
 package yarpc
 
-import "github.com/yarpc/yarpc-go"
+import (
+	"github.com/yarpc/yarpc-go"
+
+	"golang.org/x/net/context"
+)
 
 // secondService implements the SecondService.
 type secondService struct{}
 
-func (secondService) BlahBlah(reqMeta yarpc.ReqMeta) (yarpc.ResMeta, error) {
+func (secondService) BlahBlah(ctx context.Context, reqMeta yarpc.ReqMeta) (yarpc.ResMeta, error) {
 	return nil, nil
 }
 
-func (secondService) SecondtestString(reqMeta yarpc.ReqMeta, thing *string) (string, yarpc.ResMeta, error) {
+func (secondService) SecondtestString(ctx context.Context, reqMeta yarpc.ReqMeta, thing *string) (string, yarpc.ResMeta, error) {
 	return *thing, resMetaFromReqMeta(reqMeta), nil
 }
