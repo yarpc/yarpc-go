@@ -97,7 +97,8 @@ func main() {
 			key := args[0]
 
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if value, _, err := client.GetValue(yarpc.NewReqMeta(ctx), &key); err != nil {
+			// TODO can we use nil instead of NewReqMeta here?
+			if value, _, err := client.GetValue(ctx, yarpc.NewReqMeta(), &key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -113,7 +114,8 @@ func main() {
 
 			cache.Invalidate()
 			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			if _, err := client.SetValue(yarpc.NewReqMeta(ctx), &key, &value); err != nil {
+			// TODO can we use nil instead of NewReqMeta here?
+			if _, err := client.SetValue(ctx, yarpc.NewReqMeta(), &key, &value); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue

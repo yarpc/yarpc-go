@@ -34,16 +34,14 @@ import (
 	"github.com/thriftrw/thriftrw-go/envelope"
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
+	"golang.org/x/net/context"
 )
 
 // Client is a generic Thrift client. It speaks in raw Thrift payloads. The code
 // generator is responsible for putting a pretty interface in front of it.
 type Client interface {
 	// Call the given Thrift method.
-	Call(
-		reqMeta yarpc.CallReqMeta,
-		reqBody envelope.Enveloper,
-	) (wire.Value, yarpc.CallResMeta, error)
+	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error)
 }
 
 // Config contains the configuration for the Client.
@@ -103,10 +101,7 @@ type thriftClient struct {
 	disableEnveloping bool
 }
 
-func (c thriftClient) Call(
-	reqMeta yarpc.CallReqMeta,
-	reqBody envelope.Enveloper,
-) (wire.Value, yarpc.CallResMeta, error) {
+func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error) {
 	// Code generated for Thrift client calls will probably be something like
 	// this:
 	//
@@ -139,7 +134,7 @@ func (c thriftClient) Call(
 		Service:  c.ch.Service(),
 		Encoding: Encoding,
 	}
-	ctx := meta.ToTransportRequest(reqMeta, &treq)
+	meta.ToTransportRequest(reqMeta, &treq)
 	// Always override the procedure name to the Thrift procedure name.
 	treq.Procedure = procedureName(c.thriftService, reqBody.MethodName())
 

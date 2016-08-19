@@ -25,6 +25,7 @@ package secondserviceserver
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"golang.org/x/net/context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/service/secondservice"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
@@ -34,10 +35,12 @@ import (
 // Interface is the server-side interface for the SecondService service.
 type Interface interface {
 	BlahBlah(
+		ctx context.Context,
 		reqMeta yarpc.ReqMeta,
 	) (yarpc.ResMeta, error)
 
 	SecondtestString(
+		ctx context.Context,
 		reqMeta yarpc.ReqMeta,
 		thing *string,
 	) (string, yarpc.ResMeta, error)
@@ -72,13 +75,13 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) BlahBlah(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) BlahBlah(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args secondservice.BlahBlahArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	resMeta, err := h.impl.BlahBlah(reqMeta)
+	resMeta, err := h.impl.BlahBlah(ctx, reqMeta)
 
 	hadError := err != nil
 	result, err := secondservice.BlahBlahHelper.WrapResponse(err)
@@ -92,13 +95,13 @@ func (h handler) BlahBlah(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	return response, err
 }
 
-func (h handler) SecondtestString(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) SecondtestString(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args secondservice.SecondtestStringArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.SecondtestString(reqMeta, args.Thing)
+	success, resMeta, err := h.impl.SecondtestString(ctx, reqMeta, args.Thing)
 
 	hadError := err != nil
 	result, err := secondservice.SecondtestStringHelper.WrapResponse(success, err)

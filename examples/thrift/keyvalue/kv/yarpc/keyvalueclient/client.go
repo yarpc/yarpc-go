@@ -25,6 +25,7 @@ package keyvalueclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"golang.org/x/net/context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
@@ -35,11 +36,13 @@ import (
 // Interface is a client for the KeyValue service.
 type Interface interface {
 	GetValue(
+		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		key *string,
 	) (string, yarpc.CallResMeta, error)
 
 	SetValue(
+		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		key *string,
 		value *string,
@@ -60,13 +63,13 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 type client struct{ c thrift.Client }
 
 func (c client) GetValue(
-	reqMeta yarpc.CallReqMeta,
+	ctx context.Context, reqMeta yarpc.CallReqMeta,
 	_Key *string,
 ) (success string, resMeta yarpc.CallResMeta, err error) {
 	args := keyvalue.GetValueHelper.Args(_Key)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -81,14 +84,14 @@ func (c client) GetValue(
 }
 
 func (c client) SetValue(
-	reqMeta yarpc.CallReqMeta,
+	ctx context.Context, reqMeta yarpc.CallReqMeta,
 	_Key *string,
 	_Value *string,
 ) (resMeta yarpc.CallResMeta, err error) {
 	args := keyvalue.SetValueHelper.Args(_Key, _Value)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

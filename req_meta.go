@@ -20,18 +20,13 @@
 
 package yarpc
 
-import (
-	"golang.org/x/net/context"
-
-	"github.com/yarpc/yarpc-go/transport"
-)
+import "github.com/yarpc/yarpc-go/transport"
 
 // CallReqMeta contains information about an outgoing YARPC request.
 type CallReqMeta interface {
 	Procedure(string) CallReqMeta
 	Headers(Headers) CallReqMeta
 
-	GetContext() context.Context
 	GetProcedure() string
 	GetHeaders() Headers
 }
@@ -39,7 +34,6 @@ type CallReqMeta interface {
 // ReqMeta contains information about an incoming YARPC request.
 type ReqMeta interface {
 	Caller() string
-	Context() context.Context
 	Encoding() transport.Encoding
 	Headers() Headers
 	Procedure() string
@@ -49,15 +43,11 @@ type ReqMeta interface {
 // NewReqMeta constructs a CallReqMeta with the given Context.
 //
 // The context MUST NOT be nil.
-func NewReqMeta(ctx context.Context) CallReqMeta {
-	if ctx == nil {
-		panic("invalid usage of ReqMeta: context cannot be nil")
-	}
-	return &callReqMeta{ctx: ctx}
+func NewReqMeta() CallReqMeta {
+	return &callReqMeta{}
 }
 
 type callReqMeta struct {
-	ctx       context.Context
 	procedure string
 	headers   Headers
 }
@@ -70,10 +60,6 @@ func (r *callReqMeta) Procedure(p string) CallReqMeta {
 func (r *callReqMeta) Headers(h Headers) CallReqMeta {
 	r.headers = h
 	return r
-}
-
-func (r *callReqMeta) GetContext() context.Context {
-	return r.ctx
 }
 
 func (r *callReqMeta) GetProcedure() string {

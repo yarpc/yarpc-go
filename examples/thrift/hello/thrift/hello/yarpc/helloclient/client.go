@@ -25,6 +25,7 @@ package helloclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"golang.org/x/net/context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
@@ -36,6 +37,7 @@ import (
 // Interface is a client for the Hello service.
 type Interface interface {
 	Echo(
+		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		echo *hello.EchoRequest,
 	) (*hello.EchoResponse, yarpc.CallResMeta, error)
@@ -55,13 +57,13 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 type client struct{ c thrift.Client }
 
 func (c client) Echo(
-	reqMeta yarpc.CallReqMeta,
+	ctx context.Context, reqMeta yarpc.CallReqMeta,
 	_Echo *hello.EchoRequest,
 ) (success *hello.EchoResponse, resMeta yarpc.CallResMeta, err error) {
 	args := hello2.EchoHelper.Args(_Echo)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

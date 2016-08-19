@@ -40,6 +40,7 @@ package <$pkgname>
 <$yarpc 	 := import "github.com/yarpc/yarpc-go">
 <$thrift	 := import "github.com/yarpc/yarpc-go/encoding/thrift">
 <$protocol := import "github.com/thriftrw/thriftrw-go/protocol">
+<$context   := import "golang.org/x/net/context">
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
@@ -50,6 +51,7 @@ type Interface interface {
 
 	<range .Service.Functions>
 		<.Name>(
+			ctx <$context>.Context,
 			reqMeta <$yarpc>.ReqMeta, <range .Arguments>
 			<lowerFirst .Name> <formatType .Type>,<end>
 		) <if .ReturnType> (<formatType .ReturnType>, <$yarpc>.ResMeta, error)
@@ -91,16 +93,16 @@ type handler struct{ impl Interface }
 <$servicePackage := import $service.Package>
 <$wire := import "github.com/thriftrw/thriftrw-go/wire">
 
-func (h handler) <.Name>(reqMeta <$yarpc>.ReqMeta, body <$wire>.Value) (<$thrift>.Response, error) {
+func (h handler) <.Name>(ctx <$context>.Context, reqMeta <$yarpc>.ReqMeta, body <$wire>.Value) (<$thrift>.Response, error) {
 	var args <$servicePackage>.<.Name>Args
 	if err := args.FromWire(body); err != nil {
 		return <$thrift>.Response{}, err
 	}
 
 	<if .ReturnType>
-		success, resMeta, err := h.impl.<.Name>(reqMeta, <range .Arguments>args.<.Name>,<end>)
+		success, resMeta, err := h.impl.<.Name>(ctx, reqMeta, <range .Arguments>args.<.Name>,<end>)
 	<else>
-		resMeta, err := h.impl.<.Name>(reqMeta, <range .Arguments>args.<.Name>,<end>)
+		resMeta, err := h.impl.<.Name>(ctx, reqMeta, <range .Arguments>args.<.Name>,<end>)
 	<end>
 
 	hadError := err != nil
@@ -128,6 +130,7 @@ package <$pkgname>
 <$transport := import "github.com/yarpc/yarpc-go/transport">
 <$thrift    := import "github.com/yarpc/yarpc-go/encoding/thrift">
 <$protocol  := import "github.com/thriftrw/thriftrw-go/protocol">
+<$context   := import "golang.org/x/net/context">
 
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {
@@ -138,6 +141,7 @@ type Interface interface {
 
 	<range .Service.Functions>
 		<.Name>(
+			ctx <$context>.Context,
 			reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 				<lowerFirst .Name> <formatType .Type>,<end>
 		) <if .ReturnType> (<formatType .ReturnType>, <$yarpc>.CallResMeta, error)
@@ -168,13 +172,13 @@ type client struct{ c <$thrift>.Client }
 <$wire := import "github.com/thriftrw/thriftrw-go/wire">
 
 func (c client) <.Name>(
-	reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
+	ctx <$context>.Context, reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
 ) (<if .ReturnType>success <formatType .ReturnType>,<end> resMeta <$yarpc>.CallResMeta, err error) {
 	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	var body <$wire>.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

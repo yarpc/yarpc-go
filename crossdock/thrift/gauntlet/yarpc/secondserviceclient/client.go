@@ -25,6 +25,7 @@ package secondserviceclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"golang.org/x/net/context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/service/secondservice"
 	"github.com/yarpc/yarpc-go/transport"
@@ -35,10 +36,12 @@ import (
 // Interface is a client for the SecondService service.
 type Interface interface {
 	BlahBlah(
+		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 	) (yarpc.CallResMeta, error)
 
 	SecondtestString(
+		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		thing *string,
 	) (string, yarpc.CallResMeta, error)
@@ -58,12 +61,12 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 type client struct{ c thrift.Client }
 
 func (c client) BlahBlah(
-	reqMeta yarpc.CallReqMeta,
+	ctx context.Context, reqMeta yarpc.CallReqMeta,
 ) (resMeta yarpc.CallResMeta, err error) {
 	args := secondservice.BlahBlahHelper.Args()
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -78,13 +81,13 @@ func (c client) BlahBlah(
 }
 
 func (c client) SecondtestString(
-	reqMeta yarpc.CallReqMeta,
+	ctx context.Context, reqMeta yarpc.CallReqMeta,
 	_Thing *string,
 ) (success string, resMeta yarpc.CallResMeta, err error) {
 	args := secondservice.SecondtestStringHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

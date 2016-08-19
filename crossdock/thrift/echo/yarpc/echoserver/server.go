@@ -25,6 +25,7 @@ package echoserver
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"golang.org/x/net/context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
@@ -35,6 +36,7 @@ import (
 // Interface is the server-side interface for the Echo service.
 type Interface interface {
 	Echo(
+		ctx context.Context,
 		reqMeta yarpc.ReqMeta,
 		ping *echo.Ping,
 	) (*echo.Pong, yarpc.ResMeta, error)
@@ -67,13 +69,13 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) Echo(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args echo2.EchoArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.Echo(reqMeta, args.Ping)
+	success, resMeta, err := h.impl.Echo(ctx, reqMeta, args.Ping)
 
 	hadError := err != nil
 	result, err := echo2.EchoHelper.WrapResponse(success, err)

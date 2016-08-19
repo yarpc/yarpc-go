@@ -25,7 +25,7 @@ import (
 
 var _reqBody = []byte("hello")
 
-func yarpcEcho(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+func yarpcEcho(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
 	return body, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
 }
 
@@ -77,7 +77,7 @@ func withHTTPServer(t testing.TB, listenOn string, h http.Handler, f func()) {
 func runYARPCClient(b *testing.B, c raw.Client) {
 	for i := 0; i < b.N; i++ {
 		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		_, _, err := c.Call(yarpc.NewReqMeta(ctx).Procedure("echo"), _reqBody)
+		_, _, err := c.Call(ctx, yarpc.NewReqMeta().Procedure("echo"), _reqBody)
 		require.NoError(b, err, "request %d failed", i+1)
 	}
 }

@@ -25,6 +25,7 @@ package echoclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
+	"golang.org/x/net/context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/transport"
@@ -36,6 +37,7 @@ import (
 // Interface is a client for the Echo service.
 type Interface interface {
 	Echo(
+		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		ping *echo.Ping,
 	) (*echo.Pong, yarpc.CallResMeta, error)
@@ -55,13 +57,13 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 type client struct{ c thrift.Client }
 
 func (c client) Echo(
-	reqMeta yarpc.CallReqMeta,
+	ctx context.Context, reqMeta yarpc.CallReqMeta,
 	_Ping *echo.Ping,
 ) (success *echo.Pong, resMeta yarpc.CallResMeta, err error) {
 	args := echo2.EchoHelper.Args(_Ping)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
