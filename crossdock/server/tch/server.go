@@ -64,6 +64,7 @@ func Stop() {
 // Register the different endpoints of the test subject
 func register(ch *tchannel.Channel) {
 	ch.Register(raw.Wrap(echoRawHandler{}), "echo/raw")
+	ch.Register(raw.Wrap(handlerTimeoutRawHandler{}), "handlertimeout/raw")
 
 	json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError)
 

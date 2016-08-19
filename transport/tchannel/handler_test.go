@@ -109,17 +109,21 @@ func TestHandlerErrors(t *testing.T) {
 
 func TestHandlerFailures(t *testing.T) {
 	tests := []struct {
-		desc   string
-		ctx    context.Context
-		call   *fakeInboundCall
-		expect func(*transporttest.MockHandler)
-		msgs   []string
-		status tchannel.SystemErrCode
+		desc string
+
+		// context to use in the callm a default one is used otherwise.
+		ctx context.Context
+
+		sendCall   *fakeInboundCall
+		expectCall func(*transporttest.MockHandler)
+
+		wantErrors []string               // error message contents
+		wantStatus tchannel.SystemErrCode // expected status
 	}{
 		{
 			desc: "no timeout on context",
 			ctx:  context.Background(),
-			call: &fakeInboundCall{
+			sendCall: &fakeInboundCall{
 				service: "foo",
 				caller:  "bar",
 				method:  "hello",
@@ -127,12 +131,12 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			msgs:   []string{"timeout required"},
-			status: tchannel.ErrCodeBadRequest,
+			wantErrors: []string{"timeout required"},
+			wantStatus: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "arg2 reader error",
-			call: &fakeInboundCall{
+			sendCall: &fakeInboundCall{
 				service: "foo",
 				caller:  "bar",
 				method:  "hello",
@@ -140,15 +144,15 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    nil,
 				arg3:    []byte{0x00},
 			},
-			msgs: []string{
+			wantErrors: []string{
 				`BadRequest: failed to decode "raw" request headers for`,
 				`procedure "hello" of service "foo" from caller "bar"`,
 			},
-			status: tchannel.ErrCodeBadRequest,
+			wantStatus: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "arg2 parse error",
-			call: &fakeInboundCall{
+			sendCall: &fakeInboundCall{
 				service: "foo",
 				caller:  "bar",
 				method:  "hello",
@@ -156,15 +160,15 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte("{not valid JSON}"),
 				arg3:    []byte{0x00},
 			},
-			msgs: []string{
+			wantErrors: []string{
 				`BadRequest: failed to decode "json" request headers for`,
 				`procedure "hello" of service "foo" from caller "bar"`,
 			},
-			status: tchannel.ErrCodeBadRequest,
+			wantStatus: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "arg3 reader error",
-			call: &fakeInboundCall{
+			sendCall: &fakeInboundCall{
 				service: "foo",
 				caller:  "bar",
 				method:  "hello",
@@ -172,14 +176,14 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    nil,
 			},
-			msgs: []string{
+			wantErrors: []string{
 				`UnexpectedError: error for procedure "hello" of service "foo"`,
 			},
-			status: tchannel.ErrCodeUnexpected,
+			wantStatus: tchannel.ErrCodeUnexpected,
 		},
 		{
 			desc: "internal error",
-			call: &fakeInboundCall{
+			sendCall: &fakeInboundCall{
 				service: "foo",
 				caller:  "bar",
 				method:  "hello",
@@ -187,7 +191,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			expect: func(h *transporttest.MockHandler) {
+			expectCall: func(h *transporttest.MockHandler) {
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 					transportOptions,
@@ -202,15 +206,15 @@ func TestHandlerFailures(t *testing.T) {
 					), gomock.Any(),
 				).Return(fmt.Errorf("great sadness"))
 			},
-			msgs: []string{
+			wantErrors: []string{
 				`UnexpectedError: error for procedure "hello" of service "foo":`,
 				"great sadness",
 			},
-			status: tchannel.ErrCodeUnexpected,
+			wantStatus: tchannel.ErrCodeUnexpected,
 		},
 		{
 			desc: "arg3 encode error",
-			call: &fakeInboundCall{
+			sendCall: &fakeInboundCall{
 				service: "foo",
 				caller:  "bar",
 				method:  "hello",
@@ -218,7 +222,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte("{}"),
 				arg3:    []byte("{}"),
 			},
-			expect: func(h *transporttest.MockHandler) {
+			expectCall: func(h *transporttest.MockHandler) {
 				req := &transport.Request{
 					Caller:    "bar",
 					Service:   "foo",
@@ -236,12 +240,53 @@ func TestHandlerFailures(t *testing.T) {
 						"serialization derp",
 					)))
 			},
-			msgs: []string{
+			wantErrors: []string{
 				`UnexpectedError: failed to encode "json" response body for`,
 				`procedure "hello" of service "foo" from caller "bar":`,
 				`serialization derp`,
 			},
-			status: tchannel.ErrCodeUnexpected,
+			wantStatus: tchannel.ErrCodeUnexpected,
+		},
+		{
+			desc: "handler timeout",
+			ctx: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+				return ctx
+			}(),
+			sendCall: &fakeInboundCall{
+				service: "foo",
+				caller:  "bar",
+				method:  "waituntiltimeout",
+				format:  tchannel.Raw,
+				arg2:    []byte{0x00, 0x00},
+				arg3:    []byte{0x00},
+			},
+			expectCall: func(h *transporttest.MockHandler) {
+				req := &transport.Request{
+					Service:   "foo",
+					Caller:    "bar",
+					Procedure: "waituntiltimeout",
+					Encoding:  raw.Encoding,
+					Body:      bytes.NewReader([]byte{0x00}),
+				}
+				h.EXPECT().Handle(
+					transporttest.NewContextMatcher(
+						t, transporttest.ContextTTL(time.Millisecond)),
+					transportOptions,
+					transporttest.NewRequestMatcher(t, req),
+					gomock.Any(),
+				).Do(func(
+					ctx context.Context,
+					_ transport.Options,
+					_ *transport.Request,
+					_ transport.ResponseWriter,
+				) {
+					<-ctx.Done()
+				}).Return(context.DeadlineExceeded)
+			},
+			wantErrors: []string{
+				`tchannel error ErrCodeTimeout: Timeout: call to procedure "waituntiltimeout" of service "foo" from caller "bar" timed out after `},
+			wantStatus: tchannel.ErrCodeTimeout,
 		},
 	}
 
@@ -253,22 +298,22 @@ func TestHandlerFailures(t *testing.T) {
 
 		mockCtrl := gomock.NewController(t)
 		thandler := transporttest.NewMockHandler(mockCtrl)
-		if tt.expect != nil {
-			tt.expect(thandler)
+		if tt.expectCall != nil {
+			tt.expectCall(thandler)
 		}
 
 		resp := newResponseRecorder()
-		tt.call.resp = resp
+		tt.sendCall.resp = resp
 
-		handler{nil, thandler}.handle(ctx, tt.call)
+		handler{nil, thandler}.handle(ctx, tt.sendCall)
 		err := resp.systemErr
 		require.Error(t, err, "expected error for %q", tt.desc)
 
 		systemErr, isSystemErr := err.(tchannel.SystemError)
 		require.True(t, isSystemErr, "expected %v for %q to be a system error", err, tt.desc)
-		assert.Equal(t, tt.status, systemErr.Code(), tt.desc)
+		assert.Equal(t, tt.wantStatus, systemErr.Code(), tt.desc)
 
-		for _, msg := range tt.msgs {
+		for _, msg := range tt.wantErrors {
 			assert.Contains(
 				t, err.Error(), msg,
 				"error should contain message for %q", tt.desc)

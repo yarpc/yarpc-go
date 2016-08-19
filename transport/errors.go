@@ -38,7 +38,7 @@ func IsUnexpectedError(err error) bool {
 	return ok
 }
 
-// IsTimeoutError return strue if the given error is a TimeoutError.
+// IsTimeoutError return true if the given error is a TimeoutError.
 func IsTimeoutError(err error) bool {
 	_, ok := err.(errors.TimeoutError)
 	return ok

@@ -21,6 +21,7 @@
 package yarpc
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/yarpc/yarpc-go"
@@ -31,4 +32,25 @@ import (
 func SleepRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
 	time.Sleep(1 * time.Second)
 	return nil, nil, nil
+}
+
+// Sleep responds to json requests over any transport by sleeping for one
+// second.
+func Sleep(reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+	time.Sleep(1 * time.Second)
+	return nil, nil, nil
+}
+
+// WaitForTimeoutRaw waits after the context deadline then returns the context
+// error. yarpc should interpret this as an handler timeout, which in turns
+// should be forwarded to the yarpc client as a remote handler timeout.
+func WaitForTimeoutRaw(reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+	ctx := reqMeta.Context()
+	if _, ok := ctx.Deadline(); !ok {
+		return nil, nil, fmt.Errorf("no deadline set in context")
+	}
+	select {
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
+	}
 }

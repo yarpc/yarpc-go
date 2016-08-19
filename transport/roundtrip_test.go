@@ -123,7 +123,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 		{
 			requestBody:   "foo",
-			responseError: errors.LocalUnexpectedError(fmt.Errorf("great sadness")),
+			responseError: errors.HandlerUnexpectedError(fmt.Errorf("great sadness")),
 			wantError: func(err error) {
 				assert.True(t, transport.IsUnexpectedError(err), err)
 				assert.Equal(t, "UnexpectedError: great sadness", err.Error())
@@ -131,7 +131,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 		{
 			requestBody:   "bar",
-			responseError: errors.LocalBadRequestError(fmt.Errorf("missing service name")),
+			responseError: errors.HandlerBadRequestError(fmt.Errorf("missing service name")),
 			wantError: func(err error) {
 				assert.True(t, transport.IsBadRequestError(err))
 				assert.Equal(t, "BadRequest: missing service name", err.Error())

@@ -37,7 +37,7 @@ type missingParametersError struct {
 }
 
 func (e missingParametersError) AsHandlerError() errors.HandlerError {
-	return errors.LocalBadRequestError(e)
+	return errors.HandlerBadRequestError(e)
 }
 
 func (e missingParametersError) Error() string {
@@ -67,7 +67,7 @@ type invalidTTLError struct {
 }
 
 func (e invalidTTLError) AsHandlerError() errors.HandlerError {
-	return errors.LocalBadRequestError(e)
+	return errors.HandlerBadRequestError(e)
 }
 
 func (e invalidTTLError) Error() string {

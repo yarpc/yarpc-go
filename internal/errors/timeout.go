@@ -33,25 +33,72 @@ type TimeoutError interface {
 	timeoutError()
 }
 
-type timeoutError struct {
+// handlerTimeoutError represents a timeout on the handler side.
+type handlerTimeoutError struct {
+	Caller    string
 	Service   string
 	Procedure string
 	Duration  time.Duration
 }
 
-// NewTimeoutError constructs an instance of a TimeoutError for the given
-// service, procedure, and duration waited.
-func NewTimeoutError(Service string, Procedure string, Duration time.Duration) TimeoutError {
-	return timeoutError{
+var _ TimeoutError = handlerTimeoutError{}
+var _ HandlerError = handlerTimeoutError{}
+
+// HandlerTimeoutError constructs an instance of a TimeoutError representing
+// a timeout that occurred during the handler execution, with the caller,
+// service, procedure and duration waited.
+func HandlerTimeoutError(Caller string, Service string, Procedure string, Duration time.Duration) error {
+	return handlerTimeoutError{
+		Caller:    Caller,
 		Service:   Service,
 		Procedure: Procedure,
 		Duration:  Duration,
 	}
 }
 
-func (e timeoutError) timeoutError() {}
+func (handlerTimeoutError) timeoutError() {}
+func (handlerTimeoutError) handlerError() {}
 
-func (e timeoutError) Error() string {
-	return fmt.Sprintf(`timeout for procedure %q of service %q after %v`,
+func (e handlerTimeoutError) Error() string {
+	return fmt.Sprintf(`Timeout: call to procedure %q of service %q from caller %q timed out after %v`,
+		e.Procedure, e.Service, e.Caller, e.Duration)
+}
+
+// RemoteTimeoutError represents a TimeoutError from a remote handler.
+type RemoteTimeoutError string
+
+var _ TimeoutError = RemoteTimeoutError("")
+
+func (RemoteTimeoutError) timeoutError() {}
+
+func (e RemoteTimeoutError) Error() string {
+	return string(e)
+}
+
+// clientTimeoutError represents a timeout on the client side.
+type clientTimeoutError struct {
+	Service   string
+	Procedure string
+	Duration  time.Duration
+}
+
+var _ TimeoutError = clientTimeoutError{}
+
+// ClientTimeoutError constructs an instance of a TimeoutError representing
+// a timeout that occurred while the client was waiting during a request to a
+// remote handler. It includes the service, procedure and duration waited.
+func ClientTimeoutError(Service string, Procedure string, Duration time.Duration) error {
+	return clientTimeoutError{
+		Service:   Service,
+		Procedure: Procedure,
+		Duration:  Duration,
+	}
+}
+
+func (clientTimeoutError) timeoutError() {}
+func (clientTimeoutError) clientError()  {}
+
+func (e clientTimeoutError) Error() string {
+	return fmt.Sprintf(`client timeout for procedure %q of service %q after %v`,
 		e.Procedure, e.Service, e.Duration)
 }

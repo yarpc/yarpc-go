@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
@@ -87,6 +88,7 @@ func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 }
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
+	start := time.Now()
 	err := h.callHandler(ctx, call)
 	if err == nil {
 		return
@@ -97,10 +99,20 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		return
 	}
 
+	// The handler is well behaved and stopped work on context deadline. We
+	// forward this information to the client diligently.
+	if err == context.DeadlineExceeded && err == ctx.Err() {
+		deadline, _ := ctx.Deadline()
+		err = errors.HandlerTimeoutError(call.CallerName(), call.ServiceName(),
+			call.MethodString(), deadline.Sub(start))
+	}
+
 	err = errors.AsHandlerError(call.ServiceName(), call.MethodString(), err)
 	status := tchannel.ErrCodeUnexpected
 	if transport.IsBadRequestError(err) {
 		status = tchannel.ErrCodeBadRequest
+	} else if transport.IsTimeoutError(err) {
+		status = tchannel.ErrCodeTimeout
 	}
 
 	call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))

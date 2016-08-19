@@ -21,17 +21,24 @@
 package tchserver
 
 import (
+	"strings"
 	"time"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"
 )
 
 func runRaw(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	hello(t, dispatcher)
+	remoteTimeout(t, dispatcher)
+}
+
+func hello(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
@@ -39,7 +46,7 @@ func runRaw(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	headers := yarpc.NewHeaders().With("hello", "raw")
 	token := random.Bytes(5)
 
-	resBody, resMeta, err := rawCall(dispatcher, headers, token)
+	resBody, resMeta, err := rawCall(dispatcher, headers, "echo/raw", token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
@@ -49,13 +56,43 @@ func runRaw(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	}
 }
 
-func rawCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token []byte) ([]byte, yarpc.CallResMeta, error) {
+// remoteTimeout tests if a yarpc client returns a remote timeout error behind
+// the TimeoutError interface when a remote tchannel handler returns a handler
+// timeout.
+func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	assert := crossdock.Assert(t)
+
+	headers := yarpc.NewHeaders()
+	token := random.Bytes(5)
+
+	_, _, err := rawCall(dispatcher, headers, "handlertimeout/raw", token)
+	if skipOnConnRefused(t, err) {
+		return
+	}
+	if !assert.Error(err, "expected an error") {
+		return
+	}
+
+	if transport.IsBadRequestError(err) {
+		t.Skipf("handlertimeout/raw procedure not implemented: %v", err)
+		return
+	}
+
+	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
+
+	form := strings.HasPrefix(err.Error(),
+		`Timeout: call to procedure "handlertimeout/raw" of service "service" from caller "caller" timed out after`)
+	assert.True(form, "must be a remote handler timeout: %q", err.Error())
+}
+
+func rawCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, procedure string,
+	token []byte) ([]byte, yarpc.CallResMeta, error) {
 	client := raw.New(dispatcher.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta(ctx).Procedure("echo/raw").Headers(headers)
+	reqMeta := yarpc.NewReqMeta(ctx).Procedure(procedure).Headers(headers)
 	resBody, resMeta, err := client.Call(reqMeta, token)
 	return resBody, resMeta, err
 }
