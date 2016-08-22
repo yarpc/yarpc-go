@@ -108,7 +108,7 @@ func TestOutboundHeaders(t *testing.T) {
 			out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 				ServiceName: "caller",
 			}), hostport)
-			require.NoError(t, out.Start(), "failed to start outbound")
+			require.NoError(t, out.Start(transport.NoDependencies), "failed to start outbound")
 			defer out.Stop()
 
 			ctx := tt.context
@@ -176,7 +176,7 @@ func TestCallSuccess(t *testing.T) {
 		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), serverHostPort)
-		require.NoError(t, out.Start(), "failed to start outbound")
+		require.NoError(t, out.Start(transport.NoDependencies), "failed to start outbound")
 		defer out.Stop()
 
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
@@ -256,7 +256,7 @@ func TestCallFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		out := tt.getOutbound(testutils.NewClient(t, nil), serverHostPort)
-		require.NoError(t, out.Start(), "failed to start outbound")
+		require.NoError(t, out.Start(transport.NoDependencies), "failed to start outbound")
 		defer out.Stop()
 
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
@@ -284,8 +284,8 @@ func TestStartTwice(t *testing.T) {
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
-		if assert.NoError(t, out.Start()) {
-			err := out.Start()
+		if assert.NoError(t, out.Start(transport.NoDependencies)) {
+			err := out.Start(transport.NoDependencies)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "tchannel.Outbound has already been started")
 		}

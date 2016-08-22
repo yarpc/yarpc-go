@@ -49,14 +49,14 @@ func (_m *MockInbound) EXPECT() *_MockInboundRecorder {
 	return _m.recorder
 }
 
-func (_m *MockInbound) Start(_param0 transport.Handler) error {
-	ret := _m.ctrl.Call(_m, "Start", _param0)
+func (_m *MockInbound) Start(_param0 transport.Handler, _param1 transport.Dependencies) error {
+	ret := _m.ctrl.Call(_m, "Start", _param0, _param1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockInboundRecorder) Start(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0)
+func (_mr *_MockInboundRecorder) Start(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0, arg1)
 }
 
 func (_m *MockInbound) Stop() error {

@@ -89,7 +89,7 @@ func Phone(reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.Res
 		return nil, nil, fmt.Errorf("unconfigured transport")
 	}
 
-	if err := outbound.Start(); err != nil {
+	if err := outbound.Start(transport.NoDependencies); err != nil {
 		return nil, nil, err
 	}
 	defer outbound.Stop()

@@ -32,7 +32,7 @@ type Outbound interface {
 	// This MUST block until the outbound is ready to start sending requests.
 	//
 	// Implementations can assume that this function is called at most once.
-	Start() error
+	Start(dependencies Dependencies) error
 
 	// Stops the outbound, cleaning up any resources held by the Outbound.
 	Stop() error

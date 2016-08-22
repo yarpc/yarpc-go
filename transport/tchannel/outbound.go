@@ -70,7 +70,7 @@ type outbound struct {
 	HostPort string
 }
 
-func (o outbound) Start() error {
+func (o outbound) Start(d transport.Dependencies) error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
 	if o.started.Swap(true) {

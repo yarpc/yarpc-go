@@ -68,8 +68,8 @@ type filteredOutbound struct {
 	f Filter
 }
 
-func (fo filteredOutbound) Start() error {
-	return fo.o.Start()
+func (fo filteredOutbound) Start(d Dependencies) error {
+	return fo.o.Start(d)
 }
 
 func (fo filteredOutbound) Stop() error {

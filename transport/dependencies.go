@@ -20,24 +20,17 @@
 
 package transport
 
-//go:generate mockgen -destination=transporttest/inbound.go -package=transporttest github.com/yarpc/yarpc-go/transport Inbound
-
-// Inbound is a transport that knows how to receive requests for procedure
-// calls.
-type Inbound interface {
-	// Starts accepting new requests and dispatches them to the given Handler.
-	//
-	// The function MUST return immediately, although it SHOULD block until
-	// the inbound is ready to start accepting new requests.
-	//
-	// Implementations can assume that this function is called at most once.
-	Start(handler Handler, dependencies Dependencies) error
-
-	// Stops the inbound. No new requests will be processed.
-	//
-	// This MAY block while the server drains ongoing requests.
-	Stop() error
-
-	// TODO some way for the inbound to expose the host and port it's
-	// listening on
+// Dependencies is the interface of any object useful for passing injected
+// dependencies into inbound and outbound transports.
+type Dependencies interface {
+	// Tracer() opentracing.Tracer
 }
+
+// NoDependencies is a no-op implementation of Dependencies
+var NoDependencies noDependencies
+
+type noDependencies struct{}
+
+// func (d noDependencies) Tracer() opentracing.Tracer {
+// 	return opentracing.NoopTracer{}
+// }

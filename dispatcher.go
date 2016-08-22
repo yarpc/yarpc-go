@@ -121,7 +121,13 @@ func (d dispatcher) Channel(service string) transport.Channel {
 func (d dispatcher) Start() error {
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Start(d)
+			return i.Start(d, d)
+		}
+	}
+
+	startOutbound := func(o transport.Outbound) func() error {
+		return func() error {
+			return o.Start(d)
 		}
 	}
 
@@ -132,7 +138,7 @@ func (d dispatcher) Start() error {
 
 	for _, o := range d.Outbounds {
 		// TODO record the name of the service whose outbound failed
-		wait.Submit(o.Start)
+		wait.Submit(startOutbound(o))
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
