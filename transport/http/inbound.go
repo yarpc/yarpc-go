@@ -69,7 +69,7 @@ type inbound struct {
 	done       chan error
 }
 
-func (i *inbound) Start(h transport.Handler, d transport.Dependencies) error {
+func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 
 	var err error
 	i.listener, err = net.Listen("tcp", i.addr)

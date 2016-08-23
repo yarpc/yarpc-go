@@ -20,17 +20,17 @@
 
 package transport
 
-// Dependencies is the interface of any object useful for passing injected
+// Deps is the interface of any object useful for passing injected
 // dependencies into inbound and outbound transports.
-type Dependencies interface {
+type Deps interface {
 	// Tracer() opentracing.Tracer
 }
 
-// NoDependencies is a no-op implementation of Dependencies
-var NoDependencies noDependencies
+// NoDeps is a no-op implementation of Deps
+var NoDeps noDeps
 
-type noDependencies struct{}
+type noDeps struct{}
 
-// func (d noDependencies) Tracer() opentracing.Tracer {
+// func (d noDeps) Tracer() opentracing.Tracer {
 // 	return opentracing.NoopTracer{}
 // }

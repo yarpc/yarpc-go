@@ -68,7 +68,7 @@ type filteredOutbound struct {
 	f Filter
 }
 
-func (fo filteredOutbound) Start(d Dependencies) error {
+func (fo filteredOutbound) Start(d Deps) error {
 	return fo.o.Start(d)
 }
 

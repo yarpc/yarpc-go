@@ -68,12 +68,12 @@ type httpTransport struct{ t *testing.T }
 
 func (ht httpTransport) WithHandler(h transport.Handler, f func(transport.Outbound)) {
 	i := http.NewInbound("127.0.0.1:0")
-	require.NoError(ht.t, i.Start(h, transport.NoDependencies), "failed to start")
+	require.NoError(ht.t, i.Start(h, transport.NoDeps), "failed to start")
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
-	require.NoError(ht.t, o.Start(transport.NoDependencies), "failed to start outbound")
+	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
 	defer o.Stop()
 	f(o)
 }
@@ -86,14 +86,14 @@ func (tt tchannelTransport) WithHandler(h transport.Handler, f func(transport.Ou
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
 		i := tch.NewInbound(ch)
-		require.NoError(tt.t, i.Start(h, transport.NoDependencies), "failed to start")
+		require.NoError(tt.t, i.Start(h, transport.NoDeps), "failed to start")
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
 		// handler.
 
 		client := testutils.NewClient(tt.t, clientOpts)
 		o := tch.NewOutbound(client, tch.HostPort(hostPort))
-		require.NoError(tt.t, o.Start(transport.NoDependencies), "failed to start outbound")
+		require.NoError(tt.t, o.Start(transport.NoDeps), "failed to start outbound")
 		defer o.Stop()
 
 		f(o)
