@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestInboundStartNew(t *testing.T) {
 				// Can't do Equal because we want to match the pointer, not a
 				// DeepEqual.
 				assert.True(t, ch == i.Channel(), "channel does not match")
-				require.NoError(t, i.Start(new(transporttest.MockHandler)))
+				require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 				defer i.Stop()
 
 				f(i)
@@ -52,7 +53,7 @@ func TestInboundStartNew(t *testing.T) {
 			func(ch *tchannel.Channel, f func(Inbound)) {
 				i := NewInbound(ch, ListenAddr(":0"))
 				assert.True(t, ch == i.Channel(), "channel does not match")
-				require.NoError(t, i.Start(new(transporttest.MockHandler)))
+				require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 				defer i.Stop()
 
 				f(i)
@@ -80,7 +81,7 @@ func TestInboundStartAlreadyListening(t *testing.T) {
 
 	i := NewInbound(ch)
 
-	require.NoError(t, i.Start(new(transporttest.MockHandler)))
+	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 	defer i.Stop()
 
 	assert.NoError(t, i.Stop())
@@ -99,7 +100,7 @@ func TestInboundInvalidAddress(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
 	i := NewInbound(ch, ListenAddr("not valid"))
-	assert.Error(t, i.Start(new(transporttest.MockHandler)))
+	assert.Error(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 }
 
 func TestInboundExistingMethods(t *testing.T) {
@@ -113,7 +114,7 @@ func TestInboundExistingMethods(t *testing.T) {
 	}, nil)
 
 	i := NewInbound(ch)
-	require.NoError(t, i.Start(new(transporttest.MockHandler)))
+	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 	defer i.Stop()
 
 	// Make a call to the "echo" method which should call our pre-registered method.

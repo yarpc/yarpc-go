@@ -82,7 +82,7 @@ type outbound struct {
 	URL     string
 }
 
-func (o outbound) Start() error {
+func (o outbound) Start(d transport.Deps) error {
 	if o.started.Swap(true) {
 		return errOutboundAlreadyStarted
 	}

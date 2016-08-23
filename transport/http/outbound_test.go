@@ -66,7 +66,7 @@ func TestCallSuccess(t *testing.T) {
 	defer successServer.Close()
 
 	out := NewOutbound(successServer.URL)
-	require.NoError(t, out.Start(), "failed to start outbound")
+	require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 	defer out.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -147,7 +147,7 @@ func TestOutboundHeaders(t *testing.T) {
 		}
 
 		out := NewOutbound(server.URL)
-		require.NoError(t, out.Start(), "failed to start outbound")
+		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 		defer out.Stop()
 
 		res, err := out.Call(ctx, &transport.Request{
@@ -190,7 +190,7 @@ func TestCallFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		out := NewOutbound(tt.url)
-		require.NoError(t, out.Start(), "failed to start outbound")
+		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 		defer out.Stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -211,8 +211,8 @@ func TestCallFailures(t *testing.T) {
 
 func TestStartTwice(t *testing.T) {
 	out := NewOutbound("http://localhost:9999")
-	if assert.NoError(t, out.Start()) {
-		err := out.Start()
+	if assert.NoError(t, out.Start(transport.NoDeps)) {
+		err := out.Start(transport.NoDeps)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "http.Outbound has already been started")
 	}

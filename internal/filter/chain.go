@@ -55,8 +55,8 @@ type chainExec struct {
 	Final transport.Outbound
 }
 
-func (x chainExec) Start() error {
-	return x.Final.Start()
+func (x chainExec) Start(d transport.Deps) error {
+	return x.Final.Start(d)
 }
 
 func (x chainExec) Stop() error {
