@@ -29,24 +29,24 @@ type UnexpectedError interface {
 	unexpectedError()
 }
 
-type localUnexpectedError struct {
+type handlerUnexpectedError struct {
 	Reason error
 }
 
-var _ UnexpectedError = localUnexpectedError{}
-var _ HandlerError = localUnexpectedError{}
+var _ UnexpectedError = handlerUnexpectedError{}
+var _ HandlerError = handlerUnexpectedError{}
 
-// LocalUnexpectedError wraps the given error into an UnexpectedError.
+// HandlerUnexpectedError wraps the given error into an UnexpectedError.
 //
 // It represens a local failure while processing a request.
-func LocalUnexpectedError(err error) HandlerError {
-	return localUnexpectedError{Reason: err}
+func HandlerUnexpectedError(err error) HandlerError {
+	return handlerUnexpectedError{Reason: err}
 }
 
-func (localUnexpectedError) handlerError()    {}
-func (localUnexpectedError) unexpectedError() {}
+func (handlerUnexpectedError) handlerError()    {}
+func (handlerUnexpectedError) unexpectedError() {}
 
-func (e localUnexpectedError) Error() string {
+func (e handlerUnexpectedError) Error() string {
 	return "UnexpectedError: " + e.Reason.Error()
 }
 

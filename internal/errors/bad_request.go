@@ -28,24 +28,24 @@ type BadRequestError interface {
 	badRequestError()
 }
 
-type localBadRequestError struct {
+type handlerBadRequestError struct {
 	Reason error
 }
 
-var _ BadRequestError = localBadRequestError{}
-var _ HandlerError = localBadRequestError{}
+var _ BadRequestError = handlerBadRequestError{}
+var _ HandlerError = handlerBadRequestError{}
 
-// LocalBadRequestError wraps the given error into a BadRequestError.
+// HandlerBadRequestError wraps the given error into a BadRequestError.
 //
 // It represents a local failure while processing an invalid request.
-func LocalBadRequestError(err error) HandlerError {
-	return localBadRequestError{Reason: err}
+func HandlerBadRequestError(err error) HandlerError {
+	return handlerBadRequestError{Reason: err}
 }
 
-func (localBadRequestError) handlerError()    {}
-func (localBadRequestError) badRequestError() {}
+func (handlerBadRequestError) handlerError()    {}
+func (handlerBadRequestError) badRequestError() {}
 
-func (e localBadRequestError) Error() string {
+func (e handlerBadRequestError) Error() string {
 	return "BadRequest: " + e.Reason.Error()
 }
 

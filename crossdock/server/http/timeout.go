@@ -18,23 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package http
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/server/http"
-	"github.com/yarpc/yarpc-go/crossdock/server/tch"
-	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/yarpc/yarpc-go/internal/errors"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-}
-
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
+func handlerTimeoutRawHandler(w http.ResponseWriter, req *http.Request) {
+	start := time.Now()
+	err := errors.HandlerTimeoutError("caller", "service",
+		"handlertimeout/raw", time.Now().Sub(start))
+	w.WriteHeader(http.StatusGatewayTimeout)
+	fmt.Fprint(w, err.Error())
 }

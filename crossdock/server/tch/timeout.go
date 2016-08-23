@@ -18,23 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package tch
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/server/http"
-	"github.com/yarpc/yarpc-go/crossdock/server/tch"
-	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+	"time"
+
+	"golang.org/x/net/context"
+
+	"github.com/uber/tchannel-go"
+	"github.com/uber/tchannel-go/raw"
+	"github.com/yarpc/yarpc-go/internal/errors"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
+// handlerTimeoutRawHandler returns a handler timeout to the client right away.
+// On the other side, one can test if a yarpc client interpret the error
+// properly.
+type handlerTimeoutRawHandler struct{}
+
+func (handlerTimeoutRawHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	start := time.Now()
+	err := errors.HandlerTimeoutError("caller", "service",
+		"handlertimeout/raw", time.Now().Sub(start))
+	err = errors.AsHandlerError("service", "handlertimeout/raw", err)
+	err = tchannel.NewSystemError(tchannel.ErrCodeTimeout, err.Error())
+	return nil, err
 }
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
+func (handlerTimeoutRawHandler) OnError(ctx context.Context, err error) {
+	onError(ctx, err)
 }

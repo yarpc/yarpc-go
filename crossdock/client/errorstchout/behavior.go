@@ -39,6 +39,7 @@ const (
 
 type test struct {
 	name      string
+	encoding  string
 	procedure string
 	headers   []byte
 	body      []byte
@@ -172,11 +173,16 @@ func Run(t crossdock.T) {
 
 		ctx = json.WithHeaders(ctx, headers)
 
+		encoding := "json"
+		if tt.encoding != "" {
+			encoding = tt.encoding
+		}
+
 		call, err := peer.BeginCall(
 			ctx,
 			serviceName,
 			tt.procedure,
-			&tchannel.CallOptions{Format: tchannel.Format("json")},
+			&tchannel.CallOptions{Format: tchannel.Format(encoding)},
 		)
 		fatals.NoError(err, "could not begin call")
 

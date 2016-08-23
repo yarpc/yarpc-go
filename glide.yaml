@@ -20,3 +20,4 @@ import:
   # TODO: Change this to master once SubChannel.GetHandlers() is available to master.
   version: dev
 - package: github.com/crossdock/crossdock-go
+  version: master
