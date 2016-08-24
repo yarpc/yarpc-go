@@ -30,10 +30,11 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello"
 	hello2 "github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello/service/hello"
+	"golang.org/x/net/context"
 )
 
 type Interface interface {
-	Echo(reqMeta yarpc.ReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.ResMeta, error)
+	Echo(ctx context.Context, reqMeta yarpc.ReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.ResMeta, error)
 }
 
 func New(impl Interface) thrift.Service {
@@ -56,12 +57,12 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) Echo(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args hello2.EchoArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
-	success, resMeta, err := h.impl.Echo(reqMeta, args.Echo)
+	success, resMeta, err := h.impl.Echo(ctx, reqMeta, args.Echo)
 	hadError := err != nil
 	result, err := hello2.EchoHelper.WrapResponse(success, err)
 	var response thrift.Response

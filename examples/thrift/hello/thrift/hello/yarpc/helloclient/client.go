@@ -31,10 +31,11 @@ import (
 	"github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello"
 	hello2 "github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello/service/hello"
 	"github.com/yarpc/yarpc-go/transport"
+	"golang.org/x/net/context"
 )
 
 type Interface interface {
-	Echo(reqMeta yarpc.CallReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.CallResMeta, error)
+	Echo(ctx context.Context, reqMeta yarpc.CallReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.CallResMeta, error)
 }
 
 func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
@@ -43,10 +44,10 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) Echo(reqMeta yarpc.CallReqMeta, echo *hello.EchoRequest) (success *hello.EchoResponse, resMeta yarpc.CallResMeta, err error) {
+func (c client) Echo(ctx context.Context, reqMeta yarpc.CallReqMeta, echo *hello.EchoRequest) (success *hello.EchoResponse, resMeta yarpc.CallResMeta, err error) {
 	args := hello2.EchoHelper.Args(echo)
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

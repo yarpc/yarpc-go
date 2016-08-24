@@ -58,10 +58,10 @@ func jsonCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta(ctx).Procedure("echo").Headers(headers)
+	reqMeta := yarpc.NewReqMeta().Procedure("echo").Headers(headers)
 	reqBody := &jsonEcho{Token: token}
 
 	var resBody jsonEcho
-	resMeta, err := client.Call(reqMeta, reqBody, &resBody)
+	resMeta, err := client.Call(ctx, reqMeta, reqBody, &resBody)
 	return resBody.Token, resMeta, err
 }

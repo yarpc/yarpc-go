@@ -33,6 +33,7 @@ import (
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
+	"golang.org/x/net/context"
 )
 
 type getRequest struct {
@@ -57,14 +58,14 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) Get(reqMeta yarpc.ReqMeta, body *getRequest) (*getResponse, yarpc.ResMeta, error) {
+func (h *handler) Get(ctx context.Context, reqMeta yarpc.ReqMeta, body *getRequest) (*getResponse, yarpc.ResMeta, error) {
 	h.RLock()
 	result := &getResponse{Value: h.items[body.Key]}
 	h.RUnlock()
 	return result, nil, nil
 }
 
-func (h *handler) Set(reqMeta yarpc.ReqMeta, body *setRequest) (*setResponse, yarpc.ResMeta, error) {
+func (h *handler) Set(ctx context.Context, reqMeta yarpc.ReqMeta, body *setRequest) (*setResponse, yarpc.ResMeta, error) {
 	h.Lock()
 	h.items[body.Key] = body.Value
 	h.Unlock()

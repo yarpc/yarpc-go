@@ -61,10 +61,10 @@ func thriftCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta(ctx).Headers(headers)
+	reqMeta := yarpc.NewReqMeta().Headers(headers)
 	ping := &echo.Ping{Beep: token}
 
-	resBody, resMeta, err := client.Echo(reqMeta, ping)
+	resBody, resMeta, err := client.Echo(ctx, reqMeta, ping)
 	if err != nil {
 		return "", nil, err
 	}

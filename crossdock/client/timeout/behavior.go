@@ -49,8 +49,8 @@ func Run(t crossdock.T) {
 	defer dispatcher.Stop()
 
 	ch := raw.New(dispatcher.Channel("yarpc-test"))
-	_, _, err := ch.Call(yarpc.NewReqMeta(ctx).Procedure("sleep/raw"), nil)
-	fatals.Error(err, "expected an error")
+	_, _, err := ch.Call(ctx, yarpc.NewReqMeta().Procedure("sleep/raw"), nil)
+	fatals.Error(err, "expected a failure for timeout")
 
 	if transport.IsBadRequestError(err) {
 		t.Skipf("sleep/raw method not implemented: %v", err)

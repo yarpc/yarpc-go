@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"golang.org/x/net/context"
+
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
@@ -32,7 +34,7 @@ import (
 // Client makes Raw requests to a single service.
 type Client interface {
 	// Call performs an outbound Raw request.
-	Call(reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
 }
 
 // New builds a new Raw client.
@@ -44,14 +46,14 @@ type rawClient struct {
 	ch transport.Channel
 }
 
-func (c rawClient) Call(reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
+func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
 	treq := transport.Request{
 		Caller:   c.ch.Caller(),
 		Service:  c.ch.Service(),
 		Encoding: Encoding,
 		Body:     bytes.NewReader(body),
 	}
-	ctx := meta.ToTransportRequest(reqMeta, &treq)
+	meta.ToTransportRequest(reqMeta, &treq)
 
 	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
 	if err != nil {

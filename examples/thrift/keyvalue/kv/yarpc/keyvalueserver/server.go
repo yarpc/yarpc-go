@@ -29,11 +29,12 @@ import (
 	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/service/keyvalue"
+	"golang.org/x/net/context"
 )
 
 type Interface interface {
-	GetValue(reqMeta yarpc.ReqMeta, key *string) (string, yarpc.ResMeta, error)
-	SetValue(reqMeta yarpc.ReqMeta, key *string, value *string) (yarpc.ResMeta, error)
+	GetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string) (string, yarpc.ResMeta, error)
+	SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string, value *string) (yarpc.ResMeta, error)
 }
 
 func New(impl Interface) thrift.Service {
@@ -56,12 +57,12 @@ func (s service) Handlers() map[string]thrift.Handler {
 
 type handler struct{ impl Interface }
 
-func (h handler) GetValue(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) GetValue(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args keyvalue.GetValueArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
-	success, resMeta, err := h.impl.GetValue(reqMeta, args.Key)
+	success, resMeta, err := h.impl.GetValue(ctx, reqMeta, args.Key)
 	hadError := err != nil
 	result, err := keyvalue.GetValueHelper.WrapResponse(success, err)
 	var response thrift.Response
@@ -73,12 +74,12 @@ func (h handler) GetValue(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Respon
 	return response, err
 }
 
-func (h handler) SetValue(reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
+func (h handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) (thrift.Response, error) {
 	var args keyvalue.SetValueArgs
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
-	resMeta, err := h.impl.SetValue(reqMeta, args.Key, args.Value)
+	resMeta, err := h.impl.SetValue(ctx, reqMeta, args.Key, args.Value)
 	hadError := err != nil
 	result, err := keyvalue.SetValueHelper.WrapResponse(err)
 	var response thrift.Response

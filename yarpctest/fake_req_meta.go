@@ -23,13 +23,11 @@ package yarpctest
 import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
-
-	"golang.org/x/net/context"
 )
 
 // ReqMetaBuilder helps build fake yarpc.ReqMeta objects for testing.
 //
-// 	reqMeta := NewReqMetaBuilder(ctx).
+// 	reqMeta := NewReqMetaBuilder().
 // 		Encoding(json.Encoding).
 // 		Caller("mytestcaller").
 // 		Procedure("hello").
@@ -38,7 +36,6 @@ import (
 type ReqMetaBuilder struct {
 	singleUse
 
-	ctx       context.Context
 	encoding  transport.Encoding
 	headers   yarpc.Headers
 	caller    string
@@ -47,8 +44,8 @@ type ReqMetaBuilder struct {
 }
 
 // NewReqMetaBuilder instantiates a new ReqMetaBuilder with the given context.
-func NewReqMetaBuilder(ctx context.Context) *ReqMetaBuilder {
-	return &ReqMetaBuilder{ctx: ctx}
+func NewReqMetaBuilder() *ReqMetaBuilder {
+	return &ReqMetaBuilder{}
 }
 
 // Encoding specifies the Encoding for the ReqMeta.
@@ -98,10 +95,6 @@ type fakeReqMeta ReqMetaBuilder
 
 func (r fakeReqMeta) Caller() string {
 	return ReqMetaBuilder(r).caller
-}
-
-func (r fakeReqMeta) Context() context.Context {
-	return ReqMetaBuilder(r).ctx
 }
 
 func (r fakeReqMeta) Encoding() transport.Encoding {

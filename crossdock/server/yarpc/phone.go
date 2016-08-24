@@ -69,7 +69,7 @@ type PhoneResponse struct {
 }
 
 // Phone implements the phone procedure
-func Phone(reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
+func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
 	var outbound transport.Outbound
 
 	switch {
@@ -101,9 +101,10 @@ func Phone(reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.Res
 		Procedure: reqMeta.Procedure(),
 	}
 
-	ctx, _ := context.WithTimeout(reqMeta.Context(), 500*time.Millisecond)
+	ctx, _ = context.WithTimeout(ctx, 500*time.Millisecond)
 	_, err := client.Call(
-		yarpc.NewReqMeta(ctx).Procedure(body.Procedure),
+		ctx,
+		yarpc.NewReqMeta().Procedure(body.Procedure),
 		body.Body,
 		&resBody.Body)
 	if err != nil {

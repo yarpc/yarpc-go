@@ -31,10 +31,11 @@ import (
 	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
+	"golang.org/x/net/context"
 )
 
 type Interface interface {
-	Echo(reqMeta yarpc.CallReqMeta, ping *echo.Ping) (*echo.Pong, yarpc.CallResMeta, error)
+	Echo(ctx context.Context, reqMeta yarpc.CallReqMeta, ping *echo.Ping) (*echo.Pong, yarpc.CallResMeta, error)
 }
 
 func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
@@ -43,10 +44,10 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 
 type client struct{ c thrift.Client }
 
-func (c client) Echo(reqMeta yarpc.CallReqMeta, ping *echo.Ping) (success *echo.Pong, resMeta yarpc.CallResMeta, err error) {
+func (c client) Echo(ctx context.Context, reqMeta yarpc.CallReqMeta, ping *echo.Ping) (success *echo.Pong, resMeta yarpc.CallResMeta, err error) {
 	args := echo2.EchoHelper.Args(ping)
 	var body wire.Value
-	body, resMeta, err = c.c.Call(reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
