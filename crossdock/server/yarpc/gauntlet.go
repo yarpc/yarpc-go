@@ -23,8 +23,8 @@ package yarpc
 import (
 	"errors"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
 
 	"golang.org/x/net/context"
 )

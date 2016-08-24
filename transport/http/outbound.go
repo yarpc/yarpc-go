@@ -27,9 +27,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yarpc/yarpc-go/internal/baggage"
-	"github.com/yarpc/yarpc-go/internal/errors"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/internal/baggage"
+	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/transport"
 
 	"github.com/uber-go/atomic"
 	"golang.org/x/net/context"

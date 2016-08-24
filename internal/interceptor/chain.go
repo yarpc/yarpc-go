@@ -21,7 +21,7 @@
 package interceptor
 
 import (
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
 )

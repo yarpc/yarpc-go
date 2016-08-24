@@ -20,7 +20,7 @@
 
 package thrift
 
-import "github.com/yarpc/yarpc-go/transport"
+import "go.uber.org/yarpc/transport"
 
 // DisableEnvelopingForTransport allows a transport to disable Thrift request
 // and response enveloping.

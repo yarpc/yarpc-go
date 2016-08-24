@@ -26,10 +26,10 @@ package echoserver
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
-	yarpc "github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
+	yarpc "go.uber.org/yarpc"
+	"go.uber.org/yarpc/crossdock/thrift/echo"
+	echo2 "go.uber.org/yarpc/crossdock/thrift/echo/service/echo"
+	"go.uber.org/yarpc/encoding/thrift"
 	"golang.org/x/net/context"
 )
 

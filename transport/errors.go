@@ -20,7 +20,7 @@
 
 package transport
 
-import "github.com/yarpc/yarpc-go/internal/errors"
+import "go.uber.org/yarpc/internal/errors"
 
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.

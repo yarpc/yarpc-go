@@ -21,16 +21,16 @@
 package client
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/client/ctxpropagation"
-	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-	"github.com/yarpc/yarpc-go/crossdock/client/errors"
-	"github.com/yarpc/yarpc-go/crossdock/client/errorstchout"
-	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
-	"github.com/yarpc/yarpc-go/crossdock/client/headers"
-	"github.com/yarpc/yarpc-go/crossdock/client/httpserver"
-	"github.com/yarpc/yarpc-go/crossdock/client/tchclient"
-	"github.com/yarpc/yarpc-go/crossdock/client/tchserver"
-	"github.com/yarpc/yarpc-go/crossdock/client/timeout"
+	"go.uber.org/yarpc/crossdock/client/ctxpropagation"
+	"go.uber.org/yarpc/crossdock/client/echo"
+	"go.uber.org/yarpc/crossdock/client/errors"
+	"go.uber.org/yarpc/crossdock/client/errorstchout"
+	"go.uber.org/yarpc/crossdock/client/gauntlet"
+	"go.uber.org/yarpc/crossdock/client/headers"
+	"go.uber.org/yarpc/crossdock/client/httpserver"
+	"go.uber.org/yarpc/crossdock/client/tchclient"
+	"go.uber.org/yarpc/crossdock/client/tchserver"
+	"go.uber.org/yarpc/crossdock/client/timeout"
 
 	"github.com/crossdock/crossdock-go"
 )

@@ -26,7 +26,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/yarpc/yarpc-go"
+	"go.uber.org/yarpc"
 )
 
 // SleepRaw responds to raw requests over any transport by sleeping for one
