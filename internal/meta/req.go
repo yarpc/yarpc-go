@@ -33,6 +33,9 @@ func FromTransportRequest(req *transport.Request) yarpc.ReqMeta {
 // ToTransportRequest fills the given transport request with information from
 // the given ReqMeta.
 func ToTransportRequest(reqMeta yarpc.CallReqMeta, req *transport.Request) {
+	if reqMeta == nil {
+		return
+	}
 	req.Procedure = reqMeta.GetProcedure()
 	req.Headers = transport.Headers(reqMeta.GetHeaders())
 }

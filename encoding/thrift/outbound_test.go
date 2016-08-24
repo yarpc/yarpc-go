@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -183,8 +182,7 @@ func TestClient(t *testing.T) {
 			Protocol: proto,
 		})
 
-		// TODO can we pass nil instead of reqmeta?
-		_, _, err := c.Call(ctx, yarpc.NewReqMeta(), tt.giveRequestBody)
+		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)
