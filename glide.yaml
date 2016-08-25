@@ -17,6 +17,6 @@ import:
   subpackages:
   - gomock
 - package: github.com/uber/tchannel-go
-  version: master
+  version: ^1.0.9
 - package: github.com/crossdock/crossdock-go
   version: master
