@@ -130,11 +130,12 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		opentracing.StartTime(start),
 		opentracing.ChildOf(parent),
 		opentracing.Tags{
-			"caller":   treq.Caller,
-			"service":  treq.Service,
-			"encoding": treq.Encoding,
+			"yarpc.caller":   treq.Caller,
+			"yarpc.service":  treq.Service,
+			"yarpc.encoding": treq.Encoding,
 		},
 	)
+	ext.PeerService.Set(span, treq.Service)
 	ext.SpanKindRPCClient.Set(span)
 	ext.HTTPUrl.Set(span, req.URL.String())
 	defer span.Finish()

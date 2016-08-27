@@ -96,12 +96,13 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		treq.Procedure,
 		opentracing.StartTime(start),
 		opentracing.Tags{
-			"caller":   treq.Caller,
-			"service":  treq.Service,
-			"encoding": treq.Encoding,
+			"yarpc.caller":   treq.Caller,
+			"yarpc.service":  treq.Service,
+			"yarpc.encoding": treq.Encoding,
 		},
 		ext.RPCServerOption(spanCtx),
 	)
+	ext.PeerService.Set(span, treq.Caller)
 	// ext.HTTPUrl.Set(span, req.URL.String()) // XXX panics
 	// defer span.Finish() // XXX duplicate span submission
 	ctx = opentracing.ContextWithSpan(ctx, span)
