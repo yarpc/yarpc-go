@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
@@ -73,19 +75,21 @@ func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
 	client := buildClient(&cfg)
 
 	// TODO: Use option pattern with varargs instead
-	return outbound{Client: client, URL: url, started: atomic.NewBool(false)}
+	return &outbound{Client: client, URL: url, started: atomic.NewBool(false)}
 }
 
 type outbound struct {
 	started *atomic.Bool
 	Client  *http.Client
+	Tracer  opentracing.Tracer
 	URL     string
 }
 
-func (o outbound) Start(d transport.Deps) error {
+func (o *outbound) Start(d transport.Deps) error {
 	if o.started.Swap(true) {
 		return errOutboundAlreadyStarted
 	}
+	o.Tracer = d.Tracer()
 	return nil
 }
 
@@ -94,14 +98,14 @@ func (outbound) Options() (o transport.Options) {
 	return o
 }
 
-func (o outbound) Stop() error {
+func (o *outbound) Stop() error {
 	if !o.started.Swap(false) {
 		return errOutboundNotStarted
 	}
 	return nil
 }
 
-func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)
@@ -111,30 +115,62 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
 
-	request, err := http.NewRequest("POST", o.URL, req.Body)
+	req, err := http.NewRequest("POST", o.URL, treq.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = applicationHeaders.ToHTTPHeaders(req.Headers, nil)
+	// Apply HTTP Context headers for tracing and baggage carried by tracing.
+	var parent opentracing.SpanContext // ok to be nil
+	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
+		parent = parentSpan.Context()
+	}
+	span := o.Tracer.StartSpan(
+		treq.Procedure,
+		opentracing.StartTime(start),
+		opentracing.ChildOf(parent),
+		opentracing.Tags{
+			"caller":   treq.Caller,
+			"service":  treq.Service,
+			"encoding": treq.Encoding,
+		},
+	)
+	ext.SpanKindRPCClient.Set(span)
+	ext.HTTPUrl.Set(span, req.URL.String())
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
+	o.Tracer.Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
+	)
+
+	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
 	if hs := baggage.FromContext(ctx); hs.Len() > 0 {
-		request.Header = baggageHeaders.ToHTTPHeaders(hs, request.Header)
+		req.Header = baggageHeaders.ToHTTPHeaders(hs, req.Header)
 	}
 
-	request.Header.Set(CallerHeader, req.Caller)
-	request.Header.Set(ServiceHeader, req.Service)
-	request.Header.Set(ProcedureHeader, req.Procedure)
-	request.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
+	req.Header.Set(CallerHeader, treq.Caller)
+	req.Header.Set(ServiceHeader, treq.Service)
+	req.Header.Set(ProcedureHeader, treq.Procedure)
+	req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
 
-	encoding := string(req.Encoding)
+	encoding := string(treq.Encoding)
 	if encoding != "" {
-		request.Header.Set(EncodingHeader, encoding)
+		req.Header.Set(EncodingHeader, encoding)
 	}
 
-	response, err := ctxhttp.Do(ctx, o.Client, request)
+	response, err := ctxhttp.Do(ctx, o.Client, req)
+
+	if response != nil {
+		span.SetTag("http.status_code", response.StatusCode)
+	}
+
 	if err != nil {
+		span.SetTag("error", err.Error())
 		if err == context.DeadlineExceeded {
-			return nil, errors.ClientTimeoutError(req.Service, req.Procedure, deadline.Sub(start))
+			return nil, errors.ClientTimeoutError(treq.Service, treq.Procedure, deadline.Sub(start))
 		}
 
 		return nil, err
