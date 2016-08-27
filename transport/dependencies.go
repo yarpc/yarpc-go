@@ -34,5 +34,5 @@ var NoDeps noDeps
 type noDeps struct{}
 
 func (d noDeps) Tracer() opentracing.Tracer {
-	return opentracing.NoopTracer{}
+	return opentracing.GlobalTracer()
 }
