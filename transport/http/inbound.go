@@ -84,7 +84,7 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 
 	var httpHandler http.Handler = handler{
 		Handler: h,
-		Tracer:  i.tracer,
+		Deps:    d,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)

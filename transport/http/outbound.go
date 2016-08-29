@@ -81,7 +81,7 @@ func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
 type outbound struct {
 	started *atomic.Bool
 	Client  *http.Client
-	Tracer  opentracing.Tracer
+	Deps    transport.Deps
 	URL     string
 }
 
@@ -89,7 +89,7 @@ func (o *outbound) Start(d transport.Deps) error {
 	if o.started.Swap(true) {
 		return errOutboundAlreadyStarted
 	}
-	o.Tracer = d.Tracer()
+	o.Deps = d
 	return nil
 }
 
@@ -121,11 +121,12 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
+	tracer := o.Deps.Tracer()
 	var parent opentracing.SpanContext // ok to be nil
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 		parent = parentSpan.Context()
 	}
-	span := o.Tracer.StartSpan(
+	span := tracer.StartSpan(
 		treq.Procedure,
 		opentracing.StartTime(start),
 		opentracing.ChildOf(parent),
@@ -141,7 +142,7 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	o.Tracer.Inject(
+	tracer.Inject(
 		span.Context(),
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(req.Header),

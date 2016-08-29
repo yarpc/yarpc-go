@@ -23,7 +23,6 @@ package tchannel
 import (
 	"io"
 
-	"github.com/opentracing/opentracing-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
@@ -65,7 +64,6 @@ func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.Outb
 type outbound struct {
 	started *atomic.Bool
 	Channel *tchannel.Channel
-	Tracer  opentracing.Tracer
 
 	// If specified, this is the address to which the request will be made.
 	// Otherwise, the global peer list of the Channel will be used.
@@ -78,7 +76,6 @@ func (o outbound) Start(d transport.Deps) error {
 	if o.started.Swap(true) {
 		return errOutboundAlreadyStarted
 	}
-	o.Tracer = d.Tracer()
 	return nil
 }
 
