@@ -21,9 +21,9 @@
 package yarpc
 
 import (
-	"github.com/yarpc/yarpc-go/internal/filter"
-	"github.com/yarpc/yarpc-go/internal/interceptor"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/internal/filter"
+	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/transport"
 )
 
 // Filters combines the given collection of filters in-order into a single

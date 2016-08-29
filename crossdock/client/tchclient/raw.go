@@ -23,7 +23,7 @@ package tchclient
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"go.uber.org/yarpc/crossdock/client/random"
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go/raw"

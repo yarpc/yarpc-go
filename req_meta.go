@@ -20,7 +20,7 @@
 
 package yarpc
 
-import "github.com/yarpc/yarpc-go/transport"
+import "go.uber.org/yarpc/transport"
 
 // CallReqMeta contains information about an outgoing YARPC request.
 type CallReqMeta interface {

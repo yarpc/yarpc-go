@@ -25,14 +25,14 @@ import (
 	"log"
 	"time"
 
-	"github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello"
-	"github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello/yarpc/helloclient"
-	"github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello/yarpc/helloserver"
+	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
+	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello/yarpc/helloclient"
+	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello/yarpc/helloserver"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/http"
 	"golang.org/x/net/context"
 )
 

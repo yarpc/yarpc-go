@@ -21,7 +21,7 @@
 package yarpc
 
 import (
-	"github.com/yarpc/yarpc-go/internal/baggage"
+	"go.uber.org/yarpc/internal/baggage"
 
 	"golang.org/x/net/context"
 )
