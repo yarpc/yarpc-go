@@ -45,7 +45,7 @@ func popHeader(h http.Header, n string) string {
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
 	Handler transport.Handler
-	Tracer  opentracing.Tracer
+	Deps    transport.Deps
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -90,9 +90,10 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
+	tracer := h.Deps.Tracer()
 	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	spanCtx, _ := h.Tracer.Extract(opentracing.HTTPHeaders, carrier)
-	span := h.Tracer.StartSpan(
+	spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
+	span := tracer.StartSpan(
 		treq.Procedure,
 		opentracing.StartTime(start),
 		opentracing.Tags{

@@ -82,10 +82,6 @@ func NewDispatcher(cfg Config) Dispatcher {
 		panic("a service name is required")
 	}
 
-	if cfg.Tracer == nil {
-		cfg.Tracer = opentracing.NoopTracer{}
-	}
-
 	return dispatcher{
 		Name:        cfg.Name,
 		Registry:    transport.NewMapRegistry(cfg.Name),
@@ -189,5 +185,8 @@ func (d dispatcher) Stop() error {
 // the transport.Dependencies interface so the dispatcher can be used to start
 // inbounds and outbounds.
 func (d dispatcher) Tracer() opentracing.Tracer {
+	if d.tracer == nil {
+		return opentracing.GlobalTracer()
+	}
 	return d.tracer
 }
