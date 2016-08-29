@@ -1,5 +1,7 @@
 # yarpc-go [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 
+A transport and encoding agnostic RPC framework.
+
 ## Installation
 
 `go get -u go.uber.org/yarpc`
