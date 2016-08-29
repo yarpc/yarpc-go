@@ -1,17 +1,17 @@
-hash: 16a2097bbd68539e7ce55c7dd80ba7c2779e621e0a42b12eb70511a8bd06f147
-updated: 2016-08-01T11:58:30.439910236-07:00
+hash: 889020635a48a23a44a6318c8ee654aee77ec4c2dde4da4e6a3b04c56ccd2ac5
+updated: 2016-08-25T10:50:41.903050504-07:00
 imports:
 - name: github.com/apache/thrift
-  version: bcad91771b7f0bff28a1cac1981d7ef2b9bcef3c
+  version: e4ba16495e8d8177eb85d6bfcc69089b38753e39
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
-  version: 228792ab861c86f8900b2db0439577feef9ec9d8
+  version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
   subpackages:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 6cf5744a041a0022271cefed95ba843f6d87fd51
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -28,18 +28,18 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 13abcf75760f008b6f92ee3185a9534e286b64a0
+  version: 01c773686a1a72ecac80d38ba0f18060ff1e93d5
   subpackages:
   - ptr
   - wire
   - protocol
   - envelope
   - protocol/binary
-  - envelope/internal/exception
+  - internal/envelope/exception
 - name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+  version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
-  version: 2b34b80eb3345af1eda2fe27b94b0bf3ee3c920e
+  version: cddba8c9bdf3a761b261382a6d7e7253e332790c
   subpackages:
   - json
   - raw
@@ -54,7 +54,7 @@ imports:
   - relay/relaytest
   - testutils/goroutines
 - name: golang.org/x/net
-  version: 35028a49ca5a73b486af60cd20ac21cd6b67bfdb
+  version: 3a1f9ef983bc408afd0a9e63fd9c962ae853e543
   subpackages:
   - context
   - context/ctxhttp
