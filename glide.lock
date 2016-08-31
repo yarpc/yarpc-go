@@ -1,8 +1,8 @@
-hash: 889020635a48a23a44a6318c8ee654aee77ec4c2dde4da4e6a3b04c56ccd2ac5
-updated: 2016-08-25T10:50:41.903050504-07:00
+hash: 9ba800787ee3318334b30ffdee48e00c42f9f6b079dc194194a90809e0565110
+updated: 2016-08-31T14:23:48.132141348-07:00
 imports:
 - name: github.com/apache/thrift
-  version: e4ba16495e8d8177eb85d6bfcc69089b38753e39
+  version: aa4312ef5ff8ae4965cc779fe73d2375aba0c2dc
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -18,6 +18,10 @@ imports:
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
+- name: github.com/opentracing/opentracing-go
+  version: 77a31d686003349e89c89e58408aafcd20003f41
+  subpackages:
+  - ext
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -28,7 +32,7 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 01c773686a1a72ecac80d38ba0f18060ff1e93d5
+  version: 256ff412f169844b2eec8497d8a50e00accdf69e
   subpackages:
   - ptr
   - wire
@@ -39,7 +43,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
-  version: cddba8c9bdf3a761b261382a6d7e7253e332790c
+  version: 1a0e35378f6f721bc07f6c4466bc9701ed70b506
   subpackages:
   - json
   - raw
@@ -54,7 +58,7 @@ imports:
   - relay/relaytest
   - testutils/goroutines
 - name: golang.org/x/net
-  version: 3a1f9ef983bc408afd0a9e63fd9c962ae853e543
+  version: 9bc2a3340c92c17a20edcd0080e93851ed58f5d5
   subpackages:
   - context
   - context/ctxhttp
