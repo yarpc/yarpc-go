@@ -26,10 +26,10 @@ package thrifttestserver
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
-	yarpc "go.uber.org/yarpc"
-	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
-	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/thrifttest"
-	"go.uber.org/yarpc/encoding/thrift"
+	yarpc "github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/service/thrifttest"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"golang.org/x/net/context"
 )
 

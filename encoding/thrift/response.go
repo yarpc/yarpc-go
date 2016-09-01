@@ -21,7 +21,7 @@
 package thrift
 
 import (
-	"go.uber.org/yarpc"
+	"github.com/yarpc/yarpc-go"
 
 	"github.com/thriftrw/thriftrw-go/envelope"
 )

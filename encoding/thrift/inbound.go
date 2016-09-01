@@ -24,9 +24,9 @@ import (
 	"bytes"
 	"io/ioutil"
 
-	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/meta"
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/internal/encoding"
+	"github.com/yarpc/yarpc-go/internal/meta"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"

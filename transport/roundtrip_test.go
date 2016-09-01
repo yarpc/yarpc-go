@@ -29,12 +29,12 @@ import (
 
 	"golang.org/x/net/context"
 
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/transport/transporttest"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/internal/errors"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -27,7 +27,7 @@ import (
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/raw"
-	"go.uber.org/yarpc/internal/errors"
+	"github.com/yarpc/yarpc-go/internal/errors"
 )
 
 // handlerTimeoutRawHandler returns a handler timeout to the client right away.

@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
+	"github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello"
 	"strings"
 )
 

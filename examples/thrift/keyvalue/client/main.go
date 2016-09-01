@@ -29,11 +29,11 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"

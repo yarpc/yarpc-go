@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"

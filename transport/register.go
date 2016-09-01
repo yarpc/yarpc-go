@@ -20,12 +20,12 @@
 
 package transport
 
-import "go.uber.org/yarpc/internal/errors"
+import "github.com/yarpc/yarpc-go/internal/errors"
 
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport Handler
+//go:generate mockgen -destination=transporttest/register.go -package=transporttest github.com/yarpc/yarpc-go/transport Handler
 
 // Registry maintains and provides access to a collection of procedures and
 // their handlers.

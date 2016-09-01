@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/internal/baggage"
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/internal/baggage"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )

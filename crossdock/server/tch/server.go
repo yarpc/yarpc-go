@@ -27,8 +27,8 @@ import (
 	"github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
-	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
-	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_apache"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/echo"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 )
 
 var (

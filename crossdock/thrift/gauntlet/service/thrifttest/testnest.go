@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"strings"
 )
 

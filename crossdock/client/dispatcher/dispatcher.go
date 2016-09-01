@@ -23,11 +23,11 @@ package dispatcher
 import (
 	"fmt"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/crossdock/client/params"
-	"go.uber.org/yarpc/transport"
-	ht "go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/transport"
+	ht "github.com/yarpc/yarpc-go/transport/http"
+	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go"

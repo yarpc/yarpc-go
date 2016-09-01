@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/yarpc/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/json"

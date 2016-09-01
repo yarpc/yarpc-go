@@ -24,10 +24,10 @@ import (
 	"bytes"
 	"time"
 
-	"go.uber.org/yarpc"
-	disp "go.uber.org/yarpc/crossdock/client/dispatcher"
-	"go.uber.org/yarpc/crossdock/client/random"
-	"go.uber.org/yarpc/encoding/raw"
+	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/encoding/raw"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"

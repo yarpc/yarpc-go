@@ -24,7 +24,7 @@ import (
 	"errors"
 
 	"github.com/uber/tchannel-go/thrift"
-	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_apache"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 )
 
 type thriftTestHandler struct{}

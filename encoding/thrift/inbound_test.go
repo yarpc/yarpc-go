@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +36,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-//go:generate mockgen -destination=mock_handler_test.go -package=thrift go.uber.org/yarpc/encoding/thrift Handler
+//go:generate mockgen -destination=mock_handler_test.go -package=thrift github.com/yarpc/yarpc-go/encoding/thrift Handler
 //go:generate mockgen -destination=mock_protocol_test.go -package=thrift github.com/thriftrw/thriftrw-go/protocol Protocol
 
 func TestThriftHandler(t *testing.T) {
