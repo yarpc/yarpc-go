@@ -92,20 +92,20 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	// Annotate the inbound context with a trace span
 	tracer := h.Deps.Tracer()
 	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
+	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
 	span := tracer.StartSpan(
 		treq.Procedure,
 		opentracing.StartTime(start),
 		opentracing.Tags{
-			"yarpc.caller":   treq.Caller,
-			"yarpc.service":  treq.Service,
-			"yarpc.encoding": treq.Encoding,
+			"rpc.caller":   treq.Caller,
+			"rpc.service":  treq.Service,
+			"rpc.encoding": treq.Encoding,
 		},
-		ext.RPCServerOption(spanCtx),
+		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
 	)
 	ext.PeerService.Set(span, treq.Caller)
 	// ext.HTTPUrl.Set(span, req.URL.String()) // XXX panics
-	// defer span.Finish() // XXX duplicate span submission
+	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	v := request.Validator{Request: treq}
@@ -131,6 +131,11 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		deadline, _ := ctx.Deadline()
 		err = errors.HandlerTimeoutError(treq.Caller, treq.Service,
 			treq.Procedure, deadline.Sub(start))
+	}
+
+	if err != nil {
+		span.SetTag("error", true)
+		span.LogEvent(err.Error())
 	}
 
 	return err

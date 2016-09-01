@@ -73,7 +73,7 @@ func TestHandlerErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		rpcHandler := transporttest.NewMockHandler(mockCtrl)
-		tchHandler := handler{Handler: rpcHandler}
+		tchHandler := handler{nil, rpcHandler, transport.NoDeps}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t, transporttest.ContextBaggage(tt.wantBaggage)),
@@ -305,7 +305,7 @@ func TestHandlerFailures(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.sendCall.resp = resp
 
-		handler{nil, thandler}.handle(ctx, tt.sendCall)
+		handler{nil, thandler, transport.NoDeps}.handle(ctx, tt.sendCall)
 		err := resp.systemErr
 		require.Error(t, err, "expected error for %q", tt.desc)
 

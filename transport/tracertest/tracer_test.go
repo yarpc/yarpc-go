@@ -21,7 +21,6 @@
 package tracertest
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -44,7 +43,23 @@ func echo(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*ec
 	return &echoResBody{}, nil, nil
 }
 
-func TestHttpInboundTracer(t *testing.T) {
+func Assert(t *testing.T, tracer *mocktracer.MockTracer) {
+	assert.Equal(t, 2, len(tracer.FinishedSpans()), "generates inbound and outband spans")
+	if len(tracer.FinishedSpans()) != 2 {
+		return
+	}
+	spans := tracer.FinishedSpans()
+	parent := spans[0]
+	child := spans[1]
+	// Whether the parent and child have the same span id is an implementation
+	// detail of the tracer.
+	// With the mock tracer, there is no expectation that the parent context
+	// and the child context have the same trace id.
+	assert.Equal(t, "echo", parent.OperationName, "span has correct operation name")
+	assert.Equal(t, "echo", child.OperationName, "span has correct operation name")
+}
+
+func TestHttpTracer(t *testing.T) {
 	tracer := mocktracer.New()
 	rpc := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
@@ -77,12 +92,10 @@ func TestHttpInboundTracer(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(tracer.FinishedSpans()), "generates one span")
-	assert.Equal(t, tracer.FinishedSpans()[0].OperationName, "echo", "span has correct operation name")
+	Assert(t, tracer)
 }
 
-func TestTChannelInboundTracer(t *testing.T) {
-
+func TestTChannelTracer(t *testing.T) {
 	tracer := mocktracer.New()
 
 	// Establish the TChannel
@@ -90,9 +103,7 @@ func TestTChannelInboundTracer(t *testing.T) {
 		Tracer: tracer,
 	})
 	assert.NoError(t, err)
-	ip, err := tchannel.ListenIP()
-	assert.NoError(t, err)
-	hp := fmt.Sprintf("%v:%v", ip, 4040)
+	hp := "127.0.0.1:4040"
 	ch.ListenAndServe(hp)
 
 	rpc := yarpc.NewDispatcher(yarpc.Config{
@@ -126,9 +137,5 @@ func TestTChannelInboundTracer(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(tracer.FinishedSpans()), "generates one span")
-	if len(tracer.FinishedSpans()) != 1 {
-		return
-	}
-	assert.Equal(t, tracer.FinishedSpans()[0].OperationName, "echo", "span has correct operation name")
+	Assert(t, tracer)
 }
