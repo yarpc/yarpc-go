@@ -23,7 +23,7 @@ package yarpc
 import (
 	"sort"
 
-	"go.uber.org/yarpc/internal"
+	"github.com/yarpc/yarpc-go/internal"
 )
 
 // CanonicalizeHeaderKey canonicalizes the given header key for storage into

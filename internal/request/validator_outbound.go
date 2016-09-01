@@ -21,7 +21,7 @@
 package request
 
 import (
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )

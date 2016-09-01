@@ -23,7 +23,7 @@ package yarpc
 import (
 	"fmt"
 
-	"go.uber.org/yarpc"
+	"github.com/yarpc/yarpc-go"
 
 	"golang.org/x/net/context"
 )

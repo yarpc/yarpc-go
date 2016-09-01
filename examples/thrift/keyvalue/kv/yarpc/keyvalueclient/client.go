@@ -26,10 +26,10 @@ package keyvalueclient
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
-	yarpc "go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
-	"go.uber.org/yarpc/transport"
+	yarpc "github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/service/keyvalue"
+	"github.com/yarpc/yarpc-go/transport"
 	"golang.org/x/net/context"
 )
 

@@ -23,10 +23,10 @@ package echo
 import (
 	"time"
 
-	"go.uber.org/yarpc"
-	disp "go.uber.org/yarpc/crossdock/client/dispatcher"
-	"go.uber.org/yarpc/crossdock/client/random"
-	"go.uber.org/yarpc/encoding/json"
+	"github.com/yarpc/yarpc-go"
+	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
+	"github.com/yarpc/yarpc-go/crossdock/client/random"
+	"github.com/yarpc/yarpc-go/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"

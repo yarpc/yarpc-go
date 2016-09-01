@@ -26,9 +26,9 @@ import (
 	"io"
 	"strings"
 
-	"go.uber.org/yarpc/internal/baggage"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/tchannel/internal"
+	"github.com/yarpc/yarpc-go/internal/baggage"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/tchannel/internal"
 
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"

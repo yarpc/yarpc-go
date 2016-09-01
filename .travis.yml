@@ -8,8 +8,6 @@ go:
   - 1.7
   - tip
 
-go_import_path: go.uber.org/yarpc
-
 services:
   - docker
 

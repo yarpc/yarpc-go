@@ -21,8 +21,8 @@
 package yarpc
 
 import (
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/crossdock/thrift/echo"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"golang.org/x/net/context"
 )
 

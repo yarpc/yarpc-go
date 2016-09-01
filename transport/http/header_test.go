@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"testing"
 
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
 )

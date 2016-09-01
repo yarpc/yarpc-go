@@ -29,9 +29,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

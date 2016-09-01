@@ -20,7 +20,7 @@
 
 package transport
 
-import "go.uber.org/yarpc/internal"
+import "github.com/yarpc/yarpc-go/internal"
 
 // CanonicalizeHeaderKey canonicalizes the given header key for storage into
 // the Headers map.

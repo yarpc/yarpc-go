@@ -23,7 +23,7 @@ package main
 import (
 	"fmt"
 
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"golang.org/x/net/context"
 )

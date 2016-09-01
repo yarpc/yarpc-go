@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.uber.org/yarpc/internal/errors"
+	"github.com/yarpc/yarpc-go/internal/errors"
 )
 
 // missingParametersError is a failure to process a request because it was

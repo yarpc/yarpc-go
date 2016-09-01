@@ -23,7 +23,7 @@ package tchannel
 import (
 	"net"
 
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/uber/tchannel-go"
 )
