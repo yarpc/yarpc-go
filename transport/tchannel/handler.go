@@ -76,6 +76,7 @@ func (c tchannelCall) Response() inboundCallResponse {
 type handler struct {
 	existing map[string]tchannel.Handler
 	Handler  transport.Handler
+	deps     transport.Deps
 }
 
 func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
@@ -137,6 +138,11 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Tim
 		return encoding.RequestHeadersDecodeError(treq, err)
 	}
 	treq.Headers = headers
+
+	if tcall, ok := call.(tchannelCall); ok {
+		tracer := h.deps.Tracer()
+		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+	}
 
 	body, err := call.Arg3Reader()
 	if err != nil {

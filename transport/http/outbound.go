@@ -131,9 +131,9 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		opentracing.StartTime(start),
 		opentracing.ChildOf(parent),
 		opentracing.Tags{
-			"yarpc.caller":   treq.Caller,
-			"yarpc.service":  treq.Service,
-			"yarpc.encoding": treq.Encoding,
+			"rpc.caller":   treq.Caller,
+			"rpc.service":  treq.Service,
+			"rpc.encoding": treq.Encoding,
 		},
 	)
 	ext.PeerService.Set(span, treq.Service)
@@ -170,7 +170,8 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	if err != nil {
-		span.SetTag("error", err.Error())
+		span.SetTag("error", true)
+		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {
 			return nil, errors.ClientTimeoutError(treq.Service, treq.Procedure, deadline.Sub(start))
 		}
