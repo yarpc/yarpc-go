@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go/transport"
 )
 
 // Inbound represents an HTTP Inbound. It is the same as the transport Inbound

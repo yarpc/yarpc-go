@@ -21,8 +21,8 @@
 package meta
 
 import (
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/transport"
 )
 
 // FromTransportRequest builds a ReqMeta from a transport-level Request.

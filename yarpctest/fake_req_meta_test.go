@@ -23,8 +23,8 @@ package yarpctest
 import (
 	"testing"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
 )

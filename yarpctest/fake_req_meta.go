@@ -21,8 +21,8 @@
 package yarpctest
 
 import (
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/transport"
 )
 
 // ReqMetaBuilder helps build fake yarpc.ReqMeta objects for testing.

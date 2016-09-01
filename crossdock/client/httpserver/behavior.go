@@ -25,11 +25,11 @@ import (
 	"strings"
 	"time"
 
-	yarpc "go.uber.org/yarpc"
-	"go.uber.org/yarpc/crossdock/client/params"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
-	ht "go.uber.org/yarpc/transport/http"
+	yarpc "github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/transport"
+	ht "github.com/yarpc/yarpc-go/transport/http"
 
 	crossdock "github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"

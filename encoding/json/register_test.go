@@ -3,7 +3,7 @@ package json
 import (
 	"testing"
 
-	"go.uber.org/yarpc"
+	"github.com/yarpc/yarpc-go"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"

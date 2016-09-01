@@ -1,4 +1,4 @@
-package: go.uber.org/yarpc
+package: github.com/yarpc/yarpc-go
 import:
 - package: golang.org/x/net
   version: master

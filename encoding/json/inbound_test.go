@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"github.com/yarpc/yarpc-go"
+	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
