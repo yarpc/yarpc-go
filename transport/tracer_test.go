@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tracertest
+package transport_test
 
 import (
 	"testing"
@@ -67,7 +67,7 @@ func TestHttpTracer(t *testing.T) {
 			http.NewInbound(":8080"),
 		},
 		Outbounds: transport.Outbounds{
-			"yarpc-test": http.NewOutbound("http://localhost:8080"),
+			"yarpc-test": http.NewOutbound("http://127.0.0.1:8080"),
 		},
 		Tracer: tracer,
 	})
