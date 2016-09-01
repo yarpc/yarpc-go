@@ -25,6 +25,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/sync"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
 )
 
@@ -71,6 +72,8 @@ type Config struct {
 	Interceptor transport.Interceptor
 
 	// TODO FallbackHandler for catch-all endpoints
+
+	Tracer opentracing.Tracer
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -86,6 +89,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 		Outbounds:   cfg.Outbounds,
 		Filter:      cfg.Filter,
 		Interceptor: cfg.Interceptor,
+		tracer:      cfg.Tracer,
 	}
 }
 
@@ -101,6 +105,7 @@ type dispatcher struct {
 	Interceptor transport.Interceptor
 
 	inbounds []transport.Inbound
+	tracer   opentracing.Tracer
 }
 
 func (d dispatcher) Inbounds() []transport.Inbound {
@@ -174,4 +179,14 @@ func (d dispatcher) Stop() error {
 	}
 
 	return nil
+}
+
+// Tracer returns the dispatcher's configured tracer and partially satisfies
+// the transport.Dependencies interface so the dispatcher can be used to start
+// inbounds and outbounds.
+func (d dispatcher) Tracer() opentracing.Tracer {
+	if d.tracer == nil {
+		return opentracing.GlobalTracer()
+	}
+	return d.tracer
 }

@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"sync/atomic"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/yarpc/yarpc-go/transport"
 )
 
@@ -67,9 +68,13 @@ type inbound struct {
 	listener   net.Listener
 	stopped    uint32
 	done       chan error
+	tracer     opentracing.Tracer
 }
 
 func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
+	i.tracer = d.Tracer()
+	// TODO Logger
+	// TODO Stats/Metrics
 
 	var err error
 	i.listener, err = net.Listen("tcp", i.addr)
@@ -77,7 +82,10 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 		return err
 	}
 
-	var httpHandler http.Handler = handler{Handler: h}
+	var httpHandler http.Handler = handler{
+		Handler: h,
+		Deps:    d,
+	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
 		httpHandler = i.mux

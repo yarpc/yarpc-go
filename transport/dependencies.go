@@ -20,10 +20,12 @@
 
 package transport
 
+import "github.com/opentracing/opentracing-go"
+
 // Deps is the interface of any object useful for passing injected
 // dependencies into inbound and outbound transports.
 type Deps interface {
-	// Tracer() opentracing.Tracer
+	Tracer() opentracing.Tracer
 }
 
 // NoDeps is a no-op implementation of Deps
@@ -31,6 +33,6 @@ var NoDeps noDeps
 
 type noDeps struct{}
 
-// func (d noDeps) Tracer() opentracing.Tracer {
-// 	return opentracing.NoopTracer{}
-// }
+func (d noDeps) Tracer() opentracing.Tracer {
+	return opentracing.GlobalTracer()
+}

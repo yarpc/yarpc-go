@@ -29,6 +29,8 @@ import (
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"golang.org/x/net/context"
 )
 
@@ -43,9 +45,12 @@ func popHeader(h http.Header, n string) string {
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
 	Handler transport.Handler
+	Deps    transport.Deps
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	start := time.Now()
+
 	defer req.Body.Close()
 	if req.Method != "POST" {
 		http.NotFound(w, req)
@@ -55,7 +60,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	service := req.Header.Get(ServiceHeader)
 	procedure := req.Header.Get(ProcedureHeader)
 
-	err := h.callHandler(w, req)
+	err := h.callHandler(w, req, start)
 	if err == nil {
 		return
 	}
@@ -70,7 +75,8 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	http.Error(w, err.Error(), status)
 }
 
-func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
+func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
+
 	treq := &transport.Request{
 		Caller:    popHeader(req.Header, CallerHeader),
 		Service:   popHeader(req.Header, ServiceHeader),
@@ -81,6 +87,26 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 	}
 
 	ctx := context.Background()
+
+	// Extract opentracing etc baggage from headers
+	// Annotate the inbound context with a trace span
+	tracer := h.Deps.Tracer()
+	carrier := opentracing.HTTPHeadersCarrier(req.Header)
+	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
+	span := tracer.StartSpan(
+		treq.Procedure,
+		opentracing.StartTime(start),
+		opentracing.Tags{
+			"rpc.caller":   treq.Caller,
+			"rpc.service":  treq.Service,
+			"rpc.encoding": treq.Encoding,
+		},
+		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
+	)
+	ext.PeerService.Set(span, treq.Caller)
+	// ext.HTTPUrl.Set(span, req.URL.String()) // XXX panics
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	v := request.Validator{Request: treq}
 	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
@@ -96,8 +122,6 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
-	start := time.Now()
-
 	// TODO capture and handle panic
 	err = h.Handler.Handle(ctx, httpOptions, treq, newResponseWriter(w))
 
@@ -107,6 +131,11 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		deadline, _ := ctx.Deadline()
 		err = errors.HandlerTimeoutError(treq.Caller, treq.Service,
 			treq.Procedure, deadline.Sub(start))
+	}
+
+	if err != nil {
+		span.SetTag("error", true)
+		span.LogEvent(err.Error())
 	}
 
 	return err

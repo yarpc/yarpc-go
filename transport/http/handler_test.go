@@ -52,7 +52,7 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(BaggageHeaderPrefix+"BAR", "baz")
 
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	httpHandler := handler{rpcHandler}
+	httpHandler := handler{rpcHandler, transport.NoDeps}
 
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
@@ -127,7 +127,7 @@ func TestHandlerHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		rpcHandler := transporttest.NewMockHandler(mockCtrl)
-		httpHandler := handler{rpcHandler}
+		httpHandler := handler{rpcHandler, transport.NoDeps}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
@@ -237,7 +237,7 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		h := handler{transporttest.NewMockHandler(mockCtrl)}
+		h := handler{transporttest.NewMockHandler(mockCtrl), transport.NoDeps}
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 
@@ -280,7 +280,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(fmt.Errorf("great sadness"))
 
-	httpHandler := handler{rpcHandler}
+	httpHandler := handler{rpcHandler, transport.NoDeps}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
 

@@ -63,6 +63,7 @@ type inbound struct {
 	ch       *tchannel.Channel
 	addr     string
 	listener net.Listener
+	deps     transport.Deps
 }
 
 func (i *inbound) Channel() *tchannel.Channel {
@@ -72,7 +73,9 @@ func (i *inbound) Channel() *tchannel.Channel {
 func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing, h})
+	sc.SetHandler(handler{existing, h, d})
+
+	i.deps = d
 
 	if i.ch.State() == tchannel.ChannelListening {
 		// Channel.Start() was called before RPC.Start(). We still want to
