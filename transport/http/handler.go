@@ -76,7 +76,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
-
 	treq := &transport.Request{
 		Caller:    popHeader(req.Header, CallerHeader),
 		Service:   popHeader(req.Header, ServiceHeader),
