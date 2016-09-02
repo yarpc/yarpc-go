@@ -1,5 +1,5 @@
-hash: 9ba800787ee3318334b30ffdee48e00c42f9f6b079dc194194a90809e0565110
-updated: 2016-08-31T14:23:48.132141348-07:00
+hash: 8df58d37862bf74d2815e0eeef9ad586cfbf78852bc5326ca24f2e2f0e723d6c
+updated: 2016-09-02T10:41:58.381069719-07:00
 imports:
 - name: github.com/apache/thrift
   version: aa4312ef5ff8ae4965cc779fe73d2375aba0c2dc
@@ -58,7 +58,7 @@ imports:
   - relay/relaytest
   - testutils/goroutines
 - name: golang.org/x/net
-  version: 9bc2a3340c92c17a20edcd0080e93851ed58f5d5
+  version: 1358eff22f0dd0c54fc521042cc607f6ff4b531a
   subpackages:
   - context
   - context/ctxhttp
