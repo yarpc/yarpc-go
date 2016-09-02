@@ -23,8 +23,8 @@ package client
 import (
 	"github.com/yarpc/yarpc-go/crossdock/client/ctxpropagation"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-	"github.com/yarpc/yarpc-go/crossdock/client/errors_httpclient"
-	"github.com/yarpc/yarpc-go/crossdock/client/errors_tchclient"
+	"github.com/yarpc/yarpc-go/crossdock/client/errorshttpclient"
+	"github.com/yarpc/yarpc-go/crossdock/client/errorstchclient"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/client/headers"
 	"github.com/yarpc/yarpc-go/crossdock/client/httpserver"
@@ -40,8 +40,8 @@ var behaviors = crossdock.Behaviors{
 	"json":              echo.JSON,
 	"thrift":            echo.Thrift,
 	"headers":           headers.Run,
-	"errors_httpclient": errors_httpclient.Run,
-	"errors_tchclient":  errors_tchclient.Run,
+	"errors_httpclient": errorshttpclient.Run,
+	"errors_tchclient":  errorstchclient.Run,
 	"tchclient":         tchclient.Run,
 	"tchserver":         tchserver.Run,
 	"thriftgauntlet":    gauntlet.Run,
