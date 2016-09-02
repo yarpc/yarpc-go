@@ -63,10 +63,10 @@ func TestCrossdock(t *testing.T) {
 			axes: axes{"transport": []string{"http", "tchannel"}},
 		},
 		{
-			name: "errors",
+			name: "errors_httpclient",
 		},
 		{
-			name: "errorstchout",
+			name: "errors_tchclient",
 		},
 		{
 			name: "headers",
