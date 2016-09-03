@@ -131,9 +131,10 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		opentracing.StartTime(start),
 		opentracing.ChildOf(parent),
 		opentracing.Tags{
-			"rpc.caller":   treq.Caller,
-			"rpc.service":  treq.Service,
-			"rpc.encoding": treq.Encoding,
+			"rpc.caller":    treq.Caller,
+			"rpc.service":   treq.Service,
+			"rpc.encoding":  treq.Encoding,
+			"rpc.transport": "http",
 		},
 	)
 	ext.PeerService.Set(span, treq.Service)
@@ -142,16 +143,16 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
+	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	if hs := baggage.FromContext(ctx); hs.Len() > 0 {
+		req.Header = baggageHeaders.ToHTTPHeaders(hs, req.Header)
+	}
+
 	tracer.Inject(
 		span.Context(),
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(req.Header),
 	)
-
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	if hs := baggage.FromContext(ctx); hs.Len() > 0 {
-		req.Header = baggageHeaders.ToHTTPHeaders(hs, req.Header)
-	}
 
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)

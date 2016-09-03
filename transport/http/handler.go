@@ -96,14 +96,14 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		treq.Procedure,
 		opentracing.StartTime(start),
 		opentracing.Tags{
-			"rpc.caller":   treq.Caller,
-			"rpc.service":  treq.Service,
-			"rpc.encoding": treq.Encoding,
+			"rpc.caller":    treq.Caller,
+			"rpc.service":   treq.Service,
+			"rpc.encoding":  treq.Encoding,
+			"rpc.transport": "http",
 		},
 		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
 	)
 	ext.PeerService.Set(span, treq.Caller)
-	// ext.HTTPUrl.Set(span, req.URL.String()) // XXX panics
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 

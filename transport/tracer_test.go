@@ -31,6 +31,7 @@ import (
 	"github.com/yarpc/yarpc-go/transport/http"
 	ytchannel "github.com/yarpc/yarpc-go/transport/tchannel"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
@@ -51,10 +52,11 @@ func Assert(t *testing.T, tracer *mocktracer.MockTracer) {
 	spans := tracer.FinishedSpans()
 	parent := spans[0]
 	child := spans[1]
+	// parentctx := parent.Context().(mocktracer.MockSpanContext)
+	// childctx := child.Context().(mocktracer.MockSpanContext)
+	// assert.Equal(t, parentctx.TraceID, childctx.TraceID)
 	// Whether the parent and child have the same span id is an implementation
 	// detail of the tracer.
-	// With the mock tracer, there is no expectation that the parent context
-	// and the child context have the same trace id.
 	assert.Equal(t, "echo", parent.OperationName, "span has correct operation name")
 	assert.Equal(t, "echo", child.OperationName, "span has correct operation name")
 }
@@ -138,4 +140,76 @@ func TestTChannelTracer(t *testing.T) {
 	assert.NoError(t, err)
 
 	Assert(t, tracer)
+}
+
+func TestHttpTracerDepth2(t *testing.T) {
+	tracer := mocktracer.New()
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
+	span := tracer.StartSpan("test")
+	// no defer span.Finish()
+	span.SetBaggageItem("weapon", "knife")
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
+	rpc := yarpc.NewDispatcher(yarpc.Config{
+		Name: "yarpc-test",
+		Inbounds: []transport.Inbound{
+			http.NewInbound(":8080"),
+		},
+		Outbounds: transport.Outbounds{
+			"yarpc-test": http.NewOutbound("http://127.0.0.1:8080"),
+		},
+		Tracer: tracer,
+	})
+
+	client := json.New(rpc.Channel("yarpc-test"))
+
+	echo := func(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+		span := opentracing.SpanFromContext(ctx)
+		weapon := span.BaggageItem("weapon")
+		assert.Equal(t, "knife", weapon, "baggage should propagate")
+		return &echoResBody{}, nil, nil
+	}
+
+	echoecho := func(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+		var resBody echoResBody
+		_, err := client.Call(
+			ctx,
+			yarpc.NewReqMeta().Procedure("echo"),
+			reqBody,
+			&resBody,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &resBody, nil, nil
+	}
+
+	json.Register(rpc, json.Procedure("echo", echo))
+	json.Register(rpc, json.Procedure("echoecho", echoecho))
+
+	rpc.Start()
+	defer rpc.Stop()
+
+	var resBody echoResBody
+	_, err := client.Call(
+		ctx,
+		yarpc.NewReqMeta().Procedure("echoecho"),
+		&echoReqBody{},
+		&resBody,
+	)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 4, len(tracer.FinishedSpans()), "generates inbound and outband spans")
+	if len(tracer.FinishedSpans()) != 4 {
+		return
+	}
+	spans := tracer.FinishedSpans()
+	assert.Equal(t, "echo", spans[0].OperationName, "span has correct operation name")
+	assert.Equal(t, "echo", spans[1].OperationName, "span has correct operation name")
+	assert.Equal(t, "echoecho", spans[2].OperationName, "span has correct operation name")
+	assert.Equal(t, "echoecho", spans[3].OperationName, "span has correct operation name")
 }
