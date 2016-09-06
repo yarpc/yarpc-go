@@ -105,21 +105,7 @@ func (o *outbound) Stop() error {
 	return nil
 }
 
-func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
-	}
-
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	req, err := http.NewRequest("POST", o.URL, treq.Body)
-	if err != nil {
-		return nil, err
-	}
-
+func (o *outbound) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
 	tracer := o.Deps.Tracer()
 	var parent opentracing.SpanContext // ok to be nil
@@ -140,7 +126,6 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	ext.PeerService.Set(span, treq.Service)
 	ext.SpanKindRPCClient.Set(span)
 	ext.HTTPUrl.Set(span, req.URL.String())
-	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
@@ -153,6 +138,27 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(req.Header),
 	)
+
+	return ctx, span
+}
+
+func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+
+	start := time.Now()
+	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
+
+	req, err := http.NewRequest("POST", o.URL, treq.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, span := o.createSpan(ctx, req, treq, start)
+	defer span.Finish()
 
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)

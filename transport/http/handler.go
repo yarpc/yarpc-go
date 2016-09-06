@@ -87,25 +87,8 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	ctx := context.Background()
 
-	// Extract opentracing etc baggage from headers
-	// Annotate the inbound context with a trace span
-	tracer := h.Deps.Tracer()
-	carrier := opentracing.HTTPHeadersCarrier(req.Header)
-	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
-	span := tracer.StartSpan(
-		treq.Procedure,
-		opentracing.StartTime(start),
-		opentracing.Tags{
-			"rpc.caller":    treq.Caller,
-			"rpc.service":   treq.Service,
-			"rpc.encoding":  treq.Encoding,
-			"rpc.transport": "http",
-		},
-		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
-	)
-	ext.PeerService.Set(span, treq.Caller)
+	ctx, span := h.createSpan(ctx, req, treq, start)
 	defer span.Finish()
-	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	v := request.Validator{Request: treq}
 	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
@@ -138,6 +121,28 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	}
 
 	return err
+}
+
+func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
+	// Extract opentracing etc baggage from headers
+	// Annotate the inbound context with a trace span
+	tracer := h.Deps.Tracer()
+	carrier := opentracing.HTTPHeadersCarrier(req.Header)
+	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
+	span := tracer.StartSpan(
+		treq.Procedure,
+		opentracing.StartTime(start),
+		opentracing.Tags{
+			"rpc.caller":    treq.Caller,
+			"rpc.service":   treq.Service,
+			"rpc.encoding":  treq.Encoding,
+			"rpc.transport": "http",
+		},
+		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
+	)
+	ext.PeerService.Set(span, treq.Caller)
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	return ctx, span
 }
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
