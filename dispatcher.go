@@ -89,7 +89,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 		Outbounds:   cfg.Outbounds,
 		Filter:      cfg.Filter,
 		Interceptor: cfg.Interceptor,
-		tracer:      cfg.Tracer,
+		deps:        transport.Deps{}.WithTracer(cfg.Tracer),
 	}
 }
 
@@ -105,7 +105,7 @@ type dispatcher struct {
 	Interceptor transport.Interceptor
 
 	inbounds []transport.Inbound
-	tracer   opentracing.Tracer
+	deps     transport.Deps
 }
 
 func (d dispatcher) Inbounds() []transport.Inbound {
@@ -126,13 +126,13 @@ func (d dispatcher) Channel(service string) transport.Channel {
 func (d dispatcher) Start() error {
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Start(d, d)
+			return i.Start(d, d.deps)
 		}
 	}
 
 	startOutbound := func(o transport.Outbound) func() error {
 		return func() error {
-			return o.Start(d)
+			return o.Start(d.deps)
 		}
 	}
 
@@ -179,14 +179,4 @@ func (d dispatcher) Stop() error {
 	}
 
 	return nil
-}
-
-// Tracer returns the dispatcher's configured tracer and partially satisfies
-// the transport.Dependencies interface so the dispatcher can be used to start
-// inbounds and outbounds.
-func (d dispatcher) Tracer() opentracing.Tracer {
-	if d.tracer == nil {
-		return opentracing.GlobalTracer()
-	}
-	return d.tracer
 }

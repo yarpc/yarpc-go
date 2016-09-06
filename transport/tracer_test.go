@@ -44,23 +44,6 @@ func echo(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*ec
 	return &echoResBody{}, nil, nil
 }
 
-func AssertDepth1Spans(t *testing.T, tracer *mocktracer.MockTracer) {
-	assert.Equal(t, 2, len(tracer.FinishedSpans()), "generates inbound and outband spans")
-	if len(tracer.FinishedSpans()) != 2 {
-		return
-	}
-	spans := tracer.FinishedSpans()
-	parent := spans[0]
-	child := spans[1]
-	// parentctx := parent.Context().(mocktracer.MockSpanContext)
-	// childctx := child.Context().(mocktracer.MockSpanContext)
-	// assert.Equal(t, parentctx.TraceID, childctx.TraceID)
-	// Whether the parent and child have the same span id is an implementation
-	// detail of the tracer.
-	assert.Equal(t, "echo", parent.OperationName, "span has correct operation name")
-	assert.Equal(t, "echo", child.OperationName, "span has correct operation name")
-}
-
 func TestHttpTracer(t *testing.T) {
 	tracer := mocktracer.New()
 	rpc := yarpc.NewDispatcher(yarpc.Config{
@@ -140,6 +123,23 @@ func TestTChannelTracer(t *testing.T) {
 	assert.NoError(t, err)
 
 	AssertDepth1Spans(t, tracer)
+}
+
+func AssertDepth1Spans(t *testing.T, tracer *mocktracer.MockTracer) {
+	assert.Equal(t, 2, len(tracer.FinishedSpans()), "generates inbound and outband spans")
+	if len(tracer.FinishedSpans()) != 2 {
+		return
+	}
+	spans := tracer.FinishedSpans()
+	parent := spans[0]
+	child := spans[1]
+	// parentctx := parent.Context().(mocktracer.MockSpanContext)
+	// childctx := child.Context().(mocktracer.MockSpanContext)
+	// assert.Equal(t, parentctx.TraceID, childctx.TraceID)
+	// Whether the parent and child have the same span id is an implementation
+	// detail of the tracer.
+	assert.Equal(t, "echo", parent.OperationName, "span has correct operation name")
+	assert.Equal(t, "echo", child.OperationName, "span has correct operation name")
 }
 
 func TestHttpTracerDepth2(t *testing.T) {
