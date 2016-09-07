@@ -119,7 +119,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Time) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Time) (returnErr error) {
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
@@ -157,6 +157,17 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Tim
 	if err != nil {
 		return err
 	}
+
+	// We recover panics from the user handler.
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				returnErr = err
+			} else {
+				returnErr = fmt.Errorf("%q", r)
+			}
+		}
+	}()
 
 	return h.Handler.Handle(ctx, transportOptions, treq, rw)
 }
