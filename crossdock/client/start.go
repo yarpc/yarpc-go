@@ -23,8 +23,8 @@ package client
 import (
 	"github.com/yarpc/yarpc-go/crossdock/client/ctxpropagation"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
-	"github.com/yarpc/yarpc-go/crossdock/client/errors"
-	"github.com/yarpc/yarpc-go/crossdock/client/errorstchout"
+	"github.com/yarpc/yarpc-go/crossdock/client/errorshttpclient"
+	"github.com/yarpc/yarpc-go/crossdock/client/errorstchclient"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
 	"github.com/yarpc/yarpc-go/crossdock/client/headers"
 	"github.com/yarpc/yarpc-go/crossdock/client/httpserver"
@@ -36,18 +36,18 @@ import (
 )
 
 var behaviors = crossdock.Behaviors{
-	"raw":            echo.Raw,
-	"json":           echo.JSON,
-	"thrift":         echo.Thrift,
-	"headers":        headers.Run,
-	"errors":         errors.Run,
-	"errorstchout":   errorstchout.Run,
-	"tchclient":      tchclient.Run,
-	"tchserver":      tchserver.Run,
-	"thriftgauntlet": gauntlet.Run,
-	"timeout":        timeout.Run,
-	"ctxpropagation": ctxpropagation.Run,
-	"httpserver":     httpserver.Run,
+	"raw":               echo.Raw,
+	"json":              echo.JSON,
+	"thrift":            echo.Thrift,
+	"headers":           headers.Run,
+	"errors_httpclient": errorshttpclient.Run,
+	"errors_tchclient":  errorstchclient.Run,
+	"tchclient":         tchclient.Run,
+	"tchserver":         tchserver.Run,
+	"thriftgauntlet":    gauntlet.Run,
+	"timeout":           timeout.Run,
+	"ctxpropagation":    ctxpropagation.Run,
+	"httpserver":        httpserver.Run,
 }
 
 // Start registers behaviors and begins the Crossdock client
