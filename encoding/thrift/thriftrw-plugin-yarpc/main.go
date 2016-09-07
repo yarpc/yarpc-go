@@ -18,6 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// thriftrw-plugin-yarpc implements a plugin for ThriftRW that generates code
+// compatible with YARPC.
+//
+// For more information, check the documentation of the parent package.
 package main
 
 import (

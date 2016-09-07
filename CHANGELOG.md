@@ -1,6 +1,14 @@
 Releases
 ========
 
+v0.2.0 (2016-09-01)
+-------------------
+
+-   Implemented a ThriftRW plugin. Check the documentation of the
+    [thrift](https://godoc.org/github.com/yarpc/yarpc-go/encoding/thrift)
+    package for instructions on how to use it.
+
+
 v0.1.1 (2016-09-01)
 -------------------
 
