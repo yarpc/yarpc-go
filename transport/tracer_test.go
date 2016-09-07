@@ -133,9 +133,9 @@ func AssertDepth1Spans(t *testing.T, tracer *mocktracer.MockTracer) {
 	spans := tracer.FinishedSpans()
 	parent := spans[0]
 	child := spans[1]
-	// parentctx := parent.Context().(mocktracer.MockSpanContext)
-	// childctx := child.Context().(mocktracer.MockSpanContext)
-	// assert.Equal(t, parentctx.TraceID, childctx.TraceID)
+	parentctx := parent.Context().(mocktracer.MockSpanContext)
+	childctx := child.Context().(mocktracer.MockSpanContext)
+	assert.Equal(t, parentctx.TraceID, childctx.TraceID)
 	// Whether the parent and child have the same span id is an implementation
 	// detail of the tracer.
 	assert.Equal(t, "echo", parent.OperationName, "span has correct operation name")
@@ -203,15 +203,7 @@ func TestHttpTracerDepth2(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	assert.Equal(t, 4, len(tracer.FinishedSpans()), "generates inbound and outband spans")
-	if len(tracer.FinishedSpans()) != 4 {
-		return
-	}
-	spans := tracer.FinishedSpans()
-	assert.Equal(t, "echo", spans[0].OperationName, "span has correct operation name")
-	assert.Equal(t, "echo", spans[1].OperationName, "span has correct operation name")
-	assert.Equal(t, "echoecho", spans[2].OperationName, "span has correct operation name")
-	assert.Equal(t, "echoecho", spans[3].OperationName, "span has correct operation name")
+	AssertDepth2Spans(t, tracer)
 }
 
 func TestTChannelTracerDepth2(t *testing.T) {
@@ -283,13 +275,27 @@ func TestTChannelTracerDepth2(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
+	AssertDepth2Spans(t, tracer)
+}
+
+func AssertDepth2Spans(t *testing.T, tracer *mocktracer.MockTracer) {
 	assert.Equal(t, 4, len(tracer.FinishedSpans()), "generates inbound and outband spans")
 	if len(tracer.FinishedSpans()) != 4 {
 		return
 	}
 	spans := tracer.FinishedSpans()
+	ids := mapContexts(spans)
+	assert.Equal(t, []int{ids[0], ids[0], ids[0], ids[0]}, ids, "spans share a trace id")
 	assert.Equal(t, "echo", spans[0].OperationName, "span has correct operation name")
 	assert.Equal(t, "echo", spans[1].OperationName, "span has correct operation name")
 	assert.Equal(t, "echoecho", spans[2].OperationName, "span has correct operation name")
 	assert.Equal(t, "echoecho", spans[3].OperationName, "span has correct operation name")
+}
+
+func mapContexts(spans []*mocktracer.MockSpan) []int {
+	ids := make([]int, len(spans))
+	for i, span := range spans {
+		ids[i] = span.Context().(mocktracer.MockSpanContext).TraceID
+	}
+	return ids
 }
