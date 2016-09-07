@@ -7,7 +7,13 @@ v0.2.0 (2016-09-01)
 -   Implemented a ThriftRW plugin. Check the documentation of the
     [thrift](https://godoc.org/github.com/yarpc/yarpc-go/encoding/thrift)
     package for instructions on how to use it.
+- Adds support for [opentracing][]. Pass an opentracing instance as a `Tracer`
+  property of the YARPC config object and both TChannel and HTTP transports will
+  submit spans and propagate baggage. This also modifies the public interface
+  for transport inbounds and outbounds, which must now accept a transport.Deps
+  object.
 
+[opentracing]: http://opentracing.io/
 
 v0.1.1 (2016-09-01)
 -------------------
