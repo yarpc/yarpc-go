@@ -283,6 +283,9 @@ type _Set_Insanity_ValueList []*Insanity
 
 func (v _Set_Insanity_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid set item: value is nil")
+		}
 		w, err := x.ToWire()
 		if err != nil {
 			return err
@@ -342,6 +345,9 @@ func (m _Map_Insanity_String_MapItemList) ForEach(f func(wire.MapItem) error) er
 	for _, i := range m {
 		k := i.Key
 		v := i.Value
+		if k == nil {
+			return fmt.Errorf("invalid map key: value is nil")
+		}
 		kw, err := k.ToWire()
 		if err != nil {
 			return err
@@ -379,7 +385,10 @@ type _List_Map_Insanity_String_ValueList [][]struct {
 }
 
 func (v _List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueMap(_Map_Insanity_String_MapItemList(x)), error(nil)
 		if err != nil {
 			return err
@@ -410,6 +419,9 @@ type _Set_List_Map_Insanity_String_ValueList [][][]struct {
 
 func (v _Set_List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) error) error {
 	for _, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid set item: value is nil")
+		}
 		w, err := wire.NewValueList(_List_Map_Insanity_String_ValueList(x)), error(nil)
 		if err != nil {
 			return err
@@ -440,6 +452,9 @@ type _Map_I32_Set_List_Map_Insanity_String_MapItemList map[int32][][][]struct {
 
 func (m _Map_I32_Set_List_Map_Insanity_String_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
 		kw, err := wire.NewValueI32(k), error(nil)
 		if err != nil {
 			return err
@@ -483,6 +498,12 @@ func (m _Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList) ForEach(f
 	for _, i := range m {
 		k := i.Key
 		v := i.Value
+		if k == nil {
+			return fmt.Errorf("invalid map key: value is nil")
+		}
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
 		kw, err := wire.NewValueSet(_Set_I32_ValueList(k)), error(nil)
 		if err != nil {
 			return err
@@ -523,7 +544,10 @@ type _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList [][]struct
 }
 
 func (v _List_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueMap(_Map_Set_I32_Map_I32_Set_List_Map_Insanity_String_MapItemList(x)), error(nil)
 		if err != nil {
 			return err
@@ -1048,7 +1072,10 @@ func (_Map_Numberz_UserId_MapItemList) Close() {
 type _List_Xtruct_ValueList []*Xtruct
 
 func (v _List_Xtruct_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := x.ToWire()
 		if err != nil {
 			return err
@@ -1533,7 +1560,10 @@ type ListBonks struct {
 type _List_Bonk_ValueList []*Bonk
 
 func (v _List_Bonk_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := x.ToWire()
 		if err != nil {
 			return err
@@ -1812,6 +1842,9 @@ type _Map_String_Bonk_MapItemList map[string]*Bonk
 
 func (m _Map_String_Bonk_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
 		kw, err := wire.NewValueString(k), error(nil)
 		if err != nil {
 			return err
@@ -1892,7 +1925,10 @@ type NestedListsBonk struct {
 type _List_List_Bonk_ValueList [][]*Bonk
 
 func (v _List_List_Bonk_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueList(_List_Bonk_ValueList(x)), error(nil)
 		if err != nil {
 			return err
@@ -1919,7 +1955,10 @@ func (_List_List_Bonk_ValueList) Close() {
 type _List_List_List_Bonk_ValueList [][][]*Bonk
 
 func (v _List_List_List_Bonk_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueList(_List_List_Bonk_ValueList(x)), error(nil)
 		if err != nil {
 			return err
@@ -2028,7 +2067,10 @@ type NestedListsI32x2 struct {
 type _List_List_I32_ValueList [][]int32
 
 func (v _List_List_I32_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueList(_List_I32_ValueList(x)), error(nil)
 		if err != nil {
 			return err
@@ -2120,7 +2162,10 @@ type NestedListsI32x3 struct {
 type _List_List_List_I32_ValueList [][][]int32
 
 func (v _List_List_List_I32_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueList(_List_List_I32_ValueList(x)), error(nil)
 		if err != nil {
 			return err
@@ -2214,7 +2259,10 @@ type NestedMixedx2 struct {
 type _List_Set_I32_ValueList []map[int32]struct{}
 
 func (v _List_Set_I32_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueSet(_Set_I32_ValueList(x)), error(nil)
 		if err != nil {
 			return err
@@ -2242,6 +2290,9 @@ type _Map_I32_Set_String_MapItemList map[int32]map[string]struct{}
 
 func (m _Map_I32_Set_String_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
 		kw, err := wire.NewValueI32(k), error(nil)
 		if err != nil {
 			return err
@@ -2276,7 +2327,10 @@ func (_Map_I32_Set_String_MapItemList) Close() {
 type _List_Map_I32_Set_String_ValueList []map[int32]map[string]struct{}
 
 func (v _List_Map_I32_Set_String_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
 		w, err := wire.NewValueMap(_Map_I32_Set_String_MapItemList(x)), error(nil)
 		if err != nil {
 			return err
@@ -2464,17 +2518,17 @@ func (v Numberz) String() string {
 	w := int32(v)
 	switch w {
 	case 1:
-		return "One"
+		return "ONE"
 	case 2:
-		return "Two"
+		return "TWO"
 	case 3:
-		return "Three"
+		return "THREE"
 	case 5:
-		return "Five"
+		return "FIVE"
 	case 6:
-		return "Six"
+		return "SIX"
 	case 8:
-		return "Eight"
+		return "EIGHT"
 	}
 	return fmt.Sprintf("Numberz(%d)", w)
 }
