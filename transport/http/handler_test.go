@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
@@ -288,6 +290,57 @@ func TestHandlerInternalFailure(t *testing.T) {
 	assert.True(t, code >= 500 && code < 600, "expected 500 level response")
 	assert.Equal(t,
 		`UnexpectedError: error for procedure "hello" of service "fake": great sadness`+"\n",
+		httpResponse.Body.String())
+}
+
+func TestHandlerPanic(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	headers := make(http.Header)
+	headers.Set(CallerHeader, "somecaller")
+	headers.Set(EncodingHeader, "raw")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set(ProcedureHeader, "panic")
+	headers.Set(ServiceHeader, "fake")
+
+	request := http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
+	}
+
+	rpcHandler := transporttest.NewMockHandler(mockCtrl)
+	rpcHandler.EXPECT().Handle(
+		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
+		transport.Options{},
+		transporttest.NewRequestMatcher(
+			t, &transport.Request{
+				Caller:    "somecaller",
+				Service:   "fake",
+				Encoding:  raw.Encoding,
+				Procedure: "panic",
+				Body:      bytes.NewReader([]byte{}),
+			},
+		),
+		gomock.Any(),
+	).Do(func(
+		_ context.Context,
+		_ transport.Options,
+		_ *transport.Request,
+		_ transport.ResponseWriter,
+	) {
+		panic("oops I panicked!")
+	})
+
+	httpHandler := handler{Handler: rpcHandler}
+	httpResponse := httptest.NewRecorder()
+	httpHandler.ServeHTTP(httpResponse, &request)
+
+	code := httpResponse.Code
+	assert.True(t, code >= 500 && code < 600, "expected 500 level response")
+	assert.Equal(t,
+		`UnexpectedError: error for procedure "panic" of service "fake": "oops I panicked!"`+"\n",
 		httpResponse.Body.String())
 }
 

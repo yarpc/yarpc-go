@@ -21,6 +21,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -75,7 +76,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	http.Error(w, err.Error(), status)
 }
 
-func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
+func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) (returnErr error) {
 	treq := &transport.Request{
 		Caller:    popHeader(req.Header, CallerHeader),
 		Service:   popHeader(req.Header, ServiceHeader),
@@ -104,7 +105,17 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
-	// TODO capture and handle panic
+	// We recover panics from the user handler.
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				returnErr = err
+			} else {
+				returnErr = fmt.Errorf("%q", r)
+			}
+		}
+	}()
+
 	err = h.Handler.Handle(ctx, httpOptions, treq, newResponseWriter(w))
 
 	// The handler is well behaved and stopped work on context deadline. We
