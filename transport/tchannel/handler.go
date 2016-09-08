@@ -120,7 +120,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 }
 
 func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Time) error {
-
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired

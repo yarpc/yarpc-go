@@ -40,13 +40,78 @@ import (
 type echoReqBody struct{}
 type echoResBody struct{}
 
-func echo(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+type handler struct {
+	client json.Client
+	t      *testing.T
+}
+
+func (h handler) register(dispatcher yarpc.Dispatcher) {
+	json.Register(dispatcher, json.Procedure("echo", h.handleEcho))
+	json.Register(dispatcher, json.Procedure("echoecho", h.handleEchoEcho))
+}
+
+func (h handler) handleEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+	h.assertBaggage(ctx)
 	return &echoResBody{}, nil, nil
 }
 
-func TestHttpTracer(t *testing.T) {
-	tracer := mocktracer.New()
-	rpc := yarpc.NewDispatcher(yarpc.Config{
+func (h handler) handleEchoEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+	h.assertBaggage(ctx)
+	var resBody echoResBody
+	_, err := h.client.Call(
+		ctx,
+		yarpc.NewReqMeta().Procedure("echo"),
+		reqBody,
+		&resBody,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &resBody, nil, nil
+}
+
+func (h handler) echo(ctx context.Context) error {
+	var resBody echoResBody
+	_, err := h.client.Call(
+		ctx,
+		yarpc.NewReqMeta().Procedure("echo"),
+		&echoReqBody{},
+		&resBody,
+	)
+	return err
+}
+
+func (h handler) echoEcho(ctx context.Context) error {
+	var resBody echoResBody
+	_, err := h.client.Call(
+		ctx,
+		yarpc.NewReqMeta().Procedure("echoecho"),
+		&echoReqBody{},
+		&resBody,
+	)
+	return err
+}
+
+func (h handler) createContextWithBaggage(tracer opentracing.Tracer) (context.Context, func()) {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+
+	span := tracer.StartSpan("test")
+	// no defer span.Finish()
+	span.SetBaggageItem("weapon", "knife")
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
+	return ctx, cancel
+}
+
+func (h handler) assertBaggage(ctx context.Context) {
+	span := opentracing.SpanFromContext(ctx)
+	weapon := span.BaggageItem("weapon")
+	assert.Equal(h.t, "knife", weapon, "baggage should propagate")
+}
+
+func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8080"),
@@ -57,32 +122,10 @@ func TestHttpTracer(t *testing.T) {
 		Tracer: tracer,
 	})
 
-	json.Register(rpc, json.Procedure("echo", echo))
-
-	client := json.New(rpc.Channel("yarpc-test"))
-
-	rpc.Start()
-	defer rpc.Stop()
-
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-	defer cancel()
-
-	var resBody echoResBody
-	_, err := client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echo"),
-		&echoReqBody{},
-		&resBody,
-	)
-	assert.NoError(t, err)
-
-	AssertDepth1Spans(t, tracer)
+	return dispatcher
 }
 
-func TestTChannelTracer(t *testing.T) {
-	tracer := mocktracer.New()
-
+func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dispatcher {
 	// Establish the TChannel
 	ch, err := tchannel.NewChannel("yarpc-test", &tchannel.ChannelOptions{
 		Tracer: tracer,
@@ -91,7 +134,7 @@ func TestTChannelTracer(t *testing.T) {
 	hp := "127.0.0.1:4040"
 	ch.ListenAndServe(hp)
 
-	rpc := yarpc.NewDispatcher(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
 			ytchannel.NewInbound(ch),
@@ -102,24 +145,44 @@ func TestTChannelTracer(t *testing.T) {
 		Tracer: tracer,
 	})
 
-	json.Register(rpc, json.Procedure("echo", echo))
+	return dispatcher
+}
 
-	client := json.New(rpc.Channel("yarpc-test"))
+func TestHTTPTracer(t *testing.T) {
+	tracer := mocktracer.New()
+	dispatcher := createHTTPDispatcher(tracer)
 
-	rpc.Start()
-	defer rpc.Stop()
+	client := json.New(dispatcher.Channel("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
 
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	dispatcher.Start()
+	defer dispatcher.Stop()
+
+	ctx, cancel := handler.createContextWithBaggage(tracer)
 	defer cancel()
 
-	var resBody echoResBody
-	_, err = client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echo"),
-		&echoReqBody{},
-		&resBody,
-	)
+	err := handler.echo(ctx)
+	assert.NoError(t, err)
+
+	AssertDepth1Spans(t, tracer)
+}
+
+func TestTChannelTracer(t *testing.T) {
+	tracer := mocktracer.New()
+	dispatcher := createTChannelDispatcher(tracer, t)
+
+	client := json.New(dispatcher.Channel("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
+
+	dispatcher.Start()
+	defer dispatcher.Stop()
+
+	ctx, cancel := handler.createContextWithBaggage(tracer)
+	defer cancel()
+
+	err := handler.echo(ctx)
 	assert.NoError(t, err)
 
 	AssertDepth1Spans(t, tracer)
@@ -142,137 +205,41 @@ func AssertDepth1Spans(t *testing.T, tracer *mocktracer.MockTracer) {
 	assert.Equal(t, "echo", child.OperationName, "span has correct operation name")
 }
 
-func TestHttpTracerDepth2(t *testing.T) {
+func TestHTTPTracerDepth2(t *testing.T) {
 	tracer := mocktracer.New()
+	dispatcher := createHTTPDispatcher(tracer)
 
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	client := json.New(dispatcher.Channel("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
+
+	dispatcher.Start()
+	defer dispatcher.Stop()
+
+	ctx, cancel := handler.createContextWithBaggage(tracer)
 	defer cancel()
 
-	span := tracer.StartSpan("test")
-	// no defer span.Finish()
-	span.SetBaggageItem("weapon", "knife")
-	ctx = opentracing.ContextWithSpan(ctx, span)
-
-	rpc := yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
-			http.NewInbound(":8080"),
-		},
-		Outbounds: transport.Outbounds{
-			"yarpc-test": http.NewOutbound("http://127.0.0.1:8080"),
-		},
-		Tracer: tracer,
-	})
-
-	client := json.New(rpc.Channel("yarpc-test"))
-
-	echo := func(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
-		span := opentracing.SpanFromContext(ctx)
-		weapon := span.BaggageItem("weapon")
-		assert.Equal(t, "knife", weapon, "baggage should propagate")
-		return &echoResBody{}, nil, nil
-	}
-
-	echoecho := func(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
-		var resBody echoResBody
-		_, err := client.Call(
-			ctx,
-			yarpc.NewReqMeta().Procedure("echo"),
-			reqBody,
-			&resBody,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		return &resBody, nil, nil
-	}
-
-	json.Register(rpc, json.Procedure("echo", echo))
-	json.Register(rpc, json.Procedure("echoecho", echoecho))
-
-	rpc.Start()
-	defer rpc.Stop()
-
-	var resBody echoResBody
-	_, err := client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echoecho"),
-		&echoReqBody{},
-		&resBody,
-	)
+	err := handler.echoEcho(ctx)
 	assert.NoError(t, err)
 
 	AssertDepth2Spans(t, tracer)
 }
 
 func TestTChannelTracerDepth2(t *testing.T) {
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	tracer := mocktracer.New()
+	dispatcher := createTChannelDispatcher(tracer, t)
+
+	client := json.New(dispatcher.Channel("yarpc-test"))
+	handler := handler{client: client, t: t}
+	handler.register(dispatcher)
+
+	dispatcher.Start()
+	defer dispatcher.Stop()
+
+	ctx, cancel := handler.createContextWithBaggage(tracer)
 	defer cancel()
 
-	tracer := mocktracer.New()
-
-	span := tracer.StartSpan("test")
-	// no defer span.Finish()
-	span.SetBaggageItem("weapon", "knife")
-	ctx = opentracing.ContextWithSpan(ctx, span)
-
-	// Establish the TChannel
-	ch, err := tchannel.NewChannel("yarpc-test", &tchannel.ChannelOptions{
-		Tracer: tracer,
-	})
-	assert.NoError(t, err)
-	hp := "127.0.0.1:4040"
-	ch.ListenAndServe(hp)
-
-	rpc := yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
-			ytchannel.NewInbound(ch),
-		},
-		Outbounds: transport.Outbounds{
-			"yarpc-test": ytchannel.NewOutbound(ch, ytchannel.HostPort(hp)),
-		},
-		Tracer: tracer,
-	})
-
-	client := json.New(rpc.Channel("yarpc-test"))
-
-	echo := func(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
-		span := opentracing.SpanFromContext(ctx)
-		weapon := span.BaggageItem("weapon")
-		assert.Equal(t, "knife", weapon, "baggage should propagate")
-		return &echoResBody{}, nil, nil
-	}
-
-	echoecho := func(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
-		var resBody echoResBody
-		_, err := client.Call(
-			ctx,
-			yarpc.NewReqMeta().Procedure("echo"),
-			reqBody,
-			&resBody,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		return &resBody, nil, nil
-	}
-
-	json.Register(rpc, json.Procedure("echo", echo))
-	json.Register(rpc, json.Procedure("echoecho", echoecho))
-
-	rpc.Start()
-	defer rpc.Stop()
-
-	var resBody echoResBody
-	_, err = client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echoecho"),
-		&echoReqBody{},
-		&resBody,
-	)
+	err := handler.echoEcho(ctx)
 	assert.NoError(t, err)
 
 	AssertDepth2Spans(t, tracer)
