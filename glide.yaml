@@ -17,6 +17,8 @@ import:
   subpackages:
   - gomock
 - package: github.com/uber/tchannel-go
-  version: ^1.0.9
+  version: ^1.1.0
+- package: github.com/opentracing/opentracing-go
+  version: ~0.9
 - package: github.com/crossdock/crossdock-go
   version: master

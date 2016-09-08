@@ -133,7 +133,10 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		return nil, err
 	}
 
-	if err := writeRequestHeaders(ctx, format, req.Headers, call.Arg2Writer); err != nil {
+	// Inject tracing system baggage
+	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), req.Headers.Items())
+
+	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, encoding.RequestHeadersEncodeError(req, err)
