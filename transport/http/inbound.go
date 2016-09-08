@@ -73,8 +73,6 @@ type inbound struct {
 
 func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 	i.tracer = d.Tracer()
-	// TODO Logger
-	// TODO Stats/Metrics
 
 	var err error
 	i.listener, err = net.Listen("tcp", i.addr)
