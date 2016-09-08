@@ -172,10 +172,6 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 
 	response, err := ctxhttp.Do(ctx, o.Client, req)
 
-	if response != nil {
-		span.SetTag("http.status_code", response.StatusCode)
-	}
-
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
@@ -185,6 +181,8 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 
 		return nil, err
 	}
+
+	span.SetTag("http.status_code", response.StatusCode)
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		appHeaders := applicationHeaders.FromHTTPHeaders(
