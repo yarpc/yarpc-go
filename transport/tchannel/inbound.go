@@ -73,7 +73,7 @@ func (i *inbound) Channel() *tchannel.Channel {
 func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing, h, d})
+	sc.SetHandler(handler{existing: existing, Handler: h, deps: d})
 
 	i.deps = d
 
