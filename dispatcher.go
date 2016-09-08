@@ -89,7 +89,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 		Outbounds:   cfg.Outbounds,
 		Filter:      cfg.Filter,
 		Interceptor: cfg.Interceptor,
-		deps:        transport.Deps{}.WithTracer(cfg.Tracer),
+		deps:        transport.NoDeps.WithTracer(cfg.Tracer),
 	}
 }
 
