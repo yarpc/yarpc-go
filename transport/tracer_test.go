@@ -198,7 +198,7 @@ func AssertDepth1Spans(t *testing.T, tracer *mocktracer.MockTracer) {
 	child := spans[1]
 	parentctx := parent.Context().(mocktracer.MockSpanContext)
 	childctx := child.Context().(mocktracer.MockSpanContext)
-	assert.Equal(t, parentctx.TraceID, childctx.TraceID)
+	assert.Equal(t, parentctx.TraceID, childctx.TraceID, "parent and child trace ID do not match")
 	// Whether the parent and child have the same span id is an implementation
 	// detail of the tracer.
 	assert.Equal(t, "echo", parent.OperationName, "span has correct operation name")
