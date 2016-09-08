@@ -29,8 +29,6 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
-
 	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
@@ -39,6 +37,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 )
 
 func TestHandlerSucces(t *testing.T) {
