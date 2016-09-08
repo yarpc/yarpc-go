@@ -8,10 +8,11 @@ v0.2.0 (2016-09-01)
     [thrift](https://godoc.org/github.com/yarpc/yarpc-go/encoding/thrift)
     package for instructions on how to use it.
 - Adds support for [opentracing][]. Pass an opentracing instance as a `Tracer`
-  property of the YARPC config object and both TChannel and HTTP transports will
-  submit spans and propagate baggage. This also modifies the public interface
-  for transport inbounds and outbounds, which must now accept a transport.Deps
-  object.
+  property of the YARPC config struct and both TChannel and HTTP transports will
+  submit spans and propagate baggage.
+- This also modifies the public interface for transport inbounds and outbounds,
+  which must now accept a transport.Deps struct. The deps struct carries the
+  tracer and may eventually carry other dependencies.
 
 [opentracing]: http://opentracing.io/
 
