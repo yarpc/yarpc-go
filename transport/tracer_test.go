@@ -246,8 +246,7 @@ func TestTChannelTracerDepth2(t *testing.T) {
 }
 
 func AssertDepth2Spans(t *testing.T, tracer *mocktracer.MockTracer) {
-	assert.Equal(t, 4, len(tracer.FinishedSpans()), "generates inbound and outband spans")
-	if len(tracer.FinishedSpans()) != 4 {
+	if !assert.Equal(t, 4, len(tracer.FinishedSpans()), "generates inbound and outband spans") {
 		return
 	}
 	spans := tracer.FinishedSpans()
