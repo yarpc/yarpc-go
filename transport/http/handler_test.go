@@ -31,6 +31,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
@@ -293,55 +294,40 @@ func TestHandlerInternalFailure(t *testing.T) {
 		httpResponse.Body.String())
 }
 
+type panickedHandler struct{}
+
+func (th panickedHandler) Handle(context.Context, transport.Options,
+	*transport.Request, transport.ResponseWriter) error {
+	panic("oops I panicked!")
+}
+
 func TestHandlerPanic(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	headers := make(http.Header)
-	headers.Set(CallerHeader, "somecaller")
-	headers.Set(EncodingHeader, "raw")
-	headers.Set(TTLMSHeader, "1000")
-	headers.Set(ProcedureHeader, "panic")
-	headers.Set(ServiceHeader, "fake")
-
-	request := http.Request{
-		Method: "POST",
-		Header: headers,
-		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
-	}
-
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	rpcHandler.EXPECT().Handle(
-		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
-		transport.Options{},
-		transporttest.NewRequestMatcher(
-			t, &transport.Request{
-				Caller:    "somecaller",
-				Service:   "fake",
-				Encoding:  raw.Encoding,
-				Procedure: "panic",
-				Body:      bytes.NewReader([]byte{}),
-			},
-		),
-		gomock.Any(),
-	).Do(func(
-		_ context.Context,
-		_ transport.Options,
-		_ *transport.Request,
-		_ transport.ResponseWriter,
-	) {
-		panic("oops I panicked!")
+	inbound := NewInbound("localhost:0")
+	serverDispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "yarpc-test",
+		Inbounds: []transport.Inbound{inbound},
 	})
+	serverDispatcher.Register("", "panic", panickedHandler{})
 
-	httpHandler := handler{Handler: rpcHandler}
-	httpResponse := httptest.NewRecorder()
-	httpHandler.ServeHTTP(httpResponse, &request)
+	require.NoError(t, serverDispatcher.Start())
+	defer serverDispatcher.Stop()
 
-	code := httpResponse.Code
-	assert.True(t, code >= 500 && code < 600, "expected 500 level response")
+	outbound := NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()))
+	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:      "yarpc-test-client",
+		Outbounds: transport.Outbounds{"yarpc-test": outbound},
+	})
+	require.NoError(t, clientDispatcher.Start())
+	defer clientDispatcher.Stop()
+
+	client := raw.New(clientDispatcher.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("panic"), []byte{})
+
+	assert.True(t, transport.IsUnexpectedError(err), "Must be an UnexpectedError")
 	assert.Equal(t,
-		`UnexpectedError: error for procedure "panic" of service "fake": "oops I panicked!"`+"\n",
-		httpResponse.Body.String())
+		`UnexpectedError: error for procedure "panic" of service "yarpc-test": panic: oops I panicked!`,
+		err.Error())
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

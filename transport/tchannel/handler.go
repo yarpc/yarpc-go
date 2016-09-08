@@ -22,7 +22,10 @@ package tchannel
 
 import (
 	"fmt"
+	"runtime/debug"
 	"time"
+
+	"code.uber.internal/go-common.git/x/log"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
@@ -161,11 +164,8 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Tim
 	// We recover panics from the user handler.
 	defer func() {
 		if r := recover(); r != nil {
-			if err, ok := r.(error); ok {
-				returnErr = err
-			} else {
-				returnErr = fmt.Errorf("%q", r)
-			}
+			log.Errorf("Handler panicked: %v\n%s", r, debug.Stack())
+			returnErr = fmt.Errorf("panic: %v", r)
 		}
 	}()
 

@@ -322,7 +322,7 @@ func TestHandlerFailures(t *testing.T) {
 				})
 			},
 			wantErrors: []string{
-				`UnexpectedError: error for procedure "panic" of service "foo": "oops I panicked!"`,
+				`UnexpectedError: error for procedure "panic" of service "foo": panic: oops I panicked!`,
 			},
 			wantStatus: tchannel.ErrCodeUnexpected,
 		},
