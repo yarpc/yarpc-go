@@ -129,6 +129,8 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 	tracer := h.Deps.Tracer()
 	carrier := opentracing.HTTPHeadersCarrier(req.Header)
 	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
+	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
+	// gracefully.
 	span := tracer.StartSpan(
 		treq.Procedure,
 		opentracing.StartTime(start),
