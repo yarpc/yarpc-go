@@ -22,6 +22,8 @@ package tchannel
 
 import (
 	"fmt"
+	"log"
+	"runtime/debug"
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
@@ -119,7 +121,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Time) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Time) (returnErr error) {
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
@@ -157,6 +159,14 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Tim
 	if err != nil {
 		return err
 	}
+
+	// We recover panics from the user handler.
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
+			returnErr = fmt.Errorf("panic: %v", r)
+		}
+	}()
 
 	return h.Handler.Handle(ctx, transportOptions, treq, rw)
 }

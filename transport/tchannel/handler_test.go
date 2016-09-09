@@ -288,6 +288,44 @@ func TestHandlerFailures(t *testing.T) {
 				`tchannel error ErrCodeTimeout: Timeout: call to procedure "waituntiltimeout" of service "foo" from caller "bar" timed out after `},
 			wantStatus: tchannel.ErrCodeTimeout,
 		},
+		{
+			desc: "handler panic",
+			sendCall: &fakeInboundCall{
+				service: "foo",
+				caller:  "bar",
+				method:  "panic",
+				format:  tchannel.Raw,
+				arg2:    []byte{0x00, 0x00},
+				arg3:    []byte{0x00},
+			},
+			expectCall: func(h *transporttest.MockHandler) {
+				req := &transport.Request{
+					Service:   "foo",
+					Caller:    "bar",
+					Procedure: "panic",
+					Encoding:  raw.Encoding,
+					Body:      bytes.NewReader([]byte{0x00}),
+				}
+				h.EXPECT().Handle(
+					transporttest.NewContextMatcher(
+						t, transporttest.ContextTTL(time.Second)),
+					transportOptions,
+					transporttest.NewRequestMatcher(t, req),
+					gomock.Any(),
+				).Do(func(
+					_ context.Context,
+					_ transport.Options,
+					_ *transport.Request,
+					_ transport.ResponseWriter,
+				) {
+					panic("oops I panicked!")
+				})
+			},
+			wantErrors: []string{
+				`UnexpectedError: error for procedure "panic" of service "foo": panic: oops I panicked!`,
+			},
+			wantStatus: tchannel.ErrCodeUnexpected,
+		},
 	}
 
 	for _, tt := range tests {
