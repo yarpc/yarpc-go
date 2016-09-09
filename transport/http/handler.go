@@ -22,11 +22,10 @@ package http
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"runtime/debug"
 	"time"
-
-	"code.uber.internal/go-common.git/x/log"
 
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/internal/errors"
@@ -111,7 +110,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	// We recover panics from the user handler.
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf("Handler panicked: %v\n%s", r, debug.Stack())
+			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
 			returnErr = fmt.Errorf("panic: %v", r)
 		}
 	}()

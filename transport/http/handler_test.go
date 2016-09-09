@@ -295,8 +295,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, transport.Options,
-	*transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) Handle(context.Context, transport.Options, *transport.Request, transport.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 
