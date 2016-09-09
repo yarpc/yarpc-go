@@ -4,7 +4,8 @@ Releases
 v0.2.0 (2016-09-01)
 -------------------
 
--   Implemented a ThriftRW plugin. Check the documentation of the
+-   Implemented a ThriftRW plugin. This should now be used instead of the
+    ThriftRW `--yarpc` flag. Check the documentation of the
     [thrift](https://godoc.org/github.com/yarpc/yarpc-go/encoding/thrift)
     package for instructions on how to use it.
 -   Adds support for [opentracing][]. Pass an opentracing instance as a
