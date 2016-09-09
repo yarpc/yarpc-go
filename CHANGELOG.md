@@ -13,6 +13,8 @@ v0.2.0 (2016-09-01)
 -   This also modifies the public interface for transport inbounds and
     outbounds, which must now accept a transport.Deps struct. The deps struct
     carries the tracer and may eventually carry other dependencies.
+-   Panics from user handlers are recovered. The panic is logged (stderr), and
+    an unexpected error is returned to the client about it.
 
 [opentracing]: http://opentracing.io/
 
