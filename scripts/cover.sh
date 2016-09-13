@@ -39,7 +39,7 @@ for pkg in "$@"; do
 		| map
 			( select(startswith("'"$ROOT_PKG"'"))
 			| select(contains("/vendor/") | not)
-			| select(in({'"$filter"'}) | not)
+			| select({'"$filter"'}[.] | not)
 			)
 		| join(",")
 	')
