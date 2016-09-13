@@ -7,9 +7,6 @@ go:
   - 1.7
   - tip
 
-services:
-  - docker
-
 env:
   global:
     - CROSSDOCK=0
@@ -27,6 +24,7 @@ matrix:
   include:
     - go: 1.7
       env: CROSSDOCK=1
+      services: [docker]
       sudo: required
 
 before_install:
