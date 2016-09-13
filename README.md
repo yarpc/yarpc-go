@@ -12,7 +12,7 @@ Ready for adventurous users and early adopters, but there will likely be a few
 breaking changes and features required before releasing version 1.0.
 
 [doc-img]: https://godoc.org/github.com/yarpc/yarpc-go?status.svg
-[doc]: https://godoc.org/github.com/yarpc/yarp-go
+[doc]: https://godoc.org/github.com/yarpc/yarpc-go
 [ci-img]: https://travis-ci.org/yarpc/yarpc-go.svg?branch=master
 [cov-img]: https://coveralls.io/repos/github/yarpc/yarpc-go/badge.svg?branch=master
 [ci]: https://travis-ci.org/yarpc/yarpc-go
