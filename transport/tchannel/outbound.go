@@ -104,7 +104,12 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	var err error
 
 	format := tchannel.Format(req.Encoding)
-	callOptions := tchannel.CallOptions{Format: format}
+	callOptions := tchannel.CallOptions{
+		Format:          format,
+		ShardKey:        req.ShardKey,
+		RoutingKey:      req.RoutingKey,
+		RoutingDelegate: req.RoutingDelegate,
+	}
 	if o.HostPort != "" {
 		// If the hostport is given, we use the BeginCall on the channel
 		// instead of the subchannel.

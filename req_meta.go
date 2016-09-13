@@ -26,9 +26,15 @@ import "github.com/yarpc/yarpc-go/transport"
 type CallReqMeta interface {
 	Procedure(string) CallReqMeta
 	Headers(Headers) CallReqMeta
+	ShardKey(string) CallReqMeta
+	RoutingKey(string) CallReqMeta
+	RoutingDelegate(string) CallReqMeta
 
 	GetProcedure() string
 	GetHeaders() Headers
+	GetShardKey() string
+	GetRoutingKey() string
+	GetRoutingDelegate() string
 }
 
 // ReqMeta contains information about an incoming YARPC request.
@@ -46,8 +52,11 @@ func NewReqMeta() CallReqMeta {
 }
 
 type callReqMeta struct {
-	procedure string
-	headers   Headers
+	procedure     string
+	headers       Headers
+	shardKey      string
+	routeKey      string
+	routeDelegate string
 }
 
 func (r *callReqMeta) Procedure(p string) CallReqMeta {
@@ -60,10 +69,37 @@ func (r *callReqMeta) Headers(h Headers) CallReqMeta {
 	return r
 }
 
+func (r *callReqMeta) ShardKey(sk string) CallReqMeta {
+	r.shardKey = sk
+	return r
+}
+
+func (r *callReqMeta) RoutingKey(rk string) CallReqMeta {
+	r.routeKey = rk
+	return r
+}
+
+func (r *callReqMeta) RoutingDelegate(rd string) CallReqMeta {
+	r.routeDelegate = rd
+	return r
+}
+
 func (r *callReqMeta) GetProcedure() string {
 	return r.procedure
 }
 
 func (r *callReqMeta) GetHeaders() Headers {
 	return r.headers
+}
+
+func (r *callReqMeta) GetShardKey() string {
+	return r.shardKey
+}
+
+func (r *callReqMeta) GetRoutingKey() string {
+	return r.routeKey
+}
+
+func (r *callReqMeta) GetRoutingDelegate() string {
+	return r.routeDelegate
 }
