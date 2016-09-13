@@ -61,6 +61,7 @@ before_install:
 install:
 - |
   set -ex
+  make install
   case "$TYPE" in
     lint)
       go get -u -f github.com/golang/lint/golint
