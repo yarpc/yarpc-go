@@ -7,6 +7,10 @@ go:
   - 1.7
   - tip
 
+addons:
+  apt:
+    packages: [python-virtualenv]
+
 env:
   global:
     - GO15VENDOREXPERIMENT=1
