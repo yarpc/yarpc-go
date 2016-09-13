@@ -41,8 +41,6 @@ type ReqMeta interface {
 }
 
 // NewReqMeta constructs a CallReqMeta with the given Context.
-//
-// The context MUST NOT be nil.
 func NewReqMeta() CallReqMeta {
 	return &callReqMeta{}
 }
