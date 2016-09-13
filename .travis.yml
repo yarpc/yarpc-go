@@ -1,16 +1,6 @@
 sudo: false
 language: go
 
-go:
-  - 1.5
-  - 1.6
-  - 1.7
-  - tip
-
-addons:
-  apt:
-    packages: [python-virtualenv]
-
 env:
   global:
     - GO15VENDOREXPERIMENT=1
@@ -25,8 +15,29 @@ matrix:
   fast_finish: true
 
   include:
+    # Lint
     - go: 1.7
-      env: CROSSDOCK=true
+      env: TYPE=lint
+
+    # Tests
+    #
+    # Need virtualenv for example tests
+    - go: 1.5
+      env: TYPE=test
+      addons: {apt: {packages: [python-virtualenv]}}
+    - go: 1.6
+      env: TYPE=test
+      addons: {apt: {packages: [python-virtualenv]}}
+    - go: 1.7
+      env: TYPE=test
+      addons: {apt: {packages: [python-virtualenv]}}
+    - go: tip
+      env: TYPE=test
+      addons: {apt: {packages: [python-virtualenv]}}
+
+    # Crossdock
+    - go: 1.7
+      env: TYPE=crossdock
       services: [docker]
       sudo: required
 
@@ -34,31 +45,49 @@ before_install:
 - go version
 - |
   set -ex
-  if [ "$CROSSDOCK" == true ]; then
-    docker version
-    sudo rm -f /usr/local/bin/docker-compose
-    curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
-    chmod +x docker-compose
-    sudo mv docker-compose /usr/local/bin
-    docker-compose version
-  fi
+  case "$TYPE" in
+    crossdock)
+      docker version
+      sudo rm -f /usr/local/bin/docker-compose
+      curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+      chmod +x docker-compose
+      sudo mv docker-compose /usr/local/bin
+      docker-compose version
+      ;;
+  esac
   set +ex
 
 install:
-- make install_ci
+- |
+  set -ex
+  case "$TYPE" in
+    lint)
+      go get -u -f github.com/golang/lint/golint
+      ;;
+    test)
+      go get github.com/wadey/gocovmerge
+      go get github.com/mattn/goveralls
+      go get golang.org/x/tools/cmd/cover
+      ;;
+  esac
 
 script:
 - |
   set -ex
-  if [ "$CROSSDOCK"  == true ]; then
-    make crossdock
-    docker-compose logs
-  else
-    make lint_ci
-    make test_ci
-    make test-examples
-    travis_retry goveralls -coverprofile=cover.out -service=travis-ci || true
-  fi
+  case "$TYPE" in
+    lint)
+      make lint
+      ;;
+    test)
+      make test_ci
+      make test-examples
+      travis_retry goveralls -coverprofile=cover.out -service=travis-ci || true
+      ;;
+    crossdock)
+      make crossdock
+      docker-compose logs
+      ;;
+  esac
   set +ex
 
 after_success:
@@ -69,11 +98,13 @@ after_success:
 - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, REPO=$REPO, PR=$PR, BRANCH=$BRANCH, TAG=$TAG"
 - |
   set -ex
-  if [ "$CROSSDOCK"  == true ]; then
-    docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-    docker build -f Dockerfile -t $REPO:$COMMIT .
-    docker tag $REPO:$COMMIT $REPO:$TAG
-    docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
-    docker push $REPO
-  fi
+  case "$TYPE" in
+    crossdock)
+      docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      docker build -f Dockerfile -t $REPO:$COMMIT .
+      docker tag $REPO:$COMMIT $REPO:$TAG
+      docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
+      docker push $REPO
+    ;;
+  esac
   set +ex
