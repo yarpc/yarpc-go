@@ -9,7 +9,6 @@ go:
 
 env:
   global:
-    - CROSSDOCK=0
     - GO15VENDOREXPERIMENT=1
     - DOCKER_COMPOSE_VERSION=1.8.0
     - COMMIT=${TRAVIS_COMMIT::8}
@@ -31,7 +30,7 @@ before_install:
 - go version
 - |
   set -ex
-  if [ -n "$CROSSDOCK" ]; then
+  if [ "$CROSSDOCK" == 1 ]; then
     docker version
     sudo rm -f /usr/local/bin/docker-compose
     curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
@@ -47,7 +46,7 @@ install:
 script:
 - |
   set -ex
-  if [ -n "$CROSSDOCK" ]; then
+  if [ "$CROSSDOCK"  == 1 ]; then
     make crossdock
     docker-compose logs
   else
@@ -66,7 +65,7 @@ after_success:
 - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, REPO=$REPO, PR=$PR, BRANCH=$BRANCH, TAG=$TAG"
 - |
   set -ex
-  if [ -n "$CROSSDOCK" ]; then
+  if [ "$CROSSDOCK"  == 1 ]; then
     docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
     docker build -f Dockerfile -t $REPO:$COMMIT .
     docker tag $REPO:$COMMIT $REPO:$TAG
