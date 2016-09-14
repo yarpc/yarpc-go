@@ -20,5 +20,5 @@
 
 package yarpc
 
-// Version must be updated manually.
+// Version is the current version of YARPC.
 const Version = "0.2.0-dev"
