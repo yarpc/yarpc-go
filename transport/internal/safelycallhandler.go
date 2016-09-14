@@ -28,6 +28,7 @@ import (
 
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/transport"
+
 	"golang.org/x/net/context"
 )
 
