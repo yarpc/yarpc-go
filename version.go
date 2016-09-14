@@ -20,5 +20,5 @@
 
 package yarpc
 
-// VersionInfo must be updated manually.
-const VersionInfo = "0.1.1-dev"
+// Version must be updated manually.
+const Version = "0.2.0-dev"

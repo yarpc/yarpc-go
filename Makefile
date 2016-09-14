@@ -22,6 +22,8 @@ LINT_EXCLUDES := $(GENERATED_GO_FILES) $(LINT_EXCLUDES_EXTRAS)
 # Pipe lint output into this to filter out ignored files.
 FILTER_LINT := grep -v $(patsubst %,-e %, $(LINT_EXCLUDES))
 
+CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
+INTHECODE_VERSION = $(shell sed -n 's/^const Version.*"\([^"]\+\).*$$/v\1/p' version.go)
 ##############################################################################
 
 .PHONY: build
@@ -50,7 +52,7 @@ install:
 
 
 .PHONY: test
-test:
+test: verify_version
 	go test $(PACKAGES)
 
 
@@ -84,5 +86,18 @@ crossdock-fresh: install
 	docker-compose run crossdock
 
 .PHONY: test_ci
-test_ci:
+test_ci: verify_version
 	./scripts/cover.sh $(shell go list $(PACKAGES))
+
+.PHONY: verify_version
+verify_version:
+	@if [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)" ]; then \
+		echo "yarpc-go: $(CHANGELOG_VERSION)"; \
+	elif [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)-dev" ]; then \
+		echo "yarpc-go (development): $(INTHECODE_VERSION)"; \
+	else \
+		echo "Version number in version.go does not match CHANGELOG.md"; \
+		echo "version.go: $(INTHECODE_VERSION)"; \
+		echo "CHANGELOG : $(CHANGELOG_VERSION)"; \
+		exit 1; \
+	fi
