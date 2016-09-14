@@ -28,6 +28,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/internal"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -104,7 +105,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
-	err = transport.SafelyCallHandler(h.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
+	err = internal.SafelyCallHandler(h.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
 
 	if err != nil {
 		span.SetTag("error", true)

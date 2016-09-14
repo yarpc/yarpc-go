@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package internal
 
 import (
 	"fmt"
@@ -27,13 +27,14 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/errors"
+	"github.com/yarpc/yarpc-go/transport"
 	"golang.org/x/net/context"
 )
 
 // SafelyCallHandler call the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
-func SafelyCallHandler(h Handler, start time.Time, ctx context.Context,
-	opts Options, req *Request, resq ResponseWriter) (returnErr error) {
+func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context,
+	opts transport.Options, req *transport.Request, resq transport.ResponseWriter) (returnErr error) {
 
 	// We recover panics from now on.
 	defer func() {

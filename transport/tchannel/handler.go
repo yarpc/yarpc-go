@@ -28,6 +28,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/internal"
 
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
@@ -150,7 +151,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	return transport.SafelyCallHandler(h.Handler, start, ctx, transportOptions, treq, rw)
+	return internal.SafelyCallHandler(h.Handler, start, ctx, transportOptions, treq, rw)
 }
 
 type responseWriter struct {
