@@ -32,7 +32,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-// SafelyCallHandler call the handler h, recovering panics and timeout errors,
+// SafelyCallHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
 func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context,
 	opts transport.Options, req *transport.Request, resq transport.ResponseWriter) (returnErr error) {
