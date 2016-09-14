@@ -41,7 +41,7 @@ func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
-			returnErr = fmt.Errorf("panic: %v", r)
+			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
 
@@ -53,4 +53,6 @@ func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context
 		err = errors.HandlerTimeoutError(req.Caller, req.Service,
 			req.Procedure, deadline.Sub(start))
 	}
+
+	return err
 }
