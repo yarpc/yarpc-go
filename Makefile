@@ -23,7 +23,7 @@ LINT_EXCLUDES := $(GENERATED_GO_FILES) $(LINT_EXCLUDES_EXTRAS)
 FILTER_LINT := grep -v $(patsubst %,-e %, $(LINT_EXCLUDES))
 
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
-INTHECODE_VERSION = $(shell sed -n 's/^const Version.*"\([^"]\+\).*$$/v\1/p' version.go)
+INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
 ##############################################################################
 
 .PHONY: build
