@@ -22,14 +22,13 @@ package tchannel
 
 import (
 	"fmt"
-	"log"
-	"runtime/debug"
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/internal"
 
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
@@ -102,14 +101,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		return
 	}
 
-	// The handler is well behaved and stopped work on context deadline. We
-	// forward this information to the client diligently.
-	if err == context.DeadlineExceeded && err == ctx.Err() {
-		deadline, _ := ctx.Deadline()
-		err = errors.HandlerTimeoutError(call.CallerName(), call.ServiceName(),
-			call.MethodString(), deadline.Sub(start))
-	}
-
 	err = errors.AsHandlerError(call.ServiceName(), call.MethodString(), err)
 	status := tchannel.ErrCodeUnexpected
 	if transport.IsBadRequestError(err) {
@@ -121,7 +112,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Time) (returnErr error) {
+func (h handler) callHandler(ctx context.Context, call inboundCall, start time.Time) error {
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
@@ -160,15 +151,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, now time.Tim
 		return err
 	}
 
-	// We recover panics from the user handler.
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
-			returnErr = fmt.Errorf("panic: %v", r)
-		}
-	}()
-
-	return h.Handler.Handle(ctx, transportOptions, treq, rw)
+	return internal.SafelyCallHandler(h.Handler, start, ctx, transportOptions, treq, rw)
 }
 
 type responseWriter struct {

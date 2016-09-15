@@ -21,16 +21,14 @@
 package http
 
 import (
-	"fmt"
-	"log"
 	"net/http"
-	"runtime/debug"
 	"time"
 
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/internal"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -78,7 +76,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	http.Error(w, err.Error(), status)
 }
 
-func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) (returnErr error) {
+func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
 	treq := &transport.Request{
 		Caller:    popHeader(req.Header, CallerHeader),
 		Service:   popHeader(req.Header, ServiceHeader),
@@ -107,23 +105,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
-	// We recover panics from the user handler.
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
-			returnErr = fmt.Errorf("panic: %v", r)
-		}
-	}()
-
-	err = h.Handler.Handle(ctx, httpOptions, treq, newResponseWriter(w))
-
-	// The handler is well behaved and stopped work on context deadline. We
-	// forward this information to the client diligently.
-	if err == context.DeadlineExceeded && err == ctx.Err() {
-		deadline, _ := ctx.Deadline()
-		err = errors.HandlerTimeoutError(treq.Caller, treq.Service,
-			treq.Procedure, deadline.Sub(start))
-	}
+	err = internal.SafelyCallHandler(h.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
 
 	if err != nil {
 		span.SetTag("error", true)
