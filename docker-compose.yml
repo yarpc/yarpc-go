@@ -23,6 +23,8 @@ services:
             # AXIS_ERRORS_TCHSERVER TODO
             - AXIS_CTXCLIENT=go
             - AXIS_CTXSERVER=go
+            - AXIS_APACHETHRIFTCLIENT=go
+            - AXIS_APACHETHRIFTSERVER=go
             - AXIS_GAUNTLET=go
             - AXIS_HTTPSERVER=go
 
@@ -42,13 +44,14 @@ services:
             - BEHAVIOR_TIMEOUT=client,server,transport
             # BEHAVIOR_INBOUNDTTL TODO
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
-            - REPORT=compact
+            - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
+            - REPORT=list
 
     go:
         dns_search: .
         build: .
         ports:
-            - "8080-8087"
+            - "8080-8088"
 
     node:
         dns_search: .
