@@ -86,6 +86,13 @@ func New(c Config, opts ...ClientOption) Client {
 		opt.applyClientOption(&cc)
 	}
 
+	if cc.Multiplexed {
+		p = multiplexedOutboundProtocol{
+			Protocol: p,
+			Service:  c.Service,
+		}
+	}
+
 	return thriftClient{
 		p:                 p,
 		ch:                c.Channel,
@@ -122,6 +129,9 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 
 	// We disable enveloping if either the client or the transport requires it.
 	disableEnveloping := c.disableEnveloping || isEnvelopingDisabled(out.Options())
+	// Note that we apply this thrift.Option here rather than in New because
+	// this can change on a per-transport basis in addition to the
+	// user-specifed option.
 
 	proto := c.p
 	if disableEnveloping {

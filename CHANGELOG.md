@@ -1,7 +1,7 @@
 Releases
 ========
 
-v0.2.0 (2016-09-01)
+v0.2.0 (unreleased)
 -------------------
 
 -   Implemented a ThriftRW plugin. This should now be used instead of the
@@ -16,6 +16,8 @@ v0.2.0 (2016-09-01)
     carries the tracer and may eventually carry other dependencies.
 -   Panics from user handlers are recovered. The panic is logged (stderr), and
     an unexpected error is returned to the client about it.
+-   Thrift clients can now make requests to multiplexed Apache Thrift servers
+    using the `thrift.Multiplexed` client option.
 
 [opentracing]: http://opentracing.io/
 
