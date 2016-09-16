@@ -45,7 +45,7 @@ services:
             # BEHAVIOR_INBOUNDTTL TODO
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
-            - REPORT=list
+            - REPORT=compact
 
     go:
         dns_search: .
