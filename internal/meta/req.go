@@ -37,6 +37,9 @@ func ToTransportRequest(reqMeta yarpc.CallReqMeta, req *transport.Request) {
 		return
 	}
 	req.Procedure = reqMeta.GetProcedure()
+	req.ShardKey = reqMeta.GetShardKey()
+	req.RoutingKey = reqMeta.GetRoutingKey()
+	req.RoutingDelegate = reqMeta.GetRoutingDelegate()
 	req.Headers = transport.Headers(reqMeta.GetHeaders())
 }
 

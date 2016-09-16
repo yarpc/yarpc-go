@@ -28,6 +28,7 @@ type Request struct {
 	Caller string
 
 	// Name of the service to which the request is being made.
+	// The service refers to the canonical traffic group for the service.
 	Service string
 
 	// Name of the encoding used for the request body.
@@ -38,6 +39,20 @@ type Request struct {
 
 	// Headers for the request.
 	Headers Headers
+
+	// ShardKey is an opaque string that is meaningful to the destined service
+	// for how to relay a request within a cluster to the shard that owns the
+	// key.
+	ShardKey string
+
+	// RoutingKey refers to a traffic group for the destined service, and when
+	// present may override the service name for purposes of routing.
+	RoutingKey string
+
+	// RoutingDelegate refers to the traffic group for a service that proxies
+	// for the destined service for routing purposes. The routing delegate may
+	// override the routing key and service.
+	RoutingDelegate string
 
 	// Request payload.
 	Body io.Reader

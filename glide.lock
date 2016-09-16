@@ -1,8 +1,8 @@
-hash: 8df58d37862bf74d2815e0eeef9ad586cfbf78852bc5326ca24f2e2f0e723d6c
-updated: 2016-09-02T10:41:58.381069719-07:00
+hash: e24184530c3c74558539331977b541aaa6c3d1604fbd14c6465fb1ce9e72bfe8
+updated: 2016-09-15T14:29:36.127581945-07:00
 imports:
 - name: github.com/apache/thrift
-  version: aa4312ef5ff8ae4965cc779fe73d2375aba0c2dc
+  version: ddc53c32486cc23dfa63ed4e5abb19923b8d13e6
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -11,7 +11,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 6cf5744a041a0022271cefed95ba843f6d87fd51
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -38,12 +38,20 @@ imports:
   - wire
   - protocol
   - envelope
+  - plugin
+  - plugin/api
   - protocol/binary
   - internal/envelope/exception
+  - internal/envelope
+  - internal/frame
+  - internal/goast
+  - internal/multiplex
+  - plugin/api/service/plugin
+  - plugin/api/service/servicegenerator
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
-  version: 1a0e35378f6f721bc07f6c4466bc9701ed70b506
+  version: f57e644626dbf4d87ee2b36571600c21f8255f1f
   subpackages:
   - json
   - raw
@@ -58,8 +66,12 @@ imports:
   - relay/relaytest
   - testutils/goroutines
 - name: golang.org/x/net
-  version: 1358eff22f0dd0c54fc521042cc607f6ff4b531a
+  version: de35ec43e7a9aabd6a9c54d2898220ea7e44de7d
   subpackages:
   - context
   - context/ctxhttp
+- name: golang.org/x/tools
+  version: f1a397bba50dee815e8c73f3ec94ffc0e8df1a09
+  subpackages:
+  - go/ast/astutil
 testImports: []

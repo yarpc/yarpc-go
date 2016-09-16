@@ -164,6 +164,15 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
 	req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
+	if treq.ShardKey != "" {
+		req.Header.Set(ShardKeyHeader, treq.ShardKey)
+	}
+	if treq.RoutingKey != "" {
+		req.Header.Set(RoutingKeyHeader, treq.RoutingKey)
+	}
+	if treq.RoutingDelegate != "" {
+		req.Header.Set(RoutingDelegateHeader, treq.RoutingDelegate)
+	}
 
 	encoding := string(treq.Encoding)
 	if encoding != "" {
