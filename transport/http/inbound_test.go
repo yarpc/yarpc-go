@@ -57,16 +57,6 @@ func TestStartAddrInUse(t *testing.T) {
 	assert.NoError(t, i1.Stop())
 }
 
-func TestCloseError(t *testing.T) {
-	i := NewInbound(":0")
-	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
-	require.NoError(t, i.(*inbound).listener.Close())
-	err := i.Stop()
-	require.Error(t, err)
-	oe, ok := err.(*net.OpError)
-	assert.True(t, ok && oe.Op == "close", "expected a close error")
-}
-
 func TestNilAddrAfterStop(t *testing.T) {
 	i := NewInbound(":0")
 	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))

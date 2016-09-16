@@ -26,11 +26,14 @@ import (
 	"time"
 
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
+	"github.com/yarpc/yarpc-go/internal/net"
 
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
 const addr = ":8088"
+
+var server *net.HTTPServer
 
 // Start starts an Apache Thrift server on port 8088
 func Start() {
@@ -57,16 +60,21 @@ func Start() {
 	mux.HandleFunc("/thrift/SecondService", thrift.NewThriftHandlerFunc(secondService, pfactory, pfactory))
 	mux.HandleFunc("/thrift/multiplexed", thrift.NewThriftHandlerFunc(multiplexed, pfactory, pfactory))
 
-	server := &http.Server{
+	server = net.NewHTTPServer(&http.Server{
 		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
-	}
+	})
 
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Println("error:", err.Error())
-		}
-	}()
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("failed to start Apache Thrift server: %v", err)
+	}
+}
+
+// Stop stops the Apache Thrift server.
+func Stop() {
+	if err := server.Stop(); err != nil {
+		log.Printf("failed to stop Apache Thrift server: %v", err)
+	}
 }
