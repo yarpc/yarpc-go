@@ -21,6 +21,7 @@
 package client
 
 import (
+	"github.com/yarpc/yarpc-go/crossdock/client/apachethrift"
 	"github.com/yarpc/yarpc-go/crossdock/client/ctxpropagation"
 	"github.com/yarpc/yarpc-go/crossdock/client/echo"
 	"github.com/yarpc/yarpc-go/crossdock/client/errorshttpclient"
@@ -48,6 +49,7 @@ var behaviors = crossdock.Behaviors{
 	"timeout":           timeout.Run,
 	"ctxpropagation":    ctxpropagation.Run,
 	"httpserver":        httpserver.Run,
+	"apachethrift":      apachethrift.Run,
 }
 
 // Start registers behaviors and begins the Crossdock client

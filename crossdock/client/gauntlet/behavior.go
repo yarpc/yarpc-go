@@ -42,12 +42,6 @@ import (
 
 const serverName = "yarpc-test"
 
-func createGauntletT(t crossdock.T) crossdock.T {
-	t.Tag("transport", t.Param(params.Transport))
-	t.Tag("server", t.Param(params.Server))
-	return t
-}
-
 // TT is the gauntlets table test struct
 type TT struct {
 	Service  string        // thrift service name; defaults to ThriftTest
@@ -68,13 +62,50 @@ func Run(t crossdock.T) {
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
-	RunGauntlet(t, dispatcher, serverName)
+	t.Tag("transport", t.Param(params.Transport))
+	t.Tag("server", t.Param(params.Server))
+	RunGauntlet(t, Config{
+		Dispatcher: dispatcher,
+		ServerName: serverName,
+	})
+}
+
+// ServiceSet specifies which services the Gauntlet should make requests to.
+type ServiceSet int
+
+// The different Thrift services that the gauntlet can make requests to.
+const (
+	ThriftTest ServiceSet = 1 << iota
+	SecondService
+
+	AllServices = ThriftTest | SecondService
+)
+
+// Config configures a gauntlet run
+type Config struct {
+	Dispatcher yarpc.Dispatcher
+
+	// Name of the outbound to which the requests will be sent
+	ServerName string
+
+	// Whether requests should use Thrift envelopes. Defaults to false.
+	Envelope bool
+	// NOTE(abg): Enveloping is disabled by default until other YARPC
+	// implementations catch up. Only specific tests opt into this feature.
+
+	// Bit mask of the different services to call. Defaults to AllServices.
+	Services ServiceSet
+
+	// Extra options for the Thrift client
+	ClientOptions []thrift.ClientOption
 }
 
 // RunGauntlet takes an rpc object and runs the gauntlet
-func RunGauntlet(t crossdock.T, dispatcher yarpc.Dispatcher, serverName string) {
-	t = createGauntletT(t)
+func RunGauntlet(t crossdock.T, c Config) {
 	checks := crossdock.Checks(t)
+	if c.Services == 0 {
+		c.Services = AllServices
+	}
 
 	bytesToken := random.Bytes(10)
 	tests := []TT{
@@ -358,12 +389,23 @@ func RunGauntlet(t crossdock.T, dispatcher yarpc.Dispatcher, serverName string) 
 	}
 
 	for _, tt := range tests {
+		switch tt.Service {
+		case "", "ThriftTest":
+			if c.Services&ThriftTest == 0 {
+				continue
+			}
+		case "SecondService":
+			if c.Services&SecondService == 0 {
+				continue
+			}
+		}
+
 		t.Tag("service", tt.Service)
 		t.Tag("function", tt.Function)
 
 		desc := BuildDesc(tt)
 
-		client := buildClient(t, desc, tt.Service, dispatcher.Channel(serverName))
+		client := buildClient(t, desc, tt.Service, c)
 		f := client.MethodByName(tt.Function)
 		if !checks.True(f.IsValid(), "%v: invalid function", desc) {
 			continue
@@ -406,15 +448,18 @@ func BuildDesc(tt TT) string {
 	return desc
 }
 
-func buildClient(t crossdock.T, desc string, service string, channel transport.Channel) reflect.Value {
-	// NOTE(abg): Enveloping is disabled in old cross-language tests until the
-	// other YARPC implementations catch up.
+func buildClient(t crossdock.T, desc string, service string, c Config) reflect.Value {
+	channel := c.Dispatcher.Channel(c.ServerName)
+	opts := c.ClientOptions
+	if !c.Envelope {
+		opts = append(opts, thrift.DisableEnveloping)
+	}
 	switch service {
 	case "", "ThriftTest":
-		client := thrifttestclient.New(channel, thrift.DisableEnveloping)
+		client := thrifttestclient.New(channel, opts...)
 		return reflect.ValueOf(client)
 	case "SecondService":
-		client := secondserviceclient.New(channel, thrift.DisableEnveloping)
+		client := secondserviceclient.New(channel, opts...)
 		return reflect.ValueOf(client)
 	default:
 		crossdock.Fatals(t).Fail("", "%v: unknown thrift service", desc)

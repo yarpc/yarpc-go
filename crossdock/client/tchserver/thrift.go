@@ -25,6 +25,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/crossdock/client/random"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
@@ -50,7 +51,11 @@ func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 		assert.Equal(headers, resMeta.Headers(), "headers echoed")
 	}
 
-	gauntlet.RunGauntlet(t, dispatcher, serverName)
+	t.Tag("server", t.Param(params.Server))
+	gauntlet.RunGauntlet(t, gauntlet.Config{
+		Dispatcher: dispatcher,
+		ServerName: serverName,
+	})
 }
 
 func thriftCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
