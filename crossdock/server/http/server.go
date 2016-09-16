@@ -20,14 +20,61 @@
 
 package http
 
-const (
-	// ports as specified in test-subject.md
-	thirdPartyAddr   = ":8085"
-	apacheThriftAddr = ":8088"
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"sync"
+	"time"
 )
+
+const addr = ":8085"
 
 // Start starts an http server that yarpc client will make requests to
 func Start() {
-	startThirdParty()
-	startApacheThrift()
+	mux := &yarpcHTTPMux{
+		handlers: make(map[string]http.Handler),
+	}
+	mux.HandleFunc("handlertimeout/raw", handlerTimeoutRawHandler)
+
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Println("error:", err.Error())
+		}
+	}()
+}
+
+type yarpcHTTPMux struct {
+	sync.RWMutex
+	handlers map[string]http.Handler
+}
+
+func (m *yarpcHTTPMux) HandleFunc(procedure string, f http.HandlerFunc) {
+	m.Lock()
+	defer m.Unlock()
+	m.handlers[procedure] = f
+}
+
+func (m *yarpcHTTPMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	m.RLock()
+	defer m.RUnlock()
+	if req.Method != `POST` {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Invalid method: %q\n", req.Method)
+		return
+	}
+	procedure := req.Header.Get(`RPC-Procedure`)
+	if f, ok := m.handlers[procedure]; ok {
+		f.ServeHTTP(w, req)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Unknown procedure: %q\n", procedure)
+	}
 }

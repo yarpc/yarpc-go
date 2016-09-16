@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package apachethrift
 
 import (
 	"log"
@@ -30,7 +30,10 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
-func startApacheThrift() {
+const addr = ":8088"
+
+// Start starts an Apache Thrift server on port 8088
+func Start() {
 	// We expose the following endpoints:
 	// /thrift/ThriftTest:
 	//   Thrift service using TBinaryProtocol
@@ -55,7 +58,7 @@ func startApacheThrift() {
 	mux.HandleFunc("/thrift/multiplexed", thrift.NewThriftHandlerFunc(multiplexed, pfactory, pfactory))
 
 	server := &http.Server{
-		Addr:         apacheThriftAddr,
+		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,

@@ -21,6 +21,7 @@
 package server
 
 import (
+	"github.com/yarpc/yarpc-go/crossdock/server/apachethrift"
 	"github.com/yarpc/yarpc-go/crossdock/server/http"
 	"github.com/yarpc/yarpc-go/crossdock/server/tch"
 	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
@@ -31,6 +32,7 @@ func Start() {
 	tch.Start()
 	yarpc.Start()
 	http.Start()
+	apachethrift.Start()
 }
 
 // Stop stops all required Crossdock test servers
