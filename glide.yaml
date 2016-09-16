@@ -11,7 +11,7 @@ import:
   - assert
   - require
 - package: github.com/thriftrw/thriftrw-go
-  version: ~0.1
+  version: ~0.2
 - package: github.com/golang/mock
   version: master
   subpackages:

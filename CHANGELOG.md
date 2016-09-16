@@ -4,6 +4,7 @@ Releases
 v0.2.0 (unreleased)
 -------------------
 
+-   Update thriftrw-go to `>= 0.2, < 0.3`.
 -   Implemented a ThriftRW plugin. This should now be used instead of the
     ThriftRW `--yarpc` flag. Check the documentation of the
     [thrift](https://godoc.org/github.com/yarpc/yarpc-go/encoding/thrift)
