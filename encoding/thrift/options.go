@@ -22,6 +22,7 @@ package thrift
 
 type clientConfig struct {
 	DisableEnveloping bool
+	Multiplexed       bool
 }
 
 // ClientOption customizes the behavior of a Thrift client.
@@ -65,4 +66,20 @@ func (disableEnvelopingOption) applyClientOption(c *clientConfig) {
 
 func (disableEnvelopingOption) applyRegisterOption(c *registerConfig) {
 	c.DisableEnveloping = true
+}
+
+// Multiplexed is an option that specifies that requests from a client should
+// use Thrift multiplexing. This option should be used if the remote server is
+// using Thrift's TMultiplexedProtocol. It includes the name of the service in
+// the envelope name for all outbound requests.
+//
+// Specify this option when constructing the Thrift client.
+//
+// 	client := myserviceclient.New(channel, thrift.Multiplexed)
+var Multiplexed ClientOption = multiplexedOption{}
+
+type multiplexedOption struct{}
+
+func (multiplexedOption) applyClientOption(c *clientConfig) {
+	c.Multiplexed = true
 }

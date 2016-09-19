@@ -18,53 +18,74 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package apachethrift
 
 import (
 	"fmt"
 
 	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
+	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
-	tch "github.com/yarpc/yarpc-go/transport/tchannel"
+	"github.com/yarpc/yarpc-go/transport/http"
 
 	"github.com/crossdock/crossdock-go"
-	"github.com/uber/tchannel-go"
 )
 
 const (
-	serverPort = 8083
-	serverName = "tchannel-server"
+	serverParam = "apachethriftserver"
+	serverPort  = 8088
 )
 
-// Run exercises a YARPC client against a tchannel server.
+// Run runs the apachethrift behavior
 func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)
 
-	encoding := t.Param(params.Encoding)
-	server := t.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
+	server := t.Param(serverParam)
+	fatals.NotEmpty(server, "apachethriftserver is required")
 
-	ch, err := tchannel.NewChannel("yarpc-client", nil)
-	fatals.NoError(err, "could not create channel")
-
+	baseURL := fmt.Sprintf("http://%v:%v", server, serverPort)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc-client",
+		Name: "apache-thrift-client",
 		Outbounds: transport.Outbounds{
-			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+			"ThriftTest":    http.NewOutbound(baseURL + "/thrift/ThriftTest"),
+			"SecondService": http.NewOutbound(baseURL + "/thrift/SecondService"),
+			"Multiplexed":   http.NewOutbound(baseURL + "/thrift/multiplexed"),
 		},
 	})
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
-	switch encoding {
-	case "raw":
-		runRaw(t, dispatcher)
-	case "json":
-		runJSON(t, dispatcher)
-	case "thrift":
-		runThrift(t, dispatcher)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
+	// We can just run all the gauntlet tests against each URL because
+	// tests for undefined methods are skipped.
+	tests := []struct {
+		ServerName string
+		Services   gauntlet.ServiceSet
+		Options    []thrift.ClientOption
+	}{
+		{
+			ServerName: "ThriftTest",
+			Services:   gauntlet.ThriftTest,
+		},
+		{
+			ServerName: "SecondService",
+			Services:   gauntlet.SecondService,
+		},
+		{
+			ServerName: "Multiplexed",
+			Services:   gauntlet.AllServices,
+			Options:    []thrift.ClientOption{thrift.Multiplexed},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Tag("outbound", tt.ServerName)
+		gauntlet.RunGauntlet(t, gauntlet.Config{
+			Dispatcher:    dispatcher,
+			ServerName:    tt.ServerName,
+			Envelope:      true,
+			Services:      tt.Services,
+			ClientOptions: tt.Options,
+		})
 	}
 }

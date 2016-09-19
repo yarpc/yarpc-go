@@ -105,7 +105,7 @@ func TestClient(t *testing.T) {
 			},
 			wantError: `thrift request to procedure "MyService::someMethod" of ` +
 				`service "service" encountered an internal failure: ` +
-				"TApplicationException{Message: great sadness, Type: ProtocolError}",
+				"TApplicationException{Message: great sadness, Type: PROTOCOL_ERROR}",
 		},
 		{
 			desc:            "wrong envelope type for response",

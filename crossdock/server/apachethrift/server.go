@@ -18,24 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package apachethrift
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"sync"
 	"time"
+
+	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
+
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
-const addr = ":8085"
+const addr = ":8088"
 
-// Start starts an http server that yarpc client will make requests to
+// Start starts an Apache Thrift server on port 8088
 func Start() {
-	mux := &yarpcHTTPMux{
-		handlers: make(map[string]http.Handler),
-	}
-	mux.HandleFunc("handlertimeout/raw", handlerTimeoutRawHandler)
+	// We expose the following endpoints:
+	// /thrift/ThriftTest:
+	//   Thrift service using TBinaryProtocol
+	// /thrift/SecondService
+	//   Thrift service using TBinaryProtocol
+	// /thrift/mutliplexed
+	//   Thrift service using TBinaryProtocol with TMultiplexedProtocol,
+	//   serving both, ThriftTest and SecondService
+
+	pfactory := thrift.NewTBinaryProtocolFactoryDefault()
+
+	thriftTest := gauntlet_apache.NewThriftTestProcessor(thriftTestHandler{})
+	secondService := gauntlet_apache.NewSecondServiceProcessor(secondServiceHandler{})
+
+	multiplexed := thrift.NewTMultiplexedProcessor()
+	multiplexed.RegisterProcessor("ThriftTest", thriftTest)
+	multiplexed.RegisterProcessor("SecondService", secondService)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/thrift/ThriftTest", thrift.NewThriftHandlerFunc(thriftTest, pfactory, pfactory))
+	mux.HandleFunc("/thrift/SecondService", thrift.NewThriftHandlerFunc(secondService, pfactory, pfactory))
+	mux.HandleFunc("/thrift/multiplexed", thrift.NewThriftHandlerFunc(multiplexed, pfactory, pfactory))
 
 	server := &http.Server{
 		Addr:         addr,
@@ -49,32 +69,4 @@ func Start() {
 			log.Println("error:", err.Error())
 		}
 	}()
-}
-
-type yarpcHTTPMux struct {
-	sync.RWMutex
-	handlers map[string]http.Handler
-}
-
-func (m *yarpcHTTPMux) HandleFunc(procedure string, f http.HandlerFunc) {
-	m.Lock()
-	defer m.Unlock()
-	m.handlers[procedure] = f
-}
-
-func (m *yarpcHTTPMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	m.RLock()
-	defer m.RUnlock()
-	if req.Method != `POST` {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Invalid method: %q\n", req.Method)
-		return
-	}
-	procedure := req.Header.Get(`RPC-Procedure`)
-	if f, ok := m.handlers[procedure]; ok {
-		f.ServeHTTP(w, req)
-	} else {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Unknown procedure: %q\n", procedure)
-	}
 }

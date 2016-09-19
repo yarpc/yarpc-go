@@ -11,12 +11,14 @@ import:
   - assert
   - require
 - package: github.com/thriftrw/thriftrw-go
-  version: ~0.1
+  version: ~0.2
 - package: github.com/golang/mock
   version: master
   subpackages:
   - gomock
 - package: github.com/uber/tchannel-go
-  version: ^1.0.9
+  version: ^1.2
+- package: github.com/opentracing/opentracing-go
+  version: ~0.9
 - package: github.com/crossdock/crossdock-go
   version: master

@@ -1,8 +1,8 @@
-hash: 9ba800787ee3318334b30ffdee48e00c42f9f6b079dc194194a90809e0565110
-updated: 2016-08-31T14:23:48.132141348-07:00
+hash: 695b7dc863d581ff72b38fc8631b095bc5b2c5bf212b03128f35b35a39e7f13b
+updated: 2016-09-16T12:47:00.231813202-07:00
 imports:
 - name: github.com/apache/thrift
-  version: aa4312ef5ff8ae4965cc779fe73d2375aba0c2dc
+  version: 205dc19556eac3c0ab2d1965c4636b78f8922fae
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -11,7 +11,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 6cf5744a041a0022271cefed95ba843f6d87fd51
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -22,6 +22,7 @@ imports:
   version: 77a31d686003349e89c89e58408aafcd20003f41
   subpackages:
   - ext
+  - mocktracer
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -32,34 +33,46 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 256ff412f169844b2eec8497d8a50e00accdf69e
+  version: 0edcedc6665a0c7805587c5cab2fd3d31e720a10
   subpackages:
+  - envelope
+  - internal/envelope
+  - internal/envelope/exception
+  - internal/frame
+  - internal/goast
+  - internal/multiplex
+  - plugin
+  - plugin/api
+  - plugin/api/service/plugin
+  - plugin/api/service/servicegenerator
+  - protocol
+  - protocol/binary
   - ptr
   - wire
-  - protocol
-  - envelope
-  - protocol/binary
-  - internal/envelope/exception
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
-  version: 1a0e35378f6f721bc07f6c4466bc9701ed70b506
+  version: f57e644626dbf4d87ee2b36571600c21f8255f1f
   subpackages:
   - json
   - raw
-  - thrift
-  - testutils/testreader
-  - testutils
   - relay
+  - relay/relaytest
+  - testutils
+  - testutils/goroutines
+  - testutils/testreader
+  - thrift
+  - thrift/gen-go/meta
   - tnet
   - trand
   - typed
-  - thrift/gen-go/meta
-  - relay/relaytest
-  - testutils/goroutines
 - name: golang.org/x/net
-  version: 9bc2a3340c92c17a20edcd0080e93851ed58f5d5
+  version: 71a035914f99bb58fe82eac0f1289f10963d876c
   subpackages:
   - context
   - context/ctxhttp
+- name: golang.org/x/tools
+  version: f1a397bba50dee815e8c73f3ec94ffc0e8df1a09
+  subpackages:
+  - go/ast/astutil
 testImports: []

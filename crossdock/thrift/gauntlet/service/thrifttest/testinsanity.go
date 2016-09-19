@@ -101,6 +101,9 @@ type _Map_Numberz_Insanity_MapItemList map[gauntlet.Numberz]*gauntlet.Insanity
 
 func (m _Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
 		kw, err := k.ToWire()
 		if err != nil {
 			return err
@@ -136,6 +139,9 @@ type _Map_UserId_Map_Numberz_Insanity_MapItemList map[gauntlet.UserId]map[gauntl
 
 func (m _Map_UserId_Map_Numberz_Insanity_MapItemList) ForEach(f func(wire.MapItem) error) error {
 	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
 		kw, err := k.ToWire()
 		if err != nil {
 			return err

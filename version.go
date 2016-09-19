@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package keyvalue
+package yarpc
 
-//go:generate thriftrw-go --plugin=yarpc kv.thrift
-//go:generate ../../../scripts/updateLicenses.sh
+// Version is the current version of YARPC.
+const Version = "0.2.0"

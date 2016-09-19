@@ -98,15 +98,15 @@ func readHeaders(format tchannel.Format, getReader func() (tchannel.ArgReader, e
 func writeRequestHeaders(
 	ctx context.Context,
 	format tchannel.Format,
-	appHeaders transport.Headers,
+	appHeaders map[string]string,
 	getWriter func() (tchannel.ArgWriter, error),
 ) error {
 	ctxHeaders := baggage.FromContext(ctx)
-	headers := transport.NewHeadersWithCapacity(ctxHeaders.Len() + appHeaders.Len())
+	headers := transport.NewHeadersWithCapacity(ctxHeaders.Len() + len(appHeaders))
 	// TODO: zero-alloc version
 
 	prefix := strings.ToLower(BaggageHeaderPrefix)
-	for k, v := range appHeaders.Items() {
+	for k, v := range appHeaders {
 		if strings.HasPrefix(k, prefix) {
 			return fmt.Errorf(
 				// TODO: create error type for this

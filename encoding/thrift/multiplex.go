@@ -18,7 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package keyvalue
+package thrift
 
-//go:generate thriftrw-go --plugin=yarpc kv.thrift
-//go:generate ../../../scripts/updateLicenses.sh
+import (
+	"io"
+	"strings"
+
+	"github.com/thriftrw/thriftrw-go/protocol"
+	"github.com/thriftrw/thriftrw-go/wire"
+)
+
+// multiplexedOutboundProtocol is a Protocol for outbound requests that adds
+// the name of the service to the envelope name for outbound requests and
+// strips it away for inbound responses.
+type multiplexedOutboundProtocol struct {
+	protocol.Protocol
+
+	// Name of the Thrift service
+	Service string
+}
+
+func (m multiplexedOutboundProtocol) EncodeEnveloped(e wire.Envelope, w io.Writer) error {
+	e.Name = m.Service + ":" + e.Name
+	return m.Protocol.EncodeEnveloped(e, w)
+}
+
+func (m multiplexedOutboundProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelope, error) {
+	e, err := m.Protocol.DecodeEnveloped(r)
+	e.Name = strings.TrimPrefix(e.Name, m.Service+":")
+	return e, err
+}

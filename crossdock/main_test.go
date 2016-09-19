@@ -63,10 +63,10 @@ func TestCrossdock(t *testing.T) {
 			axes: axes{"transport": []string{"http", "tchannel"}},
 		},
 		{
-			name: "errors",
+			name: "errors_httpclient",
 		},
 		{
-			name: "errorstchout",
+			name: "errors_tchclient",
 		},
 		{
 			name: "headers",
@@ -109,12 +109,22 @@ func TestCrossdock(t *testing.T) {
 				"ctxclient": "127.0.0.1",
 			},
 		},
+		{
+			name: "apachethrift",
+			params: params{
+				"apachethriftserver": "127.0.0.1",
+				"apachethriftclient": "127.0.0.1",
+			},
+		},
 	}
 
 	for _, bb := range behaviors {
 
 		args := url.Values{}
 		for k, v := range defaultParams {
+			args.Set(k, v)
+		}
+		for k, v := range bb.params {
 			args.Set(k, v)
 		}
 
@@ -129,9 +139,6 @@ func TestCrossdock(t *testing.T) {
 				entryArgs.Set(k, args.Get(k))
 			}
 			for k, v := range entry {
-				entryArgs.Set(k, v)
-			}
-			for k, v := range bb.params {
 				entryArgs.Set(k, v)
 			}
 
