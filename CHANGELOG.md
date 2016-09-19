@@ -1,7 +1,7 @@
 Releases
 ========
 
-v0.2.0 (unreleased)
+v0.2.0 (2016-09-19)
 -------------------
 
 -   Update thriftrw-go to `>= 0.2, < 0.3`.
