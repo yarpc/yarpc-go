@@ -1,6 +1,12 @@
 Releases
 ========
 
+v0.3.0 (unreleased)
+-------------------
+
+-   No changes yet.
+
+
 v0.2.0 (2016-09-19)
 -------------------
 
@@ -21,6 +27,7 @@ v0.2.0 (2016-09-19)
     using the `thrift.Multiplexed` client option.
 
 [opentracing]: http://opentracing.io/
+
 
 v0.1.1 (2016-09-01)
 -------------------
