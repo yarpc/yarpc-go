@@ -45,15 +45,14 @@ func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *trans
 		return err
 	}
 
-	reqMeta := meta.FromTransportRequest(ctx, treq)
-	resBody, resMeta, err := r.h(reqMeta, reqBody)
+	reqMeta := meta.FromTransportRequest(treq)
+	resBody, resMeta, err := r.h(ctx, reqMeta, reqBody)
 	if err != nil {
 		return err
 	}
 
 	if resMeta != nil {
-		_ = meta.ToTransportResponseWriter(resMeta, rw)
-		// TODO(abg): Propagate response context
+		meta.ToTransportResponseWriter(resMeta, rw)
 	}
 
 	if _, err := rw.Write(resBody); err != nil {

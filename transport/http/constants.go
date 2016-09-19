@@ -45,4 +45,18 @@ const (
 
 	// ServiceHeader is the HTTP header used to indicate the service
 	ServiceHeader = "Rpc-Service"
+
+	// ShardKeyHeader is the HTTP header used by a clustered service to
+	// identify the node responsible for handling the request.
+	ShardKeyHeader = "Rpc-Shard-Key"
+
+	// RoutingKeyHeader is the HTTP header used by a relay to identify
+	// the traffic group responsible for handling the request, overriding the
+	// service name when available.
+	RoutingKeyHeader = "Rpc-Routing-Key"
+
+	// RoutingDelegateHeader is the HTTP header used by a relay to identify a
+	// service that can proxy for the destined service and perform
+	// application-specific routing.
+	RoutingDelegateHeader = "Rpc-Routing-Delegate"
 )

@@ -22,7 +22,8 @@ package params
 
 // Params used by behaviors
 const (
-	Encoding  = "encoding"
-	Server    = "server"
-	Transport = "transport"
+	Encoding   = "encoding"
+	Server     = "server"
+	HTTPServer = "httpserver"
+	Transport  = "transport"
 )

@@ -31,7 +31,7 @@ type Inbound interface {
 	// the inbound is ready to start accepting new requests.
 	//
 	// Implementations can assume that this function is called at most once.
-	Start(handler Handler) error
+	Start(handler Handler, deps Deps) error
 
 	// Stops the inbound. No new requests will be processed.
 	//

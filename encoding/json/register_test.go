@@ -6,6 +6,7 @@ import (
 	"github.com/yarpc/yarpc-go"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 )
 
 func TestWrapHandlerInvalid(t *testing.T) {
@@ -16,43 +17,43 @@ func TestWrapHandlerInvalid(t *testing.T) {
 		{"empty", func() {}},
 		{
 			"wrong-response",
-			func(yarpc.ReqMeta, map[string]interface{}) (yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, map[string]interface{}) (yarpc.ResMeta, error) {
 				return nil, nil
 			},
 		},
 		{
 			"wrong-request",
-			func(string, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+			func(context.Context, string, *struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"wrong-req-meta",
-			func(yarpc.CallReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.CallReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"wrong-res-meta",
-			func(yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.CallResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.CallResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-req",
-			func(yarpc.ReqMeta, struct{}) (*struct{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"non-pointer-res",
-			func(yarpc.ReqMeta, *struct{}) (struct{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, *struct{}) (struct{}, yarpc.ResMeta, error) {
 				return struct{}{}, nil, nil
 			},
 		},
 		{
 			"non-string-key",
-			func(yarpc.ReqMeta, map[int32]interface{}) (*struct{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, map[int32]interface{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
@@ -72,25 +73,25 @@ func TestWrapHandlerValid(t *testing.T) {
 	}{
 		{
 			"foo",
-			func(yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"bar",
-			func(yarpc.ReqMeta, map[string]interface{}) (*struct{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, map[string]interface{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"baz",
-			func(yarpc.ReqMeta, map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
 		{
 			"qux",
-			func(yarpc.ReqMeta, interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
+			func(context.Context, yarpc.ReqMeta, interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},

@@ -42,9 +42,9 @@ import (
 
 func TestStartAddrInUse(t *testing.T) {
 	i1 := NewInbound(":0")
-	require.NoError(t, i1.Start(new(transporttest.MockHandler)))
+	require.NoError(t, i1.Start(new(transporttest.MockHandler), transport.NoDeps))
 	i2 := NewInbound(i1.Addr().String())
-	err := i2.Start(new(transporttest.MockHandler))
+	err := i2.Start(new(transporttest.MockHandler), transport.NoDeps)
 
 	require.Error(t, err)
 	oe, ok := err.(*net.OpError)
@@ -59,7 +59,7 @@ func TestStartAddrInUse(t *testing.T) {
 
 func TestCloseError(t *testing.T) {
 	i := NewInbound(":0")
-	require.NoError(t, i.Start(new(transporttest.MockHandler)))
+	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 	require.NoError(t, i.(*inbound).listener.Close())
 	err := i.Stop()
 	require.Error(t, err)
@@ -69,7 +69,7 @@ func TestCloseError(t *testing.T) {
 
 func TestNilAddrAfterStop(t *testing.T) {
 	i := NewInbound(":0")
-	require.NoError(t, i.Start(new(transporttest.MockHandler)))
+	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NotNil(t, i.Addr())
 	assert.NoError(t, i.Stop())
@@ -78,13 +78,13 @@ func TestNilAddrAfterStop(t *testing.T) {
 
 func TestInboundStartAndStop(t *testing.T) {
 	i := NewInbound(":0")
-	require.NoError(t, i.Start(new(transporttest.MockHandler)))
+	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NoError(t, i.Stop())
 }
 
 func TestInboundStartError(t *testing.T) {
-	err := NewInbound("invalid").Start(new(transporttest.MockHandler))
+	err := NewInbound("invalid").Start(new(transporttest.MockHandler), transport.NoDeps)
 	assert.Error(t, err, "expected failure")
 }
 
@@ -105,7 +105,7 @@ func TestInboundMux(t *testing.T) {
 
 	i := NewInbound(":8080", Mux("/rpc/v1", mux))
 	h := transporttest.NewMockHandler(mockCtrl)
-	require.NoError(t, i.Start(h))
+	require.NoError(t, i.Start(h, transport.NoDeps))
 	defer i.Stop()
 
 	addr := "http://127.0.0.1:8080/"
@@ -120,7 +120,7 @@ func TestInboundMux(t *testing.T) {
 
 	// this should fail
 	o := NewOutbound(addr)
-	require.NoError(t, o.Start(), "failed to start outbound")
+	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
 	defer o.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -138,7 +138,7 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	o = NewOutbound(addr + "rpc/v1")
-	require.NoError(t, o.Start(), "failed to start outbound")
+	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
 	defer o.Stop()
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	res, err := o.Call(ctx, &transport.Request{

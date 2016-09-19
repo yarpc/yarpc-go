@@ -134,13 +134,12 @@ func TestThriftHandler(t *testing.T) {
 
 		if tt.expectHandle {
 			reqMeta := fakeReqMeta{
-				context:   ctx,
 				caller:    "caller",
 				service:   "service",
 				encoding:  Encoding,
 				procedure: "MyService::someMethod",
 			}
-			handler.EXPECT().Handle(reqMeta, requestBody).
+			handler.EXPECT().Handle(ctx, reqMeta, requestBody).
 				Return(Response{
 					Body:               fakeEnveloper(tt.responseEnvelopeType),
 					IsApplicationError: tt.responseIsAppError,

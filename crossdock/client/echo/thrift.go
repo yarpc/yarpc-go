@@ -49,10 +49,9 @@ func Thrift(t crossdock.T) {
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := random.String(5)
-	pong, _, err := client.Echo(
-		yarpc.NewReqMeta(ctx),
-		&echo.Ping{Beep: token},
-	)
+
+	// TODO can we pass nil instead of empty NewReqMeta()?
+	pong, _, err := client.Echo(ctx, yarpc.NewReqMeta(), &echo.Ping{Beep: token})
 
 	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
 	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)

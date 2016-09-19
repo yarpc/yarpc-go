@@ -25,6 +25,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/sync"
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
 )
 
@@ -71,6 +72,8 @@ type Config struct {
 	Interceptor transport.Interceptor
 
 	// TODO FallbackHandler for catch-all endpoints
+
+	Tracer opentracing.Tracer
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -86,6 +89,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 		Outbounds:   cfg.Outbounds,
 		Filter:      cfg.Filter,
 		Interceptor: cfg.Interceptor,
+		deps:        transport.NoDeps.WithTracer(cfg.Tracer),
 	}
 }
 
@@ -101,6 +105,7 @@ type dispatcher struct {
 	Interceptor transport.Interceptor
 
 	inbounds []transport.Inbound
+	deps     transport.Deps
 }
 
 func (d dispatcher) Inbounds() []transport.Inbound {
@@ -121,7 +126,13 @@ func (d dispatcher) Channel(service string) transport.Channel {
 func (d dispatcher) Start() error {
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Start(d)
+			return i.Start(d, d.deps)
+		}
+	}
+
+	startOutbound := func(o transport.Outbound) func() error {
+		return func() error {
+			return o.Start(d.deps)
 		}
 	}
 
@@ -132,7 +143,7 @@ func (d dispatcher) Start() error {
 
 	for _, o := range d.Outbounds {
 		// TODO record the name of the service whose outbound failed
-		wait.Submit(o.Start)
+		wait.Submit(startOutbound(o))
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {

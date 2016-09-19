@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
@@ -36,6 +37,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 )
 
 func TestHandlerSucces(t *testing.T) {
@@ -52,7 +54,7 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(BaggageHeaderPrefix+"BAR", "baz")
 
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	httpHandler := handler{rpcHandler}
+	httpHandler := handler{Handler: rpcHandler}
 
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
@@ -127,7 +129,7 @@ func TestHandlerHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		rpcHandler := transporttest.NewMockHandler(mockCtrl)
-		httpHandler := handler{rpcHandler}
+		httpHandler := handler{Handler: rpcHandler}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
@@ -237,7 +239,7 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		h := handler{transporttest.NewMockHandler(mockCtrl)}
+		h := handler{Handler: transporttest.NewMockHandler(mockCtrl)}
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 
@@ -280,7 +282,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(fmt.Errorf("great sadness"))
 
-	httpHandler := handler{rpcHandler}
+	httpHandler := handler{Handler: rpcHandler}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
 
@@ -289,6 +291,41 @@ func TestHandlerInternalFailure(t *testing.T) {
 	assert.Equal(t,
 		`UnexpectedError: error for procedure "hello" of service "fake": great sadness`+"\n",
 		httpResponse.Body.String())
+}
+
+type panickedHandler struct{}
+
+func (th panickedHandler) Handle(context.Context, transport.Options, *transport.Request, transport.ResponseWriter) error {
+	panic("oops I panicked!")
+}
+
+func TestHandlerPanic(t *testing.T) {
+	inbound := NewInbound("localhost:0")
+	serverDispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "yarpc-test",
+		Inbounds: []transport.Inbound{inbound},
+	})
+	serverDispatcher.Register("", "panic", panickedHandler{})
+
+	require.NoError(t, serverDispatcher.Start())
+	defer serverDispatcher.Stop()
+
+	outbound := NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()))
+	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:      "yarpc-test-client",
+		Outbounds: transport.Outbounds{"yarpc-test": outbound},
+	})
+	require.NoError(t, clientDispatcher.Start())
+	defer clientDispatcher.Stop()
+
+	client := raw.New(clientDispatcher.Channel("yarpc-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("panic"), []byte{})
+
+	assert.True(t, transport.IsUnexpectedError(err), "Must be an UnexpectedError")
+	assert.Equal(t,
+		`UnexpectedError: error for procedure "panic" of service "yarpc-test": panic: oops I panicked!`,
+		err.Error())
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

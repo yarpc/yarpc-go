@@ -22,11 +22,13 @@ package tchannel
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/internal"
 
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
@@ -75,6 +77,7 @@ func (c tchannelCall) Response() inboundCallResponse {
 type handler struct {
 	existing map[string]tchannel.Handler
 	Handler  transport.Handler
+	deps     transport.Deps
 }
 
 func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
@@ -87,7 +90,8 @@ func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 }
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
-	err := h.callHandler(ctx, call)
+	start := time.Now()
+	err := h.callHandler(ctx, call, start)
 	if err == nil {
 		return
 	}
@@ -101,12 +105,14 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	status := tchannel.ErrCodeUnexpected
 	if transport.IsBadRequestError(err) {
 		status = tchannel.ErrCodeBadRequest
+	} else if transport.IsTimeoutError(err) {
+		status = tchannel.ErrCodeTimeout
 	}
 
 	call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, start time.Time) error {
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
@@ -125,6 +131,11 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 	}
 	treq.Headers = headers
 
+	if tcall, ok := call.(tchannelCall); ok {
+		tracer := h.deps.Tracer()
+		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+	}
+
 	body, err := call.Arg3Reader()
 	if err != nil {
 		return err
@@ -140,7 +151,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall) error {
 		return err
 	}
 
-	return h.Handler.Handle(ctx, transportOptions, treq, rw)
+	return internal.SafelyCallHandler(h.Handler, start, ctx, transportOptions, treq, rw)
 }
 
 type responseWriter struct {

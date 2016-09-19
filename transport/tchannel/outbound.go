@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"io"
-	"time"
 
 	"github.com/yarpc/yarpc-go/internal/encoding"
 	"github.com/yarpc/yarpc-go/internal/errors"
@@ -71,7 +70,7 @@ type outbound struct {
 	HostPort string
 }
 
-func (o outbound) Start() error {
+func (o outbound) Start(d transport.Deps) error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
 	if o.started.Swap(true) {
@@ -104,12 +103,13 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	var call *tchannel.OutboundCall
 	var err error
 
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
 	format := tchannel.Format(req.Encoding)
-	callOptions := tchannel.CallOptions{Format: format}
+	callOptions := tchannel.CallOptions{
+		Format:          format,
+		ShardKey:        req.ShardKey,
+		RoutingKey:      req.RoutingKey,
+		RoutingDelegate: req.RoutingDelegate,
+	}
 	if o.HostPort != "" {
 		// If the hostport is given, we use the BeginCall on the channel
 		// instead of the subchannel.
@@ -138,7 +138,10 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		return nil, err
 	}
 
-	if err := writeRequestHeaders(ctx, format, req.Headers, call.Arg2Writer); err != nil {
+	// Inject tracing system baggage
+	reqHeaders := tchannel.InjectOutboundSpan(call.Response(), req.Headers.Items())
+
+	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
 		return nil, encoding.RequestHeadersEncodeError(req, err)
@@ -151,9 +154,6 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	res := call.Response()
 	headers, err := readHeaders(format, res.Arg2Reader)
 	if err != nil {
-		if err == tchannel.ErrTimeout {
-			return nil, errors.NewTimeoutError(req.Service, req.Procedure, ttl)
-		}
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)
 		}
@@ -190,6 +190,8 @@ func fromSystemError(err tchannel.SystemError) error {
 	switch err.Code() {
 	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
 		return errors.RemoteBadRequestError(err.Message())
+	case tchannel.ErrCodeTimeout:
+		return errors.RemoteTimeoutError(err.Message())
 	default:
 		return errors.RemoteUnexpectedError(err.Message())
 	}

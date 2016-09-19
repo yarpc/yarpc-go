@@ -22,13 +22,11 @@ package yarpctest
 
 import (
 	"testing"
-	"time"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 func TestReqMeta(t *testing.T) {
@@ -69,11 +67,7 @@ func TestReqMeta(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		reqMeta := tt.build(NewReqMetaBuilder(ctx)).Build()
-		assert.Equal(t, ctx, reqMeta.Context())
+		reqMeta := tt.build(NewReqMetaBuilder()).Build()
 		assert.Equal(t, tt.wantEncoding, reqMeta.Encoding())
 		assert.Equal(t, tt.wantHeaders, reqMeta.Headers())
 		assert.Equal(t, tt.wantCaller, reqMeta.Caller())

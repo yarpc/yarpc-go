@@ -34,6 +34,7 @@ import (
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
+	"golang.org/x/net/context"
 )
 
 type handler struct {
@@ -42,7 +43,7 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) GetValue(reqMeta yarpc.ReqMeta, key *string) (string, yarpc.ResMeta, error) {
+func (h *handler) GetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string) (string, yarpc.ResMeta, error) {
 	h.RLock()
 	defer h.RUnlock()
 
@@ -53,7 +54,7 @@ func (h *handler) GetValue(reqMeta yarpc.ReqMeta, key *string) (string, yarpc.Re
 	return "", nil, &kv.ResourceDoesNotExist{Key: *key}
 }
 
-func (h *handler) SetValue(reqMeta yarpc.ReqMeta, key *string, value *string) (yarpc.ResMeta, error) {
+func (h *handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string, value *string) (yarpc.ResMeta, error) {
 	h.Lock()
 	h.items[*key] = *value
 	h.Unlock()

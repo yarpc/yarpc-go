@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package outboundttl
+package timeout
 
 import (
 	"strings"
@@ -26,6 +26,7 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	disp "github.com/yarpc/yarpc-go/crossdock/client/dispatcher"
+	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 
@@ -33,8 +34,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Run tests the behavior of any outbound transport to verify that it will
-// timeout if the server fails to respond in a timely fashion.
+// Run tests if a yarpc client returns correctly a client timeout error behind
+// the TimeoutError interface when the context deadline is reached while the
+// server is taking too long to respond.
 func Run(t crossdock.T) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
@@ -47,7 +49,7 @@ func Run(t crossdock.T) {
 	defer dispatcher.Stop()
 
 	ch := raw.New(dispatcher.Channel("yarpc-test"))
-	_, _, err := ch.Call(yarpc.NewReqMeta(ctx).Procedure("sleep/raw"), nil)
+	_, _, err := ch.Call(ctx, yarpc.NewReqMeta().Procedure("sleep/raw"), nil)
 	fatals.Error(err, "expected a failure for timeout")
 
 	if transport.IsBadRequestError(err) {
@@ -55,8 +57,20 @@ func Run(t crossdock.T) {
 		return
 	}
 
-	form := strings.HasPrefix(err.Error(), `timeout for procedure "sleep/raw" of service "yarpc-test" after`)
-	assert.True(form, "error message has expected prefix for timeouts, got %q", err.Error())
-	assert.True(
-		transport.IsTimeoutError(err), "error should be a TimeoutError, got %T", err)
+	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
+
+	trans := t.Param(params.Transport)
+	switch trans {
+	case "http":
+		form := strings.HasPrefix(err.Error(),
+			`client timeout for procedure "sleep/raw" of service "yarpc-test" after`)
+		assert.True(form, "should be a client timeout: %q", err.Error())
+	case "tchannel":
+		form := strings.HasPrefix(err.Error(), `timeout`)
+		assert.True(form,
+			"should be a remote timeout (we cant represent client timeout with tchannel): %q",
+			err.Error())
+	default:
+		fatals.Fail("", "unknown transport %q", trans)
+	}
 }

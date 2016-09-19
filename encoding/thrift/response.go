@@ -26,7 +26,7 @@ import (
 	"github.com/thriftrw/thriftrw-go/envelope"
 )
 
-// Response contains the response from a generated Thrift handler.
+// Response contains the raw response from a generated Thrift handler.
 type Response struct {
 	Body envelope.Enveloper
 	Meta yarpc.ResMeta

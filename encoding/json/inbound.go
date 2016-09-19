@@ -53,17 +53,15 @@ func (h jsonHandler) Handle(ctx context.Context, _ transport.Options, treq *tran
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
-	reqMeta := meta.FromTransportRequest(ctx, treq)
-	results := h.handler.Call([]reflect.Value{reflect.ValueOf(reqMeta), reqBody})
+	reqMeta := meta.FromTransportRequest(treq)
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqMeta), reqBody})
 
 	if err := results[2].Interface(); err != nil {
 		return err.(error)
 	}
 
 	if resMeta, ok := results[1].Interface().(yarpc.ResMeta); ok {
-		_ = meta.ToTransportResponseWriter(resMeta, rw)
-		// TODO(abg): once transports support response context, we'll have to
-		// propagate that here.
+		meta.ToTransportResponseWriter(resMeta, rw)
 	}
 
 	result := results[0].Interface()

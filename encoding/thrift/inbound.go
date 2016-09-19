@@ -70,8 +70,8 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 	}
 	// TODO(abg): Support oneway
 
-	reqMeta := meta.FromTransportRequest(ctx, treq)
-	res, err := t.Handler.Handle(reqMeta, envelope.Value)
+	reqMeta := meta.FromTransportRequest(treq)
+	res, err := t.Handler.Handle(ctx, reqMeta, envelope.Value)
 	if err != nil {
 		return err
 	}
@@ -92,8 +92,7 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 
 	resMeta := res.Meta
 	if resMeta != nil {
-		_ = meta.ToTransportResponseWriter(resMeta, rw)
-		// TODO(abg): propagate response context
+		meta.ToTransportResponseWriter(resMeta, rw)
 	}
 
 	err = proto.EncodeEnveloped(wire.Envelope{

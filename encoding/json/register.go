@@ -26,9 +26,12 @@ import (
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
+
+	"golang.org/x/net/context"
 )
 
 var (
+	_ctxType            = reflect.TypeOf((*context.Context)(nil)).Elem()
 	_reqMetaType        = reflect.TypeOf((*yarpc.ReqMeta)(nil)).Elem()
 	_resMetaType        = reflect.TypeOf((*yarpc.ResMeta)(nil)).Elem()
 	_errorType          = reflect.TypeOf((*error)(nil)).Elem()
@@ -56,7 +59,7 @@ func (p procedure) getHandlers() map[string]interface{} {
 // Procedure builds a Registrant with a single procedure in it. handler must
 // be a function with a signature similar to,
 //
-// 	f(reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
+// 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
@@ -70,7 +73,7 @@ func Procedure(name string, handler interface{}) Registrant {
 // Handlers must have a signature similar to the following or the system will
 // panic.
 //
-// 	f(reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
+// 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
@@ -112,9 +115,9 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		))
 	}
 
-	if t.NumIn() != 2 {
+	if t.NumIn() != 3 {
 		panic(fmt.Sprintf(
-			"expected handler for %q to have 2 arguments but it had %v",
+			"expected handler for %q to have 3 arguments but it had %v",
 			n, t.NumIn(),
 		))
 	}
@@ -126,9 +129,17 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		))
 	}
 
-	if t.In(0) != _reqMetaType {
+	if t.In(0) != _ctxType {
 		panic(fmt.Sprintf(
 			"the first argument of the handler for %q must be of type "+
+				"context.Context, and not: %v", n, t.In(0),
+		))
+
+	}
+
+	if t.In(1) != _reqMetaType {
+		panic(fmt.Sprintf(
+			"the second argument of the handler for %q must be of type "+
 				"yarpc.ReqMeta, and not: %v", n, t.In(0),
 		))
 	}
@@ -141,12 +152,12 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		))
 	}
 
-	reqBodyType := t.In(1)
+	reqBodyType := t.In(2)
 	resBodyType := t.Out(0)
 
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the second argument of the handler for %q must be "+
+			"the thrifd argument of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
 		))

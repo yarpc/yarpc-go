@@ -71,14 +71,14 @@ func (_mr *_MockOutboundRecorder) Options() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Options")
 }
 
-func (_m *MockOutbound) Start() error {
-	ret := _m.ctrl.Call(_m, "Start")
+func (_m *MockOutbound) Start(_param0 transport.Deps) error {
+	ret := _m.ctrl.Call(_m, "Start", _param0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockOutboundRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+func (_mr *_MockOutboundRecorder) Start(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0)
 }
 
 func (_m *MockOutbound) Stop() error {

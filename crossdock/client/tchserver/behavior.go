@@ -37,7 +37,7 @@ const (
 	serverName = "tchannel-server"
 )
 
-// Run executes the tchserver test
+// Run exercises a YARPC client against a tchannel server.
 func Run(t crossdock.T) {
 	fatals := crossdock.Fatals(t)
 

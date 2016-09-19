@@ -17,36 +17,41 @@ services:
             - AXIS_SERVER=go,node,java,python
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
-            - AXIS_ERRORSHTTPOUT=node,go
-            # AXIS_ERRORSHTTPIN TODO
-            - AXIS_ERRORSTCHOUT=go
-            # AXIS_ERRORSTCHIN TODO
+            - AXIS_ERRORS_HTTPCLIENT=node,go
+            # AXIS_ERRORS_HTTPSERVER TODO
+            - AXIS_ERRORS_TCHCLIENT=go
+            # AXIS_ERRORS_TCHSERVER TODO
             - AXIS_CTXCLIENT=go
             - AXIS_CTXSERVER=go
+            - AXIS_APACHETHRIFTCLIENT=go
+            - AXIS_APACHETHRIFTSERVER=go
             - AXIS_GAUNTLET=go
+            - AXIS_HTTPSERVER=go
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
             - BEHAVIOR_THRIFT=client,server,transport
             - BEHAVIOR_HEADERS=client,server,transport,encoding
-            - BEHAVIOR_ERRORS=errorshttpout,server
+            - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
             # BEHAVIOR_ERRORSHTTPIN TODO
-            - BEHAVIOR_ERRORSTCHOUT=errorstchout,server
+            - BEHAVIOR_ERRORS_TCHCLIENT=errors_tchclient,server
             # BEHAVIOR_ERRORSTCHIN TODO
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - BEHAVIOR_TCHSERVER=client,server,encoding
             # BEHAVIOR_HTTPCLIENT TODO
-            # BEHAVIOR_HTTPSERVER TODO
+            - BEHAVIOR_HTTPSERVER=client,httpserver
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
-            - BEHAVIOR_OUTBOUNDTTL=client,server,transport
+            - BEHAVIOR_TIMEOUT=client,server,transport
             # BEHAVIOR_INBOUNDTTL TODO
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
+            - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
+            - REPORT=compact
 
     go:
         dns_search: .
         build: .
         ports:
-            - "8080-8087"
+            - "8080-8088"
 
     node:
         dns_search: .

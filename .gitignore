@@ -7,3 +7,4 @@ node_modules
 *.prof
 /cover
 /cover.html
+/cover.out

@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/transporttest"
 
@@ -106,7 +105,7 @@ func TestClient(t *testing.T) {
 			},
 			wantError: `thrift request to procedure "MyService::someMethod" of ` +
 				`service "service" encountered an internal failure: ` +
-				"TApplicationException{Message: great sadness, Type: ProtocolError}",
+				"TApplicationException{Message: great sadness, Type: PROTOCOL_ERROR}",
 		},
 		{
 			desc:            "wrong envelope type for response",
@@ -183,7 +182,7 @@ func TestClient(t *testing.T) {
 			Protocol: proto,
 		})
 
-		_, _, err := c.Call(yarpc.NewReqMeta(ctx), tt.giveRequestBody)
+		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)

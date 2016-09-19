@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package errors
+package errorshttpclient
 
 import (
 	"fmt"
@@ -118,8 +118,10 @@ func Run(t crossdock.T) {
 		body    string
 
 		wantStatus         int
+		skipBody           string
 		wantBody           string
 		wantBodyStartsWith string
+		skipStatus         int
 	}{
 		{
 			name:       "no service",
@@ -311,11 +313,60 @@ func Run(t crossdock.T) {
 			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
 				`UnexpectedError: error for procedure "unexpected-error" of service "yarpc-test": error` + "\n",
 		},
+		{
+			name: "remote timeout",
+			headers: map[string]string{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "yarpc-test",
+				"RPC-Procedure":  "waitfortimeout/raw",
+				"RPC-Encoding":   "raw",
+				"Context-TTL-MS": "100",
+			},
+			wantStatus: 504,
+			skipStatus: 400,
+			wantBodyStartsWith: `Timeout: call to procedure "waitfortimeout/raw"` +
+				` of service "yarpc-test" from caller "yarpc-test" timed out after`,
+		},
+		{
+			// We call sleep through the proxy Phone.
+			// Phone will timeout waiting after Sleep, and yarpc should return an unexpected error.
+			// This verifies that we do not forward (aka bubble up) timeout errors.
+			name: "unexpected client timeout",
+			headers: map[string]string{
+				"RPC-Caller":     "yarpc-test",
+				"RPC-Service":    "yarpc-test",
+				"RPC-Procedure":  "phone",
+				"RPC-Encoding":   "json",
+				"Context-TTL-MS": "100",
+			},
+			body: `{
+				"service": "yarpc-test",
+				"procedure": "sleep",
+				"body": "unused",
+				"transport": {"http": {"host": "` + t.Param(params.Server) + `", "port": 8081}}
+			}`,
+			skipBody: `UnexpectedError: error for procedure "phone" of service` +
+				` "yarpc-test": BadRequest: unrecognized procedure "sleep" for` +
+				` service "yarpc-test"` + "\n",
+			wantStatus: 500,
+			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service` +
+				` "yarpc-test": client timeout for procedure "sleep" of service "yarpc-test" after`,
+		},
 	}
 
 	for _, tt := range tests {
 		res := client.Call(t, tt.headers, tt.body)
 		t.Tag("scenario", tt.name)
+
+		if res.Status == tt.skipStatus {
+			t.Skipf("%q skipped (skip this status): %v", tt.name, res.Body)
+			continue
+		}
+		if tt.skipBody != "" && tt.skipBody == res.Body {
+			t.Skipf("%q skipped (skip this body): %v", tt.name, res.Body)
+			continue
+		}
+
 		assert.Equal(tt.wantStatus, res.Status, "should respond with expected status")
 		if tt.wantBody != "" {
 			assert.Equal(tt.wantBody, res.Body, "response body should be informative error")

@@ -103,9 +103,8 @@ func TestCall(t *testing.T) {
 			}, nil)
 
 		resBody, res, err := client.Call(
-			yarpc.NewReqMeta(ctx).
-				Procedure(tt.procedure).
-				Headers(tt.headers),
+			ctx,
+			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
 			tt.body)
 
 		if tt.wantErr != "" {

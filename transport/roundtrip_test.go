@@ -68,12 +68,12 @@ type httpTransport struct{ t *testing.T }
 
 func (ht httpTransport) WithHandler(h transport.Handler, f func(transport.Outbound)) {
 	i := http.NewInbound("127.0.0.1:0")
-	require.NoError(ht.t, i.Start(h), "failed to start")
+	require.NoError(ht.t, i.Start(h, transport.NoDeps), "failed to start")
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
-	require.NoError(ht.t, o.Start(), "failed to start outbound")
+	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
 	defer o.Stop()
 	f(o)
 }
@@ -86,14 +86,14 @@ func (tt tchannelTransport) WithHandler(h transport.Handler, f func(transport.Ou
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
 		i := tch.NewInbound(ch)
-		require.NoError(tt.t, i.Start(h), "failed to start")
+		require.NoError(tt.t, i.Start(h, transport.NoDeps), "failed to start")
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
 		// handler.
 
 		client := testutils.NewClient(tt.t, clientOpts)
 		o := tch.NewOutbound(client, tch.HostPort(hostPort))
-		require.NoError(tt.t, o.Start(), "failed to start outbound")
+		require.NoError(tt.t, o.Start(transport.NoDeps), "failed to start outbound")
 		defer o.Stop()
 
 		f(o)
@@ -123,7 +123,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 		{
 			requestBody:   "foo",
-			responseError: errors.LocalUnexpectedError(fmt.Errorf("great sadness")),
+			responseError: errors.HandlerUnexpectedError(fmt.Errorf("great sadness")),
 			wantError: func(err error) {
 				assert.True(t, transport.IsUnexpectedError(err), err)
 				assert.Equal(t, "UnexpectedError: great sadness", err.Error())
@@ -131,7 +131,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 		{
 			requestBody:   "bar",
-			responseError: errors.LocalBadRequestError(fmt.Errorf("missing service name")),
+			responseError: errors.HandlerBadRequestError(fmt.Errorf("missing service name")),
 			wantError: func(err error) {
 				assert.True(t, transport.IsBadRequestError(err))
 				assert.Equal(t, "BadRequest: missing service name", err.Error())

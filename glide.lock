@@ -1,17 +1,17 @@
-hash: 4ea05eb1f0074f6397781fc25a850b9c3318558046d0e2ae8a17b4bcbe852a58
-updated: 2016-08-11T16:22:23.986797563-07:00
+hash: 21459b6c58a7bb3113288f291dcdf779e2b2b5d568726241dec2aa88a62b66cc
+updated: 2016-09-19T13:00:15.085347004-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 2007783e874d524a46b818598a45078448ecc53e
+  version: 205dc19556eac3c0ab2d1965c4636b78f8922fae
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
-  version: 228792ab861c86f8900b2db0439577feef9ec9d8
+  version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
   subpackages:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -19,13 +19,14 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 2c1988e8c18d14b142c0b472624f71647cf39adb
+  version: 1f49d83d9aa00e6ce4fc8258c71cc7786aec968a
   subpackages:
   - proto
 - name: github.com/opentracing/opentracing-go
-  version: 855519783f479520497c6b3445611b05fc42f009
+  version: 77a31d686003349e89c89e58408aafcd20003f41
   subpackages:
   - ext
+  - mocktracer
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -36,43 +37,56 @@ imports:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 13abcf75760f008b6f92ee3185a9534e286b64a0
+  version: 0edcedc6665a0c7805587c5cab2fd3d31e720a10
   subpackages:
+  - envelope
+  - internal/envelope
+  - internal/envelope/exception
+  - internal/frame
+  - internal/goast
+  - internal/multiplex
+  - plugin
+  - plugin/api
+  - plugin/api/service/plugin
+  - plugin/api/service/servicegenerator
+  - protocol
+  - protocol/binary
   - ptr
   - wire
-  - protocol
-  - envelope
-  - protocol/binary
-  - envelope/internal/exception
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
-  version: 99f494da788eeefb062e564e490dfe9827e288dc
+  version: f57e644626dbf4d87ee2b36571600c21f8255f1f
   subpackages:
   - json
   - raw
-  - thrift
-  - testutils/testreader
-  - testutils
   - relay
+  - relay/relaytest
+  - testutils
+  - testutils/goroutines
+  - testutils/testreader
+  - thrift
+  - thrift/gen-go/meta
   - tnet
   - trand
   - typed
-  - thrift/gen-go/meta
-  - relay/relaytest
-  - testutils/goroutines
 - name: golang.org/x/net
-  version: 075e191f18186a8ff2becaf64478e30f4545cdad
+  version: 71a035914f99bb58fe82eac0f1289f10963d876c
   subpackages:
   - context
   - context/ctxhttp
   - http2
-  - trace
   - http2/hpack
-  - lex/httplex
+  - idna
   - internal/timeseries
+  - lex/httplex
+  - trace
+- name: golang.org/x/tools
+  version: f1a397bba50dee815e8c73f3ec94ffc0e8df1a09
+  subpackages:
+  - go/ast/astutil
 - name: google.golang.org/grpc
-  version: 13edeeffdea7a41d5aad96c28deb4c7bd01a9397
+  version: 0032a855ba5c8a3c8e0d71c2deef354b70af1584
   subpackages:
   - codes
   - credentials
@@ -80,6 +94,6 @@ imports:
   - internal
   - metadata
   - naming
-  - transport
   - peer
+  - transport
 testImports: []
