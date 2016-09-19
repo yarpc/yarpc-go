@@ -29,6 +29,11 @@ import (
 	"github.com/uber-go/atomic"
 )
 
+var (
+	errServerStopped    = errors.New("the server has been stopped")
+	errAlreadyListening = errors.New("the server is already listening")
+)
+
 // HTTPServer wraps an http.Server to listen asynchronously and allow stopping
 // it.
 type HTTPServer struct {
@@ -42,7 +47,10 @@ type HTTPServer struct {
 
 // NewHTTPServer wraps the given http.Server into an HTTPServer.
 func NewHTTPServer(s *http.Server) *HTTPServer {
-	return &HTTPServer{Server: s}
+	return &HTTPServer{
+		Server: s,
+		done:   make(chan error, 1),
+	}
 }
 
 // Listener returns the listener for this server or nil if the server isn't
@@ -58,15 +66,8 @@ func (h *HTTPServer) Listener() net.Listener {
 // An error is returned if the server failed to start up, if the server was
 // already listening, or if the server was stopped with Stop().
 func (h *HTTPServer) ListenAndServe() error {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
 	if h.stopped.Load() {
-		return errors.New("the server has been stopped")
-	}
-
-	if h.listener != nil {
-		return errors.New("the server is already listening")
+		return errServerStopped
 	}
 
 	addr := h.Server.Addr
@@ -74,13 +75,19 @@ func (h *HTTPServer) ListenAndServe() error {
 		addr = ":http"
 	}
 
-	done := make(chan error, 1)
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	if h.listener != nil {
+		return errAlreadyListening
+	}
+
 	listener, err := net.Listen("tcp", h.Server.Addr)
 	if err != nil {
 		return err
 	}
 
-	go func() {
+	go func(done chan<- error) {
 		// Serve always returns a non-nil error. For us, it's an error only if
 		// we didn't call Stop().
 		err := h.Server.Serve(listener)
@@ -89,9 +96,8 @@ func (h *HTTPServer) ListenAndServe() error {
 		} else {
 			done <- nil
 		}
-	}()
+	}(h.done)
 
-	h.done = done
 	h.listener = listener
 	return nil
 }
@@ -101,12 +107,12 @@ func (h *HTTPServer) ListenAndServe() error {
 //
 // Once a server is stopped, it cannot be started again with ListenAndServe.
 func (h *HTTPServer) Stop() error {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
 	if h.stopped.Swap(true) {
 		return nil
 	}
+
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
 	if h.listener == nil {
 		return nil
