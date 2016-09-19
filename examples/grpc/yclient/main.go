@@ -29,7 +29,7 @@ func main() {
 	client := raw.New(dispatcher.Channel("foo"))
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	resBody, _, err := client.Call(yarpc.NewReqMeta(ctx).Procedure("bar"), []byte("hi"))
+	resBody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("bar"), []byte("hi"))
 	if err != nil {
 		log.Fatalf("call failed: %v", err)
 	}

@@ -21,7 +21,7 @@ type outbound struct {
 	conn    *grpc.ClientConn
 }
 
-func (o *outbound) Start() error {
+func (o *outbound) Start(d transport.Deps) error {
 	conn, err := grpc.Dial(o.address, grpc.WithInsecure(), grpc.WithCodec(RawCodec{}))
 	if err != nil {
 		return err

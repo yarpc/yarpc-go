@@ -26,7 +26,7 @@ type inbound struct {
 	port int
 }
 
-func (i *inbound) Start(h transport.Handler) error {
+func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", i.port))
 	if err != nil {
 		return err
