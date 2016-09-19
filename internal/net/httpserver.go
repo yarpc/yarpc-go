@@ -25,7 +25,8 @@ import (
 	"net"
 	"net/http"
 	"sync"
-	"sync/atomic"
+
+	"github.com/uber-go/atomic"
 )
 
 // HTTPServer wraps an http.Server to listen asynchronously and allow stopping
@@ -36,7 +37,7 @@ type HTTPServer struct {
 	lock     sync.Mutex
 	listener net.Listener
 	done     chan error
-	stopped  uint32
+	stopped  atomic.Bool
 }
 
 // NewHTTPServer wraps the given http.Server into an HTTPServer.
@@ -60,7 +61,7 @@ func (h *HTTPServer) ListenAndServe() error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	if atomic.LoadUint32(&h.stopped) == 1 {
+	if h.stopped.Load() {
 		return errors.New("the server has been stopped")
 	}
 
@@ -83,7 +84,7 @@ func (h *HTTPServer) ListenAndServe() error {
 		// Serve always returns a non-nil error. For us, it's an error only if
 		// we didn't call Stop().
 		err := h.Server.Serve(listener)
-		if atomic.LoadUint32(&h.stopped) == 0 {
+		if !h.stopped.Load() {
 			done <- err
 		} else {
 			done <- nil
@@ -103,7 +104,7 @@ func (h *HTTPServer) Stop() error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	if !atomic.CompareAndSwapUint32(&h.stopped, 0, 1) {
+	if h.stopped.Swap(true) {
 		return nil
 	}
 
