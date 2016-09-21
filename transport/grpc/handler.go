@@ -46,12 +46,13 @@ func (h handler) Handle(srv interface{}, ctx context.Context, dec func(interface
 
 	err := internal.SafelyCallHandler(h.Handler, start, ctx, grpcOptions, treq, rw)
 
-	return &r.body, err
+	responseBody := r.body.Bytes()
+	return &responseBody, err
 }
 
 // The response object contains response information from the YARPC handler
 type response struct {
-	body    []byte
+	body    bytes.Buffer
 	headers transport.Headers
 }
 
@@ -65,8 +66,7 @@ func newResponseWriter(r *response) responseWriter {
 }
 
 func (rw responseWriter) Write(s []byte) (int, error) {
-	rw.r.body = s
-	return len(s), nil
+	return rw.r.body.Write(s)
 }
 
 func (rw responseWriter) AddHeaders(h transport.Headers) {

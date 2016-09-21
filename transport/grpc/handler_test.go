@@ -17,7 +17,7 @@ func TestResponseWriter_Write(t *testing.T) {
 
 	assert.Equal(t, len(byteMsg), changed)
 	assert.Equal(t, error(nil), err)
-	assert.Equal(t, strMsg, string(r.body))
+	assert.Equal(t, strMsg, string(r.body.Bytes()))
 }
 
 func TestResponseWriter_AddHeaders(t *testing.T) {
