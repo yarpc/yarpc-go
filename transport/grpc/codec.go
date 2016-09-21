@@ -7,7 +7,11 @@ type PassThroughCodec struct{}
 
 // Marshal takes a []byte pointer and passes it through as a []byte
 func (PassThroughCodec) Marshal(v interface{}) ([]byte, error) {
-	return *(v.(*[]byte)), nil
+	bs, ok := v.(*[]byte)
+	if !ok {
+		return nil, fmt.Errorf("expected sender of type *[]byte but got %T", v)
+	}
+	return *(bs), nil
 }
 
 // Unmarshal takes a byte slice and writes it to v
