@@ -20,13 +20,12 @@ type handler struct {
 // Handle the grpc request and convert it into a YARPC request
 // dec ('decode') will pass through the request body in raw bytes using the PassThroughCodec
 func (h handler) Handle(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	var rawBytes []byte
-
-	if err := dec(&rawBytes); err != nil {
+	var requestBody []byte
+	if err := dec(&requestBody); err != nil {
 		return nil, err
 	}
 
-	rawBytesBuffer := bytes.NewBuffer(rawBytes)
+	requestBodyBuffer := bytes.NewBuffer(requestBody)
 
 	// TODO replace the hardcoded strings with Headers from the request
 	treq := &transport.Request{
@@ -34,7 +33,7 @@ func (h handler) Handle(srv interface{}, ctx context.Context, dec func(interface
 		Service:   "foo",
 		Procedure: "bar",
 		Encoding:  "raw",
-		Body:      rawBytesBuffer,
+		Body:      requestBodyBuffer,
 	}
 
 	// TODO handle deadlines
