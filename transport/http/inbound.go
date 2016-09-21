@@ -23,10 +23,11 @@ package http
 import (
 	"net"
 	"net/http"
-	"sync/atomic"
+
+	intnet "github.com/yarpc/yarpc-go/internal/net"
+	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/yarpc/yarpc-go/transport"
 )
 
 // Inbound represents an HTTP Inbound. It is the same as the transport Inbound
@@ -54,7 +55,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 
 // NewInbound builds a new HTTP inbound that listens on the given address.
 func NewInbound(addr string, opts ...InboundOption) Inbound {
-	i := &inbound{addr: addr, done: make(chan error, 1)}
+	i := &inbound{addr: addr}
 	for _, opt := range opts {
 		opt(i)
 	}
@@ -65,20 +66,12 @@ type inbound struct {
 	addr       string
 	mux        *http.ServeMux
 	muxPattern string
-	listener   net.Listener
-	stopped    uint32
-	done       chan error
+	server     *intnet.HTTPServer
 	tracer     opentracing.Tracer
 }
 
 func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 	i.tracer = d.Tracer()
-
-	var err error
-	i.listener, err = net.Listen("tcp", i.addr)
-	if err != nil {
-		return err
-	}
 
 	var httpHandler http.Handler = handler{
 		Handler: h,
@@ -89,40 +82,34 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 		httpHandler = i.mux
 	}
 
-	i.addr = i.listener.Addr().String() // in case it changed
-	server := &http.Server{Handler: httpHandler}
-	go func(l net.Listener, done chan<- error) {
-		// an error once stopped is expected
-		err := server.Serve(l)
-		if atomic.LoadUint32(&i.stopped) == 0 {
-			done <- err
-		} else {
-			done <- nil
-		}
-	}(i.listener, i.done)
+	i.server = intnet.NewHTTPServer(&http.Server{
+		Addr:    i.addr,
+		Handler: httpHandler,
+	})
+	if err := i.server.ListenAndServe(); err != nil {
+		return err
+	}
+
+	i.addr = i.server.Listener().Addr().String() // in case it changed
 	return nil
 }
 
 func (i *inbound) Stop() error {
-	if !atomic.CompareAndSwapUint32(&i.stopped, 0, 1) {
+	if i.server == nil {
 		return nil
 	}
-
-	if i.listener == nil {
-		return nil
-	}
-	closeErr := i.listener.Close()
-	i.listener = nil
-	serveErr := <-i.done
-	if closeErr != nil {
-		return closeErr
-	}
-	return serveErr
+	return i.server.Stop()
 }
 
 func (i *inbound) Addr() net.Addr {
-	if i.listener == nil {
+	if i.server == nil {
 		return nil
 	}
-	return i.listener.Addr()
+
+	listener := i.server.Listener()
+	if listener == nil {
+		return nil
+	}
+
+	return listener.Addr()
 }

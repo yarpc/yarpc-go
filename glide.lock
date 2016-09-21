@@ -1,17 +1,14 @@
-hash: 695b7dc863d581ff72b38fc8631b095bc5b2c5bf212b03128f35b35a39e7f13b
-updated: 2016-09-16T12:47:00.231813202-07:00
+hash: 2b8aab8d2a172ddb714303aac6e77607f787f41b7fff1664898d72dd6d956ee8
+updated: 2016-09-19T10:04:06.378128281-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 205dc19556eac3c0ab2d1965c4636b78f8922fae
+  version: 5a3f855b4e6882184f13c698855c877241144a12
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
-  version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
-  subpackages:
-  - assert
-  - require
+  version: 9a20d202853d1322cb1d440821ff60dcebfb9323
 - name: github.com/davecgh/go-spew
-  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -22,7 +19,6 @@ imports:
   version: 77a31d686003349e89c89e58408aafcd20003f41
   subpackages:
   - ext
-  - mocktracer
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -35,20 +31,20 @@ imports:
 - name: github.com/thriftrw/thriftrw-go
   version: 0edcedc6665a0c7805587c5cab2fd3d31e720a10
   subpackages:
+  - ptr
+  - wire
+  - protocol
   - envelope
-  - internal/envelope
+  - plugin
+  - plugin/api
+  - protocol/binary
   - internal/envelope/exception
+  - internal/envelope
   - internal/frame
   - internal/goast
   - internal/multiplex
-  - plugin
-  - plugin/api
   - plugin/api/service/plugin
   - plugin/api/service/servicegenerator
-  - protocol
-  - protocol/binary
-  - ptr
-  - wire
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
@@ -56,18 +52,14 @@ imports:
   subpackages:
   - json
   - raw
-  - relay
-  - relay/relaytest
-  - testutils
-  - testutils/goroutines
-  - testutils/testreader
   - thrift
-  - thrift/gen-go/meta
+  - relay
   - tnet
   - trand
   - typed
+  - thrift/gen-go/meta
 - name: golang.org/x/net
-  version: 71a035914f99bb58fe82eac0f1289f10963d876c
+  version: 3797cd8864994d713d909eda5e61ede8683fdc12
   subpackages:
   - context
   - context/ctxhttp
@@ -75,4 +67,4 @@ imports:
   version: f1a397bba50dee815e8c73f3ec94ffc0e8df1a09
   subpackages:
   - go/ast/astutil
-testImports: []
+devImports: []

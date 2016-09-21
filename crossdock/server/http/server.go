@@ -26,9 +26,13 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/yarpc/yarpc-go/internal/net"
 )
 
 const addr = ":8085"
+
+var server *net.HTTPServer
 
 // Start starts an http server that yarpc client will make requests to
 func Start() {
@@ -37,18 +41,24 @@ func Start() {
 	}
 	mux.HandleFunc("handlertimeout/raw", handlerTimeoutRawHandler)
 
-	server := &http.Server{
-		Addr:         addr,
-		Handler:      mux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
-	}
+	server = net.NewHTTPServer(
+		&http.Server{
+			Addr:         addr,
+			Handler:      mux,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 5 * time.Second,
+		})
 
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Println("error:", err.Error())
-		}
-	}()
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("failed to start HTTP server: %v", err)
+	}
+}
+
+// Stop stops the HTTP server.
+func Stop() {
+	if err := server.Stop(); err != nil {
+		log.Printf("failed to stop HTTP server: %v", err)
+	}
 }
 
 type yarpcHTTPMux struct {

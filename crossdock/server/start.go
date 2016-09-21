@@ -39,4 +39,9 @@ func Start() {
 func Stop() {
 	tch.Stop()
 	yarpc.Stop()
+	http.Stop()
+	apachethrift.Stop()
 }
+
+// TODO(abg): We should probably use defers to ensure things that started up
+// successfully are stopped before we exit.
