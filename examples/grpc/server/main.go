@@ -17,14 +17,14 @@ const (
 
 // @generated
 type service interface {
-	Bar(ctx context.Context, in *string) (*string, error)
+	Bar(ctx context.Context, in *[]byte) (*[]byte, error)
 }
 
 // @generated
 // dec is testCodec.Unmarshal
 func handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	fmt.Println("grpc.methodHandler::main.handler")
-	var in string
+	var in []byte
 	if err := dec(&in); err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func handler(srv interface{}, ctx context.Context, dec func(interface{}) error, 
 		fmt.Println("grpc.UnaryHandler::main.handler")
 
 		// call the users handler, casting the req to the right type
-		return srv.(service).Bar(ctx, req.(*string))
+		return srv.(service).Bar(ctx, req.(*[]byte))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -61,11 +61,11 @@ var serviceDesc = grpc.ServiceDesc{
 
 type server struct{}
 
-func (server) Bar(ctx context.Context, in *string) (*string, error) {
+func (server) Bar(ctx context.Context, in *[]byte) (*[]byte, error) {
 	fmt.Println("main.server::Bar")
-	res := "server says hi"
+	res := []byte("server says hi")
 	if in != nil {
-		res = fmt.Sprintf("server got request body: %s", *in)
+		res = []byte(fmt.Sprintf("server got request body: %s", string(*in)))
 	}
 	return &res, nil
 }
@@ -77,7 +77,7 @@ func main() {
 	}
 
 	// TODO only 1 codec is supported at the moment, https://github.com/grpc/grpc-go/issues/803
-	s := grpc.NewServer(grpc.CustomCodec(gr.RawCodec{}))
+	s := grpc.NewServer(grpc.CustomCodec(gr.PassThroughCodec{}))
 	s.RegisterService(&serviceDesc, server{}) // @generated
 	s.Serve(lis)
 }

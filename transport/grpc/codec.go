@@ -1,19 +1,25 @@
 package grpc
 
-// RawCodec writes strings to/from the wire
-type RawCodec struct{}
+import "fmt"
 
-// Marshal takes a string pointer converts it to a byte sliced
-func (RawCodec) Marshal(v interface{}) ([]byte, error) {
-	return []byte(*(v.(*string))), nil
+// PassThroughCodec passes bytes to/from the wire without modification
+type PassThroughCodec struct{}
+
+// Marshal takes a []byte pointer and passes it through as a []byte
+func (PassThroughCodec) Marshal(v interface{}) ([]byte, error) {
+	return *(v.(*[]byte)), nil
 }
 
 // Unmarshal takes a byte slice and writes it to v
-func (RawCodec) Unmarshal(data []byte, v interface{}) error {
-	*(v.(*string)) = string(data)
+func (PassThroughCodec) Unmarshal(data []byte, v interface{}) error {
+	bs, ok := v.(*[]byte)
+	if !ok {
+		return fmt.Errorf("expected receiver of type *[]byte but got %T", v)
+	}
+	*bs = data
 	return nil
 }
 
-func (RawCodec) String() string {
+func (PassThroughCodec) String() string {
 	return "raw"
 }

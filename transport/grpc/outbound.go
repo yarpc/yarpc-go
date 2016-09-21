@@ -22,7 +22,7 @@ type outbound struct {
 }
 
 func (o *outbound) Start(d transport.Deps) error {
-	conn, err := grpc.Dial(o.address, grpc.WithInsecure(), grpc.WithCodec(RawCodec{}))
+	conn, err := grpc.Dial(o.address, grpc.WithInsecure(), grpc.WithCodec(PassThroughCodec{}))
 	if err != nil {
 		return err
 	}
@@ -45,14 +45,13 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	if err != nil {
 		return nil, err
 	}
-	rr := string(r)
 
 	uri := fmt.Sprintf("/%s/%s", req.Service, req.Procedure)
-	var res string
-	if err := grpc.Invoke(ctx, uri, &rr, &res, o.conn); err != nil {
+	var res []byte
+	if err := grpc.Invoke(ctx, uri, &r, &res, o.conn); err != nil {
 		return nil, err
 	}
-	buf := bytes.NewBufferString(res)
+	buf := bytes.NewBuffer(res)
 	closer := ioutil.NopCloser(buf)
 
 	return &transport.Response{Body: closer}, nil
