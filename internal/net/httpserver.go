@@ -70,13 +70,13 @@ func (h *HTTPServer) ListenAndServe() error {
 		return errServerStopped
 	}
 
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
 	addr := h.Server.Addr
 	if addr == "" {
 		addr = ":http"
 	}
-
-	h.lock.Lock()
-	defer h.lock.Unlock()
 
 	if h.listener != nil {
 		return errAlreadyListening
