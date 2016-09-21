@@ -39,7 +39,7 @@ var (
 type HTTPServer struct {
 	*http.Server
 
-	lock     sync.Mutex
+	lock     sync.RWMutex
 	listener net.Listener
 	done     chan error
 	stopped  atomic.Bool
@@ -56,7 +56,10 @@ func NewHTTPServer(s *http.Server) *HTTPServer {
 // Listener returns the listener for this server or nil if the server isn't
 // yet listening.
 func (h *HTTPServer) Listener() net.Listener {
-	return h.listener
+	h.lock.RLock()
+	listener := h.listener
+	h.lock.RUnlock()
+	return listener
 }
 
 // ListenAndServe starts the given HTTP server up in the background and
@@ -82,24 +85,25 @@ func (h *HTTPServer) ListenAndServe() error {
 		return errAlreadyListening
 	}
 
-	listener, err := net.Listen("tcp", addr)
+	var err error
+	h.listener, err = net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 
-	go func(done chan<- error) {
-		// Serve always returns a non-nil error. For us, it's an error only if
-		// we didn't call Stop().
-		err := h.Server.Serve(listener)
-		if !h.stopped.Load() {
-			done <- err
-		} else {
-			done <- nil
-		}
-	}(h.done)
-
-	h.listener = listener
+	go h.serve(h.listener)
 	return nil
+}
+
+func (h *HTTPServer) serve(listener net.Listener) {
+	// Serve always returns a non-nil error. For us, it's an error only if
+	// we didn't call Stop().
+	err := h.Server.Serve(listener)
+	if !h.stopped.Load() {
+		h.done <- err
+	} else {
+		h.done <- nil
+	}
 }
 
 // Stop stops the server. An error is returned if the server stopped
@@ -111,18 +115,28 @@ func (h *HTTPServer) Stop() error {
 		return nil
 	}
 
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	if h.listener == nil {
+	wasRunning, closeErr := h.closeListener()
+	if !wasRunning {
 		return nil
 	}
 
-	closeErr := h.listener.Close()
-	h.listener = nil
 	serveErr := <-h.done // wait until Serve() stops
 	if closeErr != nil {
 		return closeErr
 	}
 	return serveErr
+}
+
+func (h *HTTPServer) closeListener() (wasRunning bool, err error) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	if h.listener == nil {
+		return
+	}
+
+	wasRunning = true
+	err = h.listener.Close()
+	h.listener = nil
+	return
 }
