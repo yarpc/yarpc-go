@@ -82,7 +82,7 @@ func (h *HTTPServer) ListenAndServe() error {
 		return errAlreadyListening
 	}
 
-	listener, err := net.Listen("tcp", h.Server.Addr)
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
