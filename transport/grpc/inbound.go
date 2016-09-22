@@ -12,6 +12,8 @@ import (
 // Inbound is a gRPC Inbound.
 type Inbound interface {
 	transport.Inbound
+
+	Server() *grpc.Server
 }
 
 // NewInbound builds a new gRPC Inbound.
@@ -23,6 +25,13 @@ func NewInbound(port int) Inbound {
 type inbound struct {
 	port   int
 	server *grpc.Server
+}
+
+func (i *inbound) Server() *grpc.Server {
+	if i.server == nil {
+		return nil
+	}
+	return i.server
 }
 
 // gRPC expects a service and a server to have the same interface when it's configured
@@ -71,6 +80,9 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 }
 
 func (i *inbound) Stop() error {
+	if i.server == nil {
+		return nil
+	}
 	i.server.GracefulStop()
 	return nil
 }
