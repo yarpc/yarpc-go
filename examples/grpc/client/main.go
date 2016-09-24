@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -24,16 +25,23 @@ func main() {
 	}
 	defer conn.Close()
 
+	// Adds the necessary YARPC Headers to the request
+	md := metadata.New(map[string]string{
+		"rpc-caller":   "clientgo",
+		"rpc-encoding": "raw",
+	})
+	ctx := metadata.NewContext(context.Background(), md)
+
 	// typically called by generated code
 	strReq := "hello from client.go!"
 	req := []byte(strReq)
 
 	var res []byte
 
-	err = grpc.Invoke(context.Background(), "/foo/bar", &req, &res, conn) // @generated
+	err = grpc.Invoke(ctx, "/foo/bar", &req, &res, conn) // @generated
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
 
-	fmt.Print("GOT RESP:", string(res))
+	fmt.Println("GOT RESP: ", string(res))
 }

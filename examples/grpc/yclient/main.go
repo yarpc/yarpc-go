@@ -28,11 +28,31 @@ func main() {
 
 	client := raw.New(dispatcher.Channel("foo"))
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	resBody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("bar"), []byte("hi there"))
+	barReqBody := fmt.Sprintf("Request to bar with value %d", time.Now().Unix())
+	sendRequest(client, "bar", barReqBody)
+
+	mooReqBody := fmt.Sprintf("Request to moo with value %d", time.Now().Unix())
+	sendRequest(client, "moo", mooReqBody)
+}
+
+func sendRequest(client raw.Client, procedure, msgBody string) {
+	randDuration := time.Now().Unix()%100 + 1
+	randTimeout := time.Duration(randDuration) * time.Second
+
+	fmt.Println("---Sending a request---")
+	fmt.Println("Timeout: ", randTimeout)
+	fmt.Println("Caller: hello")
+	fmt.Println("Encoding: raw")
+	fmt.Println("Service: foo")
+	fmt.Println("Procedure: ", procedure)
+	fmt.Println("Body: ", msgBody)
+
+	ctx, _ := context.WithTimeout(context.Background(), randTimeout)
+	resBody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure(procedure), []byte(msgBody))
 	if err != nil {
 		log.Fatalf("call failed: %v", err)
 	}
 
-	fmt.Println("SUCCESS!", string(resBody))
+	fmt.Println("SUCCESS! Got response: ", string(resBody))
+	fmt.Println("---Finished request---")
 }

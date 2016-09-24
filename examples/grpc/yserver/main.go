@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"fmt"
+	"time"
 
 	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
@@ -13,9 +14,39 @@ import (
 )
 
 func bar(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-	fmt.Printf("procedure called with %v, %v", reqMeta, body)
-	res := []byte(fmt.Sprintf("server got request body: %s", string(body)))
+	fmt.Println("---NEW REQUEST TO BAR---")
+
+	printReqInfo(ctx, reqMeta, body)
+
+	res := []byte(fmt.Sprintf("server got request body: %s for Bar", string(body)))
+
+	fmt.Println("---END OF REQUEST TO BAR---")
 	return res, nil, nil
+}
+
+func moo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+	fmt.Println("---NEW REQUEST TO MOO---")
+
+	printReqInfo(ctx, reqMeta, body)
+
+	res := []byte(fmt.Sprintf("server got request body: %s", string(body)))
+
+	fmt.Println("---END OF REQUEST TO MOO---")
+	return res, nil, nil
+}
+
+func printReqInfo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) {
+	if dl, ok := ctx.Deadline(); ok {
+		fmt.Println("Timeout: ", dl.Sub(time.Now()))
+	} else {
+		fmt.Println("no deadline")
+	}
+
+	fmt.Println("Caller: ", reqMeta.Caller())
+	fmt.Println("Encoding: ", reqMeta.Encoding())
+	fmt.Println("Procedure: ", reqMeta.Procedure())
+	fmt.Println("Service: ", reqMeta.Service())
+	fmt.Println("Body: ", string(body))
 }
 
 func main() {
@@ -27,6 +58,7 @@ func main() {
 	})
 
 	raw.Register(dispatcher, raw.Procedure("bar", bar))
+	raw.Register(dispatcher, raw.Procedure("moo", moo))
 
 	if err := dispatcher.Start(); err != nil {
 		log.Fatal(err)
