@@ -57,21 +57,52 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 		Deps:    d,
 	}
 
-	// TODO Generate the serviceDesc from the configuration of the dispatcher name and procedure names
-	var serviceDesc = grpc.ServiceDesc{
-		ServiceName: "foo",
-		HandlerType: (*passThroughService)(nil),
-		Methods: []grpc.MethodDesc{
-			{
-				MethodName: "bar",
-				Handler:    gHandler.Handle, // grpc.methodHandler
+	var serviceDescs []grpc.ServiceDesc
+	if reg, ok := h.(transport.Registry); ok {
+		serviceProcedures := make(map[string][]string)
+		for _, sp := range reg.ServiceProcedures() {
+			serviceProcedures[sp.Service] = append(serviceProcedures[sp.Service], sp.Procedure)
+		}
+
+		for service, procs := range serviceProcedures {
+			methodDescs := make([]grpc.MethodDesc, 0, len(procs))
+			for _, proc := range procs {
+				methodDescs = append(methodDescs, grpc.MethodDesc{
+					MethodName: proc,
+					Handler:    gHandler.Handle,
+				})
+			}
+
+			serviceDescs = append(serviceDescs, grpc.ServiceDesc{
+				ServiceName: service,
+				HandlerType: (*passThroughService)(nil),
+				Methods:     methodDescs,
+				Streams:     []grpc.StreamDesc{},
+			})
+		}
+	} else {
+		// Called with a plain Handler instead of Dispatcher. Fall back to no meaningful service description.
+		serviceDescs = append(serviceDescs, grpc.ServiceDesc{
+			// TODO: Once we figure out a way to get the service name from the Handler (we need it
+			// for the TChannel inbound too), we should use that here instead.
+			ServiceName: "yarpc",
+			HandlerType: (*passThroughService)(nil),
+			Methods: []grpc.MethodDesc{
+				{
+					MethodName: "yarpc",         // TODO: Is this what we want here?
+					Handler:    gHandler.Handle, // grpc.methodHandler
+				},
 			},
-		},
-		Streams: []grpc.StreamDesc{},
+			Streams: []grpc.StreamDesc{},
+		})
 	}
 
+	// TODO Generate the serviceDesc from the configuration of the dispatcher name and procedure names
 	// Register Service
-	i.server.RegisterService(&serviceDesc, passThroughServer{})
+
+	for _, desc := range serviceDescs {
+		i.server.RegisterService(&desc, passThroughServer{})
+	}
 
 	// TODO should block until ready to accept requests
 	go i.server.Serve(lis)

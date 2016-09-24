@@ -36,8 +36,8 @@ func TestInboundStartAndStop(t *testing.T) {
 	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
 
 	serviceInfo := i.Server().GetServiceInfo()
-	assert.Equal(t, 1, len(serviceInfo["foo"].Methods))
-	assert.Equal(t, "bar", serviceInfo["foo"].Methods[0].Name)
+	assert.Equal(t, 1, len(serviceInfo["yarpc"].Methods))
+	assert.Equal(t, "yarpc", serviceInfo["yarpc"].Methods[0].Name)
 
 	assert.NoError(t, i.Stop())
 }
