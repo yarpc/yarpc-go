@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // NewOutbound builds a new GRPC outbound.
@@ -45,6 +46,12 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	if err != nil {
 		return nil, err
 	}
+
+	md := metadata.New(map[string]string{
+		CallerHeader:   req.Caller,
+		EncodingHeader: string(req.Encoding),
+	})
+	ctx = metadata.NewContext(ctx, md)
 
 	uri := fmt.Sprintf("/%s/%s", req.Service, req.Procedure)
 	var res []byte
