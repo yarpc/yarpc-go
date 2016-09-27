@@ -20,8 +20,11 @@ func bar(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc
 
 	res := []byte(fmt.Sprintf("server got request body: %s for Bar", string(body)))
 
+	headers := reqMeta.Headers().With("called_func", "bar")
+	resMeta := yarpc.NewResMeta().Headers(headers)
+
 	fmt.Println("---END OF REQUEST TO BAR---")
-	return res, nil, nil
+	return res, resMeta, nil
 }
 
 func moo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
@@ -29,10 +32,13 @@ func moo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc
 
 	printReqInfo(ctx, reqMeta, body)
 
-	res := []byte(fmt.Sprintf("server got request body: %s", string(body)))
+	resBody := []byte(fmt.Sprintf("server got request body: %s", string(body)))
+
+	headers := reqMeta.Headers().With("called_func", "moo")
+	resMeta := yarpc.NewResMeta().Headers(headers)
 
 	fmt.Println("---END OF REQUEST TO MOO---")
-	return res, nil, nil
+	return resBody, resMeta, nil
 }
 
 func printReqInfo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) {
@@ -46,6 +52,7 @@ func printReqInfo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) {
 	fmt.Println("Encoding: ", reqMeta.Encoding())
 	fmt.Println("Procedure: ", reqMeta.Procedure())
 	fmt.Println("Service: ", reqMeta.Service())
+	fmt.Println("Headers: ", reqMeta.Headers())
 	fmt.Println("Body: ", string(body))
 }
 

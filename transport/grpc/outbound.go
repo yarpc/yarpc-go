@@ -7,6 +7,7 @@ import (
 
 	"github.com/yarpc/yarpc-go/transport"
 
+	"github.com/yarpc/yarpc-go/internal/baggage"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -42,24 +43,52 @@ func (outbound) Options() (o transport.Options) {
 }
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	r, err := ioutil.ReadAll(req.Body)
+	requestBody, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, err
 	}
 
+	metadataHeaders := getRequestHeaders(ctx, req)
+	ctx = metadata.NewContext(ctx, metadataHeaders)
+
+	uri := fmt.Sprintf("/%s/%s", req.Service, req.Procedure)
+
+	return callDownstream(ctx, uri, &requestBody, o.conn)
+}
+
+func getRequestHeaders(ctx context.Context, req *transport.Request) metadata.MD {
+	// 'Headers' in gRPC are known as 'Metadata'
 	md := metadata.New(map[string]string{
 		CallerHeader:   req.Caller,
 		EncodingHeader: string(req.Encoding),
 	})
-	ctx = metadata.NewContext(ctx, md)
 
-	uri := fmt.Sprintf("/%s/%s", req.Service, req.Procedure)
-	var res []byte
-	if err := grpc.Invoke(ctx, uri, &r, &res, o.conn); err != nil {
+	md = applicationHeaders.ToGRPCMetadata(req.Headers, md)
+
+	if bagHeaders := baggage.FromContext(ctx); bagHeaders.Len() > 0 {
+		md = baggageHeaders.ToGRPCMetadata(bagHeaders, md)
+	}
+
+	return md
+}
+
+func callDownstream(
+	ctx context.Context,
+	uri string,
+	requestBody *[]byte,
+	connection *grpc.ClientConn,
+) (*transport.Response, error) {
+	var responseBody []byte
+	var responseHeaders metadata.MD
+
+	if err := grpc.Invoke(ctx, uri, requestBody, &responseBody, connection, grpc.Header(&responseHeaders)); err != nil {
 		return nil, err
 	}
-	buf := bytes.NewBuffer(res)
+
+	buf := bytes.NewBuffer(responseBody)
 	closer := ioutil.NopCloser(buf)
 
-	return &transport.Response{Body: closer}, nil
+	headers := applicationHeaders.FromGRPCMetadata(responseHeaders, transport.Headers{})
+
+	return &transport.Response{Body: closer, Headers: headers}, nil
 }

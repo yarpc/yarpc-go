@@ -38,6 +38,7 @@ func main() {
 func sendRequest(client raw.Client, procedure, msgBody string) {
 	randDuration := time.Now().Unix()%100 + 1
 	randTimeout := time.Duration(randDuration) * time.Second
+	headers := yarpc.NewHeaders().With("from", "self")
 
 	fmt.Println("---Sending a request---")
 	fmt.Println("Timeout: ", randTimeout)
@@ -45,14 +46,20 @@ func sendRequest(client raw.Client, procedure, msgBody string) {
 	fmt.Println("Encoding: raw")
 	fmt.Println("Service: foo")
 	fmt.Println("Procedure: ", procedure)
+	fmt.Println("headers: ", headers)
 	fmt.Println("Body: ", msgBody)
 
 	ctx, _ := context.WithTimeout(context.Background(), randTimeout)
-	resBody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure(procedure), []byte(msgBody))
+	resBody, resMeta, err := client.Call(
+		ctx,
+		yarpc.NewReqMeta().Procedure(procedure).Headers(headers),
+		[]byte(msgBody),
+	)
 	if err != nil {
 		log.Fatalf("call failed: %v", err)
 	}
 
 	fmt.Println("SUCCESS! Got response: ", string(resBody))
+	fmt.Println("With Headers: ", resMeta.Headers())
 	fmt.Println("---Finished request---")
 }

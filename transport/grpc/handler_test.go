@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/yarpc/yarpc-go/transport"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestResponseWriter_Write(t *testing.T) {
@@ -21,13 +22,23 @@ func TestResponseWriter_Write(t *testing.T) {
 }
 
 func TestResponseWriter_AddHeaders(t *testing.T) {
-	headers := transport.NewHeadersWithCapacity(10)
+	caller := "teeeeest"
+	encoding := "raw"
+	inputHeaders := transport.HeadersFromMap(map[string]string{
+		CallerHeader:   caller,
+		EncodingHeader: encoding,
+	})
+	expectedHeaders := metadata.New(map[string]string{
+		ApplicationHeaderPrefix + CallerHeader:   caller,
+		ApplicationHeaderPrefix + EncodingHeader: encoding,
+	})
+
 	var r response
 	rw := newResponseWriter(&r)
 
-	rw.AddHeaders(headers)
+	rw.AddHeaders(inputHeaders)
 
-	assert.Equal(t, headers, r.headers)
+	assert.Equal(t, expectedHeaders, r.headers)
 }
 
 func TestResponseWriter_SetApplicationError(t *testing.T) {
