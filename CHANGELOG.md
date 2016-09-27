@@ -4,7 +4,7 @@ Releases
 v0.3.0 (unreleased)
 -------------------
 
--   No changes yet.
+-   Update opentracing-go to `>= 1, < 2`.
 
 
 v0.2.0 (2016-09-19)
