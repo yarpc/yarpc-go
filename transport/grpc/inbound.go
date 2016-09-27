@@ -6,6 +6,8 @@ import (
 
 	"github.com/yarpc/yarpc-go/transport"
 
+	"net/url"
+
 	"google.golang.org/grpc"
 )
 
@@ -66,13 +68,13 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 			methodDescs := make([]grpc.MethodDesc, 0, len(procs))
 			for _, proc := range procs {
 				methodDescs = append(methodDescs, grpc.MethodDesc{
-					MethodName: proc,
+					MethodName: url.QueryEscape(proc),
 					Handler:    gHandler.Handle,
 				})
 			}
 
 			serviceDescs = append(serviceDescs, grpc.ServiceDesc{
-				ServiceName: service,
+				ServiceName: url.QueryEscape(service),
 				HandlerType: (*passThroughService)(nil),
 				Methods:     methodDescs,
 				Streams:     []grpc.StreamDesc{},
@@ -83,12 +85,12 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 		serviceDescs = append(serviceDescs, grpc.ServiceDesc{
 			// TODO: Once we figure out a way to get the service name from the Handler (we need it
 			// for the TChannel inbound too), we should use that here instead.
-			ServiceName: "yarpc",
+			ServiceName: url.QueryEscape("yarpc"),
 			HandlerType: (*passThroughService)(nil),
 			Methods: []grpc.MethodDesc{
 				{
-					MethodName: "yarpc",         // TODO: Is this what we want here?
-					Handler:    gHandler.Handle, // grpc.methodHandler
+					MethodName: url.QueryEscape("yarpc"), // TODO: Is this what we want here?
+					Handler:    gHandler.Handle,          // grpc.methodHandler
 				},
 			},
 			Streams: []grpc.StreamDesc{},

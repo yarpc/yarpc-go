@@ -15,6 +15,8 @@ import (
 
 	"errors"
 
+	"net/url"
+
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -119,8 +121,15 @@ func getServiceAndProcedure(ctx context.Context) (service, procedure string, err
 	}
 	splitPos := strings.LastIndex(streamMethod, "/")
 
-	service = streamMethod[:splitPos]
-	procedure = streamMethod[splitPos+1:]
+	service, err = url.QueryUnescape(streamMethod[:splitPos])
+	if err != nil {
+		return "", "", fmt.Errorf("Could not parse service for request: %s, error: %v", streamMethod[:splitPos], err)
+	}
+
+	procedure, err = url.QueryUnescape(streamMethod[splitPos+1:])
+	if err != nil {
+		return "", "", fmt.Errorf("Could not parse procedure for request: %s, error: %v", streamMethod[splitPos+1:], err)
+	}
 	return
 }
 

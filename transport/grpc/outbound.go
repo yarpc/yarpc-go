@@ -7,6 +7,8 @@ import (
 
 	"github.com/yarpc/yarpc-go/transport"
 
+	"net/url"
+
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -51,7 +53,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	metadataHeaders := getRequestHeaders(ctx, req)
 	ctx = metadata.NewContext(ctx, metadataHeaders)
 
-	uri := fmt.Sprintf("/%s/%s", req.Service, req.Procedure)
+	uri := fmt.Sprintf("/%s/%s", url.QueryEscape(req.Service), url.QueryEscape(req.Procedure))
 
 	return callDownstream(ctx, uri, &requestBody, o.conn)
 }
