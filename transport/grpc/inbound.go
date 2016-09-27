@@ -46,10 +46,8 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 		return err
 	}
 
-	// TODO need to get all supported encodings...
-	// TODO need to a get a list of all procedure names...
-
 	// Use a codec that passes through the bytes from gRPC requests to YARPC encoders
+	// TODO customize the Codec.String() function which is used for the Content-Type header
 	i.server = grpc.NewServer(grpc.CustomCodec(PassThroughCodec{}))
 
 	gHandler := handler{
