@@ -1,5 +1,5 @@
-hash: 695b7dc863d581ff72b38fc8631b095bc5b2c5bf212b03128f35b35a39e7f13b
-updated: 2016-09-16T12:47:00.231813202-07:00
+hash: 21459b6c58a7bb3113288f291dcdf779e2b2b5d568726241dec2aa88a62b66cc
+updated: 2016-09-19T13:00:15.085347004-07:00
 imports:
 - name: github.com/apache/thrift
   version: 205dc19556eac3c0ab2d1965c4636b78f8922fae
@@ -18,6 +18,10 @@ imports:
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
+- name: github.com/golang/protobuf
+  version: 1f49d83d9aa00e6ce4fc8258c71cc7786aec968a
+  subpackages:
+  - proto
 - name: github.com/opentracing/opentracing-go
   version: 77a31d686003349e89c89e58408aafcd20003f41
   subpackages:
@@ -71,8 +75,25 @@ imports:
   subpackages:
   - context
   - context/ctxhttp
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/tools
   version: f1a397bba50dee815e8c73f3ec94ffc0e8df1a09
   subpackages:
   - go/ast/astutil
+- name: google.golang.org/grpc
+  version: 0032a855ba5c8a3c8e0d71c2deef354b70af1584
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - transport
 testImports: []

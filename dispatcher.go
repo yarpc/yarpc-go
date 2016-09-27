@@ -21,16 +21,15 @@
 package yarpc
 
 import (
+	"github.com/opentracing/opentracing-go"
 	"github.com/yarpc/yarpc-go/internal/request"
 	"github.com/yarpc/yarpc-go/internal/sync"
 	"github.com/yarpc/yarpc-go/transport"
-
-	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
 )
 
 // Dispatcher object is used to configure a YARPC application; it is used by
-// Clients to send RPCs, and by Procedures to recieve them. This object is what
+// Clients to send RPCs, and by Procedures to receive them. This object is what
 // enables an application to be transport-agnostic.
 type Dispatcher interface {
 	transport.Handler
