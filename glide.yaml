@@ -19,7 +19,7 @@ import:
 - package: github.com/uber/tchannel-go
   version: ^1.2
 - package: github.com/opentracing/opentracing-go
-  version: ~0.9
+  version: ^1
 - package: github.com/crossdock/crossdock-go
   version: master
 - package: github.com/uber-go/atomic
