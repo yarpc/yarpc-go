@@ -88,13 +88,19 @@ func TestCrossdock(t *testing.T) {
 			},
 		},
 		{
+			name: "httpserver",
+			params: params{
+				"httpserver": "127.0.0.1",
+			},
+		},
+		{
 			name: "thriftgauntlet",
 			axes: axes{
 				"transport": []string{"http", "tchannel"},
 			},
 		},
 		{
-			name: "outboundttl",
+			name: "timeout",
 			axes: axes{
 				"transport": []string{"http", "tchannel"},
 			},
