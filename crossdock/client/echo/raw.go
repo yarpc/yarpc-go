@@ -30,7 +30,7 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/raw"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Raw implements the 'raw' behavior.

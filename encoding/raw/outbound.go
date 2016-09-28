@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"io/ioutil"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/meta"

@@ -20,7 +20,7 @@
 
 package transport
 
-import "golang.org/x/net/context"
+import "context"
 
 // Interceptor defines a transport-level middleware for Inbounds.
 //

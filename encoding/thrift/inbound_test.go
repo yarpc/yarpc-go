@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"golang.org/x/net/context"
+	"context"
 )
 
 //go:generate mockgen -destination=mock_handler_test.go -package=thrift github.com/yarpc/yarpc-go/encoding/thrift Handler

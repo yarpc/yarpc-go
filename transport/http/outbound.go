@@ -34,8 +34,8 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/uber-go/atomic"
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
+	"context"
+	"context/ctxhttp"
 )
 
 var (

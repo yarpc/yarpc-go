@@ -23,7 +23,7 @@ package baggage
 import (
 	"github.com/yarpc/yarpc-go/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 type baggageKey struct{}

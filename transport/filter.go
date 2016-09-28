@@ -20,7 +20,7 @@
 
 package transport
 
-import "golang.org/x/net/context"
+import "context"
 
 // Filter defines transport-level middleware for Outbounds.
 //

@@ -32,7 +32,7 @@ import (
 	ht "github.com/yarpc/yarpc-go/transport/http"
 
 	crossdock "github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Run exercise a yarpc client against a rigged httpserver.

@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/thriftrw/thriftrw-go/ptr"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestContextHeaders(t *testing.T) {

@@ -33,7 +33,7 @@ import (
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 type getRequest struct {

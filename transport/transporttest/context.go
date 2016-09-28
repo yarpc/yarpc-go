@@ -29,7 +29,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // ContextMatcher is a Matcher for verifying that a context's deadline is

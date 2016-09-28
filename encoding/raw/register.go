@@ -24,7 +24,7 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Registrant is used for types that define or know about different Raw

@@ -6,7 +6,7 @@ import (
 	"github.com/yarpc/yarpc-go"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestWrapHandlerInvalid(t *testing.T) {

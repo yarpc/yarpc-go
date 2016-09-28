@@ -23,7 +23,7 @@ package filter
 import (
 	"github.com/yarpc/yarpc-go/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Chain combines a series of filters into a single Filter.

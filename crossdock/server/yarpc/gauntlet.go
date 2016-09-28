@@ -26,7 +26,7 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 func resMetaFromReqMeta(reqMeta yarpc.ReqMeta) yarpc.ResMeta {

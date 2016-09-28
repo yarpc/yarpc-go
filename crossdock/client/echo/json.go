@@ -29,7 +29,7 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // jsonEcho contains an echo request or response for the JSON echo endpoint.
