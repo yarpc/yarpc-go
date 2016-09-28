@@ -21,4 +21,4 @@
 package yarpc
 
 // Version is the current version of YARPC.
-const Version = "0.2.0"
+const Version = "0.2.1"
