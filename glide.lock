@@ -1,8 +1,8 @@
-hash: 88025999cb77e2388355a000730fcd8fa5eea1b457385286706658db8db08e23
-updated: 2016-09-27T14:50:58.395609946-07:00
+hash: 54f6258557827460214fe5360d3f2b30eaa25e46f9a08cf0e42f9434ae9cd8a7
+updated: 2016-09-28T12:53:42.621983921-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 2df9c20dc76c044e502861a2111b90cbdcbbb957
+  version: 8ccf5a645c8e34e0abb6f31b216dbf77f0ac2a43
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -18,6 +18,10 @@ imports:
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
+- name: github.com/golang/protobuf
+  version: 87c000235d3d852c1628dc9490cd21ab36a7d69f
+  subpackages:
+  - proto
 - name: github.com/opentracing/opentracing-go
   version: 0c3154a3c2ce79d3271985848659870599dfb77c
   subpackages:
@@ -72,8 +76,25 @@ imports:
   subpackages:
   - context
   - context/ctxhttp
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/tools
   version: fc2b74b64ef08c618146ebc92062f6499db5314c
   subpackages:
   - go/ast/astutil
+- name: google.golang.org/grpc
+  version: 0032a855ba5c8a3c8e0d71c2deef354b70af1584
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - transport
 testImports: []
