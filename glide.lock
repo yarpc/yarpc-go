@@ -1,8 +1,8 @@
-hash: 695b7dc863d581ff72b38fc8631b095bc5b2c5bf212b03128f35b35a39e7f13b
-updated: 2016-09-16T12:47:00.231813202-07:00
+hash: 4d57834d2152d7c9f986dd1e23f32cc758804680c7436b29b061b973c189fb91
+updated: 2016-09-28T11:48:39.539966477-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 205dc19556eac3c0ab2d1965c4636b78f8922fae
+  version: 8ccf5a645c8e34e0abb6f31b216dbf77f0ac2a43
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -19,21 +19,22 @@ imports:
   subpackages:
   - gomock
 - name: github.com/opentracing/opentracing-go
-  version: 77a31d686003349e89c89e58408aafcd20003f41
+  version: 0c3154a3c2ce79d3271985848659870599dfb77c
   subpackages:
   - ext
+  - log
   - mocktracer
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: d77da356e56a7428ad25149ca77381849a6a5232
+  version: 976c720a22c8eb4eb6a0b4348ad85ad12491a506
   subpackages:
   - assert
   - require
 - name: github.com/thriftrw/thriftrw-go
-  version: 0edcedc6665a0c7805587c5cab2fd3d31e720a10
+  version: 486fe6340c8acc600a44a3a698becb9725d578fb
   subpackages:
   - envelope
   - internal/envelope
@@ -67,12 +68,12 @@ imports:
   - trand
   - typed
 - name: golang.org/x/net
-  version: 71a035914f99bb58fe82eac0f1289f10963d876c
+  version: f09c4662a0bd6bd8943ac7b4931e185df9471da4
   subpackages:
   - context
   - context/ctxhttp
 - name: golang.org/x/tools
-  version: f1a397bba50dee815e8c73f3ec94ffc0e8df1a09
+  version: fc2b74b64ef08c618146ebc92062f6499db5314c
   subpackages:
   - go/ast/astutil
 testImports: []
