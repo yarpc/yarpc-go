@@ -4,8 +4,7 @@ Releases
 v0.2.1 (2016-09-28)
 -------------------
 
--   Fix customers running into OpenTracing version conflicts between yarpc
-    and the latest version of Jaeger by pinning to `opentracing-go ^1`.
+-   Loosen constraint on `opentracing-go` to `>= 0.9, < 2`.
 
 
 v0.2.0 (2016-09-19)
