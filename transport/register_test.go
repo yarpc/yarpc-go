@@ -66,3 +66,36 @@ func TestMapRegistry(t *testing.T) {
 		}
 	}
 }
+
+func TestMapRegistry_ServiceProcedures(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	m := transport.NewMapRegistry("myservice")
+
+	bar := transporttest.NewMockHandler(mockCtrl)
+	m.Register("anotherservice", "bar", bar)
+	foo := transporttest.NewMockHandler(mockCtrl)
+	m.Register("", "foo", foo)
+	aww := transporttest.NewMockHandler(mockCtrl)
+	m.Register("anotherservice", "aww", aww)
+
+	expectedOrderedServiceProcedures := []transport.ServiceProcedure{
+		{
+			Service:   "anotherservice",
+			Procedure: "aww",
+		},
+		{
+			Service:   "anotherservice",
+			Procedure: "bar",
+		},
+		{
+			Service:   "myservice",
+			Procedure: "foo",
+		},
+	}
+
+	serviceProcedures := m.ServiceProcedures()
+
+	assert.Equal(t, expectedOrderedServiceProcedures, serviceProcedures)
+}
