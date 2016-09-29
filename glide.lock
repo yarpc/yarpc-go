@@ -1,5 +1,5 @@
-hash: 54f6258557827460214fe5360d3f2b30eaa25e46f9a08cf0e42f9434ae9cd8a7
-updated: 2016-09-28T12:53:42.621983921-07:00
+hash: dd2f75e3a8d86f54baa5090f3f777c1db5320afcb6c0e3b3ce5766bcc2dae70b
+updated: 2016-09-28T18:27:48.799105702-07:00
 imports:
 - name: github.com/apache/thrift
   version: 8ccf5a645c8e34e0abb6f31b216dbf77f0ac2a43
@@ -72,7 +72,7 @@ imports:
   - trand
   - typed
 - name: golang.org/x/net
-  version: f09c4662a0bd6bd8943ac7b4931e185df9471da4
+  version: 9f0e377a8a39bb99ff03459d77c135a0042878f0
   subpackages:
   - context
   - context/ctxhttp

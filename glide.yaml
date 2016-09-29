@@ -23,5 +23,6 @@ import:
 - package: github.com/crossdock/crossdock-go
   version: master
 - package: github.com/uber-go/atomic
-- package: google.golang.org/grpc
   version: ^1.0.0
+- package: google.golang.org/grpc
+  version: ^1
