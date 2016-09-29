@@ -39,7 +39,6 @@ matrix:
 before_install:
 - go version
 - |
-  set -ex
   case "$TYPE" in
     crossdock)
       docker version
@@ -50,11 +49,9 @@ before_install:
       docker-compose version
       ;;
   esac
-  set +ex
 
 install:
 - |
-  set -ex
   make install
   case "$TYPE" in
     lint)
@@ -69,7 +66,6 @@ install:
 
 script:
 - |
-  set -ex
   case "$TYPE" in
     lint)
       make lint
@@ -84,27 +80,19 @@ script:
       docker-compose logs
       ;;
   esac
-  set +ex
 
 after_success:
 - |
-  set -ex
   case "$TYPE" in
     crossdock)
       export REPO=yarpc/yarpc-go
-      export PR=https://api.github.com/repos/$TRAVIS_REPO_SLUG/pulls/$TRAVIS_PULL_REQUEST
-      export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo `curl -s $PR | jq -r .head.ref`; fi)
+      export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
       export TAG=`if [ "$BRANCH" == "master" ]; then echo "latest"; else echo $BRANCH; fi`
 
-      # Don't echo sensitive information.
-      set +x
       docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-      set -x
-
       docker build -f Dockerfile -t $REPO:$COMMIT .
       docker tag $REPO:$COMMIT $REPO:$TAG
       docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
       docker push $REPO
       ;;
   esac
-  set +ex
