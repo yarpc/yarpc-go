@@ -71,7 +71,7 @@ func TestCrossdock(t *testing.T) {
 		{
 			name: "headers",
 			axes: axes{
-				"transport": []string{"http", "tchannel"},
+				"transport": []string{"http", "tchannel", "grpc"},
 				"encoding":  []string{"raw", "json", "thrift"},
 			},
 		},

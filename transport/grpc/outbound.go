@@ -64,6 +64,8 @@ func getRequestHeaders(ctx context.Context, req *transport.Request) metadata.MD 
 		EncodingHeader: string(req.Encoding),
 	})
 
+	md = applicationHeaders.ToGRPCMetadata(req.Headers, md)
+
 	return md
 }
 
@@ -74,13 +76,16 @@ func callDownstream(
 	connection *grpc.ClientConn,
 ) (*transport.Response, error) {
 	var responseBody []byte
+	var responseHeaders metadata.MD
 
-	if err := grpc.Invoke(ctx, uri, requestBody, &responseBody, connection); err != nil {
+	if err := grpc.Invoke(ctx, uri, requestBody, &responseBody, connection, grpc.Header(&responseHeaders)); err != nil {
 		return nil, err
 	}
 
 	buf := bytes.NewBuffer(responseBody)
 	closer := ioutil.NopCloser(buf)
 
-	return &transport.Response{Body: closer}, nil
+	headers := applicationHeaders.FromGRPCMetadata(responseHeaders, transport.Headers{})
+
+	return &transport.Response{Body: closer, Headers: headers}, nil
 }
