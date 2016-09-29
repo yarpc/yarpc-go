@@ -1,6 +1,10 @@
 package grpc
 
 const (
+	// ApplicationHeaderPrefix is the prefix added to application headers over
+	// the wire.
+	ApplicationHeaderPrefix = "rpc-header-"
+
 	// CallerHeader is the HTTP header used to indiate the service doing the calling
 	CallerHeader = "rpc-caller"
 
