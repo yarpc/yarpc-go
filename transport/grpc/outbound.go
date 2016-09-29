@@ -9,6 +9,7 @@ import (
 
 	"net/url"
 
+	"github.com/yarpc/yarpc-go/internal/baggage"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -65,6 +66,10 @@ func getRequestHeaders(ctx context.Context, req *transport.Request) metadata.MD 
 	})
 
 	md = applicationHeaders.ToGRPCMetadata(req.Headers, md)
+
+	if bagHeaders := baggage.FromContext(ctx); bagHeaders.Len() > 0 {
+		md = baggageHeaders.ToGRPCMetadata(bagHeaders, md)
+	}
 
 	return md
 }

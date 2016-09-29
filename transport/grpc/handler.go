@@ -17,6 +17,7 @@ import (
 
 	"net/url"
 
+	"github.com/yarpc/yarpc-go/internal/baggage"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -38,7 +39,7 @@ func (h handler) Handle(
 	dec func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
 ) (interface{}, error) {
-	treq, extractErr := getTRequest(ctx, dec)
+	treq, ctx, extractErr := getTRequest(ctx, dec)
 	if extractErr != nil {
 		return nil, extractErr
 	}
@@ -51,32 +52,38 @@ func (h handler) Handle(
 	return callHandler(h, start, ctx, treq)
 }
 
-func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*transport.Request, error) {
+func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*transport.Request, context.Context, error) {
 	service, procedure, err := getServiceAndProcedure(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ctxMetadata, err := getContextMetadata(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	caller, err := getCaller(ctxMetadata)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	encoding, err := getEncoding(ctxMetadata)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	baggageHeaders := baggageHeaders.FromGRPCMetadata(ctxMetadata, transport.Headers{})
+	if baggageHeaders.Len() > 0 {
+		// Baggage headers get propagated between request hops by piggybacking on the context
+		ctx = baggage.NewContextWithHeaders(ctx, baggageHeaders.Items())
 	}
 
 	appHeaders := applicationHeaders.FromGRPCMetadata(ctxMetadata, transport.Headers{})
 
 	requestBody, err := getMsgBody(msgBodyDecoder)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	treq := &transport.Request{
@@ -88,7 +95,7 @@ func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*
 		Body:      requestBody,
 	}
 
-	return treq, nil
+	return treq, ctx, nil
 }
 
 func getServiceAndProcedure(ctx context.Context) (service, procedure string, err error) {

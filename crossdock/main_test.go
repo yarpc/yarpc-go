@@ -108,7 +108,7 @@ func TestCrossdock(t *testing.T) {
 		{
 			name: "ctxpropagation",
 			axes: axes{
-				"transport": []string{"http", "tchannel"},
+				"transport": []string{"http", "tchannel", "grpc"},
 			},
 			params: params{
 				"ctxserver": "127.0.0.1",

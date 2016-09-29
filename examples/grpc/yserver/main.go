@@ -8,6 +8,7 @@ import (
 
 	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
+	"github.com/yarpc/yarpc-go/internal/baggage"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/grpc"
 	"golang.org/x/net/context"
@@ -53,6 +54,7 @@ func printReqInfo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) {
 	fmt.Println("Procedure: ", reqMeta.Procedure())
 	fmt.Println("Service: ", reqMeta.Service())
 	fmt.Println("Headers: ", reqMeta.Headers())
+	fmt.Println("Baggage: ", baggage.FromContext(ctx))
 	fmt.Println("Body: ", string(body))
 }
 
