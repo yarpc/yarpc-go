@@ -29,12 +29,6 @@ matrix:
     # Tests
     #
     # Need virtualenv for example tests
-    - go: 1.5
-      env: TYPE=test
-      addons: {apt: {packages: [python-virtualenv]}}
-    - go: 1.6
-      env: TYPE=test
-      addons: {apt: {packages: [python-virtualenv]}}
     - go: 1.7
       env: TYPE=test
       addons: {apt: {packages: [python-virtualenv]}}
