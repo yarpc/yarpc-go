@@ -6,22 +6,39 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yarpc/yarpc-go"
+	yarpc "github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/grpc"
 	"golang.org/x/net/context"
 )
 
-func yarpcFunc(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-	fmt.Println("---NEW REQUEST TO YARPC---")
+func bar(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+	fmt.Println("---NEW REQUEST TO BAR---")
 
 	printReqInfo(ctx, reqMeta, body)
 
-	res := []byte(fmt.Sprintf("server got request body: %s for YARPC", string(body)))
+	res := []byte(fmt.Sprintf("server got request body: %s for Bar", string(body)))
 
-	fmt.Println("---END OF REQUEST TO YARPC---")
-	return res, nil, nil
+	headers := reqMeta.Headers().With("called_func", "bar")
+	resMeta := yarpc.NewResMeta().Headers(headers)
+
+	fmt.Println("---END OF REQUEST TO BAR---")
+	return res, resMeta, nil
+}
+
+func moo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+	fmt.Println("---NEW REQUEST TO MOO---")
+
+	printReqInfo(ctx, reqMeta, body)
+
+	resBody := []byte(fmt.Sprintf("server got request body: %s", string(body)))
+
+	headers := reqMeta.Headers().With("called_func", "moo")
+	resMeta := yarpc.NewResMeta().Headers(headers)
+
+	fmt.Println("---END OF REQUEST TO MOO---")
+	return resBody, resMeta, nil
 }
 
 func printReqInfo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) {
@@ -41,14 +58,14 @@ func printReqInfo(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) {
 
 func main() {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc",
+		Name: "foo",
 		Inbounds: []transport.Inbound{
 			grpc.NewInbound(50054),
 		},
 	})
 
-	// TODO support non-default procedure names
-	raw.Register(dispatcher, raw.Procedure("yarpc", yarpcFunc))
+	raw.Register(dispatcher, raw.Procedure("bar", bar))
+	raw.Register(dispatcher, raw.Procedure("moo", moo))
 
 	if err := dispatcher.Start(); err != nil {
 		log.Fatal(err)

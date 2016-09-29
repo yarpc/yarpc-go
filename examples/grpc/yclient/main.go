@@ -17,7 +17,7 @@ func main() {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Outbounds: transport.Outbounds{
-			"yarpc": grpc.NewOutbound("localhost:50054"),
+			"foo": grpc.NewOutbound("localhost:50054"),
 		},
 	})
 
@@ -26,10 +26,13 @@ func main() {
 	}
 	defer dispatcher.Stop()
 
-	client := raw.New(dispatcher.Channel("yarpc"))
+	client := raw.New(dispatcher.Channel("foo"))
 
-	yarpcReqBody := fmt.Sprintf("Request to yarpc with value %d", time.Now().Unix())
-	sendRequest(client, "yarpc", yarpcReqBody)
+	barReqBody := fmt.Sprintf("Request to bar with value %d", time.Now().Unix())
+	sendRequest(client, "bar", barReqBody)
+
+	mooReqBody := fmt.Sprintf("Request to moo with value %d", time.Now().Unix())
+	sendRequest(client, "moo", mooReqBody)
 }
 
 func sendRequest(client raw.Client, procedure, msgBody string) {
@@ -41,7 +44,7 @@ func sendRequest(client raw.Client, procedure, msgBody string) {
 	fmt.Println("Timeout: ", randTimeout)
 	fmt.Println("Caller: hello")
 	fmt.Println("Encoding: raw")
-	fmt.Println("Service: yarpc")
+	fmt.Println("Service: foo")
 	fmt.Println("Procedure: ", procedure)
 	fmt.Println("headers: ", headers)
 	fmt.Println("Body: ", msgBody)
