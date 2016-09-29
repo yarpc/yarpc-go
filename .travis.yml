@@ -98,8 +98,8 @@ after_success:
   case "$TYPE" in
     crossdock)
       export REPO=yarpc/yarpc-go
-      export TAG=`if [ "$TRAVIS_PULL_REQUEST_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi`
-
+      export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+      export TAG=`if [ "$BRANCH" == "master" ]; then echo "latest"; else echo $BRANCH; fi`
       docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
       docker build -f Dockerfile -t $REPO:$COMMIT .
       docker tag $REPO:$COMMIT $REPO:$TAG
