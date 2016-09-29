@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // NewOutbound builds a new GRPC outbound.
@@ -46,8 +47,21 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 		return nil, err
 	}
 
+	metadataHeaders := getRequestHeaders(ctx, req)
+	ctx = metadata.NewContext(ctx, metadataHeaders)
+
 	uri := fmt.Sprintf("/%s/%s", url.QueryEscape(req.Service), url.QueryEscape(req.Procedure))
 	return callDownstream(ctx, uri, &requestBody, o.conn)
+}
+
+func getRequestHeaders(ctx context.Context, req *transport.Request) metadata.MD {
+	// 'Headers' in gRPC are known as 'Metadata'
+	md := metadata.New(map[string]string{
+		CallerHeader:   req.Caller,
+		EncodingHeader: string(req.Encoding),
+	})
+
+	return md
 }
 
 func callDownstream(
