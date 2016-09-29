@@ -41,6 +41,10 @@ func TestCreate(t *testing.T) {
 			"server is required",
 		},
 		{
+			crossdock.Params{"transport": "grpc"},
+			"server is required",
+		},
+		{
 			crossdock.Params{"server": "localhost", "transport": "foo"},
 			`unknown transport "foo"`,
 		},
@@ -54,6 +58,12 @@ func TestCreate(t *testing.T) {
 			params: crossdock.Params{
 				"server":    "localhost",
 				"transport": "tchannel",
+			},
+		},
+		{
+			params: crossdock.Params{
+				"server":    "localhost",
+				"transport": "grpc",
 			},
 		},
 	}

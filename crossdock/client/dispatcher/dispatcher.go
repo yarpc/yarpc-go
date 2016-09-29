@@ -26,6 +26,7 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/client/params"
 	"github.com/yarpc/yarpc-go/transport"
+	grpc "github.com/yarpc/yarpc-go/transport/grpc"
 	ht "github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
@@ -49,6 +50,8 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")
 		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
+	case "grpc":
+		outbound = grpc.NewOutbound(fmt.Sprintf("%s:8089", server))
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}

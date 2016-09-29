@@ -32,6 +32,7 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/raw"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
+	grpc "github.com/yarpc/yarpc-go/transport/grpc"
 	"github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
@@ -52,6 +53,7 @@ func Start() {
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8081"),
 			tch.NewInbound(ch, tch.ListenAddr(":8082")),
+			grpc.NewInbound(8089),
 		},
 	})
 
