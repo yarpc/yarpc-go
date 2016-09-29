@@ -26,6 +26,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/params"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/grpc"
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
@@ -49,6 +50,8 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")
 		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
+	case "grpc":
+		outbound = grpc.NewOutbound(fmt.Sprintf("%s:8089", server))
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}

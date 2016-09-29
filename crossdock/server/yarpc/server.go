@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
@@ -52,6 +53,7 @@ func Start() {
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8081"),
 			tch.NewInbound(ch, tch.ListenAddr(":8082")),
+			grpc.NewInbound(8089),
 		},
 	})
 
