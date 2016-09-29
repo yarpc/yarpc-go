@@ -45,7 +45,7 @@ matrix:
 before_install:
 - go version
 - |
-  set -e
+  set -ex
   case "$TYPE" in
     crossdock)
       docker version
@@ -56,11 +56,11 @@ before_install:
       docker-compose version
       ;;
   esac
-  set +e
+  set +ex
 
 install:
 - |
-  set -e
+  set -ex
   make install
   case "$TYPE" in
     lint)
@@ -72,11 +72,10 @@ install:
       go get golang.org/x/tools/cmd/cover
       ;;
   esac
-  set +e
 
 script:
 - |
-  set -e
+  set -ex
   case "$TYPE" in
     lint)
       make lint
@@ -91,11 +90,11 @@ script:
       docker-compose logs
       ;;
   esac
-  set +e
+  set +ex
 
 after_success:
 - |
-  set -e
+  set -ex
   case "$TYPE" in
     crossdock)
       export REPO=yarpc/yarpc-go
@@ -110,4 +109,4 @@ after_success:
       docker push $REPO
       ;;
   esac
-  set +e
+  set +ex
