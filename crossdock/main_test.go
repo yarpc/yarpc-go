@@ -56,11 +56,11 @@ func TestCrossdock(t *testing.T) {
 		},
 		{
 			name: "json",
-			axes: axes{"transport": []string{"http", "tchannel"}},
+			axes: axes{"transport": []string{"http", "tchannel", "grpc"}},
 		},
 		{
 			name: "thrift",
-			axes: axes{"transport": []string{"http", "tchannel"}},
+			axes: axes{"transport": []string{"http", "tchannel", "grpc"}},
 		},
 		{
 			name: "errors_httpclient",
@@ -96,7 +96,7 @@ func TestCrossdock(t *testing.T) {
 		{
 			name: "thriftgauntlet",
 			axes: axes{
-				"transport": []string{"http", "tchannel"},
+				"transport": []string{"http", "tchannel", "grpc"},
 			},
 		},
 		{
