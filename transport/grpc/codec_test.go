@@ -54,5 +54,5 @@ func TestPassThroughCodecUnmarshalError(t *testing.T) {
 func TestPassThroughCodecString(t *testing.T) {
 	codec := PassThroughCodec{}
 
-	assert.Equal(t, "raw", codec.String())
+	assert.Equal(t, "passthrough", codec.String())
 }

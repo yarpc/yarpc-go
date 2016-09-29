@@ -25,5 +25,5 @@ func (PassThroughCodec) Unmarshal(data []byte, v interface{}) error {
 }
 
 func (PassThroughCodec) String() string {
-	return "raw"
+	return "passthrough"
 }
