@@ -31,7 +31,7 @@ import (
 	"github.com/yarpc/yarpc-go/transport/internal"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // inboundCall provides an interface similiar tchannel.InboundCall.

@@ -26,7 +26,7 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/opentracing/opentracing-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Dispatcher object is used to configure a YARPC application; it is used by

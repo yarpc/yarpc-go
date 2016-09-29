@@ -30,7 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go/testutils/testreader"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestRawHandler(t *testing.T) {

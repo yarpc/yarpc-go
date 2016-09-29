@@ -23,7 +23,7 @@ package yarpc
 import (
 	"github.com/yarpc/yarpc-go/internal/baggage"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // WithBaggage returns a copy of the context with the given baggage attached to

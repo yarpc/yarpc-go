@@ -20,7 +20,7 @@
 
 package transport
 
-import "golang.org/x/net/context"
+import "context"
 
 // Handler handles a single transport-level request.
 type Handler interface {

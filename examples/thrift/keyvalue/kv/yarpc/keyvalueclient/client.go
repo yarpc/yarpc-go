@@ -25,7 +25,7 @@ package keyvalueclient
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
-	"golang.org/x/net/context"
+	"context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"

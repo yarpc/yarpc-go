@@ -29,7 +29,7 @@ import (
 
 	"github.com/uber-go/atomic"
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 var (

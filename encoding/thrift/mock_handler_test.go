@@ -7,7 +7,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	wire "github.com/thriftrw/thriftrw-go/wire"
 	yarpc_go "github.com/yarpc/yarpc-go"
-	context "golang.org/x/net/context"
+	context "context"
 )
 
 // Mock of Handler interface

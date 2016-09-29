@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/internal/encoding"

@@ -26,7 +26,7 @@ import (
 
 	"github.com/thriftrw/thriftrw-go/protocol"
 	"github.com/thriftrw/thriftrw-go/wire"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Handler represents a Thrift request handler. It speaks in raw Thrift payloads.

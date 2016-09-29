@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	traw "github.com/uber/tchannel-go/raw"
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
+	"context"
+	"context/ctxhttp"
 )
 
 var _reqBody = []byte("hello")

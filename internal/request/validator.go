@@ -27,7 +27,7 @@ import (
 
 	"github.com/yarpc/yarpc-go/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Validator helps validate requests.

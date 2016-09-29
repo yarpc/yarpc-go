@@ -25,7 +25,7 @@ package thrifttestserver
 
 import (
 	"github.com/thriftrw/thriftrw-go/protocol"
-	"golang.org/x/net/context"
+	"context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"github.com/yarpc/yarpc-go/encoding/thrift"

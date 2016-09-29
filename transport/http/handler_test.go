@@ -37,7 +37,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestHandlerSucces(t *testing.T) {

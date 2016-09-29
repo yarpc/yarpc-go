@@ -33,7 +33,7 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/transport/http"
-	"golang.org/x/net/context"
+	"context"
 )
 
 //go:generate thriftrw-go --out thrift --plugin=yarpc hello.thrift

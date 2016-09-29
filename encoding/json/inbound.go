@@ -29,7 +29,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level

@@ -31,7 +31,7 @@ import (
 	"github.com/yarpc/yarpc-go/transport/tchannel/internal"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // pullBaggage pulls the context headers from the given transport.Headers,

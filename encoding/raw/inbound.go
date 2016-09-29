@@ -27,7 +27,7 @@ import (
 	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // rawHandler adapts a Handler into a transport.Handler

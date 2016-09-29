@@ -34,7 +34,7 @@ import (
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func createHeadersT(t crossdock.T) crossdock.T {
