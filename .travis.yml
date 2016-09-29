@@ -102,7 +102,11 @@ after_success:
       export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo `curl -s $PR | jq -r .head.ref`; fi)
       export TAG=`if [ "$BRANCH" == "master" ]; then echo "latest"; else echo $BRANCH; fi`
 
+      # Don't echo sensitive information.
+      set +x
       docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      set -x
+
       docker build -f Dockerfile -t $REPO:$COMMIT .
       docker tag $REPO:$COMMIT $REPO:$TAG
       docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
