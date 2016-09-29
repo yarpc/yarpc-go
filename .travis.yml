@@ -45,7 +45,6 @@ matrix:
 before_install:
 - go version
 - |
-  set -ex
   case "$TYPE" in
     crossdock)
       docker version
@@ -56,11 +55,9 @@ before_install:
       docker-compose version
       ;;
   esac
-  set +ex
 
 install:
 - |
-  set -ex
   make install
   case "$TYPE" in
     lint)
@@ -75,7 +72,6 @@ install:
 
 script:
 - |
-  set -ex
   case "$TYPE" in
     lint)
       make lint
@@ -90,7 +86,6 @@ script:
       docker-compose logs
       ;;
   esac
-  set +ex
 
 after_success:
 - |
@@ -99,8 +94,6 @@ after_success:
       export REPO=yarpc/yarpc-go
       export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
       export TAG=`if [ "$BRANCH" == "master" ]; then echo "latest"; else echo $BRANCH; fi`
-
-      echo "TRAVIS_PULL_REQUEST=$TRAVIS_PULL_REQUEST, TRAVIS_BRANCH=$TRAVIS_BRANCH, TRAVIS_PULL_REQUEST_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH, BRANCH=$BRANCH, TAG=$TAG"
 
       docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
       docker build -f Dockerfile -t $REPO:$COMMIT .
