@@ -28,6 +28,7 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/json"
 	"github.com/yarpc/yarpc-go/transport"
+	"github.com/yarpc/yarpc-go/transport/grpc"
 	ht "github.com/yarpc/yarpc-go/transport/http"
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
@@ -47,10 +48,17 @@ type TChannelTransport struct {
 	Port int    `json:"port"`
 }
 
+// GRPCTransport contains information about a gRPC transport.
+type GRPCTransport struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
 // TransportConfig contains the transport configuration for the phone request.
 type TransportConfig struct {
 	HTTP     *HTTPTransport     `json:"http"`
 	TChannel *TChannelTransport `json:"tchannel"`
+	GRPC     *GRPCTransport     `json:"grpc"`
 }
 
 // PhoneRequest is a request to make another request to a different service.
@@ -85,6 +93,9 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 			return nil, nil, fmt.Errorf("failed to build TChannel: %v", err)
 		}
 		outbound = tch.NewOutbound(ch, tch.HostPort(hostport))
+	case body.Transport.GRPC != nil:
+		t := body.Transport.GRPC
+		outbound = grpc.NewOutbound(fmt.Sprintf("%s:%d", t.Host, t.Port))
 	default:
 		return nil, nil, fmt.Errorf("unconfigured transport")
 	}

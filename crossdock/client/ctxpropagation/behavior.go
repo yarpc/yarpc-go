@@ -36,6 +36,7 @@ import (
 	tch "github.com/yarpc/yarpc-go/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
+	"github.com/yarpc/yarpc-go/transport/grpc"
 	"golang.org/x/net/context"
 )
 
@@ -161,8 +162,6 @@ func Run(t crossdock.T) {
 			}
 
 			dispatcher, tconfig := buildDispatcher(t)
-			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
-			defer dispatcher.Stop()
 
 			jsonClient := json.New(dispatcher.Channel("yarpc-test"))
 			for name, handler := range tt.handlers {
@@ -170,6 +169,9 @@ func Run(t crossdock.T) {
 				handler.SetTransport(tconfig)
 				json.Register(dispatcher, json.Procedure(name, handler.Handle))
 			}
+
+			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
+			defer dispatcher.Stop()
 
 			ctx := context.Background()
 			if tt.initCtx != nil {
@@ -292,6 +294,9 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
 	case "tchannel":
 		outbound = tch.NewOutbound(ch, tch.HostPort(fmt.Sprintf("%s:8082", subject)))
+		tconfig.GRPC = &server.GRPCTransport{Host: self, Port: 8090}
+	case "grpc":
+		outbound = grpc.NewOutbound(fmt.Sprintf("%s:8089", subject))
 		tconfig.HTTP = &server.HTTPTransport{Host: self, Port: 8086}
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
@@ -302,6 +307,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(ch, tch.ListenAddr(":8087")),
 			ht.NewInbound(":8086"),
+			grpc.NewInbound(8090),
 		},
 		Outbounds: transport.Outbounds{"yarpc-test": outbound},
 	})

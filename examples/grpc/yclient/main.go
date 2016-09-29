@@ -50,6 +50,8 @@ func sendRequest(client raw.Client, procedure, msgBody string) {
 	fmt.Println("Body: ", msgBody)
 
 	ctx, _ := context.WithTimeout(context.Background(), randTimeout)
+	ctx = yarpc.WithBaggage(ctx, "token", "42")
+
 	resBody, resMeta, err := client.Call(
 		ctx,
 		yarpc.NewReqMeta().Procedure(procedure).Headers(headers),

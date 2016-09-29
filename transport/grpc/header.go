@@ -12,6 +12,7 @@ type headerMapper struct{ Prefix string }
 
 var (
 	applicationHeaders = headerMapper{ApplicationHeaderPrefix}
+	baggageHeaders     = headerMapper{BaggageHeaderPrefix}
 )
 
 // toGRPCMetadata converts transport headers into gRPC Metadata.
