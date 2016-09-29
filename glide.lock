@@ -1,8 +1,8 @@
 hash: 88025999cb77e2388355a000730fcd8fa5eea1b457385286706658db8db08e23
-updated: 2016-09-27T14:50:58.395609946-07:00
+updated: 2016-09-28T17:08:13.445869246-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 2df9c20dc76c044e502861a2111b90cbdcbbb957
+  version: 8ccf5a645c8e34e0abb6f31b216dbf77f0ac2a43
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -23,7 +23,6 @@ imports:
   subpackages:
   - ext
   - log
-  - mocktracer
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -36,20 +35,20 @@ imports:
 - name: github.com/thriftrw/thriftrw-go
   version: 486fe6340c8acc600a44a3a698becb9725d578fb
   subpackages:
+  - ptr
+  - wire
+  - protocol
   - envelope
-  - internal/envelope
+  - plugin
+  - plugin/api
+  - protocol/binary
   - internal/envelope/exception
+  - internal/envelope
   - internal/frame
   - internal/goast
   - internal/multiplex
-  - plugin
-  - plugin/api
   - plugin/api/service/plugin
   - plugin/api/service/servicegenerator
-  - protocol
-  - protocol/binary
-  - ptr
-  - wire
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/tchannel-go
@@ -57,16 +56,16 @@ imports:
   subpackages:
   - json
   - raw
-  - relay
-  - relay/relaytest
-  - testutils
-  - testutils/goroutines
-  - testutils/testreader
   - thrift
-  - thrift/gen-go/meta
+  - testutils/testreader
+  - testutils
+  - relay
   - tnet
   - trand
   - typed
+  - thrift/gen-go/meta
+  - relay/relaytest
+  - testutils/goroutines
 - name: golang.org/x/net
   version: f09c4662a0bd6bd8943ac7b4931e185df9471da4
   subpackages:

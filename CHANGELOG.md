@@ -7,6 +7,12 @@ v0.3.0 (unreleased)
 -   Update opentracing-go to `>= 1, < 2`.
 
 
+v0.2.1 (2016-09-28)
+-------------------
+
+-   Loosen constraint on `opentracing-go` to `>= 0.9, < 2`.
+
+
 v0.2.0 (2016-09-19)
 -------------------
 
