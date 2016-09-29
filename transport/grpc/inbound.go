@@ -54,21 +54,19 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	}
 
 	var serviceDescs []grpc.ServiceDesc
+	if reg, ok := h.(transport.Registry); ok {
+		serviceProcedures := make(map[string][]string)
+		for _, sp := range reg.ServiceProcedures() {
+			serviceProcedures[sp.Service] = append(serviceProcedures[sp.Service], sp.Procedure)
+		}
 
-	// TODO generate serviceDescs from yarpc registration info
-	serviceDescs = append(serviceDescs, grpc.ServiceDesc{
-		ServiceName: url.QueryEscape("yarpc"),
-		HandlerType: (*passThroughService)(nil),
-		Methods: []grpc.MethodDesc{
-			{
-				MethodName: url.QueryEscape("yarpc"), // TODO: Is this what we want here?
-				Handler:    gHandler.Handle,          // grpc.methodHandler
-			},
-		},
-		Streams: []grpc.StreamDesc{},
-	})
-
-	// TODO Generate the serviceDesc from the configuration of the dispatcher name and procedure names
+		for service, procs := range serviceProcedures {
+			serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, service, procs))
+		}
+	} else {
+		// Called with a plain Handler instead of Dispatcher. Fall back to no meaningful service description.
+		serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, "yarpc", []string{"yarpc"}))
+	}
 
 	// Register Services
 	for _, desc := range serviceDescs {
@@ -79,6 +77,23 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	go i.server.Serve(lis)
 
 	return nil
+}
+
+func createServiceDesc(gHandler handler, service string, procedures []string) *grpc.ServiceDesc {
+	methodDescs := make([]grpc.MethodDesc, 0, len(procedures))
+	for _, proc := range procedures {
+		methodDescs = append(methodDescs, grpc.MethodDesc{
+			MethodName: url.QueryEscape(proc),
+			Handler:    gHandler.Handle,
+		})
+	}
+
+	return &grpc.ServiceDesc{
+		ServiceName: url.QueryEscape(service),
+		HandlerType: (*passThroughService)(nil),
+		Methods:     methodDescs,
+		Streams:     []grpc.StreamDesc{},
+	}
 }
 
 func (i *inbound) Stop() error {
