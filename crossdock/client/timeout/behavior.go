@@ -70,6 +70,10 @@ func Run(t crossdock.T) {
 		assert.True(form,
 			"should be a remote timeout (we cant represent client timeout with tchannel): %q",
 			err.Error())
+	case "grpc":
+		form := strings.HasPrefix(err.Error(),
+			`client timeout for procedure "sleep/raw" of service "yarpc-test" after`)
+		assert.True(form, "should be a client timeout: %q", err.Error())
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}

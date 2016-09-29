@@ -102,7 +102,7 @@ func TestCrossdock(t *testing.T) {
 		{
 			name: "timeout",
 			axes: axes{
-				"transport": []string{"http", "tchannel"},
+				"transport": []string{"http", "tchannel", "grpc"},
 			},
 		},
 		{
