@@ -27,11 +27,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/encoding/raw"
-	"github.com/yarpc/yarpc-go/internal/encoding"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/transporttest"
+	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

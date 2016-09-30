@@ -21,8 +21,8 @@
 package main
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/client"
-	"github.com/yarpc/yarpc-go/crossdock/server"
+	"go.uber.org/yarpc/crossdock/client"
+	"go.uber.org/yarpc/crossdock/server"
 )
 
 func main() {

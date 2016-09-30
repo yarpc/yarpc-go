@@ -25,11 +25,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/json"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
-	ytchannel "github.com/yarpc/yarpc-go/transport/tchannel"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/http"
+	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"

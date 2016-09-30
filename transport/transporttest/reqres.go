@@ -28,7 +28,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/transport"
 )
 
 // RequestMatcher may be used in gomock argument lists to assert that two

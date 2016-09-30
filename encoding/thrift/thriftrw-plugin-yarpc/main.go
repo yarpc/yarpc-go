@@ -39,8 +39,8 @@ const serverTemplate = `
 <$pkgname := printf "%sserver" (lower .Service.Name)>
 package <$pkgname>
 
-<$yarpc    := import "github.com/yarpc/yarpc-go">
-<$thrift   := import "github.com/yarpc/yarpc-go/encoding/thrift">
+<$yarpc    := import "go.uber.org/yarpc">
+<$thrift   := import "go.uber.org/yarpc/encoding/thrift">
 <$protocol := import "go.uber.org/thriftrw/protocol">
 <$context  := import "golang.org/x/net/context">
 
@@ -132,9 +132,9 @@ const clientTemplate = `
 <$pkgname := printf "%sclient" (lower .Service.Name)>
 package <$pkgname>
 
-<$yarpc     := import "github.com/yarpc/yarpc-go">
-<$transport := import "github.com/yarpc/yarpc-go/transport">
-<$thrift    := import "github.com/yarpc/yarpc-go/encoding/thrift">
+<$yarpc     := import "go.uber.org/yarpc">
+<$transport := import "go.uber.org/yarpc/transport">
+<$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$protocol  := import "go.uber.org/thriftrw/protocol">
 <$context   := import "golang.org/x/net/context">
 

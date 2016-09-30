@@ -25,11 +25,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/thrift/internal"
-	"github.com/yarpc/yarpc-go/internal/encoding"
-	"github.com/yarpc/yarpc-go/internal/meta"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift/internal"
+	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/meta"
+	"go.uber.org/yarpc/transport"
 
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"

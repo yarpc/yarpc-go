@@ -20,7 +20,7 @@
 
 package yarpctest
 
-import "github.com/yarpc/yarpc-go"
+import "go.uber.org/yarpc"
 
 // CallResMetaBuilder helps build fake yarpc.CallResMeta objects for testing.
 //

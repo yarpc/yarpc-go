@@ -26,7 +26,7 @@
 //
 // You must also install the ThriftRW plugin for YARPC.
 //
-// 	go get github.com/yarpc/yarpc-go/encoding/thrift/thriftrw-plugin-yarpc
+// 	go get go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc
 //
 // To generate YARPC compatible code from a Thrift file, use the command,
 //

@@ -26,7 +26,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
