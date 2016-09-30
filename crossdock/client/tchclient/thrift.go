@@ -31,7 +31,7 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 
 	"github.com/crossdock/crossdock-go"
-	"github.com/thriftrw/thriftrw-go/ptr"
+	"go.uber.org/thriftrw/ptr"
 	"github.com/uber/tchannel-go/thrift"
 )
 

@@ -32,12 +32,12 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 )
 
 //go:generate mockgen -destination=mock_handler_test.go -package=thrift github.com/yarpc/yarpc-go/encoding/thrift Handler
-//go:generate mockgen -destination=mock_protocol_test.go -package=thrift github.com/thriftrw/thriftrw-go/protocol Protocol
+//go:generate mockgen -destination=mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 
 func TestThriftHandler(t *testing.T) {
 	requestBody := wire.NewValueStruct(wire.Struct{})

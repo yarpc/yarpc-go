@@ -24,8 +24,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 )
 
 // multiplexedOutboundProtocol is a Protocol for outbound requests that adds

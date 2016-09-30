@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 )
 
 func TestDisableEnveloperEncode(t *testing.T) {

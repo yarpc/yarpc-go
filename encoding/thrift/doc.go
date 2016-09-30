@@ -22,7 +22,7 @@
 //
 // To use this package, you must install ThriftRW 0.2.0 or newer.
 //
-// 	go get github.com/thriftrw/thriftrw-go
+// 	go get go.uber.org/thriftrw
 //
 // You must also install the ThriftRW plugin for YARPC.
 //

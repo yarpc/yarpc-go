@@ -26,7 +26,7 @@ package secondservice
 import (
 	"errors"
 	"fmt"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/wire"
 	"strings"
 )
 

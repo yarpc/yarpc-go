@@ -26,7 +26,7 @@ package thrifttest
 import (
 	"errors"
 	"fmt"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/wire"
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet"
 	"strings"
 )

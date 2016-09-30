@@ -28,8 +28,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/thriftrw/thriftrw-go/plugin"
-	"github.com/thriftrw/thriftrw-go/plugin/api"
+	"go.uber.org/thriftrw/plugin"
+	"go.uber.org/thriftrw/plugin/api"
 )
 
 const serverTemplate = `
@@ -41,7 +41,7 @@ package <$pkgname>
 
 <$yarpc    := import "github.com/yarpc/yarpc-go">
 <$thrift   := import "github.com/yarpc/yarpc-go/encoding/thrift">
-<$protocol := import "github.com/thriftrw/thriftrw-go/protocol">
+<$protocol := import "go.uber.org/thriftrw/protocol">
 <$context  := import "golang.org/x/net/context">
 
 // Interface is the server-side interface for the <.Service.Name> service.
@@ -93,7 +93,7 @@ type handler struct{ impl Interface }
 <range .Service.Functions>
 
 <$servicePackage := import $service.Package>
-<$wire := import "github.com/thriftrw/thriftrw-go/wire">
+<$wire := import "go.uber.org/thriftrw/wire">
 
 func (h handler) <.Name>(
 	ctx <$context>.Context,
@@ -135,7 +135,7 @@ package <$pkgname>
 <$yarpc     := import "github.com/yarpc/yarpc-go">
 <$transport := import "github.com/yarpc/yarpc-go/transport">
 <$thrift    := import "github.com/yarpc/yarpc-go/encoding/thrift">
-<$protocol  := import "github.com/thriftrw/thriftrw-go/protocol">
+<$protocol  := import "go.uber.org/thriftrw/protocol">
 <$context   := import "golang.org/x/net/context">
 
 // Interface is a client for the <.Service.Name> service.
@@ -175,7 +175,7 @@ type client struct{ c <$thrift>.Client }
 <range .Service.Functions>
 
 <$servicePackage := import $service.Package>
-<$wire := import "github.com/thriftrw/thriftrw-go/wire">
+<$wire := import "go.uber.org/thriftrw/wire">
 
 func (c client) <.Name>(
 	ctx <$context>.Context,

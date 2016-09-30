@@ -28,8 +28,8 @@ import (
 	"github.com/yarpc/yarpc-go/internal/meta"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 )
 

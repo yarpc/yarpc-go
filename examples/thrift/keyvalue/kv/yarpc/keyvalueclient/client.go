@@ -24,13 +24,13 @@
 package keyvalueclient
 
 import (
-	"github.com/thriftrw/thriftrw-go/protocol"
+	"go.uber.org/thriftrw/protocol"
 	"golang.org/x/net/context"
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/encoding/thrift"
 	"github.com/yarpc/yarpc-go/transport"
 	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv/service/keyvalue"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is a client for the KeyValue service.

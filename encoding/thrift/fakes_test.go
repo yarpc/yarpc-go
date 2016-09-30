@@ -27,7 +27,7 @@ import (
 	"github.com/yarpc/yarpc-go"
 	"github.com/yarpc/yarpc-go/transport"
 
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/wire"
 )
 
 type fakeEnveloper wire.EnvelopeType
