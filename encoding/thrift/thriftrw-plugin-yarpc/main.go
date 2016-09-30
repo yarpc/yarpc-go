@@ -47,7 +47,7 @@ package <$pkgname>
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sserver" .Parent.Package (lower .Parent.Name)>
+		<$parentPath := printf "%s/yarpc/%sserver" .Parent.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -92,7 +92,7 @@ type handler struct{ impl Interface }
 <$service := .Service>
 <range .Service.Functions>
 
-<$servicePackage := import $service.Package>
+<$servicePackage := import $service.ImportPath>
 <$wire := import "go.uber.org/thriftrw/wire">
 
 func (h handler) <.Name>(
@@ -141,7 +141,7 @@ package <$pkgname>
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sclient" .Parent.Package (lower .Parent.Name)>
+		<$parentPath := printf "%s/yarpc/%sclient" .Parent.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -174,7 +174,7 @@ type client struct{ c <$thrift>.Client }
 <$service := .Service>
 <range .Service.Functions>
 
-<$servicePackage := import $service.Package>
+<$servicePackage := import $service.ImportPath>
 <$wire := import "go.uber.org/thriftrw/wire">
 
 func (c client) <.Name>(
