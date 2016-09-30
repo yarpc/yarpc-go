@@ -1,7 +1,7 @@
 Releases
 ========
 
-v0.3.0 (unreleased)
+v0.3.0 (2016-09-30)
 -------------------
 
 -   **Breaking**: Rename project to `go.uber.org/yarpc`.
