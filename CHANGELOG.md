@@ -4,7 +4,7 @@ Releases
 v0.3.0 (unreleased)
 -------------------
 
--   Switch to `go.uber.org/thriftrw ~0.3` from `github.com/thriftrw/thriftrw-go ~0.2`.
+-   **Breaking**: Switch to `go.uber.org/thriftrw ~0.3` from `github.com/thriftrw/thriftrw-go ~0.2`.
 -   Update opentracing-go to `>= 1, < 2`.
 
 
