@@ -28,8 +28,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/thriftrw/thriftrw-go/plugin"
-	"github.com/thriftrw/thriftrw-go/plugin/api"
+	"go.uber.org/thriftrw/plugin"
+	"go.uber.org/thriftrw/plugin/api"
 )
 
 const serverTemplate = `
@@ -41,13 +41,13 @@ package <$pkgname>
 
 <$yarpc    := import "github.com/yarpc/yarpc-go">
 <$thrift   := import "github.com/yarpc/yarpc-go/encoding/thrift">
-<$protocol := import "github.com/thriftrw/thriftrw-go/protocol">
+<$protocol := import "go.uber.org/thriftrw/protocol">
 <$context  := import "golang.org/x/net/context">
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sserver" .Parent.Package (lower .Parent.Name)>
+		<$parentPath := printf "%s/yarpc/%sserver" .Parent.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -92,8 +92,8 @@ type handler struct{ impl Interface }
 <$service := .Service>
 <range .Service.Functions>
 
-<$servicePackage := import $service.Package>
-<$wire := import "github.com/thriftrw/thriftrw-go/wire">
+<$servicePackage := import $service.ImportPath>
+<$wire := import "go.uber.org/thriftrw/wire">
 
 func (h handler) <.Name>(
 	ctx <$context>.Context,
@@ -135,13 +135,13 @@ package <$pkgname>
 <$yarpc     := import "github.com/yarpc/yarpc-go">
 <$transport := import "github.com/yarpc/yarpc-go/transport">
 <$thrift    := import "github.com/yarpc/yarpc-go/encoding/thrift">
-<$protocol  := import "github.com/thriftrw/thriftrw-go/protocol">
+<$protocol  := import "go.uber.org/thriftrw/protocol">
 <$context   := import "golang.org/x/net/context">
 
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sclient" .Parent.Package (lower .Parent.Name)>
+		<$parentPath := printf "%s/yarpc/%sclient" .Parent.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -174,8 +174,8 @@ type client struct{ c <$thrift>.Client }
 <$service := .Service>
 <range .Service.Functions>
 
-<$servicePackage := import $service.Package>
-<$wire := import "github.com/thriftrw/thriftrw-go/wire">
+<$servicePackage := import $service.ImportPath>
+<$wire := import "go.uber.org/thriftrw/wire">
 
 func (c client) <.Name>(
 	ctx <$context>.Context,

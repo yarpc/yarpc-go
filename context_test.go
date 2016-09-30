@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/thriftrw/thriftrw-go/ptr"
+	"go.uber.org/thriftrw/ptr"
 	"golang.org/x/net/context"
 )
 

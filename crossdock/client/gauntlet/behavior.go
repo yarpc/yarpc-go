@@ -36,7 +36,7 @@ import (
 	"github.com/yarpc/yarpc-go/transport"
 
 	"github.com/crossdock/crossdock-go"
-	"github.com/thriftrw/thriftrw-go/ptr"
+	"go.uber.org/thriftrw/ptr"
 	"golang.org/x/net/context"
 )
 

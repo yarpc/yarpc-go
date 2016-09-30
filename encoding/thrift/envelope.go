@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 )
 
 type errUnexpectedEnvelopeType wire.EnvelopeType

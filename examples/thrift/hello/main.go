@@ -36,7 +36,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-//go:generate thriftrw-go --out thrift --plugin=yarpc hello.thrift
+//go:generate thriftrw --out thrift --plugin=yarpc hello.thrift
 
 func main() {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

@@ -23,7 +23,7 @@ package thrift
 import (
 	"github.com/yarpc/yarpc-go"
 
-	"github.com/thriftrw/thriftrw-go/envelope"
+	"go.uber.org/thriftrw/envelope"
 )
 
 // Response contains the raw response from a generated Thrift handler.
