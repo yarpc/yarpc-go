@@ -26,7 +26,7 @@ package echo
 import (
 	"errors"
 	"fmt"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
+	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/thriftrw/wire"
 	"strings"
 )

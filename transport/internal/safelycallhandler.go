@@ -26,8 +26,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/yarpc/yarpc-go/internal/errors"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
 )

@@ -21,10 +21,10 @@
 package server
 
 import (
-	"github.com/yarpc/yarpc-go/crossdock/server/apachethrift"
-	"github.com/yarpc/yarpc-go/crossdock/server/http"
-	"github.com/yarpc/yarpc-go/crossdock/server/tch"
-	"github.com/yarpc/yarpc-go/crossdock/server/yarpc"
+	"go.uber.org/yarpc/crossdock/server/apachethrift"
+	"go.uber.org/yarpc/crossdock/server/http"
+	"go.uber.org/yarpc/crossdock/server/tch"
+	"go.uber.org/yarpc/crossdock/server/yarpc"
 )
 
 // Start starts all required Crossdock test servers

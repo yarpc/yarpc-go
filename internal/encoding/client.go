@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/transport"
 )
 
 type clientEncodingError struct {

@@ -24,11 +24,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yarpc/yarpc-go/internal/baggage"
-	"github.com/yarpc/yarpc-go/internal/errors"
-	"github.com/yarpc/yarpc-go/internal/request"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/internal"
+	"go.uber.org/yarpc/internal/baggage"
+	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"

@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yarpc/yarpc-go/internal/errors"
+	"go.uber.org/yarpc/internal/errors"
 )
 
 func handlerTimeoutRawHandler(w http.ResponseWriter, req *http.Request) {

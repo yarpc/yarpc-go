@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
 )

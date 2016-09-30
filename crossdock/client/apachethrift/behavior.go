@@ -23,11 +23,11 @@ package apachethrift
 import (
 	"fmt"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/http"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/crossdock/client/gauntlet"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
 )

@@ -4,15 +4,15 @@ A transport and encoding agnostic RPC framework.
 
 ## Installation
 
-`go get -u github.com/yarpc/yarpc-go`
+`go get -u go.uber.org/yarpc`
 
 ## Development Status: Alpha
 
 Ready for adventurous users and early adopters, but there will likely be a few
 breaking changes and features required before releasing version 1.0.
 
-[doc-img]: https://godoc.org/github.com/yarpc/yarpc-go?status.svg
-[doc]: https://godoc.org/github.com/yarpc/yarpc-go
+[doc-img]: https://godoc.org/go.uber.org/yarpc?status.svg
+[doc]: https://godoc.org/go.uber.org/yarpc
 [ci-img]: https://travis-ci.org/yarpc/yarpc-go.svg?branch=master
 [cov-img]: https://coveralls.io/repos/github/yarpc/yarpc-go/badge.svg?branch=master
 [ci]: https://travis-ci.org/yarpc/yarpc-go

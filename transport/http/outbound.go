@@ -29,9 +29,9 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/yarpc/yarpc-go/internal/baggage"
-	"github.com/yarpc/yarpc-go/internal/errors"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/internal/baggage"
+	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/transport"
 
 	"github.com/uber-go/atomic"
 	"golang.org/x/net/context"

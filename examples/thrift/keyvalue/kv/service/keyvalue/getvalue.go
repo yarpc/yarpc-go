@@ -26,7 +26,7 @@ package keyvalue
 import (
 	"errors"
 	"fmt"
-	"github.com/yarpc/yarpc-go/examples/thrift/keyvalue/kv"
+	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
 	"go.uber.org/thriftrw/wire"
 	"strings"
 )
