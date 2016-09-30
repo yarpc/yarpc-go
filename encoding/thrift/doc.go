@@ -30,7 +30,7 @@
 //
 // To generate YARPC compatible code from a Thrift file, use the command,
 //
-// 	thriftrw-go --plugin yarpc myservice.thrift
+// 	thriftrw --plugin yarpc myservice.thrift
 //
 // In addition to generating code for types specified in your THrift file,
 // this will generate two packages for each service in the file: a client
