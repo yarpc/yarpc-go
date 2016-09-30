@@ -5,22 +5,23 @@ import:
   subpackages:
   - context
   - context/ctxhttp
+- package: github.com/opentracing/opentracing-go
+  version: ^1
+- package: github.com/uber/tchannel-go
+  version: ^1.2
+- package: github.com/uber-go/atomic
+  version: ^1
+- package: go.uber.org/thriftrw
+  version: ~0.3
+
+- package: github.com/crossdock/crossdock-go
+  version: master
+- package: github.com/golang/mock
+  version: master
+  subpackages:
+  - gomock
 - package: github.com/stretchr/testify
   version: master
   subpackages:
   - assert
   - require
-- package: github.com/thriftrw/thriftrw-go
-  version: ~0.2
-- package: github.com/golang/mock
-  version: master
-  subpackages:
-  - gomock
-- package: github.com/uber/tchannel-go
-  version: ^1.2
-- package: github.com/opentracing/opentracing-go
-  version: ^1
-- package: github.com/crossdock/crossdock-go
-  version: master
-- package: github.com/uber-go/atomic
-  version: ^1.0.0
