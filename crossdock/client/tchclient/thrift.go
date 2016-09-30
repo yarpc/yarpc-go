@@ -31,8 +31,8 @@ import (
 	"github.com/yarpc/yarpc-go/crossdock/thrift/gen-go/gauntlet_apache"
 
 	"github.com/crossdock/crossdock-go"
-	"go.uber.org/thriftrw/ptr"
 	"github.com/uber/tchannel-go/thrift"
+	"go.uber.org/thriftrw/ptr"
 )
 
 func runThrift(t crossdock.T, call call) {
