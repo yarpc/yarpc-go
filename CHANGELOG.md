@@ -7,6 +7,12 @@ v0.4.0 (unreleased)
 -   No changes yet.
 
 
+v0.3.1 (2016-09-31)
+-------------------
+
+-   Fix missing canonical import path to `go.uber.org/yarpc`.
+
+
 v0.3.0 (2016-09-30)
 -------------------
 
