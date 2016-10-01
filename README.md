@@ -10,7 +10,7 @@ Use *at least* `glide version 0.12` to install:
 $ glide --version
 glide version 0.12.2
 
-$ glide get 'go.uber.org/yarpc#~0.3
+$ glide get 'go.uber.org/yarpc#~0.3'
 ```
 
 ## Development Status: Alpha
