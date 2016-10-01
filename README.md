@@ -4,7 +4,14 @@ A transport and encoding agnostic RPC framework.
 
 ## Installation
 
-`go get -u go.uber.org/yarpc`
+Use *at least* `glide version 0.12` to install:
+
+```
+$ glide --version
+glide version 0.12.2
+
+$ glide get 'go.uber.org/yarpc#~0.3
+```
 
 ## Development Status: Alpha
 
