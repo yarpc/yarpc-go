@@ -20,6 +20,8 @@
 
 package transport
 
+//go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
+
 // ChannelProvider builds channels from the current service to other services.
 type ChannelProvider interface {
 	// Retrieves a new Channel that will make requests to the given service.
