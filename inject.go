@@ -134,12 +134,12 @@ func InjectClients(src transport.ChannelProvider, dest interface{}) {
 			continue
 		}
 
-		channelV := reflect.ValueOf(src.Channel(service))
 		constructor, ok := _clientFactories[fieldT]
 		if !ok {
 			panic(fmt.Sprintf("a constructor for %v has not been registered", fieldT))
 		}
 
+		channelV := reflect.ValueOf(src.Channel(service))
 		client := constructor.Call([]reflect.Value{channelV})[0]
 		fieldV.Set(client)
 	}
