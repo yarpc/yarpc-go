@@ -82,9 +82,9 @@ func RegisterClientFactory(f interface{}) (forget func()) {
 }
 
 // InjectClients injects clients from the given Dispatcher into the given
-// struct. dest must be a pointer to a struct with zero or more public fields
-// Thrift client fields. Only fields with nil values and a `service` tag will
-// be populated; everything else will be left unchanged.
+// struct. dest must be a pointer to a struct with zero or more exported
+// fields Thrift client fields. Only fields with nil values and a `service`
+// tag will be populated; everything else will be left unchanged.
 //
 // 	type Handler struct {
 // 		KeyValueClient keyvalueclient.Interface `service:"keyvalue"`
