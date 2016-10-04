@@ -24,13 +24,13 @@
 package helloserver
 
 import (
-	"github.com/thriftrw/thriftrw-go/protocol"
+	yarpc "go.uber.org/yarpc"
 	"golang.org/x/net/context"
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello"
-	hello2 "github.com/yarpc/yarpc-go/examples/thrift/hello/thrift/hello/service/hello"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
+	hello2 "go.uber.org/yarpc/examples/thrift/hello/thrift/hello/service/hello"
 )
 
 // Interface is the server-side interface for the Hello service.

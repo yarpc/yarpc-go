@@ -23,7 +23,7 @@ package tchclient
 import (
 	"fmt"
 
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
+	"go.uber.org/yarpc/crossdock/client/params"
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go"

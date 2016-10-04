@@ -24,12 +24,12 @@
 package secondserviceserver
 
 import (
-	"github.com/thriftrw/thriftrw-go/protocol"
+	yarpc "go.uber.org/yarpc"
 	"golang.org/x/net/context"
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/gauntlet/service/secondservice"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/secondservice"
+	"go.uber.org/yarpc/encoding/thrift"
 )
 
 // Interface is the server-side interface for the SecondService service.

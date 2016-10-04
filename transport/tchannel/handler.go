@@ -24,11 +24,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yarpc/yarpc-go/internal/encoding"
-	"github.com/yarpc/yarpc-go/internal/errors"
-	"github.com/yarpc/yarpc-go/internal/request"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/internal"
+	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal"
 
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"

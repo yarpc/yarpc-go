@@ -21,7 +21,7 @@
 package yarpc
 
 import (
-	"github.com/yarpc/yarpc-go"
+	"go.uber.org/yarpc"
 
 	"golang.org/x/net/context"
 )

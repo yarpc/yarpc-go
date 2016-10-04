@@ -21,11 +21,11 @@
 package thrift
 
 import (
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/transport"
 
-	"github.com/thriftrw/thriftrw-go/protocol"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 )
 

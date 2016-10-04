@@ -23,13 +23,13 @@ package tchserver
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/gauntlet"
-	"github.com/yarpc/yarpc-go/crossdock/client/params"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo/yarpc/echoclient"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/crossdock/client/gauntlet"
+	"go.uber.org/yarpc/crossdock/client/params"
+	"go.uber.org/yarpc/crossdock/client/random"
+	"go.uber.org/yarpc/crossdock/thrift/echo"
+	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
+	"go.uber.org/yarpc/encoding/thrift"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"

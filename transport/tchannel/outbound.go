@@ -23,9 +23,9 @@ package tchannel
 import (
 	"io"
 
-	"github.com/yarpc/yarpc-go/internal/encoding"
-	"github.com/yarpc/yarpc-go/internal/errors"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/transport"
 
 	"github.com/uber-go/atomic"
 	"github.com/uber/tchannel-go"

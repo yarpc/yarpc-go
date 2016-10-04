@@ -24,14 +24,14 @@
 package echoclient
 
 import (
-	"github.com/thriftrw/thriftrw-go/protocol"
+	yarpc "go.uber.org/yarpc"
 	"golang.org/x/net/context"
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/thrift/echo"
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/encoding/thrift"
-	echo2 "github.com/yarpc/yarpc-go/crossdock/thrift/echo/service/echo"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/crossdock/thrift/echo"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	echo2 "go.uber.org/yarpc/crossdock/thrift/echo/service/echo"
 )
 
 // Interface is a client for the Echo service.

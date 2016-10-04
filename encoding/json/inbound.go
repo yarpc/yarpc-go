@@ -24,10 +24,10 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/internal/encoding"
-	"github.com/yarpc/yarpc-go/internal/meta"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/meta"
+	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
 )

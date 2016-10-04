@@ -23,9 +23,9 @@ package tchserver
 import (
 	"time"
 
-	"github.com/yarpc/yarpc-go"
-	"github.com/yarpc/yarpc-go/crossdock/client/random"
-	"github.com/yarpc/yarpc-go/encoding/json"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/crossdock/client/random"
+	"go.uber.org/yarpc/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"

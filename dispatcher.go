@@ -21,9 +21,9 @@
 package yarpc
 
 import (
-	"github.com/yarpc/yarpc-go/internal/request"
-	"github.com/yarpc/yarpc-go/internal/sync"
-	"github.com/yarpc/yarpc-go/transport"
+	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"

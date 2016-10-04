@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	yarpc "github.com/yarpc/yarpc-go"
+	yarpc "go.uber.org/yarpc"
 )
 
 func TestResMeta(t *testing.T) {

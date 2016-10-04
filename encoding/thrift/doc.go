@@ -22,15 +22,15 @@
 //
 // To use this package, you must install ThriftRW 0.2.0 or newer.
 //
-// 	go get github.com/thriftrw/thriftrw-go
+// 	go get go.uber.org/thriftrw
 //
 // You must also install the ThriftRW plugin for YARPC.
 //
-// 	go get github.com/yarpc/yarpc-go/encoding/thrift/thriftrw-plugin-yarpc
+// 	go get go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc
 //
 // To generate YARPC compatible code from a Thrift file, use the command,
 //
-// 	thriftrw-go --plugin yarpc myservice.thrift
+// 	thriftrw --plugin yarpc myservice.thrift
 //
 // In addition to generating code for types specified in your THrift file,
 // this will generate two packages for each service in the file: a client

@@ -27,14 +27,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yarpc/yarpc-go/transport"
-	"github.com/yarpc/yarpc-go/transport/transporttest"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/thriftrw/thriftrw-go/envelope"
-	"github.com/thriftrw/thriftrw-go/wire"
+	"go.uber.org/thriftrw/envelope"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 )
 

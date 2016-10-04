@@ -1,5 +1,6 @@
 sudo: false
 language: go
+go_import_path: go.uber.org/yarpc
 
 env:
   global:
@@ -29,12 +30,6 @@ matrix:
     # Tests
     #
     # Need virtualenv for example tests
-    - go: 1.5
-      env: TYPE=test
-      addons: {apt: {packages: [python-virtualenv]}}
-    - go: 1.6
-      env: TYPE=test
-      addons: {apt: {packages: [python-virtualenv]}}
     - go: 1.7
       env: TYPE=test
       addons: {apt: {packages: [python-virtualenv]}}
@@ -45,7 +40,6 @@ matrix:
 before_install:
 - go version
 - |
-  set -ex
   case "$TYPE" in
     crossdock)
       docker version
@@ -56,11 +50,9 @@ before_install:
       docker-compose version
       ;;
   esac
-  set +ex
 
 install:
 - |
-  set -ex
   make install
   case "$TYPE" in
     lint)
@@ -75,7 +67,6 @@ install:
 
 script:
 - |
-  set -ex
   case "$TYPE" in
     lint)
       make lint
@@ -90,16 +81,13 @@ script:
       docker-compose logs
       ;;
   esac
-  set +ex
 
 after_success:
 - |
-  set -ex
   case "$TYPE" in
     crossdock)
       export REPO=yarpc/yarpc-go
-      export PR=https://api.github.com/repos/$TRAVIS_REPO_SLUG/pulls/$TRAVIS_PULL_REQUEST
-      export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo `curl -s $PR | jq -r .head.ref`; fi)
+      export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
       export TAG=`if [ "$BRANCH" == "master" ]; then echo "latest"; else echo $BRANCH; fi`
 
       docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
@@ -109,4 +97,3 @@ after_success:
       docker push $REPO
       ;;
   esac
-  set +ex

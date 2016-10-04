@@ -20,5 +20,5 @@
 
 package thrift
 
-//go:generate thriftrw-go internal.thrift
+//go:generate thriftrw internal.thrift
 //go:generate ../../scripts/updateLicenses.sh

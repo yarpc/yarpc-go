@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yarpc/yarpc-go/internal/net"
+	"go.uber.org/yarpc/internal/net"
 )
 
 const addr = ":8085"

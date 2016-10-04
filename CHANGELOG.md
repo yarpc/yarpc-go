@@ -1,10 +1,31 @@
 Releases
 ========
 
-v0.3.0 (unreleased)
+v0.4.0 (unreleased)
 -------------------
 
+-   No changes yet.
+
+
+v0.3.1 (2016-09-31)
+-------------------
+
+-   Fix missing canonical import path to `go.uber.org/yarpc`.
+
+
+v0.3.0 (2016-09-30)
+-------------------
+
+-   **Breaking**: Rename project to `go.uber.org/yarpc`.
+-   **Breaking**: Switch to `go.uber.org/thriftrw ~0.3` from
+    `github.com/thriftrw/thriftrw-go ~0.2`.
 -   Update opentracing-go to `>= 1, < 2`.
+
+
+v0.2.1 (2016-09-28)
+-------------------
+
+-   Loosen constraint on `opentracing-go` to `>= 0.9, < 2`.
 
 
 v0.2.0 (2016-09-19)
