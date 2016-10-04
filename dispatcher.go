@@ -35,12 +35,7 @@ import (
 type Dispatcher interface {
 	transport.Handler
 	transport.Registry
-
-	// Retrieves a new Outbound transport that will make requests to the given
-	// service.
-	//
-	// This panics if the given service is unknown.
-	Channel(service string) transport.Channel
+	transport.ChannelProvider
 
 	// Inbounds returns a copy of the list of inbounds for this RPC object.
 	//
