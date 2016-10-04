@@ -103,7 +103,7 @@ func RegisterClientFactory(f interface{}) (forget func()) {
 // Factory functions for different client types may be registered using the
 // RegisterClientFactory function. This function panics if an empty client
 // field without a registered constructor is encountered.
-func InjectClients(src Dispatcher, dest interface{}) {
+func InjectClients(src transport.ChannelProvider, dest interface{}) {
 	destV := reflect.ValueOf(dest)
 	destT := reflect.TypeOf(dest)
 	if destT.Kind() != reflect.Ptr || destT.Elem().Kind() != reflect.Struct {

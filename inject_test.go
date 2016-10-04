@@ -1,6 +1,8 @@
 package yarpc_test
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	"go.uber.org/yarpc"
@@ -48,36 +50,46 @@ func TestRegisterClientFactoryPanics(t *testing.T) {
 }
 
 func TestInjectClientsPanics(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
 	type unknownClient interface{}
 
 	tests := []struct {
-		name      string
-		outbounds []string
-		target    interface{}
+		name           string
+		failOnServices []string
+		target         interface{}
 	}{
 		{
 			name:   "not a pointer to a struct",
 			target: struct{}{},
 		},
 		{
-			name: "unknown service",
+			name:           "unknown service",
+			failOnServices: []string{"foo"},
 			target: &struct {
 				Client json.Client `service:"foo"`
 			}{},
 		},
 		{
-			name:      "unknown client",
-			outbounds: []string{"foo"},
+			name: "unknown client",
 			target: &struct {
-				Client unknownClient `service:"foo"`
+				Client unknownClient `service:"bar"`
 			}{},
 		},
 	}
 
 	for _, tt := range tests {
-		dispatcherWithOutbounds(t, tt.outbounds, func(d yarpc.Dispatcher) {
-			assert.Panics(t, func() { yarpc.InjectClients(d, tt.target) }, tt.name)
-		})
+		cp := newMockChannelProvier(mockCtrl)
+		for _, s := range tt.failOnServices {
+			cp.EXPECT().Channel(s).Do(func(s string) {
+				panic(fmt.Sprintf("unknown service %q", s))
+			})
+		}
+
+		assert.Panics(t, func() {
+			yarpc.InjectClients(cp, tt.target)
+		}, tt.name)
 	}
 }
 
@@ -93,9 +105,15 @@ func TestInjectClientSuccess(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	tests := []struct {
-		name      string
-		outbounds []string
-		target    interface{}
+		name   string
+		target interface{}
+
+		// list of services for which Channel() should return successfully
+		knownServices []string
+
+		// list of field names in target we expect to be nil or non-nil
+		wantNil    []string
+		wantNonNil []string
 	}{
 		{
 			name:   "empty",
@@ -109,52 +127,72 @@ func TestInjectClientSuccess(t *testing.T) {
 				Client: json.New(transport.IdentityChannel(
 					"foo", "bar", transporttest.NewMockOutbound(mockCtrl))),
 			},
+			wantNonNil: []string{"Client"},
 		},
 		{
 			name: "unknown type untagged",
 			target: &struct {
 				Client unknownClient `notservice:"foo"`
 			}{},
+			wantNil: []string{"Client"},
 		},
 		{
-			name:      "unknown type non-nil",
-			outbounds: []string{"foo"},
+			name: "unknown type non-nil",
 			target: &struct {
 				Client unknownClient `service:"foo"`
 			}{Client: unknownClient(struct{}{})},
+			wantNonNil: []string{"Client"},
 		},
 		{
-			name:      "known type",
-			outbounds: []string{"foo"},
+			name:          "known type",
+			knownServices: []string{"foo"},
 			target: &struct {
 				Client knownClient `service:"foo"`
 			}{},
+			wantNonNil: []string{"Client"},
 		},
 		{
-			name:      "default encodings",
-			outbounds: []string{"jsontest", "rawtest"},
+			name:          "default encodings",
+			knownServices: []string{"jsontest", "rawtest"},
 			target: &struct {
 				JSON json.Client `service:"jsontest"`
 				Raw  raw.Client  `service:"rawtest"`
 			}{},
+			wantNonNil: []string{"JSON", "Raw"},
+		},
+		{
+			name: "unexported field",
+			target: &struct {
+				rawClient raw.Client `service:"rawtest"`
+			}{},
+			wantNil: []string{"rawClient"},
 		},
 	}
 
 	for _, tt := range tests {
-		dispatcherWithOutbounds(t, tt.outbounds, func(d yarpc.Dispatcher) {
-			assert.NotPanics(t, func() { yarpc.InjectClients(d, tt.target) }, tt.name)
-		})
+		cp := newMockChannelProvier(mockCtrl, tt.knownServices...)
+		assert.NotPanics(t, func() {
+			yarpc.InjectClients(cp, tt.target)
+		}, tt.name)
+
+		for _, fieldName := range tt.wantNil {
+			field := reflect.ValueOf(tt.target).Elem().FieldByName(fieldName)
+			assert.True(t, field.IsNil(), "expected %q to be nil", fieldName)
+		}
+
+		for _, fieldName := range tt.wantNonNil {
+			field := reflect.ValueOf(tt.target).Elem().FieldByName(fieldName)
+			assert.False(t, field.IsNil(), "expected %q to be non-nil", fieldName)
+		}
 	}
 }
 
-func dispatcherWithOutbounds(t *testing.T, outnames []string, f func(yarpc.Dispatcher)) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	outbounds := make(transport.Outbounds, len(outnames))
-	for _, name := range outnames {
-		outbounds[name] = transporttest.NewMockOutbound(mockCtrl)
+// newMockChannelProvier builds a MockChannelProvider which expects Channel()
+// calls for the given services and returns mock channels for them.
+func newMockChannelProvier(ctrl *gomock.Controller, services ...string) *transporttest.MockChannelProvider {
+	cp := transporttest.NewMockChannelProvider(ctrl)
+	for _, s := range services {
+		cp.EXPECT().Channel(s).Return(transporttest.NewMockChannel(ctrl))
 	}
-
-	f(yarpc.NewDispatcher(yarpc.Config{Name: "foo", Outbounds: outbounds}))
+	return cp
 }
