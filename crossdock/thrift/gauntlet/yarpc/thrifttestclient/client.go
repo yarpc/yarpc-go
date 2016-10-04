@@ -24,14 +24,14 @@
 package thrifttestclient
 
 import (
-	yarpc "go.uber.org/yarpc"
-	"golang.org/x/net/context"
 	"go.uber.org/thriftrw/protocol"
-	"go.uber.org/thriftrw/wire"
+	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/thrifttest"
+	"go.uber.org/yarpc"
+	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is a client for the ThriftTest service.
@@ -171,6 +171,12 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 		Channel:  c,
 		Protocol: protocol.Binary,
 	}, opts...)}
+}
+
+func init() {
+	yarpc.RegisterClientFactory(func(c transport.Channel) Interface {
+		return New(c)
+	})
 }
 
 type client struct{ c thrift.Client }

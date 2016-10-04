@@ -48,6 +48,10 @@ func New(c transport.Channel) Client {
 	return jsonClient{ch: c}
 }
 
+func init() {
+	yarpc.RegisterClientFactory(New)
+}
+
 type jsonClient struct {
 	ch transport.Channel
 }
