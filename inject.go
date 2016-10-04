@@ -114,9 +114,9 @@ func InjectClients(src transport.ChannelProvider, dest interface{}) {
 	structT := destT.Elem()
 	for i := 0; i < structV.NumField(); i++ {
 		fieldInfo := structT.Field(i)
+		fieldV := structV.Field(i)
 
-		service := fieldInfo.Tag.Get("service")
-		if service == "" {
+		if !fieldV.CanSet() {
 			continue
 		}
 
@@ -125,7 +125,11 @@ func InjectClients(src transport.ChannelProvider, dest interface{}) {
 			continue
 		}
 
-		fieldV := structV.Field(i)
+		service := fieldInfo.Tag.Get("service")
+		if service == "" {
+			continue
+		}
+
 		if !fieldV.IsNil() {
 			continue
 		}
