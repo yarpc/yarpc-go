@@ -25,3 +25,5 @@ import:
   subpackages:
   - assert
   - require
+- package: github.com/uber/jaeger-client-go
+  version: ^1
