@@ -28,11 +28,11 @@ import (
 )
 
 var (
-	_clientFactories = make(map[reflect.Type]reflect.Value)
-	_typeOfChannel   = reflect.TypeOf((*transport.Channel)(nil)).Elem()
+	_clientBuilders = make(map[reflect.Type]reflect.Value)
+	_typeOfChannel  = reflect.TypeOf((*transport.Channel)(nil)).Elem()
 )
 
-func getFactoryType(f interface{}) reflect.Type {
+func getBuilderType(f interface{}) reflect.Type {
 	if f == nil {
 		panic("f must not be nil")
 	}
@@ -53,7 +53,7 @@ func getFactoryType(f interface{}) reflect.Type {
 	return fT.Out(0)
 }
 
-// RegisterClientFactory registers a factory function for a specific client
+// RegisterClientBuilder registers a builder function for a specific client
 // type.
 //
 // Functions must have the signature,
@@ -65,20 +65,20 @@ func getFactoryType(f interface{}) reflect.Type {
 // This function panics if a client for the given type has already been
 // registered.
 //
-// After a factory function for a client type is registered, these objects can
+// After a builder function for a client type is registered, these objects can
 // be instantiated automatically using InjectClients.
 //
-// A function to unregister the factory function is returned. Note that the
-// function will clear whatever the corresponding type's factory function is
+// A function to unregister the builder function is returned. Note that the
+// function will clear whatever the corresponding type's builder function is
 // at the time it is called, regardless of whether the value matches what was
 // passed to this function or not.
-func RegisterClientFactory(f interface{}) (forget func()) {
-	t := getFactoryType(f)
-	if _, conflict := _clientFactories[t]; conflict {
-		panic(fmt.Sprintf("a factory for %v has already been registered", t))
+func RegisterClientBuilder(f interface{}) (forget func()) {
+	t := getBuilderType(f)
+	if _, conflict := _clientBuilders[t]; conflict {
+		panic(fmt.Sprintf("a builder for %v has already been registered", t))
 	}
-	_clientFactories[t] = reflect.ValueOf(f)
-	return func() { delete(_clientFactories, t) }
+	_clientBuilders[t] = reflect.ValueOf(f)
+	return func() { delete(_clientBuilders, t) }
 }
 
 // InjectClients injects clients from the given Dispatcher into the given
@@ -100,8 +100,8 @@ func RegisterClientFactory(f interface{}) (forget func()) {
 // 	h.KeyValueClient = keyvalueclient.New(dispatcher.Channel("keyvalue"))
 // 	h.UserClient = json.New(dispatcher.Channel("users"))
 //
-// Factory functions for different client types may be registered using the
-// RegisterClientFactory function. This function panics if an empty client
+// Builder functions for different client types may be registered using the
+// RegisterClientBuilder function. This function panics if an empty client
 // field without a registered constructor is encountered.
 func InjectClients(src transport.ChannelProvider, dest interface{}) {
 	destV := reflect.ValueOf(dest)
@@ -134,7 +134,7 @@ func InjectClients(src transport.ChannelProvider, dest interface{}) {
 			continue
 		}
 
-		constructor, ok := _clientFactories[fieldT]
+		constructor, ok := _clientBuilders[fieldT]
 		if !ok {
 			panic(fmt.Sprintf("a constructor for %v has not been registered", fieldT))
 		}

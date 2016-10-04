@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRegisterClientFactoryPanics(t *testing.T) {
+func TestRegisterClientBuilderPanics(t *testing.T) {
 	tests := []struct {
 		name string
 		give interface{}
@@ -45,7 +45,7 @@ func TestRegisterClientFactoryPanics(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Panics(t, func() { yarpc.RegisterClientFactory(tt.give) }, tt.name)
+		assert.Panics(t, func() { yarpc.RegisterClientBuilder(tt.give) }, tt.name)
 	}
 }
 
@@ -97,7 +97,7 @@ func TestInjectClientSuccess(t *testing.T) {
 	type unknownClient interface{}
 
 	type knownClient interface{}
-	clear := yarpc.RegisterClientFactory(
+	clear := yarpc.RegisterClientBuilder(
 		func(transport.Channel) knownClient { return knownClient(struct{}{}) })
 	defer clear()
 

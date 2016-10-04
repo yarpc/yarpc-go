@@ -55,7 +55,7 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 }
 
 func init() {
-	yarpc.RegisterClientFactory(func(c transport.Channel) Interface {
+	yarpc.RegisterClientBuilder(func(c transport.Channel) Interface {
 		return New(c)
 	})
 }
