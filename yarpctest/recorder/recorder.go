@@ -44,7 +44,8 @@ const recorderDir = "testdata/recordings"
 type Mode int
 
 const (
-	InvalidMode = iota + 1
+	// invalidMode is private and used to represent invalid modes.
+	invalidMode = iota + 1
 
 	// Replay replays stored request/response pairs.
 	Replay
@@ -70,6 +71,7 @@ func (m Mode) toHumanString() string {
 	panic("Unreachable")
 }
 
+// ModeFromString converts an English string of a mode to a `Mode`.
 func ModeFromString(s string) (Mode, error) {
 	switch s {
 	case "replay":
@@ -79,7 +81,7 @@ func ModeFromString(s string) (Mode, error) {
 	case "append":
 		return Append, nil
 	}
-	return InvalidMode, fmt.Errorf(`invalid mode: "%s"`, s)
+	return invalidMode, fmt.Errorf(`invalid mode: "%s"`, s)
 }
 
 // Logger is an interface used by the recorder for logging and reporting fatal
@@ -115,7 +117,7 @@ func NewRecorder(logger Logger) (recorder *Recorder) {
 		logger.Fatal(err)
 	}
 	recorder = &Recorder{
-		mode:       InvalidMode,
+		mode:       invalidMode,
 		logger:     logger,
 		recordsDir: filepath.Join(cwd, recorderDir),
 	}
