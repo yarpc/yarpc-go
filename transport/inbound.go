@@ -22,17 +22,8 @@ package transport
 
 //go:generate mockgen -destination=transporttest/inbound.go -package=transporttest go.uber.org/yarpc/transport Inbound
 
-// Inbound is a transport that knows how to receive requests for procedure
-// calls.
-type Inbound interface {
-	// Starts accepting new requests and dispatches them to the given Handler.
-	//
-	// The function MUST return immediately, although it SHOULD block until
-	// the inbound is ready to start accepting new requests.
-	//
-	// Implementations can assume that this function is called at most once.
-	Start(handler Handler, deps Deps) error
-
+// BaseInbound is the commone interface for all inbounds
+type BaseInbound interface {
 	// Stops the inbound. No new requests will be processed.
 	//
 	// This MAY block while the server drains ongoing requests.
@@ -40,4 +31,18 @@ type Inbound interface {
 
 	// TODO some way for the inbound to expose the host and port it's
 	// listening on
+}
+
+// Inbound is a transport that knows how to receive requests for procedure
+// calls.
+type Inbound interface {
+	BaseInbound
+
+	// Starts accepting new requests and dispatches them to the given Handler.
+	//
+	// The function MUST return immediately, although it SHOULD block until
+	// the inbound is ready to start accepting new requests.
+	//
+	// Implementations can assume that this function is called at most once.
+	Start(handler Handler, deps Deps) error
 }
