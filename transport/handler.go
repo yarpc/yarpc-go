@@ -22,7 +22,7 @@ package transport
 
 import "golang.org/x/net/context"
 
-// Handler handles a single transport-level request.
+// Handler handles a single, transport-level, unary request.
 type Handler interface {
 	// Handle the given request, writing the response to the given
 	// ResponseWriter.
@@ -35,5 +35,19 @@ type Handler interface {
 		opts Options,
 		req *Request,
 		resw ResponseWriter,
+	) error
+}
+
+// OnewayHandler handles a single, transport-level, oneway request.
+type OnewayHandler interface {
+	// Handle the given oneway request
+	//
+	// An error may be returned in case of failures. BadRequestError must be
+	// returned for invalid requests. All other failures are treated as
+	// UnexpectedErrors.
+	HandleOneway(
+		ctx context.Context,
+		opts Options,
+		req *Request,
 	) error
 }
