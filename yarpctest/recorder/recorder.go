@@ -115,11 +115,11 @@ func NewRecorder(logger Logger) (recorder *Recorder) {
 		logger.Fatal(err)
 	}
 	recorder = &Recorder{
-		mode:       mode,
+		mode:       InvalidMode,
 		logger:     logger,
 		recordsDir: filepath.Join(cwd, recorderDir),
 	}
-	logger.Logf("recorder replaying from %v", recorder.recordsDir)
+	recorder.SetMode(mode)
 	return recorder
 }
 
