@@ -2,20 +2,15 @@ package grpc
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"net/url"
+	"strings"
 	"time"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal"
-
-	"strings"
-
-	"fmt"
-
-	"io"
-
-	"errors"
-
-	"net/url"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

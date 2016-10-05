@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 
 	"go.uber.org/yarpc/transport"
-
-	"net/url"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

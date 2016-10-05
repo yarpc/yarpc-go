@@ -5,12 +5,12 @@ import (
 	"log"
 	"time"
 
-	"golang.org/x/net/context"
-
-	yarpc "go.uber.org/yarpc"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/grpc"
+
+	"golang.org/x/net/context"
 )
 
 func main() {

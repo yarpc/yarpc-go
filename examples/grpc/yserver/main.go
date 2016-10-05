@@ -1,15 +1,15 @@
 package main
 
 import (
-	"log"
-
 	"fmt"
+	"log"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/grpc"
+
 	"golang.org/x/net/context"
 )
 

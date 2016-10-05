@@ -1,10 +1,9 @@
 package grpc
 
 import (
-	"testing"
-
 	"fmt"
 	"net/url"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )

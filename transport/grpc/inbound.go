@@ -3,10 +3,9 @@ package grpc
 import (
 	"fmt"
 	"net"
+	"net/url"
 
 	"go.uber.org/yarpc/transport"
-
-	"net/url"
 
 	"google.golang.org/grpc"
 )
