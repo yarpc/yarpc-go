@@ -24,9 +24,8 @@ import "golang.org/x/net/context"
 
 //go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound
 
-// Outbound is a transport that knows how to send requests for procedure
-// calls.
-type Outbound interface {
+// BaseOutbound is the common interface for all outbounds
+type BaseOutbound interface {
 	// Sets up the outbound to start making calls.
 	//
 	// This MUST block until the outbound is ready to start sending requests.
@@ -39,6 +38,12 @@ type Outbound interface {
 
 	// Options for all requests made through this Outbound.
 	Options() Options
+}
+
+// Outbound is a unary transport that knows how to send requests for procedure
+// calls.
+type Outbound interface {
+	BaseOutbound
 
 	// Call sends the given request through this transport and returns its
 	// response.
