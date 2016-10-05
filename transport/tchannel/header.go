@@ -22,33 +22,14 @@ package tchannel
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
-	"strings"
 
-	"go.uber.org/yarpc/internal/baggage"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/tchannel/internal"
 
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
-
-// pullBaggage pulls the context headers from the given transport.Headers,
-// deleting them from the original headers map.
-func pullBaggage(headers transport.Headers) map[string]string {
-	ctxHeaders := make(map[string]string)
-	prefix := strings.ToLower(BaggageHeaderPrefix)
-	prefixLen := len(prefix)
-	for k, v := range headers.Items() {
-		if strings.HasPrefix(k, prefix) {
-			key := k[prefixLen:]
-			ctxHeaders[key] = v
-			headers.Del(k)
-		}
-	}
-	return ctxHeaders
-}
 
 // readRequestHeaders reads headers and baggage from an incoming request.
 func readRequestHeaders(
@@ -59,9 +40,6 @@ func readRequestHeaders(
 	headers, err := readHeaders(format, getReader)
 	if err != nil {
 		return ctx, headers, err
-	}
-	if ctxHeaders := pullBaggage(headers); len(ctxHeaders) > 0 {
-		ctx = baggage.NewContextWithHeaders(ctx, ctxHeaders)
 	}
 	return ctx, headers, nil
 }
@@ -101,25 +79,12 @@ func writeRequestHeaders(
 	appHeaders map[string]string,
 	getWriter func() (tchannel.ArgWriter, error),
 ) error {
-	ctxHeaders := baggage.FromContext(ctx)
+	ctxHeaders := transport.Headers{}
 	headers := transport.NewHeadersWithCapacity(ctxHeaders.Len() + len(appHeaders))
 	// TODO: zero-alloc version
 
-	prefix := strings.ToLower(BaggageHeaderPrefix)
 	for k, v := range appHeaders {
-		if strings.HasPrefix(k, prefix) {
-			return fmt.Errorf(
-				// TODO: create error type for this
-				"%q is an invalid header: application headers cannot start with %q",
-				k, BaggageHeaderPrefix)
-		}
 		headers = headers.With(k, v)
-	}
-
-	if ctxHeaders.Len() > 0 {
-		for k, v := range ctxHeaders.Items() {
-			headers = headers.With(BaggageHeaderPrefix+k, v)
-		}
 	}
 
 	return writeHeaders(format, headers, getWriter)

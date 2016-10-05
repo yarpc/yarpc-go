@@ -49,25 +49,20 @@ func TestHandlerErrors(t *testing.T) {
 		headers []byte
 
 		wantHeaders map[string]string
-		wantBaggage map[string]string
 	}{
 		{
 			format:      tchannel.JSON,
-			headers:     []byte(`{"Rpc-Header-Foo": "bar", "context-foo": "Baz"}`),
+			headers:     []byte(`{"Rpc-Header-Foo": "bar"}`),
 			wantHeaders: map[string]string{"rpc-header-foo": "bar"},
-			wantBaggage: map[string]string{"foo": "Baz"},
 		},
 		{
 			format: tchannel.Thrift,
 			headers: []byte{
-				0x00, 0x02, // 2 headers
+				0x00, 0x01, // 1 header
 				0x00, 0x03, 'F', 'o', 'o', // Foo
 				0x00, 0x03, 'B', 'a', 'r', // Bar
-				0x00, 0x0B, 'C', 'o', 'n', 't', 'e', 'x', 't', '-', 'F', 'o', 'o', // Context-Foo
-				0x00, 0x03, 'B', 'a', 'z', // Baz
 			},
 			wantHeaders: map[string]string{"foo": "Bar"},
-			wantBaggage: map[string]string{"foo": "Baz"},
 		},
 	}
 
@@ -78,7 +73,7 @@ func TestHandlerErrors(t *testing.T) {
 
 		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
 		rpcHandler.EXPECT().Handle(
-			transporttest.NewContextMatcher(t, transporttest.ContextBaggage(tt.wantBaggage)),
+			transporttest.NewContextMatcher(t),
 			transportOptions,
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
