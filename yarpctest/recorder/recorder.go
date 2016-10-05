@@ -165,8 +165,8 @@ func (r *Recorder) hashRequest(request *transport.Request, body []byte) string {
 
 	ha(request.Caller)
 	ha(request.Service)
-	ha(request.Procedure)
 	ha(string(request.Encoding))
+	ha(request.Procedure)
 
 	headersMap := request.Headers.Items()
 	orderedHeadersKeys := make([]string, 0, len(headersMap))
@@ -178,6 +178,11 @@ func (r *Recorder) hashRequest(request *transport.Request, body []byte) string {
 		ha(k)
 		ha(headersMap[k])
 	}
+
+	ha(request.ShardKey)
+	ha(request.RoutingKey)
+	ha(request.RoutingDelegate)
+
 	_, err := hash.Write(body)
 	if err != nil {
 		log.Fatal(err)
