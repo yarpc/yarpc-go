@@ -7,7 +7,7 @@ import (
 )
 
 func TestPassThroughCodecMarshal(t *testing.T) {
-	codec := PassThroughCodec{}
+	codec := passThroughCodec{}
 	strMsg := "this is a test"
 	byteSender := []byte(strMsg)
 
@@ -18,7 +18,7 @@ func TestPassThroughCodecMarshal(t *testing.T) {
 }
 
 func TestPassThroughCodecMarshalError(t *testing.T) {
-	codec := PassThroughCodec{}
+	codec := passThroughCodec{}
 	strMsg := "this is a test"
 
 	result, err := codec.Marshal(&strMsg)
@@ -28,7 +28,7 @@ func TestPassThroughCodecMarshalError(t *testing.T) {
 }
 
 func TestPassThroughCodecUnmarshal(t *testing.T) {
-	codec := PassThroughCodec{}
+	codec := passThroughCodec{}
 	strMsg := "this is a test"
 	data := []byte(strMsg)
 	var receiver []byte
@@ -40,7 +40,7 @@ func TestPassThroughCodecUnmarshal(t *testing.T) {
 }
 
 func TestPassThroughCodecUnmarshalError(t *testing.T) {
-	codec := PassThroughCodec{}
+	codec := passThroughCodec{}
 	strMsg := "this is a test"
 	data := []byte(strMsg)
 	var receiver string
@@ -52,7 +52,7 @@ func TestPassThroughCodecUnmarshalError(t *testing.T) {
 }
 
 func TestPassThroughCodecString(t *testing.T) {
-	codec := PassThroughCodec{}
+	codec := passThroughCodec{}
 
 	assert.Equal(t, "passthrough", codec.String())
 }
