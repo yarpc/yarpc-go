@@ -33,8 +33,8 @@ type BaseInbound interface {
 	// listening on
 }
 
-// Inbound is a transport that knows how to receive requests for procedure
-// calls.
+// Inbound is a transport that knows how to receive unary requests for
+// procedure calls.
 type Inbound interface {
 	BaseInbound
 
@@ -45,4 +45,18 @@ type Inbound interface {
 	//
 	// Implementations can assume that this function is called at most once.
 	Start(handler Handler, deps Deps) error
+}
+
+// OnewayInbound is a transport that knows how to receive oneway requests
+// for procedure calls.
+type OnewayInbound interface {
+	BaseInbound
+
+	// Starts accepting new requests and dispatches them to the given Handler.
+	//
+	// The function MUST return immediately, although it SHOULD block until
+	// the inbound is ready to start accepting new requests.
+	//
+	// Implementations can assume that this function is called at most once.
+	Start(handler OnewayHandler, deps Deps) error
 }
