@@ -49,7 +49,7 @@ func (_m *MockInbound) EXPECT() *_MockInboundRecorder {
 	return _m.recorder
 }
 
-func (_m *MockInbound) Start(_param0 transport.Handler, _param1 transport.Deps) error {
+func (_m *MockInbound) Start(_param0 transport.ServiceConfig, _param1 transport.Deps) error {
 	ret := _m.ctrl.Call(_m, "Start", _param0, _param1)
 	ret0, _ := ret[0].(error)
 	return ret0

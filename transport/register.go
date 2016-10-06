@@ -29,7 +29,7 @@ import (
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport Handler
+//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport Handler,Registry
 
 // ServiceProcedure represents a service and procedure registered against a
 // Registry.

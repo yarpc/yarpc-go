@@ -31,7 +31,7 @@ type Inbound interface {
 	// the inbound is ready to start accepting new requests.
 	//
 	// Implementations can assume that this function is called at most once.
-	Start(handler Handler, deps Deps) error
+	Start(config ServiceConfig, deps Deps) error
 
 	// Stops the inbound. No new requests will be processed.
 	//
@@ -40,4 +40,10 @@ type Inbound interface {
 
 	// TODO some way for the inbound to expose the host and port it's
 	// listening on
+}
+
+// ServiceConfig TODO
+type ServiceConfig struct {
+	Name     string
+	Registry Registry
 }

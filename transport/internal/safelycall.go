@@ -56,3 +56,19 @@ func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context
 
 	return err
 }
+
+// SafelyCallRegistry TODO
+func SafelyCallRegistry(
+	reg transport.Registry,
+	start time.Time,
+	ctx context.Context,
+	opts transport.Options,
+	req *transport.Request,
+	resq transport.ResponseWriter,
+) error {
+	handler, err := reg.GetHandler(req.Service, req.Procedure)
+	if err != nil {
+		return err
+	}
+	return SafelyCallHandler(handler, start, ctx, opts, req, resq)
+}
