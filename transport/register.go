@@ -46,6 +46,7 @@ type Registry interface {
 	// service may be empty to indicate that the default service name should
 	// be used.
 	Register(service, procedure string, handler Handler)
+	RegisterOneway(service, procedure string, handler OnewayHandler)
 
 	// ServiceProcedures returns a list of services and their procedures that
 	// have been registered so far.
@@ -57,8 +58,7 @@ type Registry interface {
 	//
 	// service may be empty to indicate that the default service name should
 	// be used.
-	GetHandler(service, procedure string) (Handler, error)
-	GetOnewayHandler(service, procedure string) (OnewayHandler, error)
+	GetHandler(service, procedure string) (HandlerInfo, error)
 }
 
 // MapRegistry is a Registry that maintains a map of the registered
@@ -66,6 +66,7 @@ type Registry interface {
 type MapRegistry struct {
 	defaultService string
 	entries        map[ServiceProcedure]Handler
+	onewayEntries  map[ServiceProcedure]OnewayHandler
 }
 
 // NewMapRegistry builds a new MapRegistry that uses the given name as the
@@ -74,6 +75,7 @@ func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
 		entries:        make(map[ServiceProcedure]Handler),
+		onewayEntries:  make(map[ServiceProcedure]OnewayHandler),
 	}
 }
 
@@ -82,8 +84,15 @@ func (m MapRegistry) Register(service, procedure string, handler Handler) {
 	if service == "" {
 		service = m.defaultService
 	}
-
 	m.entries[ServiceProcedure{service, procedure}] = handler
+}
+
+// RegisterOneway registers the procedure with the MapRegistry.
+func (m MapRegistry) RegisterOneway(service, procedure string, handler OnewayHandler) {
+	if service == "" {
+		service = m.defaultService
+	}
+	m.onewayEntries[ServiceProcedure{service, procedure}] = handler
 }
 
 // ServiceProcedures returns a list of services and their procedures that
@@ -99,31 +108,19 @@ func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
 
 // GetHandler retrieves the Handler for the given Procedure or returns an
 // error.
-func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
+func (m MapRegistry) GetHandler(service, procedure string) (HandlerInfo, error) {
 	if service == "" {
 		service = m.defaultService
 	}
 
 	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-		return h, nil
+		return HandlerInfo{Mode: Unary, Handler: h}, nil
 	}
-	return nil, errors.UnrecognizedProcedureError{
-		Service:   service,
-		Procedure: procedure,
-	}
-}
-
-// GetOnewayHandler retrieves the Handler for the given Procedure or returns an
-// error.
-func (m MapRegistry) GetOnewayHandler(service, procedure string) (OnewayHandler, error) {
-	if service == "" {
-		service = m.defaultService
+	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {
+		return HandlerInfo{Mode: Oneway, OnewayHandler: h}, nil
 	}
 
-	// if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-	// 	return h, nil
-	// }
-	return nil, errors.UnrecognizedProcedureError{
+	return HandlerInfo{Mode: Unknown}, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
 	}

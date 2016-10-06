@@ -155,6 +155,11 @@ func (d dispatcher) Register(service, procedure string, handler transport.Handle
 	d.Registry.Register(service, procedure, handler)
 }
 
+func (d dispatcher) RegisterOneway(service, procedure string, handler transport.OnewayHandler) {
+	//TODO: apply oneway specific Interceptor
+	d.Registry.RegisterOneway(service, procedure, handler)
+}
+
 func (d dispatcher) Stop() error {
 	var wait sync.ErrorWaiter
 	for _, i := range d.inbounds {

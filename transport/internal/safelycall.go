@@ -34,8 +34,14 @@ import (
 
 // SafelyCallHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
-func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context,
-	opts transport.Options, req *transport.Request, resq transport.ResponseWriter) (err error) {
+func SafelyCallHandler(
+	h transport.Handler,
+	start time.Time,
+	ctx context.Context,
+	opts transport.Options,
+	req *transport.Request,
+	resq transport.ResponseWriter,
+) (err error) {
 
 	// We recover panics from now on.
 	defer func() {
@@ -66,9 +72,9 @@ func SafelyCallRegistry(
 	req *transport.Request,
 	resq transport.ResponseWriter,
 ) error {
-	handler, err := reg.GetHandler(req.Service, req.Procedure)
+	handlerInfo, err := reg.GetHandler(req.Service, req.Procedure)
 	if err != nil {
 		return err
 	}
-	return SafelyCallHandler(handler, start, ctx, opts, req, resq)
+	return SafelyCallHandler(handlerInfo.Handler, start, ctx, opts, req, resq)
 }

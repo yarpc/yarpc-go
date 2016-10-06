@@ -51,3 +51,23 @@ type OnewayHandler interface {
 		req *Request,
 	) error
 }
+
+// Mode is an enum of RPC types
+type Mode int
+
+const (
+	// Unknown RPC type
+	Unknown = iota
+	// Unary RPC type
+	Unary
+	// Oneway RPC type
+	Oneway
+)
+
+// HandlerInfo holds
+type HandlerInfo struct {
+	Mode Mode
+
+	Handler       Handler
+	OnewayHandler OnewayHandler
+}
