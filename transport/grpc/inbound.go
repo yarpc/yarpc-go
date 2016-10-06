@@ -53,23 +53,10 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 		Deps:     d,
 	}
 
-	var serviceDescs []grpc.ServiceDesc
-	if reg, ok := h.(transport.Registry); ok {
-		serviceProcedures := make(map[string][]string)
-		for _, sp := range reg.ServiceProcedures() {
-			serviceProcedures[sp.Service] = append(serviceProcedures[sp.Service], sp.Procedure)
-		}
-
-		for service, procs := range serviceProcedures {
-			serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, service, procs))
-		}
-	} else {
-		// Called with a plain Handler instead of Dispatcher. Fall back to no meaningful service description.
-		serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, "yarpc", []string{"yarpc"}))
-	}
+	serviceDescs := getServiceDescs(gHandler)
 
 	// Register Services
-	for _, desc := range serviceDescs {
+	for _, desc := range *serviceDescs {
 		i.server.RegisterService(&desc, passThroughServer{})
 	}
 
@@ -79,12 +66,39 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	return nil
 }
 
+/*
+ServiceDescs in GRPC define how clients can interact with a server and usually have well defined schemas to match
+request methods with service functions.  For our purposes we are avoiding this check by dynamically creating the
+serviceDescs from the YARPC registered procedures.  This allows us to see what methods are available and to create an
+individual routing mechanism to each one.  All the routes will be forwarded to the same "Handler" which will do YARPC
+routing to handle methods and encodings.
+*/
+func getServiceDescs(gHandler handler) *[]grpc.ServiceDesc {
+	var serviceDescs []grpc.ServiceDesc
+	if reg, ok := gHandler.Handler.(transport.Registry); ok {
+		// Go through the registry to find all the methods that are currently attached to inbounds
+		serviceProcedures := make(map[string][]string)
+		for _, sp := range reg.ServiceProcedures() {
+			serviceProcedures[sp.Service] = append(serviceProcedures[sp.Service], sp.Procedure)
+		}
+
+		// Create separate routes for each service & procedure
+		for service, procs := range serviceProcedures {
+			serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, service, procs))
+		}
+	} else {
+		// Called with a plain Handler instead of Dispatcher. Fall back to no meaningful service description.
+		serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, "yarpc", []string{"yarpc"}))
+	}
+	return &serviceDescs
+}
+
 func createServiceDesc(gHandler handler, service string, procedures []string) *grpc.ServiceDesc {
 	methodDescs := make([]grpc.MethodDesc, 0, len(procedures))
 	for _, proc := range procedures {
 		methodDescs = append(methodDescs, grpc.MethodDesc{
 			MethodName: url.QueryEscape(proc),
-			Handler:    gHandler.Handle,
+			Handler:    gHandler.Handle, // Catchall method that does custom YARPC routing
 		})
 	}
 
