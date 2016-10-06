@@ -270,6 +270,12 @@ func (r *Recorder) loadRecord(filepath string) (*transport.Response, error) {
 	if err := yaml.Unmarshal(rawRecord, &cachedRecord); err != nil {
 		return nil, err
 	}
+
+	if cachedRecord.Version != currentRecordVersion {
+		return nil, fmt.Errorf("unsupported record version %d (expected %d)",
+			cachedRecord.Version, currentRecordVersion)
+	}
+
 	response := transport.Response{
 		Headers: transport.HeadersFromMap(cachedRecord.Response.Headers),
 		Body:    ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
@@ -292,6 +298,7 @@ func (r *Recorder) saveRecord(request *transport.Request, requestBody []byte,
 	}
 
 	rawRecord, err := yaml.Marshal(&record{
+		Version: currentRecordVersion,
 		Request: requestRecord{
 			Caller:    request.Caller,
 			Service:   request.Service,
@@ -326,7 +333,10 @@ type responseRecord struct {
 	Body    base64blob
 }
 
+const currentRecordVersion = 1
+
 type record struct {
+	Version  uint
 	Request  requestRecord
 	Response responseRecord
 }
