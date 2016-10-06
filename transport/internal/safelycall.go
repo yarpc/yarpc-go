@@ -57,7 +57,9 @@ func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context
 	return err
 }
 
-// SafelyCallRegistry TODO
+// SafelyCallRegistry calls procedures on the given registry safely.
+//
+// See also SafelyCallHandler.
 func SafelyCallRegistry(
 	reg transport.Registry,
 	start time.Time,
