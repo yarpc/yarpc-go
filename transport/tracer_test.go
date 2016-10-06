@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/transport"
@@ -111,13 +112,15 @@ func (h handler) assertBaggage(ctx context.Context) {
 }
 
 func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
+	// TODO: Use port 0 once https://github.com/yarpc/yarpc-go/issues/381 is
+	// fixed.
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
-			http.NewInbound(":8080"),
+			http.NewInbound(":18080"),
 		},
 		Outbounds: transport.Outbounds{
-			"yarpc-test": http.NewOutbound("http://127.0.0.1:8080"),
+			"yarpc-test": http.NewOutbound("http://127.0.0.1:18080"),
 		},
 		Tracer: tracer,
 	})
@@ -156,7 +159,7 @@ func TestHTTPTracer(t *testing.T) {
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 
-	dispatcher.Start()
+	require.NoError(t, dispatcher.Start())
 	defer dispatcher.Stop()
 
 	ctx, cancel := handler.createContextWithBaggage(tracer)
@@ -176,7 +179,7 @@ func TestTChannelTracer(t *testing.T) {
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 
-	dispatcher.Start()
+	require.NoError(t, dispatcher.Start())
 	defer dispatcher.Stop()
 
 	ctx, cancel := handler.createContextWithBaggage(tracer)
@@ -213,7 +216,7 @@ func TestHTTPTracerDepth2(t *testing.T) {
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 
-	dispatcher.Start()
+	require.NoError(t, dispatcher.Start())
 	defer dispatcher.Stop()
 
 	ctx, cancel := handler.createContextWithBaggage(tracer)
@@ -233,7 +236,7 @@ func TestTChannelTracerDepth2(t *testing.T) {
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 
-	dispatcher.Start()
+	require.NoError(t, dispatcher.Start())
 	defer dispatcher.Stop()
 
 	ctx, cancel := handler.createContextWithBaggage(tracer)
