@@ -28,7 +28,6 @@ func (o *outbound) Start(d transport.Deps) error {
 		return err
 	}
 	o.conn = conn
-
 	return nil
 }
 
@@ -48,7 +47,6 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	}
 
 	uri := fmt.Sprintf("/%s/%s", url.QueryEscape(req.Service), url.QueryEscape(req.Procedure))
-
 	return callDownstream(ctx, uri, &requestBody, o.conn)
 }
 
@@ -66,6 +64,5 @@ func callDownstream(
 
 	buf := bytes.NewBuffer(responseBody)
 	closer := ioutil.NopCloser(buf)
-
 	return &transport.Response{Body: closer}, nil
 }

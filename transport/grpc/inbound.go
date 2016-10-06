@@ -29,9 +29,6 @@ type inbound struct {
 }
 
 func (i *inbound) Server() *grpc.Server {
-	if i.server == nil {
-		return nil
-	}
 	return i.server
 }
 

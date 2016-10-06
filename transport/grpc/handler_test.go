@@ -1,61 +1,55 @@
 package grpc
 
 import (
-	"fmt"
-	"net/url"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetServiceAndProcedureFromMethod_Base(t *testing.T) {
-	method := "foo/bar"
+func TestGetServiceAndProcedureFromMethod(t *testing.T) {
+	tests := []struct {
+		method        string
+		wantService   string
+		wantProcedure string
+		wantError     error
+	}{
+		{
+			method:        "foo/bar",
+			wantService:   "foo",
+			wantProcedure: "bar",
+		},
+		{
+			method:        "/foo/bar",
+			wantService:   "foo",
+			wantProcedure: "bar",
+		},
+		{
+			method:        "/foo%2Fla/bar%2Fmoo",
+			wantService:   "foo/la",
+			wantProcedure: "bar/moo",
+		},
+		{
+			method:    "",
+			wantError: errors.New("no service procedure provided"),
+		},
+		{
+			method:    "foo%/bar",
+			wantError: errors.New("could not parse service for request: foo%, error: invalid URL escape \"%\""),
+		},
+		{
+			method:    "foo/bar%",
+			wantError: errors.New("could not parse procedure for request: bar%, error: invalid URL escape \"%\""),
+		},
+	}
 
-	service, procedure, err := getServiceAndProcedureFromMethod(method)
+	for _, tt := range tests {
+		service, procedure, err := getServiceAndProcedureFromMethod(tt.method)
 
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "foo", service)
-	assert.Equal(t, "bar", procedure)
-}
-
-func TestGetServiceAndProcedureFromMethod_ExtraSlash(t *testing.T) {
-	method := "/foo/bar"
-
-	service, procedure, err := getServiceAndProcedureFromMethod(method)
-
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "foo", service)
-	assert.Equal(t, "bar", procedure)
-}
-
-func TestGetServiceAndProcedureFromMethod_URLEncoded(t *testing.T) {
-	expectedService := "foo/la"
-	expectedProcedure := "bar/moo"
-	method := fmt.Sprintf("/%s/%s", url.QueryEscape(expectedService), url.QueryEscape(expectedProcedure))
-
-	service, procedure, err := getServiceAndProcedureFromMethod(method)
-
-	assert.Equal(t, nil, err)
-	assert.Equal(t, expectedService, service)
-	assert.Equal(t, expectedProcedure, procedure)
-}
-
-func TestGetServiceAndProcedureFromMethod_ServiceDecodeError(t *testing.T) {
-	invalidService := "foo%"
-	method := fmt.Sprintf("/%s/bar", invalidService)
-
-	_, _, err := getServiceAndProcedureFromMethod(method)
-
-	assert.NotNil(t, err, "Invalid service encoding did not cause an error")
-}
-
-func TestGetServiceAndProcedureFromMethod_ProcedureDecodeError(t *testing.T) {
-	invalidProcedure := "bar%"
-	method := fmt.Sprintf("/foo/%s", invalidProcedure)
-
-	_, _, err := getServiceAndProcedureFromMethod(method)
-
-	assert.NotNil(t, err, "Invalid procedure encoding did not cause an error")
+		assert.Equal(t, tt.wantError, err)
+		assert.Equal(t, tt.wantService, service)
+		assert.Equal(t, tt.wantProcedure, procedure)
+	}
 }
 
 func TestResponseWriter_Write(t *testing.T) {

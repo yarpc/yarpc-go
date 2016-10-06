@@ -32,16 +32,15 @@ func (h handler) Handle(
 	dec func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
 ) (interface{}, error) {
-	treq, extractErr := getTRequest(ctx, dec)
-	if extractErr != nil {
-		return nil, extractErr
+	treq, err := getTRequest(ctx, dec)
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO handle deadlines
 	// TODO handle validation
 
 	start := time.Now()
-
 	return callHandler(h, start, ctx, treq)
 }
 
@@ -63,37 +62,40 @@ func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*
 		Encoding:  transport.Encoding("raw"),
 		Body:      requestBody,
 	}
-
 	return treq, nil
 }
 
-func getServiceAndProcedure(ctx context.Context) (service, procedure string, err error) {
+func getServiceAndProcedure(ctx context.Context) (string, string, error) {
 	stream, ok := gtransport.StreamFromContext(ctx)
 	if !ok {
-		return "", "", errors.New("Could not extract stream information from context")
+		return "", "", errors.New("could not extract stream information from context")
 	}
-
-	streamMethod := stream.Method()
-
-	return getServiceAndProcedureFromMethod(streamMethod)
+	return getServiceAndProcedureFromMethod(stream.Method())
 }
 
-func getServiceAndProcedureFromMethod(streamMethod string) (service, procedure string, err error) {
-	if streamMethod != "" && streamMethod[0] == '/' {
+func getServiceAndProcedureFromMethod(streamMethod string) (string, string, error) {
+	if streamMethod == "" {
+		return "", "", errors.New("no service procedure provided")
+	}
+
+	if streamMethod[0] == '/' {
 		streamMethod = streamMethod[1:]
 	}
 	splitPos := strings.LastIndex(streamMethod, "/")
 
-	service, err = url.QueryUnescape(streamMethod[:splitPos])
+	escapedService := streamMethod[:splitPos]
+	service, err := url.QueryUnescape(escapedService)
 	if err != nil {
-		return "", "", fmt.Errorf("Could not parse service for request: %s, error: %v", streamMethod[:splitPos], err)
+		return "", "", fmt.Errorf("could not parse service for request: %s, error: %v", escapedService, err)
 	}
 
-	procedure, err = url.QueryUnescape(streamMethod[splitPos+1:])
+	escapedProcedure := streamMethod[splitPos+1:]
+	procedure, err := url.QueryUnescape(escapedProcedure)
 	if err != nil {
-		return "", "", fmt.Errorf("Could not parse procedure for request: %s, error: %v", streamMethod[splitPos+1:], err)
+		return "", "", fmt.Errorf("could not parse procedure for request: %s, error: %v", escapedProcedure, err)
 	}
-	return
+
+	return service, procedure, nil
 }
 
 func getMsgBody(msgBodyDecoder func(interface{}) error) (io.Reader, error) {
@@ -101,10 +103,7 @@ func getMsgBody(msgBodyDecoder func(interface{}) error) (io.Reader, error) {
 	if err := msgBodyDecoder(&requestBody); err != nil {
 		return nil, err
 	}
-
-	requestBodyBuffer := bytes.NewBuffer(requestBody)
-
-	return requestBodyBuffer, nil
+	return bytes.NewBuffer(requestBody), nil
 }
 
 func callHandler(
