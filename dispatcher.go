@@ -26,14 +26,12 @@ import (
 	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
-	"golang.org/x/net/context"
 )
 
 // Dispatcher object is used to configure a YARPC application; it is used by
 // Clients to send RPCs, and by Procedures to recieve them. This object is what
 // enables an application to be transport-agnostic.
 type Dispatcher interface {
-	transport.Handler
 	transport.Registry
 	transport.ChannelProvider
 
@@ -119,9 +117,14 @@ func (d dispatcher) Channel(service string) transport.Channel {
 }
 
 func (d dispatcher) Start() error {
+	config := transport.ServiceConfig{
+		Name:     d.Name,
+		Registry: d,
+	}
+
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Start(d, d.deps)
+			return i.Start(config, d.deps)
 		}
 	}
 
@@ -150,14 +153,6 @@ func (d dispatcher) Start() error {
 func (d dispatcher) Register(service, procedure string, handler transport.Handler) {
 	handler = transport.ApplyInterceptor(handler, d.Interceptor)
 	d.Registry.Register(service, procedure, handler)
-}
-
-func (d dispatcher) Handle(ctx context.Context, opts transport.Options, req *transport.Request, rw transport.ResponseWriter) error {
-	h, err := d.GetHandler(req.Service, req.Procedure)
-	if err != nil {
-		return err
-	}
-	return h.Handle(ctx, opts, req, rw)
 }
 
 func (d dispatcher) Stop() error {

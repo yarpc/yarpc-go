@@ -70,10 +70,10 @@ func (i *inbound) Channel() *tchannel.Channel {
 	return i.ch
 }
 
-func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
+func (i *inbound) Start(cfg transport.ServiceConfig, d transport.Deps) error {
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing: existing, Handler: h, deps: d})
+	sc.SetHandler(handler{existing: existing, Registry: cfg.Registry, deps: d})
 
 	i.deps = d
 

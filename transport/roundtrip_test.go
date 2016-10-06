@@ -44,19 +44,34 @@ import (
 
 // all tests in this file should use these names for callers and services.
 const (
-	testCaller  = "testService-client"
-	testService = "testService"
+	testCaller    = "testService-client"
+	testService   = "testService"
+	testProcedure = "hello"
 )
 
 // roundTripTransport provides a function that sets up and tears down an
 // Inbound, and provides an Outbound which knows how to call that Inbound.
 type roundTripTransport interface {
-	// Set up an Inbound serving Handler h, and call f with an Outbound that
+	// Set up an Inbound serving Registry r, and call f with an Outbound that
 	// knows how to talk to that Inbound.
-	WithHandler(h transport.Handler, f func(transport.Outbound))
+	WithRegistry(r transport.Registry, f func(transport.Outbound))
 }
 
-// handlerFunc wraps a function into a transport.Handler
+type staticRegistry struct{ Handler transport.Handler }
+
+func (r staticRegistry) Register(service string, procedure string, handler transport.Handler) {
+	panic("cannot register methods on a static registry")
+}
+
+func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
+	return []transport.ServiceProcedure{{Service: testService, Procedure: testProcedure}}
+}
+
+func (r staticRegistry) GetHandler(service string, procedure string) (transport.Handler, error) {
+	return r.Handler, nil
+}
+
+// handlerFunc wraps a function into a transport.Registry
 type handlerFunc func(context.Context, transport.Options, *transport.Request, transport.ResponseWriter) error
 
 func (f handlerFunc) Handle(ctx context.Context, opts transport.Options, r *transport.Request, w transport.ResponseWriter) error {
@@ -66,9 +81,9 @@ func (f handlerFunc) Handle(ctx context.Context, opts transport.Options, r *tran
 // httpTransport implements a roundTripTransport for HTTP.
 type httpTransport struct{ t *testing.T }
 
-func (ht httpTransport) WithHandler(h transport.Handler, f func(transport.Outbound)) {
+func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Outbound)) {
 	i := http.NewInbound("127.0.0.1:0")
-	require.NoError(ht.t, i.Start(h, transport.NoDeps), "failed to start")
+	require.NoError(ht.t, i.Start(transport.ServiceConfig{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
@@ -81,12 +96,12 @@ func (ht httpTransport) WithHandler(h transport.Handler, f func(transport.Outbou
 // tchannelTransport implements a roundTripTransport for TChannel.
 type tchannelTransport struct{ t *testing.T }
 
-func (tt tchannelTransport) WithHandler(h transport.Handler, f func(transport.Outbound)) {
+func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.Outbound)) {
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
 		i := tch.NewInbound(ch)
-		require.NoError(tt.t, i.Start(h, transport.NoDeps), "failed to start")
+		require.NoError(tt.t, i.Start(transport.ServiceConfig{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
 		// handler.
@@ -171,7 +186,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
 				Caller:    testCaller,
 				Service:   testService,
-				Procedure: "hello",
+				Procedure: testProcedure,
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
 				Body:      bytes.NewReader([]byte(tt.requestBody)),
@@ -195,11 +210,12 @@ func TestSimpleRoundTrip(t *testing.T) {
 
 			ctx, _ := context.WithTimeout(rootCtx, 200*time.Millisecond)
 
-			trans.WithHandler(handler, func(o transport.Outbound) {
+			registry := staticRegistry{Handler: handler}
+			trans.WithRegistry(registry, func(o transport.Outbound) {
 				res, err := o.Call(ctx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
-					Procedure: "hello",
+					Procedure: testProcedure,
 					Encoding:  raw.Encoding,
 					Headers:   tt.requestHeaders,
 					Body:      bytes.NewReader([]byte(tt.requestBody)),
