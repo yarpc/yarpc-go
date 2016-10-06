@@ -24,14 +24,14 @@
 package echoclient
 
 import (
-	yarpc "go.uber.org/yarpc"
-	"golang.org/x/net/context"
 	"go.uber.org/thriftrw/protocol"
-	"go.uber.org/thriftrw/wire"
+	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	echo2 "go.uber.org/yarpc/crossdock/thrift/echo/service/echo"
+	"go.uber.org/yarpc"
+	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is a client for the Echo service.
@@ -52,6 +52,12 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 		Channel:  c,
 		Protocol: protocol.Binary,
 	}, opts...)}
+}
+
+func init() {
+	yarpc.RegisterClientBuilder(func(c transport.Channel) Interface {
+		return New(c)
+	})
 }
 
 type client struct{ c thrift.Client }

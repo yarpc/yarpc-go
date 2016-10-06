@@ -42,6 +42,10 @@ func New(c transport.Channel) Client {
 	return rawClient{ch: c}
 }
 
+func init() {
+	yarpc.RegisterClientBuilder(New)
+}
+
 type rawClient struct {
 	ch transport.Channel
 }

@@ -26,8 +26,8 @@ package hello
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
 	"strings"
 )
 

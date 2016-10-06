@@ -4,7 +4,8 @@ Releases
 v0.4.0 (unreleased)
 -------------------
 
--   No changes yet.
+-   Add `yarpc.InjectClients` to automatically instantiate and inject clients
+    into structs that need them.
 
 
 v0.3.1 (2016-09-31)

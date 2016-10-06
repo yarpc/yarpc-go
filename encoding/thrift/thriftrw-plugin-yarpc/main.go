@@ -169,6 +169,12 @@ func New(c <$transport>.Channel, opts ...<$thrift>.ClientOption) Interface {
 	}, opts...)}
 }
 
+func init() {
+	<$yarpc>.RegisterClientBuilder(func(c <$transport>.Channel) Interface {
+		return New(c)
+	})
+}
+
 type client struct{ c <$thrift>.Client }
 
 <$service := .Service>
