@@ -26,7 +26,7 @@ func TestHeaderMapper_ToGRPCMetadata(t *testing.T) {
 	md := metadata.New(map[string]string{
 		"key": "value",
 	})
-	actualMetadata := testMapper.ToGRPCMetadata(inputHeaders, md)
+	actualMetadata := testMapper.toMetadata(inputHeaders, md)
 
 	assert.Equal(t, expectedMetadata, actualMetadata)
 }
@@ -44,7 +44,7 @@ func TestHeaderMapper_ToGRPCMetadata_fromNil(t *testing.T) {
 		prefix + "key2": "value2",
 	})
 
-	actualMetadata := testMapper.ToGRPCMetadata(inputHeaders, nil)
+	actualMetadata := testMapper.toMetadata(inputHeaders, nil)
 
 	assert.Equal(t, expectedMetadata, actualMetadata)
 }
@@ -63,17 +63,17 @@ func TestHeaderMapper_FromGRPCMetadata(t *testing.T) {
 		"key2": "value2",
 	})
 
-	actualHeaders := testMapper.FromGRPCMetadata(inputMetadata, transport.Headers{})
+	actualHeaders := testMapper.fromMetadata(inputMetadata, transport.Headers{})
 
 	assert.Equal(t, expectedHeaders, actualHeaders)
 }
 
 func TestHeaders_Add(t *testing.T) {
-	headers := Headers{}
+	headers := headers{}
 	headers["key1"] = []string{"value1"}
 	headers["key2"] = []string{"value2"}
 
-	headers.Add("testkey", "testvalue")
+	headers.add("testkey", "testvalue")
 
 	assert.Equal(t, "value1", headers["key1"][0])
 	assert.Equal(t, "value2", headers["key2"][0])
@@ -81,11 +81,11 @@ func TestHeaders_Add(t *testing.T) {
 }
 
 func TestHeaders_Del(t *testing.T) {
-	headers := Headers{}
+	headers := headers{}
 	headers["key1"] = []string{"value1"}
 	headers["key2"] = []string{"value2"}
 
-	headers.Del("key2")
+	headers.del("key2")
 
 	assert.Equal(t, 1, len(headers))
 	assert.Equal(t, "value1", headers["key1"][0])
@@ -93,38 +93,38 @@ func TestHeaders_Del(t *testing.T) {
 }
 
 func TestHeaders_Get(t *testing.T) {
-	headers := Headers{}
+	headers := headers{}
 	headers["key1"] = []string{"value1"}
 	headers["key2"] = []string{"value2"}
 
-	value := headers.Get("key2")
+	value := headers.get("key2")
 
 	assert.Equal(t, "value2", value)
 }
 
 func TestHeaders_Get_Nil(t *testing.T) {
-	headers := Headers(nil)
+	headers := headers(nil)
 
-	value := headers.Get("key2")
+	value := headers.get("key2")
 
 	assert.Equal(t, "", value)
 }
 
 func TestHeaders_Get_EmptyList(t *testing.T) {
-	headers := Headers{}
+	headers := headers{}
 	headers["key1"] = []string{}
 
-	value := headers.Get("key1")
+	value := headers.get("key1")
 
 	assert.Equal(t, "", value)
 }
 
 func TestHeaders_Set(t *testing.T) {
-	headers := Headers{}
+	headers := headers{}
 	headers["key1"] = []string{"value1"}
 	headers["key2"] = []string{"value2"}
 
-	headers.Set("key2", "newValue")
+	headers.set("key2", "newValue")
 
 	assert.Equal(t, []string{"newValue"}, headers["key2"])
 }

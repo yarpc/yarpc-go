@@ -65,7 +65,7 @@ func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*
 		return nil, err
 	}
 
-	appHeaders := applicationHeaders.FromGRPCMetadata(ctxMetadata, transport.Headers{})
+	appHeaders := applicationHeaders.fromMetadata(ctxMetadata, transport.Headers{})
 
 	requestBody, err := getMsgBody(msgBodyDecoder)
 	if err != nil {
@@ -192,7 +192,7 @@ func (rw responseWriter) Write(s []byte) (int, error) {
 }
 
 func (rw responseWriter) AddHeaders(h transport.Headers) {
-	rw.r.headers = applicationHeaders.ToGRPCMetadata(h, rw.r.headers)
+	rw.r.headers = applicationHeaders.toMetadata(h, rw.r.headers)
 }
 
 func (responseWriter) SetApplicationError() {
