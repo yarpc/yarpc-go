@@ -41,7 +41,7 @@ type Inbound interface {
 	// listening on
 }
 
-// ServiceConfig TODO
+// ServiceConfig holds the service name and procedure configurations
 type ServiceConfig struct {
 	Name     string
 	Registry Registry

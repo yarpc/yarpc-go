@@ -58,6 +58,7 @@ type Registry interface {
 	// service may be empty to indicate that the default service name should
 	// be used.
 	GetHandler(service, procedure string) (Handler, error)
+	GetOnewayHandler(service, procedure string) (OnewayHandler, error)
 }
 
 // MapRegistry is a Registry that maintains a map of the registered
@@ -106,6 +107,22 @@ func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
 	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
 		return h, nil
 	}
+	return nil, errors.UnrecognizedProcedureError{
+		Service:   service,
+		Procedure: procedure,
+	}
+}
+
+// GetOnewayHandler retrieves the Handler for the given Procedure or returns an
+// error.
+func (m MapRegistry) GetOnewayHandler(service, procedure string) (OnewayHandler, error) {
+	if service == "" {
+		service = m.defaultService
+	}
+
+	// if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
+	// 	return h, nil
+	// }
 	return nil, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
