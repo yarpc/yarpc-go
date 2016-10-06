@@ -1,3 +1,30 @@
+// Recorder records & replay yarpc requests on the client side.
+//
+// For recording, the client must be connected and able to issue requests to a
+// remote service. Every request and its response is recorded into a YAML file,
+// under the directory "testdata/recordings".
+//
+// During replay, the client doesn't need to be connected, for any recorded
+// request Recorder will return the recorded response. Any new request will
+// return an error.
+//
+// NewRecorder() returns a Recorder, in the mode specified by the flag
+// `--recorder=replay|append|overwrite`. `replay` is the default.
+//
+// The new Recorder instance is a yarpc filter middleware. It takes a
+// `testing.T` or compatible as argument.
+//
+// Example:
+//  func MyTest(t *testing.T) {
+//    dispatcher, err := yarpc.NewDispatcher(yarpc.Config{
+//                          name: ..., Outbounds: ...,
+//                          Filter: recorder.NewRecorder(t) })
+//
+// Running the tests in append mode:
+//  $ go test -v ./... --recorder=append
+//
+// The recorded messages will be stored in
+// `./testdata/recordings/*.yaml`.
 package recorder
 
 import (
@@ -34,28 +61,29 @@ append: replay existing and record new request/response pairs.`)
 // return an error.
 type Recorder struct {
 	mode       Mode
-	logger     Logger
+	logger     TestingT
 	recordsDir string
 }
 
 const recorderDir = "testdata/recordings"
 
-// Mode the different replay and recording modes.
+// Mode is the recording mode of the recorder.
 type Mode int
 
 const (
 	// invalidMode is private and used to represent invalid modes.
-	invalidMode = iota + 1
+	invalidMode = iota
 
-	// Replay replays stored request/response pairs.
+	// Replay replays stored request/response pairs, any non pre-recorded
+	// requests will be rejected.
 	Replay
 
-	// Overwrite will record on file all request/response pairs, overwriting
-	// existing records.
+	// Overwrite will store all request/response pairs, overwriting existing
+	// records.
 	Overwrite
 
-	// Append will record on file all new request/response pairs, keeping
-	// existing record without modification.
+	// Append will store all new request/response pairs and replay from
+	// existing record.
 	Append
 )
 
@@ -67,8 +95,9 @@ func (m Mode) toHumanString() string {
 		return "recording (overwrite)"
 	case Append:
 		return "recording (append)"
+	default:
+		return fmt.Sprintf("Mode(%d)", int(m))
 	}
-	panic("Unreachable")
 }
 
 // ModeFromString converts an English string of a mode to a `Mode`.
@@ -84,9 +113,9 @@ func ModeFromString(s string) (Mode, error) {
 	return invalidMode, fmt.Errorf(`invalid mode: "%s"`, s)
 }
 
-// Logger is an interface used by the recorder for logging and reporting fatal
+// TestingT is an interface used by the recorder for logging and reporting fatal
 // errors. It is intentionally made to match with testing.T.
-type Logger interface {
+type TestingT interface {
 	// Logf must behaves similarly to testing.T.Logf.
 	Logf(format string, args ...interface{})
 
@@ -96,18 +125,13 @@ type Logger interface {
 }
 
 // NewRecorder returns a Recorder in whatever mode specified via the
-// `recorderFlag`.
+// `--recorder` flag.
 //
 // The new Recorder instance is a yarpc filter middleware. It takes a logger as
-// argument compatible with `testing.T`. It is designed to be used in testing
-// environment:
+// argument compatible with `testing.T`.
 //
-// 	dispatcher, err := yarpc.NewDispatcher(yarpc.Config{name: ...},
-// 		xyarpc.Filter(recorder.NewRecorder(t)))
-//
-// The recorded messages will be stored in
-// `./testdata/recordings/*.yaml`.
-func NewRecorder(logger Logger) (recorder *Recorder) {
+// See package documentation for more details.
+func NewRecorder(logger TestingT) *Recorder {
 	cwd, err := os.Getwd()
 	if err != nil {
 		logger.Fatal(err)
@@ -116,7 +140,7 @@ func NewRecorder(logger Logger) (recorder *Recorder) {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	recorder = &Recorder{
+	recorder := &Recorder{
 		mode:       invalidMode,
 		logger:     logger,
 		recordsDir: filepath.Join(cwd, recorderDir),
@@ -219,17 +243,20 @@ func (r *Recorder) Call(
 		if !os.IsNotExist(err) {
 			return response, err
 		}
-	}
+		fallthrough
+	case Overwrite:
+		response, err := out.Call(ctx, request)
+		if err != nil {
+			return response, err
+		}
 
-	response, err := out.Call(ctx, request)
-	if err != nil {
-		return response, err
+		if err := r.saveRecord(request, requestBody, response, filepath); err != nil {
+			log.Fatal(err)
+		}
+		return response, nil
+	default:
+		panic("Invalid mode")
 	}
-
-	if err := r.saveRecord(request, requestBody, response, filepath); err != nil {
-		log.Fatal(err)
-	}
-	return response, nil
 }
 
 // loadRecord attempts to load a record from the given file.
