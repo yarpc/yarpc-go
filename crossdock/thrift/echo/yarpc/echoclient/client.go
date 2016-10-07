@@ -24,14 +24,13 @@
 package echoclient
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	echo2 "go.uber.org/yarpc/crossdock/thrift/echo/service/echo"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is a client for the Echo service.
@@ -48,9 +47,8 @@ type Interface interface {
 // 	client := echoclient.New(dispatcher.Channel("echo"))
 func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service:  "Echo",
-		Channel:  c,
-		Protocol: protocol.Binary,
+		Service: "Echo",
+		Channel: c,
 	}, opts...)}
 }
 

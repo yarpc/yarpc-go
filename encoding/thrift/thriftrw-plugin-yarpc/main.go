@@ -39,10 +39,10 @@ const serverTemplate = `
 <$pkgname := printf "%sserver" (lower .Service.Name)>
 package <$pkgname>
 
-<$yarpc    := import "go.uber.org/yarpc">
-<$thrift   := import "go.uber.org/yarpc/encoding/thrift">
-<$protocol := import "go.uber.org/thriftrw/protocol">
-<$context  := import "golang.org/x/net/context">
+<$yarpc     := import "go.uber.org/yarpc">
+<$thrift    := import "go.uber.org/yarpc/encoding/thrift">
+<$transport := import "go.uber.org/yarpc/transport">
+<$context   := import "golang.org/x/net/context">
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
@@ -62,34 +62,26 @@ type Interface interface {
 	<end>
 }
 
+<$service := .Service>
+
 // New prepares an implementation of the <.Service.Name> service for
 // registration.
 //
 // 	handler := <.Service.Name>Handler{}
-// 	thrift.Register(dispatcher, <$pkgname>.New(handler))
-func New(impl Interface) <$thrift>.Service {
-	return service{handler{impl}}
-}
-
-type service struct{ h handler }
-
-func (service) Name() string {
-	return "<.Service.Name>"
-}
-
-func (service) Protocol() <$protocol>.Protocol {
-	return <$protocol>.Binary
-}
-
-func (s service) Handlers() map[string]<$thrift>.Handler {
-	return map[string]<$thrift>.Handler{<range .Service.Functions>
-			"<.ThriftName>": <$thrift>.HandlerFunc(s.h.<.Name>),
-	<end>}
+// 	dispatcher.Register(<$pkgname>.New(handler))
+func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Registrant {
+	h := handler{impl}
+	service := <$thrift>.Service{
+		Name: "<.Service.Name>",
+		Methods: map[string]<$thrift>.Handler{
+			<range .Service.Functions>"<.ThriftName>": <$thrift>.HandlerFunc(h.<.Name>),
+		<end>},
+	}
+	return <$thrift>.BuildRegistrants(service, opts...)
 }
 
 type handler struct{ impl Interface }
 
-<$service := .Service>
 <range .Service.Functions>
 
 <$servicePackage := import $service.ImportPath>
@@ -135,7 +127,6 @@ package <$pkgname>
 <$yarpc     := import "go.uber.org/yarpc">
 <$transport := import "go.uber.org/yarpc/transport">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
-<$protocol  := import "go.uber.org/thriftrw/protocol">
 <$context   := import "golang.org/x/net/context">
 
 // Interface is a client for the <.Service.Name> service.
@@ -165,7 +156,6 @@ func New(c <$transport>.Channel, opts ...<$thrift>.ClientOption) Interface {
 	return client{c: <$thrift>.New(<$thrift>.Config{
 		Service: "<.Service.Name>",
 		Channel: c,
-		Protocol: <$protocol>.Binary,
 	}, opts...)}
 }
 

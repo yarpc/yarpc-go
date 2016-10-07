@@ -24,13 +24,12 @@
 package keyvalueclient
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is a client for the KeyValue service.
@@ -54,9 +53,8 @@ type Interface interface {
 // 	client := keyvalueclient.New(dispatcher.Channel("keyvalue"))
 func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service:  "KeyValue",
-		Channel:  c,
-		Protocol: protocol.Binary,
+		Service: "KeyValue",
+		Channel: c,
 	}, opts...)}
 }
 

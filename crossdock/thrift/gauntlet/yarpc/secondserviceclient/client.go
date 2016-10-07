@@ -24,13 +24,12 @@
 package secondserviceclient
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/secondservice"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is a client for the SecondService service.
@@ -52,9 +51,8 @@ type Interface interface {
 // 	client := secondserviceclient.New(dispatcher.Channel("secondservice"))
 func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service:  "SecondService",
-		Channel:  c,
-		Protocol: protocol.Binary,
+		Service: "SecondService",
+		Channel: c,
 	}, opts...)}
 }
 

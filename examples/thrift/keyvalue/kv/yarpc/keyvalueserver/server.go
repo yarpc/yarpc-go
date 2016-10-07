@@ -24,12 +24,12 @@
 package keyvalueserver
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is the server-side interface for the KeyValue service.
@@ -52,27 +52,17 @@ type Interface interface {
 // registration.
 //
 // 	handler := KeyValueHandler{}
-// 	thrift.Register(dispatcher, keyvalueserver.New(handler))
-func New(impl Interface) thrift.Service {
-	return service{handler{impl}}
-}
-
-type service struct{ h handler }
-
-func (service) Name() string {
-	return "KeyValue"
-}
-
-func (service) Protocol() protocol.Protocol {
-	return protocol.Binary
-}
-
-func (s service) Handlers() map[string]thrift.Handler {
-	return map[string]thrift.Handler{
-		"getValue": thrift.HandlerFunc(s.h.GetValue),
-
-		"setValue": thrift.HandlerFunc(s.h.SetValue),
+// 	dispatcher.Register(keyvalueserver.New(handler))
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+	h := handler{impl}
+	service := thrift.Service{
+		Name: "KeyValue",
+		Methods: map[string]thrift.Handler{
+			"getValue": thrift.HandlerFunc(h.GetValue),
+			"setValue": thrift.HandlerFunc(h.SetValue),
+		},
 	}
+	return thrift.BuildRegistrants(service, opts...)
 }
 
 type handler struct{ impl Interface }

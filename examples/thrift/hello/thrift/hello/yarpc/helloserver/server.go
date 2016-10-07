@@ -24,13 +24,13 @@
 package helloserver
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
 	hello2 "go.uber.org/yarpc/examples/thrift/hello/thrift/hello/service/hello"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is the server-side interface for the Hello service.
@@ -46,25 +46,16 @@ type Interface interface {
 // registration.
 //
 // 	handler := HelloHandler{}
-// 	thrift.Register(dispatcher, helloserver.New(handler))
-func New(impl Interface) thrift.Service {
-	return service{handler{impl}}
-}
-
-type service struct{ h handler }
-
-func (service) Name() string {
-	return "Hello"
-}
-
-func (service) Protocol() protocol.Protocol {
-	return protocol.Binary
-}
-
-func (s service) Handlers() map[string]thrift.Handler {
-	return map[string]thrift.Handler{
-		"echo": thrift.HandlerFunc(s.h.Echo),
+// 	dispatcher.Register(helloserver.New(handler))
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+	h := handler{impl}
+	service := thrift.Service{
+		Name: "Hello",
+		Methods: map[string]thrift.Handler{
+			"echo": thrift.HandlerFunc(h.Echo),
+		},
 	}
+	return thrift.BuildRegistrants(service, opts...)
 }
 
 type handler struct{ impl Interface }
