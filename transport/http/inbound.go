@@ -70,12 +70,12 @@ type inbound struct {
 	tracer     opentracing.Tracer
 }
 
-func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
+func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 	i.tracer = d.Tracer()
 
 	var httpHandler http.Handler = handler{
-		Handler: h,
-		Deps:    d,
+		Registry: service.Registry,
+		Deps:     d,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)

@@ -45,8 +45,8 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	Handler transport.Handler
-	Deps    transport.Deps
+	Registry transport.Registry
+	Deps     transport.Deps
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -105,7 +105,10 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
-	err = internal.SafelyCallHandler(h.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
+	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
+	if err == nil {
+		err = internal.SafelyCallHandler(handler, start, ctx, httpOptions, treq, newResponseWriter(w))
+	}
 
 	if err != nil {
 		span.SetTag("error", true)

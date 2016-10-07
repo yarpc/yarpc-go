@@ -76,7 +76,7 @@ func (c tchannelCall) Response() inboundCallResponse {
 // handler wraps a transport.Handler into a TChannel Handler.
 type handler struct {
 	existing map[string]tchannel.Handler
-	Handler  transport.Handler
+	Registry transport.Registry
 	deps     transport.Deps
 }
 
@@ -151,7 +151,11 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	return internal.SafelyCallHandler(h.Handler, start, ctx, transportOptions, treq, rw)
+	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
+	if err == nil {
+		err = internal.SafelyCallHandler(handler, start, ctx, transportOptions, treq, rw)
+	}
+	return err
 }
 
 type responseWriter struct {
