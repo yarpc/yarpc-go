@@ -22,8 +22,12 @@ package thrift
 
 //go:generate thriftrw --plugin=yarpc echo.thrift
 //go:generate thriftrw --plugin=yarpc gauntlet.thrift
+
 //go:generate thrift-gen --generateThrift --inputFile echo.thrift
+//go:generate touch gen-go/echo/.nocover
+
 //go:generate thrift-gen --generateThrift --inputFile gauntlet_apache.thrift
+//go:generate touch gen-go/gauntlet_apache/.nocover
 
 // Run this last
 

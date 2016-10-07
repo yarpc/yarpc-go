@@ -59,7 +59,7 @@ type roundTripTransport interface {
 
 type staticRegistry struct{ Handler transport.Handler }
 
-func (r staticRegistry) Register(service string, procedure string, handler transport.Handler) {
+func (r staticRegistry) Register([]transport.Registrant) {
 	panic("cannot register methods on a static registry")
 }
 

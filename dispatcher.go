@@ -150,15 +150,12 @@ func (d dispatcher) Start() error {
 	return nil
 }
 
-func (d dispatcher) Register(service, procedure string, handler transport.Handler) {
-	handler = transport.ApplyInterceptor(handler, d.Interceptor)
-	d.Registry.Register(service, procedure, handler)
-}
-
-
-func (d dispatcher) RegisterOneway(service, procedure string, handler transport.OnewayHandler) {
-	//TODO: apply oneway specific Interceptor
-	d.Registry.RegisterOneway(service, procedure, handler)
+func (d dispatcher) Register(rs []transport.Registrant) {
+	for i, r := range rs {
+		r.Handler = transport.ApplyInterceptor(r.Handler, d.Interceptor)
+		rs[i] = r
+	}
+	d.Registry.Register(rs)
 }
 
 func (d dispatcher) Stop() error {

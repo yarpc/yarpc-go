@@ -37,10 +37,11 @@ func TestMapRegistry(t *testing.T) {
 	m := transport.NewMapRegistry("myservice")
 
 	foo := transporttest.NewMockHandler(mockCtrl)
-	m.Register("", "foo", foo)
-
 	bar := transporttest.NewMockHandler(mockCtrl)
-	m.Register("anotherservice", "bar", bar)
+	m.Register([]transport.Registrant{
+		{Procedure: "foo", Handler: foo},
+		{Service: "anotherservice", Procedure: "bar", Handler: bar},
+	})
 
 	tests := []struct {
 		service, procedure string
@@ -74,11 +75,13 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 	m := transport.NewMapRegistry("myservice")
 
 	bar := transporttest.NewMockHandler(mockCtrl)
-	m.Register("anotherservice", "bar", bar)
 	foo := transporttest.NewMockHandler(mockCtrl)
-	m.Register("", "foo", foo)
 	aww := transporttest.NewMockHandler(mockCtrl)
-	m.Register("anotherservice", "aww", aww)
+	m.Register([]transport.Registrant{
+		{Service: "anotherservice", Procedure: "bar", Handler: bar},
+		{Procedure: "foo", Handler: foo},
+		{Service: "anotherservice", Procedure: "aww", Handler: aww},
+	})
 
 	expectedOrderedServiceProcedures := []transport.ServiceProcedure{
 		{

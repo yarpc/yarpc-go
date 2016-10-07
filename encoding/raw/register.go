@@ -27,36 +27,25 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Registrant is used for types that define or know about different Raw
-// procedures.
-type Registrant interface {
-	// Gets a mapping from procedure name to the Handler for that procedure
-	// for all procedures provided by the registrant.
-	getHandlers() map[string]Handler
+// Register calls the Registry's Register method.
+//
+// This function exists for backwards compatibility only. It will be removed
+// in a future version.
+//
+// Deprecated: Use the Registry's Register method directly.
+func Register(r transport.Registry, rs []transport.Registrant) {
+	r.Register(rs)
 }
 
 // Handler implements a single procedure.
 type Handler func(context.Context, yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
 
-// procedure is a registrant with a single handler.
-type procedure struct {
-	Name    string
-	Handler Handler
-}
-
-func (p procedure) getHandlers() map[string]Handler {
-	return map[string]Handler{p.Name: p.Handler}
-}
-
-// Procedure builds a Registrant with a single procedure in it.
-func Procedure(name string, handler Handler) Registrant {
-	return procedure{Name: name, Handler: handler}
-}
-
-// Register registers the procedures defined by the given Registrant with the
-// given Registry.
-func Register(reg transport.Registry, registrant Registrant) {
-	for name, handler := range registrant.getHandlers() {
-		reg.Register("", name, rawHandler{handler})
+// Procedure builds a Registrant from the given raw handler.
+func Procedure(name string, handler Handler) []transport.Registrant {
+	return []transport.Registrant{
+		{
+			Procedure: name,
+			Handler:   rawHandler{handler},
+		},
 	}
 }

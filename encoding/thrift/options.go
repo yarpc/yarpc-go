@@ -20,7 +20,10 @@
 
 package thrift
 
+import "go.uber.org/thriftrw/protocol"
+
 type clientConfig struct {
+	Protocol          protocol.Protocol
 	DisableEnveloping bool
 	Multiplexed       bool
 }
@@ -31,6 +34,7 @@ type ClientOption interface {
 }
 
 type registerConfig struct {
+	Protocol          protocol.Protocol
 	DisableEnveloping bool
 }
 
@@ -55,7 +59,7 @@ type Option interface {
 //
 // It may be specified on the server side when the handler is registered.
 //
-// 	thrift.Register(dispatch, myserviceserver.New(handler), thrift.DisableEnveloping)
+// 	dispatcher.Register(myserviceserver.New(handler, thrift.DisableEnveloping))
 var DisableEnveloping Option = disableEnvelopingOption{}
 
 type disableEnvelopingOption struct{}
@@ -82,4 +86,29 @@ type multiplexedOption struct{}
 
 func (multiplexedOption) applyClientOption(c *clientConfig) {
 	c.Multiplexed = true
+}
+
+type protocolOption struct{ Protocol protocol.Protocol }
+
+func (p protocolOption) applyClientOption(c *clientConfig) {
+	c.Protocol = p.Protocol
+}
+
+func (p protocolOption) applyRegisterOption(c *registerConfig) {
+	c.Protocol = p.Protocol
+}
+
+// Protocol is an option that specifies which Thrift Protocol servers and
+// clients should use. It may be specified on the client side when the client
+// is constructed,
+//
+// 	client := myserviceclient.New(channel, thrift.Protocol(protocol.Binary))
+//
+// It may be specified on the server side when the handler is registered.
+//
+// 	dispatcher.Register(myserviceserver.New(handler, thrift.Protocol(protocol.Binary)))
+//
+// It defaults to the Binary protocol.
+func Protocol(p protocol.Protocol) Option {
+	return protocolOption{Protocol: p}
 }

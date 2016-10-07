@@ -4,8 +4,23 @@ Releases
 v0.4.0 (unreleased)
 -------------------
 
+This release requires regeneration of ThriftRW code.
+
+-   **Breaking**: Procedure registration must now always be done directly
+    against the `Dispatcher`. Encoding-specific functions `json.Register`,
+    `raw.Register`, and `thrift.Register` have been deprecated in favor of
+    the `Dispatcher.Register` method. Existing code may be migrated by running
+    the following commands on your go files.
+
+    ```
+    gofmt -w -r 'raw.Register(d, h) -> d.Register(h)' $file.go
+    gofmt -w -r 'json.Register(d, h) -> d.Register(h)' $file.go
+    gofmt -w -r 'thrift.Register(d, h) -> d.Register(h)' $file.go
+    ```
 -   Add `yarpc.InjectClients` to automatically instantiate and inject clients
     into structs that need them.
+-   Thrift: Add a `Protocol` option to change the Thrift protocol used by
+    clients and servers.
 
 
 v0.3.1 (2016-09-31)

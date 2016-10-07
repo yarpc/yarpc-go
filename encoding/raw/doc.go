@@ -28,12 +28,12 @@
 // 		[]byte{1, 2, 3},
 // 	)
 //
-// To register a raw procedure, define a Registrant or use Procedure to make a
-// single-function Registrant, and register it with Register.
+// Use the Procedure function to build registrants to register against a
+// Registry.
 //
 // 	func Submit(reqMeta yarpc.ReqMeta, reqBody []byte) ([]byte, yarpc.ResMeta, error) {
 // 		// ...
 // 	}
 //
-// 	raw.Register(dispatcher, raw.Procedure("submit", Submit))
+// 	dispatcher.Register(raw.Procedure("submit", Submit))
 package raw
