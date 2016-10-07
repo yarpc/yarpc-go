@@ -49,5 +49,5 @@
 // a YARPC dispatcher.
 //
 // 	handler := myHandler{}
-// 	thrift.Register(dispatcher, myserviceserver.New(handler))
+// 	dispatcher.Register(myserviceserver.New(handler))
 package thrift

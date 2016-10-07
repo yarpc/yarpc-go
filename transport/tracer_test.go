@@ -47,8 +47,8 @@ type handler struct {
 }
 
 func (h handler) register(dispatcher yarpc.Dispatcher) {
-	json.Register(dispatcher, json.Procedure("echo", h.handleEcho))
-	json.Register(dispatcher, json.Procedure("echoecho", h.handleEchoEcho))
+	dispatcher.Register(json.Procedure("echo", h.handleEcho))
+	dispatcher.Register(json.Procedure("echoecho", h.handleEchoEcho))
 }
 
 func (h handler) handleEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {

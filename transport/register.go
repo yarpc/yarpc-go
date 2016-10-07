@@ -38,14 +38,23 @@ type ServiceProcedure struct {
 	Procedure string
 }
 
+// Registrant specifies a single handler registered against the registry.
+type Registrant struct {
+	// Service name or empty to use the default service name.
+	Service string
+
+	// Name of the procedure.
+	Procedure string
+
+	// Handler implementing the given procedure.
+	Handler Handler
+}
+
 // Registry maintains and provides access to a collection of procedures and
 // their handlers.
 type Registry interface {
-	// Registers a procedure with this registry under the given service name.
-	//
-	// service may be empty to indicate that the default service name should
-	// be used.
-	Register(service, procedure string, handler Handler)
+	// Registers zero or more registrants with the registry.
+	Register([]Registrant)
 
 	// ServiceProcedures returns a list of services and their procedures that
 	// have been registered so far.
@@ -77,12 +86,14 @@ func NewMapRegistry(defaultService string) MapRegistry {
 }
 
 // Register registers the procedure with the MapRegistry.
-func (m MapRegistry) Register(service, procedure string, handler Handler) {
-	if service == "" {
-		service = m.defaultService
-	}
+func (m MapRegistry) Register(rs []Registrant) {
+	for _, r := range rs {
+		if r.Service == "" {
+			r.Service = m.defaultService
+		}
 
-	m.entries[ServiceProcedure{service, procedure}] = handler
+		m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.Handler
+	}
 }
 
 // ServiceProcedures returns a list of services and their procedures that

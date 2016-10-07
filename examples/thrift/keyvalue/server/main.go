@@ -26,7 +26,6 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueserver"
 	"go.uber.org/yarpc/transport"
@@ -76,7 +75,7 @@ func main() {
 	})
 
 	handler := handler{items: make(map[string]string)}
-	thrift.Register(dispatcher, keyvalueserver.New(&handler))
+	dispatcher.Register(keyvalueserver.New(&handler))
 
 	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())

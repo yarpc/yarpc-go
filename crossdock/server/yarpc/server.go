@@ -73,20 +73,20 @@ func Stop() {
 }
 
 func register(reg transport.Registry) {
-	raw.Register(reg, raw.Procedure("echo/raw", EchoRaw))
-	json.Register(reg, json.Procedure("echo", EchoJSON))
+	reg.Register(raw.Procedure("echo/raw", EchoRaw))
+	reg.Register(json.Procedure("echo", EchoJSON))
 
 	// NOTE(abg): Enveloping is disabled in old cross-language tests until the
 	// other YARPC implementations catch up.
-	thrift.Register(reg, echoserver.New(EchoThrift{}), thrift.DisableEnveloping)
-	thrift.Register(reg, thrifttestserver.New(thriftTest{}), thrift.DisableEnveloping)
-	thrift.Register(reg, secondserviceserver.New(secondService{}), thrift.DisableEnveloping)
+	reg.Register(echoserver.New(EchoThrift{}, thrift.DisableEnveloping))
+	reg.Register(thrifttestserver.New(thriftTest{}, thrift.DisableEnveloping))
+	reg.Register(secondserviceserver.New(secondService{}, thrift.DisableEnveloping))
 
-	json.Register(reg, json.Procedure("unexpected-error", UnexpectedError))
-	json.Register(reg, json.Procedure("bad-response", BadResponse))
-	json.Register(reg, json.Procedure("phone", Phone))
-	json.Register(reg, json.Procedure("sleep", Sleep))
+	reg.Register(json.Procedure("unexpected-error", UnexpectedError))
+	reg.Register(json.Procedure("bad-response", BadResponse))
+	reg.Register(json.Procedure("phone", Phone))
+	reg.Register(json.Procedure("sleep", Sleep))
 
-	raw.Register(reg, raw.Procedure("sleep/raw", SleepRaw))
-	raw.Register(reg, raw.Procedure("waitfortimeout/raw", WaitForTimeoutRaw))
+	reg.Register(raw.Procedure("sleep/raw", SleepRaw))
+	reg.Register(raw.Procedure("waitfortimeout/raw", WaitForTimeoutRaw))
 }

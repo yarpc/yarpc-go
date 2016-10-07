@@ -24,14 +24,13 @@
 package helloclient
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
 	hello2 "go.uber.org/yarpc/examples/thrift/hello/thrift/hello/service/hello"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is a client for the Hello service.
@@ -48,9 +47,8 @@ type Interface interface {
 // 	client := helloclient.New(dispatcher.Channel("hello"))
 func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service:  "Hello",
-		Channel:  c,
-		Protocol: protocol.Binary,
+		Service: "Hello",
+		Channel: c,
 	}, opts...)}
 }
 

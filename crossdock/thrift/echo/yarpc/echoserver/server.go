@@ -24,13 +24,13 @@
 package echoserver
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	echo2 "go.uber.org/yarpc/crossdock/thrift/echo/service/echo"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is the server-side interface for the Echo service.
@@ -46,25 +46,16 @@ type Interface interface {
 // registration.
 //
 // 	handler := EchoHandler{}
-// 	thrift.Register(dispatcher, echoserver.New(handler))
-func New(impl Interface) thrift.Service {
-	return service{handler{impl}}
-}
-
-type service struct{ h handler }
-
-func (service) Name() string {
-	return "Echo"
-}
-
-func (service) Protocol() protocol.Protocol {
-	return protocol.Binary
-}
-
-func (s service) Handlers() map[string]thrift.Handler {
-	return map[string]thrift.Handler{
-		"echo": thrift.HandlerFunc(s.h.Echo),
+// 	dispatcher.Register(echoserver.New(handler))
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+	h := handler{impl}
+	service := thrift.Service{
+		Name: "Echo",
+		Methods: map[string]thrift.Handler{
+			"echo": thrift.HandlerFunc(h.Echo),
+		},
 	}
+	return thrift.BuildRegistrants(service, opts...)
 }
 
 type handler struct{ impl Interface }
