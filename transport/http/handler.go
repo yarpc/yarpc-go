@@ -105,7 +105,11 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
-	err = internal.SafelyCallRegistry(h.Registry, start, ctx, httpOptions, treq, newResponseWriter(w))
+	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
+	if err == nil {
+		err = internal.SafelyCallHandler(handler, start, ctx, httpOptions, treq, newResponseWriter(w))
+	}
+
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
