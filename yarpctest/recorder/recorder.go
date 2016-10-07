@@ -2,7 +2,7 @@
 //
 // For recording, the client must be connected and able to issue requests to a
 // remote service. Every request and its response is recorded into a YAML file,
-// under the directory "testdata/recordings".
+// under the directory "testdata/recordings" relative to the test directory.
 //
 // During replay, the client doesn't need to be connected, for any recorded
 // request Recorder will return the recorded response. Any new request (ie: not
@@ -16,9 +16,14 @@
 //
 // Example:
 //  func MyTest(t *testing.T) {
-//    dispatcher, err := yarpc.NewDispatcher(yarpc.Config{
-//                          name: ..., Outbounds: ...,
-//                          Filter: recorder.NewRecorder(t) })
+//    dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//    	Name: "...",
+//    	Outbounds: transport.Outbounds{
+//    		...
+//    	},
+//    	Filter: recorder.NewRecorder(t),
+//    })
+//  }
 //
 // Running the tests in append mode:
 //  $ go test -v ./... --recorder=append
@@ -41,6 +46,7 @@ import (
 	"unicode"
 
 	"go.uber.org/yarpc/transport"
+
 	"golang.org/x/net/context"
 	"gopkg.in/yaml.v2"
 )
@@ -74,7 +80,7 @@ type Mode int
 
 const (
 	// invalidMode is private and used to represent invalid modes.
-	invalidMode = iota
+	invalidMode Mode = iota
 
 	// Replay replays stored request/response pairs, any non pre-recorded
 	// requests will be rejected.
@@ -143,7 +149,7 @@ func NewRecorder(logger TestingT, opts ...Option) *Recorder {
 		logger:     logger,
 		recordsDir: filepath.Join(cwd, defaultRecorderDir),
 	}
-	var mode Mode
+	mode := invalidMode
 	for _, opt := range opts {
 		if opt.RecordsPath != "" {
 			recorder.recordsDir = opt.RecordsPath
