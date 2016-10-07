@@ -17,17 +17,6 @@ This release requires regeneration of ThriftRW code.
     gofmt -w -r 'json.Register(d, h) -> d.Register(h)' $file.go
     gofmt -w -r 'thrift.Register(d, h) -> d.Register(h)' $file.go
     ```
--   **Breaking**: `Dispatcher.Register` now accepts a collection of
-    `transport.Registrant` objects rather than the service, method, and
-    handler. Existing code may be migrated by running the following command on
-    your go files.
-
-    ```
-    gofmt -w -r \
-        'dispatcher.Register(s, p, h) -> dispatcher.Register([]transport.Registrant{
-            {Service: s, Procedure: p, Handler: h},
-        })' $file.go
-    ```
 -   Add `yarpc.InjectClients` to automatically instantiate and inject clients
     into structs that need them.
 -   Thrift: Add a `Protocol` option to change the Thrift protocol used by
