@@ -21,6 +21,7 @@
 package http
 
 import (
+	xerrors "errors"
 	"net/http"
 	"time"
 
@@ -43,20 +44,33 @@ func popHeader(h http.Header, n string) string {
 	return v
 }
 
+// DefaultExtractor creates a transport request from http headers
+func DefaultExtractor(req *http.Request) (*transport.Request, error) {
+	if req.Method != "POST" {
+		return nil, errors.HandlerBadRequestError(xerrors.New("must use the POST method when making requests"))
+	}
+
+	return &transport.Request{
+		Caller:    popHeader(req.Header, CallerHeader),
+		Service:   popHeader(req.Header, ServiceHeader),
+		Procedure: popHeader(req.Header, ProcedureHeader),
+		Encoding:  transport.Encoding(popHeader(req.Header, EncodingHeader)),
+		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
+		Body:      req.Body,
+	}, nil
+}
+
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	Handler transport.Handler
-	Deps    transport.Deps
+	Extractor RequestExtractor
+	Handler   transport.Handler
+	Deps      transport.Deps
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 
 	defer req.Body.Close()
-	if req.Method != "POST" {
-		http.NotFound(w, req)
-		return
-	}
 
 	service := req.Header.Get(ServiceHeader)
 	procedure := req.Header.Get(ProcedureHeader)
@@ -77,16 +91,12 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
-	treq := &transport.Request{
-		Caller:    popHeader(req.Header, CallerHeader),
-		Service:   popHeader(req.Header, ServiceHeader),
-		Procedure: popHeader(req.Header, ProcedureHeader),
-		Encoding:  transport.Encoding(popHeader(req.Header, EncodingHeader)),
-		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
-		Body:      req.Body,
-	}
-
 	ctx := context.Background()
+
+	treq, err := h.Extractor(req)
+	if err != nil {
+		return err
+	}
 
 	v := request.Validator{Request: treq}
 	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
@@ -95,7 +105,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	ctx, span := h.createSpan(ctx, req, treq, start)
 	defer span.Finish()
 
-	treq, err := v.Validate(ctx)
+	treq, err = v.Validate(ctx)
 	if err != nil {
 		return err
 	}

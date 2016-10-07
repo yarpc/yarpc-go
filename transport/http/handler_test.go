@@ -54,7 +54,7 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(BaggageHeaderPrefix+"BAR", "baz")
 
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	httpHandler := handler{Handler: rpcHandler}
+	httpHandler := handler{Handler: rpcHandler, Extractor: DefaultExtractor}
 
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
@@ -129,7 +129,7 @@ func TestHandlerHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		rpcHandler := transporttest.NewMockHandler(mockCtrl)
-		httpHandler := handler{Handler: rpcHandler}
+		httpHandler := handler{Handler: rpcHandler, Extractor: DefaultExtractor}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
@@ -189,7 +189,7 @@ func TestHandlerFailures(t *testing.T) {
 		req *http.Request
 		msg string
 	}{
-		{&http.Request{Method: "GET"}, "404 page not found\n"},
+		{&http.Request{Method: "GET"}, "BadRequest: must use the POST method when making requests\n"},
 		{
 			&http.Request{
 				Method: "POST",
@@ -239,7 +239,7 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		h := handler{Handler: transporttest.NewMockHandler(mockCtrl)}
+		h := handler{Handler: transporttest.NewMockHandler(mockCtrl), Extractor: DefaultExtractor}
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 
@@ -282,7 +282,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(fmt.Errorf("great sadness"))
 
-	httpHandler := handler{Handler: rpcHandler}
+	httpHandler := handler{Handler: rpcHandler, Extractor: DefaultExtractor}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
 

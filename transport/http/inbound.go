@@ -41,6 +41,10 @@ type Inbound interface {
 	Addr() net.Addr
 }
 
+// RequestExtractor extracts rpc info from an http request to
+// build a transport.Request
+type RequestExtractor func(*http.Request) (*transport.Request, error)
+
 // InboundOption is an option for an HTTP inbound.
 type InboundOption func(*inbound)
 
@@ -53,12 +57,25 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	}
 }
 
+// Extractor specifies how a transport.Request is built from
+// the incoming http request.
+func Extractor(extractor RequestExtractor) InboundOption {
+	return func(i *inbound) {
+		i.extractor = extractor
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address.
 func NewInbound(addr string, opts ...InboundOption) Inbound {
 	i := &inbound{addr: addr}
 	for _, opt := range opts {
 		opt(i)
 	}
+
+	if i.extractor == nil {
+		i.extractor = DefaultExtractor
+	}
+
 	return i
 }
 
@@ -68,15 +85,18 @@ type inbound struct {
 	muxPattern string
 	server     *intnet.HTTPServer
 	tracer     opentracing.Tracer
+	extractor  RequestExtractor
 }
 
 func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 	i.tracer = d.Tracer()
 
 	var httpHandler http.Handler = handler{
-		Handler: h,
-		Deps:    d,
+		Handler:   h,
+		Deps:      d,
+		Extractor: i.extractor,
 	}
+
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
 		httpHandler = i.mux
