@@ -1,4 +1,4 @@
-// Recorder records & replay yarpc requests on the client side.
+// Package recorder records & replay yarpc requests on the client side.
 //
 // For recording, the client must be connected and able to issue requests to a
 // remote service. Every request and its response is recorded into a YAML file,
@@ -65,7 +65,7 @@ type Recorder struct {
 	recordsDir string
 }
 
-const recorderDir = "testdata/recordings"
+const defaultRecorderDir = "testdata/recordings"
 
 // Mode is the recording mode of the recorder.
 type Mode int
@@ -131,22 +131,39 @@ type TestingT interface {
 // argument compatible with `testing.T`.
 //
 // See package documentation for more details.
-func NewRecorder(logger TestingT) *Recorder {
+func NewRecorder(logger TestingT, opts ...Option) *Recorder {
 	cwd, err := os.Getwd()
-	if err != nil {
-		logger.Fatal(err)
-	}
-	mode, err := ModeFromString(*recorderFlag)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	recorder := &Recorder{
 		mode:       invalidMode,
 		logger:     logger,
-		recordsDir: filepath.Join(cwd, recorderDir),
+		recordsDir: filepath.Join(cwd, defaultRecorderDir),
+	}
+	var mode Mode = invalidMode
+	for _, opt := range opts {
+		if opt.RecordsPath != "" {
+			recorder.recordsDir = opt.RecordsPath
+		}
+		if opt.Mode != invalidMode {
+			mode = opt.Mode
+		}
+	}
+	if mode == invalidMode {
+		mode, err = ModeFromString(*recorderFlag)
+		if err != nil {
+			logger.Fatal(err)
+		}
 	}
 	recorder.SetMode(mode)
 	return recorder
+}
+
+// Option can be passed to NewRecorder for customization.
+type Option struct {
+	Mode        Mode   // Initial mode.
+	RecordsPath string // Initial records location.
 }
 
 // SetMode let you choose enable the different replay and recording modes,
@@ -156,7 +173,7 @@ func (r *Recorder) SetMode(newMode Mode) {
 		return
 	}
 	r.mode = newMode
-	r.logger.Logf("recorder %s to %v", r.mode.toHumanString(), r.recordsDir)
+	r.logger.Logf("recorder %s from/to %v", r.mode.toHumanString(), r.recordsDir)
 }
 
 func sanitizeFilename(s string) (r string) {
@@ -293,7 +310,7 @@ func (r *Recorder) saveRecord(request *transport.Request, requestBody []byte,
 	}
 	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
 
-	if err := os.MkdirAll(recorderDir, 0775); err != nil {
+	if err := os.MkdirAll(defaultRecorderDir, 0775); err != nil {
 		return err
 	}
 
