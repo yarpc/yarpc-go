@@ -74,10 +74,12 @@ func TestHandlerErrors(t *testing.T) {
 	for _, tt := range tests {
 		rpcHandler := transporttest.NewMockHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
+
 		handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 		tchHandler := handler{Registry: registry}
 
 		registry.EXPECT().GetHandler("service", "hello").Return(handlerInfo, nil)
+
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t, transporttest.ContextBaggage(tt.wantBaggage)),
 			transportOptions,

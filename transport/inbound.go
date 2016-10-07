@@ -24,13 +24,14 @@ package transport
 
 // Inbound is a transport that knows how to receive requests for procedure calls.
 type Inbound interface {
-	// Starts accepting new requests and dispatches them to the given Handler.
+	// Starts accepting new requests and dispatches them using the given
+	// service configuration.
 	//
 	// The function MUST return immediately, although it SHOULD block until
 	// the inbound is ready to start accepting new requests.
 	//
 	// Implementations can assume that this function is called at most once.
-	Start(config ServiceConfig, deps Deps) error
+	Start(service ServiceDetail, deps Deps) error
 
 	// Stops the inbound. No new requests will be processed.
 	//
@@ -41,8 +42,12 @@ type Inbound interface {
 	// listening on
 }
 
-// ServiceConfig holds the service name and procedure configurations
-type ServiceConfig struct {
-	Name     string
+
+// ServiceDetail specifies the service that an Inbound must serve.
+type ServiceDetail struct {
+	// Name of the service being served.
+	Name string
+
+	// Registry of procedures that this service offers.
 	Registry Registry
 }

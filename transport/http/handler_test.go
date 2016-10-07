@@ -58,6 +58,7 @@ func TestHandlerSucces(t *testing.T) {
 	handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 
 	registry.EXPECT().GetHandler("curly", "nyuck").Return(handlerInfo, nil)
+
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
@@ -136,6 +137,7 @@ func TestHandlerHeaders(t *testing.T) {
 		handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 
 		registry.EXPECT().GetHandler("service", "hello").Return(handlerInfo, nil)
+
 		httpHandler := handler{Registry: registry}
 
 		rpcHandler.EXPECT().Handle(
@@ -293,6 +295,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 
 	registry.EXPECT().GetHandler("fake", "hello").Return(handlerInfo, nil)
+
 	httpHandler := handler{Registry: registry}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
