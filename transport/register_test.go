@@ -59,7 +59,7 @@ func TestMapRegistry(t *testing.T) {
 		if tt.want != nil {
 			assert.NoError(t, err,
 				"GetHandler(%q, %q) failed", tt.service, tt.procedure)
-			assert.True(t, tt.want == got, // want == match, not deep equals
+			assert.True(t, tt.want == got.Handler, // want == match, not deep equals
 				"GetHandler(%q, %q) did not match", tt.service, tt.procedure)
 		} else {
 			assert.Error(t, err)

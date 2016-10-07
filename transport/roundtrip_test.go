@@ -62,13 +62,16 @@ type staticRegistry struct{ Handler transport.Handler }
 func (r staticRegistry) Register(service string, procedure string, handler transport.Handler) {
 	panic("cannot register methods on a static registry")
 }
+func (r staticRegistry) RegisterOneway(service string, procedure string, handler transport.OnewayHandler) {
+	panic("cannot register methods on a static registry")
+}
 
 func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	return []transport.ServiceProcedure{{Service: testService, Procedure: testProcedure}}
 }
 
-func (r staticRegistry) GetHandler(service string, procedure string) (transport.Handler, error) {
-	return r.Handler, nil
+func (r staticRegistry) GetHandler(service string, procedure string) (transport.HandlerInfo, error) {
+	return transport.HandlerInfo{Mode: transport.Unary, Handler: r.Handler}, nil
 }
 
 // handlerFunc wraps a function into a transport.Registry

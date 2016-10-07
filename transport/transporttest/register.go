@@ -81,9 +81,9 @@ func (_m *MockRegistry) EXPECT() *_MockRegistryRecorder {
 	return _m.recorder
 }
 
-func (_m *MockRegistry) GetHandler(_param0 string, _param1 string) (transport.Handler, error) {
+func (_m *MockRegistry) GetHandler(_param0 string, _param1 string) (transport.HandlerInfo, error) {
 	ret := _m.ctrl.Call(_m, "GetHandler", _param0, _param1)
-	ret0, _ := ret[0].(transport.Handler)
+	ret0, _ := ret[0].(transport.HandlerInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -98,6 +98,14 @@ func (_m *MockRegistry) Register(_param0 string, _param1 string, _param2 transpo
 
 func (_mr *_MockRegistryRecorder) Register(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Register", arg0, arg1, arg2)
+}
+
+func (_m *MockRegistry) RegisterOneway(_param0 string, _param1 string, _param2 transport.OnewayHandler) {
+	_m.ctrl.Call(_m, "RegisterOneway", _param0, _param1, _param2)
+}
+
+func (_mr *_MockRegistryRecorder) RegisterOneway(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "RegisterOneway", arg0, arg1, arg2)
 }
 
 func (_m *MockRegistry) ServiceProcedures() []transport.ServiceProcedure {

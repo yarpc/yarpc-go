@@ -53,10 +53,11 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(BaggageHeaderPrefix+"Foo", "bar")
 	headers.Set(BaggageHeaderPrefix+"BAR", "baz")
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	registry := transporttest.NewMockRegistry(mockCtrl)
+	rpcHandler := transporttest.NewMockHandler(mockCtrl)
+	handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 
-	registry.EXPECT().GetHandler("curly", "nyuck").Return(rpcHandler, nil)
+	registry.EXPECT().GetHandler("curly", "nyuck").Return(handlerInfo, nil)
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
@@ -130,10 +131,11 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		rpcHandler := transporttest.NewMockHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
+		rpcHandler := transporttest.NewMockHandler(mockCtrl)
+		handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 
-		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
+		registry.EXPECT().GetHandler("service", "hello").Return(handlerInfo, nil)
 		httpHandler := handler{Registry: registry}
 
 		rpcHandler.EXPECT().Handle(
@@ -288,8 +290,9 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(fmt.Errorf("great sadness"))
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
+	handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 
-	registry.EXPECT().GetHandler("fake", "hello").Return(rpcHandler, nil)
+	registry.EXPECT().GetHandler("fake", "hello").Return(handlerInfo, nil)
 	httpHandler := handler{Registry: registry}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)

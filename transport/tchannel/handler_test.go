@@ -74,9 +74,10 @@ func TestHandlerErrors(t *testing.T) {
 	for _, tt := range tests {
 		rpcHandler := transporttest.NewMockHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
+		handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: rpcHandler}
 		tchHandler := handler{Registry: registry}
 
-		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
+		registry.EXPECT().GetHandler("service", "hello").Return(handlerInfo, nil)
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t, transporttest.ContextBaggage(tt.wantBaggage)),
 			transportOptions,
@@ -338,6 +339,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		mockCtrl := gomock.NewController(t)
 		thandler := transporttest.NewMockHandler(mockCtrl)
+		handlerInfo := transport.HandlerInfo{Mode: transport.Unary, Handler: thandler}
 		if tt.expectCall != nil {
 			tt.expectCall(thandler)
 		}
@@ -347,7 +349,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		registry := transporttest.NewMockRegistry(mockCtrl)
 		registry.EXPECT().GetHandler(tt.sendCall.service, tt.sendCall.method).
-			Return(thandler, nil).AnyTimes()
+			Return(handlerInfo, nil).AnyTimes()
 
 		handler{Registry: registry}.handle(ctx, tt.sendCall)
 		err := resp.systemErr
