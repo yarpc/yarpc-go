@@ -2,14 +2,21 @@ package recorder
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
+	"time"
 
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/http"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 )
 
 func TestSanitizeFilename(t *testing.T) {
@@ -125,4 +132,103 @@ func TestHash(t *testing.T) {
 	r = request
 	b := []byte(rgen.Atom())
 	assert.NotEqual(t, recorder.hashRequest(&r, b), referenceHash)
+}
+
+func TestOverwriteReplay(t *testing.T) {
+	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // clean up
+
+	func() {
+		// First we double check that our cache is empty.
+		recorder := NewRecorder(t, Option{
+			Mode:        Replay,
+			RecordsPath: dir,
+		})
+
+		clientDisp := yarpc.NewDispatcher(yarpc.Config{
+			Name: "client",
+			Outbounds: transport.Outbounds{
+				"server": http.NewOutbound("http://localhost:65535"),
+			},
+			Filter: recorder,
+		})
+		require.NoError(t, clientDisp.Start())
+		defer clientDisp.Stop()
+
+		client := raw.New(clientDisp.Channel("server"))
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+		_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no such file or directory")
+	}()
+
+	func() {
+		// Now let's record our call.
+		recorder := NewRecorder(t, Option{
+			Mode:        Overwrite,
+			RecordsPath: dir,
+		})
+
+		serverHTTP := http.NewInbound(":0")
+
+		serverDisp := yarpc.NewDispatcher(yarpc.Config{
+			Name:     "server",
+			Inbounds: []transport.Inbound{serverHTTP},
+		})
+
+		raw.Register(serverDisp, raw.Procedure("hello",
+			func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+				return append(body, []byte(", World")...), nil, nil
+			}))
+
+		require.NoError(t, serverDisp.Start())
+		defer serverDisp.Stop()
+
+		clientDisp := yarpc.NewDispatcher(yarpc.Config{
+			Name: "client",
+			Outbounds: transport.Outbounds{
+				"server": http.NewOutbound(fmt.Sprintf("http://%s",
+					serverHTTP.Addr().String())),
+			},
+			Filter: recorder,
+		})
+		require.NoError(t, clientDisp.Start())
+		defer clientDisp.Stop()
+
+		client := raw.New(clientDisp.Channel("server"))
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		require.NoError(t, err)
+		assert.Equal(t, rbody, []byte("Hello, World"))
+	}()
+
+	func() {
+		// Now we should be able to replay.
+		recorder := NewRecorder(t, Option{
+			Mode:        Replay,
+			RecordsPath: dir,
+		})
+
+		clientDisp := yarpc.NewDispatcher(yarpc.Config{
+			Name: "client",
+			Outbounds: transport.Outbounds{
+				"server": http.NewOutbound("http://localhost:65535"),
+			},
+			Filter: recorder,
+		})
+		require.NoError(t, clientDisp.Start())
+		defer clientDisp.Stop()
+
+		client := raw.New(clientDisp.Channel("server"))
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		require.NoError(t, err)
+		assert.Equal(t, rbody, []byte("Hello, World"))
+	}()
 }
