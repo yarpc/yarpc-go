@@ -117,14 +117,14 @@ func (d dispatcher) Channel(service string) transport.Channel {
 }
 
 func (d dispatcher) Start() error {
-	config := transport.ServiceConfig{
+	service := transport.ServiceDetail{
 		Name:     d.Name,
 		Registry: d,
 	}
 
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Start(config, d.deps)
+			return i.Start(service, d.deps)
 		}
 	}
 

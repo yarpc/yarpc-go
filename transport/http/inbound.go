@@ -70,11 +70,11 @@ type inbound struct {
 	tracer     opentracing.Tracer
 }
 
-func (i *inbound) Start(cfg transport.ServiceConfig, d transport.Deps) error {
+func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 	i.tracer = d.Tracer()
 
 	var httpHandler http.Handler = handler{
-		Registry: cfg.Registry,
+		Registry: service.Registry,
 		Deps:     d,
 	}
 	if i.mux != nil {

@@ -32,7 +32,7 @@ type Inbound interface {
 	// the inbound is ready to start accepting new requests.
 	//
 	// Implementations can assume that this function is called at most once.
-	Start(config ServiceConfig, deps Deps) error
+	Start(service ServiceDetail, deps Deps) error
 
 	// Stops the inbound. No new requests will be processed.
 	//
@@ -43,8 +43,8 @@ type Inbound interface {
 	// listening on
 }
 
-// ServiceConfig specifies the service that an Inbound must serve.
-type ServiceConfig struct {
+// ServiceDetail specifies the service that an Inbound must serve.
+type ServiceDetail struct {
 	// Name of the service being served.
 	Name string
 

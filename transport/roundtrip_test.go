@@ -83,7 +83,7 @@ type httpTransport struct{ t *testing.T }
 
 func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Outbound)) {
 	i := http.NewInbound("127.0.0.1:0")
-	require.NoError(ht.t, i.Start(transport.ServiceConfig{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+	require.NoError(ht.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
@@ -101,7 +101,7 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
 		i := tch.NewInbound(ch)
-		require.NoError(tt.t, i.Start(transport.ServiceConfig{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+		require.NoError(tt.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
 		// handler.
