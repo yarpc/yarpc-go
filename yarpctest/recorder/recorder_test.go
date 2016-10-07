@@ -163,7 +163,7 @@ func TestOverwriteReplay(t *testing.T) {
 
 		_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no such file or directory")
+		assert.True(t, os.IsNotExist(err))
 	}()
 
 	func() {
@@ -180,7 +180,7 @@ func TestOverwriteReplay(t *testing.T) {
 			Inbounds: []transport.Inbound{serverHTTP},
 		})
 
-		raw.Register(serverDisp, raw.Procedure("hello",
+		serverDisp.Register(raw.Procedure("hello",
 			func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
 				return append(body, []byte(", World")...), nil, nil
 			}))
