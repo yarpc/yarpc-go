@@ -5,8 +5,8 @@
 // under the directory "testdata/recordings".
 //
 // During replay, the client doesn't need to be connected, for any recorded
-// request Recorder will return the recorded response. Any new request will
-// return an error.
+// request Recorder will return the recorded response. Any new request (ie: not
+// pre-recorded) will abort the test.
 //
 // NewRecorder() returns a Recorder, in the mode specified by the flag
 // `--recorder=replay|append|overwrite`. `replay` is the default.
@@ -58,7 +58,7 @@ append: replay existing and record new request/response pairs.`)
 //
 // During replay, the client doesn't need to be connected, for any recorded
 // request Recorder will return the recorded response. Any new request will
-// return an error.
+// abort the test by calling logger.Fatal().
 type Recorder struct {
 	mode       Mode
 	logger     TestingT
@@ -66,6 +66,8 @@ type Recorder struct {
 }
 
 const defaultRecorderDir = "testdata/recordings"
+
+var errRecordNotFound = fmt.Errorf("record not found")
 
 // Mode is the recording mode of the recorder.
 type Mode int
@@ -141,7 +143,7 @@ func NewRecorder(logger TestingT, opts ...Option) *Recorder {
 		logger:     logger,
 		recordsDir: filepath.Join(cwd, defaultRecorderDir),
 	}
-	var mode Mode = invalidMode
+	var mode Mode
 	for _, opt := range opts {
 		if opt.RecordsPath != "" {
 			recorder.recordsDir = opt.RecordsPath
@@ -254,43 +256,47 @@ func (r *Recorder) Call(
 
 	switch r.mode {
 	case Replay:
-		return r.loadRecord(filepath)
+		response, err := r.loadRecord(filepath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return response, nil
 	case Append:
 		response, err := r.loadRecord(filepath)
-		if !os.IsNotExist(err) {
-			return response, err
+		if err == nil {
+			return response, nil
 		}
 		fallthrough
 	case Overwrite:
 		response, err := out.Call(ctx, request)
-		if err != nil {
-			return response, err
+		if err == nil {
+			r.saveRecord(request, requestBody, response, filepath)
 		}
-
-		if err := r.saveRecord(request, requestBody, response, filepath); err != nil {
-			log.Fatal(err)
-		}
-		return response, nil
+		return response, err
 	default:
 		panic("Invalid mode")
 	}
 }
 
-// loadRecord attempts to load a record from the given file.
+// loadRecord attempts to load a record from the given file. If the record
+// cannot be found the errRecordNotFound is returned. Any other error will
+// abort the current test.
 func (r *Recorder) loadRecord(filepath string) (*transport.Response, error) {
-	// TODO wrap recorder errors in theirs own type.
 	rawRecord, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			return nil, errRecordNotFound
+		}
+		r.logger.Fatal(err)
 	}
 	var cachedRecord record
 	if err := yaml.Unmarshal(rawRecord, &cachedRecord); err != nil {
-		return nil, err
+		r.logger.Fatal(err)
 	}
 
 	if cachedRecord.Version != currentRecordVersion {
-		return nil, fmt.Errorf("unsupported record version %d (expected %d)",
-			cachedRecord.Version, currentRecordVersion)
+		r.logger.Fatal(fmt.Sprintf("unsupported record version %d (expected %d)",
+			cachedRecord.Version, currentRecordVersion))
 	}
 
 	response := transport.Response{
@@ -300,18 +306,19 @@ func (r *Recorder) loadRecord(filepath string) (*transport.Response, error) {
 	return &response, nil
 }
 
-// saveRecord attempts to save a record to the given file.
+// saveRecord attempts to save a record to the given file, any error fails the
+// current test.
 func (r *Recorder) saveRecord(request *transport.Request, requestBody []byte,
-	response *transport.Response, filepath string) error {
+	response *transport.Response, filepath string) {
 
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return err
+		r.logger.Fatal(err)
 	}
 	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
 
 	if err := os.MkdirAll(defaultRecorderDir, 0775); err != nil {
-		return err
+		r.logger.Fatal(err)
 	}
 
 	rawRecord, err := yaml.Marshal(&record{
@@ -330,10 +337,12 @@ func (r *Recorder) saveRecord(request *transport.Request, requestBody []byte,
 		},
 	})
 	if err != nil {
-		return err
+		r.logger.Fatal(err)
 	}
 
-	return ioutil.WriteFile(filepath, rawRecord, 0664)
+	if err := ioutil.WriteFile(filepath, rawRecord, 0664); err != nil {
+		r.logger.Fatal(err)
+	}
 }
 
 type requestRecord struct {

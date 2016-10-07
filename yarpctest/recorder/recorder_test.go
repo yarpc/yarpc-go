@@ -134,7 +134,23 @@ func TestHash(t *testing.T) {
 	assert.NotEqual(t, recorder.hashRequest(&r, b), referenceHash)
 }
 
+var testingTMockFatal = struct{}{}
+
+type testingTMock struct {
+	*testing.T
+
+	fatalCount int
+}
+
+func (t *testingTMock) Fatal(args ...interface{}) {
+	t.Logf("counting fatal: %s", args)
+	t.fatalCount++
+	panic(testingTMockFatal)
+}
+
 func TestOverwriteReplay(t *testing.T) {
+	tMock := testingTMock{t, 0}
+
 	dir, err := ioutil.TempDir("", "yarpcgorecorder")
 	if err != nil {
 		t.Fatal(err)
@@ -143,7 +159,7 @@ func TestOverwriteReplay(t *testing.T) {
 
 	func() {
 		// First we double check that our cache is empty.
-		recorder := NewRecorder(t, Option{
+		recorder := NewRecorder(&tMock, Option{
 			Mode:        Replay,
 			RecordsPath: dir,
 		})
@@ -161,14 +177,15 @@ func TestOverwriteReplay(t *testing.T) {
 		client := raw.New(clientDisp.Channel("server"))
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
-		_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
-		require.Error(t, err)
-		assert.True(t, os.IsNotExist(err))
+		require.Panics(t, func() {
+			client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		})
+		assert.Equal(t, tMock.fatalCount, 1)
 	}()
 
 	func() {
 		// Now let's record our call.
-		recorder := NewRecorder(t, Option{
+		recorder := NewRecorder(&tMock, Option{
 			Mode:        Overwrite,
 			RecordsPath: dir,
 		})
@@ -209,7 +226,7 @@ func TestOverwriteReplay(t *testing.T) {
 
 	func() {
 		// Now we should be able to replay.
-		recorder := NewRecorder(t, Option{
+		recorder := NewRecorder(&tMock, Option{
 			Mode:        Replay,
 			RecordsPath: dir,
 		})
