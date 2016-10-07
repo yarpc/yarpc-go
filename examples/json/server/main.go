@@ -89,8 +89,8 @@ func main() {
 
 	handler := handler{items: make(map[string]string)}
 
-	json.Register(dispatcher, json.Procedure("get", handler.Get))
-	json.Register(dispatcher, json.Procedure("set", handler.Set))
+	dispatcher.Register(json.Procedure("get", handler.Get))
+	dispatcher.Register(json.Procedure("set", handler.Set))
 
 	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())

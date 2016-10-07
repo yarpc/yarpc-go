@@ -24,13 +24,13 @@
 package thrifttestserver
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/thrifttest"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is the server-side interface for the ThriftTest service.
@@ -165,63 +165,35 @@ type Interface interface {
 // registration.
 //
 // 	handler := ThriftTestHandler{}
-// 	thrift.Register(dispatcher, thrifttestserver.New(handler))
-func New(impl Interface) thrift.Service {
-	return service{handler{impl}}
-}
-
-type service struct{ h handler }
-
-func (service) Name() string {
-	return "ThriftTest"
-}
-
-func (service) Protocol() protocol.Protocol {
-	return protocol.Binary
-}
-
-func (s service) Handlers() map[string]thrift.Handler {
-	return map[string]thrift.Handler{
-		"testBinary": thrift.HandlerFunc(s.h.TestBinary),
-
-		"testByte": thrift.HandlerFunc(s.h.TestByte),
-
-		"testDouble": thrift.HandlerFunc(s.h.TestDouble),
-
-		"testEnum": thrift.HandlerFunc(s.h.TestEnum),
-
-		"testException": thrift.HandlerFunc(s.h.TestException),
-
-		"testI32": thrift.HandlerFunc(s.h.TestI32),
-
-		"testI64": thrift.HandlerFunc(s.h.TestI64),
-
-		"testInsanity": thrift.HandlerFunc(s.h.TestInsanity),
-
-		"testList": thrift.HandlerFunc(s.h.TestList),
-
-		"testMap": thrift.HandlerFunc(s.h.TestMap),
-
-		"testMapMap": thrift.HandlerFunc(s.h.TestMapMap),
-
-		"testMulti": thrift.HandlerFunc(s.h.TestMulti),
-
-		"testMultiException": thrift.HandlerFunc(s.h.TestMultiException),
-
-		"testNest": thrift.HandlerFunc(s.h.TestNest),
-
-		"testSet": thrift.HandlerFunc(s.h.TestSet),
-
-		"testString": thrift.HandlerFunc(s.h.TestString),
-
-		"testStringMap": thrift.HandlerFunc(s.h.TestStringMap),
-
-		"testStruct": thrift.HandlerFunc(s.h.TestStruct),
-
-		"testTypedef": thrift.HandlerFunc(s.h.TestTypedef),
-
-		"testVoid": thrift.HandlerFunc(s.h.TestVoid),
+// 	dispatcher.Register(thrifttestserver.New(handler))
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+	h := handler{impl}
+	service := thrift.Service{
+		Name: "ThriftTest",
+		Methods: map[string]thrift.Handler{
+			"testBinary":         thrift.HandlerFunc(h.TestBinary),
+			"testByte":           thrift.HandlerFunc(h.TestByte),
+			"testDouble":         thrift.HandlerFunc(h.TestDouble),
+			"testEnum":           thrift.HandlerFunc(h.TestEnum),
+			"testException":      thrift.HandlerFunc(h.TestException),
+			"testI32":            thrift.HandlerFunc(h.TestI32),
+			"testI64":            thrift.HandlerFunc(h.TestI64),
+			"testInsanity":       thrift.HandlerFunc(h.TestInsanity),
+			"testList":           thrift.HandlerFunc(h.TestList),
+			"testMap":            thrift.HandlerFunc(h.TestMap),
+			"testMapMap":         thrift.HandlerFunc(h.TestMapMap),
+			"testMulti":          thrift.HandlerFunc(h.TestMulti),
+			"testMultiException": thrift.HandlerFunc(h.TestMultiException),
+			"testNest":           thrift.HandlerFunc(h.TestNest),
+			"testSet":            thrift.HandlerFunc(h.TestSet),
+			"testString":         thrift.HandlerFunc(h.TestString),
+			"testStringMap":      thrift.HandlerFunc(h.TestStringMap),
+			"testStruct":         thrift.HandlerFunc(h.TestStruct),
+			"testTypedef":        thrift.HandlerFunc(h.TestTypedef),
+			"testVoid":           thrift.HandlerFunc(h.TestVoid),
+		},
 	}
+	return thrift.BuildRegistrants(service, opts...)
 }
 
 type handler struct{ impl Interface }

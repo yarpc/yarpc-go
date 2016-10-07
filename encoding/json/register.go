@@ -38,48 +38,29 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Registrant is used for types that define or know about different JSON
-// procedures.
-type Registrant interface {
-	// Gets a mapping from procedure name to the handler for that procedure for
-	// all procedures provided by this registrant.
-	getHandlers() map[string]interface{}
+// Register calls the Registry's Register method.
+//
+// This function exists for backwards compatibility only. It will be removed
+// in a future version.
+//
+// Deprecated: Use the Registry's Register method directly.
+func Register(r transport.Registry, rs []transport.Registrant) {
+	r.Register(rs)
 }
 
-// procedure is a simple Registrant that has a single procedure.
-type procedure struct {
-	Name    string
-	Handler interface{}
-}
-
-func (p procedure) getHandlers() map[string]interface{} {
-	return map[string]interface{}{p.Name: p.Handler}
-}
-
-// Procedure builds a Registrant with a single procedure in it. handler must
-// be a function with a signature similar to,
+// Procedure builds a Registrant from the given JSON handler. handler must be
+// a function with a signature similar to,
 //
 // 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
-func Procedure(name string, handler interface{}) Registrant {
-	return procedure{Name: name, Handler: handler}
-}
-
-// Register registers the procedures defined by the given JSON registrant with
-// the given registry.
-//
-// Handlers must have a signature similar to the following or the system will
-// panic.
-//
-// 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
-//
-// Where $reqBody and $resBody are a map[string]interface{} or pointers to
-// structs.
-func Register(reg transport.Registry, registrant Registrant) {
-	for name, handler := range registrant.getHandlers() {
-		reg.Register("", name, wrapHandler(name, handler))
+func Procedure(name string, handler interface{}) []transport.Registrant {
+	return []transport.Registrant{
+		{
+			Procedure: name,
+			Handler:   wrapHandler(name, handler),
+		},
 	}
 }
 

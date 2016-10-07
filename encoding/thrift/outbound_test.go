@@ -177,10 +177,9 @@ func TestClient(t *testing.T) {
 		}
 
 		c := New(Config{
-			Service:  "MyService",
-			Channel:  transport.IdentityChannel("caller", "service", trans),
-			Protocol: proto,
-		})
+			Service: "MyService",
+			Channel: transport.IdentityChannel("caller", "service", trans),
+		}, Protocol(proto))
 
 		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {

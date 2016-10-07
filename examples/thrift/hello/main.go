@@ -30,7 +30,6 @@ import (
 	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello/yarpc/helloserver"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	"golang.org/x/net/context"
@@ -49,7 +48,7 @@ func main() {
 		},
 	})
 
-	thrift.Register(dispatcher, helloserver.New(&helloHandler{}))
+	dispatcher.Register(helloserver.New(&helloHandler{}))
 	client := helloclient.New(dispatcher.Channel("hello"))
 
 	if err := dispatcher.Start(); err != nil {

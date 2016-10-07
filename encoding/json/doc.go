@@ -37,10 +37,10 @@
 // Where '$reqBody' and '$resBody' are either pointers to structs representing
 // your request and response objects, or map[string]interface{}.
 //
-// Use the Register and Procedure functions to register the procedures with a
+// Use the Procedure function to build registrants to register against a
 // Registry.
 //
-// 	json.Register(r, json.Procedure("getValue", GetValue))
-// 	json.Register(r, json.Procedure("setValue", SetValue))
+// 	dispatcher.Register(json.Procedure("getValue", GetValue))
+// 	dispatcher.Register(json.Procedure("setValue", SetValue))
 //
 package json

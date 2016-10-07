@@ -24,12 +24,12 @@
 package secondserviceserver
 
 import (
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/secondservice"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Interface is the server-side interface for the SecondService service.
@@ -50,27 +50,17 @@ type Interface interface {
 // registration.
 //
 // 	handler := SecondServiceHandler{}
-// 	thrift.Register(dispatcher, secondserviceserver.New(handler))
-func New(impl Interface) thrift.Service {
-	return service{handler{impl}}
-}
-
-type service struct{ h handler }
-
-func (service) Name() string {
-	return "SecondService"
-}
-
-func (service) Protocol() protocol.Protocol {
-	return protocol.Binary
-}
-
-func (s service) Handlers() map[string]thrift.Handler {
-	return map[string]thrift.Handler{
-		"blahBlah": thrift.HandlerFunc(s.h.BlahBlah),
-
-		"secondtestString": thrift.HandlerFunc(s.h.SecondtestString),
+// 	dispatcher.Register(secondserviceserver.New(handler))
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+	h := handler{impl}
+	service := thrift.Service{
+		Name: "SecondService",
+		Methods: map[string]thrift.Handler{
+			"blahBlah":         thrift.HandlerFunc(h.BlahBlah),
+			"secondtestString": thrift.HandlerFunc(h.SecondtestString),
+		},
 	}
+	return thrift.BuildRegistrants(service, opts...)
 }
 
 type handler struct{ impl Interface }

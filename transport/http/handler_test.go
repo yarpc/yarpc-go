@@ -313,7 +313,9 @@ func TestHandlerPanic(t *testing.T) {
 		Name:     "yarpc-test",
 		Inbounds: []transport.Inbound{inbound},
 	})
-	serverDispatcher.Register("", "panic", panickedHandler{})
+	serverDispatcher.Register([]transport.Registrant{
+		{Procedure: "panic", Handler: panickedHandler{}},
+	})
 
 	require.NoError(t, serverDispatcher.Start())
 	defer serverDispatcher.Stop()

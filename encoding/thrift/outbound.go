@@ -54,9 +54,6 @@ type Config struct {
 
 	// Channel through which requests will be sent. Required.
 	Channel transport.Channel
-
-	// Thrift encoding protocol. Defaults to Binary if nil.
-	Protocol protocol.Protocol
 }
 
 // New creates a new Thrift client.
@@ -76,14 +73,14 @@ func New(c Config, opts ...ClientOption) Client {
 	// So Config is really the internal config as far as consumers of the
 	// generated client are concerned.
 
-	p := c.Protocol
-	if p == nil {
-		p = protocol.Binary
-	}
-
 	var cc clientConfig
 	for _, opt := range opts {
 		opt.applyClientOption(&cc)
+	}
+
+	p := protocol.Binary
+	if cc.Protocol != nil {
+		p = cc.Protocol
 	}
 
 	if cc.Multiplexed {
