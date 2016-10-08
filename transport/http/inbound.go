@@ -70,7 +70,6 @@ type inbound struct {
 	tracer     opentracing.Tracer
 }
 
-
 func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 	i.tracer = d.Tracer()
 

@@ -70,7 +70,6 @@ func (i *inbound) Channel() *tchannel.Channel {
 	return i.ch
 }
 
-
 func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()

@@ -42,7 +42,6 @@ type Inbound interface {
 	// listening on
 }
 
-
 // ServiceDetail specifies the service that an Inbound must serve.
 type ServiceDetail struct {
 	// Name of the service being served.

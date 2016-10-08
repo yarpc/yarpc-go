@@ -71,8 +71,8 @@ func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	return []transport.ServiceProcedure{{Service: testService, Procedure: testProcedure}}
 }
 
-func (r staticRegistry) GetHandler(service string, procedure string) (transport.HandlerInfo, error) {
-	return transport.HandlerInfo{Mode: transport.Unary, Handler: r.Handler}, nil
+func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transport.HandlerSpec, error) {
+	return transport.HandlerSpec{Mode: transport.Unary, Handler: r.Handler}, nil
 }
 
 // handlerFunc wraps a function into a transport.Registry

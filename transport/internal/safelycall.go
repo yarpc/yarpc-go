@@ -64,6 +64,7 @@ func SafelyCallHandler(
 
 // SafelyCallOnewayHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
+// TODO: reduce repetition bewteen these two functions
 func SafelyCallOnewayHandler(
 	h transport.OnewayHandler,
 	start time.Time,

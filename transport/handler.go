@@ -45,8 +45,8 @@ func (m Mode) String() string {
 	}
 }
 
-// HandlerInfo holds a handler and its mode
-type HandlerInfo struct {
+// HandlerSpec holds a handler and its mode
+type HandlerSpec struct {
 	Mode Mode
 
 	Handler       Handler
@@ -73,9 +73,8 @@ type Handler interface {
 type OnewayHandler interface {
 	// Handle the given oneway request
 	//
-	// An error may be returned in case of failures. BadRequestError must be
-	// returned for invalid requests. All other failures are treated as
-	// UnexpectedErrors.
+	// An error may be returned in case of failures.
+	// TODO: determine oneway errors and how to deal with them
 	HandleOneway(
 		ctx context.Context,
 		opts Options,

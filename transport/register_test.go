@@ -56,12 +56,12 @@ func TestMapRegistry(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got, err := m.GetHandler(tt.service, tt.procedure)
+		got, err := m.GetHandlerSpec(tt.service, tt.procedure)
 		if tt.want != nil {
 			assert.NoError(t, err,
-				"GetHandler(%q, %q) failed", tt.service, tt.procedure)
+				"GetHandlerSpec(%q, %q) failed", tt.service, tt.procedure)
 			assert.True(t, tt.want == got.Handler, // want == match, not deep equals
-				"GetHandler(%q, %q) did not match", tt.service, tt.procedure)
+				"GetHandlerSpec(%q, %q) did not match", tt.service, tt.procedure)
 		} else {
 			assert.Error(t, err)
 		}

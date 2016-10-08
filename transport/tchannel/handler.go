@@ -151,18 +151,18 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	handlerInfo, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
+	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
 	if err != nil {
 		return err
 	}
 
-	switch handlerInfo.Mode {
+	switch spec.Mode {
 	case transport.Unary:
-		err = internal.SafelyCallHandler(handlerInfo.Handler, start, ctx, transportOptions, treq, rw)
+		err = internal.SafelyCallHandler(spec.Handler, start, ctx, transportOptions, treq, rw)
 	case transport.Oneway:
 		fallthrough //TODO support tchannel oneway
 	default:
-		err = errors.UnknownRPCModeError{Transport: "tchannel", Mode: handlerInfo.Mode.String()}
+		err = errors.UnknownRPCModeError{Transport: "tchannel", Mode: spec.Mode.String()}
 	}
 
 	return err
