@@ -122,3 +122,15 @@ func (e ProcedureFailedError) Error() string {
 func (e ProcedureFailedError) AsHandlerError() HandlerError {
 	return HandlerUnexpectedError(e)
 }
+
+// UnknownRPCModeError is a failure to process a request because the RPC
+// mode is unkown to the transport
+//TODO: add tests for this error
+type UnknownRPCModeError struct {
+	Transport string
+	Mode      string
+}
+
+func (e UnknownRPCModeError) Error() string {
+	return fmt.Sprintf(`unknown RPC mode %s for transport %s:`, e.Mode, e.Transport)
+}

@@ -151,7 +151,21 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	return internal.SafelyCallRegistry(h.Registry, start, ctx, transportOptions, treq, rw)
+	handlerInfo, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
+	if err != nil {
+		return err
+	}
+
+	switch handlerInfo.Mode {
+	case transport.Unary:
+		err = internal.SafelyCallHandler(handlerInfo.Handler, start, ctx, transportOptions, treq, rw)
+	case transport.Oneway:
+		fallthrough //TODO support tchannel oneway
+	default:
+		err = errors.UnknownRPCModeError{Transport: "http", Mode: handlerInfo.Mode.String()}
+	}
+
+	return err
 }
 
 type responseWriter struct {

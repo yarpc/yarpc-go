@@ -100,14 +100,6 @@ func (_mr *_MockRegistryRecorder) Register(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Register", arg0)
 }
 
-func (_m *MockRegistry) RegisterOneway(_param0 string, _param1 string, _param2 transport.OnewayHandler) {
-	_m.ctrl.Call(_m, "RegisterOneway", _param0, _param1, _param2)
-}
-
-func (_mr *_MockRegistryRecorder) RegisterOneway(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "RegisterOneway", arg0, arg1, arg2)
-}
-
 func (_m *MockRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	ret := _m.ctrl.Call(_m, "ServiceProcedures")
 	ret0, _ := ret[0].([]transport.ServiceProcedure)

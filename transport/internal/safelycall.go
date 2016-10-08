@@ -42,7 +42,6 @@ func SafelyCallHandler(
 	req *transport.Request,
 	resq transport.ResponseWriter,
 ) (err error) {
-
 	// We recover panics from now on.
 	defer func() {
 		if r := recover(); r != nil {
@@ -63,18 +62,32 @@ func SafelyCallHandler(
 	return err
 }
 
-// SafelyCallRegistry TODO
-func SafelyCallRegistry(
-	reg transport.Registry,
+// SafelyCallOnewayHandler calls the handler h, recovering panics and timeout errors,
+// converting them to yarpc errors. All other errors are passed trough.
+func SafelyCallOnewayHandler(
+	h transport.OnewayHandler,
 	start time.Time,
 	ctx context.Context,
 	opts transport.Options,
 	req *transport.Request,
-	resq transport.ResponseWriter,
-) error {
-	handlerInfo, err := reg.GetHandler(req.Service, req.Procedure)
-	if err != nil {
-		return err
+) (err error) {
+
+	// We recover panics from now on.
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	err = h.HandleOneway(ctx, opts, req)
+
+	// The handler stopped work on context deadline.
+	if err == context.DeadlineExceeded && err == ctx.Err() {
+		deadline, _ := ctx.Deadline()
+		err = errors.HandlerTimeoutError(req.Caller, req.Service,
+			req.Procedure, deadline.Sub(start))
 	}
-	return SafelyCallHandler(handlerInfo.Handler, start, ctx, opts, req, resq)
+
+	return err
 }

@@ -22,6 +22,37 @@ package transport
 
 import "golang.org/x/net/context"
 
+// Mode is an enum of RPC types
+type Mode int
+
+const (
+	// Unknown RPC type
+	Unknown = iota
+	// Unary RPC type
+	Unary = iota
+	// Oneway RPC type
+	Oneway
+)
+
+func (m Mode) String() string {
+	switch m {
+	case Unary:
+		return "Unary"
+	case Oneway:
+		return "Oneway"
+	default:
+		return "Unknown"
+	}
+}
+
+// HandlerInfo holds a handler and its mode
+type HandlerInfo struct {
+	Mode Mode
+
+	Handler       Handler
+	OnewayHandler OnewayHandler
+}
+
 // Handler handles a single, transport-level, unary request.
 type Handler interface {
 	// Handle the given request, writing the response to the given
@@ -50,24 +81,4 @@ type OnewayHandler interface {
 		opts Options,
 		req *Request,
 	) error
-}
-
-// Mode is an enum of RPC types
-type Mode int
-
-const (
-	// Unknown RPC type
-	Unknown = iota
-	// Unary RPC type
-	Unary
-	// Oneway RPC type
-	Oneway
-)
-
-// HandlerInfo holds
-type HandlerInfo struct {
-	Mode Mode
-
-	Handler       Handler
-	OnewayHandler OnewayHandler
 }

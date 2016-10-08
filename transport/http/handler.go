@@ -105,7 +105,20 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
-	err = internal.SafelyCallRegistry(h.Registry, start, ctx, httpOptions, treq, newResponseWriter(w))
+	handlerInfo, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
+	if err != nil {
+		return err
+	}
+
+	switch handlerInfo.Mode {
+	case transport.Unary:
+		err = internal.SafelyCallHandler(handlerInfo.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
+	case transport.Oneway:
+		go internal.SafelyCallOnewayHandler(handlerInfo.OnewayHandler, start, ctx, httpOptions, treq)
+	default:
+		err = errors.UnknownRPCModeError{Transport: "http", Mode: handlerInfo.Mode.String()}
+	}
+
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
