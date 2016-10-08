@@ -162,7 +162,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	case transport.Oneway:
 		fallthrough //TODO support tchannel oneway
 	default:
-		err = errors.UnknownRPCModeError{Transport: "http", Mode: handlerInfo.Mode.String()}
+		err = errors.UnknownRPCModeError{Transport: "tchannel", Mode: handlerInfo.Mode.String()}
 	}
 
 	return err
