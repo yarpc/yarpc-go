@@ -110,13 +110,13 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		return err
 	}
 
-	switch spec.Mode {
+	switch spec.RPCType {
 	case transport.Unary:
 		err = internal.SafelyCallHandler(spec.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
 	case transport.Oneway:
 		go internal.SafelyCallOnewayHandler(spec.OnewayHandler, start, ctx, httpOptions, treq)
 	default:
-		err = errors.UnknownRPCModeError{Transport: "http", Mode: spec.Mode.String()}
+		err = errors.UnknownRPCTypeError{Transport: "http", RPCType: spec.RPCType.String()}
 	}
 
 	if err != nil {

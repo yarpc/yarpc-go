@@ -117,13 +117,13 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 	}
 
 	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-		return HandlerSpec{Mode: Unary, Handler: h}, nil
+		return HandlerSpec{RPCType: Unary, Handler: h}, nil
 	}
 	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {
-		return HandlerSpec{Mode: Oneway, OnewayHandler: h}, nil
+		return HandlerSpec{RPCType: Oneway, OnewayHandler: h}, nil
 	}
 
-	return HandlerSpec{Mode: Unknown}, errors.UnrecognizedProcedureError{
+	return HandlerSpec{RPCType: Unknown}, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
 	}

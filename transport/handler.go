@@ -22,8 +22,8 @@ package transport
 
 import "golang.org/x/net/context"
 
-// Mode is an enum of RPC types
-type Mode int
+// RPCType is an enum of RPC types
+type RPCType int
 
 const (
 	// Unknown RPC type
@@ -34,8 +34,8 @@ const (
 	Oneway
 )
 
-func (m Mode) String() string {
-	switch m {
+func (t RPCType) String() string {
+	switch t {
 	case Unary:
 		return "Unary"
 	case Oneway:
@@ -45,9 +45,9 @@ func (m Mode) String() string {
 	}
 }
 
-// HandlerSpec holds a handler and its mode
+// HandlerSpec holds a handler and its RPCType
 type HandlerSpec struct {
-	Mode Mode
+	RPCType RPCType
 
 	Handler       Handler
 	OnewayHandler OnewayHandler
