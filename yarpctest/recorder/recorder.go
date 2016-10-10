@@ -73,8 +73,6 @@ type Recorder struct {
 
 const defaultRecorderDir = "testdata/recordings"
 
-var errRecordNotFound = fmt.Errorf("record not found")
-
 // Mode is the recording mode of the recorder.
 type Mode int
 
@@ -280,7 +278,7 @@ func (r *Recorder) Call(
 		}
 		return response, err
 	default:
-		panic("Invalid mode")
+		panic(fmt.Sprintf("invalid record mode: %v", r.mode))
 	}
 }
 
@@ -291,7 +289,7 @@ func (r *Recorder) loadRecord(filepath string) (*transport.Response, error) {
 	rawRecord, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, errRecordNotFound
+			return nil, newErrRecordNotFound(err)
 		}
 		r.logger.Fatal(err)
 	}
@@ -349,6 +347,18 @@ func (r *Recorder) saveRecord(request *transport.Request, requestBody []byte,
 	if err := ioutil.WriteFile(filepath, rawRecord, 0664); err != nil {
 		r.logger.Fatal(err)
 	}
+}
+
+type errRecordNotFound struct {
+	underlyingError error
+}
+
+func newErrRecordNotFound(underlyingError error) errRecordNotFound {
+	return errRecordNotFound{underlyingError}
+}
+
+func (e errRecordNotFound) Error() string {
+	return fmt.Sprintf("record not found (%s)", e.underlyingError)
 }
 
 type requestRecord struct {
