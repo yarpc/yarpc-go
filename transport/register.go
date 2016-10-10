@@ -48,6 +48,8 @@ type Registrant struct {
 
 	// Handler implementing the given procedure.
 	Handler Handler
+
+	HandlerSpec HandlerSpec
 }
 
 // Registry maintains and provides access to a collection of procedures and
@@ -123,7 +125,7 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 		return HandlerSpec{RPCType: Oneway, OnewayHandler: h}, nil
 	}
 
-	return HandlerSpec{RPCType: Unknown}, errors.UnrecognizedProcedureError{
+	return HandlerSpec{}, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
 	}

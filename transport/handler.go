@@ -20,16 +20,18 @@
 
 package transport
 
-import "golang.org/x/net/context"
+import (
+	"fmt"
+
+	"golang.org/x/net/context"
+)
 
 // RPCType is an enum of RPC types
 type RPCType int
 
 const (
-	// Unknown RPC type
-	Unknown = iota
 	// Unary RPC type
-	Unary = iota
+	Unary RPCType = iota + 1
 	// Oneway RPC type
 	Oneway
 )
@@ -41,7 +43,7 @@ func (t RPCType) String() string {
 	case Oneway:
 		return "Oneway"
 	default:
-		return "Unknown"
+		return fmt.Sprintf("RPCType(%v)", int(t))
 	}
 }
 

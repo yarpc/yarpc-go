@@ -124,7 +124,7 @@ func (e ProcedureFailedError) AsHandlerError() HandlerError {
 }
 
 // UnknownRPCTypeError is a failure to process a request because the RPC
-// type is unkown to the transport
+// type is unknown to the transport
 //TODO: add tests for this error
 type UnknownRPCTypeError struct {
 	Transport string
