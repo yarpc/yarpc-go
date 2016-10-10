@@ -320,7 +320,13 @@ func TestHandlerPanic(t *testing.T) {
 		Inbounds: []transport.Inbound{inbound},
 	})
 	serverDispatcher.Register([]transport.Registrant{
-		{Procedure: "panic", Handler: panickedHandler{}},
+		{
+			Procedure: "panic",
+			HandlerSpec: transport.HandlerSpec{
+				RPCType: transport.Unary,
+				Handler: panickedHandler{},
+			},
+		},
 	})
 
 	require.NoError(t, serverDispatcher.Start())

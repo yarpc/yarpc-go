@@ -39,8 +39,21 @@ func TestMapRegistry(t *testing.T) {
 	foo := transporttest.NewMockHandler(mockCtrl)
 	bar := transporttest.NewMockHandler(mockCtrl)
 	m.Register([]transport.Registrant{
-		{Procedure: "foo", Handler: foo},
-		{Service: "anotherservice", Procedure: "bar", Handler: bar},
+		{
+			Procedure: "foo",
+			HandlerSpec: transport.HandlerSpec{
+				RPCType: transport.Unary,
+				Handler: foo,
+			},
+		},
+		{
+			Service:   "anotherservice",
+			Procedure: "bar",
+			HandlerSpec: transport.HandlerSpec{
+				RPCType: transport.Unary,
+				Handler: bar,
+			},
+		},
 	})
 
 	tests := []struct {
@@ -78,9 +91,29 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 	foo := transporttest.NewMockHandler(mockCtrl)
 	aww := transporttest.NewMockHandler(mockCtrl)
 	m.Register([]transport.Registrant{
-		{Service: "anotherservice", Procedure: "bar", Handler: bar},
-		{Procedure: "foo", Handler: foo},
-		{Service: "anotherservice", Procedure: "aww", Handler: aww},
+		{
+			Service:   "anotherservice",
+			Procedure: "bar",
+			HandlerSpec: transport.HandlerSpec{
+				RPCType: transport.Unary,
+				Handler: bar,
+			},
+		},
+		{
+			Procedure: "foo",
+			HandlerSpec: transport.HandlerSpec{
+				RPCType: transport.Unary,
+				Handler: foo,
+			},
+		},
+		{
+			Service:   "anotherservice",
+			Procedure: "aww",
+			HandlerSpec: transport.HandlerSpec{
+				RPCType: transport.Unary,
+				Handler: aww,
+			},
+		},
 	})
 
 	expectedOrderedServiceProcedures := []transport.ServiceProcedure{

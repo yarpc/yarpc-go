@@ -21,6 +21,7 @@
 package transport
 
 import (
+	"fmt"
 	"sort"
 
 	"go.uber.org/yarpc/internal/errors"
@@ -46,9 +47,7 @@ type Registrant struct {
 	// Name of the procedure.
 	Procedure string
 
-	// Handler implementing the given procedure.
-	Handler Handler
-
+	// HandlerSpec specifiying which handler and rpc type.
 	HandlerSpec HandlerSpec
 }
 
@@ -96,7 +95,14 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.Handler
+		switch r.HandlerSpec.RPCType {
+		case Unary:
+			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.Handler
+		case Oneway:
+			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.OnewayHandler
+		default:
+			panic(fmt.Sprintf("Unknown RPC Type %v, for %s::%s", r.HandlerSpec.RPCType, r.Service, r.Procedure))
+		}
 	}
 }
 

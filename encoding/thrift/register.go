@@ -78,13 +78,17 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 
 	rs := make([]transport.Registrant, 0, len(s.Methods))
 	for methodName, handler := range s.Methods {
-		rs = append(rs, transport.Registrant{
-			Procedure: procedureName(s.Name, methodName),
+		spec := transport.HandlerSpec{
+			RPCType: transport.Unary,
 			Handler: thriftHandler{
 				Handler:           handler,
 				Protocol:          proto,
 				DisableEnveloping: rc.DisableEnveloping,
 			},
+		}
+		rs = append(rs, transport.Registrant{
+			Procedure:   procedureName(s.Name, methodName),
+			HandlerSpec: spec,
 		})
 	}
 	return rs
