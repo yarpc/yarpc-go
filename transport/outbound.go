@@ -40,7 +40,7 @@ type BaseOutbound interface {
 	Options() Options
 }
 
-// Outbound is a unary transport that knows how to send requests for procedure
+// Outbound is a transport that knows how to send unary requests for procedure
 // calls.
 type Outbound interface {
 	BaseOutbound
@@ -52,6 +52,20 @@ type Outbound interface {
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
 	Call(ctx context.Context, request *Request) (*Response, error)
+}
+
+// OnewayOutbound is a transport that knows how to send oneway requests for
+// procedure calls.
+type OnewayOutbound interface {
+	BaseOutbound
+
+	// Call sends the given request through this transport and returns its
+	// response.
+	//
+	// This MUST NOT be called before Start() has been called successfully. This
+	// MAY panic if called without calling Start(). This MUST be safe to call
+	// concurrently.
+	Call(ctx context.Context, request *Request) (*Ack, error)
 }
 
 // Outbounds is a map of service name to Outbound for that service.
