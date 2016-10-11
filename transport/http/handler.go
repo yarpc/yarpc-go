@@ -116,7 +116,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	case transport.Oneway:
 		go internal.SafelyCallOnewayHandler(spec.OnewayHandler, start, ctx, httpOptions, treq)
 	default:
-		err = errors.UnknownRPCTypeError{Transport: "http", RPCType: spec.RPCType.String()}
+		err = errors.UnsupportedRPCTypeError{Transport: "http", RPCType: spec.RPCType.String()}
 	}
 
 	if err != nil {

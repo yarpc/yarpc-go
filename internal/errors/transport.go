@@ -123,14 +123,14 @@ func (e ProcedureFailedError) AsHandlerError() HandlerError {
 	return HandlerUnexpectedError(e)
 }
 
-// UnknownRPCTypeError is a failure to process a request because the RPC
+// UnsupportedRPCTypeError is a failure to process a request because the RPC
 // type is unknown to the transport
 //TODO: add tests for this error
-type UnknownRPCTypeError struct {
+type UnsupportedRPCTypeError struct {
 	Transport string
 	RPCType   string
 }
 
-func (e UnknownRPCTypeError) Error() string {
-	return fmt.Sprintf(`unknown RPC type %s for transport %s:`, e.RPCType, e.Transport)
+func (e UnsupportedRPCTypeError) Error() string {
+	return fmt.Sprintf(`unsupported RPC type '%v' for transport %v`, e.RPCType, e.Transport)
 }

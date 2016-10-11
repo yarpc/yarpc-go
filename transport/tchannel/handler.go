@@ -162,7 +162,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	case transport.Oneway:
 		fallthrough //TODO support tchannel oneway
 	default:
-		err = errors.UnknownRPCTypeError{Transport: "tchannel", RPCType: spec.RPCType.String()}
+		err = errors.UnsupportedRPCTypeError{Transport: "tchannel", RPCType: spec.RPCType.String()}
 	}
 
 	return err

@@ -33,9 +33,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-// thriftHandler wraps a Thrift Handler into a transport.Handler
+// thriftHandler wraps a Thrift Handler into a transport.Handler and transport.OnewayHandler
 type thriftHandler struct {
 	Handler           Handler
+	OnewayHandler     OnewayHandler
 	Protocol          protocol.Protocol
 	DisableEnveloping bool
 }
@@ -68,7 +69,6 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 		return encoding.RequestBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
-	// TODO(abg): Support oneway
 
 	reqMeta := meta.FromTransportRequest(treq)
 	res, err := t.Handler.Handle(ctx, reqMeta, envelope.Value)
@@ -106,4 +106,38 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 	}
 
 	return nil
+}
+
+// TODO: reduce commonality between Handle and HandleOneway
+func (t thriftHandler) HandleOneway(ctx context.Context, opts transport.Options, treq *transport.Request) error {
+	if err := encoding.Expect(treq, Encoding); err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(treq.Body)
+	if err != nil {
+		return err
+	}
+
+	// We disable enveloping if either the client or the transport requires it.
+	proto := t.Protocol
+	if t.DisableEnveloping || isEnvelopingDisabled(opts) {
+		proto = disableEnvelopingProtocol{
+			Protocol: proto,
+			Type:     wire.Call, // we only decode requests
+		}
+	}
+
+	envelope, err := proto.DecodeEnveloped(bytes.NewReader(body))
+	if err != nil {
+		return encoding.RequestBodyDecodeError(treq, err)
+	}
+
+	if envelope.Type != wire.Call {
+		return encoding.RequestBodyDecodeError(
+			treq, errUnexpectedEnvelopeType(envelope.Type))
+	}
+
+	reqMeta := meta.FromTransportRequest(treq)
+	return t.OnewayHandler.HandleOneway(ctx, reqMeta, envelope.Value)
 }
