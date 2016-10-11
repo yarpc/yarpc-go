@@ -9,12 +9,37 @@ import (
 	"golang.org/x/net/context"
 )
 
-func TestWrapHandlerInvalid(t *testing.T) {
+func TestWrapUnaryHandlerInvalid(t *testing.T) {
 	tests := []struct {
 		Name string
 		Func interface{}
 	}{
 		{"empty", func() {}},
+		{"not-a-function", 0},
+		{
+			"wrong-args-in",
+			func(context.Context, yarpc.ReqMeta) (*struct{}, yarpc.ResMeta, error) {
+				return nil, nil, nil
+			},
+		},
+		{
+			"wrong-ctx",
+			func(string, yarpc.ReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+				return nil, nil, nil
+			},
+		},
+		{
+			"wrong-req-meta",
+			func(context.Context, yarpc.CallReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
+				return nil, nil, nil
+			},
+		},
+		{
+			"wrong-req-body",
+			func(context.Context, string, int) (*struct{}, yarpc.ResMeta, error) {
+				return nil, nil, nil
+			},
+		},
 		{
 			"wrong-response",
 			func(context.Context, yarpc.ReqMeta, map[string]interface{}) (yarpc.ResMeta, error) {
@@ -24,12 +49,6 @@ func TestWrapHandlerInvalid(t *testing.T) {
 		{
 			"wrong-request",
 			func(context.Context, string, *struct{}) (*struct{}, yarpc.ResMeta, error) {
-				return nil, nil, nil
-			},
-		},
-		{
-			"wrong-req-meta",
-			func(context.Context, yarpc.CallReqMeta, *struct{}) (*struct{}, yarpc.ResMeta, error) {
 				return nil, nil, nil
 			},
 		},
@@ -61,12 +80,12 @@ func TestWrapHandlerInvalid(t *testing.T) {
 
 	for _, tt := range tests {
 		assert.Panics(t, assert.PanicTestFunc(func() {
-			wrapHandler(tt.Name, tt.Func)
+			wrapUnaryHandler(tt.Name, tt.Func)
 		}))
 	}
 }
 
-func TestWrapHandlerValid(t *testing.T) {
+func TestWrapUnaryHandlerValid(t *testing.T) {
 	tests := []struct {
 		Name string
 		Func interface{}
@@ -98,6 +117,105 @@ func TestWrapHandlerValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		wrapHandler(tt.Name, tt.Func)
+		wrapUnaryHandler(tt.Name, tt.Func)
+	}
+}
+
+func TestWrapOnewayHandlerInvalid(t *testing.T) {
+	tests := []struct {
+		Name string
+		Func interface{}
+	}{
+		{"empty", func() {}},
+		{"not-a-function", 0},
+		{
+			"wrong-args-in",
+			func(context.Context, yarpc.ReqMeta) error {
+				return nil
+			},
+		},
+		{
+			"wrong-ctx",
+			func(string, yarpc.ReqMeta, *struct{}) error {
+				return nil
+			},
+		},
+		{
+			"wrong-req-meta",
+			func(context.Context, yarpc.CallReqMeta, *struct{}) error {
+				return nil
+			},
+		},
+		{
+			"wrong-req-body",
+			func(context.Context, string, int) error {
+				return nil
+			},
+		},
+		{
+			"wrong-response",
+			func(context.Context, yarpc.ReqMeta, map[string]interface{}) (*struct{}, yarpc.ResMeta, error) {
+				return nil, nil, nil
+			},
+		},
+		{
+			"wrong-response-val",
+			func(context.Context, yarpc.ReqMeta, map[string]interface{}) int {
+				return 0
+			},
+		},
+		{
+			"non-pointer-req",
+			func(context.Context, yarpc.ReqMeta, struct{}) error {
+				return nil
+			},
+		},
+		{
+			"non-string-key",
+			func(context.Context, yarpc.ReqMeta, map[int32]interface{}) error {
+				return nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		assert.Panics(t, assert.PanicTestFunc(func() {
+			wrapOnewayHandler(tt.Name, tt.Func)
+		}))
+	}
+}
+func TestWrapOnewayHandlerValid(t *testing.T) {
+	tests := []struct {
+		Name string
+		Func interface{}
+	}{
+		{
+			"foo",
+			func(context.Context, yarpc.ReqMeta, *struct{}) error {
+				return nil
+			},
+		},
+		{
+			"bar",
+			func(context.Context, yarpc.ReqMeta, map[string]interface{}) error {
+				return nil
+			},
+		},
+		{
+			"baz",
+			func(context.Context, yarpc.ReqMeta, map[string]interface{}) error {
+				return nil
+			},
+		},
+		{
+			"qux",
+			func(context.Context, yarpc.ReqMeta, interface{}) error {
+				return nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		wrapOnewayHandler(tt.Name, tt.Func)
 	}
 }
