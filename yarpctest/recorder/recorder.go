@@ -106,8 +106,8 @@ func (m Mode) toHumanString() string {
 	}
 }
 
-// ModeFromString converts an English string of a mode to a `Mode`.
-func ModeFromString(s string) (Mode, error) {
+// modeFromString converts an English string of a mode to a `Mode`.
+func modeFromString(s string) (Mode, error) {
 	switch s {
 	case "replay":
 		return Replay, nil
@@ -143,21 +143,23 @@ func NewRecorder(logger TestingT, opts ...Option) *Recorder {
 		logger.Fatal(err)
 	}
 	recorder := &Recorder{
-		mode:       invalidMode,
-		logger:     logger,
-		recordsDir: filepath.Join(cwd, defaultRecorderDir),
+		logger: logger,
 	}
-	mode := invalidMode
+
+	var cfg config
 	for _, opt := range opts {
-		if opt.RecordsPath != "" {
-			recorder.recordsDir = opt.RecordsPath
-		}
-		if opt.Mode != invalidMode {
-			mode = opt.Mode
-		}
+		opt(&cfg)
 	}
+
+	if cfg.RecordsPath != "" {
+		recorder.recordsDir = cfg.RecordsPath
+	} else {
+		recorder.recordsDir = filepath.Join(cwd, defaultRecorderDir)
+	}
+
+	mode := cfg.Mode
 	if mode == invalidMode {
-		mode, err = ModeFromString(*recorderFlag)
+		mode, err = modeFromString(*recorderFlag)
 		if err != nil {
 			logger.Fatal(err)
 		}
@@ -166,10 +168,26 @@ func NewRecorder(logger TestingT, opts ...Option) *Recorder {
 	return recorder
 }
 
-// Option can be passed to NewRecorder for customization.
-type Option struct {
-	Mode        Mode   // Initial mode.
-	RecordsPath string // Initial records location.
+// RecordMode sets the mode.
+func RecordMode(mode Mode) Option {
+	return func(cfg *config) {
+		cfg.Mode = mode
+	}
+}
+
+// RecordsPath sets the records directory path.
+func RecordsPath(path string) Option {
+	return func(cfg *config) {
+		cfg.RecordsPath = path
+	}
+}
+
+// Option is the type used for the functional options pattern.
+type Option func(*config)
+
+type config struct {
+	Mode        Mode
+	RecordsPath string
 }
 
 // SetMode let you choose enable the different replay and recording modes,
