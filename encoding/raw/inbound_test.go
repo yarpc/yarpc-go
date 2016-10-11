@@ -96,7 +96,7 @@ func TestRawHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		handler := rawHandler{tt.handler}
+		handler := rawHandler{handler: tt.handler}
 		resw := new(transporttest.FakeResponseWriter)
 
 		writer, chunkReader := testreader.ChunkReader()

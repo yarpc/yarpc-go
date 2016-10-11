@@ -30,9 +30,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-// rawHandler adapts a Handler into a transport.Handler
+// rawHandler adapts a Handler into a transport.Handler and transport.OnewayHandler
 type rawHandler struct {
-	h Handler
+	handler       Handler
+	OnewayHandler OnewayHandler
 }
 
 func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *transport.Request, rw transport.ResponseWriter) error {
@@ -46,7 +47,7 @@ func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *trans
 	}
 
 	reqMeta := meta.FromTransportRequest(treq)
-	resBody, resMeta, err := r.h(ctx, reqMeta, reqBody)
+	resBody, resMeta, err := r.handler(ctx, reqMeta, reqBody)
 	if err != nil {
 		return err
 	}
@@ -56,6 +57,25 @@ func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *trans
 	}
 
 	if _, err := rw.Write(resBody); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r rawHandler) HandleOneway(ctx context.Context, _ transport.Options, treq *transport.Request) error {
+	if err := encoding.Expect(treq, Encoding); err != nil {
+		return err
+	}
+
+	reqBody, err := ioutil.ReadAll(treq.Body)
+	if err != nil {
+		return err
+	}
+
+	reqMeta := meta.FromTransportRequest(treq)
+	err = r.OnewayHandler(ctx, reqMeta, reqBody)
+	if err != nil {
 		return err
 	}
 
