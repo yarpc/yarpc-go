@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -157,104 +159,200 @@ func (t *testingTMock) Fatal(args ...interface{}) {
 	panic(testingTMockFatal)
 }
 
-func TestOverwriteReplay(t *testing.T) {
+func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
+	clientDisp := yarpc.NewDispatcher(yarpc.Config{
+		Name: "client",
+		Outbounds: transport.Outbounds{
+			"server": http.NewOutbound("http://localhost:65535"),
+		},
+		Filter: recorder,
+	})
+	require.NoError(t, clientDisp.Start())
+	defer clientDisp.Stop()
+
+	client := raw.New(clientDisp.Channel("server"))
+	f(client)
+}
+
+func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
+	serverHTTP := http.NewInbound(":0")
+
+	serverDisp := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "server",
+		Inbounds: []transport.Inbound{serverHTTP},
+	})
+
+	serverDisp.Register(raw.Procedure("hello",
+		func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+			return append(body, []byte(", World")...), nil, nil
+		}))
+
+	require.NoError(t, serverDisp.Start())
+	defer serverDisp.Stop()
+
+	clientDisp := yarpc.NewDispatcher(yarpc.Config{
+		Name: "client",
+		Outbounds: transport.Outbounds{
+			"server": http.NewOutbound(fmt.Sprintf("http://%s",
+				serverHTTP.Addr().String())),
+		},
+		Filter: recorder,
+	})
+	require.NoError(t, clientDisp.Start())
+	defer clientDisp.Stop()
+
+	client := raw.New(clientDisp.Channel("server"))
+	f(client)
+}
+
+func TestEndToEnd(t *testing.T) {
 	tMock := testingTMock{t, 0}
 
 	dir, err := ioutil.TempDir("", "yarpcgorecorder")
 	if err != nil {
 		t.Fatal(err)
 	}
-	//defer os.RemoveAll(dir) // clean up
+	defer os.RemoveAll(dir) // clean up
 
-	func() {
-		// First we double check that our cache is empty.
-		recorder := NewRecorder(&tMock, Option{
-			Mode:        Replay,
-			RecordsPath: dir,
-		})
+	// First we double check that our cache is empty.
+	recorder := NewRecorder(&tMock, Option{
+		Mode:        Replay,
+		RecordsPath: dir,
+	})
 
-		clientDisp := yarpc.NewDispatcher(yarpc.Config{
-			Name: "client",
-			Outbounds: transport.Outbounds{
-				"server": http.NewOutbound("http://localhost:65535"),
-			},
-			Filter: recorder,
-		})
-		require.NoError(t, clientDisp.Start())
-		defer clientDisp.Stop()
-
-		client := raw.New(clientDisp.Channel("server"))
+	withDisconnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		require.Panics(t, func() {
 			client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		})
 		assert.Equal(t, tMock.fatalCount, 1)
-	}()
+	})
 
-	func() {
-		// Now let's record our call.
-		recorder := NewRecorder(&tMock, Option{
-			Mode:        Overwrite,
-			RecordsPath: dir,
-		})
+	// Now let's record our call.
+	recorder = NewRecorder(&tMock, Option{
+		Mode:        Overwrite,
+		RecordsPath: dir,
+	})
 
-		serverHTTP := http.NewInbound(":0")
-
-		serverDisp := yarpc.NewDispatcher(yarpc.Config{
-			Name:     "server",
-			Inbounds: []transport.Inbound{serverHTTP},
-		})
-
-		serverDisp.Register(raw.Procedure("hello",
-			func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-				return append(body, []byte(", World")...), nil, nil
-			}))
-
-		require.NoError(t, serverDisp.Start())
-		defer serverDisp.Stop()
-
-		clientDisp := yarpc.NewDispatcher(yarpc.Config{
-			Name: "client",
-			Outbounds: transport.Outbounds{
-				"server": http.NewOutbound(fmt.Sprintf("http://%s",
-					serverHTTP.Addr().String())),
-			},
-			Filter: recorder,
-		})
-		require.NoError(t, clientDisp.Start())
-		defer clientDisp.Stop()
-
-		client := raw.New(clientDisp.Channel("server"))
+	withConnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
 		assert.Equal(t, rbody, []byte("Hello, World"))
-	}()
+	})
 
-	func() {
-		// Now we should be able to replay.
-		recorder := NewRecorder(&tMock, Option{
-			Mode:        Replay,
-			RecordsPath: dir,
-		})
+	// Now replay the call.
+	recorder = NewRecorder(&tMock, Option{
+		Mode:        Replay,
+		RecordsPath: dir,
+	})
 
-		clientDisp := yarpc.NewDispatcher(yarpc.Config{
-			Name: "client",
-			Outbounds: transport.Outbounds{
-				"server": http.NewOutbound("http://localhost:65535"),
-			},
-			Filter: recorder,
-		})
-		require.NoError(t, clientDisp.Start())
-		defer clientDisp.Stop()
-
-		client := raw.New(clientDisp.Channel("server"))
+	withDisconnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
 		assert.Equal(t, rbody, []byte("Hello, World"))
-	}()
+	})
+}
+
+func TestEmptyReplay(t *testing.T) {
+	tMock := testingTMock{t, 0}
+
+	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // clean up
+
+	recorder := NewRecorder(&tMock, Option{
+		Mode:        Replay,
+		RecordsPath: dir,
+	})
+
+	withDisconnectedClient(t, recorder, func(client raw.Client) {
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+		require.Panics(t, func() {
+			client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		})
+		assert.Equal(t, tMock.fatalCount, 1)
+	})
+}
+
+const refRecordFilename = `server.hello.254fa3bab61fc27f.yaml`
+const refRecordContent = `version: 1
+request:
+  caller: client
+  service: server
+  procedure: hello
+  encoding: raw
+  headers: {}
+  shardkey: ""
+  routingkey: ""
+  routingdelegate: ""
+  body: SGVsbG8=
+response:
+  headers: {}
+  body: SGVsbG8sIFdvcmxk
+`
+
+func TestRecording(t *testing.T) {
+	tMock := testingTMock{t, 0}
+
+	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // clean up
+
+	recorder := NewRecorder(&tMock, Option{
+		Mode:        Append,
+		RecordsPath: dir,
+	})
+
+	withConnectedClient(t, recorder, func(client raw.Client) {
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		require.NoError(t, err)
+		assert.Equal(t, []byte("Hello, World"), rbody)
+	})
+
+	recordPath := path.Join(dir, refRecordFilename)
+	_, err = os.Stat(recordPath)
+	require.NoError(t, err)
+
+	recordContent, err := ioutil.ReadFile(recordPath)
+	require.NoError(t, err)
+	assert.Equal(t, refRecordContent, string(recordContent))
+}
+
+func TestReplaying(t *testing.T) {
+	tMock := testingTMock{t, 0}
+
+	dir, err := ioutil.TempDir("", "yarpcgorecorder")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // clean up
+
+	recorder := NewRecorder(&tMock, Option{
+		Mode:        Replay,
+		RecordsPath: dir,
+	})
+
+	recordPath := path.Join(dir, refRecordFilename)
+	err = ioutil.WriteFile(recordPath, []byte(refRecordContent), 0444)
+	require.NoError(t, err)
+
+	withDisconnectedClient(t, recorder, func(client raw.Client) {
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		require.NoError(t, err)
+		assert.Equal(t, rbody, []byte("Hello, World"))
+	})
 }
