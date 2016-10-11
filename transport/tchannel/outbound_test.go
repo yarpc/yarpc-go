@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 
@@ -58,14 +57,6 @@ func TestOutboundHeaders(t *testing.T) {
 		wantError   string
 	}{
 		{
-			context: yarpc.WithBaggage(context.Background(), "FOO", "Bar"),
-			wantHeaders: []byte{
-				0x00, 0x01,
-				0x00, 0x0B, 'c', 'o', 'n', 't', 'e', 'x', 't', '-', 'f', 'o', 'o', // context-foo
-				0x00, 0x03, 'B', 'a', 'r',
-			},
-		},
-		{
 			headers: transport.NewHeaders().With("contextfoo", "bar"),
 			wantHeaders: []byte{
 				0x00, 0x01,
@@ -80,10 +71,6 @@ func TestOutboundHeaders(t *testing.T) {
 				0x00, 0x03, 'f', 'o', 'o',
 				0x00, 0x03, 'b', 'a', 'r',
 			},
-		},
-		{
-			headers:   transport.NewHeaders().With("context-foo", "bar"),
-			wantError: `application headers cannot start with "Context-"`,
 		},
 	}
 

@@ -21,6 +21,8 @@ This release requires regeneration of ThriftRW code.
     into structs that need them.
 -   Thrift: Add a `Protocol` option to change the Thrift protocol used by
     clients and servers.
+-   **Breaking**: Remove the ability to set Baggage Headers through yarpc, use
+    opentracing baggage instead
 
 
 v0.3.1 (2016-09-31)

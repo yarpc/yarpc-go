@@ -22,12 +22,8 @@ package transporttest
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
-
-	"go.uber.org/yarpc/internal/baggage"
-	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
 )
@@ -36,9 +32,8 @@ import (
 // within expected bounds: the current time, plus a TTL, plus or minus some
 // tolerance.
 type ContextMatcher struct {
-	t       *testing.T
-	ttl     time.Duration
-	baggage *transport.Headers
+	t   *testing.T
+	ttl time.Duration
 
 	TTLDelta time.Duration
 }
@@ -54,15 +49,6 @@ type ContextTTL time.Duration
 
 func (ttl ContextTTL) run(c *ContextMatcher) {
 	c.ttl = time.Duration(ttl)
-}
-
-// ContextBaggage requires that the Context have the given baggage associated
-// with it.
-type ContextBaggage map[string]string
-
-func (b ContextBaggage) run(c *ContextMatcher) {
-	h := transport.HeadersFromMap(b)
-	c.baggage = &h
 }
 
 // NewContextMatcher creates a ContextMatcher to verify properties about a
@@ -98,14 +84,6 @@ func (c *ContextMatcher) Matches(got interface{}) bool {
 		minTTL := c.ttl - c.TTLDelta
 		if ttl > maxTTL || ttl < minTTL {
 			c.t.Logf("TTL out of expected bounds: %v < %v < %v", minTTL, ttl, maxTTL)
-			return false
-		}
-	}
-
-	if c.baggage != nil {
-		headers := baggage.FromContext(ctx)
-		if !reflect.DeepEqual(*c.baggage, headers) {
-			c.t.Logf("Headers did not match:\n\t   %v (want)\n\t!= %v (got)", c.baggage, headers)
 			return false
 		}
 	}

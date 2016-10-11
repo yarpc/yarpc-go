@@ -29,7 +29,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 
@@ -105,26 +104,6 @@ func TestOutboundHeaders(t *testing.T) {
 			wantHeaders: map[string]string{
 				"Rpc-Header-Foo": "bar",
 				"Rpc-Header-Baz": "Qux",
-			},
-		},
-		{
-			desc: "baggage",
-			context: yarpc.WithBaggage(
-				yarpc.WithBaggage(context.Background(), "FOO", "bar"),
-				"baZ", "qUx",
-			),
-			wantHeaders: map[string]string{
-				"Context-Foo": "bar",
-				"Context-Baz": "qUx",
-			},
-		},
-		{
-			desc:    "application headers and baggage",
-			context: yarpc.WithBaggage(context.Background(), "foo", "bar"),
-			headers: transport.NewHeaders().With("foo", "baz"),
-			wantHeaders: map[string]string{
-				"Context-Foo":    "bar",
-				"Rpc-Header-Foo": "baz",
 			},
 		},
 	}
