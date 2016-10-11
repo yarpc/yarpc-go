@@ -222,16 +222,25 @@ func assertBaggageMatches(t crossdock.T, ctx context.Context, want map[string]st
 
 	if len(want) == 0 {
 		// len check to handle nil vs empty cases gracefully.
-		return assert.Equal(0, len(got), "baggage must be empty: %v", got)
+		return assert.Empty(got, "baggage must be empty: %v", got)
 	}
 
 	return assert.Equal(want, got, "baggage must match")
 }
 
 func getOpenTracingBaggage(ctx context.Context) map[string]string {
-	headers := map[string]string{}
+	headers := make(map[string]string)
 
-	spanContext := opentracing.SpanFromContext(ctx).Context()
+	span := opentracing.SpanFromContext(ctx)
+	if span == nil {
+		return headers
+	}
+
+	spanContext := span.Context()
+	if spanContext == nil {
+		return headers
+	}
+
 	spanContext.ForeachBaggageItem(func(k, v string) bool {
 		headers[k] = v
 		return true
