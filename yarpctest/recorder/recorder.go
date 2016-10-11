@@ -195,7 +195,7 @@ func sanitizeFilename(s string) (r string) {
 	}, s)
 }
 
-func (r *Recorder) hashRequest(request *transport.Request, body []byte) string {
+func (r *Recorder) hashRequestRecord(requestRecord *requestRecord) string {
 	log := r.logger
 	hash := fnv.New64a()
 
@@ -210,27 +210,26 @@ func (r *Recorder) hashRequest(request *transport.Request, body []byte) string {
 		}
 	}
 
-	ha(request.Caller)
-	ha(request.Service)
-	ha(string(request.Encoding))
-	ha(request.Procedure)
+	ha(requestRecord.Caller)
+	ha(requestRecord.Service)
+	ha(string(requestRecord.Encoding))
+	ha(requestRecord.Procedure)
 
-	headersMap := request.Headers.Items()
-	orderedHeadersKeys := make([]string, 0, len(headersMap))
-	for k := range headersMap {
+	orderedHeadersKeys := make([]string, 0, len(requestRecord.Headers))
+	for k := range requestRecord.Headers {
 		orderedHeadersKeys = append(orderedHeadersKeys, k)
 	}
 	sort.Strings(orderedHeadersKeys)
 	for _, k := range orderedHeadersKeys {
 		ha(k)
-		ha(headersMap[k])
+		ha(requestRecord.Headers[k])
 	}
 
-	ha(request.ShardKey)
-	ha(request.RoutingKey)
-	ha(request.RoutingDelegate)
+	ha(requestRecord.ShardKey)
+	ha(requestRecord.RoutingKey)
+	ha(requestRecord.RoutingDelegate)
 
-	_, err := hash.Write(body)
+	_, err := hash.Write(requestRecord.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -249,32 +248,36 @@ func (r *Recorder) Call(
 	out transport.Outbound,
 ) (*transport.Response, error) {
 	log := r.logger
-	requestBody, err := ioutil.ReadAll(request.Body)
-	request.Body = bytes.NewReader(requestBody)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	requestHash := r.hashRequest(request, requestBody)
+	requestRecord := r.requestToRequestRecord(request)
+
+	requestHash := r.hashRequestRecord(&requestRecord)
 	filepath := r.makeFilePath(request, requestHash)
 
 	switch r.mode {
 	case Replay:
-		response, err := r.loadRecord(filepath)
+		cachedRecord, err := r.loadRecord(filepath)
 		if err != nil {
 			log.Fatal(err)
 		}
-		return response, nil
+		response := r.recordToResponse(cachedRecord)
+		return &response, nil
 	case Append:
-		response, err := r.loadRecord(filepath)
+		cachedRecord, err := r.loadRecord(filepath)
 		if err == nil {
-			return response, nil
+			response := r.recordToResponse(cachedRecord)
+			return &response, nil
 		}
 		fallthrough
 	case Overwrite:
 		response, err := out.Call(ctx, request)
 		if err == nil {
-			r.saveRecord(request, requestBody, response, filepath)
+			cachedRecord := record{
+				Version:  currentRecordVersion,
+				Request:  requestRecord,
+				Response: r.responseToResponseRecord(response),
+			}
+			r.saveRecord(filepath, &cachedRecord)
 		}
 		return response, err
 	default:
@@ -282,10 +285,49 @@ func (r *Recorder) Call(
 	}
 }
 
+func (r *Recorder) recordToResponse(cachedRecord *record) transport.Response {
+	response := transport.Response{
+		Headers: transport.HeadersFromMap(cachedRecord.Response.Headers),
+		Body:    ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
+	}
+	return response
+}
+
+func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRecord {
+	requestBody, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		r.logger.Fatal(err)
+	}
+	request.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
+	return requestRecord{
+		Caller:          request.Caller,
+		Service:         request.Service,
+		Procedure:       request.Procedure,
+		Encoding:        string(request.Encoding),
+		Headers:         request.Headers.Items(),
+		ShardKey:        request.ShardKey,
+		RoutingKey:      request.RoutingKey,
+		RoutingDelegate: request.RoutingDelegate,
+		Body:            requestBody,
+	}
+}
+
+func (r *Recorder) responseToResponseRecord(response *transport.Response) responseRecord {
+	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		r.logger.Fatal(err)
+	}
+	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
+	return responseRecord{
+		Headers: response.Headers.Items(),
+		Body:    responseBody,
+	}
+}
+
 // loadRecord attempts to load a record from the given file. If the record
 // cannot be found the errRecordNotFound is returned. Any other error will
 // abort the current test.
-func (r *Recorder) loadRecord(filepath string) (*transport.Response, error) {
+func (r *Recorder) loadRecord(filepath string) (*record, error) {
 	rawRecord, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -303,43 +345,17 @@ func (r *Recorder) loadRecord(filepath string) (*transport.Response, error) {
 			cachedRecord.Version, currentRecordVersion))
 	}
 
-	response := transport.Response{
-		Headers: transport.HeadersFromMap(cachedRecord.Response.Headers),
-		Body:    ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
-	}
-	return &response, nil
+	return &cachedRecord, nil
 }
 
 // saveRecord attempts to save a record to the given file, any error fails the
 // current test.
-func (r *Recorder) saveRecord(request *transport.Request, requestBody []byte,
-	response *transport.Response, filepath string) {
-
-	responseBody, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		r.logger.Fatal(err)
-	}
-	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
-
+func (r *Recorder) saveRecord(filepath string, cachedRecord *record) {
 	if err := os.MkdirAll(defaultRecorderDir, 0775); err != nil {
 		r.logger.Fatal(err)
 	}
 
-	rawRecord, err := yaml.Marshal(&record{
-		Version: currentRecordVersion,
-		Request: requestRecord{
-			Caller:    request.Caller,
-			Service:   request.Service,
-			Procedure: request.Procedure,
-			Encoding:  string(request.Encoding),
-			Headers:   request.Headers.Items(),
-			Body:      requestBody,
-		},
-		Response: responseRecord{
-			Headers: response.Headers.Items(),
-			Body:    responseBody,
-		},
-	})
+	rawRecord, err := yaml.Marshal(&cachedRecord)
 	if err != nil {
 		r.logger.Fatal(err)
 	}
@@ -362,12 +378,15 @@ func (e errRecordNotFound) Error() string {
 }
 
 type requestRecord struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Encoding  string
-	Headers   map[string]string
-	Body      base64blob
+	Caller          string
+	Service         string
+	Procedure       string
+	Encoding        string
+	Headers         map[string]string
+	ShardKey        string
+	RoutingKey      string
+	RoutingDelegate string
+	Body            base64blob
 }
 
 type responseRecord struct {

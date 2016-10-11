@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -63,7 +62,7 @@ func (r *randomGenerator) Headers() transport.Headers {
 }
 
 // Request returns a new randomized request.
-func (r *randomGenerator) Request() (transport.Request, []byte) {
+func (r *randomGenerator) Request() transport.Request {
 	bodyData := []byte(r.Atom())
 
 	return transport.Request{
@@ -76,62 +75,72 @@ func (r *randomGenerator) Request() (transport.Request, []byte) {
 		RoutingKey:      r.Atom(),
 		RoutingDelegate: r.Atom(),
 		Body:            ioutil.NopCloser(bytes.NewReader(bodyData)),
-	}, bodyData
+	}
 }
 
 func TestHash(t *testing.T) {
 	rgen := newRandomGenerator(42)
-	request, body := rgen.Request()
+	request := rgen.Request()
 
 	recorder := NewRecorder(t)
-	referenceHash := recorder.hashRequest(&request, body)
+	requestRecord := recorder.requestToRequestRecord(&request)
+	referenceHash := recorder.hashRequestRecord(&requestRecord)
 
 	require.Equal(t, "7195d5a712201d2a", referenceHash)
 
 	// Caller
 	r := request
 	r.Caller = rgen.Atom()
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// Service
 	r = request
 	r.Service = rgen.Atom()
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// Encoding
 	r = request
 	r.Encoding = transport.Encoding(rgen.Atom())
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// Procedure
 	r = request
 	r.Procedure = rgen.Atom()
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// Headers
 	r = request
 	r.Headers = rgen.Headers()
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// ShardKey
 	r = request
 	r.ShardKey = rgen.Atom()
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// RoutingKey
 	r = request
 	r.RoutingKey = rgen.Atom()
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// RoutingDelegate
 	r = request
 	r.RoutingDelegate = rgen.Atom()
-	assert.NotEqual(t, recorder.hashRequest(&r, body), referenceHash)
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 
 	// Body
 	r = request
-	b := []byte(rgen.Atom())
-	assert.NotEqual(t, recorder.hashRequest(&r, b), referenceHash)
+	request.Body = ioutil.NopCloser(bytes.NewReader([]byte(rgen.Atom())))
+	requestRecord = recorder.requestToRequestRecord(&r)
+	assert.NotEqual(t, recorder.hashRequestRecord(&requestRecord), referenceHash)
 }
 
 var testingTMockFatal = struct{}{}
@@ -155,7 +164,7 @@ func TestOverwriteReplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // clean up
+	//defer os.RemoveAll(dir) // clean up
 
 	func() {
 		// First we double check that our cache is empty.
