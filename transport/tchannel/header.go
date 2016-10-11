@@ -79,8 +79,7 @@ func writeRequestHeaders(
 	appHeaders map[string]string,
 	getWriter func() (tchannel.ArgWriter, error),
 ) error {
-	ctxHeaders := transport.Headers{}
-	headers := transport.NewHeadersWithCapacity(ctxHeaders.Len() + len(appHeaders))
+	headers := transport.NewHeadersWithCapacity(len(appHeaders))
 	// TODO: zero-alloc version
 
 	for k, v := range appHeaders {
