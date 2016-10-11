@@ -215,10 +215,7 @@ func TestEndToEnd(t *testing.T) {
 	defer os.RemoveAll(dir) // clean up
 
 	// First we double check that our cache is empty.
-	recorder := NewRecorder(&tMock, Option{
-		Mode:        Replay,
-		RecordsPath: dir,
-	})
+	recorder := NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -230,10 +227,7 @@ func TestEndToEnd(t *testing.T) {
 	})
 
 	// Now let's record our call.
-	recorder = NewRecorder(&tMock, Option{
-		Mode:        Overwrite,
-		RecordsPath: dir,
-	})
+	recorder = NewRecorder(&tMock, RecordMode(Overwrite), RecordsPath(dir))
 
 	withConnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -244,10 +238,7 @@ func TestEndToEnd(t *testing.T) {
 	})
 
 	// Now replay the call.
-	recorder = NewRecorder(&tMock, Option{
-		Mode:        Replay,
-		RecordsPath: dir,
-	})
+	recorder = NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -267,10 +258,7 @@ func TestEmptyReplay(t *testing.T) {
 	}
 	defer os.RemoveAll(dir) // clean up
 
-	recorder := NewRecorder(&tMock, Option{
-		Mode:        Replay,
-		RecordsPath: dir,
-	})
+	recorder := NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -308,10 +296,7 @@ func TestRecording(t *testing.T) {
 	}
 	defer os.RemoveAll(dir) // clean up
 
-	recorder := NewRecorder(&tMock, Option{
-		Mode:        Append,
-		RecordsPath: dir,
-	})
+	recorder := NewRecorder(&tMock, RecordMode(Append), RecordsPath(dir))
 
 	withConnectedClient(t, recorder, func(client raw.Client) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
@@ -339,10 +324,7 @@ func TestReplaying(t *testing.T) {
 	}
 	defer os.RemoveAll(dir) // clean up
 
-	recorder := NewRecorder(&tMock, Option{
-		Mode:        Replay,
-		RecordsPath: dir,
-	})
+	recorder := NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	recordPath := path.Join(dir, refRecordFilename)
 	err = ioutil.WriteFile(recordPath, []byte(refRecordContent), 0444)
