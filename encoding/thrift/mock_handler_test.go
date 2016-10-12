@@ -6,7 +6,7 @@ package thrift
 import (
 	gomock "github.com/golang/mock/gomock"
 	wire "go.uber.org/thriftrw/wire"
-	yarpc_go "go.uber.org/yarpc"
+	"go.uber.org/yarpc"
 	context "golang.org/x/net/context"
 )
 
@@ -31,7 +31,7 @@ func (_m *MockHandler) EXPECT() *_MockHandlerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockHandler) Handle(_param0 context.Context, _param1 yarpc_go.ReqMeta, _param2 wire.Value) (Response, error) {
+func (_m *MockHandler) Handle(_param0 context.Context, _param1 yarpc.ReqMeta, _param2 wire.Value) (Response, error) {
 	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1, _param2)
 	ret0, _ := ret[0].(Response)
 	ret1, _ := ret[1].(error)

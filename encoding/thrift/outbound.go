@@ -122,7 +122,17 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	// 		return success, resMeta, err
 	// 	}
 
-	out := c.ch.GetOutbound()
+	treq := transport.Request{
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
+		Encoding: Encoding,
+	}
+	meta.ToTransportRequest(reqMeta, &treq)
+
+	out := c.ch.GetOutbound(treq.Procedure)
+
+	// Always override the procedure name to the Thriexft procedure name.
+	treq.Procedure = procedureName(c.thriftService, reqBody.MethodName())
 
 	// We disable enveloping if either the client or the transport requires it.
 	disableEnveloping := c.disableEnveloping || isEnvelopingDisabled(out.Options())
@@ -137,15 +147,6 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 			Type:     wire.Reply, // we only decode replies with this instance
 		}
 	}
-
-	treq := transport.Request{
-		Caller:   c.ch.Caller(),
-		Service:  c.ch.Service(),
-		Encoding: Encoding,
-	}
-	meta.ToTransportRequest(reqMeta, &treq)
-	// Always override the procedure name to the Thrift procedure name.
-	treq.Procedure = procedureName(c.thriftService, reqBody.MethodName())
 
 	value, err := reqBody.ToWire()
 	if err != nil {

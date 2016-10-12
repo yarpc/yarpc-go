@@ -59,7 +59,7 @@ func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []b
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
 
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetOutbound(treq.Procedure).Call(ctx, &treq)
 	if err != nil {
 		return nil, nil, err
 	}

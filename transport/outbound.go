@@ -65,8 +65,5 @@ type OnewayOutbound interface {
 	// This MUST NOT be called before Start() has been called successfully. This
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
-	Call(ctx context.Context, request *Request) (*Ack, error)
+	CallOneway(ctx context.Context, request *Request) (*Ack, error)
 }
-
-// Outbounds is a map of service name to Outbound for that service.
-type Outbounds map[string]Outbound

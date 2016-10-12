@@ -21,7 +21,6 @@
 package yarpc
 
 import (
-	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport"
 
@@ -55,18 +54,30 @@ type Dispatcher interface {
 
 // Config specifies the parameters of a new RPC constructed via New.
 type Config struct {
-	Name      string
-	Inbounds  []transport.Inbound
-	Outbounds transport.Outbounds
+	Name string
+
+	Inbounds       []transport.Inbound
+	RemoteServices []RemoteService
 
 	// Filter and Interceptor that will be applied to all outgoing and incoming
 	// requests respectively.
 	Filter      transport.Filter
 	Interceptor transport.Interceptor
 
-	// TODO FallbackHandler for catch-all endpoints
-
 	Tracer opentracing.Tracer
+}
+
+// RemoteService encapsulates a remote service and its outbounds
+type RemoteService struct {
+	Name string
+
+	// Defaults
+	DefaultOutbounds []transport.BaseOutbound
+	Outbounds        []transport.Outbound
+	OnewayOutbounds  []transport.OnewayOutbound
+
+	// Overrides
+	ProcedureOverrides map[string]transport.BaseOutbound
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -76,14 +87,57 @@ func NewDispatcher(cfg Config) Dispatcher {
 	}
 
 	return dispatcher{
-		Name:        cfg.Name,
-		Registry:    transport.NewMapRegistry(cfg.Name),
-		inbounds:    cfg.Inbounds,
-		Outbounds:   cfg.Outbounds,
-		Filter:      cfg.Filter,
-		Interceptor: cfg.Interceptor,
-		deps:        transport.NoDeps.WithTracer(cfg.Tracer),
+		Name:           cfg.Name,
+		Registry:       transport.NewMapRegistry(cfg.Name),
+		inbounds:       cfg.Inbounds,
+		RemoteServices: convertRemoteServices(cfg.RemoteServices),
+		Filter:         cfg.Filter,
+		Interceptor:    cfg.Interceptor,
+		deps:           transport.NoDeps.WithTracer(cfg.Tracer),
 	}
+}
+
+func convertRemoteServices(remoteServices []RemoteService) map[string]transport.RemoteService {
+	services := make(map[string]transport.RemoteService, len(remoteServices))
+
+	for _, rs := range remoteServices {
+		var (
+			outbounds          []transport.Outbound
+			onewayOutbounds    []transport.OnewayOutbound
+			procedureOverrides map[string]transport.BaseOutbound
+		)
+
+		for _, o := range rs.Outbounds {
+			outbounds = append(outbounds, o)
+		}
+
+		for _, o := range rs.OnewayOutbounds {
+			onewayOutbounds = append(onewayOutbounds, o)
+		}
+
+		// add outbounds that may implement different RPC types
+		for _, o := range rs.DefaultOutbounds {
+			if out, ok := o.(transport.Outbound); ok {
+				outbounds = append(outbounds, out)
+			}
+			if out, ok := o.(transport.OnewayOutbound); ok {
+				onewayOutbounds = append(onewayOutbounds, out)
+			}
+		}
+
+		for p, o := range rs.ProcedureOverrides {
+			procedureOverrides[p] = o
+		}
+
+		services[rs.Name] = transport.RemoteService{
+			Name:               rs.Name,
+			Outbounds:          outbounds,
+			OnewayOutbounds:    onewayOutbounds,
+			ProcedureOverrides: procedureOverrides,
+		}
+	}
+
+	return services
 }
 
 // dispatcher is the standard RPC implementation.
@@ -92,13 +146,17 @@ func NewDispatcher(cfg Config) Dispatcher {
 type dispatcher struct {
 	transport.Registry
 
-	Name        string
-	Outbounds   transport.Outbounds
+	Name string
+
+	RemoteServices map[string]transport.RemoteService
+
+	//TODO: get rid of these, can just apply filter in NewDispatcher
 	Filter      transport.Filter
 	Interceptor transport.Interceptor
 
 	inbounds []transport.Inbound
-	deps     transport.Deps
+
+	deps transport.Deps
 }
 
 func (d dispatcher) Inbounds() []transport.Inbound {
@@ -108,10 +166,13 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 }
 
 func (d dispatcher) Channel(service string) transport.Channel {
-	if out, ok := d.Outbounds[service]; ok {
-		out = transport.ApplyFilter(out, d.Filter)
-		out = request.ValidatorOutbound{Outbound: out}
-		return transport.IdentityChannel(d.Name, service, out)
+	if rs, ok := d.RemoteServices[service]; ok {
+		//TODO: ..apply filters to outbounds
+
+		// out := transport.ApplyFilter(rs.Outbound, d.Filter)
+		// out = request.ValidatorOutbound{Outbound: out}
+		// rs.Outbound = out
+		return transport.MultiOutboundChannel(d.Name, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }
@@ -128,7 +189,7 @@ func (d dispatcher) Start() error {
 		}
 	}
 
-	startOutbound := func(o transport.Outbound) func() error {
+	startOutbound := func(o transport.BaseOutbound) func() error {
 		return func() error {
 			return o.Start(d.deps)
 		}
@@ -139,8 +200,8 @@ func (d dispatcher) Start() error {
 		wait.Submit(startInbound(i))
 	}
 
-	for _, o := range d.Outbounds {
-		// TODO record the name of the service whose outbound failed
+	// TODO record the name of the service whose outbound failed
+	for _, o := range d.getUniqueOutbounds() {
 		wait.Submit(startOutbound(o))
 	}
 
@@ -165,7 +226,8 @@ func (d dispatcher) Stop() error {
 	for _, i := range d.inbounds {
 		wait.Submit(i.Stop)
 	}
-	for _, o := range d.Outbounds {
+
+	for _, o := range d.getUniqueOutbounds() {
 		wait.Submit(o.Stop)
 	}
 
@@ -174,4 +236,30 @@ func (d dispatcher) Stop() error {
 	}
 
 	return nil
+}
+
+func (d dispatcher) getUniqueOutbounds() []transport.BaseOutbound {
+	var unique []transport.BaseOutbound
+	seen := make(map[transport.BaseOutbound]struct{})
+
+	appendUnique := func(o transport.BaseOutbound) {
+		if _, ok := seen[o]; !ok {
+			seen[o] = struct{}{}
+			unique = append(unique, o)
+		}
+	}
+
+	for _, rs := range d.RemoteServices {
+		for _, o := range rs.Outbounds {
+			appendUnique(o)
+		}
+		for _, o := range rs.OnewayOutbounds {
+			appendUnique(o)
+		}
+		for _, o := range rs.ProcedureOverrides {
+			appendUnique(o)
+		}
+	}
+
+	return unique
 }

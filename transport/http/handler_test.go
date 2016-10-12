@@ -332,10 +332,16 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, serverDispatcher.Start())
 	defer serverDispatcher.Stop()
 
-	outbound := NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()))
 	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:      "yarpc-test-client",
-		Outbounds: transport.Outbounds{"yarpc-test": outbound},
+		Name: "yarpc-test-client",
+		RemoteServices: []yarpc.RemoteService{
+			{
+				Name: "yarpc-test",
+				Outbounds: []transport.Outbound{
+					NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
+				},
+			},
+		},
 	})
 	require.NoError(t, clientDispatcher.Start())
 	defer clientDispatcher.Stop()

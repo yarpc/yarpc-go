@@ -47,10 +47,25 @@ func Run(t crossdock.T) {
 	baseURL := fmt.Sprintf("http://%v:%v", server, serverPort)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "apache-thrift-client",
-		Outbounds: transport.Outbounds{
-			"ThriftTest":    http.NewOutbound(baseURL + "/thrift/ThriftTest"),
-			"SecondService": http.NewOutbound(baseURL + "/thrift/SecondService"),
-			"Multiplexed":   http.NewOutbound(baseURL + "/thrift/multiplexed"),
+		RemoteServices: []yarpc.RemoteService{
+			{
+				Name: "ThriftTest",
+				Outbounds: []transport.Outbound{
+					http.NewOutbound(baseURL + "/thrift/ThriftTest"),
+				},
+			},
+			{
+				Name: "SecondService",
+				Outbounds: []transport.Outbound{
+					http.NewOutbound(baseURL + "/thrift/SecondService"),
+				},
+			},
+			{
+				Name: "Multiplexed",
+				Outbounds: []transport.Outbound{
+					http.NewOutbound(baseURL + "/thrift/multiplexed"),
+				},
+			},
 		},
 	})
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")

@@ -20,6 +20,8 @@
 
 package transport
 
+import "fmt"
+
 //go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
 
 // ChannelProvider builds channels from the current service to other services.
@@ -41,9 +43,67 @@ type Channel interface {
 
 	// Returns an outbound to send the request through.
 	//
-	// MAY be called multiple times for a request. MAY return different outbounds
-	// for each call. The returned outbound MUST have already been started.
-	GetOutbound() Outbound
+	// MAY be called multiple times for a request. The returned outbound MUST
+	// have already been started.
+	GetOutbound(procedure string) Outbound
+	GetOnewayOutbound(procedure string) OnewayOutbound
+}
+
+// RemoteService encapsulates a service's outbounds
+type RemoteService struct {
+	Name string
+
+	// Defaults
+	Outbounds       []Outbound
+	OnewayOutbounds []OnewayOutbound
+
+	// Overrides
+	ProcedureOverrides map[string]BaseOutbound
+}
+
+// MultiOutboundChannel constructs a Channel backed by multiple outobund types
+func MultiOutboundChannel(caller string, rs RemoteService) Channel {
+	return multiOutboundChannel{caller: caller, rs: rs}
+}
+
+type multiOutboundChannel struct {
+	caller string
+	rs     RemoteService
+}
+
+func (c multiOutboundChannel) Caller() string  { return c.caller }
+func (c multiOutboundChannel) Service() string { return c.rs.Name }
+
+func (c multiOutboundChannel) GetOutbound(procedure string) Outbound {
+	if baseOutbound, ok := c.rs.ProcedureOverrides[procedure]; ok {
+		if o, ok := baseOutbound.(Outbound); ok {
+			return o
+		}
+		panic(fmt.Sprintf("%s::%s does not support unary calls", c.Service(), procedure))
+	}
+
+	//TODO: 'smartly' decide which outbound to use
+	if len(c.rs.Outbounds) > 0 && c.rs.Outbounds[0] != nil {
+		return c.rs.Outbounds[0]
+	}
+
+	panic(fmt.Sprintf("no outbound found for %s::%s", c.Service(), procedure))
+}
+
+func (c multiOutboundChannel) GetOnewayOutbound(procedure string) OnewayOutbound {
+	if baseOutbound, ok := c.rs.ProcedureOverrides[procedure]; ok {
+		if o, ok := baseOutbound.(OnewayOutbound); ok {
+			return o
+		}
+		panic(fmt.Sprintf("%s::%s does not support oneway calls", c.Service(), procedure))
+	}
+
+	//TODO: 'smartly' decide which outbound to use
+	if len(c.rs.OnewayOutbounds) > 0 && c.rs.OnewayOutbounds[0] != nil {
+		return c.rs.OnewayOutbounds[0]
+	}
+
+	panic(fmt.Sprintf("no oneway outbound found for %s::%s", c.Service(), procedure))
 }
 
 // IdentityChannel constructs a simple Channel for the given caller-service pair
@@ -58,6 +118,9 @@ type identityChannel struct {
 	outbound Outbound
 }
 
-func (s identityChannel) Caller() string        { return s.caller }
-func (s identityChannel) Service() string       { return s.service }
-func (s identityChannel) GetOutbound() Outbound { return s.outbound }
+func (s identityChannel) Caller() string                        { return s.caller }
+func (s identityChannel) Service() string                       { return s.service }
+func (s identityChannel) GetOutbound(procedure string) Outbound { return s.outbound }
+func (s identityChannel) GetOnewayOutbound(procedure string) OnewayOutbound {
+	panic("Unsupported GetOnewayOutbound with identityChannel")
+}

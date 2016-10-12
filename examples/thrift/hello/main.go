@@ -38,13 +38,19 @@ import (
 //go:generate thriftrw --out thrift --plugin=yarpc hello.thrift
 
 func main() {
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8086"),
 		},
-		Outbounds: transport.Outbounds{
-			"hello": http.NewOutbound("http://127.0.0.1:8086"),
+		RemoteServices: []yarpc.RemoteService{
+			{
+				Name: "hello",
+				Outbounds: []transport.Outbound{
+					http.NewOutbound("http://127.0.0.1:8086"),
+				},
+			},
 		},
 	})
 

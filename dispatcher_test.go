@@ -22,7 +22,6 @@ package yarpc_test
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	. "go.uber.org/yarpc"
@@ -99,7 +98,7 @@ func TestStartStopFailures(t *testing.T) {
 		desc string
 
 		inbounds  func(*gomock.Controller) []transport.Inbound
-		outbounds func(*gomock.Controller) transport.Outbounds
+		outbounds func(*gomock.Controller) []transport.Outbound
 
 		wantStartErr string
 		wantStopErr  string
@@ -116,13 +115,13 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+			outbounds: func(mockCtrl *gomock.Controller) []transport.Outbound {
+				outbounds := make([]transport.Outbound, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("service-%v", i)] = out
+					outbounds[i] = out
 				}
 				return outbounds
 			},
@@ -143,12 +142,12 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+			outbounds: func(mockCtrl *gomock.Controller) []transport.Outbound {
+				outbounds := make([]transport.Outbound, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
-					outbounds[fmt.Sprintf("service-%v", i)] = out
+					outbounds[i] = out
 				}
 				return outbounds
 			},
@@ -170,13 +169,13 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+			outbounds: func(mockCtrl *gomock.Controller) []transport.Outbound {
+				outbounds := make([]transport.Outbound, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("service-%v", i)] = out
+					outbounds[i] = out
 				}
 				return outbounds
 			},
@@ -193,8 +192,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+			outbounds: func(mockCtrl *gomock.Controller) []transport.Outbound {
+				outbounds := make([]transport.Outbound, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockOutbound(mockCtrl)
 					if i == 5 {
@@ -202,7 +201,7 @@ func TestStartStopFailures(t *testing.T) {
 					} else {
 						out.EXPECT().Start(gomock.Any()).Return(nil)
 					}
-					outbounds[fmt.Sprintf("service-%v", i)] = out
+					outbounds[i] = out
 				}
 				return outbounds
 			},
@@ -221,8 +220,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+			outbounds: func(mockCtrl *gomock.Controller) []transport.Outbound {
+				outbounds := make([]transport.Outbound, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
@@ -231,7 +230,7 @@ func TestStartStopFailures(t *testing.T) {
 					} else {
 						out.EXPECT().Stop().Return(nil)
 					}
-					outbounds[fmt.Sprintf("service-%v", i)] = out
+					outbounds[i] = out
 				}
 				return outbounds
 			},
@@ -245,9 +244,13 @@ func TestStartStopFailures(t *testing.T) {
 	for _, tt := range tests {
 
 		dispatcher := NewDispatcher(Config{
-			Name:      "test",
-			Inbounds:  tt.inbounds(mockCtrl),
-			Outbounds: tt.outbounds(mockCtrl),
+			Name:     "test",
+			Inbounds: tt.inbounds(mockCtrl),
+			RemoteServices: []RemoteService{
+				{
+					Outbounds: tt.outbounds(mockCtrl),
+				},
+			},
 		})
 
 		err := dispatcher.Start()
