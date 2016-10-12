@@ -26,9 +26,9 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/params"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/grpc"
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go"
