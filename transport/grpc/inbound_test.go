@@ -17,8 +17,8 @@ func TestStartAddrInUse(t *testing.T) {
 	i1 := NewInbound(50099)
 	i2 := NewInbound(50099)
 
-	require.NoError(t, i1.Start(new(transporttest.MockHandler), transport.NoDeps))
-	err := i2.Start(new(transporttest.MockHandler), transport.NoDeps)
+	require.NoError(t, i1.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
+	err := i2.Start(transport.ServiceDetail{Name: "bar", Registry: new(transporttest.MockRegistry)}, transport.NoDeps)
 
 	require.Error(t, err)
 	opErr, ok := err.(*net.OpError)
@@ -34,7 +34,7 @@ func TestStartAddrInUse(t *testing.T) {
 func TestInboundStartAndStop(t *testing.T) {
 	i := NewInbound(0)
 
-	require.NoError(t, i.Start(new(transporttest.MockHandler), transport.NoDeps))
+	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
 
 	serviceInfo := i.Server().GetServiceInfo()
 	assert.Equal(t, 1, len(serviceInfo["yarpc"].Methods))
@@ -44,7 +44,7 @@ func TestInboundStartAndStop(t *testing.T) {
 }
 
 func TestInboundStartError(t *testing.T) {
-	err := NewInbound(-100).Start(new(transporttest.MockHandler), transport.NoDeps)
+	err := NewInbound(-100).Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps)
 	// Verify that two inbounds started on the same port
 	assert.Error(t, err, "expected failure")
 }

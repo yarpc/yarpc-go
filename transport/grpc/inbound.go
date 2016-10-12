@@ -38,7 +38,7 @@ func (i *inbound) Server() *grpc.Server {
 type passThroughService interface{}
 type passThroughServer struct{}
 
-func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
+func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", i.port))
 	if err != nil {
 		return err
@@ -49,8 +49,8 @@ func (i *inbound) Start(h transport.Handler, d transport.Deps) error {
 	i.server = grpc.NewServer(grpc.CustomCodec(passThroughCodec{}))
 
 	gHandler := handler{
-		Handler: h,
-		Deps:    d,
+		Registry: service.Registry,
+		Deps:     d,
 	}
 
 	var serviceDescs []grpc.ServiceDesc

@@ -20,8 +20,8 @@ import (
 var grpcOptions transport.Options
 
 type handler struct {
-	Handler transport.Handler
-	Deps    transport.Deps
+	Registry transport.Registry
+	Deps     transport.Deps
 }
 
 // Handle the grpc request and convert it into a YARPC request
@@ -115,7 +115,12 @@ func callHandler(
 	var r response
 	rw := newResponseWriter(&r)
 
-	err := internal.SafelyCallHandler(h.Handler, start, ctx, grpcOptions, treq, rw)
+	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
+	if err != nil {
+		return nil, err
+	}
+
+	err = internal.SafelyCallHandler(handler, start, ctx, grpcOptions, treq, rw)
 
 	responseBody := r.body.Bytes()
 	return &responseBody, err
