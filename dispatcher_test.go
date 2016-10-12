@@ -137,8 +137,8 @@ func TestStartStopFailures(t *testing.T) {
 						in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(errors.New("great sadness"))
 					} else {
 						in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+						in.EXPECT().Stop().Return(nil)
 					}
-					// no Stop() because Start() failed
 					inbounds[i] = in
 				}
 				return inbounds
@@ -148,6 +148,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] = out
 				}
 				return outbounds
@@ -189,6 +190,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
 				}
 				return inbounds
@@ -201,6 +203,7 @@ func TestStartStopFailures(t *testing.T) {
 						out.EXPECT().Start(gomock.Any()).Return(errors.New("something went wrong"))
 					} else {
 						out.EXPECT().Start(gomock.Any()).Return(nil)
+						out.EXPECT().Stop().Return(nil)
 					}
 					outbounds[fmt.Sprintf("service-%v", i)] = out
 				}

@@ -21,8 +21,10 @@
 package yarpc
 
 import (
+	"sync"
+
 	"go.uber.org/yarpc/internal/request"
-	"go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
@@ -117,6 +119,12 @@ func (d dispatcher) Channel(service string) transport.Channel {
 }
 
 func (d dispatcher) Start() error {
+	var (
+		mu               sync.Mutex
+		startedInbounds  []transport.Inbound
+		startedOutbounds []transport.Outbound
+	)
+
 	service := transport.ServiceDetail{
 		Name:     d.Name,
 		Registry: d,
@@ -124,17 +132,31 @@ func (d dispatcher) Start() error {
 
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			return i.Start(service, d.deps)
+			if err := i.Start(service, d.deps); err != nil {
+				return err
+			}
+
+			mu.Lock()
+			startedInbounds = append(startedInbounds, i)
+			mu.Unlock()
+			return nil
 		}
 	}
 
 	startOutbound := func(o transport.Outbound) func() error {
 		return func() error {
-			return o.Start(d.deps)
+			if err := o.Start(d.deps); err != nil {
+				return err
+			}
+
+			mu.Lock()
+			startedOutbounds = append(startedOutbounds, o)
+			mu.Unlock()
+			return nil
 		}
 	}
 
-	var wait sync.ErrorWaiter
+	var wait intsync.ErrorWaiter
 	for _, i := range d.inbounds {
 		wait.Submit(startInbound(i))
 	}
@@ -144,10 +166,25 @@ func (d dispatcher) Start() error {
 		wait.Submit(startOutbound(o))
 	}
 
-	if errors := wait.Wait(); len(errors) > 0 {
-		return errorGroup(errors)
+	errors := wait.Wait()
+	if len(errors) == 0 {
+		return nil
 	}
-	return nil
+
+	// Failed to start so stop everything that was started.
+	wait = intsync.ErrorWaiter{}
+	for _, i := range startedInbounds {
+		wait.Submit(i.Stop)
+	}
+	for _, o := range startedOutbounds {
+		wait.Submit(o.Stop)
+	}
+
+	if newErrors := wait.Wait(); len(newErrors) > 0 {
+		errors = append(errors, newErrors...)
+	}
+
+	return errorGroup(errors)
 }
 
 func (d dispatcher) Register(rs []transport.Registrant) {
@@ -159,7 +196,7 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 }
 
 func (d dispatcher) Stop() error {
-	var wait sync.ErrorWaiter
+	var wait intsync.ErrorWaiter
 	for _, i := range d.inbounds {
 		wait.Submit(i.Stop)
 	}
