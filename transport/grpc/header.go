@@ -8,14 +8,14 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// headerMapper converts gRCP Metadata to and from transport headers.
+// headerMapper converts gRPC Metadata to and from transport headers.
 type headerMapper struct{ Prefix string }
 
 var (
 	applicationHeaders = headerMapper{ApplicationHeaderPrefix}
 )
 
-// toGRPCMetadata converts transport headers into gRPC Metadata.
+// toMetadata converts transport headers into gRPC Metadata.
 //
 // Headers are read from 'from' and written to 'to'. The final header collection
 // is returned.
@@ -31,7 +31,7 @@ func (hm headerMapper) toMetadata(from transport.Headers, to metadata.MD) metada
 	return to
 }
 
-// fromGRPCMetadata converts GRPC Metadata to transport headers.
+// fromMetadata converts GRPC Metadata to transport headers.
 //
 // Headers are read from 'from' and written to 'to'. The final header collection
 // is returned.

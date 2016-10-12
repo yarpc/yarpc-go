@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func TestHeaderMapper_ToGRPCMetadata(t *testing.T) {
+func TestHeaderMapper_ToMetadata(t *testing.T) {
 	prefix := "test-"
 	testMapper := headerMapper{prefix}
 
@@ -31,7 +31,7 @@ func TestHeaderMapper_ToGRPCMetadata(t *testing.T) {
 	assert.Equal(t, expectedMetadata, actualMetadata)
 }
 
-func TestHeaderMapper_ToGRPCMetadata_fromNil(t *testing.T) {
+func TestHeaderMapper_ToMetadata_fromNil(t *testing.T) {
 	prefix := "test-"
 	testMapper := headerMapper{prefix}
 
@@ -49,7 +49,7 @@ func TestHeaderMapper_ToGRPCMetadata_fromNil(t *testing.T) {
 	assert.Equal(t, expectedMetadata, actualMetadata)
 }
 
-func TestHeaderMapper_FromGRPCMetadata(t *testing.T) {
+func TestHeaderMapper_FromMetadata(t *testing.T) {
 	prefix := "test-"
 	testMapper := headerMapper{prefix}
 
