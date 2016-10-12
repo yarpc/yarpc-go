@@ -2,7 +2,7 @@ package grpc
 
 import "fmt"
 
-// PassThroughCodec passes bytes to/from the wire without modification
+// passThroughCodec passes bytes to/from the wire without modification
 type passThroughCodec struct{}
 
 // Marshal takes a []byte pointer and passes it through as a []byte
