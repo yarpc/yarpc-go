@@ -75,22 +75,27 @@ routing to handle methods and encodings.
 */
 func getServiceDescs(gHandler handler) *[]grpc.ServiceDesc {
 	var serviceDescs []grpc.ServiceDesc
-	if reg, ok := gHandler.Handler.(transport.Registry); ok {
-		// Go through the registry to find all the methods that are currently attached to inbounds
-		serviceProcedures := make(map[string][]string)
-		for _, sp := range reg.ServiceProcedures() {
-			serviceProcedures[sp.Service] = append(serviceProcedures[sp.Service], sp.Procedure)
-		}
 
-		// Create separate routes for each service & procedure
-		for service, procs := range serviceProcedures {
-			serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, service, procs))
-		}
-	} else {
-		// Called with a plain Handler instead of Dispatcher. Fall back to no meaningful service description.
+	// Create separate routes for each service & procedure
+	for service, procs := range getServiceProcedures(gHandler.Registry) {
+		serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, service, procs))
+	}
+
+	// If no service procedures are configured insert a default serviceProcedure
+	if len(serviceDescs) == 0 {
 		serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, "yarpc", []string{"yarpc"}))
 	}
+
 	return &serviceDescs
+}
+
+func getServiceProcedures(reg transport.Registry) map[string][]string {
+	// Go through the registry to find all the methods that are currently attached to inbounds
+	serviceProcedures := make(map[string][]string)
+	for _, sp := range reg.ServiceProcedures() {
+		serviceProcedures[sp.Service] = append(serviceProcedures[sp.Service], sp.Procedure)
+	}
+	return serviceProcedures
 }
 
 func createServiceDesc(gHandler handler, service string, procedures []string) *grpc.ServiceDesc {
