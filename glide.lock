@@ -1,5 +1,5 @@
-hash: 5283d102b407f1619077732a322925aa568fc45a0a205285ae12e61d9872d29c
-updated: 2016-09-29T17:07:39.870293261-07:00
+hash: 83308ca10a783ad7e750f39b70b1f4aa79020d82120cb210141b28c07529273a
+updated: 2016-10-04T13:02:16.214634444-07:00
 imports:
 - name: github.com/apache/thrift
   version: e349c345d3c3380657f7d0d388cda676f2014c3d
@@ -35,8 +35,17 @@ imports:
   - require
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
+- name: github.com/uber/jaeger-client-go
+  version: 78ce632052c36e2a64e73ef3a1098ce13bf9390d
+  subpackages:
+  - internal/spanlog
+  - thrift-gen/agent
+  - thrift-gen/sampling
+  - thrift-gen/zipkincore
+  - transport
+  - utils
 - name: github.com/uber/tchannel-go
-  version: f57e644626dbf4d87ee2b36571600c21f8255f1f
+  version: 4a23f3aae76694b21107f118ece763a61b98ea07
   subpackages:
   - json
   - raw
@@ -51,7 +60,7 @@ imports:
   - trand
   - typed
 - name: go.uber.org/thriftrw
-  version: ce496e4e93fa5f04f705f8bbe6192d071abe5182
+  version: 751bde77e2b9c9c4cded903432f874e63e890a73
   subpackages:
   - envelope
   - internal/envelope
@@ -68,7 +77,7 @@ imports:
   - ptr
   - wire
 - name: golang.org/x/net
-  version: 8058fc7b18f8794d9fc57eee98d64fe2c750e3f1
+  version: ffe101cce3477a6c6d8f0754d103bb0a84ec1266
   subpackages:
   - context
   - context/ctxhttp

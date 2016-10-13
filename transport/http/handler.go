@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"time"
 
-	"go.uber.org/yarpc/internal/baggage"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/transport"
@@ -98,11 +97,6 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	treq, err := v.Validate(ctx)
 	if err != nil {
 		return err
-	}
-
-	headers := baggageHeaders.FromHTTPHeaders(req.Header, transport.Headers{})
-	if headers.Len() > 0 {
-		ctx = baggage.NewContextWithHeaders(ctx, headers.Items())
 	}
 
 	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)

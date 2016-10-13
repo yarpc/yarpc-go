@@ -50,8 +50,6 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(TTLMSHeader, "1000")
 	headers.Set(ProcedureHeader, "nyuck")
 	headers.Set(ServiceHeader, "curly")
-	headers.Set(BaggageHeaderPrefix+"Foo", "bar")
-	headers.Set(BaggageHeaderPrefix+"BAR", "baz")
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
@@ -62,10 +60,6 @@ func TestHandlerSucces(t *testing.T) {
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
-			transporttest.ContextBaggage{
-				"foo": "bar",
-				"bar": "baz",
-			},
 		),
 		transport.Options{},
 		transporttest.NewRequestMatcher(
@@ -102,32 +96,24 @@ func TestHandlerHeaders(t *testing.T) {
 
 		wantTTL     time.Duration
 		wantHeaders map[string]string
-		wantBaggage map[string]string
 	}{
 		{
 			giveHeaders: http.Header{
 				TTLMSHeader:      {"1000"},
 				"Rpc-Header-Foo": {"bar"},
-				"Context-Foo":    {"Baz"},
 			},
 			wantTTL: time.Second,
 			wantHeaders: map[string]string{
 				"foo": "bar",
 			},
-			wantBaggage: map[string]string{
-				"foo": "Baz",
-			},
 		},
 		{
 			giveHeaders: http.Header{
-				TTLMSHeader:           {"100"},
-				"Rpc-Foo":             {"ignored"},
-				"ContextFoo":          {"ignored"},
-				"Context-Rpc-Service": {"hello"},
+				TTLMSHeader: {"100"},
+				"Rpc-Foo":   {"ignored"},
 			},
 			wantTTL:     100 * time.Millisecond,
 			wantHeaders: map[string]string{},
-			wantBaggage: map[string]string{"rpc-service": "hello"},
 		},
 	}
 
@@ -143,7 +129,6 @@ func TestHandlerHeaders(t *testing.T) {
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
 				transporttest.ContextTTL(tt.wantTTL),
-				transporttest.ContextBaggage(tt.wantBaggage),
 			),
 			transport.Options{},
 			transporttest.NewRequestMatcher(t,

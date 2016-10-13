@@ -29,7 +29,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"go.uber.org/yarpc/internal/baggage"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
@@ -129,9 +128,6 @@ func (o *outbound) createSpan(ctx context.Context, req *http.Request, treq *tran
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	if hs := baggage.FromContext(ctx); hs.Len() > 0 {
-		req.Header = baggageHeaders.ToHTTPHeaders(hs, req.Header)
-	}
 
 	tracer.Inject(
 		span.Context(),
