@@ -116,7 +116,7 @@ func getServiceAndProcedureFromMethod(streamMethod string) (string, string, erro
 func getContextMetadata(ctx context.Context) (metadata.MD, error) {
 	contextMetadata, ok := metadata.FromContext(ctx)
 	if !ok || contextMetadata == nil {
-		return nil, errors.New("Could not extract metadata information from context")
+		return nil, errCantExtractMetadata{ctx: ctx}
 	}
 	return contextMetadata, nil
 }
@@ -132,12 +132,9 @@ func getEncoding(ctxMetadata metadata.MD) (string, error) {
 }
 
 func extractMetadataHeader(ctxMetadata metadata.MD, header string) (string, error) {
-	headerList, ok := ctxMetadata[header]
-	if !ok {
-		return "", fmt.Errorf("Couldn't extract header:(%s) from Context Metadata (%v)", header, ctxMetadata)
-	}
+	headerList, _ := ctxMetadata[header]
 	if len(headerList) != 1 {
-		return "", fmt.Errorf("Invalid number of headers for %s, expected 1, got %d", header, len(headerList))
+		return "", errCantExtractHeader{Name: header, MD: ctxMetadata}
 	}
 	return headerList[0], nil
 }
