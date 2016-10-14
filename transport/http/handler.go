@@ -101,7 +101,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
 	if err == nil {
-		err = internal.SafelyCallHandler(handler, start, ctx, httpOptions, treq, newResponseWriter(w))
+		err = internal.SafelyCallHandler(ctx, handler, start, httpOptions, treq, newResponseWriter(w))
 	}
 
 	if err != nil {
