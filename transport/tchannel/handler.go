@@ -153,7 +153,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
 	if err == nil {
-		err = internal.SafelyCallHandler(handler, start, ctx, transportOptions, treq, rw)
+		err = internal.SafelyCallHandler(ctx, handler, start, transportOptions, treq, rw)
 	}
 	return err
 }

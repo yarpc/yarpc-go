@@ -34,7 +34,7 @@ import (
 
 // SafelyCallHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
-func SafelyCallHandler(h transport.Handler, start time.Time, ctx context.Context,
+func SafelyCallHandler(ctx context.Context, h transport.Handler, start time.Time,
 	opts transport.Options, req *transport.Request, resq transport.ResponseWriter) (err error) {
 
 	// We recover panics from now on.
