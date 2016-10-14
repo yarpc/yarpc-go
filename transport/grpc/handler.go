@@ -26,8 +26,7 @@ type handler struct {
 
 // Handle the grpc request and convert it into a YARPC request
 // dec ('decode') will pass through the request body in raw bytes using the passThroughCodec
-func (h handler) Handle(
-	srv interface{},
+func (h handler) handleImpl(
 	ctx context.Context,
 	dec func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
@@ -41,7 +40,7 @@ func (h handler) Handle(
 	// TODO handle validation
 
 	start := time.Now()
-	return callHandler(h, start, ctx, treq)
+	return callHandler(ctx, h, start, treq)
 }
 
 func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*transport.Request, error) {
@@ -107,9 +106,9 @@ func getMsgBody(msgBodyDecoder func(interface{}) error) (io.Reader, error) {
 }
 
 func callHandler(
+	ctx context.Context,
 	h handler,
 	start time.Time,
-	ctx context.Context,
 	treq *transport.Request,
 ) (interface{}, error) {
 	var r response
@@ -120,7 +119,7 @@ func callHandler(
 		return nil, err
 	}
 
-	err = internal.SafelyCallHandler(handler, start, ctx, grpcOptions, treq, rw)
+	err = internal.SafelyCallHandler(ctx, handler, start, grpcOptions, treq, rw)
 
 	responseBody := r.body.Bytes()
 	return &responseBody, err
