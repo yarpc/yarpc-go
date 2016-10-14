@@ -13,6 +13,8 @@ import:
   version: ^1
 - package: go.uber.org/thriftrw
   version: ~0.3
+- package: google.golang.org/grpc
+  version: ^1
 
 - package: github.com/crossdock/crossdock-go
   version: master
