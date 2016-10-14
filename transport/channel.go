@@ -43,8 +43,8 @@ type Channel interface {
 	//
 	// MAY be called multiple times for a request. The returned outbound MUST
 	// have already been started.
-	GetOutbound(procedure string) Outbound
-	GetOnewayOutbound(procedure string) OnewayOutbound
+	GetOutbound() Outbound
+	GetOnewayOutbound() OnewayOutbound
 }
 
 // RemoteService encapsulates a service's outbounds
@@ -68,11 +68,11 @@ type multiOutboundChannel struct {
 func (c multiOutboundChannel) Caller() string  { return c.caller }
 func (c multiOutboundChannel) Service() string { return c.rs.Name }
 
-func (c multiOutboundChannel) GetOutbound(procedure string) Outbound {
+func (c multiOutboundChannel) GetOutbound() Outbound {
 	return c.rs.Outbounds[0]
 }
 
-func (c multiOutboundChannel) GetOnewayOutbound(procedure string) OnewayOutbound {
+func (c multiOutboundChannel) GetOnewayOutbound() OnewayOutbound {
 	return c.rs.OnewayOutbounds[0]
 }
 
@@ -88,9 +88,9 @@ type identityChannel struct {
 	outbound Outbound
 }
 
-func (s identityChannel) Caller() string                        { return s.caller }
-func (s identityChannel) Service() string                       { return s.service }
-func (s identityChannel) GetOutbound(procedure string) Outbound { return s.outbound }
-func (s identityChannel) GetOnewayOutbound(procedure string) OnewayOutbound {
+func (s identityChannel) Caller() string        { return s.caller }
+func (s identityChannel) Service() string       { return s.service }
+func (s identityChannel) GetOutbound() Outbound { return s.outbound }
+func (s identityChannel) GetOnewayOutbound() OnewayOutbound {
 	panic("Unsupported GetOnewayOutbound with identityChannel")
 }
