@@ -16,5 +16,5 @@ func (h handler) Handle(
 	dec func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
 ) (interface{}, error) {
-	return h.handleImpl(ctx, dec, interceptor)
+	return h.handle(ctx, dec, interceptor)
 }

@@ -26,7 +26,7 @@ type handler struct {
 
 // Handle the grpc request and convert it into a YARPC request
 // dec ('decode') will pass through the request body in raw bytes using the passThroughCodec
-func (h handler) handleImpl(
+func (h handler) handle(
 	ctx context.Context,
 	dec func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
