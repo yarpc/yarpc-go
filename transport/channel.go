@@ -20,8 +20,6 @@
 
 package transport
 
-import "fmt"
-
 //go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
 
 // ChannelProvider builds channels from the current service to other services.
@@ -53,12 +51,8 @@ type Channel interface {
 type RemoteService struct {
 	Name string
 
-	// Defaults
 	Outbounds       []Outbound
 	OnewayOutbounds []OnewayOutbound
-
-	// Overrides
-	ProcedureOverrides map[string]BaseOutbound
 }
 
 // MultiOutboundChannel constructs a Channel backed by multiple outobund types
@@ -75,35 +69,11 @@ func (c multiOutboundChannel) Caller() string  { return c.caller }
 func (c multiOutboundChannel) Service() string { return c.rs.Name }
 
 func (c multiOutboundChannel) GetOutbound(procedure string) Outbound {
-	if baseOutbound, ok := c.rs.ProcedureOverrides[procedure]; ok {
-		if o, ok := baseOutbound.(Outbound); ok {
-			return o
-		}
-		panic(fmt.Sprintf("%s::%s does not support unary calls", c.Service(), procedure))
-	}
-
-	//TODO: 'smartly' decide which outbound to use
-	if len(c.rs.Outbounds) > 0 && c.rs.Outbounds[0] != nil {
-		return c.rs.Outbounds[0]
-	}
-
-	panic(fmt.Sprintf("no outbound found for %s::%s", c.Service(), procedure))
+	return c.rs.Outbounds[0]
 }
 
 func (c multiOutboundChannel) GetOnewayOutbound(procedure string) OnewayOutbound {
-	if baseOutbound, ok := c.rs.ProcedureOverrides[procedure]; ok {
-		if o, ok := baseOutbound.(OnewayOutbound); ok {
-			return o
-		}
-		panic(fmt.Sprintf("%s::%s does not support oneway calls", c.Service(), procedure))
-	}
-
-	//TODO: 'smartly' decide which outbound to use
-	if len(c.rs.OnewayOutbounds) > 0 && c.rs.OnewayOutbounds[0] != nil {
-		return c.rs.OnewayOutbounds[0]
-	}
-
-	panic(fmt.Sprintf("no oneway outbound found for %s::%s", c.Service(), procedure))
+	return c.rs.OnewayOutbounds[0]
 }
 
 // IdentityChannel constructs a simple Channel for the given caller-service pair

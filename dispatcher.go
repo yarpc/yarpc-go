@@ -73,13 +73,9 @@ type Config struct {
 type RemoteService struct {
 	Name string
 
-	// Defaults
 	DefaultOutbounds []transport.BaseOutbound
 	Outbounds        []transport.Outbound
 	OnewayOutbounds  []transport.OnewayOutbound
-
-	// Overrides
-	ProcedureOverrides map[string]transport.BaseOutbound
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -104,9 +100,8 @@ func convertRemoteServices(remoteServices []RemoteService) map[string]transport.
 
 	for _, rs := range remoteServices {
 		var (
-			outbounds          []transport.Outbound
-			onewayOutbounds    []transport.OnewayOutbound
-			procedureOverrides map[string]transport.BaseOutbound
+			outbounds       []transport.Outbound
+			onewayOutbounds []transport.OnewayOutbound
 		)
 
 		for _, o := range rs.Outbounds {
@@ -127,15 +122,10 @@ func convertRemoteServices(remoteServices []RemoteService) map[string]transport.
 			}
 		}
 
-		for p, o := range rs.ProcedureOverrides {
-			procedureOverrides[p] = o
-		}
-
 		services[rs.Name] = transport.RemoteService{
-			Name:               rs.Name,
-			Outbounds:          outbounds,
-			OnewayOutbounds:    onewayOutbounds,
-			ProcedureOverrides: procedureOverrides,
+			Name:            rs.Name,
+			Outbounds:       outbounds,
+			OnewayOutbounds: onewayOutbounds,
 		}
 	}
 
@@ -291,9 +281,6 @@ func (d dispatcher) getUniqueOutbounds() []transport.BaseOutbound {
 			appendUnique(o)
 		}
 		for _, o := range rs.OnewayOutbounds {
-			appendUnique(o)
-		}
-		for _, o := range rs.ProcedureOverrides {
 			appendUnique(o)
 		}
 	}
