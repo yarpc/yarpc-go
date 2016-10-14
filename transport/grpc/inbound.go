@@ -56,7 +56,7 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	serviceDescs := getServiceDescs(gHandler)
 
 	// Register Services
-	for _, desc := range *serviceDescs {
+	for _, desc := range serviceDescs {
 		i.server.RegisterService(&desc, passThroughServer{})
 	}
 
@@ -73,7 +73,7 @@ serviceDescs from the YARPC registered procedures.  This allows us to see what m
 individual routing mechanism to each one.  All the routes will be forwarded to the same "Handler" which will do YARPC
 routing to handle methods and encodings.
 */
-func getServiceDescs(gHandler handler) *[]grpc.ServiceDesc {
+func getServiceDescs(gHandler handler) []grpc.ServiceDesc {
 	var serviceDescs []grpc.ServiceDesc
 
 	// Create separate routes for each service & procedure
@@ -86,7 +86,7 @@ func getServiceDescs(gHandler handler) *[]grpc.ServiceDesc {
 		serviceDescs = append(serviceDescs, *createServiceDesc(gHandler, "yarpc", []string{"yarpc"}))
 	}
 
-	return &serviceDescs
+	return serviceDescs
 }
 
 func getServiceProcedures(reg transport.Registry) map[string][]string {
@@ -99,19 +99,18 @@ func getServiceProcedures(reg transport.Registry) map[string][]string {
 }
 
 func createServiceDesc(gHandler handler, service string, procedures []string) *grpc.ServiceDesc {
-	methodDescs := make([]grpc.MethodDesc, 0, len(procedures))
-	for _, proc := range procedures {
-		methodDescs = append(methodDescs, grpc.MethodDesc{
+	methodDescs := make([]grpc.MethodDesc, len(procedures))
+	for i, proc := range procedures {
+		methodDescs[i] = grpc.MethodDesc{
 			MethodName: url.QueryEscape(proc),
 			Handler:    gHandler.Handle, // Catchall method that does custom YARPC routing
-		})
+		}
 	}
 
 	return &grpc.ServiceDesc{
 		ServiceName: url.QueryEscape(service),
 		HandlerType: (*passThroughService)(nil),
 		Methods:     methodDescs,
-		Streams:     []grpc.StreamDesc{},
 	}
 }
 

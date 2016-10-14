@@ -43,7 +43,7 @@ func TestInboundStartAndStop(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	reg := transporttest.NewMockRegistry(mockCtrl)
-	reg.EXPECT().ServiceProcedures().Return(make([]transport.ServiceProcedure, 0, 0))
+	reg.EXPECT().ServiceProcedures().Return(nil)
 
 	i := NewInbound(0)
 
