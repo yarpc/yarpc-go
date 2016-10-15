@@ -1,5 +1,6 @@
 # Paths besides auto-detected generated files that should be excluded from
 # lint results.
+# Exclude the handler_interface to grpc because their handler interface does not meet golint standards
 LINT_EXCLUDES_EXTRAS = transport/grpc/handler_interface.go
 
 ##############################################################################
