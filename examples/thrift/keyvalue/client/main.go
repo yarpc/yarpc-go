@@ -67,8 +67,8 @@ func main() {
 		Name: "keyvalue-client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:      "keyvalue",
-				Outbounds: []transport.Outbound{outbound},
+				Name:     "keyvalue",
+				Outbound: outbound,
 			},
 		},
 		Filter: cache,

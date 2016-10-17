@@ -25,7 +25,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/params"
-	"go.uber.org/yarpc/transport"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/crossdock/crossdock-go"
@@ -52,10 +51,8 @@ func Run(t crossdock.T) {
 		Name: "yarpc-client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: serverName,
-				Outbounds: []transport.Outbound{
-					tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
-				},
+				Name:     serverName,
+				Outbound: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
 			},
 		},
 	})

@@ -51,8 +51,8 @@ type Channel interface {
 type RemoteService struct {
 	Name string
 
-	Outbounds       []Outbound
-	OnewayOutbounds []OnewayOutbound
+	Outbound       Outbound
+	OnewayOutbound OnewayOutbound
 }
 
 // MultiOutboundChannel constructs a Channel backed by multiple outobund types
@@ -69,11 +69,11 @@ func (c multiOutboundChannel) Caller() string  { return c.caller }
 func (c multiOutboundChannel) Service() string { return c.rs.Name }
 
 func (c multiOutboundChannel) GetOutbound() Outbound {
-	return c.rs.Outbounds[0]
+	return c.rs.Outbound
 }
 
 func (c multiOutboundChannel) GetOnewayOutbound() OnewayOutbound {
-	return c.rs.OnewayOutbounds[0]
+	return c.rs.OnewayOutbound
 }
 
 // IdentityChannel constructs a simple Channel for the given caller-service pair

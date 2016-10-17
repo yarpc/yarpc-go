@@ -26,7 +26,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/gauntlet"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
@@ -49,22 +48,16 @@ func Run(t crossdock.T) {
 		Name: "apache-thrift-client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: "ThriftTest",
-				Outbounds: []transport.Outbound{
-					http.NewOutbound(baseURL + "/thrift/ThriftTest"),
-				},
+				Name:     "ThriftTest",
+				Outbound: http.NewOutbound(baseURL + "/thrift/ThriftTest"),
 			},
 			{
-				Name: "SecondService",
-				Outbounds: []transport.Outbound{
-					http.NewOutbound(baseURL + "/thrift/SecondService"),
-				},
+				Name:     "SecondService",
+				Outbound: http.NewOutbound(baseURL + "/thrift/SecondService"),
 			},
 			{
-				Name: "Multiplexed",
-				Outbounds: []transport.Outbound{
-					http.NewOutbound(baseURL + "/thrift/multiplexed"),
-				},
+				Name:     "Multiplexed",
+				Outbound: http.NewOutbound(baseURL + "/thrift/multiplexed"),
 			},
 		},
 	})

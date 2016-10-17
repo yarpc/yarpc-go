@@ -164,10 +164,8 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 		Name: "client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: "server",
-				Outbounds: []transport.Outbound{
-					http.NewOutbound("http://localhost:65535"),
-				},
+				Name:     "server",
+				Outbound: http.NewOutbound("http://localhost:65535"),
 			},
 		},
 		Filter: recorder,
@@ -199,10 +197,8 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 		Name: "client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: "server",
-				Outbounds: []transport.Outbound{
-					http.NewOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr().String())),
-				},
+				Name:     "server",
+				Outbound: http.NewOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr().String())),
 			},
 		},
 		Filter: recorder,

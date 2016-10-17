@@ -57,8 +57,8 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 		Name: "client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:      "yarpc-test",
-				Outbounds: []transport.Outbound{outbound},
+				Name:     "yarpc-test",
+				Outbound: outbound,
 			},
 		},
 	})

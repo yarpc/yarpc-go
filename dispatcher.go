@@ -23,6 +23,7 @@ package yarpc
 import (
 	"sync"
 
+	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport"
 
@@ -73,9 +74,8 @@ type Config struct {
 type RemoteService struct {
 	Name string
 
-	DefaultOutbounds []transport.BaseOutbound
-	Outbounds        []transport.Outbound
-	OnewayOutbounds  []transport.OnewayOutbound
+	Outbound       transport.Outbound
+	OnewayOutbound transport.OnewayOutbound
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -88,44 +88,29 @@ func NewDispatcher(cfg Config) Dispatcher {
 		Name:           cfg.Name,
 		Registry:       transport.NewMapRegistry(cfg.Name),
 		inbounds:       cfg.Inbounds,
-		RemoteServices: convertRemoteServices(cfg.RemoteServices),
-		Filter:         cfg.Filter,
+		RemoteServices: convertRemoteServices(cfg.RemoteServices, cfg.Filter),
 		Interceptor:    cfg.Interceptor,
 		deps:           transport.NoDeps.WithTracer(cfg.Tracer),
 	}
 }
 
-func convertRemoteServices(remoteServices []RemoteService) map[string]transport.RemoteService {
+func convertRemoteServices(
+	remoteServices []RemoteService,
+	filter transport.Filter,
+) map[string]transport.RemoteService {
 	services := make(map[string]transport.RemoteService, len(remoteServices))
 
 	for _, rs := range remoteServices {
-		var (
-			outbounds       []transport.Outbound
-			onewayOutbounds []transport.OnewayOutbound
-		)
+		// apply filter and create a ValidatorOutbound
+		out := transport.ApplyFilter(rs.Outbound, filter)
+		out = request.ValidatorOutbound{Outbound: out}
 
-		for _, o := range rs.Outbounds {
-			outbounds = append(outbounds, o)
-		}
-
-		for _, o := range rs.OnewayOutbounds {
-			onewayOutbounds = append(onewayOutbounds, o)
-		}
-
-		// add outbounds that may implement different RPC types
-		for _, o := range rs.DefaultOutbounds {
-			if out, ok := o.(transport.Outbound); ok {
-				outbounds = append(outbounds, out)
-			}
-			if out, ok := o.(transport.OnewayOutbound); ok {
-				onewayOutbounds = append(onewayOutbounds, out)
-			}
-		}
+		// TODO: apply oneway outbound filter, test for outbound/onewayoutbound being the same
 
 		services[rs.Name] = transport.RemoteService{
-			Name:            rs.Name,
-			Outbounds:       outbounds,
-			OnewayOutbounds: onewayOutbounds,
+			Name:           rs.Name,
+			Outbound:       out,
+			OnewayOutbound: rs.OnewayOutbound,
 		}
 	}
 
@@ -159,11 +144,6 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 
 func (d dispatcher) Channel(service string) transport.Channel {
 	if rs, ok := d.RemoteServices[service]; ok {
-		//TODO: ..apply filters to outbounds
-
-		// out := transport.ApplyFilter(rs.Outbound, d.Filter)
-		// out = request.ValidatorOutbound{Outbound: out}
-		// rs.Outbound = out
 		return transport.MultiOutboundChannel(d.Name, rs)
 	}
 	panic(noOutboundForService{Service: service})
@@ -244,6 +224,7 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 			r.HandlerSpec.Handler = transport.ApplyInterceptor(r.HandlerSpec.Handler, d.Interceptor)
 			rs[i] = r
 		}
+		//TODO add oneway interceptors
 	}
 	d.Registry.Register(rs)
 }
@@ -267,21 +248,16 @@ func (d dispatcher) Stop() error {
 
 func (d dispatcher) getUniqueOutbounds() []transport.BaseOutbound {
 	var unique []transport.BaseOutbound
-	seen := make(map[transport.BaseOutbound]struct{})
-
-	appendUnique := func(o transport.BaseOutbound) {
-		if _, ok := seen[o]; !ok {
-			seen[o] = struct{}{}
-			unique = append(unique, o)
-		}
-	}
 
 	for _, rs := range d.RemoteServices {
-		for _, o := range rs.Outbounds {
-			appendUnique(o)
-		}
-		for _, o := range rs.OnewayOutbounds {
-			appendUnique(o)
+		if rs.Outbound == nil {
+			unique = append(unique, rs.OnewayOutbound)
+		} else if rs.OnewayOutbound == nil {
+			unique = append(unique, rs.Outbound)
+		} else if rs.Outbound.(transport.BaseOutbound) == rs.OnewayOutbound.(transport.BaseOutbound) {
+			unique = append(unique, rs.Outbound)
+		} else {
+			unique = append(unique, rs.Outbound, rs.OnewayOutbound)
 		}
 	}
 

@@ -46,10 +46,8 @@ func Run(t crossdock.T) {
 		Name: "client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: "yarpc-test",
-				Outbounds: []transport.Outbound{
-					ht.NewOutbound(fmt.Sprintf("http://%s:8085", server)),
-				},
+				Name:     "yarpc-test",
+				Outbound: ht.NewOutbound(fmt.Sprintf("http://%s:8085", server)),
 			},
 		},
 	})

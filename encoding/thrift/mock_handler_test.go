@@ -6,7 +6,7 @@ package thrift
 import (
 	gomock "github.com/golang/mock/gomock"
 	wire "go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
+	yarpc "go.uber.org/yarpc"
 	context "golang.org/x/net/context"
 )
 

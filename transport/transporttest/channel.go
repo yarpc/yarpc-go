@@ -59,24 +59,24 @@ func (_mr *_MockChannelRecorder) Caller() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Caller")
 }
 
-func (_m *MockChannel) GetOnewayOutbound(_param0 string) transport.OnewayOutbound {
-	ret := _m.ctrl.Call(_m, "GetOnewayOutbound", _param0)
+func (_m *MockChannel) GetOnewayOutbound() transport.OnewayOutbound {
+	ret := _m.ctrl.Call(_m, "GetOnewayOutbound")
 	ret0, _ := ret[0].(transport.OnewayOutbound)
 	return ret0
 }
 
-func (_mr *_MockChannelRecorder) GetOnewayOutbound(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetOnewayOutbound", arg0)
+func (_mr *_MockChannelRecorder) GetOnewayOutbound() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetOnewayOutbound")
 }
 
-func (_m *MockChannel) GetOutbound(_param0 string) transport.Outbound {
-	ret := _m.ctrl.Call(_m, "GetOutbound", _param0)
+func (_m *MockChannel) GetOutbound() transport.Outbound {
+	ret := _m.ctrl.Call(_m, "GetOutbound")
 	ret0, _ := ret[0].(transport.Outbound)
 	return ret0
 }
 
-func (_mr *_MockChannelRecorder) GetOutbound(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetOutbound", arg0)
+func (_mr *_MockChannelRecorder) GetOutbound() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetOutbound")
 }
 
 func (_m *MockChannel) Service() string {

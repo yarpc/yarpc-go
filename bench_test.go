@@ -127,10 +127,8 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 		Name: "client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: "server",
-				Outbounds: []transport.Outbound{
-					yhttp.NewOutbound("http://localhost:8999"),
-				},
+				Name:     "server",
+				Outbound: yhttp.NewOutbound("http://localhost:8999"),
 			},
 		},
 	}
@@ -149,10 +147,8 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 		Name: "client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: "server",
-				Outbounds: []transport.Outbound{
-					yhttp.NewOutbound("http://localhost:8998"),
-				},
+				Name:     "server",
+				Outbound: yhttp.NewOutbound("http://localhost:8998"),
 			},
 		},
 	}
@@ -208,10 +204,8 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 			Name: "client",
 			RemoteServices: []yarpc.RemoteService{
 				{
-					Name: "server",
-					Outbounds: []transport.Outbound{
-						ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
-					},
+					Name:     "server",
+					Outbound: ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
 				},
 			},
 		}
@@ -237,10 +231,8 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 		Name: "client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name: "server",
-				Outbounds: []transport.Outbound{
-					ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
-				},
+				Name:     "server",
+				Outbound: ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
 			},
 		},
 	}
