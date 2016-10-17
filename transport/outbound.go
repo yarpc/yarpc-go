@@ -22,7 +22,7 @@ package transport
 
 import "golang.org/x/net/context"
 
-//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound
+//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound,OnewayOutbound
 
 // BaseOutbound is the common interface for all outbounds
 type BaseOutbound interface {
@@ -65,5 +65,5 @@ type OnewayOutbound interface {
 	// This MUST NOT be called before Start() has been called successfully. This
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
-	CallOneway(ctx context.Context, request *Request) (*Ack, error)
+	CallOneway(ctx context.Context, request *Request) (Ack, error)
 }
