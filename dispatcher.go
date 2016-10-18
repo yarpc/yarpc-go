@@ -245,7 +245,7 @@ func (d dispatcher) Start() error {
 
 func (d dispatcher) Register(rs []transport.Registrant) {
 	for i, r := range rs {
-		if r.HandlerSpec.RPCType == transport.Unary {
+		if r.HandlerSpec.Type == transport.Unary {
 			r.HandlerSpec.Handler = transport.ApplyInterceptor(r.HandlerSpec.Handler, d.Interceptor)
 			rs[i] = r
 		}

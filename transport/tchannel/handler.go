@@ -156,13 +156,13 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	switch spec.RPCType {
+	switch spec.Type {
 	case transport.Unary:
 		err = internal.SafelyCallHandler(spec.Handler, start, ctx, transportOptions, treq, rw)
 	case transport.Oneway:
 		fallthrough //TODO support tchannel oneway
 	default:
-		err = errors.UnsupportedRPCTypeError{Transport: "tchannel", RPCType: spec.RPCType.String()}
+		err = errors.UnsupportedTypeError{Transport: "tchannel", Type: spec.Type.String()}
 	}
 
 	return err

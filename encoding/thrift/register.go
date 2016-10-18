@@ -98,7 +98,7 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 	// unary procedures
 	for methodName, handler := range s.Methods {
 		spec := transport.HandlerSpec{
-			RPCType: transport.Unary,
+			Type: transport.Unary,
 			Handler: thriftHandler{
 				Handler:           handler,
 				Protocol:          proto,
@@ -114,7 +114,7 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 	// oneway procedures
 	for methodName, handler := range s.OnewayMethods {
 		spec := transport.HandlerSpec{
-			RPCType: transport.Oneway,
+			Type: transport.Oneway,
 			OnewayHandler: thriftHandler{
 				OnewayHandler:     handler,
 				Protocol:          proto,

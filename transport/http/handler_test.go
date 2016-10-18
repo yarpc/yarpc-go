@@ -53,7 +53,7 @@ func TestHandlerSucces(t *testing.T) {
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	spec := transport.HandlerSpec{RPCType: transport.Unary, Handler: rpcHandler}
+	spec := transport.HandlerSpec{Type: transport.Unary, Handler: rpcHandler}
 
 	registry.EXPECT().GetHandlerSpec("curly", "nyuck").Return(spec, nil)
 
@@ -120,7 +120,7 @@ func TestHandlerHeaders(t *testing.T) {
 	for _, tt := range tests {
 		registry := transporttest.NewMockRegistry(mockCtrl)
 		rpcHandler := transporttest.NewMockHandler(mockCtrl)
-		spec := transport.HandlerSpec{RPCType: transport.Unary, Handler: rpcHandler}
+		spec := transport.HandlerSpec{Type: transport.Unary, Handler: rpcHandler}
 
 		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
 
@@ -277,7 +277,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(fmt.Errorf("great sadness"))
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
-	spec := transport.HandlerSpec{RPCType: transport.Unary, Handler: rpcHandler}
+	spec := transport.HandlerSpec{Type: transport.Unary, Handler: rpcHandler}
 
 	registry.EXPECT().GetHandlerSpec("fake", "hello").Return(spec, nil)
 
@@ -308,7 +308,7 @@ func TestHandlerPanic(t *testing.T) {
 		{
 			Procedure: "panic",
 			HandlerSpec: transport.HandlerSpec{
-				RPCType: transport.Unary,
+				Type:    transport.Unary,
 				Handler: panickedHandler{},
 			},
 		},

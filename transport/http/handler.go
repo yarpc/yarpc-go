@@ -104,13 +104,13 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		return err
 	}
 
-	switch spec.RPCType {
+	switch spec.Type {
 	case transport.Unary:
 		err = internal.SafelyCallHandler(spec.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
 	case transport.Oneway:
 		go internal.SafelyCallOnewayHandler(spec.OnewayHandler, start, ctx, httpOptions, treq)
 	default:
-		err = errors.UnsupportedRPCTypeError{Transport: "http", RPCType: spec.RPCType.String()}
+		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
 	}
 
 	if err != nil {

@@ -42,7 +42,7 @@ func TestMapRegistry(t *testing.T) {
 		{
 			Procedure: "foo",
 			HandlerSpec: transport.HandlerSpec{
-				RPCType: transport.Unary,
+				Type:    transport.Unary,
 				Handler: foo,
 			},
 		},
@@ -50,7 +50,7 @@ func TestMapRegistry(t *testing.T) {
 			Service:   "anotherservice",
 			Procedure: "bar",
 			HandlerSpec: transport.HandlerSpec{
-				RPCType: transport.Unary,
+				Type:    transport.Unary,
 				Handler: bar,
 			},
 		},
@@ -95,14 +95,14 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 			Service:   "anotherservice",
 			Procedure: "bar",
 			HandlerSpec: transport.HandlerSpec{
-				RPCType: transport.Unary,
+				Type:    transport.Unary,
 				Handler: bar,
 			},
 		},
 		{
 			Procedure: "foo",
 			HandlerSpec: transport.HandlerSpec{
-				RPCType: transport.Unary,
+				Type:    transport.Unary,
 				Handler: foo,
 			},
 		},
@@ -110,7 +110,7 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 			Service:   "anotherservice",
 			Procedure: "aww",
 			HandlerSpec: transport.HandlerSpec{
-				RPCType: transport.Unary,
+				Type:    transport.Unary,
 				Handler: aww,
 			},
 		},

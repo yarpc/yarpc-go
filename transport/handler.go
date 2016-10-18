@@ -26,30 +26,30 @@ import (
 	"golang.org/x/net/context"
 )
 
-// RPCType is an enum of RPC types
-type RPCType int
+// Type is an enum of RPC types
+type Type int
 
 const (
-	// Unary RPC type
-	Unary RPCType = iota + 1
-	// Oneway RPC type
+	// Unary type
+	Unary Type = iota + 1
+	// Oneway type
 	Oneway
 )
 
-func (t RPCType) String() string {
+func (t Type) String() string {
 	switch t {
 	case Unary:
 		return "Unary"
 	case Oneway:
 		return "Oneway"
 	default:
-		return fmt.Sprintf("RPCType(%v)", int(t))
+		return fmt.Sprintf("Type(%v)", int(t))
 	}
 }
 
-// HandlerSpec holds a handler and its RPCType
+// HandlerSpec holds a handler and its Type
 type HandlerSpec struct {
-	RPCType RPCType
+	Type Type
 
 	Handler       Handler
 	OnewayHandler OnewayHandler
