@@ -35,6 +35,7 @@ import (
 type Client interface {
 	// Call performs an outbound Raw request.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	// CallOneway performs a oneway outbound Raw request.
 	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error)
 }
 
