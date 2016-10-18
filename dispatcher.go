@@ -101,16 +101,41 @@ func convertRemoteServices(
 	services := make(map[string]transport.RemoteService, len(remoteServices))
 
 	for _, rs := range remoteServices {
-		// apply filter and create a ValidatorOutbound
-		out := transport.ApplyFilter(rs.Outbound, filter)
-		out = request.ValidatorOutbound{Outbound: out}
+		// This ensures that we don't apply filters/validators to the same outbound
+		//	more than once. This can be the case if one object implements multiple
+		//	outbound types
+		seen := make(map[transport.BaseOutbound]transport.BaseOutbound, 2)
 
-		// TODO: apply oneway outbound filter, test for outbound/onewayoutbound being the same
+		outbound := rs.Outbound
+		onewayOutbound := rs.OnewayOutbound
+
+		// apply filters and create ValidatorOutbounds
+		if rs.Outbound != nil {
+			original := rs.Outbound
+
+			outbound = transport.ApplyFilter(rs.Outbound, filter)
+			outbound = request.ValidatorOutbound{Outbound: outbound}
+
+			seen[original] = outbound
+		}
+
+		if rs.OnewayOutbound != nil {
+			original := rs.OnewayOutbound
+
+			// TODO: apply oneway outbound filter
+			if o, ok := seen[original]; ok {
+				onewayOutbound = o.(transport.OnewayOutbound)
+			} else {
+				onewayOutbound = request.OnewayValidatorOutbound{
+					OnewayOutbound: rs.OnewayOutbound,
+				}
+			}
+		}
 
 		services[rs.Name] = transport.RemoteService{
 			Name:           rs.Name,
-			Outbound:       out,
-			OnewayOutbound: rs.OnewayOutbound,
+			Outbound:       outbound,
+			OnewayOutbound: onewayOutbound,
 		}
 	}
 
