@@ -75,22 +75,3 @@ func (c multiOutboundChannel) GetOutbound() Outbound {
 func (c multiOutboundChannel) GetOnewayOutbound() OnewayOutbound {
 	return c.rs.OnewayOutbound
 }
-
-// IdentityChannel constructs a simple Channel for the given caller-service pair
-// which always returns the given Outbound.
-func IdentityChannel(caller, service string, out Outbound) Channel {
-	return identityChannel{caller: caller, service: service, outbound: out}
-}
-
-type identityChannel struct {
-	caller   string
-	service  string
-	outbound Outbound
-}
-
-func (s identityChannel) Caller() string        { return s.caller }
-func (s identityChannel) Service() string       { return s.service }
-func (s identityChannel) GetOutbound() Outbound { return s.outbound }
-func (s identityChannel) GetOnewayOutbound() OnewayOutbound {
-	panic("Unsupported GetOnewayOutbound with identityChannel")
-}

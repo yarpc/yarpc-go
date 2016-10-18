@@ -79,7 +79,10 @@ func TestCall(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockOutbound(mockCtrl)
-		client := New(transport.IdentityChannel(caller, service, outbound))
+		client := New(transport.MultiOutboundChannel(caller, transport.RemoteService{
+			Name:     service,
+			Outbound: outbound,
+		}))
 
 		writer, responseBody := testreader.ChunkReader()
 		for _, chunk := range tt.responseBody {

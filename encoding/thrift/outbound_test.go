@@ -179,7 +179,10 @@ func TestClient(t *testing.T) {
 
 		c := New(Config{
 			Service: "MyService",
-			Channel: transport.IdentityChannel("caller", "service", trans),
+			Channel: transport.MultiOutboundChannel("caller", transport.RemoteService{
+				Name:     "service",
+				Outbound: trans,
+			}),
 		}, Protocol(proto))
 
 		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
