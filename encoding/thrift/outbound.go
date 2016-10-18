@@ -44,6 +44,7 @@ import (
 type Client interface {
 	// Call the given Thrift method.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error)
+	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (transport.Ack, error)
 }
 
 // Config contains the configuration for the Client.
@@ -124,55 +125,11 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 
 	out := c.ch.GetOutbound()
 
-	// We disable enveloping if either the client or the transport requires it.
-	disableEnveloping := c.disableEnveloping || isEnvelopingDisabled(out.Options())
-	// Note that we apply this thrift.Option here rather than in New because
-	// this can change on a per-transport basis in addition to the
-	// user-specifed option.
-
-	proto := c.p
-	if disableEnveloping {
-		proto = disableEnvelopingProtocol{
-			Protocol: proto,
-			Type:     wire.Reply, // we only decode replies with this instance
-		}
-	}
-
-	treq := transport.Request{
-		Caller:   c.ch.Caller(),
-		Service:  c.ch.Service(),
-		Encoding: Encoding,
-	}
-	meta.ToTransportRequest(reqMeta, &treq)
-	// Always override the procedure name to the Thrift procedure name.
-	treq.Procedure = procedureName(c.thriftService, reqBody.MethodName())
-
-	value, err := reqBody.ToWire()
+	treq, proto, err := c.buildTransportRequest(out.Options(), reqMeta, reqBody)
 	if err != nil {
-		// ToWire validates the request. If it failed, we should return the error
-		// as-is because it's not an encoding error.
 		return wire.Value{}, nil, err
 	}
 
-	reqEnvelopeType := reqBody.EnvelopeType()
-	if reqEnvelopeType != wire.Call {
-		return wire.Value{}, nil, encoding.RequestBodyEncodeError(
-			&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
-		)
-	}
-
-	var buffer bytes.Buffer
-	err = proto.EncodeEnveloped(wire.Envelope{
-		Name:  reqBody.MethodName(),
-		Type:  reqEnvelopeType,
-		SeqID: 1, // don't care
-		Value: value,
-	}, &buffer)
-	if err != nil {
-		return wire.Value{}, nil, encoding.RequestBodyEncodeError(&treq, err)
-	}
-
-	treq.Body = &buffer
 	tres, err := out.Call(ctx, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
@@ -206,6 +163,81 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(
 			&treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
+}
+
+func (c thriftClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (transport.Ack, error) {
+	out := c.ch.GetOnewayOutbound()
+
+	treq, _, err := c.buildTransportRequest(out.Options(), reqMeta, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	ack, err := out.CallOneway(ctx, &treq)
+	if err != nil {
+		return nil, err
+	}
+
+	return ack, nil
+}
+
+func (c thriftClient) buildTransportRequest(
+	opts transport.Options,
+	reqMeta yarpc.CallReqMeta,
+	reqBody envelope.Enveloper) (
+	transport.Request, protocol.Protocol, error) {
+
+	// We disable enveloping if either the client or the transport requires it.
+	disableEnveloping := c.disableEnveloping || isEnvelopingDisabled(opts)
+	// Note that we apply this thrift.Option here rather than in New because
+	// this can change on a per-transport basis in addition to the
+	// user-specifed option.
+
+	proto := c.p
+	if disableEnveloping {
+		proto = disableEnvelopingProtocol{
+			Protocol: proto,
+			Type:     wire.Reply, // we only decode replies with this instance
+		}
+	}
+
+	treq := transport.Request{
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
+		Encoding: Encoding,
+	}
+	meta.ToTransportRequest(reqMeta, &treq)
+	// Always override the procedure name to the Thrift procedure name.
+	treq.Procedure = procedureName(c.thriftService, reqBody.MethodName())
+
+	value, err := reqBody.ToWire()
+	if err != nil {
+		// ToWire validates the request. If it failed, we should return the error
+		// as-is because it's not an encoding error.
+		return transport.Request{}, nil, err
+	}
+
+	reqEnvelopeType := reqBody.EnvelopeType()
+	if reqEnvelopeType != wire.Call {
+		return transport.Request{}, nil,
+			encoding.RequestBodyEncodeError(
+				&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
+			)
+	}
+
+	var buffer bytes.Buffer
+	err = proto.EncodeEnveloped(wire.Envelope{
+		Name:  reqBody.MethodName(),
+		Type:  reqEnvelopeType,
+		SeqID: 1, // don't care
+		Value: value,
+	}, &buffer)
+	if err != nil {
+		return transport.Request{}, nil, encoding.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = &buffer
+	return treq, proto, nil
 }
 
 type thriftException struct {

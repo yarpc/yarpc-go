@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"testing"
@@ -188,6 +189,120 @@ func TestClient(t *testing.T) {
 			}
 		} else {
 			assert.NoError(t, err, "%v: expected success", tt.desc)
+		}
+	}
+}
+
+type successAck struct{}
+
+func (a successAck) String() string {
+	return "success"
+}
+
+func TestClientOneway(t *testing.T) {
+	caller, service, procedure := "caller", "MyService", "someMethod"
+
+	tests := []struct {
+		desc             string
+		giveRequestBody  envelope.Enveloper // outgoing request body
+		transportOptions transport.Options  // options for the outbound
+
+		expectCall          bool           // whether outbound.Call is expected
+		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
+		wantRequestBody     *wire.Value    // expect Encode(x)
+		wantError           string         // whether an error is expected
+	}{
+		{
+			desc:            "happy case",
+			giveRequestBody: fakeEnveloper(wire.Call),
+			expectCall:      true,
+			wantRequestEnvelope: &wire.Envelope{
+				Name:  procedure,
+				SeqID: 1,
+				Type:  wire.Call,
+				Value: wire.NewValueStruct(wire.Struct{}),
+			},
+		},
+		{
+			desc:             "happy case without enveloping",
+			giveRequestBody:  fakeEnveloper(wire.Call),
+			expectCall:       true,
+			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
+			transportOptions: DisableEnvelopingForTransport,
+		},
+		{
+			desc:            "wrong envelope type for request",
+			giveRequestBody: fakeEnveloper(wire.Reply),
+			wantError: `failed to encode "thrift" request body for procedure ` +
+				`"MyService::someMethod" of service "MyService": unexpected envelope type: Reply`,
+		},
+	}
+
+	for _, tt := range tests {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		proto := NewMockProtocol(mockCtrl)
+		bodyBytes := []byte("irrelevant")
+
+		if tt.wantRequestEnvelope != nil {
+			proto.EXPECT().EncodeEnveloped(*tt.wantRequestEnvelope, gomock.Any()).
+				Do(func(_ wire.Envelope, w io.Writer) {
+					_, err := w.Write(bodyBytes)
+					require.NoError(t, err, "Write() failed")
+				}).Return(nil)
+		}
+
+		if tt.wantRequestBody != nil {
+			proto.EXPECT().Encode(*tt.wantRequestBody, gomock.Any()).
+				Do(func(_ wire.Value, w io.Writer) {
+					_, err := w.Write(bodyBytes)
+					require.NoError(t, err, "Write() failed")
+				}).Return(nil)
+		}
+
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+		onewayOutbound := transporttest.NewMockOnewayOutbound(mockCtrl)
+		onewayOutbound.EXPECT().Options().Return(tt.transportOptions).AnyTimes()
+
+		requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
+			Caller:    caller,
+			Service:   service,
+			Encoding:  Encoding,
+			Procedure: procedureName(service, procedure),
+			Body:      bytes.NewReader(bodyBytes),
+		})
+
+		if tt.expectCall {
+			if tt.wantError != "" {
+				onewayOutbound.
+					EXPECT().
+					CallOneway(ctx, requestMatcher).
+					Return(nil, errors.New(tt.wantError))
+			} else {
+				onewayOutbound.
+					EXPECT().
+					CallOneway(ctx, requestMatcher).
+					Return(&successAck{}, nil)
+			}
+		}
+		c := New(Config{
+			Service: service,
+			Channel: transport.MultiOutboundChannel(caller, transport.RemoteService{
+				Name:           service,
+				OnewayOutbound: onewayOutbound,
+			}),
+		}, Protocol(proto))
+
+		ack, err := c.CallOneway(ctx, nil, tt.giveRequestBody)
+		if tt.wantError != "" {
+			if assert.Error(t, err, "%v: expected failure", tt.desc) {
+				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)
+			}
+		} else {
+			assert.NoError(t, err, "%v: expected success", tt.desc)
+			assert.Equal(t, "success", ack.String())
 		}
 	}
 }
