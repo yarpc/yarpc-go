@@ -108,17 +108,23 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	case transport.Unary:
 		err = internal.SafelyCallHandler(spec.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
 	case transport.Oneway:
-		go internal.SafelyCallOnewayHandler(spec.OnewayHandler, start, ctx, httpOptions, treq)
+		go func() {
+			err = internal.SafelyCallOnewayHandler(spec.OnewayHandler, start, ctx, httpOptions, treq)
+			setSpanErr(span, err)
+		}()
 	default:
 		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
 	}
 
+	setSpanErr(span, err)
+	return err
+}
+
+func setSpanErr(span opentracing.Span, err error) {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
 	}
-
-	return err
 }
 
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
