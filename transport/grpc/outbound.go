@@ -59,10 +59,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	uri := fmt.Sprintf("/%s/%s", url.QueryEscape(req.Service), url.QueryEscape(req.Procedure))
 
 	response, err := callDownstream(ctx, uri, &requestBody, o.conn)
-	if err != nil {
-		return nil, getErrFromGRPCError(err, req, ttl)
-	}
-	return response, nil
+	return response, getErrFromGRPCError(err, req, ttl)
 }
 
 func getRequestHeaders(ctx context.Context, req *transport.Request) metadata.MD {
@@ -94,6 +91,10 @@ func callDownstream(
 }
 
 func getErrFromGRPCError(err error, treq *transport.Request, ttl time.Duration) error {
+	if err == nil {
+		return nil
+	}
+
 	switch grpc.Code(err) {
 	// TIMEOUT
 	case codes.DeadlineExceeded:
