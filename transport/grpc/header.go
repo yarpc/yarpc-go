@@ -11,9 +11,7 @@ import (
 // headerMapper converts gRPC Metadata to and from transport headers.
 type headerMapper struct{ Prefix string }
 
-var (
-	applicationHeaders = headerMapper{ApplicationHeaderPrefix}
-)
+var applicationHeaders = headerMapper{ApplicationHeaderPrefix}
 
 // toMetadata converts transport headers into gRPC Metadata.
 //
@@ -49,12 +47,13 @@ func (hm headerMapper) fromMetadata(from metadata.MD, to transport.Headers) tran
 	return to
 }
 
-// headers is a convenience type for converting Header information safely
+// headers is a convenience type for converting Header information safely (all GRPC headers need to be lowercase)
 type headers map[string][]string
 
 // Add adds the key, value pair to the header.
 // It appends to any existing values associated with key.
 func (h headers) add(key, value string) {
+	key = strings.ToLower(key)
 	h[key] = append(h[key], value)
 }
 
@@ -62,6 +61,7 @@ func (h headers) add(key, value string) {
 // the single element value. It replaces any existing
 // values associated with key.
 func (h headers) set(key, value string) {
+	key = strings.ToLower(key)
 	h[key] = []string{value}
 }
 
@@ -70,6 +70,7 @@ func (h headers) set(key, value string) {
 // Get is a convenience method. For more complex queries,
 // access the map directly.
 func (h headers) get(key string) string {
+	key = strings.ToLower(key)
 	if h == nil {
 		return ""
 	}
@@ -82,5 +83,6 @@ func (h headers) get(key string) string {
 
 // Del deletes the values associated with key.
 func (h headers) del(key string) {
+	key = strings.ToLower(key)
 	delete(h, key)
 }

@@ -141,7 +141,7 @@ func TestExtractMetadataHeader(t *testing.T) {
 	}
 }
 
-func TestResponseWriter_Write(t *testing.T) {
+func TestResponseWriter(t *testing.T) {
 	strMsg := "this is a test"
 	byteMsg := []byte(strMsg)
 	var r response
@@ -154,7 +154,7 @@ func TestResponseWriter_Write(t *testing.T) {
 	assert.Equal(t, strMsg, string(r.body.Bytes()))
 }
 
-func TestResponseWriter_AddHeaders(t *testing.T) {
+func TestResponseWriterWithHeaders(t *testing.T) {
 	caller := "teeeeest"
 	encoding := "raw"
 	inputHeaders := transport.HeadersFromMap(map[string]string{
@@ -172,13 +172,4 @@ func TestResponseWriter_AddHeaders(t *testing.T) {
 	rw.AddHeaders(inputHeaders)
 
 	assert.Equal(t, expectedHeaders, r.headers)
-}
-
-func TestResponseWriter_SetApplicationError(t *testing.T) {
-	var r response
-	rw := newResponseWriter(&r)
-
-	rw.SetApplicationError()
-
-	// No action on Application Error
 }
