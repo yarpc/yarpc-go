@@ -243,7 +243,13 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return nil, errors.RemoteUnexpectedError(message)
 }
 
-func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) error {
+type ack struct{}
+
+func (ack) String() string {
+	return "success"
+}
+
+func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)
@@ -255,7 +261,7 @@ func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) erro
 
 	req, err := http.NewRequest("POST", o.URL, treq.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx, span := o.createSpan(ctx, req, treq, start)
@@ -270,5 +276,5 @@ func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) erro
 		}
 	}()
 
-	return nil
+	return ack{}, nil
 }
