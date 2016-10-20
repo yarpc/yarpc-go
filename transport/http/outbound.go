@@ -246,7 +246,7 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 type ack struct{}
 
 func (ack) String() string {
-	return "success"
+	return ""
 }
 
 func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
