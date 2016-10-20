@@ -37,11 +37,24 @@ func (h handler) handle(
 		return nil, err
 	}
 
-	// TODO handle deadlines
-	// TODO handle validation
+	if interceptor == nil {
+		return callHandler(ctx, h, treq)
+	}
 
-	start := time.Now()
-	return callHandler(ctx, h, start, treq)
+	info := &grpc.UnaryServerInfo{
+		Server:     passThroughServer{},
+		FullMethod: getFullMethod(treq),
+	}
+	handler := h.handleFromInterceptor
+	return interceptor(ctx, treq, info, handler)
+}
+
+func getFullMethod(treq *transport.Request) string {
+	return fmt.Sprintf("/%s/%s", url.QueryEscape(treq.Service), url.QueryEscape(treq.Procedure))
+}
+
+func (h handler) handleFromInterceptor(ctx context.Context, req interface{}) (interface{}, error) {
+	return callHandler(ctx, h, req.(*transport.Request))
 }
 
 func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*transport.Request, error) {
@@ -153,9 +166,10 @@ func getMsgBody(msgBodyDecoder func(interface{}) error) (io.Reader, error) {
 func callHandler(
 	ctx context.Context,
 	h handler,
-	start time.Time,
 	treq *transport.Request,
 ) (interface{}, error) {
+	start := time.Now()
+
 	var r response
 	rw := newResponseWriter(&r)
 

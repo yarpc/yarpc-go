@@ -10,6 +10,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -27,7 +28,12 @@ type outbound struct {
 }
 
 func (o *outbound) Start(d transport.Deps) error {
-	conn, err := grpc.Dial(o.address, grpc.WithInsecure(), grpc.WithCodec(passThroughCodec{}))
+	conn, err := grpc.Dial(
+		o.address,
+		grpc.WithInsecure(),
+		grpc.WithCodec(passThroughCodec{}),
+		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(d.Tracer())),
+	)
 	if err != nil {
 		return err
 	}

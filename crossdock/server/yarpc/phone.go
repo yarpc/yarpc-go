@@ -30,7 +30,9 @@ import (
 	"go.uber.org/yarpc/transport"
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
@@ -47,10 +49,17 @@ type TChannelTransport struct {
 	Port int    `json:"port"`
 }
 
+// GRPCTransport contains information about a GRPC transport.
+type GRPCTransport struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
 // TransportConfig contains the transport configuration for the phone request.
 type TransportConfig struct {
 	HTTP     *HTTPTransport     `json:"http"`
 	TChannel *TChannelTransport `json:"tchannel"`
+	GRPC     *GRPCTransport     `json:"grpc"`
 }
 
 // PhoneRequest is a request to make another request to a different service.
@@ -85,11 +94,15 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 			return nil, nil, fmt.Errorf("failed to build TChannel: %v", err)
 		}
 		outbound = tch.NewOutbound(ch, tch.HostPort(hostport))
+	case body.Transport.GRPC != nil:
+		t := body.Transport.GRPC
+		url := fmt.Sprintf("%s:%d", t.Host, t.Port)
+		outbound = grpc.NewOutbound(url)
 	default:
 		return nil, nil, fmt.Errorf("unconfigured transport")
 	}
 
-	if err := outbound.Start(transport.NoDeps); err != nil {
+	if err := outbound.Start(transport.NoDeps.WithTracer(opentracing.GlobalTracer())); err != nil {
 		return nil, nil, err
 	}
 	defer outbound.Stop()

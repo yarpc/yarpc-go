@@ -1,8 +1,8 @@
-hash: 56853f7f597e1ee1c72e9d06ee14fd77c59011d008d34423715bf1a750610e51
-updated: 2016-10-12T13:59:36.510012099-07:00
+hash: 3c6980939d88e380999e856dd9491b931b3e3be924fbc219e3c99cfbbab145df
+updated: 2016-10-19T14:58:39.088904871-07:00
 imports:
 - name: github.com/apache/thrift
-  version: e349c345d3c3380657f7d0d388cda676f2014c3d
+  version: d1c0d331992014f36b221ea707943cbaa3bfb3a3
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -18,6 +18,14 @@ imports:
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
+- name: github.com/golang/protobuf
+  version: 98fa357170587e470c5f27d3c3ea0947b71eb455
+  subpackages:
+  - proto
+- name: github.com/grpc-ecosystem/grpc-opentracing
+  version: 1dc7acc9afe69e22a3c7a5876330b05fe1ec7883
+  subpackages:
+  - go/otgrpc
 - name: github.com/opentracing/opentracing-go
   version: 0c3154a3c2ce79d3271985848659870599dfb77c
   subpackages:
@@ -36,7 +44,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/jaeger-client-go
-  version: 78ce632052c36e2a64e73ef3a1098ce13bf9390d
+  version: e39d0f1b622558cae3d9db0062a739cc6ffa700f
   subpackages:
   - internal/spanlog
   - thrift-gen/agent
@@ -77,16 +85,31 @@ imports:
   - ptr
   - wire
 - name: golang.org/x/net
-  version: cf4effbb9db1f3ef07f7e1891402991b6afbb276
+  version: 6dba816f1056709e29a1c442883cab1336d3c083
   subpackages:
   - context
   - context/ctxhttp
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/tools
   version: fc2b74b64ef08c618146ebc92062f6499db5314c
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/grpc
-  version: b1a2821ca5a4fd6b6e48ddfbb7d6d7584d839d21
+  version: b7f1379d3cbbbeb2ca3405852012e237aa05459e
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - transport
 - name: gopkg.in/yaml.v2
   version: a5b47d31c556af34a302ce5d659e6fea44d90de0
 testImports: []

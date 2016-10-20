@@ -32,10 +32,10 @@ import (
 	"go.uber.org/yarpc/transport"
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/opentracing/opentracing-go"
-	"github.com/uber/jaeger-client-go"
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
@@ -58,10 +58,6 @@ func Run(t crossdock.T) {
 	checks := crossdock.Checks(t)
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
-
-	tracer, closer := jaeger.NewTracer("crossdock", jaeger.NewConstSampler(true), jaeger.NewNullReporter())
-	defer closer.Close()
-	opentracing.InitGlobalTracer(tracer)
 
 	tests := []struct {
 		desc      string
@@ -178,8 +174,6 @@ func Run(t crossdock.T) {
 			}
 
 			dispatcher, tconfig := buildDispatcher(t)
-			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
-			defer dispatcher.Stop()
 
 			jsonClient := json.New(dispatcher.Channel("yarpc-test"))
 			for name, handler := range tt.handlers {
@@ -188,6 +182,9 @@ func Run(t crossdock.T) {
 				dispatcher.Register(json.Procedure(name, handler.Handle))
 			}
 
+			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
+			defer dispatcher.Stop()
+
 			ctx := context.Background()
 			if tt.initCtx != nil {
 				ctx = tt.initCtx
@@ -195,6 +192,7 @@ func Run(t crossdock.T) {
 			ctx, _ = context.WithTimeout(ctx, time.Second)
 
 			var resp js.RawMessage
+
 			_, err := jsonClient.Call(
 				ctx,
 				yarpc.NewReqMeta().Procedure("phone"),
@@ -333,6 +331,9 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
 	case "tchannel":
 		outbound = tch.NewOutbound(ch, tch.HostPort(fmt.Sprintf("%s:8082", subject)))
+		tconfig.GRPC = &server.GRPCTransport{Host: self, Port: 8090}
+	case "grpc":
+		outbound = grpc.NewOutbound(fmt.Sprintf("%s:8089", subject))
 		tconfig.HTTP = &server.HTTPTransport{Host: self, Port: 8086}
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
@@ -343,6 +344,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 		Inbounds: []transport.Inbound{
 			tch.NewInbound(ch, tch.ListenAddr(":8087")),
 			ht.NewInbound(":8086"),
+			grpc.NewInbound(8090),
 		},
 		Outbounds: transport.Outbounds{"yarpc-test": outbound},
 	})

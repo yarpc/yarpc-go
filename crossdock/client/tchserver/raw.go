@@ -52,7 +52,13 @@ func hello(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	}
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers(), "headers echoed")
+
+		// Extra headers may have been added by the tracer, only assert against the starting headers
+		for _, key := range headers.Keys() {
+			expected, _ := headers.Get(key)
+			actual, _ := resMeta.Headers().Get(key)
+			assert.Equal(expected, actual, "headers echoed")
+		}
 	}
 }
 

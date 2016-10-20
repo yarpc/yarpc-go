@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -46,7 +47,10 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 
 	// Use a codec that passes through the bytes from gRPC requests to YARPC encoders
 	// TODO customize the Codec.String() function which is used for the Content-Type header
-	i.server = grpc.NewServer(grpc.CustomCodec(passThroughCodec{}))
+	i.server = grpc.NewServer(
+		grpc.CustomCodec(passThroughCodec{}),
+		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(d.Tracer())),
+	)
 
 	gHandler := handler{
 		Registry: service.Registry,
