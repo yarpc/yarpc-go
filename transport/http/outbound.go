@@ -255,20 +255,21 @@ func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		panic(errOutboundNotStarted)
 	}
 
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
 	req, err := http.NewRequest("POST", o.URL, treq.Body)
 	if err != nil {
 		return nil, err
 	}
 
+	start := time.Now()
+	ttl := time.Duration(0)
+
 	ctx, span := o.createSpan(ctx, req, treq, start)
-	defer span.Finish()
+
 	setHeaders(req, treq, ttl)
 
 	go func() {
+		defer span.Finish()
+
 		_, err = ctxhttp.Do(ctx, o.Client, req)
 		if err != nil {
 			span.SetTag("error", true)

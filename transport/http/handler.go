@@ -108,10 +108,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	case transport.Unary:
 		err = internal.SafelyCallHandler(spec.Handler, start, ctx, httpOptions, treq, newResponseWriter(w))
 	case transport.Oneway:
-		go func() {
-			err = internal.SafelyCallOnewayHandler(spec.OnewayHandler, start, ctx, httpOptions, treq)
-			setSpanErr(span, err)
-		}()
+		err = internal.SafelyCallOnewayHandler(spec.OnewayHandler, start, ctx, httpOptions, treq)
 	default:
 		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
 	}
