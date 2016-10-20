@@ -302,35 +302,9 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 	rootCtx := context.Background()
 
 	for _, tt := range tests {
-		requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
-			Caller:    testCaller,
-			Service:   testService,
-			Procedure: testProcedureOneway,
-			Encoding:  raw.Encoding,
-			Headers:   tt.requestHeaders,
-			Body:      bytes.NewReader([]byte(tt.requestBody)),
-		})
+		t.Run(tt.name, func(t *testing.T) {
 
-		handlerDone := make(chan struct{})
-
-		onewayHandler := OnewayHandlerFunc(func(_ context.Context, _ transport.Options, r *transport.Request) error {
-			assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
-
-			// Pretend to work: this delay should not slow down tests since it is a
-			// server-side operation
-			time.Sleep(5 * time.Second)
-
-			// fill the channel, telling the client (which should not be waiting for
-			// a response) that the handler finished executing
-			handlerDone <- struct{}{}
-
-			return nil
-		})
-
-		registry := staticRegistry{OnewayHandler: onewayHandler}
-
-		trans.WithRegistryOneway(registry, func(o transport.OnewayOutbound) {
-			ack, err := o.CallOneway(rootCtx, &transport.Request{
+			requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
 				Caller:    testCaller,
 				Service:   testService,
 				Procedure: testProcedureOneway,
@@ -339,17 +313,46 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 				Body:      bytes.NewReader([]byte(tt.requestBody)),
 			})
 
-			select {
-			case <-handlerDone:
-				// if the server filled the channel, it means we waited for the server
-				// to complete the request
-				assert.Fail(t, "server handler executed before client")
-			default:
-			}
+			handlerDone := make(chan struct{})
 
-			if assert.NoError(t, err, "%T: oneway call failed for test '%v'", trans, tt.name) {
-				assert.NotNil(t, ack)
-			}
+			onewayHandler := OnewayHandlerFunc(func(_ context.Context, _ transport.Options, r *transport.Request) error {
+				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
+
+				// Pretend to work: this delay should not slow down tests since it is a
+				// server-side operation
+				time.Sleep(5 * time.Second)
+
+				// fill the channel, telling the client (which should not be waiting for
+				// a response) that the handler finished executing
+				handlerDone <- struct{}{}
+
+				return nil
+			})
+
+			registry := staticRegistry{OnewayHandler: onewayHandler}
+
+			trans.WithRegistryOneway(registry, func(o transport.OnewayOutbound) {
+				ack, err := o.CallOneway(rootCtx, &transport.Request{
+					Caller:    testCaller,
+					Service:   testService,
+					Procedure: testProcedureOneway,
+					Encoding:  raw.Encoding,
+					Headers:   tt.requestHeaders,
+					Body:      bytes.NewReader([]byte(tt.requestBody)),
+				})
+
+				select {
+				case <-handlerDone:
+					// if the server filled the channel, it means we waited for the server
+					// to complete the request
+					assert.Fail(t, "server handler executed before client")
+				default:
+				}
+
+				if assert.NoError(t, err, "%T: oneway call failed for test '%v'", trans, tt.name) {
+					assert.NotNil(t, ack)
+				}
+			})
 		})
 	}
 }
