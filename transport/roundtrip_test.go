@@ -44,9 +44,11 @@ import (
 
 // all tests in this file should use these names for callers and services.
 const (
-	testCaller    = "testService-client"
-	testService   = "testService"
-	testProcedure = "hello"
+	testCaller  = "testService-client"
+	testService = "testService"
+
+	testProcedure       = "hello"
+	testProcedureOneway = "hello-oneway"
 )
 
 // roundTripTransport provides a function that sets up and tears down an
@@ -55,15 +57,15 @@ type roundTripTransport interface {
 	// Set up an Inbound serving Registry r, and call f with an Outbound that
 	// knows how to talk to that Inbound.
 	WithRegistry(r transport.Registry, f func(transport.Outbound))
+	WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound))
 }
 
-type staticRegistry struct{ Handler transport.Handler }
+type staticRegistry struct {
+	Handler       transport.Handler
+	OnewayHandler transport.OnewayHandler
+}
 
 func (r staticRegistry) Register([]transport.Registrant) {
-	panic("cannot register methods on a static registry")
-}
-
-func (r staticRegistry) RegisterOneway(service string, procedure string, handler transport.OnewayHandler) {
 	panic("cannot register methods on a static registry")
 }
 
@@ -72,7 +74,11 @@ func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
 }
 
 func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transport.HandlerSpec, error) {
-	return transport.HandlerSpec{Type: transport.Unary, Handler: r.Handler}, nil
+	if procedure == testProcedure {
+		return transport.HandlerSpec{Type: transport.Unary, Handler: r.Handler}, nil
+	} else {
+		return transport.HandlerSpec{Type: transport.Oneway, OnewayHandler: r.OnewayHandler}, nil
+	}
 }
 
 // handlerFunc wraps a function into a transport.Registry
@@ -80,6 +86,13 @@ type handlerFunc func(context.Context, transport.Options, *transport.Request, tr
 
 func (f handlerFunc) Handle(ctx context.Context, opts transport.Options, r *transport.Request, w transport.ResponseWriter) error {
 	return f(ctx, opts, r, w)
+}
+
+// OnewayHandlerFunc wraps a function into a transport.Registry
+type OnewayHandlerFunc func(context.Context, transport.Options, *transport.Request) error
+
+func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, opts transport.Options, r *transport.Request) error {
+	return f(ctx, opts, r)
 }
 
 // httpTransport implements a roundTripTransport for HTTP.
@@ -92,6 +105,18 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Outb
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
+	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
+	defer o.Stop()
+	f(o)
+}
+
+func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
+	i := http.NewInbound("127.0.0.1:0")
+	require.NoError(ht.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+	defer i.Stop()
+
+	addr := fmt.Sprintf("http://%v/", i.Addr().String())
+	o := http.NewOnewayOutbound(addr)
 	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
 	defer o.Stop()
 	f(o)
@@ -118,6 +143,10 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 
 		f(o)
 	})
+}
+
+func (tt tchannelTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
+	panic("tchannel does not support oneway calls")
 }
 
 func TestSimpleRoundTrip(t *testing.T) {
@@ -247,5 +276,80 @@ func TestSimpleRoundTrip(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestSimpleRoundTripOneway(t *testing.T) {
+	trans := httpTransport{t}
+
+	tests := []struct {
+		name           string
+		requestHeaders transport.Headers
+		requestBody    string
+	}{
+		{
+			name:           "hello world",
+			requestHeaders: transport.NewHeaders().With("foo", "bar"),
+			requestBody:    "hello world",
+		},
+		{
+			name:           "empty",
+			requestHeaders: transport.NewHeaders(),
+			requestBody:    "",
+		},
+	}
+
+	rootCtx := context.Background()
+
+	for _, tt := range tests {
+		requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
+			Caller:    testCaller,
+			Service:   testService,
+			Procedure: testProcedureOneway,
+			Encoding:  raw.Encoding,
+			Headers:   tt.requestHeaders,
+			Body:      bytes.NewReader([]byte(tt.requestBody)),
+		})
+
+		handlerDone := make(chan int)
+
+		onewayHandler := OnewayHandlerFunc(func(_ context.Context, _ transport.Options, r *transport.Request) error {
+			assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
+
+			// Pretend to work: this delay should not slow down tests since it is a
+			// server-side operation
+			time.Sleep(5 * time.Second)
+
+			// fill the channel, telling the client (which should not be waiting for
+			// a response) that the handler finished executing
+			handlerDone <- 1
+
+			return nil
+		})
+
+		registry := staticRegistry{OnewayHandler: onewayHandler}
+
+		trans.WithRegistryOneway(registry, func(o transport.OnewayOutbound) {
+			ack, err := o.CallOneway(rootCtx, &transport.Request{
+				Caller:    testCaller,
+				Service:   testService,
+				Procedure: testProcedureOneway,
+				Encoding:  raw.Encoding,
+				Headers:   tt.requestHeaders,
+				Body:      bytes.NewReader([]byte(tt.requestBody)),
+			})
+
+			select {
+			case <-handlerDone:
+				// if the server filled the channel, it means we waited for the server
+				// to complete the request
+				assert.Fail(t, "server handler executed before client")
+			default:
+			}
+
+			if assert.NoError(t, err, "%T: oneway call failed for test '%v'", trans, tt.name) {
+				assert.NotNil(t, ack)
+			}
+		})
 	}
 }
