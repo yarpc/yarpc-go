@@ -311,7 +311,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 			Body:      bytes.NewReader([]byte(tt.requestBody)),
 		})
 
-		handlerDone := make(chan int)
+		handlerDone := make(chan struct{})
 
 		onewayHandler := OnewayHandlerFunc(func(_ context.Context, _ transport.Options, r *transport.Request) error {
 			assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
@@ -322,7 +322,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 
 			// fill the channel, telling the client (which should not be waiting for
 			// a response) that the handler finished executing
-			handlerDone <- 1
+			handlerDone <- struct{}{}
 
 			return nil
 		})
