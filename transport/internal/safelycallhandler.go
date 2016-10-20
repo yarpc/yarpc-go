@@ -35,9 +35,9 @@ import (
 // SafelyCallHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
 func SafelyCallHandler(
+	ctx context.Context,
 	h transport.Handler,
 	start time.Time,
-	ctx context.Context,
 	opts transport.Options,
 	req *transport.Request,
 	resq transport.ResponseWriter,
@@ -66,13 +66,12 @@ func SafelyCallHandler(
 // converting them to yarpc errors. All other errors are passed trough.
 // TODO: reduce repetition bewteen these two functions
 func SafelyCallOnewayHandler(
+	ctx context.Context,
 	h transport.OnewayHandler,
 	start time.Time,
-	ctx context.Context,
 	opts transport.Options,
 	req *transport.Request,
 ) (err error) {
-
 	// We recover panics from now on.
 	defer func() {
 		if r := recover(); r != nil {

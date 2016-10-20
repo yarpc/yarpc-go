@@ -158,7 +158,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	switch spec.Type {
 	case transport.Unary:
-		err = internal.SafelyCallHandler(spec.Handler, start, ctx, transportOptions, treq, rw)
+		err = internal.SafelyCallHandler(ctx, spec.Handler, start, transportOptions, treq, rw)
 	case transport.Oneway:
 		fallthrough //TODO support tchannel oneway
 	default:
