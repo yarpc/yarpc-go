@@ -87,7 +87,7 @@ func TestCall(t *testing.T) {
 		close(writer)
 
 		outbound.EXPECT().Call(gomock.Any(),
-			transporttest.NewRequestMatcher(t,
+			transporttest.NewOutboundCallMatcher(t,
 				&transport.Request{
 					Caller:    caller,
 					Service:   service,
@@ -95,7 +95,7 @@ func TestCall(t *testing.T) {
 					Headers:   transport.Headers(tt.headers),
 					Encoding:  Encoding,
 					Body:      bytes.NewReader(tt.body),
-				}),
+				}, transport.Options{}),
 		).Return(
 			&transport.Response{
 				Body:    ioutil.NopCloser(responseBody),

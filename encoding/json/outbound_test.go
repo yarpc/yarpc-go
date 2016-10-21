@@ -102,7 +102,7 @@ func TestCall(t *testing.T) {
 
 		if !tt.noCall {
 			outbound.EXPECT().Call(gomock.Any(),
-				transporttest.NewRequestMatcher(t,
+				transporttest.NewOutboundCallMatcher(t,
 					&transport.Request{
 						Caller:    caller,
 						Service:   service,
@@ -110,7 +110,8 @@ func TestCall(t *testing.T) {
 						Encoding:  Encoding,
 						Headers:   transport.Headers(tt.headers),
 						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
-					}),
+					}, transport.Options{},
+				),
 			).Return(
 				&transport.Response{
 					Body: ioutil.NopCloser(

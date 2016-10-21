@@ -22,7 +22,31 @@ package transport
 
 import "golang.org/x/net/context"
 
-//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound
+//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound,OutboundCall
+
+// OutboundCall is a single outbound call.
+type OutboundCall interface {
+	// BuildRequest builds the transport request based on the given transport
+	// options.
+	//
+	// Implementations of OutboundCall may customize the request based on the
+	// transport options fed in by the transport.
+	BuildRequest(opts Options) (*Request, error)
+}
+
+// OutboundCallFromRequest builds an OutboundCall from the given Request.
+//
+// This may be used in situations where the Options will not affect the shape of
+// the request.
+func OutboundCallFromRequest(req *Request) OutboundCall {
+	return (*outboundCallFromRequest)(req)
+}
+
+type outboundCallFromRequest Request
+
+func (r *outboundCallFromRequest) BuildRequest(Options) (*Request, error) {
+	return (*Request)(r), nil
+}
 
 // Outbound is a transport that knows how to send requests for procedure
 // calls.
@@ -37,16 +61,13 @@ type Outbound interface {
 	// Stops the outbound, cleaning up any resources held by the Outbound.
 	Stop() error
 
-	// Options for all requests made through this Outbound.
-	Options() Options
-
 	// Call sends the given request through this transport and returns its
 	// response.
 	//
 	// This MUST NOT be called before Start() has been called successfully. This
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
-	Call(ctx context.Context, request *Request) (*Response, error)
+	Call(ctx context.Context, call OutboundCall) (*Response, error)
 }
 
 // Outbounds is a map of service name to Outbound for that service.

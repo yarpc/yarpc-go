@@ -18,33 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package request
+package http
 
-import (
-	"go.uber.org/yarpc/transport"
+import "go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
-)
-
-// ValidatorOutbound wraps an Outbound to validate all outgoing requests.
-type ValidatorOutbound struct{ transport.Outbound }
-
-// Call performs the given request, failing early if the request is invalid.
-func (o ValidatorOutbound) Call(ctx context.Context, call transport.OutboundCall) (*transport.Response, error) {
-	return o.Outbound.Call(ctx, validatorCall{ctx, call})
-}
-
-type validatorCall struct {
-	Context context.Context
-	Call    transport.OutboundCall
-}
-
-func (c validatorCall) BuildRequest(opts transport.Options) (*transport.Request, error) {
-	request, err := c.Call.BuildRequest(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	return Validate(c.Context, request)
-
-}
+var httpOptions transport.Options

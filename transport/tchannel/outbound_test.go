@@ -106,14 +106,15 @@ func TestOutboundHeaders(t *testing.T) {
 
 			res, err := out.Call(
 				ctx,
-				&transport.Request{
-					Caller:    "caller",
-					Service:   "service",
-					Encoding:  raw.Encoding,
-					Procedure: "hello",
-					Headers:   tt.headers,
-					Body:      bytes.NewReader([]byte("world")),
-				},
+				transport.OutboundCallFromRequest(
+					&transport.Request{
+						Caller:    "caller",
+						Service:   "service",
+						Encoding:  raw.Encoding,
+						Procedure: "hello",
+						Headers:   tt.headers,
+						Body:      bytes.NewReader([]byte("world")),
+					}),
 			)
 			if tt.wantError != "" {
 				if assert.Error(t, err, "expected error") {
@@ -169,13 +170,13 @@ func TestCallSuccess(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		res, err := out.Call(
 			ctx,
-			&transport.Request{
+			transport.OutboundCallFromRequest(&transport.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  raw.Encoding,
 				Procedure: "hello",
 				Body:      bytes.NewReader([]byte("world")),
-			},
+			}),
 		)
 
 		if !assert.NoError(t, err, "failed to make call") {
@@ -249,13 +250,13 @@ func TestCallFailures(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		_, err := out.Call(
 			ctx,
-			&transport.Request{
+			transport.OutboundCallFromRequest(&transport.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  raw.Encoding,
 				Procedure: tt.procedure,
 				Body:      bytes.NewReader([]byte("sup")),
-			},
+			}),
 		)
 
 		assert.Error(t, err, "expected failure")
@@ -305,13 +306,13 @@ func TestCallWithoutStarting(t *testing.T) {
 			ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 			out.Call(
 				ctx,
-				&transport.Request{
+				transport.OutboundCallFromRequest(&transport.Request{
 					Caller:    "caller",
 					Service:   "service",
 					Encoding:  raw.Encoding,
 					Procedure: "foo",
 					Body:      bytes.NewReader([]byte("sup")),
-				},
+				}),
 			)
 		})
 	}

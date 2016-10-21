@@ -153,16 +153,15 @@ func TestClient(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		trans := transporttest.NewMockOutbound(mockCtrl)
-		trans.EXPECT().Options().Return(tt.transportOptions).AnyTimes()
 		if tt.expectCall {
 			trans.EXPECT().Call(ctx,
-				transporttest.NewRequestMatcher(t, &transport.Request{
+				transporttest.NewOutboundCallMatcher(t, &transport.Request{
 					Caller:    "caller",
 					Service:   "service",
 					Encoding:  Encoding,
 					Procedure: "MyService::someMethod",
 					Body:      bytes.NewReader([]byte("irrelevant")),
-				}),
+				}, tt.transportOptions),
 			).Return(&transport.Response{
 				Body: ioutil.NopCloser(bytes.NewReader([]byte("irrelevant"))),
 			}, nil)

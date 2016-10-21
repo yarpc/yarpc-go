@@ -41,11 +41,11 @@ func Chain(filters ...transport.Filter) transport.Filter {
 // filterChain combines a series of filters into a single Filter.
 type chain []transport.Filter
 
-func (c chain) Call(ctx context.Context, request *transport.Request, out transport.Outbound) (*transport.Response, error) {
+func (c chain) Call(ctx context.Context, call transport.OutboundCall, out transport.Outbound) (*transport.Response, error) {
 	return chainExec{
 		Chain: []transport.Filter(c),
 		Final: out,
-	}.Call(ctx, request)
+	}.Call(ctx, call)
 }
 
 // chainExec adapts a series of filters into an Outbound. It is scoped to a
@@ -63,15 +63,11 @@ func (x chainExec) Stop() error {
 	return x.Final.Stop()
 }
 
-func (x chainExec) Options() transport.Options {
-	return x.Final.Options()
-}
-
-func (x chainExec) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (x chainExec) Call(ctx context.Context, call transport.OutboundCall) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.Call(ctx, request)
+		return x.Final.Call(ctx, call)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
-	return next.Call(ctx, request, x)
+	return next.Call(ctx, call, x)
 }

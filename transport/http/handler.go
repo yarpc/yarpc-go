@@ -34,8 +34,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-var httpOptions transport.Options
-
 func popHeader(h http.Header, n string) string {
 	v := h.Get(n)
 	h.Del(n)

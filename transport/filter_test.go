@@ -43,18 +43,18 @@ func TestNopFilter(t *testing.T) {
 	wrappedO := transport.ApplyFilter(o, transport.NopFilter)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	req := &transport.Request{
+	call := transport.OutboundCallFromRequest(&transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	}
+	})
 
 	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
-	o.EXPECT().Call(ctx, req).Return(res, nil)
+	o.EXPECT().Call(ctx, call).Return(res, nil)
 
-	got, err := wrappedO.Call(ctx, req)
+	got, err := wrappedO.Call(ctx, call)
 	if assert.NoError(t, err) {
 		assert.Equal(t, res, got)
 	}

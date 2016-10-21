@@ -40,7 +40,7 @@ import "golang.org/x/net/context"
 // Filters are re-used across requests and MAY be called multiple times on the
 // same request.
 type Filter interface {
-	Call(ctx context.Context, request *Request, out Outbound) (*Response, error)
+	Call(ctx context.Context, call OutboundCall, out Outbound) (*Response, error)
 }
 
 // NopFilter is a filter that does not do anything special. It simply calls
@@ -56,11 +56,11 @@ func ApplyFilter(o Outbound, f Filter) Outbound {
 }
 
 // FilterFunc adapts a function into a Filter.
-type FilterFunc func(context.Context, *Request, Outbound) (*Response, error)
+type FilterFunc func(context.Context, OutboundCall, Outbound) (*Response, error)
 
 // Call for FilterFunc.
-func (f FilterFunc) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
-	return f(ctx, request, out)
+func (f FilterFunc) Call(ctx context.Context, call OutboundCall, out Outbound) (*Response, error) {
+	return f(ctx, call, out)
 }
 
 type filteredOutbound struct {
@@ -76,16 +76,12 @@ func (fo filteredOutbound) Stop() error {
 	return fo.o.Stop()
 }
 
-func (fo filteredOutbound) Options() Options {
-	return fo.o.Options()
-}
-
-func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
-	return fo.f.Call(ctx, request, fo.o)
+func (fo filteredOutbound) Call(ctx context.Context, call OutboundCall) (*Response, error) {
+	return fo.f.Call(ctx, call, fo.o)
 }
 
 type nopFilter struct{}
 
-func (nopFilter) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
-	return out.Call(ctx, request)
+func (nopFilter) Call(ctx context.Context, call OutboundCall, out Outbound) (*Response, error) {
+	return out.Call(ctx, call)
 }

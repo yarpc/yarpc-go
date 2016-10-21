@@ -31,6 +31,42 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
+// OutboundCallMatcher matches outbound calls which yield a request matching the
+// given RequestMatcher.
+type OutboundCallMatcher struct {
+	opts transport.Options // Options for the OutboundCall
+	reqM RequestMatcher
+}
+
+// NewOutboundCallMatcher builds an OutboundCallMatcher that matches
+// OutboundCalls which produce the given Request when called with the given
+// options.
+func NewOutboundCallMatcher(t *testing.T, r *transport.Request, o transport.Options) OutboundCallMatcher {
+	return OutboundCallMatcher{
+		opts: o,
+		reqM: NewRequestMatcher(t, r),
+	}
+}
+
+// Matches returns true if the given OutboundCall matches this matcher.
+func (m OutboundCallMatcher) Matches(got interface{}) bool {
+	call, ok := got.(transport.OutboundCall)
+	if !ok {
+		panic(fmt.Sprintf("expected transport.OutboundCall, got %v", got))
+	}
+
+	req, err := call.BuildRequest(m.opts)
+	if err != nil {
+		return false
+	}
+
+	return m.reqM.Matches(req)
+}
+
+func (m OutboundCallMatcher) String() string {
+	return fmt.Sprintf("OutboundCall(%v).Returns(%v)", m.opts, m.reqM)
+}
+
 // RequestMatcher may be used in gomock argument lists to assert that two
 // requests match.
 //
