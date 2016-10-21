@@ -1,3 +1,23 @@
+// Copyright (c) 2016 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 // Package recorder records & replay yarpc requests on the client side.
 //
 // For recording, the client must be connected and able to issue requests to a
@@ -45,6 +65,7 @@ import (
 	"strings"
 	"unicode"
 
+	"go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
@@ -262,11 +283,26 @@ func (r *Recorder) makeFilePath(request *transport.Request, hash string) string 
 // Call implements the yarpc transport filter interface
 func (r *Recorder) Call(
 	ctx context.Context,
-	request *transport.Request,
+	call transport.OutboundCall,
 	out transport.Outbound,
 ) (*transport.Response, error) {
-	log := r.logger
+	return out.Call(ctx, outbound.OutboundCallFunc(
+		func(ctx context.Context, opts transport.Options, sender transport.RequestSender) (*transport.Response, error) {
+			return call.WithRequest(ctx, opts, recorderSender{
+				Sender:   sender,
+				Recorder: r,
+			})
+		}))
+}
 
+type recorderSender struct {
+	Sender   transport.RequestSender
+	Recorder *Recorder
+}
+
+func (s recorderSender) Send(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	r := s.Recorder
+	log := r.logger
 	requestRecord := r.requestToRequestRecord(request)
 
 	requestHash := r.hashRequestRecord(&requestRecord)
@@ -288,7 +324,7 @@ func (r *Recorder) Call(
 		}
 		fallthrough
 	case Overwrite:
-		response, err := out.Call(ctx, request)
+		response, err := s.Sender.Send(ctx, request)
 		if err == nil {
 			cachedRecord := record{
 				Version:  currentRecordVersion,

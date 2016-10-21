@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	iout "go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
@@ -70,7 +71,7 @@ func TestCallSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	res, err := out.Call(ctx, transport.OutboundCallFromRequest(&transport.Request{
+	res, err := out.Call(ctx, iout.CallFromRequest(&transport.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Encoding:  raw.Encoding,
@@ -129,7 +130,7 @@ func TestOutboundHeaders(t *testing.T) {
 		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 		defer out.Stop()
 
-		res, err := out.Call(ctx, transport.OutboundCallFromRequest(&transport.Request{
+		res, err := out.Call(ctx, iout.CallFromRequest(&transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  raw.Encoding,
@@ -174,7 +175,7 @@ func TestCallFailures(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		_, err := out.Call(ctx, transport.OutboundCallFromRequest(&transport.Request{
+		_, err := out.Call(ctx, iout.CallFromRequest(&transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  raw.Encoding,
@@ -210,7 +211,7 @@ func TestCallWithoutStarting(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		out.Call(
 			ctx,
-			transport.OutboundCallFromRequest(&transport.Request{
+			iout.CallFromRequest(&transport.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  raw.Encoding,

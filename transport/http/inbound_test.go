@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	iout "go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -117,7 +118,7 @@ func TestInboundMux(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = o.Call(ctx, transport.OutboundCallFromRequest(&transport.Request{
+	_, err = o.Call(ctx, iout.CallFromRequest(&transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
@@ -135,7 +136,7 @@ func TestInboundMux(t *testing.T) {
 
 	reg.EXPECT().GetHandler("bar", "hello").Return(h, nil)
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	res, err := o.Call(ctx, transport.OutboundCallFromRequest(&transport.Request{
+	res, err := o.Call(ctx, iout.CallFromRequest(&transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",

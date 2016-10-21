@@ -22,30 +22,18 @@ package transport
 
 import "golang.org/x/net/context"
 
-//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound,OutboundCall
+//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound,OutboundCall,RequestSender
+
+// RequestSender sends the given request to the remote.
+type RequestSender interface {
+	Send(ctx context.Context, req *Request) (*Response, error)
+}
 
 // OutboundCall is a single outbound call.
 type OutboundCall interface {
-	// BuildRequest builds the transport request based on the given transport
-	// options.
-	//
-	// Implementations of OutboundCall may customize the request based on the
-	// transport options fed in by the transport.
-	BuildRequest(opts Options) (*Request, error)
-}
-
-// OutboundCallFromRequest builds an OutboundCall from the given Request.
-//
-// This may be used in situations where the Options will not affect the shape of
-// the request.
-func OutboundCallFromRequest(req *Request) OutboundCall {
-	return (*outboundCallFromRequest)(req)
-}
-
-type outboundCallFromRequest Request
-
-func (r *outboundCallFromRequest) BuildRequest(Options) (*Request, error) {
-	return (*Request)(r), nil
+	// WithRequest builds the transport request based on the given transport
+	// options and sends it through the given RequestSender.
+	WithRequest(ctx context.Context, opts Options, sender RequestSender) (*Response, error)
 }
 
 // Outbound is a transport that knows how to send requests for procedure

@@ -29,42 +29,26 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/transport"
+
+	"golang.org/x/net/context"
 )
 
-// OutboundCallMatcher matches outbound calls which yield a request matching the
-// given RequestMatcher.
-type OutboundCallMatcher struct {
-	opts transport.Options // Options for the OutboundCall
-	reqM RequestMatcher
+// OutboundWithSender builds an Outbound which simply executes calls with the
+// given options and sender.
+func OutboundWithSender(opts transport.Options, sender transport.RequestSender) transport.Outbound {
+	return outboundWithSender{Options: opts, Sender: sender}
 }
 
-// NewOutboundCallMatcher builds an OutboundCallMatcher that matches
-// OutboundCalls which produce the given Request when called with the given
-// options.
-func NewOutboundCallMatcher(t *testing.T, r *transport.Request, o transport.Options) OutboundCallMatcher {
-	return OutboundCallMatcher{
-		opts: o,
-		reqM: NewRequestMatcher(t, r),
-	}
+type outboundWithSender struct {
+	Options transport.Options
+	Sender  transport.RequestSender
 }
 
-// Matches returns true if the given OutboundCall matches this matcher.
-func (m OutboundCallMatcher) Matches(got interface{}) bool {
-	call, ok := got.(transport.OutboundCall)
-	if !ok {
-		panic(fmt.Sprintf("expected transport.OutboundCall, got %v", got))
-	}
+func (outboundWithSender) Start(transport.Deps) error { return nil }
+func (outboundWithSender) Stop() error                { return nil }
 
-	req, err := call.BuildRequest(m.opts)
-	if err != nil {
-		return false
-	}
-
-	return m.reqM.Matches(req)
-}
-
-func (m OutboundCallMatcher) String() string {
-	return fmt.Sprintf("OutboundCall(%v).Returns(%v)", m.opts, m.reqM)
+func (o outboundWithSender) Call(ctx context.Context, call transport.OutboundCall) (*transport.Response, error) {
+	return call.WithRequest(ctx, o.Options, o.Sender)
 }
 
 // RequestMatcher may be used in gomock argument lists to assert that two

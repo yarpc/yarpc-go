@@ -31,20 +31,21 @@ type ValidatorOutbound struct{ transport.Outbound }
 
 // Call performs the given request, failing early if the request is invalid.
 func (o ValidatorOutbound) Call(ctx context.Context, call transport.OutboundCall) (*transport.Response, error) {
-	return o.Outbound.Call(ctx, validatorCall{ctx, call})
+	return o.Outbound.Call(ctx, validatorCall{call})
 }
 
-type validatorCall struct {
-	Context context.Context
-	Call    transport.OutboundCall
+type validatorCall struct{ transport.OutboundCall }
+
+func (c validatorCall) WithRequest(ctx context.Context, opts transport.Options, sender transport.RequestSender) (*transport.Response, error) {
+	return c.OutboundCall.WithRequest(ctx, opts, validatorSender{sender})
 }
 
-func (c validatorCall) BuildRequest(opts transport.Options) (*transport.Request, error) {
-	request, err := c.Call.BuildRequest(opts)
+type validatorSender struct{ transport.RequestSender }
+
+func (s validatorSender) Send(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	req, err := Validate(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-
-	return Validate(c.Context, request)
-
+	return s.RequestSender.Send(ctx, req)
 }

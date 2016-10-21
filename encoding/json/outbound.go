@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
+	"go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 )
 
@@ -70,7 +71,7 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.ch.GetOutbound().Call(ctx, transport.OutboundCallFromRequest(&treq))
+	tres, err := c.ch.GetOutbound().Call(ctx, outbound.CallFromRequest(&treq))
 
 	if err != nil {
 		return nil, err

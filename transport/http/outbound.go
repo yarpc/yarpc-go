@@ -139,11 +139,10 @@ func (o *outbound) Call(ctx context.Context, call transport.OutboundCall) (*tran
 		panic(errOutboundNotStarted)
 	}
 
-	treq, err := call.BuildRequest(httpOptions)
-	if err != nil {
-		return nil, err
-	}
+	return call.WithRequest(ctx, httpOptions, o)
+}
 
+func (o *outbound) Send(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	start := time.Now()
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)

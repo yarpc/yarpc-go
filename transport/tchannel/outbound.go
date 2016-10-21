@@ -93,15 +93,17 @@ func (o outbound) Call(ctx context.Context, outCall transport.OutboundCall) (*tr
 		panic(errOutboundNotStarted)
 	}
 
-	req, err := outCall.BuildRequest(transportOptions)
-	if err != nil {
-		return nil, err
-	}
+	return outCall.WithRequest(ctx, transportOptions, o)
+}
 
+func (o outbound) Send(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
 	// constructing the RPC.
-	var call *tchannel.OutboundCall
+	var (
+		call *tchannel.OutboundCall
+		err  error
+	)
 
 	format := tchannel.Format(req.Encoding)
 	callOptions := tchannel.CallOptions{

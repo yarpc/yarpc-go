@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -35,11 +36,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-var retryFilter transport.FilterFunc = func(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
-	res, err := o.Call(ctx, req)
+var retryFilter transport.FilterFunc = func(ctx context.Context, call transport.OutboundCall, o transport.Outbound) (*transport.Response, error) {
+	res, err := o.Call(ctx, call)
 	if err != nil {
-		res, err = o.Call(ctx, req)
+		res, err = o.Call(ctx, call)
 	}
 	return res, err
 }
@@ -47,9 +47,9 @@ var retryFilter transport.FilterFunc = func(
 type countFilter struct{ Count int }
 
 func (c *countFilter) Call(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
+	ctx context.Context, call transport.OutboundCall, o transport.Outbound) (*transport.Response, error) {
 	c.Count++
-	return o.Call(ctx, req)
+	return o.Call(ctx, call)
 }
 
 func TestChain(t *testing.T) {
@@ -57,26 +57,27 @@ func TestChain(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	req := &transport.Request{
+	call := outbound.CallFromRequest(&transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
 		Encoding:  transport.Encoding("raw"),
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	}
+	})
+
 	res := &transport.Response{
 		Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
 	}
 
 	o := transporttest.NewMockOutbound(mockCtrl)
-	o.EXPECT().Call(ctx, req).After(
-		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
+	o.EXPECT().Call(ctx, call).After(
+		o.EXPECT().Call(ctx, call).Return(nil, errors.New("great sadness")),
 	).Return(res, nil)
 
 	before := &countFilter{}
 	after := &countFilter{}
 	gotRes, err := transport.ApplyFilter(
-		o, Chain(before, retryFilter, after)).Call(ctx, req)
+		o, Chain(before, retryFilter, after)).Call(ctx, call)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")

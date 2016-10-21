@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	iout "go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
@@ -106,7 +107,7 @@ func TestOutboundHeaders(t *testing.T) {
 
 			res, err := out.Call(
 				ctx,
-				transport.OutboundCallFromRequest(
+				iout.CallFromRequest(
 					&transport.Request{
 						Caller:    "caller",
 						Service:   "service",
@@ -170,7 +171,7 @@ func TestCallSuccess(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		res, err := out.Call(
 			ctx,
-			transport.OutboundCallFromRequest(&transport.Request{
+			iout.CallFromRequest(&transport.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  raw.Encoding,
@@ -250,7 +251,7 @@ func TestCallFailures(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		_, err := out.Call(
 			ctx,
-			transport.OutboundCallFromRequest(&transport.Request{
+			iout.CallFromRequest(&transport.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  raw.Encoding,
@@ -306,7 +307,7 @@ func TestCallWithoutStarting(t *testing.T) {
 			ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 			out.Call(
 				ctx,
-				transport.OutboundCallFromRequest(&transport.Request{
+				iout.CallFromRequest(&transport.Request{
 					Caller:    "caller",
 					Service:   "service",
 					Encoding:  raw.Encoding,

@@ -186,7 +186,7 @@ type thriftCall struct {
 	Body              envelope.Enveloper
 }
 
-func (c *thriftCall) BuildRequest(options transport.Options) (*transport.Request, error) {
+func (c *thriftCall) WithRequest(ctx context.Context, options transport.Options, sender transport.RequestSender) (*transport.Response, error) {
 	// We disable enveloping if either the client or the transport requires it.
 	c.DisableEnveloping = c.DisableEnveloping || isEnvelopingDisabled(options)
 	// Note that we apply this thrift.Option here rather than in New because
@@ -217,7 +217,7 @@ func (c *thriftCall) BuildRequest(options transport.Options) (*transport.Request
 	}
 
 	c.Request.Body = &buffer
-	return c.Request, nil
+	return sender.Send(ctx, c.Request)
 }
 
 type thriftException struct {

@@ -97,21 +97,20 @@ func TestCall(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		outbound := transporttest.NewMockOutbound(mockCtrl)
+		sender := transporttest.NewMockRequestSender(mockCtrl)
+		outbound := transporttest.OutboundWithSender(transport.Options{}, sender)
 		client := New(transport.IdentityChannel(caller, service, outbound))
 
 		if !tt.noCall {
-			outbound.EXPECT().Call(gomock.Any(),
-				transporttest.NewOutboundCallMatcher(t,
-					&transport.Request{
-						Caller:    caller,
-						Service:   service,
-						Procedure: tt.procedure,
-						Encoding:  Encoding,
-						Headers:   transport.Headers(tt.headers),
-						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
-					}, transport.Options{},
-				),
+			sender.EXPECT().Send(gomock.Any(),
+				transporttest.NewRequestMatcher(t, &transport.Request{
+					Caller:    caller,
+					Service:   service,
+					Procedure: tt.procedure,
+					Encoding:  Encoding,
+					Headers:   transport.Headers(tt.headers),
+					Body:      bytes.NewReader([]byte(tt.encodedRequest)),
+				}),
 			).Return(
 				&transport.Response{
 					Body: ioutil.NopCloser(

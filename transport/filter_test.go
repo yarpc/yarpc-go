@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -43,7 +44,7 @@ func TestNopFilter(t *testing.T) {
 	wrappedO := transport.ApplyFilter(o, transport.NopFilter)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	call := transport.OutboundCallFromRequest(&transport.Request{
+	call := outbound.CallFromRequest(&transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
 		Encoding:  raw.Encoding,
