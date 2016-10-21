@@ -65,7 +65,6 @@ import (
 	"strings"
 	"unicode"
 
-	"go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
@@ -251,7 +250,7 @@ func (r *Recorder) hashRequestRecord(requestRecord *requestRecord) string {
 
 	ha(requestRecord.Caller)
 	ha(requestRecord.Service)
-	ha(string(requestRecord.Encoding))
+	ha(requestRecord.Encoding)
 	ha(requestRecord.Procedure)
 
 	orderedHeadersKeys := make([]string, 0, len(requestRecord.Headers))
@@ -280,29 +279,14 @@ func (r *Recorder) makeFilePath(request *transport.Request, hash string) string 
 	return filepath.Join(r.recordsDir, sanitizeFilename(s))
 }
 
-// Call implements the yarpc transport filter interface
-func (r *Recorder) Call(
+// Send implements the yarpc transport filter interface
+func (r *Recorder) Send(
 	ctx context.Context,
-	call transport.OutboundCall,
-	out transport.Outbound,
+	request *transport.Request,
+	sender transport.RequestSender,
 ) (*transport.Response, error) {
-	return out.Call(ctx, outbound.OutboundCallFunc(
-		func(ctx context.Context, opts transport.Options, sender transport.RequestSender) (*transport.Response, error) {
-			return call.WithRequest(ctx, opts, recorderSender{
-				Sender:   sender,
-				Recorder: r,
-			})
-		}))
-}
-
-type recorderSender struct {
-	Sender   transport.RequestSender
-	Recorder *Recorder
-}
-
-func (s recorderSender) Send(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	r := s.Recorder
 	log := r.logger
+
 	requestRecord := r.requestToRequestRecord(request)
 
 	requestHash := r.hashRequestRecord(&requestRecord)
@@ -324,7 +308,7 @@ func (s recorderSender) Send(ctx context.Context, request *transport.Request) (*
 		}
 		fallthrough
 	case Overwrite:
-		response, err := s.Sender.Send(ctx, request)
+		response, err := sender.Send(ctx, request)
 		if err == nil {
 			cachedRecord := record{
 				Version:  currentRecordVersion,

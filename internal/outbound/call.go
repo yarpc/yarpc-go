@@ -26,27 +26,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-// OutboundCallFunc is an OutboundCall implemented as a single function.
-type OutboundCallFunc func(
-	context.Context, transport.Options, transport.RequestSender) (*transport.Response, error)
-
-func (f OutboundCallFunc) WithRequest(ctx context.Context, opts transport.Options, req transport.RequestSender) (*transport.Response, error) {
-	return f(ctx, opts, req)
-}
-
-// RequestSenderFunc is a RequestSender implemented as a single function.
-type RequestSenderFunc func(context.Context, *transport.Request) (*transport.Response, error)
-
-func (f RequestSenderFunc) Send(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return f(ctx, req)
-}
-
-// verify that we don't break the interfaces
-var (
-	_ transport.OutboundCall  = (OutboundCallFunc)(nil)
-	_ transport.RequestSender = (RequestSenderFunc)(nil)
-)
-
 // CallFromRequest builds an OutboundCall from the given request that does not
 // vary based on the transport options.
 func CallFromRequest(req *transport.Request) transport.OutboundCall {

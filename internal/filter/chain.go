@@ -41,33 +41,25 @@ func Chain(filters ...transport.Filter) transport.Filter {
 // filterChain combines a series of filters into a single Filter.
 type chain []transport.Filter
 
-func (c chain) Call(ctx context.Context, call transport.OutboundCall, out transport.Outbound) (*transport.Response, error) {
+func (c chain) Send(ctx context.Context, request *transport.Request, sender transport.RequestSender) (*transport.Response, error) {
 	return chainExec{
 		Chain: []transport.Filter(c),
-		Final: out,
-	}.Call(ctx, call)
+		Final: sender,
+	}.Send(ctx, request)
 }
 
 // chainExec adapts a series of filters into an Outbound. It is scoped to a
 // single call of an Outbound and is not thread-safe.
 type chainExec struct {
 	Chain []transport.Filter
-	Final transport.Outbound
+	Final transport.RequestSender
 }
 
-func (x chainExec) Start(d transport.Deps) error {
-	return x.Final.Start(d)
-}
-
-func (x chainExec) Stop() error {
-	return x.Final.Stop()
-}
-
-func (x chainExec) Call(ctx context.Context, call transport.OutboundCall) (*transport.Response, error) {
+func (x chainExec) Send(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.Call(ctx, call)
+		return x.Final.Send(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
-	return next.Call(ctx, call, x)
+	return next.Send(ctx, request, x)
 }

@@ -40,22 +40,23 @@ func TestNopFilter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := transporttest.NewMockOutbound(mockCtrl)
-	wrappedO := transport.ApplyFilter(o, transport.NopFilter)
+	sender := transporttest.NewMockRequestSender(mockCtrl)
+	wrappedO := transport.ApplyFilter(transporttest.OutboundWithSender(
+		transport.Options{}, sender), transport.NopFilter)
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	call := outbound.CallFromRequest(&transport.Request{
+	req := &transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	})
+	}
 
 	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
-	o.EXPECT().Call(ctx, call).Return(res, nil)
+	sender.EXPECT().Send(ctx, req).Return(res, nil)
 
-	got, err := wrappedO.Call(ctx, call)
+	got, err := wrappedO.Call(ctx, outbound.CallFromRequest(req))
 	if assert.NoError(t, err) {
 		assert.Equal(t, res, got)
 	}
