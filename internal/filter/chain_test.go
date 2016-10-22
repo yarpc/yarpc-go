@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -36,20 +37,20 @@ import (
 )
 
 var retryFilter transport.FilterFunc = func(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
-	res, err := o.Call(ctx, req)
+	ctx context.Context, req *transport.Request, s transport.RequestSender) (*transport.Response, error) {
+	res, err := s.Send(ctx, req)
 	if err != nil {
-		res, err = o.Call(ctx, req)
+		res, err = s.Send(ctx, req)
 	}
 	return res, err
 }
 
 type countFilter struct{ Count int }
 
-func (c *countFilter) Call(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
+func (c *countFilter) Send(
+	ctx context.Context, req *transport.Request, s transport.RequestSender) (*transport.Response, error) {
 	c.Count++
-	return o.Call(ctx, req)
+	return s.Send(ctx, req)
 }
 
 func TestChain(t *testing.T) {
@@ -68,15 +69,17 @@ func TestChain(t *testing.T) {
 		Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
 	}
 
-	o := transporttest.NewMockOutbound(mockCtrl)
-	o.EXPECT().Call(ctx, req).After(
-		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
+	sender := transporttest.NewMockRequestSender(mockCtrl)
+	sender.EXPECT().Send(ctx, req).After(
+		sender.EXPECT().Send(ctx, req).Return(nil, errors.New("great sadness")),
 	).Return(res, nil)
 
 	before := &countFilter{}
 	after := &countFilter{}
 	gotRes, err := transport.ApplyFilter(
-		o, Chain(before, retryFilter, after)).Call(ctx, req)
+		transporttest.OutboundWithSender(transport.Options{}, sender),
+		Chain(before, retryFilter, after),
+	).Call(ctx, outbound.CallFromRequest(req))
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")

@@ -40,7 +40,7 @@ import "golang.org/x/net/context"
 // Filters are re-used across requests and MAY be called multiple times on the
 // same request.
 type Filter interface {
-	Call(ctx context.Context, request *Request, out Outbound) (*Response, error)
+	Send(ctx context.Context, req *Request, sender RequestSender) (*Response, error)
 }
 
 // NopFilter is a filter that does not do anything special. It simply calls
@@ -52,40 +52,54 @@ func ApplyFilter(o Outbound, f Filter) Outbound {
 	if f == nil {
 		return o
 	}
-	return filteredOutbound{o: o, f: f}
+	return filteredOutbound{Filter: f, Outbound: o}
 }
 
 // FilterFunc adapts a function into a Filter.
-type FilterFunc func(context.Context, *Request, Outbound) (*Response, error)
+type FilterFunc func(context.Context, *Request, RequestSender) (*Response, error)
 
-// Call for FilterFunc.
-func (f FilterFunc) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
-	return f(ctx, request, out)
+// Send for FilterFunc.
+func (f FilterFunc) Send(ctx context.Context, req *Request, sender RequestSender) (*Response, error) {
+	return f(ctx, req, sender)
 }
 
 type filteredOutbound struct {
-	o Outbound
-	f Filter
+	Filter   Filter
+	Outbound Outbound
 }
 
 func (fo filteredOutbound) Start(d Deps) error {
-	return fo.o.Start(d)
+	return fo.Outbound.Start(d)
 }
 
 func (fo filteredOutbound) Stop() error {
-	return fo.o.Stop()
+	return fo.Outbound.Stop()
 }
 
-func (fo filteredOutbound) Options() Options {
-	return fo.o.Options()
+func (fo filteredOutbound) Call(ctx context.Context, call OutboundCall) (*Response, error) {
+	return fo.Outbound.Call(ctx, filteredCall{Filter: fo.Filter, Call: call})
 }
 
-func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
-	return fo.f.Call(ctx, request, fo.o)
+type filteredCall struct {
+	Filter Filter
+	Call   OutboundCall
+}
+
+func (fc filteredCall) WithRequest(ctx context.Context, opts Options, sender RequestSender) (*Response, error) {
+	return fc.Call.WithRequest(ctx, opts, filteredSender{Filter: fc.Filter, Sender: sender})
+}
+
+type filteredSender struct {
+	Filter Filter
+	Sender RequestSender
+}
+
+func (fs filteredSender) Send(ctx context.Context, req *Request) (*Response, error) {
+	return fs.Filter.Send(ctx, req, fs.Sender)
 }
 
 type nopFilter struct{}
 
-func (nopFilter) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
-	return out.Call(ctx, request)
+func (nopFilter) Send(ctx context.Context, req *Request, sender RequestSender) (*Response, error) {
+	return sender.Send(ctx, req)
 }

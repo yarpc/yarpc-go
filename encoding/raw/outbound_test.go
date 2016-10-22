@@ -77,7 +77,8 @@ func TestCall(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		outbound := transporttest.NewMockOutbound(mockCtrl)
+		sender := transporttest.NewMockRequestSender(mockCtrl)
+		outbound := transporttest.OutboundWithSender(transport.Options{}, sender)
 		client := New(transport.IdentityChannel(caller, service, outbound))
 
 		writer, responseBody := testreader.ChunkReader()
@@ -86,16 +87,15 @@ func TestCall(t *testing.T) {
 		}
 		close(writer)
 
-		outbound.EXPECT().Call(gomock.Any(),
-			transporttest.NewRequestMatcher(t,
-				&transport.Request{
-					Caller:    caller,
-					Service:   service,
-					Procedure: tt.procedure,
-					Headers:   transport.Headers(tt.headers),
-					Encoding:  Encoding,
-					Body:      bytes.NewReader(tt.body),
-				}),
+		sender.EXPECT().Send(gomock.Any(),
+			transporttest.NewRequestMatcher(t, &transport.Request{
+				Caller:    caller,
+				Service:   service,
+				Procedure: tt.procedure,
+				Headers:   transport.Headers(tt.headers),
+				Encoding:  Encoding,
+				Body:      bytes.NewReader(tt.body),
+			}),
 		).Return(
 			&transport.Response{
 				Body:    ioutil.NopCloser(responseBody),

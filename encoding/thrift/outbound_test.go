@@ -152,10 +152,9 @@ func TestClient(t *testing.T) {
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
-		trans := transporttest.NewMockOutbound(mockCtrl)
-		trans.EXPECT().Options().Return(tt.transportOptions).AnyTimes()
+		sender := transporttest.NewMockRequestSender(mockCtrl)
 		if tt.expectCall {
-			trans.EXPECT().Call(ctx,
+			sender.EXPECT().Send(ctx,
 				transporttest.NewRequestMatcher(t, &transport.Request{
 					Caller:    "caller",
 					Service:   "service",
@@ -176,6 +175,7 @@ func TestClient(t *testing.T) {
 			proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(*tt.giveResponseBody, nil)
 		}
 
+		trans := transporttest.OutboundWithSender(tt.transportOptions, sender)
 		c := New(Config{
 			Service: "MyService",
 			Channel: transport.IdentityChannel("caller", "service", trans),

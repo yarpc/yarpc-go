@@ -92,11 +92,6 @@ func (o *outbound) Start(d transport.Deps) error {
 	return nil
 }
 
-// Options for the HTTP transport.
-func (outbound) Options() (o transport.Options) {
-	return o
-}
-
 func (o *outbound) Stop() error {
 	if !o.started.Swap(false) {
 		return errOutboundNotStarted
@@ -138,12 +133,16 @@ func (o *outbound) createSpan(ctx context.Context, req *http.Request, treq *tran
 	return ctx, span
 }
 
-func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+func (o *outbound) Call(ctx context.Context, call transport.OutboundCall) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)
 	}
 
+	return call.WithRequest(ctx, httpOptions, o)
+}
+
+func (o *outbound) Send(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	start := time.Now()
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)

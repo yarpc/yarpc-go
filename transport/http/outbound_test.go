@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	iout "go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
@@ -70,13 +71,13 @@ func TestCallSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	res, err := out.Call(ctx, &transport.Request{
+	res, err := out.Call(ctx, iout.CallFromRequest(&transport.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Encoding:  raw.Encoding,
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte("world")),
-	})
+	}))
 	require.NoError(t, err)
 	defer res.Body.Close()
 
@@ -129,14 +130,14 @@ func TestOutboundHeaders(t *testing.T) {
 		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 		defer out.Stop()
 
-		res, err := out.Call(ctx, &transport.Request{
+		res, err := out.Call(ctx, iout.CallFromRequest(&transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Headers:   tt.headers,
 			Procedure: "hello",
 			Body:      bytes.NewReader([]byte("world")),
-		})
+		}))
 
 		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
 			continue
@@ -174,13 +175,13 @@ func TestCallFailures(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		_, err := out.Call(ctx, &transport.Request{
+		_, err := out.Call(ctx, iout.CallFromRequest(&transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  raw.Encoding,
 			Procedure: "wat",
 			Body:      bytes.NewReader([]byte("huh")),
-		})
+		}))
 		assert.Error(t, err, "expected failure")
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
@@ -210,13 +211,13 @@ func TestCallWithoutStarting(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		out.Call(
 			ctx,
-			&transport.Request{
+			iout.CallFromRequest(&transport.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Encoding:  raw.Encoding,
 				Procedure: "foo",
 				Body:      bytes.NewReader([]byte("sup")),
-			},
+			}),
 		)
 	})
 }

@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	iout "go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -117,13 +118,13 @@ func TestInboundMux(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &transport.Request{
+	_, err = o.Call(ctx, iout.CallFromRequest(&transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
 		Body:      bytes.NewReader([]byte("derp")),
-	})
+	}))
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
 		assert.Equal(t, err.Error(), "404 page not found")
@@ -135,13 +136,13 @@ func TestInboundMux(t *testing.T) {
 
 	reg.EXPECT().GetHandler("bar", "hello").Return(h, nil)
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	res, err := o.Call(ctx, &transport.Request{
+	res, err := o.Call(ctx, iout.CallFromRequest(&transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
 		Encoding:  raw.Encoding,
 		Body:      bytes.NewReader([]byte("derp")),
-	})
+	}))
 
 	if assert.NoError(t, err, "expected rpc request to succeed") {
 		defer res.Body.Close()

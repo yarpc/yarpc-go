@@ -29,7 +29,27 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/transport"
+
+	"golang.org/x/net/context"
 )
+
+// OutboundWithSender builds an Outbound which simply executes calls with the
+// given options and sender.
+func OutboundWithSender(opts transport.Options, sender transport.RequestSender) transport.Outbound {
+	return outboundWithSender{Options: opts, Sender: sender}
+}
+
+type outboundWithSender struct {
+	Options transport.Options
+	Sender  transport.RequestSender
+}
+
+func (outboundWithSender) Start(transport.Deps) error { return nil }
+func (outboundWithSender) Stop() error                { return nil }
+
+func (o outboundWithSender) Call(ctx context.Context, call transport.OutboundCall) (*transport.Response, error) {
+	return call.WithRequest(ctx, o.Options, o.Sender)
+}
 
 // RequestMatcher may be used in gomock argument lists to assert that two
 // requests match.

@@ -18,46 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport_test
+package http
 
-import (
-	"bytes"
-	"io/ioutil"
-	"testing"
-	"time"
+import "go.uber.org/yarpc/transport"
 
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/outbound"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
-)
-
-func TestNopFilter(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	sender := transporttest.NewMockRequestSender(mockCtrl)
-	wrappedO := transport.ApplyFilter(transporttest.OutboundWithSender(
-		transport.Options{}, sender), transport.NopFilter)
-
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	req := &transport.Request{
-		Caller:    "somecaller",
-		Service:   "someservice",
-		Encoding:  raw.Encoding,
-		Procedure: "hello",
-		Body:      bytes.NewReader([]byte{1, 2, 3}),
-	}
-
-	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
-	sender.EXPECT().Send(ctx, req).Return(res, nil)
-
-	got, err := wrappedO.Call(ctx, outbound.CallFromRequest(req))
-	if assert.NoError(t, err) {
-		assert.Equal(t, res, got)
-	}
-}
+var httpOptions transport.Options

@@ -31,6 +31,7 @@ import (
 
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/outbound"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -212,14 +213,14 @@ func TestSimpleRoundTrip(t *testing.T) {
 
 			registry := staticRegistry{Handler: handler}
 			trans.WithRegistry(registry, func(o transport.Outbound) {
-				res, err := o.Call(ctx, &transport.Request{
+				res, err := o.Call(ctx, outbound.CallFromRequest(&transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
 					Procedure: testProcedure,
 					Encoding:  raw.Encoding,
 					Headers:   tt.requestHeaders,
 					Body:      bytes.NewReader([]byte(tt.requestBody)),
-				})
+				}))
 
 				if tt.wantError != nil {
 					if assert.Error(t, err, "%T: expected error, got %v", trans, res) {
