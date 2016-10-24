@@ -85,7 +85,7 @@ func (h jsonHandler) HandleOneway(ctx context.Context, _ transport.Options, treq
 	reqMeta := meta.FromTransportRequest(treq)
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqMeta), reqBody})
 
-	if err := results[2].Interface(); err != nil {
+	if err := results[0].Interface(); err != nil {
 		return err.(error)
 	}
 

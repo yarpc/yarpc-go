@@ -72,8 +72,7 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 //
 // 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) error
 //
-// Where $reqBody and $resBody are a map[string]interface{} or pointers to
-// structs.
+// Where $reqBody is a map[string]interface{} or pointer to a struct.
 func OnewayProcedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
