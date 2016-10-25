@@ -31,8 +31,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-// jsonEcho contains an echo request or response for the JSON echo endpoint.
-type jsonEcho struct {
+type jsonCall struct {
 	Token string `json:"token"`
 }
 
@@ -45,7 +44,7 @@ func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
 
 	var ack transport.Ack
 
-	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("callMe/json"), &jsonEcho{Token: token}, &ack)
+	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("callMe/json"), &jsonCall{Token: token}, &ack)
 	crossdock.Fatals(t).NoError(err, "call to oneway/json failed: %v", err)
 	crossdock.Fatals(t).NotNil(ack, "ack was not nil")
 
