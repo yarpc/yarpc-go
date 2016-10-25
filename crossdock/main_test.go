@@ -50,6 +50,12 @@ func TestCrossdock(t *testing.T) {
 		axes   axes
 	}{
 		{
+			name: "oneway",
+			axes: axes{
+				"encoding": []string{"raw", "json", "thrift"},
+			},
+		},
+		{
 			name: "raw",
 
 			axes: axes{"transport": []string{"http", "tchannel"}},

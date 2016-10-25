@@ -18,33 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package oneway
 
 import (
-	"go.uber.org/yarpc/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/crossdock/server/http"
-	"go.uber.org/yarpc/crossdock/server/oneway"
-	"go.uber.org/yarpc/crossdock/server/tch"
-	"go.uber.org/yarpc/crossdock/server/yarpc"
+	"fmt"
+
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/http"
 )
 
-// Start starts all required Crossdock test servers
+var dispatcher yarpc.Dispatcher
+
+// Start starts the test server that clients will make requests to
 func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
+	dispatcher = yarpc.NewDispatcher(yarpc.Config{
+		Name: "yarpc-test",
+		Inbounds: []transport.Inbound{
+			http.NewInbound(":8084"),
+		},
+	})
+
+	register(dispatcher)
+
+	if err := dispatcher.Start(); err != nil {
+		fmt.Println("error:", err.Error())
+	}
 }
 
-// Stop stops all required Crossdock test servers
+// Stop stops running the RPC test subject
 func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
+	if dispatcher == nil {
+		return
+	}
+	if err := dispatcher.Stop(); err != nil {
+		fmt.Println("failed to stop:", err.Error())
+	}
 }
 
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
+func register(reg transport.Registry) {
+	reg.Register(raw.OnewayProcedure("callMe/raw", CallMeRaw))
+	reg.Register(json.OnewayProcedure("callMe/json", CallMeJSON))
+}

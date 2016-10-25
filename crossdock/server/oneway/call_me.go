@@ -18,33 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package oneway
 
 import (
-	"go.uber.org/yarpc/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/crossdock/server/http"
-	"go.uber.org/yarpc/crossdock/server/oneway"
-	"go.uber.org/yarpc/crossdock/server/tch"
-	"go.uber.org/yarpc/crossdock/server/yarpc"
+	"bytes"
+	"time"
+
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/http"
+	"golang.org/x/net/context"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
+const callBackAddr = "http://127.0.0.1:8082"
+
+// CallMeRaw implements the CallMe/raw procedure.
+func CallMeRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
+	//make call back to the client
+	callHome(body)
+
+	return nil
 }
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
+// CallMeJSON implements the CallMe/json procedure.
+func CallMeJSON(ctx context.Context, reqMeta yarpc.ReqMeta, body map[string]interface{}) error {
+	token := body["token"].(string)
+
+	//make call back to the client
+	callHome([]byte(token))
+
+	return nil
 }
 
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
+func callHome(body []byte) {
+	onewayOutbound := http.NewOnewayOutbound(callBackAddr)
+	onewayOutbound.Start(transport.NoDeps)
+	defer onewayOutbound.Stop()
+
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
+
+	_, _ = onewayOutbound.CallOneway(ctx, &transport.Request{
+		Caller:    "yarpc-test",
+		Service:   "client",
+		Procedure: "call-back",
+		Encoding:  raw.Encoding,
+		Body:      bytes.NewReader(body),
+	})
+}

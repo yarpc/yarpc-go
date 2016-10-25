@@ -18,33 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package oneway
 
 import (
-	"go.uber.org/yarpc/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/crossdock/server/http"
-	"go.uber.org/yarpc/crossdock/server/oneway"
-	"go.uber.org/yarpc/crossdock/server/tch"
-	"go.uber.org/yarpc/crossdock/server/yarpc"
+	"go.uber.org/yarpc/crossdock/client/params"
+
+	"github.com/crossdock/crossdock-go"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
+// createT tags the given T with the transport, encoding and server.
+func createT(t crossdock.T) crossdock.T {
+	t.Tag("encoding", t.Param(params.Encoding))
+	t.Tag("server", t.Param(params.Server))
+	return t
 }
-
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
-}
-
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
