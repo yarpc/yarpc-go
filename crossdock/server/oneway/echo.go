@@ -33,16 +33,16 @@ import (
 
 const callBackAddr = "http://127.0.0.1:8082"
 
-// CallMeRaw implements the CallMe/raw procedure.
-func CallMeRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
+// EchoRaw implements the echo/raw procedure.
+func EchoRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
 	//make call back to the client
 	callHome(body)
 
 	return nil
 }
 
-// CallMeJSON implements the CallMe/json procedure.
-func CallMeJSON(ctx context.Context, reqMeta yarpc.ReqMeta, body map[string]interface{}) error {
+// EchoJSON implements the echo/json procedure.
+func EchoJSON(ctx context.Context, reqMeta yarpc.ReqMeta, body map[string]interface{}) error {
 	token := body["token"].(string)
 
 	//make call back to the client
@@ -59,7 +59,7 @@ func callHome(body []byte) {
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
 
 	_, _ = onewayOutbound.CallOneway(ctx, &transport.Request{
-		Caller:    "yarpc-test",
+		Caller:    "oneway-test",
 		Service:   "client",
 		Procedure: "call-back",
 		Encoding:  raw.Encoding,

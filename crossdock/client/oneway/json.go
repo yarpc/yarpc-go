@@ -31,20 +31,20 @@ import (
 	"golang.org/x/net/context"
 )
 
-type jsonCall struct {
+type jsonToken struct {
 	Token string `json:"token"`
 }
 
 // JSON starts an http run using JSON encoding
 func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
-	client := json.New(dispatcher.Channel("yarpc-test"))
+	client := json.New(dispatcher.Channel("oneway-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := getRandomID()
 
 	var ack transport.Ack
 
-	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("callMe/json"), &jsonCall{Token: token}, &ack)
+	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("echo/json"), &jsonToken{Token: token}, &ack)
 	crossdock.Fatals(t).NoError(err, "call to oneway/json failed: %v", err)
 	crossdock.Fatals(t).NotNil(ack, "ack was not nil")
 

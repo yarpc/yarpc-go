@@ -35,7 +35,7 @@ var dispatcher yarpc.Dispatcher
 // Start starts the test server that clients will make requests to
 func Start() {
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc-test",
+		Name: "oneway-test",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8084"),
 		},
@@ -59,6 +59,6 @@ func Stop() {
 }
 
 func register(reg transport.Registry) {
-	reg.Register(raw.OnewayProcedure("callMe/raw", CallMeRaw))
-	reg.Register(json.OnewayProcedure("callMe/json", CallMeJSON))
+	reg.Register(raw.OnewayProcedure("echo/raw", EchoRaw))
+	reg.Register(json.OnewayProcedure("echo/json", EchoJSON))
 }
