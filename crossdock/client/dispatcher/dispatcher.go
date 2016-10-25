@@ -40,25 +40,8 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	rs := yarpc.RemoteService{Name: "yarpc-test"}
-
-	switch t.Param("rpc-type") {
-	case "oneway":
-		rs.OnewayOutbound = createOnewayOutbound(t, server, fatals)
-	default:
-		rs.Outbound = createOutbound(t, server, fatals)
-	}
-
-	return yarpc.NewDispatcher(yarpc.Config{
-		Name:           "client",
-		RemoteServices: []yarpc.RemoteService{rs},
-	})
-}
-
-func createOutbound(t crossdock.T, server string, fatals crossdock.Assertions) transport.Outbound {
 	var outbound transport.Outbound
 	trans := t.Param(params.Transport)
-
 	switch trans {
 	case "http":
 		outbound = ht.NewOutbound(fmt.Sprintf("http://%s:8081", server))
@@ -70,19 +53,13 @@ func createOutbound(t crossdock.T, server string, fatals crossdock.Assertions) t
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	return outbound
-}
-
-func createOnewayOutbound(t crossdock.T, server string, fatals crossdock.Assertions) transport.OnewayOutbound {
-	var outbound transport.OnewayOutbound
-	trans := t.Param(params.Transport)
-
-	switch trans {
-	case "http":
-		outbound = ht.NewOnewayOutbound(fmt.Sprintf("http://%s:8081", server))
-	default:
-		fatals.Fail("", "unknown transport %q", trans)
-	}
-
-	return outbound
+	return yarpc.NewDispatcher(yarpc.Config{
+		Name: "client",
+		RemoteServices: []yarpc.RemoteService{
+			{
+				Name:     "yarpc-test",
+				Outbound: outbound,
+			},
+		},
+	})
 }
