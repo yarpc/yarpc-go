@@ -76,10 +76,6 @@ func (fo filteredOutbound) Stop() error {
 	return fo.o.Stop()
 }
 
-func (fo filteredOutbound) Options() Options {
-	return fo.o.Options()
-}
-
 func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
 	return fo.f.Call(ctx, request, fo.o)
 }

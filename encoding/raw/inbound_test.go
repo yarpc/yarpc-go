@@ -23,6 +23,7 @@ package raw
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
@@ -105,17 +106,15 @@ func TestRawHandler(t *testing.T) {
 		}
 		close(writer)
 
-		err := handler.Handle(
-			context.TODO(),
-			transport.Options{},
-			&transport.Request{
-				Procedure: tt.procedure,
-				Headers:   tt.headers,
-				Encoding:  "raw",
-				Body:      chunkReader,
-			},
-			resw,
-		)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err := handler.Handle(ctx, &transport.Request{
+			Procedure: tt.procedure,
+			Headers:   tt.headers,
+			Encoding:  "raw",
+			Body:      chunkReader,
+		}, resw)
 
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {

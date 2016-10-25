@@ -42,7 +42,6 @@ func TestNopInterceptor(t *testing.T) {
 	h := transporttest.NewMockHandler(mockCtrl)
 	wrappedH := transport.ApplyInterceptor(h, transport.NopInterceptor)
 
-	var opts transport.Options
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	req := &transport.Request{
@@ -54,7 +53,7 @@ func TestNopInterceptor(t *testing.T) {
 	}
 	resw := new(transporttest.FakeResponseWriter)
 	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, opts, req, resw).Return(err)
+	h.EXPECT().Handle(ctx, req, resw).Return(err)
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, opts, req, resw))
+	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
 }

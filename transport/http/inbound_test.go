@@ -134,7 +134,7 @@ func TestInboundMux(t *testing.T) {
 	defer o.Stop()
 
 	reg.EXPECT().GetHandler("bar", "hello").Return(h, nil)
-	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	res, err := o.Call(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",

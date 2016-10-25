@@ -72,10 +72,10 @@ func (r staticRegistry) GetHandler(service string, procedure string) (transport.
 }
 
 // handlerFunc wraps a function into a transport.Registry
-type handlerFunc func(context.Context, transport.Options, *transport.Request, transport.ResponseWriter) error
+type handlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 
-func (f handlerFunc) Handle(ctx context.Context, opts transport.Options, r *transport.Request, w transport.ResponseWriter) error {
-	return f(ctx, opts, r, w)
+func (f handlerFunc) Handle(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
+	return f(ctx, r, w)
 }
 
 // httpTransport implements a roundTripTransport for HTTP.
@@ -192,7 +192,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				Body:      bytes.NewReader([]byte(tt.requestBody)),
 			})
 
-			handler := handlerFunc(func(_ context.Context, _ transport.Options, r *transport.Request, w transport.ResponseWriter) error {
+			handler := handlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				if tt.responseError != nil {

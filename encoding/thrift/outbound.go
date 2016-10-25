@@ -122,16 +122,8 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	// 		return success, resMeta, err
 	// 	}
 
-	out := c.ch.GetOutbound()
-
-	// We disable enveloping if either the client or the transport requires it.
-	disableEnveloping := c.disableEnveloping || isEnvelopingDisabled(out.Options())
-	// Note that we apply this thrift.Option here rather than in New because
-	// this can change on a per-transport basis in addition to the
-	// user-specifed option.
-
 	proto := c.p
-	if disableEnveloping {
+	if c.disableEnveloping {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Reply, // we only decode replies with this instance
@@ -173,7 +165,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	}
 
 	treq.Body = &buffer
-	tres, err := out.Call(ctx, &treq)
+	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
