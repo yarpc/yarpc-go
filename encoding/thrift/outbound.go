@@ -91,10 +91,10 @@ func New(c Config, opts ...ClientOption) Client {
 	}
 
 	return thriftClient{
-		p:                 p,
-		ch:                c.Channel,
-		thriftService:     c.Service,
-		disableEnveloping: cc.DisableEnveloping,
+		p:             p,
+		ch:            c.Channel,
+		thriftService: c.Service,
+		Enveloping:    cc.Enveloping,
 	}
 }
 
@@ -103,8 +103,8 @@ type thriftClient struct {
 	p  protocol.Protocol
 
 	// name of the Thrift service
-	thriftService     string
-	disableEnveloping bool
+	thriftService string
+	Enveloping    bool
 }
 
 func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error) {
@@ -123,7 +123,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	// 	}
 
 	proto := c.p
-	if c.disableEnveloping {
+	if !c.Enveloping {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Reply, // we only decode replies with this instance

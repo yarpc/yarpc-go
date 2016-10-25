@@ -130,7 +130,7 @@ func TestThriftHandler(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		handler := NewMockHandler(mockCtrl)
-		h := thriftHandler{Protocol: proto, Handler: handler}
+		h := thriftHandler{Protocol: proto, Handler: handler, Enveloping: true}
 
 		if tt.expectHandle {
 			reqMeta := fakeReqMeta{

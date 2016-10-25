@@ -30,7 +30,6 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet/yarpc/thrifttestserver"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -76,11 +75,9 @@ func register(reg transport.Registry) {
 	reg.Register(raw.Procedure("echo/raw", EchoRaw))
 	reg.Register(json.Procedure("echo", EchoJSON))
 
-	// NOTE(abg): Enveloping is disabled in old cross-language tests until the
-	// other YARPC implementations catch up.
-	reg.Register(echoserver.New(EchoThrift{}, thrift.DisableEnveloping))
-	reg.Register(thrifttestserver.New(thriftTest{}, thrift.DisableEnveloping))
-	reg.Register(secondserviceserver.New(secondService{}, thrift.DisableEnveloping))
+	reg.Register(echoserver.New(EchoThrift{}))
+	reg.Register(thrifttestserver.New(thriftTest{}))
+	reg.Register(secondserviceserver.New(secondService{}))
 
 	reg.Register(json.Procedure("unexpected-error", UnexpectedError))
 	reg.Register(json.Procedure("bad-response", BadResponse))

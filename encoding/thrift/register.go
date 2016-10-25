@@ -81,9 +81,9 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 		rs = append(rs, transport.Registrant{
 			Procedure: procedureName(s.Name, methodName),
 			Handler: thriftHandler{
-				Handler:           handler,
-				Protocol:          proto,
-				DisableEnveloping: rc.DisableEnveloping,
+				Handler:    handler,
+				Protocol:   proto,
+				Enveloping: rc.Enveloping,
 			},
 		})
 	}
