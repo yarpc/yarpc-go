@@ -37,9 +37,6 @@ type Outbound interface {
 	// Stops the outbound, cleaning up any resources held by the Outbound.
 	Stop() error
 
-	// Options for all requests made through this Outbound.
-	Options() Options
-
 	// Call sends the given request through this transport and returns its
 	// response.
 	//

@@ -46,7 +46,7 @@ func TestClient(t *testing.T) {
 		giveRequestBody      envelope.Enveloper // outgoing request body
 		giveResponseEnvelope *wire.Envelope     // returned on DecodeEnveloped()
 		giveResponseBody     *wire.Value        // return on Decode()
-		transportOptions     transport.Options  // options for the outbound
+		clientOptions        []ClientOption
 
 		expectCall          bool           // whether outbound.Call is expected
 		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
@@ -72,11 +72,11 @@ func TestClient(t *testing.T) {
 		},
 		{
 			desc:             "happy case without enveloping",
+			clientOptions:    []ClientOption{DisableEnveloping},
 			giveRequestBody:  fakeEnveloper(wire.Call),
 			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
 			expectCall:       true,
 			giveResponseBody: valueptr(wire.NewValueStruct(wire.Struct{})),
-			transportOptions: DisableEnvelopingForTransport,
 		},
 		{
 			desc:            "wrong envelope type for request",
@@ -153,7 +153,6 @@ func TestClient(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		trans := transporttest.NewMockOutbound(mockCtrl)
-		trans.EXPECT().Options().Return(tt.transportOptions).AnyTimes()
 		if tt.expectCall {
 			trans.EXPECT().Call(ctx,
 				transporttest.NewRequestMatcher(t, &transport.Request{
@@ -176,10 +175,12 @@ func TestClient(t *testing.T) {
 			proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(*tt.giveResponseBody, nil)
 		}
 
+		opts := tt.clientOptions
+		opts = append(opts, Protocol(proto))
 		c := New(Config{
 			Service: "MyService",
 			Channel: transport.IdentityChannel("caller", "service", trans),
-		}, Protocol(proto))
+		}, opts...)
 
 		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {

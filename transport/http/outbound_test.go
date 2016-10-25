@@ -122,7 +122,9 @@ func TestOutboundHeaders(t *testing.T) {
 
 		ctx := tt.context
 		if ctx == nil {
-			ctx = context.TODO()
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 		}
 
 		out := NewOutbound(server.URL)

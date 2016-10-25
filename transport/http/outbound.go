@@ -92,11 +92,6 @@ func (o *outbound) Start(d transport.Deps) error {
 	return nil
 }
 
-// Options for the HTTP transport.
-func (outbound) Options() (o transport.Options) {
-	return o
-}
-
 func (o *outbound) Stop() error {
 	if !o.started.Swap(false) {
 		return errOutboundNotStarted

@@ -41,11 +41,11 @@ func Chain(interceptors ...transport.Interceptor) transport.Interceptor {
 // interceptorChain combines a series of interceptors into a single Interceptor.
 type chain []transport.Interceptor
 
-func (c chain) Handle(ctx context.Context, opts transport.Options, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+func (c chain) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
 	return chainExec{
 		Chain: []transport.Interceptor(c),
 		Final: h,
-	}.Handle(ctx, opts, req, resw)
+	}.Handle(ctx, req, resw)
 }
 
 // chainExec adapts a series of interceptors into a Handler. It is scoped to a
@@ -55,11 +55,11 @@ type chainExec struct {
 	Final transport.Handler
 }
 
-func (x chainExec) Handle(ctx context.Context, opts transport.Options, req *transport.Request, resw transport.ResponseWriter) error {
+func (x chainExec) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	if len(x.Chain) == 0 {
-		return x.Final.Handle(ctx, opts, req, resw)
+		return x.Final.Handle(ctx, req, resw)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
-	return next.Handle(ctx, opts, req, resw, x)
+	return next.Handle(ctx, req, resw, x)
 }

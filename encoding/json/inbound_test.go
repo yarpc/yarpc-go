@@ -40,12 +40,11 @@ func TestHandleStructSuccess(t *testing.T) {
 	}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), transport.Options{},
-		&transport.Request{
-			Procedure: "simpleCall",
-			Encoding:  "json",
-			Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
-		}, resw)
+	err := handler.Handle(context.Background(), &transport.Request{
+		Procedure: "simpleCall",
+		Encoding:  "json",
+		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
+	}, resw)
 	require.NoError(t, err)
 
 	var response simpleResponse
@@ -68,12 +67,11 @@ func TestHandleMapSuccess(t *testing.T) {
 	}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), transport.Options{},
-		&transport.Request{
-			Procedure: "foo",
-			Encoding:  "json",
-			Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
-		}, resw)
+	err := handler.Handle(context.Background(), &transport.Request{
+		Procedure: "foo",
+		Encoding:  "json",
+		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
+	}, resw)
 	require.NoError(t, err)
 
 	var response struct{ Success string }
@@ -89,12 +87,11 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), transport.Options{},
-		&transport.Request{
-			Procedure: "foo",
-			Encoding:  "json",
-			Body:      jsonBody(`["a", "b", "c"]`),
-		}, resw)
+	err := handler.Handle(context.Background(), &transport.Request{
+		Procedure: "foo",
+		Encoding:  "json",
+		Body:      jsonBody(`["a", "b", "c"]`),
+	}, resw)
 	require.NoError(t, err)
 
 	assert.JSONEq(t, `["a", "b", "c"]`, resw.Body.String())
@@ -112,12 +109,11 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), transport.Options{},
-		&transport.Request{
-			Procedure: "simpleCall",
-			Encoding:  "json",
-			Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
-		}, resw)
+	err := handler.Handle(context.Background(), &transport.Request{
+		Procedure: "simpleCall",
+		Encoding:  "json",
+		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
+	}, resw)
 	require.NoError(t, err)
 
 	assert.Equal(t, transport.NewHeaders().With("foo", "bar"), resw.Headers)

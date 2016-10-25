@@ -34,8 +34,13 @@ import (
 
 // SafelyCallHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
-func SafelyCallHandler(ctx context.Context, h transport.Handler, start time.Time,
-	opts transport.Options, req *transport.Request, resq transport.ResponseWriter) (err error) {
+func SafelyCallHandler(
+	ctx context.Context,
+	h transport.Handler,
+	start time.Time,
+	req *transport.Request,
+	resq transport.ResponseWriter,
+) (err error) {
 
 	// We recover panics from now on.
 	defer func() {
@@ -45,7 +50,7 @@ func SafelyCallHandler(ctx context.Context, h transport.Handler, start time.Time
 		}
 	}()
 
-	err = h.Handle(ctx, opts, req, resq)
+	err = h.Handle(ctx, req, resq)
 
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {

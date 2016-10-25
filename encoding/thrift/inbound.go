@@ -40,7 +40,7 @@ type thriftHandler struct {
 	DisableEnveloping bool
 }
 
-func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq *transport.Request, rw transport.ResponseWriter) error {
+func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 
 	// We disable enveloping if either the client or the transport requires it.
 	proto := t.Protocol
-	if t.DisableEnveloping || isEnvelopingDisabled(opts) {
+	if t.DisableEnveloping {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Call, // we only decode requests

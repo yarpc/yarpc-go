@@ -34,8 +34,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-var httpOptions transport.Options
-
 func popHeader(h http.Header, n string) string {
 	v := h.Get(n)
 	h.Del(n)
@@ -101,7 +99,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
 	if err == nil {
-		err = internal.SafelyCallHandler(ctx, handler, start, httpOptions, treq, newResponseWriter(w))
+		err = internal.SafelyCallHandler(ctx, handler, start, treq, newResponseWriter(w))
 	}
 
 	if err != nil {
