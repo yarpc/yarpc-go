@@ -21,6 +21,8 @@
 package http
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -92,7 +94,6 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	defer cancel()
 
 	ctx, span := h.createSpan(ctx, req, treq, start)
-	defer span.Finish()
 
 	treq, err := v.Validate(ctx)
 	if err != nil {
@@ -107,17 +108,44 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	switch spec.Type {
 	case transport.Unary:
 		err = internal.SafelyCallHandler(ctx, spec.Handler, start, httpOptions, treq, newResponseWriter(w))
+		defer span.Finish()
 	case transport.Oneway:
-		err = internal.SafelyCallOnewayHandler(ctx, spec.OnewayHandler, start, httpOptions, treq)
+		err = handleOnewayRequest(ctx, span, treq, spec.OnewayHandler, start)
 	default:
 		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
 	}
 
-	setSpanErr(span, err)
+	updateSpanIfErr(span, err)
 	return err
 }
 
-func setSpanErr(span opentracing.Span, err error) {
+func handleOnewayRequest(
+	ctx context.Context,
+	span opentracing.Span,
+	treq *transport.Request,
+	onewayHandler transport.OnewayHandler,
+	start time.Time,
+) error {
+	// we will lose access to the body unless we read all the bytes before
+	// returning from the request
+	body, err := ioutil.ReadAll(treq.Body)
+	if err != nil {
+		return err
+	}
+
+	treq.Body = bytes.NewBuffer(body)
+
+	go func() {
+		// ensure the span lasts for length of the request in case of errors
+		defer span.Finish()
+
+		err = internal.SafelyCallOnewayHandler(ctx, onewayHandler, start, httpOptions, treq)
+		updateSpanIfErr(span, err)
+	}()
+	return nil
+}
+
+func updateSpanIfErr(span opentracing.Span, err error) {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
