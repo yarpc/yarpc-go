@@ -22,46 +22,31 @@ package oneway
 
 import (
 	"fmt"
+	"time"
 
 	"go.uber.org/yarpc"
-
-	"go.uber.org/yarpc/crossdock/thrift/oneway/yarpc/onewayserver"
-	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/crossdock/thrift/oneway/yarpc/onewayclient"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/http"
+
+	"github.com/crossdock/crossdock-go"
+	"golang.org/x/net/context"
 )
 
-var dispatcher yarpc.Dispatcher
+// Thrift starts an http oneway run using Thrift encoding
+func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	client := onewayclient.New(dispatcher.Channel("oneway-test"))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
-// Start starts the test server that clients will make requests to
-func Start() {
-	dispatcher = yarpc.NewDispatcher(yarpc.Config{
-		Name: "oneway-test",
-		Inbounds: []transport.Inbound{
-			http.NewInbound(":8084"),
-		},
-	})
+	token := getRandomID()
+	fmt.Println("thrift token", token)
 
-	register(dispatcher)
+	var ack transport.Ack
 
-	if err := dispatcher.Start(); err != nil {
-		fmt.Println("error:", err.Error())
-	}
-}
+	ack, err := client.Echo(ctx, nil, &token)
+	crossdock.Fatals(t).NoError(err, "call to Oneway::echo failed: %v", err)
+	crossdock.Fatals(t).NotNil(ack, "ack was not nil")
 
-// Stop stops running the RPC test subject
-func Stop() {
-	if dispatcher == nil {
-		return
-	}
-	if err := dispatcher.Stop(); err != nil {
-		fmt.Println("failed to stop:", err.Error())
-	}
-}
-
-func register(reg transport.Registry) {
-	reg.Register(raw.OnewayProcedure("echo/raw", EchoRaw))
-	reg.Register(json.OnewayProcedure("echo/json", EchoJSON))
-	reg.Register(onewayserver.New(onewayHandler{}))
+	serverToken := <-serverCalledBack
+	crossdock.Fatals(t).Equal(token, string(serverToken),
+		"Client/Server token mismatch. expected:%s received: %s", token, serverToken)
 }

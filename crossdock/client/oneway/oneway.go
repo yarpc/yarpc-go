@@ -55,7 +55,7 @@ func Run(t crossdock.T) {
 	case "json":
 		JSON(t, dispatcher)
 	case "thrift":
-		// Thrift(t, dispatcher)
+		Thrift(t, dispatcher)
 	default:
 		fatals.Fail("unknown encoding", "%v", encoding)
 	}

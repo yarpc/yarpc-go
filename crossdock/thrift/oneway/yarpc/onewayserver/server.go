@@ -21,50 +21,55 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echoonewayclient
+package onewayserver
 
 import (
-	"go.uber.org/yarpc"
+	"go.uber.org/thriftrw/wire"
 	"golang.org/x/net/context"
-	"go.uber.org/yarpc/crossdock/thrift/oneway/service/echooneway"
+	"go.uber.org/yarpc/crossdock/thrift/oneway/service/oneway"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc"
 )
 
-// Interface is a client for the EchoOneway service.
+// Interface is the server-side interface for the Oneway service.
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
+		reqMeta yarpc.ReqMeta,
 		Token *string,
-	) (transport.Ack, error)
+	) error
 }
 
-// New builds a new client for the EchoOneway service.
+// New prepares an implementation of the Oneway service for
+// registration.
 //
-// 	client := echoonewayclient.New(dispatcher.Channel("echooneway"))
-func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
-	return client{c: thrift.New(thrift.Config{
-		Service: "EchoOneway",
-		Channel: c,
-	}, opts...)}
+// 	handler := OnewayHandler{}
+// 	dispatcher.Register(onewayserver.New(handler))
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+	h := handler{impl}
+	service := thrift.Service{
+		Name:    "Oneway",
+		Methods: map[string]thrift.Handler{},
+		OnewayMethods: map[string]thrift.OnewayHandler{
+			"echo": thrift.OnewayHandlerFunc(h.Echo),
+		},
+	}
+	return thrift.BuildRegistrants(service, opts...)
 }
 
-func init() {
-	yarpc.RegisterClientBuilder(func(c transport.Channel) Interface {
-		return New(c)
-	})
-}
+type handler struct{ impl Interface }
 
-type client struct{ c thrift.Client }
-
-func (c client) Echo(
+func (h handler) Echo(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
-	_Token *string,
-) (ack transport.Ack, err error) {
-	args := echooneway.EchoHelper.Args(_Token)
+	reqMeta yarpc.ReqMeta,
+	body wire.Value,
+) error {
+	var args oneway.EchoArgs
+	if err := args.FromWire(body); err != nil {
+		return err
+	}
 
-	ack, err = c.c.CallOneway(ctx, reqMeta, args)
-	return
+	err := h.impl.Echo(ctx, reqMeta, args.Token)
+	return err
 }

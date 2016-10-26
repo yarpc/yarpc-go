@@ -37,7 +37,6 @@ const callBackAddr = "http://127.0.0.1:8082"
 func EchoRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
 	//make call back to the client
 	callHome(body)
-
 	return nil
 }
 
@@ -47,7 +46,14 @@ func EchoJSON(ctx context.Context, reqMeta yarpc.ReqMeta, body map[string]interf
 
 	//make call back to the client
 	callHome([]byte(token))
+	return nil
+}
 
+type onewayHandler struct{}
+
+// Echo implements the Oneway::Echo procedure.
+func (onewayHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, Token *string) error {
+	callHome([]byte(*Token))
 	return nil
 }
 
@@ -56,7 +62,7 @@ func callHome(body []byte) {
 	onewayOutbound.Start(transport.NoDeps)
 	defer onewayOutbound.Stop()
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	_, _ = onewayOutbound.CallOneway(ctx, &transport.Request{
 		Caller:    "oneway-test",
