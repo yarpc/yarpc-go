@@ -133,7 +133,7 @@ func (t thriftHandler) HandleOneway(ctx context.Context, opts transport.Options,
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
-	if envelope.Type != wire.Call {
+	if envelope.Type != wire.OneWay {
 		return encoding.RequestBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}

@@ -218,7 +218,7 @@ func (c thriftClient) buildTransportRequest(
 	}
 
 	reqEnvelopeType := reqBody.EnvelopeType()
-	if reqEnvelopeType != wire.Call {
+	if reqEnvelopeType != wire.Call && reqEnvelopeType != wire.OneWay {
 		return transport.Request{}, nil,
 			encoding.RequestBodyEncodeError(
 				&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
