@@ -192,6 +192,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 			"testTypedef":        thrift.HandlerFunc(h.TestTypedef),
 			"testVoid":           thrift.HandlerFunc(h.TestVoid),
 		},
+		OnewayMethods: map[string]thrift.OnewayHandler{},
 	}
 	return thrift.BuildRegistrants(service, opts...)
 }
