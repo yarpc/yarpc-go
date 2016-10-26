@@ -37,18 +37,30 @@ type jsonToken struct {
 
 // JSON starts an http run using JSON encoding
 func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	fatals := crossdock.Fatals(t)
+
 	client := json.New(dispatcher.Channel("oneway-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := getRandomID()
 
 	var ack transport.Ack
+	ack, err := client.CallOneway(
+		ctx,
+		yarpc.NewReqMeta().Procedure("echo/json"),
+		&jsonToken{Token: token},
+		&ack)
 
-	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("echo/json"), &jsonToken{Token: token}, &ack)
-	crossdock.Fatals(t).NoError(err, "call to oneway/json failed: %v", err)
-	crossdock.Fatals(t).NotNil(ack, "ack was not nil")
+	// ensure channel hasn't been filled yet
+	select {
+	case <-serverCalledBack:
+		fatals.FailNow("oneway json test failed", "client waited for server to fill channel")
+	default:
+	}
+
+	fatals.NoError(err, "call to oneway/json failed: %v", err)
+	fatals.NotNil(ack, "ack is nil")
 
 	serverToken := <-serverCalledBack
-	crossdock.Fatals(t).Equal(token, string(serverToken),
-		"Client/Server token mismatch. expected:%s received: %s", token, serverToken)
+	fatals.Equal(token, string(serverToken), "Client/Server token mismatch")
 }

@@ -32,16 +32,24 @@ import (
 
 // Raw starts an http run using raw encoding
 func Raw(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	fatals := crossdock.Fatals(t)
+
 	client := raw.New(dispatcher.Channel("oneway-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := []byte(getRandomID())
-
 	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("echo/raw"), token)
-	crossdock.Fatals(t).NoError(err, "call to oneway/raw failed: %v", err)
-	crossdock.Fatals(t).NotNil(ack, "ack was not nil")
+
+	// ensure channel hasn't been filled yet
+	select {
+	case <-serverCalledBack:
+		fatals.FailNow("oneway raw test failed", "client waited for server to fill channel")
+	default:
+	}
+
+	fatals.NoError(err, "call to oneway/raw failed: %v", err)
+	fatals.NotNil(ack, "ack is nil")
 
 	serverToken := <-serverCalledBack
-	crossdock.Fatals(t).Equal(token, serverToken,
-		"Client/Server token mismatch. expected:%s received: %s", token, serverToken)
+	fatals.Equal(token, serverToken, "Client/Server token mismatch.")
 }

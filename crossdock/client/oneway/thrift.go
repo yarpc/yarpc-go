@@ -21,12 +21,10 @@
 package oneway
 
 import (
-	"fmt"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/oneway/yarpc/onewayclient"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"
@@ -34,19 +32,24 @@ import (
 
 // Thrift starts an http oneway run using Thrift encoding
 func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	fatals := crossdock.Fatals(t)
+
 	client := onewayclient.New(dispatcher.Channel("oneway-test"))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := getRandomID()
-	fmt.Println("thrift token", token)
-
-	var ack transport.Ack
-
 	ack, err := client.Echo(ctx, nil, &token)
-	crossdock.Fatals(t).NoError(err, "call to Oneway::echo failed: %v", err)
-	crossdock.Fatals(t).NotNil(ack, "ack was not nil")
+
+	// ensure channel hasn't been filled yet
+	select {
+	case <-serverCalledBack:
+		fatals.FailNow("oneway thrift test failed", "client waited for server to fill channel")
+	default:
+	}
+
+	fatals.NoError(err, "call to Oneway::echo failed: %v", err)
+	fatals.NotNil(ack, "ack is nil")
 
 	serverToken := <-serverCalledBack
-	crossdock.Fatals(t).Equal(token, string(serverToken),
-		"Client/Server token mismatch. expected:%s received: %s", token, serverToken)
+	fatals.Equal(token, string(serverToken), "Client/Server token mismatch")
 }

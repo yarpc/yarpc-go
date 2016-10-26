@@ -33,7 +33,7 @@ import (
 
 // Interface is a client for the Oneway service.
 type Interface interface {
-		Echo(
+	Echo(
 		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		Token *string,
