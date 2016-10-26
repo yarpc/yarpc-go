@@ -55,6 +55,7 @@ func TestClient(t *testing.T) {
 	}{
 		{
 			desc:            "happy case",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -72,7 +73,6 @@ func TestClient(t *testing.T) {
 		},
 		{
 			desc:             "happy case without enveloping",
-			clientOptions:    []ClientOption{DisableEnveloping},
 			giveRequestBody:  fakeEnveloper(wire.Call),
 			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
 			expectCall:       true,
@@ -80,12 +80,14 @@ func TestClient(t *testing.T) {
 		},
 		{
 			desc:            "wrong envelope type for request",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Reply),
 			wantError: `failed to encode "thrift" request body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Reply`,
 		},
 		{
 			desc:            "TApplicationException",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -109,6 +111,7 @@ func TestClient(t *testing.T) {
 		},
 		{
 			desc:            "wrong envelope type for response",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",

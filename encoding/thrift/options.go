@@ -23,9 +23,9 @@ package thrift
 import "go.uber.org/thriftrw/protocol"
 
 type clientConfig struct {
-	Protocol          protocol.Protocol
-	DisableEnveloping bool
-	Multiplexed       bool
+	Protocol    protocol.Protocol
+	Enveloping  bool
+	Multiplexed bool
 }
 
 // ClientOption customizes the behavior of a Thrift client.
@@ -34,8 +34,8 @@ type ClientOption interface {
 }
 
 type registerConfig struct {
-	Protocol          protocol.Protocol
-	DisableEnveloping bool
+	Protocol   protocol.Protocol
+	Enveloping bool
 }
 
 // RegisterOption customizes the behavior of a Thrift handler during
@@ -50,26 +50,29 @@ type Option interface {
 	RegisterOption
 }
 
-// DisableEnveloping is an option that disables enveloping of Thrift requests
-// and responses.
+// Enveloped is an option that specifies that Thrift requests and responses
+// should be enveloped. It defaults to false.
 //
 // It may be specified on the client side when the client is constructed.
 //
-// 	client := myserviceclient.New(channel, thrift.DisableEnveloping)
+// 	client := myserviceclient.New(channel, thrift.Enveloped)
 //
 // It may be specified on the server side when the handler is registered.
 //
-// 	dispatcher.Register(myserviceserver.New(handler, thrift.DisableEnveloping))
-var DisableEnveloping Option = disableEnvelopingOption{}
+// 	dispatcher.Register(myserviceserver.New(handler, thrift.Enveloped))
+//
+// Note that you will need to enable enveloping to communicate with Apache
+// Thrift HTTP servers.
+var Enveloped Option = envelopedOption{}
 
-type disableEnvelopingOption struct{}
+type envelopedOption struct{}
 
-func (disableEnvelopingOption) applyClientOption(c *clientConfig) {
-	c.DisableEnveloping = true
+func (e envelopedOption) applyClientOption(c *clientConfig) {
+	c.Enveloping = true
 }
 
-func (disableEnvelopingOption) applyRegisterOption(c *registerConfig) {
-	c.DisableEnveloping = true
+func (e envelopedOption) applyRegisterOption(c *registerConfig) {
+	c.Enveloping = true
 }
 
 // Multiplexed is an option that specifies that requests from a client should

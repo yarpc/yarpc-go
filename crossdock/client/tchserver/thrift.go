@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
-	"go.uber.org/yarpc/encoding/thrift"
 
 	"github.com/crossdock/crossdock-go"
 	"golang.org/x/net/context"
@@ -59,9 +58,7 @@ func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 }
 
 func thriftCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
-	// NOTE(abg): Enveloping is disabled in old cross-language tests until the
-	// other YARPC implementations catch up.
-	client := echoclient.New(dispatcher.Channel(serverName), thrift.DisableEnveloping)
+	client := echoclient.New(dispatcher.Channel(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

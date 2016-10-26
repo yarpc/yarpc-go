@@ -25,6 +25,9 @@ This release requires regeneration of ThriftRW code.
     opentracing baggage instead
 -   **Breaking**: Transport options have been removed completely. Encoding
     values differently based on the transport is no longer supported.
+-   **Breaking**: Thrift requests and responses are no longer enveloped by
+    default. The `thrift.Enveloped` option may be used to turn enveloping on
+    when instantiating Thrift clients or registering handlers.
 
 
 v0.3.1 (2016-09-31)
