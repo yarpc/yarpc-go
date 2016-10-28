@@ -28,7 +28,7 @@ import (
 	"go.uber.org/yarpc/transport/tchannel/internal"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // readRequestHeaders reads headers and baggage from an incoming request.

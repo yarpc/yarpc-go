@@ -31,7 +31,7 @@ import (
 	"go.uber.org/yarpc/transport"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Run tests if a yarpc client returns correctly a client timeout error behind

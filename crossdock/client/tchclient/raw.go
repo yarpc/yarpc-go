@@ -27,7 +27,7 @@ import (
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go/raw"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func runRaw(t crossdock.T, call call) {

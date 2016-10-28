@@ -47,7 +47,7 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
+	"context"
 	"gopkg.in/yaml.v2"
 )
 

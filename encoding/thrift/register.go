@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Register calls the Registry's Register method.

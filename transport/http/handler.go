@@ -31,7 +31,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func popHeader(h http.Header, n string) string {

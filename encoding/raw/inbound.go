@@ -27,7 +27,7 @@ import (
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // rawHandler adapts a Handler into a transport.Handler

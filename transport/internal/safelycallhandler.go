@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // SafelyCallHandler calls the handler h, recovering panics and timeout errors,

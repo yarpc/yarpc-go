@@ -23,7 +23,7 @@ package yarpc
 import (
 	"go.uber.org/yarpc"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // secondService implements the SecondService.

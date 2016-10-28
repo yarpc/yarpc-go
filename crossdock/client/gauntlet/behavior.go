@@ -37,7 +37,7 @@ import (
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/thriftrw/ptr"
-	"golang.org/x/net/context"
+	"context"
 )
 
 const serverName = "yarpc-test"

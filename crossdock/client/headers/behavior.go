@@ -33,7 +33,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func createHeadersT(t crossdock.T) crossdock.T {

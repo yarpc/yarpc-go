@@ -25,7 +25,7 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 type requestLogInterceptor struct{}

@@ -35,7 +35,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func valueptr(v wire.Value) *wire.Value { return &v }

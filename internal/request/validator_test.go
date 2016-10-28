@@ -27,7 +27,7 @@ import (
 	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func TestValidator(t *testing.T) {

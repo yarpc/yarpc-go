@@ -26,7 +26,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 func resMetaFromReqMeta(reqMeta yarpc.ReqMeta) yarpc.ResMeta {

@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Thrift implements the 'thrift' behavior.

@@ -26,7 +26,7 @@ import (
 	"github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
-	"golang.org/x/net/context"
+	"context"
 )
 
 type echoRawHandler struct{}

@@ -26,7 +26,7 @@ package transporttest
 import (
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/transport"
-	context "golang.org/x/net/context"
+	context "context"
 )
 
 // Mock of Handler interface

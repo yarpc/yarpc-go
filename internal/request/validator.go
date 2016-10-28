@@ -27,7 +27,7 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Validator helps validate requests.

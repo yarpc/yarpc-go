@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level

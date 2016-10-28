@@ -25,7 +25,7 @@ package keyvalueclient
 
 import (
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
+	"context"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"

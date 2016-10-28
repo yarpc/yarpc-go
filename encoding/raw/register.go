@@ -24,7 +24,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Register calls the Registry's Register method.

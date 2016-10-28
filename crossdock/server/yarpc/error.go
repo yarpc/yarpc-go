@@ -25,7 +25,7 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // UnexpectedError fails with an unexpected error.

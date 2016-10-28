@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/encoding"

@@ -30,7 +30,7 @@ import (
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // thriftHandler wraps a Thrift Handler into a transport.Handler

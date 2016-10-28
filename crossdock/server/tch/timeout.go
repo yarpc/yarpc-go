@@ -23,7 +23,7 @@ package tch
 import (
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/raw"

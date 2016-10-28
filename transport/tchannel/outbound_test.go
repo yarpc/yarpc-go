@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Different ways in which outbounds can be constructed from a client Channel

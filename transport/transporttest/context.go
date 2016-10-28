@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // ContextMatcher is a Matcher for verifying that a context's deadline is

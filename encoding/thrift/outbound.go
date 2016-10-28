@@ -34,7 +34,7 @@ import (
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Client is a generic Thrift client. It speaks in raw Thrift payloads.

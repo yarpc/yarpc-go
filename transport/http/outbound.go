@@ -32,9 +32,9 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
+	"context"
+
 	"github.com/uber-go/atomic"
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
 )
 
 var (
@@ -170,7 +170,7 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		req.Header.Set(EncodingHeader, encoding)
 	}
 
-	response, err := ctxhttp.Do(ctx, o.Client, req)
+	response, err := o.Client.Do(req.WithContext(ctx))
 
 	if err != nil {
 		span.SetTag("error", true)

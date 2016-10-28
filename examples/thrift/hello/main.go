@@ -32,7 +32,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
-	"golang.org/x/net/context"
+	"context"
 )
 
 //go:generate thriftrw --out thrift --plugin=yarpc hello.thrift

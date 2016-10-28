@@ -32,9 +32,10 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 
+	"context"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 func TestCallSuccess(t *testing.T) {
@@ -209,7 +210,8 @@ func TestStopWithoutStarting(t *testing.T) {
 func TestCallWithoutStarting(t *testing.T) {
 	out := NewOutbound("http://localhost:9999")
 	assert.Panics(t, func() {
-		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
 		out.Call(
 			ctx,
 			&transport.Request{

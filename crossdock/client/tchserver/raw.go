@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/transport"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func runRaw(t crossdock.T, dispatcher yarpc.Dispatcher) {

@@ -28,7 +28,7 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
+	"context"
 )
 
 func runJSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
