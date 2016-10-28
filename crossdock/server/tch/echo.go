@@ -23,10 +23,11 @@ package tch
 import (
 	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
 
+	"context"
+
 	"github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
-	"context"
 )
 
 type echoRawHandler struct{}

@@ -28,9 +28,10 @@ import (
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
 
+	"context"
+
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"context"
 )
 
 // thriftHandler wraps a Thrift Handler into a transport.Handler

@@ -29,8 +29,9 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 
-	"github.com/crossdock/crossdock-go"
 	"context"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 func runRaw(t crossdock.T, dispatcher yarpc.Dispatcher) {

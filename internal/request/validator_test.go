@@ -26,8 +26,9 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
-	"github.com/stretchr/testify/assert"
 	"context"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestValidator(t *testing.T) {

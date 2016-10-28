@@ -30,8 +30,9 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
 
-	"github.com/crossdock/crossdock-go"
 	"context"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {

@@ -29,10 +29,11 @@ import (
 	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello/yarpc/helloclient"
 	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello/yarpc/helloserver"
 
+	"context"
+
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
-	"context"
 )
 
 //go:generate thriftrw --out thrift --plugin=yarpc hello.thrift

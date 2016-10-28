@@ -32,10 +32,11 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
+	"context"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/uber/tchannel-go"
-	"context"
 )
 
 type echoReqBody struct{}

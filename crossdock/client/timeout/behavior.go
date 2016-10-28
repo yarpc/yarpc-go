@@ -30,8 +30,9 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 
-	"github.com/crossdock/crossdock-go"
 	"context"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 // Run tests if a yarpc client returns correctly a client timeout error behind

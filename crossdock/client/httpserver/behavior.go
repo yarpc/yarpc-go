@@ -31,8 +31,9 @@ import (
 	"go.uber.org/yarpc/transport"
 	ht "go.uber.org/yarpc/transport/http"
 
-	crossdock "github.com/crossdock/crossdock-go"
 	"context"
+
+	crossdock "github.com/crossdock/crossdock-go"
 )
 
 // Run exercise a yarpc client against a rigged httpserver.

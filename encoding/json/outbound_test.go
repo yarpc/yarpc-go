@@ -30,10 +30,11 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
+	"context"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"context"
 )
 
 var _typeOfMapInterface = reflect.TypeOf(map[string]interface{}{})

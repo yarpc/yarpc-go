@@ -31,10 +31,11 @@ import (
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
 
+	"context"
+
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"context"
 )
 
 // Client is a generic Thrift client. It speaks in raw Thrift payloads.

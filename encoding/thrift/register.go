@@ -24,9 +24,10 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 
+	"context"
+
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"context"
 )
 
 // Register calls the Registry's Register method.

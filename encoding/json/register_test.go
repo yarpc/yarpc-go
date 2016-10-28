@@ -5,8 +5,9 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/stretchr/testify/assert"
 	"context"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWrapHandlerInvalid(t *testing.T) {
