@@ -208,7 +208,8 @@ func TestSimpleRoundTrip(t *testing.T) {
 				return err
 			})
 
-			ctx, _ := context.WithTimeout(rootCtx, 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(rootCtx, 200*time.Millisecond)
+			defer cancel()
 
 			registry := staticRegistry{Handler: handler}
 			trans.WithRegistry(registry, func(o transport.Outbound) {

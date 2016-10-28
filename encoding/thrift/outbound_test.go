@@ -30,12 +30,13 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
+	"context"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
-	"context"
 )
 
 func valueptr(v wire.Value) *wire.Value { return &v }
@@ -153,7 +154,8 @@ func TestClient(t *testing.T) {
 				}).Return(nil)
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		trans := transporttest.NewMockOutbound(mockCtrl)
 		if tt.expectCall {

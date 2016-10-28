@@ -29,8 +29,9 @@ import (
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/encoding/raw"
 
-	"github.com/crossdock/crossdock-go"
 	"context"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 // Raw implements the 'raw' behavior.
@@ -43,7 +44,8 @@ func Raw(t crossdock.T) {
 	defer dispatcher.Stop()
 
 	client := raw.New(dispatcher.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
 	token := random.Bytes(5)
 	resBody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("echo/raw"), token)

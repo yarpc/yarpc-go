@@ -30,9 +30,10 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
+	"context"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"context"
 )
 
 func TestNopFilter(t *testing.T) {
@@ -42,7 +43,8 @@ func TestNopFilter(t *testing.T) {
 	o := transporttest.NewMockOutbound(mockCtrl)
 	wrappedO := transport.ApplyFilter(o, transport.NopFilter)
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	req := &transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",

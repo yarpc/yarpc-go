@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
-	"context"
+	"golang.org/x/net/context"
 )
 
 // Different ways in which outbounds can be constructed from a client Channel
@@ -102,7 +102,8 @@ func TestOutboundHeaders(t *testing.T) {
 			if ctx == nil {
 				ctx = context.Background()
 			}
-			ctx, _ = context.WithTimeout(ctx, time.Second)
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			defer cancel()
 
 			res, err := out.Call(
 				ctx,
@@ -166,7 +167,8 @@ func TestCallSuccess(t *testing.T) {
 		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 		defer out.Stop()
 
-		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
 		res, err := out.Call(
 			ctx,
 			&transport.Request{
@@ -246,7 +248,8 @@ func TestCallFailures(t *testing.T) {
 		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 		defer out.Stop()
 
-		ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
 		_, err := out.Call(
 			ctx,
 			&transport.Request{
@@ -302,7 +305,8 @@ func TestCallWithoutStarting(t *testing.T) {
 		// hostport will have to be changed to a real server.
 
 		assert.Panics(t, func() {
-			ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			defer cancel()
 			out.Call(
 				ctx,
 				&transport.Request{

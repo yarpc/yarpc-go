@@ -23,14 +23,14 @@ package echo
 import (
 	"time"
 
-	"go.uber.org/yarpc"
 	disp "go.uber.org/yarpc/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
 
-	"github.com/crossdock/crossdock-go"
 	"context"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 // Thrift implements the 'thrift' behavior.
@@ -43,12 +43,12 @@ func Thrift(t crossdock.T) {
 	defer dispatcher.Stop()
 
 	client := echoclient.New(dispatcher.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
 	token := random.String(5)
 
-	// TODO can we pass nil instead of empty NewReqMeta()?
-	pong, _, err := client.Echo(ctx, yarpc.NewReqMeta(), &echo.Ping{Beep: token})
+	pong, _, err := client.Echo(ctx, nil, &echo.Ping{Beep: token})
 
 	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
 	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)

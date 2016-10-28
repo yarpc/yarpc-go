@@ -32,8 +32,9 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 
-	"github.com/crossdock/crossdock-go"
 	"context"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 func createHeadersT(t crossdock.T) crossdock.T {
@@ -174,6 +175,7 @@ func (c thriftCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 }
 
 func newTestContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	return ctx
 }

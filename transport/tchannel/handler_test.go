@@ -33,11 +33,12 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
+	"context"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
-	"context"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -88,7 +89,8 @@ func TestHandlerErrors(t *testing.T) {
 
 		respRecorder := newResponseRecorder()
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 		tchHandler.handle(ctx, &fakeInboundCall{
 			service: "service",
 			caller:  "caller",
@@ -244,7 +246,8 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "handler timeout",
 			ctx: func() context.Context {
-				ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+				defer cancel()
 				return ctx
 			}(),
 			sendCall: &fakeInboundCall{
@@ -311,7 +314,8 @@ func TestHandlerFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 		if tt.ctx != nil {
 			ctx = tt.ctx
 		}

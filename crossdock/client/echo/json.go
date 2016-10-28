@@ -28,8 +28,9 @@ import (
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/encoding/json"
 
-	"github.com/crossdock/crossdock-go"
 	"context"
+
+	"github.com/crossdock/crossdock-go"
 )
 
 // jsonEcho contains an echo request or response for the JSON echo endpoint.
@@ -47,7 +48,8 @@ func JSON(t crossdock.T) {
 	defer dispatcher.Stop()
 
 	client := json.New(dispatcher.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
 	var response jsonEcho
 	token := random.String(5)

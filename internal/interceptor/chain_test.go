@@ -29,9 +29,10 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
+	"context"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"context"
 )
 
 var retryInterceptor transport.InterceptorFunc = func(
@@ -54,7 +55,8 @@ func TestChain(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	req := &transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",

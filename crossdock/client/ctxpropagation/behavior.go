@@ -33,11 +33,12 @@ import (
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
+	"context"
+
 	"github.com/crossdock/crossdock-go"
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go"
 	"github.com/uber/tchannel-go"
-	"context"
 )
 
 // Run verifies that opentracing context is propagated across multiple hops.
@@ -192,7 +193,8 @@ func Run(t crossdock.T) {
 			if tt.initCtx != nil {
 				ctx = tt.initCtx
 			}
-			ctx, _ = context.WithTimeout(ctx, time.Second)
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			defer cancel()
 
 			var resp js.RawMessage
 			_, err := jsonClient.Call(

@@ -31,8 +31,9 @@ import (
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/tchannel-go"
 	"context"
+
+	"github.com/uber/tchannel-go"
 )
 
 // HTTPTransport contains information about an HTTP transport.
@@ -101,7 +102,8 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 		Procedure: reqMeta.Procedure(),
 	}
 
-	ctx, _ = context.WithTimeout(ctx, 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
 	_, err := client.Call(
 		ctx,
 		yarpc.NewReqMeta().Procedure(body.Procedure),

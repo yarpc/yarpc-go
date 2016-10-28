@@ -29,9 +29,10 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal"
 
+	"context"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"context"
 )
 
 func popHeader(h http.Header, n string) string {
