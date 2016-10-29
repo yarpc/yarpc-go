@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -32,8 +33,6 @@ import (
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
-
-	"context"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

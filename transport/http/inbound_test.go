@@ -22,6 +22,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -34,8 +35,6 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
-
-	"context"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

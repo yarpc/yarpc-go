@@ -21,9 +21,9 @@
 package tch
 
 import (
-	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
-
 	"context"
+
+	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
 
 	"github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/raw"

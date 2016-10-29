@@ -21,6 +21,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"runtime/debug"
@@ -28,8 +29,6 @@ import (
 
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 )
 
 // SafelyCallHandler calls the handler h, recovering panics and timeout errors,

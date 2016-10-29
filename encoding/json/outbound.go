@@ -22,9 +22,8 @@ package json
 
 import (
 	"bytes"
-	"encoding/json"
-
 	"context"
+	"encoding/json"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/encoding"

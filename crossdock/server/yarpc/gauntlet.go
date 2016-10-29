@@ -21,12 +21,11 @@
 package yarpc
 
 import (
+	"context"
 	"errors"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
-
-	"context"
 )
 
 func resMetaFromReqMeta(reqMeta yarpc.ReqMeta) yarpc.ResMeta {

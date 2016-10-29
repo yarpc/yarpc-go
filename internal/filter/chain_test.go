@@ -22,6 +22,7 @@ package filter
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io/ioutil"
 	"testing"
@@ -29,8 +30,6 @@ import (
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
-
-	"context"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

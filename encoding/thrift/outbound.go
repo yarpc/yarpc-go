@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 
@@ -30,8 +31,6 @@ import (
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"

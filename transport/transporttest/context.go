@@ -21,11 +21,10 @@
 package transporttest
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
-
-	"context"
 )
 
 // ContextMatcher is a Matcher for verifying that a context's deadline is

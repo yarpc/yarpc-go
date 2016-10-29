@@ -26,8 +26,9 @@ package echo
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/thriftrw/wire"
 	"strings"
+
+	"go.uber.org/thriftrw/wire"
 )
 
 type Ping struct {

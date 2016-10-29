@@ -22,14 +22,13 @@ package interceptor
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
-
-	"context"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

@@ -21,11 +21,10 @@
 package yarpc
 
 import (
+	"context"
 	"fmt"
 
 	"go.uber.org/yarpc"
-
-	"context"
 )
 
 // UnexpectedError fails with an unexpected error.

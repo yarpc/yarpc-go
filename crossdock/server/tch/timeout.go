@@ -21,9 +21,8 @@
 package tch
 
 import (
-	"time"
-
 	"context"
+	"time"
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/raw"

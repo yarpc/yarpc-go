@@ -21,6 +21,7 @@
 package gauntlet
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"time"
@@ -34,8 +35,6 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/thriftrw/ptr"

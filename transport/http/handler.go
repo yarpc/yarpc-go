@@ -21,6 +21,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -28,8 +29,6 @@ import (
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal"
-
-	"context"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"

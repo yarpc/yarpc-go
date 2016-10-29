@@ -22,12 +22,11 @@ package transport_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
-
-	"context"
 
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/errors"

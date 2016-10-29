@@ -25,8 +25,9 @@ package internal
 
 import (
 	"fmt"
-	"go.uber.org/thriftrw/wire"
 	"strings"
+
+	"go.uber.org/thriftrw/wire"
 )
 
 type ExceptionType int32

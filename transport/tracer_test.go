@@ -21,6 +21,7 @@
 package transport_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -31,8 +32,6 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
-
-	"context"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"

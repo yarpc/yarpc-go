@@ -2,6 +2,7 @@ package yarpc_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 	"net"
@@ -14,8 +15,6 @@ import (
 	"go.uber.org/yarpc/transport"
 	yhttp "go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

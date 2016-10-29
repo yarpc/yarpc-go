@@ -21,13 +21,12 @@
 package tchannel
 
 import (
+	"context"
 	"io"
 
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"github.com/uber-go/atomic"
 	"github.com/uber/tchannel-go"

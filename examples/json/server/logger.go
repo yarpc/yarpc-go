@@ -21,11 +21,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"go.uber.org/yarpc/transport"
-
-	"context"
 )
 
 type requestLogInterceptor struct{}

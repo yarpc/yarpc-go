@@ -25,8 +25,9 @@ package secondservice
 
 import (
 	"fmt"
-	"go.uber.org/thriftrw/wire"
 	"strings"
+
+	"go.uber.org/thriftrw/wire"
 )
 
 type BlahBlahArgs struct{}

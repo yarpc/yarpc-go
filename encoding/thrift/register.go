@@ -21,10 +21,10 @@
 package thrift
 
 import (
+	"context"
+
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"

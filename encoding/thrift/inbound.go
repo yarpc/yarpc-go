@@ -22,13 +22,12 @@ package thrift
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"

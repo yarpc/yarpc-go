@@ -21,6 +21,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -31,8 +32,6 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"context"
 
 	"github.com/uber/tchannel-go"
 )

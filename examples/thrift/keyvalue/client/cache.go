@@ -22,12 +22,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 
 	"go.uber.org/yarpc/transport"
-
-	"context"
 )
 
 // CacheFilter is a filter

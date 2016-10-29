@@ -21,6 +21,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -31,8 +32,6 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"github.com/uber-go/atomic"
 )

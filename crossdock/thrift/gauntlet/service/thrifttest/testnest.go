@@ -26,9 +26,10 @@ package thrifttest
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
-	"strings"
 )
 
 type TestNestArgs struct {

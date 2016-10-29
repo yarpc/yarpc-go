@@ -21,13 +21,12 @@
 package request
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
 
 	"go.uber.org/yarpc/transport"
-
-	"context"
 )
 
 // Validator helps validate requests.

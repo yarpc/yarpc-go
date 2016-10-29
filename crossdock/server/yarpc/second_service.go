@@ -21,9 +21,9 @@
 package yarpc
 
 import (
-	"go.uber.org/yarpc"
-
 	"context"
+
+	"go.uber.org/yarpc"
 )
 
 // secondService implements the SecondService.

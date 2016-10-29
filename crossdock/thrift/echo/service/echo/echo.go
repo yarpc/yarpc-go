@@ -26,9 +26,10 @@ package echo
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
-	"strings"
 )
 
 type EchoArgs struct {

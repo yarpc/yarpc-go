@@ -21,6 +21,7 @@
 package raw
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -28,8 +29,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go/testutils/testreader"

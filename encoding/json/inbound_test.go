@@ -2,6 +2,7 @@ package json
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"reflect"
@@ -10,8 +11,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

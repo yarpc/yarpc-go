@@ -21,13 +21,12 @@
 package tchserver
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/encoding/json"
-
-	"context"
 
 	"github.com/crossdock/crossdock-go"
 )

@@ -25,8 +25,9 @@ package thrifttest
 
 import (
 	"fmt"
-	"go.uber.org/thriftrw/wire"
 	"strings"
+
+	"go.uber.org/thriftrw/wire"
 )
 
 type TestVoidArgs struct{}

@@ -21,6 +21,7 @@
 package yarpc
 
 import (
+	"context"
 	js "encoding/json"
 	"fmt"
 	"time"
@@ -30,8 +31,6 @@ import (
 	"go.uber.org/yarpc/transport"
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"context"
 
 	"github.com/uber/tchannel-go"
 )

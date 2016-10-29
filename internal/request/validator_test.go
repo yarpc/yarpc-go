@@ -21,12 +21,11 @@
 package request
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 )

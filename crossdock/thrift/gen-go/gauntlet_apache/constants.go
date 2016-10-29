@@ -26,6 +26,7 @@ package gauntlet_apache
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/apache/thrift/lib/go/thrift"
 )
 

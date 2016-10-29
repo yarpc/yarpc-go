@@ -4,10 +4,11 @@
 package thrift
 
 import (
+	context "context"
+
 	gomock "github.com/golang/mock/gomock"
 	wire "go.uber.org/thriftrw/wire"
 	yarpc_go "go.uber.org/yarpc"
-	context "context"
 )
 
 // Mock of Handler interface

@@ -21,13 +21,12 @@
 package json
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 )
 
 var (

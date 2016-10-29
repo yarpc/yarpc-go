@@ -22,9 +22,8 @@ package raw
 
 import (
 	"bytes"
-	"io/ioutil"
-
 	"context"
+	"io/ioutil"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/meta"

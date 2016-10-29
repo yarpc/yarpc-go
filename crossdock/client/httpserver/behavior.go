@@ -21,6 +21,7 @@
 package httpserver
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -30,8 +31,6 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 	ht "go.uber.org/yarpc/transport/http"
-
-	"context"
 
 	crossdock "github.com/crossdock/crossdock-go"
 )

@@ -21,10 +21,9 @@
 package yarpc
 
 import (
+	"context"
 	"fmt"
 	"time"
-
-	"context"
 
 	"go.uber.org/yarpc"
 )

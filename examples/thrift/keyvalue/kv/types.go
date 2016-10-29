@@ -26,8 +26,9 @@ package kv
 import (
 	"errors"
 	"fmt"
-	"go.uber.org/thriftrw/wire"
 	"strings"
+
+	"go.uber.org/thriftrw/wire"
 )
 
 type ResourceDoesNotExist struct {

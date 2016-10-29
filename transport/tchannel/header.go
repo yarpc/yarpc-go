@@ -21,13 +21,12 @@
 package tchannel
 
 import (
+	"context"
 	"encoding/binary"
 	"io"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/tchannel/internal"
-
-	"context"
 
 	"github.com/uber/tchannel-go"
 )

@@ -21,6 +21,7 @@
 package headers
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -31,8 +32,6 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-
-	"context"
 
 	"github.com/crossdock/crossdock-go"
 )

@@ -1,11 +1,10 @@
 package json
 
 import (
+	"context"
 	"testing"
 
 	"go.uber.org/yarpc"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 )

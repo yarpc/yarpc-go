@@ -22,6 +22,7 @@ package transport_test
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -29,8 +30,6 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
-
-	"context"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

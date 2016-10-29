@@ -21,6 +21,7 @@
 package timeout
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -29,8 +30,6 @@ import (
 	"go.uber.org/yarpc/crossdock/client/params"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
-
-	"context"
 
 	"github.com/crossdock/crossdock-go"
 )

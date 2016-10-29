@@ -26,9 +26,10 @@ package keyvalue
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
-	"strings"
 )
 
 type GetValueArgs struct {

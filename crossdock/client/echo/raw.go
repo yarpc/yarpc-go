@@ -22,14 +22,13 @@ package echo
 
 import (
 	"bytes"
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
 	disp "go.uber.org/yarpc/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/encoding/raw"
-
-	"context"
 
 	"github.com/crossdock/crossdock-go"
 )
