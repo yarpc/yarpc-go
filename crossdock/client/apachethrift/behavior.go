@@ -48,16 +48,18 @@ func Run(t crossdock.T) {
 		Name: "apache-thrift-client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:     "ThriftTest",
-				Outbound: http.NewOutbound(baseURL + "/thrift/ThriftTest"),
+				Name:           "ThriftTest",
+				Outbound:       http.NewOutbound(baseURL + "/thrift/ThriftTest"),
+				OnewayOutbound: http.NewOnewayOutbound(baseURL + "/thrift/ThriftTest"),
 			},
 			{
 				Name:     "SecondService",
 				Outbound: http.NewOutbound(baseURL + "/thrift/SecondService"),
 			},
 			{
-				Name:     "Multiplexed",
-				Outbound: http.NewOutbound(baseURL + "/thrift/multiplexed"),
+				Name:           "Multiplexed",
+				Outbound:       http.NewOutbound(baseURL + "/thrift/multiplexed"),
+				OnewayOutbound: http.NewOnewayOutbound(baseURL + "/thrift/multiplexed"),
 			},
 		},
 	})
@@ -94,6 +96,7 @@ func Run(t crossdock.T) {
 			Envelope:      true,
 			Services:      tt.Services,
 			ClientOptions: tt.Options,
+			EnableOneway:  true,
 		})
 	}
 }

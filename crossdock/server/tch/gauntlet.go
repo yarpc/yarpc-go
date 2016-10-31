@@ -24,7 +24,7 @@ import (
 	"errors"
 
 	"github.com/uber/tchannel-go/thrift"
-	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_apache"
+	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_tchannel"
 )
 
 type thriftTestHandler struct{}
@@ -64,12 +64,12 @@ func (thriftTestHandler) TestBinary(ctx thrift.Context, thing []byte) ([]byte, e
 	return thing, nil
 }
 
-func (thriftTestHandler) TestStruct(ctx thrift.Context, thing *gauntlet_apache.Xtruct) (*gauntlet_apache.Xtruct, error) {
+func (thriftTestHandler) TestStruct(ctx thrift.Context, thing *gauntlet_tchannel.Xtruct) (*gauntlet_tchannel.Xtruct, error) {
 	ctx.SetResponseHeaders(ctx.Headers())
 	return thing, nil
 }
 
-func (thriftTestHandler) TestNest(ctx thrift.Context, thing *gauntlet_apache.Xtruct2) (*gauntlet_apache.Xtruct2, error) {
+func (thriftTestHandler) TestNest(ctx thrift.Context, thing *gauntlet_tchannel.Xtruct2) (*gauntlet_tchannel.Xtruct2, error) {
 	ctx.SetResponseHeaders(ctx.Headers())
 	return thing, nil
 }
@@ -94,12 +94,12 @@ func (thriftTestHandler) TestList(ctx thrift.Context, thing []int32) ([]int32, e
 	return thing, nil
 }
 
-func (thriftTestHandler) TestEnum(ctx thrift.Context, thing gauntlet_apache.Numberz) (gauntlet_apache.Numberz, error) {
+func (thriftTestHandler) TestEnum(ctx thrift.Context, thing gauntlet_tchannel.Numberz) (gauntlet_tchannel.Numberz, error) {
 	ctx.SetResponseHeaders(ctx.Headers())
 	return thing, nil
 }
 
-func (thriftTestHandler) TestTypedef(ctx thrift.Context, thing gauntlet_apache.UserId) (gauntlet_apache.UserId, error) {
+func (thriftTestHandler) TestTypedef(ctx thrift.Context, thing gauntlet_tchannel.UserId) (gauntlet_tchannel.UserId, error) {
 	ctx.SetResponseHeaders(ctx.Headers())
 	return thing, nil
 }
@@ -123,17 +123,17 @@ func (thriftTestHandler) TestMapMap(ctx thrift.Context, hello int32) (map[int32]
 	return result, nil
 }
 
-func (thriftTestHandler) TestInsanity(ctx thrift.Context, argument *gauntlet_apache.Insanity) (
-	map[gauntlet_apache.UserId]map[gauntlet_apache.Numberz]*gauntlet_apache.Insanity, error) {
+func (thriftTestHandler) TestInsanity(ctx thrift.Context, argument *gauntlet_tchannel.Insanity) (
+	map[gauntlet_tchannel.UserId]map[gauntlet_tchannel.Numberz]*gauntlet_tchannel.Insanity, error) {
 
 	ctx.SetResponseHeaders(ctx.Headers())
-	result := map[gauntlet_apache.UserId]map[gauntlet_apache.Numberz]*gauntlet_apache.Insanity{
+	result := map[gauntlet_tchannel.UserId]map[gauntlet_tchannel.Numberz]*gauntlet_tchannel.Insanity{
 		1: {
-			gauntlet_apache.Numberz_TWO:   argument,
-			gauntlet_apache.Numberz_THREE: argument,
+			gauntlet_tchannel.Numberz_TWO:   argument,
+			gauntlet_tchannel.Numberz_THREE: argument,
 		},
 		2: {
-			gauntlet_apache.Numberz_SIX: &gauntlet_apache.Insanity{},
+			gauntlet_tchannel.Numberz_SIX: &gauntlet_tchannel.Insanity{},
 		},
 	}
 	return result, nil
@@ -145,13 +145,13 @@ func (thriftTestHandler) TestMulti(
 	arg1 int32,
 	arg2 int64,
 	arg3 map[int16]string,
-	arg4 gauntlet_apache.Numberz,
-	arg5 gauntlet_apache.UserId,
-) (*gauntlet_apache.Xtruct, error) {
+	arg4 gauntlet_tchannel.Numberz,
+	arg5 gauntlet_tchannel.UserId,
+) (*gauntlet_tchannel.Xtruct, error) {
 
 	ctx.SetResponseHeaders(ctx.Headers())
 	hello := "Hello2"
-	result := &gauntlet_apache.Xtruct{
+	result := &gauntlet_tchannel.Xtruct{
 		StringThing: &hello,
 		ByteThing:   &arg0,
 		I32Thing:    &arg1,
@@ -165,7 +165,7 @@ func (thriftTestHandler) TestException(ctx thrift.Context, arg string) error {
 	switch arg {
 	case "Xception":
 		code := int32(1001)
-		return &gauntlet_apache.Xception{ErrorCode: &code, Message: &arg}
+		return &gauntlet_tchannel.Xception{ErrorCode: &code, Message: &arg}
 	case "TException":
 		// unexpected exception.
 		return errors.New("great sadness")
@@ -174,17 +174,17 @@ func (thriftTestHandler) TestException(ctx thrift.Context, arg string) error {
 	}
 }
 
-func (thriftTestHandler) TestMultiException(ctx thrift.Context, arg0 string, arg1 string) (*gauntlet_apache.Xtruct, error) {
+func (thriftTestHandler) TestMultiException(ctx thrift.Context, arg0 string, arg1 string) (*gauntlet_tchannel.Xtruct, error) {
 	ctx.SetResponseHeaders(ctx.Headers())
-	structThing := &gauntlet_apache.Xtruct{StringThing: &arg1}
+	structThing := &gauntlet_tchannel.Xtruct{StringThing: &arg1}
 	switch arg0 {
 	case "Xception":
 		code := int32(1001)
 		message := "This is an Xception"
-		return nil, &gauntlet_apache.Xception{ErrorCode: &code, Message: &message}
+		return nil, &gauntlet_tchannel.Xception{ErrorCode: &code, Message: &message}
 	case "Xception2":
 		code := int32(2002)
-		return nil, &gauntlet_apache.Xception2{ErrorCode: &code, StructThing: structThing}
+		return nil, &gauntlet_tchannel.Xception2{ErrorCode: &code, StructThing: structThing}
 	default:
 		return structThing, nil
 	}
