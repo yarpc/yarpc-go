@@ -36,8 +36,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-var httpOptions transport.Options
-
 func popHeader(h http.Header, n string) string {
 	v := h.Get(n)
 	h.Del(n)
@@ -107,7 +105,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	switch spec.Type {
 	case transport.Unary:
-		err = internal.SafelyCallHandler(ctx, spec.Handler, start, httpOptions, treq, newResponseWriter(w))
+		err = internal.SafelyCallHandler(ctx, spec.Handler, start, treq, newResponseWriter(w))
 		defer span.Finish()
 	case transport.Oneway:
 		err = handleOnewayRequest(ctx, span, treq, spec.OnewayHandler, start)
@@ -139,7 +137,7 @@ func handleOnewayRequest(
 		// ensure the span lasts for length of the request in case of errors
 		defer span.Finish()
 
-		err = internal.SafelyCallOnewayHandler(ctx, onewayHandler, start, httpOptions, treq)
+		err = internal.SafelyCallOnewayHandler(ctx, onewayHandler, start, treq)
 		updateSpanIfErr(span, err)
 	}()
 	return nil

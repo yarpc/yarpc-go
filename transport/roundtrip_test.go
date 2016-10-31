@@ -82,17 +82,17 @@ func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transp
 }
 
 // handlerFunc wraps a function into a transport.Registry
-type handlerFunc func(context.Context, transport.Options, *transport.Request, transport.ResponseWriter) error
+type handlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 
-func (f handlerFunc) Handle(ctx context.Context, opts transport.Options, r *transport.Request, w transport.ResponseWriter) error {
-	return f(ctx, opts, r, w)
+func (f handlerFunc) Handle(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
+	return f(ctx, r, w)
 }
 
 // OnewayHandlerFunc wraps a function into a transport.Registry
-type OnewayHandlerFunc func(context.Context, transport.Options, *transport.Request) error
+type OnewayHandlerFunc func(context.Context, *transport.Request) error
 
-func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, opts transport.Options, r *transport.Request) error {
-	return f(ctx, opts, r)
+func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Request) error {
+	return f(ctx, r)
 }
 
 // httpTransport implements a roundTripTransport for HTTP.
@@ -226,7 +226,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				Body:      bytes.NewReader([]byte(tt.requestBody)),
 			})
 
-			handler := handlerFunc(func(_ context.Context, _ transport.Options, r *transport.Request, w transport.ResponseWriter) error {
+			handler := handlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				if tt.responseError != nil {
@@ -315,7 +315,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 
 			handlerDone := make(chan struct{})
 
-			onewayHandler := OnewayHandlerFunc(func(_ context.Context, _ transport.Options, r *transport.Request) error {
+			onewayHandler := OnewayHandlerFunc(func(_ context.Context, r *transport.Request) error {
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				// Pretend to work: this delay should not slow down tests since it is a

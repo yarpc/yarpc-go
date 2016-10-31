@@ -100,9 +100,9 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 		spec := transport.HandlerSpec{
 			Type: transport.Unary,
 			Handler: thriftHandler{
-				Handler:           handler,
-				Protocol:          proto,
-				DisableEnveloping: rc.DisableEnveloping,
+				Handler:    handler,
+				Protocol:   proto,
+				Enveloping: rc.Enveloping,
 			},
 		}
 		rs = append(rs, transport.Registrant{
@@ -116,9 +116,9 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 		spec := transport.HandlerSpec{
 			Type: transport.Oneway,
 			OnewayHandler: thriftHandler{
-				OnewayHandler:     handler,
-				Protocol:          proto,
-				DisableEnveloping: rc.DisableEnveloping,
+				OnewayHandler: handler,
+				Protocol:      proto,
+				Enveloping:    rc.Enveloping,
 			},
 		}
 		rs = append(rs, transport.Registrant{

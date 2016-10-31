@@ -35,9 +35,6 @@ type BaseOutbound interface {
 
 	// Stops the outbound, cleaning up any resources held by the Outbound.
 	Stop() error
-
-	// Options for all requests made through this Outbound.
-	Options() Options
 }
 
 // Outbound is a transport that knows how to send unary requests for procedure

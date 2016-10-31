@@ -77,7 +77,6 @@ func TestHandlerErrors(t *testing.T) {
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t),
-			transportOptions,
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
 					Caller:    "caller",
@@ -194,7 +193,6 @@ func TestHandlerFailures(t *testing.T) {
 			expectCall: func(h *transporttest.MockHandler) {
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
-					transportOptions,
 					transporttest.NewRequestMatcher(
 						t, &transport.Request{
 							Caller:    "bar",
@@ -232,7 +230,6 @@ func TestHandlerFailures(t *testing.T) {
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
-					transportOptions,
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Return(
@@ -272,15 +269,9 @@ func TestHandlerFailures(t *testing.T) {
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
 						t, transporttest.ContextTTL(time.Millisecond)),
-					transportOptions,
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
-				).Do(func(
-					ctx context.Context,
-					_ transport.Options,
-					_ *transport.Request,
-					_ transport.ResponseWriter,
-				) {
+				).Do(func(ctx context.Context, _ *transport.Request, _ transport.ResponseWriter) {
 					<-ctx.Done()
 				}).Return(context.DeadlineExceeded)
 			},
@@ -309,15 +300,9 @@ func TestHandlerFailures(t *testing.T) {
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
 						t, transporttest.ContextTTL(time.Second)),
-					transportOptions,
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
-				).Do(func(
-					_ context.Context,
-					_ transport.Options,
-					_ *transport.Request,
-					_ transport.ResponseWriter,
-				) {
+				).Do(func(context.Context, *transport.Request, transport.ResponseWriter) {
 					panic("oops I panicked!")
 				})
 			},

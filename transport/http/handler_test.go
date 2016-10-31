@@ -61,7 +61,6 @@ func TestHandlerSucces(t *testing.T) {
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
 		),
-		transport.Options{},
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "moe",
@@ -130,7 +129,6 @@ func TestHandlerHeaders(t *testing.T) {
 			transporttest.NewContextMatcher(t,
 				transporttest.ContextTTL(tt.wantTTL),
 			),
-			transport.Options{},
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
 					Caller:    "caller",
@@ -263,7 +261,6 @@ func TestHandlerInternalFailure(t *testing.T) {
 	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
-		transport.Options{},
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
 				Caller:    "somecaller",
@@ -294,7 +291,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, transport.Options, *transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 

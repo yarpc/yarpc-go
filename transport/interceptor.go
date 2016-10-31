@@ -38,13 +38,7 @@ import "golang.org/x/net/context"
 // Interceptors are re-used across requests and MAY be called multiple times for
 // the same request.
 type Interceptor interface {
-	Handle(
-		ctx context.Context,
-		opts Options,
-		req *Request,
-		resw ResponseWriter,
-		h Handler,
-	) error
+	Handle(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error
 }
 
 // NopInterceptor is a interceptor that does not do anything special. It
@@ -60,11 +54,11 @@ func ApplyInterceptor(h Handler, i Interceptor) Handler {
 }
 
 // InterceptorFunc adapts a function into an Interceptor.
-type InterceptorFunc func(context.Context, Options, *Request, ResponseWriter, Handler) error
+type InterceptorFunc func(context.Context, *Request, ResponseWriter, Handler) error
 
 // Handle for InterceptorFunc
-func (f InterceptorFunc) Handle(ctx context.Context, opts Options, req *Request, resw ResponseWriter, h Handler) error {
-	return f(ctx, opts, req, resw, h)
+func (f InterceptorFunc) Handle(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error {
+	return f(ctx, req, resw, h)
 }
 
 type interceptedHandler struct {
@@ -72,12 +66,12 @@ type interceptedHandler struct {
 	i Interceptor
 }
 
-func (h interceptedHandler) Handle(ctx context.Context, opts Options, req *Request, resw ResponseWriter) error {
-	return h.i.Handle(ctx, opts, req, resw, h.h)
+func (h interceptedHandler) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
+	return h.i.Handle(ctx, req, resw, h.h)
 }
 
 type nopInterceptor struct{}
 
-func (nopInterceptor) Handle(ctx context.Context, opts Options, req *Request, resw ResponseWriter, handler Handler) error {
-	return handler.Handle(ctx, opts, req, resw)
+func (nopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
+	return handler.Handle(ctx, req, resw)
 }

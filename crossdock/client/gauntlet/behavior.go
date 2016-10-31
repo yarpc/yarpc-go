@@ -92,8 +92,6 @@ type Config struct {
 
 	// Whether requests should use Thrift envelopes. Defaults to false.
 	Envelope bool
-	// NOTE(abg): Enveloping is disabled by default until other YARPC
-	// implementations catch up. Only specific tests opt into this feature.
 
 	// Bit mask of the different services to call. Defaults to AllServices.
 	Services ServiceSet
@@ -471,8 +469,8 @@ func BuildDesc(tt TT) string {
 func buildClient(t crossdock.T, desc string, service string, c Config) reflect.Value {
 	channel := c.Dispatcher.Channel(c.ServerName)
 	opts := c.ClientOptions
-	if !c.Envelope {
-		opts = append(opts, thrift.DisableEnveloping)
+	if c.Envelope {
+		opts = append(opts, thrift.Enveloped)
 	}
 	switch service {
 	case "", "ThriftTest":

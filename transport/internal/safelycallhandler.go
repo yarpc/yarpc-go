@@ -38,7 +38,6 @@ func SafelyCallHandler(
 	ctx context.Context,
 	h transport.Handler,
 	start time.Time,
-	opts transport.Options,
 	req *transport.Request,
 	resq transport.ResponseWriter,
 ) (err error) {
@@ -50,7 +49,7 @@ func SafelyCallHandler(
 		}
 	}()
 
-	err = h.Handle(ctx, opts, req, resq)
+	err = h.Handle(ctx, req, resq)
 
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {
@@ -69,7 +68,6 @@ func SafelyCallOnewayHandler(
 	ctx context.Context,
 	h transport.OnewayHandler,
 	start time.Time,
-	opts transport.Options,
 	req *transport.Request,
 ) (err error) {
 	// We recover panics from now on.
@@ -80,7 +78,7 @@ func SafelyCallOnewayHandler(
 		}
 	}()
 
-	err = h.HandleOneway(ctx, opts, req)
+	err = h.HandleOneway(ctx, req)
 
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {

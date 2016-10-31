@@ -35,13 +35,13 @@ import (
 
 // thriftHandler wraps a Thrift Handler into a transport.Handler and transport.OnewayHandler
 type thriftHandler struct {
-	Handler           Handler
-	OnewayHandler     OnewayHandler
-	Protocol          protocol.Protocol
-	DisableEnveloping bool
+	Handler       Handler
+	OnewayHandler OnewayHandler
+	Protocol      protocol.Protocol
+	Enveloping    bool
 }
 
-func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq *transport.Request, rw transport.ResponseWriter) error {
+func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 
 	// We disable enveloping if either the client or the transport requires it.
 	proto := t.Protocol
-	if t.DisableEnveloping || isEnvelopingDisabled(opts) {
+	if !t.Enveloping {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Call, // we only decode requests
@@ -109,7 +109,7 @@ func (t thriftHandler) Handle(ctx context.Context, opts transport.Options, treq 
 }
 
 // TODO: reduce commonality between Handle and HandleOneway
-func (t thriftHandler) HandleOneway(ctx context.Context, opts transport.Options, treq *transport.Request) error {
+func (t thriftHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -121,10 +121,10 @@ func (t thriftHandler) HandleOneway(ctx context.Context, opts transport.Options,
 
 	// We disable enveloping if either the client or the transport requires it.
 	proto := t.Protocol
-	if t.DisableEnveloping || isEnvelopingDisabled(opts) {
+	if !t.Enveloping {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
-			Type:     wire.Call, // we only decode requests
+			Type:     wire.OneWay, // we only decode oneway requests
 		}
 	}
 

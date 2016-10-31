@@ -47,7 +47,7 @@ func TestClient(t *testing.T) {
 		giveRequestBody      envelope.Enveloper // outgoing request body
 		giveResponseEnvelope *wire.Envelope     // returned on DecodeEnveloped()
 		giveResponseBody     *wire.Value        // return on Decode()
-		transportOptions     transport.Options  // options for the outbound
+		clientOptions        []ClientOption
 
 		expectCall          bool           // whether outbound.Call is expected
 		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
@@ -56,6 +56,7 @@ func TestClient(t *testing.T) {
 	}{
 		{
 			desc:            "happy case",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -77,16 +78,17 @@ func TestClient(t *testing.T) {
 			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
 			expectCall:       true,
 			giveResponseBody: valueptr(wire.NewValueStruct(wire.Struct{})),
-			transportOptions: DisableEnvelopingForTransport,
 		},
 		{
 			desc:            "wrong envelope type for request",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Reply),
 			wantError: `failed to encode "thrift" request body for procedure ` +
 				`"MyService::someMethod" of service "service": unexpected envelope type: Reply`,
 		},
 		{
 			desc:            "TApplicationException",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -110,6 +112,7 @@ func TestClient(t *testing.T) {
 		},
 		{
 			desc:            "wrong envelope type for response",
+			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Call),
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  "someMethod",
@@ -154,7 +157,6 @@ func TestClient(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		trans := transporttest.NewMockOutbound(mockCtrl)
-		trans.EXPECT().Options().Return(tt.transportOptions).AnyTimes()
 		if tt.expectCall {
 			trans.EXPECT().Call(ctx,
 				transporttest.NewRequestMatcher(t, &transport.Request{
@@ -177,13 +179,15 @@ func TestClient(t *testing.T) {
 			proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(*tt.giveResponseBody, nil)
 		}
 
+		opts := tt.clientOptions
+		opts = append(opts, Protocol(proto))
 		c := New(Config{
 			Service: "MyService",
 			Channel: transport.MultiOutboundChannel("caller", transport.RemoteService{
 				Name:     "service",
 				Outbound: trans,
 			}),
-		}, Protocol(proto))
+		}, opts...)
 
 		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {
@@ -206,9 +210,9 @@ func TestClientOneway(t *testing.T) {
 	caller, service, procedure := "caller", "MyService", "someMethod"
 
 	tests := []struct {
-		desc             string
-		giveRequestBody  envelope.Enveloper // outgoing request body
-		transportOptions transport.Options  // options for the outbound
+		desc            string
+		giveRequestBody envelope.Enveloper // outgoing request body
+		clientOptions   []ClientOption
 
 		expectCall          bool           // whether outbound.Call is expected
 		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
@@ -218,7 +222,9 @@ func TestClientOneway(t *testing.T) {
 		{
 			desc:            "happy case",
 			giveRequestBody: fakeEnveloper(wire.Call),
-			expectCall:      true,
+			clientOptions:   []ClientOption{Enveloped},
+
+			expectCall: true,
 			wantRequestEnvelope: &wire.Envelope{
 				Name:  procedure,
 				SeqID: 1,
@@ -227,15 +233,17 @@ func TestClientOneway(t *testing.T) {
 			},
 		},
 		{
-			desc:             "happy case without enveloping",
-			giveRequestBody:  fakeEnveloper(wire.Call),
-			expectCall:       true,
-			wantRequestBody:  valueptr(wire.NewValueStruct(wire.Struct{})),
-			transportOptions: DisableEnvelopingForTransport,
+			desc:            "happy case without enveloping",
+			giveRequestBody: fakeEnveloper(wire.Call),
+
+			expectCall:      true,
+			wantRequestBody: valueptr(wire.NewValueStruct(wire.Struct{})),
 		},
 		{
 			desc:            "wrong envelope type for request",
 			giveRequestBody: fakeEnveloper(wire.Reply),
+			clientOptions:   []ClientOption{Enveloped},
+
 			wantError: `failed to encode "thrift" request body for procedure ` +
 				`"MyService::someMethod" of service "MyService": unexpected envelope type: Reply`,
 		},
@@ -267,7 +275,6 @@ func TestClientOneway(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		onewayOutbound := transporttest.NewMockOnewayOutbound(mockCtrl)
-		onewayOutbound.EXPECT().Options().Return(tt.transportOptions).AnyTimes()
 
 		requestMatcher := transporttest.NewRequestMatcher(t, &transport.Request{
 			Caller:    caller,
@@ -290,13 +297,16 @@ func TestClientOneway(t *testing.T) {
 					Return(&successAck{}, nil)
 			}
 		}
+		opts := tt.clientOptions
+		opts = append(opts, Protocol(proto))
+
 		c := New(Config{
 			Service: service,
 			Channel: transport.MultiOutboundChannel(caller, transport.RemoteService{
 				Name:           service,
 				OnewayOutbound: onewayOutbound,
 			}),
-		}, Protocol(proto))
+		}, opts...)
 
 		ack, err := c.CallOneway(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {

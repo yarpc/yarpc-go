@@ -36,7 +36,7 @@ type rawHandler struct {
 	OnewayHandler OnewayHandler
 }
 
-func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *transport.Request, rw transport.ResponseWriter) error {
+func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (r rawHandler) Handle(ctx context.Context, _ transport.Options, treq *trans
 	return nil
 }
 
-func (r rawHandler) HandleOneway(ctx context.Context, _ transport.Options, treq *transport.Request) error {
+func (r rawHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}

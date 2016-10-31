@@ -130,7 +130,7 @@ func TestThriftHandler(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 		handler := NewMockHandler(mockCtrl)
-		h := thriftHandler{Protocol: proto, Handler: handler}
+		h := thriftHandler{Protocol: proto, Handler: handler, Enveloping: true}
 
 		if tt.expectHandle {
 			reqMeta := fakeReqMeta{
@@ -147,7 +147,7 @@ func TestThriftHandler(t *testing.T) {
 		}
 
 		rw := new(transporttest.FakeResponseWriter)
-		err := h.Handle(ctx, transport.Options{}, &transport.Request{
+		err := h.Handle(ctx, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  Encoding,

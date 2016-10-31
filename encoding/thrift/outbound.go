@@ -92,10 +92,10 @@ func New(c Config, opts ...ClientOption) Client {
 	}
 
 	return thriftClient{
-		p:                 p,
-		ch:                c.Channel,
-		thriftService:     c.Service,
-		disableEnveloping: cc.DisableEnveloping,
+		p:             p,
+		ch:            c.Channel,
+		thriftService: c.Service,
+		Enveloping:    cc.Enveloping,
 	}
 }
 
@@ -104,8 +104,8 @@ type thriftClient struct {
 	p  protocol.Protocol
 
 	// name of the Thrift service
-	thriftService     string
-	disableEnveloping bool
+	thriftService string
+	Enveloping    bool
 }
 
 func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error) {
@@ -125,7 +125,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 
 	out := c.ch.GetOutbound()
 
-	treq, proto, err := c.buildTransportRequest(out.Options(), reqMeta, reqBody)
+	treq, proto, err := c.buildTransportRequest(reqMeta, reqBody)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
@@ -168,7 +168,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 func (c thriftClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (transport.Ack, error) {
 	out := c.ch.GetOnewayOutbound()
 
-	treq, _, err := c.buildTransportRequest(out.Options(), reqMeta, reqBody)
+	treq, _, err := c.buildTransportRequest(reqMeta, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -182,19 +182,12 @@ func (c thriftClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta,
 }
 
 func (c thriftClient) buildTransportRequest(
-	opts transport.Options,
 	reqMeta yarpc.CallReqMeta,
 	reqBody envelope.Enveloper) (
 	transport.Request, protocol.Protocol, error) {
 
-	// We disable enveloping if either the client or the transport requires it.
-	disableEnveloping := c.disableEnveloping || isEnvelopingDisabled(opts)
-	// Note that we apply this thrift.Option here rather than in New because
-	// this can change on a per-transport basis in addition to the
-	// user-specifed option.
-
 	proto := c.p
-	if disableEnveloping {
+	if !c.Enveloping {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Reply, // we only decode replies with this instance

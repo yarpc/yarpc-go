@@ -216,7 +216,7 @@ type handler interface {
 	Handle(context.Context, yarpc.ReqMeta, interface{}) (interface{}, yarpc.ResMeta, error)
 }
 
-func assertBaggageMatches(t crossdock.T, ctx context.Context, want map[string]string) bool {
+func assertBaggageMatches(ctx context.Context, t crossdock.T, want map[string]string) bool {
 	assert := crossdock.Assert(t)
 	got := getOpenTracingBaggage(ctx)
 
@@ -260,7 +260,7 @@ func (*singleHopHandler) SetClient(json.Client)               {}
 func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
 func (h *singleHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
-	assertBaggageMatches(h.t, ctx, h.wantBaggage)
+	assertBaggageMatches(ctx, h.t, h.wantBaggage)
 	resMeta := yarpc.NewResMeta().Headers(reqMeta.Headers())
 	return map[string]interface{}{}, resMeta, nil
 }
@@ -292,7 +292,7 @@ func (h *multiHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, bod
 		panic("call SetClient() and SetTransport() first")
 	}
 
-	assertBaggageMatches(h.t, ctx, h.wantBaggage)
+	assertBaggageMatches(ctx, h.t, h.wantBaggage)
 
 	span := opentracing.SpanFromContext(ctx)
 	for key, value := range h.addBaggage {
