@@ -170,8 +170,15 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	response, err := o.Client.Do(req.WithContext(ctx))
-
 	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {
