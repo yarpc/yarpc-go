@@ -26,7 +26,6 @@ package gauntlet_apache
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -1449,7 +1448,7 @@ func (p *CrazyNesting) writeField2(oprot thrift.TProtocol) (err error) {
 		if err := oprot.WriteSetBegin(thrift.STRUCT, len(p.SetField)); err != nil {
 			return thrift.PrependError("error writing set begin: ", err)
 		}
-		for v := range p.SetField {
+		for v, _ := range p.SetField {
 			if err := v.Write(oprot); err != nil {
 				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
 			}
@@ -2732,7 +2731,7 @@ func (p *VersioningTestV2) writeField9(oprot thrift.TProtocol) (err error) {
 		if err := oprot.WriteSetBegin(thrift.I32, len(p.Newset_)); err != nil {
 			return thrift.PrependError("error writing set begin: ", err)
 		}
-		for v := range p.Newset_ {
+		for v, _ := range p.Newset_ {
 			if err := oprot.WriteI32(int32(v)); err != nil {
 				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 			}
@@ -3767,7 +3766,7 @@ func (p *LargeDeltas) writeField2500(oprot thrift.TProtocol) (err error) {
 		if err := oprot.WriteSetBegin(thrift.STRING, len(p.ASet2500)); err != nil {
 			return thrift.PrependError("error writing set begin: ", err)
 		}
-		for v := range p.ASet2500 {
+		for v, _ := range p.ASet2500 {
 			if err := oprot.WriteString(string(v)); err != nil {
 				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 			}
@@ -4371,7 +4370,7 @@ func (p *NestedMixedx2) writeField1(oprot thrift.TProtocol) (err error) {
 			if err := oprot.WriteSetBegin(thrift.I32, len(v)); err != nil {
 				return thrift.PrependError("error writing set begin: ", err)
 			}
-			for v := range v {
+			for v, _ := range v {
 				if err := oprot.WriteI32(int32(v)); err != nil {
 					return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 				}
@@ -4405,7 +4404,7 @@ func (p *NestedMixedx2) writeField2(oprot thrift.TProtocol) (err error) {
 			if err := oprot.WriteSetBegin(thrift.STRING, len(v)); err != nil {
 				return thrift.PrependError("error writing set begin: ", err)
 			}
-			for v := range v {
+			for v, _ := range v {
 				if err := oprot.WriteString(string(v)); err != nil {
 					return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 				}
@@ -4443,7 +4442,7 @@ func (p *NestedMixedx2) writeField3(oprot thrift.TProtocol) (err error) {
 				if err := oprot.WriteSetBegin(thrift.STRING, len(v)); err != nil {
 					return thrift.PrependError("error writing set begin: ", err)
 				}
-				for v := range v {
+				for v, _ := range v {
 					if err := oprot.WriteString(string(v)); err != nil {
 						return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 					}

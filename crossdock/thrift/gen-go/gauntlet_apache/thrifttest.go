@@ -26,7 +26,6 @@ package gauntlet_apache
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -5168,7 +5167,7 @@ func (p *ThriftTestTestSetArgs) writeField1(oprot thrift.TProtocol) (err error) 
 	if err := oprot.WriteSetBegin(thrift.I32, len(p.Thing)); err != nil {
 		return thrift.PrependError("error writing set begin: ", err)
 	}
-	for v := range p.Thing {
+	for v, _ := range p.Thing {
 		if err := oprot.WriteI32(int32(v)); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 		}
@@ -5287,7 +5286,7 @@ func (p *ThriftTestTestSetResult) writeField0(oprot thrift.TProtocol) (err error
 		if err := oprot.WriteSetBegin(thrift.I32, len(p.Success)); err != nil {
 			return thrift.PrependError("error writing set begin: ", err)
 		}
-		for v := range p.Success {
+		for v, _ := range p.Success {
 			if err := oprot.WriteI32(int32(v)); err != nil {
 				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 			}

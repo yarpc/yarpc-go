@@ -25,13 +25,12 @@ package thrifttestclient
 
 import (
 	"context"
-
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
-	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/thrifttest"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/thrifttest"
+	"go.uber.org/yarpc"
 )
 
 // Interface is a client for the ThriftTest service.

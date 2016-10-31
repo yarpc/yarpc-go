@@ -21,8 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package kv
 
+import "go.uber.org/thriftrw/version"
 
-
-const MyNumberz Numberz = NumberzOne
+func init() {
+	version.CheckCompatWithGeneratedCodeAt("0.4.0", "go.uber.org/yarpc/examples/thrift/keyvalue/kv")
+}

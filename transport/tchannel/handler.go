@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -31,7 +32,7 @@ import (
 	"go.uber.org/yarpc/transport/internal"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
+	ncontext "golang.org/x/net/context"
 )
 
 // inboundCall provides an interface similiar tchannel.InboundCall.
@@ -80,7 +81,7 @@ type handler struct {
 	deps     transport.Deps
 }
 
-func (h handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
+func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 	if m, ok := h.existing[call.MethodString()]; ok {
 		m.Handle(ctx, call)
 		return

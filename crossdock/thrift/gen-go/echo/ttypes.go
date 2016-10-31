@@ -26,7 +26,6 @@ package echo
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/apache/thrift/lib/go/thrift"
 )
 

@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	traw "github.com/uber/tchannel-go/raw"
+	ncontext "golang.org/x/net/context"
 )
 
 var _reqBody = []byte("hello")
@@ -43,11 +44,11 @@ func httpEcho(t testing.TB) http.HandlerFunc {
 
 type tchannelEcho struct{ t testing.TB }
 
-func (tchannelEcho) Handle(ctx context.Context, args *traw.Args) (*traw.Res, error) {
+func (tchannelEcho) Handle(ctx ncontext.Context, args *traw.Args) (*traw.Res, error) {
 	return &traw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
 }
 
-func (t tchannelEcho) OnError(ctx context.Context, err error) {
+func (t tchannelEcho) OnError(ctx ncontext.Context, err error) {
 	t.t.Fatalf("request failed: %v", err)
 }
 

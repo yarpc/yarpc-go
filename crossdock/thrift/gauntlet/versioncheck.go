@@ -23,6 +23,8 @@
 
 package gauntlet
 
+import "go.uber.org/thriftrw/version"
 
-
-const MyNumberz Numberz = NumberzOne
+func init() {
+	version.CheckCompatWithGeneratedCodeAt("0.4.0", "go.uber.org/yarpc/crossdock/thrift/gauntlet")
+}

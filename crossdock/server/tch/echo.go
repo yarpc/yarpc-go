@@ -21,13 +21,12 @@
 package tch
 
 import (
-	"context"
-
 	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
 
 	"github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
+	"golang.org/x/net/context"
 )
 
 type echoRawHandler struct{}

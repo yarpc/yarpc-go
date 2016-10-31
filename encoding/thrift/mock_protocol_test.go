@@ -4,10 +4,9 @@
 package thrift
 
 import (
-	io "io"
-
 	gomock "github.com/golang/mock/gomock"
 	wire "go.uber.org/thriftrw/wire"
+	io "io"
 )
 
 // Mock of Protocol interface
