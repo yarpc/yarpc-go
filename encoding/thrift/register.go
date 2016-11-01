@@ -21,12 +21,13 @@
 package thrift
 
 import (
+	"context"
+
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
 )
 
 // Register calls the Registry's Register method.

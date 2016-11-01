@@ -24,8 +24,8 @@
 package echoclient
 
 import (
+	"context"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"

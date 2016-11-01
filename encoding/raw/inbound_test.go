@@ -21,6 +21,7 @@
 package raw
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -31,7 +32,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go/testutils/testreader"
-	"golang.org/x/net/context"
 )
 
 func TestRawHandler(t *testing.T) {

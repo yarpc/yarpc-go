@@ -21,6 +21,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,8 +34,6 @@ import (
 	"go.uber.org/yarpc/transport"
 
 	"github.com/uber-go/atomic"
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
 )
 
 var (
@@ -170,9 +169,16 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		req.Header.Set(EncodingHeader, encoding)
 	}
 
-	response, err := ctxhttp.Do(ctx, o.Client, req)
-
+	response, err := o.Client.Do(req.WithContext(ctx))
 	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {

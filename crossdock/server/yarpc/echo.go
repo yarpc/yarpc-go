@@ -21,9 +21,10 @@
 package yarpc
 
 import (
+	"context"
+
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
-	"golang.org/x/net/context"
 )
 
 // EchoRaw implements the echo/raw procedure.

@@ -22,6 +22,7 @@ package raw
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"testing"
 
@@ -32,7 +33,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go/testutils/testreader"
-	"golang.org/x/net/context"
 )
 
 func TestCall(t *testing.T) {

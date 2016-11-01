@@ -21,6 +21,7 @@
 package echo
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -29,7 +30,6 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 // jsonEcho contains an echo request or response for the JSON echo endpoint.
@@ -47,7 +47,8 @@ func JSON(t crossdock.T) {
 	defer dispatcher.Stop()
 
 	client := json.New(dispatcher.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
 	var response jsonEcho
 	token := random.String(5)

@@ -21,10 +21,10 @@
 package raw
 
 import (
+	"context"
+
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
-
-	"golang.org/x/net/context"
 )
 
 // Register calls the Registry's Register method.

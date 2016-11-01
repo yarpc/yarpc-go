@@ -1,12 +1,12 @@
 package json
 
 import (
+	"context"
 	"testing"
 
 	"go.uber.org/yarpc"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 func TestWrapHandlerInvalid(t *testing.T) {

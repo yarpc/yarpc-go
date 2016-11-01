@@ -21,6 +21,7 @@
 package tchserver
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -31,7 +32,6 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {

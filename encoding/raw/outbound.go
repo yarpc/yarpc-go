@@ -22,9 +22,8 @@ package raw
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
-
-	"golang.org/x/net/context"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/meta"

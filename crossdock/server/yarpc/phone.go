@@ -21,6 +21,7 @@
 package yarpc
 
 import (
+	"context"
 	js "encoding/json"
 	"fmt"
 	"time"
@@ -32,7 +33,6 @@ import (
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
 )
 
 // HTTPTransport contains information about an HTTP transport.
@@ -101,7 +101,8 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 		Procedure: reqMeta.Procedure(),
 	}
 
-	ctx, _ = context.WithTimeout(ctx, 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
 	_, err := client.Call(
 		ctx,
 		yarpc.NewReqMeta().Procedure(body.Procedure),

@@ -22,12 +22,11 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 
 	"go.uber.org/yarpc/transport"
-
-	"golang.org/x/net/context"
 )
 
 // CacheFilter is a filter

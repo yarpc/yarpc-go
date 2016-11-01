@@ -21,14 +21,13 @@
 package tch
 
 import (
-	"golang.org/x/net/context"
-
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/raw"
 	"github.com/uber/tchannel-go/thrift"
 	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
 	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_apache"
+	"golang.org/x/net/context"
 )
 
 var (

@@ -21,6 +21,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"runtime/debug"
@@ -28,8 +29,6 @@ import (
 
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
-
-	"golang.org/x/net/context"
 )
 
 // SafelyCallHandler calls the handler h, recovering panics and timeout errors,
@@ -51,13 +50,11 @@ func SafelyCallHandler(
 	}()
 
 	err = h.Handle(ctx, req, resq)
-
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {
 		deadline, _ := ctx.Deadline()
 		err = errors.HandlerTimeoutError(req.Caller, req.Service,
 			req.Procedure, deadline.Sub(start))
 	}
-
 	return err
 }

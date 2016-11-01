@@ -2,6 +2,7 @@ package recorder
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 func TestSanitizeFilename(t *testing.T) {
@@ -218,7 +218,8 @@ func TestEndToEnd(t *testing.T) {
 	recorder := NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		require.Panics(t, func() {
 			client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
@@ -230,7 +231,8 @@ func TestEndToEnd(t *testing.T) {
 	recorder = NewRecorder(&tMock, RecordMode(Overwrite), RecordsPath(dir))
 
 	withConnectedClient(t, recorder, func(client raw.Client) {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
@@ -241,7 +243,8 @@ func TestEndToEnd(t *testing.T) {
 	recorder = NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
@@ -261,7 +264,8 @@ func TestEmptyReplay(t *testing.T) {
 	recorder := NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		require.Panics(t, func() {
 			client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
@@ -299,7 +303,8 @@ func TestRecording(t *testing.T) {
 	recorder := NewRecorder(&tMock, RecordMode(Append), RecordsPath(dir))
 
 	withConnectedClient(t, recorder, func(client raw.Client) {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
@@ -331,7 +336,8 @@ func TestReplaying(t *testing.T) {
 	require.NoError(t, err)
 
 	withDisconnectedClient(t, recorder, func(client raw.Client) {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)

@@ -42,7 +42,7 @@ package <$pkgname>
 <$yarpc     := import "go.uber.org/yarpc">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$transport := import "go.uber.org/yarpc/transport">
-<$context   := import "golang.org/x/net/context">
+<$context   := import "context">
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
@@ -127,7 +127,7 @@ package <$pkgname>
 <$yarpc     := import "go.uber.org/yarpc">
 <$transport := import "go.uber.org/yarpc/transport">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
-<$context   := import "golang.org/x/net/context">
+<$context   := import "context">
 
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {

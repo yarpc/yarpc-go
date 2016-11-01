@@ -21,9 +21,9 @@
 package request
 
 import (
-	"go.uber.org/yarpc/transport"
+	"context"
 
-	"golang.org/x/net/context"
+	"go.uber.org/yarpc/transport"
 )
 
 // ValidatorOutbound wraps an Outbound to validate all outgoing requests.

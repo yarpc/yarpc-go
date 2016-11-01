@@ -21,6 +21,7 @@
 package json
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 
@@ -28,8 +29,6 @@ import (
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
-
-	"golang.org/x/net/context"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level

@@ -21,6 +21,7 @@
 package gauntlet
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"time"
@@ -37,7 +38,6 @@ import (
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/thriftrw/ptr"
-	"golang.org/x/net/context"
 )
 
 const serverName = "yarpc-test"
@@ -409,7 +409,8 @@ func RunGauntlet(t crossdock.T, c Config) {
 			continue
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 		args := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(yarpc.NewReqMeta())}
 		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give, 2); ok {
 			args = append(args, give...)
