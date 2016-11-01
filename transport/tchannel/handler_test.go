@@ -67,15 +67,15 @@ func TestHandlerErrors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		rpcHandler := transporttest.NewMockHandler(mockCtrl)
+		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
 
-		spec := transport.HandlerSpec{Type: transport.Unary, Handler: rpcHandler}
+		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 		tchHandler := handler{Registry: registry}
 
 		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
 
-		rpcHandler.EXPECT().Handle(
+		rpcHandler.EXPECT().HandleUnary(
 			transporttest.NewContextMatcher(t),
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
@@ -116,7 +116,7 @@ func TestHandlerFailures(t *testing.T) {
 		ctxFunc func() (context.Context, context.CancelFunc)
 
 		sendCall   *fakeInboundCall
-		expectCall func(*transporttest.MockHandler)
+		expectCall func(*transporttest.MockUnaryHandler)
 
 		wantErrors []string               // error message contents
 		wantStatus tchannel.SystemErrCode // expected status
@@ -192,8 +192,8 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			expectCall: func(h *transporttest.MockHandler) {
-				h.EXPECT().Handle(
+			expectCall: func(h *transporttest.MockUnaryHandler) {
+				h.EXPECT().HandleUnary(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(
 						t, &transport.Request{
@@ -222,7 +222,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte("{}"),
 				arg3:    []byte("{}"),
 			},
-			expectCall: func(h *transporttest.MockHandler) {
+			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
 					Caller:    "bar",
 					Service:   "foo",
@@ -230,7 +230,7 @@ func TestHandlerFailures(t *testing.T) {
 					Procedure: "hello",
 					Body:      bytes.NewReader([]byte("{}")),
 				}
-				h.EXPECT().Handle(
+				h.EXPECT().HandleUnary(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
@@ -259,7 +259,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			expectCall: func(h *transporttest.MockHandler) {
+			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
 					Service:   "foo",
 					Caller:    "bar",
@@ -267,7 +267,7 @@ func TestHandlerFailures(t *testing.T) {
 					Encoding:  raw.Encoding,
 					Body:      bytes.NewReader([]byte{0x00}),
 				}
-				h.EXPECT().Handle(
+				h.EXPECT().HandleUnary(
 					transporttest.NewContextMatcher(
 						t, transporttest.ContextTTL(time.Millisecond)),
 					transporttest.NewRequestMatcher(t, req),
@@ -290,7 +290,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			expectCall: func(h *transporttest.MockHandler) {
+			expectCall: func(h *transporttest.MockUnaryHandler) {
 				req := &transport.Request{
 					Service:   "foo",
 					Caller:    "bar",
@@ -298,7 +298,7 @@ func TestHandlerFailures(t *testing.T) {
 					Encoding:  raw.Encoding,
 					Body:      bytes.NewReader([]byte{0x00}),
 				}
-				h.EXPECT().Handle(
+				h.EXPECT().HandleUnary(
 					transporttest.NewContextMatcher(
 						t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(t, req),
@@ -324,8 +324,8 @@ func TestHandlerFailures(t *testing.T) {
 		defer cancel()
 
 		mockCtrl := gomock.NewController(t)
-		thandler := transporttest.NewMockHandler(mockCtrl)
-		spec := transport.HandlerSpec{Type: transport.Unary, Handler: thandler}
+		thandler := transporttest.NewMockUnaryHandler(mockCtrl)
+		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: thandler}
 		if tt.expectCall != nil {
 			tt.expectCall(thandler)
 		}

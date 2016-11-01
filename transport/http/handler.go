@@ -105,7 +105,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	switch spec.Type {
 	case transport.Unary:
-		err = internal.SafelyCallHandler(ctx, spec.Handler, start, treq, newResponseWriter(w))
+		err = internal.SafelyCallHandler(ctx, spec.UnaryHandler, start, treq, newResponseWriter(w))
 		defer span.Finish()
 	case transport.Oneway:
 		err = handleOnewayRequest(ctx, span, treq, spec.OnewayHandler, start)

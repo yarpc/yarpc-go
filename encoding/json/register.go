@@ -59,8 +59,8 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 		{
 			Procedure: name,
 			HandlerSpec: transport.HandlerSpec{
-				Type:    transport.Unary,
-				Handler: wrapUnaryHandler(name, handler),
+				Type:         transport.Unary,
+				UnaryHandler: wrapUnaryHandler(name, handler),
 			},
 		},
 	}
@@ -86,7 +86,7 @@ func OnewayProcedure(name string, handler interface{}) []transport.Registrant {
 
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
 // transport.Handler.
-func wrapUnaryHandler(name string, handler interface{}) transport.Handler {
+func wrapUnaryHandler(name string, handler interface{}) transport.UnaryHandler {
 	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
 	return newJSONHandler(reqBodyType, handler)
 }

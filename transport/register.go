@@ -30,7 +30,7 @@ import (
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport Handler,Registry
+//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport UnaryHandler,Registry
 
 // ServiceProcedure represents a service and procedure registered against a
 // Registry.
@@ -74,7 +74,7 @@ type Registry interface {
 // procedures.
 type MapRegistry struct {
 	defaultService string
-	entries        map[ServiceProcedure]Handler
+	entries        map[ServiceProcedure]UnaryHandler
 	onewayEntries  map[ServiceProcedure]OnewayHandler
 }
 
@@ -83,7 +83,7 @@ type MapRegistry struct {
 func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
-		entries:        make(map[ServiceProcedure]Handler),
+		entries:        make(map[ServiceProcedure]UnaryHandler),
 		onewayEntries:  make(map[ServiceProcedure]OnewayHandler),
 	}
 }
@@ -97,7 +97,7 @@ func (m MapRegistry) Register(rs []Registrant) {
 
 		switch r.HandlerSpec.Type {
 		case Unary:
-			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.Handler
+			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.UnaryHandler
 		case Oneway:
 			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.OnewayHandler
 		default:
@@ -125,7 +125,7 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 	}
 
 	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-		return HandlerSpec{Type: Unary, Handler: h}, nil
+		return HandlerSpec{Type: Unary, UnaryHandler: h}, nil
 	}
 	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {
 		return HandlerSpec{Type: Oneway, OnewayHandler: h}, nil

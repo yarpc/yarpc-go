@@ -98,7 +98,7 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	i := NewInbound(":0", Mux("/rpc/v1", mux))
-	h := transporttest.NewMockHandler(mockCtrl)
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRegistry(mockCtrl)
 	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: reg}, transport.NoDeps))
 
@@ -137,10 +137,10 @@ func TestInboundMux(t *testing.T) {
 	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
 	defer o.Stop()
 
-	spec := transport.HandlerSpec{Type: transport.Unary, Handler: h}
+	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: h}
 	reg.EXPECT().GetHandlerSpec("bar", "hello").Return(spec, nil)
 
-	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	h.EXPECT().HandleUnary(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	res, err := o.Call(ctx, &transport.Request{
 		Caller:    "foo",

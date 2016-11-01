@@ -40,7 +40,7 @@ func TestHandleStructSuccess(t *testing.T) {
 	}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	err := handler.HandleUnary(context.Background(), &transport.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
@@ -67,7 +67,7 @@ func TestHandleMapSuccess(t *testing.T) {
 	}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	err := handler.HandleUnary(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Encoding:  "json",
 		Body:      jsonBody(`{"foo": 42, "bar": ["a", "b", "c"]}`),
@@ -87,7 +87,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	err := handler.HandleUnary(context.Background(), &transport.Request{
 		Procedure: "foo",
 		Encoding:  "json",
 		Body:      jsonBody(`["a", "b", "c"]`),
@@ -109,7 +109,7 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	}
 
 	resw := new(transporttest.FakeResponseWriter)
-	err := handler.Handle(context.Background(), &transport.Request{
+	err := handler.HandleUnary(context.Background(), &transport.Request{
 		Procedure: "simpleCall",
 		Encoding:  "json",
 		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),

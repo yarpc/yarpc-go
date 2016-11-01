@@ -60,7 +60,7 @@ type roundTripTransport interface {
 }
 
 type staticRegistry struct {
-	Handler       transport.Handler
+	Handler       transport.UnaryHandler
 	OnewayHandler transport.OnewayHandler
 }
 
@@ -74,7 +74,7 @@ func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
 
 func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transport.HandlerSpec, error) {
 	if procedure == testProcedure {
-		return transport.HandlerSpec{Type: transport.Unary, Handler: r.Handler}, nil
+		return transport.HandlerSpec{Type: transport.Unary, UnaryHandler: r.Handler}, nil
 	} else {
 		return transport.HandlerSpec{Type: transport.Oneway, OnewayHandler: r.OnewayHandler}, nil
 	}
@@ -83,7 +83,7 @@ func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transp
 // handlerFunc wraps a function into a transport.Registry
 type handlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 
-func (f handlerFunc) Handle(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
+func (f handlerFunc) HandleUnary(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
 	return f(ctx, r, w)
 }
 

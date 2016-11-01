@@ -65,7 +65,7 @@ type Config struct {
 	// Filter and Interceptor that will be applied to all outgoing and incoming
 	// requests respectively.
 	Filter      transport.Filter
-	Interceptor transport.Interceptor
+	Interceptor transport.UnaryInterceptor
 
 	Tracer opentracing.Tracer
 }
@@ -154,7 +154,7 @@ type dispatcher struct {
 
 	//TODO: get rid of these, can just apply filter in NewDispatcher
 	Filter      transport.Filter
-	Interceptor transport.Interceptor
+	Interceptor transport.UnaryInterceptor
 
 	inbounds []transport.Inbound
 
@@ -246,7 +246,7 @@ func (d dispatcher) Start() error {
 func (d dispatcher) Register(rs []transport.Registrant) {
 	for i, r := range rs {
 		if r.HandlerSpec.Type == transport.Unary {
-			r.HandlerSpec.Handler = transport.ApplyInterceptor(r.HandlerSpec.Handler, d.Interceptor)
+			r.HandlerSpec.UnaryHandler = transport.ApplyUnaryInterceptor(r.HandlerSpec.UnaryHandler, d.Interceptor)
 			rs[i] = r
 		}
 		//TODO add oneway interceptors

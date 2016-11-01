@@ -34,6 +34,6 @@ func Filters(filters ...transport.Filter) transport.Filter {
 
 // Interceptors combines the given collection of interceptors in-order into a
 // single Interceptor.
-func Interceptors(interceptors ...transport.Interceptor) transport.Interceptor {
+func Interceptors(interceptors ...transport.UnaryInterceptor) transport.UnaryInterceptor {
 	return interceptor.Chain(interceptors...)
 }

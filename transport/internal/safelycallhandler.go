@@ -35,8 +35,7 @@ import (
 // converting them to yarpc errors. All other errors are passed trough.
 func SafelyCallHandler(
 	ctx context.Context,
-	h transport.Handler,
-	start time.Time,
+	h transport.UnaryHandler, start time.Time,
 	req *transport.Request,
 	resq transport.ResponseWriter,
 ) (err error) {
@@ -48,7 +47,7 @@ func SafelyCallHandler(
 		}
 	}()
 
-	err = h.Handle(ctx, req, resq)
+	err = h.HandleUnary(ctx, req, resq)
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {
 		deadline, _ := ctx.Deadline()

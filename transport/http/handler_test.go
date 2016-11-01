@@ -52,12 +52,12 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(ServiceHeader, "curly")
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	spec := transport.HandlerSpec{Type: transport.Unary, Handler: rpcHandler}
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
 	registry.EXPECT().GetHandlerSpec("curly", "nyuck").Return(spec, nil)
 
-	rpcHandler.EXPECT().Handle(
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
 		),
@@ -118,14 +118,14 @@ func TestHandlerHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		registry := transporttest.NewMockRegistry(mockCtrl)
-		rpcHandler := transporttest.NewMockHandler(mockCtrl)
-		spec := transport.HandlerSpec{Type: transport.Unary, Handler: rpcHandler}
+		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
 		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
 
 		httpHandler := handler{Registry: registry}
 
-		rpcHandler.EXPECT().Handle(
+		rpcHandler.EXPECT().HandleUnary(
 			transporttest.NewContextMatcher(t,
 				transporttest.ContextTTL(tt.wantTTL),
 			),
@@ -258,8 +258,8 @@ func TestHandlerInternalFailure(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	rpcHandler.EXPECT().Handle(
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
@@ -274,7 +274,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(fmt.Errorf("great sadness"))
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
-	spec := transport.HandlerSpec{Type: transport.Unary, Handler: rpcHandler}
+	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
 	registry.EXPECT().GetHandlerSpec("fake", "hello").Return(spec, nil)
 
@@ -291,7 +291,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) HandleUnary(context.Context, *transport.Request, transport.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 
@@ -305,8 +305,8 @@ func TestHandlerPanic(t *testing.T) {
 		{
 			Procedure: "panic",
 			HandlerSpec: transport.HandlerSpec{
-				Type:    transport.Unary,
-				Handler: panickedHandler{},
+				Type:         transport.Unary,
+				UnaryHandler: panickedHandler{},
 			},
 		},
 	})

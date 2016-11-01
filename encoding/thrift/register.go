@@ -100,7 +100,7 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 	for methodName, handler := range s.UnaryMethods {
 		spec := transport.HandlerSpec{
 			Type: transport.Unary,
-			Handler: thriftHandler{
+			UnaryHandler: thriftHandler{
 				Handler:    handler,
 				Protocol:   proto,
 				Enveloping: rc.Enveloping,
