@@ -24,11 +24,12 @@
 package onewayclient
 
 import (
+	"context"
+
 	"go.uber.org/yarpc"
-	"golang.org/x/net/context"
 	"go.uber.org/yarpc/crossdock/thrift/oneway/service/oneway"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
 )
 
 // Interface is a client for the Oneway service.

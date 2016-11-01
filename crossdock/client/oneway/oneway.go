@@ -21,6 +21,7 @@
 package oneway
 
 import (
+	"context"
 	"fmt"
 
 	"go.uber.org/yarpc"
@@ -31,7 +32,6 @@ import (
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 var serverCalledBack chan []byte

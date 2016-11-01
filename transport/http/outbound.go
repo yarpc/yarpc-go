@@ -21,6 +21,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,8 +34,6 @@ import (
 	"go.uber.org/yarpc/transport"
 
 	"github.com/uber-go/atomic"
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
 )
 
 var (
@@ -191,9 +190,16 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 
 	setHeaders(req, treq, ttl)
 
-	response, err := ctxhttp.Do(ctx, o.Client, req)
-
+	response, err := o.Client.Do(req.WithContext(ctx))
 	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {
@@ -263,7 +269,17 @@ func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 
 	setHeaders(req, treq, ttl)
 
-	_, err = ctxhttp.Do(ctx, o.Client, req)
+	_, err = o.Client.Do(req.WithContext(ctx))
+	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+	}
+
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())

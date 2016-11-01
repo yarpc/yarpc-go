@@ -22,13 +22,13 @@ package oneway
 
 import (
 	"bytes"
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
-	"golang.org/x/net/context"
 )
 
 const callBackAddr = "http://127.0.0.1:8082"

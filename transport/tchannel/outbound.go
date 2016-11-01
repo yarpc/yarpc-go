@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"context"
 	"io"
 
 	"go.uber.org/yarpc/internal/encoding"
@@ -29,7 +30,6 @@ import (
 
 	"github.com/uber-go/atomic"
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
 )
 
 var (

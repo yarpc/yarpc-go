@@ -21,13 +21,13 @@
 package request
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 func TestValidator(t *testing.T) {

@@ -22,6 +22,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -33,7 +34,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"golang.org/x/net/context"
 )
 
 func popHeader(h http.Header, n string) string {
@@ -85,7 +85,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		Body:      req.Body,
 	}
 
-	ctx := context.Background()
+	ctx := req.Context()
 
 	v := request.Validator{Request: treq}
 	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))

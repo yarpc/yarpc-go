@@ -21,6 +21,7 @@
 package tchserver
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -28,7 +29,6 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 func runJSON(t crossdock.T, dispatcher yarpc.Dispatcher) {

@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -37,7 +38,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -91,7 +91,8 @@ func TestHandlerErrors(t *testing.T) {
 
 		respRecorder := newResponseRecorder()
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 		tchHandler.handle(ctx, &fakeInboundCall{
 			service: "service",
 			caller:  "caller",
@@ -111,7 +112,8 @@ func TestHandlerFailures(t *testing.T) {
 		desc string
 
 		// context to use in the callm a default one is used otherwise.
-		ctx context.Context
+		ctx     context.Context
+		ctxFunc func() (context.Context, context.CancelFunc)
 
 		sendCall   *fakeInboundCall
 		expectCall func(*transporttest.MockHandler)
@@ -246,10 +248,9 @@ func TestHandlerFailures(t *testing.T) {
 		},
 		{
 			desc: "handler timeout",
-			ctx: func() context.Context {
-				ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
-				return ctx
-			}(),
+			ctxFunc: func() (context.Context, context.CancelFunc) {
+				return context.WithTimeout(context.Background(), time.Millisecond)
+			},
 			sendCall: &fakeInboundCall{
 				service: "foo",
 				caller:  "bar",
@@ -314,10 +315,13 @@ func TestHandlerFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		if tt.ctx != nil {
 			ctx = tt.ctx
+		} else if tt.ctxFunc != nil {
+			ctx, cancel = tt.ctxFunc()
 		}
+		defer cancel()
 
 		mockCtrl := gomock.NewController(t)
 		thandler := transporttest.NewMockHandler(mockCtrl)

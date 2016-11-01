@@ -22,6 +22,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -36,7 +37,6 @@ import (
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
 )
 
 type getRequest struct {
@@ -142,7 +142,8 @@ func main() {
 			}
 			key := args[0]
 
-			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
+			defer cancel()
 			if value, err := get(ctx, client, key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
@@ -157,7 +158,8 @@ func main() {
 			}
 			key, value := args[0], args[1]
 
-			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
+			defer cancel()
 			if err := set(ctx, client, key, value); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}

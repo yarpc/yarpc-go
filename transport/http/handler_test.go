@@ -22,6 +22,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -37,7 +38,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 func TestHandlerSucces(t *testing.T) {
@@ -327,7 +327,8 @@ func TestHandlerPanic(t *testing.T) {
 	defer clientDispatcher.Stop()
 
 	client := raw.New(clientDispatcher.Channel("yarpc-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("panic"), []byte{})
 
 	assert.True(t, transport.IsUnexpectedError(err), "Must be an UnexpectedError")

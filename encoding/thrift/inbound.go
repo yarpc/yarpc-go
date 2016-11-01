@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 
 	"go.uber.org/yarpc/internal/encoding"
@@ -30,7 +31,6 @@ import (
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
 )
 
 // thriftHandler wraps a Thrift Handler into a transport.Handler and transport.OnewayHandler

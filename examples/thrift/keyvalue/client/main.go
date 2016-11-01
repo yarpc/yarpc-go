@@ -22,6 +22,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -36,7 +37,6 @@ import (
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
 )
 
 func main() {
@@ -101,9 +101,10 @@ func main() {
 			}
 			key := args[0]
 
-			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			// TODO can we use nil instead of NewReqMeta here?
-			if value, _, err := client.GetValue(ctx, yarpc.NewReqMeta(), &key); err != nil {
+			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
+			defer cancel()
+
+			if value, _, err := client.GetValue(ctx, nil, &key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -118,9 +119,10 @@ func main() {
 			key, value := args[0], args[1]
 
 			cache.Invalidate()
-			ctx, _ := context.WithTimeout(rootCtx, 100*time.Millisecond)
-			// TODO can we use nil instead of NewReqMeta here?
-			if _, err := client.SetValue(ctx, yarpc.NewReqMeta(), &key, &value); err != nil {
+			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
+			defer cancel()
+
+			if _, err := client.SetValue(ctx, nil, &key, &value); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue

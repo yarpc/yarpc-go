@@ -21,6 +21,7 @@
 package timeout
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -31,7 +32,6 @@ import (
 	"go.uber.org/yarpc/transport"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 // Run tests if a yarpc client returns correctly a client timeout error behind

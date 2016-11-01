@@ -21,10 +21,9 @@
 package yarpc
 
 import (
+	"context"
 	"fmt"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"go.uber.org/yarpc"
 )

@@ -21,6 +21,7 @@
 package headers
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -33,7 +34,6 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 func createHeadersT(t crossdock.T) crossdock.T {
@@ -133,8 +133,11 @@ type headerCaller interface {
 type rawCaller struct{ c raw.Client }
 
 func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	_, res, err := c.c.Call(
-		newTestContext(),
+		ctx,
 		yarpc.NewReqMeta().Headers(h).Procedure("echo/raw"),
 		[]byte("hello"))
 
@@ -147,9 +150,12 @@ func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 type jsonCaller struct{ c json.Client }
 
 func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	var resBody interface{}
 	res, err := c.c.Call(
-		newTestContext(),
+		ctx,
 		yarpc.NewReqMeta().Headers(h).Procedure("echo"),
 		map[string]interface{}{}, &resBody)
 
@@ -162,8 +168,11 @@ func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 type thriftCaller struct{ c echoclient.Interface }
 
 func (c thriftCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	_, res, err := c.c.Echo(
-		newTestContext(),
+		ctx,
 		yarpc.NewReqMeta().Headers(h),
 		&echo.Ping{Beep: "hello"})
 
@@ -171,9 +180,4 @@ func (c thriftCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 		return yarpc.Headers{}, err
 	}
 	return res.Headers(), nil
-}
-
-func newTestContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	return ctx
 }

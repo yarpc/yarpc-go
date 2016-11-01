@@ -54,6 +54,7 @@ package recorder
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -67,7 +68,6 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
-	"golang.org/x/net/context"
 	"gopkg.in/yaml.v2"
 )
 

@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -36,7 +37,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
 )
 
 func valueptr(v wire.Value) *wire.Value { return &v }
@@ -154,7 +154,8 @@ func TestClient(t *testing.T) {
 				}).Return(nil)
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		trans := transporttest.NewMockOutbound(mockCtrl)
 		if tt.expectCall {

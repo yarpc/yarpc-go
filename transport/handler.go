@@ -21,9 +21,8 @@
 package transport
 
 import (
+	"context"
 	"fmt"
-
-	"golang.org/x/net/context"
 )
 
 // Type is an enum of RPC types

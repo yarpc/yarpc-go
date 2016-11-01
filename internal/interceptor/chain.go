@@ -21,9 +21,9 @@
 package interceptor
 
 import (
-	"go.uber.org/yarpc/transport"
+	"context"
 
-	"golang.org/x/net/context"
+	"go.uber.org/yarpc/transport"
 )
 
 // Chain combines a series of Interceptors into a single Interceptor.

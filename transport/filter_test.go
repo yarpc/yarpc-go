@@ -22,6 +22,7 @@ package transport_test
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -32,7 +33,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 func TestNopFilter(t *testing.T) {
@@ -42,7 +42,8 @@ func TestNopFilter(t *testing.T) {
 	o := transporttest.NewMockOutbound(mockCtrl)
 	wrappedO := transport.ApplyFilter(o, transport.NopFilter)
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	req := &transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",

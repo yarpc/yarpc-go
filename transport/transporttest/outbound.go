@@ -24,9 +24,9 @@
 package transporttest
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/transport"
-	context "golang.org/x/net/context"
 )
 
 // Mock of Outbound interface

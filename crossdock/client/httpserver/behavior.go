@@ -21,6 +21,7 @@
 package httpserver
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -32,7 +33,6 @@ import (
 	ht "go.uber.org/yarpc/transport/http"
 
 	crossdock "github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 // Run exercise a yarpc client against a rigged httpserver.

@@ -21,13 +21,13 @@
 package oneway
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 // Raw starts an http run using raw encoding

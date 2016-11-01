@@ -2,6 +2,7 @@ package json
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"reflect"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 type simpleRequest struct {

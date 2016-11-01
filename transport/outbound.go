@@ -20,7 +20,7 @@
 
 package transport
 
-import "golang.org/x/net/context"
+import "context"
 
 //go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound,OnewayOutbound
 

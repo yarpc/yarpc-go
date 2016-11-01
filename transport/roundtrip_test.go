@@ -22,12 +22,11 @@ package transport_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/errors"
@@ -242,7 +241,8 @@ func TestSimpleRoundTrip(t *testing.T) {
 				return err
 			})
 
-			ctx, _ := context.WithTimeout(rootCtx, 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(rootCtx, 200*time.Millisecond)
+			defer cancel()
 
 			registry := staticRegistry{Handler: handler}
 			trans.WithRegistry(registry, func(o transport.Outbound) {

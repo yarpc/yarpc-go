@@ -21,6 +21,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -33,7 +34,6 @@ import (
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/tchannel-go"
-	"golang.org/x/net/context"
 )
 
 type getRequest struct {

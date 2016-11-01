@@ -21,11 +21,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"go.uber.org/yarpc/transport"
-
-	"golang.org/x/net/context"
 )
 
 type requestLogFilter struct{}

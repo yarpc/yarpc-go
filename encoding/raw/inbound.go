@@ -21,13 +21,12 @@
 package raw
 
 import (
+	"context"
 	"io/ioutil"
 
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
 	"go.uber.org/yarpc/transport"
-
-	"golang.org/x/net/context"
 )
 
 // rawHandler adapts a Handler into a transport.Handler and transport.OnewayHandler

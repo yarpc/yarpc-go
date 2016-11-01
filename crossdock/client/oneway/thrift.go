@@ -21,13 +21,13 @@
 package oneway
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/oneway/yarpc/onewayclient"
 
 	"github.com/crossdock/crossdock-go"
-	"golang.org/x/net/context"
 )
 
 // Thrift starts an http oneway run using Thrift encoding

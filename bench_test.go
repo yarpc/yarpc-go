@@ -2,6 +2,7 @@ package yarpc_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 	"net"
@@ -19,8 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	traw "github.com/uber/tchannel-go/raw"
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
+	ncontext "golang.org/x/net/context"
 )
 
 var _reqBody = []byte("hello")
@@ -44,11 +44,11 @@ func httpEcho(t testing.TB) http.HandlerFunc {
 
 type tchannelEcho struct{ t testing.TB }
 
-func (tchannelEcho) Handle(ctx context.Context, args *traw.Args) (*traw.Res, error) {
+func (tchannelEcho) Handle(ctx ncontext.Context, args *traw.Args) (*traw.Res, error) {
 	return &traw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
 }
 
-func (t tchannelEcho) OnError(ctx context.Context, err error) {
+func (t tchannelEcho) OnError(ctx ncontext.Context, err error) {
 	t.t.Fatalf("request failed: %v", err)
 }
 
@@ -76,7 +76,8 @@ func withHTTPServer(t testing.TB, listenOn string, h http.Handler, f func()) {
 
 func runYARPCClient(b *testing.B, c raw.Client) {
 	for i := 0; i < b.N; i++ {
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
 		_, _, err := c.Call(ctx, yarpc.NewReqMeta().Procedure("echo"), _reqBody)
 		require.NoError(b, err, "request %d failed", i+1)
 	}
@@ -84,9 +85,11 @@ func runYARPCClient(b *testing.B, c raw.Client) {
 
 func runHTTPClient(b *testing.B, c *http.Client, url string) {
 	for i := 0; i < b.N; i++ {
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
 		req, err := http.NewRequest("POST", url, bytes.NewReader(_reqBody))
 		require.NoError(b, err, "failed to build request %d", i+1)
+		req = req.WithContext(ctx)
 
 		req.Header = http.Header{
 			"Context-TTL-MS": {"100"},
@@ -95,7 +98,7 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 			"Rpc-Procedure":  {"echo"},
 			"Rpc-Service":    {"server"},
 		}
-		res, err := ctxhttp.Do(ctx, c, req)
+		res, err := c.Do(req)
 		require.NoError(b, err, "request %d failed", i+1)
 
 		_, err = ioutil.ReadAll(res.Body)
@@ -107,7 +110,8 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 func runTChannelClient(b *testing.B, c *tchannel.Channel, hostPort string) {
 	headers := []byte{0x00, 0x00} // TODO: YARPC TChannel should support empty arg2
 	for i := 0; i < b.N; i++ {
-		ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
 		call, err := c.BeginCall(ctx, hostPort, "server", "echo",
 			&tchannel.CallOptions{Format: tchannel.Raw})
 		require.NoError(b, err, "BeginCall %v failed", i+1)

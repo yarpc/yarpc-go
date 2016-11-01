@@ -22,6 +22,7 @@ package json
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io/ioutil"
 	"reflect"
@@ -34,7 +35,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 var _typeOfMapInterface = reflect.TypeOf(map[string]interface{}{})

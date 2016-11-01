@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"testing"
 	"time"
@@ -33,7 +34,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/wire"
-	"golang.org/x/net/context"
 )
 
 //go:generate mockgen -destination=mock_handler_test.go -package=thrift go.uber.org/yarpc/encoding/thrift Handler
@@ -127,7 +127,8 @@ func TestThriftHandler(t *testing.T) {
 				}).Return(nil)
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 
 		handler := NewMockHandler(mockCtrl)
 		h := thriftHandler{Protocol: proto, Handler: handler, Enveloping: true}
