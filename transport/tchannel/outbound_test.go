@@ -105,7 +105,7 @@ func TestOutboundHeaders(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, time.Second)
 			defer cancel()
 
-			res, err := out.Call(
+			res, err := out.CallUnary(
 				ctx,
 				&transport.Request{
 					Caller:    "caller",
@@ -169,7 +169,7 @@ func TestCallSuccess(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
-		res, err := out.Call(
+		res, err := out.CallUnary(
 			ctx,
 			&transport.Request{
 				Caller:    "caller",
@@ -250,7 +250,7 @@ func TestCallFailures(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
-		_, err := out.Call(
+		_, err := out.CallUnary(
 			ctx,
 			&transport.Request{
 				Caller:    "caller",
@@ -307,7 +307,7 @@ func TestCallWithoutStarting(t *testing.T) {
 		assert.Panics(t, func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 			defer cancel()
-			out.Call(
+			out.CallUnary(
 				ctx,
 				&transport.Request{
 					Caller:    "caller",

@@ -45,7 +45,7 @@ func (c chain) CallUnary(ctx context.Context, request *transport.Request, out tr
 	return chainExec{
 		Chain: []transport.UnaryFilter(c),
 		Final: out,
-	}.Call(ctx, request)
+	}.CallUnary(ctx, request)
 }
 
 // chainExec adapts a series of filters into an Outbound. It is scoped to a
@@ -63,9 +63,9 @@ func (x chainExec) Stop() error {
 	return x.Final.Stop()
 }
 
-func (x chainExec) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (x chainExec) CallUnary(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.Call(ctx, request)
+		return x.Final.CallUnary(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]

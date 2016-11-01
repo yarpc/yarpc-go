@@ -105,7 +105,7 @@ func TestCallUnary(t *testing.T) {
 		}))
 
 		if !tt.noCall {
-			outbound.EXPECT().Call(gomock.Any(),
+			outbound.EXPECT().CallUnary(gomock.Any(),
 				transporttest.NewRequestMatcher(t,
 					&transport.Request{
 						Caller:    caller,

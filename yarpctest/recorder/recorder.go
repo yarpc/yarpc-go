@@ -307,7 +307,7 @@ func (r *Recorder) CallUnary(
 		}
 		fallthrough
 	case Overwrite:
-		response, err := out.Call(ctx, request)
+		response, err := out.CallUnary(ctx, request)
 		if err == nil {
 			cachedRecord := record{
 				Version:  currentRecordVersion,

@@ -159,7 +159,7 @@ func TestClient(t *testing.T) {
 
 		trans := transporttest.NewMockUnaryOutbound(mockCtrl)
 		if tt.expectCall {
-			trans.EXPECT().Call(ctx,
+			trans.EXPECT().CallUnary(ctx,
 				transporttest.NewRequestMatcher(t, &transport.Request{
 					Caller:    "caller",
 					Service:   "service",

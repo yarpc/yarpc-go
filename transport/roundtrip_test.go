@@ -81,16 +81,16 @@ func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transp
 }
 
 // handlerFunc wraps a function into a transport.Registry
-type handlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
+type unaryHandlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 
-func (f handlerFunc) HandleUnary(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
+func (f unaryHandlerFunc) HandleUnary(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
 	return f(ctx, r, w)
 }
 
-// OnewayHandlerFunc wraps a function into a transport.Registry
-type OnewayHandlerFunc func(context.Context, *transport.Request) error
+// onewayHandlerFunc wraps a function into a transport.Registry
+type onewayHandlerFunc func(context.Context, *transport.Request) error
 
-func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Request) error {
+func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Request) error {
 	return f(ctx, r)
 }
 
@@ -225,7 +225,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				Body:      bytes.NewReader([]byte(tt.requestBody)),
 			})
 
-			handler := handlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
+			handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				if tt.responseError != nil {
@@ -246,7 +246,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 
 			registry := staticRegistry{Handler: handler}
 			trans.WithRegistry(registry, func(o transport.UnaryOutbound) {
-				res, err := o.Call(ctx, &transport.Request{
+				res, err := o.CallUnary(ctx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
 					Procedure: testProcedure,
@@ -315,7 +315,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 
 			handlerDone := make(chan struct{})
 
-			onewayHandler := OnewayHandlerFunc(func(_ context.Context, r *transport.Request) error {
+			onewayHandler := onewayHandlerFunc(func(_ context.Context, r *transport.Request) error {
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				// Pretend to work: this delay should not slow down tests since it is a

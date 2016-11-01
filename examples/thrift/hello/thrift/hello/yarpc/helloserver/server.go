@@ -26,11 +26,11 @@ package helloserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
 	hello2 "go.uber.org/yarpc/examples/thrift/hello/thrift/hello/service/hello"
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the Hello service.
@@ -54,6 +54,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 		UnaryMethods: map[string]thrift.UnaryHandler{
 			"echo": thrift.UnaryHandlerFunc(h.Echo),
 		},
+		OnewayMethods: map[string]thrift.OnewayHandler{},
 	}
 	return thrift.BuildRegistrants(service, opts...)
 }

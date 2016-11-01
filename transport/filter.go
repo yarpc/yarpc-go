@@ -76,12 +76,12 @@ func (fo filteredOutbound) Stop() error {
 	return fo.o.Stop()
 }
 
-func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
+func (fo filteredOutbound) CallUnary(ctx context.Context, request *Request) (*Response, error) {
 	return fo.f.CallUnary(ctx, request, fo.o)
 }
 
 type nopFilter struct{}
 
 func (nopFilter) CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
-	return out.Call(ctx, request)
+	return out.CallUnary(ctx, request)
 }

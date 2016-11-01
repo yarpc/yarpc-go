@@ -73,7 +73,7 @@ func (c *cacheFilter) CallUnary(ctx context.Context, request *transport.Request,
 	}
 
 	fmt.Println("cache miss")
-	res, err := out.Call(ctx, request)
+	res, err := out.CallUnary(ctx, request)
 	if err != nil {
 		return nil, err
 	}

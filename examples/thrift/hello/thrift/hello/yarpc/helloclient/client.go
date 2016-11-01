@@ -26,11 +26,11 @@ package helloclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
 	hello2 "go.uber.org/yarpc/examples/thrift/hello/thrift/hello/service/hello"
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc"
 )
 
 // Interface is a client for the Hello service.
@@ -65,6 +65,7 @@ func (c client) Echo(
 	reqMeta yarpc.CallReqMeta,
 	_Echo *hello.EchoRequest,
 ) (success *hello.EchoResponse, resMeta yarpc.CallResMeta, err error) {
+
 	args := hello2.EchoHelper.Args(_Echo)
 
 	var body wire.Value

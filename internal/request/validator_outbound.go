@@ -33,13 +33,13 @@ type ValidatorOutbound struct{ transport.UnaryOutbound }
 type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
 
 // Call performs the given request, failing early if the request is invalid.
-func (o ValidatorOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (o ValidatorOutbound) CallUnary(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	request, err := Validate(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	return o.UnaryOutbound.Call(ctx, request)
+	return o.UnaryOutbound.CallUnary(ctx, request)
 }
 
 // CallOneway performs the given request, failing early if the request is invalid.

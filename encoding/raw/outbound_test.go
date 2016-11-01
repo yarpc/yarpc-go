@@ -90,7 +90,7 @@ func TestCallUnary(t *testing.T) {
 		}
 		close(writer)
 
-		outbound.EXPECT().Call(gomock.Any(),
+		outbound.EXPECT().CallUnary(gomock.Any(),
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
 					Caller:    caller,

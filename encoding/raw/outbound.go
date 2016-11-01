@@ -60,7 +60,7 @@ func (c rawClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, bod
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
 
-	tres, err := c.ch.GetUnaryOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().CallUnary(ctx, &treq)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -114,7 +114,7 @@ func (c thriftClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, 
 	//
 	// 	func (c *MyServiceClient) someMethod(reqMeta yarpc.CallReqMeta, arg1 Arg1Type, arg2 arg2Type) (returnValue, yarpc.CallResMeta, error) {
 	// 		args := myservice.SomeMethodHelper.Args(arg1, arg2)
-	// 		resBody, resMeta, err := c.client.Call(reqMeta, args)
+	// 		resBody, resMeta, err := c.client.CallUnary(reqMeta, args)
 	// 		var result myservice.SomeMethodResult
 	// 		if err = result.FromWire(resBody); err != nil {
 	// 			return nil, resMeta, err
@@ -130,7 +130,7 @@ func (c thriftClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, 
 		return wire.Value{}, nil, err
 	}
 
-	tres, err := out.Call(ctx, &treq)
+	tres, err := out.CallUnary(ctx, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}

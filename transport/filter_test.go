@@ -53,9 +53,9 @@ func TestNopFilter(t *testing.T) {
 	}
 
 	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
-	o.EXPECT().Call(ctx, req).Return(res, nil)
+	o.EXPECT().CallUnary(ctx, req).Return(res, nil)
 
-	got, err := wrappedO.Call(ctx, req)
+	got, err := wrappedO.CallUnary(ctx, req)
 	if assert.NoError(t, err) {
 		assert.Equal(t, res, got)
 	}
