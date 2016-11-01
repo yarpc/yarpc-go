@@ -345,10 +345,10 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 			tch.NewInbound(ch, tch.ListenAddr(":8087")),
 			ht.NewInbound(":8086"),
 		},
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:          "yarpc-test",
-				UnaryOutbound: outbound,
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary:  outbound,
+				Oneway: nil,
 			},
 		},
 	})

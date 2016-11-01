@@ -44,10 +44,9 @@ func main() {
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":8086"),
 		},
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:          "hello",
-				UnaryOutbound: http.NewOutbound("http://127.0.0.1:8086"),
+		Outbounds: yarpc.Outbounds{
+			"hello": {
+				Unary: http.NewOutbound("http://127.0.0.1:8086"),
 			},
 		},
 	})

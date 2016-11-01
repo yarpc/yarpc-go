@@ -162,10 +162,9 @@ func (t *testingTMock) Fatal(args ...interface{}) {
 func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:          "server",
-				UnaryOutbound: http.NewOutbound("http://localhost:65535"),
+		Outbounds: yarpc.Outbounds{
+			"server": {
+				Unary: http.NewOutbound("http://localhost:65535"),
 			},
 		},
 		Filter: recorder,
@@ -195,10 +194,9 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:          "server",
-				UnaryOutbound: http.NewOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr().String())),
+		Outbounds: yarpc.Outbounds{
+			"server": {
+				Unary: http.NewOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr().String())),
 			},
 		},
 		Filter: recorder,

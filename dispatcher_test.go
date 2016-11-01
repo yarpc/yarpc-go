@@ -99,8 +99,8 @@ func TestStartStopFailures(t *testing.T) {
 	tests := []struct {
 		desc string
 
-		inbounds       func(*gomock.Controller) []transport.Inbound
-		remoteServices func(*gomock.Controller) []yarpc.RemoteService
+		inbounds  func(*gomock.Controller) []transport.Inbound
+		outbounds func(*gomock.Controller) yarpc.Outbounds
 
 		wantStartErr string
 		wantStopErr  string
@@ -117,18 +117,18 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			remoteServices: func(mockCtrl *gomock.Controller) []yarpc.RemoteService {
-				remoteServices := make([]yarpc.RemoteService, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					remoteServices[i] = yarpc.RemoteService{
-						Name:          fmt.Sprintf("servuce-%v", i),
-						UnaryOutbound: out,
-					}
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
-				return remoteServices
+				return outbounds
 			},
 		},
 		{
@@ -147,18 +147,18 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			remoteServices: func(mockCtrl *gomock.Controller) []yarpc.RemoteService {
-				remoteServices := make([]yarpc.RemoteService, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					remoteServices[i] = yarpc.RemoteService{
-						Name:          fmt.Sprintf("servuce-%v", i),
-						UnaryOutbound: out,
-					}
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
-				return remoteServices
+				return outbounds
 			},
 			wantStartErr: "great sadness",
 		},
@@ -178,18 +178,18 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			remoteServices: func(mockCtrl *gomock.Controller) []yarpc.RemoteService {
-				remoteServices := make([]yarpc.RemoteService, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					remoteServices[i] = yarpc.RemoteService{
-						Name:          fmt.Sprintf("servuce-%v", i),
-						UnaryOutbound: out,
-					}
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
-				return remoteServices
+				return outbounds
 			},
 			wantStopErr: "great sadness",
 		},
@@ -205,8 +205,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			remoteServices: func(mockCtrl *gomock.Controller) []yarpc.RemoteService {
-				remoteServices := make([]yarpc.RemoteService, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					if i == 5 {
@@ -215,12 +215,12 @@ func TestStartStopFailures(t *testing.T) {
 						out.EXPECT().Start(gomock.Any()).Return(nil)
 						out.EXPECT().Stop().Return(nil)
 					}
-					remoteServices[i] = yarpc.RemoteService{
-						Name:          fmt.Sprintf("servuce-%v", i),
-						UnaryOutbound: out,
-					}
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
-				return remoteServices
+				return outbounds
 			},
 			wantStartErr: "something went wrong",
 			// TODO: Include the name of the outbound in the error message
@@ -237,8 +237,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			remoteServices: func(mockCtrl *gomock.Controller) []yarpc.RemoteService {
-				remoteServices := make([]yarpc.RemoteService, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
@@ -247,12 +247,12 @@ func TestStartStopFailures(t *testing.T) {
 					} else {
 						out.EXPECT().Stop().Return(nil)
 					}
-					remoteServices[i] = yarpc.RemoteService{
-						Name:          fmt.Sprintf("servuce-%v", i),
-						UnaryOutbound: out,
-					}
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
-				return remoteServices
+				return outbounds
 			},
 			wantStopErr: "something went wrong",
 			// TODO: Include the name of the outbound in the error message
@@ -264,9 +264,9 @@ func TestStartStopFailures(t *testing.T) {
 	for _, tt := range tests {
 
 		dispatcher := NewDispatcher(Config{
-			Name:           "test",
-			Inbounds:       tt.inbounds(mockCtrl),
-			RemoteServices: tt.remoteServices(mockCtrl),
+			Name:      "test",
+			Inbounds:  tt.inbounds(mockCtrl),
+			Outbounds: tt.outbounds(mockCtrl),
 		})
 
 		err := dispatcher.Start()

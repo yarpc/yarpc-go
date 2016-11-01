@@ -65,10 +65,9 @@ func main() {
 	cache := NewCacheFilter()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue-client",
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:          "keyvalue",
-				UnaryOutbound: outbound,
+		Outbounds: yarpc.Outbounds{
+			"keyvalue": {
+				Unary: outbound,
 			},
 		},
 		Filter: cache,

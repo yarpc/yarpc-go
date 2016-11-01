@@ -49,10 +49,9 @@ func Run(t crossdock.T) {
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-client",
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:          serverName,
-				UnaryOutbound: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+		Outbounds: yarpc.Outbounds{
+			serverName: {
+				Unary: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
 			},
 		},
 	})

@@ -46,20 +46,17 @@ func Run(t crossdock.T) {
 	baseURL := fmt.Sprintf("http://%v:%v", server, serverPort)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "apache-thrift-client",
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:           "ThriftTest",
-				UnaryOutbound:  http.NewOutbound(baseURL + "/thrift/ThriftTest"),
-				OnewayOutbound: http.NewOnewayOutbound(baseURL + "/thrift/ThriftTest"),
+		Outbounds: yarpc.Outbounds{
+			"ThriftTest": {
+				Unary:  http.NewOutbound(baseURL + "/thrift/ThriftTest"),
+				Oneway: http.NewOnewayOutbound(baseURL + "/thrift/ThriftTest"),
 			},
-			{
-				Name:          "SecondService",
-				UnaryOutbound: http.NewOutbound(baseURL + "/thrift/SecondService"),
+			"SecondService": {
+				Unary: http.NewOutbound(baseURL + "/thrift/SecondService"),
 			},
-			{
-				Name:           "Multiplexed",
-				UnaryOutbound:  http.NewOutbound(baseURL + "/thrift/multiplexed"),
-				OnewayOutbound: http.NewOnewayOutbound(baseURL + "/thrift/multiplexed"),
+			"Multiplexed": {
+				Unary:  http.NewOutbound(baseURL + "/thrift/multiplexed"),
+				Oneway: http.NewOnewayOutbound(baseURL + "/thrift/multiplexed"),
 			},
 		},
 	})

@@ -67,10 +67,9 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
-		RemoteServices: []yarpc.RemoteService{
-			{
-				Name:           "oneway-test",
-				OnewayOutbound: http.NewOnewayOutbound(fmt.Sprintf("http://%s:8084", server)),
+		Outbounds: yarpc.Outbounds{
+			"oneway-test": {
+				Oneway: http.NewOnewayOutbound(fmt.Sprintf("http://%s:8084", server)),
 			},
 		},
 		//for call back
