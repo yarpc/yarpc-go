@@ -25,12 +25,11 @@ package onewayserver
 
 import (
 	"context"
-
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/oneway/service/oneway"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the Oneway service.
@@ -50,8 +49,8 @@ type Interface interface {
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 	h := handler{impl}
 	service := thrift.Service{
-		Name:    "Oneway",
-		Methods: map[string]thrift.Handler{},
+		Name:         "Oneway",
+		UnaryMethods: map[string]thrift.UnaryHandler{},
 		OnewayMethods: map[string]thrift.OnewayHandler{
 			"echo": thrift.OnewayHandlerFunc(h.Echo),
 		},

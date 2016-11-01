@@ -35,7 +35,7 @@ import (
 
 // thriftHandler wraps a Thrift Handler into a transport.Handler and transport.OnewayHandler
 type thriftHandler struct {
-	Handler       Handler
+	Handler       UnaryHandler
 	OnewayHandler OnewayHandler
 	Protocol      protocol.Protocol
 	Enveloping    bool
@@ -71,7 +71,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 	}
 
 	reqMeta := meta.FromTransportRequest(treq)
-	res, err := t.Handler.Handle(ctx, reqMeta, envelope.Value)
+	res, err := t.Handler.HandleUnary(ctx, reqMeta, envelope.Value)
 	if err != nil {
 		return err
 	}
