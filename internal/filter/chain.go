@@ -27,10 +27,10 @@ import (
 )
 
 // Chain combines a series of filters into a single Filter.
-func Chain(filters ...transport.Filter) transport.Filter {
+func Chain(filters ...transport.UnaryFilter) transport.UnaryFilter {
 	switch len(filters) {
 	case 0:
-		return transport.NopFilter
+		return transport.NopUnaryFilter
 	case 1:
 		return filters[0]
 	default:
@@ -39,11 +39,11 @@ func Chain(filters ...transport.Filter) transport.Filter {
 }
 
 // filterChain combines a series of filters into a single Filter.
-type chain []transport.Filter
+type chain []transport.UnaryFilter
 
-func (c chain) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (c chain) CallUnary(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	return chainExec{
-		Chain: []transport.Filter(c),
+		Chain: []transport.UnaryFilter(c),
 		Final: out,
 	}.Call(ctx, request)
 }
@@ -51,7 +51,7 @@ func (c chain) Call(ctx context.Context, request *transport.Request, out transpo
 // chainExec adapts a series of filters into an Outbound. It is scoped to a
 // single call of an Outbound and is not thread-safe.
 type chainExec struct {
-	Chain []transport.Filter
+	Chain []transport.UnaryFilter
 	Final transport.UnaryOutbound
 }
 
@@ -69,5 +69,5 @@ func (x chainExec) Call(ctx context.Context, request *transport.Request) (*trans
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
-	return next.Call(ctx, request, x)
+	return next.CallUnary(ctx, request, x)
 }

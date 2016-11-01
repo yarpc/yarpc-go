@@ -227,7 +227,7 @@ func TestEndToEnd(t *testing.T) {
 		defer cancel()
 
 		require.Panics(t, func() {
-			client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+			client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		})
 		assert.Equal(t, tMock.fatalCount, 1)
 	})
@@ -239,7 +239,7 @@ func TestEndToEnd(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		rbody, _, err := client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
 		assert.Equal(t, rbody, []byte("Hello, World"))
 	})
@@ -251,7 +251,7 @@ func TestEndToEnd(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		rbody, _, err := client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
 		assert.Equal(t, rbody, []byte("Hello, World"))
 	})
@@ -273,7 +273,7 @@ func TestEmptyReplay(t *testing.T) {
 		defer cancel()
 
 		require.Panics(t, func() {
-			client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+			client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		})
 		assert.Equal(t, tMock.fatalCount, 1)
 	})
@@ -311,7 +311,7 @@ func TestRecording(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		rbody, _, err := client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
 		assert.Equal(t, []byte("Hello, World"), rbody)
 	})
@@ -344,7 +344,7 @@ func TestReplaying(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		rbody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
+		rbody, _, err := client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("hello"), []byte("Hello"))
 		require.NoError(t, err)
 		assert.Equal(t, rbody, []byte("Hello, World"))
 	})

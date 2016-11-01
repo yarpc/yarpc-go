@@ -131,7 +131,7 @@ func TestThriftHandler(t *testing.T) {
 		defer cancel()
 
 		handler := NewMockUnaryHandler(mockCtrl)
-		h := thriftHandler{Protocol: proto, Handler: handler, Enveloping: true}
+		h := thriftHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
 
 		if tt.expectHandle {
 			reqMeta := fakeReqMeta{

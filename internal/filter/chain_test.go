@@ -46,7 +46,7 @@ var retryFilter transport.FilterFunc = func(
 
 type countFilter struct{ Count int }
 
-func (c *countFilter) Call(
+func (c *countFilter) CallUnary(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	c.Count++
 	return o.Call(ctx, req)

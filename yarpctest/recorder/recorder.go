@@ -280,7 +280,7 @@ func (r *Recorder) makeFilePath(request *transport.Request, hash string) string 
 }
 
 // Call implements the yarpc transport filter interface
-func (r *Recorder) Call(
+func (r *Recorder) CallUnary(
 	ctx context.Context,
 	request *transport.Request,
 	out transport.UnaryOutbound) (*transport.Response, error) {

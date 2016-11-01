@@ -106,7 +106,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 
 	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
-	_, err := client.Call(
+	_, err := client.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Procedure(body.Procedure),
 		body.Body,

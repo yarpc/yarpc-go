@@ -101,9 +101,9 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 		spec := transport.HandlerSpec{
 			Type: transport.Unary,
 			UnaryHandler: thriftHandler{
-				Handler:    handler,
-				Protocol:   proto,
-				Enveloping: rc.Enveloping,
+				UnaryHandler: handler,
+				Protocol:     proto,
+				Enveloping:   rc.Enveloping,
 			},
 		}
 		rs = append(rs, transport.Registrant{

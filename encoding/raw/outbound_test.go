@@ -36,7 +36,7 @@ import (
 	"github.com/uber/tchannel-go/testutils/testreader"
 )
 
-func TestCall(t *testing.T) {
+func TestCallUnary(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -106,7 +106,7 @@ func TestCall(t *testing.T) {
 				Headers: transport.Headers(tt.wantHeaders),
 			}, nil)
 
-		resBody, res, err := client.Call(
+		resBody, res, err := client.CallUnary(
 			ctx,
 			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
 			tt.body)

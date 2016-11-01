@@ -64,7 +64,7 @@ type Config struct {
 
 	// Filter and Interceptor that will be applied to all outgoing and incoming
 	// requests respectively.
-	Filter      transport.Filter
+	Filter      transport.UnaryFilter
 	Interceptor transport.UnaryInterceptor
 
 	Tracer opentracing.Tracer
@@ -96,8 +96,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 
 func convertRemoteServices(
 	remoteServices []RemoteService,
-	filter transport.Filter,
-) map[string]transport.RemoteService {
+	filter transport.UnaryFilter) map[string]transport.RemoteService {
 	services := make(map[string]transport.RemoteService, len(remoteServices))
 
 	for _, rs := range remoteServices {
@@ -153,7 +152,7 @@ type dispatcher struct {
 	RemoteServices map[string]transport.RemoteService
 
 	//TODO: get rid of these, can just apply filter in NewDispatcher
-	Filter      transport.Filter
+	Filter      transport.UnaryFilter
 	Interceptor transport.UnaryInterceptor
 
 	inbounds []transport.Inbound

@@ -74,7 +74,7 @@ type Registry interface {
 // procedures.
 type MapRegistry struct {
 	defaultService string
-	entries        map[ServiceProcedure]UnaryHandler
+	unaryEntries   map[ServiceProcedure]UnaryHandler
 	onewayEntries  map[ServiceProcedure]OnewayHandler
 }
 
@@ -83,7 +83,7 @@ type MapRegistry struct {
 func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
-		entries:        make(map[ServiceProcedure]UnaryHandler),
+		unaryEntries:   make(map[ServiceProcedure]UnaryHandler),
 		onewayEntries:  make(map[ServiceProcedure]OnewayHandler),
 	}
 }
@@ -97,7 +97,7 @@ func (m MapRegistry) Register(rs []Registrant) {
 
 		switch r.HandlerSpec.Type {
 		case Unary:
-			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.UnaryHandler
+			m.unaryEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.UnaryHandler
 		case Oneway:
 			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.OnewayHandler
 		default:
@@ -109,8 +109,8 @@ func (m MapRegistry) Register(rs []Registrant) {
 // ServiceProcedures returns a list of services and their procedures that
 // have been registered so far.
 func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
-	procs := make([]ServiceProcedure, 0, len(m.entries))
-	for k := range m.entries {
+	procs := make([]ServiceProcedure, 0, len(m.unaryEntries))
+	for k := range m.unaryEntries {
 		procs = append(procs, k)
 	}
 	sort.Sort(byServiceProcedure(procs))
@@ -124,7 +124,7 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 		service = m.defaultService
 	}
 
-	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
+	if h, ok := m.unaryEntries[ServiceProcedure{service, procedure}]; ok {
 		return HandlerSpec{Type: Unary, UnaryHandler: h}, nil
 	}
 	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {

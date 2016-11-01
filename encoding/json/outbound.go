@@ -39,7 +39,7 @@ type Client interface {
 	// json.Unmarshal.
 	//
 	// Returns the response or an error if the request failed.
-	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
+	CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
 	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (transport.Ack, error)
 }
 
@@ -56,7 +56,7 @@ type jsonClient struct {
 	ch transport.Channel
 }
 
-func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
+func (c jsonClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
 	treq := transport.Request{
 		Caller:   c.ch.Caller(),
 		Service:  c.ch.Service(),

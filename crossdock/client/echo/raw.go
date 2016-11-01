@@ -47,7 +47,7 @@ func Raw(t crossdock.T) {
 	defer cancel()
 
 	token := random.Bytes(5)
-	resBody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("echo/raw"), token)
+	resBody, _, err := client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("echo/raw"), token)
 
 	crossdock.Fatals(t).NoError(err, "call to echo/raw failed: %v", err)
 	crossdock.Assert(t).True(bytes.Equal(token, resBody), "server said: %v", resBody)

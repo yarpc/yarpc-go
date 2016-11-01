@@ -28,7 +28,7 @@ import (
 
 // Filters combines the given collection of filters in-order into a single
 // Filter.
-func Filters(filters ...transport.Filter) transport.Filter {
+func Filters(filters ...transport.UnaryFilter) transport.UnaryFilter {
 	return filter.Chain(filters...)
 }
 
