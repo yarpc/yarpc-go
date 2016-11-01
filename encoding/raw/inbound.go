@@ -31,7 +31,7 @@ import (
 
 // rawHandler adapts a Handler into a transport.Handler and transport.OnewayHandler
 type rawHandler struct {
-	handler       Handler
+	UnaryHandler  UnaryHandler
 	OnewayHandler OnewayHandler
 }
 
@@ -46,7 +46,7 @@ func (r rawHandler) HandleUnary(ctx context.Context, treq *transport.Request, rw
 	}
 
 	reqMeta := meta.FromTransportRequest(treq)
-	resBody, resMeta, err := r.handler(ctx, reqMeta, reqBody)
+	resBody, resMeta, err := r.UnaryHandler(ctx, reqMeta, reqBody)
 	if err != nil {
 		return err
 	}

@@ -37,17 +37,17 @@ func Register(r transport.Registry, rs []transport.Registrant) {
 	r.Register(rs)
 }
 
-// Handler implements a single, unary procedure.
-type Handler func(context.Context, yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
+// UnaryHandler implements a single, unary procedure.
+type UnaryHandler func(context.Context, yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
 
-// Procedure builds a Registrant from the given raw handler.
-func Procedure(name string, handler Handler) []transport.Registrant {
+// UnaryProcedure builds a Registrant from the given raw handler.
+func UnaryProcedure(name string, handler UnaryHandler) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
 			HandlerSpec: transport.HandlerSpec{
 				Type:         transport.Unary,
-				UnaryHandler: rawHandler{handler: handler},
+				UnaryHandler: rawHandler{UnaryHandler: handler},
 			},
 		},
 	}

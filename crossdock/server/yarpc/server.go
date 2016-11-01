@@ -72,18 +72,18 @@ func Stop() {
 }
 
 func register(reg transport.Registry) {
-	reg.Register(raw.Procedure("echo/raw", EchoRaw))
-	reg.Register(json.Procedure("echo", EchoJSON))
+	reg.Register(raw.UnaryProcedure("echo/raw", EchoRaw))
+	reg.Register(json.UnaryProcedure("echo", EchoJSON))
 
 	reg.Register(echoserver.New(EchoThrift{}))
 	reg.Register(thrifttestserver.New(thriftTest{}))
 	reg.Register(secondserviceserver.New(secondService{}))
 
-	reg.Register(json.Procedure("unexpected-error", UnexpectedError))
-	reg.Register(json.Procedure("bad-response", BadResponse))
-	reg.Register(json.Procedure("phone", Phone))
-	reg.Register(json.Procedure("sleep", Sleep))
+	reg.Register(json.UnaryProcedure("unexpected-error", UnexpectedError))
+	reg.Register(json.UnaryProcedure("bad-response", BadResponse))
+	reg.Register(json.UnaryProcedure("phone", Phone))
+	reg.Register(json.UnaryProcedure("sleep", Sleep))
 
-	reg.Register(raw.Procedure("sleep/raw", SleepRaw))
-	reg.Register(raw.Procedure("waitfortimeout/raw", WaitForTimeoutRaw))
+	reg.Register(raw.UnaryProcedure("sleep/raw", SleepRaw))
+	reg.Register(raw.UnaryProcedure("waitfortimeout/raw", WaitForTimeoutRaw))
 }

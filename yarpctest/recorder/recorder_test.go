@@ -185,7 +185,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 		Inbounds: []transport.Inbound{serverHTTP},
 	})
 
-	serverDisp.Register(raw.Procedure("hello",
+	serverDisp.Register(raw.UnaryProcedure("hello",
 		func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
 			return append(body, []byte(", World")...), nil, nil
 		}))
