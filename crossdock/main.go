@@ -21,11 +21,16 @@
 package main
 
 import (
+	"github.com/opentracing/opentracing-go"
+	jaeger "github.com/uber/jaeger-client-go"
 	"go.uber.org/yarpc/crossdock/client"
 	"go.uber.org/yarpc/crossdock/server"
 )
 
 func main() {
+	tracer, _ := jaeger.NewTracer("crossdock", jaeger.NewConstSampler(true), jaeger.NewNullReporter())
+	opentracing.InitGlobalTracer(tracer)
+
 	server.Start()
 	client.Start()
 }

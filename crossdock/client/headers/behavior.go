@@ -121,7 +121,16 @@ func Run(t crossdock.T) {
 	for _, tt := range tests {
 		got, err := caller.Call(tt.give)
 		if checks.NoError(err, "%v: call failed", tt.desc) {
-			assert.Equal(tt.want, got, "%v: returns valid headers", tt.desc)
+			for _, header := range tt.want.Keys() {
+				expectedValue, _ := tt.want.Get(header)
+				actualValue, _ := got.Get(header)
+				assert.Equal(
+					expectedValue,
+					actualValue,
+					"%v: returns valid headers",
+					tt.desc,
+				)
+			}
 		}
 	}
 }

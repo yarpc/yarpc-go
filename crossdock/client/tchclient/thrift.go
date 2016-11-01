@@ -49,7 +49,13 @@ func runThrift(t crossdock.T, call call) {
 	resp, respHeaders, err := thriftCall(client, headers, token)
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resp.Boop, "body echoed")
-		assert.Equal(headers, respHeaders, "headers echoed")
+		for key, value := range headers {
+			assert.Equal(
+				value,
+				respHeaders[key],
+				"headers echoed",
+			)
+		}
 	}
 
 	runGauntlet(t, client)
