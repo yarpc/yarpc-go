@@ -64,3 +64,9 @@ type OnewayOutbound interface {
 	// concurrently.
 	CallOneway(ctx context.Context, request *Request) (Ack, error)
 }
+
+// Outbounds encapsulates outbound types for a service
+type Outbounds struct {
+	Unary  UnaryOutbound
+	Oneway OnewayOutbound
+}

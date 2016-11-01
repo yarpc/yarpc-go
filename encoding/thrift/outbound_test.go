@@ -184,10 +184,10 @@ func TestClient(t *testing.T) {
 		opts = append(opts, Protocol(proto))
 		c := New(Config{
 			Service: "MyService",
-			Channel: transport.MultiOutboundChannel("caller", transport.RemoteService{
-				Name:          "service",
-				UnaryOutbound: trans,
-			}),
+			Channel: transport.MultiOutboundChannel("caller", "service",
+				transport.Outbounds{
+					Unary: trans,
+				}),
 		}, opts...)
 
 		_, _, err := c.CallUnary(ctx, nil, tt.giveRequestBody)
@@ -303,10 +303,10 @@ func TestClientOneway(t *testing.T) {
 
 		c := New(Config{
 			Service: service,
-			Channel: transport.MultiOutboundChannel(caller, transport.RemoteService{
-				Name:           service,
-				OnewayOutbound: onewayOutbound,
-			}),
+			Channel: transport.MultiOutboundChannel(caller, service,
+				transport.Outbounds{
+					Oneway: onewayOutbound,
+				}),
 		}, opts...)
 
 		ack, err := c.CallOneway(ctx, nil, tt.giveRequestBody)

@@ -47,31 +47,24 @@ type Channel interface {
 	GetOnewayOutbound() OnewayOutbound
 }
 
-// RemoteService encapsulates a service's outbounds
-type RemoteService struct {
-	Name string
-
-	UnaryOutbound  UnaryOutbound
-	OnewayOutbound OnewayOutbound
-}
-
 // MultiOutboundChannel constructs a Channel backed by multiple outobund types
-func MultiOutboundChannel(caller string, rs RemoteService) Channel {
-	return multiOutboundChannel{caller: caller, rs: rs}
+func MultiOutboundChannel(caller, service string, Outbounds Outbounds) Channel {
+	return multiOutboundChannel{caller: caller, service: service, Outbounds: Outbounds}
 }
 
 type multiOutboundChannel struct {
-	caller string
-	rs     RemoteService
+	caller    string
+	service   string
+	Outbounds Outbounds
 }
 
 func (c multiOutboundChannel) Caller() string  { return c.caller }
-func (c multiOutboundChannel) Service() string { return c.rs.Name }
+func (c multiOutboundChannel) Service() string { return c.service }
 
 func (c multiOutboundChannel) GetUnaryOutbound() UnaryOutbound {
-	return c.rs.UnaryOutbound
+	return c.Outbounds.Unary
 }
 
 func (c multiOutboundChannel) GetOnewayOutbound() OnewayOutbound {
-	return c.rs.OnewayOutbound
+	return c.Outbounds.Oneway
 }

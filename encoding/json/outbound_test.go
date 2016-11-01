@@ -99,10 +99,10 @@ func TestCallUnary(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
-		client := New(transport.MultiOutboundChannel(caller, transport.RemoteService{
-			Name:          service,
-			UnaryOutbound: outbound,
-		}))
+		client := New(transport.MultiOutboundChannel(caller, service,
+			transport.Outbounds{
+				Unary: outbound,
+			}))
 
 		if !tt.noCall {
 			outbound.EXPECT().CallUnary(gomock.Any(),
@@ -199,10 +199,10 @@ func TestCallOneway(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
-		client := New(transport.MultiOutboundChannel(caller, transport.RemoteService{
-			Name:           service,
-			OnewayOutbound: outbound,
-		}))
+		client := New(transport.MultiOutboundChannel(caller, service,
+			transport.Outbounds{
+				Oneway: outbound,
+			}))
 
 		if !tt.noCall {
 			reqMatcher := transporttest.NewRequestMatcher(t,

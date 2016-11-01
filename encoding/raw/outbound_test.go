@@ -79,10 +79,10 @@ func TestCallUnary(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
-		client := New(transport.MultiOutboundChannel(caller, transport.RemoteService{
-			Name:          service,
-			UnaryOutbound: outbound,
-		}))
+		client := New(transport.MultiOutboundChannel(caller, service,
+			transport.Outbounds{
+				Unary: outbound,
+			}))
 
 		writer, responseBody := testreader.ChunkReader()
 		for _, chunk := range tt.responseBody {
@@ -160,10 +160,10 @@ func TestCallOneway(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
-		client := New(transport.MultiOutboundChannel(caller, transport.RemoteService{
-			Name:           service,
-			OnewayOutbound: outbound,
-		}))
+		client := New(transport.MultiOutboundChannel(caller, service,
+			transport.Outbounds{
+				Oneway: outbound,
+			}))
 
 		outbound.EXPECT().CallOneway(gomock.Any(),
 			transporttest.NewRequestMatcher(t,
@@ -204,10 +204,10 @@ func TestCallOnewayFailure(t *testing.T) {
 	body := []byte{1, 2, 3}
 
 	outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
-	client := New(transport.MultiOutboundChannel(caller, transport.RemoteService{
-		Name:           service,
-		OnewayOutbound: outbound,
-	}))
+	client := New(transport.MultiOutboundChannel(caller, service,
+		transport.Outbounds{
+			Oneway: outbound,
+		}))
 
 	outbound.EXPECT().CallOneway(gomock.Any(),
 		transporttest.NewRequestMatcher(t,

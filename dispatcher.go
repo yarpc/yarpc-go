@@ -95,9 +95,8 @@ func NewDispatcher(cfg Config) Dispatcher {
 }
 
 func convertRemoteServices(
-	remoteServices []RemoteService,
-	filter transport.UnaryFilter) map[string]transport.RemoteService {
-	services := make(map[string]transport.RemoteService, len(remoteServices))
+	remoteServices []RemoteService, filter transport.UnaryFilter) map[string]transport.Outbounds {
+	services := make(map[string]transport.Outbounds, len(remoteServices))
 
 	for _, rs := range remoteServices {
 		// This ensures that we don't apply filters/validators to the same outbound
@@ -131,10 +130,9 @@ func convertRemoteServices(
 			}
 		}
 
-		services[rs.Name] = transport.RemoteService{
-			Name:           rs.Name,
-			UnaryOutbound:  outbound,
-			OnewayOutbound: onewayOutbound,
+		services[rs.Name] = transport.Outbounds{
+			Unary:  outbound,
+			Oneway: onewayOutbound,
 		}
 	}
 
@@ -149,7 +147,7 @@ type dispatcher struct {
 
 	Name string
 
-	RemoteServices map[string]transport.RemoteService
+	RemoteServices map[string]transport.Outbounds
 
 	//TODO: get rid of these, can just apply filter in NewDispatcher
 	Filter      transport.UnaryFilter
@@ -168,7 +166,7 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 
 func (d dispatcher) Channel(service string) transport.Channel {
 	if rs, ok := d.RemoteServices[service]; ok {
-		return transport.MultiOutboundChannel(d.Name, rs)
+		return transport.MultiOutboundChannel(d.Name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }
@@ -274,14 +272,14 @@ func (d dispatcher) getUniqueOutbounds() []transport.Outbound {
 	var unique []transport.Outbound
 
 	for _, rs := range d.RemoteServices {
-		if rs.UnaryOutbound == nil {
-			unique = append(unique, rs.OnewayOutbound)
-		} else if rs.OnewayOutbound == nil {
-			unique = append(unique, rs.UnaryOutbound)
-		} else if rs.UnaryOutbound.(transport.Outbound) == rs.OnewayOutbound.(transport.Outbound) {
-			unique = append(unique, rs.UnaryOutbound)
+		if rs.Unary == nil {
+			unique = append(unique, rs.Oneway)
+		} else if rs.Oneway == nil {
+			unique = append(unique, rs.Unary)
+		} else if rs.Unary.(transport.Outbound) == rs.Oneway.(transport.Outbound) {
+			unique = append(unique, rs.Unary)
 		} else {
-			unique = append(unique, rs.UnaryOutbound, rs.OnewayOutbound)
+			unique = append(unique, rs.Unary, rs.Oneway)
 		}
 	}
 

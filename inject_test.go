@@ -126,9 +126,9 @@ func TestInjectClientSuccess(t *testing.T) {
 			}{
 				Client: json.New(transport.MultiOutboundChannel(
 					"foo",
-					transport.RemoteService{
-						Name:          "bar",
-						UnaryOutbound: transporttest.NewMockUnaryOutbound(mockCtrl),
+					"bar",
+					transport.Outbounds{
+						Unary: transporttest.NewMockUnaryOutbound(mockCtrl),
 					})),
 			},
 			wantNonNil: []string{"Client"},
