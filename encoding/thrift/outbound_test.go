@@ -190,7 +190,7 @@ func TestClient(t *testing.T) {
 			}),
 		}, opts...)
 
-		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
+		_, _, err := c.CallUnary(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)

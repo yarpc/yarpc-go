@@ -26,10 +26,10 @@ package keyvalueclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
+	"go.uber.org/yarpc/transport"
 )
 
 // Interface is a client for the KeyValue service.
@@ -74,7 +74,7 @@ func (c client) GetValue(
 	args := keyvalue.GetValueHelper.Args(_Key)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -97,7 +97,7 @@ func (c client) SetValue(
 	args := keyvalue.SetValueHelper.Args(_Key, _Value)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
