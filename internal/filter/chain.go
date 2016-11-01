@@ -41,7 +41,7 @@ func Chain(filters ...transport.Filter) transport.Filter {
 // filterChain combines a series of filters into a single Filter.
 type chain []transport.Filter
 
-func (c chain) Call(ctx context.Context, request *transport.Request, out transport.Outbound) (*transport.Response, error) {
+func (c chain) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	return chainExec{
 		Chain: []transport.Filter(c),
 		Final: out,
@@ -52,7 +52,7 @@ func (c chain) Call(ctx context.Context, request *transport.Request, out transpo
 // single call of an Outbound and is not thread-safe.
 type chainExec struct {
 	Chain []transport.Filter
-	Final transport.Outbound
+	Final transport.UnaryOutbound
 }
 
 func (x chainExec) Start(d transport.Deps) error {

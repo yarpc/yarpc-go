@@ -22,10 +22,10 @@ package transport
 
 import "context"
 
-//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport Outbound,OnewayOutbound
+//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport UnaryOutbound,OnewayOutbound
 
-// BaseOutbound is the common interface for all outbounds
-type BaseOutbound interface {
+// Outbound is the common interface for all outbounds
+type Outbound interface {
 	// Sets up the outbound to start making calls.
 	//
 	// This MUST block until the outbound is ready to start sending requests.
@@ -37,10 +37,10 @@ type BaseOutbound interface {
 	Stop() error
 }
 
-// Outbound is a transport that knows how to send unary requests for procedure
+// UnaryOutbound is a transport that knows how to send unary requests for procedure
 // calls.
-type Outbound interface {
-	BaseOutbound
+type UnaryOutbound interface {
+	Outbound
 
 	// Call sends the given request through this transport and returns its
 	// response.
@@ -54,9 +54,9 @@ type Outbound interface {
 // OnewayOutbound is a transport that knows how to send oneway requests for
 // procedure calls.
 type OnewayOutbound interface {
-	BaseOutbound
+	Outbound
 
-	// Call sends the given request through this transport and returns its
+	// CallOneway sends the given request through this transport and returns its
 	// response.
 	//
 	// This MUST NOT be called before Start() has been called successfully. This

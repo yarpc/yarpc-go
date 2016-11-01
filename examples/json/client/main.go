@@ -90,7 +90,7 @@ func main() {
 
 	flag.Parse()
 
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
 		outbound = http.NewOutbound("http://localhost:24034")
@@ -108,8 +108,8 @@ func main() {
 		Name: "keyvalue-client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:     "keyvalue",
-				Outbound: outbound,
+				Name:          "keyvalue",
+				UnaryOutbound: outbound,
 			},
 		},
 		Filter: yarpc.Filters(requestLogFilter{}),

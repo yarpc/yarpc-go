@@ -123,7 +123,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	// 		return success, resMeta, err
 	// 	}
 
-	out := c.ch.GetOutbound()
+	out := c.ch.GetUnaryOutbound()
 
 	treq, proto, err := c.buildTransportRequest(reqMeta, reqBody)
 	if err != nil {

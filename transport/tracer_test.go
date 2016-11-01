@@ -122,8 +122,8 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 		},
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:     "yarpc-test",
-				Outbound: http.NewOutbound("http://127.0.0.1:18080"),
+				Name:          "yarpc-test",
+				UnaryOutbound: http.NewOutbound("http://127.0.0.1:18080"),
 			},
 		},
 		Tracer: tracer,
@@ -148,8 +148,8 @@ func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dis
 		},
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:     "yarpc-test",
-				Outbound: ytchannel.NewOutbound(ch, ytchannel.HostPort(hp)),
+				Name:          "yarpc-test",
+				UnaryOutbound: ytchannel.NewOutbound(ch, ytchannel.HostPort(hp)),
 			},
 		},
 		Tracer: tracer,

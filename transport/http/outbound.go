@@ -62,8 +62,8 @@ func KeepAlive(t time.Duration) OutboundOption {
 
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
-func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
-	return newOutbound(url, opts...).(transport.Outbound)
+func NewOutbound(url string, opts ...OutboundOption) transport.UnaryOutbound {
+	return newOutbound(url, opts...).(transport.UnaryOutbound)
 }
 
 // NewOnewayOutbound builds a new HTTP outbound that sends oneway requests to
@@ -74,12 +74,12 @@ func NewOnewayOutbound(url string, opts ...OutboundOption) transport.OnewayOutbo
 
 // NewOutbounds builds an HTTP Outbound and OnewayOutbound based on the same
 // underlying object, that send requests to the given URL.
-func NewOutbounds(url string, opts ...OutboundOption) (transport.Outbound, transport.OnewayOutbound) {
+func NewOutbounds(url string, opts ...OutboundOption) (transport.UnaryOutbound, transport.OnewayOutbound) {
 	out := newOutbound(url, opts...)
-	return out.(transport.Outbound), out.(transport.OnewayOutbound)
+	return out.(transport.UnaryOutbound), out.(transport.OnewayOutbound)
 }
 
-func newOutbound(url string, opts ...OutboundOption) transport.BaseOutbound {
+func newOutbound(url string, opts ...OutboundOption) transport.Outbound {
 	cfg := defaultConfig
 	for _, o := range opts {
 		o(&cfg)

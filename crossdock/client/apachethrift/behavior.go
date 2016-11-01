@@ -49,16 +49,16 @@ func Run(t crossdock.T) {
 		RemoteServices: []yarpc.RemoteService{
 			{
 				Name:           "ThriftTest",
-				Outbound:       http.NewOutbound(baseURL + "/thrift/ThriftTest"),
+				UnaryOutbound:  http.NewOutbound(baseURL + "/thrift/ThriftTest"),
 				OnewayOutbound: http.NewOnewayOutbound(baseURL + "/thrift/ThriftTest"),
 			},
 			{
-				Name:     "SecondService",
-				Outbound: http.NewOutbound(baseURL + "/thrift/SecondService"),
+				Name:          "SecondService",
+				UnaryOutbound: http.NewOutbound(baseURL + "/thrift/SecondService"),
 			},
 			{
 				Name:           "Multiplexed",
-				Outbound:       http.NewOutbound(baseURL + "/thrift/multiplexed"),
+				UnaryOutbound:  http.NewOutbound(baseURL + "/thrift/multiplexed"),
 				OnewayOutbound: http.NewOnewayOutbound(baseURL + "/thrift/multiplexed"),
 			},
 		},

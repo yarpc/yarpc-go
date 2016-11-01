@@ -70,7 +70,7 @@ type PhoneResponse struct {
 
 // Phone implements the phone procedure
 func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 
 	switch {
 	case body.Transport.HTTP != nil:
@@ -96,8 +96,8 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 
 	// TODO use reqMeta.Service for caller
 	client := json.New(transport.MultiOutboundChannel("yarpc-test", transport.RemoteService{
-		Name:     body.Service,
-		Outbound: outbound,
+		Name:          body.Service,
+		UnaryOutbound: outbound,
 	}))
 	resBody := PhoneResponse{
 		Service:   "yarpc-test", // TODO use reqMeta.Service

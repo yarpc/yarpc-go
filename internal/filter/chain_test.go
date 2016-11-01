@@ -36,7 +36,7 @@ import (
 )
 
 var retryFilter transport.FilterFunc = func(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
+	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	res, err := o.Call(ctx, req)
 	if err != nil {
 		res, err = o.Call(ctx, req)
@@ -47,7 +47,7 @@ var retryFilter transport.FilterFunc = func(
 type countFilter struct{ Count int }
 
 func (c *countFilter) Call(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
+	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	c.Count++
 	return o.Call(ctx, req)
 }
@@ -69,7 +69,7 @@ func TestChain(t *testing.T) {
 		Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
 	}
 
-	o := transporttest.NewMockOutbound(mockCtrl)
+	o := transporttest.NewMockUnaryOutbound(mockCtrl)
 	o.EXPECT().Call(ctx, req).After(
 		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
 	).Return(res, nil)

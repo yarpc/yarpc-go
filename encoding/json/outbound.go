@@ -70,7 +70,7 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().Call(ctx, &treq)
 
 	if err != nil {
 		return nil, err

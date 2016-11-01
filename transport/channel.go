@@ -43,7 +43,7 @@ type Channel interface {
 	//
 	// MAY be called multiple times for a request. The returned outbound MUST
 	// have already been started.
-	GetOutbound() Outbound
+	GetUnaryOutbound() UnaryOutbound
 	GetOnewayOutbound() OnewayOutbound
 }
 
@@ -51,7 +51,7 @@ type Channel interface {
 type RemoteService struct {
 	Name string
 
-	Outbound       Outbound
+	UnaryOutbound  UnaryOutbound
 	OnewayOutbound OnewayOutbound
 }
 
@@ -68,8 +68,8 @@ type multiOutboundChannel struct {
 func (c multiOutboundChannel) Caller() string  { return c.caller }
 func (c multiOutboundChannel) Service() string { return c.rs.Name }
 
-func (c multiOutboundChannel) GetOutbound() Outbound {
-	return c.rs.Outbound
+func (c multiOutboundChannel) GetUnaryOutbound() UnaryOutbound {
+	return c.rs.UnaryOutbound
 }
 
 func (c multiOutboundChannel) GetOnewayOutbound() OnewayOutbound {

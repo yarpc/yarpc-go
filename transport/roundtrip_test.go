@@ -55,7 +55,7 @@ const (
 type roundTripTransport interface {
 	// Set up an Inbound serving Registry r, and call f with an Outbound that
 	// knows how to talk to that Inbound.
-	WithRegistry(r transport.Registry, f func(transport.Outbound))
+	WithRegistry(r transport.Registry, f func(transport.UnaryOutbound))
 	WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound))
 }
 
@@ -97,7 +97,7 @@ func (f OnewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Reques
 // httpTransport implements a roundTripTransport for HTTP.
 type httpTransport struct{ t *testing.T }
 
-func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Outbound)) {
+func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
 	i := http.NewInbound("127.0.0.1:0")
 	require.NoError(ht.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
 	defer i.Stop()
@@ -124,7 +124,7 @@ func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transpor
 // tchannelTransport implements a roundTripTransport for TChannel.
 type tchannelTransport struct{ t *testing.T }
 
-func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.Outbound)) {
+func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
@@ -245,7 +245,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 			defer cancel()
 
 			registry := staticRegistry{Handler: handler}
-			trans.WithRegistry(registry, func(o transport.Outbound) {
+			trans.WithRegistry(registry, func(o transport.UnaryOutbound) {
 				res, err := o.Call(ctx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,

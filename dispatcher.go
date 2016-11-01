@@ -74,7 +74,7 @@ type Config struct {
 type RemoteService struct {
 	Name string
 
-	Outbound       transport.Outbound
+	UnaryOutbound  transport.UnaryOutbound
 	OnewayOutbound transport.OnewayOutbound
 }
 
@@ -104,17 +104,17 @@ func convertRemoteServices(
 		// This ensures that we don't apply filters/validators to the same outbound
 		//	more than once. This can be the case if one object implements multiple
 		//	outbound types
-		seen := make(map[transport.BaseOutbound]transport.BaseOutbound, 2)
+		seen := make(map[transport.Outbound]transport.Outbound, 2)
 
-		outbound := rs.Outbound
+		outbound := rs.UnaryOutbound
 		onewayOutbound := rs.OnewayOutbound
 
 		// apply filters and create ValidatorOutbounds
-		if rs.Outbound != nil {
-			original := rs.Outbound
+		if rs.UnaryOutbound != nil {
+			original := rs.UnaryOutbound
 
-			outbound = transport.ApplyFilter(rs.Outbound, filter)
-			outbound = request.ValidatorOutbound{Outbound: outbound}
+			outbound = transport.ApplyFilter(rs.UnaryOutbound, filter)
+			outbound = request.ValidatorOutbound{UnaryOutbound: outbound}
 
 			seen[original] = outbound
 		}
@@ -134,7 +134,7 @@ func convertRemoteServices(
 
 		services[rs.Name] = transport.RemoteService{
 			Name:           rs.Name,
-			Outbound:       outbound,
+			UnaryOutbound:  outbound,
 			OnewayOutbound: onewayOutbound,
 		}
 	}
@@ -178,7 +178,7 @@ func (d dispatcher) Start() error {
 	var (
 		mu               sync.Mutex
 		startedInbounds  []transport.Inbound
-		startedOutbounds []transport.BaseOutbound
+		startedOutbounds []transport.Outbound
 	)
 
 	service := transport.ServiceDetail{
@@ -199,7 +199,7 @@ func (d dispatcher) Start() error {
 		}
 	}
 
-	startOutbound := func(o transport.BaseOutbound) func() error {
+	startOutbound := func(o transport.Outbound) func() error {
 		return func() error {
 			if err := o.Start(d.deps); err != nil {
 				return err
@@ -271,18 +271,18 @@ func (d dispatcher) Stop() error {
 	return nil
 }
 
-func (d dispatcher) getUniqueOutbounds() []transport.BaseOutbound {
-	var unique []transport.BaseOutbound
+func (d dispatcher) getUniqueOutbounds() []transport.Outbound {
+	var unique []transport.Outbound
 
 	for _, rs := range d.RemoteServices {
-		if rs.Outbound == nil {
+		if rs.UnaryOutbound == nil {
 			unique = append(unique, rs.OnewayOutbound)
 		} else if rs.OnewayOutbound == nil {
-			unique = append(unique, rs.Outbound)
-		} else if rs.Outbound.(transport.BaseOutbound) == rs.OnewayOutbound.(transport.BaseOutbound) {
-			unique = append(unique, rs.Outbound)
+			unique = append(unique, rs.UnaryOutbound)
+		} else if rs.UnaryOutbound.(transport.Outbound) == rs.OnewayOutbound.(transport.Outbound) {
+			unique = append(unique, rs.UnaryOutbound)
 		} else {
-			unique = append(unique, rs.Outbound, rs.OnewayOutbound)
+			unique = append(unique, rs.UnaryOutbound, rs.OnewayOutbound)
 		}
 	}
 

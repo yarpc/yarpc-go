@@ -318,8 +318,8 @@ func TestHandlerPanic(t *testing.T) {
 		Name: "yarpc-test-client",
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:     "yarpc-test",
-				Outbound: NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
+				Name:          "yarpc-test",
+				UnaryOutbound: NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
 			},
 		},
 	})

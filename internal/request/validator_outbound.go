@@ -27,7 +27,7 @@ import (
 )
 
 // ValidatorOutbound wraps an Outbound to validate all outgoing requests.
-type ValidatorOutbound struct{ transport.Outbound }
+type ValidatorOutbound struct{ transport.UnaryOutbound }
 
 // OnewayValidatorOutbound wraps an Outbound to validate all outgoing requests.
 type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
@@ -39,7 +39,7 @@ func (o ValidatorOutbound) Call(ctx context.Context, request *transport.Request)
 		return nil, err
 	}
 
-	return o.Outbound.Call(ctx, request)
+	return o.UnaryOutbound.Call(ctx, request)
 }
 
 // CallOneway performs the given request, failing early if the request is invalid.

@@ -46,8 +46,8 @@ func main() {
 		},
 		RemoteServices: []yarpc.RemoteService{
 			{
-				Name:     "hello",
-				Outbound: http.NewOutbound("http://127.0.0.1:8086"),
+				Name:          "hello",
+				UnaryOutbound: http.NewOutbound("http://127.0.0.1:8086"),
 			},
 		},
 	})
