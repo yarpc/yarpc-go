@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/random"
+	"go.uber.org/yarpc/crossdock/internal"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 
@@ -52,15 +53,8 @@ func hello(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	}
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		for _, header := range headers.Keys() {
-			expectedValue, _ := headers.Get(header)
-			actualValue, _ := resMeta.Headers().Get(header)
-			assert.Equal(
-				expectedValue,
-				actualValue,
-				"headers echoed",
-			)
-		}
+		resHeaders := internal.RemoveVariableHeaderKeys(resMeta.Headers())
+		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 }
 

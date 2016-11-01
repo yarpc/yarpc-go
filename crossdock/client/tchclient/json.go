@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/crossdock/client/random"
+	"go.uber.org/yarpc/crossdock/internal"
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go/json"
@@ -41,13 +42,8 @@ func runJSON(t crossdock.T, call call) {
 	resp, respHeaders, err := jsonCall(call, headers, token)
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resp.Token, "body echoed")
-		for key, value := range headers {
-			assert.Equal(
-				value,
-				respHeaders[key],
-				"headers echoed",
-			)
-		}
+		respHeaders = internal.RemoveVariableMapKeys(respHeaders)
+		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 }
 

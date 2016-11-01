@@ -28,6 +28,7 @@ import (
 	disp "go.uber.org/yarpc/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/crossdock/client/params"
 	"go.uber.org/yarpc/crossdock/client/random"
+	"go.uber.org/yarpc/crossdock/internal"
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/crossdock/thrift/echo/yarpc/echoclient"
 	"go.uber.org/yarpc/encoding/json"
@@ -121,16 +122,8 @@ func Run(t crossdock.T) {
 	for _, tt := range tests {
 		got, err := caller.Call(tt.give)
 		if checks.NoError(err, "%v: call failed", tt.desc) {
-			for _, header := range tt.want.Keys() {
-				expectedValue, _ := tt.want.Get(header)
-				actualValue, _ := got.Get(header)
-				assert.Equal(
-					expectedValue,
-					actualValue,
-					"%v: returns valid headers",
-					tt.desc,
-				)
-			}
+			gotHeaders := internal.RemoveVariableHeaderKeys(got)
+			assert.Equal(tt.want, gotHeaders, "%v: returns valid headers", tt.desc)
 		}
 	}
 }

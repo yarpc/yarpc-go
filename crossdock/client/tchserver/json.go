@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/random"
+	"go.uber.org/yarpc/crossdock/internal"
 	"go.uber.org/yarpc/encoding/json"
 
 	"github.com/crossdock/crossdock-go"
@@ -44,16 +45,8 @@ func runJSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	}
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		assert.Equal(headers, resMeta.Headers())
-		for _, header := range headers.Keys() {
-			expectedValue, _ := headers.Get(header)
-			actualValue, _ := resMeta.Headers().Get(header)
-			assert.Equal(
-				expectedValue,
-				actualValue,
-				"headers echoed",
-			)
-		}
+		resHeaders := internal.RemoveVariableHeaderKeys(resMeta.Headers())
+		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 }
 
