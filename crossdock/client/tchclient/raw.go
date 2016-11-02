@@ -41,12 +41,22 @@ func runRaw(t crossdock.T, call call) {
 		0x00, 0x03, // length = 3
 		'r', 'a', 'w',
 	}
+	expectedHeaderContains := []byte{
+		0x00, 0x05, // length = 5
+		'h', 'e', 'l', 'l', 'o',
+		0x00, 0x03, // length = 3
+		'r', 'a', 'w',
+	}
 	token := random.Bytes(5)
 
 	resp, respHeaders, err := rawCall(call, headers, token)
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resp, "body echoed")
-		assert.Equal(headers, respHeaders, "headers echoed")
+		assert.Contains(
+			string(respHeaders),
+			string(expectedHeaderContains),
+			"headers echoed",
+		)
 	}
 }
 

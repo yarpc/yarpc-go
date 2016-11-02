@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc/crossdock/client/gauntlet"
 	"go.uber.org/yarpc/crossdock/client/random"
+	"go.uber.org/yarpc/crossdock/internal"
 	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
 	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_tchannel"
 
@@ -49,6 +50,7 @@ func runThrift(t crossdock.T, call call) {
 	resp, respHeaders, err := thriftCall(client, headers, token)
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resp.Boop, "body echoed")
+		respHeaders = internal.RemoveVariableMapKeys(respHeaders)
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 

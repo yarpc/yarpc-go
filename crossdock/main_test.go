@@ -28,11 +28,17 @@ import (
 	"go.uber.org/yarpc/crossdock/server"
 
 	"github.com/crossdock/crossdock-go"
+	"github.com/opentracing/opentracing-go"
+	jaeger "github.com/uber/jaeger-client-go"
 )
 
 const clientURL = "http://127.0.0.1:8080"
 
 func TestCrossdock(t *testing.T) {
+	tracer, closer := jaeger.NewTracer("crossdock", jaeger.NewConstSampler(true), jaeger.NewNullReporter())
+	defer closer.Close()
+	opentracing.InitGlobalTracer(tracer)
+
 	server.Start()
 	defer server.Stop()
 	go client.Start()

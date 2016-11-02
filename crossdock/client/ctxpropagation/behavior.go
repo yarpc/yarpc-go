@@ -36,7 +36,6 @@ import (
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/opentracing/opentracing-go"
-	"github.com/uber/jaeger-client-go"
 	"github.com/uber/tchannel-go"
 )
 
@@ -58,10 +57,6 @@ func Run(t crossdock.T) {
 	checks := crossdock.Checks(t)
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
-
-	tracer, closer := jaeger.NewTracer("crossdock", jaeger.NewConstSampler(true), jaeger.NewNullReporter())
-	defer closer.Close()
-	opentracing.InitGlobalTracer(tracer)
 
 	tests := []struct {
 		desc      string

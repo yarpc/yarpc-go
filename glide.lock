@@ -1,8 +1,8 @@
-hash: 83308ca10a783ad7e750f39b70b1f4aa79020d82120cb210141b28c07529273a
-updated: 2016-10-04T13:02:16.214634444-07:00
+hash: d0c252b8df396d598b16e6fc6a3ffb5bbc31d2acd6349a24251ce6f8b3658fe4
+updated: 2016-11-01T12:04:27.184233356-07:00
 imports:
 - name: github.com/apache/thrift
-  version: e349c345d3c3380657f7d0d388cda676f2014c3d
+  version: 74c99ba38b02288daf05229cdf34e60261d2d01e
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -11,7 +11,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -36,7 +36,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/jaeger-client-go
-  version: 78ce632052c36e2a64e73ef3a1098ce13bf9390d
+  version: e39d0f1b622558cae3d9db0062a739cc6ffa700f
   subpackages:
   - internal/spanlog
   - thrift-gen/agent
@@ -60,7 +60,7 @@ imports:
   - trand
   - typed
 - name: go.uber.org/thriftrw
-  version: 751bde77e2b9c9c4cded903432f874e63e890a73
+  version: 4c40656a52cb05fcefe41d7eecd6ecc2bb5c1863
   subpackages:
   - envelope
   - internal/envelope
@@ -75,9 +75,10 @@ imports:
   - protocol
   - protocol/binary
   - ptr
+  - version
   - wire
 - name: golang.org/x/net
-  version: ffe101cce3477a6c6d8f0754d103bb0a84ec1266
+  version: 541150ac4f433e755f5663eba5d888c2fa347343
   subpackages:
   - context
   - context/ctxhttp
@@ -85,4 +86,6 @@ imports:
   version: fc2b74b64ef08c618146ebc92062f6499db5314c
   subpackages:
   - go/ast/astutil
+- name: gopkg.in/yaml.v2
+  version: a5b47d31c556af34a302ce5d659e6fea44d90de0
 testImports: []
