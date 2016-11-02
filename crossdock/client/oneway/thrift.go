@@ -22,7 +22,6 @@ package oneway
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/oneway/yarpc/onewayclient"
@@ -35,7 +34,7 @@ func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals := crossdock.Fatals(t)
 
 	client := onewayclient.New(dispatcher.Channel("oneway-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx := context.Background()
 
 	token := getRandomID()
 	ack, err := client.Echo(ctx, nil, &token)

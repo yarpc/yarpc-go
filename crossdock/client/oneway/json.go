@@ -22,7 +22,6 @@ package oneway
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
@@ -40,13 +39,12 @@ func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals := crossdock.Fatals(t)
 
 	client := json.New(dispatcher.Channel("oneway-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	token := getRandomID()
 
 	var ack transport.Ack
 	ack, err := client.CallOneway(
-		ctx,
+		context.Background(),
 		yarpc.NewReqMeta().Procedure("echo/json"),
 		&jsonToken{Token: token},
 		&ack)

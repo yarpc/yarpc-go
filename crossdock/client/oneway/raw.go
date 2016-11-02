@@ -22,7 +22,6 @@ package oneway
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
@@ -35,7 +34,7 @@ func Raw(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals := crossdock.Fatals(t)
 
 	client := raw.New(dispatcher.Channel("oneway-test"))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx := context.Background()
 
 	token := []byte(getRandomID())
 	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("echo/raw"), token)

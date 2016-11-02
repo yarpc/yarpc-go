@@ -23,7 +23,6 @@ package oneway
 import (
 	"bytes"
 	"context"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
@@ -62,7 +61,7 @@ func callHome(body []byte) {
 	onewayOutbound.Start(transport.NoDeps)
 	defer onewayOutbound.Stop()
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx := context.Background()
 
 	_, _ = onewayOutbound.CallOneway(ctx, &transport.Request{
 		Caller:    "oneway-test",
