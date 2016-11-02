@@ -40,7 +40,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":

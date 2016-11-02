@@ -59,7 +59,7 @@ func get(ctx context.Context, c json.Client, k string) (string, error) {
 	var response getResponse
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	_, err := c.Call(
+	_, err := c.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Procedure("get"),
 		&getRequest{Key: k},
@@ -72,7 +72,7 @@ func set(ctx context.Context, c json.Client, k string, v string) error {
 	var response setResponse
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	_, err := c.Call(
+	_, err := c.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Procedure("set"),
 		&setRequest{Key: k, Value: v},
@@ -90,7 +90,7 @@ func main() {
 
 	flag.Parse()
 
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
 		outbound = http.NewOutbound("http://localhost:24034")

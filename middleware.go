@@ -28,12 +28,12 @@ import (
 
 // Filters combines the given collection of filters in-order into a single
 // Filter.
-func Filters(filters ...transport.Filter) transport.Filter {
+func Filters(filters ...transport.UnaryFilter) transport.UnaryFilter {
 	return filter.Chain(filters...)
 }
 
 // Interceptors combines the given collection of interceptors in-order into a
 // single Interceptor.
-func Interceptors(interceptors ...transport.Interceptor) transport.Interceptor {
+func Interceptors(interceptors ...transport.UnaryInterceptor) transport.UnaryInterceptor {
 	return interceptor.Chain(interceptors...)
 }

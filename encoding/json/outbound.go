@@ -39,7 +39,7 @@ type Client interface {
 	// json.Unmarshal.
 	//
 	// Returns the response or an error if the request failed.
-	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
+	CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
 }
 
 // New builds a new JSON client.
@@ -55,7 +55,7 @@ type jsonClient struct {
 	ch transport.Channel
 }
 
-func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
+func (c jsonClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
 	treq := transport.Request{
 		Caller:   c.ch.Caller(),
 		Service:  c.ch.Service(),
@@ -69,7 +69,7 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().CallUnary(ctx, &treq)
 
 	if err != nil {
 		return nil, err

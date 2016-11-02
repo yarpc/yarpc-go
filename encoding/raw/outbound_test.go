@@ -35,7 +35,7 @@ import (
 	"github.com/uber/tchannel-go/testutils/testreader"
 )
 
-func TestCall(t *testing.T) {
+func TestCallUnary(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -77,7 +77,7 @@ func TestCall(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		outbound := transporttest.NewMockOutbound(mockCtrl)
+		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
 		client := New(transport.IdentityChannel(caller, service, outbound))
 
 		writer, responseBody := testreader.ChunkReader()
@@ -86,7 +86,7 @@ func TestCall(t *testing.T) {
 		}
 		close(writer)
 
-		outbound.EXPECT().Call(gomock.Any(),
+		outbound.EXPECT().CallUnary(gomock.Any(),
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
 					Caller:    caller,
@@ -102,7 +102,7 @@ func TestCall(t *testing.T) {
 				Headers: transport.Headers(tt.wantHeaders),
 			}, nil)
 
-		resBody, res, err := client.Call(
+		resBody, res, err := client.CallUnary(
 			ctx,
 			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
 			tt.body)

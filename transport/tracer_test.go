@@ -47,8 +47,8 @@ type handler struct {
 }
 
 func (h handler) register(dispatcher yarpc.Dispatcher) {
-	dispatcher.Register(json.Procedure("echo", h.handleEcho))
-	dispatcher.Register(json.Procedure("echoecho", h.handleEchoEcho))
+	dispatcher.Register(json.UnaryProcedure("echo", h.handleEcho))
+	dispatcher.Register(json.UnaryProcedure("echoecho", h.handleEchoEcho))
 }
 
 func (h handler) handleEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
@@ -59,7 +59,7 @@ func (h handler) handleEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody 
 func (h handler) handleEchoEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
 	h.assertBaggage(ctx)
 	var resBody echoResBody
-	_, err := h.client.Call(
+	_, err := h.client.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Procedure("echo"),
 		reqBody,
@@ -73,7 +73,7 @@ func (h handler) handleEchoEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqB
 
 func (h handler) echo(ctx context.Context) error {
 	var resBody echoResBody
-	_, err := h.client.Call(
+	_, err := h.client.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Procedure("echo"),
 		&echoReqBody{},
@@ -84,7 +84,7 @@ func (h handler) echo(ctx context.Context) error {
 
 func (h handler) echoEcho(ctx context.Context) error {
 	var resBody echoResBody
-	_, err := h.client.Call(
+	_, err := h.client.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Procedure("echoecho"),
 		&echoReqBody{},

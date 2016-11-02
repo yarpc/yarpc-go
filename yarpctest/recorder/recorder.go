@@ -279,12 +279,11 @@ func (r *Recorder) makeFilePath(request *transport.Request, hash string) string 
 	return filepath.Join(r.recordsDir, sanitizeFilename(s))
 }
 
-// Call implements the yarpc transport filter interface
-func (r *Recorder) Call(
+// CallUnary implements the yarpc transport filter interface
+func (r *Recorder) CallUnary(
 	ctx context.Context,
 	request *transport.Request,
-	out transport.Outbound,
-) (*transport.Response, error) {
+	out transport.UnaryOutbound) (*transport.Response, error) {
 	log := r.logger
 
 	requestRecord := r.requestToRequestRecord(request)
@@ -308,7 +307,7 @@ func (r *Recorder) Call(
 		}
 		fallthrough
 	case Overwrite:
-		response, err := out.Call(ctx, request)
+		response, err := out.CallUnary(ctx, request)
 		if err == nil {
 			cachedRecord := record{
 				Version:  currentRecordVersion,

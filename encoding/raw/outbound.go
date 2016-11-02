@@ -32,8 +32,8 @@ import (
 
 // Client makes Raw requests to a single service.
 type Client interface {
-	// Call performs an outbound Raw request.
-	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	// CallUnary performs a unary outbound Raw request.
+	CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
 }
 
 // New builds a new Raw client.
@@ -49,7 +49,7 @@ type rawClient struct {
 	ch transport.Channel
 }
 
-func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
+func (c rawClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
 	treq := transport.Request{
 		Caller:   c.ch.Caller(),
 		Service:  c.ch.Service(),
@@ -58,7 +58,7 @@ func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []b
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
 
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().CallUnary(ctx, &treq)
 	if err != nil {
 		return nil, nil, err
 	}

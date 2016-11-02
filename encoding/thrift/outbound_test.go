@@ -156,9 +156,9 @@ func TestClient(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		trans := transporttest.NewMockOutbound(mockCtrl)
+		trans := transporttest.NewMockUnaryOutbound(mockCtrl)
 		if tt.expectCall {
-			trans.EXPECT().Call(ctx,
+			trans.EXPECT().CallUnary(ctx,
 				transporttest.NewRequestMatcher(t, &transport.Request{
 					Caller:    "caller",
 					Service:   "service",
@@ -186,7 +186,7 @@ func TestClient(t *testing.T) {
 			Channel: transport.IdentityChannel("caller", "service", trans),
 		}, opts...)
 
-		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
+		_, _, err := c.CallUnary(ctx, nil, tt.giveRequestBody)
 		if tt.wantError != "" {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)

@@ -65,7 +65,7 @@ func runRaw(t crossdock.T, disp yarpc.Dispatcher) {
 	defer cancel()
 
 	ch := raw.New(disp.Channel("yarpc-test"))
-	_, _, err := ch.Call(ctx, yarpc.NewReqMeta().Procedure("handlertimeout/raw"), nil)
+	_, _, err := ch.CallUnary(ctx, yarpc.NewReqMeta().Procedure("handlertimeout/raw"), nil)
 	fatals.Error(err, "expected an error")
 
 	if transport.IsBadRequestError(err) {

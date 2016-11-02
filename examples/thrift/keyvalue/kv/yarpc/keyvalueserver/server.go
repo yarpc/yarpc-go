@@ -57,9 +57,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "KeyValue",
-		Methods: map[string]thrift.Handler{
-			"getValue": thrift.HandlerFunc(h.GetValue),
-			"setValue": thrift.HandlerFunc(h.SetValue),
+		UnaryMethods: map[string]thrift.UnaryHandler{
+			"getValue": thrift.UnaryHandlerFunc(h.GetValue),
+			"setValue": thrift.UnaryHandlerFunc(h.SetValue),
 		},
 	}
 	return thrift.BuildRegistrants(service, opts...)

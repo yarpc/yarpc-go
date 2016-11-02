@@ -180,7 +180,7 @@ func Run(t crossdock.T) {
 			for name, handler := range tt.handlers {
 				handler.SetClient(jsonClient)
 				handler.SetTransport(tconfig)
-				dispatcher.Register(json.Procedure(name, handler.Handle))
+				dispatcher.Register(json.UnaryProcedure(name, handler.Handle))
 			}
 
 			ctx := context.Background()
@@ -191,7 +191,7 @@ func Run(t crossdock.T) {
 			defer cancel()
 
 			var resp js.RawMessage
-			_, err := jsonClient.Call(
+			_, err := jsonClient.CallUnary(
 				ctx,
 				yarpc.NewReqMeta().Procedure("phone"),
 				&server.PhoneRequest{
@@ -297,7 +297,7 @@ func (h *multiHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, bod
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	var resp js.RawMessage
-	phoneResMeta, err := h.phoneClient.Call(
+	phoneResMeta, err := h.phoneClient.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Procedure("phone").Headers(reqMeta.Headers()),
 		&server.PhoneRequest{
@@ -322,7 +322,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	ch, err := tchannel.NewChannel("ctxclient", nil)
 	fatals.NoError(err, "failed to create TChannel")
 
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 	switch trans := t.Param(params.Transport); trans {
 	case "http":
 		outbound = ht.NewOutbound(fmt.Sprintf("http://%s:8081", subject))

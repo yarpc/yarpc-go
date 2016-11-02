@@ -36,20 +36,20 @@ import (
 )
 
 var retryFilter transport.FilterFunc = func(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
-	res, err := o.Call(ctx, req)
+	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
+	res, err := o.CallUnary(ctx, req)
 	if err != nil {
-		res, err = o.Call(ctx, req)
+		res, err = o.CallUnary(ctx, req)
 	}
 	return res, err
 }
 
 type countFilter struct{ Count int }
 
-func (c *countFilter) Call(
-	ctx context.Context, req *transport.Request, o transport.Outbound) (*transport.Response, error) {
+func (c *countFilter) CallUnary(
+	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	c.Count++
-	return o.Call(ctx, req)
+	return o.CallUnary(ctx, req)
 }
 
 func TestChain(t *testing.T) {
@@ -69,15 +69,15 @@ func TestChain(t *testing.T) {
 		Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
 	}
 
-	o := transporttest.NewMockOutbound(mockCtrl)
-	o.EXPECT().Call(ctx, req).After(
-		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
+	o := transporttest.NewMockUnaryOutbound(mockCtrl)
+	o.EXPECT().CallUnary(ctx, req).After(
+		o.EXPECT().CallUnary(ctx, req).Return(nil, errors.New("great sadness")),
 	).Return(res, nil)
 
 	before := &countFilter{}
 	after := &countFilter{}
-	gotRes, err := transport.ApplyFilter(
-		o, Chain(before, retryFilter, after)).Call(ctx, req)
+	gotRes, err := transport.ApplyUnaryFilter(
+		o, Chain(before, retryFilter, after)).CallUnary(ctx, req)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")

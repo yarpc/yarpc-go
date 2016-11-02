@@ -22,7 +22,7 @@ package transport
 
 import "context"
 
-// Filter defines transport-level middleware for Outbounds.
+// UnaryFilter defines transport-level middleware for Outbounds.
 //
 // Filters MAY
 //
@@ -39,16 +39,16 @@ import "context"
 //
 // Filters are re-used across requests and MAY be called multiple times on the
 // same request.
-type Filter interface {
-	Call(ctx context.Context, request *Request, out Outbound) (*Response, error)
+type UnaryFilter interface {
+	CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error)
 }
 
-// NopFilter is a filter that does not do anything special. It simply calls
+// NopUnaryFilter is a filter that does not do anything special. It simply calls
 // the underlying Outbound.
-var NopFilter Filter = nopFilter{}
+var NopUnaryFilter UnaryFilter = nopFilter{}
 
-// ApplyFilter applies the given Filter to the given Outbound.
-func ApplyFilter(o Outbound, f Filter) Outbound {
+// ApplyUnaryFilter applies the given Filter to the given Outbound.
+func ApplyUnaryFilter(o UnaryOutbound, f UnaryFilter) UnaryOutbound {
 	if f == nil {
 		return o
 	}
@@ -56,16 +56,16 @@ func ApplyFilter(o Outbound, f Filter) Outbound {
 }
 
 // FilterFunc adapts a function into a Filter.
-type FilterFunc func(context.Context, *Request, Outbound) (*Response, error)
+type FilterFunc func(context.Context, *Request, UnaryOutbound) (*Response, error)
 
-// Call for FilterFunc.
-func (f FilterFunc) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
+// CallUnary for FilterFunc.
+func (f FilterFunc) CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
 	return f(ctx, request, out)
 }
 
 type filteredOutbound struct {
-	o Outbound
-	f Filter
+	o UnaryOutbound
+	f UnaryFilter
 }
 
 func (fo filteredOutbound) Start(d Deps) error {
@@ -76,12 +76,12 @@ func (fo filteredOutbound) Stop() error {
 	return fo.o.Stop()
 }
 
-func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
-	return fo.f.Call(ctx, request, fo.o)
+func (fo filteredOutbound) CallUnary(ctx context.Context, request *Request) (*Response, error) {
+	return fo.f.CallUnary(ctx, request, fo.o)
 }
 
 type nopFilter struct{}
 
-func (nopFilter) Call(ctx context.Context, request *Request, out Outbound) (*Response, error) {
-	return out.Call(ctx, request)
+func (nopFilter) CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
+	return out.CallUnary(ctx, request)
 }

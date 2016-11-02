@@ -39,8 +39,8 @@ func TestNopInterceptor(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockHandler(mockCtrl)
-	wrappedH := transport.ApplyInterceptor(h, transport.NopInterceptor)
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
+	wrappedH := transport.ApplyUnaryInterceptor(h, transport.NopInterceptor)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -53,7 +53,7 @@ func TestNopInterceptor(t *testing.T) {
 	}
 	resw := new(transporttest.FakeResponseWriter)
 	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, req, resw).Return(err)
+	h.EXPECT().HandleUnary(ctx, req, resw).Return(err)
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+	assert.Equal(t, err, wrappedH.HandleUnary(ctx, req, resw))
 }

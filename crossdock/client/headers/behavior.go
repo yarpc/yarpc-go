@@ -138,7 +138,7 @@ func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	_, res, err := c.c.Call(
+	_, res, err := c.c.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Headers(h).Procedure("echo/raw"),
 		[]byte("hello"))
@@ -156,7 +156,7 @@ func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	defer cancel()
 
 	var resBody interface{}
-	res, err := c.c.Call(
+	res, err := c.c.CallUnary(
 		ctx,
 		yarpc.NewReqMeta().Headers(h).Procedure("echo"),
 		map[string]interface{}{}, &resBody)
