@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 )
 
-const callBackAddr = "http://127.0.0.1:8082"
+const callBackAddr = "http://127.0.0.1:8089"
 
 // EchoRaw implements the echo/raw procedure.
 func EchoRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
