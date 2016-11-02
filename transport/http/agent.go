@@ -3,11 +3,18 @@ package http
 import (
 	"net/http"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal/errors"
 	"go.uber.org/yarpc/transport/peer/hostport"
 )
+
+type agentConfig struct {
+	keepAlive time.Duration
+}
+
+var defaultConfig = agentConfig{keepAlive: 30 * time.Second}
 
 // Agent keeps track of http peers and the associated client with which the peer will call into.
 type Agent struct {
@@ -29,7 +36,7 @@ func NewDefaultAgent() *Agent {
 }
 
 // NewAgent creates a new http agent for managing peers and sending requests
-func NewAgent(cfg *outboundConfig) *Agent {
+func NewAgent(cfg *agentConfig) *Agent {
 	return &Agent{
 		client:    buildClient(cfg),
 		peerNodes: make(map[string]*peerNode),

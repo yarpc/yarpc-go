@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/peers"
 
 	"github.com/uber-go/atomic"
 )
@@ -41,46 +43,46 @@ var (
 	errOutboundNotStarted     = errors.ErrOutboundNotStarted("http.Outbound")
 )
 
-type outboundConfig struct {
-	keepAlive time.Duration
+// NewOutbound is deprecated
+// TODO rename this func NewOutboundFromURL
+func NewOutbound(urlStr string) transport.Outbound {
+	agent := NewDefaultAgent()
+
+	scheme, hostport, path := parseURL(urlStr)
+
+	peerID := peers.NewPeerIdentifier(hostport)
+	peerList := peers.NewSinglePeerList(peerID, agent)
+
+	return NewPeerListOutbound(peerList, path, scheme)
 }
 
-var defaultConfig = outboundConfig{keepAlive: 30 * time.Second}
+func parseURL(urlStr string) (string, string, string) {
+	parseURL, err := url.Parse(urlStr)
 
-// OutboundOption customizes the behavior of an HTTP outbound.
-type OutboundOption func(*outboundConfig)
-
-// KeepAlive specifies the keep-alive period for the network connection. If
-// zero, keep-alives are disabled.
-//
-// Defaults to 30 seconds.
-func KeepAlive(t time.Duration) OutboundOption {
-	return func(c *outboundConfig) {
-		c.keepAlive = t
+	if err != nil {
+		return "", urlStr, ""
 	}
+
+	return parseURL.Scheme, parseURL.Host, parseURL.Path
 }
 
-// NewOutbound builds a new HTTP outbound that sends requests to the given
-// URL.
-func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
-	cfg := defaultConfig
-	for _, o := range opts {
-		o(&cfg)
+// NewPeerListOutbound Builds a new HTTP outbound build around a PeerList for getting potential downstream hosts
+// TODO rename this NewOutbound
+func NewPeerListOutbound(peerList transport.PeerList, path, scheme string) transport.Outbound {
+	return &outbound{
+		started:  atomic.NewBool(false),
+		PeerList: peerList,
+		Path:     path,
+		Scheme:   scheme,
 	}
-
-	// Instead of using a global client for all outbounds, we use an HTTP
-	// client per outbound if unspecified.
-	client := buildClient(&cfg)
-
-	// TODO: Use option pattern with varargs instead
-	return &outbound{Client: client, URL: url, started: atomic.NewBool(false)}
 }
 
 type outbound struct {
-	started *atomic.Bool
-	Client  *http.Client
-	Deps    transport.Deps
-	URL     string
+	started  *atomic.Bool
+	Deps     transport.Deps
+	PeerList transport.PeerList
+	Path     string
+	Scheme   string
 }
 
 func (o *outbound) Start(d transport.Deps) error {
@@ -88,14 +90,14 @@ func (o *outbound) Start(d transport.Deps) error {
 		return errOutboundAlreadyStarted
 	}
 	o.Deps = d
-	return nil
+	return o.PeerList.Start()
 }
 
 func (o *outbound) Stop() error {
 	if !o.started.Swap(false) {
 		return errOutboundNotStarted
 	}
-	return nil
+	return o.PeerList.Stop()
 }
 
 func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
@@ -107,7 +109,14 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
 
-	req, err := o.createRequest(treq)
+	peer, err := o.getPeerForRequest(ctx, treq)
+	if err != nil {
+		return nil, err
+	}
+	peer.IncPending()
+	defer peer.DecPending()
+
+	req, err := o.createRequest(peer, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +126,7 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	defer span.Finish()
 	req = o.withCoreHeaders(req, treq, ttl)
 
-	response, err := o.getHTTPClient().Do(req.WithContext(ctx))
+	response, err := o.getHTTPClient(peer).Do(req.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
@@ -152,8 +161,26 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return nil, getErrFromResponse(response)
 }
 
-func (o *outbound) createRequest(treq *transport.Request) (*http.Request, error) {
-	reqURL := o.URL
+func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*peers.HostPortPeer, error) {
+	peer, err := o.PeerList.ChoosePeer(ctx, treq)
+	if err != nil {
+		return nil, err
+	}
+
+	hpPeer, ok := peer.(*peers.HostPortPeer)
+	if ok {
+		return hpPeer, nil
+
+	}
+
+	return nil, errors.ErrInvalidPeerConversion{
+		Peer:         peer,
+		ExpectedType: "*peers.HostPortPeer",
+	}
+}
+
+func (o *outbound) createRequest(peer *peers.HostPortPeer, treq *transport.Request) (*http.Request, error) {
+	reqURL := fmt.Sprintf("%s://%s%s", o.Scheme, peer.HostPort(), o.Path)
 	return http.NewRequest("POST", reqURL, treq.Body)
 }
 
@@ -212,8 +239,9 @@ func (o *outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
-func (o *outbound) getHTTPClient() *http.Client {
-	return o.Client
+func (o *outbound) getHTTPClient(peer *peers.HostPortPeer) *http.Client {
+	agent := peer.GetAgent().(*Agent)
+	return agent.client
 }
 
 func getErrFromResponse(response *http.Response) error {
