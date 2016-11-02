@@ -23,6 +23,7 @@ package oneway
 import (
 	"bytes"
 	"context"
+	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
@@ -57,6 +58,9 @@ func (onewayHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, Token *str
 }
 
 func callHome(body []byte) {
+	// reduce the chance of a race condition
+	time.Sleep(time.Millisecond * 100)
+
 	onewayOutbound := http.NewOnewayOutbound(callBackAddr)
 	onewayOutbound.Start(transport.NoDeps)
 	defer onewayOutbound.Stop()
