@@ -273,7 +273,7 @@ func TestClientOneway(t *testing.T) {
 				}).Return(nil)
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		ctx := context.Background()
 
 		onewayOutbound := transporttest.NewMockOnewayOutbound(mockCtrl)
 
