@@ -109,7 +109,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 			return err
 		}
 
-		err = internal.SafelyCallHandler(ctx, spec.UnaryHandler, start, treq, newResponseWriter(w))
+		err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, newResponseWriter(w))
 		defer span.Finish()
 
 	case transport.Oneway:

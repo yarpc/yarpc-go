@@ -31,9 +31,9 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// SafelyCallHandler calls the handler h, recovering panics and timeout errors,
+// SafelyCallUnaryHandler calls the handler h, recovering panics and timeout errors,
 // converting them to yarpc errors. All other errors are passed trough.
-func SafelyCallHandler(
+func SafelyCallUnaryHandler(
 	ctx context.Context,
 	h transport.UnaryHandler, start time.Time,
 	req *transport.Request,

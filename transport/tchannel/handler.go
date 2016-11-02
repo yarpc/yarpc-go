@@ -161,7 +161,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	case transport.Unary:
 		treq, err = request.ValidateUnary(ctx, treq)
 		if err == nil {
-			err = internal.SafelyCallHandler(ctx, spec.UnaryHandler, start, treq, rw)
+			err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, rw)
 		}
 
 	case transport.Oneway:
