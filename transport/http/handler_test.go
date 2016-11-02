@@ -167,12 +167,14 @@ func TestHandlerFailures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	service, procedure := "fake", "hello"
+
 	baseHeaders := make(http.Header)
 	baseHeaders.Set(CallerHeader, "somecaller")
 	baseHeaders.Set(EncodingHeader, "raw")
 	baseHeaders.Set(TTLMSHeader, "1000")
-	baseHeaders.Set(ProcedureHeader, "hello")
-	baseHeaders.Set(ServiceHeader, "fake")
+	baseHeaders.Set(ProcedureHeader, procedure)
+	baseHeaders.Set(ServiceHeader, service)
 
 	headersWithBadTTL := headerCopyWithout(baseHeaders, TTLMSHeader)
 	headersWithBadTTL.Set(TTLMSHeader, "not a number")
@@ -180,48 +182,52 @@ func TestHandlerFailures(t *testing.T) {
 	tests := []struct {
 		req *http.Request
 		msg string
+
+		errTTL bool // if we expect an error due to the TTL
 	}{
-		{&http.Request{Method: "GET"}, "404 page not found\n"},
+		{req: &http.Request{Method: "GET"}, msg: "404 page not found\n"},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			"BadRequest: missing caller name\n",
+			msg: "BadRequest: missing caller name\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			"BadRequest: missing service name\n",
+			msg: "BadRequest: missing service name\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			"BadRequest: missing procedure\n",
+			msg: "BadRequest: missing procedure\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			"BadRequest: missing TTL\n",
+			msg:    "BadRequest: missing TTL\n",
+			errTTL: true,
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 			},
-			"BadRequest: missing service name, procedure, caller name, TTL, and encoding\n",
+			msg: "BadRequest: missing service name, procedure, caller name, and encoding\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			`BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
+			msg:    `BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
+			errTTL: true,
 		},
 	}
 
@@ -231,7 +237,17 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		h := handler{Registry: transporttest.NewMockRegistry(mockCtrl)}
+		reg := transporttest.NewMockRegistry(mockCtrl)
+
+		if tt.errTTL {
+			// since TTL is checked after we've determined the transport type, if we have an
+			// error with TTL it will be discovered after we read from the registry
+			spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: panickedHandler{}}
+			reg.EXPECT().GetHandlerSpec(service, procedure).Return(spec, nil)
+		}
+
+		h := handler{Registry: reg}
+
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 

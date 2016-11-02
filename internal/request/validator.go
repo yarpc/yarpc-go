@@ -32,24 +32,37 @@ import (
 // Validator helps validate requests.
 //
 // 	v := Validator{Request: request}
+// 	v.Validate()
+//  ...
 // 	v.ParseTTL(ttlstring)
-// 	request, err := v.Validate()
+// 	request, err := v.ValidateUnary()
 type Validator struct {
-	Request  *transport.Request
-	earlyErr error
-	lateErr  error
+	Request *transport.Request
+	errTTL  error
 }
 
 // Validate is a shortcut for the case where a request needs to be validated
-// without changing the TTL.
+// without changing the TTL. This should be used to validate all request types
 func Validate(ctx context.Context, req *transport.Request) (*transport.Request, error) {
 	v := Validator{Request: req}
 	return v.Validate(ctx)
 }
 
+// ValidateUnary validates a unary request. This should be used after a successful Validate()
+func ValidateUnary(ctx context.Context, req *transport.Request) (*transport.Request, error) {
+	v := Validator{Request: req}
+	return v.ValidateUnary(ctx)
+}
+
+// ValidateOneway validates a oneway request. This should be used after a successful Validate()
+func ValidateOneway(ctx context.Context, req *transport.Request) (*transport.Request, error) {
+	v := Validator{Request: req}
+	return v.ValidateOneway(ctx)
+}
+
 // ParseTTL takes a context parses the given TTL, clamping the context to that TTL
 // and as a side-effect, tracking any errors encountered while attempting to
-// parse and validate that TTL.
+// parse and validate that TTL. Should only be used for unary requests
 func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, func()) {
 	if ttl == "" {
 		// The TTL is missing so set it to 0 and let Validate() fail with the
@@ -59,7 +72,7 @@ func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, 
 
 	ttlms, err := strconv.Atoi(ttl)
 	if err != nil {
-		v.earlyErr = invalidTTLError{
+		v.errTTL = invalidTTLError{
 			Service:   v.Request.Service,
 			Procedure: v.Request.Procedure,
 			TTL:       ttl,
@@ -68,7 +81,7 @@ func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, 
 	}
 	// negative TTLs are invalid
 	if ttlms < 0 {
-		v.lateErr = invalidTTLError{
+		v.errTTL = invalidTTLError{
 			Service:   v.Request.Service,
 			Procedure: v.Request.Procedure,
 			TTL:       fmt.Sprint(ttlms),
@@ -80,15 +93,9 @@ func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, 
 }
 
 // Validate checks that the request inside this validator is valid and returns
-// either the validated request or an error.
+// either the validated request or an error. This should be used to check all
+// transport types (unary,oneway,etc)
 func (v *Validator) Validate(ctx context.Context) (*transport.Request, error) {
-	// already failed
-	if v.earlyErr != nil {
-		return nil, v.earlyErr
-	}
-
-	_, hasDeadline := ctx.Deadline()
-
 	// check missing params
 	var missingParams []string
 	if v.Request.Service == "" {
@@ -100,9 +107,6 @@ func (v *Validator) Validate(ctx context.Context) (*transport.Request, error) {
 	if v.Request.Caller == "" {
 		missingParams = append(missingParams, "caller name")
 	}
-	if !hasDeadline && v.lateErr == nil {
-		missingParams = append(missingParams, "TTL")
-	}
 	if v.Request.Encoding == "" {
 		missingParams = append(missingParams, "encoding")
 	}
@@ -110,9 +114,26 @@ func (v *Validator) Validate(ctx context.Context) (*transport.Request, error) {
 		return nil, missingParametersError{Parameters: missingParams}
 	}
 
-	if v.lateErr != nil {
-		return nil, v.lateErr
+	return v.Request, nil
+}
+
+// ValidateUnary validates a unary request. This should be used after a successful v.Validate()
+func (v *Validator) ValidateUnary(ctx context.Context) (*transport.Request, error) {
+	if v.errTTL != nil {
+		return nil, v.errTTL
 	}
 
+	_, hasDeadline := ctx.Deadline()
+
+	if !hasDeadline {
+		return nil, missingParametersError{Parameters: []string{"TTL"}}
+	}
+
+	return v.Request, nil
+}
+
+// ValidateOneway validates a oneway request. This should be used after a successful Validate()
+func (v *Validator) ValidateOneway(ctx context.Context) (*transport.Request, error) {
+	// Currently, no extra checks for oneway requests are required
 	return v.Request, nil
 }

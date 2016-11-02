@@ -103,7 +103,7 @@ func convertOutbounds(outbounds Outbounds, filter transport.UnaryFilter) Outboun
 		// apply filters and create ValidatorOutbounds
 		if outs.Unary != nil {
 			unaryOutbound = transport.ApplyFilter(outs.Unary, filter)
-			unaryOutbound = request.ValidatorOutbound{UnaryOutbound: unaryOutbound}
+			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		// TODO(apb): apply oneway outbound filter

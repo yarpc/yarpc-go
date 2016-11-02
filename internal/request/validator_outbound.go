@@ -26,15 +26,20 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// ValidatorOutbound wraps an Outbound to validate all outgoing requests.
-type ValidatorOutbound struct{ transport.UnaryOutbound }
+// UnaryValidatorOutbound wraps an Outbound to validate all outgoing unary requests.
+type UnaryValidatorOutbound struct{ transport.UnaryOutbound }
 
-// OnewayValidatorOutbound wraps an Outbound to validate all outgoing requests.
+// OnewayValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
 type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
 
-// Call performs the given request, failing early if the request is invalid.
-func (o ValidatorOutbound) CallUnary(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+// CallUnary performs the given request, failing early if the request is invalid.
+func (o UnaryValidatorOutbound) CallUnary(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	request, err := Validate(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err = ValidateUnary(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +50,11 @@ func (o ValidatorOutbound) CallUnary(ctx context.Context, request *transport.Req
 // CallOneway performs the given request, failing early if the request is invalid.
 func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	request, err := Validate(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err = ValidateOneway(ctx, request)
 	if err != nil {
 		return nil, err
 	}
