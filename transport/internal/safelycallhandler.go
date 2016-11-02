@@ -42,12 +42,13 @@ func SafelyCallUnaryHandler(
 	// We recover panics from now on.
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
+			log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
 
 	err = h.HandleUnary(ctx, req, resq)
+
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {
 		deadline, _ := ctx.Deadline()
@@ -57,31 +58,19 @@ func SafelyCallUnaryHandler(
 	return err
 }
 
-// SafelyCallOnewayHandler calls the handler h, recovering panics and timeout errors,
-// converting them to yarpc errors. All other errors are passed trough.
-// TODO: reduce repetition bewteen these two functions
+// SafelyCallOnewayHandler calls the handler h, recovering panics.
 func SafelyCallOnewayHandler(
 	ctx context.Context,
 	h transport.OnewayHandler,
-	start time.Time,
 	req *transport.Request,
 ) (err error) {
-	// We recover panics from now on.
+	// recover on panics
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Handler panicked: %v\n%s", r, debug.Stack())
+			log.Printf("Oneway handler panicked: %v\n%s", r, debug.Stack())
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
 
-	err = h.HandleOneway(ctx, req)
-
-	// The handler stopped work on context deadline.
-	if err == context.DeadlineExceeded && err == ctx.Err() {
-		deadline, _ := ctx.Deadline()
-		err = errors.HandlerTimeoutError(req.Caller, req.Service,
-			req.Procedure, deadline.Sub(start))
-	}
-
-	return err
+	return h.HandleOneway(ctx, req)
 }

@@ -117,7 +117,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		if err != nil {
 			return err
 		}
-		err = handleOnewayRequest(ctx, span, treq, spec.OnewayHandler, start)
+		err = handleOnewayRequest(ctx, span, treq, spec.OnewayHandler)
 
 	default:
 		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
@@ -132,7 +132,6 @@ func handleOnewayRequest(
 	span opentracing.Span,
 	treq *transport.Request,
 	onewayHandler transport.OnewayHandler,
-	start time.Time,
 ) error {
 	// we will lose access to the body unless we read all the bytes before
 	// returning from the request
@@ -147,7 +146,7 @@ func handleOnewayRequest(
 		// ensure the span lasts for length of the request in case of errors
 		defer span.Finish()
 
-		err = internal.SafelyCallOnewayHandler(ctx, onewayHandler, start, treq)
+		err = internal.SafelyCallOnewayHandler(ctx, onewayHandler, treq)
 		updateSpanIfErr(span, err)
 	}()
 	return nil
