@@ -43,7 +43,7 @@ type UnaryFilter interface {
 	CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error)
 }
 
-// NopFilter is a filter that does not do anything special. It simply calls
+// NopUnaryFilter is a filter that does not do anything special. It simply calls
 // the underlying Outbound.
 var NopUnaryFilter UnaryFilter = nopFilter{}
 

@@ -279,7 +279,7 @@ func (r *Recorder) makeFilePath(request *transport.Request, hash string) string 
 	return filepath.Join(r.recordsDir, sanitizeFilename(s))
 }
 
-// Call implements the yarpc transport filter interface
+// CallUnary implements the yarpc transport filter interface
 func (r *Recorder) CallUnary(
 	ctx context.Context,
 	request *transport.Request,
