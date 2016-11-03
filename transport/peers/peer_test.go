@@ -37,125 +37,103 @@ func TestPeer(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	type testStruct struct {
-		pi          *HostPortPeerIdentifier
-		agent       transport.PeerAgent
-		appliedFunc func(transport.SubscribablePeer)
-		assertFunc  func(*HostPortPeer)
+		msg                string
+		pi                 *HostPortPeerIdentifier
+		agent              transport.PeerAgent
+		subscriber         transport.PeerSubscriber
+		appliedFunc        func(*HostPortPeer)
+		expectedIdentifier string
+		expectedHostPort   string
+		expectedStatus     transport.PeerStatus
+		expectedAgent      transport.PeerAgent
 	}
 	tests := []testStruct{
 		func() (s testStruct) {
+			s.msg = "create"
 			s.pi = NewPeerIdentifier("localhost:12345")
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
-			s.appliedFunc = func(p transport.SubscribablePeer) {}
-			s.assertFunc = func(p *HostPortPeer) {
-				assert.Equal(t, s.pi.hostport, p.hostport)
-				assert.Equal(t, s.pi.hostport, p.HostPort())
-				assert.Equal(t, s.pi.Identifier(), p.Identifier())
-				assert.Empty(t, p.references)
-				assert.Equal(t, 0, p.Pending())
-				assert.Equal(t, transport.PeerAvailable, p.GetStatus())
+			s.subscriber = transporttest.NewMockPeerSubscriber(mockCtrl)
+			s.appliedFunc = func(p *HostPortPeer) {}
+			s.expectedIdentifier = "localhost:12345"
+			s.expectedHostPort = "localhost:12345"
+			s.expectedAgent = s.agent
+			s.expectedStatus = transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerAvailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
-			peerlist := transporttest.NewMockPeerList(mockCtrl)
-			s.appliedFunc = func(p transport.SubscribablePeer) {
-				p.OnRetain(peerlist)
+			s.msg = "start request"
+			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
+			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(1)
+			s.subscriber = subscriber
+
+			s.appliedFunc = func(p *HostPortPeer) {
+				p.StartRequest()
 			}
-			s.assertFunc = func(p *HostPortPeer) {
-				assert.Equal(t, 1, len(p.references))
-				assert.Equal(t, true, p.references[peerlist])
+
+			s.expectedStatus = transport.PeerStatus{
+				PendingRequestCount: 1,
+				ConnectionStatus:    transport.PeerAvailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
-			peerlist := transporttest.NewMockPeerList(mockCtrl)
-			s.appliedFunc = func(p transport.SubscribablePeer) {
-				p.OnRetain(peerlist)
-				p.OnRelease(peerlist)
-			}
-			s.assertFunc = func(p *HostPortPeer) {
-				assert.Equal(t, 0, len(p.references))
+			s.msg = "start request stop request"
+			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
+			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(2)
+			s.subscriber = subscriber
 
-				_, ok := p.references[peerlist]
-				assert.Equal(t, false, ok)
+			s.appliedFunc = func(p *HostPortPeer) {
+				done := p.StartRequest()
+				done()
+			}
+
+			s.expectedStatus = transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerAvailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
-			peerlist1 := transporttest.NewMockPeerList(mockCtrl)
-			peerlist2 := transporttest.NewMockPeerList(mockCtrl)
-			s.appliedFunc = func(p transport.SubscribablePeer) {
-				p.OnRetain(peerlist1)
-				p.OnRetain(peerlist2)
-				p.OnRelease(peerlist1)
+			s.msg = "start 5 stop 2"
+			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
+			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(7)
+			s.subscriber = subscriber
+
+			s.appliedFunc = func(p *HostPortPeer) {
+				done1 := p.StartRequest()
+				p.StartRequest()
+				p.StartRequest()
+				done2 := p.StartRequest()
+				done1()
+				p.StartRequest()
+				done2()
 			}
-			s.assertFunc = func(p *HostPortPeer) {
-				assert.Equal(t, 1, len(p.references))
 
-				val, ok := p.references[peerlist1]
-				assert.Equal(t, false, ok)
-				assert.Equal(t, false, val)
-
-				val, ok = p.references[peerlist2]
-				assert.Equal(t, true, ok)
-				assert.Equal(t, true, val)
+			s.expectedStatus = transport.PeerStatus{
+				PendingRequestCount: 3,
+				ConnectionStatus:    transport.PeerAvailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
-			peerlist1 := transporttest.NewMockPeerList(mockCtrl)
-			peerlist2 := transporttest.NewMockPeerList(mockCtrl)
-			peerlist3 := transporttest.NewMockPeerList(mockCtrl)
-			s.appliedFunc = func(p transport.SubscribablePeer) {
-				p.OnRetain(peerlist1)
-				p.OnRetain(peerlist2)
-				p.OnRetain(peerlist3)
-			}
-			s.assertFunc = func(p *HostPortPeer) {
-				assert.Equal(t, 3, len(p.references))
+			s.msg = "start 5 stop 5"
+			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
+			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(10)
+			s.subscriber = subscriber
 
-				val, ok := p.references[peerlist1]
-				assert.Equal(t, true, ok)
-				assert.Equal(t, true, val)
+			s.appliedFunc = func(p *HostPortPeer) {
+				for i := 0; i < 5; i++ {
+					done := p.StartRequest()
+					defer done()
+				}
+			}
 
-				val, ok = p.references[peerlist2]
-				assert.Equal(t, true, ok)
-				assert.Equal(t, true, val)
-
-				val, ok = p.references[peerlist3]
-				assert.Equal(t, true, ok)
-				assert.Equal(t, true, val)
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			peerlist1 := transporttest.NewMockPeerList(mockCtrl)
-			peerlist2 := transporttest.NewMockPeerList(mockCtrl)
-			peerlist3 := transporttest.NewMockPeerList(mockCtrl)
-			s.appliedFunc = func(p transport.SubscribablePeer) {
-				p.OnRetain(peerlist1)
-				p.OnRetain(peerlist2)
-			}
-			s.assertFunc = func(p *HostPortPeer) {
-				err := p.OnRelease(peerlist3)
-				assert.NotNil(t, err)
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			peerlist1 := transporttest.NewMockPeerList(mockCtrl)
-			s.appliedFunc = func(p transport.SubscribablePeer) {
-				p.OnRetain(peerlist1)
-				p.IncPending()
-				p.IncPending()
-				p.IncPending()
-				p.IncPending()
-				p.DecPending()
-				p.DecPending()
-			}
-			s.assertFunc = func(p *HostPortPeer) {
-				assert.Equal(t, 2, p.Pending())
+			s.expectedStatus = transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerAvailable,
 			}
 			return
 		}(),
@@ -164,15 +142,21 @@ func TestPeer(t *testing.T) {
 	for _, tt := range tests {
 		if tt.pi == nil {
 			tt.pi = NewPeerIdentifier("localhost:12345")
+			tt.expectedIdentifier = "localhost:12345"
+			tt.expectedHostPort = "localhost:12345"
 		}
 		if tt.agent == nil {
 			tt.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			tt.expectedAgent = tt.agent
 		}
 
-		peer := NewPeer(tt.pi, tt.agent)
+		peer := NewPeer(tt.pi, tt.agent, tt.subscriber)
 
 		tt.appliedFunc(peer)
 
-		tt.assertFunc(peer)
+		assert.Equal(t, tt.expectedIdentifier, peer.Identifier(), tt.msg)
+		assert.Equal(t, tt.expectedHostPort, peer.HostPort(), tt.msg)
+		assert.Equal(t, tt.expectedAgent, peer.GetAgent(), tt.msg)
+		assert.Equal(t, tt.expectedStatus, peer.GetStatus(), tt.msg)
 	}
 }
