@@ -180,7 +180,7 @@ func Run(t crossdock.T) {
 			for name, handler := range tt.handlers {
 				handler.SetClient(jsonClient)
 				handler.SetTransport(tconfig)
-				dispatcher.Register(json.UnaryProcedure(name, handler.Handle))
+				dispatcher.Register(json.Procedure(name, handler.Handle))
 			}
 
 			ctx := context.Background()

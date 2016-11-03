@@ -47,14 +47,14 @@ func Register(r transport.Registry, rs []transport.Registrant) {
 	r.Register(rs)
 }
 
-// UnaryProcedure builds a Registrant from the given JSON handler. handler must be
+// Procedure builds a Registrant from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
 // 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
-func UnaryProcedure(name string, handler interface{}) []transport.Registrant {
+func Procedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
