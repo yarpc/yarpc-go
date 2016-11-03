@@ -56,7 +56,7 @@ func TestHandlerSucces(t *testing.T) {
 
 	registry.EXPECT().GetHandler("curly", "nyuck").Return(rpcHandler, nil)
 
-	rpcHandler.EXPECT().HandleUnary(
+	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
 		),
@@ -122,7 +122,7 @@ func TestHandlerHeaders(t *testing.T) {
 		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
 		httpHandler := handler{Registry: registry}
 
-		rpcHandler.EXPECT().HandleUnary(
+		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
 				transporttest.ContextTTL(tt.wantTTL),
 			),
@@ -258,7 +258,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	}
 
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-	rpcHandler.EXPECT().HandleUnary(
+	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
@@ -288,7 +288,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) HandleUnary(context.Context, *transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 

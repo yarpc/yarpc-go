@@ -74,7 +74,7 @@ func TestHandlerErrors(t *testing.T) {
 
 		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
 
-		rpcHandler.EXPECT().HandleUnary(
+		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t),
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
@@ -192,7 +192,7 @@ func TestHandlerFailures(t *testing.T) {
 				arg3:    []byte{0x00},
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
-				h.EXPECT().HandleUnary(
+				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(
 						t, &transport.Request{
@@ -229,7 +229,7 @@ func TestHandlerFailures(t *testing.T) {
 					Procedure: "hello",
 					Body:      bytes.NewReader([]byte("{}")),
 				}
-				h.EXPECT().HandleUnary(
+				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
@@ -266,7 +266,7 @@ func TestHandlerFailures(t *testing.T) {
 					Encoding:  raw.Encoding,
 					Body:      bytes.NewReader([]byte{0x00}),
 				}
-				h.EXPECT().HandleUnary(
+				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
 						t, transporttest.ContextTTL(time.Millisecond)),
 					transporttest.NewRequestMatcher(t, req),
@@ -297,7 +297,7 @@ func TestHandlerFailures(t *testing.T) {
 					Encoding:  raw.Encoding,
 					Body:      bytes.NewReader([]byte{0x00}),
 				}
-				h.EXPECT().HandleUnary(
+				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
 						t, transporttest.ContextTTL(time.Second)),
 					transporttest.NewRequestMatcher(t, req),

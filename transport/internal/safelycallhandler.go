@@ -47,7 +47,7 @@ func SafelyCallUnaryHandler(
 		}
 	}()
 
-	err = h.HandleUnary(ctx, req, resq)
+	err = h.Handle(ctx, req, resq)
 
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {
