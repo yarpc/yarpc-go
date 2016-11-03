@@ -95,9 +95,10 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	i := NewInbound(":0", Mux("/rpc/v1", mux))
-	h := transporttest.NewMockHandler(mockCtrl)
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRegistry(mockCtrl)
 	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: reg}, transport.NoDeps))
+
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
@@ -134,7 +135,8 @@ func TestInboundMux(t *testing.T) {
 	defer o.Stop()
 
 	reg.EXPECT().GetHandler("bar", "hello").Return(h, nil)
-	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	h.EXPECT().HandleUnary(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
 	res, err := o.Call(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",

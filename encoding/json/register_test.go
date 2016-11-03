@@ -61,12 +61,12 @@ func TestWrapHandlerInvalid(t *testing.T) {
 
 	for _, tt := range tests {
 		assert.Panics(t, assert.PanicTestFunc(func() {
-			wrapHandler(tt.Name, tt.Func)
+			wrapUnaryHandler(tt.Name, tt.Func)
 		}))
 	}
 }
 
-func TestWrapHandlerValid(t *testing.T) {
+func TestWrapUnaryHandlerValid(t *testing.T) {
 	tests := []struct {
 		Name string
 		Func interface{}
@@ -98,6 +98,6 @@ func TestWrapHandlerValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		wrapHandler(tt.Name, tt.Func)
+		wrapUnaryHandler(tt.Name, tt.Func)
 	}
 }

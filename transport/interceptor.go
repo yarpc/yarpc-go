@@ -38,7 +38,7 @@ import "context"
 // Interceptors are re-used across requests and MAY be called multiple times for
 // the same request.
 type Interceptor interface {
-	Handle(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error
+	HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error
 }
 
 // NopInterceptor is a interceptor that does not do anything special. It
@@ -46,7 +46,7 @@ type Interceptor interface {
 var NopInterceptor Interceptor = nopInterceptor{}
 
 // ApplyInterceptor applies the given Interceptor to the given Handler.
-func ApplyInterceptor(h Handler, i Interceptor) Handler {
+func ApplyInterceptor(h UnaryHandler, i Interceptor) UnaryHandler {
 	if i == nil {
 		return h
 	}
@@ -54,24 +54,24 @@ func ApplyInterceptor(h Handler, i Interceptor) Handler {
 }
 
 // InterceptorFunc adapts a function into an Interceptor.
-type InterceptorFunc func(context.Context, *Request, ResponseWriter, Handler) error
+type InterceptorFunc func(context.Context, *Request, ResponseWriter, UnaryHandler) error
 
-// Handle for InterceptorFunc
-func (f InterceptorFunc) Handle(ctx context.Context, req *Request, resw ResponseWriter, h Handler) error {
+// HandleUnary for InterceptorFunc
+func (f InterceptorFunc) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
 	return f(ctx, req, resw, h)
 }
 
 type interceptedHandler struct {
-	h Handler
+	h UnaryHandler
 	i Interceptor
 }
 
-func (h interceptedHandler) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
-	return h.i.Handle(ctx, req, resw, h.h)
+func (h interceptedHandler) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter) error {
+	return h.i.HandleUnary(ctx, req, resw, h.h)
 }
 
 type nopInterceptor struct{}
 
-func (nopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler Handler) error {
-	return handler.Handle(ctx, req, resw)
+func (nopInterceptor) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, handler UnaryHandler) error {
+	return handler.HandleUnary(ctx, req, resw)
 }

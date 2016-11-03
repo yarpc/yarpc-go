@@ -53,7 +53,7 @@ func HostPort(hostPort string) OutboundOption {
 
 // NewOutbound builds a new TChannel outbound which uses the given Channel to
 // make requests.
-func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.Outbound {
+func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.UnaryOutbound {
 	o := outbound{Channel: ch, started: atomic.NewBool(false)}
 	for _, opt := range options {
 		opt(&o)

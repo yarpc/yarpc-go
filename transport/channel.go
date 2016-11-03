@@ -41,23 +41,25 @@ type Channel interface {
 
 	// Returns an outbound to send the request through.
 	//
-	// MAY be called multiple times for a request. MAY return different outbounds
-	// for each call. The returned outbound MUST have already been started.
-	GetOutbound() Outbound
+	// MAY be called multiple times for a request. The returned outbound MUST
+	// have already been started.
+	GetUnaryOutbound() UnaryOutbound
 }
 
 // IdentityChannel constructs a simple Channel for the given caller-service pair
 // which always returns the given Outbound.
-func IdentityChannel(caller, service string, out Outbound) Channel {
+func IdentityChannel(caller, service string, out UnaryOutbound) Channel {
 	return identityChannel{caller: caller, service: service, outbound: out}
 }
 
 type identityChannel struct {
 	caller   string
 	service  string
-	outbound Outbound
+	outbound UnaryOutbound
 }
 
-func (s identityChannel) Caller() string        { return s.caller }
-func (s identityChannel) Service() string       { return s.service }
-func (s identityChannel) GetOutbound() Outbound { return s.outbound }
+func (s identityChannel) Caller() string  { return s.caller }
+func (s identityChannel) Service() string { return s.service }
+func (s identityChannel) GetUnaryOutbound() UnaryOutbound {
+	return s.outbound
+}

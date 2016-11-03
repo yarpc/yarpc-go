@@ -35,19 +35,19 @@ import (
 )
 
 var retryInterceptor transport.InterceptorFunc = func(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
-	if err := h.Handle(ctx, req, resw); err != nil {
-		return h.Handle(ctx, req, resw)
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	if err := h.HandleUnary(ctx, req, resw); err != nil {
+		return h.HandleUnary(ctx, req, resw)
 	}
 	return nil
 }
 
 type countInterceptor struct{ Count int }
 
-func (c *countInterceptor) Handle(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+func (c *countInterceptor) HandleUnary(
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	c.Count++
-	return h.Handle(ctx, req, resw)
+	return h.HandleUnary(ctx, req, resw)
 }
 
 func TestChain(t *testing.T) {
@@ -65,16 +65,16 @@ func TestChain(t *testing.T) {
 	}
 	resw := new(transporttest.FakeResponseWriter)
 
-	h := transporttest.NewMockHandler(mockCtrl)
-	h.EXPECT().Handle(ctx, req, resw).After(
-		h.EXPECT().Handle(ctx, req, resw).Return(errors.New("great sadness")),
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
+	h.EXPECT().HandleUnary(ctx, req, resw).After(
+		h.EXPECT().HandleUnary(ctx, req, resw).Return(errors.New("great sadness")),
 	).Return(nil)
 
 	before := &countInterceptor{}
 	after := &countInterceptor{}
 	err := transport.ApplyInterceptor(
 		h, Chain(before, retryInterceptor, after),
-	).Handle(ctx, req, resw)
+	).HandleUnary(ctx, req, resw)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")

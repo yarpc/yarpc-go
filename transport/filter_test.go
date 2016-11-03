@@ -39,7 +39,7 @@ func TestNopFilter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	o := transporttest.NewMockOutbound(mockCtrl)
+	o := transporttest.NewMockUnaryOutbound(mockCtrl)
 	wrappedO := transport.ApplyFilter(o, transport.NopFilter)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

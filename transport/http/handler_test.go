@@ -51,11 +51,12 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(ProcedureHeader, "nyuck")
 	headers.Set(ServiceHeader, "curly")
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	registry := transporttest.NewMockRegistry(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 
 	registry.EXPECT().GetHandler("curly", "nyuck").Return(rpcHandler, nil)
-	rpcHandler.EXPECT().Handle(
+
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
 		),
@@ -115,13 +116,13 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		rpcHandler := transporttest.NewMockHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
+		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 
 		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
 		httpHandler := handler{Registry: registry}
 
-		rpcHandler.EXPECT().Handle(
+		rpcHandler.EXPECT().HandleUnary(
 			transporttest.NewContextMatcher(t,
 				transporttest.ContextTTL(tt.wantTTL),
 			),
@@ -163,12 +164,14 @@ func TestHandlerFailures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	service, procedure := "fake", "hello"
+
 	baseHeaders := make(http.Header)
 	baseHeaders.Set(CallerHeader, "somecaller")
 	baseHeaders.Set(EncodingHeader, "raw")
 	baseHeaders.Set(TTLMSHeader, "1000")
-	baseHeaders.Set(ProcedureHeader, "hello")
-	baseHeaders.Set(ServiceHeader, "fake")
+	baseHeaders.Set(ProcedureHeader, procedure)
+	baseHeaders.Set(ServiceHeader, service)
 
 	headersWithBadTTL := headerCopyWithout(baseHeaders, TTLMSHeader)
 	headersWithBadTTL.Set(TTLMSHeader, "not a number")
@@ -254,8 +257,8 @@ func TestHandlerInternalFailure(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	rpcHandler.EXPECT().Handle(
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
@@ -285,7 +288,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) HandleUnary(context.Context, *transport.Request, transport.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 
