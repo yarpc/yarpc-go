@@ -94,3 +94,30 @@ type ErrInvalidAgentConversion struct {
 func (e ErrInvalidAgentConversion) Error() string {
 	return fmt.Sprintf("cannot convert agent (%v) to type %s", e.Agent, e.ExpectedType)
 }
+
+// ErrNoPeerToSelect is used when a peerlist doesn't have any peers to return
+type ErrNoPeerToSelect string
+
+func (e ErrNoPeerToSelect) Error() string {
+	return fmt.Sprintf("could not find a peer to select in peerlist %s", string(e))
+}
+
+// ErrPeerAlreadyInList is used when a peerlist attempts to add a peer that is already in the list
+type ErrPeerAlreadyInList struct {
+	Peer     interface{}
+	PeerList interface{}
+}
+
+func (e ErrPeerAlreadyInList) Error() string {
+	return fmt.Sprintf("can't add peer (%v) because is already in peerlist (%v)", e.Peer, e.PeerList)
+}
+
+// ErrPeerNotInList is used when a peerlist attempts to remove a peer that is not in the list
+type ErrPeerNotInList struct {
+	Peer     interface{}
+	PeerList interface{}
+}
+
+func (e ErrPeerNotInList) Error() string {
+	return fmt.Sprintf("can't remove peer (%v) because it is not in peerlist (%v)", e.Peer, e.PeerList)
+}
