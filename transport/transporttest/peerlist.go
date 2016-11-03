@@ -41,44 +41,6 @@ func (_mr *_MockPeerListRecorder) ChoosePeer(arg0, arg1 interface{}) *gomock.Cal
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "ChoosePeer", arg0, arg1)
 }
 
-func (_m *MockPeerList) NotifyAvailable(_param0 transport.Peer) error {
-	ret := _m.ctrl.Call(_m, "NotifyAvailable", _param0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-func (_mr *_MockPeerListRecorder) NotifyAvailable(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyAvailable", arg0)
-}
-
-func (_m *MockPeerList) NotifyConnecting(_param0 transport.Peer) error {
-	ret := _m.ctrl.Call(_m, "NotifyConnecting", _param0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-func (_mr *_MockPeerListRecorder) NotifyConnecting(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyConnecting", arg0)
-}
-
-func (_m *MockPeerList) NotifyPending(_param0 transport.Peer) {
-	_m.ctrl.Call(_m, "NotifyPending", _param0)
-}
-
-func (_mr *_MockPeerListRecorder) NotifyPending(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyPending", arg0)
-}
-
-func (_m *MockPeerList) NotifyUnavailable(_param0 transport.Peer) error {
-	ret := _m.ctrl.Call(_m, "NotifyUnavailable", _param0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-func (_mr *_MockPeerListRecorder) NotifyUnavailable(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyUnavailable", arg0)
-}
-
 func (_m *MockPeerList) Start() error {
 	ret := _m.ctrl.Call(_m, "Start")
 	ret0, _ := ret[0].(error)

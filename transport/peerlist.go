@@ -4,12 +4,14 @@ import "context"
 
 //go:generate mockgen -destination=transporttest/peerlist.go -package=transporttest go.uber.org/yarpc/transport PeerList
 
-// PeerList is a collection of Peers.  Outbounds request peers from the ChoosePeer to determine where to send requests
+// PeerList is a collection of Peers.  Outbounds request peers from the PeerList to determine where to send requests
 type PeerList interface {
-	PeerSubscriber
+	// Notify the PeerList that it will start receiving requests
+	Start() error
 
-	Start() error // Notify the PeerList that it will start receiving requests
-	Stop() error  // Notify the PeerList that it will stop receiving requests
+	// Notify the PeerList that it will stop receiving requests
+	Stop() error
 
-	ChoosePeer(context.Context, *Request) (Peer, error) // Choose a Peer for the next call
+	// Choose a Peer for the next call
+	ChoosePeer(context.Context, *Request) (Peer, error)
 }
