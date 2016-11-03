@@ -69,7 +69,7 @@ func (c client) Echo(
 	args := echo2.EchoHelper.Args(_Ping)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

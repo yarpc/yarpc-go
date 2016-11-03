@@ -40,7 +40,7 @@ import "context"
 // Filters are re-used across requests and MAY be called multiple times on the
 // same request.
 type UnaryFilter interface {
-	CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error)
+	Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error)
 }
 
 // NopUnaryFilter is a filter that does not do anything special. It simply calls
@@ -58,8 +58,8 @@ func ApplyFilter(o UnaryOutbound, f UnaryFilter) UnaryOutbound {
 // FilterFunc adapts a function into a Filter.
 type FilterFunc func(context.Context, *Request, UnaryOutbound) (*Response, error)
 
-// CallUnary for FilterFunc.
-func (f FilterFunc) CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
+// Call for FilterFunc.
+func (f FilterFunc) Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
 	return f(ctx, request, out)
 }
 
@@ -76,12 +76,12 @@ func (fo filteredOutbound) Stop() error {
 	return fo.o.Stop()
 }
 
-func (fo filteredOutbound) CallUnary(ctx context.Context, request *Request) (*Response, error) {
-	return fo.f.CallUnary(ctx, request, fo.o)
+func (fo filteredOutbound) Call(ctx context.Context, request *Request) (*Response, error) {
+	return fo.f.Call(ctx, request, fo.o)
 }
 
 type nopFilter struct{}
 
-func (nopFilter) CallUnary(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
-	return out.CallUnary(ctx, request)
+func (nopFilter) Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
+	return out.Call(ctx, request)
 }

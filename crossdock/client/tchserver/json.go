@@ -64,6 +64,6 @@ func jsonCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) 
 	reqBody := &jsonEcho{Token: token}
 
 	var resBody jsonEcho
-	resMeta, err := client.CallUnary(ctx, reqMeta, reqBody, &resBody)
+	resMeta, err := client.Call(ctx, reqMeta, reqBody, &resBody)
 	return resBody.Token, resMeta, err
 }

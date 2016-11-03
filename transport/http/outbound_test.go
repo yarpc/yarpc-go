@@ -70,7 +70,7 @@ func TestCallSuccess(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	res, err := out.CallUnary(ctx, &transport.Request{
+	res, err := out.Call(ctx, &transport.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Encoding:  raw.Encoding,
@@ -131,7 +131,7 @@ func TestOutboundHeaders(t *testing.T) {
 		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
 		defer out.Stop()
 
-		res, err := out.CallUnary(ctx, &transport.Request{
+		res, err := out.Call(ctx, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  raw.Encoding,
@@ -176,7 +176,7 @@ func TestCallFailures(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		_, err := out.CallUnary(ctx, &transport.Request{
+		_, err := out.Call(ctx, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  raw.Encoding,
@@ -211,7 +211,7 @@ func TestCallWithoutStarting(t *testing.T) {
 	assert.Panics(t, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
-		out.CallUnary(
+		out.Call(
 			ctx,
 			&transport.Request{
 				Caller:    "caller",

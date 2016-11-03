@@ -50,15 +50,15 @@ func (_m *MockUnaryOutbound) EXPECT() *_MockUnaryOutboundRecorder {
 	return _m.recorder
 }
 
-func (_m *MockUnaryOutbound) CallUnary(_param0 context.Context, _param1 *transport.Request) (*transport.Response, error) {
-	ret := _m.ctrl.Call(_m, "CallUnary", _param0, _param1)
+func (_m *MockUnaryOutbound) Call(_param0 context.Context, _param1 *transport.Request) (*transport.Response, error) {
+	ret := _m.ctrl.Call(_m, "Call", _param0, _param1)
 	ret0, _ := ret[0].(*transport.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockUnaryOutboundRecorder) CallUnary(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "CallUnary", arg0, arg1)
+func (_mr *_MockUnaryOutboundRecorder) Call(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Call", arg0, arg1)
 }
 
 func (_m *MockUnaryOutbound) Start(_param0 transport.Deps) error {

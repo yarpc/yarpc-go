@@ -32,8 +32,8 @@ import (
 
 // Client makes Raw requests to a single service.
 type Client interface {
-	// CallUnary performs a unary outbound Raw request.
-	CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	// Call performs a unary outbound Raw request.
+	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
 	// CallOneway performs a oneway outbound Raw request.
 	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error)
 }
@@ -51,7 +51,7 @@ type rawClient struct {
 	ch transport.Channel
 }
 
-func (c rawClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
+func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
 	treq := transport.Request{
 		Caller:   c.ch.Caller(),
 		Service:  c.ch.Service(),
@@ -60,7 +60,7 @@ func (c rawClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, bod
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
 
-	tres, err := c.ch.GetUnaryOutbound().CallUnary(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().Call(ctx, &treq)
 	if err != nil {
 		return nil, nil, err
 	}

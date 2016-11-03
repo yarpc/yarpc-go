@@ -87,7 +87,7 @@ func (o outbound) Stop() error {
 	return nil
 }
 
-func (o outbound) CallUnary(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)

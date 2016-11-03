@@ -39,7 +39,7 @@ import (
 
 var _typeOfMapInterface = reflect.TypeOf(map[string]interface{}{})
 
-func TestCallUnary(t *testing.T) {
+func TestCall(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -105,7 +105,7 @@ func TestCallUnary(t *testing.T) {
 			}))
 
 		if !tt.noCall {
-			outbound.EXPECT().CallUnary(gomock.Any(),
+			outbound.EXPECT().Call(gomock.Any(),
 				transporttest.NewRequestMatcher(t,
 					&transport.Request{
 						Caller:    caller,
@@ -132,7 +132,7 @@ func TestCallUnary(t *testing.T) {
 		}
 		resBody := reflect.Zero(wantType).Interface()
 
-		res, err := client.CallUnary(
+		res, err := client.Call(
 			ctx,
 			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
 			tt.body,

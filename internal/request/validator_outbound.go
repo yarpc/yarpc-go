@@ -32,8 +32,8 @@ type UnaryValidatorOutbound struct{ transport.UnaryOutbound }
 // OnewayValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
 type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
 
-// CallUnary performs the given request, failing early if the request is invalid.
-func (o UnaryValidatorOutbound) CallUnary(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+// Call performs the given request, failing early if the request is invalid.
+func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	request, err := Validate(ctx, request)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (o UnaryValidatorOutbound) CallUnary(ctx context.Context, request *transpor
 		return nil, err
 	}
 
-	return o.UnaryOutbound.CallUnary(ctx, request)
+	return o.UnaryOutbound.Call(ctx, request)
 }
 
 // CallOneway performs the given request, failing early if the request is invalid.

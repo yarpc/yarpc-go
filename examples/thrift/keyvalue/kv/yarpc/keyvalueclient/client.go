@@ -75,7 +75,7 @@ func (c client) GetValue(
 	args := keyvalue.GetValueHelper.Args(_Key)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -99,7 +99,7 @@ func (c client) SetValue(
 	args := keyvalue.SetValueHelper.Args(_Key, _Value)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

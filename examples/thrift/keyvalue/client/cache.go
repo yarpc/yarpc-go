@@ -54,7 +54,7 @@ func (c *cacheFilter) Invalidate() {
 	*c = make(cacheFilter)
 }
 
-func (c *cacheFilter) CallUnary(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (c *cacheFilter) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	data := *c
 
 	// Read the entire request body to match against the cache
@@ -73,7 +73,7 @@ func (c *cacheFilter) CallUnary(ctx context.Context, request *transport.Request,
 	}
 
 	fmt.Println("cache miss")
-	res, err := out.CallUnary(ctx, request)
+	res, err := out.Call(ctx, request)
 	if err != nil {
 		return nil, err
 	}

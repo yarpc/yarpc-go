@@ -246,7 +246,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 
 			registry := staticRegistry{Handler: handler}
 			trans.WithRegistry(registry, func(o transport.UnaryOutbound) {
-				res, err := o.CallUnary(ctx, &transport.Request{
+				res, err := o.Call(ctx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
 					Procedure: testProcedure,

@@ -43,7 +43,7 @@ import (
 // using this directly.
 type Client interface {
 	// Call the given Thrift method.
-	CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error)
+	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error)
 	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (transport.Ack, error)
 }
 
@@ -108,13 +108,13 @@ type thriftClient struct {
 	Enveloping    bool
 }
 
-func (c thriftClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error) {
+func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error) {
 	// Code generated for Thrift client calls will probably be something like
 	// this:
 	//
 	// 	func (c *MyServiceClient) someMethod(reqMeta yarpc.CallReqMeta, arg1 Arg1Type, arg2 arg2Type) (returnValue, yarpc.CallResMeta, error) {
 	// 		args := myservice.SomeMethodHelper.Args(arg1, arg2)
-	// 		resBody, resMeta, err := c.client.CallUnary(reqMeta, args)
+	// 		resBody, resMeta, err := c.client.Call(reqMeta, args)
 	// 		var result myservice.SomeMethodResult
 	// 		if err = result.FromWire(resBody); err != nil {
 	// 			return nil, resMeta, err
@@ -130,7 +130,7 @@ func (c thriftClient) CallUnary(ctx context.Context, reqMeta yarpc.CallReqMeta, 
 		return wire.Value{}, nil, err
 	}
 
-	tres, err := out.CallUnary(ctx, &treq)
+	tres, err := out.Call(ctx, &treq)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}

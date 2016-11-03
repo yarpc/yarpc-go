@@ -208,7 +208,7 @@ func (c client) <.Name>(
 	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	var body <$wire>.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

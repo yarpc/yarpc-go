@@ -52,7 +52,7 @@ func JSON(t crossdock.T) {
 
 	var response jsonEcho
 	token := random.String(5)
-	_, err := client.CallUnary(
+	_, err := client.Call(
 		ctx,
 		yarpc.NewReqMeta().Procedure("echo"),
 		&jsonEcho{Token: token},

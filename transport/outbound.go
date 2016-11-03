@@ -48,7 +48,7 @@ type UnaryOutbound interface {
 	// This MUST NOT be called before Start() has been called successfully. This
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
-	CallUnary(ctx context.Context, request *Request) (*Response, error)
+	Call(ctx context.Context, request *Request) (*Response, error)
 }
 
 // OnewayOutbound is a transport that knows how to send oneway requests for

@@ -194,7 +194,7 @@ func (c client) TestBinary(
 	args := thrifttest.TestBinaryHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -217,7 +217,7 @@ func (c client) TestByte(
 	args := thrifttest.TestByteHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -240,7 +240,7 @@ func (c client) TestDouble(
 	args := thrifttest.TestDoubleHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -263,7 +263,7 @@ func (c client) TestEnum(
 	args := thrifttest.TestEnumHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -286,7 +286,7 @@ func (c client) TestException(
 	args := thrifttest.TestExceptionHelper.Args(_Arg)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -309,7 +309,7 @@ func (c client) TestI32(
 	args := thrifttest.TestI32Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -332,7 +332,7 @@ func (c client) TestI64(
 	args := thrifttest.TestI64Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -355,7 +355,7 @@ func (c client) TestInsanity(
 	args := thrifttest.TestInsanityHelper.Args(_Argument)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -378,7 +378,7 @@ func (c client) TestList(
 	args := thrifttest.TestListHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -401,7 +401,7 @@ func (c client) TestMap(
 	args := thrifttest.TestMapHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -424,7 +424,7 @@ func (c client) TestMapMap(
 	args := thrifttest.TestMapMapHelper.Args(_Hello)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -452,7 +452,7 @@ func (c client) TestMulti(
 	args := thrifttest.TestMultiHelper.Args(_Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -476,7 +476,7 @@ func (c client) TestMultiException(
 	args := thrifttest.TestMultiExceptionHelper.Args(_Arg0, _Arg1)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -499,7 +499,7 @@ func (c client) TestNest(
 	args := thrifttest.TestNestHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -533,7 +533,7 @@ func (c client) TestSet(
 	args := thrifttest.TestSetHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -556,7 +556,7 @@ func (c client) TestString(
 	args := thrifttest.TestStringHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -579,7 +579,7 @@ func (c client) TestStringMap(
 	args := thrifttest.TestStringMapHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -602,7 +602,7 @@ func (c client) TestStruct(
 	args := thrifttest.TestStructHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -625,7 +625,7 @@ func (c client) TestTypedef(
 	args := thrifttest.TestTypedefHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -647,7 +647,7 @@ func (c client) TestVoid(
 	args := thrifttest.TestVoidHelper.Args()
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

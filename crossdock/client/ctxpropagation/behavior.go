@@ -191,7 +191,7 @@ func Run(t crossdock.T) {
 			defer cancel()
 
 			var resp js.RawMessage
-			_, err := jsonClient.CallUnary(
+			_, err := jsonClient.Call(
 				ctx,
 				yarpc.NewReqMeta().Procedure("phone"),
 				&server.PhoneRequest{
@@ -297,7 +297,7 @@ func (h *multiHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, bod
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	var resp js.RawMessage
-	phoneResMeta, err := h.phoneClient.CallUnary(
+	phoneResMeta, err := h.phoneClient.Call(
 		ctx,
 		yarpc.NewReqMeta().Procedure("phone").Headers(reqMeta.Headers()),
 		&server.PhoneRequest{

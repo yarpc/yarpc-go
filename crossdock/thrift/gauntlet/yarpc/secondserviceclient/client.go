@@ -72,7 +72,7 @@ func (c client) BlahBlah(
 	args := secondservice.BlahBlahHelper.Args()
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -95,7 +95,7 @@ func (c client) SecondtestString(
 	args := secondservice.SecondtestStringHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
+	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

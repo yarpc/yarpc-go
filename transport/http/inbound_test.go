@@ -121,7 +121,7 @@ func TestInboundMux(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = o.CallUnary(ctx, &transport.Request{
+	_, err = o.Call(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
@@ -142,7 +142,7 @@ func TestInboundMux(t *testing.T) {
 
 	h.EXPECT().HandleUnary(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-	res, err := o.CallUnary(ctx, &transport.Request{
+	res, err := o.Call(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",

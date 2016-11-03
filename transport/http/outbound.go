@@ -170,7 +170,7 @@ func setHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) {
 	}
 }
 
-func (o *outbound) CallUnary(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)

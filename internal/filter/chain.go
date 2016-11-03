@@ -41,11 +41,11 @@ func Chain(filters ...transport.UnaryFilter) transport.UnaryFilter {
 // filterChain combines a series of filters into a single Filter.
 type chain []transport.UnaryFilter
 
-func (c chain) CallUnary(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (c chain) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	return chainExec{
 		Chain: []transport.UnaryFilter(c),
 		Final: out,
-	}.CallUnary(ctx, request)
+	}.Call(ctx, request)
 }
 
 // chainExec adapts a series of filters into an Outbound. It is scoped to a
@@ -63,11 +63,11 @@ func (x chainExec) Stop() error {
 	return x.Final.Stop()
 }
 
-func (x chainExec) CallUnary(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (x chainExec) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
-		return x.Final.CallUnary(ctx, request)
+		return x.Final.Call(ctx, request)
 	}
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
-	return next.CallUnary(ctx, request, x)
+	return next.Call(ctx, request, x)
 }

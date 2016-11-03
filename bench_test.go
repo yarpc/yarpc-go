@@ -78,7 +78,7 @@ func runYARPCClient(b *testing.B, c raw.Client) {
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		_, _, err := c.CallUnary(ctx, yarpc.NewReqMeta().Procedure("echo"), _reqBody)
+		_, _, err := c.Call(ctx, yarpc.NewReqMeta().Procedure("echo"), _reqBody)
 		require.NoError(b, err, "request %d failed", i+1)
 	}
 }
