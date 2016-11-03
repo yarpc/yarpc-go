@@ -27,7 +27,7 @@ import (
 )
 
 // Chain combines a series of Interceptors into a single Interceptor.
-func Chain(interceptors ...transport.UnaryInterceptor) transport.UnaryInterceptor {
+func Chain(interceptors ...transport.Interceptor) transport.Interceptor {
 	switch len(interceptors) {
 	case 0:
 		return transport.NopInterceptor
@@ -39,11 +39,11 @@ func Chain(interceptors ...transport.UnaryInterceptor) transport.UnaryIntercepto
 }
 
 // interceptorChain combines a series of interceptors into a single Interceptor.
-type chain []transport.UnaryInterceptor
+type chain []transport.Interceptor
 
 func (c chain) HandleUnary(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	return chainExec{
-		Chain: []transport.UnaryInterceptor(c),
+		Chain: []transport.Interceptor(c),
 		Final: h,
 	}.HandleUnary(ctx, req, resw)
 }
@@ -51,7 +51,7 @@ func (c chain) HandleUnary(ctx context.Context, req *transport.Request, resw tra
 // chainExec adapts a series of interceptors into a Handler. It is scoped to a
 // single request to the Handler and is not thread-safe.
 type chainExec struct {
-	Chain []transport.UnaryInterceptor
+	Chain []transport.Interceptor
 	Final transport.UnaryHandler
 }
 

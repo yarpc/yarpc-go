@@ -22,7 +22,7 @@ package transport
 
 import "context"
 
-// UnaryInterceptor defines a transport-level middleware for Inbounds.
+// Interceptor defines a transport-level middleware for Inbounds.
 //
 // Interceptors MAY
 //
@@ -37,33 +37,33 @@ import "context"
 //
 // Interceptors are re-used across requests and MAY be called multiple times for
 // the same request.
-type UnaryInterceptor interface {
+type Interceptor interface {
 	HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error
 }
 
 // NopInterceptor is a interceptor that does not do anything special. It
 // simply calls the underlying Handler.
-var NopInterceptor UnaryInterceptor = nopInterceptor{}
+var NopInterceptor Interceptor = nopInterceptor{}
 
-// ApplyUnaryInterceptor applies the given Interceptor to the given Handler.
-func ApplyUnaryInterceptor(h UnaryHandler, i UnaryInterceptor) UnaryHandler {
+// ApplyInterceptor applies the given Interceptor to the given Handler.
+func ApplyInterceptor(h UnaryHandler, i Interceptor) UnaryHandler {
 	if i == nil {
 		return h
 	}
 	return interceptedHandler{h: h, i: i}
 }
 
-// UnaryInterceptorFunc adapts a function into an Interceptor.
-type UnaryInterceptorFunc func(context.Context, *Request, ResponseWriter, UnaryHandler) error
+// InterceptorFunc adapts a function into an Interceptor.
+type InterceptorFunc func(context.Context, *Request, ResponseWriter, UnaryHandler) error
 
-// HandleUnary for UnaryInterceptorFunc
-func (f UnaryInterceptorFunc) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
+// HandleUnary for InterceptorFunc
+func (f InterceptorFunc) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
 	return f(ctx, req, resw, h)
 }
 
 type interceptedHandler struct {
 	h UnaryHandler
-	i UnaryInterceptor
+	i Interceptor
 }
 
 func (h interceptedHandler) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter) error {

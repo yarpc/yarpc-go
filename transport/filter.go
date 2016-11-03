@@ -22,7 +22,7 @@ package transport
 
 import "context"
 
-// UnaryFilter defines transport-level middleware for Outbounds.
+// Filter defines transport-level middleware for Outbounds.
 //
 // Filters MAY
 //
@@ -39,16 +39,16 @@ import "context"
 //
 // Filters are re-used across requests and MAY be called multiple times on the
 // same request.
-type UnaryFilter interface {
+type Filter interface {
 	Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error)
 }
 
-// NopUnaryFilter is a filter that does not do anything special. It simply calls
+// NopFilter is a filter that does not do anything special. It simply calls
 // the underlying Outbound.
-var NopUnaryFilter UnaryFilter = nopFilter{}
+var NopFilter Filter = nopFilter{}
 
 // ApplyFilter applies the given Filter to the given Outbound.
-func ApplyFilter(o UnaryOutbound, f UnaryFilter) UnaryOutbound {
+func ApplyFilter(o UnaryOutbound, f Filter) UnaryOutbound {
 	if f == nil {
 		return o
 	}
@@ -65,7 +65,7 @@ func (f FilterFunc) Call(ctx context.Context, request *Request, out UnaryOutboun
 
 type filteredOutbound struct {
 	o UnaryOutbound
-	f UnaryFilter
+	f Filter
 }
 
 func (fo filteredOutbound) Start(d Deps) error {
