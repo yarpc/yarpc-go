@@ -190,12 +190,12 @@ func (c thriftClient) buildTransportRequest(
 	if err != nil {
 		// ToWire validates the request. If it failed, we should return the error
 		// as-is because it's not an encoding error.
-		return &transport.Request{}, nil, err
+		return nil, nil, err
 	}
 
 	reqEnvelopeType := reqBody.EnvelopeType()
 	if reqEnvelopeType != wire.Call && reqEnvelopeType != wire.OneWay {
-		return &transport.Request{}, nil,
+		return nil, nil,
 			encoding.RequestBodyEncodeError(
 				&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
 			)
@@ -209,7 +209,7 @@ func (c thriftClient) buildTransportRequest(
 		Value: value,
 	}, &buffer)
 	if err != nil {
-		return &transport.Request{}, nil, encoding.RequestBodyEncodeError(&treq, err)
+		return nil, nil, encoding.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = &buffer
