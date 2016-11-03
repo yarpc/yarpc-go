@@ -30,6 +30,9 @@ This release requires regeneration of ThriftRW code.
     when instantiating Thrift clients or registering handlers.
 -   **Breaking**: Use of `golang.org/x/net/context` has been dropped in favor
     of the standard library's `context` package.
+-   Rename 'Handler' interface to 'HandleUnary' and separate Outbound
+    interface into 'Outbound' and 'UnaryOutbound' in anticipation of Oneway
+    support.
 
 
 v0.3.1 (2016-09-31)
