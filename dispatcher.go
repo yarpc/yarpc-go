@@ -128,13 +128,12 @@ type dispatcher struct {
 
 	Name string
 
-	outbounds map[string]transport.Outbounds
+	inbounds  []transport.Inbound
+	outbounds Outbounds
 
 	//TODO(apb): get rid of these, can just apply filter in NewDispatcher
 	Filter      transport.Filter
 	Interceptor transport.Interceptor
-
-	inbounds []transport.Inbound
 
 	deps transport.Deps
 }
