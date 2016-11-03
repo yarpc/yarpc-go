@@ -43,6 +43,7 @@ import (
 
 func TestStartAddrInUse(t *testing.T) {
 	i1 := NewInbound(":0")
+
 	require.NoError(t, i1.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
 	i2 := NewInbound(i1.Addr().String())
 	err := i2.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps)
@@ -61,6 +62,7 @@ func TestStartAddrInUse(t *testing.T) {
 func TestNilAddrAfterStop(t *testing.T) {
 	i := NewInbound(":0")
 	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
+
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NotNil(t, i.Addr())
 	assert.NoError(t, i.Stop())
@@ -70,6 +72,7 @@ func TestNilAddrAfterStop(t *testing.T) {
 func TestInboundStartAndStop(t *testing.T) {
 	i := NewInbound(":0")
 	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
+
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NoError(t, i.Stop())
 }
@@ -95,9 +98,10 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	i := NewInbound(":0", Mux("/rpc/v1", mux))
-	h := transporttest.NewMockHandler(mockCtrl)
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRegistry(mockCtrl)
 	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: reg}, transport.NoDeps))
+
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
@@ -117,7 +121,7 @@ func TestInboundMux(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = o.Call(ctx, &transport.Request{
+	_, err = o.CallUnary(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",
@@ -134,8 +138,8 @@ func TestInboundMux(t *testing.T) {
 	defer o.Stop()
 
 	reg.EXPECT().GetHandler("bar", "hello").Return(h, nil)
-	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	res, err := o.Call(ctx, &transport.Request{
+	h.EXPECT().HandleUnary(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	res, err := o.CallUnary(ctx, &transport.Request{
 		Caller:    "foo",
 		Service:   "bar",
 		Procedure: "hello",

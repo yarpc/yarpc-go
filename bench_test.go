@@ -78,7 +78,7 @@ func runYARPCClient(b *testing.B, c raw.Client) {
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		_, _, err := c.Call(ctx, yarpc.NewReqMeta().Procedure("echo"), _reqBody)
+		_, _, err := c.CallUnary(ctx, yarpc.NewReqMeta().Procedure("echo"), _reqBody)
 		require.NoError(b, err, "request %d failed", i+1)
 	}
 }
@@ -133,7 +133,7 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
+		server.Register(raw.UnaryProcedure("echo", yarpcEcho))
 		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
 			b.ResetTimer()
 			runYARPCClient(b, raw.New(client.Channel("server")))
@@ -162,7 +162,7 @@ func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
+		server.Register(raw.UnaryProcedure("echo", yarpcEcho))
 
 		b.ResetTimer()
 		runHTTPClient(b, http.DefaultClient, "http://localhost:8996")
@@ -191,7 +191,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 	// no defer close on channels because YARPC will take care of that
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
+		server.Register(raw.UnaryProcedure("echo", yarpcEcho))
 
 		// Need server already started to build client config
 		clientCfg := yarpc.Config{
@@ -241,7 +241,7 @@ func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
+		server.Register(raw.UnaryProcedure("echo", yarpcEcho))
 
 		clientCh, err := tchannel.NewChannel("client", nil)
 		require.NoError(b, err, "failed to build client TChannel")

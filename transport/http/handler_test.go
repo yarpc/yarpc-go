@@ -51,11 +51,11 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(ProcedureHeader, "nyuck")
 	headers.Set(ServiceHeader, "curly")
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	registry := transporttest.NewMockRegistry(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 
 	registry.EXPECT().GetHandler("curly", "nyuck").Return(rpcHandler, nil)
-	rpcHandler.EXPECT().Handle(
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
 		),
@@ -115,13 +115,13 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		rpcHandler := transporttest.NewMockHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
+		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 
 		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
 		httpHandler := handler{Registry: registry}
 
-		rpcHandler.EXPECT().Handle(
+		rpcHandler.EXPECT().HandleUnary(
 			transporttest.NewContextMatcher(t,
 				transporttest.ContextTTL(tt.wantTTL),
 			),
@@ -254,8 +254,8 @@ func TestHandlerInternalFailure(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	rpcHandler.EXPECT().Handle(
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
@@ -285,7 +285,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) HandleUnary(context.Context, *transport.Request, transport.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 
@@ -296,7 +296,7 @@ func TestHandlerPanic(t *testing.T) {
 		Inbounds: []transport.Inbound{inbound},
 	})
 	serverDispatcher.Register([]transport.Registrant{
-		{Procedure: "panic", Handler: panickedHandler{}},
+		{Procedure: "panic", UnaryHandler: panickedHandler{}},
 	})
 
 	require.NoError(t, serverDispatcher.Start())
@@ -313,7 +313,7 @@ func TestHandlerPanic(t *testing.T) {
 	client := raw.New(clientDispatcher.Channel("yarpc-test"))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("panic"), []byte{})
+	_, _, err := client.CallUnary(ctx, yarpc.NewReqMeta().Procedure("panic"), []byte{})
 
 	assert.True(t, transport.IsUnexpectedError(err), "Must be an UnexpectedError")
 	assert.Equal(t,

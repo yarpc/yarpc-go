@@ -68,10 +68,11 @@ func (c client) BlahBlah(
 	ctx context.Context,
 	reqMeta yarpc.CallReqMeta,
 ) (resMeta yarpc.CallResMeta, err error) {
+
 	args := secondservice.BlahBlahHelper.Args()
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}
@@ -90,10 +91,11 @@ func (c client) SecondtestString(
 	reqMeta yarpc.CallReqMeta,
 	_Thing *string,
 ) (success string, resMeta yarpc.CallResMeta, err error) {
+
 	args := secondservice.SecondtestStringHelper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

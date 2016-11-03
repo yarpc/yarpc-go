@@ -53,7 +53,7 @@ func HostPort(hostPort string) OutboundOption {
 
 // NewOutbound builds a new TChannel outbound which uses the given Channel to
 // make requests.
-func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.Outbound {
+func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.UnaryOutbound {
 	o := outbound{Channel: ch, started: atomic.NewBool(false)}
 	for _, opt := range options {
 		opt(&o)
@@ -87,7 +87,7 @@ func (o outbound) Stop() error {
 	return nil
 }
 
-func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+func (o outbound) CallUnary(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)

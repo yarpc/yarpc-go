@@ -63,13 +63,16 @@ type Config struct {
 
 	// Filter and Interceptor that will be applied to all outgoing and incoming
 	// requests respectively.
-	Filter      transport.Filter
-	Interceptor transport.Interceptor
+	Filter      transport.UnaryFilter
+	Interceptor transport.UnaryInterceptor
 
 	// TODO FallbackHandler for catch-all endpoints
 
 	Tracer opentracing.Tracer
 }
+
+// Outbounds encapsulates a remote service and its outbounds
+type Outbounds map[string]transport.Outbounds
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
 func NewDispatcher(cfg Config) Dispatcher {
@@ -94,10 +97,11 @@ func NewDispatcher(cfg Config) Dispatcher {
 type dispatcher struct {
 	transport.Registry
 
-	Name        string
-	Outbounds   transport.Outbounds
-	Filter      transport.Filter
-	Interceptor transport.Interceptor
+	Name      string
+	Outbounds transport.Outbounds
+	//TODO(apb): get rid of these, can just apply filter in NewDispatcher
+	Filter      transport.UnaryFilter
+	Interceptor transport.UnaryInterceptor
 
 	inbounds []transport.Inbound
 	deps     transport.Deps
@@ -111,8 +115,8 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 
 func (d dispatcher) Channel(service string) transport.Channel {
 	if out, ok := d.Outbounds[service]; ok {
-		out = transport.ApplyFilter(out, d.Filter)
-		out = request.ValidatorOutbound{Outbound: out}
+		out = transport.ApplyUnaryFilter(out, d.Filter)
+		out = request.ValidatorOutbound{UnaryOutbound: out}
 		return transport.IdentityChannel(d.Name, service, out)
 	}
 	panic(noOutboundForService{Service: service})
@@ -189,7 +193,7 @@ func (d dispatcher) Start() error {
 
 func (d dispatcher) Register(rs []transport.Registrant) {
 	for i, r := range rs {
-		r.Handler = transport.ApplyInterceptor(r.Handler, d.Interceptor)
+		r.UnaryHandler = transport.ApplyUnaryInterceptor(r.UnaryHandler, d.Interceptor)
 		rs[i] = r
 	}
 	d.Registry.Register(rs)

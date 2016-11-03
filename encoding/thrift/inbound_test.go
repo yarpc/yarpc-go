@@ -36,7 +36,7 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-//go:generate mockgen -destination=mock_handler_test.go -package=thrift go.uber.org/yarpc/encoding/thrift Handler
+//go:generate mockgen -destination=mock_handler_test.go -package=thrift go.uber.org/yarpc/encoding/thrift UnaryHandler
 //go:generate mockgen -destination=mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 
 func TestThriftHandler(t *testing.T) {
@@ -130,8 +130,8 @@ func TestThriftHandler(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		handler := NewMockHandler(mockCtrl)
-		h := thriftHandler{Protocol: proto, Handler: handler, Enveloping: true}
+		handler := NewMockUnaryHandler(mockCtrl)
+		h := thriftHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
 
 		if tt.expectHandle {
 			reqMeta := fakeReqMeta{
@@ -140,7 +140,7 @@ func TestThriftHandler(t *testing.T) {
 				encoding:  Encoding,
 				procedure: "MyService::someMethod",
 			}
-			handler.EXPECT().Handle(ctx, reqMeta, requestBody).
+			handler.EXPECT().HandleUnary(ctx, reqMeta, requestBody).
 				Return(Response{
 					Body:               fakeEnveloper(tt.responseEnvelopeType),
 					IsApplicationError: tt.responseIsAppError,
@@ -148,7 +148,7 @@ func TestThriftHandler(t *testing.T) {
 		}
 
 		rw := new(transporttest.FakeResponseWriter)
-		err := h.Handle(ctx, &transport.Request{
+		err := h.HandleUnary(ctx, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  Encoding,

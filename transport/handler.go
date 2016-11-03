@@ -22,13 +22,13 @@ package transport
 
 import "context"
 
-// Handler handles a single transport-level request.
-type Handler interface {
+// UnaryHandler handles a single, transport-level, unary request.
+type UnaryHandler interface {
 	// Handle the given request, writing the response to the given
 	// ResponseWriter.
 	//
 	// An error may be returned in case of failures. BadRequestError must be
 	// returned for invalid requests. All other failures are treated as
 	// UnexpectedErrors.
-	Handle(ctx context.Context, req *Request, resw ResponseWriter) error
+	HandleUnary(ctx context.Context, req *Request, resw ResponseWriter) error
 }

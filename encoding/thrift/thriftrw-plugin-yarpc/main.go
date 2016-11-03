@@ -73,8 +73,8 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 	h := handler{impl}
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
-		Methods: map[string]<$thrift>.Handler{
-			<range .Service.Functions>"<.ThriftName>": <$thrift>.HandlerFunc(h.<.Name>),
+		UnaryMethods: map[string]<$thrift>.UnaryHandler{
+			<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$thrift>.UnaryHandlerFunc(h.<.Name>),<end>
 		<end>},
 	}
 	return <$thrift>.BuildRegistrants(service, opts...)
@@ -181,7 +181,7 @@ func (c client) <.Name>(
 	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	var body <$wire>.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, resMeta, err = c.c.CallUnary(ctx, reqMeta, args)
 	if err != nil {
 		return
 	}

@@ -43,9 +43,11 @@ import (
 
 // all tests in this file should use these names for callers and services.
 const (
-	testCaller    = "testService-client"
-	testService   = "testService"
-	testProcedure = "hello"
+	testCaller  = "testService-client"
+	testService = "testService"
+
+	testProcedure       = "hello"
+	testProcedureOneway = "hello-oneway"
 )
 
 // roundTripTransport provides a function that sets up and tears down an
@@ -53,10 +55,10 @@ const (
 type roundTripTransport interface {
 	// Set up an Inbound serving Registry r, and call f with an Outbound that
 	// knows how to talk to that Inbound.
-	WithRegistry(r transport.Registry, f func(transport.Outbound))
+	WithRegistry(r transport.Registry, f func(transport.UnaryOutbound))
 }
 
-type staticRegistry struct{ Handler transport.Handler }
+type staticRegistry struct{ UnaryHandler transport.UnaryHandler }
 
 func (r staticRegistry) Register([]transport.Registrant) {
 	panic("cannot register methods on a static registry")
@@ -66,21 +68,21 @@ func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	return []transport.ServiceProcedure{{Service: testService, Procedure: testProcedure}}
 }
 
-func (r staticRegistry) GetHandler(service string, procedure string) (transport.Handler, error) {
-	return r.Handler, nil
+func (r staticRegistry) GetHandler(service string, procedure string) (transport.UnaryHandler, error) {
+	return r.UnaryHandler, nil
 }
 
 // handlerFunc wraps a function into a transport.Registry
-type handlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
+type unaryHandlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 
-func (f handlerFunc) Handle(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
+func (f unaryHandlerFunc) HandleUnary(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
 	return f(ctx, r, w)
 }
 
 // httpTransport implements a roundTripTransport for HTTP.
 type httpTransport struct{ t *testing.T }
 
-func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Outbound)) {
+func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
 	i := http.NewInbound("127.0.0.1:0")
 	require.NoError(ht.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
 	defer i.Stop()
@@ -95,12 +97,13 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Outb
 // tchannelTransport implements a roundTripTransport for TChannel.
 type tchannelTransport struct{ t *testing.T }
 
-func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.Outbound)) {
+func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
 		i := tch.NewInbound(ch)
 		require.NoError(tt.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
 		// handler.
@@ -191,7 +194,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				Body:      bytes.NewReader([]byte(tt.requestBody)),
 			})
 
-			handler := handlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
+			handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				if tt.responseError != nil {
@@ -210,9 +213,9 @@ func TestSimpleRoundTrip(t *testing.T) {
 			ctx, cancel := context.WithTimeout(rootCtx, 200*time.Millisecond)
 			defer cancel()
 
-			registry := staticRegistry{Handler: handler}
-			trans.WithRegistry(registry, func(o transport.Outbound) {
-				res, err := o.Call(ctx, &transport.Request{
+			registry := staticRegistry{UnaryHandler: handler}
+			trans.WithRegistry(registry, func(o transport.UnaryOutbound) {
+				res, err := o.CallUnary(ctx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
 					Procedure: testProcedure,

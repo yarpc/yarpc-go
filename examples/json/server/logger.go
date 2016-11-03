@@ -29,8 +29,8 @@ import (
 
 type requestLogInterceptor struct{}
 
-func (requestLogInterceptor) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.Handler) error {
+func (requestLogInterceptor) HandleUnary(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.UnaryHandler) error {
 	fmt.Printf("received a request to %q from client %q (encoding %q)\n",
 		req.Procedure, req.Caller, req.Encoding)
-	return handler.Handle(ctx, req, resw)
+	return handler.HandleUnary(ctx, req, resw)
 }

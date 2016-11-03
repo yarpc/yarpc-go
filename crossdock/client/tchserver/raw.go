@@ -95,7 +95,7 @@ func rawCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, procedure strin
 	defer cancel()
 
 	reqMeta := yarpc.NewReqMeta().Procedure(procedure).Headers(headers)
-	resBody, resMeta, err := client.Call(ctx, reqMeta, token)
+	resBody, resMeta, err := client.CallUnary(ctx, reqMeta, token)
 
 	return resBody, resMeta, err
 }

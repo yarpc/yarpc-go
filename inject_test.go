@@ -125,7 +125,7 @@ func TestInjectClientSuccess(t *testing.T) {
 				Client json.Client `service:"foo"`
 			}{
 				Client: json.New(transport.IdentityChannel(
-					"foo", "bar", transporttest.NewMockOutbound(mockCtrl))),
+					"foo", "bar", transporttest.NewMockUnaryOutbound(mockCtrl))),
 			},
 			wantNonNil: []string{"Client"},
 		},

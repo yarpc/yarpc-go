@@ -99,7 +99,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
 	if err == nil {
-		err = internal.SafelyCallHandler(ctx, handler, start, treq, newResponseWriter(w))
+		err = internal.SafelyCallUnaryHandler(ctx, handler, start, treq, newResponseWriter(w))
 	}
 
 	if err != nil {

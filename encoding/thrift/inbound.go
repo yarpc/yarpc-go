@@ -35,12 +35,12 @@ import (
 
 // thriftHandler wraps a Thrift Handler into a transport.Handler
 type thriftHandler struct {
-	Handler    Handler
-	Protocol   protocol.Protocol
-	Enveloping bool
+	UnaryHandler UnaryHandler
+	Protocol     protocol.Protocol
+	Enveloping   bool
 }
 
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+func (t thriftHandler) HandleUnary(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -68,10 +68,9 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		return encoding.RequestBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
-	// TODO(abg): Support oneway
 
 	reqMeta := meta.FromTransportRequest(treq)
-	res, err := t.Handler.Handle(ctx, reqMeta, envelope.Value)
+	res, err := t.UnaryHandler.HandleUnary(ctx, reqMeta, envelope.Value)
 	if err != nil {
 		return err
 	}
