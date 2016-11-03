@@ -56,6 +56,15 @@ func preparePeerReleases(
 	}
 }
 
+func preparePeerIdentifierReleases(
+	agent *transporttest.MockPeerAgent,
+	peerIDs []transport.PeerIdentifier,
+) {
+	for _, pid := range peerIDs {
+		agent.EXPECT().ReleasePeer(pid, gomock.Any()).Return(nil)
+	}
+}
+
 func TestRoundRobinList(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -272,6 +281,240 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				{
 					err: errors.ErrNoPeerToSelect("RoundRobinList"),
+				},
+			}
+			s.expectedStarted = true
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "start add"
+
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			allPids := createPeerIDs([]string{"1", "2"})
+
+			s.pids = []transport.PeerIdentifier{allPids[0]}
+
+			s.expectedPeers = createPeers(mockCtrl, s.agent, allPids)
+
+			s.appliedFunc = func(pl *roundRobin) error {
+				pl.Start()
+				return pl.Add(allPids[1])
+			}
+
+			s.expectedChooseResults = []expectedChooseResult{
+				{
+					peer: s.expectedPeers[0],
+				},
+				{
+					peer: s.expectedPeers[1],
+				},
+				{
+					peer: s.expectedPeers[0],
+				},
+			}
+			s.expectedStarted = true
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "start remove"
+
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+
+			s.pids = createPeerIDs([]string{"1", "2"})
+			initialPeers := createPeers(mockCtrl, s.agent, s.pids)
+
+			s.expectedPeers = []transport.Peer{initialPeers[1]}
+
+			removedPeers := []transport.Peer{initialPeers[0]}
+			preparePeerReleases(s.agent, removedPeers)
+
+			s.appliedFunc = func(pl *roundRobin) error {
+				pl.Start()
+				return pl.Remove(removedPeers[0])
+			}
+
+			s.expectedChooseResults = []expectedChooseResult{
+				{
+					peer: s.expectedPeers[0],
+				},
+			}
+			s.expectedStarted = true
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "start addremoveaddremoveaddremoveaddremoveaddremoveaddremove"
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+
+			initialPeerIDs := createPeerIDs([]string{"1", "2", "3", "4"})
+			initialPeers := createPeers(mockCtrl, s.agent, initialPeerIDs)
+
+			addedRemovedPeerIDs := createPeerIDs([]string{"5", "6"})
+			createPeers(mockCtrl, s.agent, addedRemovedPeerIDs)
+
+			addedPeerIDs := createPeerIDs([]string{"7", "8"})
+			addedPeers := createPeers(mockCtrl, s.agent, addedPeerIDs)
+
+			removedPeerIDs := initialPeerIDs[2:]
+
+			allRemovedPeerIDs := append(addedRemovedPeerIDs, removedPeerIDs...)
+			preparePeerIdentifierReleases(s.agent, allRemovedPeerIDs)
+
+			s.pids = initialPeerIDs
+			s.expectedPeers = append(addedPeers, initialPeers[:2]...)
+
+			s.appliedFunc = func(pl *roundRobin) error {
+				pl.Start()
+
+				for _, pid := range addedRemovedPeerIDs {
+					err := pl.Add(pid)
+					if err != nil {
+						return err
+					}
+				}
+
+				for _, pid := range removedPeerIDs {
+					err := pl.Remove(pid)
+					if err != nil {
+						return err
+					}
+				}
+
+				for _, pid := range addedPeerIDs {
+					err := pl.Add(pid)
+					if err != nil {
+						return err
+					}
+				}
+
+				for _, pid := range addedRemovedPeerIDs {
+					err := pl.Remove(pid)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+
+			s.expectedChooseResults = []expectedChooseResult{
+				{
+					peer: initialPeers[0],
+				},
+				{
+					peer: initialPeers[1],
+				},
+				{
+					peer: addedPeers[0],
+				},
+				{
+					peer: addedPeers[1],
+				},
+				{
+					peer: initialPeers[0],
+				},
+			}
+			s.expectedStarted = true
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "add duplicate"
+
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.pids = createPeerIDs([]string{"1", "2"})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
+
+			s.pl, _ = NewRoundRobin(s.pids, s.agent)
+
+			duplicatePid := s.pids[0]
+			s.agent.EXPECT().RetainPeer(duplicatePid, s.pl).Return(s.expectedPeers[0], nil)
+
+			s.appliedFunc = func(pl *roundRobin) error {
+				pl.Start()
+				return pl.Add(duplicatePid)
+			}
+
+			s.expectedError = errors.ErrPeerAlreadyInList{
+				Peer:     s.expectedPeers[0],
+				PeerList: s.pl,
+			}
+			s.expectedChooseResults = []expectedChooseResult{
+				{
+					peer: s.expectedPeers[0],
+				},
+				{
+					peer: s.expectedPeers[1],
+				},
+				{
+					peer: s.expectedPeers[0],
+				},
+			}
+			s.expectedStarted = true
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "add retain error"
+
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.pids = createPeerIDs([]string{"1", "2"})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
+
+			s.pl, _ = NewRoundRobin(s.pids, s.agent)
+
+			newPid := createPeerIDs([]string{"3"})[0]
+			s.expectedError = errors.ErrInvalidPeerType{
+				ExpectedType:   "test",
+				PeerIdentifier: newPid,
+			}
+			s.agent.EXPECT().RetainPeer(newPid, s.pl).Return(nil, s.expectedError)
+
+			s.appliedFunc = func(pl *roundRobin) error {
+				pl.Start()
+				return pl.Add(newPid)
+			}
+
+			s.expectedChooseResults = []expectedChooseResult{
+				{
+					peer: s.expectedPeers[0],
+				},
+				{
+					peer: s.expectedPeers[1],
+				},
+				{
+					peer: s.expectedPeers[0],
+				},
+			}
+			s.expectedStarted = true
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "remove peer not in list"
+
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.pids = createPeerIDs([]string{"1", "2"})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
+
+			s.pl, _ = NewRoundRobin(s.pids, s.agent)
+
+			removedPeerID := createPeerIDs([]string{"3"})[0]
+			s.expectedError = errors.ErrPeerNotInList{
+				PeerIdentifier: removedPeerID,
+				PeerList:       s.pl,
+			}
+			s.agent.EXPECT().ReleasePeer(removedPeerID, s.pl).Return(nil)
+
+			s.appliedFunc = func(pl *roundRobin) error {
+				pl.Start()
+				return pl.Remove(removedPeerID)
+			}
+
+			s.expectedChooseResults = []expectedChooseResult{
+				{
+					peer: s.expectedPeers[0],
+				},
+				{
+					peer: s.expectedPeers[1],
+				},
+				{
+					peer: s.expectedPeers[0],
 				},
 			}
 			s.expectedStarted = true

@@ -96,20 +96,20 @@ func (pl *roundRobin) addPeer(peer transport.Peer) error {
 	return nil
 }
 
-func (pl *roundRobin) removePeer(peer transport.Peer) error {
-	node, ok := pl.peerToNode[peer.Identifier()]
+func (pl *roundRobin) removePeer(pid transport.PeerIdentifier) error {
+	node, ok := pl.peerToNode[pid.Identifier()]
 	if !ok {
 		// Peer doesn't exist in the list
 		return errors.ErrPeerNotInList{
-			PeerIdentifier: peer,
+			PeerIdentifier: pid,
 			PeerList:       pl,
 		}
 	}
 
-	if node.previousNode == node.nextNode {
+	if node.previousNode == node {
 		// This is the last node, set the nextNode to this
 		pl.nextNode = nil
-		delete(pl.peerToNode, peer.Identifier())
+		delete(pl.peerToNode, pid.Identifier())
 		return nil
 	}
 
@@ -121,7 +121,7 @@ func (pl *roundRobin) removePeer(peer transport.Peer) error {
 	node.previousNode.nextNode, node.nextNode.previousNode = node.nextNode, node.previousNode
 
 	// Remove the node from our node map
-	delete(pl.peerToNode, peer.Identifier())
+	delete(pl.peerToNode, pid.Identifier())
 
 	return nil
 }
@@ -157,12 +157,10 @@ func (pl *roundRobin) clearPeers() error {
 	for _, node := range pl.peerToNode {
 		peer := node.peer
 
-		err := pl.agent.ReleasePeer(peer, pl)
+		err := pl.Remove(peer)
 		if err != nil {
 			return err
 		}
-
-		pl.removePeer(peer)
 	}
 	return nil
 }
@@ -177,5 +175,29 @@ func (pl *roundRobin) ChoosePeer(context.Context, *transport.Request) (transport
 	return pl.nextPeer()
 }
 
-// NotifyPending when the number of Pending requests changes
+func (pl *roundRobin) Add(pid transport.PeerIdentifier) error {
+	pl.Lock()
+	defer pl.Unlock()
+
+	peer, err := pl.agent.RetainPeer(pid, pl)
+	if err != nil {
+		return err
+	}
+
+	return pl.addPeer(peer)
+}
+
+func (pl *roundRobin) Remove(pid transport.PeerIdentifier) error {
+	pl.Lock()
+	defer pl.Unlock()
+
+	err := pl.agent.ReleasePeer(pid, pl)
+	if err != nil {
+		return err
+	}
+
+	return pl.removePeer(pid)
+}
+
+// NotifyStatusChanged when the peer's status changes
 func (pl *roundRobin) NotifyStatusChanged(transport.Peer) {}
