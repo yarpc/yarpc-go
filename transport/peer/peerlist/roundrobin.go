@@ -132,12 +132,12 @@ func (pl *RoundRobin) waitForPeerAddedEventOrTimeout(ctx context.Context) error 
 	}
 }
 
-func (pl *RoundRobin) removePeer(peer transport.Peer) error {
-	node, ok := pl.peerToNode[peer.Identifier()]
+func (pl *RoundRobin) removePeer(pid transport.PeerIdentifier) error {
+	node, ok := pl.peerToNode[pid.Identifier()]
 	if !ok {
 		// Peer doesn't exist in the list
 		return errors.ErrPeerNotInList{
-			PeerIdentifier: peer,
+			PeerIdentifier: pid,
 			PeerList:       pl,
 		}
 	}
@@ -151,7 +151,7 @@ func (pl *RoundRobin) removePeer(peer transport.Peer) error {
 	}
 
 	// Remove the node from our node map
-	delete(pl.peerToNode, peer.Identifier())
+	delete(pl.peerToNode, pid.Identifier())
 
 	return nil
 }
@@ -177,12 +177,10 @@ func (pl *RoundRobin) clearPeers() error {
 	for _, node := range pl.peerToNode {
 		peer := node.getPeer()
 
-		err := pl.agent.ReleasePeer(peer, pl)
+		err := pl.removePeer(peer)
 		if err != nil {
 			return err
 		}
-
-		pl.removePeer(peer)
 	}
 	return nil
 }
@@ -209,5 +207,29 @@ func (pl *RoundRobin) nextPeer() (transport.Peer, error) {
 	return peer, nil
 }
 
-// NotifyPending when the number of Pending requests changes
+func (pl *RoundRobin) Add(pid transport.PeerIdentifier) error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	peer, err := pl.agent.RetainPeer(pid, pl)
+	if err != nil {
+		return err
+	}
+
+	return pl.addToRing(peer)
+}
+
+func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	err := pl.agent.ReleasePeer(pid, pl)
+	if err != nil {
+		return err
+	}
+
+	return pl.removePeer(pid)
+}
+
+// NotifyStatusChanged when the number of Pending requests changes
 func (pl *RoundRobin) NotifyStatusChanged(transport.Peer) {}
