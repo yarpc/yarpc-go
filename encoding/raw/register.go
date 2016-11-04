@@ -57,13 +57,13 @@ func Procedure(name string, handler UnaryHandler) []transport.Registrant {
 type OnewayHandler func(context.Context, yarpc.ReqMeta, []byte) error
 
 // OnewayProcedure builds a Registrant from the given raw handler
-func OnewayProcedure(name string, onewayHandler OnewayHandler) []transport.Registrant {
+func OnewayProcedure(name string, handler OnewayHandler) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
 			HandlerSpec: transport.HandlerSpec{
 				Type:          transport.Oneway,
-				OnewayHandler: rawHandler{OnewayHandler: onewayHandler},
+				OnewayHandler: rawHandler{OnewayHandler: handler},
 			},
 		},
 	}

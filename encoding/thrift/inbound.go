@@ -33,7 +33,8 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-// thriftHandler wraps a Thrift Handler into a transport.Handler and transport.OnewayHandler
+// thriftHandler wraps a Thrift Handler into a transport.UnaryHandler and
+// transport.OnewayHandler
 type thriftHandler struct {
 	UnaryHandler  UnaryHandler
 	OnewayHandler OnewayHandler
