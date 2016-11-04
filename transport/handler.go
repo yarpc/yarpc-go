@@ -20,7 +20,39 @@
 
 package transport
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
+
+// Type is an enum of RPC types
+type Type int
+
+const (
+	// Unary type
+	Unary Type = iota + 1
+	// Oneway type
+	Oneway
+)
+
+func (t Type) String() string {
+	switch t {
+	case Unary:
+		return "Unary"
+	case Oneway:
+		return "Oneway"
+	default:
+		return fmt.Sprintf("Type(%v)", int(t))
+	}
+}
+
+// HandlerSpec holds a handler and its Type
+type HandlerSpec struct {
+	Type Type
+
+	UnaryHandler  UnaryHandler
+	OnewayHandler OnewayHandler
+}
 
 // UnaryHandler handles a single, transport-level, unary request.
 type UnaryHandler interface {
@@ -31,4 +63,16 @@ type UnaryHandler interface {
 	// returned for invalid requests. All other failures are treated as
 	// UnexpectedErrors.
 	HandleUnary(ctx context.Context, req *Request, resw ResponseWriter) error
+}
+
+// OnewayHandler handles a single, transport-level, oneway request.
+type OnewayHandler interface {
+	// Handle the given oneway request
+	//
+	// An error may be returned in case of failures.
+	// TODO: determine oneway errors and how to deal with them
+	HandleOneway(
+		ctx context.Context,
+		req *Request,
+	) error
 }

@@ -53,8 +53,9 @@ func TestHandlerSucces(t *testing.T) {
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
-	registry.EXPECT().GetHandler("curly", "nyuck").Return(rpcHandler, nil)
+	registry.EXPECT().GetHandlerSpec("curly", "nyuck").Return(spec, nil)
 
 	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t,
@@ -118,8 +119,10 @@ func TestHandlerHeaders(t *testing.T) {
 	for _, tt := range tests {
 		registry := transporttest.NewMockRegistry(mockCtrl)
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
-		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
+		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
+
 		httpHandler := handler{Registry: registry}
 
 		rpcHandler.EXPECT().HandleUnary(
@@ -230,7 +233,9 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		h := handler{Registry: transporttest.NewMockRegistry(mockCtrl)}
+		reg := transporttest.NewMockRegistry(mockCtrl)
+		h := handler{Registry: reg}
+
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 
@@ -273,8 +278,9 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(fmt.Errorf("great sadness"))
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
+	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
+	registry.EXPECT().GetHandlerSpec("fake", "hello").Return(spec, nil)
 
-	registry.EXPECT().GetHandler("fake", "hello").Return(rpcHandler, nil)
 	httpHandler := handler{Registry: registry}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
@@ -299,7 +305,13 @@ func TestHandlerPanic(t *testing.T) {
 		Inbounds: []transport.Inbound{inbound},
 	})
 	serverDispatcher.Register([]transport.Registrant{
-		{Procedure: "panic", Handler: panickedHandler{}},
+		{
+			Procedure: "panic",
+			HandlerSpec: transport.HandlerSpec{
+				Type:         transport.Unary,
+				UnaryHandler: panickedHandler{},
+			},
+		},
 	})
 
 	require.NoError(t, serverDispatcher.Start())

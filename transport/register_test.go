@@ -39,8 +39,21 @@ func TestMapRegistry(t *testing.T) {
 	foo := transporttest.NewMockUnaryHandler(mockCtrl)
 	bar := transporttest.NewMockUnaryHandler(mockCtrl)
 	m.Register([]transport.Registrant{
-		{Procedure: "foo", Handler: foo},
-		{Service: "anotherservice", Procedure: "bar", Handler: bar},
+		{
+			Procedure: "foo",
+			HandlerSpec: transport.HandlerSpec{
+				Type:         transport.Unary,
+				UnaryHandler: foo,
+			},
+		},
+		{
+			Service:   "anotherservice",
+			Procedure: "bar",
+			HandlerSpec: transport.HandlerSpec{
+				Type:         transport.Unary,
+				UnaryHandler: bar,
+			},
+		},
 	})
 
 	tests := []struct {
@@ -56,12 +69,12 @@ func TestMapRegistry(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got, err := m.GetHandler(tt.service, tt.procedure)
+		got, err := m.GetHandlerSpec(tt.service, tt.procedure)
 		if tt.want != nil {
 			assert.NoError(t, err,
-				"GetHandler(%q, %q) failed", tt.service, tt.procedure)
-			assert.True(t, tt.want == got, // want == match, not deep equals
-				"GetHandler(%q, %q) did not match", tt.service, tt.procedure)
+				"GetHandlerSpec(%q, %q) failed", tt.service, tt.procedure)
+			assert.True(t, tt.want == got.UnaryHandler, // want == match, not deep equals
+				"GetHandlerSpec(%q, %q) did not match", tt.service, tt.procedure)
 		} else {
 			assert.Error(t, err)
 		}
@@ -78,9 +91,29 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 	foo := transporttest.NewMockUnaryHandler(mockCtrl)
 	aww := transporttest.NewMockUnaryHandler(mockCtrl)
 	m.Register([]transport.Registrant{
-		{Service: "anotherservice", Procedure: "bar", Handler: bar},
-		{Procedure: "foo", Handler: foo},
-		{Service: "anotherservice", Procedure: "aww", Handler: aww},
+		{
+			Service:   "anotherservice",
+			Procedure: "bar",
+			HandlerSpec: transport.HandlerSpec{
+				Type:         transport.Unary,
+				UnaryHandler: bar,
+			},
+		},
+		{
+			Procedure: "foo",
+			HandlerSpec: transport.HandlerSpec{
+				Type:         transport.Unary,
+				UnaryHandler: foo,
+			},
+		},
+		{
+			Service:   "anotherservice",
+			Procedure: "aww",
+			HandlerSpec: transport.HandlerSpec{
+				Type:         transport.Unary,
+				UnaryHandler: aww,
+			},
+		},
 	})
 
 	expectedOrderedServiceProcedures := []transport.ServiceProcedure{

@@ -81,14 +81,19 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 
 	// unary procedures
 	for methodName, handler := range s.Methods {
-		rs = append(rs, transport.Registrant{
-			Procedure: procedureName(s.Name, methodName),
-			Handler: thriftHandler{
+		spec := transport.HandlerSpec{
+			Type: transport.Unary,
+			UnaryHandler: thriftHandler{
 				UnaryHandler: handler,
 				Protocol:     proto,
 				Enveloping:   rc.Enveloping,
 			},
+		}
+		rs = append(rs, transport.Registrant{
+			Procedure:   procedureName(s.Name, methodName),
+			HandlerSpec: spec,
 		})
 	}
+
 	return rs
 }

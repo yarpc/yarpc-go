@@ -189,8 +189,11 @@ func (d dispatcher) Start() error {
 
 func (d dispatcher) Register(rs []transport.Registrant) {
 	for i, r := range rs {
-		r.Handler = transport.ApplyInterceptor(r.Handler, d.Interceptor)
-		rs[i] = r
+		if r.HandlerSpec.Type == transport.Unary {
+			r.HandlerSpec.UnaryHandler = transport.ApplyInterceptor(r.HandlerSpec.UnaryHandler, d.Interceptor)
+			rs[i] = r
+		}
+		//TODO(apb): add oneway interceptors
 	}
 	d.Registry.Register(rs)
 }

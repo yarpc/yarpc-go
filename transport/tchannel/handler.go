@@ -152,10 +152,18 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
-	if err == nil {
-		err = internal.SafelyCallUnaryHandler(ctx, handler, start, treq, rw)
+	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
+	if err != nil {
+		return err
 	}
+
+	switch spec.Type {
+	case transport.Unary:
+		err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, rw)
+	default:
+		err = errors.UnsupportedTypeError{Transport: "tchannel", Type: spec.Type.String()}
+	}
+
 	return err
 }
 

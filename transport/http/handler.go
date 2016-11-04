@@ -88,7 +88,6 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	v := request.Validator{Request: treq}
 	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
 	defer cancel()
-
 	ctx, span := h.createSpan(ctx, req, treq, start)
 	defer span.Finish()
 
@@ -97,17 +96,27 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		return err
 	}
 
-	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
-	if err == nil {
-		err = internal.SafelyCallUnaryHandler(ctx, handler, start, treq, newResponseWriter(w))
+	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
+	if err != nil {
+		return err
 	}
 
+	switch spec.Type {
+	case transport.Unary:
+		err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, newResponseWriter(w))
+	default:
+		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
+	}
+
+	updateSpanIfErr(span, err)
+	return err
+}
+
+func updateSpanIfErr(span opentracing.Span, err error) {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
 	}
-
-	return err
 }
 
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
