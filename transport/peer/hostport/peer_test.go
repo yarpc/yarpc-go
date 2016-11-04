@@ -1,4 +1,4 @@
-package peers
+package hostport
 
 import (
 	"testing"
@@ -38,10 +38,10 @@ func TestPeer(t *testing.T) {
 
 	type testStruct struct {
 		msg                string
-		pi                 *HostPortPeerIdentifier
+		pi                 PeerIdentifier
 		agent              transport.PeerAgent
 		subscriber         transport.PeerSubscriber
-		appliedFunc        func(*HostPortPeer)
+		appliedFunc        func(*Peer)
 		expectedIdentifier string
 		expectedHostPort   string
 		expectedStatus     transport.PeerStatus
@@ -53,7 +53,7 @@ func TestPeer(t *testing.T) {
 			s.pi = NewPeerIdentifier("localhost:12345")
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 			s.subscriber = transporttest.NewMockPeerSubscriber(mockCtrl)
-			s.appliedFunc = func(p *HostPortPeer) {}
+			s.appliedFunc = func(p *Peer) {}
 			s.expectedIdentifier = "localhost:12345"
 			s.expectedHostPort = "localhost:12345"
 			s.expectedAgent = s.agent
@@ -66,10 +66,10 @@ func TestPeer(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start request"
 			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(1)
+			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(1)
 			s.subscriber = subscriber
 
-			s.appliedFunc = func(p *HostPortPeer) {
+			s.appliedFunc = func(p *Peer) {
 				p.StartRequest()
 			}
 
@@ -82,10 +82,10 @@ func TestPeer(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start request stop request"
 			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(2)
+			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(2)
 			s.subscriber = subscriber
 
-			s.appliedFunc = func(p *HostPortPeer) {
+			s.appliedFunc = func(p *Peer) {
 				done := p.StartRequest()
 				done()
 			}
@@ -99,10 +99,10 @@ func TestPeer(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start 5 stop 2"
 			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(7)
+			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(7)
 			s.subscriber = subscriber
 
-			s.appliedFunc = func(p *HostPortPeer) {
+			s.appliedFunc = func(p *Peer) {
 				done1 := p.StartRequest()
 				p.StartRequest()
 				p.StartRequest()
@@ -121,10 +121,10 @@ func TestPeer(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start 5 stop 5"
 			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyPendingUpdate(gomock.Any()).Times(10)
+			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(10)
 			s.subscriber = subscriber
 
-			s.appliedFunc = func(p *HostPortPeer) {
+			s.appliedFunc = func(p *Peer) {
 				for i := 0; i < 5; i++ {
 					done := p.StartRequest()
 					defer done()
@@ -140,7 +140,7 @@ func TestPeer(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if tt.pi == nil {
+		if tt.pi == PeerIdentifier("") {
 			tt.pi = NewPeerIdentifier("localhost:12345")
 			tt.expectedIdentifier = "localhost:12345"
 			tt.expectedHostPort = "localhost:12345"
