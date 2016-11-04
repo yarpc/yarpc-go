@@ -17,9 +17,10 @@ func TestAgent(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	type testStruct struct {
-		agent       *Agent
-		appliedFunc func(transport.PeerAgent)
-		assertFunc  func(*Agent)
+		msg           string
+		agent         *Agent
+		appliedFunc   func(*Agent)
+		expectedPeers []peerNode
 	}
 	tests := []testStruct{
 		func() (s testStruct) {
