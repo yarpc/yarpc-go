@@ -71,6 +71,26 @@ func (h jsonHandler) HandleUnary(ctx context.Context, treq *transport.Request, r
 	return nil
 }
 
+func (h jsonHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
+	if err := encoding.Expect(treq, Encoding); err != nil {
+		return err
+	}
+
+	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
+	if err != nil {
+		return encoding.RequestBodyDecodeError(treq, err)
+	}
+
+	reqMeta := meta.FromTransportRequest(treq)
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqMeta), reqBody})
+
+	if err := results[0].Interface(); err != nil {
+		return err.(error)
+	}
+
+	return nil
+}
+
 // requestReader is used to parse a JSON request argument from a JSON decoder.
 type requestReader interface {
 	Read(*json.Decoder) (reflect.Value, error)
