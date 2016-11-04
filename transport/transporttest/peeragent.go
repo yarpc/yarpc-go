@@ -71,40 +71,10 @@ func (_m *MockPeerSubscriber) EXPECT() *_MockPeerSubscriberRecorder {
 	return _m.recorder
 }
 
-func (_m *MockPeerSubscriber) NotifyAvailable(_param0 transport.Peer) error {
-	ret := _m.ctrl.Call(_m, "NotifyAvailable", _param0)
-	ret0, _ := ret[0].(error)
-	return ret0
+func (_m *MockPeerSubscriber) NotifyStatusChanged(_param0 transport.Peer) {
+	_m.ctrl.Call(_m, "NotifyStatusChanged", _param0)
 }
 
-func (_mr *_MockPeerSubscriberRecorder) NotifyAvailable(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyAvailable", arg0)
-}
-
-func (_m *MockPeerSubscriber) NotifyConnecting(_param0 transport.Peer) error {
-	ret := _m.ctrl.Call(_m, "NotifyConnecting", _param0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-func (_mr *_MockPeerSubscriberRecorder) NotifyConnecting(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyConnecting", arg0)
-}
-
-func (_m *MockPeerSubscriber) NotifyPendingUpdate(_param0 transport.Peer) {
-	_m.ctrl.Call(_m, "NotifyPendingUpdate", _param0)
-}
-
-func (_mr *_MockPeerSubscriberRecorder) NotifyPendingUpdate(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyPendingUpdate", arg0)
-}
-
-func (_m *MockPeerSubscriber) NotifyUnavailable(_param0 transport.Peer) error {
-	ret := _m.ctrl.Call(_m, "NotifyUnavailable", _param0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-func (_mr *_MockPeerSubscriberRecorder) NotifyUnavailable(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyUnavailable", arg0)
+func (_mr *_MockPeerSubscriberRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyStatusChanged", arg0)
 }

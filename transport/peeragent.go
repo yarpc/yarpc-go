@@ -14,15 +14,6 @@ type PeerAgent interface {
 
 // PeerSubscriber listens to changes of a Peer over time.
 type PeerSubscriber interface {
-	// The Peer Notifies the PeerSubscriber that it can accept requests
-	NotifyAvailable(Peer) error
-
-	// The Peer Notifies the PeerSubscriber that it is setting up connections
-	NotifyConnecting(Peer) error
-
-	// The Peer Notifies the PeerSubscriber that it is ineligible for requests
-	NotifyUnavailable(Peer) error
-
-	// The Peer Notifies the PeerSubscriber when its pending request count changes (maybe to 0).
-	NotifyPendingUpdate(Peer)
+	// The Peer Notifies the PeerSubscriber when its status changes (e.g. connections status, pending requests)
+	NotifyStatusChanged(Peer)
 }

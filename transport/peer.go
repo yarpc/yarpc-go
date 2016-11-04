@@ -7,13 +7,13 @@ type PeerConnectionStatus int
 
 const (
 	// PeerAvailable indicates the Peer is available for requests
-	PeerAvailable PeerConnectionStatus = 1
+	PeerAvailable PeerConnectionStatus = iota + 1
 
 	// PeerConnecting indicates the Peer is in the process of connecting
-	PeerConnecting PeerConnectionStatus = 2
+	PeerConnecting
 
 	// PeerUnavailable indicates the Peer is unavailable for requests
-	PeerUnavailable PeerConnectionStatus = 3
+	PeerUnavailable
 )
 
 // PeerStatus holds all the information about a peer's state that would be useful to PeerSubscribers
