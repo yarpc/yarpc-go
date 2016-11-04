@@ -98,7 +98,10 @@ func TestCall(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
-		client := New(transport.IdentityChannel(caller, service, outbound))
+		client := New(transport.MultiOutboundChannel(caller, service,
+			transport.Outbounds{
+				Unary: outbound,
+			}))
 
 		if !tt.noCall {
 			outbound.EXPECT().Call(gomock.Any(),

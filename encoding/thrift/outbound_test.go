@@ -183,7 +183,10 @@ func TestClient(t *testing.T) {
 		opts = append(opts, Protocol(proto))
 		c := New(Config{
 			Service: "MyService",
-			Channel: transport.IdentityChannel("caller", "service", trans),
+			Channel: transport.MultiOutboundChannel("caller", "service",
+				transport.Outbounds{
+					Unary: trans,
+				}),
 		}, opts...)
 
 		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)

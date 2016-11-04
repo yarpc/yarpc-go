@@ -35,6 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc"
 )
 
 func basicDispatcher(t *testing.T) Dispatcher {
@@ -99,7 +100,7 @@ func TestStartStopFailures(t *testing.T) {
 		desc string
 
 		inbounds  func(*gomock.Controller) []transport.Inbound
-		outbounds func(*gomock.Controller) transport.Outbounds
+		outbounds func(*gomock.Controller) yarpc.Outbounds
 
 		wantStartErr string
 		wantStopErr  string
@@ -116,13 +117,16 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("servuce-%v", i)] = out
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
 				return outbounds
 			},
@@ -143,13 +147,16 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("servuce-%v", i)] = out
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
 				return outbounds
 			},
@@ -171,13 +178,16 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("servuce-%v", i)] = out
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
 				return outbounds
 			},
@@ -195,8 +205,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					if i == 5 {
@@ -205,7 +215,10 @@ func TestStartStopFailures(t *testing.T) {
 						out.EXPECT().Start(gomock.Any()).Return(nil)
 						out.EXPECT().Stop().Return(nil)
 					}
-					outbounds[fmt.Sprintf("servuce-%v", i)] = out
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
 				return outbounds
 			},
@@ -224,8 +237,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
+				outbounds := make(yarpc.Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
@@ -234,7 +247,10 @@ func TestStartStopFailures(t *testing.T) {
 					} else {
 						out.EXPECT().Stop().Return(nil)
 					}
-					outbounds[fmt.Sprintf("servuce-%v", i)] = out
+					outbounds[fmt.Sprintf("servuce-%v", i)] =
+						transport.Outbounds{
+							Unary: out,
+						}
 				}
 				return outbounds
 			},

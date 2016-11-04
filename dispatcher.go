@@ -57,19 +57,21 @@ type Dispatcher interface {
 
 // Config specifies the parameters of a new RPC constructed via New.
 type Config struct {
-	Name      string
+	Name string
+
 	Inbounds  []transport.Inbound
-	Outbounds transport.Outbounds
+	Outbounds Outbounds
 
 	// Filter and Interceptor that will be applied to all outgoing and incoming
 	// requests respectively.
 	Filter      transport.Filter
 	Interceptor transport.Interceptor
 
-	// TODO FallbackHandler for catch-all endpoints
-
 	Tracer opentracing.Tracer
 }
+
+// Outbounds encapsulates a service and its outbounds
+type Outbounds map[string]transport.Outbounds
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
 func NewDispatcher(cfg Config) Dispatcher {
@@ -81,11 +83,40 @@ func NewDispatcher(cfg Config) Dispatcher {
 		Name:        cfg.Name,
 		Registry:    transport.NewMapRegistry(cfg.Name),
 		inbounds:    cfg.Inbounds,
-		Outbounds:   cfg.Outbounds,
-		Filter:      cfg.Filter,
+		outbounds:   convertOutbounds(cfg.Outbounds, cfg.Filter),
 		Interceptor: cfg.Interceptor,
 		deps:        transport.NoDeps.WithTracer(cfg.Tracer),
 	}
+}
+
+// convertOutbounds applys filters and creates validator outbounds
+func convertOutbounds(outbounds Outbounds, filter transport.Filter) Outbounds {
+	//TODO(apb): ensure we're not given the same underlying outbound for each RPC type
+	convertedOutbounds := make(Outbounds, len(outbounds))
+
+	for service, outs := range outbounds {
+		var (
+			unaryOutbound  transport.UnaryOutbound
+			onewayOutbound transport.OnewayOutbound
+		)
+
+		// apply filters and create ValidatorOutbounds
+		if outs.Unary != nil {
+			unaryOutbound = transport.ApplyFilter(outs.Unary, filter)
+			unaryOutbound = request.ValidatorOutbound{UnaryOutbound: unaryOutbound}
+		}
+
+		if outs.Oneway != nil {
+			// TODO(apb): apply oneway outbound filter & validation
+		}
+
+		convertedOutbounds[service] = transport.Outbounds{
+			Unary:  unaryOutbound,
+			Oneway: onewayOutbound,
+		}
+	}
+
+	return convertedOutbounds
 }
 
 // dispatcher is the standard RPC implementation.
@@ -94,13 +125,15 @@ func NewDispatcher(cfg Config) Dispatcher {
 type dispatcher struct {
 	transport.Registry
 
-	Name        string
-	Outbounds   transport.Outbounds
+	Name string
+
+	inbounds  []transport.Inbound
+	outbounds Outbounds
+
 	Filter      transport.Filter
 	Interceptor transport.Interceptor
 
-	inbounds []transport.Inbound
-	deps     transport.Deps
+	deps transport.Deps
 }
 
 func (d dispatcher) Inbounds() []transport.Inbound {
@@ -110,10 +143,8 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 }
 
 func (d dispatcher) Channel(service string) transport.Channel {
-	if out, ok := d.Outbounds[service]; ok {
-		out = transport.ApplyFilter(out, d.Filter)
-		out = request.ValidatorOutbound{UnaryOutbound: out}
-		return transport.IdentityChannel(d.Name, service, out)
+	if rs, ok := d.outbounds[service]; ok {
+		return transport.MultiOutboundChannel(d.Name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }
@@ -161,8 +192,8 @@ func (d dispatcher) Start() error {
 		wait.Submit(startInbound(i))
 	}
 
-	for _, o := range d.Outbounds {
-		// TODO record the name of the service whose outbound failed
+	// TODO record the name of the service whose outbound failed
+	for _, o := range d.getUniqueOutbounds() {
 		wait.Submit(startOutbound(o))
 	}
 
@@ -203,7 +234,8 @@ func (d dispatcher) Stop() error {
 	for _, i := range d.inbounds {
 		wait.Submit(i.Stop)
 	}
-	for _, o := range d.Outbounds {
+
+	for _, o := range d.getUniqueOutbounds() {
 		wait.Submit(o.Stop)
 	}
 
@@ -212,4 +244,27 @@ func (d dispatcher) Stop() error {
 	}
 
 	return nil
+}
+
+// getUniqueOutbounds helps ensure we only start/stop the same outbound once
+func (d dispatcher) getUniqueOutbounds() []transport.Outbound {
+	var unique []transport.Outbound
+
+	for _, outs := range d.outbounds {
+		if outs.Unary == nil && outs.Oneway == nil {
+			continue
+		}
+
+		if outs.Unary == nil {
+			unique = append(unique, outs.Oneway)
+		} else if outs.Oneway == nil {
+			unique = append(unique, outs.Unary)
+		} else if outs.Unary.(transport.Outbound) == outs.Oneway.(transport.Outbound) {
+			unique = append(unique, outs.Unary)
+		} else {
+			unique = append(unique, outs.Unary, outs.Oneway)
+		}
+	}
+
+	return unique
 }

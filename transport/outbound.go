@@ -22,7 +22,7 @@ package transport
 
 import "context"
 
-//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport UnaryOutbound
+//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/transport UnaryOutbound,OnewayOutbound
 
 // Outbound is the common interface for all outbounds
 type Outbound interface {
@@ -51,5 +51,22 @@ type UnaryOutbound interface {
 	Call(ctx context.Context, request *Request) (*Response, error)
 }
 
-// Outbounds is a map of service name to Outbound for that service.
-type Outbounds map[string]UnaryOutbound
+// OnewayOutbound is a transport that knows how to send oneway requests for
+// procedure calls.
+type OnewayOutbound interface {
+	Outbound
+
+	// CallOneway sends the given request through this transport and returns its
+	// response.
+	//
+	// This MUST NOT be called before Start() has been called successfully. This
+	// MAY panic if called without calling Start(). This MUST be safe to call
+	// concurrently.
+	CallOneway(ctx context.Context, request *Request) (Ack, error)
+}
+
+// Outbounds encapsulates outbound types for a service
+type Outbounds struct {
+	Unary  UnaryOutbound
+	Oneway OnewayOutbound
+}

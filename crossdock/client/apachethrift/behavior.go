@@ -26,7 +26,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/gauntlet"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
@@ -47,10 +46,16 @@ func Run(t crossdock.T) {
 	baseURL := fmt.Sprintf("http://%v:%v", server, serverPort)
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "apache-thrift-client",
-		Outbounds: transport.Outbounds{
-			"ThriftTest":    http.NewOutbound(baseURL + "/thrift/ThriftTest"),
-			"SecondService": http.NewOutbound(baseURL + "/thrift/SecondService"),
-			"Multiplexed":   http.NewOutbound(baseURL + "/thrift/multiplexed"),
+		Outbounds: yarpc.Outbounds{
+			"ThriftTest": {
+				Unary: http.NewOutbound(baseURL + "/thrift/ThriftTest"),
+			},
+			"SecondService": {
+				Unary: http.NewOutbound(baseURL + "/thrift/SecondService"),
+			},
+			"Multiplexed": {
+				Unary: http.NewOutbound(baseURL + "/thrift/multiplexed"),
+			},
 		},
 	})
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")

@@ -18,54 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package transport
 
-import (
-	"fmt"
-
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/crossdock/client/params"
-	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/crossdock/crossdock-go"
-	"github.com/uber/tchannel-go"
-)
-
-const (
-	serverPort = 8083
-	serverName = "tchannel-server"
-)
-
-// Run exercises a YARPC client against a tchannel server.
-func Run(t crossdock.T) {
-	fatals := crossdock.Fatals(t)
-
-	encoding := t.Param(params.Encoding)
-	server := t.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
-
-	ch, err := tchannel.NewChannel("yarpc-client", nil)
-	fatals.NoError(err, "could not create channel")
-
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc-client",
-		Outbounds: yarpc.Outbounds{
-			serverName: {
-				Unary: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
-			},
-		},
-	})
-	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
-	defer dispatcher.Stop()
-
-	switch encoding {
-	case "raw":
-		runRaw(t, dispatcher)
-	case "json":
-		runJSON(t, dispatcher)
-	case "thrift":
-		runThrift(t, dispatcher)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
-	}
+// Ack represents and acknowledgement from a oneway request
+type Ack interface {
+	String() string
 }
