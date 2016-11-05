@@ -84,13 +84,9 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	}
 
 	ctx := req.Context()
+	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	v := request.Validator{Request: treq}
-	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
-	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
-	defer span.Finish()
-
 	treq, err := v.Validate(ctx)
 	if err != nil {
 		return err
@@ -103,7 +99,17 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	switch spec.Type {
 	case transport.Unary:
+		ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
+		defer cancel()
+
+		treq, err = v.ValidateUnary(ctx)
+		if err != nil {
+			return err
+		}
+
 		err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, newResponseWriter(w))
+		defer span.Finish()
+
 	default:
 		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
 	}
