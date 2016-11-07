@@ -77,7 +77,7 @@ func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transp
 // handlerFunc wraps a function into a transport.Registry
 type unaryHandlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 
-func (f unaryHandlerFunc) HandleUnary(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
+func (f unaryHandlerFunc) Handle(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
 	return f(ctx, r, w)
 }
 

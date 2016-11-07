@@ -109,7 +109,7 @@ func TestRawHandler(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		err := handler.HandleUnary(ctx, &transport.Request{
+		err := handler.Handle(ctx, &transport.Request{
 			Procedure: tt.procedure,
 			Headers:   tt.headers,
 			Encoding:  "raw",

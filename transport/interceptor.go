@@ -38,7 +38,7 @@ import "context"
 // Interceptors are re-used across requests and MAY be called multiple times for
 // the same request.
 type Interceptor interface {
-	HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error
+	Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error
 }
 
 // NopInterceptor is a interceptor that does not do anything special. It
@@ -56,8 +56,8 @@ func ApplyInterceptor(h UnaryHandler, i Interceptor) UnaryHandler {
 // InterceptorFunc adapts a function into an Interceptor.
 type InterceptorFunc func(context.Context, *Request, ResponseWriter, UnaryHandler) error
 
-// HandleUnary for InterceptorFunc
-func (f InterceptorFunc) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
+// Handle for InterceptorFunc
+func (f InterceptorFunc) Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
 	return f(ctx, req, resw, h)
 }
 
@@ -66,12 +66,12 @@ type interceptedHandler struct {
 	i Interceptor
 }
 
-func (h interceptedHandler) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter) error {
-	return h.i.HandleUnary(ctx, req, resw, h.h)
+func (h interceptedHandler) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
+	return h.i.Handle(ctx, req, resw, h.h)
 }
 
 type nopInterceptor struct{}
 
-func (nopInterceptor) HandleUnary(ctx context.Context, req *Request, resw ResponseWriter, handler UnaryHandler) error {
-	return handler.HandleUnary(ctx, req, resw)
+func (nopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler UnaryHandler) error {
+	return handler.Handle(ctx, req, resw)
 }
