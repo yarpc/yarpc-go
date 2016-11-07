@@ -123,7 +123,7 @@ func TestStartStopFailures(t *testing.T) {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("servuce-%v", i)] =
+					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
 							Unary: out,
 						}
@@ -153,7 +153,7 @@ func TestStartStopFailures(t *testing.T) {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("servuce-%v", i)] =
+					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
 							Unary: out,
 						}
@@ -184,7 +184,7 @@ func TestStartStopFailures(t *testing.T) {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
-					outbounds[fmt.Sprintf("servuce-%v", i)] =
+					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
 							Unary: out,
 						}
@@ -215,7 +215,7 @@ func TestStartStopFailures(t *testing.T) {
 						out.EXPECT().Start(gomock.Any()).Return(nil)
 						out.EXPECT().Stop().Return(nil)
 					}
-					outbounds[fmt.Sprintf("servuce-%v", i)] =
+					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
 							Unary: out,
 						}
@@ -247,7 +247,7 @@ func TestStartStopFailures(t *testing.T) {
 					} else {
 						out.EXPECT().Stop().Return(nil)
 					}
-					outbounds[fmt.Sprintf("servuce-%v", i)] =
+					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
 							Unary: out,
 						}

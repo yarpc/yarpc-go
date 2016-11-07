@@ -50,14 +50,14 @@ func (_m *MockUnaryHandler) EXPECT() *_MockUnaryHandlerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockUnaryHandler) HandleUnary(_param0 context.Context, _param1 *transport.Request, _param2 transport.ResponseWriter) error {
-	ret := _m.ctrl.Call(_m, "HandleUnary", _param0, _param1, _param2)
+func (_m *MockUnaryHandler) Handle(_param0 context.Context, _param1 *transport.Request, _param2 transport.ResponseWriter) error {
+	ret := _m.ctrl.Call(_m, "Handle", _param0, _param1, _param2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockUnaryHandlerRecorder) HandleUnary(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "HandleUnary", arg0, arg1, arg2)
+func (_mr *_MockUnaryHandlerRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Handle", arg0, arg1, arg2)
 }
 
 // Mock of Registry interface

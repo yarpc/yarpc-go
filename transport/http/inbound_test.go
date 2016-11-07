@@ -137,7 +137,7 @@ func TestInboundMux(t *testing.T) {
 	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: h}
 	reg.EXPECT().GetHandlerSpec("bar", "hello").Return(spec, nil)
 
-	h.EXPECT().HandleUnary(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	res, err := o.Call(ctx, &transport.Request{
 		Caller:    "foo",

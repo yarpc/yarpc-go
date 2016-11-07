@@ -140,7 +140,7 @@ func TestThriftHandler(t *testing.T) {
 				encoding:  Encoding,
 				procedure: "MyService::someMethod",
 			}
-			handler.EXPECT().HandleUnary(ctx, reqMeta, requestBody).
+			handler.EXPECT().Handle(ctx, reqMeta, requestBody).
 				Return(Response{
 					Body:               fakeEnveloper(tt.responseEnvelopeType),
 					IsApplicationError: tt.responseIsAppError,
@@ -148,7 +148,7 @@ func TestThriftHandler(t *testing.T) {
 		}
 
 		rw := new(transporttest.FakeResponseWriter)
-		err := h.HandleUnary(ctx, &transport.Request{
+		err := h.Handle(ctx, &transport.Request{
 			Caller:    "caller",
 			Service:   "service",
 			Encoding:  Encoding,

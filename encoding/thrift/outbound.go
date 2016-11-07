@@ -129,7 +129,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 		return wire.Value{}, nil, err
 	}
 
-	tres, err := out.Call(ctx, &treq)
+	tres, err := out.Call(ctx, treq)
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
@@ -142,7 +142,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 
 	envelope, err := proto.DecodeEnveloped(bytes.NewReader(payload))
 	if err != nil {
-		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
+		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(treq, err)
 	}
 
 	switch envelope.Type {
@@ -151,7 +151,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	case wire.Exception:
 		var exc internal.TApplicationException
 		if err := exc.FromWire(envelope.Value); err != nil {
-			return wire.Value{}, nil, encoding.ResponseBodyDecodeError(&treq, err)
+			return wire.Value{}, nil, encoding.ResponseBodyDecodeError(treq, err)
 		}
 		return wire.Value{}, nil, thriftException{
 			Service:   treq.Service,
@@ -160,14 +160,14 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 		}
 	default:
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(
-			&treq, errUnexpectedEnvelopeType(envelope.Type))
+			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 }
 
 func (c thriftClient) buildTransportRequest(
 	reqMeta yarpc.CallReqMeta,
 	reqBody envelope.Enveloper) (
-	transport.Request, protocol.Protocol, error) {
+	*transport.Request, protocol.Protocol, error) {
 
 	proto := c.p
 	if !c.Enveloping {
@@ -190,12 +190,12 @@ func (c thriftClient) buildTransportRequest(
 	if err != nil {
 		// ToWire validates the request. If it failed, we should return the error
 		// as-is because it's not an encoding error.
-		return transport.Request{}, nil, err
+		return nil, nil, err
 	}
 
 	reqEnvelopeType := reqBody.EnvelopeType()
 	if reqEnvelopeType != wire.Call && reqEnvelopeType != wire.OneWay {
-		return transport.Request{}, nil,
+		return nil, nil,
 			encoding.RequestBodyEncodeError(
 				&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
 			)
@@ -209,11 +209,11 @@ func (c thriftClient) buildTransportRequest(
 		Value: value,
 	}, &buffer)
 	if err != nil {
-		return transport.Request{}, nil, encoding.RequestBodyEncodeError(&treq, err)
+		return nil, nil, encoding.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = &buffer
-	return treq, proto, nil
+	return &treq, proto, nil
 }
 
 type thriftException struct {
