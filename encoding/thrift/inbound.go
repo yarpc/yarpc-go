@@ -40,7 +40,7 @@ type thriftHandler struct {
 	Enveloping   bool
 }
 
-func (t thriftHandler) HandleUnary(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (t thriftHandler) HandleUnary(ctx context.Context, treq *transport.Request,
 	// TODO(abg): Support oneway
 
 	reqMeta := meta.FromTransportRequest(treq)
-	res, err := t.UnaryHandler.HandleUnary(ctx, reqMeta, envelope.Value)
+	res, err := t.UnaryHandler.Handle(ctx, reqMeta, envelope.Value)
 	if err != nil {
 		return err
 	}

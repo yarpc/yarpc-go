@@ -58,8 +58,6 @@ type identityChannel struct {
 	outbound UnaryOutbound
 }
 
-func (s identityChannel) Caller() string  { return s.caller }
-func (s identityChannel) Service() string { return s.service }
-func (s identityChannel) GetUnaryOutbound() UnaryOutbound {
-	return s.outbound
-}
+func (s identityChannel) Caller() string                  { return s.caller }
+func (s identityChannel) Service() string                 { return s.service }
+func (s identityChannel) GetUnaryOutbound() UnaryOutbound { return s.outbound }
