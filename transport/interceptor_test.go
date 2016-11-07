@@ -53,7 +53,7 @@ func TestNopInterceptor(t *testing.T) {
 	}
 	resw := new(transporttest.FakeResponseWriter)
 	err := errors.New("great sadness")
-	h.EXPECT().HandleUnary(ctx, req, resw).Return(err)
+	h.EXPECT().Handle(ctx, req, resw).Return(err)
 
-	assert.Equal(t, err, wrappedH.HandleUnary(ctx, req, resw))
+	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
 }
