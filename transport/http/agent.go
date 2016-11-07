@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/peers"
+	"go.uber.org/yarpc/transport/peer/hostport"
 )
 
 // Agent keeps track of http peers and the associated client with which the peer will call into.
@@ -19,7 +19,7 @@ type Agent struct {
 
 // peerNode keeps track of a HostPortPeer and any subscribers referencing it
 type peerNode struct {
-	peer       *peers.HostPortPeer
+	peer       *hostport.Peer
 	references map[transport.PeerSubscriber]bool
 }
 
@@ -46,19 +46,27 @@ func (a *Agent) RetainPeer(pid transport.PeerIdentifier, sub transport.PeerSubsc
 	a.Mutex.Lock()
 	defer a.Mutex.Unlock()
 
-	node := a.getOrCreatePeerNode(pid)
+	hppid, ok := pid.(hostport.PeerIdentifier)
+	if !ok {
+		return nil, errors.ErrInvalidPeerType{
+			ExpectedType:   "hostport.PeerIdentifier",
+			PeerIdentifier: pid,
+		}
+	}
+
+	node := a.getOrCreatePeerNode(hppid)
 
 	node.references[sub] = true
 
 	return node.peer, nil
 }
 
-func (a *Agent) getOrCreatePeerNode(pid transport.PeerIdentifier) *peerNode {
+func (a *Agent) getOrCreatePeerNode(pid hostport.PeerIdentifier) *peerNode {
 	if node, ok := a.peerNodes[pid.Identifier()]; ok {
 		return node
 	}
 
-	peer := peers.NewPeer(pid, a, a)
+	peer := hostport.NewPeer(pid, a, a)
 	node := &peerNode{
 		peer:       peer,
 		references: make(map[transport.PeerSubscriber]bool),
@@ -68,7 +76,7 @@ func (a *Agent) getOrCreatePeerNode(pid transport.PeerIdentifier) *peerNode {
 	return node
 }
 
-// ReleasePeer releases a peer from the peersubscriber and removes that peer from the Agent if nothing is listening to it
+// ReleasePeer releases a peer from the PeerSubscriber and removes that peer from the Agent if nothing is listening to it
 func (a *Agent) ReleasePeer(id transport.PeerIdentifier, sub transport.PeerSubscriber) error {
 	a.Mutex.Lock()
 	defer a.Mutex.Unlock()
@@ -84,7 +92,7 @@ func (a *Agent) ReleasePeer(id transport.PeerIdentifier, sub transport.PeerSubsc
 	_, ok = node.references[sub]
 	if !ok {
 		return errors.ErrPeerHasNoReferenceToSubscriber{
-			Peer:           node.peer,
+			PeerIdentifier: id,
 			PeerSubscriber: sub,
 		}
 	}
@@ -98,21 +106,8 @@ func (a *Agent) ReleasePeer(id transport.PeerIdentifier, sub transport.PeerSubsc
 	return nil
 }
 
-func (a *Agent) NotifyAvailable(peer transport.Peer) error {
-	return nil
-}
-
-func (a *Agent) NotifyConnecting(peer transport.Peer) error {
-	return nil
-}
-
-// The Peer Notifies the PeerSubscriber that it is ineligible for requests
-func (a *Agent) NotifyUnavailable(peer transport.Peer) error {
-	return nil
-}
-
-// The Peer Notifies the PeerSubscriber when its pending request count changes (maybe to 0).
-func (a *Agent) NotifyPendingUpdate(peer transport.Peer) {
+// NotifyStatusChanged Notifies peer subscribers the peer's status changes.
+func (a *Agent) NotifyStatusChanged(peer transport.Peer) {
 	a.Mutex.Lock()
 	defer a.Mutex.Unlock()
 
@@ -122,7 +117,7 @@ func (a *Agent) NotifyPendingUpdate(peer transport.Peer) {
 		return
 	}
 
-	for sub, _ := range node.references {
-		sub.NotifyPendingUpdate(peer)
+	for sub := range node.references {
+		sub.NotifyStatusChanged(peer)
 	}
 }
