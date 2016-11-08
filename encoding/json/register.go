@@ -114,8 +114,6 @@ func newJSONHandler(reqBodyType reflect.Type, handler interface{}) jsonHandler {
 
 // verifyUnarySignature verifies that the given type matches what we expect from
 // JSON unary handlers and returns the request type.
-//
-// Returns the request type.
 func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 	reqBodyType := verifyInputSignature(n, t)
 

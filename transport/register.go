@@ -21,7 +21,6 @@
 package transport
 
 import (
-	"fmt"
 	"sort"
 
 	"go.uber.org/yarpc/internal/errors"
@@ -55,6 +54,9 @@ type Registrant struct {
 // their handlers.
 type Registry interface {
 	// Registers zero or more registrants with the registry.
+	//
+	// Registering a duplicate service/procedure name will silently overwrite a
+	// previously registered handler.
 	Register([]Registrant)
 
 	// ServiceProcedures returns a list of services and their procedures that
@@ -93,14 +95,12 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		sp := ServiceProcedure{r.Service, r.Procedure}
-		if _, ok := m.entries[sp]; !ok {
-			m.entries[sp] = r.HandlerSpec
-
-		} else {
-			panic(fmt.Sprintf("Duplicate handler registered for service %q, "+
-				"procedure %q", r.Service, r.Procedure))
+		if r.Procedure == "" {
+			panic("Expected procedure name not to be empty string in registration")
 		}
+
+		sp := ServiceProcedure{r.Service, r.Procedure}
+		m.entries[sp] = r.HandlerSpec
 	}
 }
 
