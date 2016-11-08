@@ -74,8 +74,7 @@ type Registry interface {
 // procedures.
 type MapRegistry struct {
 	defaultService string
-	entries        map[ServiceProcedure]UnaryHandler
-	onewayEntries  map[ServiceProcedure]OnewayHandler
+	entries        map[ServiceProcedure]HandlerSpec
 }
 
 // NewMapRegistry builds a new MapRegistry that uses the given name as the
@@ -83,8 +82,7 @@ type MapRegistry struct {
 func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
-		entries:        make(map[ServiceProcedure]UnaryHandler),
-		onewayEntries:  make(map[ServiceProcedure]OnewayHandler),
+		entries:        make(map[ServiceProcedure]HandlerSpec),
 	}
 }
 
@@ -95,14 +93,13 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		switch r.HandlerSpec.Type() {
-		case Unary:
-			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.Unary()
-		case Oneway:
-			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.Oneway()
-		default:
-			panic(fmt.Sprintf("Unknown handler type %v, for service %q, procedure %q",
-				r.HandlerSpec.Type(), r.Service, r.Procedure))
+		sp := ServiceProcedure{r.Service, r.Procedure}
+		if _, ok := m.entries[sp]; !ok {
+			m.entries[sp] = r.HandlerSpec
+
+		} else {
+			panic(fmt.Sprintf("Duplicate handler registered for service %q, "+
+				"procedure %q", r.Service, r.Procedure))
 		}
 	}
 }
@@ -125,11 +122,8 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 		service = m.defaultService
 	}
 
-	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-		return NewUnaryHandlerSpec(h), nil
-	}
-	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {
-		return NewOnewayHandlerSpec(h), nil
+	if spec, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
+		return spec, nil
 	}
 
 	return HandlerSpec{}, errors.UnrecognizedProcedureError{
