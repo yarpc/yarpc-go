@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
 	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/internal/errors"
 )
 
 // gomock has difficulty seeing between mock objects of the same type, we need to define
@@ -69,6 +69,7 @@ func TestRoundRobinList(t *testing.T) {
 		msg                   string
 		pids                  []transport.PeerIdentifier
 		agent                 *transporttest.MockPeerAgent
+		pl                    transport.PeerList
 		appliedFunc           func(*roundRobin) error
 		expectedCreateErr     error
 		expectedPeers         []transport.Peer
@@ -279,13 +280,19 @@ func TestRoundRobinList(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pl, err := NewRoundRobin(tt.pids, tt.agent)
-		assert.Equal(t, tt.expectedCreateErr, err)
-
+		var pl transport.PeerList
+		var err error
+		pl = tt.pl
 		if pl == nil {
-			continue
+			pl, err = NewRoundRobin(tt.pids, tt.agent)
+			assert.Equal(t, tt.expectedCreateErr, err)
+
+			if pl == nil {
+				continue
+			}
 		}
-		peerList := pl.(*roundRobin)
+		peerList, ok := pl.(*roundRobin)
+		assert.True(t, ok, tt.msg)
 
 		err = tt.appliedFunc(peerList)
 		assert.Equal(t, tt.expectedError, err, tt.msg)
