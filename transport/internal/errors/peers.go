@@ -64,3 +64,13 @@ type ErrInvalidPeerConversion struct {
 func (e ErrInvalidPeerConversion) Error() string {
 	return fmt.Sprintf("cannot convert peer (%v) to type %s", e.Peer, e.ExpectedType)
 }
+
+// ErrInvalidAgentConversion is called when an agent can't be properly converted
+type ErrInvalidAgentConversion struct {
+	Agent        transport.Agent
+	ExpectedType string
+}
+
+func (e ErrInvalidAgentConversion) Error() string {
+	return fmt.Sprintf("cannot convert agent (%v) to type %s", e.Agent, e.ExpectedType)
+}

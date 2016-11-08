@@ -31,6 +31,7 @@ import (
 
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	terrors "go.uber.org/yarpc/transport/internal/errors"
 	"go.uber.org/yarpc/transport/peer/hostport"
 	"go.uber.org/yarpc/transport/peer/peerlist"
 
@@ -179,7 +180,7 @@ func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 
 	}
 
-	return nil, errors.ErrInvalidPeerConversion{
+	return nil, terrors.ErrInvalidPeerConversion{
 		Peer:         peer,
 		ExpectedType: "*hostport.Peer",
 	}
@@ -251,7 +252,7 @@ func (o *outbound) getHTTPClient(peer *hostport.Peer) (*http.Client, error) {
 		return agent.client, nil
 
 	}
-	return nil, errors.ErrInvalidAgentConversion{
+	return nil, terrors.ErrInvalidAgentConversion{
 		Agent:        peer.GetAgent(),
 		ExpectedType: "*http.Agent",
 	}
