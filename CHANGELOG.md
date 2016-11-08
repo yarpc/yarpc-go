@@ -32,7 +32,8 @@ This release requires regeneration of ThriftRW code.
     of the standard library's `context` package.
 -   Rename `Handler` interface to `UnaryHandler` and separate `Outbound`
     interface into `Outbound` and `UnaryOutbound`.
-
+-   Add `OnewayHandler` and `HandlerSpec` to support oneway handlers.
+    Transport inbounds can choose which RPC types to accept
 
 v0.3.1 (2016-09-31)
 -------------------

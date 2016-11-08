@@ -58,7 +58,9 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			Handler:   wrapUnaryHandler(name, handler),
+			HandlerSpec: transport.NewUnaryHandlerSpec(
+				wrapUnaryHandler(name, handler),
+			),
 		},
 	}
 }
@@ -66,8 +68,11 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 // wrapUnaryHandler takes a valid JSON handler function and converts it into a
 // transport.UnaryHandler.
 func wrapUnaryHandler(name string, handler interface{}) transport.UnaryHandler {
-	reqBodyType := verifySignature(name, reflect.TypeOf(handler))
+	reqBodyType := verifyUnarySignature(name, reflect.TypeOf(handler))
+	return newJSONHandler(reqBodyType, handler)
+}
 
+func newJSONHandler(reqBodyType reflect.Type, handler interface{}) jsonHandler {
 	var r requestReader
 	if reqBodyType == _interfaceEmptyType {
 		r = ifaceEmptyReader{}
@@ -84,11 +89,54 @@ func wrapUnaryHandler(name string, handler interface{}) transport.UnaryHandler {
 	}
 }
 
-// verifySignature verifies that the given type matches what we expect from
-// JSON handlers and returns the request and response types.
+// verifyUnarySignature verifies that the given type matches what we expect
+// from JSON unary handlers and returns the request and response types.
 //
 // Returns the request type.
-func verifySignature(n string, t reflect.Type) reflect.Type {
+func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
+	reqBodyType := verifyInputSignature(n, t)
+
+	if t.NumOut() != 3 {
+		panic(fmt.Sprintf(
+			"expected handler for %q to have 3 results but it had %v",
+			n, t.NumOut(),
+		))
+	}
+
+	if t.Out(1) != _resMetaType || t.Out(2) != _errorType {
+		panic(fmt.Sprintf(
+			"the last two results of the handler for %q must be of type "+
+				"yarpc.ResMeta and error, and not: %v, %v",
+			n, t.Out(1), t.Out(2),
+		))
+	}
+
+	resBodyType := t.Out(0)
+
+	if !isValidReqResType(reqBodyType) {
+		panic(fmt.Sprintf(
+			"the third argument of the handler for %q must be "+
+				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
+			n, reqBodyType,
+		))
+	}
+
+	if !isValidReqResType(resBodyType) {
+		panic(fmt.Sprintf(
+			"the first result of the handler for %q must be "+
+				"a struct pointer, a map[string]interface{}, or interface{], and not: %v",
+			n, resBodyType,
+		))
+	}
+
+	return reqBodyType
+}
+
+// verifyInputSignature verifies that the given input argument types match
+// what we expect from JSON handlers and returns the request body type.
+//
+// Returns the request type.
+func verifyInputSignature(n string, t reflect.Type) reflect.Type {
 	if t.Kind() != reflect.Func {
 		panic(fmt.Sprintf(
 			"handler for %q is not a function but a %v", n, t.Kind(),
@@ -99,13 +147,6 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		panic(fmt.Sprintf(
 			"expected handler for %q to have 3 arguments but it had %v",
 			n, t.NumIn(),
-		))
-	}
-
-	if t.NumOut() != 3 {
-		panic(fmt.Sprintf(
-			"expected handler for %q to have 3 results but it had %v",
-			n, t.NumOut(),
 		))
 	}
 
@@ -124,30 +165,13 @@ func verifySignature(n string, t reflect.Type) reflect.Type {
 		))
 	}
 
-	if t.Out(1) != _resMetaType || t.Out(2) != _errorType {
-		panic(fmt.Sprintf(
-			"the last two results of the handler for %q must be of type "+
-				"yarpc.ResMeta and error, and not: %v, %v",
-			n, t.Out(1), t.Out(2),
-		))
-	}
-
 	reqBodyType := t.In(2)
-	resBodyType := t.Out(0)
 
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the thrifd argument of the handler for %q must be "+
+			"the third argument of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
-		))
-	}
-
-	if !isValidReqResType(resBodyType) {
-		panic(fmt.Sprintf(
-			"the first result of the handler for %q must be "+
-				"a struct pointer, a map[string]interface{}, or interface{], and not: %v",
-			n, resBodyType,
 		))
 	}
 

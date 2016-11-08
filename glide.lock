@@ -2,7 +2,7 @@ hash: d0c252b8df396d598b16e6fc6a3ffb5bbc31d2acd6349a24251ce6f8b3658fe4
 updated: 2016-11-08T10:23:16.249183138-08:00
 imports:
 - name: github.com/apache/thrift
-  version: 74c99ba38b02288daf05229cdf34e60261d2d01e
+  version: 59cb6661bcee265d39ad524154472ebe27760f1e
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -11,7 +11,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/golang/mock

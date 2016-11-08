@@ -21,6 +21,7 @@
 package yarpc
 
 import (
+	"fmt"
 	"sync"
 
 	"go.uber.org/yarpc/internal/request"
@@ -188,11 +189,24 @@ func (d dispatcher) Start() error {
 }
 
 func (d dispatcher) Register(rs []transport.Registrant) {
-	for i, r := range rs {
-		r.Handler = transport.ApplyInterceptor(r.Handler, d.Interceptor)
-		rs[i] = r
+	registrants := make([]transport.Registrant, 0, len(rs))
+
+	for _, r := range rs {
+		switch r.HandlerSpec.Type() {
+		case transport.Unary:
+			h := transport.ApplyInterceptor(r.HandlerSpec.Unary(), d.Interceptor)
+			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
+		case transport.Oneway:
+			//TODO(apb): add oneway interceptors https://github.com/yarpc/yarpc-go/issues/413
+		default:
+			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
+				r.HandlerSpec.Type(), r.Service, r.Procedure))
+		}
+
+		registrants = append(registrants, r)
 	}
-	d.Registry.Register(rs)
+
+	d.Registry.Register(registrants)
 }
 
 func (d dispatcher) Stop() error {
