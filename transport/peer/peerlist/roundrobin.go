@@ -123,7 +123,7 @@ func (pl *roundRobin) nextPeer() (transport.Peer, error) {
 
 func (pl *roundRobin) Start() error {
 	if pl.started.Swap(true) {
-		return errors.ErrOutboundAlreadyStarted("RoundRobinList")
+		return errors.ErrPeerListAlreadyStarted("RoundRobinList")
 	}
 	pl.Lock()
 	defer pl.Unlock()
@@ -144,7 +144,7 @@ func (pl *roundRobin) Start() error {
 
 func (pl *roundRobin) Stop() error {
 	if !pl.started.Swap(false) {
-		return errors.ErrOutboundNotStarted("RoundRobinList")
+		return errors.ErrPeerListNotStarted("RoundRobinList")
 	}
 	pl.Lock()
 	defer pl.Unlock()
@@ -167,7 +167,7 @@ func (pl *roundRobin) ChoosePeer(context.Context, *transport.Request) (transport
 	defer pl.Unlock()
 
 	if !pl.started.Load() {
-		return nil, errors.ErrOutboundNotStarted("peerlist was not started")
+		return nil, errors.ErrPeerListNotStarted("RoundRobinList")
 	}
 	return pl.nextPeer()
 }
