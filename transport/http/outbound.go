@@ -29,12 +29,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/peer/hostport"
 	"go.uber.org/yarpc/transport/peers"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/uber-go/atomic"
 )
 
@@ -48,9 +49,9 @@ var (
 func NewOutbound(urlStr string) transport.Outbound {
 	agent := NewDefaultAgent()
 
-	scheme, hostport, path := parseURL(urlStr)
+	scheme, hp, path := parseURL(urlStr)
 
-	peerID := peers.NewPeerIdentifier(hostport)
+	peerID := hostport.NewPeerIdentifier(hp)
 	peerList := peers.NewSinglePeerList(peerID, agent)
 
 	return NewPeerListOutbound(peerList, path, scheme)
@@ -113,8 +114,8 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if err != nil {
 		return nil, err
 	}
-	peer.IncPending()
-	defer peer.DecPending()
+	endRequest := peer.StartRequest()
+	defer endRequest()
 
 	req, err := o.createRequest(peer, treq)
 	if err != nil {
@@ -126,7 +127,12 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	defer span.Finish()
 	req = o.withCoreHeaders(req, treq, ttl)
 
-	response, err := o.getHTTPClient(peer).Do(req.WithContext(ctx))
+	client, err := o.getHTTPClient(peer)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := client.Do(req.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
@@ -161,13 +167,13 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return nil, getErrFromResponse(response)
 }
 
-func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*peers.HostPortPeer, error) {
+func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
 	peer, err := o.PeerList.ChoosePeer(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
 
-	hpPeer, ok := peer.(*peers.HostPortPeer)
+	hpPeer, ok := peer.(*hostport.Peer)
 	if ok {
 		return hpPeer, nil
 
@@ -179,7 +185,7 @@ func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	}
 }
 
-func (o *outbound) createRequest(peer *peers.HostPortPeer, treq *transport.Request) (*http.Request, error) {
+func (o *outbound) createRequest(peer *hostport.Peer, treq *transport.Request) (*http.Request, error) {
 	reqURL := fmt.Sprintf("%s://%s%s", o.Scheme, peer.HostPort(), o.Path)
 	return http.NewRequest("POST", reqURL, treq.Body)
 }
@@ -239,9 +245,16 @@ func (o *outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
-func (o *outbound) getHTTPClient(peer *peers.HostPortPeer) *http.Client {
-	agent := peer.GetAgent().(*Agent)
-	return agent.client
+func (o *outbound) getHTTPClient(peer *hostport.Peer) (*http.Client, error) {
+	agent, ok := peer.GetAgent().(*Agent)
+	if ok {
+		return agent.client, nil
+
+	}
+	return nil, errors.ErrInvalidAgentConversion{
+		Agent:        peer.GetAgent(),
+		ExpectedType: "*http.Agent",
+	}
 }
 
 func getErrFromResponse(response *http.Response) error {
