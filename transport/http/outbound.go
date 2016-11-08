@@ -32,7 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/peer/hostport"
-	"go.uber.org/yarpc/transport/peers"
+	"go.uber.org/yarpc/transport/peer/peerlist"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -52,7 +52,7 @@ func NewOutbound(urlStr string) transport.Outbound {
 	scheme, hp, path := parseURL(urlStr)
 
 	peerID := hostport.NewPeerIdentifier(hp)
-	peerList := peers.NewSinglePeerList(peerID, agent)
+	peerList := peerlist.NewSingle(peerID, agent)
 
 	return NewPeerListOutbound(peerList, path, scheme)
 }
@@ -181,7 +181,7 @@ func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 
 	return nil, errors.ErrInvalidPeerConversion{
 		Peer:         peer,
-		ExpectedType: "*peers.HostPortPeer",
+		ExpectedType: "*hostport.Peer",
 	}
 }
 
