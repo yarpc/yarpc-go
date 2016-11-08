@@ -289,3 +289,41 @@ func TestStartStopFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestStartStopOutboundsOnce(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	unary := transporttest.NewMockUnaryOutbound(mockCtrl)
+	unaryCall := unary.EXPECT().Start(gomock.Any())
+
+	oneway := transporttest.NewMockOnewayOutbound(mockCtrl)
+	onewayCall := oneway.EXPECT().Start(gomock.Any())
+
+	unary.EXPECT().Stop().After(unaryCall)
+	oneway.EXPECT().Stop().After(onewayCall)
+
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"service-1": {
+				Unary:  unary,
+				Oneway: oneway,
+			},
+			"service-2": {
+				Unary:  unary,
+				Oneway: oneway,
+			},
+			"service-3": {
+				Unary: unary,
+			},
+			"service-4": {
+				Oneway: oneway,
+			},
+		},
+	})
+
+	err := dispatcher.Start()
+	assert.NoError(t, err)
+
+	dispatcher.Stop()
+}
