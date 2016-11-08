@@ -3,8 +3,8 @@ package http
 import (
 	"testing"
 
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
 	"go.uber.org/yarpc/transport/peer/hostport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -375,8 +375,8 @@ func TestAgent(t *testing.T) {
 
 			assert.Equal(t, len(expectedPeerNode.subscribers), len(peerNode.references), tt.msg)
 			for _, expectedSubscriber := range expectedPeerNode.subscribers {
-				subExists, ok := peerNode.references[expectedSubscriber]
-				assert.True(t, ok && subExists, "subscriber (%v) not in list (%v). %s", expectedSubscriber, peerNode.references, tt.msg)
+				_, ok := peerNode.references[expectedSubscriber]
+				assert.True(t, ok, "subscriber (%v) not in list (%v). %s", expectedSubscriber, peerNode.references, tt.msg)
 			}
 		}
 	}
