@@ -22,8 +22,8 @@ package transport
 
 import "context"
 
-// Handler handles a single transport-level request.
-type Handler interface {
+// UnaryHandler handles a single, transport-level, unary request.
+type UnaryHandler interface {
 	// Handle the given request, writing the response to the given
 	// ResponseWriter.
 	//

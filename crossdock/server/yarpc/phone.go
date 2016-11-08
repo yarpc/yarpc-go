@@ -70,7 +70,7 @@ type PhoneResponse struct {
 
 // Phone implements the phone procedure
 func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 
 	switch {
 	case body.Transport.HTTP != nil:

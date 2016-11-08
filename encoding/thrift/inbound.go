@@ -33,11 +33,11 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-// thriftHandler wraps a Thrift Handler into a transport.Handler
+// thriftHandler wraps a Thrift Handler into a transport.UnaryHandler
 type thriftHandler struct {
-	Handler    Handler
-	Protocol   protocol.Protocol
-	Enveloping bool
+	UnaryHandler UnaryHandler
+	Protocol     protocol.Protocol
+	Enveloping   bool
 }
 
 func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
@@ -71,7 +71,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 	// TODO(abg): Support oneway
 
 	reqMeta := meta.FromTransportRequest(treq)
-	res, err := t.Handler.Handle(ctx, reqMeta, envelope.Value)
+	res, err := t.UnaryHandler.Handle(ctx, reqMeta, envelope.Value)
 	if err != nil {
 		return err
 	}

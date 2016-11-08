@@ -35,7 +35,7 @@ import (
 )
 
 var retryInterceptor transport.InterceptorFunc = func(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
 		return h.Handle(ctx, req, resw)
 	}
@@ -45,7 +45,7 @@ var retryInterceptor transport.InterceptorFunc = func(
 type countInterceptor struct{ Count int }
 
 func (c *countInterceptor) Handle(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	c.Count++
 	return h.Handle(ctx, req, resw)
 }
@@ -65,7 +65,7 @@ func TestChain(t *testing.T) {
 	}
 	resw := new(transporttest.FakeResponseWriter)
 
-	h := transporttest.NewMockHandler(mockCtrl)
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	h.EXPECT().Handle(ctx, req, resw).After(
 		h.EXPECT().Handle(ctx, req, resw).Return(errors.New("great sadness")),
 	).Return(nil)

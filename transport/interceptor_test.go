@@ -39,7 +39,7 @@ func TestNopInterceptor(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockHandler(mockCtrl)
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	wrappedH := transport.ApplyInterceptor(h, transport.NopInterceptor)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

@@ -90,7 +90,7 @@ func main() {
 
 	flag.Parse()
 
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
 		outbound = http.NewOutbound("http://localhost:24034")

@@ -46,7 +46,7 @@ func TestRawHandler(t *testing.T) {
 		procedure  string
 		headers    transport.Headers
 		bodyChunks [][]byte
-		handler    Handler
+		handler    UnaryHandler
 
 		wantErr     string
 		wantHeaders transport.Headers
@@ -97,7 +97,7 @@ func TestRawHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		handler := rawHandler{tt.handler}
+		handler := rawHandler{UnaryHandler: tt.handler}
 		resw := new(transporttest.FakeResponseWriter)
 
 		writer, chunkReader := testreader.ChunkReader()

@@ -32,6 +32,8 @@ This release requires regeneration of ThriftRW code.
     of the standard library's `context` package.
 -   Add support for providing peer lists to dynamically choose downstream
     peers in HTTP Outbounds
+-   Rename `Handler` interface to `UnaryHandler` and separate `Outbound`
+    interface into `Outbound` and `UnaryOutbound`.
 
 
 v0.3.1 (2016-09-31)
