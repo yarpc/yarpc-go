@@ -98,7 +98,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
 	if err != nil {
-		return err
+		return updateSpanWithErr(span, err)
 	}
 
 	switch spec.Type() {
@@ -108,15 +108,16 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
 	}
 
-	updateSpanIfErr(span, err)
-	return err
+	return updateSpanWithErr(span, err)
 }
 
-func updateSpanIfErr(span opentracing.Span, err error) {
+func updateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
 	}
+
+	return err
 }
 
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
