@@ -226,7 +226,7 @@ func TestRoundRobinList(t *testing.T) {
 				return pl.Start()
 			}
 
-			s.expectedError = errors.ErrOutboundAlreadyStarted("RoundRobinList")
+			s.expectedError = errors.ErrPeerListAlreadyStarted("RoundRobinList")
 			s.expectedNextPeer = s.expectedPeers[0]
 			s.expectedInitialPeerIDs = s.pids
 			s.expectedStarted = true
@@ -246,7 +246,7 @@ func TestRoundRobinList(t *testing.T) {
 				return pl.Stop()
 			}
 
-			s.expectedError = errors.ErrOutboundNotStarted("RoundRobinList")
+			s.expectedError = errors.ErrPeerListNotStarted("RoundRobinList")
 			s.expectedNextPeer = nil
 			s.expectedInitialPeerIDs = s.pids
 			s.expectedPeers = []transport.Peer{}
@@ -315,7 +315,7 @@ func TestRoundRobinList(t *testing.T) {
 				return err
 			}
 
-			s.expectedError = errors.ErrOutboundNotStarted("peerlist was not started")
+			s.expectedError = errors.ErrPeerListNotStarted("RoundRobinList")
 			s.expectedNextPeer = nil
 			s.expectedPeers = []transport.Peer{}
 			s.expectedInitialPeerIDs = s.pids
