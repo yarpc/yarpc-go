@@ -35,6 +35,7 @@ const (
 )
 
 // HandlerSpec holds a handler and its Type
+// one handler will be set, the other nil
 type HandlerSpec struct {
 	t Type
 
@@ -45,10 +46,10 @@ type HandlerSpec struct {
 // Type returns the associated handler's type
 func (h HandlerSpec) Type() Type { return h.t }
 
-// UnaryHandler returns the Unary Handler or nil
+// Unary returns the Unary Handler or nil
 func (h HandlerSpec) Unary() UnaryHandler { return h.unaryHandler }
 
-// OnewayHandler returns the Oneway Handler or nil
+// Oneway returns the Oneway Handler or nil
 func (h HandlerSpec) Oneway() OnewayHandler { return h.onewayHandler }
 
 // NewUnaryHandlerSpec returns an new HandlerSpec with a UnaryHandler
@@ -77,7 +78,6 @@ type OnewayHandler interface {
 	// Handle the given oneway request
 	//
 	// An error may be returned in case of failures.
-	// TODO: determine oneway errors and how to deal with them
 	HandleOneway(
 		ctx context.Context,
 		req *Request,

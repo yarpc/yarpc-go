@@ -169,7 +169,7 @@ func verifyInputSignature(n string, t reflect.Type) reflect.Type {
 
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the thrifd argument of the handler for %q must be "+
+			"the third argument of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
 		))
