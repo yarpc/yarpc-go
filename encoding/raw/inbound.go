@@ -33,7 +33,7 @@ import (
 type rawUnaryHandler struct{ UnaryHandler }
 
 // rawOnewayHandler adapts a Handler into a transport.OnewayHandler
-type rawOnewayHandler struct{ OnewayHandler OnewayHandler }
+type rawOnewayHandler struct{ OnewayHandler }
 
 func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
