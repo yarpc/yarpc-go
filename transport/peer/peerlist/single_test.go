@@ -58,7 +58,7 @@ func TestSingle(t *testing.T) {
 				return pl.Stop()
 			}
 
-			s.expectedErr = errors.ErrOutboundNotStarted("single")
+			s.expectedErr = errors.ErrPeerListNotStarted("single")
 			s.expectedPeerID = s.pid
 			s.expectedAgent = s.agent
 			s.expectedStarted = false
@@ -78,7 +78,7 @@ func TestSingle(t *testing.T) {
 			s.expectedStarted = false
 			s.expectedChooseResults = []expectedChooseResult{{
 				peer: nil,
-				err:  errors.ErrOutboundNotStarted("peerlist was not started"),
+				err:  errors.ErrPeerListNotStarted("single"),
 			}}
 			return
 		}(),
@@ -133,7 +133,7 @@ func TestSingle(t *testing.T) {
 				return pl.Start()
 			}
 
-			s.expectedErr = errors.ErrOutboundAlreadyStarted("single")
+			s.expectedErr = errors.ErrPeerListAlreadyStarted("single")
 			s.expectedPeerID = s.pid
 			s.expectedAgent = s.agent
 			s.expectedStarted = true

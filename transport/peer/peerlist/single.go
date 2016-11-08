@@ -26,7 +26,7 @@ func NewSingle(pi transport.PeerIdentifier, agent transport.PeerAgent) transport
 
 func (pl *single) Start() error {
 	if pl.started.Swap(true) {
-		return errors.ErrOutboundAlreadyStarted("single")
+		return errors.ErrPeerListAlreadyStarted("single")
 	}
 	peer, err := pl.agent.RetainPeer(pl.peerID, pl)
 	if err != nil {
@@ -39,7 +39,7 @@ func (pl *single) Start() error {
 
 func (pl *single) Stop() error {
 	if !pl.started.Swap(false) {
-		return errors.ErrOutboundNotStarted("single")
+		return errors.ErrPeerListNotStarted("single")
 	}
 	err := pl.agent.ReleasePeer(pl.peerID, pl)
 	if err != nil {
@@ -52,7 +52,7 @@ func (pl *single) Stop() error {
 
 func (pl *single) ChoosePeer(context.Context, *transport.Request) (transport.Peer, error) {
 	if !pl.started.Load() {
-		return nil, errors.ErrOutboundNotStarted("peerlist was not started")
+		return nil, errors.ErrPeerListNotStarted("single")
 	}
 	return pl.peer, nil
 }
