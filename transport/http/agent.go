@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"sync"
 
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
 	"go.uber.org/yarpc/transport/peer/hostport"
 )
 
@@ -20,7 +20,7 @@ type Agent struct {
 // peerNode keeps track of a HostPortPeer and any subscribers referencing it
 type peerNode struct {
 	peer       *hostport.Peer
-	references map[transport.PeerSubscriber]bool
+	references map[transport.PeerSubscriber]struct{}
 }
 
 // NewDefaultAgent creates an http agent with the default parameters
@@ -56,7 +56,7 @@ func (a *Agent) RetainPeer(pid transport.PeerIdentifier, sub transport.PeerSubsc
 
 	node := a.getOrCreatePeerNode(hppid)
 
-	node.references[sub] = true
+	node.references[sub] = struct{}{}
 
 	return node.peer, nil
 }
@@ -69,7 +69,7 @@ func (a *Agent) getOrCreatePeerNode(pid hostport.PeerIdentifier) *peerNode {
 	peer := hostport.NewPeer(pid, a, a)
 	node := &peerNode{
 		peer:       peer,
-		references: make(map[transport.PeerSubscriber]bool),
+		references: make(map[transport.PeerSubscriber]struct{}),
 	}
 	a.peerNodes[peer.Identifier()] = node
 
@@ -77,22 +77,22 @@ func (a *Agent) getOrCreatePeerNode(pid hostport.PeerIdentifier) *peerNode {
 }
 
 // ReleasePeer releases a peer from the PeerSubscriber and removes that peer from the Agent if nothing is listening to it
-func (a *Agent) ReleasePeer(id transport.PeerIdentifier, sub transport.PeerSubscriber) error {
+func (a *Agent) ReleasePeer(pid transport.PeerIdentifier, sub transport.PeerSubscriber) error {
 	a.Mutex.Lock()
 	defer a.Mutex.Unlock()
 
-	node, ok := a.peerNodes[id.Identifier()]
+	node, ok := a.peerNodes[pid.Identifier()]
 	if !ok {
 		return errors.ErrAgentHasNoReferenceToPeer{
 			Agent:          a,
-			PeerIdentifier: id,
+			PeerIdentifier: pid,
 		}
 	}
 
 	_, ok = node.references[sub]
 	if !ok {
 		return errors.ErrPeerHasNoReferenceToSubscriber{
-			PeerIdentifier: id,
+			PeerIdentifier: pid,
 			PeerSubscriber: sub,
 		}
 	}
@@ -100,7 +100,7 @@ func (a *Agent) ReleasePeer(id transport.PeerIdentifier, sub transport.PeerSubsc
 	delete(node.references, sub)
 
 	if len(node.references) == 0 {
-		delete(a.peerNodes, id.Identifier())
+		delete(a.peerNodes, pid.Identifier())
 	}
 
 	return nil
