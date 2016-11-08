@@ -326,6 +326,7 @@ func TestHandlerFailures(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		thandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		spec := transport.NewUnaryHandlerSpec(thandler)
+
 		if tt.expectCall != nil {
 			tt.expectCall(thandler)
 		}
