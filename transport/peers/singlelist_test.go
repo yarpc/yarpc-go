@@ -17,179 +17,195 @@ func TestSinglePeerList(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	type expectedChooseResult struct {
+		peer transport.Peer
+		err  error
+	}
+
 	type testStruct struct {
-		pl          *singlePeerList
-		appliedFunc func(transport.PeerList)
-		assertFunc  func(*singlePeerList)
+		msg                   string
+		pid                   transport.PeerIdentifier
+		agent                 *transporttest.MockPeerAgent
+		appliedFunc           func(*singlePeerList) error
+		expectedPeerID        transport.PeerIdentifier
+		expectedPeer          transport.Peer
+		expectedAgent         transport.PeerAgent
+		expectedStarted       bool
+		expectedErr           error
+		expectedChooseResults []expectedChooseResult
 	}
 	tests := []testStruct{
 		func() (s testStruct) {
-			msg := "setup"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
+			s.msg = "setup"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
-			s.appliedFunc = func(pl transport.PeerList) {}
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.Nil(t, pl.peer, msg)
-				assert.Equal(t, agent, pl.agent, msg)
-				assert.Equal(t, pi, pl.peerID, msg)
-				assert.Equal(t, false, pl.started.Load(), msg)
+			s.appliedFunc = func(pl *singlePeerList) error {
+				return nil
 			}
+
+			s.expectedPeerID = s.pid
+			s.expectedAgent = s.agent
+			s.expectedStarted = false
 			return
 		}(),
 		func() (s testStruct) {
-			msg := "stop before start"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
-			var err error
-			s.appliedFunc = func(pl transport.PeerList) {
-				err = pl.Stop()
+			s.msg = "stop before start"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+
+			s.appliedFunc = func(pl *singlePeerList) error {
+				return pl.Stop()
 			}
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.NotNil(t, err, msg)
-				assert.IsType(t, errors.ErrOutboundNotStarted(""), err, msg)
-				assert.Equal(t, false, pl.started.Load(), msg)
-			}
+
+			s.expectedErr = errors.ErrOutboundNotStarted("SinglePeerList")
+			s.expectedPeerID = s.pid
+			s.expectedAgent = s.agent
+			s.expectedStarted = false
 			return
 		}(),
 		func() (s testStruct) {
-			msg := "choose before start"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
-			var err error
-			var peer transport.Peer
-			s.appliedFunc = func(pl transport.PeerList) {
-				peer, err = pl.ChoosePeer(context.Background(), &transport.Request{})
+			s.msg = "choose before start"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+
+			s.appliedFunc = func(pl *singlePeerList) error {
+				return nil
 			}
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.Nil(t, peer, msg)
-				assert.NotNil(t, err, msg)
-				assert.IsType(t, errors.ErrOutboundNotStarted(""), err, msg)
-				assert.Equal(t, false, pl.started.Load(), msg)
-			}
+
+			s.expectedPeerID = s.pid
+			s.expectedAgent = s.agent
+			s.expectedStarted = false
+			s.expectedChooseResults = []expectedChooseResult{{
+				peer: nil,
+				err:  errors.ErrOutboundNotStarted("peerlist was not started"),
+			}}
 			return
 		}(),
 		func() (s testStruct) {
-			msg := "start and choose"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
+			s.msg = "start and choose"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
-			expectedPeer := transporttest.NewMockPeer(mockCtrl)
-			agent.EXPECT().RetainPeer(pi, s.pl).Return(expectedPeer, nil)
+			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
+			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
 
-			var startErr error
-			var chooseErr error
-			var peer transport.Peer
-			s.appliedFunc = func(pl transport.PeerList) {
-				startErr = pl.Start()
-				peer, chooseErr = pl.ChoosePeer(context.Background(), &transport.Request{})
+			s.appliedFunc = func(pl *singlePeerList) error {
+				return pl.Start()
 			}
 
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.Nil(t, startErr, msg)
-				assert.Nil(t, chooseErr, msg)
-				assert.Equal(t, expectedPeer, peer, msg)
-				assert.Equal(t, true, pl.started.Load(), msg)
-			}
+			s.expectedPeerID = s.pid
+			s.expectedAgent = s.agent
+			s.expectedStarted = true
+			s.expectedChooseResults = []expectedChooseResult{{
+				peer: s.expectedPeer,
+				err:  nil,
+			}}
 			return
 		}(),
 		func() (s testStruct) {
-			msg := "start with agent error"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
+			s.msg = "start with agent error"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
-			expectedErr := fmt.Errorf("test error")
-			agent.EXPECT().RetainPeer(pi, s.pl).Return(nil, expectedErr)
+			s.expectedErr = fmt.Errorf("test error")
+			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(nil, s.expectedErr)
 
-			var startErr error
-			s.appliedFunc = func(pl transport.PeerList) {
-				startErr = pl.Start()
+			s.appliedFunc = func(pl *singlePeerList) error {
+				return pl.Start()
 			}
 
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.Equal(t, expectedErr, startErr, msg)
-				assert.Equal(t, false, pl.started.Load(), msg)
-			}
+			s.expectedPeerID = s.pid
+			s.expectedAgent = s.agent
+			s.expectedStarted = false
 			return
 		}(),
 		func() (s testStruct) {
-			msg := "start twice"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
+			s.msg = "start twice"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+
+			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
+			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
+
+			s.appliedFunc = func(pl *singlePeerList) error {
+				pl.Start()
+				return pl.Start()
+			}
+
+			s.expectedErr = errors.ErrOutboundAlreadyStarted("SinglePeerList")
+			s.expectedPeerID = s.pid
+			s.expectedAgent = s.agent
+			s.expectedStarted = true
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "start stop"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
 			peer := transporttest.NewMockPeer(mockCtrl)
-			agent.EXPECT().RetainPeer(pi, s.pl).Return(peer, nil)
+			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(peer, nil)
+			s.agent.EXPECT().ReleasePeer(s.pid, gomock.Any()).Return(nil)
 
-			var startErr error
-			s.appliedFunc = func(pl transport.PeerList) {
-				_ = pl.Start()
-				startErr = pl.Start()
+			s.appliedFunc = func(pl *singlePeerList) error {
+				err := pl.Start()
+				if err != nil {
+					return err
+				}
+				return pl.Stop()
 			}
 
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.NotNil(t, startErr, msg)
-				assert.IsType(t, errors.ErrOutboundAlreadyStarted(""), startErr, msg)
-			}
+			s.expectedErr = nil
+			s.expectedPeerID = s.pid
+			s.expectedPeer = nil
+			s.expectedAgent = s.agent
+			s.expectedStarted = false
 			return
 		}(),
 		func() (s testStruct) {
-			msg := "start stop"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
+			s.msg = "start stop release failure"
+			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
+			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
-			peer := transporttest.NewMockPeer(mockCtrl)
-			agent.EXPECT().RetainPeer(pi, s.pl).Return(peer, nil)
-			agent.EXPECT().ReleasePeer(pi, s.pl).Return(nil)
+			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
+			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
 
-			var startErr error
-			var stopErr error
-			s.appliedFunc = func(pl transport.PeerList) {
-				startErr = pl.Start()
-				stopErr = pl.Stop()
+			s.expectedErr = errors.ErrAgentHasNoReferenceToPeer{}
+			s.agent.EXPECT().ReleasePeer(s.pid, gomock.Any()).Return(s.expectedErr)
+
+			s.appliedFunc = func(pl *singlePeerList) error {
+				err := pl.Start()
+				if err != nil {
+					return err
+				}
+				return pl.Stop()
 			}
 
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.Nil(t, startErr, msg)
-				assert.Nil(t, stopErr, msg)
-				assert.Equal(t, false, pl.started.Load(), msg)
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			msg := "start stop release failure"
-			pi := transporttest.NewMockPeerIdentifier(mockCtrl)
-			agent := transporttest.NewMockPeerAgent(mockCtrl)
-			s.pl = NewSinglePeerList(pi, agent).(*singlePeerList)
-
-			peer := transporttest.NewMockPeer(mockCtrl)
-			agent.EXPECT().RetainPeer(pi, s.pl).Return(peer, nil)
-			agent.EXPECT().ReleasePeer(pi, s.pl).Return(errors.ErrAgentHasNoReferenceToPeer{})
-
-			var startErr error
-			var stopErr error
-			s.appliedFunc = func(pl transport.PeerList) {
-				startErr = pl.Start()
-				stopErr = pl.Stop()
-			}
-
-			s.assertFunc = func(pl *singlePeerList) {
-				assert.Nil(t, startErr, msg)
-				assert.Equal(t, errors.ErrAgentHasNoReferenceToPeer{}, stopErr, msg)
-			}
+			s.expectedPeerID = s.pid
+			s.expectedAgent = s.agent
+			s.expectedStarted = false
 			return
 		}(),
 	}
 
 	for _, tt := range tests {
-		tt.appliedFunc(tt.pl)
+		pl := NewSinglePeerList(tt.pid, tt.agent).(*singlePeerList)
 
-		tt.assertFunc(tt.pl)
+		err := tt.appliedFunc(pl)
+
+		assert.Equal(t, tt.expectedErr, err, tt.msg)
+		assert.Equal(t, tt.expectedAgent, pl.agent, tt.msg)
+		assert.Equal(t, tt.expectedPeerID, pl.peerID, tt.msg)
+		assert.Equal(t, tt.expectedPeer, pl.peer, tt.msg)
+		assert.Equal(t, tt.expectedStarted, pl.started.Load(), tt.msg)
+
+		for _, expectedResult := range tt.expectedChooseResults {
+			peer, err := pl.ChoosePeer(context.Background(), &transport.Request{})
+
+			assert.Equal(t, expectedResult.peer, peer, tt.msg)
+			assert.True(t, expectedResult.peer == peer, tt.msg)
+			assert.Equal(t, expectedResult.err, err, tt.msg)
+		}
 	}
 }

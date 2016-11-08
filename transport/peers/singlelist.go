@@ -13,15 +13,14 @@ type singlePeerList struct {
 	peerID  transport.PeerIdentifier
 	peer    transport.Peer
 	agent   transport.PeerAgent
-	started *atomic.Bool
+	started atomic.Bool
 }
 
 // NewSinglePeerList creates a static PeerList with a single Peer
 func NewSinglePeerList(pi transport.PeerIdentifier, agent transport.PeerAgent) transport.PeerList {
 	return &singlePeerList{
-		peerID:  pi,
-		agent:   agent,
-		started: atomic.NewBool(false),
+		peerID: pi,
+		agent:  agent,
 	}
 }
 
@@ -58,20 +57,5 @@ func (pl *singlePeerList) ChoosePeer(context.Context, *transport.Request) (trans
 	return pl.peer, nil
 }
 
-// NotifyAvailable when a Peer can accept requests
-func (pl *singlePeerList) NotifyAvailable(transport.Peer) error {
-	return nil // Noop
-}
-
-// NotifyConnecting when a Peer is connecting
-func (pl *singlePeerList) NotifyConnecting(transport.Peer) error {
-	return nil // Noop
-}
-
-// NotifyUnavailable when a Peer is cannot handle requests
-func (pl *singlePeerList) NotifyUnavailable(transport.Peer) error {
-	return nil // Noop
-}
-
 // NotifyPending when the number of Pending requests changes
-func (pl *singlePeerList) NotifyPending(transport.Peer) {}
+func (pl *singlePeerList) NotifyStatusChanged(transport.Peer) {}
