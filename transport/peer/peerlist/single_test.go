@@ -1,4 +1,4 @@
-package peers
+package peerlist
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-func TestSinglePeerList(t *testing.T) {
+func TestSingle(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -26,7 +26,7 @@ func TestSinglePeerList(t *testing.T) {
 		msg                   string
 		pid                   transport.PeerIdentifier
 		agent                 *transporttest.MockPeerAgent
-		appliedFunc           func(*singlePeerList) error
+		appliedFunc           func(*single) error
 		expectedPeerID        transport.PeerIdentifier
 		expectedPeer          transport.Peer
 		expectedAgent         transport.PeerAgent
@@ -40,7 +40,7 @@ func TestSinglePeerList(t *testing.T) {
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				return nil
 			}
 
@@ -54,11 +54,11 @@ func TestSinglePeerList(t *testing.T) {
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				return pl.Stop()
 			}
 
-			s.expectedErr = errors.ErrOutboundNotStarted("SinglePeerList")
+			s.expectedErr = errors.ErrOutboundNotStarted("single")
 			s.expectedPeerID = s.pid
 			s.expectedAgent = s.agent
 			s.expectedStarted = false
@@ -69,7 +69,7 @@ func TestSinglePeerList(t *testing.T) {
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				return nil
 			}
 
@@ -90,7 +90,7 @@ func TestSinglePeerList(t *testing.T) {
 			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				return pl.Start()
 			}
 
@@ -111,7 +111,7 @@ func TestSinglePeerList(t *testing.T) {
 			s.expectedErr = fmt.Errorf("test error")
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(nil, s.expectedErr)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				return pl.Start()
 			}
 
@@ -128,12 +128,12 @@ func TestSinglePeerList(t *testing.T) {
 			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				pl.Start()
 				return pl.Start()
 			}
 
-			s.expectedErr = errors.ErrOutboundAlreadyStarted("SinglePeerList")
+			s.expectedErr = errors.ErrOutboundAlreadyStarted("single")
 			s.expectedPeerID = s.pid
 			s.expectedAgent = s.agent
 			s.expectedStarted = true
@@ -148,7 +148,7 @@ func TestSinglePeerList(t *testing.T) {
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(peer, nil)
 			s.agent.EXPECT().ReleasePeer(s.pid, gomock.Any()).Return(nil)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				err := pl.Start()
 				if err != nil {
 					return err
@@ -174,7 +174,7 @@ func TestSinglePeerList(t *testing.T) {
 			s.expectedErr = errors.ErrAgentHasNoReferenceToPeer{}
 			s.agent.EXPECT().ReleasePeer(s.pid, gomock.Any()).Return(s.expectedErr)
 
-			s.appliedFunc = func(pl *singlePeerList) error {
+			s.appliedFunc = func(pl *single) error {
 				err := pl.Start()
 				if err != nil {
 					return err
@@ -190,7 +190,7 @@ func TestSinglePeerList(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pl := NewSinglePeerList(tt.pid, tt.agent).(*singlePeerList)
+		pl := NewSingle(tt.pid, tt.agent).(*single)
 
 		err := tt.appliedFunc(pl)
 

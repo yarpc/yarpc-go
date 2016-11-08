@@ -1,4 +1,4 @@
-package peers
+package peerlist
 
 import (
 	"context"
@@ -9,24 +9,24 @@ import (
 	"github.com/uber-go/atomic"
 )
 
-type singlePeerList struct {
+type single struct {
 	peerID  transport.PeerIdentifier
 	peer    transport.Peer
 	agent   transport.PeerAgent
 	started atomic.Bool
 }
 
-// NewSinglePeerList creates a static PeerList with a single Peer
-func NewSinglePeerList(pi transport.PeerIdentifier, agent transport.PeerAgent) transport.PeerList {
-	return &singlePeerList{
+// NewSingle creates a static PeerList with a single Peer
+func NewSingle(pi transport.PeerIdentifier, agent transport.PeerAgent) transport.PeerList {
+	return &single{
 		peerID: pi,
 		agent:  agent,
 	}
 }
 
-func (pl *singlePeerList) Start() error {
+func (pl *single) Start() error {
 	if pl.started.Swap(true) {
-		return errors.ErrOutboundAlreadyStarted("SinglePeerList")
+		return errors.ErrOutboundAlreadyStarted("single")
 	}
 	peer, err := pl.agent.RetainPeer(pl.peerID, pl)
 	if err != nil {
@@ -37,9 +37,9 @@ func (pl *singlePeerList) Start() error {
 	return nil
 }
 
-func (pl *singlePeerList) Stop() error {
+func (pl *single) Stop() error {
 	if !pl.started.Swap(false) {
-		return errors.ErrOutboundNotStarted("SinglePeerList")
+		return errors.ErrOutboundNotStarted("single")
 	}
 	err := pl.agent.ReleasePeer(pl.peerID, pl)
 	if err != nil {
@@ -50,7 +50,7 @@ func (pl *singlePeerList) Stop() error {
 	return nil
 }
 
-func (pl *singlePeerList) ChoosePeer(context.Context, *transport.Request) (transport.Peer, error) {
+func (pl *single) ChoosePeer(context.Context, *transport.Request) (transport.Peer, error) {
 	if !pl.started.Load() {
 		return nil, errors.ErrOutboundNotStarted("peerlist was not started")
 	}
@@ -58,4 +58,4 @@ func (pl *singlePeerList) ChoosePeer(context.Context, *transport.Request) (trans
 }
 
 // NotifyPending when the number of Pending requests changes
-func (pl *singlePeerList) NotifyStatusChanged(transport.Peer) {}
+func (pl *single) NotifyStatusChanged(transport.Peer) {}
