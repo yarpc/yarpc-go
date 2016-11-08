@@ -45,7 +45,7 @@ func Procedure(name string, handler UnaryHandler) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure:   name,
-			HandlerSpec: transport.NewUnaryHandlerSpec(rawHandler{UnaryHandler: handler}),
+			HandlerSpec: transport.NewUnaryHandlerSpec(rawUnaryHandler{handler}),
 		},
 	}
 }
@@ -58,7 +58,7 @@ func OnewayProcedure(name string, handler OnewayHandler) []transport.Registrant 
 	return []transport.Registrant{
 		{
 			Procedure:   name,
-			HandlerSpec: transport.NewOnewayHandlerSpec(rawHandler{OnewayHandler: handler}),
+			HandlerSpec: transport.NewOnewayHandlerSpec(rawOnewayHandler{handler}),
 		},
 	}
 }

@@ -75,10 +75,8 @@ func OnewayProcedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			HandlerSpec: transport.HandlerSpec{
-				Type:          transport.Oneway,
-				OnewayHandler: wrapOnewayHandler(name, handler),
-			},
+			HandlerSpec: transport.NewOnewayHandlerSpec(
+				wrapOnewayHandler(name, handler)),
 		},
 	}
 }
