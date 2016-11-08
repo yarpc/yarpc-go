@@ -41,7 +41,7 @@ func Chain(interceptors ...transport.Interceptor) transport.Interceptor {
 // interceptorChain combines a series of interceptors into a single Interceptor.
 type chain []transport.Interceptor
 
-func (c chain) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.Handler) error {
+func (c chain) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	return chainExec{
 		Chain: []transport.Interceptor(c),
 		Final: h,
@@ -52,7 +52,7 @@ func (c chain) Handle(ctx context.Context, req *transport.Request, resw transpor
 // single request to the Handler and is not thread-safe.
 type chainExec struct {
 	Chain []transport.Interceptor
-	Final transport.Handler
+	Final transport.UnaryHandler
 }
 
 func (x chainExec) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {

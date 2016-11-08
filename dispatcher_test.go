@@ -117,9 +117,9 @@ func TestStartStopFailures(t *testing.T) {
 				return inbounds
 			},
 			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+				outbounds := make(transport.Outbounds, 10)
 				for i := 0; i < 10; i++ {
-					out := transporttest.NewMockOutbound(mockCtrl)
+					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] = out
@@ -144,9 +144,9 @@ func TestStartStopFailures(t *testing.T) {
 				return inbounds
 			},
 			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+				outbounds := make(transport.Outbounds, 10)
 				for i := 0; i < 10; i++ {
-					out := transporttest.NewMockOutbound(mockCtrl)
+					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] = out
@@ -172,9 +172,9 @@ func TestStartStopFailures(t *testing.T) {
 				return inbounds
 			},
 			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+				outbounds := make(transport.Outbounds, 10)
 				for i := 0; i < 10; i++ {
-					out := transporttest.NewMockOutbound(mockCtrl)
+					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] = out
@@ -196,9 +196,9 @@ func TestStartStopFailures(t *testing.T) {
 				return inbounds
 			},
 			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+				outbounds := make(transport.Outbounds, 10)
 				for i := 0; i < 10; i++ {
-					out := transporttest.NewMockOutbound(mockCtrl)
+					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					if i == 5 {
 						out.EXPECT().Start(gomock.Any()).Return(errors.New("something went wrong"))
 					} else {
@@ -225,9 +225,9 @@ func TestStartStopFailures(t *testing.T) {
 				return inbounds
 			},
 			outbounds: func(mockCtrl *gomock.Controller) transport.Outbounds {
-				outbounds := make(transport.Outbounds)
+				outbounds := make(transport.Outbounds, 10)
 				for i := 0; i < 10; i++ {
-					out := transporttest.NewMockOutbound(mockCtrl)
+					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
 					if i == 7 {
 						out.EXPECT().Stop().Return(errors.New("something went wrong"))

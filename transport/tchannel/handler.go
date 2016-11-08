@@ -74,7 +74,7 @@ func (c tchannelCall) Response() inboundCallResponse {
 	return c.InboundCall.Response()
 }
 
-// handler wraps a transport.Handler into a TChannel Handler.
+// handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
 	existing map[string]tchannel.Handler
 	Registry transport.Registry
@@ -154,7 +154,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
 	if err == nil {
-		err = internal.SafelyCallHandler(ctx, handler, start, treq, rw)
+		err = internal.SafelyCallUnaryHandler(ctx, handler, start, treq, rw)
 	}
 	return err
 }

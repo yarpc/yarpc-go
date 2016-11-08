@@ -62,7 +62,11 @@ func KeepAlive(t time.Duration) OutboundOption {
 
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
-func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
+func NewOutbound(url string, opts ...OutboundOption) transport.UnaryOutbound {
+	return newOutbound(url, opts...).(transport.UnaryOutbound)
+}
+
+func newOutbound(url string, opts ...OutboundOption) transport.Outbound {
 	cfg := defaultConfig
 	for _, o := range opts {
 		o(&cfg)
@@ -132,24 +136,7 @@ func (o *outbound) createSpan(ctx context.Context, req *http.Request, treq *tran
 	return ctx, span
 }
 
-func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
-	}
-
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	req, err := http.NewRequest("POST", o.URL, treq.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, span := o.createSpan(ctx, req, treq, start)
-	defer span.Finish()
-
+func setHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) {
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
@@ -168,6 +155,27 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if encoding != "" {
 		req.Header.Set(EncodingHeader, encoding)
 	}
+}
+
+func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+
+	start := time.Now()
+	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
+
+	req, err := http.NewRequest("POST", o.URL, treq.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, span := o.createSpan(ctx, req, treq, start)
+	defer span.Finish()
+
+	setHeaders(req, treq, ttl)
 
 	response, err := o.Client.Do(req.WithContext(ctx))
 	if err != nil {
