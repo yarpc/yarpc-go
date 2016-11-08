@@ -12,13 +12,8 @@ import (
 
 // NewRoundRobin creates a new round robin PeerList using
 func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.PeerAgent) transport.PeerList {
-	peerIDMap := make(map[string]transport.PeerIdentifier, len(peerIDs))
-
-	for _, peerID := range peerIDs {
-		peerIDMap[peerID.Identifier()] = peerID
-	}
 	return &roundRobin{
-		initialPeerIDs: peerIDMap,
+		initialPeerIDs: peerIDs,
 		peerToNode:     make(map[string]*roundRobinNode, len(peerIDs)),
 		agent:          agent,
 		started:        atomic.NewBool(false),
@@ -29,7 +24,7 @@ func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.PeerAgent
 type roundRobin struct {
 	sync.Mutex
 
-	initialPeerIDs map[string]transport.PeerIdentifier
+	initialPeerIDs []transport.PeerIdentifier
 	peerToNode     map[string]*roundRobinNode
 	agent          transport.PeerAgent
 	started        *atomic.Bool
@@ -134,10 +129,8 @@ func (pl *roundRobin) Start() error {
 			return err
 		}
 
-		err = pl.addPeer(peer)
-		if err != nil {
-			return err
-		}
+		// TODO add event/log when duplicates are inserted
+		pl.addPeer(peer)
 	}
 	return nil
 }
