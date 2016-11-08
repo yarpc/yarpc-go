@@ -40,19 +40,13 @@ func TestMapRegistry(t *testing.T) {
 	bar := transporttest.NewMockUnaryHandler(mockCtrl)
 	m.Register([]transport.Registrant{
 		{
-			Procedure: "foo",
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: foo,
-			},
+			Procedure:   "foo",
+			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
 		},
 		{
-			Service:   "anotherservice",
-			Procedure: "bar",
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: bar,
-			},
+			Service:     "anotherservice",
+			Procedure:   "bar",
+			HandlerSpec: transport.NewUnaryHandlerSpec(bar),
 		},
 	})
 
@@ -73,7 +67,7 @@ func TestMapRegistry(t *testing.T) {
 		if tt.want != nil {
 			assert.NoError(t, err,
 				"GetHandlerSpec(%q, %q) failed", tt.service, tt.procedure)
-			assert.True(t, tt.want == got.UnaryHandler, // want == match, not deep equals
+			assert.True(t, tt.want == got.Unary(), // want == match, not deep equals
 				"GetHandlerSpec(%q, %q) did not match", tt.service, tt.procedure)
 		} else {
 			assert.Error(t, err)
@@ -92,27 +86,18 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 	aww := transporttest.NewMockUnaryHandler(mockCtrl)
 	m.Register([]transport.Registrant{
 		{
-			Service:   "anotherservice",
-			Procedure: "bar",
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: bar,
-			},
+			Service:     "anotherservice",
+			Procedure:   "bar",
+			HandlerSpec: transport.NewUnaryHandlerSpec(bar),
 		},
 		{
-			Procedure: "foo",
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: foo,
-			},
+			Procedure:   "foo",
+			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
 		},
 		{
-			Service:   "anotherservice",
-			Procedure: "aww",
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: aww,
-			},
+			Service:     "anotherservice",
+			Procedure:   "aww",
+			HandlerSpec: transport.NewUnaryHandlerSpec(aww),
 		},
 	})
 
@@ -134,4 +119,60 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 	serviceProcedures := m.ServiceProcedures()
 
 	assert.Equal(t, expectedOrderedServiceProcedures, serviceProcedures)
+}
+
+func TestDuplicates(t *testing.T) {
+	m := transport.NewMapRegistry("test-service-name")
+
+	tests := []struct {
+		name string
+
+		service1   string
+		procedure1 string
+
+		service2   string
+		procedure2 string
+	}{
+		{
+			name: "same-service",
+
+			service1: "service",
+			service2: "service",
+		},
+
+		{
+			name: "same-procedure",
+
+			procedure1: "procedure",
+			procedure2: "procedure",
+		},
+		{
+			name: "both",
+
+			service1:   "service",
+			procedure1: "procedure",
+
+			service2:   "service",
+			procedure2: "procedure",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registrants := []transport.Registrant{
+				{
+					Service:   tt.service1,
+					Procedure: tt.procedure1,
+				},
+				{
+					Service:   tt.service2,
+					Procedure: tt.procedure2,
+				},
+			}
+
+			assert.Panics(t, func() {
+				m.Register(registrants)
+			}, "expected registry panic")
+		})
+	}
 }

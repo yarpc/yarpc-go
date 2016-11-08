@@ -166,8 +166,8 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 
 func (c thriftClient) buildTransportRequest(
 	reqMeta yarpc.CallReqMeta,
-	reqBody envelope.Enveloper) (
-	*transport.Request, protocol.Protocol, error) {
+	reqBody envelope.Enveloper,
+) (*transport.Request, protocol.Protocol, error) {
 
 	proto := c.p
 	if !c.Enveloping {
@@ -195,10 +195,9 @@ func (c thriftClient) buildTransportRequest(
 
 	reqEnvelopeType := reqBody.EnvelopeType()
 	if reqEnvelopeType != wire.Call && reqEnvelopeType != wire.OneWay {
-		return nil, nil,
-			encoding.RequestBodyEncodeError(
-				&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
-			)
+		return nil, nil, encoding.RequestBodyEncodeError(
+			&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
+		)
 	}
 
 	var buffer bytes.Buffer
