@@ -30,6 +30,12 @@ INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "
 build:
 	go build $(PACKAGES)
 
+.PHONY: generate
+generate:
+	go install ./vendor/go.uber.org/thriftrw
+	go install ./encoding/thrift/thriftrw-plugin-yarpc
+	go generate $(PACKAGES)
+
 .PHONY: lint
 lint:
 	$(eval FMT_LOG := $(shell mktemp -t gofmt.XXXXX))
