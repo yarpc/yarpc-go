@@ -192,24 +192,18 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 	registrants := make([]transport.Registrant, 0, len(rs))
 
 	for _, r := range rs {
-		registrant := transport.Registrant{
-			Service:   r.Service,
-			Procedure: r.Procedure,
-		}
-
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
 			h := transport.ApplyInterceptor(r.HandlerSpec.Unary(), d.Interceptor)
-			registrant.HandlerSpec = transport.NewUnaryHandlerSpec(h)
+			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
 			//TODO(apb): add oneway interceptors https://github.com/yarpc/yarpc-go/issues/413
-			registrant.HandlerSpec = r.HandlerSpec
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
 				r.HandlerSpec.Type(), r.Service, r.Procedure))
 		}
 
-		registrants = append(registrants, registrant)
+		registrants = append(registrants, r)
 	}
 
 	d.Registry.Register(registrants)

@@ -121,58 +121,17 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 	assert.Equal(t, expectedOrderedServiceProcedures, serviceProcedures)
 }
 
-func TestDuplicates(t *testing.T) {
+func TestEmptyProcedureRegistration(t *testing.T) {
 	m := transport.NewMapRegistry("test-service-name")
 
-	tests := []struct {
-		name string
-
-		service1   string
-		procedure1 string
-
-		service2   string
-		procedure2 string
-	}{
+	registrants := []transport.Registrant{
 		{
-			name: "same-service",
-
-			service1: "service",
-			service2: "service",
-		},
-
-		{
-			name: "same-procedure",
-
-			procedure1: "procedure",
-			procedure2: "procedure",
-		},
-		{
-			name: "both",
-
-			service1:   "service",
-			procedure1: "procedure",
-
-			service2:   "service",
-			procedure2: "procedure",
+			Service:   "test",
+			Procedure: "",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			registrants := []transport.Registrant{
-				{
-					Service:   tt.service1,
-					Procedure: tt.procedure1,
-				},
-				{
-					Service:   tt.service2,
-					Procedure: tt.procedure2,
-				},
-			}
-
-			assert.Panics(t, func() {
-				m.Register(registrants)
-			}, "expected registry panic")
-		})
-	}
+	assert.Panics(t,
+		func() { m.Register(registrants) },
+		"expected registry panic")
 }
