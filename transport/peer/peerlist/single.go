@@ -3,8 +3,8 @@ package peerlist
 import (
 	"context"
 
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
 
 	"github.com/uber-go/atomic"
 )

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
 	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/crossdock/crossdock-go/assert"

@@ -2,6 +2,7 @@ package errors
 
 import (
 	"fmt"
+
 	"go.uber.org/yarpc/transport"
 )
 
