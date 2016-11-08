@@ -70,8 +70,8 @@ func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	return []transport.ServiceProcedure{{Service: testService, Procedure: testProcedure}}
 }
 
-func (r staticRegistry) GetHandler(service string, procedure string) (transport.UnaryHandler, error) {
-	return r.Handler, nil
+func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transport.HandlerSpec, error) {
+	return transport.NewUnaryHandlerSpec(r.Handler), nil
 }
 
 // handlerFunc wraps a function into a transport.Registry
@@ -105,6 +105,7 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
 		i := tch.NewInbound(ch)
 		require.NoError(tt.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
 		// handler.

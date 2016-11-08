@@ -22,6 +22,46 @@ package transport
 
 import "context"
 
+// Type is an enum of RPC types
+type Type int
+
+//go:generate stringer -type=Type
+
+const (
+	// Unary types are traditional request/response RPCs
+	Unary Type = iota + 1
+	// Oneway types are fire and forget RPCs (no response)
+	Oneway
+)
+
+// HandlerSpec holds a handler and its Type
+// one handler will be set, the other nil
+type HandlerSpec struct {
+	t Type
+
+	unaryHandler  UnaryHandler
+	onewayHandler OnewayHandler
+}
+
+// Type returns the associated handler's type
+func (h HandlerSpec) Type() Type { return h.t }
+
+// Unary returns the Unary Handler or nil
+func (h HandlerSpec) Unary() UnaryHandler { return h.unaryHandler }
+
+// Oneway returns the Oneway Handler or nil
+func (h HandlerSpec) Oneway() OnewayHandler { return h.onewayHandler }
+
+// NewUnaryHandlerSpec returns an new HandlerSpec with a UnaryHandler
+func NewUnaryHandlerSpec(handler UnaryHandler) HandlerSpec {
+	return HandlerSpec{t: Unary, unaryHandler: handler}
+}
+
+// NewOnewayHandlerSpec returns an new HandlerSpec with a OnewayHandler
+func NewOnewayHandlerSpec(handler OnewayHandler) HandlerSpec {
+	return HandlerSpec{t: Oneway, onewayHandler: handler}
+}
+
 // UnaryHandler handles a single, transport-level, unary request.
 type UnaryHandler interface {
 	// Handle the given request, writing the response to the given
@@ -31,4 +71,12 @@ type UnaryHandler interface {
 	// returned for invalid requests. All other failures are treated as
 	// UnexpectedErrors.
 	Handle(ctx context.Context, req *Request, resw ResponseWriter) error
+}
+
+// OnewayHandler handles a single, transport-level, oneway request.
+type OnewayHandler interface {
+	// Handle the given oneway request
+	//
+	// An error may be returned in case of failures.
+	HandleOneway(ctx context.Context, req *Request) error
 }

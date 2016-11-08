@@ -46,8 +46,8 @@ type Registrant struct {
 	// Name of the procedure.
 	Procedure string
 
-	// Handler implementing the given procedure.
-	Handler UnaryHandler
+	// HandlerSpec specifiying which handler and rpc type.
+	HandlerSpec HandlerSpec
 }
 
 // Registry maintains and provides access to a collection of procedures and
@@ -63,7 +63,7 @@ type Registry interface {
 	//
 	// service may be empty to indicate that the default service name should
 	// be used.
-	GetHandler(service, procedure string) (UnaryHandler, error)
+	GetHandlerSpec(service, procedure string) (HandlerSpec, error)
 }
 
 // Registrar provides access to a collection of procedures and their handlers.
@@ -78,7 +78,7 @@ type Registrar interface {
 // procedures.
 type MapRegistry struct {
 	defaultService string
-	unaryEntries   map[ServiceProcedure]UnaryHandler
+	entries        map[ServiceProcedure]HandlerSpec
 }
 
 // NewMapRegistry builds a new MapRegistry that uses the given name as the
@@ -86,7 +86,7 @@ type MapRegistry struct {
 func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
-		unaryEntries:   make(map[ServiceProcedure]UnaryHandler),
+		entries:        make(map[ServiceProcedure]HandlerSpec),
 	}
 }
 
@@ -97,33 +97,38 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		m.unaryEntries[ServiceProcedure{r.Service, r.Procedure}] = r.Handler
+		if r.Procedure == "" {
+			panic("Expected procedure name not to be empty string in registration")
+		}
+
+		sp := ServiceProcedure{r.Service, r.Procedure}
+		m.entries[sp] = r.HandlerSpec
 	}
 }
 
 // ServiceProcedures returns a list of services and their procedures that
 // have been registered so far.
 func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
-	procs := make([]ServiceProcedure, 0, len(m.unaryEntries))
-	for k := range m.unaryEntries {
+	procs := make([]ServiceProcedure, 0, len(m.entries))
+	for k := range m.entries {
 		procs = append(procs, k)
 	}
 	sort.Sort(byServiceProcedure(procs))
 	return procs
 }
 
-// GetHandler retrieves the Handler for the given Procedure or returns an
+// GetHandlerSpec retrieves the HandlerSpec for the given Procedure or returns an
 // error.
-func (m MapRegistry) GetHandler(service, procedure string) (UnaryHandler, error) {
+func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, error) {
 	if service == "" {
 		service = m.defaultService
 	}
 
-	if h, ok := m.unaryEntries[ServiceProcedure{service, procedure}]; ok {
-		return h, nil
+	if spec, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
+		return spec, nil
 	}
 
-	return nil, errors.UnrecognizedProcedureError{
+	return HandlerSpec{}, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
 	}

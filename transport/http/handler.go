@@ -97,11 +97,22 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		return err
 	}
 
-	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
-	if err == nil {
-		err = internal.SafelyCallUnaryHandler(ctx, handler, start, treq, newResponseWriter(w))
+	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
+	if err != nil {
+		return updateSpanWithErr(span, err)
 	}
 
+	switch spec.Type() {
+	case transport.Unary:
+		err = internal.SafelyCallUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
+	default:
+		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
+	}
+
+	return updateSpanWithErr(span, err)
+}
+
+func updateSpanWithErr(span opentracing.Span, err error) error {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
