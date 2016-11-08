@@ -88,6 +88,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	v := request.Validator{Request: treq}
 	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
 	defer cancel()
+
 	ctx, span := h.createSpan(ctx, req, treq, start)
 	defer span.Finish()
 

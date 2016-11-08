@@ -40,7 +40,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-func TestHandlerPanic(t *testing.T) {
+func TestHandlerErrors(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
