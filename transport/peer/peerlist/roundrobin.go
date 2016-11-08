@@ -11,30 +11,50 @@ import (
 )
 
 // NewRoundRobin creates a new round robin PeerList using
-func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.PeerAgent) transport.PeerList {
-	return &roundRobin{
-		initialPeerIDs: peerIDs,
-		peerToNode:     make(map[string]*roundRobinNode, len(peerIDs)),
-		agent:          agent,
-		started:        atomic.NewBool(false),
-		nextNode:       nil,
+func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.PeerAgent) (transport.PeerList, error) {
+	rr := &roundRobin{
+		peerToNode: make(map[string]*roundRobinNode, len(peerIDs)),
+		agent:      agent,
+		started:    atomic.NewBool(false),
+		nextNode:   nil,
 	}
+
+	err := rr.createPeers(peerIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return rr, nil
 }
 
 type roundRobin struct {
 	sync.Mutex
 
-	initialPeerIDs []transport.PeerIdentifier
-	peerToNode     map[string]*roundRobinNode
-	agent          transport.PeerAgent
-	started        *atomic.Bool
-	nextNode       *roundRobinNode
+	peerToNode map[string]*roundRobinNode
+	agent      transport.PeerAgent
+	started    *atomic.Bool
+	nextNode   *roundRobinNode
 }
 
 type roundRobinNode struct {
 	peer         transport.Peer
 	nextNode     *roundRobinNode
 	previousNode *roundRobinNode
+}
+
+func (pl *roundRobin) createPeers(peerIDs []transport.PeerIdentifier) error {
+	pl.Lock()
+	defer pl.Unlock()
+	for _, peerID := range peerIDs {
+		peer, err := pl.agent.RetainPeer(peerID, pl)
+		if err != nil {
+			return err
+		}
+
+		// TODO add event/log when duplicates are inserted
+		pl.addPeer(peer)
+	}
+	return nil
 }
 
 func (pl *roundRobin) addPeer(peer transport.Peer) error {
@@ -120,18 +140,6 @@ func (pl *roundRobin) Start() error {
 	if pl.started.Swap(true) {
 		return errors.ErrPeerListAlreadyStarted("RoundRobinList")
 	}
-	pl.Lock()
-	defer pl.Unlock()
-
-	for _, peerID := range pl.initialPeerIDs {
-		peer, err := pl.agent.RetainPeer(peerID, pl)
-		if err != nil {
-			return err
-		}
-
-		// TODO add event/log when duplicates are inserted
-		pl.addPeer(peer)
-	}
 	return nil
 }
 
@@ -139,6 +147,10 @@ func (pl *roundRobin) Stop() error {
 	if !pl.started.Swap(false) {
 		return errors.ErrPeerListNotStarted("RoundRobinList")
 	}
+	return pl.clearPeers()
+}
+
+func (pl *roundRobin) clearPeers() error {
 	pl.Lock()
 	defer pl.Unlock()
 
