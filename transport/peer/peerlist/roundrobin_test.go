@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/internal/errors"
 )
 
 // gomock has difficulty seeing between mock objects of the same type, we need to define
@@ -66,15 +66,15 @@ func TestRoundRobinList(t *testing.T) {
 	}
 
 	type testStruct struct {
-		msg                    string
-		pids                   []transport.PeerIdentifier
-		agent                  *transporttest.MockPeerAgent
-		appliedFunc            func(*roundRobin) error
-		expectedInitialPeerIDs []transport.PeerIdentifier
-		expectedPeers          []transport.Peer
-		expectedStarted        bool
-		expectedError          error
-		expectedChooseResults  []expectedChooseResult
+		msg                   string
+		pids                  []transport.PeerIdentifier
+		agent                 *transporttest.MockPeerAgent
+		appliedFunc           func(*roundRobin) error
+		expectedCreateErr     error
+		expectedPeers         []transport.Peer
+		expectedStarted       bool
+		expectedError         error
+		expectedChooseResults []expectedChooseResult
 	}
 	tests := []testStruct{
 		func() (s testStruct) {
@@ -82,11 +82,10 @@ func TestRoundRobinList(t *testing.T) {
 
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 			s.pids = createPeerIDs([]string{"1"})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
 
 			s.appliedFunc = func(pl *roundRobin) error { return nil }
 
-			s.expectedInitialPeerIDs = s.pids
-			s.expectedPeers = []transport.Peer{}
 			return
 		}(),
 		func() (s testStruct) {
@@ -104,7 +103,6 @@ func TestRoundRobinList(t *testing.T) {
 				peer: s.expectedPeers[0],
 				err:  nil,
 			}}
-			s.expectedInitialPeerIDs = s.pids
 			s.expectedStarted = true
 			return
 		}(),
@@ -128,7 +126,6 @@ func TestRoundRobinList(t *testing.T) {
 				peer: nil,
 				err:  errors.ErrPeerListNotStarted("RoundRobinList"),
 			}}
-			s.expectedInitialPeerIDs = s.pids
 			s.expectedPeers = []transport.Peer{}
 			s.expectedStarted = false
 			return
@@ -170,7 +167,6 @@ func TestRoundRobinList(t *testing.T) {
 					peer: s.expectedPeers[1],
 				},
 			}
-			s.expectedInitialPeerIDs = s.pids
 			s.expectedStarted = true
 			return
 		}(),
@@ -190,7 +186,6 @@ func TestRoundRobinList(t *testing.T) {
 			s.expectedChooseResults = []expectedChooseResult{{
 				peer: s.expectedPeers[0],
 			}}
-			s.expectedInitialPeerIDs = s.pids
 			s.expectedStarted = true
 			return
 		}(),
@@ -199,14 +194,13 @@ func TestRoundRobinList(t *testing.T) {
 
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 			s.pids = createPeerIDs([]string{"1"})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
 
 			s.appliedFunc = func(pl *roundRobin) error {
 				return pl.Stop()
 			}
 
 			s.expectedError = errors.ErrPeerListNotStarted("RoundRobinList")
-			s.expectedInitialPeerIDs = s.pids
-			s.expectedPeers = []transport.Peer{}
 			s.expectedStarted = false
 			return
 		}(),
@@ -216,16 +210,8 @@ func TestRoundRobinList(t *testing.T) {
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 			s.pids = createPeerIDs([]string{"1"})
 
-			s.expectedError = errors.ErrNoPeerToSelect("Test!!")
-			s.agent.EXPECT().RetainPeer(s.pids[0], gomock.Any()).Return(nil, s.expectedError)
-
-			s.appliedFunc = func(pl *roundRobin) error {
-				return pl.Start()
-			}
-
-			s.expectedInitialPeerIDs = s.pids
-			s.expectedPeers = []transport.Peer{}
-			s.expectedStarted = true
+			s.expectedCreateErr = errors.ErrNoPeerToSelect("Test!!")
+			s.agent.EXPECT().RetainPeer(s.pids[0], gomock.Any()).Return(nil, s.expectedCreateErr)
 			return
 		}(),
 		func() (s testStruct) {
@@ -243,7 +229,6 @@ func TestRoundRobinList(t *testing.T) {
 				return pl.Stop()
 			}
 
-			s.expectedInitialPeerIDs = s.pids
 			s.expectedStarted = false
 			return
 		}(),
@@ -252,6 +237,7 @@ func TestRoundRobinList(t *testing.T) {
 
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 			s.pids = createPeerIDs([]string{"1"})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
 
 			s.appliedFunc = func(pl *roundRobin) error {
 				return nil
@@ -265,7 +251,6 @@ func TestRoundRobinList(t *testing.T) {
 					err: errors.ErrPeerListNotStarted("RoundRobinList"),
 				},
 			}
-			s.expectedInitialPeerIDs = s.pids
 			s.expectedStarted = false
 			return
 		}(),
@@ -274,6 +259,7 @@ func TestRoundRobinList(t *testing.T) {
 
 			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
 			s.pids = createPeerIDs([]string{})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
 
 			s.appliedFunc = func(pl *roundRobin) error {
 				return pl.Start()
@@ -287,19 +273,22 @@ func TestRoundRobinList(t *testing.T) {
 					err: errors.ErrNoPeerToSelect("RoundRobinList"),
 				},
 			}
-			s.expectedInitialPeerIDs = s.pids
 			s.expectedStarted = true
 			return
 		}(),
 	}
 
 	for _, tt := range tests {
-		peerList := NewRoundRobin(tt.pids, tt.agent).(*roundRobin)
+		pl, err := NewRoundRobin(tt.pids, tt.agent)
+		assert.Equal(t, tt.expectedCreateErr, err)
 
-		err := tt.appliedFunc(peerList)
+		if pl == nil {
+			continue
+		}
+		peerList := pl.(*roundRobin)
+
+		err = tt.appliedFunc(peerList)
 		assert.Equal(t, tt.expectedError, err, tt.msg)
-
-		assert.Equal(t, tt.expectedInitialPeerIDs, peerList.initialPeerIDs, tt.msg)
 
 		assert.Equal(t, len(tt.expectedPeers), len(peerList.peerToNode), tt.msg)
 		for _, expectedPeer := range tt.expectedPeers {
