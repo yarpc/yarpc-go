@@ -265,6 +265,7 @@ func (d dispatcher) Stop() error {
 // getUniqueOutbounds helps ensure we only start/stop the same outbound once
 func (d dispatcher) getUniqueOutbounds() []transport.Outbound {
 	seen := make(map[transport.Outbound]struct{})
+	unique := []transport.Outbound{}
 
 	addIfUnique := func(outbound transport.Outbound) {
 		if outbound == nil {
@@ -273,17 +274,13 @@ func (d dispatcher) getUniqueOutbounds() []transport.Outbound {
 
 		if _, ok := seen[outbound]; !ok {
 			seen[outbound] = struct{}{}
+			unique = append(unique, outbound)
 		}
 	}
 
 	for _, outs := range d.outbounds {
 		addIfUnique(outs.Unary)
 		addIfUnique(outs.Oneway)
-	}
-
-	unique := make([]transport.Outbound, 0, len(seen))
-	for outbound := range seen {
-		unique = append(unique, outbound)
 	}
 
 	return unique
