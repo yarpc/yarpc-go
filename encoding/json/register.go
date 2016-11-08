@@ -58,10 +58,9 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: wrapUnaryHandler(name, handler),
-			},
+			HandlerSpec: transport.NewUnaryHandlerSpec(
+				wrapUnaryHandler(name, handler),
+			),
 		},
 	}
 }
@@ -76,10 +75,8 @@ func OnewayProcedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			HandlerSpec: transport.HandlerSpec{
-				Type:          transport.Oneway,
-				OnewayHandler: wrapOnewayHandler(name, handler),
-			},
+			HandlerSpec: transport.NewOnewayHandlerSpec(
+				wrapOnewayHandler(name, handler)),
 		},
 	}
 }
@@ -141,7 +138,7 @@ func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the thrifd argument of the handler for %q must be "+
+			"the third argument of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
 		))
@@ -219,7 +216,7 @@ func verifyInputSignature(n string, t reflect.Type) reflect.Type {
 
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the thrifd argument of the handler for %q must be "+
+			"the third argument of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
 		))
