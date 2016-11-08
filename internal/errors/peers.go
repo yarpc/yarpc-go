@@ -22,6 +22,16 @@ func (e ErrInvalidPeerConversion) Error() string {
 	return fmt.Sprintf("cannot convert peer (%v) to type %s", e.Peer, e.ExpectedType)
 }
 
+// ErrInvalidAgentConversion is called when an agent can't be properly converted
+type ErrInvalidAgentConversion struct {
+	Agent        interface{}
+	ExpectedType string
+}
+
+func (e ErrInvalidAgentConversion) Error() string {
+	return fmt.Sprintf("cannot convert agent (%v) to type %s", e.Agent, e.ExpectedType)
+}
+
 // ErrAgentHasNoReferenceToPeer is called when an agent is expected to operate on a Peer it has no reference to
 type ErrAgentHasNoReferenceToPeer struct {
 	Agent          interface{}
