@@ -1,14 +1,15 @@
-package peers
+package peerlist
 
 import (
+	"context"
 	"testing"
 
-	"code.uber.internal/rds/contact_service.git/Godeps/_workspace/src/golang.org/x/net/context"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
 func createPeers(
@@ -346,7 +347,7 @@ func TestRoundRobinList(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		peerList := NewRoundRobinPeerList(tt.pids, tt.agent).(*roundRobinList)
+		peerList := NewRoundRobin(tt.pids, tt.agent).(*roundRobin)
 
 		err := tt.appliedFunc(peerList)
 		assert.Equal(t, tt.expectedError, err, tt.msg)
