@@ -122,3 +122,16 @@ func (e ProcedureFailedError) Error() string {
 func (e ProcedureFailedError) AsHandlerError() HandlerError {
 	return HandlerUnexpectedError(e)
 }
+
+// UnsupportedTypeError is a failure to process a request because the RPC type
+// is unknown to the transport
+type UnsupportedTypeError struct {
+	Transport string
+	Type      string
+}
+
+//TODO(apb): add tests for UnsupportedTypeError error
+
+func (e UnsupportedTypeError) Error() string {
+	return fmt.Sprintf(`unsupported RPC type %q for transport %q`, e.Type, e.Transport)
+}

@@ -70,9 +70,10 @@ func TestHandlerErrors(t *testing.T) {
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
 
+		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 		tchHandler := handler{Registry: registry}
 
-		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
+		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t),
@@ -324,6 +325,8 @@ func TestHandlerFailures(t *testing.T) {
 
 		mockCtrl := gomock.NewController(t)
 		thandler := transporttest.NewMockUnaryHandler(mockCtrl)
+		spec := transport.NewUnaryHandlerSpec(thandler)
+
 		if tt.expectCall != nil {
 			tt.expectCall(thandler)
 		}
@@ -332,8 +335,8 @@ func TestHandlerFailures(t *testing.T) {
 		tt.sendCall.resp = resp
 
 		registry := transporttest.NewMockRegistry(mockCtrl)
-		registry.EXPECT().GetHandler(tt.sendCall.service, tt.sendCall.method).
-			Return(thandler, nil).AnyTimes()
+		registry.EXPECT().GetHandlerSpec(tt.sendCall.service, tt.sendCall.method).
+			Return(spec, nil).AnyTimes()
 
 		handler{Registry: registry}.handle(ctx, tt.sendCall)
 		err := resp.systemErr
