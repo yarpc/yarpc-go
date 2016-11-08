@@ -84,8 +84,8 @@ func (e ErrNoPeerToSelect) Error() string {
 
 // ErrPeerAlreadyInList is used when a peerlist attempts to add a peer that is already in the list
 type ErrPeerAlreadyInList struct {
-	Peer     interface{}
-	PeerList interface{}
+	Peer     transport.Peer
+	PeerList transport.PeerList
 }
 
 func (e ErrPeerAlreadyInList) Error() string {
@@ -94,10 +94,10 @@ func (e ErrPeerAlreadyInList) Error() string {
 
 // ErrPeerNotInList is used when a peerlist attempts to remove a peer that is not in the list
 type ErrPeerNotInList struct {
-	Peer     interface{}
-	PeerList interface{}
+	PeerIdentifier transport.PeerIdentifier
+	PeerList       transport.PeerList
 }
 
 func (e ErrPeerNotInList) Error() string {
-	return fmt.Sprintf("can't remove peer (%v) because it is not in peerlist (%v)", e.Peer, e.PeerList)
+	return fmt.Sprintf("can't remove peer (%v) because it is not in peerlist (%v)", e.PeerIdentifier, e.PeerList)
 }

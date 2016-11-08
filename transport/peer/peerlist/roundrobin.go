@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
 
 	"github.com/uber-go/atomic"
 )
@@ -101,8 +101,8 @@ func (pl *roundRobin) removePeer(peer transport.Peer) error {
 	if !ok {
 		// Peer doesn't exist in the list
 		return errors.ErrPeerNotInList{
-			Peer:     peer,
-			PeerList: pl,
+			PeerIdentifier: peer,
+			PeerList:       pl,
 		}
 	}
 
