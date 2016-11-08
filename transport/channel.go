@@ -39,7 +39,8 @@ type Channel interface {
 	// Name of the service to which the request is being made.
 	Service() string
 
-	// Returns an outbound to send the request through.
+	// Returns an outbound to send the request through or nil if there is no
+	// outbound for this service
 	//
 	// MAY be called multiple times for a request. The returned outbound MUST
 	// have already been started.

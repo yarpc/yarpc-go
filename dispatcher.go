@@ -131,7 +131,6 @@ type dispatcher struct {
 	inbounds  []transport.Inbound
 	outbounds Outbounds
 
-	Filter      transport.Filter
 	Interceptor transport.Interceptor
 
 	deps transport.Deps
