@@ -157,11 +157,11 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	switch spec.Type {
+	switch spec.Type() {
 	case transport.Unary:
-		err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, rw)
+		err = internal.SafelyCallUnaryHandler(ctx, spec.Unary(), start, treq, rw)
 	default:
-		err = errors.UnsupportedTypeError{Transport: "tchannel", Type: spec.Type.String()}
+		err = errors.UnsupportedTypeError{Transport: "tchannel", Type: string(spec.Type())}
 	}
 
 	return err

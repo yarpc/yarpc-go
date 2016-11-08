@@ -58,10 +58,9 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: wrapUnaryHandler(name, handler),
-			},
+			HandlerSpec: transport.NewUnaryHandlerSpec(
+				wrapUnaryHandler(name, handler),
+			),
 		},
 	}
 }

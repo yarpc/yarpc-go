@@ -101,11 +101,11 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		return err
 	}
 
-	switch spec.Type {
+	switch spec.Type() {
 	case transport.Unary:
-		err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, newResponseWriter(w))
+		err = internal.SafelyCallUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
 	default:
-		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
+		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
 	}
 
 	updateSpanIfErr(span, err)

@@ -20,38 +20,45 @@
 
 package transport
 
-import (
-	"context"
-	"fmt"
-)
+//go:generate stringer -type=Type
+
+import "context"
 
 // Type is an enum of RPC types
 type Type int
 
 const (
-	// Unary type
+	// Unary types are traditional request/response RPCs
 	Unary Type = iota + 1
-	// Oneway type
+	// Oneway types are fire and forget RPCs (no response)
 	Oneway
 )
 
-func (t Type) String() string {
-	switch t {
-	case Unary:
-		return "Unary"
-	case Oneway:
-		return "Oneway"
-	default:
-		return fmt.Sprintf("Type(%v)", int(t))
-	}
-}
-
 // HandlerSpec holds a handler and its Type
 type HandlerSpec struct {
-	Type Type
+	t Type
 
-	UnaryHandler  UnaryHandler
-	OnewayHandler OnewayHandler
+	unaryHandler  UnaryHandler
+	onewayHandler OnewayHandler
+}
+
+// Type returns the associated handler's type
+func (h HandlerSpec) Type() Type { return h.t }
+
+// UnaryHandler returns the Unary Handler or nil
+func (h HandlerSpec) Unary() UnaryHandler { return h.unaryHandler }
+
+// OnewayHandler returns the Oneway Handler or nil
+func (h HandlerSpec) Oneway() OnewayHandler { return h.onewayHandler }
+
+// NewUnaryHandlerSpec returns an new HandlerSpec with a UnaryHandler
+func NewUnaryHandlerSpec(handler UnaryHandler) HandlerSpec {
+	return HandlerSpec{t: Unary, unaryHandler: handler}
+}
+
+// NewOnewayHandlerSpec returns an new HandlerSpec with a OnewayHandler
+func NewOnewayHandlerSpec(handler OnewayHandler) HandlerSpec {
+	return HandlerSpec{t: Oneway, onewayHandler: handler}
 }
 
 // UnaryHandler handles a single, transport-level, unary request.

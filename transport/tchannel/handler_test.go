@@ -40,7 +40,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-func TestHandlerErrors(t *testing.T) {
+func TestHandlerPanic(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -70,7 +70,7 @@ func TestHandlerErrors(t *testing.T) {
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
 
-		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
+		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 		tchHandler := handler{Registry: registry}
 
 		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
@@ -325,7 +325,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		mockCtrl := gomock.NewController(t)
 		thandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: thandler}
+		spec := transport.NewUnaryHandlerSpec(thandler)
 		if tt.expectCall != nil {
 			tt.expectCall(thandler)
 		}

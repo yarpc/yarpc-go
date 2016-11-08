@@ -95,13 +95,14 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		switch r.HandlerSpec.Type {
+		switch r.HandlerSpec.Type() {
 		case Unary:
-			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.UnaryHandler
+			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.Unary()
 		case Oneway:
-			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.OnewayHandler
+			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.Oneway()
 		default:
-			panic(fmt.Sprintf("Unknown RPC Type %v, for %s::%s", r.HandlerSpec.Type, r.Service, r.Procedure))
+			panic(fmt.Sprintf("Unknown handler type %v, for service %q, procedure %q",
+				r.HandlerSpec.Type(), r.Service, r.Procedure))
 		}
 	}
 }
@@ -125,10 +126,10 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 	}
 
 	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-		return HandlerSpec{Type: Unary, UnaryHandler: h}, nil
+		return NewUnaryHandlerSpec(h), nil
 	}
 	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {
-		return HandlerSpec{Type: Oneway, OnewayHandler: h}, nil
+		return NewOnewayHandlerSpec(h), nil
 	}
 
 	return HandlerSpec{}, errors.UnrecognizedProcedureError{
