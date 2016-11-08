@@ -58,14 +58,14 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			Handler:   wrapHandler(name, handler),
+			Handler:   wrapUnaryHandler(name, handler),
 		},
 	}
 }
 
-// wrapHandler takes a valid JSON handler function and converts it into a
-// transport.Handler.
-func wrapHandler(name string, handler interface{}) transport.Handler {
+// wrapUnaryHandler takes a valid JSON handler function and converts it into a
+// transport.UnaryHandler.
+func wrapUnaryHandler(name string, handler interface{}) transport.UnaryHandler {
 	reqBodyType := verifySignature(name, reflect.TypeOf(handler))
 
 	var r requestReader

@@ -32,7 +32,7 @@ import (
 
 // Client makes Raw requests to a single service.
 type Client interface {
-	// Call performs an outbound Raw request.
+	// Call performs a unary outbound Raw request.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
 }
 
@@ -58,7 +58,7 @@ func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []b
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
 
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().Call(ctx, &treq)
 	if err != nil {
 		return nil, nil, err
 	}

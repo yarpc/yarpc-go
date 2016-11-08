@@ -283,8 +283,7 @@ func (r *Recorder) makeFilePath(request *transport.Request, hash string) string 
 func (r *Recorder) Call(
 	ctx context.Context,
 	request *transport.Request,
-	out transport.Outbound,
-) (*transport.Response, error) {
+	out transport.UnaryOutbound) (*transport.Response, error) {
 	log := r.logger
 
 	requestRecord := r.requestToRequestRecord(request)

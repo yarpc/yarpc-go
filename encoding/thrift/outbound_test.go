@@ -156,7 +156,7 @@ func TestClient(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		trans := transporttest.NewMockOutbound(mockCtrl)
+		trans := transporttest.NewMockUnaryOutbound(mockCtrl)
 		if tt.expectCall {
 			trans.EXPECT().Call(ctx,
 				transporttest.NewRequestMatcher(t, &transport.Request{

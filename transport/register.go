@@ -29,7 +29,7 @@ import (
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport Handler,Registry
+//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport UnaryHandler,Registry
 
 // ServiceProcedure represents a service and procedure registered against a
 // Registry.
@@ -47,7 +47,7 @@ type Registrant struct {
 	Procedure string
 
 	// Handler implementing the given procedure.
-	Handler Handler
+	Handler UnaryHandler
 }
 
 // Registry maintains and provides access to a collection of procedures and
@@ -63,7 +63,7 @@ type Registry interface {
 	//
 	// service may be empty to indicate that the default service name should
 	// be used.
-	GetHandler(service, procedure string) (Handler, error)
+	GetHandler(service, procedure string) (UnaryHandler, error)
 }
 
 // Registrar provides access to a collection of procedures and their handlers.
@@ -78,7 +78,7 @@ type Registrar interface {
 // procedures.
 type MapRegistry struct {
 	defaultService string
-	entries        map[ServiceProcedure]Handler
+	unaryEntries   map[ServiceProcedure]UnaryHandler
 }
 
 // NewMapRegistry builds a new MapRegistry that uses the given name as the
@@ -86,7 +86,7 @@ type MapRegistry struct {
 func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
-		entries:        make(map[ServiceProcedure]Handler),
+		unaryEntries:   make(map[ServiceProcedure]UnaryHandler),
 	}
 }
 
@@ -97,15 +97,15 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.Handler
+		m.unaryEntries[ServiceProcedure{r.Service, r.Procedure}] = r.Handler
 	}
 }
 
 // ServiceProcedures returns a list of services and their procedures that
 // have been registered so far.
 func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
-	procs := make([]ServiceProcedure, 0, len(m.entries))
-	for k := range m.entries {
+	procs := make([]ServiceProcedure, 0, len(m.unaryEntries))
+	for k := range m.unaryEntries {
 		procs = append(procs, k)
 	}
 	sort.Sort(byServiceProcedure(procs))
@@ -114,14 +114,15 @@ func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
 
 // GetHandler retrieves the Handler for the given Procedure or returns an
 // error.
-func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
+func (m MapRegistry) GetHandler(service, procedure string) (UnaryHandler, error) {
 	if service == "" {
 		service = m.defaultService
 	}
 
-	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
+	if h, ok := m.unaryEntries[ServiceProcedure{service, procedure}]; ok {
 		return h, nil
 	}
+
 	return nil, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,

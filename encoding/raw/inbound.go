@@ -29,9 +29,9 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// rawHandler adapts a Handler into a transport.Handler
+// rawHandler adapts a Handler into a transport.UnaryHandler
 type rawHandler struct {
-	h Handler
+	UnaryHandler UnaryHandler
 }
 
 func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
@@ -45,7 +45,7 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 	}
 
 	reqMeta := meta.FromTransportRequest(treq)
-	resBody, resMeta, err := r.h(ctx, reqMeta, reqBody)
+	resBody, resMeta, err := r.UnaryHandler(ctx, reqMeta, reqBody)
 	if err != nil {
 		return err
 	}

@@ -112,7 +112,7 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 func (d dispatcher) Channel(service string) transport.Channel {
 	if out, ok := d.Outbounds[service]; ok {
 		out = transport.ApplyFilter(out, d.Filter)
-		out = request.ValidatorOutbound{Outbound: out}
+		out = request.ValidatorOutbound{UnaryOutbound: out}
 		return transport.IdentityChannel(d.Name, service, out)
 	}
 	panic(noOutboundForService{Service: service})

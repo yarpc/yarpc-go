@@ -39,12 +39,12 @@ import (
 
 // Different ways in which outbounds can be constructed from a client Channel
 // and a hostPort
-var newOutbounds = []func(*tchannel.Channel, string) transport.Outbound{
-	func(ch *tchannel.Channel, hostPort string) transport.Outbound {
+var newOutbounds = []func(*tchannel.Channel, string) transport.UnaryOutbound{
+	func(ch *tchannel.Channel, hostPort string) transport.UnaryOutbound {
 		ch.Peers().Add(hostPort)
 		return NewOutbound(ch)
 	},
-	func(ch *tchannel.Channel, hostPort string) transport.Outbound {
+	func(ch *tchannel.Channel, hostPort string) transport.UnaryOutbound {
 		return NewOutbound(ch, HostPort(hostPort))
 	},
 }
@@ -219,7 +219,7 @@ func TestCallFailures(t *testing.T) {
 
 	type testCase struct {
 		procedure   string
-		getOutbound func(*tchannel.Channel, string) transport.Outbound
+		getOutbound func(*tchannel.Channel, string) transport.UnaryOutbound
 		message     string
 	}
 

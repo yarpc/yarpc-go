@@ -46,7 +46,7 @@ var errOutboundNotStarted = errors.ErrOutboundNotStarted("http.Outbound")
 // URL.
 //
 // Deprecated: create outbounds through NewPeerListOutbound instead
-func NewOutbound(urlStr string, opts ...AgentOption) transport.Outbound {
+func NewOutbound(urlStr string, opts ...AgentOption) transport.UnaryOutbound {
 	agent := NewAgent(opts...)
 
 	urlTemplate, hp := parseURL(urlStr)
@@ -75,7 +75,7 @@ func parseURL(urlStr string) (*url.URL, string) {
 // for getting potential downstream hosts.
 // PeerList.ChoosePeer MUST return *hostport.Peer objects.
 // PeerList.Start MUST be called before Outbound.Start
-func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) transport.Outbound {
+func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) transport.UnaryOutbound {
 	return &outbound{
 		started:     atomic.NewBool(false),
 		PeerList:    peerList,
@@ -193,7 +193,6 @@ func (o *outbound) createRequest(peer *hostport.Peer, treq *transport.Request) (
 
 func (o *outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
-
 	tracer := o.Deps.Tracer()
 	var parent opentracing.SpanContext // ok to be nil
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {

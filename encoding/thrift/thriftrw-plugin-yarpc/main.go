@@ -73,8 +73,8 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 	h := handler{impl}
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
-		Methods: map[string]<$thrift>.Handler{
-			<range .Service.Functions>"<.ThriftName>": <$thrift>.HandlerFunc(h.<.Name>),
+		Methods: map[string]<$thrift>.UnaryHandler{
+			<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$thrift>.UnaryHandlerFunc(h.<.Name>),<end>
 		<end>},
 	}
 	return <$thrift>.BuildRegistrants(service, opts...)
