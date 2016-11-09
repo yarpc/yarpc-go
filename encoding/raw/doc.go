@@ -36,4 +36,13 @@
 // 	}
 //
 // 	dispatcher.Register(raw.Procedure("submit", Submit))
+//
+// Similarly, use the OnewayProcedure function to build registrants to register
+// against a Registry.
+//
+// 	func RunTask(reqMeta yarpc.ReqMeta, reqBody []byte) error {
+// 		// ...
+// 	}
+//
+// 	dispatcher.Register(raw.OnewayProcedure("RunTask", RunTask))
 package raw

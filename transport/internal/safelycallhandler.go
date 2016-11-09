@@ -57,3 +57,20 @@ func SafelyCallUnaryHandler(
 	}
 	return err
 }
+
+// SafelyCallOnewayHandler calls the handler h, recovering panics.
+func SafelyCallOnewayHandler(
+	ctx context.Context,
+	h transport.OnewayHandler,
+	req *transport.Request,
+) (err error) {
+	// recover on panics
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Oneway handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	return h.HandleOneway(ctx, req)
+}
