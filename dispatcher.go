@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/yarpc/internal/channel"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport"
@@ -144,7 +145,7 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 
 func (d dispatcher) Channel(service string) transport.Channel {
 	if rs, ok := d.outbounds[service]; ok {
-		return transport.MultiOutboundChannel(d.Name, service, rs)
+		return channel.MultiOutbound(d.Name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }

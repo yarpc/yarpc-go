@@ -18,32 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package channel
 
-//go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
+import "go.uber.org/yarpc/transport"
 
-// ChannelProvider builds channels from the current service to other services.
-type ChannelProvider interface {
-	// Retrieves a new Channel that will make requests to the given service.
-	//
-	// This MAY panic if the given service is unknown.
-	Channel(service string) Channel
+type multiOutbound struct {
+	caller    string
+	service   string
+	Outbounds transport.Outbounds
 }
 
-// A Channel is a stream of communication between a single caller-service
-// pair.
-type Channel interface {
-	// Name of the service making the request.
-	Caller() string
+// MultiOutbound constructs a Channel backed by multiple outbound types
+func MultiOutbound(caller, service string, Outbounds transport.Outbounds) transport.Channel {
+	return multiOutbound{caller: caller, service: service, Outbounds: Outbounds}
+}
 
-	// Name of the service to which the request is being made.
-	Service() string
+func (c multiOutbound) Caller() string  { return c.caller }
+func (c multiOutbound) Service() string { return c.service }
 
-	// Returns an outbound to send the request through or nil if there is no
-	// outbound for this service
-	//
-	// MAY be called multiple times for a request. The returned outbound MUST
-	// have already been started.
-	GetUnaryOutbound() UnaryOutbound
-	GetOnewayOutbound() OnewayOutbound
+func (c multiOutbound) GetUnaryOutbound() transport.UnaryOutbound {
+	return c.Outbounds.Unary
+}
+
+func (c multiOutbound) GetOnewayOutbound() transport.OnewayOutbound {
+	return c.Outbounds.Oneway
 }
