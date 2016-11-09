@@ -51,11 +51,13 @@ func TestHandlerSucces(t *testing.T) {
 	headers.Set(ProcedureHeader, "nyuck")
 	headers.Set(ServiceHeader, "curly")
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
 	registry := transporttest.NewMockRegistry(mockCtrl)
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
-	registry.EXPECT().GetHandler("curly", "nyuck").Return(rpcHandler, nil)
-	rpcHandler.EXPECT().Handle(
+	registry.EXPECT().GetHandlerSpec("curly", "nyuck").Return(spec, nil)
+
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t,
 			transporttest.ContextTTL(time.Second),
 		),
@@ -115,13 +117,15 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		rpcHandler := transporttest.NewMockHandler(mockCtrl)
 		registry := transporttest.NewMockRegistry(mockCtrl)
+		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
-		registry.EXPECT().GetHandler("service", "hello").Return(rpcHandler, nil)
+		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
+
 		httpHandler := handler{Registry: registry}
 
-		rpcHandler.EXPECT().Handle(
+		rpcHandler.EXPECT().HandleUnary(
 			transporttest.NewContextMatcher(t,
 				transporttest.ContextTTL(tt.wantTTL),
 			),
@@ -163,12 +167,14 @@ func TestHandlerFailures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	service, procedure := "fake", "hello"
+
 	baseHeaders := make(http.Header)
 	baseHeaders.Set(CallerHeader, "somecaller")
 	baseHeaders.Set(EncodingHeader, "raw")
 	baseHeaders.Set(TTLMSHeader, "1000")
-	baseHeaders.Set(ProcedureHeader, "hello")
-	baseHeaders.Set(ServiceHeader, "fake")
+	baseHeaders.Set(ProcedureHeader, procedure)
+	baseHeaders.Set(ServiceHeader, service)
 
 	headersWithBadTTL := headerCopyWithout(baseHeaders, TTLMSHeader)
 	headersWithBadTTL.Set(TTLMSHeader, "not a number")
@@ -176,48 +182,52 @@ func TestHandlerFailures(t *testing.T) {
 	tests := []struct {
 		req *http.Request
 		msg string
+
+		errTTL bool // if we expect an error due to the TTL
 	}{
-		{&http.Request{Method: "GET"}, "404 page not found\n"},
+		{req: &http.Request{Method: "GET"}, msg: "404 page not found\n"},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			"BadRequest: missing caller name\n",
+			msg: "BadRequest: missing caller name\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			"BadRequest: missing service name\n",
+			msg: "BadRequest: missing service name\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			"BadRequest: missing procedure\n",
+			msg: "BadRequest: missing procedure\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			"BadRequest: missing TTL\n",
+			msg:    "BadRequest: missing TTL\n",
+			errTTL: true,
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 			},
-			"BadRequest: missing service name, procedure, caller name, TTL, and encoding\n",
+			msg: "BadRequest: missing service name, procedure, caller name, and encoding\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			`BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
+			msg:    `BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
+			errTTL: true,
 		},
 	}
 
@@ -227,7 +237,17 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		h := handler{Registry: transporttest.NewMockRegistry(mockCtrl)}
+		reg := transporttest.NewMockRegistry(mockCtrl)
+
+		if tt.errTTL {
+			// since TTL is checked after we've determined the transport type, if we have an
+			// error with TTL it will be discovered after we read from the registry
+			spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: panickedHandler{}}
+			reg.EXPECT().GetHandlerSpec(service, procedure).Return(spec, nil)
+		}
+
+		h := handler{Registry: reg}
+
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 
@@ -254,8 +274,8 @@ func TestHandlerInternalFailure(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	rpcHandler := transporttest.NewMockHandler(mockCtrl)
-	rpcHandler.EXPECT().Handle(
+	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
+	rpcHandler.EXPECT().HandleUnary(
 		transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
@@ -270,8 +290,10 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(fmt.Errorf("great sadness"))
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
+	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
 
-	registry.EXPECT().GetHandler("fake", "hello").Return(rpcHandler, nil)
+	registry.EXPECT().GetHandlerSpec("fake", "hello").Return(spec, nil)
+
 	httpHandler := handler{Registry: registry}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
@@ -285,7 +307,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 type panickedHandler struct{}
 
-func (th panickedHandler) Handle(context.Context, *transport.Request, transport.ResponseWriter) error {
+func (th panickedHandler) HandleUnary(context.Context, *transport.Request, transport.ResponseWriter) error {
 	panic("oops I panicked!")
 }
 
@@ -296,16 +318,25 @@ func TestHandlerPanic(t *testing.T) {
 		Inbounds: []transport.Inbound{inbound},
 	})
 	serverDispatcher.Register([]transport.Registrant{
-		{Procedure: "panic", Handler: panickedHandler{}},
+		{
+			Procedure: "panic",
+			HandlerSpec: transport.HandlerSpec{
+				Type:         transport.Unary,
+				UnaryHandler: panickedHandler{},
+			},
+		},
 	})
 
 	require.NoError(t, serverDispatcher.Start())
 	defer serverDispatcher.Stop()
 
-	outbound := NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()))
 	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:      "yarpc-test-client",
-		Outbounds: transport.Outbounds{"yarpc-test": outbound},
+		Name: "yarpc-test-client",
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
+			},
+		},
 	})
 	require.NoError(t, clientDispatcher.Start())
 	defer clientDispatcher.Stop()

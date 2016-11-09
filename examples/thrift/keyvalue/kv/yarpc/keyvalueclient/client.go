@@ -71,6 +71,7 @@ func (c client) GetValue(
 	reqMeta yarpc.CallReqMeta,
 	_Key *string,
 ) (success string, resMeta yarpc.CallResMeta, err error) {
+
 	args := keyvalue.GetValueHelper.Args(_Key)
 
 	var body wire.Value
@@ -94,6 +95,7 @@ func (c client) SetValue(
 	_Key *string,
 	_Value *string,
 ) (resMeta yarpc.CallResMeta, err error) {
+
 	args := keyvalue.SetValueHelper.Args(_Key, _Value)
 
 	var body wire.Value

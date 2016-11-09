@@ -44,8 +44,10 @@ func Run(t crossdock.T) {
 
 	disp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
-		Outbounds: transport.Outbounds{
-			"yarpc-test": ht.NewOutbound(fmt.Sprintf("http://%s:8085", server)),
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: ht.NewOutbound(fmt.Sprintf("http://%s:8085", server)),
+			},
 		},
 	})
 

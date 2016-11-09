@@ -21,6 +21,7 @@
 package transport
 
 import (
+	"fmt"
 	"sort"
 
 	"go.uber.org/yarpc/internal/errors"
@@ -29,7 +30,7 @@ import (
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport Handler,Registry
+//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport UnaryHandler,Registry
 
 // ServiceProcedure represents a service and procedure registered against a
 // Registry.
@@ -46,8 +47,8 @@ type Registrant struct {
 	// Name of the procedure.
 	Procedure string
 
-	// Handler implementing the given procedure.
-	Handler Handler
+	// HandlerSpec specifiying which handler and rpc type.
+	HandlerSpec HandlerSpec
 }
 
 // Registry maintains and provides access to a collection of procedures and
@@ -66,14 +67,15 @@ type Registry interface {
 	//
 	// service may be empty to indicate that the default service name should
 	// be used.
-	GetHandler(service, procedure string) (Handler, error)
+	GetHandlerSpec(service, procedure string) (HandlerSpec, error)
 }
 
 // MapRegistry is a Registry that maintains a map of the registered
 // procedures.
 type MapRegistry struct {
 	defaultService string
-	entries        map[ServiceProcedure]Handler
+	unaryEntries   map[ServiceProcedure]UnaryHandler
+	onewayEntries  map[ServiceProcedure]OnewayHandler
 }
 
 // NewMapRegistry builds a new MapRegistry that uses the given name as the
@@ -81,7 +83,8 @@ type MapRegistry struct {
 func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
-		entries:        make(map[ServiceProcedure]Handler),
+		unaryEntries:   make(map[ServiceProcedure]UnaryHandler),
+		onewayEntries:  make(map[ServiceProcedure]OnewayHandler),
 	}
 }
 
@@ -92,32 +95,43 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.Handler
+		switch r.HandlerSpec.Type {
+		case Unary:
+			m.unaryEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.UnaryHandler
+		case Oneway:
+			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.OnewayHandler
+		default:
+			panic(fmt.Sprintf("Unknown RPC Type %v, for %s::%s", r.HandlerSpec.Type, r.Service, r.Procedure))
+		}
 	}
 }
 
 // ServiceProcedures returns a list of services and their procedures that
 // have been registered so far.
 func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
-	procs := make([]ServiceProcedure, 0, len(m.entries))
-	for k := range m.entries {
+	procs := make([]ServiceProcedure, 0, len(m.unaryEntries))
+	for k := range m.unaryEntries {
 		procs = append(procs, k)
 	}
 	sort.Sort(byServiceProcedure(procs))
 	return procs
 }
 
-// GetHandler retrieves the Handler for the given Procedure or returns an
+// GetHandlerSpec retrieves the HandlerSpec for the given Procedure or returns an
 // error.
-func (m MapRegistry) GetHandler(service, procedure string) (Handler, error) {
+func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, error) {
 	if service == "" {
 		service = m.defaultService
 	}
 
-	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-		return h, nil
+	if h, ok := m.unaryEntries[ServiceProcedure{service, procedure}]; ok {
+		return HandlerSpec{Type: Unary, UnaryHandler: h}, nil
 	}
-	return nil, errors.UnrecognizedProcedureError{
+	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {
+		return HandlerSpec{Type: Oneway, OnewayHandler: h}, nil
+	}
+
+	return HandlerSpec{}, errors.UnrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
 	}

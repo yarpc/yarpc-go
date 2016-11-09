@@ -62,7 +62,24 @@ func KeepAlive(t time.Duration) OutboundOption {
 
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
-func NewOutbound(url string, opts ...OutboundOption) transport.Outbound {
+func NewOutbound(url string, opts ...OutboundOption) transport.UnaryOutbound {
+	return newOutbound(url, opts...).(transport.UnaryOutbound)
+}
+
+// NewOnewayOutbound builds a new HTTP outbound that sends oneway requests to
+// the given URL.
+func NewOnewayOutbound(url string, opts ...OutboundOption) transport.OnewayOutbound {
+	return newOutbound(url, opts...).(transport.OnewayOutbound)
+}
+
+// NewOutbounds builds an HTTP Outbound and OnewayOutbound based on the same
+// underlying object, that send requests to the given URL.
+func NewOutbounds(url string, opts ...OutboundOption) (transport.UnaryOutbound, transport.OnewayOutbound) {
+	out := newOutbound(url, opts...)
+	return out.(transport.UnaryOutbound), out.(transport.OnewayOutbound)
+}
+
+func newOutbound(url string, opts ...OutboundOption) transport.Outbound {
 	cfg := defaultConfig
 	for _, o := range opts {
 		o(&cfg)
@@ -132,24 +149,7 @@ func (o *outbound) createSpan(ctx context.Context, req *http.Request, treq *tran
 	return ctx, span
 }
 
-func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
-	}
-
-	start := time.Now()
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-
-	req, err := http.NewRequest("POST", o.URL, treq.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, span := o.createSpan(ctx, req, treq, start)
-	defer span.Finish()
-
+func setHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) {
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
@@ -168,6 +168,27 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if encoding != "" {
 		req.Header.Set(EncodingHeader, encoding)
 	}
+}
+
+func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+
+	start := time.Now()
+	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
+
+	req, err := http.NewRequest("POST", o.URL, treq.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, span := o.createSpan(ctx, req, treq, start)
+	defer span.Finish()
+
+	setHeaders(req, treq, ttl)
 
 	response, err := o.Client.Do(req.WithContext(ctx))
 	if err != nil {
@@ -221,4 +242,49 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	return nil, errors.RemoteUnexpectedError(message)
+}
+
+type ack struct{}
+
+func (ack) String() string {
+	return ""
+}
+
+func (o *outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+
+	req, err := http.NewRequest("POST", o.URL, treq.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	start := time.Now()
+	ttl := time.Duration(0)
+
+	ctx, span := o.createSpan(ctx, req, treq, start)
+	defer span.Finish()
+
+	setHeaders(req, treq, ttl)
+
+	_, err = o.Client.Do(req.WithContext(ctx))
+	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+	}
+
+	if err != nil {
+		span.SetTag("error", true)
+		span.LogEvent(err.Error())
+		return nil, err
+	}
+
+	return ack{}, nil
 }

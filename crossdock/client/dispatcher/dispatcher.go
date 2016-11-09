@@ -40,21 +40,25 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	var outbound transport.Outbound
+	var unaryOutbound transport.UnaryOutbound
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
-		outbound = ht.NewOutbound(fmt.Sprintf("http://%s:8081", server))
+		unaryOutbound = ht.NewOutbound(fmt.Sprintf("http://%s:8081", server))
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")
-		outbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
+		unaryOutbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
 	return yarpc.NewDispatcher(yarpc.Config{
-		Name:      "client",
-		Outbounds: transport.Outbounds{"yarpc-test": outbound},
+		Name: "client",
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: unaryOutbound,
+			},
+		},
 	})
 }

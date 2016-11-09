@@ -198,6 +198,14 @@ type ThriftTest interface {
 	//  - Arg0
 	//  - Arg1
 	TestMultiException(arg0 string, arg1 string) (r *Xtruct, err error)
+	// Print 'testOneway(%d): Sleeping...' with secondsToSleep as '%d'
+	// sleep 'secondsToSleep'
+	// Print 'testOneway(%d): done sleeping!' with secondsToSleep as '%d'
+	// @param i32 secondsToSleep - the number of seconds to sleep
+	//
+	// Parameters:
+	//  - SecondsToSleep
+	TestOneway(secondsToSleep int32) (err error)
 }
 
 type ThriftTestClient struct {
@@ -1882,6 +1890,42 @@ func (p *ThriftTestClient) recvTestMultiException() (value *Xtruct, err error) {
 	return
 }
 
+// Print 'testOneway(%d): Sleeping...' with secondsToSleep as '%d'
+// sleep 'secondsToSleep'
+// Print 'testOneway(%d): done sleeping!' with secondsToSleep as '%d'
+// @param i32 secondsToSleep - the number of seconds to sleep
+//
+// Parameters:
+//  - SecondsToSleep
+func (p *ThriftTestClient) TestOneway(secondsToSleep int32) (err error) {
+	if err = p.sendTestOneway(secondsToSleep); err != nil {
+		return
+	}
+	return
+}
+
+func (p *ThriftTestClient) sendTestOneway(secondsToSleep int32) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("testOneway", thrift.ONEWAY, p.SeqId); err != nil {
+		return
+	}
+	args := ThriftTestTestOnewayArgs{
+		SecondsToSleep: secondsToSleep,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
 type ThriftTestProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
 	handler      ThriftTest
@@ -1923,6 +1967,7 @@ func NewThriftTestProcessor(handler ThriftTest) *ThriftTestProcessor {
 	self72.processorMap["testMulti"] = &thriftTestProcessorTestMulti{handler: handler}
 	self72.processorMap["testException"] = &thriftTestProcessorTestException{handler: handler}
 	self72.processorMap["testMultiException"] = &thriftTestProcessorTestMultiException{handler: handler}
+	self72.processorMap["testOneway"] = &thriftTestProcessorTestOneway{handler: handler}
 	return self72
 }
 
@@ -2909,6 +2954,25 @@ func (p *thriftTestProcessorTestMultiException) Process(seqId int32, iprot, opro
 		return
 	}
 	return true, err
+}
+
+type thriftTestProcessorTestOneway struct {
+	handler ThriftTest
+}
+
+func (p *thriftTestProcessorTestOneway) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ThriftTestTestOnewayArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	if err2 = p.handler.TestOneway(args.SecondsToSleep); err2 != nil {
+		return true, err2
+	}
+	return true, nil
 }
 
 // HELPER FUNCTIONS AND STRUCTURES
@@ -7343,4 +7407,95 @@ func (p *ThriftTestTestMultiExceptionResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("ThriftTestTestMultiExceptionResult(%+v)", *p)
+}
+
+// Attributes:
+//  - SecondsToSleep
+type ThriftTestTestOnewayArgs struct {
+	SecondsToSleep int32 `thrift:"secondsToSleep,1" json:"secondsToSleep"`
+}
+
+func NewThriftTestTestOnewayArgs() *ThriftTestTestOnewayArgs {
+	return &ThriftTestTestOnewayArgs{}
+}
+
+func (p *ThriftTestTestOnewayArgs) GetSecondsToSleep() int32 {
+	return p.SecondsToSleep
+}
+func (p *ThriftTestTestOnewayArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ThriftTestTestOnewayArgs) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.SecondsToSleep = v
+	}
+	return nil
+}
+
+func (p *ThriftTestTestOnewayArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("testOneway_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ThriftTestTestOnewayArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("secondsToSleep", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:secondsToSleep: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.SecondsToSleep)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.secondsToSleep (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:secondsToSleep: ", p), err)
+	}
+	return err
+}
+
+func (p *ThriftTestTestOnewayArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ThriftTestTestOnewayArgs(%+v)", *p)
 }

@@ -40,6 +40,7 @@ type Client interface {
 	//
 	// Returns the response or an error if the request failed.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
+	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (transport.Ack, error)
 }
 
 // New builds a new JSON client.
@@ -69,7 +70,7 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().Call(ctx, &treq)
 
 	if err != nil {
 		return nil, err
@@ -85,4 +86,27 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 	}
 
 	return meta.FromTransportResponse(tres), nil
+}
+
+func (c jsonClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (transport.Ack, error) {
+	treq := transport.Request{
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
+		Encoding: Encoding,
+	}
+	meta.ToTransportRequest(reqMeta, &treq)
+
+	encoded, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, encoding.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = bytes.NewReader(encoded)
+	ack, err := c.ch.GetOnewayOutbound().CallOneway(ctx, &treq)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ack, nil
 }

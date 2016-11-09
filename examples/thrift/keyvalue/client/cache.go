@@ -54,7 +54,7 @@ func (c *cacheFilter) Invalidate() {
 	*c = make(cacheFilter)
 }
 
-func (c *cacheFilter) Call(ctx context.Context, request *transport.Request, out transport.Outbound) (*transport.Response, error) {
+func (c *cacheFilter) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	data := *c
 
 	// Read the entire request body to match against the cache

@@ -23,6 +23,7 @@ package server
 import (
 	"go.uber.org/yarpc/crossdock/server/apachethrift"
 	"go.uber.org/yarpc/crossdock/server/http"
+	"go.uber.org/yarpc/crossdock/server/oneway"
 	"go.uber.org/yarpc/crossdock/server/tch"
 	"go.uber.org/yarpc/crossdock/server/yarpc"
 )
@@ -33,6 +34,7 @@ func Start() {
 	yarpc.Start()
 	http.Start()
 	apachethrift.Start()
+	oneway.Start()
 }
 
 // Stop stops all required Crossdock test servers
@@ -41,6 +43,7 @@ func Stop() {
 	yarpc.Stop()
 	http.Stop()
 	apachethrift.Stop()
+	oneway.Stop()
 }
 
 // TODO(abg): We should probably use defers to ensure things that started up

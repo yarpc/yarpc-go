@@ -34,11 +34,7 @@ var _ = thrift.ZERO
 var _ = fmt.Printf
 var _ = bytes.Equal
 
-type SecondService interface { //Print 'testOneway(%d): Sleeping...' with secondsToSleep as '%d'
-	//sleep 'secondsToSleep'
-	//Print 'testOneway(%d): done sleeping!' with secondsToSleep as '%d'
-	//@param i32 secondsToSleep - the number of seconds to sleep
-
+type SecondService interface {
 	BlahBlah() (err error)
 	// Prints 'testString("%s")' with thing as '%s'
 	// @param string thing - the string to print
@@ -49,10 +45,6 @@ type SecondService interface { //Print 'testOneway(%d): Sleeping...' with second
 	SecondtestString(thing string) (r string, err error)
 }
 
-//Print 'testOneway(%d): Sleeping...' with secondsToSleep as '%d'
-//sleep 'secondsToSleep'
-//Print 'testOneway(%d): done sleeping!' with secondsToSleep as '%d'
-//@param i32 secondsToSleep - the number of seconds to sleep
 type SecondServiceClient struct {
 	Transport       thrift.TTransport
 	ProtocolFactory thrift.TProtocolFactory
@@ -125,16 +117,16 @@ func (p *SecondServiceClient) recvBlahBlah() (err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error159 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error160 error
-		error160, err = error159.Read(iprot)
+		error160 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error161 error
+		error161, err = error160.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error160
+		err = error161
 		return
 	}
 	if mTypeId != thrift.REPLY {
@@ -205,16 +197,16 @@ func (p *SecondServiceClient) recvSecondtestString() (value string, err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error161 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error162 error
-		error162, err = error161.Read(iprot)
+		error162 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error163 error
+		error163, err = error162.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error162
+		err = error163
 		return
 	}
 	if mTypeId != thrift.REPLY {
@@ -252,10 +244,10 @@ func (p *SecondServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunc
 
 func NewSecondServiceProcessor(handler SecondService) *SecondServiceProcessor {
 
-	self163 := &SecondServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self163.processorMap["blahBlah"] = &secondServiceProcessorBlahBlah{handler: handler}
-	self163.processorMap["secondtestString"] = &secondServiceProcessorSecondtestString{handler: handler}
-	return self163
+	self164 := &SecondServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self164.processorMap["blahBlah"] = &secondServiceProcessorBlahBlah{handler: handler}
+	self164.processorMap["secondtestString"] = &secondServiceProcessorSecondtestString{handler: handler}
+	return self164
 }
 
 func (p *SecondServiceProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -268,12 +260,12 @@ func (p *SecondServiceProcessor) Process(iprot, oprot thrift.TProtocol) (success
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x164 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x165 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x164.Write(oprot)
+	x165.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x164
+	return false, x165
 
 }
 

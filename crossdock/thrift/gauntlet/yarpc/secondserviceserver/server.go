@@ -55,10 +55,11 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "SecondService",
-		Methods: map[string]thrift.Handler{
-			"blahBlah":         thrift.HandlerFunc(h.BlahBlah),
-			"secondtestString": thrift.HandlerFunc(h.SecondtestString),
+		UnaryMethods: map[string]thrift.UnaryHandler{
+			"blahBlah":         thrift.UnaryHandlerFunc(h.BlahBlah),
+			"secondtestString": thrift.UnaryHandlerFunc(h.SecondtestString),
 		},
+		OnewayMethods: map[string]thrift.OnewayHandler{},
 	}
 	return thrift.BuildRegistrants(service, opts...)
 }

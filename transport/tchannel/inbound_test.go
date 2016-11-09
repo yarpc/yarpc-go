@@ -40,11 +40,13 @@ func TestInboundStartNew(t *testing.T) {
 		{
 			func(ch *tchannel.Channel, f func(Inbound)) {
 				i := NewInbound(ch)
-				service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
+
+				cfg := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 				// Can't do Equal because we want to match the pointer, not a
 				// DeepEqual.
 				assert.True(t, ch == i.Channel(), "channel does not match")
-				require.NoError(t, i.Start(service, transport.NoDeps))
+				require.NoError(t, i.Start(cfg, transport.NoDeps))
+
 				defer i.Stop()
 
 				f(i)
@@ -53,9 +55,11 @@ func TestInboundStartNew(t *testing.T) {
 		{
 			func(ch *tchannel.Channel, f func(Inbound)) {
 				i := NewInbound(ch, ListenAddr(":0"))
+
 				service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start(service, transport.NoDeps))
+
 				defer i.Stop()
 
 				f(i)
@@ -85,6 +89,7 @@ func TestInboundStartAlreadyListening(t *testing.T) {
 
 	service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 	require.NoError(t, i.Start(service, transport.NoDeps))
+
 	defer i.Stop()
 
 	assert.NoError(t, i.Stop())
@@ -103,6 +108,7 @@ func TestInboundInvalidAddress(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
 	i := NewInbound(ch, ListenAddr("not valid"))
+
 	service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 	assert.Error(t, i.Start(service, transport.NoDeps))
 }
@@ -118,8 +124,10 @@ func TestInboundExistingMethods(t *testing.T) {
 	}, nil)
 
 	i := NewInbound(ch)
+
 	service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 	require.NoError(t, i.Start(service, transport.NoDeps))
+
 	defer i.Stop()
 
 	// Make a call to the "echo" method which should call our pre-registered method.

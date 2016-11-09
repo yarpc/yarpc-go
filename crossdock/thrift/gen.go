@@ -21,13 +21,17 @@
 package thrift
 
 //go:generate thriftrw --plugin=yarpc echo.thrift
+//go:generate thriftrw --plugin=yarpc oneway.thrift
 //go:generate thriftrw --plugin=yarpc gauntlet.thrift
 
 //go:generate thrift-gen --generateThrift --inputFile echo.thrift
 //go:generate touch gen-go/echo/.nocover
 
-//go:generate thrift-gen --generateThrift --inputFile gauntlet_apache.thrift
+//go:generate thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift gauntlet_apache.thrift
 //go:generate touch gen-go/gauntlet_apache/.nocover
+
+//go:generate thrift-gen --generateThrift --inputFile gauntlet_tchannel.thrift
+//go:generate touch gen-go/gauntlet_tchannel/.nocover
 
 // Run this last
 

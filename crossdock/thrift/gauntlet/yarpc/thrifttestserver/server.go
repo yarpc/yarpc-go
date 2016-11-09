@@ -125,6 +125,12 @@ type Interface interface {
 		Thing *gauntlet.Xtruct2,
 	) (*gauntlet.Xtruct2, yarpc.ResMeta, error)
 
+	TestOneway(
+		ctx context.Context,
+		reqMeta yarpc.ReqMeta,
+		SecondsToSleep *int32,
+	) error
+
 	TestSet(
 		ctx context.Context,
 		reqMeta yarpc.ReqMeta,
@@ -170,27 +176,32 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "ThriftTest",
-		Methods: map[string]thrift.Handler{
-			"testBinary":         thrift.HandlerFunc(h.TestBinary),
-			"testByte":           thrift.HandlerFunc(h.TestByte),
-			"testDouble":         thrift.HandlerFunc(h.TestDouble),
-			"testEnum":           thrift.HandlerFunc(h.TestEnum),
-			"testException":      thrift.HandlerFunc(h.TestException),
-			"testI32":            thrift.HandlerFunc(h.TestI32),
-			"testI64":            thrift.HandlerFunc(h.TestI64),
-			"testInsanity":       thrift.HandlerFunc(h.TestInsanity),
-			"testList":           thrift.HandlerFunc(h.TestList),
-			"testMap":            thrift.HandlerFunc(h.TestMap),
-			"testMapMap":         thrift.HandlerFunc(h.TestMapMap),
-			"testMulti":          thrift.HandlerFunc(h.TestMulti),
-			"testMultiException": thrift.HandlerFunc(h.TestMultiException),
-			"testNest":           thrift.HandlerFunc(h.TestNest),
-			"testSet":            thrift.HandlerFunc(h.TestSet),
-			"testString":         thrift.HandlerFunc(h.TestString),
-			"testStringMap":      thrift.HandlerFunc(h.TestStringMap),
-			"testStruct":         thrift.HandlerFunc(h.TestStruct),
-			"testTypedef":        thrift.HandlerFunc(h.TestTypedef),
-			"testVoid":           thrift.HandlerFunc(h.TestVoid),
+		UnaryMethods: map[string]thrift.UnaryHandler{
+			"testBinary":         thrift.UnaryHandlerFunc(h.TestBinary),
+			"testByte":           thrift.UnaryHandlerFunc(h.TestByte),
+			"testDouble":         thrift.UnaryHandlerFunc(h.TestDouble),
+			"testEnum":           thrift.UnaryHandlerFunc(h.TestEnum),
+			"testException":      thrift.UnaryHandlerFunc(h.TestException),
+			"testI32":            thrift.UnaryHandlerFunc(h.TestI32),
+			"testI64":            thrift.UnaryHandlerFunc(h.TestI64),
+			"testInsanity":       thrift.UnaryHandlerFunc(h.TestInsanity),
+			"testList":           thrift.UnaryHandlerFunc(h.TestList),
+			"testMap":            thrift.UnaryHandlerFunc(h.TestMap),
+			"testMapMap":         thrift.UnaryHandlerFunc(h.TestMapMap),
+			"testMulti":          thrift.UnaryHandlerFunc(h.TestMulti),
+			"testMultiException": thrift.UnaryHandlerFunc(h.TestMultiException),
+			"testNest":           thrift.UnaryHandlerFunc(h.TestNest),
+
+			"testSet":       thrift.UnaryHandlerFunc(h.TestSet),
+			"testString":    thrift.UnaryHandlerFunc(h.TestString),
+			"testStringMap": thrift.UnaryHandlerFunc(h.TestStringMap),
+			"testStruct":    thrift.UnaryHandlerFunc(h.TestStruct),
+			"testTypedef":   thrift.UnaryHandlerFunc(h.TestTypedef),
+			"testVoid":      thrift.UnaryHandlerFunc(h.TestVoid),
+		},
+		OnewayMethods: map[string]thrift.OnewayHandler{
+
+			"testOneway": thrift.OnewayHandlerFunc(h.TestOneway),
 		},
 	}
 	return thrift.BuildRegistrants(service, opts...)
@@ -532,6 +543,20 @@ func (h handler) TestNest(
 		response.Body = result
 	}
 	return response, err
+}
+
+func (h handler) TestOneway(
+	ctx context.Context,
+	reqMeta yarpc.ReqMeta,
+	body wire.Value,
+) error {
+	var args thrifttest.TestOnewayArgs
+	if err := args.FromWire(body); err != nil {
+		return err
+	}
+
+	err := h.impl.TestOneway(ctx, reqMeta, args.SecondsToSleep)
+	return err
 }
 
 func (h handler) TestSet(

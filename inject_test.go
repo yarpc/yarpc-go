@@ -124,8 +124,12 @@ func TestInjectClientSuccess(t *testing.T) {
 			target: &struct {
 				Client json.Client `service:"foo"`
 			}{
-				Client: json.New(transport.IdentityChannel(
-					"foo", "bar", transporttest.NewMockOutbound(mockCtrl))),
+				Client: json.New(transport.MultiOutboundChannel(
+					"foo",
+					"bar",
+					transport.Outbounds{
+						Unary: transporttest.NewMockUnaryOutbound(mockCtrl),
+					})),
 			},
 			wantNonNil: []string{"Client"},
 		},

@@ -23,6 +23,7 @@ package json
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -97,8 +98,11 @@ func TestCall(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		outbound := transporttest.NewMockOutbound(mockCtrl)
-		client := New(transport.IdentityChannel(caller, service, outbound))
+		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
+		client := New(transport.MultiOutboundChannel(caller, service,
+			transport.Outbounds{
+				Unary: outbound,
+			}))
 
 		if !tt.noCall {
 			outbound.EXPECT().Call(gomock.Any(),
@@ -144,6 +148,100 @@ func TestCall(t *testing.T) {
 				assert.Equal(t, tt.wantHeaders, res.Headers())
 				assert.Equal(t, tt.want, resBody)
 			}
+		}
+	}
+}
+
+type successAck struct{}
+
+func (a successAck) String() string {
+	return "success"
+}
+
+func TestCallOneway(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+
+	caller := "caller"
+	service := "service"
+
+	tests := []struct {
+		procedure      string
+		headers        yarpc.Headers
+		body           interface{}
+		encodedRequest string
+
+		// whether the outbound receives the request
+		noCall bool
+
+		wantErr string // error message
+	}{
+		{
+			procedure:      "foo",
+			body:           []string{"foo", "bar"},
+			encodedRequest: `["foo","bar"]`,
+		},
+		{
+			procedure: "baz",
+			body:      func() {}, // funcs cannot be json.Marshal'ed
+			noCall:    true,
+			wantErr:   `failed to encode "json" request body for procedure "baz" of service "service"`,
+		},
+		{
+			procedure:      "requestHeaders",
+			headers:        yarpc.NewHeaders().With("user-id", "42"),
+			body:           map[string]interface{}{},
+			encodedRequest: "{}",
+		},
+	}
+
+	for _, tt := range tests {
+		outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
+		client := New(transport.MultiOutboundChannel(caller, service,
+			transport.Outbounds{
+				Oneway: outbound,
+			}))
+
+		if !tt.noCall {
+			reqMatcher := transporttest.NewRequestMatcher(t,
+				&transport.Request{
+					Caller:    caller,
+					Service:   service,
+					Procedure: tt.procedure,
+					Encoding:  Encoding,
+					Headers:   transport.Headers(tt.headers),
+					Body:      bytes.NewReader([]byte(tt.encodedRequest)),
+				})
+
+			if tt.wantErr != "" {
+				outbound.
+					EXPECT().
+					CallOneway(gomock.Any(), reqMatcher).
+					Return(nil, errors.New(tt.wantErr))
+			} else {
+				outbound.
+					EXPECT().
+					CallOneway(gomock.Any(), reqMatcher).
+					Return(&successAck{}, nil)
+			}
+		}
+
+		resBody := reflect.Zero(_typeOfMapInterface).Interface()
+
+		ack, err := client.CallOneway(
+			ctx,
+			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
+			tt.body,
+			&resBody)
+
+		if tt.wantErr != "" {
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		} else {
+			assert.NoError(t, err, "")
+			assert.Equal(t, ack.String(), "success")
 		}
 	}
 }

@@ -90,7 +90,7 @@ func main() {
 
 	flag.Parse()
 
-	var outbound transport.Outbound
+	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
 		outbound = http.NewOutbound("http://localhost:24034")
@@ -105,9 +105,13 @@ func main() {
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name:      "keyvalue-client",
-		Outbounds: transport.Outbounds{"keyvalue": outbound},
-		Filter:    yarpc.Filters(requestLogFilter{}),
+		Name: "keyvalue-client",
+		Outbounds: yarpc.Outbounds{
+			"keyvalue": {
+				Unary: outbound,
+			},
+		},
+		Filter: yarpc.Filters(requestLogFilter{}),
 	})
 	if err := dispatcher.Start(); err != nil {
 		log.Fatalf("failed to start Dispatcher: %v", err)

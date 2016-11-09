@@ -32,8 +32,10 @@ import (
 
 // Client makes Raw requests to a single service.
 type Client interface {
-	// Call performs an outbound Raw request.
+	// Call performs a unary outbound Raw request.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	// CallOneway performs a oneway outbound Raw request.
+	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error)
 }
 
 // New builds a new Raw client.
@@ -58,7 +60,7 @@ func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []b
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
 
-	tres, err := c.ch.GetOutbound().Call(ctx, &treq)
+	tres, err := c.ch.GetUnaryOutbound().Call(ctx, &treq)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -70,4 +72,21 @@ func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []b
 	}
 
 	return resBody, meta.FromTransportResponse(tres), nil
+}
+
+func (c rawClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error) {
+	treq := transport.Request{
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
+		Encoding: Encoding,
+		Body:     bytes.NewReader(body),
+	}
+	meta.ToTransportRequest(reqMeta, &treq)
+
+	ack, err := c.ch.GetOnewayOutbound().CallOneway(ctx, &treq)
+	if err != nil {
+		return nil, err
+	}
+
+	return ack, nil
 }

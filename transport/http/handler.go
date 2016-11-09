@@ -21,7 +21,9 @@
 package http
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -84,30 +86,77 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	}
 
 	ctx := req.Context()
+	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	v := request.Validator{Request: treq}
-	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
-	defer cancel()
-
-	ctx, span := h.createSpan(ctx, req, treq, start)
-	defer span.Finish()
-
 	treq, err := v.Validate(ctx)
 	if err != nil {
 		return err
 	}
 
-	handler, err := h.Registry.GetHandler(treq.Service, treq.Procedure)
-	if err == nil {
-		err = internal.SafelyCallHandler(ctx, handler, start, treq, newResponseWriter(w))
+	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
+	if err != nil {
+		return err
 	}
 
+	switch spec.Type {
+	case transport.Unary:
+		ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
+		defer cancel()
+
+		treq, err = v.ValidateUnary(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = internal.SafelyCallUnaryHandler(ctx, spec.UnaryHandler, start, treq, newResponseWriter(w))
+		defer span.Finish()
+
+	case transport.Oneway:
+		treq, err = v.ValidateOneway(ctx)
+		if err != nil {
+			return err
+		}
+		err = handleOnewayRequest(ctx, span, treq, spec.OnewayHandler)
+
+	default:
+		err = errors.UnsupportedTypeError{Transport: "http", Type: spec.Type.String()}
+	}
+
+	updateSpanIfErr(span, err)
+	return err
+}
+
+func handleOnewayRequest(
+	ctx context.Context,
+	span opentracing.Span,
+	treq *transport.Request,
+	onewayHandler transport.OnewayHandler,
+) error {
+	// we will lose access to the body unless we read all the bytes before
+	// returning from the request
+	body, err := ioutil.ReadAll(treq.Body)
+	if err != nil {
+		return err
+	}
+
+	treq.Body = bytes.NewBuffer(body)
+
+	go func() {
+		// ensure the span lasts for length of the request in case of errors
+		defer span.Finish()
+
+		err = internal.SafelyCallOnewayHandler(ctx, onewayHandler, treq)
+		updateSpanIfErr(span, err)
+	}()
+	return nil
+}
+
+func updateSpanIfErr(span opentracing.Span, err error) {
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
 	}
-
-	return err
 }
 
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
