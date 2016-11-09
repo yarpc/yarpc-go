@@ -26,7 +26,7 @@ func TestPeerIdenfier(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pi := NewPeerIdentifier(tt.hostport)
+		pi := PeerIdentifier(tt.hostport)
 
 		assert.Equal(t, tt.expectedIdentifier, pi.Identifier())
 	}
@@ -39,68 +39,70 @@ func TestPeer(t *testing.T) {
 	type testStruct struct {
 		msg                string
 		pi                 PeerIdentifier
-		agent              transport.PeerAgent
-		subscriber         transport.PeerSubscriber
+		agent              transport.Agent
 		appliedFunc        func(*Peer)
 		expectedIdentifier string
 		expectedHostPort   string
 		expectedStatus     transport.PeerStatus
-		expectedAgent      transport.PeerAgent
+		expectedAgent      transport.Agent
 	}
 	tests := []testStruct{
 		func() (s testStruct) {
 			s.msg = "create"
-			s.pi = NewPeerIdentifier("localhost:12345")
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
-			s.subscriber = transporttest.NewMockPeerSubscriber(mockCtrl)
+			s.pi = PeerIdentifier("localhost:12345")
+			s.agent = transporttest.NewMockAgent(mockCtrl)
+
 			s.appliedFunc = func(p *Peer) {}
+
 			s.expectedIdentifier = "localhost:12345"
 			s.expectedHostPort = "localhost:12345"
 			s.expectedAgent = s.agent
 			s.expectedStatus = transport.PeerStatus{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    transport.PeerUnavailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
 			s.msg = "start request"
-			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(1)
-			s.subscriber = subscriber
+			agent := transporttest.NewMockAgent(mockCtrl)
+			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(1)
+			s.agent = agent
 
 			s.appliedFunc = func(p *Peer) {
 				p.StartRequest()
 			}
 
+			s.expectedAgent = s.agent
 			s.expectedStatus = transport.PeerStatus{
 				PendingRequestCount: 1,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    transport.PeerUnavailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
 			s.msg = "start request stop request"
-			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(2)
-			s.subscriber = subscriber
+			agent := transporttest.NewMockAgent(mockCtrl)
+			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(2)
+			s.agent = agent
 
 			s.appliedFunc = func(p *Peer) {
 				done := p.StartRequest()
 				done()
 			}
 
+			s.expectedAgent = s.agent
 			s.expectedStatus = transport.PeerStatus{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    transport.PeerUnavailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
 			s.msg = "start 5 stop 2"
-			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(7)
-			s.subscriber = subscriber
+			agent := transporttest.NewMockAgent(mockCtrl)
+			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(7)
+			s.agent = agent
 
 			s.appliedFunc = func(p *Peer) {
 				done1 := p.StartRequest()
@@ -112,23 +114,38 @@ func TestPeer(t *testing.T) {
 				done2()
 			}
 
+			s.expectedAgent = s.agent
 			s.expectedStatus = transport.PeerStatus{
 				PendingRequestCount: 3,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    transport.PeerUnavailable,
 			}
 			return
 		}(),
 		func() (s testStruct) {
 			s.msg = "start 5 stop 5"
-			subscriber := transporttest.NewMockPeerSubscriber(mockCtrl)
-			subscriber.EXPECT().NotifyStatusChanged(gomock.Any()).Times(10)
-			s.subscriber = subscriber
+			agent := transporttest.NewMockAgent(mockCtrl)
+			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(10)
+			s.agent = agent
 
 			s.appliedFunc = func(p *Peer) {
 				for i := 0; i < 5; i++ {
 					done := p.StartRequest()
 					defer done()
 				}
+			}
+
+			s.expectedAgent = s.agent
+			s.expectedStatus = transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerUnavailable,
+			}
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "set status"
+
+			s.appliedFunc = func(p *Peer) {
+				p.SetStatus(transport.PeerAvailable)
 			}
 
 			s.expectedStatus = transport.PeerStatus{
@@ -141,22 +158,22 @@ func TestPeer(t *testing.T) {
 
 	for _, tt := range tests {
 		if tt.pi == PeerIdentifier("") {
-			tt.pi = NewPeerIdentifier("localhost:12345")
+			tt.pi = PeerIdentifier("localhost:12345")
 			tt.expectedIdentifier = "localhost:12345"
 			tt.expectedHostPort = "localhost:12345"
 		}
 		if tt.agent == nil {
-			tt.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			tt.agent = transporttest.NewMockAgent(mockCtrl)
 			tt.expectedAgent = tt.agent
 		}
 
-		peer := NewPeer(tt.pi, tt.agent, tt.subscriber)
+		peer := NewPeer(tt.pi, tt.agent)
 
 		tt.appliedFunc(peer)
 
 		assert.Equal(t, tt.expectedIdentifier, peer.Identifier(), tt.msg)
 		assert.Equal(t, tt.expectedHostPort, peer.HostPort(), tt.msg)
-		assert.Equal(t, tt.expectedAgent, peer.GetAgent(), tt.msg)
-		assert.Equal(t, tt.expectedStatus, peer.GetStatus(), tt.msg)
+		assert.Equal(t, tt.expectedAgent, peer.Agent(), tt.msg)
+		assert.Equal(t, tt.expectedStatus, peer.Status(), tt.msg)
 	}
 }

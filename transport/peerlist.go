@@ -12,6 +12,6 @@ type PeerList interface {
 	// Notify the PeerList that it will stop receiving requests
 	Stop() error
 
-	// Choose a Peer for the next call
+	// Choose a Peer for the next call, block until a peer is available (or timeout)
 	ChoosePeer(context.Context, *Request) (Peer, error)
 }

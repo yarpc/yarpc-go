@@ -6,14 +6,14 @@ package transport
 type PeerConnectionStatus int
 
 const (
-	// PeerAvailable indicates the Peer is available for requests
-	PeerAvailable PeerConnectionStatus = iota + 1
+	// PeerUnavailable indicates the Peer is unavailable for requests
+	PeerUnavailable PeerConnectionStatus = iota
 
 	// PeerConnecting indicates the Peer is in the process of connecting
 	PeerConnecting
 
-	// PeerUnavailable indicates the Peer is unavailable for requests
-	PeerUnavailable
+	// PeerAvailable indicates the Peer is available for requests
+	PeerAvailable
 )
 
 // PeerStatus holds all the information about a peer's state that would be useful to PeerSubscribers
@@ -37,7 +37,7 @@ type Peer interface {
 	PeerIdentifier
 
 	// Get the status of the Peer
-	GetStatus() PeerStatus
+	Status() PeerStatus
 
 	// Tell the peer that a request is starting/ending
 	// The callsite should look like:

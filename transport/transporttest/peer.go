@@ -60,16 +60,6 @@ func (_m *MockPeer) EXPECT() *_MockPeerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockPeer) GetStatus() transport.PeerStatus {
-	ret := _m.ctrl.Call(_m, "GetStatus")
-	ret0, _ := ret[0].(transport.PeerStatus)
-	return ret0
-}
-
-func (_mr *_MockPeerRecorder) GetStatus() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetStatus")
-}
-
 func (_m *MockPeer) Identifier() string {
 	ret := _m.ctrl.Call(_m, "Identifier")
 	ret0, _ := ret[0].(string)
@@ -88,4 +78,14 @@ func (_m *MockPeer) StartRequest() func() {
 
 func (_mr *_MockPeerRecorder) StartRequest() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "StartRequest")
+}
+
+func (_m *MockPeer) Status() transport.PeerStatus {
+	ret := _m.ctrl.Call(_m, "Status")
+	ret0, _ := ret[0].(transport.PeerStatus)
+	return ret0
+}
+
+func (_mr *_MockPeerRecorder) Status() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Status")
 }
