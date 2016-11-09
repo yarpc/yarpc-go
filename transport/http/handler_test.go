@@ -182,48 +182,53 @@ func TestHandlerFailures(t *testing.T) {
 	tests := []struct {
 		req *http.Request
 		msg string
+
+		// if we expect an error as a result of the TTL
+		errTTL bool
 	}{
-		{&http.Request{Method: "GET"}, "404 page not found\n"},
+		{req: &http.Request{Method: "GET"}, msg: "404 page not found\n"},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			"BadRequest: missing caller name\n",
+			msg: "BadRequest: missing caller name\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			"BadRequest: missing service name\n",
+			msg: "BadRequest: missing service name\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			"BadRequest: missing procedure\n",
+			msg: "BadRequest: missing procedure\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			"BadRequest: missing TTL\n",
+			msg:    "BadRequest: missing TTL\n",
+			errTTL: true,
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 			},
-			"BadRequest: missing service name, procedure, caller name, TTL, and encoding\n",
+			msg: "BadRequest: missing service name, procedure, caller name, and encoding\n",
 		},
 		{
-			&http.Request{
+			req: &http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			`BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
+			msg:    `BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
+			errTTL: true,
 		},
 	}
 
@@ -234,6 +239,14 @@ func TestHandlerFailures(t *testing.T) {
 		}
 
 		reg := transporttest.NewMockRegistry(mockCtrl)
+
+		if tt.errTTL {
+			// since TTL is checked after we've determined the transport type, if we have an
+			// error with TTL it will be discovered after we read from the registry
+			spec := transport.NewUnaryHandlerSpec(panickedHandler{})
+			reg.EXPECT().GetHandlerSpec(service, procedure).Return(spec, nil)
+		}
+
 		h := handler{Registry: reg}
 
 		rw := httptest.NewRecorder()
@@ -279,6 +292,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
 	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
 	registry.EXPECT().GetHandlerSpec("fake", "hello").Return(spec, nil)
 
 	httpHandler := handler{Registry: registry}
@@ -314,11 +328,12 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, serverDispatcher.Start())
 	defer serverDispatcher.Stop()
 
-	outbound := NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String()))
 	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test-client",
 		Outbounds: yarpc.Outbounds{
-			"yarpc-test": {Unary: outbound},
+			"yarpc-test": {
+				Unary: NewOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
+			},
 		},
 	})
 	require.NoError(t, clientDispatcher.Start())

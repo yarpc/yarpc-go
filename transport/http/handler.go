@@ -90,7 +90,6 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	defer cancel()
 
 	ctx, span := h.createSpan(ctx, req, treq, start)
-	defer span.Finish()
 
 	treq, err := v.Validate(ctx)
 	if err != nil {
@@ -104,7 +103,17 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	switch spec.Type() {
 	case transport.Unary:
+		defer span.Finish()
+
+		ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
+		defer cancel()
+
+		treq, err = v.ValidateUnary(ctx)
+		if err != nil {
+			return err
+		}
 		err = internal.SafelyCallUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
+
 	default:
 		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
 	}
