@@ -20,12 +20,12 @@
 
 package transport
 
-//go:generate stringer -type=Type
-
 import "context"
 
 // Type is an enum of RPC types
 type Type int
+
+//go:generate stringer -type=Type
 
 const (
 	// Unary types are traditional request/response RPCs
@@ -78,8 +78,5 @@ type OnewayHandler interface {
 	// Handle the given oneway request
 	//
 	// An error may be returned in case of failures.
-	HandleOneway(
-		ctx context.Context,
-		req *Request,
-	) error
+	HandleOneway(ctx context.Context, req *Request) error
 }

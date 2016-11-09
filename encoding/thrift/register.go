@@ -123,5 +123,6 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 			HandlerSpec: spec,
 		})
 	}
+
 	return rs
 }
