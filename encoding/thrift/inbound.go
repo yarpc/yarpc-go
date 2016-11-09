@@ -33,14 +33,21 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-// thriftHandler wraps a Thrift Handler into a transport.UnaryHandler
-type thriftHandler struct {
+// thriftUnaryHandler wraps a Thrift Handler into a transport.UnaryHandler
+type thriftUnaryHandler struct {
 	UnaryHandler UnaryHandler
 	Protocol     protocol.Protocol
 	Enveloping   bool
 }
 
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+// thriftOnewayHandler wraps a Thrift Handler into a transport.OnewayHandler
+type thriftOnewayHandler struct {
+	OnewayHandler OnewayHandler
+	Protocol      protocol.Protocol
+	Enveloping    bool
+}
+
+func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -68,7 +75,6 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 		return encoding.RequestBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
-	// TODO(abg): Support oneway
 
 	reqMeta := meta.FromTransportRequest(treq)
 	res, err := t.UnaryHandler.Handle(ctx, reqMeta, envelope.Value)
@@ -106,4 +112,38 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 	}
 
 	return nil
+}
+
+// TODO(apb): reduce commonality between Handle and HandleOneway
+func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
+	if err := encoding.Expect(treq, Encoding); err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(treq.Body)
+	if err != nil {
+		return err
+	}
+
+	// We disable enveloping if either the client or the transport requires it.
+	proto := t.Protocol
+	if !t.Enveloping {
+		proto = disableEnvelopingProtocol{
+			Protocol: proto,
+			Type:     wire.OneWay, // we only decode oneway requests
+		}
+	}
+
+	envelope, err := proto.DecodeEnveloped(bytes.NewReader(body))
+	if err != nil {
+		return encoding.RequestBodyDecodeError(treq, err)
+	}
+
+	if envelope.Type != wire.OneWay {
+		return encoding.RequestBodyDecodeError(
+			treq, errUnexpectedEnvelopeType(envelope.Type))
+	}
+
+	reqMeta := meta.FromTransportRequest(treq)
+	return t.OnewayHandler.HandleOneway(ctx, reqMeta, envelope.Value)
 }

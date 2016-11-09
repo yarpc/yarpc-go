@@ -32,7 +32,7 @@
 //
 // To register a JSON procedure, define functions in the format,
 //
-// 	f(meta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
+// 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 //
 // Where '$reqBody' and '$resBody' are either pointers to structs representing
 // your request and response objects, or map[string]interface{}.
@@ -40,7 +40,20 @@
 // Use the Procedure function to build registrants to register against a
 // Registry.
 //
-// 	dispatcher.Register(json.Procedure("getValue", GetValue))
-// 	dispatcher.Register(json.Procedure("setValue", SetValue))
+//  dispatcher.Register(json.Procedure("getValue", GetValue))
+//  dispatcher.Register(json.Procedure("setValue", SetValue))
+//
+// Similarly, to register a oneway JSON procedure, define functions in the
+// format,
+//
+// 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) error
+//
+// Where $reqBody is a map[string]interface{} or pointer to a struct.
+//
+// Use the OnewayProcedure function to build registrants to register against a
+// Registry.
+//
+//  dispatcher.Register(json.OnewayProcedure("setValue", SetValue))
+//  dispatcher.Register(json.OnewayProcedure("runTask", RunTask))
 //
 package json
