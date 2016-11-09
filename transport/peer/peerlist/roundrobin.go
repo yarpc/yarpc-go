@@ -1,7 +1,6 @@
 package peerlist
 
 import (
-	"container/ring"
 	"context"
 	"sync"
 
@@ -11,44 +10,10 @@ import (
 	"github.com/uber-go/atomic"
 )
 
-type peerRing struct {
-	*ring.Ring
-}
-
-func newPeerRing(peer transport.Peer) *peerRing {
-	newNode := &peerRing{
-		Ring: ring.New(1),
-	}
-	newNode.Value = peer
-	return newNode
-}
-
-func (pr *peerRing) getPeer() transport.Peer {
-	return pr.Value.(transport.Peer)
-}
-
-func (pr *peerRing) isLastPeer() bool {
-	return pr.Ring.Next() == pr.Ring
-}
-
-func (pr *peerRing) pop() {
-	pr.Prev().Unlink(1)
-}
-
-func (pr *peerRing) push(newPR *peerRing) {
-	pr.Prev().Link(newPR.Ring)
-}
-
-func (pr *peerRing) nextPeer() *peerRing {
-	return &peerRing{
-		Ring: pr.Ring.Next(),
-	}
-}
-
 // NewRoundRobin creates a new round robin PeerList using
 func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin, error) {
 	rr := &RoundRobin{
-		peerToNode:     make(map[string]*peerRing, len(peerIDs)),
+		pr:             newPeerRing(len(peerIDs)),
 		agent:          agent,
 		peerAddedEvent: make(chan struct{}, 1),
 	}
@@ -61,8 +26,7 @@ func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*
 type RoundRobin struct {
 	lock sync.Mutex
 
-	peerToNode map[string]*peerRing
-	nextNode   *peerRing
+	pr *peerRing
 
 	peerAddedEvent chan struct{}
 
@@ -75,44 +39,14 @@ func (pl *RoundRobin) addMulti(peerIDs []transport.PeerIdentifier) error {
 	defer pl.lock.Unlock()
 
 	for _, peerID := range peerIDs {
-		peer, err := pl.agent.RetainPeer(peerID, pl)
+		p, err := pl.agent.RetainPeer(peerID, pl)
 		if err != nil {
 			return err
 		}
 
 		// TODO add event/log when duplicates are inserted
-		pl.addToRing(peer)
+		pl.pr.Add(p)
 	}
-	return nil
-}
-
-func (pl *RoundRobin) addToRing(peer transport.Peer) error {
-	_, ok := pl.peerToNode[peer.Identifier()]
-	if ok {
-		// Peer Already exists, ignore the add
-		return errors.ErrPeerAlreadyInList{
-			Peer:     peer,
-			PeerList: pl,
-		}
-	}
-
-	defer pl.notifyPeerAddedEvent()
-
-	newNode := newPeerRing(peer)
-
-	pl.peerToNode[peer.Identifier()] = newNode
-
-	next := pl.nextNode
-	if next == nil {
-
-		// Empty List, add the first node
-		pl.nextNode = newNode
-
-		return nil
-	}
-
-	next.push(newNode)
-
 	return nil
 }
 
@@ -132,30 +66,6 @@ func (pl *RoundRobin) waitForPeerAddedEventOrTimeout(ctx context.Context) error 
 	}
 }
 
-func (pl *RoundRobin) removePeer(pid transport.PeerIdentifier) error {
-	node, ok := pl.peerToNode[pid.Identifier()]
-	if !ok {
-		// Peer doesn't exist in the list
-		return errors.ErrPeerNotInList{
-			PeerIdentifier: pid,
-			PeerList:       pl,
-		}
-	}
-
-	if node.isLastPeer() {
-		// This is the last node, set the nextNode to nil
-		pl.nextNode = nil
-	} else {
-		// Unlink one node after the "Prev" node (i.e. the current node)
-		node.pop()
-	}
-
-	// Remove the node from our node map
-	delete(pl.peerToNode, pid.Identifier())
-
-	return nil
-}
-
 func (pl *RoundRobin) Start() error {
 	if pl.started.Swap(true) {
 		return errors.ErrPeerListAlreadyStarted("RoundRobinList")
@@ -163,26 +73,20 @@ func (pl *RoundRobin) Start() error {
 	return nil
 }
 
+// Stop notifies the RoundRobin that requests will stop coming
 func (pl *RoundRobin) Stop() error {
 	if !pl.started.Swap(false) {
 		return errors.ErrPeerListNotStarted("RoundRobinList")
 	}
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
 	return pl.clearPeers()
 }
 
 func (pl *RoundRobin) clearPeers() error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	for _, node := range pl.peerToNode {
-		peer := node.getPeer()
-
-		err := pl.agent.ReleasePeer(peer, pl)
-		if err != nil {
-			return err
-		}
-
-		err = pl.removePeer(peer)
+	peers := pl.pr.popAll()
+	for _, p := range peers {
+		err := pl.agent.ReleasePeer(p, pl)
 		if err != nil {
 			return err
 		}
@@ -190,51 +94,45 @@ func (pl *RoundRobin) clearPeers() error {
 	return nil
 }
 
+// ChoosePeer selects the next available peer in the round robin
 func (pl *RoundRobin) ChoosePeer(context.Context, *transport.Request) (transport.Peer, error) {
 	if !pl.started.Load() {
 		return nil, errors.ErrPeerListNotStarted("RoundRobinList")
 	}
-	return pl.nextPeer()
-}
-
-func (pl *RoundRobin) nextPeer() (transport.Peer, error) {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	if pl.nextNode == nil {
+	nextPeer := pl.pr.next()
+	if nextPeer == nil {
 		return nil, errors.ErrNoPeerToSelect("RoundRobinList")
 	}
-
-	peer := pl.nextNode.getPeer()
-
-	pl.nextNode = pl.nextNode.nextPeer()
-
-	return peer, nil
+	return nextPeer, nil
 }
 
 func (pl *RoundRobin) Add(pid transport.PeerIdentifier) error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	peer, err := pl.agent.RetainPeer(pid, pl)
+	p, err := pl.agent.RetainPeer(pid, pl)
 	if err != nil {
 		return err
 	}
 
-	return pl.addToRing(peer)
+	return pl.pr.Add(p)
 }
 
 func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	err := pl.agent.ReleasePeer(pid, pl)
+	err := pl.pr.removePeer(pid)
 	if err != nil {
+		// The peer has already been removed
 		return err
 	}
 
-	return pl.removePeer(pid)
+	return pl.agent.ReleasePeer(pid, pl)
 }
 
-// NotifyStatusChanged when the number of Pending requests changes
+// NotifyStatusChanged when the peer's status changes
 func (pl *RoundRobin) NotifyStatusChanged(transport.Peer) {}

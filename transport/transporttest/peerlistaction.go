@@ -40,7 +40,7 @@ func (a StopAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
-// ChooseAction is an action for
+// ChooseAction is an action for choosing a peer from the peerlist
 type ChooseAction struct {
 	InputContext context.Context
 	InputRequest *transport.Request
@@ -58,6 +58,38 @@ func (a ChooseAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
 		a.ExpectedPeer == peer,
 		fmt.Sprintf("%v was not the same instance as %v", peer, a.ExpectedPeer),
 	)
+	assert.Equal(t, a.ExpectedErr, err)
+}
+
+// AddAction is an action for adding a peer to the peerlist
+type AddAction struct {
+	InputPeerID transport.PeerIdentifier
+	ExpectedErr error
+}
+
+// ApplyAndAssert runs "Add" on the peerList after casting it to a PeerChangeListener
+// and validates the error
+func (a AddAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
+	changeListener := pl.(transport.PeerChangeListener)
+
+	err := changeListener.Add(a.InputPeerID)
+
+	assert.Equal(t, a.ExpectedErr, err)
+}
+
+// RemoveAction is an action for adding a peer to the peerlist
+type RemoveAction struct {
+	InputPeerID transport.PeerIdentifier
+	ExpectedErr error
+}
+
+// ApplyAndAssert runs "Remove" on the peerList after casting it to a PeerChangeListener
+// and validates the error
+func (a RemoveAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
+	changeListener := pl.(transport.PeerChangeListener)
+
+	err := changeListener.Remove(a.InputPeerID)
+
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
