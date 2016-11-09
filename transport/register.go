@@ -21,7 +21,6 @@
 package transport
 
 import (
-	"fmt"
 	"sort"
 
 	"go.uber.org/yarpc/internal/errors"
@@ -55,6 +54,9 @@ type Registrant struct {
 // their handlers.
 type Registry interface {
 	// Registers zero or more registrants with the registry.
+	//
+	// Registering a duplicate service/procedure name will silently overwrite a
+	// previously registered handler.
 	Register([]Registrant)
 
 	// ServiceProcedures returns a list of services and their procedures that
@@ -74,8 +76,7 @@ type Registry interface {
 // procedures.
 type MapRegistry struct {
 	defaultService string
-	entries        map[ServiceProcedure]UnaryHandler
-	onewayEntries  map[ServiceProcedure]OnewayHandler
+	entries        map[ServiceProcedure]HandlerSpec
 }
 
 // NewMapRegistry builds a new MapRegistry that uses the given name as the
@@ -83,8 +84,7 @@ type MapRegistry struct {
 func NewMapRegistry(defaultService string) MapRegistry {
 	return MapRegistry{
 		defaultService: defaultService,
-		entries:        make(map[ServiceProcedure]UnaryHandler),
-		onewayEntries:  make(map[ServiceProcedure]OnewayHandler),
+		entries:        make(map[ServiceProcedure]HandlerSpec),
 	}
 }
 
@@ -95,14 +95,12 @@ func (m MapRegistry) Register(rs []Registrant) {
 			r.Service = m.defaultService
 		}
 
-		switch r.HandlerSpec.Type {
-		case Unary:
-			m.entries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.UnaryHandler
-		case Oneway:
-			m.onewayEntries[ServiceProcedure{r.Service, r.Procedure}] = r.HandlerSpec.OnewayHandler
-		default:
-			panic(fmt.Sprintf("Unknown RPC Type %v, for %s::%s", r.HandlerSpec.Type, r.Service, r.Procedure))
+		if r.Procedure == "" {
+			panic("Expected procedure name not to be empty string in registration")
 		}
+
+		sp := ServiceProcedure{r.Service, r.Procedure}
+		m.entries[sp] = r.HandlerSpec
 	}
 }
 
@@ -124,11 +122,8 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 		service = m.defaultService
 	}
 
-	if h, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
-		return HandlerSpec{Type: Unary, UnaryHandler: h}, nil
-	}
-	if h, ok := m.onewayEntries[ServiceProcedure{service, procedure}]; ok {
-		return HandlerSpec{Type: Oneway, OnewayHandler: h}, nil
+	if spec, ok := m.entries[ServiceProcedure{service, procedure}]; ok {
+		return spec, nil
 	}
 
 	return HandlerSpec{}, errors.UnrecognizedProcedureError{

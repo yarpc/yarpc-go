@@ -21,8 +21,10 @@
 package yarpc
 
 import (
+	"fmt"
 	"sync"
 
+	"go.uber.org/yarpc/internal/channel"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport"
@@ -131,7 +133,6 @@ type dispatcher struct {
 	inbounds  []transport.Inbound
 	outbounds Outbounds
 
-	Filter      transport.Filter
 	Interceptor transport.Interceptor
 
 	deps transport.Deps
@@ -145,7 +146,7 @@ func (d dispatcher) Inbounds() []transport.Inbound {
 
 func (d dispatcher) Channel(service string) transport.Channel {
 	if rs, ok := d.outbounds[service]; ok {
-		return transport.MultiOutboundChannel(d.Name, service, rs)
+		return channel.MultiOutbound(d.Name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }
@@ -220,14 +221,24 @@ func (d dispatcher) Start() error {
 }
 
 func (d dispatcher) Register(rs []transport.Registrant) {
-	for i, r := range rs {
-		if r.HandlerSpec.Type == transport.Unary {
-			r.HandlerSpec.UnaryHandler = transport.ApplyInterceptor(r.HandlerSpec.UnaryHandler, d.Interceptor)
-			rs[i] = r
+	registrants := make([]transport.Registrant, 0, len(rs))
+
+	for _, r := range rs {
+		switch r.HandlerSpec.Type() {
+		case transport.Unary:
+			h := transport.ApplyInterceptor(r.HandlerSpec.Unary(), d.Interceptor)
+			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
+		case transport.Oneway:
+			//TODO(apb): add oneway interceptors https://github.com/yarpc/yarpc-go/issues/413
+		default:
+			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
+				r.HandlerSpec.Type(), r.Service, r.Procedure))
 		}
-		//TODO(apb): add oneway interceptors
+
+		registrants = append(registrants, r)
 	}
-	d.Registry.Register(rs)
+
+	d.Registry.Register(registrants)
 }
 
 func (d dispatcher) Stop() error {
@@ -249,22 +260,23 @@ func (d dispatcher) Stop() error {
 
 // getUniqueOutbounds helps ensure we only start/stop the same outbound once
 func (d dispatcher) getUniqueOutbounds() []transport.Outbound {
-	var unique []transport.Outbound
+	seen := make(map[transport.Outbound]struct{})
+	unique := []transport.Outbound{}
+
+	addIfUnique := func(outbound transport.Outbound) {
+		if outbound == nil {
+			return
+		}
+
+		if _, ok := seen[outbound]; !ok {
+			seen[outbound] = struct{}{}
+			unique = append(unique, outbound)
+		}
+	}
 
 	for _, outs := range d.outbounds {
-		if outs.Unary == nil && outs.Oneway == nil {
-			continue
-		}
-
-		if outs.Unary == nil {
-			unique = append(unique, outs.Oneway)
-		} else if outs.Oneway == nil {
-			unique = append(unique, outs.Unary)
-		} else if outs.Unary.(transport.Outbound) == outs.Oneway.(transport.Outbound) {
-			unique = append(unique, outs.Unary)
-		} else {
-			unique = append(unique, outs.Unary, outs.Oneway)
-		}
+		addIfUnique(outs.Unary)
+		addIfUnique(outs.Oneway)
 	}
 
 	return unique

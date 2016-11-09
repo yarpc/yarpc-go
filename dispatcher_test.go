@@ -35,7 +35,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc"
 )
 
 func basicDispatcher(t *testing.T) Dispatcher {
@@ -100,7 +99,7 @@ func TestStartStopFailures(t *testing.T) {
 		desc string
 
 		inbounds  func(*gomock.Controller) []transport.Inbound
-		outbounds func(*gomock.Controller) yarpc.Outbounds
+		outbounds func(*gomock.Controller) Outbounds
 
 		wantStartErr string
 		wantStopErr  string
@@ -117,8 +116,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
-				outbounds := make(yarpc.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) Outbounds {
+				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
@@ -147,8 +146,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
-				outbounds := make(yarpc.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) Outbounds {
+				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
@@ -178,8 +177,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
-				outbounds := make(yarpc.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) Outbounds {
+				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
@@ -205,8 +204,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
-				outbounds := make(yarpc.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) Outbounds {
+				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					if i == 5 {
@@ -237,8 +236,8 @@ func TestStartStopFailures(t *testing.T) {
 				}
 				return inbounds
 			},
-			outbounds: func(mockCtrl *gomock.Controller) yarpc.Outbounds {
-				outbounds := make(yarpc.Outbounds, 10)
+			outbounds: func(mockCtrl *gomock.Controller) Outbounds {
+				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					out.EXPECT().Start(gomock.Any()).Return(nil)
@@ -289,4 +288,42 @@ func TestStartStopFailures(t *testing.T) {
 			assert.Contains(t, err.Error(), tt.wantStopErr, tt.desc)
 		}
 	}
+}
+
+func TestStartStopOutboundsOnce(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	unary := transporttest.NewMockUnaryOutbound(mockCtrl)
+	unaryCall := unary.EXPECT().Start(gomock.Any())
+
+	oneway := transporttest.NewMockOnewayOutbound(mockCtrl)
+	onewayCall := oneway.EXPECT().Start(gomock.Any())
+
+	unary.EXPECT().Stop().After(unaryCall)
+	oneway.EXPECT().Stop().After(onewayCall)
+
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"service-1": {
+				Unary:  unary,
+				Oneway: oneway,
+			},
+			"service-2": {
+				Unary:  unary,
+				Oneway: oneway,
+			},
+			"service-3": {
+				Unary: unary,
+			},
+			"service-4": {
+				Oneway: oneway,
+			},
+		},
+	})
+
+	err := dispatcher.Start()
+	assert.NoError(t, err)
+
+	dispatcher.Stop()
 }

@@ -18,32 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package channel
 
-//go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
+import (
+	"testing"
 
-// ChannelProvider builds channels from the current service to other services.
-type ChannelProvider interface {
-	// Retrieves a new Channel that will make requests to the given service.
-	//
-	// This MAY panic if the given service is unknown.
-	Channel(service string) Channel
+	"go.uber.org/yarpc/transport"
+
+	"github.com/stretchr/testify/assert"
+)
+
+const (
+	caller  = "caller"
+	service = "service"
+)
+
+func TestChannelNames(t *testing.T) {
+	outbounds := transport.Outbounds{}
+	c := MultiOutbound(caller, service, outbounds)
+
+	assert.Equal(t, c.Caller(), caller)
+	assert.Equal(t, c.Service(), service)
 }
 
-// A Channel is a stream of communication between a single caller-service
-// pair.
-type Channel interface {
-	// Name of the service making the request.
-	Caller() string
+func TestChannelPanic(t *testing.T) {
+	c := MultiOutbound(caller, service, transport.Outbounds{})
 
-	// Name of the service to which the request is being made.
-	Service() string
+	assert.Panics(t, func() { c.GetUnaryOutbound() },
+		"expected channel to panic for nil UnaryOutbound")
 
-	// Returns an outbound to send the request through or panics if there is no
-	// outbound for this service
-	//
-	// MAY be called multiple times for a request. The returned outbound MUST
-	// have already been started.
-	GetUnaryOutbound() UnaryOutbound
-	GetOnewayOutbound() OnewayOutbound
+	assert.Panics(t, func() { c.GetOnewayOutbound() },
+		"expected channel to panic for nil OnewayOutbound")
 }

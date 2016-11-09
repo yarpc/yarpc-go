@@ -56,8 +56,8 @@ type UnaryOutbound interface {
 type OnewayOutbound interface {
 	Outbound
 
-	// CallOneway sends the given request through this transport and returns its
-	// response.
+	// CallOneway sends the given request through this transport and returns an
+	// ack.
 	//
 	// This MUST NOT be called before Start() has been called successfully. This
 	// MAY panic if called without calling Start(). This MUST be safe to call

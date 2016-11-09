@@ -98,14 +98,12 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 
 	// unary procedures
 	for methodName, handler := range s.Methods {
-		spec := transport.HandlerSpec{
-			Type: transport.Unary,
-			UnaryHandler: thriftHandler{
-				UnaryHandler: handler,
-				Protocol:     proto,
-				Enveloping:   rc.Enveloping,
-			},
-		}
+		spec := transport.NewUnaryHandlerSpec(thriftUnaryHandler{
+			UnaryHandler: handler,
+			Protocol:     proto,
+			Enveloping:   rc.Enveloping,
+		})
+
 		rs = append(rs, transport.Registrant{
 			Procedure:   procedureName(s.Name, methodName),
 			HandlerSpec: spec,
@@ -114,18 +112,17 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 
 	// oneway procedures
 	for methodName, handler := range s.OnewayMethods {
-		spec := transport.HandlerSpec{
-			Type: transport.Oneway,
-			OnewayHandler: thriftHandler{
-				OnewayHandler: handler,
-				Protocol:      proto,
-				Enveloping:    rc.Enveloping,
-			},
-		}
+		spec := transport.NewOnewayHandlerSpec(thriftOnewayHandler{
+			OnewayHandler: handler,
+			Protocol:      proto,
+			Enveloping:    rc.Enveloping,
+		})
+
 		rs = append(rs, transport.Registrant{
 			Procedure:   procedureName(s.Name, methodName),
 			HandlerSpec: spec,
 		})
 	}
+
 	return rs
 }

@@ -33,16 +33,21 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-// thriftHandler wraps a Thrift Handler into a transport.UnaryHandler and
-// transport.OnewayHandler
-type thriftHandler struct {
-	UnaryHandler  UnaryHandler
+// thriftUnaryHandler wraps a Thrift Handler into a transport.UnaryHandler
+type thriftUnaryHandler struct {
+	UnaryHandler UnaryHandler
+	Protocol     protocol.Protocol
+	Enveloping   bool
+}
+
+// thriftOnewayHandler wraps a Thrift Handler into a transport.OnewayHandler
+type thriftOnewayHandler struct {
 	OnewayHandler OnewayHandler
 	Protocol      protocol.Protocol
 	Enveloping    bool
 }
 
-func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -110,7 +115,7 @@ func (t thriftHandler) Handle(ctx context.Context, treq *transport.Request, rw t
 }
 
 // TODO(apb): reduce commonality between Handle and HandleOneway
-func (t thriftHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
+func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}

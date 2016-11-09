@@ -29,13 +29,13 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// rawHandler adapts a Handler into a transport.UnaryHandler and transport.OnewayHandler
-type rawHandler struct {
-	UnaryHandler  UnaryHandler
-	OnewayHandler OnewayHandler
-}
+// rawUnaryHandler adapts a Handler into a transport.UnaryHandler
+type rawUnaryHandler struct{ UnaryHandler }
 
-func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
+// rawOnewayHandler adapts a Handler into a transport.OnewayHandler
+type rawOnewayHandler struct{ OnewayHandler }
+
+func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (r rawHandler) Handle(ctx context.Context, treq *transport.Request, rw tran
 	return nil
 }
 
-func (r rawHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
+func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
 		return err
 	}
@@ -73,10 +73,5 @@ func (r rawHandler) HandleOneway(ctx context.Context, treq *transport.Request) e
 	}
 
 	reqMeta := meta.FromTransportRequest(treq)
-	err = r.OnewayHandler(ctx, reqMeta, reqBody)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.OnewayHandler(ctx, reqMeta, reqBody)
 }

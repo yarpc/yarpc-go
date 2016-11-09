@@ -53,7 +53,7 @@ func TestHandlerSucces(t *testing.T) {
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
 	registry.EXPECT().GetHandlerSpec("curly", "nyuck").Return(spec, nil)
 
@@ -119,7 +119,7 @@ func TestHandlerHeaders(t *testing.T) {
 	for _, tt := range tests {
 		registry := transporttest.NewMockRegistry(mockCtrl)
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
+		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
 		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
 
@@ -243,7 +243,7 @@ func TestHandlerFailures(t *testing.T) {
 		if tt.errTTL {
 			// since TTL is checked after we've determined the transport type, if we have an
 			// error with TTL it will be discovered after we read from the registry
-			spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: panickedHandler{}}
+			spec := transport.NewUnaryHandlerSpec(panickedHandler{})
 			reg.EXPECT().GetHandlerSpec(service, procedure).Return(spec, nil)
 		}
 
@@ -291,7 +291,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	).Return(fmt.Errorf("great sadness"))
 
 	registry := transporttest.NewMockRegistry(mockCtrl)
-	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: rpcHandler}
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
 	registry.EXPECT().GetHandlerSpec("fake", "hello").Return(spec, nil)
 
@@ -320,11 +320,8 @@ func TestHandlerPanic(t *testing.T) {
 	})
 	serverDispatcher.Register([]transport.Registrant{
 		{
-			Procedure: "panic",
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: panickedHandler{},
-			},
+			Procedure:   "panic",
+			HandlerSpec: transport.NewUnaryHandlerSpec(panickedHandler{}),
 		},
 	})
 

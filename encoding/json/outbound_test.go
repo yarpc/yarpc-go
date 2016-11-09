@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/channel"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -98,7 +99,7 @@ func TestCall(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
-		client := New(transport.MultiOutboundChannel(caller, service,
+		client := New(channel.MultiOutbound(caller, service,
 			transport.Outbounds{
 				Unary: outbound,
 			}))

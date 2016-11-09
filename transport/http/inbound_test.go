@@ -134,7 +134,7 @@ func TestInboundMux(t *testing.T) {
 	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
 	defer o.Stop()
 
-	spec := transport.HandlerSpec{Type: transport.Unary, UnaryHandler: h}
+	spec := transport.NewUnaryHandlerSpec(h)
 	reg.EXPECT().GetHandlerSpec("bar", "hello").Return(spec, nil)
 
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)

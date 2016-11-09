@@ -58,10 +58,9 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			HandlerSpec: transport.HandlerSpec{
-				Type:         transport.Unary,
-				UnaryHandler: wrapUnaryHandler(name, handler),
-			},
+			HandlerSpec: transport.NewUnaryHandlerSpec(
+				wrapUnaryHandler(name, handler),
+			),
 		},
 	}
 }
@@ -76,10 +75,8 @@ func OnewayProcedure(name string, handler interface{}) []transport.Registrant {
 	return []transport.Registrant{
 		{
 			Procedure: name,
-			HandlerSpec: transport.HandlerSpec{
-				Type:          transport.Oneway,
-				OnewayHandler: wrapOnewayHandler(name, handler),
-			},
+			HandlerSpec: transport.NewOnewayHandlerSpec(
+				wrapOnewayHandler(name, handler)),
 		},
 	}
 }
@@ -117,8 +114,6 @@ func newJSONHandler(reqBodyType reflect.Type, handler interface{}) jsonHandler {
 
 // verifyUnarySignature verifies that the given type matches what we expect from
 // JSON unary handlers and returns the request type.
-//
-// Returns the request type.
 func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 	reqBodyType := verifyInputSignature(n, t)
 
@@ -141,7 +136,7 @@ func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the thrifd argument of the handler for %q must be "+
+			"the third argument of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
 		))
@@ -184,8 +179,6 @@ func verifyOnewaySignature(n string, t reflect.Type) reflect.Type {
 
 // verifyInputSignature verifies that the given input argument types match
 // what we expect from JSON handlers and returns the request body type.
-//
-// Returns the request type.
 func verifyInputSignature(n string, t reflect.Type) reflect.Type {
 	if t.Kind() != reflect.Func {
 		panic(fmt.Sprintf(
@@ -219,7 +212,7 @@ func verifyInputSignature(n string, t reflect.Type) reflect.Type {
 
 	if !isValidReqResType(reqBodyType) {
 		panic(fmt.Sprintf(
-			"the thrifd argument of the handler for %q must be "+
+			"the third argument of the handler for %q must be "+
 				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
 			n, reqBodyType,
 		))
