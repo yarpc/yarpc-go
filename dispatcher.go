@@ -34,7 +34,7 @@ import (
 // Clients to send RPCs, and by Procedures to recieve them. This object is what
 // enables an application to be transport-agnostic.
 type Dispatcher interface {
-	transport.Registry
+	transport.Registrar
 	transport.ChannelProvider
 
 	// Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -79,7 +79,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 
 	return dispatcher{
 		Name:        cfg.Name,
-		Registry:    transport.NewMapRegistry(cfg.Name),
+		Registrar:   transport.NewMapRegistry(cfg.Name),
 		inbounds:    cfg.Inbounds,
 		Outbounds:   cfg.Outbounds,
 		Filter:      cfg.Filter,
@@ -92,7 +92,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 //
 // It allows use of multiple Inbounds and Outbounds together.
 type dispatcher struct {
-	transport.Registry
+	transport.Registrar
 
 	Name        string
 	Outbounds   transport.Outbounds
@@ -192,7 +192,7 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 		r.Handler = transport.ApplyInterceptor(r.Handler, d.Interceptor)
 		rs[i] = r
 	}
-	d.Registry.Register(rs)
+	d.Registrar.Register(rs)
 }
 
 func (d dispatcher) Stop() error {

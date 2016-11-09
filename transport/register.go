@@ -53,9 +53,6 @@ type Registrant struct {
 // Registry maintains and provides access to a collection of procedures and
 // their handlers.
 type Registry interface {
-	// Registers zero or more registrants with the registry.
-	Register([]Registrant)
-
 	// ServiceProcedures returns a list of services and their procedures that
 	// have been registered so far.
 	ServiceProcedures() []ServiceProcedure
@@ -67,6 +64,14 @@ type Registry interface {
 	// service may be empty to indicate that the default service name should
 	// be used.
 	GetHandler(service, procedure string) (Handler, error)
+}
+
+// Registrar provides access to a collection of procedures and their handlers.
+type Registrar interface {
+	Registry
+
+	// Registers zero or more registrants with the registry.
+	Register([]Registrant)
 }
 
 // MapRegistry is a Registry that maintains a map of the registered
