@@ -2,6 +2,7 @@ package http
 
 import (
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal/errors"
@@ -24,7 +25,7 @@ func createPeerExpectations(
 ) []peerExpectation {
 	expectations := make([]peerExpectation, 0, len(hostports))
 	for _, hp := range hostports {
-		hpid := hostport.NewPeerIdentifier(hp)
+		hpid := hostport.PeerIdentifier(hp)
 		subs := make([]*transporttest.MockPeerSubscriber, 0, subscribers)
 		for i := 0; i < subscribers; i++ {
 			subs = append(subs, transporttest.NewMockPeerSubscriber(mockCtrl))
@@ -69,7 +70,6 @@ func TestAgent(t *testing.T) {
 	tests := []testStruct{
 		func() (s testStruct) {
 			s.msg = "one retain"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = createPeerExpectations(
 				mockCtrl,
 				[]string{"localhost:1234"},
@@ -82,30 +82,25 @@ func TestAgent(t *testing.T) {
 			return
 		}(),
 		func() (s testStruct) {
-			s.msg = "one retain on release"
-			s.agent = NewDefaultAgent()
+			s.msg = "one retain one release"
 			s.expectedPeers = []peerExpectation{}
 			s.appliedFunc = func(a *Agent) error {
-				pid := hostport.NewPeerIdentifier("localhost:1234")
+				pid := hostport.PeerIdentifier("localhost:1234")
 
 				sub := transporttest.NewMockPeerSubscriber(mockCtrl)
 
-				_, err := a.RetainPeer(pid, sub)
-				if err != nil {
+				if _, err := a.RetainPeer(pid, sub); err != nil {
 					return err
 				}
-				err = a.ReleasePeer(pid, sub)
-
-				return err
+				return a.ReleasePeer(pid, sub)
 			}
 			return
 		}(),
 		func() (s testStruct) {
-			s.msg = "one retain on release using peer"
-			s.agent = NewDefaultAgent()
+			s.msg = "one retain one release using peer"
 			s.expectedPeers = []peerExpectation{}
 			s.appliedFunc = func(a *Agent) error {
-				pid := hostport.NewPeerIdentifier("localhost:1234")
+				pid := hostport.PeerIdentifier("localhost:1234")
 
 				sub := transporttest.NewMockPeerSubscriber(mockCtrl)
 
@@ -121,7 +116,6 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "three retains"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = createPeerExpectations(
 				mockCtrl,
 				[]string{"localhost:1234"},
@@ -137,7 +131,6 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "three retains, one release"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = createPeerExpectations(
 				mockCtrl,
 				[]string{"localhost:1234"},
@@ -156,10 +149,9 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "three retains, three release"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = []peerExpectation{}
 			s.appliedFunc = func(a *Agent) error {
-				pid := hostport.NewPeerIdentifier("localhost:123")
+				pid := hostport.PeerIdentifier("localhost:123")
 
 				sub := transporttest.NewMockPeerSubscriber(mockCtrl)
 				sub2 := transporttest.NewMockPeerSubscriber(mockCtrl)
@@ -178,10 +170,10 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "no retains, one release"
-			s.agent = NewDefaultAgent()
+			s.agent = NewAgent()
 			s.expectedPeers = []peerExpectation{}
 
-			pid := hostport.NewPeerIdentifier("localhost:1234")
+			pid := hostport.PeerIdentifier("localhost:1234")
 			s.expectedErr = errors.ErrAgentHasNoReferenceToPeer{
 				Agent:          s.agent,
 				PeerIdentifier: pid,
@@ -194,7 +186,6 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "retain with invalid identifier"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = []peerExpectation{}
 
 			pid := transporttest.NewMockPeerIdentifier(mockCtrl)
@@ -211,7 +202,6 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "one retains, one release (from different subscriber)"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = createPeerExpectations(
 				mockCtrl,
 				[]string{"localhost:1234"},
@@ -232,7 +222,6 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "multi peer retain/release"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = createPeerExpectations(
 				mockCtrl,
 				[]string{"localhost:1234", "localhost:1111", "localhost:2222"},
@@ -243,8 +232,8 @@ func TestAgent(t *testing.T) {
 				expP1 := s.expectedPeers[0]
 				expP2 := s.expectedPeers[1]
 				expP3 := s.expectedPeers[2]
-				rndP1 := hostport.NewPeerIdentifier("localhost:9888")
-				rndP2 := hostport.NewPeerIdentifier("localhost:9883")
+				rndP1 := hostport.PeerIdentifier("localhost:9888")
+				rndP2 := hostport.PeerIdentifier("localhost:9883")
 				rndSub1 := transporttest.NewMockPeerSubscriber(mockCtrl)
 				rndSub2 := transporttest.NewMockPeerSubscriber(mockCtrl)
 				rndSub3 := transporttest.NewMockPeerSubscriber(mockCtrl)
@@ -285,7 +274,6 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "notification verification"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = createPeerExpectations(
 				mockCtrl,
 				[]string{"localhost:1234"},
@@ -313,13 +301,12 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "no notification after release"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = []peerExpectation{}
 
 			sub := transporttest.NewMockPeerSubscriber(mockCtrl)
 			sub.EXPECT().NotifyStatusChanged(gomock.Any()).Times(0)
 
-			pid := hostport.NewPeerIdentifier("localhost:1234")
+			pid := hostport.PeerIdentifier("localhost:1234")
 
 			s.appliedFunc = func(a *Agent) error {
 				peer, _ := a.RetainPeer(pid, sub)
@@ -335,10 +322,9 @@ func TestAgent(t *testing.T) {
 		}(),
 		func() (s testStruct) {
 			s.msg = "notification before versus after release"
-			s.agent = NewDefaultAgent()
 			s.expectedPeers = []peerExpectation{}
 
-			pid := hostport.NewPeerIdentifier("localhost:1234")
+			pid := hostport.PeerIdentifier("localhost:1234")
 
 			sub := transporttest.NewMockPeerSubscriber(mockCtrl)
 			sub.EXPECT().NotifyStatusChanged(peerIdentifierMatcher(pid)).Times(1)
@@ -362,28 +348,39 @@ func TestAgent(t *testing.T) {
 
 	for _, tt := range tests {
 		agent := tt.agent
+		if agent == nil {
+			agent = NewAgent()
+		}
 
 		err := tt.appliedFunc(agent)
 
 		assert.Equal(t, tt.expectedErr, err, tt.msg)
-		assert.Equal(t, len(tt.expectedPeers), len(agent.peerNodes), tt.msg)
+		assert.Len(t, agent.peerNodes, len(tt.expectedPeers), tt.msg)
 		for _, expectedPeerNode := range tt.expectedPeers {
 			peerNode, ok := agent.peerNodes[expectedPeerNode.identifier.Identifier()]
 			assert.True(t, ok, tt.msg)
 
 			assert.Equal(t, expectedPeerNode.identifier.Identifier(), peerNode.peer.Identifier(), tt.msg)
 
-			assert.Equal(t, len(expectedPeerNode.subscribers), len(peerNode.references), tt.msg)
+			assert.Len(t, peerNode.subscribers, len(expectedPeerNode.subscribers), tt.msg)
 			for _, expectedSubscriber := range expectedPeerNode.subscribers {
-				_, ok := peerNode.references[expectedSubscriber]
-				assert.True(t, ok, "subscriber (%v) not in list (%v). %s", expectedSubscriber, peerNode.references, tt.msg)
+				_, ok := peerNode.subscribers[expectedSubscriber]
+				assert.True(t, ok, "subscriber (%v) not in list (%v). %s", expectedSubscriber, peerNode.subscribers, tt.msg)
 			}
 		}
 	}
 }
 
 func TestAgentClient(t *testing.T) {
-	agent := NewDefaultAgent()
+	agent := NewAgent()
 
-	assert.NotNil(t, agent.GetClient())
+	assert.NotNil(t, agent.client)
+}
+
+func TestAgentClientWithKeepAlive(t *testing.T) {
+	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
+	// assert this worked
+	agent := NewAgent(AgentKeepAlive(time.Second))
+
+	assert.NotNil(t, agent.client)
 }

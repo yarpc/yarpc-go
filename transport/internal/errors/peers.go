@@ -19,7 +19,7 @@ func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 // ErrAgentHasNoReferenceToPeer is called when an agent is expected to
 // operate on a Peer it has no reference to
 type ErrAgentHasNoReferenceToPeer struct {
-	Agent          transport.PeerAgent
+	Agent          transport.Agent
 	PeerIdentifier transport.PeerIdentifier
 }
 
