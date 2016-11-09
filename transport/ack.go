@@ -20,30 +20,7 @@
 
 package transport
 
-//go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
-
-// ChannelProvider builds channels from the current service to other services.
-type ChannelProvider interface {
-	// Retrieves a new Channel that will make requests to the given service.
-	//
-	// This MAY panic if the given service is unknown.
-	Channel(service string) Channel
-}
-
-// A Channel is a stream of communication between a single caller-service
-// pair.
-type Channel interface {
-	// Name of the service making the request.
-	Caller() string
-
-	// Name of the service to which the request is being made.
-	Service() string
-
-	// Returns an outbound to send the request through or panics if there is no
-	// outbound for this service
-	//
-	// MAY be called multiple times for a request. The returned outbound MUST
-	// have already been started.
-	GetUnaryOutbound() UnaryOutbound
-	GetOnewayOutbound() OnewayOutbound
+// Ack represents and acknowledgement from a oneway request
+type Ack interface {
+	String() string
 }

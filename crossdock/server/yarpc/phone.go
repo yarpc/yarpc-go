@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/internal/channel"
 	"go.uber.org/yarpc/transport"
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -95,7 +96,9 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 	defer outbound.Stop()
 
 	// TODO use reqMeta.Service for caller
-	client := json.New(transport.IdentityChannel("yarpc-test", body.Service, outbound))
+	client := json.New(channel.MultiOutbound("yarpc-test", body.Service, transport.Outbounds{
+		Unary: outbound,
+	}))
 	resBody := PhoneResponse{
 		Service:   "yarpc-test", // TODO use reqMeta.Service
 		Procedure: reqMeta.Procedure(),

@@ -128,8 +128,12 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 	}
 
 	clientCfg := yarpc.Config{
-		Name:      "client",
-		Outbounds: transport.Outbounds{"server": yhttp.NewOutbound("http://localhost:8999")},
+		Name: "client",
+		Outbounds: yarpc.Outbounds{
+			"server": {
+				Unary: yhttp.NewOutbound("http://localhost:8999"),
+			},
+		},
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
@@ -143,8 +147,12 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 
 func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 	clientCfg := yarpc.Config{
-		Name:      "client",
-		Outbounds: transport.Outbounds{"server": yhttp.NewOutbound("http://localhost:8998")},
+		Name: "client",
+		Outbounds: yarpc.Outbounds{
+			"server": {
+				Unary: yhttp.NewOutbound("http://localhost:8998"),
+			},
+		},
 	}
 
 	withHTTPServer(b, ":8998", httpEcho(b), func() {
@@ -196,8 +204,10 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 		// Need server already started to build client config
 		clientCfg := yarpc.Config{
 			Name: "client",
-			Outbounds: transport.Outbounds{
-				"server": ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+			Outbounds: yarpc.Outbounds{
+				"server": {
+					Unary: ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+				},
 			},
 		}
 		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
@@ -220,8 +230,10 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 
 	clientCfg := yarpc.Config{
 		Name: "client",
-		Outbounds: transport.Outbounds{
-			"server": ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+		Outbounds: yarpc.Outbounds{
+			"server": {
+				Unary: ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+			},
 		},
 	}
 

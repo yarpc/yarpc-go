@@ -114,13 +114,16 @@ func (h handler) assertBaggage(ctx context.Context) {
 func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 	// TODO: Use port 0 once https://github.com/yarpc/yarpc-go/issues/381 is
 	// fixed.
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: []transport.Inbound{
 			http.NewInbound(":18080"),
 		},
-		Outbounds: transport.Outbounds{
-			"yarpc-test": http.NewOutbound("http://127.0.0.1:18080"),
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: http.NewOutbound("http://127.0.0.1:18080"),
+			},
 		},
 		Tracer: tracer,
 	})
@@ -142,8 +145,10 @@ func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dis
 		Inbounds: []transport.Inbound{
 			ytchannel.NewInbound(ch),
 		},
-		Outbounds: transport.Outbounds{
-			"yarpc-test": ytchannel.NewOutbound(ch, ytchannel.HostPort(hp)),
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: ytchannel.NewOutbound(ch, ytchannel.HostPort(hp)),
+			},
 		},
 		Tracer: tracer,
 	})
