@@ -31,11 +31,11 @@ import (
 
 // Validator helps validate requests.
 //
-// 	v := Validator{Request: request}
-// 	v.Validate()
-//  ...
-// 	v.ParseTTL(ttlstring)
-// 	request, err := v.ValidateUnary()
+//	v := Validator{Request: request}
+//	v.Validate()
+//	...
+//	v.ParseTTL(ttlstring)
+//	request, err := v.ValidateUnary()
 type Validator struct {
 	Request *transport.Request
 	errTTL  error
