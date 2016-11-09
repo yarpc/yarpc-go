@@ -177,7 +177,12 @@ func (pl *RoundRobin) clearPeers() error {
 	for _, node := range pl.peerToNode {
 		peer := node.getPeer()
 
-		err := pl.removePeer(peer)
+		err := pl.agent.ReleasePeer(peer, pl)
+		if err != nil {
+			return err
+		}
+
+		err = pl.removePeer(peer)
 		if err != nil {
 			return err
 		}
