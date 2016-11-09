@@ -20,7 +20,11 @@
 
 package channel
 
-import "go.uber.org/yarpc/transport"
+import (
+	"fmt"
+
+	"go.uber.org/yarpc/transport"
+)
 
 type multiOutbound struct {
 	caller    string
@@ -37,9 +41,17 @@ func (c multiOutbound) Caller() string  { return c.caller }
 func (c multiOutbound) Service() string { return c.service }
 
 func (c multiOutbound) GetUnaryOutbound() transport.UnaryOutbound {
+	if c.Outbounds.Unary == nil {
+		panic(fmt.Sprintf("Service %q does not have a unary outbound", c.service))
+	}
+
 	return c.Outbounds.Unary
 }
 
 func (c multiOutbound) GetOnewayOutbound() transport.OnewayOutbound {
+	if c.Outbounds.Oneway == nil {
+		panic(fmt.Sprintf("Service %q does not have a oneway outbound", c.service))
+	}
+
 	return c.Outbounds.Oneway
 }
