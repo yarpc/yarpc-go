@@ -2,6 +2,7 @@ package errors
 
 import (
 	"fmt"
+
 	"go.uber.org/yarpc/transport"
 )
 
@@ -36,4 +37,20 @@ type ErrInvalidPeerType struct {
 
 func (e ErrInvalidPeerType) Error() string {
 	return fmt.Sprintf("expected peer type (%s) but got peer (%v)", e.ExpectedType, e.PeerIdentifier)
+}
+
+// ErrPeerListAlreadyStarted represents a failure because Start() was already
+// called on the peerlist.
+type ErrPeerListAlreadyStarted string
+
+func (e ErrPeerListAlreadyStarted) Error() string {
+	return fmt.Sprintf("%s has already been started", string(e))
+}
+
+// ErrPeerListNotStarted represents a failure because Start() was not called
+// on a peerlist or if Stop() was called.
+type ErrPeerListNotStarted string
+
+func (e ErrPeerListNotStarted) Error() string {
+	return fmt.Sprintf("%s has not been started or was stopped", string(e))
 }
