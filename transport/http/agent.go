@@ -19,11 +19,11 @@ var defaultAgentConfig = agentConfig{keepAlive: 30 * time.Second}
 // AgentOption customizes the behavior of an HTTP agent.
 type AgentOption func(*agentConfig)
 
-// AgentKeepAlive specifies the keep-alive period for the network connection. If
+// KeepAlive specifies the keep-alive period for the network connection. If
 // zero, keep-alives are disabled.
 //
 // Defaults to 30 seconds.
-func AgentKeepAlive(t time.Duration) AgentOption {
+func KeepAlive(t time.Duration) AgentOption {
 	return func(c *agentConfig) {
 		c.keepAlive = t
 	}

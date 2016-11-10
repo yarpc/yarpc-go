@@ -47,12 +47,12 @@ var (
 
 // NewOutbound is deprecated
 // TODO rename this func NewOutboundFromURL
-func NewOutbound(urlStr string) transport.Outbound {
-	agent := NewDefaultAgent()
+func NewOutbound(urlStr string, ops ...AgentOption) transport.Outbound {
+	agent := NewAgent(ops...)
 
 	scheme, hp, path := parseURL(urlStr)
 
-	peerID := hostport.NewPeerIdentifier(hp)
+	peerID := hostport.PeerIdentifier(hp)
 	peerList := peerlist.NewSingle(peerID, agent)
 
 	return NewPeerListOutbound(peerList, path, scheme)
@@ -247,15 +247,14 @@ func (o *outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 }
 
 func (o *outbound) getHTTPClient(peer *hostport.Peer) (*http.Client, error) {
-	agent, ok := peer.GetAgent().(*Agent)
-	if ok {
-		return agent.client, nil
-
+	agent, ok := peer.Agent().(*Agent)
+	if !ok {
+		return nil, terrors.ErrInvalidAgentConversion{
+			Agent:        peer.Agent(),
+			ExpectedType: "*http.Agent",
+		}
 	}
-	return nil, terrors.ErrInvalidAgentConversion{
-		Agent:        peer.GetAgent(),
-		ExpectedType: "*http.Agent",
-	}
+	return agent.client, nil
 }
 
 func getErrFromResponse(response *http.Response) error {

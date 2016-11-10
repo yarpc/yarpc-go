@@ -383,7 +383,7 @@ func TestAgentClient(t *testing.T) {
 func TestAgentClientWithKeepAlive(t *testing.T) {
 	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
 	// assert this worked
-	agent := NewAgent(AgentKeepAlive(time.Second))
+	agent := NewAgent(KeepAlive(time.Second))
 
 	assert.NotNil(t, agent.client)
 }
