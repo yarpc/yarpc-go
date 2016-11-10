@@ -37,13 +37,13 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Register calls the Registry's Register method.
+// Register calls the Registrar's Register method.
 //
 // This function exists for backwards compatibility only. It will be removed
 // in a future version.
 //
-// Deprecated: Use the Registry's Register method directly.
-func Register(r transport.Registry, rs []transport.Registrant) {
+// Deprecated: Use the Registrar's Register method directly.
+func Register(r transport.Registrar, rs []transport.Registrant) {
 	r.Register(rs)
 }
 
