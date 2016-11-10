@@ -38,7 +38,7 @@ func TestPeer(t *testing.T) {
 
 	type testStruct struct {
 		msg                string
-		pi                 PeerIdentifier
+		pid                PeerIdentifier
 		agent              transport.Agent
 		appliedFunc        func(*Peer)
 		expectedIdentifier string
@@ -49,7 +49,7 @@ func TestPeer(t *testing.T) {
 	tests := []testStruct{
 		func() (s testStruct) {
 			s.msg = "create"
-			s.pi = PeerIdentifier("localhost:12345")
+			s.pid = PeerIdentifier("localhost:12345")
 			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.appliedFunc = func(p *Peer) {}
@@ -157,8 +157,8 @@ func TestPeer(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if tt.pi == PeerIdentifier("") {
-			tt.pi = PeerIdentifier("localhost:12345")
+		if tt.pid == PeerIdentifier("") {
+			tt.pid = PeerIdentifier("localhost:12345")
 			tt.expectedIdentifier = "localhost:12345"
 			tt.expectedHostPort = "localhost:12345"
 		}
@@ -167,7 +167,7 @@ func TestPeer(t *testing.T) {
 			tt.expectedAgent = tt.agent
 		}
 
-		peer := NewPeer(tt.pi, tt.agent)
+		peer := NewPeer(tt.pid, tt.agent)
 
 		tt.appliedFunc(peer)
 
