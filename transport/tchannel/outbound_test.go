@@ -23,6 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"io/ioutil"
+	"sync"
 	"testing"
 	"time"
 
@@ -266,7 +267,7 @@ func TestCallFailures(t *testing.T) {
 	}
 }
 
-func TestStartTwice(t *testing.T) {
+func TestStartMultiple(t *testing.T) {
 	for _, getOutbound := range newOutbounds {
 		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
@@ -274,15 +275,25 @@ func TestStartTwice(t *testing.T) {
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
-		if assert.NoError(t, out.Start(transport.NoDeps)) {
-			err := out.Start(transport.NoDeps)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "tchannel.Outbound has already been started")
+		var wg sync.WaitGroup
+		signal := make(chan struct{})
+
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-signal
+
+				err := out.Start(transport.NoDeps)
+				assert.NoError(t, err)
+			}()
 		}
+		close(signal)
+		wg.Wait()
 	}
 }
 
-func TestStopWithoutStarting(t *testing.T) {
+func TestStopMultiple(t *testing.T) {
 	for _, getOutbound := range newOutbounds {
 		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
@@ -290,9 +301,24 @@ func TestStopWithoutStarting(t *testing.T) {
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
-		err := out.Stop()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "tchannel.Outbound has not been started")
+		err := out.Start(transport.NoDeps)
+		require.NoError(t, err)
+
+		var wg sync.WaitGroup
+		signal := make(chan struct{})
+
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-signal
+
+				err := out.Stop()
+				assert.NoError(t, err)
+			}()
+		}
+		close(signal)
+		wg.Wait()
 	}
 }
 
