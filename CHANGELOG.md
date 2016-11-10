@@ -30,6 +30,8 @@ This release requires regeneration of ThriftRW code.
     when instantiating Thrift clients or registering handlers.
 -   **Breaking**: Use of `golang.org/x/net/context` has been dropped in favor
     of the standard library's `context` package.
+-   Add support for providing peer lists to dynamically choose downstream
+    peers in HTTP Outbounds
 
 
 v0.3.1 (2016-09-31)
