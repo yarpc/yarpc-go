@@ -75,7 +75,7 @@ func (o outbound) Start(d transport.Deps) error {
 }
 
 func (o outbound) Stop() error {
-	if !o.started.Swap(false) {
+	if o.started.Swap(false) {
 		o.Channel.Close()
 	}
 	return nil
