@@ -340,7 +340,11 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 			tch.NewInbound(ch, tch.ListenAddr(":8087")),
 			ht.NewInbound(":8086"),
 		},
-		Outbounds: transport.Outbounds{"yarpc-test": outbound},
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: outbound,
+			},
+		},
 	})
 
 	return dispatcher, tconfig

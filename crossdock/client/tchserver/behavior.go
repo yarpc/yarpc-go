@@ -25,7 +25,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/client/params"
-	"go.uber.org/yarpc/transport"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/crossdock/crossdock-go"
@@ -50,8 +49,10 @@ func Run(t crossdock.T) {
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-client",
-		Outbounds: transport.Outbounds{
-			serverName: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+		Outbounds: yarpc.Outbounds{
+			serverName: {
+				Unary: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+			},
 		},
 	})
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")

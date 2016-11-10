@@ -54,7 +54,11 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	}
 
 	return yarpc.NewDispatcher(yarpc.Config{
-		Name:      "client",
-		Outbounds: transport.Outbounds{"yarpc-test": unaryOutbound},
+		Name: "client",
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: unaryOutbound,
+			},
+		},
 	})
 }
