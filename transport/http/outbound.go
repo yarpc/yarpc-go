@@ -57,25 +57,27 @@ func NewOutbound(urlStr string, opts ...AgentOption) transport.Outbound {
 	peerID := hostport.PeerIdentifier(hp)
 	peerList := peerlist.NewSingle(peerID, agent)
 
-	peerList.Start()
+	err := peerList.Start()
+	if err != nil {
+		// This should never happen, single shouldn't return an error here
+		panic(fmt.Sprintf("could not start single peerlist, err: %s", err))
+	}
 
 	return NewPeerListOutbound(peerList, urlTemplate)
 }
 
 func parseURL(urlStr string) (*url.URL, string) {
 	parsedURL, err := url.Parse(urlStr)
-
 	if err != nil {
-		return nil, urlStr
+		panic(fmt.Sprintf("invalid url: %s, err: %s", urlStr, err))
 	}
-
 	return parsedURL, parsedURL.Host
 }
 
 // NewPeerListOutbound builds a new HTTP outbound built around a PeerList
-// for getting potential downstream hosts.  The PeerList.ChoosePeer function
-// needs to return a *hostport.Peer or it will break assumptions we make in the
-// Call func
+// for getting potential downstream hosts.
+// PeerList.ChoosePeer MUST return *hostport.Peer objects.
+// PeerList.Start MUST be called before Outbound.Start
 func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) transport.Outbound {
 	return &outbound{
 		started:     atomic.NewBool(false),
