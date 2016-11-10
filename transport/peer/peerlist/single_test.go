@@ -25,11 +25,11 @@ func TestSingle(t *testing.T) {
 	type testStruct struct {
 		msg                   string
 		pid                   transport.PeerIdentifier
-		agent                 *transporttest.MockPeerAgent
+		agent                 *transporttest.MockAgent
 		appliedFunc           func(*single) error
 		expectedPeerID        transport.PeerIdentifier
 		expectedPeer          transport.Peer
-		expectedAgent         transport.PeerAgent
+		expectedAgent         transport.Agent
 		expectedStarted       bool
 		expectedErr           error
 		expectedChooseResults []expectedChooseResult
@@ -38,7 +38,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "setup"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.appliedFunc = func(pl *single) error {
 				return nil
@@ -52,7 +52,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "stop before start"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.appliedFunc = func(pl *single) error {
 				return pl.Stop()
@@ -67,7 +67,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "choose before start"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.appliedFunc = func(pl *single) error {
 				return nil
@@ -85,7 +85,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start and choose"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
@@ -106,7 +106,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start with agent error"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.expectedErr = fmt.Errorf("test error")
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(nil, s.expectedErr)
@@ -123,7 +123,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start twice"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
@@ -142,7 +142,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start stop"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			peer := transporttest.NewMockPeer(mockCtrl)
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(peer, nil)
@@ -166,7 +166,7 @@ func TestSingle(t *testing.T) {
 		func() (s testStruct) {
 			s.msg = "start stop release failure"
 			s.pid = transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.agent = transporttest.NewMockPeerAgent(mockCtrl)
+			s.agent = transporttest.NewMockAgent(mockCtrl)
 
 			s.expectedPeer = transporttest.NewMockPeer(mockCtrl)
 			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
@@ -196,9 +196,9 @@ func TestSingle(t *testing.T) {
 
 		assert.Equal(t, tt.expectedErr, err, tt.msg)
 		assert.Equal(t, tt.expectedAgent, pl.agent, tt.msg)
-		assert.Equal(t, tt.expectedPeerID, pl.peerID, tt.msg)
+		assert.Equal(t, tt.expectedPeerID, pl.initialPeerID, tt.msg)
 		assert.Equal(t, tt.expectedPeer, pl.peer, tt.msg)
-		assert.Equal(t, tt.expectedStarted, pl.started.Load(), tt.msg)
+		assert.Equal(t, tt.expectedStarted, pl.started, tt.msg)
 
 		for _, expectedResult := range tt.expectedChooseResults {
 			peer, err := pl.ChoosePeer(context.Background(), &transport.Request{})

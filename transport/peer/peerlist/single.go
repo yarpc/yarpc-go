@@ -3,34 +3,41 @@ package peerlist
 import (
 	"context"
 
+	"sync"
+
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal/errors"
-
-	"github.com/uber-go/atomic"
 )
 
 type single struct {
-	peerID  transport.PeerIdentifier
-	peer    transport.Peer
-	agent   transport.PeerAgent
-	started atomic.Bool
+	lock sync.RWMutex
+
+	initialPeerID transport.PeerIdentifier
+	peer          transport.Peer
+	agent         transport.Agent
+	started       bool
 }
 
 // NewSingle creates a static PeerList with a single Peer
-func NewSingle(pi transport.PeerIdentifier, agent transport.PeerAgent) transport.PeerList {
+func NewSingle(pi transport.PeerIdentifier, agent transport.Agent) transport.PeerList {
 	return &single{
-		peerID: pi,
-		agent:  agent,
+		initialPeerID: pi,
+		agent:         agent,
+		started:       false,
 	}
 }
 
 func (pl *single) Start() error {
-	if pl.started.Swap(true) {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+	if pl.started {
 		return errors.ErrPeerListAlreadyStarted("single")
 	}
-	peer, err := pl.agent.RetainPeer(pl.peerID, pl)
+	pl.started = true
+
+	peer, err := pl.agent.RetainPeer(pl.initialPeerID, pl)
 	if err != nil {
-		pl.started.Swap(false)
+		pl.started = false
 		return err
 	}
 	pl.peer = peer
@@ -38,10 +45,15 @@ func (pl *single) Start() error {
 }
 
 func (pl *single) Stop() error {
-	if !pl.started.Swap(false) {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	if !pl.started {
 		return errors.ErrPeerListNotStarted("single")
 	}
-	err := pl.agent.ReleasePeer(pl.peerID, pl)
+	pl.started = false
+
+	err := pl.agent.ReleasePeer(pl.initialPeerID, pl)
 	if err != nil {
 		return err
 	}
@@ -51,11 +63,14 @@ func (pl *single) Stop() error {
 }
 
 func (pl *single) ChoosePeer(context.Context, *transport.Request) (transport.Peer, error) {
-	if !pl.started.Load() {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+
+	if !pl.started {
 		return nil, errors.ErrPeerListNotStarted("single")
 	}
 	return pl.peer, nil
 }
 
-// NotifyPending when the number of Pending requests changes
+// NotifyStatusChanged when the Peer status changes
 func (pl *single) NotifyStatusChanged(transport.Peer) {}
