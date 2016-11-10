@@ -32,10 +32,7 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-var (
-	errOutboundAlreadyStarted = errors.ErrOutboundAlreadyStarted("tchannel.Outbound")
-	errOutboundNotStarted     = errors.ErrOutboundNotStarted("tchannel.Outbound")
-)
+var errOutboundNotStarted = errors.ErrOutboundNotStarted("tchannel.Outbound")
 
 // OutboundOption configures Outbound.
 type OutboundOption func(*outbound)
@@ -73,17 +70,14 @@ type outbound struct {
 func (o outbound) Start(d transport.Deps) error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
-	if o.started.Swap(true) {
-		return errOutboundAlreadyStarted
-	}
+	o.started.Swap(true)
 	return nil
 }
 
 func (o outbound) Stop() error {
 	if !o.started.Swap(false) {
-		return errOutboundNotStarted
+		o.Channel.Close()
 	}
-	o.Channel.Close()
 	return nil
 }
 

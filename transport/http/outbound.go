@@ -36,10 +36,7 @@ import (
 	"github.com/uber-go/atomic"
 )
 
-var (
-	errOutboundAlreadyStarted = errors.ErrOutboundAlreadyStarted("http.Outbound")
-	errOutboundNotStarted     = errors.ErrOutboundNotStarted("http.Outbound")
-)
+var errOutboundNotStarted = errors.ErrOutboundNotStarted("http.Outbound")
 
 type outboundConfig struct {
 	keepAlive time.Duration
@@ -84,22 +81,20 @@ type outbound struct {
 }
 
 func (o *outbound) Start(d transport.Deps) error {
-	if o.started.Swap(true) {
-		return errOutboundAlreadyStarted
+	if !o.started.Swap(true) {
+		o.Deps = d
 	}
-	o.Deps = d
 	return nil
 }
 
 func (o *outbound) Stop() error {
-	if !o.started.Swap(false) {
-		return errOutboundNotStarted
-	}
+	o.started.Swap(false)
 	return nil
 }
 
 func (o *outbound) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
+
 	tracer := o.Deps.Tracer()
 	var parent opentracing.SpanContext // ok to be nil
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {

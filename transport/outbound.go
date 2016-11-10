@@ -30,11 +30,15 @@ type Outbound interface {
 	// Sets up the outbound to start making calls.
 	//
 	// This MUST block until the outbound is ready to start sending requests.
+	// This MUST be idempotent and thread-safe. If call multiple times, only
+	// the first arguments given (deps) are considered valid
 	//
 	// Implementations can assume that this function is called at most once.
 	Start(deps Deps) error
 
 	// Stops the outbound, cleaning up any resources held by the Outbound.
+	//
+	// This MUST be idempotent and thread-safe. This MAY be called more than once
 	Stop() error
 
 	// Call sends the given request through this transport and returns its

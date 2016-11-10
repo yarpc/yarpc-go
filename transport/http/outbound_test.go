@@ -190,20 +190,19 @@ func TestCallFailures(t *testing.T) {
 	}
 }
 
-func TestStartTwice(t *testing.T) {
+func TestStartMultiple(t *testing.T) {
 	out := NewOutbound("http://localhost:9999")
-	if assert.NoError(t, out.Start(transport.NoDeps)) {
+	for i := 0; i < 10; i++ {
 		err := out.Start(transport.NoDeps)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "http.Outbound has already been started")
+		assert.NoError(t, err)
 	}
 }
 
-func TestStopWithoutStarting(t *testing.T) {
+func TestStopMultiple(t *testing.T) {
 	out := NewOutbound("http://localhost:9999")
-	err := out.Stop()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "http.Outbound has not been started")
+	for i := 0; i < 10; i++ {
+		assert.NoError(t, out.Stop())
+	}
 }
 
 func TestCallWithoutStarting(t *testing.T) {

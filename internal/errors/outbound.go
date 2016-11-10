@@ -22,14 +22,6 @@ package errors
 
 import "fmt"
 
-// ErrOutboundAlreadyStarted represents a failure because Start() was already
-// called on the outbound.
-type ErrOutboundAlreadyStarted string
-
-func (e ErrOutboundAlreadyStarted) Error() string {
-	return fmt.Sprintf("%s has already been started", string(e))
-}
-
 // ErrOutboundNotStarted represents a failure because Start() was not called
 // on an outbound or if Stop() was called.
 type ErrOutboundNotStarted string

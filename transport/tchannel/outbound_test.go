@@ -266,7 +266,7 @@ func TestCallFailures(t *testing.T) {
 	}
 }
 
-func TestStartTwice(t *testing.T) {
+func TestStartMultiple(t *testing.T) {
 	for _, getOutbound := range newOutbounds {
 		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
@@ -274,25 +274,10 @@ func TestStartTwice(t *testing.T) {
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
-		if assert.NoError(t, out.Start(transport.NoDeps)) {
+		for i := 0; i < 10; i++ {
 			err := out.Start(transport.NoDeps)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "tchannel.Outbound has already been started")
+			assert.NoError(t, err)
 		}
-	}
-}
-
-func TestStopWithoutStarting(t *testing.T) {
-	for _, getOutbound := range newOutbounds {
-		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
-			ServiceName: "caller",
-		}), "localhost:4040")
-		// TODO: If we change Start() to establish a connection to the host, this
-		// hostport will have to be changed to a real server.
-
-		err := out.Stop()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "tchannel.Outbound has not been started")
 	}
 }
 
