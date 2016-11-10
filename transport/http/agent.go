@@ -37,7 +37,7 @@ func NewAgent(opts ...AgentOption) *Agent {
 	}
 
 	return &Agent{
-		client:    buildAgentClient(&cfg),
+		client:    buildClient(&cfg),
 		peerNodes: make(map[string]*peerNode),
 	}
 }

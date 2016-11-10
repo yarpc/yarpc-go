@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// +build go1.6
+// +build !go1.6
 
 package http
 
@@ -37,8 +37,7 @@ func buildClient(cfg *agentConfig) *http.Client {
 				Timeout:   30 * time.Second,
 				KeepAlive: cfg.keepAlive,
 			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+			TLSHandshakeTimeout: 10 * time.Second,
 		},
 	}
 }

@@ -45,46 +45,50 @@ var (
 	errOutboundNotStarted     = errors.ErrOutboundNotStarted("http.Outbound")
 )
 
-// NewOutbound is deprecated
-// TODO rename this func NewOutboundFromURL
+// NewOutbound builds a new HTTP outbound that sends requests to the given
+// URL.
+//
+// Deprecated: create outbounds through NewPeerListOutbound instead
 func NewOutbound(urlStr string, ops ...AgentOption) transport.Outbound {
 	agent := NewAgent(ops...)
 
-	scheme, hp, path := parseURL(urlStr)
+	urlTemplate, hp := parseURL(urlStr)
 
 	peerID := hostport.PeerIdentifier(hp)
 	peerList := peerlist.NewSingle(peerID, agent)
 
-	return NewPeerListOutbound(peerList, path, scheme)
+	peerList.Start()
+
+	return NewPeerListOutbound(peerList, urlTemplate)
 }
 
-func parseURL(urlStr string) (string, string, string) {
-	parseURL, err := url.Parse(urlStr)
+func parseURL(urlStr string) (*url.URL, string) {
+	parsedURL, err := url.Parse(urlStr)
 
 	if err != nil {
-		return "", urlStr, ""
+		return nil, urlStr
 	}
 
-	return parseURL.Scheme, parseURL.Host, parseURL.Path
+	return parsedURL, parsedURL.Host
 }
 
-// NewPeerListOutbound Builds a new HTTP outbound build around a PeerList for getting potential downstream hosts
-// TODO rename this NewOutbound
-func NewPeerListOutbound(peerList transport.PeerList, path, scheme string) transport.Outbound {
+// NewPeerListOutbound builds a new HTTP outbound built around a PeerList
+// for getting potential downstream hosts.  The PeerList.ChoosePeer function
+// needs to return a *hostport.Peer or it will break assumptions we make in the
+// Call func
+func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) transport.Outbound {
 	return &outbound{
-		started:  atomic.NewBool(false),
-		PeerList: peerList,
-		Path:     path,
-		Scheme:   scheme,
+		started:     atomic.NewBool(false),
+		PeerList:    peerList,
+		URLTemplate: urlTemplate,
 	}
 }
 
 type outbound struct {
-	started  *atomic.Bool
-	Deps     transport.Deps
-	PeerList transport.PeerList
-	Path     string
-	Scheme   string
+	started     *atomic.Bool
+	Deps        transport.Deps
+	PeerList    transport.PeerList
+	URLTemplate *url.URL
 }
 
 func (o *outbound) Start(d transport.Deps) error {
@@ -92,14 +96,14 @@ func (o *outbound) Start(d transport.Deps) error {
 		return errOutboundAlreadyStarted
 	}
 	o.Deps = d
-	return o.PeerList.Start()
+	return nil
 }
 
 func (o *outbound) Stop() error {
 	if !o.started.Swap(false) {
 		return errOutboundNotStarted
 	}
-	return o.PeerList.Stop()
+	return nil
 }
 
 func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
@@ -175,20 +179,20 @@ func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	}
 
 	hpPeer, ok := peer.(*hostport.Peer)
-	if ok {
-		return hpPeer, nil
-
+	if !ok {
+		return nil, terrors.ErrInvalidPeerConversion{
+			Peer:         peer,
+			ExpectedType: "*hostport.Peer",
+		}
 	}
 
-	return nil, terrors.ErrInvalidPeerConversion{
-		Peer:         peer,
-		ExpectedType: "*hostport.Peer",
-	}
+	return hpPeer, nil
 }
 
 func (o *outbound) createRequest(peer *hostport.Peer, treq *transport.Request) (*http.Request, error) {
-	reqURL := fmt.Sprintf("%s://%s%s", o.Scheme, peer.HostPort(), o.Path)
-	return http.NewRequest("POST", reqURL, treq.Body)
+	newURL := *o.URLTemplate
+	newURL.Host = peer.HostPort()
+	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
 func (o *outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span) {

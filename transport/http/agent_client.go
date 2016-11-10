@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func buildAgentClient(cfg *agentConfig) *http.Client {
+func buildClient(cfg *agentConfig) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			// options lifted from https://golang.org/src/net/http/transport.go
