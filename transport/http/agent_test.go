@@ -18,6 +18,9 @@ type peerExpectation struct {
 	subscribers []*transporttest.MockPeerSubscriber
 }
 
+// createPeerExpectations creates a slice of peerExpectation structs for the
+// peers that are expected to be contained in the agent.  It will also add a
+// number of expected subscribers for each Peer
 func createPeerExpectations(
 	mockCtrl *gomock.Controller,
 	hostports []string,
@@ -53,7 +56,7 @@ func (pim peerIdentifierMatcher) Matches(x interface{}) bool {
 
 // String describes what the matcher matches.
 func (pim peerIdentifierMatcher) String() string {
-	return string(hostport.PeerIdentifier(pim).Identifier())
+	return hostport.PeerIdentifier(pim).Identifier()
 }
 
 func TestAgent(t *testing.T) {
