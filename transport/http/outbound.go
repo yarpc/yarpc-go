@@ -49,8 +49,8 @@ var (
 // URL.
 //
 // Deprecated: create outbounds through NewPeerListOutbound instead
-func NewOutbound(urlStr string, ops ...AgentOption) transport.Outbound {
-	agent := NewAgent(ops...)
+func NewOutbound(urlStr string, opts ...AgentOption) transport.Outbound {
+	agent := NewAgent(opts...)
 
 	urlTemplate, hp := parseURL(urlStr)
 
