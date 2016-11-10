@@ -56,7 +56,7 @@ type peerNode struct {
 	subscribers map[transport.PeerSubscriber]struct{}
 }
 
-// RetainPeer gets or creates a Peer for the specificed PeerList
+// RetainPeer gets or creates a Peer for the specified PeerSubscriber (usually a PeerList)
 func (a *Agent) RetainPeer(pid transport.PeerIdentifier, sub transport.PeerSubscriber) (transport.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
