@@ -2,7 +2,6 @@ package peerlist
 
 import (
 	"context"
-
 	"sync"
 
 	"go.uber.org/yarpc/transport"
@@ -19,9 +18,9 @@ type single struct {
 }
 
 // NewSingle creates a static PeerList with a single Peer
-func NewSingle(pi transport.PeerIdentifier, agent transport.Agent) transport.PeerList {
+func NewSingle(pid transport.PeerIdentifier, agent transport.Agent) transport.PeerList {
 	return &single{
-		initialPeerID: pi,
+		initialPeerID: pid,
 		agent:         agent,
 		started:       false,
 	}
