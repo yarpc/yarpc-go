@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// +build go1.6
+// +build !go1.6
 
 package http
 
@@ -28,7 +28,7 @@ import (
 	"time"
 )
 
-func buildClient(cfg *outboundConfig) *http.Client {
+func buildClient(cfg *agentConfig) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			// options lifted from https://golang.org/src/net/http/transport.go
@@ -37,8 +37,7 @@ func buildClient(cfg *outboundConfig) *http.Client {
 				Timeout:   30 * time.Second,
 				KeepAlive: cfg.keepAlive,
 			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+			TLSHandshakeTimeout: 10 * time.Second,
 		},
 	}
 }

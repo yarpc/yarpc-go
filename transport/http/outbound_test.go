@@ -164,7 +164,7 @@ func TestCallFailures(t *testing.T) {
 		url      string
 		messages []string
 	}{
-		{"not a URL", []string{"unsupported protocol scheme"}},
+		{"not a URL", []string{"protocol scheme"}},
 		{notFoundServer.URL, []string{"404", "page not found"}},
 		{internalErrorServer.URL, []string{"great sadness"}},
 	}
