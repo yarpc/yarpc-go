@@ -23,6 +23,7 @@ package tchannel
 import (
 	"bytes"
 	"io/ioutil"
+	"sync"
 	"testing"
 	"time"
 
@@ -274,10 +275,50 @@ func TestStartMultiple(t *testing.T) {
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
+		var wg sync.WaitGroup
+		signal := make(chan struct{})
+
 		for i := 0; i < 10; i++ {
-			err := out.Start(transport.NoDeps)
-			assert.NoError(t, err)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-signal
+
+				err := out.Start(transport.NoDeps)
+				assert.NoError(t, err)
+			}()
 		}
+		close(signal)
+		wg.Wait()
+	}
+}
+
+func TestStopMultiple(t *testing.T) {
+	for _, getOutbound := range newOutbounds {
+		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+			ServiceName: "caller",
+		}), "localhost:4040")
+		// TODO: If we change Start() to establish a connection to the host, this
+		// hostport will have to be changed to a real server.
+
+		err := out.Start(transport.NoDeps)
+		require.NoError(t, err)
+
+		var wg sync.WaitGroup
+		signal := make(chan struct{})
+
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-signal
+
+				err := out.Stop()
+				assert.NoError(t, err)
+			}()
+		}
+		close(signal)
+		wg.Wait()
 	}
 }
 

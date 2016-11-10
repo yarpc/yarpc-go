@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -192,17 +193,45 @@ func TestCallFailures(t *testing.T) {
 
 func TestStartMultiple(t *testing.T) {
 	out := NewOutbound("http://localhost:9999")
+
+	var wg sync.WaitGroup
+	signal := make(chan struct{})
+
 	for i := 0; i < 10; i++ {
-		err := out.Start(transport.NoDeps)
-		assert.NoError(t, err)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-signal
+
+			err := out.Start(transport.NoDeps)
+			assert.NoError(t, err)
+		}()
 	}
+	close(signal)
+	wg.Wait()
 }
 
 func TestStopMultiple(t *testing.T) {
 	out := NewOutbound("http://localhost:9999")
+
+	err := out.Start(transport.NoDeps)
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+	signal := make(chan struct{})
+
 	for i := 0; i < 10; i++ {
-		assert.NoError(t, out.Stop())
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-signal
+
+			err := out.Stop()
+			assert.NoError(t, err)
+		}()
 	}
+	close(signal)
+	wg.Wait()
 }
 
 func TestCallWithoutStarting(t *testing.T) {
