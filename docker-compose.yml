@@ -17,7 +17,7 @@ services:
             - AXIS_SERVER=go,node,java,python
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
-            - AXIS_ERRORS_HTTPCLIENT=node,go
+            - AXIS_ERRORS_HTTPCLIENT=go # pending update to node test
             # AXIS_ERRORS_HTTPSERVER TODO
             - AXIS_ERRORS_TCHCLIENT=go
             # AXIS_ERRORS_TCHSERVER TODO

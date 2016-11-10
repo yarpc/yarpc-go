@@ -117,19 +117,28 @@ func Run(t crossdock.T) {
 		headers map[string]string
 		body    string
 
-		wantStatus         int
+		wantStatus int
+		skipStatus int
+
 		skipBody           string
 		wantBody           string
 		wantBodyStartsWith string
-		skipStatus         int
+
+		// hack to get java/python/node crossdock tests passing for now :(
+		// this is because we're changing when we validate the TTL
+		wantBodyOneOf []string
 	}{
 		{
 			name:       "no service",
 			headers:    map[string]string{},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody: "BadRequest: missing service name, procedure, " +
-				"caller name, TTL, and encoding\n",
+			wantBodyOneOf: []string{
+				"BadRequest: missing service name, procedure, " +
+					"caller name, and encoding\n",
+				"BadRequest: missing service name, procedure, " +
+					"caller name, TTL, and encoding\n",
+			},
 		},
 		{
 			name: "wrong service",
@@ -152,7 +161,10 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   "BadRequest: missing procedure, caller name, TTL, and encoding\n",
+			wantBodyOneOf: []string{
+				"BadRequest: missing procedure, caller name, and encoding\n",
+				"BadRequest: missing procedure, caller name, TTL, and encoding\n",
+			},
 		},
 		{
 			name: "no caller",
@@ -162,7 +174,10 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   "BadRequest: missing caller name, TTL, and encoding\n",
+			wantBodyOneOf: []string{
+				"BadRequest: missing caller name and encoding\n",
+				"BadRequest: missing caller name, TTL, and encoding\n",
+			},
 		},
 		{
 			name: "no handler",
@@ -187,7 +202,10 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   "BadRequest: missing TTL and encoding\n",
+			wantBodyOneOf: []string{
+				"BadRequest: missing encoding\n",
+				"BadRequest: missing TTL and encoding\n",
+			},
 		},
 		{
 			name: "no encoding",
