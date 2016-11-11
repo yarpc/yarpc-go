@@ -26,7 +26,7 @@ package secondserviceclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/secondservice"
+	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
@@ -68,7 +68,7 @@ func (c client) BlahBlah(
 	ctx context.Context,
 	reqMeta yarpc.CallReqMeta,
 ) (resMeta yarpc.CallResMeta, err error) {
-	args := secondservice.BlahBlahHelper.Args()
+	args := gauntlet.SecondService_BlahBlah_Helper.Args()
 
 	var body wire.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
@@ -76,12 +76,12 @@ func (c client) BlahBlah(
 		return
 	}
 
-	var result secondservice.BlahBlahResult
+	var result gauntlet.SecondService_BlahBlah_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	err = secondservice.BlahBlahHelper.UnwrapResponse(&result)
+	err = gauntlet.SecondService_BlahBlah_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -90,7 +90,7 @@ func (c client) SecondtestString(
 	reqMeta yarpc.CallReqMeta,
 	_Thing *string,
 ) (success string, resMeta yarpc.CallResMeta, err error) {
-	args := secondservice.SecondtestStringHelper.Args(_Thing)
+	args := gauntlet.SecondService_SecondtestString_Helper.Args(_Thing)
 
 	var body wire.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
@@ -98,11 +98,11 @@ func (c client) SecondtestString(
 		return
 	}
 
-	var result secondservice.SecondtestStringResult
+	var result gauntlet.SecondService_SecondtestString_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = secondservice.SecondtestStringHelper.UnwrapResponse(&result)
+	success, err = gauntlet.SecondService_SecondtestString_Helper.UnwrapResponse(&result)
 	return
 }

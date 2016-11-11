@@ -28,7 +28,7 @@ import (
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
+	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
 	"go.uber.org/yarpc"
 )
 
@@ -71,7 +71,7 @@ func (c client) GetValue(
 	reqMeta yarpc.CallReqMeta,
 	_Key *string,
 ) (success string, resMeta yarpc.CallResMeta, err error) {
-	args := keyvalue.GetValueHelper.Args(_Key)
+	args := kv.KeyValue_GetValue_Helper.Args(_Key)
 
 	var body wire.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
@@ -79,12 +79,12 @@ func (c client) GetValue(
 		return
 	}
 
-	var result keyvalue.GetValueResult
+	var result kv.KeyValue_GetValue_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = keyvalue.GetValueHelper.UnwrapResponse(&result)
+	success, err = kv.KeyValue_GetValue_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -94,7 +94,7 @@ func (c client) SetValue(
 	_Key *string,
 	_Value *string,
 ) (resMeta yarpc.CallResMeta, err error) {
-	args := keyvalue.SetValueHelper.Args(_Key, _Value)
+	args := kv.KeyValue_SetValue_Helper.Args(_Key, _Value)
 
 	var body wire.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
@@ -102,11 +102,11 @@ func (c client) SetValue(
 		return
 	}
 
-	var result keyvalue.SetValueResult
+	var result kv.KeyValue_SetValue_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	err = keyvalue.SetValueHelper.UnwrapResponse(&result)
+	err = kv.KeyValue_SetValue_Helper.UnwrapResponse(&result)
 	return
 }

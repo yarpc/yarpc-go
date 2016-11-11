@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	echo2 "go.uber.org/yarpc/crossdock/thrift/echo/service/echo"
 	"go.uber.org/yarpc"
 )
 
@@ -65,7 +64,7 @@ func (c client) Echo(
 	reqMeta yarpc.CallReqMeta,
 	_Ping *echo.Ping,
 ) (success *echo.Pong, resMeta yarpc.CallResMeta, err error) {
-	args := echo2.EchoHelper.Args(_Ping)
+	args := echo.Echo_Echo_Helper.Args(_Ping)
 
 	var body wire.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
@@ -73,11 +72,11 @@ func (c client) Echo(
 		return
 	}
 
-	var result echo2.EchoResult
+	var result echo.Echo_Echo_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = echo2.EchoHelper.UnwrapResponse(&result)
+	success, err = echo.Echo_Echo_Helper.UnwrapResponse(&result)
 	return
 }
