@@ -26,7 +26,7 @@ package secondserviceserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/crossdock/thrift/gauntlet/service/secondservice"
+	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
@@ -71,7 +71,7 @@ func (h handler) BlahBlah(
 	reqMeta yarpc.ReqMeta,
 	body wire.Value,
 ) (thrift.Response, error) {
-	var args secondservice.BlahBlahArgs
+	var args gauntlet.SecondService_BlahBlah_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
@@ -79,7 +79,7 @@ func (h handler) BlahBlah(
 	resMeta, err := h.impl.BlahBlah(ctx, reqMeta)
 
 	hadError := err != nil
-	result, err := secondservice.BlahBlahHelper.WrapResponse(err)
+	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {
@@ -95,7 +95,7 @@ func (h handler) SecondtestString(
 	reqMeta yarpc.ReqMeta,
 	body wire.Value,
 ) (thrift.Response, error) {
-	var args secondservice.SecondtestStringArgs
+	var args gauntlet.SecondService_SecondtestString_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
@@ -103,7 +103,7 @@ func (h handler) SecondtestString(
 	success, resMeta, err := h.impl.SecondtestString(ctx, reqMeta, args.Thing)
 
 	hadError := err != nil
-	result, err := secondservice.SecondtestStringHelper.WrapResponse(success, err)
+	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

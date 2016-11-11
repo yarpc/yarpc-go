@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	echo2 "go.uber.org/yarpc/crossdock/thrift/echo/service/echo"
 	"go.uber.org/yarpc"
 )
 
@@ -66,7 +65,7 @@ func (h handler) Echo(
 	reqMeta yarpc.ReqMeta,
 	body wire.Value,
 ) (thrift.Response, error) {
-	var args echo2.EchoArgs
+	var args echo.Echo_Echo_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
@@ -74,7 +73,7 @@ func (h handler) Echo(
 	success, resMeta, err := h.impl.Echo(ctx, reqMeta, args.Ping)
 
 	hadError := err != nil
-	result, err := echo2.EchoHelper.WrapResponse(success, err)
+	result, err := echo.Echo_Echo_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

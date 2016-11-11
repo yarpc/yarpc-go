@@ -71,7 +71,7 @@ cover:
 # This is not part of the regular test target because we don't want to slow it
 # down.
 .PHONY: test-examples
-test-examples:
+test-examples: build
 	make -C examples
 
 

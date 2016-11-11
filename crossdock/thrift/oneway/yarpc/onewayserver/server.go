@@ -26,7 +26,7 @@ package onewayserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/crossdock/thrift/oneway/service/oneway"
+	"go.uber.org/yarpc/crossdock/thrift/oneway"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
@@ -65,7 +65,7 @@ func (h handler) Echo(
 	reqMeta yarpc.ReqMeta,
 	body wire.Value,
 ) error {
-	var args oneway.EchoArgs
+	var args oneway.Oneway_Echo_Args
 	if err := args.FromWire(body); err != nil {
 		return err
 	}

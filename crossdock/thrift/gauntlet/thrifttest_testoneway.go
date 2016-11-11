@@ -21,86 +21,78 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package kv
+package gauntlet
 
 import (
-	"errors"
 	"fmt"
 	"go.uber.org/thriftrw/wire"
 	"strings"
 )
 
-type ResourceDoesNotExist struct {
-	Key     string  `json:"key"`
-	Message *string `json:"message,omitempty"`
+type ThriftTest_TestOneway_Args struct {
+	SecondsToSleep *int32 `json:"secondsToSleep,omitempty"`
 }
 
-func (v *ResourceDoesNotExist) ToWire() (wire.Value, error) {
+func (v *ThriftTest_TestOneway_Args) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [1]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
-	w, err = wire.NewValueString(v.Key), error(nil)
-	if err != nil {
-		return w, err
-	}
-	fields[i] = wire.Field{ID: 1, Value: w}
-	i++
-	if v.Message != nil {
-		w, err = wire.NewValueString(*(v.Message)), error(nil)
+	if v.SecondsToSleep != nil {
+		w, err = wire.NewValueI32(*(v.SecondsToSleep)), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 2, Value: w}
+		fields[i] = wire.Field{ID: 1, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func (v *ResourceDoesNotExist) FromWire(w wire.Value) error {
+func (v *ThriftTest_TestOneway_Args) FromWire(w wire.Value) error {
 	var err error
-	keyIsSet := false
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
-			if field.Value.Type() == wire.TBinary {
-				v.Key, err = field.Value.GetString(), error(nil)
-				if err != nil {
-					return err
-				}
-				keyIsSet = true
-			}
-		case 2:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.Message = &x
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.SecondsToSleep = &x
 				if err != nil {
 					return err
 				}
 			}
 		}
 	}
-	if !keyIsSet {
-		return errors.New("field Key of ResourceDoesNotExist is required")
-	}
 	return nil
 }
 
-func (v *ResourceDoesNotExist) String() string {
-	var fields [2]string
+func (v *ThriftTest_TestOneway_Args) String() string {
+	var fields [1]string
 	i := 0
-	fields[i] = fmt.Sprintf("Key: %v", v.Key)
-	i++
-	if v.Message != nil {
-		fields[i] = fmt.Sprintf("Message: %v", *(v.Message))
+	if v.SecondsToSleep != nil {
+		fields[i] = fmt.Sprintf("SecondsToSleep: %v", *(v.SecondsToSleep))
 		i++
 	}
-	return fmt.Sprintf("ResourceDoesNotExist{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ThriftTest_TestOneway_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-func (v *ResourceDoesNotExist) Error() string {
-	return v.String()
+func (v *ThriftTest_TestOneway_Args) MethodName() string {
+	return "testOneway"
+}
+
+func (v *ThriftTest_TestOneway_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.OneWay
+}
+
+var ThriftTest_TestOneway_Helper = struct {
+	Args func(secondsToSleep *int32) *ThriftTest_TestOneway_Args
+}{}
+
+func init() {
+	ThriftTest_TestOneway_Helper.Args = func(secondsToSleep *int32) *ThriftTest_TestOneway_Args {
+		return &ThriftTest_TestOneway_Args{SecondsToSleep: secondsToSleep}
+	}
 }
