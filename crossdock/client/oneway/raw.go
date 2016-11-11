@@ -18,33 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package oneway
 
 import (
-	"go.uber.org/yarpc/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/crossdock/server/http"
-	"go.uber.org/yarpc/crossdock/server/oneway"
-	"go.uber.org/yarpc/crossdock/server/tch"
-	"go.uber.org/yarpc/crossdock/server/yarpc"
+	"context"
+
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/raw"
+
+	"github.com/crossdock/crossdock-go"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
-}
+// Raw starts an http run using raw encoding
+func Raw(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	fatals := crossdock.Fatals(t)
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
-}
+	client := raw.New(dispatcher.Channel("oneway-test"))
+	ctx := context.Background()
 
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
+	token := []byte(getRandomID())
+	ack, err := client.CallOneway(ctx, yarpc.NewReqMeta().Procedure("echo/raw"), token)
+
+	// ensure channel hasn't been filled yet
+	select {
+	case <-serverCalledBack:
+		fatals.FailNow("oneway raw test failed", "client waited for server to fill channel")
+	default:
+	}
+
+	fatals.NoError(err, "call to oneway/raw failed: %v", err)
+	fatals.NotNil(ack, "ack is nil")
+
+	serverToken := <-serverCalledBack
+	fatals.Equal(token, serverToken, "Client/Server token mismatch.")
+}
