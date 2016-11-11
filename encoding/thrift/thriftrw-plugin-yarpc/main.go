@@ -56,7 +56,8 @@ type Interface interface {
 			ctx <$context>.Context,
 			reqMeta <$yarpc>.ReqMeta, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
-		) <if .ReturnType> (<formatType .ReturnType>, <$yarpc>.ResMeta, error)
+		)<if .OneWay> error
+		<else if .ReturnType> (<formatType .ReturnType>, <$yarpc>.ResMeta, error)
 		<else> (<$yarpc>.ResMeta, error)
 		<end>
 	<end>
@@ -76,6 +77,9 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 		Methods: map[string]<$thrift>.UnaryHandler{
 			<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$thrift>.UnaryHandlerFunc(h.<.Name>),<end>
 		<end>},
+		OnewayMethods: map[string]<$thrift>.OnewayHandler{
+			<range .Service.Functions><if .OneWay>"<.ThriftName>": <$thrift>.OnewayHandlerFunc(h.<.Name>),<end>
+		<end>},
 	}
 	return <$thrift>.BuildRegistrants(service, opts...)
 }
@@ -87,6 +91,20 @@ type handler struct{ impl Interface }
 <$servicePackage := import $service.ImportPath>
 <$wire := import "go.uber.org/thriftrw/wire">
 
+<if .OneWay>
+func (h handler) <.Name>(
+	ctx <$context>.Context,
+	reqMeta <$yarpc>.ReqMeta,
+	body <$wire>.Value,
+) error {
+	var args <$servicePackage>.<.Name>Args
+	if err := args.FromWire(body); err != nil {
+		return err
+	}
+
+	return h.impl.<.Name>(ctx, reqMeta, <range .Arguments>args.<.Name>,<end>)
+}
+<else>
 func (h handler) <.Name>(
 	ctx <$context>.Context,
 	reqMeta <$yarpc>.ReqMeta,
@@ -115,6 +133,7 @@ func (h handler) <.Name>(
 	return response, err
 }
 <end>
+<end>
 `
 
 const clientTemplate = `
@@ -141,7 +160,8 @@ type Interface interface {
 			ctx <$context>.Context,
 			reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 				<.Name> <formatType .Type>,<end>
-		) <if .ReturnType> (<formatType .ReturnType>, <$yarpc>.CallResMeta, error)
+		)<if .OneWay> (<$transport>.Ack, error)
+		<else if .ReturnType> (<formatType .ReturnType>, <$yarpc>.CallResMeta, error)
 		<else> (<$yarpc>.CallResMeta, error)
 		<end>
 	<end>
@@ -171,13 +191,17 @@ type client struct{ c <$thrift>.Client }
 <range .Service.Functions>
 
 <$servicePackage := import $service.ImportPath>
-<$wire := import "go.uber.org/thriftrw/wire">
 
 func (c client) <.Name>(
 	ctx <$context>.Context,
 	reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
-) (<if .ReturnType>success <formatType .ReturnType>,<end> resMeta <$yarpc>.CallResMeta, err error) {
+<if .OneWay>) (<$transport>.Ack, error) {
+	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
+	return c.c.CallOneway(ctx, reqMeta, args)
+}
+<else>) (<if .ReturnType>success <formatType .ReturnType>,<end> resMeta <$yarpc>.CallResMeta, err error) {
+	<$wire := import "go.uber.org/thriftrw/wire">
 	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	var body <$wire>.Value
@@ -194,6 +218,7 @@ func (c client) <.Name>(
 	<if .ReturnType>success, <end>err = <$servicePackage>.<.Name>Helper.UnwrapResponse(&result)
 	return
 }
+<end>
 <end>
 `
 

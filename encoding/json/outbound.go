@@ -40,6 +40,7 @@ type Client interface {
 	//
 	// Returns the response or an error if the request failed.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
+	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}) (transport.Ack, error)
 }
 
 // New builds a new JSON client.
@@ -85,4 +86,22 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 	}
 
 	return meta.FromTransportResponse(tres), nil
+}
+
+func (c jsonClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}) (transport.Ack, error) {
+	treq := transport.Request{
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
+		Encoding: Encoding,
+	}
+	meta.ToTransportRequest(reqMeta, &treq)
+
+	var buff bytes.Buffer
+	if err := json.NewEncoder(&buff).Encode(reqBody); err != nil {
+		return nil, encoding.RequestBodyEncodeError(&treq, err)
+	}
+
+	treq.Body = &buff
+
+	return c.ch.GetOnewayOutbound().CallOneway(ctx, &treq)
 }

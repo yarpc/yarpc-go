@@ -34,6 +34,8 @@ import (
 type Client interface {
 	// Call performs a unary outbound Raw request.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	// CallOneway performs a oneway outbound Raw request.
+	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error)
 }
 
 // New builds a new Raw client.
@@ -70,4 +72,16 @@ func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []b
 	}
 
 	return resBody, meta.FromTransportResponse(tres), nil
+}
+
+func (c rawClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error) {
+	treq := transport.Request{
+		Caller:   c.ch.Caller(),
+		Service:  c.ch.Service(),
+		Encoding: Encoding,
+		Body:     bytes.NewReader(body),
+	}
+	meta.ToTransportRequest(reqMeta, &treq)
+
+	return c.ch.GetOnewayOutbound().CallOneway(ctx, &treq)
 }
