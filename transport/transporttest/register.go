@@ -92,14 +92,6 @@ func (_mr *_MockRegistryRecorder) GetHandlerSpec(arg0, arg1 interface{}) *gomock
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetHandlerSpec", arg0, arg1)
 }
 
-func (_m *MockRegistry) Register(_param0 []transport.Registrant) {
-	_m.ctrl.Call(_m, "Register", _param0)
-}
-
-func (_mr *_MockRegistryRecorder) Register(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Register", arg0)
-}
-
 func (_m *MockRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	ret := _m.ctrl.Call(_m, "ServiceProcedures")
 	ret0, _ := ret[0].([]transport.ServiceProcedure)

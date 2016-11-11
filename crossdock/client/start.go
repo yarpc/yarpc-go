@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/crossdock/client/gauntlet"
 	"go.uber.org/yarpc/crossdock/client/headers"
 	"go.uber.org/yarpc/crossdock/client/httpserver"
+	"go.uber.org/yarpc/crossdock/client/oneway"
 	"go.uber.org/yarpc/crossdock/client/tchclient"
 	"go.uber.org/yarpc/crossdock/client/tchserver"
 	"go.uber.org/yarpc/crossdock/client/timeout"
@@ -50,6 +51,7 @@ var behaviors = crossdock.Behaviors{
 	"ctxpropagation":    ctxpropagation.Run,
 	"httpserver":        httpserver.Run,
 	"apachethrift":      apachethrift.Run,
+	"oneway":            oneway.Run,
 }
 
 // Start registers behaviors and begins the Crossdock client

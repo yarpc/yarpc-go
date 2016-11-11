@@ -18,33 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package oneway
 
 import (
-	"go.uber.org/yarpc/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/crossdock/server/http"
-	"go.uber.org/yarpc/crossdock/server/oneway"
-	"go.uber.org/yarpc/crossdock/server/tch"
-	"go.uber.org/yarpc/crossdock/server/yarpc"
+	"context"
+
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/json"
+
+	"github.com/crossdock/crossdock-go"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
+type jsonToken struct {
+	Token string `json:"token"`
 }
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
-}
+// JSON starts an http run using JSON encoding
+func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	fatals := crossdock.Fatals(t)
 
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
+	client := json.New(dispatcher.Channel("oneway-test"))
+	token := getRandomID()
+
+	ack, err := client.CallOneway(
+		context.Background(),
+		yarpc.NewReqMeta().Procedure("echo/json"),
+		&jsonToken{Token: token},
+	)
+
+	// ensure channel hasn't been filled yet
+	select {
+	case <-serverCalledBack:
+		fatals.FailNow("oneway json test failed", "client waited for server to fill channel")
+	default:
+	}
+
+	fatals.NoError(err, "call to oneway/json failed: %v", err)
+	fatals.NotNil(ack, "ack is nil")
+
+	serverToken := <-serverCalledBack
+	fatals.Equal(token, string(serverToken), "Client/Server token mismatch")
+}

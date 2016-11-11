@@ -18,33 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package oneway
 
 import (
-	"go.uber.org/yarpc/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/crossdock/server/http"
-	"go.uber.org/yarpc/crossdock/server/oneway"
-	"go.uber.org/yarpc/crossdock/server/tch"
-	"go.uber.org/yarpc/crossdock/server/yarpc"
+	"context"
+
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/crossdock/thrift/oneway/yarpc/onewayclient"
+
+	"github.com/crossdock/crossdock-go"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
-}
+// Thrift starts an http oneway run using Thrift encoding
+func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
+	fatals := crossdock.Fatals(t)
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
-}
+	client := onewayclient.New(dispatcher.Channel("oneway-test"))
+	ctx := context.Background()
 
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
+	token := getRandomID()
+	ack, err := client.Echo(ctx, nil, &token)
+
+	// ensure channel hasn't been filled yet
+	select {
+	case <-serverCalledBack:
+		fatals.FailNow("oneway thrift test failed", "client waited for server to fill channel")
+	default:
+	}
+
+	fatals.NoError(err, "call to Oneway::echo failed: %v", err)
+	fatals.NotNil(ack, "ack is nil")
+
+	serverToken := <-serverCalledBack
+	fatals.Equal(token, string(serverToken), "Client/Server token mismatch")
+}
