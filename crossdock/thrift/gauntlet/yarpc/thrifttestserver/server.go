@@ -125,6 +125,12 @@ type Interface interface {
 		Thing *gauntlet.Xtruct2,
 	) (*gauntlet.Xtruct2, yarpc.ResMeta, error)
 
+	TestOneway(
+		ctx context.Context,
+		reqMeta yarpc.ReqMeta,
+		SecondsToSleep *int32,
+	) error
+
 	TestSet(
 		ctx context.Context,
 		reqMeta yarpc.ReqMeta,
@@ -185,14 +191,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 			"testMulti":          thrift.UnaryHandlerFunc(h.TestMulti),
 			"testMultiException": thrift.UnaryHandlerFunc(h.TestMultiException),
 			"testNest":           thrift.UnaryHandlerFunc(h.TestNest),
-			"testSet":            thrift.UnaryHandlerFunc(h.TestSet),
-			"testString":         thrift.UnaryHandlerFunc(h.TestString),
-			"testStringMap":      thrift.UnaryHandlerFunc(h.TestStringMap),
-			"testStruct":         thrift.UnaryHandlerFunc(h.TestStruct),
-			"testTypedef":        thrift.UnaryHandlerFunc(h.TestTypedef),
-			"testVoid":           thrift.UnaryHandlerFunc(h.TestVoid),
+
+			"testSet":       thrift.UnaryHandlerFunc(h.TestSet),
+			"testString":    thrift.UnaryHandlerFunc(h.TestString),
+			"testStringMap": thrift.UnaryHandlerFunc(h.TestStringMap),
+			"testStruct":    thrift.UnaryHandlerFunc(h.TestStruct),
+			"testTypedef":   thrift.UnaryHandlerFunc(h.TestTypedef),
+			"testVoid":      thrift.UnaryHandlerFunc(h.TestVoid),
 		},
-		OnewayMethods: map[string]thrift.OnewayHandler{},
+		OnewayMethods: map[string]thrift.OnewayHandler{
+
+			"testOneway": thrift.OnewayHandlerFunc(h.TestOneway),
+		},
 	}
 	return thrift.BuildRegistrants(service, opts...)
 }
@@ -533,6 +543,19 @@ func (h handler) TestNest(
 		response.Body = result
 	}
 	return response, err
+}
+
+func (h handler) TestOneway(
+	ctx context.Context,
+	reqMeta yarpc.ReqMeta,
+	body wire.Value,
+) error {
+	var args thrifttest.TestOnewayArgs
+	if err := args.FromWire(body); err != nil {
+		return err
+	}
+
+	return h.impl.TestOneway(ctx, reqMeta, args.SecondsToSleep)
 }
 
 func (h handler) TestSet(

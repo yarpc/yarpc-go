@@ -44,10 +44,12 @@ const serverName = "yarpc-test"
 
 // TT is the gauntlets table test struct
 type TT struct {
-	Service  string        // thrift service name; defaults to ThriftTest
-	Function string        // name of the Go function on the client
-	Details  string        // optional extra details about what this test does
-	Give     []interface{} // arguments besides ReqMeta
+	Service  string // thrift service name; defaults to ThriftTest
+	Function string // name of the Go function on the client
+	Oneway   bool   // if the function is a oneway function
+
+	Details string        // optional extra details about what this test does
+	Give    []interface{} // arguments besides ReqMeta
 
 	Want          interface{} // expected response; nil for void
 	WantError     error       // expected error
@@ -96,6 +98,9 @@ type Config struct {
 
 	// Extra options for the Thrift client
 	ClientOptions []thrift.ClientOption
+
+	// Whether to run oneway tests
+	EnableOneway bool
 }
 
 // RunGauntlet takes an rpc object and runs the gauntlet
@@ -374,6 +379,12 @@ func RunGauntlet(t crossdock.T, c Config) {
 			Give:     []interface{}{},
 		},
 		{
+			Function:  "TestOneway",
+			Oneway:    true,
+			Give:      []interface{}{ptr.Int32(123)},
+			WantError: nil,
+		},
+		{
 			Service:  "SecondService",
 			Function: "BlahBlah",
 			Give:     []interface{}{},
@@ -387,8 +398,12 @@ func RunGauntlet(t crossdock.T, c Config) {
 	}
 
 	for _, tt := range tests {
+		if tt.Service == "" {
+			tt.Service = "ThriftTest"
+		}
+
 		switch tt.Service {
-		case "", "ThriftTest":
+		case "ThriftTest":
 			if c.Services&ThriftTest == 0 {
 				continue
 			}
@@ -400,6 +415,11 @@ func RunGauntlet(t crossdock.T, c Config) {
 
 		t.Tag("service", tt.Service)
 		t.Tag("function", tt.Function)
+
+		//only run oneway tests if specified
+		if !c.EnableOneway && tt.Oneway {
+			continue
+		}
 
 		desc := BuildDesc(tt)
 

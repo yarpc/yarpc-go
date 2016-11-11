@@ -23,6 +23,7 @@ package yarpc
 import (
 	"context"
 	"errors"
+	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
@@ -143,6 +144,11 @@ func (thriftTest) TestMultiException(ctx context.Context, reqMeta yarpc.ReqMeta,
 
 func (thriftTest) TestNest(ctx context.Context, reqMeta yarpc.ReqMeta, thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2, yarpc.ResMeta, error) {
 	return thing, resMetaFromReqMeta(reqMeta), nil
+}
+
+func (thriftTest) TestOneway(ctx context.Context, reqMeta yarpc.ReqMeta, seconds *int32) error {
+	time.Sleep(time.Duration(*seconds) * time.Second)
+	return nil
 }
 
 func (thriftTest) TestSet(ctx context.Context, reqMeta yarpc.ReqMeta, thing map[int32]struct{}) (map[int32]struct{}, yarpc.ResMeta, error) {

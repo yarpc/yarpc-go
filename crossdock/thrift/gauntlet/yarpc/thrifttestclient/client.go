@@ -125,6 +125,12 @@ type Interface interface {
 		Thing *gauntlet.Xtruct2,
 	) (*gauntlet.Xtruct2, yarpc.CallResMeta, error)
 
+	TestOneway(
+		ctx context.Context,
+		reqMeta yarpc.CallReqMeta,
+		SecondsToSleep *int32,
+	) (transport.Ack, error)
+
 	TestSet(
 		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
@@ -505,6 +511,15 @@ func (c client) TestNest(
 
 	success, err = thrifttest.TestNestHelper.UnwrapResponse(&result)
 	return
+}
+
+func (c client) TestOneway(
+	ctx context.Context,
+	reqMeta yarpc.CallReqMeta,
+	_SecondsToSleep *int32,
+) (transport.Ack, error) {
+	args := thrifttest.TestOnewayHelper.Args(_SecondsToSleep)
+	return c.c.CallOneway(ctx, reqMeta, args)
 }
 
 func (c client) TestSet(

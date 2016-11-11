@@ -88,6 +88,11 @@ func (thriftTestHandler) TestTypedef(thing gauntlet_apache.UserId) (r gauntlet_a
 	return thing, nil
 }
 
+func (thriftTestHandler) TestOneway(seconds int32) (err error) {
+	// time.Sleep(time.Duration(seconds) * time.Second)
+	return nil
+}
+
 func (thriftTestHandler) TestMapMap(hello int32) (r map[int32]map[int32]int32, err error) {
 	result := map[int32]map[int32]int32{
 		-4: {
