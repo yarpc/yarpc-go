@@ -21,7 +21,9 @@
 package http
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -114,11 +116,42 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		}
 		err = internal.SafelyCallUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
 
+	case transport.Oneway:
+		treq, err = v.ValidateOneway(ctx)
+		if err != nil {
+			return err
+		}
+		err = handleOnewayRequest(ctx, span, treq, spec.Oneway())
+
 	default:
 		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
 	}
 
 	return updateSpanWithErr(span, err)
+}
+
+func handleOnewayRequest(
+	ctx context.Context,
+	span opentracing.Span,
+	treq *transport.Request,
+	onewayHandler transport.OnewayHandler,
+) error {
+	// we will lose access to the body unless we read all the bytes before
+	// returning from the request
+	var buff bytes.Buffer
+	if _, err := io.Copy(&buff, treq.Body); err != nil {
+		return err
+	}
+	treq.Body = &buff
+
+	go func() {
+		// ensure the span lasts for length of the request in case of errors
+		defer span.Finish()
+
+		err := internal.SafelyCallOnewayHandler(ctx, onewayHandler, treq)
+		updateSpanWithErr(span, err)
+	}()
+	return nil
 }
 
 func updateSpanWithErr(span opentracing.Span, err error) error {

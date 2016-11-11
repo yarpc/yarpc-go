@@ -42,11 +42,21 @@ import (
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("http.Outbound")
 
+// this ensures the HTTP outbound implements both transport.Outbound interfaces
+var (
+	_ transport.UnaryOutbound  = (*Outbound)(nil)
+	_ transport.OnewayOutbound = (*Outbound)(nil)
+)
+
+type outboundConfig struct {
+	keepAlive time.Duration
+}
+
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
 //
 // Deprecated: create outbounds through NewPeerListOutbound instead
-func NewOutbound(urlStr string, opts ...AgentOption) transport.UnaryOutbound {
+func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 	agent := NewAgent(opts...)
 
 	urlTemplate, hp := parseURL(urlStr)
@@ -68,6 +78,7 @@ func parseURL(urlStr string) (*url.URL, string) {
 	if err != nil {
 		panic(fmt.Sprintf("invalid url: %s, err: %s", urlStr, err))
 	}
+
 	return parsedURL, parsedURL.Host
 }
 
@@ -75,34 +86,38 @@ func parseURL(urlStr string) (*url.URL, string) {
 // for getting potential downstream hosts.
 // PeerList.ChoosePeer MUST return *hostport.Peer objects.
 // PeerList.Start MUST be called before Outbound.Start
-func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) transport.UnaryOutbound {
-	return &outbound{
+func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) *Outbound {
+	return &Outbound{
 		started:     atomic.NewBool(false),
-		PeerList:    peerList,
-		URLTemplate: urlTemplate,
+		peerList:    peerList,
+		urlTemplate: urlTemplate,
 	}
 }
 
-type outbound struct {
+// Outbound is an HTTP UnaryOutbound and OnewayOutbound
+type Outbound struct {
 	started     *atomic.Bool
-	Deps        transport.Deps
-	PeerList    transport.PeerList
-	URLTemplate *url.URL
+	deps        transport.Deps
+	peerList    transport.PeerList
+	urlTemplate *url.URL
 }
 
-func (o *outbound) Start(d transport.Deps) error {
+// Start the HTTP outbound
+func (o *Outbound) Start(d transport.Deps) error {
 	if !o.started.Swap(true) {
-		o.Deps = d
+		o.deps = d
 	}
 	return nil
 }
 
-func (o *outbound) Stop() error {
+// Stop the HTTP outbound
+func (o *Outbound) Stop() error {
 	o.started.Swap(false)
 	return nil
 }
 
-func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
+// Call makes a HTTP request
+func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)
@@ -168,8 +183,70 @@ func (o *outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return nil, getErrFromResponse(response)
 }
 
-func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
-	peer, err := o.PeerList.ChoosePeer(ctx, treq)
+type ack struct {
+	time time.Time
+}
+
+func (a ack) String() string {
+	return a.time.String()
+}
+
+// CallOneway makes a oneway request
+func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+
+	peer, err := o.getPeerForRequest(ctx, treq)
+	if err != nil {
+		return nil, err
+	}
+	endRequest := peer.StartRequest()
+	defer endRequest()
+
+	req, err := o.createRequest(peer, treq)
+	if err != nil {
+		return nil, err
+	}
+
+	start := time.Now()
+	var ttl time.Duration
+
+	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	ctx, req, span := o.withOpentracingSpan(ctx, req, treq, start)
+	defer span.Finish()
+	req = o.withCoreHeaders(req, treq, ttl)
+
+	client, err := o.getHTTPClient(peer)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = client.Do(req.WithContext(ctx))
+	if err != nil {
+		// Workaround borrowed from ctxhttp until
+		// https://github.com/golang/go/issues/17711 is resolved.
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		default:
+		}
+	}
+
+	sent := time.Now()
+
+	if err != nil {
+		span.SetTag("error", true)
+		span.LogEvent(err.Error())
+		return nil, err
+	}
+
+	return ack{time: sent}, nil
+}
+
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
+	peer, err := o.peerList.ChoosePeer(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -185,15 +262,15 @@ func (o *outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, nil
 }
 
-func (o *outbound) createRequest(peer *hostport.Peer, treq *transport.Request) (*http.Request, error) {
-	newURL := *o.URLTemplate
+func (o *Outbound) createRequest(peer *hostport.Peer, treq *transport.Request) (*http.Request, error) {
+	newURL := *o.urlTemplate
 	newURL.Host = peer.HostPort()
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
-func (o *outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span) {
+func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
-	tracer := o.Deps.Tracer()
+	tracer := o.deps.Tracer()
 	var parent opentracing.SpanContext // ok to be nil
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 		parent = parentSpan.Context()
@@ -223,11 +300,13 @@ func (o *outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 	return ctx, req, span
 }
 
-func (o *outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {
+func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)
-	req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
+	if ttl != 0 {
+		req.Header.Set(TTLMSHeader, fmt.Sprintf("%d", ttl/time.Millisecond))
+	}
 	if treq.ShardKey != "" {
 		req.Header.Set(ShardKeyHeader, treq.ShardKey)
 	}
@@ -246,7 +325,7 @@ func (o *outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
-func (o *outbound) getHTTPClient(peer *hostport.Peer) (*http.Client, error) {
+func (o *Outbound) getHTTPClient(peer *hostport.Peer) (*http.Client, error) {
 	agent, ok := peer.Agent().(*Agent)
 	if !ok {
 		return nil, terrors.ErrInvalidAgentConversion{

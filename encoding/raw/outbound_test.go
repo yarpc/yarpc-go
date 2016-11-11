@@ -23,6 +23,7 @@ package raw
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io/ioutil"
 	"testing"
 
@@ -122,4 +123,108 @@ func TestCall(t *testing.T) {
 			}
 		}
 	}
+}
+
+type successAck struct{}
+
+func (a successAck) String() string {
+	return "success"
+}
+
+func TestCallOneway(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+
+	caller := "caller"
+	service := "service"
+
+	tests := []struct {
+		procedure string
+		headers   yarpc.Headers
+		body      []byte
+
+		wantErr     string
+		wantHeaders yarpc.Headers
+	}{
+		{
+			procedure: "foo",
+			body:      []byte{1, 2, 3},
+		},
+		{
+			procedure: "headers",
+			headers:   yarpc.NewHeaders().With("x", "y"),
+			body:      []byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
+		client := New(channel.MultiOutbound(caller, service,
+			transport.Outbounds{
+				Oneway: outbound,
+			}))
+
+		outbound.EXPECT().CallOneway(gomock.Any(),
+			transporttest.NewRequestMatcher(t,
+				&transport.Request{
+					Caller:    caller,
+					Service:   service,
+					Procedure: tt.procedure,
+					Headers:   transport.Headers(tt.headers),
+					Encoding:  Encoding,
+					Body:      bytes.NewReader(tt.body),
+				}),
+		).Return(&successAck{}, nil)
+
+		ack, err := client.CallOneway(
+			ctx,
+			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
+			tt.body)
+
+		if tt.wantErr != "" {
+			if assert.Error(t, err) {
+				assert.Equal(t, err.Error(), tt.wantErr)
+			}
+		} else {
+			assert.Equal(t, "success", ack.String())
+		}
+	}
+}
+
+func TestCallOnewayFailure(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+
+	caller := "caller"
+	service := "service"
+	procedure := "procedure"
+	body := []byte{1, 2, 3}
+
+	outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
+	client := New(channel.MultiOutbound(caller, service,
+		transport.Outbounds{
+			Oneway: outbound,
+		}))
+
+	outbound.EXPECT().CallOneway(gomock.Any(),
+		transporttest.NewRequestMatcher(t,
+			&transport.Request{
+				Service:   service,
+				Caller:    caller,
+				Procedure: procedure,
+				Encoding:  Encoding,
+				Body:      bytes.NewReader(body),
+			}),
+	).Return(nil, errors.New("some error"))
+
+	_, err := client.CallOneway(
+		ctx,
+		yarpc.NewReqMeta().Procedure(procedure),
+		body)
+
+	assert.Error(t, err)
 }
