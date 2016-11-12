@@ -59,6 +59,16 @@ func (_mr *_MockChannelRecorder) Caller() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Caller")
 }
 
+func (_m *MockChannel) GetOnewayOutbound() transport.OnewayOutbound {
+	ret := _m.ctrl.Call(_m, "GetOnewayOutbound")
+	ret0, _ := ret[0].(transport.OnewayOutbound)
+	return ret0
+}
+
+func (_mr *_MockChannelRecorder) GetOnewayOutbound() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetOnewayOutbound")
+}
+
 func (_m *MockChannel) GetUnaryOutbound() transport.UnaryOutbound {
 	ret := _m.ctrl.Call(_m, "GetUnaryOutbound")
 	ret0, _ := ret[0].(transport.UnaryOutbound)

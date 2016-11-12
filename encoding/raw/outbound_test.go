@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/channel"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -78,7 +79,10 @@ func TestCall(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
-		client := New(transport.IdentityChannel(caller, service, outbound))
+		client := New(channel.MultiOutbound(caller, service,
+			transport.Outbounds{
+				Unary: outbound,
+			}))
 
 		writer, responseBody := testreader.ChunkReader()
 		for _, chunk := range tt.responseBody {
