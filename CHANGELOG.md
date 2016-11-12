@@ -1,6 +1,10 @@
 Releases
 ========
 
+v0.5.0 (unreleased)
+-------------------
+
+
 v0.4.0 (2016-11-11)
 -------------------
 
@@ -36,6 +40,7 @@ This release requires regeneration of ThriftRW code.
     interface into `Outbound` and `UnaryOutbound`.
 -   Add `OnewayHandler` and `HandlerSpec` to support oneway handlers.
     Transport inbounds can choose which RPC types to accept
+
 
 v0.3.1 (2016-09-31)
 -------------------
