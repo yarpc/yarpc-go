@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/crossdock/internal"
 	"go.uber.org/yarpc/crossdock/thrift/gen-go/echo"
-	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_apache"
+	"go.uber.org/yarpc/crossdock/thrift/gen-go/gauntlet_tchannel"
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go/thrift"
@@ -93,26 +93,26 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 		{
 			Function: "TestEnum",
 			Details:  "MyNumberz",
-			Give:     []interface{}{gauntlet_apache.Numberz(gauntlet_apache.MyNumberz)},
-			Want:     gauntlet_apache.Numberz(gauntlet_apache.MyNumberz),
+			Give:     []interface{}{gauntlet_tchannel.Numberz(gauntlet_tchannel.MyNumberz)},
+			Want:     gauntlet_tchannel.Numberz(gauntlet_tchannel.MyNumberz),
 		},
 		{
 			Function: "TestEnum",
 			Details:  "NumberzThree",
-			Give:     []interface{}{gauntlet_apache.Numberz_THREE},
-			Want:     gauntlet_apache.Numberz_THREE,
+			Give:     []interface{}{gauntlet_tchannel.Numberz_THREE},
+			Want:     gauntlet_tchannel.Numberz_THREE,
 		},
 		{
 			Function: "TestEnum",
 			Details:  "unrecognized Numberz",
-			Give:     []interface{}{gauntlet_apache.Numberz(42)},
-			Want:     gauntlet_apache.Numberz(42),
+			Give:     []interface{}{gauntlet_tchannel.Numberz(42)},
+			Want:     gauntlet_tchannel.Numberz(42),
 		},
 		{
 			Function: "TestException",
 			Details:  "Xception",
 			Give:     []interface{}{"Xception"},
-			WantError: &gauntlet_apache.Xception{
+			WantError: &gauntlet_tchannel.Xception{
 				ErrorCode: ptr.Int32(1001),
 				Message:   ptr.String("Xception"),
 			},
@@ -141,12 +141,12 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 		{
 			Function: "TestInsanity",
 			Give: []interface{}{
-				&gauntlet_apache.Insanity{
-					UserMap: map[gauntlet_apache.Numberz]gauntlet_apache.UserId{
-						gauntlet_apache.Numberz_THREE: gauntlet_apache.UserId(100),
-						gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
+				&gauntlet_tchannel.Insanity{
+					UserMap: map[gauntlet_tchannel.Numberz]gauntlet_tchannel.UserId{
+						gauntlet_tchannel.Numberz_THREE: gauntlet_tchannel.UserId(100),
+						gauntlet_tchannel.Numberz(100):  gauntlet_tchannel.UserId(200),
 					},
-					Xtructs: []*gauntlet_apache.Xtruct{
+					Xtructs: []*gauntlet_tchannel.Xtruct{
 						{StringThing: ptr.String("0")},
 						{ByteThing: ptr.Int8(1)},
 						{I32Thing: ptr.Int32(2)},
@@ -154,26 +154,26 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 					},
 				},
 			},
-			Want: map[gauntlet_apache.UserId]map[gauntlet_apache.Numberz]*gauntlet_apache.Insanity{
+			Want: map[gauntlet_tchannel.UserId]map[gauntlet_tchannel.Numberz]*gauntlet_tchannel.Insanity{
 				1: {
-					gauntlet_apache.Numberz_TWO: &gauntlet_apache.Insanity{
-						UserMap: map[gauntlet_apache.Numberz]gauntlet_apache.UserId{
-							gauntlet_apache.Numberz_THREE: gauntlet_apache.UserId(100),
-							gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
+					gauntlet_tchannel.Numberz_TWO: &gauntlet_tchannel.Insanity{
+						UserMap: map[gauntlet_tchannel.Numberz]gauntlet_tchannel.UserId{
+							gauntlet_tchannel.Numberz_THREE: gauntlet_tchannel.UserId(100),
+							gauntlet_tchannel.Numberz(100):  gauntlet_tchannel.UserId(200),
 						},
-						Xtructs: []*gauntlet_apache.Xtruct{
+						Xtructs: []*gauntlet_tchannel.Xtruct{
 							{StringThing: ptr.String("0")},
 							{ByteThing: ptr.Int8(1)},
 							{I32Thing: ptr.Int32(2)},
 							{I64Thing: ptr.Int64(3)},
 						},
 					},
-					gauntlet_apache.Numberz_THREE: &gauntlet_apache.Insanity{
-						UserMap: map[gauntlet_apache.Numberz]gauntlet_apache.UserId{
-							gauntlet_apache.Numberz_THREE: gauntlet_apache.UserId(100),
-							gauntlet_apache.Numberz(100):  gauntlet_apache.UserId(200),
+					gauntlet_tchannel.Numberz_THREE: &gauntlet_tchannel.Insanity{
+						UserMap: map[gauntlet_tchannel.Numberz]gauntlet_tchannel.UserId{
+							gauntlet_tchannel.Numberz_THREE: gauntlet_tchannel.UserId(100),
+							gauntlet_tchannel.Numberz(100):  gauntlet_tchannel.UserId(200),
 						},
-						Xtructs: []*gauntlet_apache.Xtruct{
+						Xtructs: []*gauntlet_tchannel.Xtruct{
 							{StringThing: ptr.String("0")},
 							{ByteThing: ptr.Int8(1)},
 							{I32Thing: ptr.Int32(2)},
@@ -182,7 +182,7 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 					},
 				},
 				2: {
-					gauntlet_apache.Numberz_SIX: &gauntlet_apache.Insanity{},
+					gauntlet_tchannel.Numberz_SIX: &gauntlet_tchannel.Insanity{},
 				},
 			},
 		},
@@ -221,10 +221,10 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 				int32(200),
 				int64(300),
 				map[int16]string{1: "1", 2: "2", 3: "3"},
-				gauntlet_apache.Numberz_EIGHT,
-				gauntlet_apache.UserId(42),
+				gauntlet_tchannel.Numberz_EIGHT,
+				gauntlet_tchannel.UserId(42),
 			},
-			Want: &gauntlet_apache.Xtruct{
+			Want: &gauntlet_tchannel.Xtruct{
 				StringThing: ptr.String("Hello2"),
 				ByteThing:   ptr.Int8(100),
 				I32Thing:    ptr.Int32(200),
@@ -235,7 +235,7 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 			Function: "TestMultiException",
 			Details:  "Xception",
 			Give:     []interface{}{"Xception", "foo"},
-			WantError: &gauntlet_apache.Xception{
+			WantError: &gauntlet_tchannel.Xception{
 				ErrorCode: ptr.Int32(1001),
 				Message:   ptr.String("This is an Xception"),
 			},
@@ -244,24 +244,24 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 			Function: "TestMultiException",
 			Details:  "Xception2",
 			Give:     []interface{}{"Xception2", "foo"},
-			WantError: &gauntlet_apache.Xception2{
+			WantError: &gauntlet_tchannel.Xception2{
 				ErrorCode:   ptr.Int32(2002),
-				StructThing: &gauntlet_apache.Xtruct{StringThing: ptr.String("foo")},
+				StructThing: &gauntlet_tchannel.Xtruct{StringThing: ptr.String("foo")},
 			},
 		},
 		{
 			Function: "TestMultiException",
 			Details:  "no error",
 			Give:     []interface{}{"hello", "foo"},
-			Want:     &gauntlet_apache.Xtruct{StringThing: ptr.String("foo")},
+			Want:     &gauntlet_tchannel.Xtruct{StringThing: ptr.String("foo")},
 		},
 		{
 			Function: "TestNest",
 			Give: []interface{}{
-				&gauntlet_apache.Xtruct2{
+				&gauntlet_tchannel.Xtruct2{
 					ByteThing: ptr.Int8(-1),
 					I32Thing:  ptr.Int32(-1234),
-					StructThing: &gauntlet_apache.Xtruct{
+					StructThing: &gauntlet_tchannel.Xtruct{
 						StringThing: ptr.String("0"),
 						ByteThing:   ptr.Int8(1),
 						I32Thing:    ptr.Int32(2),
@@ -269,10 +269,10 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 					},
 				},
 			},
-			Want: &gauntlet_apache.Xtruct2{
+			Want: &gauntlet_tchannel.Xtruct2{
 				ByteThing: ptr.Int8(-1),
 				I32Thing:  ptr.Int32(-1234),
-				StructThing: &gauntlet_apache.Xtruct{
+				StructThing: &gauntlet_tchannel.Xtruct{
 					StringThing: ptr.String("0"),
 					ByteThing:   ptr.Int8(1),
 					I32Thing:    ptr.Int32(2),
@@ -318,14 +318,14 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 		{
 			Function: "TestStruct",
 			Give: []interface{}{
-				&gauntlet_apache.Xtruct{
+				&gauntlet_tchannel.Xtruct{
 					StringThing: ptr.String("0"),
 					ByteThing:   ptr.Int8(1),
 					I32Thing:    ptr.Int32(2),
 					I64Thing:    ptr.Int64(3),
 				},
 			},
-			Want: &gauntlet_apache.Xtruct{
+			Want: &gauntlet_tchannel.Xtruct{
 				StringThing: ptr.String("0"),
 				ByteThing:   ptr.Int8(1),
 				I32Thing:    ptr.Int32(2),
@@ -334,8 +334,8 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 		},
 		{
 			Function: "TestTypedef",
-			Give:     []interface{}{gauntlet_apache.UserId(42)},
-			Want:     gauntlet_apache.UserId(42),
+			Give:     []interface{}{gauntlet_tchannel.UserId(42)},
+			Want:     gauntlet_tchannel.UserId(42),
 		},
 		{
 			Function: "TestVoid",
@@ -385,10 +385,10 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 func buildClient(t crossdock.T, desc string, service string, client thrift.TChanClient) reflect.Value {
 	switch service {
 	case "", "ThriftTest":
-		client := gauntlet_apache.NewTChanThriftTestClient(client)
+		client := gauntlet_tchannel.NewTChanThriftTestClient(client)
 		return reflect.ValueOf(client)
 	case "SecondService":
-		client := gauntlet_apache.NewTChanSecondServiceClient(client)
+		client := gauntlet_tchannel.NewTChanSecondServiceClient(client)
 		return reflect.ValueOf(client)
 	default:
 		crossdock.Fatals(t).Fail("", "%v: unknown thrift service", desc)

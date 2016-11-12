@@ -284,7 +284,8 @@ service ThriftTest
    * Print 'testOneway(%d): done sleeping!' with secondsToSleep as '%d'
    * @param i32 secondsToSleep - the number of seconds to sleep
    */
-  oneway void testOneway(1:i32 secondsToSleep)
+  // oneway void testOneway(1:i32 secondsToSleep)
+  // thriftrw does not support oneway
 }
 
 service SecondService
