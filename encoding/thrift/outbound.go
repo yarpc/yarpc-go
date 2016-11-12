@@ -44,6 +44,7 @@ import (
 type Client interface {
 	// Call the given Thrift method.
 	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (wire.Value, yarpc.CallResMeta, error)
+	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (transport.Ack, error)
 }
 
 // Config contains the configuration for the Client.
@@ -162,6 +163,17 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 		return wire.Value{}, nil, encoding.ResponseBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
+}
+
+func (c thriftClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (transport.Ack, error) {
+	out := c.ch.GetOnewayOutbound()
+
+	treq, _, err := c.buildTransportRequest(reqMeta, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	return out.CallOneway(ctx, treq)
 }
 
 func (c thriftClient) buildTransportRequest(

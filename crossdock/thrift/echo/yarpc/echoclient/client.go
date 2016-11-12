@@ -65,6 +65,7 @@ func (c client) Echo(
 	reqMeta yarpc.CallReqMeta,
 	_Ping *echo.Ping,
 ) (success *echo.Pong, resMeta yarpc.CallResMeta, err error) {
+
 	args := echo2.EchoHelper.Args(_Ping)
 
 	var body wire.Value

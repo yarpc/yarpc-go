@@ -25,12 +25,11 @@ package keyvalueserver
 
 import (
 	"context"
-
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/service/keyvalue"
+	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the KeyValue service.
@@ -62,6 +61,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 			"getValue": thrift.UnaryHandlerFunc(h.GetValue),
 			"setValue": thrift.UnaryHandlerFunc(h.SetValue),
 		},
+		OnewayMethods: map[string]thrift.OnewayHandler{},
 	}
 	return thrift.BuildRegistrants(service, opts...)
 }
