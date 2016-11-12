@@ -1,7 +1,7 @@
 Releases
 ========
 
-v0.4.0 (unreleased)
+v0.4.0 (2016-11-11)
 -------------------
 
 This release requires regeneration of ThriftRW code.
