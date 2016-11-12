@@ -47,7 +47,7 @@ package <$pkgname>
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sserver" .Parent.ImportPath (lower .Parent.Name)>
+		<$parentPath := printf "%s/yarpc/%sserver" .ParentModule.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -62,8 +62,6 @@ type Interface interface {
 		<end>
 	<end>
 }
-
-<$service := .Service>
 
 // New prepares an implementation of the <.Service.Name> service for
 // registration.
@@ -86,9 +84,11 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 
 type handler struct{ impl Interface }
 
+<$service := .Service>
+<$module := .Module>
 <range .Service.Functions>
+<$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
-<$servicePackage := import $service.ImportPath>
 <$wire := import "go.uber.org/thriftrw/wire">
 
 <if .OneWay>
@@ -97,7 +97,7 @@ func (h handler) <.Name>(
 	reqMeta <$yarpc>.ReqMeta,
 	body <$wire>.Value,
 ) error {
-	var args <$servicePackage>.<.Name>Args
+	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (h handler) <.Name>(
 	reqMeta <$yarpc>.ReqMeta,
 	body <$wire>.Value,
 ) (<$thrift>.Response, error) {
-	var args <$servicePackage>.<.Name>Args
+	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
 		return <$thrift>.Response{}, err
 	}
@@ -122,7 +122,7 @@ func (h handler) <.Name>(
 	<end>
 
 	hadError := err != nil
-	result, err := <$servicePackage>.<.Name>Helper.WrapResponse(<if .ReturnType>success,<end> err)
+	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> err)
 
 	var response <$thrift>.Response
 	if err == nil {
@@ -151,7 +151,7 @@ package <$pkgname>
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sclient" .Parent.ImportPath (lower .Parent.Name)>
+		<$parentPath := printf "%s/yarpc/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -188,21 +188,21 @@ func init() {
 type client struct{ c <$thrift>.Client }
 
 <$service := .Service>
+<$module := .Module>
 <range .Service.Functions>
-
-<$servicePackage := import $service.ImportPath>
+<$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
 func (c client) <.Name>(
 	ctx <$context>.Context,
 	reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
 <if .OneWay>) (<$transport>.Ack, error) {
-	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
+	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 	return c.c.CallOneway(ctx, reqMeta, args)
 }
 <else>) (<if .ReturnType>success <formatType .ReturnType>,<end> resMeta <$yarpc>.CallResMeta, err error) {
 	<$wire := import "go.uber.org/thriftrw/wire">
-	args := <$servicePackage>.<.Name>Helper.Args(<range .Arguments>_<.Name>, <end>)
+	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	var body <$wire>.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
@@ -210,12 +210,12 @@ func (c client) <.Name>(
 		return
 	}
 
-	var result <$servicePackage>.<.Name>Result
+	var result <$prefix>Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	<if .ReturnType>success, <end>err = <$servicePackage>.<.Name>Helper.UnwrapResponse(&result)
+	<if .ReturnType>success, <end>err = <$prefix>Helper.UnwrapResponse(&result)
 	return
 }
 <end>
@@ -234,15 +234,26 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 		service := req.Services[serviceID]
 		module := req.Modules[service.ModuleID]
 
-		var parent *api.Service
+		var (
+			parent       *api.Service
+			parentModule *api.Module
+		)
 		if service.ParentID != nil {
 			parent = req.Services[*service.ParentID]
+			parentModule = req.Modules[parent.ModuleID]
 		}
 
 		templateData := struct {
-			Service *api.Service
-			Parent  *api.Service
-		}{Service: service, Parent: parent}
+			Module       *api.Module
+			Service      *api.Service
+			Parent       *api.Service
+			ParentModule *api.Module
+		}{
+			Module:       module,
+			Service:      service,
+			Parent:       parent,
+			ParentModule: parentModule,
+		}
 
 		// kv.thrift => .../kv/yarpc
 		baseDir := filepath.Join(module.Directory, "yarpc")

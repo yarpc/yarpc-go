@@ -12,7 +12,7 @@ import:
 - package: github.com/uber-go/atomic
   version: ^1
 - package: go.uber.org/thriftrw
-  version: ~0.4
+  version: ~0.5
 
 - package: github.com/crossdock/crossdock-go
   version: master

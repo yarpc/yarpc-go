@@ -26,16 +26,16 @@ import (
 	"log"
 	"time"
 
-	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello"
-	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello/yarpc/helloclient"
-	"go.uber.org/yarpc/examples/thrift/hello/thrift/hello/yarpc/helloserver"
+	"go.uber.org/yarpc/examples/thrift/hello/echo"
+	"go.uber.org/yarpc/examples/thrift/hello/echo/yarpc/helloclient"
+	"go.uber.org/yarpc/examples/thrift/hello/echo/yarpc/helloserver"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 )
 
-//go:generate thriftrw --out thrift --plugin=yarpc hello.thrift
+//go:generate thriftrw --plugin=yarpc echo.thrift
 
 func main() {
 
@@ -67,20 +67,20 @@ func main() {
 
 type helloHandler struct{}
 
-func (h helloHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, echo *hello.EchoRequest) (*hello.EchoResponse, yarpc.ResMeta, error) {
-	return &hello.EchoResponse{Message: echo.Message, Count: echo.Count + 1},
+func (h helloHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, e *echo.EchoRequest) (*echo.EchoResponse, yarpc.ResMeta, error) {
+	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1},
 		yarpc.NewResMeta().Headers(reqMeta.Headers()),
 		nil
 }
 
-func call(client helloclient.Interface, message string) (*hello.EchoResponse, yarpc.Headers) {
+func call(client helloclient.Interface, message string) (*echo.EchoResponse, yarpc.Headers) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	resBody, resMeta, err := client.Echo(
 		ctx,
 		yarpc.NewReqMeta().Headers(yarpc.NewHeaders().With("from", "self")),
-		&hello.EchoRequest{Message: message, Count: 1},
+		&echo.EchoRequest{Message: message, Count: 1},
 	)
 	if err != nil {
 		log.Fatal(err)

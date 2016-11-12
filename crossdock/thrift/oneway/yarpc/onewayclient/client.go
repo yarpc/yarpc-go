@@ -26,7 +26,7 @@ package onewayclient
 import (
 	"context"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/crossdock/thrift/oneway/service/oneway"
+	"go.uber.org/yarpc/crossdock/thrift/oneway"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 )
@@ -63,6 +63,6 @@ func (c client) Echo(
 	reqMeta yarpc.CallReqMeta,
 	_Token *string,
 ) (transport.Ack, error) {
-	args := oneway.EchoHelper.Args(_Token)
+	args := oneway.Oneway_Echo_Helper.Args(_Token)
 	return c.c.CallOneway(ctx, reqMeta, args)
 }

@@ -21,109 +21,78 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package oneway
 
 import (
-	"errors"
 	"fmt"
 	"go.uber.org/thriftrw/wire"
 	"strings"
 )
 
-type Ping struct {
-	Beep string `json:"beep"`
+type Oneway_Echo_Args struct {
+	Token *string `json:"token,omitempty"`
 }
 
-func (v *Ping) ToWire() (wire.Value, error) {
+func (v *Oneway_Echo_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
-	w, err = wire.NewValueString(v.Beep), error(nil)
-	if err != nil {
-		return w, err
+	if v.Token != nil {
+		w, err = wire.NewValueString(*(v.Token)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
 	}
-	fields[i] = wire.Field{ID: 1, Value: w}
-	i++
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func (v *Ping) FromWire(w wire.Value) error {
+func (v *Oneway_Echo_Args) FromWire(w wire.Value) error {
 	var err error
-	beepIsSet := false
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TBinary {
-				v.Beep, err = field.Value.GetString(), error(nil)
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Token = &x
 				if err != nil {
 					return err
 				}
-				beepIsSet = true
 			}
 		}
-	}
-	if !beepIsSet {
-		return errors.New("field Beep of Ping is required")
 	}
 	return nil
 }
 
-func (v *Ping) String() string {
+func (v *Oneway_Echo_Args) String() string {
 	var fields [1]string
 	i := 0
-	fields[i] = fmt.Sprintf("Beep: %v", v.Beep)
-	i++
-	return fmt.Sprintf("Ping{%v}", strings.Join(fields[:i], ", "))
-}
-
-type Pong struct {
-	Boop string `json:"boop"`
-}
-
-func (v *Pong) ToWire() (wire.Value, error) {
-	var (
-		fields [1]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-	w, err = wire.NewValueString(v.Boop), error(nil)
-	if err != nil {
-		return w, err
+	if v.Token != nil {
+		fields[i] = fmt.Sprintf("Token: %v", *(v.Token))
+		i++
 	}
-	fields[i] = wire.Field{ID: 1, Value: w}
-	i++
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+	return fmt.Sprintf("Oneway_Echo_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-func (v *Pong) FromWire(w wire.Value) error {
-	var err error
-	boopIsSet := false
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 1:
-			if field.Value.Type() == wire.TBinary {
-				v.Boop, err = field.Value.GetString(), error(nil)
-				if err != nil {
-					return err
-				}
-				boopIsSet = true
-			}
-		}
-	}
-	if !boopIsSet {
-		return errors.New("field Boop of Pong is required")
-	}
-	return nil
+func (v *Oneway_Echo_Args) MethodName() string {
+	return "echo"
 }
 
-func (v *Pong) String() string {
-	var fields [1]string
-	i := 0
-	fields[i] = fmt.Sprintf("Boop: %v", v.Boop)
-	i++
-	return fmt.Sprintf("Pong{%v}", strings.Join(fields[:i], ", "))
+func (v *Oneway_Echo_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.OneWay
+}
+
+var Oneway_Echo_Helper = struct {
+	Args func(token *string) *Oneway_Echo_Args
+}{}
+
+func init() {
+	Oneway_Echo_Helper.Args = func(token *string) *Oneway_Echo_Args {
+		return &Oneway_Echo_Args{Token: token}
+	}
 }
