@@ -32,9 +32,12 @@ import (
 
 func TestValidator(t *testing.T) {
 	tests := []struct {
-		req         *transport.Request
-		ttl         time.Duration
-		ttlString   string // set to try parseTTL
+		req           *transport.Request
+		transportType transport.Type
+
+		ttl       time.Duration
+		ttlString string // set to try parseTTL
+
 		wantErr     error
 		wantMessage string
 	}{
@@ -55,7 +58,6 @@ func TestValidator(t *testing.T) {
 				Service:   "service",
 				Procedure: "hello",
 			},
-			ttl: time.Second,
 			wantErr: missingParametersError{
 				Parameters: []string{"encoding"},
 			},
@@ -67,7 +69,6 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			ttl: time.Second,
 			wantErr: missingParametersError{
 				Parameters: []string{"caller name"},
 			},
@@ -79,7 +80,6 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			ttl: time.Second,
 			wantErr: missingParametersError{
 				Parameters: []string{"service name"},
 			},
@@ -91,7 +91,6 @@ func TestValidator(t *testing.T) {
 				Service:  "service",
 				Encoding: "raw",
 			},
-			ttl: time.Second,
 			wantErr: missingParametersError{
 				Parameters: []string{"procedure"},
 			},
@@ -104,6 +103,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
+			transportType: transport.Unary,
 			wantErr: missingParametersError{
 				Parameters: []string{"TTL"},
 			},
@@ -113,10 +113,10 @@ func TestValidator(t *testing.T) {
 			req: &transport.Request{},
 			wantErr: missingParametersError{
 				Parameters: []string{
-					"service name", "procedure", "caller name", "TTL", "encoding",
+					"service name", "procedure", "caller name", "encoding",
 				},
 			},
-			wantMessage: "missing service name, procedure, caller name, TTL, and encoding",
+			wantMessage: "missing service name, procedure, caller name, and encoding",
 		},
 		{
 			req: &transport.Request{
@@ -125,7 +125,8 @@ func TestValidator(t *testing.T) {
 				Encoding:  "raw",
 				Procedure: "hello",
 			},
-			ttlString: "-1000",
+			transportType: transport.Unary,
+			ttlString:     "-1000",
 			wantErr: invalidTTLError{
 				Service:   "service",
 				Procedure: "hello",
@@ -140,7 +141,8 @@ func TestValidator(t *testing.T) {
 				Encoding:  "raw",
 				Procedure: "hello",
 			},
-			ttlString: "not an integer",
+			transportType: transport.Unary,
+			ttlString:     "not an integer",
 			wantErr: invalidTTLError{
 				Service:   "service",
 				Procedure: "hello",
@@ -154,17 +156,26 @@ func TestValidator(t *testing.T) {
 		v := Validator{Request: tt.req}
 
 		ctx := context.Background()
-		if tt.ttl != 0 {
-			var cancel func()
-			ctx, cancel = context.WithTimeout(ctx, tt.ttl)
-			defer cancel()
-		}
-
-		if tt.ttlString != "" {
-			v.ParseTTL(ctx, tt.ttlString)
-		}
-
 		_, err := v.Validate(ctx)
+
+		if err == nil && tt.transportType == transport.Oneway {
+			_, err = v.ValidateOneway(ctx)
+		} else if err == nil { // default to unary
+			var cancel func()
+
+			if tt.ttl != 0 {
+				ctx, cancel = context.WithTimeout(ctx, tt.ttl)
+				defer cancel()
+			}
+
+			if tt.ttlString != "" {
+				ctx, cancel = v.ParseTTL(ctx, tt.ttlString)
+				defer cancel()
+			}
+
+			_, err = v.ValidateUnary(ctx)
+		}
+
 		if tt.wantErr != nil {
 			assert.Equal(t, tt.wantErr, err)
 			if tt.wantMessage != "" && err != nil {
