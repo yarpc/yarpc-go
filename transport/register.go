@@ -58,14 +58,6 @@ type Registry interface {
 	// have been registered so far.
 	ServiceProcedures() []ServiceProcedure
 
-	// Gets the handler for the given service, procedure tuple. An
-	// UnrecognizedProcedureError will be returned if the handler does not
-	// exist.
-	//
-	// service may be empty to indicate that the default service name should
-	// be used.
-	GetHandlerSpec(service, procedure string) (HandlerSpec, error)
-
 	// Choose decides a handler based on a context and transport
 	// request metadata.  This is the interface for use in inbound transports
 	// to select a handler for a request.
