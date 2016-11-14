@@ -1,8 +1,8 @@
-hash: 7da33fc2fc71a9de32d820128f0fca3bbc3c15c7f19c0746341b5a508110e2f5
-updated: 2016-11-14T15:36:15.524111701-08:00
+hash: d07a774c552cf67c25cf338fd6bf8e6eacf7597f8baaa417b01d141b85a13ab4
+updated: 2016-11-14T15:42:41.962533657-08:00
 imports:
 - name: github.com/apache/thrift
-  version: fd832242bba9d4eaba71c7c08e8eed440b106f98
+  version: 4337983d157dd7041c17340107682f26d2c0c795
   subpackages:
   - lib/go/thrift
 - name: github.com/crossdock/crossdock-go
@@ -62,7 +62,7 @@ imports:
 - name: go.uber.org/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: go.uber.org/thriftrw
-  version: 0e820a1d58079f74827407498fb63d746f2f533d
+  version: c98a13058faa5dd41584a77221a268d2c72d832d
   subpackages:
   - envelope
   - internal/envelope
@@ -70,6 +70,7 @@ imports:
   - internal/frame
   - internal/goast
   - internal/multiplex
+  - internal/semver
   - plugin
   - plugin/api
   - protocol
@@ -78,7 +79,7 @@ imports:
   - version
   - wire
 - name: golang.org/x/net
-  version: 0e2717dc3cc05907dc23096ef3a9086ea93f567f
+  version: 0dd7c8d7c3a523ec6fc7c7e0e4210469e15e833e
   subpackages:
   - context
   - context/ctxhttp
