@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/registrytest"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -73,7 +74,10 @@ func TestHandlerErrors(t *testing.T) {
 		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 		tchHandler := handler{Registry: registry}
 
-		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
+		registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+			WithService("service").
+			WithProcedure("hello"),
+		).Return(spec, nil)
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t),
@@ -335,8 +339,10 @@ func TestHandlerFailures(t *testing.T) {
 		tt.sendCall.resp = resp
 
 		registry := transporttest.NewMockRegistry(mockCtrl)
-		registry.EXPECT().GetHandlerSpec(tt.sendCall.service, tt.sendCall.method).
-			Return(spec, nil).AnyTimes()
+		registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+			WithService(tt.sendCall.service).
+			WithProcedure(tt.sendCall.method),
+		).Return(spec, nil).AnyTimes()
 
 		handler{Registry: registry}.handle(ctx, tt.sendCall)
 		err := resp.systemErr
