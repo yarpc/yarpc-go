@@ -28,8 +28,8 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
-	"github.com/uber-go/atomic"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/atomic"
 )
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("tchannel.Outbound")

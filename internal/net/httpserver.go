@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/uber-go/atomic"
+	"go.uber.org/atomic"
 )
 
 var (
