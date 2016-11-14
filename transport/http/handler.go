@@ -98,7 +98,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		return err
 	}
 
-	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
+	spec, err := h.Registry.Choose(ctx, treq)
 	if err != nil {
 		return updateSpanWithErr(span, err)
 	}

@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/registrytest"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -135,7 +136,11 @@ func TestInboundMux(t *testing.T) {
 	defer o.Stop()
 
 	spec := transport.NewUnaryHandlerSpec(h)
-	reg.EXPECT().GetHandlerSpec("bar", "hello").Return(spec, nil)
+	reg.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+		WithCaller("foo").
+		WithService("bar").
+		WithProcedure("hello"),
+	).Return(spec, nil)
 
 	h.EXPECT().Handle(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
