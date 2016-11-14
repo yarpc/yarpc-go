@@ -80,6 +80,13 @@ func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transp
 	}
 }
 
+func (r staticRegistry) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+	if req.Procedure == testProcedure {
+		return transport.NewUnaryHandlerSpec(r.Handler), nil
+	}
+	return transport.NewOnewayHandlerSpec(r.OnewayHandler), nil
+}
+
 // handlerFunc wraps a function into a transport.Registry
 type unaryHandlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 

@@ -21,6 +21,7 @@
 package transport
 
 import (
+	"context"
 	"sort"
 
 	"go.uber.org/yarpc/internal/errors"
@@ -64,6 +65,11 @@ type Registry interface {
 	// service may be empty to indicate that the default service name should
 	// be used.
 	GetHandlerSpec(service, procedure string) (HandlerSpec, error)
+
+	// Choose decides a handler based on a context and transport
+	// request metadata.  This is the interface for use in inbound transports
+	// to select a handler for a request.
+	Choose(ctx context.Context, req *Request) (HandlerSpec, error)
 }
 
 // Registrar provides access to a collection of procedures and their handlers.
@@ -132,6 +138,12 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 		Service:   service,
 		Procedure: procedure,
 	}
+}
+
+// Choose retrives the HandlerSpec for the service and procedure noted on the
+// transport request, or returns an error.
+func (m MapRegistry) Choose(ctx context.Context, req *Request) (HandlerSpec, error) {
+	return m.GetHandlerSpec(req.Service, req.Procedure)
 }
 
 type byServiceProcedure []ServiceProcedure
