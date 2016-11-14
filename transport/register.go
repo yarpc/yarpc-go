@@ -115,9 +115,9 @@ func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
 	return procs
 }
 
-// GetHandlerSpec retrieves the HandlerSpec for the given Procedure or returns an
+// ChooseProcedure retrieves the HandlerSpec for the given Procedure or returns an
 // error.
-func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, error) {
+func (m MapRegistry) ChooseProcedure(service, procedure string) (HandlerSpec, error) {
 	if service == "" {
 		service = m.defaultService
 	}
@@ -135,7 +135,7 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 // Choose retrives the HandlerSpec for the service and procedure noted on the
 // transport request, or returns an error.
 func (m MapRegistry) Choose(ctx context.Context, req *Request) (HandlerSpec, error) {
-	return m.GetHandlerSpec(req.Service, req.Procedure)
+	return m.ChooseProcedure(req.Service, req.Procedure)
 }
 
 type byServiceProcedure []ServiceProcedure

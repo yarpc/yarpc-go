@@ -72,14 +72,6 @@ func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	return []transport.ServiceProcedure{{Service: testService, Procedure: testProcedure}}
 }
 
-func (r staticRegistry) GetHandlerSpec(service string, procedure string) (transport.HandlerSpec, error) {
-	if procedure == testProcedure {
-		return transport.NewUnaryHandlerSpec(r.Handler), nil
-	} else {
-		return transport.NewOnewayHandlerSpec(r.OnewayHandler), nil
-	}
-}
-
 func (r staticRegistry) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
 	if req.Procedure == testProcedure {
 		return transport.NewUnaryHandlerSpec(r.Handler), nil
