@@ -1,5 +1,5 @@
-hash: 29fb0512ba9ccdda4f2aa1b0f0566089fc3c2a0a251e83162e406c2bc1ab6698
-updated: 2016-11-11T17:07:08.003028758-08:00
+hash: 7da33fc2fc71a9de32d820128f0fca3bbc3c15c7f19c0746341b5a508110e2f5
+updated: 2016-11-14T15:36:15.524111701-08:00
 imports:
 - name: github.com/apache/thrift
   version: fd832242bba9d4eaba71c7c08e8eed440b106f98
@@ -60,7 +60,7 @@ imports:
   - trand
   - typed
 - name: go.uber.org/atomic
-  version: 9e99152552a6ce13fa3b2ce4a9c4fb117cca4506
+  version: 0c9e689d64f004564b79d9a663634756df322902
 - name: go.uber.org/thriftrw
   version: 0e820a1d58079f74827407498fb63d746f2f533d
   subpackages:
@@ -83,7 +83,7 @@ imports:
   - context
   - context/ctxhttp
 - name: golang.org/x/tools
-  version: fc2b74b64ef08c618146ebc92062f6499db5314c
+  version: 1529f889eb4b594d1f047f2fb8d5b3cc85c8f006
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/yaml.v2

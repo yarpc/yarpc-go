@@ -37,7 +37,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/uber-go/atomic"
+	"go.uber.org/atomic"
 )
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("http.Outbound")
