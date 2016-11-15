@@ -42,6 +42,9 @@ This release requires regeneration of ThriftRW code.
     interface into `Outbound` and `UnaryOutbound`.
 -   Add `OnewayHandler` and `HandlerSpec` to support oneway handlers.
     Transport inbounds can choose which RPC types to accept
+-   The package `yarpctest.recorder` can be used to record/replay requests
+    during testing. A command line flag (`--recorder=replay|append|overwrite`)
+    is used to control the mode during the execution of the test.
 
 
 v0.3.1 (2016-09-31)
