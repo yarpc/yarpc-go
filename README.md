@@ -14,7 +14,7 @@ If using [Glide](https://github.com/Masterminds/glide), *at least* `glide versio
 $ glide --version
 glide version 0.12.2
 
-$ glide get 'go.uber.org/yarpc#~0.3'
+$ glide get 'go.uber.org/yarpc#~0.4'
 ```
 
 ## Development Status: Alpha
