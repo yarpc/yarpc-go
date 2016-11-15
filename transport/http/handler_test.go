@@ -32,6 +32,7 @@ import (
 
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/registrytest"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -55,7 +56,10 @@ func TestHandlerSucces(t *testing.T) {
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 	spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-	registry.EXPECT().GetHandlerSpec("curly", "nyuck").Return(spec, nil)
+	registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+		WithService("curly").
+		WithProcedure("nyuck"),
+	).Return(spec, nil)
 
 	rpcHandler.EXPECT().Handle(
 		transporttest.NewContextMatcher(t,
@@ -121,7 +125,10 @@ func TestHandlerHeaders(t *testing.T) {
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-		registry.EXPECT().GetHandlerSpec("service", "hello").Return(spec, nil)
+		registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+			WithService("service").
+			WithProcedure("hello"),
+		).Return(spec, nil)
 
 		httpHandler := handler{Registry: registry}
 
@@ -244,7 +251,10 @@ func TestHandlerFailures(t *testing.T) {
 			// since TTL is checked after we've determined the transport type, if we have an
 			// error with TTL it will be discovered after we read from the registry
 			spec := transport.NewUnaryHandlerSpec(panickedHandler{})
-			reg.EXPECT().GetHandlerSpec(service, procedure).Return(spec, nil)
+			reg.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+				WithService(service).
+				WithProcedure(procedure),
+			).Return(spec, nil)
 		}
 
 		h := handler{Registry: reg}
@@ -293,7 +303,10 @@ func TestHandlerInternalFailure(t *testing.T) {
 	registry := transporttest.NewMockRegistry(mockCtrl)
 	spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-	registry.EXPECT().GetHandlerSpec("fake", "hello").Return(spec, nil)
+	registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+		WithService("fake").
+		WithProcedure("hello"),
+	).Return(spec, nil)
 
 	httpHandler := handler{Registry: registry}
 	httpResponse := httptest.NewRecorder()

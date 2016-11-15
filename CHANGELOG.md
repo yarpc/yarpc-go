@@ -5,6 +5,13 @@ v0.5.0 (unreleased)
 -------------------
 
 -   Upgrade to ThriftRW 1.0.
+-   **Breaking**: A detail of inbound transports has changed.
+    Starting an inbound transport accepts a ServiceDetail, including
+    the service name and a Registry. The Registry now must
+    implement `Choose(context.Context, transport.Request) (HandlerSpec, error)`
+    instead of `GetHandler(service, procedure string) (HandlerSpec, error)`.
+    Note that in the prior release, `Handler` became `HandleSpec` to
+    accommodate oneway handlers.
 
 
 v0.4.0 (2016-11-11)

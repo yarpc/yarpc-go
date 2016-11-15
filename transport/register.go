@@ -21,6 +21,7 @@
 package transport
 
 import (
+	"context"
 	"sort"
 
 	"go.uber.org/yarpc/internal/errors"
@@ -57,13 +58,11 @@ type Registry interface {
 	// have been registered so far.
 	ServiceProcedures() []ServiceProcedure
 
-	// Gets the handler for the given service, procedure tuple. An
-	// UnrecognizedProcedureError will be returned if the handler does not
-	// exist.
-	//
-	// service may be empty to indicate that the default service name should
-	// be used.
-	GetHandlerSpec(service, procedure string) (HandlerSpec, error)
+	// Choose decides a handler based on a context and transport request
+	// metadata, or returns an UnrecognizedProcedureError if no handler exists
+	// for the request.  This is the interface for use in inbound transports to
+	// select a handler for a request.
+	Choose(ctx context.Context, req *Request) (HandlerSpec, error)
 }
 
 // Registrar provides access to a collection of procedures and their handlers.
@@ -117,9 +116,9 @@ func (m MapRegistry) ServiceProcedures() []ServiceProcedure {
 	return procs
 }
 
-// GetHandlerSpec retrieves the HandlerSpec for the given Procedure or returns an
+// ChooseProcedure retrieves the HandlerSpec for the given Procedure or returns an
 // error.
-func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, error) {
+func (m MapRegistry) ChooseProcedure(service, procedure string) (HandlerSpec, error) {
 	if service == "" {
 		service = m.defaultService
 	}
@@ -132,6 +131,12 @@ func (m MapRegistry) GetHandlerSpec(service, procedure string) (HandlerSpec, err
 		Service:   service,
 		Procedure: procedure,
 	}
+}
+
+// Choose retrives the HandlerSpec for the service and procedure noted on the
+// transport request, or returns an error.
+func (m MapRegistry) Choose(ctx context.Context, req *Request) (HandlerSpec, error) {
+	return m.ChooseProcedure(req.Service, req.Procedure)
 }
 
 type byServiceProcedure []ServiceProcedure

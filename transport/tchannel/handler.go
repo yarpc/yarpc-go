@@ -152,7 +152,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	spec, err := h.Registry.GetHandlerSpec(treq.Service, treq.Procedure)
+	spec, err := h.Registry.Choose(ctx, treq)
 	if err != nil {
 		return err
 	}
