@@ -58,9 +58,10 @@ type Registry interface {
 	// have been registered so far.
 	ServiceProcedures() []ServiceProcedure
 
-	// Choose decides a handler based on a context and transport
-	// request metadata.  This is the interface for use in inbound transports
-	// to select a handler for a request.
+	// Choose decides a handler based on a context and transport request
+	// metadata, or returns an UnrecognizedProcedureError if no handler exists
+	// for the request.  This is the interface for use in inbound transports to
+	// select a handler for a request.
 	Choose(ctx context.Context, req *Request) (HandlerSpec, error)
 }
 
