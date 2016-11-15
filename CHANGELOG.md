@@ -4,6 +4,8 @@ Releases
 v0.5.0 (unreleased)
 -------------------
 
+-   Upgrade to ThriftRW 1.0.
+
 
 v0.4.0 (2016-11-11)
 -------------------
