@@ -25,8 +25,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/crossdock/crossdock-go/assert"
 	"go.uber.org/yarpc/transport"
+
+	"github.com/crossdock/crossdock-go/assert"
 )
 
 // PeerListAction is an interface for defining actions that can be applied
