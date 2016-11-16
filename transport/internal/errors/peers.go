@@ -102,7 +102,8 @@ func (e ErrNoPeerToSelect) Error() string {
 	return fmt.Sprintf("could not find a peer to select in peerlist %s", string(e))
 }
 
-// ErrPeerAlreadyInList is used when a peerlist attempts to add a peer that is already in the list
+// ErrPeerAlreadyInList is returned to peer providers if the
+// peerlist is already tracking a peer for the added identifier
 type ErrPeerAlreadyInList struct {
 	Peer transport.Peer
 }
@@ -111,7 +112,8 @@ func (e ErrPeerAlreadyInList) Error() string {
 	return fmt.Sprintf("can't add peer (%v) because is already in peerlist", e.Peer)
 }
 
-// ErrPeerNotInList is used when a peerlist attempts to remove a peer that is not in the list
+// ErrPeerNotInList is returned to peer providers if the peerlist
+// is not tracking the peer to remove for a given identifier
 type ErrPeerNotInList struct {
 	PeerIdentifier transport.PeerIdentifier
 }

@@ -1,4 +1,4 @@
-package peerlist
+package roundrobin
 
 import (
 	"fmt"
@@ -427,7 +427,7 @@ func TestRoundRobinList(t *testing.T) {
 			s.pids = createPeerIDs([]string{"1", "2"})
 			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
 
-			s.pl, _ = NewRoundRobin(s.pids, s.agent)
+			s.pl, _ = New(s.pids, s.agent)
 
 			duplicatePid := s.pids[0]
 			s.agent.EXPECT().RetainPeer(duplicatePid, s.pl).Return(s.expectedPeers[0], nil)
@@ -461,7 +461,7 @@ func TestRoundRobinList(t *testing.T) {
 			s.pids = createPeerIDs([]string{"1", "2"})
 			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
 
-			s.pl, _ = NewRoundRobin(s.pids, s.agent)
+			s.pl, _ = New(s.pids, s.agent)
 
 			newPid := createPeerIDs([]string{"3"})[0]
 			expectedError := errors.ErrInvalidPeerType{
@@ -497,7 +497,7 @@ func TestRoundRobinList(t *testing.T) {
 			s.pids = createPeerIDs([]string{"1", "2"})
 			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
 
-			s.pl, _ = NewRoundRobin(s.pids, s.agent)
+			s.pl, _ = New(s.pids, s.agent)
 
 			removedPeerID := createPeerIDs([]string{"3"})[0]
 
@@ -531,7 +531,7 @@ func TestRoundRobinList(t *testing.T) {
 			peers := createPeers(mockCtrl, s.agent, s.pids)
 			s.expectedPeers = []transport.Peer{peers[0]}
 
-			s.pl, _ = NewRoundRobin(s.pids, s.agent)
+			s.pl, _ = New(s.pids, s.agent)
 
 			removedPid := s.pids[1]
 			expectedError := errors.ErrAgentHasNoReferenceToPeer{
@@ -562,7 +562,7 @@ func TestRoundRobinList(t *testing.T) {
 			var err error
 			pl = tt.pl
 			if pl == nil {
-				pl, err = NewRoundRobin(tt.pids, tt.agent)
+				pl, err = New(tt.pids, tt.agent)
 				assert.Equal(t, tt.expectedCreateErr, err)
 
 				if pl == nil {

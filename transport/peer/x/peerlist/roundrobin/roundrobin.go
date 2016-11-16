@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package roundrobin
 
 import (
 	"context"
@@ -29,14 +29,14 @@ import (
 	"github.com/uber-go/atomic"
 )
 
-// NewRoundRobin creates a new round robin PeerList using
-func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin, error) {
+// New creates a new round robin PeerList using
+func New(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin, error) {
 	rr := &RoundRobin{
 		pr:    NewPeerRing(len(peerIDs)),
 		agent: agent,
 	}
 
-	err := rr.addMulti(peerIDs)
+	err := rr.addAll(peerIDs)
 	return rr, err
 }
 
@@ -47,7 +47,7 @@ type RoundRobin struct {
 	started atomic.Bool
 }
 
-func (pl *RoundRobin) addMulti(peerIDs []transport.PeerIdentifier) error {
+func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
 	errs := errors.Errors{}
 
 	for _, peerID := range peerIDs {

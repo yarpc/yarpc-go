@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package roundrobin
 
 import (
 	"container/ring"
@@ -28,10 +28,10 @@ import (
 	"go.uber.org/yarpc/transport/internal/errors"
 )
 
-// NewPeerRing creates a new PeerRing with initial size of "length"
-func NewPeerRing(length int) *PeerRing {
+// NewPeerRing creates a new PeerRing with an initial capacity
+func NewPeerRing(capacity int) *PeerRing {
 	return &PeerRing{
-		peerToNode: make(map[string]*peerRingNode, length),
+		peerToNode: make(map[string]*peerRingNode, capacity),
 	}
 }
 
@@ -65,7 +65,7 @@ func (pr *PeerRing) Add(peer transport.Peer) error {
 		pr.nextNode = newNode
 	} else {
 		// Push the node to the ring
-		pr.nextNode.push(newNode)
+		pr.nextNode.pushBefore(newNode)
 	}
 	return nil
 }
@@ -170,7 +170,7 @@ func (prn *peerRingNode) pop() {
 	prn.Prev().Unlink(1)
 }
 
-func (prn *peerRingNode) push(newPR *peerRingNode) {
+func (prn *peerRingNode) pushBefore(newPR *peerRingNode) {
 	prn.Prev().Link(newPR.Ring)
 }
 
