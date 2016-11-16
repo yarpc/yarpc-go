@@ -23,7 +23,9 @@ package internal
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/transport"
 
@@ -60,15 +62,26 @@ func (a StopAction) Apply(t *testing.T, pl transport.PeerList) {
 
 // ChooseAction is an action for choosing a peer from the peerlist
 type ChooseAction struct {
-	InputContext context.Context
-	InputRequest *transport.Request
-	ExpectedPeer string
-	ExpectedErr  error
+	InputContext        context.Context
+	InputContextTimeout time.Duration
+	InputRequest        *transport.Request
+	ExpectedPeer        string
+	ExpectedErr         error
 }
 
 // Apply runs "ChoosePeer" on the peerList and validates the peer && error
 func (a ChooseAction) Apply(t *testing.T, pl transport.PeerList) {
-	peer, err := pl.ChoosePeer(a.InputContext, a.InputRequest)
+	ctx := a.InputContext
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if a.InputContextTimeout != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, a.InputContextTimeout)
+		defer cancel()
+	}
+
+	peer, err := pl.ChoosePeer(ctx, a.InputRequest)
 
 	if a.ExpectedErr != nil {
 		// Note that we're not verifying anything about ExpectedPeer here because
@@ -113,6 +126,30 @@ func (a RemoveAction) Apply(t *testing.T, pl transport.PeerList) {
 
 	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
 	assert.Equal(t, a.ExpectedErr, err)
+}
+
+// ConcurrentAction will run a series of actions in parallel
+type ConcurrentAction struct {
+	Actions []PeerListAction
+	Wait    time.Duration
+}
+
+// Apply runs all the ConcurrentAction's actions in goroutines with a delay of MSWait
+// between each action and uses a WaitGroup to make sure all goroutines finish before continuing
+func (a ConcurrentAction) Apply(t *testing.T, pl transport.PeerList) {
+	var wg sync.WaitGroup
+
+	wg.Add(len(a.Actions))
+	for _, action := range a.Actions {
+		go func() {
+			defer wg.Done()
+			action.Apply(t, pl)
+		}()
+
+		time.Sleep(a.Wait)
+	}
+
+	wg.Wait()
 }
 
 // ApplyPeerListActions runs all the PeerListActions on the PeerList
