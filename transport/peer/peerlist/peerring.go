@@ -101,6 +101,7 @@ func (pr *PeerRing) RemoveAll() []transport.Peer {
 	return peers
 }
 
+// Must be run inside a mutex.Lock()
 func (pr *PeerRing) popNode(node *peerRingNode) transport.Peer {
 	p := node.getPeer()
 
@@ -119,6 +120,7 @@ func (pr *PeerRing) popNode(node *peerRingNode) transport.Peer {
 	return p
 }
 
+// Must be run inside a mutex.Lock()
 func (pr *PeerRing) isNextNode(node *peerRingNode) bool {
 	return node.equals(pr.nextNode)
 }
