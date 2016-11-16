@@ -86,7 +86,6 @@ func TestRoundRobinList(t *testing.T) {
 			s.agent = transporttest.NewMockAgent(mockCtrl)
 			s.pids = createPeerIDs([]string{"1"})
 			s.expectedPeers = createPeers(mockCtrl, s.agent, s.pids)
-
 			return
 		}(),
 		func() (s testStruct) {
@@ -213,6 +212,21 @@ func TestRoundRobinList(t *testing.T) {
 			return
 		}(),
 		func() (s testStruct) {
+			s.msg = "start retain multiple errors"
+
+			s.agent = transporttest.NewMockAgent(mockCtrl)
+			s.pids = createPeerIDs([]string{"1", "2", "3"})
+			s.expectedPeers = createPeers(mockCtrl, s.agent, []transport.PeerIdentifier{s.pids[1]})
+
+			retainErr := errors.ErrNoPeerToSelect("Test!!")
+
+			s.agent.EXPECT().RetainPeer(s.pids[0], gomock.Any()).Return(nil, retainErr)
+			s.agent.EXPECT().RetainPeer(s.pids[2], gomock.Any()).Return(nil, retainErr)
+
+			s.expectedCreateErr = errors.Errors{retainErr, retainErr}
+			return
+		}(),
+		func() (s testStruct) {
 			s.msg = "start stop release error"
 
 			s.agent = transporttest.NewMockAgent(mockCtrl)
@@ -226,6 +240,28 @@ func TestRoundRobinList(t *testing.T) {
 				transporttest.StartAction{},
 				transporttest.StopAction{
 					ExpectedErr: errors.Errors{expectedErr},
+				},
+			}
+
+			s.expectedStarted = false
+			return
+		}(),
+		func() (s testStruct) {
+			s.msg = "start stop release multiple errors"
+
+			s.agent = transporttest.NewMockAgent(mockCtrl)
+			s.pids = createPeerIDs([]string{"1", "2", "3"})
+			peers := createPeers(mockCtrl, s.agent, s.pids)
+
+			expectedErr := errors.ErrAgentHasNoReferenceToPeer{}
+			s.agent.EXPECT().ReleasePeer(peers[0], gomock.Any()).Return(expectedErr)
+			s.agent.EXPECT().ReleasePeer(peers[1], gomock.Any()).Return(nil)
+			s.agent.EXPECT().ReleasePeer(peers[2], gomock.Any()).Return(expectedErr)
+
+			s.peerListActions = []transporttest.PeerListAction{
+				transporttest.StartAction{},
+				transporttest.StopAction{
+					ExpectedErr: errors.Errors{expectedErr, expectedErr},
 				},
 			}
 
@@ -337,12 +373,12 @@ func TestRoundRobinList(t *testing.T) {
 				transporttest.StartAction{},
 			}
 
-			addedRemovedPeerIDs := createPeerIDs([]string{"5", "6"})
-			createPeers(mockCtrl, s.agent, addedRemovedPeerIDs)
+			addedThenRemovedPeerIDs := createPeerIDs([]string{"5", "6"})
+			createPeers(mockCtrl, s.agent, addedThenRemovedPeerIDs)
 
 			addedPeerIDs := createPeerIDs([]string{"7", "8"})
 			addedPeers := createPeers(mockCtrl, s.agent, addedPeerIDs)
-			allAddedPeerIDs := append(addedRemovedPeerIDs, addedPeerIDs...)
+			allAddedPeerIDs := append(addedThenRemovedPeerIDs, addedPeerIDs...)
 
 			for _, pid := range allAddedPeerIDs {
 				s.peerListActions = append(s.peerListActions, transporttest.AddAction{
@@ -351,7 +387,7 @@ func TestRoundRobinList(t *testing.T) {
 			}
 
 			removedPeerIDs := initialPeerIDs[2:]
-			allRemovedPeerIDs := append(addedRemovedPeerIDs, removedPeerIDs...)
+			allRemovedPeerIDs := append(addedThenRemovedPeerIDs, removedPeerIDs...)
 			preparePeerIdentifierReleases(s.agent, allRemovedPeerIDs)
 
 			for _, pid := range allRemovedPeerIDs {
