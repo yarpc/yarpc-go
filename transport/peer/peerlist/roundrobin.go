@@ -32,9 +32,8 @@ import (
 // NewRoundRobin creates a new round robin PeerList using
 func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin, error) {
 	rr := &RoundRobin{
-		pr:             NewPeerRing(len(peerIDs)),
-		agent:          agent,
-		peerAddedEvent: make(chan struct{}, 1),
+		pr:    NewPeerRing(len(peerIDs)),
+		agent: agent,
 	}
 
 	err := rr.addMulti(peerIDs)
@@ -43,10 +42,9 @@ func NewRoundRobin(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*
 
 // RoundRobin is a PeerList which rotates which peers are to be selected in a circle
 type RoundRobin struct {
-	pr             *PeerRing
-	peerAddedEvent chan struct{}
-	agent          transport.Agent
-	started        atomic.Bool
+	pr      *PeerRing
+	agent   transport.Agent
+	started atomic.Bool
 }
 
 func (pl *RoundRobin) addMulti(peerIDs []transport.PeerIdentifier) error {
