@@ -32,10 +32,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Dependencies are passed through PeerListActions' Apply methods in order
+// to allow the PeerListAction to modify state other than just the PeerList
+type Dependencies struct {
+	Peers map[string]*MockPeer
+}
+
 // PeerListAction defines actions that can be applied to a PeerList
 type PeerListAction interface {
 	// Apply runs a function on the PeerList and asserts the result
-	Apply(*testing.T, transport.PeerList)
+	Apply(*testing.T, transport.PeerList, Dependencies)
 }
 
 // StartAction is an action for testing PeerList.Start
@@ -44,7 +50,7 @@ type StartAction struct {
 }
 
 // Apply runs "Start" on the peerList and validates the error
-func (a StartAction) Apply(t *testing.T, pl transport.PeerList) {
+func (a StartAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
 	err := pl.Start()
 	assert.Equal(t, a.ExpectedErr, err)
 }
@@ -55,9 +61,25 @@ type StopAction struct {
 }
 
 // Apply runs "Stop" on the peerList and validates the error
-func (a StopAction) Apply(t *testing.T, pl transport.PeerList) {
+func (a StopAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
 	err := pl.Stop()
 	assert.Equal(t, a.ExpectedErr, err)
+}
+
+// ChooseMultiAction will run ChoosePeer multiple times on the PeerList
+// It will assert if there is ANY failures
+type ChooseMultiAction struct {
+	ExpectedPeers []string
+}
+
+// Apply runs "ChoosePeer" on the peerList for every ExpectedPeer
+func (a ChooseMultiAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
+	for _, expectedPeer := range a.ExpectedPeers {
+		action := ChooseAction{
+			ExpectedPeer: expectedPeer,
+		}
+		action.Apply(t, pl, deps)
+	}
 }
 
 // ChooseAction is an action for choosing a peer from the peerlist
@@ -70,7 +92,7 @@ type ChooseAction struct {
 }
 
 // Apply runs "ChoosePeer" on the peerList and validates the peer && error
-func (a ChooseAction) Apply(t *testing.T, pl transport.PeerList) {
+func (a ChooseAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
 	ctx := a.InputContext
 	if ctx == nil {
 		ctx = context.Background()
@@ -106,7 +128,7 @@ type AddAction struct {
 
 // Apply runs "Add" on the peerList after casting it to a PeerChangeListener
 // and validates the error
-func (a AddAction) Apply(t *testing.T, pl transport.PeerList) {
+func (a AddAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
 	changeListener := pl.(transport.PeerChangeListener)
 
 	err := changeListener.Add(MockPeerIdentifier(a.InputPeerID))
@@ -121,7 +143,7 @@ type RemoveAction struct {
 
 // Apply runs "Remove" on the peerList after casting it to a PeerChangeListener
 // and validates the error
-func (a RemoveAction) Apply(t *testing.T, pl transport.PeerList) {
+func (a RemoveAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
 	changeListener := pl.(transport.PeerChangeListener)
 
 	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
@@ -136,14 +158,14 @@ type ConcurrentAction struct {
 
 // Apply runs all the ConcurrentAction's actions in goroutines with a delay of MSWait
 // between each action and uses a WaitGroup to make sure all goroutines finish before continuing
-func (a ConcurrentAction) Apply(t *testing.T, pl transport.PeerList) {
+func (a ConcurrentAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(a.Actions))
 	for _, action := range a.Actions {
 		go func() {
 			defer wg.Done()
-			action.Apply(t, pl)
+			action.Apply(t, pl, deps)
 		}()
 
 		time.Sleep(a.Wait)
@@ -152,11 +174,29 @@ func (a ConcurrentAction) Apply(t *testing.T, pl transport.PeerList) {
 	wg.Wait()
 }
 
+// NotifyStatusChangeAction will run the NotifyStatusChange function on a PeerList with a specified Peer
+type NotifyStatusChangeAction struct {
+	// PeerID is a unique identifier to the Peer we want use in the notification
+	PeerID string
+
+	// NewConnectionStatus is the new ConnectionStatus of the Peer
+	NewConnectionStatus transport.PeerConnectionStatus
+}
+
+// Apply will run the NotifyStatusChanged function on the PeerList with the provided Peer
+func (a NotifyStatusChangeAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
+	deps.Peers[a.PeerID].StatusObj.ConnectionStatus = a.NewConnectionStatus
+
+	plSub := pl.(transport.PeerSubscriber)
+
+	plSub.NotifyStatusChanged(deps.Peers[a.PeerID])
+}
+
 // ApplyPeerListActions runs all the PeerListActions on the PeerList
-func ApplyPeerListActions(t *testing.T, pl transport.PeerList, actions []PeerListAction) {
+func ApplyPeerListActions(t *testing.T, pl transport.PeerList, actions []PeerListAction, deps Dependencies) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
-			action.Apply(t, pl)
+			action.Apply(t, pl, deps)
 		})
 	}
 }

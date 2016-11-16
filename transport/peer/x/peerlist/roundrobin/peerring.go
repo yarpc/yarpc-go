@@ -42,6 +42,16 @@ type PeerRing struct {
 	nextNode   *ring.Ring
 }
 
+// GetPeer returns the Peer from the Ring or Nil
+func (pr *PeerRing) GetPeer(pid transport.PeerIdentifier) transport.Peer {
+	node, ok := pr.peerToNode[pid.Identifier()]
+	if !ok {
+		return nil
+	}
+
+	return getPeerForRingNode(node)
+}
+
 // Add a transport.Peer to the end of the PeerRing, if the ring is empty
 // it initializes the nextNode marker
 func (pr *PeerRing) Add(peer transport.Peer) error {
@@ -69,13 +79,13 @@ func newPeerRingNode(peer transport.Peer) *ring.Ring {
 	return newNode
 }
 
-// Remove a peer PeerIdentifier from the PeerRing, if the PeerID is not
+// Remove a peer Peer from the PeerRing, if the PeerID is not
 // in the ring return an error
-func (pr *PeerRing) Remove(pid transport.PeerIdentifier) error {
-	node, ok := pr.peerToNode[pid.Identifier()]
+func (pr *PeerRing) Remove(p transport.Peer) error {
+	node, ok := pr.peerToNode[p.Identifier()]
 	if !ok {
 		// Peer doesn't exist in the list
-		return errors.ErrPeerRemoveNotInList(pid.Identifier())
+		return errors.ErrPeerRemoveNotInList(p.Identifier())
 	}
 
 	pr.popNode(node)

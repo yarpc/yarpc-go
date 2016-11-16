@@ -91,7 +91,7 @@ func (_m *MockPeerSubscriber) EXPECT() *_MockPeerSubscriberRecorder {
 	return _m.recorder
 }
 
-func (_m *MockPeerSubscriber) NotifyStatusChanged(_param0 transport.Peer) {
+func (_m *MockPeerSubscriber) NotifyStatusChanged(_param0 transport.PeerIdentifier) {
 	_m.ctrl.Call(_m, "NotifyStatusChanged", _param0)
 }
 

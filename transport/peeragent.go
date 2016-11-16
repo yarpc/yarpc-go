@@ -25,7 +25,7 @@ package transport
 // PeerSubscriber listens to changes of a Peer over time.
 type PeerSubscriber interface {
 	// The Peer Notifies the PeerSubscriber when its status changes (e.g. connections status, pending requests)
-	NotifyStatusChanged(Peer)
+	NotifyStatusChanged(PeerIdentifier)
 }
 
 // Agent manages Peers across different PeerSubscribers.  A PeerSubscriber will request a Peer for a specific
