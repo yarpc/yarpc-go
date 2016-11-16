@@ -2,47 +2,60 @@ package peerlist
 
 import (
 	"container/ring"
+	"sync"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal/errors"
 )
 
-func newPeerRing(length int) *peerRing {
-	return &peerRing{
+// NewPeerRing creates a new PeerRing with initial size of "length"
+func NewPeerRing(length int) *PeerRing {
+	return &PeerRing{
 		peerToNode: make(map[string]*peerRingNode, length),
 	}
 }
 
-type peerRing struct {
+// PeerRing provides a safe way to interact (Add/Remove/Get) with a potentially
+// changing list of peer objects
+type PeerRing struct {
+	lock sync.Mutex
+
 	peerToNode map[string]*peerRingNode
 	nextNode   *peerRingNode
 }
 
-func (pr *peerRing) Add(peer transport.Peer) error {
+// Add a transport.Peer to the end of the PeerRing, if the ring is empty
+// it initializes the nextNode marker
+func (pr *PeerRing) Add(peer transport.Peer) error {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
+
 	if _, ok := pr.peerToNode[peer.Identifier()]; ok {
-		// Peer Already exists, ignore the add
+		// Peer Already in ring, ignore the add
 		return errors.ErrPeerAlreadyInList{
 			Peer: peer,
 		}
 	}
 
 	newNode := newPeerRingNode(peer)
-
 	pr.peerToNode[peer.Identifier()] = newNode
 
 	if pr.nextNode == nil {
-		// Empty List, add the first node
+		// Empty ring, add the first node
 		pr.nextNode = newNode
-
-		return nil
+	} else {
+		// Push the node to the ring
+		pr.nextNode.push(newNode)
 	}
-
-	pr.nextNode.push(newNode)
-
 	return nil
 }
 
-func (pr *peerRing) removePeer(pid transport.PeerIdentifier) error {
+// Remove a peer PeerIdentifier from the PeerRing, if the PeerID is not
+// in the ring return an error
+func (pr *PeerRing) Remove(pid transport.PeerIdentifier) error {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
+
 	node, ok := pr.peerToNode[pid.Identifier()]
 	if !ok {
 		// Peer doesn't exist in the list
@@ -56,7 +69,11 @@ func (pr *peerRing) removePeer(pid transport.PeerIdentifier) error {
 	return nil
 }
 
-func (pr *peerRing) popAll() []transport.Peer {
+// RemoveAll pops all the peers from the ring and returns them in a list
+func (pr *PeerRing) RemoveAll() []transport.Peer {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
+
 	peers := make([]transport.Peer, 0, len(pr.peerToNode))
 	for _, node := range pr.peerToNode {
 		peers = append(peers, pr.popNode(node))
@@ -64,17 +81,15 @@ func (pr *peerRing) popAll() []transport.Peer {
 	return peers
 }
 
-func (pr *peerRing) popNode(node *peerRingNode) transport.Peer {
+func (pr *PeerRing) popNode(node *peerRingNode) transport.Peer {
 	p := node.getPeer()
 
-	if node.isLastPeer() {
-		// This is the last node, set the nextNode to nil
+	if node.isLastNode() {
 		pr.nextNode = nil
 	} else {
-		if node.equals(pr.nextNode) {
-			pr.nextNode = pr.nextNode.nextPeer()
+		if pr.isNextNode(node) {
+			pr.nextNode = pr.nextNode.nextRingNode()
 		}
-		// Unlink one node after the "Prev" node (i.e. the current node)
 		node.pop()
 	}
 
@@ -84,20 +99,25 @@ func (pr *peerRing) popNode(node *peerRingNode) transport.Peer {
 	return p
 }
 
-func (pr *peerRing) next() transport.Peer {
+func (pr *PeerRing) isNextNode(node *peerRingNode) bool {
+	return node.equals(pr.nextNode)
+}
+
+// Next returns the next peer in the ring, or nil if there is no peer in the ring
+// after it has the next peer, it increments the nextPeer marker in the ring
+func (pr *PeerRing) Next() transport.Peer {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
+
 	if pr.nextNode == nil {
 		return nil
 	}
 
 	p := pr.nextNode.getPeer()
 
-	pr.nextNode = pr.nextNode.nextPeer()
+	pr.nextNode = pr.nextNode.nextRingNode()
 
 	return p
-}
-
-type peerRingNode struct {
-	*ring.Ring
 }
 
 func newPeerRingNode(peer transport.Peer) *peerRingNode {
@@ -108,28 +128,32 @@ func newPeerRingNode(peer transport.Peer) *peerRingNode {
 	return newNode
 }
 
-func (pr *peerRingNode) getPeer() transport.Peer {
-	return pr.Value.(transport.Peer)
+type peerRingNode struct {
+	*ring.Ring
 }
 
-func (pr *peerRingNode) isLastPeer() bool {
-	return pr.Ring.Next() == pr.Ring
+func (prn *peerRingNode) getPeer() transport.Peer {
+	return prn.Value.(transport.Peer)
 }
 
-func (pr *peerRingNode) equals(compPR *peerRingNode) bool {
-	return pr.Ring == compPR.Ring
+func (prn *peerRingNode) isLastNode() bool {
+	return prn.Ring.Next() == prn.Ring
 }
 
-func (pr *peerRingNode) pop() {
-	pr.Prev().Unlink(1)
+func (prn *peerRingNode) equals(compPR *peerRingNode) bool {
+	return prn.Ring == compPR.Ring
 }
 
-func (pr *peerRingNode) push(newPR *peerRingNode) {
-	pr.Prev().Link(newPR.Ring)
+func (prn *peerRingNode) pop() {
+	prn.Prev().Unlink(1)
 }
 
-func (pr *peerRingNode) nextPeer() *peerRingNode {
+func (prn *peerRingNode) push(newPR *peerRingNode) {
+	prn.Prev().Link(newPR.Ring)
+}
+
+func (prn *peerRingNode) nextRingNode() *peerRingNode {
 	return &peerRingNode{
-		Ring: pr.Ring.Next(),
+		Ring: prn.Ring.Next(),
 	}
 }

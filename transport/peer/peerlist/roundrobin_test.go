@@ -206,8 +206,10 @@ func TestRoundRobinList(t *testing.T) {
 			s.agent = transporttest.NewMockAgent(mockCtrl)
 			s.pids = createPeerIDs([]string{"1"})
 
-			s.expectedCreateErr = errors.ErrNoPeerToSelect("Test!!")
-			s.agent.EXPECT().RetainPeer(s.pids[0], gomock.Any()).Return(nil, s.expectedCreateErr)
+			retainErr := errors.ErrNoPeerToSelect("Test!!")
+			s.agent.EXPECT().RetainPeer(s.pids[0], gomock.Any()).Return(nil, retainErr)
+
+			s.expectedCreateErr = errors.Errors{retainErr}
 			return
 		}(),
 		func() (s testStruct) {
@@ -223,7 +225,7 @@ func TestRoundRobinList(t *testing.T) {
 			s.peerListActions = []transporttest.PeerListAction{
 				transporttest.StartAction{},
 				transporttest.StopAction{
-					ExpectedErr: expectedErr,
+					ExpectedErr: errors.Errors{expectedErr},
 				},
 			}
 

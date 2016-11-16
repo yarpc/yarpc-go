@@ -119,3 +119,18 @@ type ErrPeerNotInList struct {
 func (e ErrPeerNotInList) Error() string {
 	return fmt.Sprintf("can't remove peer (%v) because it is not in peerlist", e.PeerIdentifier)
 }
+
+// Errors is used to encapsulate multiple errors returned at the same time
+type Errors []error
+
+func (e Errors) Error() string {
+	if len(e) == 1 {
+		return e[0].Error()
+	}
+
+	msg := "multiple peer errors:"
+	for _, err := range e {
+		msg += "\n" + err.Error()
+	}
+	return msg
+}
