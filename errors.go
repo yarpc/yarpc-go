@@ -22,7 +22,6 @@ package yarpc
 
 import (
 	"fmt"
-	"strings"
 )
 
 type noOutboundForService struct {

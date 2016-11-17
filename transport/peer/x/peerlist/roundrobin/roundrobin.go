@@ -27,7 +27,7 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal/errors"
 
-	"github.com/uber-go/atomic"
+	"go.uber.org/atomic"
 )
 
 // New creates a new round robin PeerList using
@@ -49,23 +49,16 @@ type RoundRobin struct {
 }
 
 func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
-	var errs yerrors.ErrorGroup
+	var errs []error
 
 	for _, peerID := range peerIDs {
-		p, err := pl.agent.RetainPeer(peerID, pl)
-		if err != nil {
+		if err := pl.addPeer(peerID); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-
-		// TODO add event/log when duplicates are inserted
-		pl.pr.Add(p)
 	}
 
-	if len(errs) == 0 {
-		return nil
-	}
-	return errs
+	return yerrors.MultiError(errs)
 }
 
 // Start notifies the RoundRobin that requests will start coming
@@ -85,7 +78,7 @@ func (pl *RoundRobin) Stop() error {
 }
 
 func (pl *RoundRobin) clearPeers() error {
-	var errs yerrors.ErrorGroup
+	var errs []error
 
 	peers := pl.pr.RemoveAll()
 	for _, p := range peers {
@@ -95,10 +88,7 @@ func (pl *RoundRobin) clearPeers() error {
 		}
 	}
 
-	if len(errs) == 0 {
-		return nil
-	}
-	return errs
+	return yerrors.MultiError(errs)
 }
 
 // ChoosePeer selects the next available peer in the round robin
@@ -116,6 +106,10 @@ func (pl *RoundRobin) ChoosePeer(context.Context, *transport.Request) (transport
 
 // Add a peer identifier to the round robin
 func (pl *RoundRobin) Add(pid transport.PeerIdentifier) error {
+	return pl.addPeer(pid)
+}
+
+func (pl *RoundRobin) addPeer(pid transport.PeerIdentifier) error {
 	p, err := pl.agent.RetainPeer(pid, pl)
 	if err != nil {
 		return err

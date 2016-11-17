@@ -112,7 +112,7 @@ func TestRoundRobinList(t *testing.T) {
 			inputPeerIDs:       []string{"1"},
 			errRetainedPeerIDs: []string{"1"},
 			retainErr:          errors.ErrNoPeerToSelect("Test!!"),
-			expectedCreateErr:  yerrors.ErrorGroup{errors.ErrNoPeerToSelect("Test!!")},
+			expectedCreateErr:  errors.ErrNoPeerToSelect("Test!!"),
 		},
 		{
 			msg:                "start retain multiple errors",
@@ -132,7 +132,7 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StopAction{
-					ExpectedErr: yerrors.ErrorGroup{errors.ErrAgentHasNoReferenceToPeer{}},
+					ExpectedErr: errors.ErrAgentHasNoReferenceToPeer{},
 				},
 			},
 			expectedStarted: false,
@@ -335,7 +335,7 @@ func TestRoundRobinList(t *testing.T) {
 				node, ok := pl.pr.peerToNode[expectedRingPeer]
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in peerlist", expectedRingPeer))
 
-				actualPeer := node.getPeer()
+				actualPeer := getPeerForRingNode(node)
 				assert.Equal(t, expectedRingPeer, actualPeer.Identifier())
 			}
 

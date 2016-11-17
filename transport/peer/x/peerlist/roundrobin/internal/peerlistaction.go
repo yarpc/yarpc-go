@@ -27,14 +27,13 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
-	"github.com/crossdock/crossdock-go/assert"
+	"github.com/stretchr/testify/assert"
 )
 
-// PeerListAction is an interface for defining actions that can be applied
-// to a PeerList
+// PeerListAction defines actions that can be applied to a PeerList
 type PeerListAction interface {
-	// ApplyAndAssert runs a function on the PeerList and asserts the result
-	ApplyAndAssert(*testing.T, transport.PeerList)
+	// Apply runs a function on the PeerList and asserts the result
+	Apply(*testing.T, transport.PeerList)
 }
 
 // StartAction is an action for testing PeerList.Start
@@ -42,8 +41,8 @@ type StartAction struct {
 	ExpectedErr error
 }
 
-// ApplyAndAssert runs "Start" on the peerList and validates the error
-func (a StartAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
+// Apply runs "Start" on the peerList and validates the error
+func (a StartAction) Apply(t *testing.T, pl transport.PeerList) {
 	err := pl.Start()
 
 	assert.Equal(t, a.ExpectedErr, err)
@@ -54,8 +53,8 @@ type StopAction struct {
 	ExpectedErr error
 }
 
-// ApplyAndAssert runs "Stop" on the peerList and validates the error
-func (a StopAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
+// Apply runs "Stop" on the peerList and validates the error
+func (a StopAction) Apply(t *testing.T, pl transport.PeerList) {
 	err := pl.Stop()
 
 	assert.Equal(t, a.ExpectedErr, err)
@@ -69,8 +68,8 @@ type ChooseAction struct {
 	ExpectedErr  error
 }
 
-// ApplyAndAssert runs "ChoosePeer" on the peerList and validates the peer && error
-func (a ChooseAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
+// Apply runs "ChoosePeer" on the peerList and validates the peer && error
+func (a ChooseAction) Apply(t *testing.T, pl transport.PeerList) {
 	peer, err := pl.ChoosePeer(a.InputContext, a.InputRequest)
 
 	if peer != nil {
@@ -87,9 +86,9 @@ type AddAction struct {
 	ExpectedErr error
 }
 
-// ApplyAndAssert runs "Add" on the peerList after casting it to a PeerChangeListener
+// Apply runs "Add" on the peerList after casting it to a PeerChangeListener
 // and validates the error
-func (a AddAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
+func (a AddAction) Apply(t *testing.T, pl transport.PeerList) {
 	changeListener := pl.(transport.PeerChangeListener)
 
 	err := changeListener.Add(MockPeerIdentifier(a.InputPeerID))
@@ -103,9 +102,9 @@ type RemoveAction struct {
 	ExpectedErr error
 }
 
-// ApplyAndAssert runs "Remove" on the peerList after casting it to a PeerChangeListener
+// Apply runs "Remove" on the peerList after casting it to a PeerChangeListener
 // and validates the error
-func (a RemoveAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
+func (a RemoveAction) Apply(t *testing.T, pl transport.PeerList) {
 	changeListener := pl.(transport.PeerChangeListener)
 
 	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
@@ -117,7 +116,7 @@ func (a RemoveAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
 func ApplyPeerListActions(t *testing.T, pl transport.PeerList, actions []PeerListAction) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
-			action.ApplyAndAssert(t, pl)
+			action.Apply(t, pl)
 		})
 	}
 }

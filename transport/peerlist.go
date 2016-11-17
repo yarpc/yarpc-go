@@ -36,11 +36,13 @@ type PeerList interface {
 	ChoosePeer(context.Context, *Request) (Peer, error)
 }
 
-// PeerChangeListener listens to adds and removes of Peers
+// PeerChangeListener listens to adds and removes of Peers from a PeerProvider
+// A PeerList will implement the PeerChangeListener interface in order to receive
+// updates to the list of Peers it is keeping track of
 type PeerChangeListener interface {
-	// Add a peer to the Listener
+	// Add a peer to the PeerList (Called directly from a PeerProvider)
 	Add(PeerIdentifier) error
 
-	// Remove a peer from the PeerList
+	// Remove a peer from the PeerList (Called directly from a PeerProvider)
 	Remove(PeerIdentifier) error
 }
