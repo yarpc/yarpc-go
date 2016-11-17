@@ -23,6 +23,7 @@ package roundrobin
 import (
 	"context"
 
+	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal/errors"
 
@@ -48,7 +49,7 @@ type RoundRobin struct {
 }
 
 func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
-	errs := errors.Errors{}
+	var errs yerrors.ErrorGroup
 
 	for _, peerID := range peerIDs {
 		p, err := pl.agent.RetainPeer(peerID, pl)
@@ -84,7 +85,7 @@ func (pl *RoundRobin) Stop() error {
 }
 
 func (pl *RoundRobin) clearPeers() error {
-	errs := errors.Errors{}
+	var errs yerrors.ErrorGroup
 
 	peers := pl.pr.RemoveAll()
 	for _, p := range peers {

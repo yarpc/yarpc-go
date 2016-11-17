@@ -52,7 +52,7 @@ func (pr *PeerRing) Add(peer transport.Peer) error {
 
 	if _, ok := pr.peerToNode[peer.Identifier()]; ok {
 		// Peer Already in ring, ignore the add
-		return errors.ErrPeerAlreadyInList(peer.Identifier())
+		return errors.ErrPeerAddAlreadyInList(peer.Identifier())
 	}
 
 	newNode := newPeerRingNode(peer)
@@ -77,7 +77,7 @@ func (pr *PeerRing) Remove(pid transport.PeerIdentifier) error {
 	node, ok := pr.peerToNode[pid.Identifier()]
 	if !ok {
 		// Peer doesn't exist in the list
-		return errors.ErrPeerNotInList(pid.Identifier())
+		return errors.ErrPeerRemoveNotInList(pid.Identifier())
 	}
 
 	pr.popNode(node)

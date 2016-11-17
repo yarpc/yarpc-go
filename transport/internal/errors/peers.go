@@ -102,33 +102,18 @@ func (e ErrNoPeerToSelect) Error() string {
 	return fmt.Sprintf("could not find a peer to select in peerlist %s", string(e))
 }
 
-// ErrPeerAlreadyInList is returned to peer providers if the
+// ErrPeerAddAlreadyInList is returned to peer providers if the
 // peerlist is already tracking a peer for the added identifier
-type ErrPeerAlreadyInList string
+type ErrPeerAddAlreadyInList string
 
-func (e ErrPeerAlreadyInList) Error() string {
+func (e ErrPeerAddAlreadyInList) Error() string {
 	return fmt.Sprintf("can't add peer (%s) because is already in peerlist", string(e))
 }
 
-// ErrPeerNotInList is returned to peer providers if the peerlist
+// ErrPeerRemoveNotInList is returned to peer providers if the peerlist
 // is not tracking the peer to remove for a given identifier
-type ErrPeerNotInList string
+type ErrPeerRemoveNotInList string
 
-func (e ErrPeerNotInList) Error() string {
+func (e ErrPeerRemoveNotInList) Error() string {
 	return fmt.Sprintf("can't remove peer (%s) because it is not in peerlist", string(e))
-}
-
-// Errors is used to encapsulate multiple errors returned at the same time
-type Errors []error
-
-func (e Errors) Error() string {
-	if len(e) == 1 {
-		return e[0].Error()
-	}
-
-	msg := "multiple peer errors:"
-	for _, err := range e {
-		msg += "\n" + err.Error()
-	}
-	return msg
 }

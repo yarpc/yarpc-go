@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc/internal/channel"
+	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport"
@@ -222,7 +223,7 @@ func (d dispatcher) Start() error {
 		errors = append(errors, newErrors...)
 	}
 
-	return errorGroup(errors)
+	return yerrors.ErrorGroup(errors)
 }
 
 func (d dispatcher) Register(rs []transport.Registrant) {
@@ -262,7 +263,7 @@ func (d dispatcher) Stop() error {
 	}
 
 	if errors := wait.Wait(); len(errors) > 0 {
-		return errorGroup(errors)
+		return yerrors.ErrorGroup(errors)
 	}
 
 	return nil

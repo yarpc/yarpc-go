@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport/internal/errors"
 	. "go.uber.org/yarpc/transport/peer/x/peerlist/roundrobin/internal"
 	"go.uber.org/yarpc/transport/transporttest"
@@ -111,7 +112,7 @@ func TestRoundRobinList(t *testing.T) {
 			inputPeerIDs:       []string{"1"},
 			errRetainedPeerIDs: []string{"1"},
 			retainErr:          errors.ErrNoPeerToSelect("Test!!"),
-			expectedCreateErr:  errors.Errors{errors.ErrNoPeerToSelect("Test!!")},
+			expectedCreateErr:  yerrors.ErrorGroup{errors.ErrNoPeerToSelect("Test!!")},
 		},
 		{
 			msg:                "start retain multiple errors",
@@ -119,7 +120,7 @@ func TestRoundRobinList(t *testing.T) {
 			retainedPeerIDs:    []string{"2"},
 			errRetainedPeerIDs: []string{"1", "3"},
 			retainErr:          errors.ErrNoPeerToSelect("Test!!"),
-			expectedCreateErr:  errors.Errors{errors.ErrNoPeerToSelect("Test!!"), errors.ErrNoPeerToSelect("Test!!")},
+			expectedCreateErr:  yerrors.ErrorGroup{errors.ErrNoPeerToSelect("Test!!"), errors.ErrNoPeerToSelect("Test!!")},
 			expectedRingPeers:  []string{"2"},
 		},
 		{
@@ -131,7 +132,7 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StopAction{
-					ExpectedErr: errors.Errors{errors.ErrAgentHasNoReferenceToPeer{}},
+					ExpectedErr: yerrors.ErrorGroup{errors.ErrAgentHasNoReferenceToPeer{}},
 				},
 			},
 			expectedStarted: false,
@@ -146,7 +147,7 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StopAction{
-					ExpectedErr: errors.Errors{
+					ExpectedErr: yerrors.ErrorGroup{
 						errors.ErrAgentHasNoReferenceToPeer{},
 						errors.ErrAgentHasNoReferenceToPeer{},
 					},
@@ -261,7 +262,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				AddAction{
 					InputPeerID: "2",
-					ExpectedErr: errors.ErrPeerAlreadyInList("2"),
+					ExpectedErr: errors.ErrPeerAddAlreadyInList("2"),
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
@@ -278,7 +279,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				RemoveAction{
 					InputPeerID: "3",
-					ExpectedErr: errors.ErrPeerNotInList("3"),
+					ExpectedErr: errors.ErrPeerRemoveNotInList("3"),
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
