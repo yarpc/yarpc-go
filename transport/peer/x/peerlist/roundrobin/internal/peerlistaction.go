@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transporttest
+package internal
 
 import (
 	"context"
@@ -65,7 +65,7 @@ func (a StopAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
 type ChooseAction struct {
 	InputContext context.Context
 	InputRequest *transport.Request
-	ExpectedPeer transport.Peer
+	ExpectedPeer string
 	ExpectedErr  error
 }
 
@@ -73,18 +73,17 @@ type ChooseAction struct {
 func (a ChooseAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
 	peer, err := pl.ChoosePeer(a.InputContext, a.InputRequest)
 
-	assert.Equal(t, a.ExpectedPeer, peer)
-	assert.True(
-		t,
-		a.ExpectedPeer == peer,
-		fmt.Sprintf("%v was not the same instance as %v", peer, a.ExpectedPeer),
-	)
+	if peer != nil {
+		assert.Equal(t, a.ExpectedPeer, peer.Identifier())
+	} else {
+		assert.Equal(t, a.ExpectedPeer, "")
+	}
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
 // AddAction is an action for adding a peer to the peerlist
 type AddAction struct {
-	InputPeerID transport.PeerIdentifier
+	InputPeerID string
 	ExpectedErr error
 }
 
@@ -93,14 +92,14 @@ type AddAction struct {
 func (a AddAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
 	changeListener := pl.(transport.PeerChangeListener)
 
-	err := changeListener.Add(a.InputPeerID)
+	err := changeListener.Add(MockPeerIdentifier(a.InputPeerID))
 
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
 // RemoveAction is an action for adding a peer to the peerlist
 type RemoveAction struct {
-	InputPeerID transport.PeerIdentifier
+	InputPeerID string
 	ExpectedErr error
 }
 
@@ -109,7 +108,7 @@ type RemoveAction struct {
 func (a RemoveAction) ApplyAndAssert(t *testing.T, pl transport.PeerList) {
 	changeListener := pl.(transport.PeerChangeListener)
 
-	err := changeListener.Remove(a.InputPeerID)
+	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
 
 	assert.Equal(t, a.ExpectedErr, err)
 }
