@@ -22,6 +22,7 @@ package hostport
 
 import (
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
 
 	"go.uber.org/atomic"
 )
@@ -39,6 +40,7 @@ func NewPeer(pid PeerIdentifier, agent transport.Agent) *Peer {
 	return &Peer{
 		PeerIdentifier:   pid,
 		agent:            agent,
+		subscribers:      make(map[transport.PeerSubscriber]struct{}),
 		connectionStatus: transport.PeerUnavailable,
 	}
 }
@@ -48,6 +50,7 @@ type Peer struct {
 	PeerIdentifier
 
 	agent            transport.Agent
+	subscribers      map[transport.PeerSubscriber]struct{}
 	pending          atomic.Int32
 	connectionStatus transport.PeerConnectionStatus
 }
@@ -56,6 +59,37 @@ type Peer struct {
 // You need to cast the transport.Peer to a *hostport.Peer and run this function
 func (p *Peer) HostPort() string {
 	return string(p.PeerIdentifier)
+}
+
+// Agent returns the Agent that is in charge of this hostport.Peer (and should be the one to handle requests)
+func (p *Peer) Agent() transport.Agent {
+	return p.agent
+}
+
+// AddSubscriber adds a subscriber to the peer's subscriber map
+// Must be run in a Mutex.Lock from the transport.Agent
+func (p *Peer) AddSubscriber(sub transport.PeerSubscriber) {
+	p.subscribers[sub] = struct{}{}
+}
+
+// RemoveSubscriber removes a subscriber from the peer's subscriber map
+// Must be run in a Mutex.Lock from the transport.Agent
+func (p *Peer) RemoveSubscriber(sub transport.PeerSubscriber) error {
+	if _, ok := p.subscribers[sub]; !ok {
+		return errors.ErrPeerHasNoReferenceToSubscriber{
+			PeerIdentifier: p.PeerIdentifier,
+			PeerSubscriber: sub,
+		}
+	}
+
+	delete(p.subscribers, sub)
+	return nil
+}
+
+// NumSubscribers returns the number of subscriptions attached to the peer
+// Must be run in a Mutex.Lock at the Agent level
+func (p *Peer) NumSubscribers() int {
+	return len(p.subscribers)
 }
 
 // Status returns the current status of the hostport.Peer
@@ -69,23 +103,24 @@ func (p *Peer) Status() transport.PeerStatus {
 // SetStatus sets the status of the Peer (to be used by the Agent)
 func (p *Peer) SetStatus(status transport.PeerConnectionStatus) {
 	p.connectionStatus = status
-}
-
-// Agent returns the Agent that is in charge of this hostport.Peer (and should be the one to handle requests)
-func (p *Peer) Agent() transport.Agent {
-	return p.agent
+	p.notifyStatusChanged()
 }
 
 // StartRequest runs at the beginning of a request and returns a callback for when the request finished
 func (p *Peer) StartRequest() func() {
 	p.pending.Inc()
-	p.agent.NotifyStatusChanged(p)
-
+	p.notifyStatusChanged()
 	return p.endRequest
 }
 
 // endRequest should be run after a request has finished
 func (p *Peer) endRequest() {
 	p.pending.Dec()
-	p.agent.NotifyStatusChanged(p)
+	p.notifyStatusChanged()
+}
+
+func (p *Peer) notifyStatusChanged() {
+	for sub := range p.subscribers {
+		sub.NotifyStatusChanged(p)
+	}
 }

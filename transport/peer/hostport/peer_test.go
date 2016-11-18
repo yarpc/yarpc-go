@@ -4,13 +4,15 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/internal/errors"
+	. "go.uber.org/yarpc/transport/internal/transporttest"
 	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPeerIdenfier(t *testing.T) {
+func TestPeerIdentifier(t *testing.T) {
 	tests := []struct {
 		hostport           string
 		expectedIdentifier string
@@ -33,147 +35,225 @@ func TestPeerIdenfier(t *testing.T) {
 }
 
 func TestPeer(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
 	type testStruct struct {
-		msg                string
-		pid                PeerIdentifier
-		agent              transport.Agent
-		appliedFunc        func(*Peer)
-		expectedIdentifier string
-		expectedHostPort   string
-		expectedStatus     transport.PeerStatus
-		expectedAgent      transport.Agent
+		msg         string
+		inputPeerID string
+
+		// Map of subscriber id (used internally) to number of times notify will be called
+		SubDefinitions      []SubscriberDefinition
+		actions             []PeerAction
+		expectedIdentifier  string
+		expectedHostPort    string
+		expectedStatus      transport.PeerStatus
+		expectedAgent       transport.Agent
+		expectedSubscribers []string
 	}
 	tests := []testStruct{
-		func() (s testStruct) {
-			s.msg = "create"
-			s.pid = PeerIdentifier("localhost:12345")
-			s.agent = transporttest.NewMockAgent(mockCtrl)
-
-			s.appliedFunc = func(p *Peer) {}
-
-			s.expectedIdentifier = "localhost:12345"
-			s.expectedHostPort = "localhost:12345"
-			s.expectedAgent = s.agent
-			s.expectedStatus = transport.PeerStatus{
+		{
+			msg:                "create",
+			inputPeerID:        "localhost:12345",
+			expectedIdentifier: "localhost:12345",
+			expectedHostPort:   "localhost:12345",
+			expectedStatus: transport.PeerStatus{
 				PendingRequestCount: 0,
 				ConnectionStatus:    transport.PeerUnavailable,
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start request"
-			agent := transporttest.NewMockAgent(mockCtrl)
-			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(1)
-			s.agent = agent
-
-			s.appliedFunc = func(p *Peer) {
-				p.StartRequest()
-			}
-
-			s.expectedAgent = s.agent
-			s.expectedStatus = transport.PeerStatus{
+			},
+		},
+		{
+			msg:            "start request",
+			SubDefinitions: []SubscriberDefinition{{ID: "1", ExpectedNotifyCount: 1}},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				StartStopReqAction{Stop: false},
+			},
+			expectedSubscribers: []string{"1"},
+			expectedStatus: transport.PeerStatus{
 				PendingRequestCount: 1,
 				ConnectionStatus:    transport.PeerUnavailable,
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start request stop request"
-			agent := transporttest.NewMockAgent(mockCtrl)
-			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(2)
-			s.agent = agent
-
-			s.appliedFunc = func(p *Peer) {
-				done := p.StartRequest()
-				done()
-			}
-
-			s.expectedAgent = s.agent
-			s.expectedStatus = transport.PeerStatus{
+			},
+		},
+		{
+			msg:            "start request stop request",
+			SubDefinitions: []SubscriberDefinition{{ID: "1", ExpectedNotifyCount: 2}},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				StartStopReqAction{Stop: true},
+			},
+			expectedSubscribers: []string{"1"},
+			expectedStatus: transport.PeerStatus{
 				PendingRequestCount: 0,
 				ConnectionStatus:    transport.PeerUnavailable,
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start 5 stop 2"
-			agent := transporttest.NewMockAgent(mockCtrl)
-			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(7)
-			s.agent = agent
-
-			s.appliedFunc = func(p *Peer) {
-				done1 := p.StartRequest()
-				p.StartRequest()
-				p.StartRequest()
-				done2 := p.StartRequest()
-				done1()
-				p.StartRequest()
-				done2()
-			}
-
-			s.expectedAgent = s.agent
-			s.expectedStatus = transport.PeerStatus{
+			},
+		},
+		{
+			msg:            "start 5 stop 2",
+			SubDefinitions: []SubscriberDefinition{{ID: "1", ExpectedNotifyCount: 7}},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				StartStopReqAction{Stop: true},
+				StartStopReqAction{Stop: false},
+				StartStopReqAction{Stop: false},
+				StartStopReqAction{Stop: true},
+				StartStopReqAction{Stop: false},
+			},
+			expectedSubscribers: []string{"1"},
+			expectedStatus: transport.PeerStatus{
 				PendingRequestCount: 3,
 				ConnectionStatus:    transport.PeerUnavailable,
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start 5 stop 5"
-			agent := transporttest.NewMockAgent(mockCtrl)
-			agent.EXPECT().NotifyStatusChanged(gomock.Any()).Times(10)
-			s.agent = agent
+			},
+		},
+		{
+			msg:            "start 5 stop 5",
+			SubDefinitions: []SubscriberDefinition{{ID: "1", ExpectedNotifyCount: 10}},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				StartStopReqAction{Stop: true},
+				StartStopReqAction{Stop: true},
+				StartStopReqAction{Stop: true},
+				StartStopReqAction{Stop: true},
+				StartStopReqAction{Stop: true},
+			},
+			expectedSubscribers: []string{"1"},
+			expectedStatus: transport.PeerStatus{
 
-			s.appliedFunc = func(p *Peer) {
-				for i := 0; i < 5; i++ {
-					done := p.StartRequest()
-					defer done()
-				}
-			}
-
-			s.expectedAgent = s.agent
-			s.expectedStatus = transport.PeerStatus{
-				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerUnavailable,
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "set status"
-
-			s.appliedFunc = func(p *Peer) {
-				p.SetStatus(transport.PeerAvailable)
-			}
-
-			s.expectedStatus = transport.PeerStatus{
+				ConnectionStatus: transport.PeerUnavailable,
+			},
+		},
+		{
+			msg: "set status",
+			SubDefinitions: []SubscriberDefinition{
+				{ID: "1", ExpectedNotifyCount: 1},
+				{ID: "2", ExpectedNotifyCount: 1},
+				{ID: "3", ExpectedNotifyCount: 1},
+			},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				SubscribeAction{SubscriberID: "2", ExpectedSubCount: 2},
+				SubscribeAction{SubscriberID: "3", ExpectedSubCount: 3},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+			},
+			expectedSubscribers: []string{"1", "2", "3"},
+			expectedStatus: transport.PeerStatus{
 				PendingRequestCount: 0,
 				ConnectionStatus:    transport.PeerAvailable,
-			}
-			return
-		}(),
+			},
+		},
+		{
+			msg: "incremental subscribe",
+			SubDefinitions: []SubscriberDefinition{
+				{ID: "1", ExpectedNotifyCount: 3},
+				{ID: "2", ExpectedNotifyCount: 2},
+				{ID: "3", ExpectedNotifyCount: 1},
+			},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SubscribeAction{SubscriberID: "2", ExpectedSubCount: 2},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SubscribeAction{SubscriberID: "3", ExpectedSubCount: 3},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+			},
+			expectedSubscribers: []string{"1", "2", "3"},
+			expectedStatus: transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerAvailable,
+			},
+		},
+		{
+			msg: "subscribe unsubscribe",
+			SubDefinitions: []SubscriberDefinition{
+				{ID: "1", ExpectedNotifyCount: 1},
+			},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				UnsubscribeAction{SubscriberID: "1", ExpectedSubCount: 0},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+			},
+			expectedStatus: transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerAvailable,
+			},
+		},
+		{
+			msg: "incremental subscribe unsubscribe",
+			SubDefinitions: []SubscriberDefinition{
+				{ID: "1", ExpectedNotifyCount: 5},
+				{ID: "2", ExpectedNotifyCount: 3},
+				{ID: "3", ExpectedNotifyCount: 1},
+			},
+			actions: []PeerAction{
+				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SubscribeAction{SubscriberID: "2", ExpectedSubCount: 2},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SubscribeAction{SubscriberID: "3", ExpectedSubCount: 3},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				UnsubscribeAction{SubscriberID: "3", ExpectedSubCount: 2},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				UnsubscribeAction{SubscriberID: "2", ExpectedSubCount: 1},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+				UnsubscribeAction{SubscriberID: "1", ExpectedSubCount: 0},
+				SetStatusAction{InputStatus: transport.PeerAvailable},
+			},
+			expectedStatus: transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerAvailable,
+			},
+		},
+		{
+			msg: "unsubscribe error",
+			SubDefinitions: []SubscriberDefinition{
+				{ID: "1", ExpectedNotifyCount: 0},
+			},
+			actions: []PeerAction{
+				UnsubscribeAction{
+					SubscriberID:     "1",
+					ExpectedErrType:  errors.ErrPeerHasNoReferenceToSubscriber{},
+					ExpectedSubCount: 0,
+				},
+			},
+			expectedStatus: transport.PeerStatus{
+				PendingRequestCount: 0,
+				ConnectionStatus:    transport.PeerUnavailable,
+			},
+		},
 	}
 
 	for _, tt := range tests {
-		if tt.pid == PeerIdentifier("") {
-			tt.pid = PeerIdentifier("localhost:12345")
-			tt.expectedIdentifier = "localhost:12345"
-			tt.expectedHostPort = "localhost:12345"
-		}
-		if tt.agent == nil {
-			tt.agent = transporttest.NewMockAgent(mockCtrl)
-			tt.expectedAgent = tt.agent
-		}
+		t.Run(tt.msg, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-		peer := NewPeer(tt.pid, tt.agent)
+			if tt.inputPeerID == "" {
+				tt.inputPeerID = "localhost:12345"
+				tt.expectedIdentifier = "localhost:12345"
+				tt.expectedHostPort = "localhost:12345"
+			}
 
-		tt.appliedFunc(peer)
+			agent := transporttest.NewMockAgent(mockCtrl)
 
-		assert.Equal(t, tt.expectedIdentifier, peer.Identifier(), tt.msg)
-		assert.Equal(t, tt.expectedHostPort, peer.HostPort(), tt.msg)
-		assert.Equal(t, tt.expectedAgent, peer.Agent(), tt.msg)
-		assert.Equal(t, tt.expectedStatus, peer.Status(), tt.msg)
+			peer := NewPeer(PeerIdentifier(tt.inputPeerID), agent)
+
+			deps := &Dependencies{
+				Subscribers: CreateSubscriberMap(mockCtrl, tt.SubDefinitions),
+			}
+
+			ApplyPeerActions(t, peer, tt.actions, deps)
+
+			assert.Equal(t, tt.expectedIdentifier, peer.Identifier())
+			assert.Equal(t, tt.expectedHostPort, peer.HostPort())
+			assert.Equal(t, agent, peer.Agent())
+			assert.Equal(t, tt.expectedStatus, peer.Status())
+
+			assert.Len(t, peer.subscribers, len(tt.expectedSubscribers))
+			for _, subID := range tt.expectedSubscribers {
+				sub, ok := deps.Subscribers[subID]
+				assert.True(t, ok, "referenced subscriber id that does not exist %s", sub)
+
+				_, ok = peer.subscribers[sub]
+				assert.True(t, ok, "peer did not have reference to subscriber %v", sub)
+			}
+		})
 	}
 }
