@@ -344,6 +344,34 @@ func TestRoundRobinList(t *testing.T) {
 			expectedStarted: true,
 		},
 		{
+			msg:               "multiple blocking until add",
+			retainedPeerIDs:   []string{"1"},
+			expectedRingPeers: []string{"1"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "1",
+						},
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "1",
+						},
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "1",
+						},
+						AddAction{InputPeerID: "1"},
+					},
+					Wait: 10 * time.Millisecond,
+				},
+				ChooseAction{ExpectedPeer: "1"},
+			},
+			expectedStarted: true,
+		},
+		{
 			msg:               "block but added too late",
 			retainedPeerIDs:   []string{"1"},
 			expectedRingPeers: []string{"1"},

@@ -33,9 +33,9 @@ import (
 // New creates a new round robin PeerList using
 func New(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin, error) {
 	rr := &RoundRobin{
-		pr:             NewPeerRing(len(peerIDs)),
-		agent:          agent,
-		peerAddedEvent: make(chan struct{}, 1),
+		pr:                 NewPeerRing(len(peerIDs)),
+		agent:              agent,
+		peerAvailableEvent: make(chan struct{}, 1),
 	}
 
 	err := rr.addAll(peerIDs)
@@ -44,10 +44,10 @@ func New(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin
 
 // RoundRobin is a PeerList which rotates which peers are to be selected in a circle
 type RoundRobin struct {
-	pr             *PeerRing
-	peerAddedEvent chan struct{}
-	agent          transport.Agent
-	started        atomic.Bool
+	pr                 *PeerRing
+	peerAvailableEvent chan struct{}
+	agent              transport.Agent
+	started            atomic.Bool
 }
 
 func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
@@ -78,15 +78,8 @@ func (pl *RoundRobin) addPeer(pid transport.PeerIdentifier) error {
 		return err
 	}
 
-	pl.notifyPeerAddedEvent()
+	pl.notifyPeerAvailable()
 	return nil
-}
-
-func (pl *RoundRobin) notifyPeerAddedEvent() {
-	select {
-	case pl.peerAddedEvent <- struct{}{}:
-	default:
-	}
 }
 
 // Start notifies the RoundRobin that requests will start coming
@@ -136,12 +129,22 @@ func (pl *RoundRobin) ChoosePeer(ctx context.Context, req *transport.Request) (t
 
 	for {
 		if nextPeer := pl.pr.Next(); nextPeer != nil {
+			pl.notifyPeerAvailable()
 			return nextPeer, nil
 		}
 
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
 			return nil, err
 		}
+	}
+}
+
+// notifyPeerAvailable writes to a channel indicating that a Peer is currently
+// available for requests
+func (pl *RoundRobin) notifyPeerAvailable() {
+	select {
+	case pl.peerAvailableEvent <- struct{}{}:
+	default:
 	}
 }
 
@@ -153,7 +156,7 @@ func (pl *RoundRobin) waitForPeerAddedEvent(ctx context.Context) error {
 	}
 
 	select {
-	case <-pl.peerAddedEvent:
+	case <-pl.peerAvailableEvent:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
