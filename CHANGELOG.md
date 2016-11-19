@@ -4,7 +4,6 @@ Releases
 v0.5.0 (unreleased)
 -------------------
 
--   Upgrade to ThriftRW 1.0.
 -   **Breaking**: A detail of inbound transports has changed.
     Starting an inbound transport accepts a ServiceDetail, including
     the service name and a Registry. The Registry now must
@@ -12,6 +11,10 @@ v0.5.0 (unreleased)
     instead of `GetHandler(service, procedure string) (HandlerSpec, error)`.
     Note that in the prior release, `Handler` became `HandleSpec` to
     accommodate oneway handlers.
+-   Upgrade to ThriftRW 1.0.
+-   TChannel: `NewInbound` and `NewOutbound` now accept any object satisfying
+    the `Channel` interface. This should work with existing `*tchannel.Channel`
+    objects without any changes.
 
 
 v0.4.0 (2016-11-11)
