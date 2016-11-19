@@ -82,8 +82,7 @@ func (pl *RoundRobin) clearPeers() error {
 
 	peers := pl.pr.RemoveAll()
 	for _, p := range peers {
-		err := pl.agent.ReleasePeer(p, pl)
-		if err != nil {
+		if err := pl.agent.ReleasePeer(p, pl); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -120,8 +119,7 @@ func (pl *RoundRobin) addPeer(pid transport.PeerIdentifier) error {
 
 // Remove a peer identifier from the round robin
 func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
-	err := pl.pr.Remove(pid)
-	if err != nil {
+	if err := pl.pr.Remove(pid); err != nil {
 		// The peer has already been removed
 		return err
 	}

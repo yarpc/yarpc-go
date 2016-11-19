@@ -57,9 +57,7 @@ func (pim PeerIdentifierMatcher) String() string {
 }
 
 // CreatePeerIDs takes a slice of peerID strings and returns a slice of PeerIdentifiers
-func CreatePeerIDs(
-	peerIDStrs []string,
-) []transport.PeerIdentifier {
+func CreatePeerIDs(peerIDStrs []string) []transport.PeerIdentifier {
 	pids := make([]transport.PeerIdentifier, 0, len(peerIDStrs))
 	for _, id := range peerIDStrs {
 		pids = append(pids, MockPeerIdentifier(id))
@@ -72,7 +70,7 @@ func ExpectPeerRetains(
 	mockCtrl *gomock.Controller,
 	agent *transporttest.MockAgent,
 	peerStrs []string,
-	err error,
+	err error, // Will be returned from the MockAgent on the Retains of these Peers
 ) []transport.Peer {
 	peers := make([]transport.Peer, 0, len(peerStrs))
 	for _, peerStr := range peerStrs {

@@ -99,7 +99,7 @@ func (e ErrInvalidAgentConversion) Error() string {
 type ErrNoPeerToSelect string
 
 func (e ErrNoPeerToSelect) Error() string {
-	return fmt.Sprintf("could not find a peer to select in peerlist %s", string(e))
+	return fmt.Sprintf("could not find a peer to select in peerlist %q", string(e))
 }
 
 // ErrPeerAddAlreadyInList is returned to peer providers if the
@@ -107,7 +107,7 @@ func (e ErrNoPeerToSelect) Error() string {
 type ErrPeerAddAlreadyInList string
 
 func (e ErrPeerAddAlreadyInList) Error() string {
-	return fmt.Sprintf("can't add peer (%s) because is already in peerlist", string(e))
+	return fmt.Sprintf("can't add peer %q because is already in peerlist", string(e))
 }
 
 // ErrPeerRemoveNotInList is returned to peer providers if the peerlist

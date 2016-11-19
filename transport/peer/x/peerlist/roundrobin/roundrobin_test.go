@@ -15,18 +15,36 @@ import (
 
 func TestRoundRobinList(t *testing.T) {
 	type testStruct struct {
-		msg                string
-		inputPeerIDs       []string
-		retainedPeerIDs    []string
-		releasedPeerIDs    []string
+		msg string
+
+		// PeerIDs that will be inserted into the PeerList at creation time
+		inputPeerIDs []string
+
+		// PeerIDs that will be returned from the agent's OnRetain
+		retainedPeerIDs []string
+
+		// PeerIDs that will be released from the agent
+		releasedPeerIDs []string
+
+		// PeerIDs that will return "retainErr" from the agent's OnRetain function
 		errRetainedPeerIDs []string
 		retainErr          error
+
+		// PeerIDs that will return "releaseErr" from the agent's OnRelease function
 		errReleasedPeerIDs []string
 		releaseErr         error
-		peerListActions    []PeerListAction
-		expectedCreateErr  error
-		expectedRingPeers  []string
-		expectedStarted    bool
+
+		// A list of actions that will be applied on the PeerList
+		peerListActions []PeerListAction
+
+		// Expected Error to be returned from the PeerList's creation function
+		expectedCreateErr error
+
+		// PeerIDs expected to be in the PeerList's PeerRing after the actions have been applied
+		expectedRingPeers []string
+
+		// Boolean indicating whether the PeerList is "started" after the actions have been applied
+		expectedStarted bool
 	}
 	tests := []testStruct{
 		{
@@ -309,6 +327,9 @@ func TestRoundRobinList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
+			// Due to a deadlock that occurs when an Expectation on the Peers
+			// relies on the MockController we need to use separate controllers
+			// for the MockPeers and MockAgents
 			agentMockCtrl := gomock.NewController(t)
 			defer agentMockCtrl.Finish()
 			peerMockCtrl := gomock.NewController(t)

@@ -44,7 +44,6 @@ type StartAction struct {
 // Apply runs "Start" on the peerList and validates the error
 func (a StartAction) Apply(t *testing.T, pl transport.PeerList) {
 	err := pl.Start()
-
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
@@ -56,7 +55,6 @@ type StopAction struct {
 // Apply runs "Stop" on the peerList and validates the error
 func (a StopAction) Apply(t *testing.T, pl transport.PeerList) {
 	err := pl.Stop()
-
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
@@ -72,12 +70,19 @@ type ChooseAction struct {
 func (a ChooseAction) Apply(t *testing.T, pl transport.PeerList) {
 	peer, err := pl.ChoosePeer(a.InputContext, a.InputRequest)
 
-	if peer != nil {
-		assert.Equal(t, a.ExpectedPeer, peer.Identifier())
-	} else {
-		assert.Equal(t, a.ExpectedPeer, "")
+	if a.ExpectedErr != nil {
+		// Note that we're not verifying anything about ExpectedPeer here because
+		// it being non-empty means that the test itself was invalid. If anything,
+		// that should cause a panic, not a test failure. But that validation can
+		// be done before you start asserting expectations.
+		assert.Nil(t, peer)
+		assert.Equal(t, a.ExpectedErr, err)
+		return
 	}
-	assert.Equal(t, a.ExpectedErr, err)
+
+	if assert.NoError(t, err) && assert.NotNil(t, peer) {
+		assert.Equal(t, a.ExpectedPeer, peer.Identifier())
+	}
 }
 
 // AddAction is an action for adding a peer to the peerlist
@@ -92,7 +97,6 @@ func (a AddAction) Apply(t *testing.T, pl transport.PeerList) {
 	changeListener := pl.(transport.PeerChangeListener)
 
 	err := changeListener.Add(MockPeerIdentifier(a.InputPeerID))
-
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
@@ -108,7 +112,6 @@ func (a RemoveAction) Apply(t *testing.T, pl transport.PeerList) {
 	changeListener := pl.(transport.PeerChangeListener)
 
 	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
-
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
