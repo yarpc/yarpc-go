@@ -3,10 +3,8 @@ package hostport
 import (
 	"testing"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/internal/errors"
-	. "go.uber.org/yarpc/transport/internal/transporttest"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/peer"
+	. "go.uber.org/yarpc/peer/peertest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -56,7 +54,7 @@ func TestPeer(t *testing.T) {
 		expectedHostPort string
 
 		// Expected result from running Status() on the peer after the actions have been applied
-		expectedStatus transport.PeerStatus
+		expectedStatus peer.Status
 
 		// Expected subscribers in the Peer's "subscribers" map after the actions have been applied
 		expectedSubscribers []string
@@ -67,9 +65,9 @@ func TestPeer(t *testing.T) {
 			inputPeerID:        "localhost:12345",
 			expectedIdentifier: "localhost:12345",
 			expectedHostPort:   "localhost:12345",
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerUnavailable,
+				ConnectionStatus:    peer.Unavailable,
 			},
 		},
 		{
@@ -80,9 +78,9 @@ func TestPeer(t *testing.T) {
 				StartStopReqAction{Stop: false},
 			},
 			expectedSubscribers: []string{"1"},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 1,
-				ConnectionStatus:    transport.PeerUnavailable,
+				ConnectionStatus:    peer.Unavailable,
 			},
 		},
 		{
@@ -93,9 +91,9 @@ func TestPeer(t *testing.T) {
 				StartStopReqAction{Stop: true},
 			},
 			expectedSubscribers: []string{"1"},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerUnavailable,
+				ConnectionStatus:    peer.Unavailable,
 			},
 		},
 		{
@@ -110,9 +108,9 @@ func TestPeer(t *testing.T) {
 				StartStopReqAction{Stop: false},
 			},
 			expectedSubscribers: []string{"1"},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 3,
-				ConnectionStatus:    transport.PeerUnavailable,
+				ConnectionStatus:    peer.Unavailable,
 			},
 		},
 		{
@@ -127,9 +125,9 @@ func TestPeer(t *testing.T) {
 				StartStopReqAction{Stop: true},
 			},
 			expectedSubscribers: []string{"1"},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 
-				ConnectionStatus: transport.PeerUnavailable,
+				ConnectionStatus: peer.Unavailable,
 			},
 		},
 		{
@@ -143,12 +141,12 @@ func TestPeer(t *testing.T) {
 				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
 				SubscribeAction{SubscriberID: "2", ExpectedSubCount: 2},
 				SubscribeAction{SubscriberID: "3", ExpectedSubCount: 3},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 			},
 			expectedSubscribers: []string{"1", "2", "3"},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    peer.Available,
 			},
 		},
 		{
@@ -160,16 +158,16 @@ func TestPeer(t *testing.T) {
 			},
 			actions: []PeerAction{
 				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				SubscribeAction{SubscriberID: "2", ExpectedSubCount: 2},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				SubscribeAction{SubscriberID: "3", ExpectedSubCount: 3},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 			},
 			expectedSubscribers: []string{"1", "2", "3"},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    peer.Available,
 			},
 		},
 		{
@@ -179,13 +177,13 @@ func TestPeer(t *testing.T) {
 			},
 			actions: []PeerAction{
 				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				UnsubscribeAction{SubscriberID: "1", ExpectedSubCount: 0},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 			},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    peer.Available,
 			},
 		},
 		{
@@ -197,21 +195,21 @@ func TestPeer(t *testing.T) {
 			},
 			actions: []PeerAction{
 				SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				SubscribeAction{SubscriberID: "2", ExpectedSubCount: 2},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				SubscribeAction{SubscriberID: "3", ExpectedSubCount: 3},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				UnsubscribeAction{SubscriberID: "3", ExpectedSubCount: 2},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				UnsubscribeAction{SubscriberID: "2", ExpectedSubCount: 1},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 				UnsubscribeAction{SubscriberID: "1", ExpectedSubCount: 0},
-				SetStatusAction{InputStatus: transport.PeerAvailable},
+				SetStatusAction{InputStatus: peer.Available},
 			},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerAvailable,
+				ConnectionStatus:    peer.Available,
 			},
 		},
 		{
@@ -222,13 +220,13 @@ func TestPeer(t *testing.T) {
 			actions: []PeerAction{
 				UnsubscribeAction{
 					SubscriberID:     "1",
-					ExpectedErrType:  errors.ErrPeerHasNoReferenceToSubscriber{},
+					ExpectedErrType:  peer.ErrPeerHasNoReferenceToSubscriber{},
 					ExpectedSubCount: 0,
 				},
 			},
-			expectedStatus: transport.PeerStatus{
+			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
-				ConnectionStatus:    transport.PeerUnavailable,
+				ConnectionStatus:    peer.Unavailable,
 			},
 		},
 	}
@@ -244,7 +242,7 @@ func TestPeer(t *testing.T) {
 				tt.expectedHostPort = "localhost:12345"
 			}
 
-			agent := transporttest.NewMockAgent(mockCtrl)
+			agent := NewMockAgent(mockCtrl)
 
 			peer := NewPeer(PeerIdentifier(tt.inputPeerID), agent)
 

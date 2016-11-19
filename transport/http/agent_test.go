@@ -4,10 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/internal/errors"
-	"go.uber.org/yarpc/transport/peer/hostport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/peertest"
 
 	"github.com/crossdock/crossdock-go/assert"
 	"github.com/golang/mock/gomock"
@@ -15,7 +14,7 @@ import (
 
 type peerExpectation struct {
 	identifier  hostport.PeerIdentifier
-	subscribers []*transporttest.MockPeerSubscriber
+	subscribers []*peertest.MockSubscriber
 }
 
 // createPeerExpectations creates a slice of peerExpectation structs for the
@@ -29,9 +28,9 @@ func createPeerExpectations(
 	expectations := make([]peerExpectation, 0, len(hostports))
 	for _, hp := range hostports {
 		hpid := hostport.PeerIdentifier(hp)
-		subs := make([]*transporttest.MockPeerSubscriber, 0, subscribers)
+		subs := make([]*peertest.MockSubscriber, 0, subscribers)
 		for i := 0; i < subscribers; i++ {
-			subs = append(subs, transporttest.NewMockPeerSubscriber(mockCtrl))
+			subs = append(subs, peertest.NewMockSubscriber(mockCtrl))
 		}
 		expectations = append(expectations, peerExpectation{
 			identifier:  hpid,
@@ -46,7 +45,7 @@ type peerIdentifierMatcher hostport.PeerIdentifier
 
 // Matches returns whether x is a match.
 func (pim peerIdentifierMatcher) Matches(x interface{}) bool {
-	res, ok := x.(transport.PeerIdentifier)
+	res, ok := x.(peer.Identifier)
 	if !ok {
 		return false
 	}
@@ -90,7 +89,7 @@ func TestAgent(t *testing.T) {
 			s.appliedFunc = func(a *Agent) error {
 				pid := hostport.PeerIdentifier("localhost:1234")
 
-				sub := transporttest.NewMockPeerSubscriber(mockCtrl)
+				sub := peertest.NewMockSubscriber(mockCtrl)
 
 				if _, err := a.RetainPeer(pid, sub); err != nil {
 					return err
@@ -105,13 +104,13 @@ func TestAgent(t *testing.T) {
 			s.appliedFunc = func(a *Agent) error {
 				pid := hostport.PeerIdentifier("localhost:1234")
 
-				sub := transporttest.NewMockPeerSubscriber(mockCtrl)
+				sub := peertest.NewMockSubscriber(mockCtrl)
 
-				peer, err := a.RetainPeer(pid, sub)
+				p, err := a.RetainPeer(pid, sub)
 				if err != nil {
 					return err
 				}
-				err = a.ReleasePeer(peer, sub)
+				err = a.ReleasePeer(p, sub)
 
 				return err
 			}
@@ -140,7 +139,7 @@ func TestAgent(t *testing.T) {
 				2,
 			)
 			s.appliedFunc = func(a *Agent) error {
-				unSub := transporttest.NewMockPeerSubscriber(mockCtrl)
+				unSub := peertest.NewMockSubscriber(mockCtrl)
 				a.RetainPeer(s.expectedPeers[0].identifier, unSub)
 				a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[0])
 				a.ReleasePeer(s.expectedPeers[0].identifier, unSub)
@@ -156,9 +155,9 @@ func TestAgent(t *testing.T) {
 			s.appliedFunc = func(a *Agent) error {
 				pid := hostport.PeerIdentifier("localhost:123")
 
-				sub := transporttest.NewMockPeerSubscriber(mockCtrl)
-				sub2 := transporttest.NewMockPeerSubscriber(mockCtrl)
-				sub3 := transporttest.NewMockPeerSubscriber(mockCtrl)
+				sub := peertest.NewMockSubscriber(mockCtrl)
+				sub2 := peertest.NewMockSubscriber(mockCtrl)
+				sub3 := peertest.NewMockSubscriber(mockCtrl)
 
 				a.RetainPeer(pid, sub)
 				a.RetainPeer(pid, sub2)
@@ -177,13 +176,13 @@ func TestAgent(t *testing.T) {
 			s.expectedPeers = []peerExpectation{}
 
 			pid := hostport.PeerIdentifier("localhost:1234")
-			s.expectedErr = errors.ErrAgentHasNoReferenceToPeer{
+			s.expectedErr = peer.ErrAgentHasNoReferenceToPeer{
 				Agent:          s.agent,
 				PeerIdentifier: pid,
 			}
 
 			s.appliedFunc = func(a *Agent) error {
-				return a.ReleasePeer(pid, transporttest.NewMockPeerSubscriber(mockCtrl))
+				return a.ReleasePeer(pid, peertest.NewMockSubscriber(mockCtrl))
 			}
 			return
 		}(),
@@ -191,14 +190,14 @@ func TestAgent(t *testing.T) {
 			s.msg = "retain with invalid identifier"
 			s.expectedPeers = []peerExpectation{}
 
-			pid := transporttest.NewMockPeerIdentifier(mockCtrl)
-			s.expectedErr = errors.ErrInvalidPeerType{
+			pid := peertest.NewMockIdentifier(mockCtrl)
+			s.expectedErr = peer.ErrInvalidPeerType{
 				ExpectedType:   "hostport.PeerIdentifier",
 				PeerIdentifier: pid,
 			}
 
 			s.appliedFunc = func(a *Agent) error {
-				_, err := a.RetainPeer(pid, transporttest.NewMockPeerSubscriber(mockCtrl))
+				_, err := a.RetainPeer(pid, peertest.NewMockSubscriber(mockCtrl))
 				return err
 			}
 			return
@@ -211,8 +210,8 @@ func TestAgent(t *testing.T) {
 				1,
 			)
 
-			invalidSub := transporttest.NewMockPeerSubscriber(mockCtrl)
-			s.expectedErr = errors.ErrPeerHasNoReferenceToSubscriber{
+			invalidSub := peertest.NewMockSubscriber(mockCtrl)
+			s.expectedErr = peer.ErrPeerHasNoReferenceToSubscriber{
 				PeerIdentifier: s.expectedPeers[0].identifier,
 				PeerSubscriber: invalidSub,
 			}
@@ -237,9 +236,9 @@ func TestAgent(t *testing.T) {
 				expP3 := s.expectedPeers[2]
 				rndP1 := hostport.PeerIdentifier("localhost:9888")
 				rndP2 := hostport.PeerIdentifier("localhost:9883")
-				rndSub1 := transporttest.NewMockPeerSubscriber(mockCtrl)
-				rndSub2 := transporttest.NewMockPeerSubscriber(mockCtrl)
-				rndSub3 := transporttest.NewMockPeerSubscriber(mockCtrl)
+				rndSub1 := peertest.NewMockSubscriber(mockCtrl)
+				rndSub2 := peertest.NewMockSubscriber(mockCtrl)
+				rndSub3 := peertest.NewMockSubscriber(mockCtrl)
 
 				// exp1: Defer a bunch of Releases
 				a.RetainPeer(expP1.identifier, rndSub1)
@@ -289,12 +288,12 @@ func TestAgent(t *testing.T) {
 			assert.Equal(t, tt.expectedErr, err)
 			assert.Len(t, agent.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {
-				peer, ok := agent.peers[expectedPeerNode.identifier.Identifier()]
+				p, ok := agent.peers[expectedPeerNode.identifier.Identifier()]
 				assert.True(t, ok)
 
-				assert.Equal(t, expectedPeerNode.identifier.Identifier(), peer.Identifier())
+				assert.Equal(t, expectedPeerNode.identifier.Identifier(), p.Identifier())
 
-				assert.Len(t, expectedPeerNode.subscribers, peer.NumSubscribers())
+				assert.Len(t, expectedPeerNode.subscribers, p.NumSubscribers())
 			}
 		})
 	}
