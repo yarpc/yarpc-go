@@ -64,7 +64,7 @@ func NewAgent(opts ...AgentOption) *Agent {
 
 // Agent keeps track of http peers and the associated client with which the peer will call into.
 type Agent struct {
-	lock sync.RWMutex
+	lock sync.Mutex
 
 	client *http.Client
 	peers  map[string]*hostport.Peer
