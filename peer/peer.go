@@ -18,46 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package peer
 
-//go:generate mockgen -destination=transporttest/peer.go -package=transporttest go.uber.org/yarpc/transport PeerIdentifier,Peer
+//go:generate mockgen -destination=peertest/peer.go -package=peertest go.uber.org/yarpc/peer Identifier,Peer
 
-// PeerConnectionStatus maintains information about the Peer's connection state
-type PeerConnectionStatus int
+// ConnectionStatus maintains information about the Peer's connection state
+type ConnectionStatus int
 
 const (
-	// PeerUnavailable indicates the Peer is unavailable for requests
-	PeerUnavailable PeerConnectionStatus = iota
+	// Unavailable indicates the Peer is unavailable for requests
+	Unavailable ConnectionStatus = iota
 
-	// PeerConnecting indicates the Peer is in the process of connecting
-	PeerConnecting
+	// Connecting indicates the Peer is in the process of connecting
+	Connecting
 
-	// PeerAvailable indicates the Peer is available for requests
-	PeerAvailable
+	// Available indicates the Peer is available for requests
+	Available
 )
 
-// PeerStatus holds all the information about a peer's state that would be useful to PeerSubscribers
-type PeerStatus struct {
+// Status holds all the information about a peer's state that would be useful to Subscribers
+type Status struct {
 	// Current number of pending requests on this peer
 	PendingRequestCount int
 
 	// Current status of the Peer's connection
-	ConnectionStatus PeerConnectionStatus
+	ConnectionStatus ConnectionStatus
 }
 
-// PeerIdentifier is able to uniquely identify a peer (e.g. hostport)
-type PeerIdentifier interface {
+// Identifier is able to uniquely identify a peer (e.g. hostport)
+type Identifier interface {
 	Identifier() string
 }
 
-// Peer is a level on top of PeerIdentifier.  It should be created by a PeerAgent so we
+// Peer is a level on top of Identifier.  It should be created by a Agent so we
 // can maintain multiple references to the same downstream peer (e.g. hostport).  This is
 // useful for load balancing requests to downstream services.
 type Peer interface {
-	PeerIdentifier
+	Identifier
 
 	// Get the status of the Peer
-	Status() PeerStatus
+	Status() Status
 
 	// Tell the peer that a request is starting/ending
 	// The callsite should look like:

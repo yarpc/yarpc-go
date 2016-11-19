@@ -25,9 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/internal/errors"
-	"go.uber.org/yarpc/transport/peer/hostport"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 )
 
 type agentConfig struct {
@@ -70,56 +69,56 @@ type Agent struct {
 	peers  map[string]*hostport.Peer
 }
 
-// RetainPeer gets or creates a Peer for the specified PeerSubscriber (usually a PeerList)
-func (a *Agent) RetainPeer(pid transport.PeerIdentifier, sub transport.PeerSubscriber) (transport.Peer, error) {
+// RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.List)
+func (a *Agent) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	hppid, ok := pid.(hostport.PeerIdentifier)
 	if !ok {
-		return nil, errors.ErrInvalidPeerType{
+		return nil, peer.ErrInvalidPeerType{
 			ExpectedType:   "hostport.PeerIdentifier",
 			PeerIdentifier: pid,
 		}
 	}
 
-	peer := a.getOrCreatePeer(hppid)
-	peer.AddSubscriber(sub)
-	return peer, nil
+	p := a.getOrCreatePeer(hppid)
+	p.AddSubscriber(sub)
+	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
 func (a *Agent) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
-	if peer, ok := a.peers[pid.Identifier()]; ok {
-		return peer
+	if p, ok := a.peers[pid.Identifier()]; ok {
+		return p
 	}
 
-	peer := hostport.NewPeer(pid, a)
-	peer.SetStatus(transport.PeerAvailable)
+	p := hostport.NewPeer(pid, a)
+	p.SetStatus(peer.Available)
 
-	a.peers[peer.Identifier()] = peer
+	a.peers[p.Identifier()] = p
 
-	return peer
+	return p
 }
 
-// ReleasePeer releases a peer from the PeerSubscriber and removes that peer from the Agent if nothing is listening to it
-func (a *Agent) ReleasePeer(pid transport.PeerIdentifier, sub transport.PeerSubscriber) error {
+// ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Agent if nothing is listening to it
+func (a *Agent) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	peer, ok := a.peers[pid.Identifier()]
+	p, ok := a.peers[pid.Identifier()]
 	if !ok {
-		return errors.ErrAgentHasNoReferenceToPeer{
+		return peer.ErrAgentHasNoReferenceToPeer{
 			Agent:          a,
 			PeerIdentifier: pid,
 		}
 	}
 
-	if err := peer.RemoveSubscriber(sub); err != nil {
+	if err := p.RemoveSubscriber(sub); err != nil {
 		return err
 	}
 
-	if peer.NumSubscribers() == 0 {
+	if p.NumSubscribers() == 0 {
 		delete(a.peers, pid.Identifier())
 	}
 

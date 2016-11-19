@@ -18,32 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transporttest
+package peer
 
 import (
-	"go.uber.org/yarpc/transport/transporttest"
+	"context"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/yarpc/transport"
 )
 
-// SubscriberDefinition is an abstraction for defining a PeerSubscriber with
-// an ID so it can be referenced later.
-type SubscriberDefinition struct {
-	ID                  string
-	ExpectedNotifyCount int
+//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/peer List,ChangeListener
+
+// List is a collection of Peers.  Outbounds request peers from the peer.List to determine where to send requests
+type List interface {
+	// Notify the PeerList that it will start receiving requests
+	Start() error
+
+	// Notify the PeerList that it will stop receiving requests
+	Stop() error
+
+	// Choose a Peer for the next call, block until a peer is available (or timeout)
+	ChoosePeer(context.Context, *transport.Request) (Peer, error)
 }
 
-// CreateSubscriberMap will take a slice of SubscriberDefinitions and return
-// a map of IDs to MockPeerSubscribers
-func CreateSubscriberMap(
-	mockCtrl *gomock.Controller,
-	subDefinitions []SubscriberDefinition,
-) map[string]*transporttest.MockPeerSubscriber {
-	subscribers := make(map[string]*transporttest.MockPeerSubscriber, len(subDefinitions))
-	for _, subDef := range subDefinitions {
-		sub := transporttest.NewMockPeerSubscriber(mockCtrl)
-		sub.EXPECT().NotifyStatusChanged(gomock.Any()).Times(subDef.ExpectedNotifyCount)
-		subscribers[subDef.ID] = sub
-	}
-	return subscribers
+// ChangeListener listens to adds and removes of Peers from a PeerProvider
+// A List will implement the PeerChangeListener interface in order to receive
+// updates to the list of Peers it is keeping track of
+type ChangeListener interface {
+	// Add a peer to the List (Called directly from a PeerProvider)
+	Add(Identifier) error
+
+	// Remove a peer from the List (Called directly from a PeerProvider)
+	Remove(Identifier) error
 }

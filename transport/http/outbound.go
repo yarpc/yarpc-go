@@ -30,10 +30,10 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/list"
 	"go.uber.org/yarpc/transport"
-	terrors "go.uber.org/yarpc/transport/internal/errors"
-	"go.uber.org/yarpc/transport/peer/hostport"
-	"go.uber.org/yarpc/transport/peer/peerlist"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -62,7 +62,7 @@ func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 	urlTemplate, hp := parseURL(urlStr)
 
 	peerID := hostport.PeerIdentifier(hp)
-	peerList := peerlist.NewSingle(peerID, agent)
+	peerList := list.NewSingle(peerID, agent)
 
 	err := peerList.Start()
 	if err != nil {
@@ -86,7 +86,7 @@ func parseURL(urlStr string) (*url.URL, string) {
 // for getting potential downstream hosts.
 // PeerList.ChoosePeer MUST return *hostport.Peer objects.
 // PeerList.Start MUST be called before Outbound.Start
-func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) *Outbound {
+func NewPeerListOutbound(peerList peer.List, urlTemplate *url.URL) *Outbound {
 	return &Outbound{
 		started:     atomic.NewBool(false),
 		peerList:    peerList,
@@ -98,7 +98,7 @@ func NewPeerListOutbound(peerList transport.PeerList, urlTemplate *url.URL) *Out
 type Outbound struct {
 	started     *atomic.Bool
 	deps        transport.Deps
-	peerList    transport.PeerList
+	peerList    peer.List
 	urlTemplate *url.URL
 }
 
@@ -126,14 +126,14 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
 
-	peer, err := o.getPeerForRequest(ctx, treq)
+	p, err := o.getPeerForRequest(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
-	endRequest := peer.StartRequest()
+	endRequest := p.StartRequest()
 	defer endRequest()
 
-	req, err := o.createRequest(peer, treq)
+	req, err := o.createRequest(p, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	defer span.Finish()
 	req = o.withCoreHeaders(req, treq, ttl)
 
-	client, err := o.getHTTPClient(peer)
+	client, err := o.getHTTPClient(p)
 	if err != nil {
 		return nil, err
 	}
@@ -198,14 +198,14 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		panic(errOutboundNotStarted)
 	}
 
-	peer, err := o.getPeerForRequest(ctx, treq)
+	p, err := o.getPeerForRequest(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
-	endRequest := peer.StartRequest()
+	endRequest := p.StartRequest()
 	defer endRequest()
 
-	req, err := o.createRequest(peer, treq)
+	req, err := o.createRequest(p, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	defer span.Finish()
 	req = o.withCoreHeaders(req, treq, ttl)
 
-	client, err := o.getHTTPClient(peer)
+	client, err := o.getHTTPClient(p)
 	if err != nil {
 		return nil, err
 	}
@@ -246,15 +246,15 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
-	peer, err := o.peerList.ChoosePeer(ctx, treq)
+	p, err := o.peerList.ChoosePeer(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
 
-	hpPeer, ok := peer.(*hostport.Peer)
+	hpPeer, ok := p.(*hostport.Peer)
 	if !ok {
-		return nil, terrors.ErrInvalidPeerConversion{
-			Peer:         peer,
+		return nil, peer.ErrInvalidPeerConversion{
+			Peer:         p,
 			ExpectedType: "*hostport.Peer",
 		}
 	}
@@ -262,9 +262,9 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	return hpPeer, nil
 }
 
-func (o *Outbound) createRequest(peer *hostport.Peer, treq *transport.Request) (*http.Request, error) {
+func (o *Outbound) createRequest(p *hostport.Peer, treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
-	newURL.Host = peer.HostPort()
+	newURL.Host = p.HostPort()
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
@@ -325,11 +325,11 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
-func (o *Outbound) getHTTPClient(peer *hostport.Peer) (*http.Client, error) {
-	agent, ok := peer.Agent().(*Agent)
+func (o *Outbound) getHTTPClient(p *hostport.Peer) (*http.Client, error) {
+	agent, ok := p.Agent().(*Agent)
 	if !ok {
-		return nil, terrors.ErrInvalidAgentConversion{
-			Agent:        peer.Agent(),
+		return nil, peer.ErrInvalidAgentConversion{
+			Agent:        p.Agent(),
 			ExpectedType: "*http.Agent",
 		}
 	}

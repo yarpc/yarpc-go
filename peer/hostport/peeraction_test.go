@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/peertest"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -36,7 +36,7 @@ import (
 // Dependences are passed through all the PeerActions in order to pass certain
 // state in between Actions
 type Dependencies struct {
-	Subscribers map[string]*transporttest.MockPeerSubscriber
+	Subscribers map[string]*peertest.MockSubscriber
 }
 
 // PeerAction defines actions that can be applied on a hostport.Peer
@@ -59,7 +59,7 @@ func (sa StartStopReqAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
 
 // SetStatusAction will run a SetStatus on a Peer
 type SetStatusAction struct {
-	InputStatus transport.PeerConnectionStatus
+	InputStatus peer.ConnectionStatus
 }
 
 // Apply will run SetStatus on the Peer

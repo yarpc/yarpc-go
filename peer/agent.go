@@ -18,31 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package peer
 
-import "context"
+//go:generate mockgen -destination=peertest/agent.go -package=peertest go.uber.org/yarpc/peer Agent,Subscriber
 
-//go:generate mockgen -destination=transporttest/peerlist.go -package=transporttest go.uber.org/yarpc/transport PeerList,PeerChangeListener
-
-// PeerList is a collection of Peers.  Outbounds request peers from the PeerList to determine where to send requests
-type PeerList interface {
-	// Notify the PeerList that it will start receiving requests
-	Start() error
-
-	// Notify the PeerList that it will stop receiving requests
-	Stop() error
-
-	// Choose a Peer for the next call, block until a peer is available (or timeout)
-	ChoosePeer(context.Context, *Request) (Peer, error)
+// Subscriber listens to changes of a Peer over time.
+type Subscriber interface {
+	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)
+	NotifyStatusChanged(Identifier)
 }
 
-// PeerChangeListener listens to adds and removes of Peers from a PeerProvider
-// A PeerList will implement the PeerChangeListener interface in order to receive
-// updates to the list of Peers it is keeping track of
-type PeerChangeListener interface {
-	// Add a peer to the PeerList (Called directly from a PeerProvider)
-	Add(PeerIdentifier) error
+// Agent manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
+// PeerIdentifier and the Agent has the ability to create a new Peer or return an existing one.
+type Agent interface {
+	// Get or create a Peer for the Subscriber
+	RetainPeer(Identifier, Subscriber) (Peer, error)
 
-	// Remove a peer from the PeerList (Called directly from a PeerProvider)
-	Remove(PeerIdentifier) error
+	// Unallocate a peer from the Subscriber
+	ReleasePeer(Identifier, Subscriber) error
 }
