@@ -145,6 +145,8 @@ func (pl *RoundRobin) clearPeers() error {
 	return yerrors.MultiError(errs)
 }
 
+// removeAllUnavailable will clear the nonAvailablePeers list and
+// return all the Peers in the list in a slice
 // Must be run in a mutex.Lock()
 func (pl *RoundRobin) removeAllUnavailable() []transport.Peer {
 	peers := make([]transport.Peer, 0, len(pl.nonAvailablePeers))
@@ -172,7 +174,7 @@ func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	if err := pl.removePeerIdentifier(pid); err != nil {
+	if err := pl.removeByPeerIdentifier(pid); err != nil {
 		// The peer has already been removed
 		return err
 	}
@@ -180,14 +182,17 @@ func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
 	return pl.agent.ReleasePeer(pid, pl)
 }
 
+// removeByPeerIdentifier will search through the Available and Unavailable Peers
+// for the PeerID and remove it
 // Must be run in a mutex.Lock()
-func (pl *RoundRobin) removePeerIdentifier(pid transport.PeerIdentifier) error {
+func (pl *RoundRobin) removeByPeerIdentifier(pid transport.PeerIdentifier) error {
 	if peer := pl.availablePeerRing.GetPeer(pid); peer != nil {
 		return pl.availablePeerRing.Remove(peer)
 	}
 
 	if peer := pl.getUnavailablePeer(pid); peer != nil {
-		return pl.removeFromUnavailablePeers(peer)
+		pl.removeFromUnavailablePeers(peer)
+		return nil
 	}
 
 	return errors.ErrPeerRemoveNotInList(pid.Identifier())
@@ -203,15 +208,11 @@ func (pl *RoundRobin) getUnavailablePeer(pid transport.PeerIdentifier) transport
 	return p
 }
 
+// removeFromUnavailablePeers remove a peer from the Unavailable Peers list
+// the Peer should already be validated as non-nil and in the Unavailable list
 // Must be run in a mutex.Lock()
-func (pl *RoundRobin) removeFromUnavailablePeers(p transport.Peer) error {
-	p, ok := pl.nonAvailablePeers[p.Identifier()]
-	if !ok {
-		return errors.ErrPeerRemoveNotInList(p.Identifier())
-	}
-
+func (pl *RoundRobin) removeFromUnavailablePeers(p transport.Peer) {
 	delete(pl.nonAvailablePeers, p.Identifier())
-	return nil
 }
 
 // ChoosePeer selects the next available peer in the round robin
@@ -312,10 +313,7 @@ func (pl *RoundRobin) handleUnavailablePeerStatusChange(p transport.Peer) error 
 		return nil
 	}
 
-	if err := pl.removeFromUnavailablePeers(p); err != nil {
-		// Peer was not in list
-		return err
-	}
+	pl.removeFromUnavailablePeers(p)
 
 	return pl.addToAvailablePeers(p)
 }

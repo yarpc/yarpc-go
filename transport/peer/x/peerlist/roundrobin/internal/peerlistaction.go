@@ -67,7 +67,7 @@ func (a StopAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies
 }
 
 // ChooseMultiAction will run ChoosePeer multiple times on the PeerList
-// It will assert if there is ANY failures
+// It will assert if there are ANY failures
 type ChooseMultiAction struct {
 	ExpectedPeers []string
 }
@@ -176,7 +176,8 @@ func (a ConcurrentAction) Apply(t *testing.T, pl transport.PeerList, deps Depend
 	wg.Wait()
 }
 
-// NotifyStatusChangeAction will run the NotifyStatusChange function on a PeerList with a specified Peer
+// NotifyStatusChangeAction will run the NotifyStatusChange function on a PeerList
+// with a specified Peer after changing the peer's ConnectionStatus
 type NotifyStatusChangeAction struct {
 	// PeerID is a unique identifier to the Peer we want use in the notification
 	PeerID string
