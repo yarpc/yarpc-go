@@ -61,7 +61,7 @@ type Dispatcher interface {
 type Config struct {
 	Name string
 
-	Inbounds  []transport.Inbound
+	Inbounds  Inbounds
 	Outbounds Outbounds
 
 	// Filter and Interceptor that will be applied to all outgoing and incoming
@@ -71,6 +71,9 @@ type Config struct {
 
 	Tracer opentracing.Tracer
 }
+
+// Inbounds contains a list of inbound transports
+type Inbounds []transport.Inbound
 
 // Outbounds encapsulates a service and its outbounds
 type Outbounds map[string]transport.Outbounds
