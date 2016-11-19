@@ -36,16 +36,29 @@ func TestPeerIdentifier(t *testing.T) {
 
 func TestPeer(t *testing.T) {
 	type testStruct struct {
-		msg         string
+		msg string
+
+		// PeerID for all the hostport.Peer initialization
 		inputPeerID string
 
-		// Map of subscriber id (used internally) to number of times notify will be called
-		SubDefinitions      []SubscriberDefinition
-		actions             []PeerAction
-		expectedIdentifier  string
-		expectedHostPort    string
-		expectedStatus      transport.PeerStatus
-		expectedAgent       transport.Agent
+		// List of "Subscribers" that we can define beforehand and reference in our PeerActions
+		// using the "ID" field in the subscriber definition, the "ExpectedNotifyCount" is the
+		// expected number of times the subscriber will be notified
+		SubDefinitions []SubscriberDefinition
+
+		// List of actions to be applied to the peer
+		actions []PeerAction
+
+		// Expected result from running Identifier() on the peer after the actions have been applied
+		expectedIdentifier string
+
+		// Expected result from running HostPort() on the peer after the actions have been applied
+		expectedHostPort string
+
+		// Expected result from running Status() on the peer after the actions have been applied
+		expectedStatus transport.PeerStatus
+
+		// Expected subscribers in the Peer's "subscribers" map after the actions have been applied
 		expectedSubscribers []string
 	}
 	tests := []testStruct{
