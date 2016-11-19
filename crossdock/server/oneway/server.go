@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/crossdock/thrift/oneway/yarpc/onewayserver"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -42,7 +41,7 @@ func Start() {
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "oneway-test",
-		Inbounds: []transport.Inbound{
+		Inbounds: yarpc.Inbounds{
 			http.NewInbound(":8084"),
 		},
 		Outbounds: yarpc.Outbounds{

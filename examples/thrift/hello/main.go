@@ -31,7 +31,6 @@ import (
 	"go.uber.org/yarpc/examples/thrift/hello/echo/yarpc/helloserver"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -41,7 +40,7 @@ func main() {
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
-		Inbounds: []transport.Inbound{
+		Inbounds: yarpc.Inbounds{
 			http.NewInbound(":8086"),
 		},
 		Outbounds: yarpc.Outbounds{

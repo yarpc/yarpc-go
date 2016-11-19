@@ -329,7 +329,7 @@ func TestHandlerPanic(t *testing.T) {
 	inbound := NewInbound("localhost:0")
 	serverDispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "yarpc-test",
-		Inbounds: []transport.Inbound{inbound},
+		Inbounds: yarpc.Inbounds{inbound},
 	})
 	serverDispatcher.Register([]transport.Registrant{
 		{

@@ -43,7 +43,7 @@ type Dispatcher interface {
 	//
 	// The Inbounds will be returned in the same order that was used in the
 	// configuration.
-	Inbounds() []transport.Inbound
+	Inbounds() Inbounds
 
 	// Starts the RPC allowing it to accept and processing new incoming
 	// requests.
@@ -133,7 +133,7 @@ type dispatcher struct {
 
 	Name string
 
-	inbounds  []transport.Inbound
+	inbounds  Inbounds
 	outbounds Outbounds
 
 	Interceptor transport.Interceptor
@@ -141,8 +141,8 @@ type dispatcher struct {
 	deps transport.Deps
 }
 
-func (d dispatcher) Inbounds() []transport.Inbound {
-	inbounds := make([]transport.Inbound, len(d.inbounds))
+func (d dispatcher) Inbounds() Inbounds {
+	inbounds := make(Inbounds, len(d.inbounds))
 	copy(inbounds, d.inbounds)
 	return inbounds
 }

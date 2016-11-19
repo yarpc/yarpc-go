@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueserver"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
@@ -68,7 +67,7 @@ func main() {
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
-		Inbounds: []transport.Inbound{
+		Inbounds: yarpc.Inbounds{
 			tch.NewInbound(channel, tch.ListenAddr(":28941")),
 			http.NewInbound(":24034"),
 		},

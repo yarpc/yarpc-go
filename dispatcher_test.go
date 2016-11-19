@@ -43,7 +43,7 @@ func basicDispatcher(t *testing.T) Dispatcher {
 
 	return NewDispatcher(Config{
 		Name: "test",
-		Inbounds: []transport.Inbound{
+		Inbounds: Inbounds{
 			tch.NewInbound(ch, tch.ListenAddr(":0")),
 			http.NewInbound(":0"),
 		},
@@ -98,7 +98,7 @@ func TestStartStopFailures(t *testing.T) {
 	tests := []struct {
 		desc string
 
-		inbounds  func(*gomock.Controller) []transport.Inbound
+		inbounds  func(*gomock.Controller) Inbounds
 		outbounds func(*gomock.Controller) Outbounds
 
 		wantStartErr string
@@ -106,8 +106,8 @@ func TestStartStopFailures(t *testing.T) {
 	}{
 		{
 			desc: "all success",
-			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
-				inbounds := make([]transport.Inbound, 10)
+			inbounds: func(mockCtrl *gomock.Controller) Inbounds {
+				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
@@ -132,8 +132,8 @@ func TestStartStopFailures(t *testing.T) {
 		},
 		{
 			desc: "inbound 6 start failure",
-			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
-				inbounds := make([]transport.Inbound, 10)
+			inbounds: func(mockCtrl *gomock.Controller) Inbounds {
+				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					if i == 6 {
@@ -163,8 +163,8 @@ func TestStartStopFailures(t *testing.T) {
 		},
 		{
 			desc: "inbound 7 stop failure",
-			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
-				inbounds := make([]transport.Inbound, 10)
+			inbounds: func(mockCtrl *gomock.Controller) Inbounds {
+				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
@@ -194,8 +194,8 @@ func TestStartStopFailures(t *testing.T) {
 		},
 		{
 			desc: "outbound 5 start failure",
-			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
-				inbounds := make([]transport.Inbound, 10)
+			inbounds: func(mockCtrl *gomock.Controller) Inbounds {
+				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
@@ -226,8 +226,8 @@ func TestStartStopFailures(t *testing.T) {
 		},
 		{
 			desc: "inbound 7 stop failure",
-			inbounds: func(mockCtrl *gomock.Controller) []transport.Inbound {
-				inbounds := make([]transport.Inbound, 10)
+			inbounds: func(mockCtrl *gomock.Controller) Inbounds {
+				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)

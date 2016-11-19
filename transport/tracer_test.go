@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
@@ -117,7 +116,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
+		Inbounds: yarpc.Inbounds{
 			http.NewInbound(":18080"),
 		},
 		Outbounds: yarpc.Outbounds{
@@ -142,7 +141,7 @@ func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dis
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
+		Inbounds: yarpc.Inbounds{
 			ytchannel.NewInbound(ch),
 		},
 		Outbounds: yarpc.Outbounds{

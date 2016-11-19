@@ -12,7 +12,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
 	yhttp "go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
@@ -124,7 +123,7 @@ func runTChannelClient(b *testing.B, c *tchannel.Channel, hostPort string) {
 func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: []transport.Inbound{yhttp.NewInbound(":8999")},
+		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8999")},
 	}
 
 	clientCfg := yarpc.Config{
@@ -166,7 +165,7 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: []transport.Inbound{yhttp.NewInbound(":8996")},
+		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8996")},
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
@@ -190,7 +189,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: []transport.Inbound{ytchannel.NewInbound(serverCh)},
+		Inbounds: yarpc.Inbounds{ytchannel.NewInbound(serverCh)},
 	}
 
 	clientCh, err := tchannel.NewChannel("client", nil)
@@ -249,7 +248,7 @@ func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
 
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: []transport.Inbound{ytchannel.NewInbound(serverCh)},
+		Inbounds: yarpc.Inbounds{ytchannel.NewInbound(serverCh)},
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
