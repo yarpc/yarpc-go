@@ -115,5 +115,5 @@ func (e ErrPeerRemoveNotInList) Error() string {
 type ErrChooseContextHasNoDeadline string
 
 func (e ErrChooseContextHasNoDeadline) Error() string {
-	return fmt.Sprintf("can't wait for peer without a context deadline for peerlist %s", string(e))
+	return fmt.Sprintf("can't wait for peer without a context deadline for peerlist %q", string(e))
 }
