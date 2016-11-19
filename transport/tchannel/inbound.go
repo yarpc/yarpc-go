@@ -33,7 +33,7 @@ type Inbound interface {
 	transport.Inbound
 
 	// Returns the underlying Channel for this Inbound.
-	Channel() *tchannel.Channel
+	Channel() Channel
 }
 
 // InboundOption configures Inbound.
@@ -51,7 +51,7 @@ func ListenAddr(addr string) InboundOption {
 // NewInbound builds a new TChannel inbound from the given Channel. Existing
 // methods registered on the channel remain registered and are preferred when
 // a call is received.
-func NewInbound(ch *tchannel.Channel, opts ...InboundOption) Inbound {
+func NewInbound(ch Channel, opts ...InboundOption) Inbound {
 	i := &inbound{ch: ch}
 	for _, opt := range opts {
 		opt(i)
@@ -60,13 +60,13 @@ func NewInbound(ch *tchannel.Channel, opts ...InboundOption) Inbound {
 }
 
 type inbound struct {
-	ch       *tchannel.Channel
+	ch       Channel
 	addr     string
 	listener net.Listener
 	deps     transport.Deps
 }
 
-func (i *inbound) Channel() *tchannel.Channel {
+func (i *inbound) Channel() Channel {
 	return i.ch
 }
 
@@ -99,17 +99,11 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	// TODO(abg): If addr was just the port (":4040"), we want to use
 	// ListenIP() + ":4040" rather than just ":4040".
 
-	var err error
-	i.listener, err = net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-	i.addr = i.listener.Addr().String() // in case it changed
-
-	if err := i.ch.Serve(i.listener); err != nil {
+	if err := i.ch.ListenAndServe(addr); err != nil {
 		return err
 	}
 
+	i.addr = i.ch.PeerInfo().HostPort
 	return nil
 }
 

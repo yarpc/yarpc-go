@@ -50,7 +50,7 @@ func HostPort(hostPort string) OutboundOption {
 
 // NewOutbound builds a new TChannel outbound which uses the given Channel to
 // make requests.
-func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.UnaryOutbound {
+func NewOutbound(ch Channel, options ...OutboundOption) transport.UnaryOutbound {
 	o := outbound{Channel: ch, started: atomic.NewBool(false)}
 	for _, opt := range options {
 		opt(&o)
@@ -60,7 +60,7 @@ func NewOutbound(ch *tchannel.Channel, options ...OutboundOption) transport.Unar
 
 type outbound struct {
 	started *atomic.Bool
-	Channel *tchannel.Channel
+	Channel Channel
 
 	// If specified, this is the address to which the request will be made.
 	// Otherwise, the global peer list of the Channel will be used.
