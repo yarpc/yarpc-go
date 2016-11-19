@@ -47,10 +47,10 @@ func New(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin
 type RoundRobin struct {
 	lock sync.Mutex
 
-	pr             *PeerRing
+	pr                 *PeerRing
 	peerAvailableEvent chan struct{}
-	agent          transport.Agent
-	started        atomic.Bool
+	agent              transport.Agent
+	started            atomic.Bool
 }
 
 func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
@@ -72,8 +72,9 @@ func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
 // Add a peer identifier to the round robin
 func (pl *RoundRobin) Add(pid transport.PeerIdentifier) error {
 	pl.lock.Lock()
-	defer pl.lock.Unlock()
-	return pl.addPeer(pid)
+	err := pl.addPeer(pid)
+	pl.lock.Unlock()
+	return err
 }
 
 // Must be run inside a mutex.Lock()
@@ -154,11 +155,13 @@ func (pl *RoundRobin) ChoosePeer(ctx context.Context, req *transport.Request) (t
 	}
 }
 
+// nextPeer grabs the next available peer from the PeerRing and returns it,
+// if there are no available peers it returns nil
 func (pl *RoundRobin) nextPeer() transport.Peer {
 	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	return pl.pr.Next()
+	peer := pl.pr.Next()
+	pl.lock.Unlock()
+	return peer
 }
 
 // notifyPeerAvailable writes to a channel indicating that a Peer is currently
