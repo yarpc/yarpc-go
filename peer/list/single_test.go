@@ -1,211 +1,165 @@
 package list
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
 	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/peertest"
-	"go.uber.org/yarpc/transport"
+	. "go.uber.org/yarpc/peer/peertest"
 
 	"github.com/crossdock/crossdock-go/assert"
 	"github.com/golang/mock/gomock"
 )
 
 func TestSingleList(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	type expectedChooseResult struct {
-		peer peer.Peer
-		err  error
-	}
-
 	type testStruct struct {
-		msg                   string
-		pid                   peer.Identifier
-		agent                 *peertest.MockAgent
-		appliedFunc           func(*single) error
-		expectedPeerID        peer.Identifier
-		expectedPeer          peer.Peer
-		expectedAgent         peer.Agent
-		expectedStarted       bool
-		expectedErr           error
-		expectedChooseResults []expectedChooseResult
+		msg string
+
+		// PeerID that will be input into the PeerList
+		inputPeerID string
+
+		// PeerID that will be returned from the agent's OnRetain
+		retainedPeerID string
+
+		// Error that will be returned from the agent's OnRetain
+		retainedErr error
+
+		// PeerID that will be released from the agent
+		releasedPeerID string
+
+		// Error that will be returned from the agent's OnRelease
+		releasedErr error
+
+		// Actions that will be applied on the PeerList
+		actions []PeerListAction
+
+		// Expected PeerID to be stored in the Single List
+		expectedPeerID string
+
+		// Expected Peer to be stored in the Single List
+		expectedPeer string
+
+		// Expected state of the started flag in the List
+		expectedStarted bool
 	}
 	tests := []testStruct{
-		func() (s testStruct) {
-			s.msg = "setup"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			s.appliedFunc = func(pl *single) error {
-				return nil
-			}
-
-			s.expectedPeerID = s.pid
-			s.expectedAgent = s.agent
-			s.expectedStarted = false
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "stop before start"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			s.appliedFunc = func(pl *single) error {
-				return pl.Stop()
-			}
-
-			s.expectedErr = peer.ErrPeerListNotStarted("single")
-			s.expectedPeerID = s.pid
-			s.expectedAgent = s.agent
-			s.expectedStarted = false
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "choose before start"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			s.appliedFunc = func(pl *single) error {
-				return nil
-			}
-
-			s.expectedPeerID = s.pid
-			s.expectedAgent = s.agent
-			s.expectedStarted = false
-			s.expectedChooseResults = []expectedChooseResult{{
-				peer: nil,
-				err:  peer.ErrPeerListNotStarted("single"),
-			}}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start and choose"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			s.expectedPeer = peertest.NewMockPeer(mockCtrl)
-			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
-
-			s.appliedFunc = func(pl *single) error {
-				return pl.Start()
-			}
-
-			s.expectedPeerID = s.pid
-			s.expectedAgent = s.agent
-			s.expectedStarted = true
-			s.expectedChooseResults = []expectedChooseResult{{
-				peer: s.expectedPeer,
-				err:  nil,
-			}}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start with agent error"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			s.expectedErr = fmt.Errorf("test error")
-			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(nil, s.expectedErr)
-
-			s.appliedFunc = func(pl *single) error {
-				return pl.Start()
-			}
-
-			s.expectedPeerID = s.pid
-			s.expectedAgent = s.agent
-			s.expectedStarted = false
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start twice"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			s.expectedPeer = peertest.NewMockPeer(mockCtrl)
-			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
-
-			s.appliedFunc = func(pl *single) error {
-				pl.Start()
-				return pl.Start()
-			}
-
-			s.expectedErr = peer.ErrPeerListAlreadyStarted("single")
-			s.expectedPeerID = s.pid
-			s.expectedAgent = s.agent
-			s.expectedStarted = true
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start stop"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			p := peertest.NewMockPeer(mockCtrl)
-			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(p, nil)
-			s.agent.EXPECT().ReleasePeer(s.pid, gomock.Any()).Return(nil)
-
-			s.appliedFunc = func(pl *single) error {
-				err := pl.Start()
-				if err != nil {
-					return err
-				}
-				return pl.Stop()
-			}
-
-			s.expectedErr = nil
-			s.expectedPeerID = s.pid
-			s.expectedPeer = nil
-			s.expectedAgent = s.agent
-			s.expectedStarted = false
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "start stop release failure"
-			s.pid = peertest.NewMockIdentifier(mockCtrl)
-			s.agent = peertest.NewMockAgent(mockCtrl)
-
-			s.expectedPeer = peertest.NewMockPeer(mockCtrl)
-			s.agent.EXPECT().RetainPeer(s.pid, gomock.Any()).Return(s.expectedPeer, nil)
-
-			s.expectedErr = peer.ErrAgentHasNoReferenceToPeer{}
-			s.agent.EXPECT().ReleasePeer(s.pid, gomock.Any()).Return(s.expectedErr)
-
-			s.appliedFunc = func(pl *single) error {
-				err := pl.Start()
-				if err != nil {
-					return err
-				}
-				return pl.Stop()
-			}
-
-			s.expectedPeerID = s.pid
-			s.expectedAgent = s.agent
-			s.expectedStarted = false
-			return
-		}(),
+		{
+			msg:             "setup",
+			inputPeerID:     "1",
+			expectedPeerID:  "1",
+			expectedStarted: false,
+		},
+		{
+			msg:         "stop before start",
+			inputPeerID: "1",
+			actions: []PeerListAction{
+				StopAction{ExpectedErr: peer.ErrPeerListNotStarted("single")},
+			},
+			expectedPeerID:  "1",
+			expectedStarted: false,
+		},
+		{
+			msg:         "choose before start",
+			inputPeerID: "1",
+			actions: []PeerListAction{
+				ChooseAction{ExpectedErr: peer.ErrPeerListNotStarted("single")},
+			},
+			expectedPeerID:  "1",
+			expectedStarted: false,
+		},
+		{
+			msg:            "start and choose",
+			inputPeerID:    "1",
+			retainedPeerID: "1",
+			actions: []PeerListAction{
+				StartAction{},
+				ChooseAction{ExpectedPeer: "1"},
+			},
+			expectedPeerID:  "1",
+			expectedPeer:    "1",
+			expectedStarted: true,
+		},
+		{
+			msg:            "start with agent error",
+			inputPeerID:    "1",
+			retainedPeerID: "1",
+			retainedErr:    fmt.Errorf("test error"),
+			actions: []PeerListAction{
+				StartAction{ExpectedErr: fmt.Errorf("test error")},
+			},
+			expectedPeerID:  "1",
+			expectedStarted: false,
+		},
+		{
+			msg:            "start twice",
+			inputPeerID:    "1",
+			retainedPeerID: "1",
+			actions: []PeerListAction{
+				StartAction{},
+				StartAction{ExpectedErr: peer.ErrPeerListAlreadyStarted("single")},
+			},
+			expectedPeer:    "1",
+			expectedPeerID:  "1",
+			expectedStarted: true,
+		},
+		{
+			msg:            "start stop",
+			inputPeerID:    "1",
+			retainedPeerID: "1",
+			releasedPeerID: "1",
+			actions: []PeerListAction{
+				StartAction{},
+				StopAction{},
+			},
+			expectedPeerID:  "1",
+			expectedStarted: false,
+		},
+		{
+			msg:            "start stop release failure",
+			inputPeerID:    "1",
+			retainedPeerID: "1",
+			releasedPeerID: "1",
+			releasedErr:    peer.ErrAgentHasNoReferenceToPeer{},
+			actions: []PeerListAction{
+				StartAction{},
+				StopAction{ExpectedErr: peer.ErrAgentHasNoReferenceToPeer{}},
+			},
+			expectedPeerID:  "1",
+			expectedPeer:    "1",
+			expectedStarted: false,
+		},
 	}
 
 	for _, tt := range tests {
-		pl := NewSingle(tt.pid, tt.agent).(*single)
+		t.Run(tt.msg, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-		err := tt.appliedFunc(pl)
+			agent := NewMockAgent(mockCtrl)
 
-		assert.Equal(t, tt.expectedErr, err, tt.msg)
-		assert.Equal(t, tt.expectedAgent, pl.agent, tt.msg)
-		assert.Equal(t, tt.expectedPeerID, pl.initialPeerID, tt.msg)
-		assert.Equal(t, tt.expectedPeer, pl.p, tt.msg)
-		assert.Equal(t, tt.expectedStarted, pl.started, tt.msg)
+			if tt.retainedPeerID != "" {
+				if tt.retainedErr != nil {
+					ExpectPeerRetainsWithError(agent, []string{tt.retainedPeerID}, tt.retainedErr)
+				} else {
+					ExpectPeerRetains(agent, []string{tt.retainedPeerID}, []string{})
+				}
+			}
+			if tt.releasedPeerID != "" {
+				ExpectPeerReleases(agent, []string{tt.releasedPeerID}, tt.releasedErr)
+			}
 
-		for _, expectedResult := range tt.expectedChooseResults {
-			p, err := pl.ChoosePeer(context.Background(), &transport.Request{})
+			pl := NewSingle(MockPeerIdentifier(tt.inputPeerID), agent).(*single)
 
-			assert.Equal(t, expectedResult.peer, p, tt.msg)
-			assert.True(t, expectedResult.peer == p, tt.msg)
-			assert.Equal(t, expectedResult.err, err, tt.msg)
-		}
+			ApplyPeerListActions(t, pl, tt.actions, ListActionDeps{})
+
+			assert.Equal(t, agent, pl.agent)
+			assert.Equal(t, tt.expectedPeerID, pl.initialPeerID.Identifier())
+			if tt.expectedPeer != "" {
+				assert.Equal(t, tt.expectedPeer, pl.p.Identifier())
+			} else {
+				assert.Nil(t, pl.p)
+			}
+			assert.Equal(t, tt.expectedStarted, pl.started)
+		})
 	}
 }
