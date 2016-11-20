@@ -140,6 +140,35 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
 
+	return o.call(ctx, treq, start, ttl)
+}
+
+type ack struct {
+	time time.Time
+}
+
+func (a ack) String() string {
+	return a.time.String()
+}
+
+// CallOneway makes a oneway request
+func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+	start := time.Now()
+	var ttl time.Duration
+
+	_, err := o.call(ctx, treq, start, ttl)
+	if err != nil {
+		return nil, err
+	}
+
+	return ack{time: time.Now()}, nil
+}
+
+func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time.Time, ttl time.Duration) (*transport.Response, error) {
 	p, err := o.getPeerForRequest(ctx, treq)
 	if err != nil {
 		return nil, err
@@ -195,68 +224,6 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	}
 
 	return nil, getErrFromResponse(response)
-}
-
-type ack struct {
-	time time.Time
-}
-
-func (a ack) String() string {
-	return a.time.String()
-}
-
-// CallOneway makes a oneway request
-func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
-	}
-
-	p, err := o.getPeerForRequest(ctx, treq)
-	if err != nil {
-		return nil, err
-	}
-	p.StartRequest(nil)
-	defer p.EndRequest(nil)
-
-	req, err := o.createRequest(p, treq)
-	if err != nil {
-		return nil, err
-	}
-
-	start := time.Now()
-	var ttl time.Duration
-
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, req, span := o.withOpentracingSpan(ctx, req, treq, start)
-	defer span.Finish()
-	req = o.withCoreHeaders(req, treq, ttl)
-
-	client, err := o.getHTTPClient(p)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = client.Do(req.WithContext(ctx))
-	if err != nil {
-		// Workaround borrowed from ctxhttp until
-		// https://github.com/golang/go/issues/17711 is resolved.
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-		default:
-		}
-	}
-
-	sent := time.Now()
-
-	if err != nil {
-		span.SetTag("error", true)
-		span.LogEvent(err.Error())
-		return nil, err
-	}
-
-	return ack{time: sent}, nil
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
