@@ -126,46 +126,11 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
 
-	p, err := o.getPeerForRequest(ctx, treq)
-	if err != nil {
-		return nil, err
+	response, span, err := o.call(ctx, treq, start, ttl)
+	if span != nil {
+		defer span.Finish()
 	}
-	endRequest := p.StartRequest()
-	defer endRequest()
-
-	req, err := o.createRequest(p, treq)
 	if err != nil {
-		return nil, err
-	}
-
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, req, span := o.withOpentracingSpan(ctx, req, treq, start)
-	defer span.Finish()
-	req = o.withCoreHeaders(req, treq, ttl)
-
-	client, err := o.getHTTPClient(p)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := client.Do(req.WithContext(ctx))
-
-	if err != nil {
-		// Workaround borrowed from ctxhttp until
-		// https://github.com/golang/go/issues/17711 is resolved.
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-		default:
-		}
-
-		span.SetTag("error", true)
-		span.LogEvent(err.Error())
-		if err == context.DeadlineExceeded {
-			end := time.Now()
-			return nil, errors.ClientTimeoutError(treq.Service, treq.Procedure, end.Sub(start))
-		}
-
 		return nil, err
 	}
 
@@ -197,33 +162,44 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)
 	}
+	start := time.Now()
+	var ttl time.Duration
 
-	p, err := o.getPeerForRequest(ctx, treq)
+	_, span, err := o.call(ctx, treq, start, ttl)
+	if span != nil {
+		defer span.Finish()
+	}
 	if err != nil {
 		return nil, err
+	}
+
+	return ack{time: time.Now()}, nil
+}
+
+func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time.Time, ttl time.Duration) (*http.Response, opentracing.Span, error) {
+	p, err := o.getPeerForRequest(ctx, treq)
+	if err != nil {
+		return nil, nil, err
 	}
 	endRequest := p.StartRequest()
 	defer endRequest()
 
 	req, err := o.createRequest(p, treq)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	start := time.Now()
-	var ttl time.Duration
 
 	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
 	ctx, req, span := o.withOpentracingSpan(ctx, req, treq, start)
-	defer span.Finish()
 	req = o.withCoreHeaders(req, treq, ttl)
 
 	client, err := o.getHTTPClient(p)
 	if err != nil {
-		return nil, err
+		return nil, span, err
 	}
 
-	_, err = client.Do(req.WithContext(ctx))
+	response, err := client.Do(req.WithContext(ctx))
+
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
 		// https://github.com/golang/go/issues/17711 is resolved.
@@ -232,17 +208,18 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 			err = ctx.Err()
 		default:
 		}
-	}
 
-	sent := time.Now()
-
-	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
-		return nil, err
+		if err == context.DeadlineExceeded {
+			end := time.Now()
+			return nil, span, errors.ClientTimeoutError(treq.Service, treq.Procedure, end.Sub(start))
+		}
+
+		return nil, span, err
 	}
 
-	return ack{time: sent}, nil
+	return response, span, nil
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
