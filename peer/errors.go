@@ -38,12 +38,12 @@ func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 // ErrAgentHasNoReferenceToPeer is called when an agent is expected to
 // operate on a Peer it has no reference to
 type ErrAgentHasNoReferenceToPeer struct {
-	Agent          Agent
-	PeerIdentifier Identifier
+	AgentName      string
+	PeerIdentifier string
 }
 
 func (e ErrAgentHasNoReferenceToPeer) Error() string {
-	return fmt.Sprintf("agent (%v) has no reference to peer (%v)", e.Agent, e.PeerIdentifier)
+	return fmt.Sprintf("agent %q has no reference to peer %q", e.AgentName, e.PeerIdentifier)
 }
 
 // ErrInvalidPeerType is when a specfic peer type is required, but

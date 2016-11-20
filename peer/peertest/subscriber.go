@@ -20,7 +20,11 @@
 
 package peertest
 
-import "github.com/golang/mock/gomock"
+import (
+	"go.uber.org/yarpc/peer"
+
+	"github.com/golang/mock/gomock"
+)
 
 // SubscriberDefinition is an abstraction for defining a PeerSubscriber with
 // an ID so it can be referenced later.
@@ -34,8 +38,8 @@ type SubscriberDefinition struct {
 func CreateSubscriberMap(
 	mockCtrl *gomock.Controller,
 	subDefinitions []SubscriberDefinition,
-) map[string]*MockSubscriber {
-	subscribers := make(map[string]*MockSubscriber, len(subDefinitions))
+) map[string]peer.Subscriber {
+	subscribers := make(map[string]peer.Subscriber, len(subDefinitions))
 	for _, subDef := range subDefinitions {
 		sub := NewMockSubscriber(mockCtrl)
 		sub.EXPECT().NotifyStatusChanged(gomock.Any()).Times(subDef.ExpectedNotifyCount)
