@@ -6,297 +6,254 @@ import (
 
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/peertest"
+	. "go.uber.org/yarpc/peer/peertest"
 
 	"github.com/crossdock/crossdock-go/assert"
 	"github.com/golang/mock/gomock"
 )
 
 type peerExpectation struct {
-	identifier  hostport.PeerIdentifier
-	subscribers []*peertest.MockSubscriber
+	id          string
+	subscribers []string
 }
 
-// createPeerExpectations creates a slice of peerExpectation structs for the
-// peers that are expected to be contained in the agent.  It will also add a
-// number of expected subscribers for each Peer
-func createPeerExpectations(
-	mockCtrl *gomock.Controller,
-	hostports []string,
-	subscribers int,
-) []peerExpectation {
-	expectations := make([]peerExpectation, 0, len(hostports))
-	for _, hp := range hostports {
-		hpid := hostport.PeerIdentifier(hp)
-		subs := make([]*peertest.MockSubscriber, 0, subscribers)
-		for i := 0; i < subscribers; i++ {
-			subs = append(subs, peertest.NewMockSubscriber(mockCtrl))
-		}
-		expectations = append(expectations, peerExpectation{
-			identifier:  hpid,
-			subscribers: subs,
-		})
+func createPeerIdentifierMap(ids []string) map[string]peer.Identifier {
+	pids := make(map[string]peer.Identifier, len(ids))
+	for _, id := range ids {
+		pids[id] = hostport.PeerIdentifier(id)
 	}
-	return expectations
-}
-
-// peerIdentifierMatcher allows us to compare peerIdentifiers with Peers through gomock
-type peerIdentifierMatcher hostport.PeerIdentifier
-
-// Matches returns whether x is a match.
-func (pim peerIdentifierMatcher) Matches(x interface{}) bool {
-	res, ok := x.(peer.Identifier)
-	if !ok {
-		return false
-	}
-
-	return res.Identifier() == hostport.PeerIdentifier(pim).Identifier()
-}
-
-// String describes what the matcher matches.
-func (pim peerIdentifierMatcher) String() string {
-	return hostport.PeerIdentifier(pim).Identifier()
+	return pids
 }
 
 func TestAgent(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
 	type testStruct struct {
-		msg           string
-		agent         *Agent
-		appliedFunc   func(*Agent) error
+		msg string
+
+		// identifiers defines all the Identifiers that will be used in
+		// the actions up from so they can be generated and passed as deps
+		identifiers []string
+
+		// subscriberDefs defines all the Subscribers that will be used in
+		// the actions up from so they can be generated and passed as deps
+		subscriberDefs []SubscriberDefinition
+
+		// actions are the actions that will be applied against the agent
+		actions []AgentAction
+
+		// expectedPeers are a list of peers (and those peer's subscribers)
+		// that are expected on the agent after the actions
 		expectedPeers []peerExpectation
-		expectedErr   error
 	}
 	tests := []testStruct{
-		func() (s testStruct) {
-			s.msg = "one retain"
-			s.expectedPeers = createPeerExpectations(
-				mockCtrl,
-				[]string{"localhost:1234"},
-				1,
-			)
-			s.appliedFunc = func(a *Agent) error {
-				_, err := a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[0])
-				return err
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "one retain one release"
-			s.expectedPeers = []peerExpectation{}
-			s.appliedFunc = func(a *Agent) error {
-				pid := hostport.PeerIdentifier("localhost:1234")
+		{
+			msg:         "one retain",
+			identifiers: []string{"i1"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+			},
+			actions: []AgentAction{
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+			},
+			expectedPeers: []peerExpectation{
+				{id: "i1", subscribers: []string{"s1"}},
+			},
+		},
+		{
+			msg:         "one retain one release",
+			identifiers: []string{"i1"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+			},
+			actions: []AgentAction{
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s1"},
+			},
+		},
+		{
+			msg:         "three retains",
+			identifiers: []string{"i1"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+				{ID: "s2"},
+				{ID: "s3"},
+			},
+			actions: []AgentAction{
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
+			},
+			expectedPeers: []peerExpectation{
+				{id: "i1", subscribers: []string{"s1", "s2", "s3"}},
+			},
+		},
+		{
+			msg:         "three retains one release",
+			identifiers: []string{"i1"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+				{ID: "s2r"},
+				{ID: "s3"},
+			},
+			actions: []AgentAction{
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2r", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
+				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s2r"},
+			},
+			expectedPeers: []peerExpectation{
+				{id: "i1", subscribers: []string{"s1", "s3"}},
+			},
+		},
+		{
+			msg:         "three retains, three release",
+			identifiers: []string{"i1"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+				{ID: "s2"},
+				{ID: "s3"},
+			},
+			actions: []AgentAction{
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
+				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s1"},
+				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s2"},
+				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s3"},
+			},
+		},
+		{
+			msg:         "no retains one release",
+			identifiers: []string{"i1"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+			},
+			actions: []AgentAction{
+				ReleaseAction{
+					InputIdentifierID: "i1",
+					InputSubscriberID: "s1",
+					ExpectedErrType:   peer.ErrAgentHasNoReferenceToPeer{},
+				},
+			},
+		},
+		{
+			msg:         "one retains, one release (from different subscriber)",
+			identifiers: []string{"i1"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+				{ID: "s2"},
+			},
+			actions: []AgentAction{
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				ReleaseAction{
+					InputIdentifierID: "i1",
+					InputSubscriberID: "s2",
+					ExpectedErrType:   peer.ErrPeerHasNoReferenceToSubscriber{},
+				},
+			},
+			expectedPeers: []peerExpectation{
+				{id: "i1", subscribers: []string{"s1"}},
+			},
+		},
+		{
+			msg:         "multi peer retain/release",
+			identifiers: []string{"i1", "i2", "i3", "i4r", "i5r"},
+			subscriberDefs: []SubscriberDefinition{
+				{ID: "s1"},
+				{ID: "s2"},
+				{ID: "s3"},
+				{ID: "s4"},
+				{ID: "s5rnd"},
+				{ID: "s6rnd"},
+				{ID: "s7rnd"},
+			},
+			actions: []AgentAction{
+				// Retains/Releases of i1 (Retain/Release the random peers at the end)
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s5rnd", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s6rnd", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
+				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
+				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s5rnd"},
+				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s6rnd"},
 
-				sub := peertest.NewMockSubscriber(mockCtrl)
+				// Retains/Releases of i2 (Retain then Release then Retain again)
+				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s2", ExpectedPeerID: "i2"},
+				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s3", ExpectedPeerID: "i2"},
+				ReleaseAction{InputIdentifierID: "i2", InputSubscriberID: "s2"},
+				ReleaseAction{InputIdentifierID: "i2", InputSubscriberID: "s3"},
+				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s2", ExpectedPeerID: "i2"},
+				RetainAction{InputIdentifierID: "i2", InputSubscriberID: "s3", ExpectedPeerID: "i2"},
 
-				if _, err := a.RetainPeer(pid, sub); err != nil {
-					return err
-				}
-				return a.ReleasePeer(pid, sub)
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "one retain one release using peer"
-			s.expectedPeers = []peerExpectation{}
-			s.appliedFunc = func(a *Agent) error {
-				pid := hostport.PeerIdentifier("localhost:1234")
+				// Retains/Releases of i3 (Retain/Release unrelated sub, then retain two)
+				RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s7rnd", ExpectedPeerID: "i3"},
+				ReleaseAction{InputIdentifierID: "i3", InputSubscriberID: "s7rnd"},
+				RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s3", ExpectedPeerID: "i3"},
+				RetainAction{InputIdentifierID: "i3", InputSubscriberID: "s4", ExpectedPeerID: "i3"},
 
-				sub := peertest.NewMockSubscriber(mockCtrl)
+				// Retain/Release i4r on random subscriber
+				RetainAction{InputIdentifierID: "i4r", InputSubscriberID: "s5rnd", ExpectedPeerID: "i4r"},
+				ReleaseAction{InputIdentifierID: "i4r", InputSubscriberID: "s5rnd"},
 
-				p, err := a.RetainPeer(pid, sub)
-				if err != nil {
-					return err
-				}
-				err = a.ReleasePeer(p, sub)
-
-				return err
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "three retains"
-			s.expectedPeers = createPeerExpectations(
-				mockCtrl,
-				[]string{"localhost:1234"},
-				3,
-			)
-			s.appliedFunc = func(a *Agent) error {
-				a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[0])
-				a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[1])
-				_, err := a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[2])
-				return err
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "three retains, one release"
-			s.expectedPeers = createPeerExpectations(
-				mockCtrl,
-				[]string{"localhost:1234"},
-				2,
-			)
-			s.appliedFunc = func(a *Agent) error {
-				unSub := peertest.NewMockSubscriber(mockCtrl)
-				a.RetainPeer(s.expectedPeers[0].identifier, unSub)
-				a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[0])
-				a.ReleasePeer(s.expectedPeers[0].identifier, unSub)
-				a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[1])
-
-				return nil
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "three retains, three release"
-			s.expectedPeers = []peerExpectation{}
-			s.appliedFunc = func(a *Agent) error {
-				pid := hostport.PeerIdentifier("localhost:123")
-
-				sub := peertest.NewMockSubscriber(mockCtrl)
-				sub2 := peertest.NewMockSubscriber(mockCtrl)
-				sub3 := peertest.NewMockSubscriber(mockCtrl)
-
-				a.RetainPeer(pid, sub)
-				a.RetainPeer(pid, sub2)
-				a.ReleasePeer(pid, sub)
-				a.RetainPeer(pid, sub3)
-				a.ReleasePeer(pid, sub2)
-				a.ReleasePeer(pid, sub3)
-
-				return nil
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "no retains, one release"
-			s.agent = NewAgent()
-			s.expectedPeers = []peerExpectation{}
-
-			pid := hostport.PeerIdentifier("localhost:1234")
-			s.expectedErr = peer.ErrAgentHasNoReferenceToPeer{
-				Agent:          s.agent,
-				PeerIdentifier: pid,
-			}
-
-			s.appliedFunc = func(a *Agent) error {
-				return a.ReleasePeer(pid, peertest.NewMockSubscriber(mockCtrl))
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "retain with invalid identifier"
-			s.expectedPeers = []peerExpectation{}
-
-			pid := peertest.NewMockIdentifier(mockCtrl)
-			s.expectedErr = peer.ErrInvalidPeerType{
-				ExpectedType:   "hostport.PeerIdentifier",
-				PeerIdentifier: pid,
-			}
-
-			s.appliedFunc = func(a *Agent) error {
-				_, err := a.RetainPeer(pid, peertest.NewMockSubscriber(mockCtrl))
-				return err
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "one retains, one release (from different subscriber)"
-			s.expectedPeers = createPeerExpectations(
-				mockCtrl,
-				[]string{"localhost:1234"},
-				1,
-			)
-
-			invalidSub := peertest.NewMockSubscriber(mockCtrl)
-			s.expectedErr = peer.ErrPeerHasNoReferenceToSubscriber{
-				PeerIdentifier: s.expectedPeers[0].identifier,
-				PeerSubscriber: invalidSub,
-			}
-
-			s.appliedFunc = func(a *Agent) error {
-				a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[0])
-				return a.ReleasePeer(s.expectedPeers[0].identifier, invalidSub)
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "multi peer retain/release"
-			s.expectedPeers = createPeerExpectations(
-				mockCtrl,
-				[]string{"localhost:1234", "localhost:1111", "localhost:2222"},
-				2,
-			)
-
-			s.appliedFunc = func(a *Agent) error {
-				expP1 := s.expectedPeers[0]
-				expP2 := s.expectedPeers[1]
-				expP3 := s.expectedPeers[2]
-				rndP1 := hostport.PeerIdentifier("localhost:9888")
-				rndP2 := hostport.PeerIdentifier("localhost:9883")
-				rndSub1 := peertest.NewMockSubscriber(mockCtrl)
-				rndSub2 := peertest.NewMockSubscriber(mockCtrl)
-				rndSub3 := peertest.NewMockSubscriber(mockCtrl)
-
-				// exp1: Defer a bunch of Releases
-				a.RetainPeer(expP1.identifier, rndSub1)
-				defer a.ReleasePeer(expP1.identifier, rndSub1)
-				a.RetainPeer(expP1.identifier, expP1.subscribers[0])
-				a.RetainPeer(expP1.identifier, rndSub2)
-				defer a.ReleasePeer(expP1.identifier, rndSub2)
-				a.RetainPeer(expP1.identifier, expP1.subscribers[1])
-
-				// exp2: Retain a subscriber, release it, then retain it again
-				a.RetainPeer(expP2.identifier, expP2.subscribers[0])
-				a.RetainPeer(expP2.identifier, expP2.subscribers[1])
-				a.ReleasePeer(expP2.identifier, expP2.subscribers[0])
-				a.ReleasePeer(expP2.identifier, expP2.subscribers[1])
-				a.RetainPeer(expP2.identifier, expP2.subscribers[0])
-				a.RetainPeer(expP2.identifier, expP2.subscribers[1])
-
-				// exp3: Retain release a Peer
-				a.RetainPeer(expP3.identifier, rndSub3)
-				a.ReleasePeer(expP3.identifier, rndSub3)
-				a.RetainPeer(expP3.identifier, expP3.subscribers[0])
-				a.RetainPeer(expP3.identifier, expP3.subscribers[1])
-
-				// rnd1: retain/release on random sub
-				a.RetainPeer(rndP1, rndSub1)
-				a.ReleasePeer(rndP1, rndSub1)
-
-				// rnd2: retain/release on already used subscriber
-				a.RetainPeer(rndP2, expP1.subscribers[0])
-				a.ReleasePeer(rndP2, expP1.subscribers[0])
-
-				return nil
-			}
-			return
-		}(),
+				// Retain/Release i5r on already used subscriber
+				RetainAction{InputIdentifierID: "i5r", InputSubscriberID: "s3", ExpectedPeerID: "i5r"},
+				ReleaseAction{InputIdentifierID: "i5r", InputSubscriberID: "s3"},
+			},
+			expectedPeers: []peerExpectation{
+				{id: "i1", subscribers: []string{"s1", "s2"}},
+				{id: "i2", subscribers: []string{"s2", "s3"}},
+				{id: "i3", subscribers: []string{"s3", "s4"}},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			agent := tt.agent
-			if agent == nil {
-				agent = NewAgent()
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			agent := NewAgent()
+
+			deps := AgentDeps{
+				PeerIdentifiers: createPeerIdentifierMap(tt.identifiers),
+				Subscribers:     CreateSubscriberMap(mockCtrl, tt.subscriberDefs),
 			}
+			ApplyAgentActions(t, agent, tt.actions, deps)
 
-			err := tt.appliedFunc(agent)
-
-			assert.Equal(t, tt.expectedErr, err)
 			assert.Len(t, agent.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {
-				p, ok := agent.peers[expectedPeerNode.identifier.Identifier()]
+				p, ok := agent.peers[expectedPeerNode.id]
 				assert.True(t, ok)
 
-				assert.Equal(t, expectedPeerNode.identifier.Identifier(), p.Identifier())
+				if assert.NotNil(t, p) {
+					assert.Equal(t, expectedPeerNode.id, p.Identifier())
 
-				assert.Equal(t, p.NumSubscribers(), len(expectedPeerNode.subscribers))
+					// We can't look at the hostport subscribers directly so we'll
+					// attempt to remove subscribers and be sure that it doesn't error
+					assert.Equal(t, p.NumSubscribers(), len(expectedPeerNode.subscribers))
+					for _, sub := range expectedPeerNode.subscribers {
+						err := p.RemoveSubscriber(deps.Subscribers[sub])
+						assert.NoError(t, err, "peer %s did not have reference to subscriber %s", p.Identifier(), sub)
+					}
+				}
 			}
 		})
 	}
+}
+
+func TestAgentRetainWithInvalidPeerIdentifierType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	agent := NewAgent()
+	pid := NewMockIdentifier(mockCtrl)
+
+	expectedErr := peer.ErrInvalidPeerType{
+		ExpectedType:   "hostport.PeerIdentifier",
+		PeerIdentifier: pid,
+	}
+
+	_, err := agent.RetainPeer(pid, NewMockSubscriber(mockCtrl))
+
+	assert.Equal(t, expectedErr, err, "did not return error on invalid peer identifier")
 }
 
 func TestAgentClient(t *testing.T) {

@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/peertest"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -36,7 +35,7 @@ import (
 // Dependences are passed through all the PeerActions in order to pass certain
 // state in between Actions
 type Dependencies struct {
-	Subscribers map[string]*peertest.MockSubscriber
+	Subscribers map[string]peer.Subscriber
 }
 
 // PeerAction defines actions that can be applied on a hostport.Peer
