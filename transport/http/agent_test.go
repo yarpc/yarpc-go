@@ -294,7 +294,7 @@ func TestAgent(t *testing.T) {
 
 				assert.Equal(t, expectedPeerNode.identifier.Identifier(), peer.Identifier())
 
-				assert.Equal(t, peer.NumSubscribers(), len(expectedPeerNode.subscribers))
+				assert.Len(t, expectedPeerNode.subscribers, peer.NumSubscribers())
 			}
 		})
 	}

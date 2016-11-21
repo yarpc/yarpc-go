@@ -67,13 +67,13 @@ func (p *Peer) Agent() transport.Agent {
 }
 
 // AddSubscriber adds a subscriber to the peer's subscriber map
-// Must be run in a Mutex.Lock from the transport.Agent
+// This function isn't thread safe
 func (p *Peer) AddSubscriber(sub transport.PeerSubscriber) {
 	p.subscribers[sub] = struct{}{}
 }
 
 // RemoveSubscriber removes a subscriber from the peer's subscriber map
-// Must be run in a Mutex.Lock from the transport.Agent
+// This function isn't thread safe
 func (p *Peer) RemoveSubscriber(sub transport.PeerSubscriber) error {
 	if _, ok := p.subscribers[sub]; !ok {
 		return errors.ErrPeerHasNoReferenceToSubscriber{
@@ -87,7 +87,7 @@ func (p *Peer) RemoveSubscriber(sub transport.PeerSubscriber) error {
 }
 
 // NumSubscribers returns the number of subscriptions attached to the peer
-// Must be run in a Mutex.Lock at the Agent level
+// This function isn't thread safe
 func (p *Peer) NumSubscribers() int {
 	return len(p.subscribers)
 }
