@@ -49,14 +49,6 @@ func (_m *MockAgent) EXPECT() *_MockAgentRecorder {
 	return _m.recorder
 }
 
-func (_m *MockAgent) NotifyStatusChanged(_param0 transport.Peer) {
-	_m.ctrl.Call(_m, "NotifyStatusChanged", _param0)
-}
-
-func (_mr *_MockAgentRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyStatusChanged", arg0)
-}
-
 func (_m *MockAgent) ReleasePeer(_param0 transport.PeerIdentifier, _param1 transport.PeerSubscriber) error {
 	ret := _m.ctrl.Call(_m, "ReleasePeer", _param0, _param1)
 	ret0, _ := ret[0].(error)
