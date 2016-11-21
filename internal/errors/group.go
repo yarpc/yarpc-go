@@ -18,16 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package errors
 
-import (
-	"fmt"
-)
+import "strings"
 
-type noOutboundForService struct {
-	Service string
+// ErrorGroup represents a collection of errors.
+type ErrorGroup []error
+
+func (e ErrorGroup) Error() string {
+	messages := make([]string, 0, len(e)+1)
+	messages = append(messages, "the following errors occurred:")
+	for _, err := range e {
+		messages = append(messages, err.Error())
+	}
+	return strings.Join(messages, "\n\t")
 }
 
-func (e noOutboundForService) Error() string {
-	return fmt.Sprintf("no configured outbound transport for service %q", e.Service)
+// MultiError combines a list of errors into one. The list MUST NOT contain nil.
+//
+// Returns nil if the error list is empty.
+func MultiError(errors []error) error {
+	switch len(errors) {
+	case 0:
+		return nil
+	case 1:
+		return errors[0]
+	}
+
+	newErrors := make(ErrorGroup, 0, len(errors))
+	for _, err := range errors {
+		switch e := err.(type) {
+		case ErrorGroup:
+			newErrors = append(newErrors, e...)
+		default:
+			newErrors = append(newErrors, e)
+		}
+	}
+
+	return ErrorGroup(newErrors)
 }
