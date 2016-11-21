@@ -1,8 +1,10 @@
 package roundrobin
 
 import (
+	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport/internal/errors"
@@ -129,16 +131,16 @@ func TestRoundRobinList(t *testing.T) {
 			msg:                "start retain error",
 			inputPeerIDs:       []string{"1"},
 			errRetainedPeerIDs: []string{"1"},
-			retainErr:          errors.ErrNoPeerToSelect("Test!!"),
-			expectedCreateErr:  errors.ErrNoPeerToSelect("Test!!"),
+			retainErr:          errors.ErrInvalidPeerType{},
+			expectedCreateErr:  errors.ErrInvalidPeerType{},
 		},
 		{
 			msg:                "start retain multiple errors",
 			inputPeerIDs:       []string{"1", "2", "3"},
 			retainedPeerIDs:    []string{"2"},
 			errRetainedPeerIDs: []string{"1", "3"},
-			retainErr:          errors.ErrNoPeerToSelect("Test!!"),
-			expectedCreateErr:  yerrors.ErrorGroup{errors.ErrNoPeerToSelect("Test!!"), errors.ErrNoPeerToSelect("Test!!")},
+			retainErr:          errors.ErrInvalidPeerType{},
+			expectedCreateErr:  yerrors.ErrorGroup{errors.ErrInvalidPeerType{}, errors.ErrInvalidPeerType{}},
 			expectedRingPeers:  []string{"2"},
 		},
 		{
@@ -193,10 +195,8 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				ChooseAction{
-					ExpectedErr: errors.ErrNoPeerToSelect("RoundRobinList"),
-				},
-				ChooseAction{
-					ExpectedErr: errors.ErrNoPeerToSelect("RoundRobinList"),
+					InputContextTimeout: 20 * time.Millisecond,
+					ExpectedErr:         context.DeadlineExceeded,
 				},
 			},
 			expectedStarted: true,
@@ -320,6 +320,108 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "1"},
+			},
+			expectedStarted: true,
+		},
+		{
+			msg:               "block until add",
+			retainedPeerIDs:   []string{"1"},
+			expectedRingPeers: []string{"1"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "1",
+						},
+						AddAction{InputPeerID: "1"},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+				ChooseAction{ExpectedPeer: "1"},
+			},
+			expectedStarted: true,
+		},
+		{
+			msg:               "multiple blocking until add",
+			retainedPeerIDs:   []string{"1"},
+			expectedRingPeers: []string{"1"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "1",
+						},
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "1",
+						},
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "1",
+						},
+						AddAction{InputPeerID: "1"},
+					},
+					Wait: 10 * time.Millisecond,
+				},
+				ChooseAction{ExpectedPeer: "1"},
+			},
+			expectedStarted: true,
+		},
+		{
+			msg:               "block but added too late",
+			retainedPeerIDs:   []string{"1"},
+			expectedRingPeers: []string{"1"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						ChooseAction{
+							InputContextTimeout: 10 * time.Millisecond,
+							ExpectedErr:         context.DeadlineExceeded,
+						},
+						AddAction{InputPeerID: "1"},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+				ChooseAction{ExpectedPeer: "1"},
+			},
+			expectedStarted: true,
+		},
+		{
+			msg:               "block until new peer after removal of only peer",
+			inputPeerIDs:      []string{"1"},
+			retainedPeerIDs:   []string{"1", "2"},
+			releasedPeerIDs:   []string{"1"},
+			expectedRingPeers: []string{"2"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				RemoveAction{InputPeerID: "1"},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						ChooseAction{
+							InputContextTimeout: 200 * time.Millisecond,
+							ExpectedPeer:        "2",
+						},
+						AddAction{InputPeerID: "2"},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+				ChooseAction{ExpectedPeer: "2"},
+			},
+			expectedStarted: true,
+		},
+		{
+			msg: "no blocking with no context deadline",
+			peerListActions: []PeerListAction{
+				StartAction{},
+				ChooseAction{
+					InputContext: context.Background(),
+					ExpectedErr:  errors.ErrChooseContextHasNoDeadline("RoundRobinList"),
+				},
 			},
 			expectedStarted: true,
 		},

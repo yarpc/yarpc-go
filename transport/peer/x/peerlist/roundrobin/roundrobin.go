@@ -33,8 +33,9 @@ import (
 // New creates a new round robin PeerList using
 func New(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin, error) {
 	rr := &RoundRobin{
-		pr:    NewPeerRing(len(peerIDs)),
-		agent: agent,
+		pr:                 NewPeerRing(len(peerIDs)),
+		agent:              agent,
+		peerAvailableEvent: make(chan struct{}, 1),
 	}
 
 	err := rr.addAll(peerIDs)
@@ -43,9 +44,10 @@ func New(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin
 
 // RoundRobin is a PeerList which rotates which peers are to be selected in a circle
 type RoundRobin struct {
-	pr      *PeerRing
-	agent   transport.Agent
-	started atomic.Bool
+	pr                 *PeerRing
+	peerAvailableEvent chan struct{}
+	agent              transport.Agent
+	started            atomic.Bool
 }
 
 func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
@@ -59,6 +61,25 @@ func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
 	}
 
 	return yerrors.MultiError(errs)
+}
+
+// Add a peer identifier to the round robin
+func (pl *RoundRobin) Add(pid transport.PeerIdentifier) error {
+	return pl.addPeer(pid)
+}
+
+func (pl *RoundRobin) addPeer(pid transport.PeerIdentifier) error {
+	p, err := pl.agent.RetainPeer(pid, pl)
+	if err != nil {
+		return err
+	}
+
+	if err = pl.pr.Add(p); err != nil {
+		return err
+	}
+
+	pl.notifyPeerAvailable()
+	return nil
 }
 
 // Start notifies the RoundRobin that requests will start coming
@@ -90,33 +111,6 @@ func (pl *RoundRobin) clearPeers() error {
 	return yerrors.MultiError(errs)
 }
 
-// ChoosePeer selects the next available peer in the round robin
-func (pl *RoundRobin) ChoosePeer(context.Context, *transport.Request) (transport.Peer, error) {
-	if !pl.started.Load() {
-		return nil, errors.ErrPeerListNotStarted("RoundRobinList")
-	}
-
-	nextPeer := pl.pr.Next()
-	if nextPeer == nil {
-		return nil, errors.ErrNoPeerToSelect("RoundRobinList")
-	}
-	return nextPeer, nil
-}
-
-// Add a peer identifier to the round robin
-func (pl *RoundRobin) Add(pid transport.PeerIdentifier) error {
-	return pl.addPeer(pid)
-}
-
-func (pl *RoundRobin) addPeer(pid transport.PeerIdentifier) error {
-	p, err := pl.agent.RetainPeer(pid, pl)
-	if err != nil {
-		return err
-	}
-
-	return pl.pr.Add(p)
-}
-
 // Remove a peer identifier from the round robin
 func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
 	if err := pl.pr.Remove(pid); err != nil {
@@ -125,6 +119,48 @@ func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
 	}
 
 	return pl.agent.ReleasePeer(pid, pl)
+}
+
+// ChoosePeer selects the next available peer in the round robin
+func (pl *RoundRobin) ChoosePeer(ctx context.Context, req *transport.Request) (transport.Peer, error) {
+	if !pl.started.Load() {
+		return nil, errors.ErrPeerListNotStarted("RoundRobinList")
+	}
+
+	for {
+		if nextPeer := pl.pr.Next(); nextPeer != nil {
+			pl.notifyPeerAvailable()
+			return nextPeer, nil
+		}
+
+		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
+			return nil, err
+		}
+	}
+}
+
+// notifyPeerAvailable writes to a channel indicating that a Peer is currently
+// available for requests
+func (pl *RoundRobin) notifyPeerAvailable() {
+	select {
+	case pl.peerAvailableEvent <- struct{}{}:
+	default:
+	}
+}
+
+// waitForPeerAddedEvent waits until a peer is added to the peer list or the
+// given context finishes.
+func (pl *RoundRobin) waitForPeerAddedEvent(ctx context.Context) error {
+	if _, ok := ctx.Deadline(); !ok {
+		return errors.ErrChooseContextHasNoDeadline("RoundRobinList")
+	}
+
+	select {
+	case <-pl.peerAvailableEvent:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // NotifyStatusChanged when the peer's status changes
