@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/yarpc/peer"
 
-	"github.com/crossdock/crossdock-go/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 // AgentDeps are passed through all the AgentActions in order to pass certain
