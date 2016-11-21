@@ -22,7 +22,6 @@ package roundrobin
 
 import (
 	"container/ring"
-	"sync"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal/errors"
@@ -37,9 +36,8 @@ func NewPeerRing(capacity int) *PeerRing {
 
 // PeerRing provides a safe way to interact (Add/Remove/Get) with a potentially
 // changing list of peer objects
+// PeerRing is NOT Thread-safe, make sure to only call PeerRing functions with a lock
 type PeerRing struct {
-	lock sync.Mutex
-
 	peerToNode map[string]*ring.Ring
 	nextNode   *ring.Ring
 }
@@ -47,9 +45,6 @@ type PeerRing struct {
 // Add a transport.Peer to the end of the PeerRing, if the ring is empty
 // it initializes the nextNode marker
 func (pr *PeerRing) Add(peer transport.Peer) error {
-	pr.lock.Lock()
-	defer pr.lock.Unlock()
-
 	if _, ok := pr.peerToNode[peer.Identifier()]; ok {
 		// Peer Already in ring, ignore the add
 		return errors.ErrPeerAddAlreadyInList(peer.Identifier())
@@ -77,9 +72,6 @@ func newPeerRingNode(peer transport.Peer) *ring.Ring {
 // Remove a peer PeerIdentifier from the PeerRing, if the PeerID is not
 // in the ring return an error
 func (pr *PeerRing) Remove(pid transport.PeerIdentifier) error {
-	pr.lock.Lock()
-	defer pr.lock.Unlock()
-
 	node, ok := pr.peerToNode[pid.Identifier()]
 	if !ok {
 		// Peer doesn't exist in the list
@@ -93,9 +85,6 @@ func (pr *PeerRing) Remove(pid transport.PeerIdentifier) error {
 
 // RemoveAll pops all the peers from the ring and returns them in a list
 func (pr *PeerRing) RemoveAll() []transport.Peer {
-	pr.lock.Lock()
-	defer pr.lock.Unlock()
-
 	peers := make([]transport.Peer, 0, len(pr.peerToNode))
 	for _, node := range pr.peerToNode {
 		peers = append(peers, pr.popNode(node))
@@ -103,7 +92,6 @@ func (pr *PeerRing) RemoveAll() []transport.Peer {
 	return peers
 }
 
-// Must be run inside a mutex.Lock()
 func (pr *PeerRing) popNode(node *ring.Ring) transport.Peer {
 	p := getPeerForRingNode(node)
 
@@ -122,7 +110,6 @@ func (pr *PeerRing) popNode(node *ring.Ring) transport.Peer {
 	return p
 }
 
-// Must be run inside a mutex.Lock()
 func (pr *PeerRing) isNextNode(node *ring.Ring) bool {
 	return pr.nextNode == node
 }
@@ -130,9 +117,6 @@ func (pr *PeerRing) isNextNode(node *ring.Ring) bool {
 // Next returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
 func (pr *PeerRing) Next() transport.Peer {
-	pr.lock.Lock()
-	defer pr.lock.Unlock()
-
 	if pr.nextNode == nil {
 		return nil
 	}

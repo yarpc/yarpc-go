@@ -22,6 +22,7 @@ package roundrobin
 
 import (
 	"context"
+	"sync"
 
 	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
@@ -44,6 +45,8 @@ func New(peerIDs []transport.PeerIdentifier, agent transport.Agent) (*RoundRobin
 
 // RoundRobin is a PeerList which rotates which peers are to be selected in a circle
 type RoundRobin struct {
+	lock sync.Mutex
+
 	pr                 *PeerRing
 	peerAvailableEvent chan struct{}
 	agent              transport.Agent
@@ -51,6 +54,9 @@ type RoundRobin struct {
 }
 
 func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
 	var errs []error
 
 	for _, peerID := range peerIDs {
@@ -65,9 +71,13 @@ func (pl *RoundRobin) addAll(peerIDs []transport.PeerIdentifier) error {
 
 // Add a peer identifier to the round robin
 func (pl *RoundRobin) Add(pid transport.PeerIdentifier) error {
-	return pl.addPeer(pid)
+	pl.lock.Lock()
+	err := pl.addPeer(pid)
+	pl.lock.Unlock()
+	return err
 }
 
+// Must be run inside a mutex.Lock()
 func (pl *RoundRobin) addPeer(pid transport.PeerIdentifier) error {
 	p, err := pl.agent.RetainPeer(pid, pl)
 	if err != nil {
@@ -99,6 +109,9 @@ func (pl *RoundRobin) Stop() error {
 }
 
 func (pl *RoundRobin) clearPeers() error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
 	var errs []error
 
 	peers := pl.pr.RemoveAll()
@@ -113,6 +126,9 @@ func (pl *RoundRobin) clearPeers() error {
 
 // Remove a peer identifier from the round robin
 func (pl *RoundRobin) Remove(pid transport.PeerIdentifier) error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
 	if err := pl.pr.Remove(pid); err != nil {
 		// The peer has already been removed
 		return err
@@ -128,7 +144,7 @@ func (pl *RoundRobin) ChoosePeer(ctx context.Context, req *transport.Request) (t
 	}
 
 	for {
-		if nextPeer := pl.pr.Next(); nextPeer != nil {
+		if nextPeer := pl.nextPeer(); nextPeer != nil {
 			pl.notifyPeerAvailable()
 			return nextPeer, nil
 		}
@@ -137,6 +153,15 @@ func (pl *RoundRobin) ChoosePeer(ctx context.Context, req *transport.Request) (t
 			return nil, err
 		}
 	}
+}
+
+// nextPeer grabs the next available peer from the PeerRing and returns it,
+// if there are no available peers it returns nil
+func (pl *RoundRobin) nextPeer() transport.Peer {
+	pl.lock.Lock()
+	peer := pl.pr.Next()
+	pl.lock.Unlock()
+	return peer
 }
 
 // notifyPeerAvailable writes to a channel indicating that a Peer is currently
@@ -150,6 +175,7 @@ func (pl *RoundRobin) notifyPeerAvailable() {
 
 // waitForPeerAddedEvent waits until a peer is added to the peer list or the
 // given context finishes.
+// Must NOT be run in a mutex.Lock()
 func (pl *RoundRobin) waitForPeerAddedEvent(ctx context.Context) error {
 	if _, ok := ctx.Deadline(); !ok {
 		return errors.ErrChooseContextHasNoDeadline("RoundRobinList")
