@@ -35,12 +35,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNopFilter(t *testing.T) {
+func TestUnaryNopFilter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	o := transporttest.NewMockUnaryOutbound(mockCtrl)
 	wrappedO := transport.ApplyUnaryFilter(o, transport.UnaryNopFilter)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte{1, 2, 3}),
+	}
+
+	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	o.EXPECT().Call(ctx, req).Return(res, nil)
+
+	got, err := wrappedO.Call(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, res, got)
+	}
+}
+
+func TestOnewayNopFilter(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	o := transporttest.NewMockOnewayOutbound(mockCtrl)
+	wrappedO := transport.ApplyOnewayFilter(o, transport.OnewayNopFilter)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

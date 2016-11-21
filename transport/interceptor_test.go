@@ -35,12 +35,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNopInterceptor(t *testing.T) {
+func TestUnaryNopInterceptor(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	wrappedH := transport.ApplyUnaryInterceptor(h, transport.UnaryNopInterceptor)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte{1, 2, 3}),
+	}
+	resw := new(transporttest.FakeResponseWriter)
+	err := errors.New("great sadness")
+	h.EXPECT().Handle(ctx, req, resw).Return(err)
+
+	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+}
+
+func TestOnewayNopInterceptor(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockOnewayHandler(mockCtrl)
+	wrappedH := transport.ApplyOnewayInterceptor(h, transport.OnewayNopInterceptor)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
