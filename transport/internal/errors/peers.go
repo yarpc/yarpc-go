@@ -95,13 +95,6 @@ func (e ErrInvalidAgentConversion) Error() string {
 	return fmt.Sprintf("cannot convert agent (%v) to type %s", e.Agent, e.ExpectedType)
 }
 
-// ErrNoPeerToSelect is used when a peerlist doesn't have any peers to return
-type ErrNoPeerToSelect string
-
-func (e ErrNoPeerToSelect) Error() string {
-	return fmt.Sprintf("could not find a peer to select in peerlist %q", string(e))
-}
-
 // ErrPeerAddAlreadyInList is returned to peer providers if the
 // peerlist is already tracking a peer for the added identifier
 type ErrPeerAddAlreadyInList string
@@ -116,4 +109,11 @@ type ErrPeerRemoveNotInList string
 
 func (e ErrPeerRemoveNotInList) Error() string {
 	return fmt.Sprintf("can't remove peer (%s) because it is not in peerlist", string(e))
+}
+
+// ErrChooseContextHasNoDeadline is returned when a context is sent to a peerlist with no deadline
+type ErrChooseContextHasNoDeadline string
+
+func (e ErrChooseContextHasNoDeadline) Error() string {
+	return fmt.Sprintf("can't wait for peer without a context deadline for peerlist %q", string(e))
 }
