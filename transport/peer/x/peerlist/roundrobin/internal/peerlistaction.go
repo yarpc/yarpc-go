@@ -134,19 +134,21 @@ type ConcurrentAction struct {
 	Wait    time.Duration
 }
 
-// Apply runs all the ConcurrentAction's actions in goroutines with a delay of MSWait
-// between each action and uses a WaitGroup to make sure all goroutines finish before continuing
+// Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
+// between each action. Returns when all actions have finished executing
 func (a ConcurrentAction) Apply(t *testing.T, pl transport.PeerList) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(a.Actions))
 	for _, action := range a.Actions {
-		go func() {
+		go func(ac PeerListAction) {
 			defer wg.Done()
-			action.Apply(t, pl)
-		}()
+			ac.Apply(t, pl)
+		}(action)
 
-		time.Sleep(a.Wait)
+		if a.Wait > 0 {
+			time.Sleep(a.Wait)
+		}
 	}
 
 	wg.Wait()
