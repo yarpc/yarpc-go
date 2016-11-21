@@ -275,102 +275,28 @@ func TestAgent(t *testing.T) {
 			}
 			return
 		}(),
-		func() (s testStruct) {
-			s.msg = "notification verification"
-			s.expectedPeers = createPeerExpectations(
-				mockCtrl,
-				[]string{"localhost:1234"},
-				2,
-			)
-
-			s.expectedPeers[0].subscribers[0].EXPECT().NotifyStatusChanged(
-				peerIdentifierMatcher(s.expectedPeers[0].identifier),
-			).Times(3)
-			s.expectedPeers[0].subscribers[1].EXPECT().NotifyStatusChanged(
-				peerIdentifierMatcher(s.expectedPeers[0].identifier),
-			).Times(3)
-
-			s.appliedFunc = func(a *Agent) error {
-				peer, _ := a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[0])
-				a.RetainPeer(s.expectedPeers[0].identifier, s.expectedPeers[0].subscribers[1])
-
-				a.NotifyStatusChanged(peer)
-				a.NotifyStatusChanged(peer)
-				a.NotifyStatusChanged(peer)
-
-				return nil
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "no notification after release"
-			s.expectedPeers = []peerExpectation{}
-
-			sub := transporttest.NewMockPeerSubscriber(mockCtrl)
-			sub.EXPECT().NotifyStatusChanged(gomock.Any()).Times(0)
-
-			pid := hostport.PeerIdentifier("localhost:1234")
-
-			s.appliedFunc = func(a *Agent) error {
-				peer, _ := a.RetainPeer(pid, sub)
-				a.ReleasePeer(pid, sub)
-
-				a.NotifyStatusChanged(peer)
-				a.NotifyStatusChanged(peer)
-				a.NotifyStatusChanged(peer)
-
-				return nil
-			}
-			return
-		}(),
-		func() (s testStruct) {
-			s.msg = "notification before versus after release"
-			s.expectedPeers = []peerExpectation{}
-
-			pid := hostport.PeerIdentifier("localhost:1234")
-
-			sub := transporttest.NewMockPeerSubscriber(mockCtrl)
-			sub.EXPECT().NotifyStatusChanged(peerIdentifierMatcher(pid)).Times(1)
-
-			s.appliedFunc = func(a *Agent) error {
-				peer, _ := a.RetainPeer(pid, sub)
-
-				a.NotifyStatusChanged(peer)
-
-				a.ReleasePeer(pid, sub)
-
-				a.NotifyStatusChanged(peer)
-				a.NotifyStatusChanged(peer)
-				a.NotifyStatusChanged(peer)
-
-				return nil
-			}
-			return
-		}(),
 	}
 
 	for _, tt := range tests {
-		agent := tt.agent
-		if agent == nil {
-			agent = NewAgent()
-		}
-
-		err := tt.appliedFunc(agent)
-
-		assert.Equal(t, tt.expectedErr, err, tt.msg)
-		assert.Len(t, agent.peerNodes, len(tt.expectedPeers), tt.msg)
-		for _, expectedPeerNode := range tt.expectedPeers {
-			peerNode, ok := agent.peerNodes[expectedPeerNode.identifier.Identifier()]
-			assert.True(t, ok, tt.msg)
-
-			assert.Equal(t, expectedPeerNode.identifier.Identifier(), peerNode.peer.Identifier(), tt.msg)
-
-			assert.Len(t, peerNode.subscribers, len(expectedPeerNode.subscribers), tt.msg)
-			for _, expectedSubscriber := range expectedPeerNode.subscribers {
-				_, ok := peerNode.subscribers[expectedSubscriber]
-				assert.True(t, ok, "subscriber (%v) not in list (%v). %s", expectedSubscriber, peerNode.subscribers, tt.msg)
+		t.Run(tt.msg, func(t *testing.T) {
+			agent := tt.agent
+			if agent == nil {
+				agent = NewAgent()
 			}
-		}
+
+			err := tt.appliedFunc(agent)
+
+			assert.Equal(t, tt.expectedErr, err)
+			assert.Len(t, agent.peers, len(tt.expectedPeers))
+			for _, expectedPeerNode := range tt.expectedPeers {
+				peer, ok := agent.peers[expectedPeerNode.identifier.Identifier()]
+				assert.True(t, ok)
+
+				assert.Equal(t, expectedPeerNode.identifier.Identifier(), peer.Identifier())
+
+				assert.Len(t, expectedPeerNode.subscribers, peer.NumSubscribers())
+			}
+		})
 	}
 }
 
