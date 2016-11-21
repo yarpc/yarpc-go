@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/crossdock/client/params"
 	"go.uber.org/yarpc/crossdock/client/random"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
@@ -74,7 +73,7 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 			},
 		},
 		//for call back
-		Inbounds: []transport.Inbound{http.NewInbound(fmt.Sprintf("%s:8089", server))},
+		Inbounds: yarpc.Inbounds{http.NewInbound(fmt.Sprintf("%s:8089", server))},
 	})
 
 	// register procedure for remote server to call us back on

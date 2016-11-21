@@ -181,7 +181,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 
 	serverDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "server",
-		Inbounds: []transport.Inbound{serverHTTP},
+		Inbounds: yarpc.Inbounds{serverHTTP},
 	})
 
 	serverDisp.Register(raw.Procedure("hello",

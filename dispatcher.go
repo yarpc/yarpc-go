@@ -43,7 +43,7 @@ type Dispatcher interface {
 	//
 	// The Inbounds will be returned in the same order that was used in the
 	// configuration.
-	Inbounds() []transport.Inbound
+	Inbounds() Inbounds
 
 	// Starts the RPC allowing it to accept and processing new incoming
 	// requests.
@@ -61,7 +61,7 @@ type Dispatcher interface {
 type Config struct {
 	Name string
 
-	Inbounds  []transport.Inbound
+	Inbounds  Inbounds
 	Outbounds Outbounds
 
 	// Filter and Interceptor that will be applied to all outgoing and incoming
@@ -71,6 +71,9 @@ type Config struct {
 
 	Tracer opentracing.Tracer
 }
+
+// Inbounds contains a list of inbound transports
+type Inbounds []transport.Inbound
 
 // Outbounds encapsulates a service and its outbounds
 type Outbounds map[string]transport.Outbounds
@@ -130,7 +133,7 @@ type dispatcher struct {
 
 	Name string
 
-	inbounds  []transport.Inbound
+	inbounds  Inbounds
 	outbounds Outbounds
 
 	Interceptor transport.Interceptor
@@ -138,8 +141,8 @@ type dispatcher struct {
 	deps transport.Deps
 }
 
-func (d dispatcher) Inbounds() []transport.Inbound {
-	inbounds := make([]transport.Inbound, len(d.inbounds))
+func (d dispatcher) Inbounds() Inbounds {
+	inbounds := make(Inbounds, len(d.inbounds))
 	copy(inbounds, d.inbounds)
 	return inbounds
 }

@@ -48,7 +48,7 @@ func Start() {
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
-		Inbounds: []transport.Inbound{
+		Inbounds: yarpc.Inbounds{
 			http.NewInbound(":8081"),
 			tch.NewInbound(ch, tch.ListenAddr(":8082")),
 		},

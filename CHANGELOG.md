@@ -15,6 +15,8 @@ v0.5.0 (unreleased)
 -   TChannel: `NewInbound` and `NewOutbound` now accept any object satisfying
     the `Channel` interface. This should work with existing `*tchannel.Channel`
     objects without any changes.
+-   Introduced `yarpc.Inbounds` to be used instead of `[]transport.Inbound`
+    when configuring a Dispatcher.
 
 
 v0.4.0 (2016-11-11)
