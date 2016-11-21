@@ -92,4 +92,4 @@ func (pl *single) ChoosePeer(context.Context, *transport.Request) (transport.Pee
 }
 
 // NotifyStatusChanged when the Peer status changes
-func (pl *single) NotifyStatusChanged(transport.Peer) {}
+func (pl *single) NotifyStatusChanged(transport.PeerIdentifier) {}
