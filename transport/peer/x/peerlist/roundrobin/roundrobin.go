@@ -190,22 +190,12 @@ func (pl *RoundRobin) removeByPeerIdentifier(pid transport.PeerIdentifier) error
 		return pl.availablePeerRing.Remove(peer)
 	}
 
-	if peer := pl.getUnavailablePeer(pid); peer != nil {
+	if peer, ok := pl.nonAvailablePeers[pid.Identifier()]; ok && peer != nil {
 		pl.removeFromUnavailablePeers(peer)
 		return nil
 	}
 
 	return errors.ErrPeerRemoveNotInList(pid.Identifier())
-}
-
-// getUnavailablePeer returns a Peer from the unavailable peer map or nil
-// Must be run in a mutex.Lock()
-func (pl *RoundRobin) getUnavailablePeer(pid transport.PeerIdentifier) transport.Peer {
-	p, ok := pl.nonAvailablePeers[pid.Identifier()]
-	if !ok {
-		return nil
-	}
-	return p
 }
 
 // removeFromUnavailablePeers remove a peer from the Unavailable Peers list
@@ -277,13 +267,11 @@ func (pl *RoundRobin) NotifyStatusChanged(pid transport.PeerIdentifier) {
 		return
 	}
 
-	if peer := pl.getUnavailablePeer(pid); peer != nil {
+	if peer, ok := pl.nonAvailablePeers[pid.Identifier()]; ok && peer != nil {
 		pl.handleUnavailablePeerStatusChange(peer)
 		return
 	}
-
 	// No action required
-	return
 }
 
 // handleAvailablePeerStatusChange checks the connection status of a connected peer to potentially

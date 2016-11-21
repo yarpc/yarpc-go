@@ -42,7 +42,7 @@ func (pid MockPeerIdentifier) Identifier() string {
 func NewMockPeer(pid MockPeerIdentifier, conStatus transport.PeerConnectionStatus) *MockPeer {
 	return &MockPeer{
 		MockPeerIdentifier: pid,
-		StatusObj: transport.PeerStatus{
+		PeerStatus: transport.PeerStatus{
 			ConnectionStatus:    conStatus,
 			PendingRequestCount: 0,
 		},
@@ -55,23 +55,23 @@ func NewMockPeer(pid MockPeerIdentifier, conStatus transport.PeerConnectionStatu
 type MockPeer struct {
 	MockPeerIdentifier
 
-	StatusObj transport.PeerStatus
+	PeerStatus transport.PeerStatus
 }
 
 // Status returns the Status Object of the MockPeer
 func (p *MockPeer) Status() transport.PeerStatus {
-	return p.StatusObj
+	return p.PeerStatus
 }
 
 // StartRequest is run when a Request starts
 func (p *MockPeer) StartRequest() func() {
-	p.StatusObj.PendingRequestCount++
+	p.PeerStatus.PendingRequestCount++
 	return p.endRequest
 }
 
 // endRequest should be run after a MockPeer request has finished
 func (p *MockPeer) endRequest() {
-	p.StatusObj.PendingRequestCount--
+	p.PeerStatus.PendingRequestCount--
 }
 
 // PeerIdentifierMatcher is used to match a Peer/PeerIdentifier by comparing

@@ -188,7 +188,7 @@ type NotifyStatusChangeAction struct {
 
 // Apply will run the NotifyStatusChanged function on the PeerList with the provided Peer
 func (a NotifyStatusChangeAction) Apply(t *testing.T, pl transport.PeerList, deps Dependencies) {
-	deps.Peers[a.PeerID].StatusObj.ConnectionStatus = a.NewConnectionStatus
+	deps.Peers[a.PeerID].PeerStatus.ConnectionStatus = a.NewConnectionStatus
 
 	plSub := pl.(transport.PeerSubscriber)
 
