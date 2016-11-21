@@ -86,3 +86,68 @@ type unaryNopFilter struct{}
 func (unaryNopFilter) Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
 	return out.Call(ctx, request)
 }
+
+// OnewayFilter defines transport-level middleware for `OnewayOutbound`s.
+// Note: this is client side.
+//
+// OnewayFilter MAY
+//
+// - change the context
+// - change the request
+// - change the returned response
+// - handle the returned error
+// - call the given outbound zero or more times
+//
+// OnewayFilter MUST
+//
+// - always return a non-nil Response or error.
+// - be thread-safe
+//
+// OnewayFilter is re-used across requests and MAY be called multiple times on
+// the same request.
+type OnewayFilter interface {
+	CallOneway(ctx context.Context, request *Request, out OnewayOutbound) (Ack, error)
+}
+
+// OnewayNopFilter is a filter that does not do anything special. It simply
+// calls the underlying OnewayOutbound.
+var OnewayNopFilter OnewayFilter = onewayNopFilter{}
+
+// ApplyOnewayFilter applies the given Filter to the given Outbound.
+func ApplyOnewayFilter(o OnewayOutbound, f OnewayFilter) OnewayOutbound {
+	if f == nil {
+		return o
+	}
+	return onewayFilteredOutbound{o: o, f: f}
+}
+
+// OnewayFilterFunc adapts a function into a OnewayFilter.
+type OnewayFilterFunc func(context.Context, *Request, OnewayOutbound) (Ack, error)
+
+// Call for OnewayFilterFunc.
+func (f OnewayFilterFunc) CallOneway(ctx context.Context, request *Request, out OnewayOutbound) (Ack, error) {
+	return f(ctx, request, out)
+}
+
+type onewayFilteredOutbound struct {
+	o OnewayOutbound
+	f OnewayFilter
+}
+
+func (fo onewayFilteredOutbound) Start(d Deps) error {
+	return fo.o.Start(d)
+}
+
+func (fo onewayFilteredOutbound) Stop() error {
+	return fo.o.Stop()
+}
+
+func (fo onewayFilteredOutbound) CallOneway(ctx context.Context, request *Request) (Ack, error) {
+	return fo.f.CallOneway(ctx, request, fo.o)
+}
+
+type onewayNopFilter struct{}
+
+func (onewayNopFilter) CallOneway(ctx context.Context, request *Request, out OnewayOutbound) (Ack, error) {
+	return out.CallOneway(ctx, request)
+}

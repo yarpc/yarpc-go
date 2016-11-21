@@ -76,3 +76,58 @@ type unaryNopInterceptor struct{}
 func (unaryNopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler UnaryHandler) error {
 	return handler.Handle(ctx, req, resw)
 }
+
+// OnewayInterceptor defines a transport-level middleware for `OnewayHandler`s.
+// Note: this is server side.
+//
+// OnewayInterceptor MAY
+//
+// - change the context
+// - change the request
+// - call the ResponseWriter
+// - modify the response body by wrapping the ResponseWriter
+// - handle the returned error
+// - call the given handler zero or more times
+//
+// OnewayInterceptor MUST be thread-safe.
+//
+// OnewayInterceptor is re-used across requests and MAY be called multiple times
+// for the same request.
+type OnewayInterceptor interface {
+	HandleOneway(ctx context.Context, req *Request, h OnewayHandler) error
+}
+
+// OnewayNopInterceptor is a interceptor that does not do anything special. It
+// simply calls the underlying OnewayHandler.
+var OnewayNopInterceptor OnewayInterceptor = onewayNopInterceptor{}
+
+// ApplyOnewayInterceptor applies the given Interceptor to the given OnewayHandler.
+func ApplyOnewayInterceptor(h OnewayHandler, i OnewayInterceptor) OnewayHandler {
+	if i == nil {
+		return h
+	}
+	return onewayInterceptedHandler{h: h, i: i}
+}
+
+// OnewayInterceptorFunc adapts a function into an Interceptor.
+type OnewayInterceptorFunc func(context.Context, *Request, OnewayHandler) error
+
+// HandleOneway for OnewayInterceptorFunc
+func (f OnewayInterceptorFunc) HandleOneway(ctx context.Context, req *Request, h OnewayHandler) error {
+	return f(ctx, req, h)
+}
+
+type onewayInterceptedHandler struct {
+	h OnewayHandler
+	i OnewayInterceptor
+}
+
+func (h onewayInterceptedHandler) HandleOneway(ctx context.Context, req *Request) error {
+	return h.i.HandleOneway(ctx, req, h.h)
+}
+
+type onewayNopInterceptor struct{}
+
+func (onewayNopInterceptor) HandleOneway(ctx context.Context, req *Request, handler OnewayHandler) error {
+	return handler.HandleOneway(ctx, req)
+}
