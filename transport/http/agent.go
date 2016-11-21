@@ -109,8 +109,8 @@ func (a *Agent) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
 	p, ok := a.peers[pid.Identifier()]
 	if !ok {
 		return peer.ErrAgentHasNoReferenceToPeer{
-			Agent:          a,
-			PeerIdentifier: pid,
+			AgentName:      "http.Agent",
+			PeerIdentifier: pid.Identifier(),
 		}
 	}
 
