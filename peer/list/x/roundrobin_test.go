@@ -1,4 +1,4 @@
-package roundrobin
+package list
 
 import (
 	"context"
@@ -7,10 +7,9 @@ import (
 	"time"
 
 	yerrors "go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/internal/errors"
-	. "go.uber.org/yarpc/transport/peer/x/peerlist/roundrobin/internal"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/peer"
+	. "go.uber.org/yarpc/peer/list/x/internal"
+	"go.uber.org/yarpc/peer/peertest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -93,7 +92,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				StopAction{},
 				ChooseAction{
-					ExpectedErr: errors.ErrPeerListNotStarted("RoundRobinList"),
+					ExpectedErr: peer.ErrPeerListNotStarted("RoundRobinList"),
 				},
 			},
 			expectedStarted: false,
@@ -123,7 +122,7 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StartAction{
-					ExpectedErr: errors.ErrPeerListAlreadyStarted("RoundRobinList"),
+					ExpectedErr: peer.ErrPeerListAlreadyStarted("RoundRobinList"),
 				},
 				ChooseAction{
 					ExpectedPeer: "1",
@@ -138,7 +137,7 @@ func TestRoundRobinList(t *testing.T) {
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
 				StopAction{
-					ExpectedErr: errors.ErrPeerListNotStarted("RoundRobinList"),
+					ExpectedErr: peer.ErrPeerListNotStarted("RoundRobinList"),
 				},
 			},
 			expectedStarted: false,
@@ -147,16 +146,16 @@ func TestRoundRobinList(t *testing.T) {
 			msg:                "start retain error",
 			inputPeerIDs:       []string{"1"},
 			errRetainedPeerIDs: []string{"1"},
-			retainErr:          errors.ErrInvalidPeerType{},
-			expectedCreateErr:  errors.ErrInvalidPeerType{},
+			retainErr:          peer.ErrInvalidPeerType{},
+			expectedCreateErr:  peer.ErrInvalidPeerType{},
 		},
 		{
 			msg:                      "start retain multiple errors",
 			inputPeerIDs:             []string{"1", "2", "3"},
 			retainedAvailablePeerIDs: []string{"2"},
 			errRetainedPeerIDs:       []string{"1", "3"},
-			retainErr:                errors.ErrInvalidPeerType{},
-			expectedCreateErr:        yerrors.ErrorGroup{errors.ErrInvalidPeerType{}, errors.ErrInvalidPeerType{}},
+			retainErr:                peer.ErrInvalidPeerType{},
+			expectedCreateErr:        yerrors.ErrorGroup{peer.ErrInvalidPeerType{}, peer.ErrInvalidPeerType{}},
 			expectedAvailablePeers:   []string{"2"},
 		},
 		{
@@ -164,11 +163,11 @@ func TestRoundRobinList(t *testing.T) {
 			inputPeerIDs:             []string{"1"},
 			retainedAvailablePeerIDs: []string{"1"},
 			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               errors.ErrAgentHasNoReferenceToPeer{},
+			releaseErr:               peer.ErrAgentHasNoReferenceToPeer{},
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StopAction{
-					ExpectedErr: errors.ErrAgentHasNoReferenceToPeer{},
+					ExpectedErr: peer.ErrAgentHasNoReferenceToPeer{},
 				},
 			},
 			expectedStarted: false,
@@ -179,13 +178,13 @@ func TestRoundRobinList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1", "2", "3"},
 			releasedPeerIDs:          []string{"2"},
 			errReleasedPeerIDs:       []string{"1", "3"},
-			releaseErr:               errors.ErrAgentHasNoReferenceToPeer{},
+			releaseErr:               peer.ErrAgentHasNoReferenceToPeer{},
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StopAction{
 					ExpectedErr: yerrors.ErrorGroup{
-						errors.ErrAgentHasNoReferenceToPeer{},
-						errors.ErrAgentHasNoReferenceToPeer{},
+						peer.ErrAgentHasNoReferenceToPeer{},
+						peer.ErrAgentHasNoReferenceToPeer{},
 					},
 				},
 			},
@@ -198,10 +197,10 @@ func TestRoundRobinList(t *testing.T) {
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
 				ChooseAction{
-					ExpectedErr: errors.ErrPeerListNotStarted("RoundRobinList"),
+					ExpectedErr: peer.ErrPeerListNotStarted("RoundRobinList"),
 				},
 				ChooseAction{
-					ExpectedErr: errors.ErrPeerListNotStarted("RoundRobinList"),
+					ExpectedErr: peer.ErrPeerListNotStarted("RoundRobinList"),
 				},
 			},
 			expectedStarted: false,
@@ -274,12 +273,12 @@ func TestRoundRobinList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			errRetainedPeerIDs:       []string{"3"},
-			retainErr:                errors.ErrInvalidPeerType{},
+			retainErr:                peer.ErrInvalidPeerType{},
 			peerListActions: []PeerListAction{
 				StartAction{},
 				AddAction{
 					InputPeerID: "3",
-					ExpectedErr: errors.ErrInvalidPeerType{},
+					ExpectedErr: peer.ErrInvalidPeerType{},
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
@@ -296,7 +295,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				AddAction{
 					InputPeerID: "2",
-					ExpectedErr: errors.ErrPeerAddAlreadyInList("2"),
+					ExpectedErr: peer.ErrPeerAddAlreadyInList("2"),
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
@@ -313,7 +312,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				RemoveAction{
 					InputPeerID: "3",
-					ExpectedErr: errors.ErrPeerRemoveNotInList("3"),
+					ExpectedErr: peer.ErrPeerRemoveNotInList("3"),
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
@@ -326,13 +325,13 @@ func TestRoundRobinList(t *testing.T) {
 			inputPeerIDs:             []string{"1", "2"},
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			errReleasedPeerIDs:       []string{"2"},
-			releaseErr:               errors.ErrAgentHasNoReferenceToPeer{},
+			releaseErr:               peer.ErrAgentHasNoReferenceToPeer{},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
 				StartAction{},
 				RemoveAction{
 					InputPeerID: "2",
-					ExpectedErr: errors.ErrAgentHasNoReferenceToPeer{},
+					ExpectedErr: peer.ErrAgentHasNoReferenceToPeer{},
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "1"},
@@ -436,7 +435,7 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				ChooseAction{
 					InputContext: context.Background(),
-					ExpectedErr:  errors.ErrChooseContextHasNoDeadline("RoundRobinList"),
+					ExpectedErr:  peer.ErrChooseContextHasNoDeadline("RoundRobinList"),
 				},
 			},
 			expectedStarted: true,
@@ -482,7 +481,7 @@ func TestRoundRobinList(t *testing.T) {
 					InputContextTimeout: 10 * time.Millisecond,
 					ExpectedErr:         context.DeadlineExceeded,
 				},
-				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: transport.PeerAvailable},
+				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
 			},
 			expectedStarted: true,
@@ -495,7 +494,7 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				ChooseAction{ExpectedPeer: "1"},
-				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: transport.PeerAvailable},
+				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
 			},
 			expectedStarted: true,
@@ -508,7 +507,7 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				ChooseAction{ExpectedPeer: "1"},
-				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: transport.PeerUnavailable},
+				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
 					ExpectedErr:         context.DeadlineExceeded,
@@ -523,7 +522,7 @@ func TestRoundRobinList(t *testing.T) {
 			expectedUnavailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
 				StartAction{},
-				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: transport.PeerUnavailable},
+				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
 					ExpectedErr:         context.DeadlineExceeded,
@@ -539,7 +538,7 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				StartAction{},
 				RemoveAction{InputPeerID: "1"},
-				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: transport.PeerAvailable},
+				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 			},
 			expectedStarted: true,
 		},
@@ -568,15 +567,15 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "3vau", "4var", "5vaur"}},
 
 				// Change Status to Unavailable
-				NotifyStatusChangeAction{PeerID: "3vau", NewConnectionStatus: transport.PeerUnavailable},
-				NotifyStatusChangeAction{PeerID: "5vaur", NewConnectionStatus: transport.PeerUnavailable},
+				NotifyStatusChangeAction{PeerID: "3vau", NewConnectionStatus: peer.Unavailable},
+				NotifyStatusChangeAction{PeerID: "5vaur", NewConnectionStatus: peer.Unavailable},
 
 				ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "4var"}},
 				ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "4var"}},
 
 				// Change Status to Available
-				NotifyStatusChangeAction{PeerID: "8uav", NewConnectionStatus: transport.PeerAvailable},
-				NotifyStatusChangeAction{PeerID: "10uavr", NewConnectionStatus: transport.PeerAvailable},
+				NotifyStatusChangeAction{PeerID: "8uav", NewConnectionStatus: peer.Available},
+				NotifyStatusChangeAction{PeerID: "10uavr", NewConnectionStatus: peer.Available},
 
 				ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "4var", "8uav", "10uavr"}},
 				ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "4var", "8uav", "10uavr"}},
@@ -605,7 +604,7 @@ func TestRoundRobinList(t *testing.T) {
 							InputContextTimeout: 200 * time.Millisecond,
 							ExpectedPeer:        "1",
 						},
-						NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: transport.PeerAvailable},
+						NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 					},
 					Wait: 20 * time.Millisecond,
 				},
@@ -621,7 +620,7 @@ func TestRoundRobinList(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			pids := CreatePeerIDs(tt.inputPeerIDs)
-			agent := transporttest.NewMockAgent(mockCtrl)
+			agent := peertest.NewMockAgent(mockCtrl)
 
 			// Healthy Agent Retain/Release
 			peerMap := ExpectPeerRetains(
@@ -635,7 +634,7 @@ func TestRoundRobinList(t *testing.T) {
 			ExpectPeerRetainsWithError(agent, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(agent, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl, err := New(pids, agent)
+			pl, err := NewRoundRobin(pids, agent)
 			assert.Equal(t, tt.expectedCreateErr, err)
 
 			deps := Dependencies{
@@ -655,10 +654,10 @@ func TestRoundRobinList(t *testing.T) {
 
 			assert.Len(t, pl.nonAvailablePeers, len(tt.expectedUnavailablePeers), "invalid unavailable peerlist size")
 			for _, expectedUnavailablePeer := range tt.expectedUnavailablePeers {
-				peer, ok := pl.nonAvailablePeers[expectedUnavailablePeer]
+				p, ok := pl.nonAvailablePeers[expectedUnavailablePeer]
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in unavailable peerlist", expectedUnavailablePeer))
 				if ok {
-					assert.Equal(t, expectedUnavailablePeer, peer.Identifier())
+					assert.Equal(t, expectedUnavailablePeer, p.Identifier())
 				}
 			}
 

@@ -23,8 +23,8 @@ package internal
 import (
 	"fmt"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/peertest"
 
 	"github.com/golang/mock/gomock"
 )
@@ -39,10 +39,10 @@ func (pid MockPeerIdentifier) Identifier() string {
 }
 
 // NewMockPeer returns a new MockPeer
-func NewMockPeer(pid MockPeerIdentifier, conStatus transport.PeerConnectionStatus) *MockPeer {
+func NewMockPeer(pid MockPeerIdentifier, conStatus peer.ConnectionStatus) *MockPeer {
 	return &MockPeer{
 		MockPeerIdentifier: pid,
-		PeerStatus: transport.PeerStatus{
+		PeerStatus: peer.Status{
 			ConnectionStatus:    conStatus,
 			PendingRequestCount: 0,
 		},
@@ -55,11 +55,11 @@ func NewMockPeer(pid MockPeerIdentifier, conStatus transport.PeerConnectionStatu
 type MockPeer struct {
 	MockPeerIdentifier
 
-	PeerStatus transport.PeerStatus
+	PeerStatus peer.Status
 }
 
 // Status returns the Status Object of the MockPeer
-func (p *MockPeer) Status() transport.PeerStatus {
+func (p *MockPeer) Status() peer.Status {
 	return p.PeerStatus
 }
 
@@ -80,7 +80,7 @@ type PeerIdentifierMatcher string
 
 // Matches returns true of got is equivalent to the PeerIdentifier Matching string
 func (pim PeerIdentifierMatcher) Matches(got interface{}) bool {
-	gotPID, ok := got.(transport.PeerIdentifier)
+	gotPID, ok := got.(peer.Identifier)
 	if !ok {
 		return false
 	}
@@ -93,8 +93,8 @@ func (pim PeerIdentifierMatcher) String() string {
 }
 
 // CreatePeerIDs takes a slice of peerID strings and returns a slice of PeerIdentifiers
-func CreatePeerIDs(peerIDStrs []string) []transport.PeerIdentifier {
-	pids := make([]transport.PeerIdentifier, 0, len(peerIDStrs))
+func CreatePeerIDs(peerIDStrs []string) []peer.Identifier {
+	pids := make([]peer.Identifier, 0, len(peerIDStrs))
 	for _, id := range peerIDStrs {
 		pids = append(pids, MockPeerIdentifier(id))
 	}
@@ -103,18 +103,18 @@ func CreatePeerIDs(peerIDStrs []string) []transport.PeerIdentifier {
 
 // ExpectPeerRetains registers expectations on a MockAgent to generate peers on the RetainPeer function
 func ExpectPeerRetains(
-	agent *transporttest.MockAgent,
+	agent *peertest.MockAgent,
 	availablePeerStrs []string,
 	unavailablePeerStrs []string,
 ) map[string]*MockPeer {
 	peers := make(map[string]*MockPeer, len(availablePeerStrs)+len(unavailablePeerStrs))
 	for _, peerStr := range availablePeerStrs {
-		peer := NewMockPeer(MockPeerIdentifier(peerStr), transport.PeerAvailable)
+		peer := NewMockPeer(MockPeerIdentifier(peerStr), peer.Available)
 		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(peer, nil)
 		peers[peer.Identifier()] = peer
 	}
 	for _, peerStr := range unavailablePeerStrs {
-		peer := NewMockPeer(MockPeerIdentifier(peerStr), transport.PeerUnavailable)
+		peer := NewMockPeer(MockPeerIdentifier(peerStr), peer.Unavailable)
 		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(peer, nil)
 		peers[peer.Identifier()] = peer
 	}
@@ -123,7 +123,7 @@ func ExpectPeerRetains(
 
 // ExpectPeerRetainsWithError registers expectations on a MockAgent return errors
 func ExpectPeerRetainsWithError(
-	agent *transporttest.MockAgent,
+	agent *peertest.MockAgent,
 	peerStrs []string,
 	err error, // Will be returned from the MockAgent on the Retains of these Peers
 ) {
@@ -134,7 +134,7 @@ func ExpectPeerRetainsWithError(
 
 // ExpectPeerReleases registers expectations on a MockAgent to release peers through the ReleasePeer function
 func ExpectPeerReleases(
-	agent *transporttest.MockAgent,
+	agent *peertest.MockAgent,
 	peerStrs []string,
 	err error,
 ) {

@@ -18,19 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package errors
+package peer
 
 import (
 	"fmt"
-
-	"go.uber.org/yarpc/transport"
 )
 
 // ErrPeerHasNoReferenceToSubscriber is called when a Peer is expected
 // to operate on a PeerSubscriber it has no reference to
 type ErrPeerHasNoReferenceToSubscriber struct {
-	PeerIdentifier transport.PeerIdentifier
-	PeerSubscriber transport.PeerSubscriber
+	PeerIdentifier Identifier
+	PeerSubscriber Subscriber
 }
 
 func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
@@ -40,8 +38,8 @@ func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 // ErrAgentHasNoReferenceToPeer is called when an agent is expected to
 // operate on a Peer it has no reference to
 type ErrAgentHasNoReferenceToPeer struct {
-	Agent          transport.Agent
-	PeerIdentifier transport.PeerIdentifier
+	Agent          Agent
+	PeerIdentifier Identifier
 }
 
 func (e ErrAgentHasNoReferenceToPeer) Error() string {
@@ -52,7 +50,7 @@ func (e ErrAgentHasNoReferenceToPeer) Error() string {
 // was not passed in
 type ErrInvalidPeerType struct {
 	ExpectedType   string
-	PeerIdentifier transport.PeerIdentifier
+	PeerIdentifier Identifier
 }
 
 func (e ErrInvalidPeerType) Error() string {
@@ -77,7 +75,7 @@ func (e ErrPeerListNotStarted) Error() string {
 
 // ErrInvalidPeerConversion is called when a peer can't be properly converted
 type ErrInvalidPeerConversion struct {
-	Peer         transport.Peer
+	Peer         Peer
 	ExpectedType string
 }
 
@@ -87,7 +85,7 @@ func (e ErrInvalidPeerConversion) Error() string {
 
 // ErrInvalidAgentConversion is called when an agent can't be properly converted
 type ErrInvalidAgentConversion struct {
-	Agent        transport.Agent
+	Agent        Agent
 	ExpectedType string
 }
 
