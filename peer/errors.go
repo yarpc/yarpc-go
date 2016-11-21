@@ -18,19 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package errors
+package peer
 
 import (
 	"fmt"
-
-	"go.uber.org/yarpc/transport"
 )
 
 // ErrPeerHasNoReferenceToSubscriber is called when a Peer is expected
 // to operate on a PeerSubscriber it has no reference to
 type ErrPeerHasNoReferenceToSubscriber struct {
-	PeerIdentifier transport.PeerIdentifier
-	PeerSubscriber transport.PeerSubscriber
+	PeerIdentifier Identifier
+	PeerSubscriber Subscriber
 }
 
 func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
@@ -40,19 +38,19 @@ func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 // ErrAgentHasNoReferenceToPeer is called when an agent is expected to
 // operate on a Peer it has no reference to
 type ErrAgentHasNoReferenceToPeer struct {
-	Agent          transport.Agent
-	PeerIdentifier transport.PeerIdentifier
+	AgentName      string
+	PeerIdentifier string
 }
 
 func (e ErrAgentHasNoReferenceToPeer) Error() string {
-	return fmt.Sprintf("agent (%v) has no reference to peer (%v)", e.Agent, e.PeerIdentifier)
+	return fmt.Sprintf("agent %q has no reference to peer %q", e.AgentName, e.PeerIdentifier)
 }
 
 // ErrInvalidPeerType is when a specfic peer type is required, but
 // was not passed in
 type ErrInvalidPeerType struct {
 	ExpectedType   string
-	PeerIdentifier transport.PeerIdentifier
+	PeerIdentifier Identifier
 }
 
 func (e ErrInvalidPeerType) Error() string {
@@ -77,7 +75,7 @@ func (e ErrPeerListNotStarted) Error() string {
 
 // ErrInvalidPeerConversion is called when a peer can't be properly converted
 type ErrInvalidPeerConversion struct {
-	Peer         transport.Peer
+	Peer         Peer
 	ExpectedType string
 }
 
@@ -87,10 +85,33 @@ func (e ErrInvalidPeerConversion) Error() string {
 
 // ErrInvalidAgentConversion is called when an agent can't be properly converted
 type ErrInvalidAgentConversion struct {
-	Agent        transport.Agent
+	Agent        Agent
 	ExpectedType string
 }
 
 func (e ErrInvalidAgentConversion) Error() string {
 	return fmt.Sprintf("cannot convert agent (%v) to type %s", e.Agent, e.ExpectedType)
+}
+
+// ErrPeerAddAlreadyInList is returned to peer providers if the
+// peerlist is already tracking a peer for the added identifier
+type ErrPeerAddAlreadyInList string
+
+func (e ErrPeerAddAlreadyInList) Error() string {
+	return fmt.Sprintf("can't add peer %q because is already in peerlist", string(e))
+}
+
+// ErrPeerRemoveNotInList is returned to peer providers if the peerlist
+// is not tracking the peer to remove for a given identifier
+type ErrPeerRemoveNotInList string
+
+func (e ErrPeerRemoveNotInList) Error() string {
+	return fmt.Sprintf("can't remove peer (%s) because it is not in peerlist", string(e))
+}
+
+// ErrChooseContextHasNoDeadline is returned when a context is sent to a peerlist with no deadline
+type ErrChooseContextHasNoDeadline string
+
+func (e ErrChooseContextHasNoDeadline) Error() string {
+	return fmt.Sprintf("can't wait for peer without a context deadline for peerlist %q", string(e))
 }

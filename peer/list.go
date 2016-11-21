@@ -18,16 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package peer
 
 import (
-	"fmt"
+	"context"
+
+	"go.uber.org/yarpc/transport"
 )
 
-type noOutboundForService struct {
-	Service string
+//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/peer List,ChangeListener
+
+// List is a collection of Peers.  Outbounds request peers from the peer.List to determine where to send requests
+type List interface {
+	// Notify the PeerList that it will start receiving requests
+	Start() error
+
+	// Notify the PeerList that it will stop receiving requests
+	Stop() error
+
+	// Choose a Peer for the next call, block until a peer is available (or timeout)
+	ChoosePeer(context.Context, *transport.Request) (Peer, error)
 }
 
-func (e noOutboundForService) Error() string {
-	return fmt.Sprintf("no configured outbound transport for service %q", e.Service)
+// ChangeListener listens to adds and removes of Peers from a PeerProvider
+// A List will implement the PeerChangeListener interface in order to receive
+// updates to the list of Peers it is keeping track of
+type ChangeListener interface {
+	// Add a peer to the List (Called directly from a PeerProvider)
+	Add(Identifier) error
+
+	// Remove a peer from the List (Called directly from a PeerProvider)
+	Remove(Identifier) error
 }

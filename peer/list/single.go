@@ -18,27 +18,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peerlist
+package list
 
 import (
 	"context"
 	"sync"
 
+	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/internal/errors"
 )
 
 type single struct {
 	lock sync.RWMutex
 
-	initialPeerID transport.PeerIdentifier
-	peer          transport.Peer
-	agent         transport.Agent
+	initialPeerID peer.Identifier
+	p             peer.Peer
+	agent         peer.Agent
 	started       bool
 }
 
-// NewSingle creates a static PeerList with a single Peer
-func NewSingle(pid transport.PeerIdentifier, agent transport.Agent) transport.PeerList {
+// NewSingle creates a static peer.List with a single Peer
+func NewSingle(pid peer.Identifier, agent peer.Agent) peer.List {
 	return &single{
 		initialPeerID: pid,
 		agent:         agent,
@@ -50,16 +50,16 @@ func (pl *single) Start() error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 	if pl.started {
-		return errors.ErrPeerListAlreadyStarted("single")
+		return peer.ErrPeerListAlreadyStarted("single")
 	}
 	pl.started = true
 
-	peer, err := pl.agent.RetainPeer(pl.initialPeerID, pl)
+	p, err := pl.agent.RetainPeer(pl.initialPeerID, pl)
 	if err != nil {
 		pl.started = false
 		return err
 	}
-	pl.peer = peer
+	pl.p = p
 	return nil
 }
 
@@ -68,7 +68,7 @@ func (pl *single) Stop() error {
 	defer pl.lock.Unlock()
 
 	if !pl.started {
-		return errors.ErrPeerListNotStarted("single")
+		return peer.ErrPeerListNotStarted("single")
 	}
 	pl.started = false
 
@@ -77,19 +77,19 @@ func (pl *single) Stop() error {
 		return err
 	}
 
-	pl.peer = nil
+	pl.p = nil
 	return nil
 }
 
-func (pl *single) ChoosePeer(context.Context, *transport.Request) (transport.Peer, error) {
+func (pl *single) ChoosePeer(context.Context, *transport.Request) (peer.Peer, error) {
 	pl.lock.RLock()
 	defer pl.lock.RUnlock()
 
 	if !pl.started {
-		return nil, errors.ErrPeerListNotStarted("single")
+		return nil, peer.ErrPeerListNotStarted("single")
 	}
-	return pl.peer, nil
+	return pl.p, nil
 }
 
 // NotifyStatusChanged when the Peer status changes
-func (pl *single) NotifyStatusChanged(transport.Peer) {}
+func (pl *single) NotifyStatusChanged(peer.Identifier) {}

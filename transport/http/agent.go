@@ -25,9 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/internal/errors"
-	"go.uber.org/yarpc/transport/peer/hostport"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 )
 
 type agentConfig struct {
@@ -57,102 +56,71 @@ func NewAgent(opts ...AgentOption) *Agent {
 	}
 
 	return &Agent{
-		client:    buildClient(&cfg),
-		peerNodes: make(map[string]*peerNode),
+		client: buildClient(&cfg),
+		peers:  make(map[string]*hostport.Peer),
 	}
 }
 
 // Agent keeps track of http peers and the associated client with which the peer will call into.
 type Agent struct {
-	lock sync.RWMutex
+	lock sync.Mutex
 
-	client    *http.Client
-	peerNodes map[string]*peerNode
+	client *http.Client
+	peers  map[string]*hostport.Peer
 }
 
-// peerNode keeps track of a HostPortPeer and any subscribers retaining it
-type peerNode struct {
-	peer        *hostport.Peer
-	subscribers map[transport.PeerSubscriber]struct{}
-}
-
-// RetainPeer gets or creates a Peer for the specified PeerSubscriber (usually a PeerList)
-func (a *Agent) RetainPeer(pid transport.PeerIdentifier, sub transport.PeerSubscriber) (transport.Peer, error) {
+// RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.List)
+func (a *Agent) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	hppid, ok := pid.(hostport.PeerIdentifier)
 	if !ok {
-		return nil, errors.ErrInvalidPeerType{
+		return nil, peer.ErrInvalidPeerType{
 			ExpectedType:   "hostport.PeerIdentifier",
 			PeerIdentifier: pid,
 		}
 	}
 
-	node := a.getOrCreatePeerNode(hppid)
-	node.subscribers[sub] = struct{}{}
-	return node.peer, nil
+	p := a.getOrCreatePeer(hppid)
+	p.AddSubscriber(sub)
+	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Agent) getOrCreatePeerNode(pid hostport.PeerIdentifier) *peerNode {
-	if node, ok := a.peerNodes[pid.Identifier()]; ok {
-		return node
+func (a *Agent) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
+	if p, ok := a.peers[pid.Identifier()]; ok {
+		return p
 	}
 
-	peer := hostport.NewPeer(pid, a)
-	peer.SetStatus(transport.PeerAvailable)
+	p := hostport.NewPeer(pid, a)
+	p.SetStatus(peer.Available)
 
-	node := &peerNode{
-		peer:        peer,
-		subscribers: make(map[transport.PeerSubscriber]struct{}),
-	}
-	a.peerNodes[peer.Identifier()] = node
+	a.peers[p.Identifier()] = p
 
-	return node
+	return p
 }
 
-// ReleasePeer releases a peer from the PeerSubscriber and removes that peer from the Agent if nothing is listening to it
-func (a *Agent) ReleasePeer(pid transport.PeerIdentifier, sub transport.PeerSubscriber) error {
+// ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Agent if nothing is listening to it
+func (a *Agent) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	node, ok := a.peerNodes[pid.Identifier()]
+	p, ok := a.peers[pid.Identifier()]
 	if !ok {
-		return errors.ErrAgentHasNoReferenceToPeer{
-			Agent:          a,
-			PeerIdentifier: pid,
+		return peer.ErrAgentHasNoReferenceToPeer{
+			AgentName:      "http.Agent",
+			PeerIdentifier: pid.Identifier(),
 		}
 	}
 
-	if _, ok = node.subscribers[sub]; !ok {
-		return errors.ErrPeerHasNoReferenceToSubscriber{
-			PeerIdentifier: pid,
-			PeerSubscriber: sub,
-		}
+	if err := p.RemoveSubscriber(sub); err != nil {
+		return err
 	}
 
-	delete(node.subscribers, sub)
-
-	if len(node.subscribers) == 0 {
-		delete(a.peerNodes, pid.Identifier())
+	if p.NumSubscribers() == 0 {
+		delete(a.peers, pid.Identifier())
 	}
 
 	return nil
-}
-
-// NotifyStatusChanged Notifies peer subscribers the peer's status changes.
-func (a *Agent) NotifyStatusChanged(peer transport.Peer) {
-	a.lock.RLock()
-	defer a.lock.RUnlock()
-
-	node, ok := a.peerNodes[peer.Identifier()]
-	if !ok {
-		// The peer has probably been released already and this is a request finishing, ignore
-		return
-	}
-
-	for sub := range node.subscribers {
-		sub.NotifyStatusChanged(peer)
-	}
 }

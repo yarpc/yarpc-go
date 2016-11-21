@@ -18,16 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package peer
 
-import (
-	"fmt"
-)
+//go:generate mockgen -destination=peertest/agent.go -package=peertest go.uber.org/yarpc/peer Agent,Subscriber
 
-type noOutboundForService struct {
-	Service string
+// Subscriber listens to changes of a Peer over time.
+type Subscriber interface {
+	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)
+	NotifyStatusChanged(Identifier)
 }
 
-func (e noOutboundForService) Error() string {
-	return fmt.Sprintf("no configured outbound transport for service %q", e.Service)
+// Agent manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
+// PeerIdentifier and the Agent has the ability to create a new Peer or return an existing one.
+type Agent interface {
+	// Get or create a Peer for the Subscriber
+	RetainPeer(Identifier, Subscriber) (Peer, error)
+
+	// Unallocate a peer from the Subscriber
+	ReleasePeer(Identifier, Subscriber) error
 }

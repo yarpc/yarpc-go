@@ -18,20 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package errors
 
-import "context"
+import "strings"
 
-//go:generate mockgen -destination=transporttest/peerlist.go -package=transporttest go.uber.org/yarpc/transport PeerList
+// ErrorGroup represents a collection of errors.
+type ErrorGroup []error
 
-// PeerList is a collection of Peers.  Outbounds request peers from the PeerList to determine where to send requests
-type PeerList interface {
-	// Notify the PeerList that it will start receiving requests
-	Start() error
+func (e ErrorGroup) Error() string {
+	messages := make([]string, 0, len(e)+1)
+	messages = append(messages, "the following errors occurred:")
+	for _, err := range e {
+		messages = append(messages, err.Error())
+	}
+	return strings.Join(messages, "\n\t")
+}
 
-	// Notify the PeerList that it will stop receiving requests
-	Stop() error
+// MultiError combines a list of errors into one. The list MUST NOT contain nil.
+//
+// Returns nil if the error list is empty.
+func MultiError(errors []error) error {
+	switch len(errors) {
+	case 0:
+		return nil
+	case 1:
+		return errors[0]
+	}
 
-	// Choose a Peer for the next call, block until a peer is available (or timeout)
-	ChoosePeer(context.Context, *Request) (Peer, error)
+	newErrors := make(ErrorGroup, 0, len(errors))
+	for _, err := range errors {
+		switch e := err.(type) {
+		case ErrorGroup:
+			newErrors = append(newErrors, e...)
+		default:
+			newErrors = append(newErrors, e)
+		}
+	}
+
+	return ErrorGroup(newErrors)
 }
