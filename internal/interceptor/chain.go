@@ -26,36 +26,35 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// Chain combines a series of Interceptors into a single Interceptor.
-func Chain(interceptors ...transport.Interceptor) transport.Interceptor {
+// UnaryChain combines a series of `UnaryInterceptor`s into a single `Interceptor`.
+func UnaryChain(interceptors ...transport.UnaryInterceptor) transport.UnaryInterceptor {
 	switch len(interceptors) {
 	case 0:
-		return transport.NopInterceptor
+		return transport.UnaryNopInterceptor
 	case 1:
 		return interceptors[0]
 	default:
-		return chain(interceptors)
+		return unaryChain(interceptors)
 	}
 }
 
-// interceptorChain combines a series of interceptors into a single Interceptor.
-type chain []transport.Interceptor
+type unaryChain []transport.UnaryInterceptor
 
-func (c chain) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	return chainExec{
-		Chain: []transport.Interceptor(c),
+func (c unaryChain) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	return unaryChainExec{
+		Chain: []transport.UnaryInterceptor(c),
 		Final: h,
 	}.Handle(ctx, req, resw)
 }
 
-// chainExec adapts a series of interceptors into a Handler. It is scoped to a
-// single request to the Handler and is not thread-safe.
-type chainExec struct {
-	Chain []transport.Interceptor
+// unaryChainExec adapts a series of `UnaryInterceptor`s into a UnaryHandler.
+// It is scoped to a single request to the `Handler` and is not thread-safe.
+type unaryChainExec struct {
+	Chain []transport.UnaryInterceptor
 	Final transport.UnaryHandler
 }
 
-func (x chainExec) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+func (x unaryChainExec) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	if len(x.Chain) == 0 {
 		return x.Final.Handle(ctx, req, resw)
 	}

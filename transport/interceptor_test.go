@@ -40,7 +40,7 @@ func TestNopInterceptor(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	wrappedH := transport.ApplyInterceptor(h, transport.NopInterceptor)
+	wrappedH := transport.ApplyUnaryInterceptor(h, transport.UnaryNopInterceptor)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

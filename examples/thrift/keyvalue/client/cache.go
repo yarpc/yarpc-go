@@ -31,7 +31,7 @@ import (
 
 // CacheFilter is a filter
 type CacheFilter interface {
-	transport.Filter
+	transport.UnaryFilter
 
 	Invalidate()
 }

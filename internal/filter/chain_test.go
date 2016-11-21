@@ -35,7 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var retryFilter transport.FilterFunc = func(
+var retryFilter transport.UnaryFilterFunc = func(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	res, err := o.Call(ctx, req)
 	if err != nil {
@@ -76,8 +76,8 @@ func TestChain(t *testing.T) {
 
 	before := &countFilter{}
 	after := &countFilter{}
-	gotRes, err := transport.ApplyFilter(
-		o, Chain(before, retryFilter, after)).Call(ctx, req)
+	gotRes, err := transport.ApplyUnaryFilter(
+		o, UnaryChain(before, retryFilter, after)).Call(ctx, req)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")

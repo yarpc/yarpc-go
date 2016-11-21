@@ -26,44 +26,43 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// Chain combines a series of filters into a single Filter.
-func Chain(filters ...transport.Filter) transport.Filter {
+// UnaryChain combines a series of `UnaryFilter`s into a single `UnaryFilter`.
+func UnaryChain(filters ...transport.UnaryFilter) transport.UnaryFilter {
 	switch len(filters) {
 	case 0:
-		return transport.NopFilter
+		return transport.UnaryNopFilter
 	case 1:
 		return filters[0]
 	default:
-		return chain(filters)
+		return unaryChain(filters)
 	}
 }
 
-// filterChain combines a series of filters into a single Filter.
-type chain []transport.Filter
+type unaryChain []transport.UnaryFilter
 
-func (c chain) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	return chainExec{
-		Chain: []transport.Filter(c),
+func (c unaryChain) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	return unaryChainExec{
+		Chain: []transport.UnaryFilter(c),
 		Final: out,
 	}.Call(ctx, request)
 }
 
-// chainExec adapts a series of filters into an Outbound. It is scoped to a
-// single call of an Outbound and is not thread-safe.
-type chainExec struct {
-	Chain []transport.Filter
+// unaryChainExec adapts a series of `UnaryFilter`s into a `UnaryOutbound`. It
+// is scoped to a single call of a UnaryOutbound and is not thread-safe.
+type unaryChainExec struct {
+	Chain []transport.UnaryFilter
 	Final transport.UnaryOutbound
 }
 
-func (x chainExec) Start(d transport.Deps) error {
+func (x unaryChainExec) Start(d transport.Deps) error {
 	return x.Final.Start(d)
 }
 
-func (x chainExec) Stop() error {
+func (x unaryChainExec) Stop() error {
 	return x.Final.Stop()
 }
 
-func (x chainExec) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+func (x unaryChainExec) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
 		return x.Final.Call(ctx, request)
 	}

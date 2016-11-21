@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var retryInterceptor transport.InterceptorFunc = func(
+var retryInterceptor transport.UnaryInterceptorFunc = func(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
 		return h.Handle(ctx, req, resw)
@@ -72,8 +72,8 @@ func TestChain(t *testing.T) {
 
 	before := &countInterceptor{}
 	after := &countInterceptor{}
-	err := transport.ApplyInterceptor(
-		h, Chain(before, retryInterceptor, after),
+	err := transport.ApplyUnaryInterceptor(
+		h, UnaryChain(before, retryInterceptor, after),
 	).Handle(ctx, req, resw)
 
 	assert.NoError(t, err, "expected success")

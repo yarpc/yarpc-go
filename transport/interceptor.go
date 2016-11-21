@@ -22,9 +22,10 @@ package transport
 
 import "context"
 
-// Interceptor defines a transport-level middleware for Inbounds.
+// UnaryInterceptor defines a transport-level middleware for `UnaryHandler`s.
+// Note: this is server side.
 //
-// Interceptors MAY
+// UnaryInterceptor MAY
 //
 // - change the context
 // - change the request
@@ -33,45 +34,45 @@ import "context"
 // - handle the returned error
 // - call the given handler zero or more times
 //
-// Interceptors MUST be thread-safe.
+// UnaryInterceptor MUST be thread-safe.
 //
-// Interceptors are re-used across requests and MAY be called multiple times for
-// the same request.
-type Interceptor interface {
+// UnaryInterceptor is re-used across requests and MAY be called multiple times
+// for the same request.
+type UnaryInterceptor interface {
 	Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error
 }
 
-// NopInterceptor is a interceptor that does not do anything special. It
+// UnaryNopInterceptor is a interceptor that does not do anything special. It
 // simply calls the underlying Handler.
-var NopInterceptor Interceptor = nopInterceptor{}
+var UnaryNopInterceptor UnaryInterceptor = unaryNopInterceptor{}
 
-// ApplyInterceptor applies the given Interceptor to the given Handler.
-func ApplyInterceptor(h UnaryHandler, i Interceptor) UnaryHandler {
+// ApplyUnaryInterceptor applies the given Interceptor to the given Handler.
+func ApplyUnaryInterceptor(h UnaryHandler, i UnaryInterceptor) UnaryHandler {
 	if i == nil {
 		return h
 	}
-	return interceptedHandler{h: h, i: i}
+	return unaryInterceptedHandler{h: h, i: i}
 }
 
-// InterceptorFunc adapts a function into an Interceptor.
-type InterceptorFunc func(context.Context, *Request, ResponseWriter, UnaryHandler) error
+// UnaryInterceptorFunc adapts a function into an Interceptor.
+type UnaryInterceptorFunc func(context.Context, *Request, ResponseWriter, UnaryHandler) error
 
-// Handle for InterceptorFunc
-func (f InterceptorFunc) Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
+// Handle for UnaryInterceptorFunc
+func (f UnaryInterceptorFunc) Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
 	return f(ctx, req, resw, h)
 }
 
-type interceptedHandler struct {
+type unaryInterceptedHandler struct {
 	h UnaryHandler
-	i Interceptor
+	i UnaryInterceptor
 }
 
-func (h interceptedHandler) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
+func (h unaryInterceptedHandler) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
 	return h.i.Handle(ctx, req, resw, h.h)
 }
 
-type nopInterceptor struct{}
+type unaryNopInterceptor struct{}
 
-func (nopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler UnaryHandler) error {
+func (unaryNopInterceptor) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler UnaryHandler) error {
 	return handler.Handle(ctx, req, resw)
 }

@@ -67,8 +67,8 @@ type Config struct {
 
 	// Filter and Interceptor that will be applied to all outgoing and incoming
 	// requests respectively.
-	Filter      transport.Filter
-	Interceptor transport.Interceptor
+	Filter      transport.UnaryFilter
+	Interceptor transport.UnaryInterceptor
 
 	Tracer opentracing.Tracer
 }
@@ -96,7 +96,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 }
 
 // convertOutbounds applys filters and creates validator outbounds
-func convertOutbounds(outbounds Outbounds, filter transport.Filter) Outbounds {
+func convertOutbounds(outbounds Outbounds, filter transport.UnaryFilter) Outbounds {
 	//TODO(apb): ensure we're not given the same underlying outbound for each RPC type
 	convertedOutbounds := make(Outbounds, len(outbounds))
 
@@ -108,7 +108,7 @@ func convertOutbounds(outbounds Outbounds, filter transport.Filter) Outbounds {
 
 		// apply filters and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = transport.ApplyFilter(outs.Unary, filter)
+			unaryOutbound = transport.ApplyUnaryFilter(outs.Unary, filter)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
@@ -137,7 +137,7 @@ type dispatcher struct {
 	inbounds  Inbounds
 	outbounds Outbounds
 
-	Interceptor transport.Interceptor
+	Interceptor transport.UnaryInterceptor
 
 	deps transport.Deps
 }
@@ -235,7 +235,7 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 	for _, r := range rs {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
-			h := transport.ApplyInterceptor(r.HandlerSpec.Unary(), d.Interceptor)
+			h := transport.ApplyUnaryInterceptor(r.HandlerSpec.Unary(), d.Interceptor)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
 			//TODO(apb): add oneway interceptors https://github.com/yarpc/yarpc-go/issues/413
