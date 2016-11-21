@@ -8,8 +8,7 @@ import (
 
 	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/peer"
-	. "go.uber.org/yarpc/peer/list/x/internal"
-	"go.uber.org/yarpc/peer/peertest"
+	. "go.uber.org/yarpc/peer/peertest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -620,7 +619,7 @@ func TestRoundRobinList(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			pids := CreatePeerIDs(tt.inputPeerIDs)
-			agent := peertest.NewMockAgent(mockCtrl)
+			agent := NewMockAgent(mockCtrl)
 
 			// Healthy Agent Retain/Release
 			peerMap := ExpectPeerRetains(
@@ -637,7 +636,7 @@ func TestRoundRobinList(t *testing.T) {
 			pl, err := NewRoundRobin(pids, agent)
 			assert.Equal(t, tt.expectedCreateErr, err)
 
-			deps := Dependencies{
+			deps := ListActionDeps{
 				Peers: peerMap,
 			}
 			ApplyPeerListActions(t, pl, tt.peerListActions, deps)

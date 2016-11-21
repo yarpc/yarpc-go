@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package internal
+package peertest
 
 import (
 	"fmt"
 
 	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/peertest"
 
 	"github.com/golang/mock/gomock"
 )
@@ -38,9 +37,9 @@ func (pid MockPeerIdentifier) Identifier() string {
 	return string(pid)
 }
 
-// NewMockPeer returns a new MockPeer
-func NewMockPeer(pid MockPeerIdentifier, conStatus peer.ConnectionStatus) *MockPeer {
-	return &MockPeer{
+// NewLightMockPeer returns a new MockPeer
+func NewLightMockPeer(pid MockPeerIdentifier, conStatus peer.ConnectionStatus) *LightMockPeer {
+	return &LightMockPeer{
 		MockPeerIdentifier: pid,
 		PeerStatus: peer.Status{
 			ConnectionStatus:    conStatus,
@@ -49,28 +48,28 @@ func NewMockPeer(pid MockPeerIdentifier, conStatus peer.ConnectionStatus) *MockP
 	}
 }
 
-// MockPeer is a small simple wrapper around the Peer interface for mocking and changing
+// LightMockPeer is a small simple wrapper around the Peer interface for mocking and changing
 // a peer's attributes
 // MockPeer is NOT thread safe
-type MockPeer struct {
+type LightMockPeer struct {
 	MockPeerIdentifier
 
 	PeerStatus peer.Status
 }
 
 // Status returns the Status Object of the MockPeer
-func (p *MockPeer) Status() peer.Status {
+func (p *LightMockPeer) Status() peer.Status {
 	return p.PeerStatus
 }
 
 // StartRequest is run when a Request starts
-func (p *MockPeer) StartRequest() func() {
+func (p *LightMockPeer) StartRequest() func() {
 	p.PeerStatus.PendingRequestCount++
 	return p.endRequest
 }
 
 // endRequest should be run after a MockPeer request has finished
-func (p *MockPeer) endRequest() {
+func (p *LightMockPeer) endRequest() {
 	p.PeerStatus.PendingRequestCount--
 }
 
@@ -103,27 +102,27 @@ func CreatePeerIDs(peerIDStrs []string) []peer.Identifier {
 
 // ExpectPeerRetains registers expectations on a MockAgent to generate peers on the RetainPeer function
 func ExpectPeerRetains(
-	agent *peertest.MockAgent,
+	agent *MockAgent,
 	availablePeerStrs []string,
 	unavailablePeerStrs []string,
-) map[string]*MockPeer {
-	peers := make(map[string]*MockPeer, len(availablePeerStrs)+len(unavailablePeerStrs))
+) map[string]*LightMockPeer {
+	peers := make(map[string]*LightMockPeer, len(availablePeerStrs)+len(unavailablePeerStrs))
 	for _, peerStr := range availablePeerStrs {
-		peer := NewMockPeer(MockPeerIdentifier(peerStr), peer.Available)
-		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(peer, nil)
-		peers[peer.Identifier()] = peer
+		p := NewLightMockPeer(MockPeerIdentifier(peerStr), peer.Available)
+		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
+		peers[p.Identifier()] = p
 	}
 	for _, peerStr := range unavailablePeerStrs {
-		peer := NewMockPeer(MockPeerIdentifier(peerStr), peer.Unavailable)
-		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(peer, nil)
-		peers[peer.Identifier()] = peer
+		p := NewLightMockPeer(MockPeerIdentifier(peerStr), peer.Unavailable)
+		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
+		peers[p.Identifier()] = p
 	}
 	return peers
 }
 
 // ExpectPeerRetainsWithError registers expectations on a MockAgent return errors
 func ExpectPeerRetainsWithError(
-	agent *peertest.MockAgent,
+	agent *MockAgent,
 	peerStrs []string,
 	err error, // Will be returned from the MockAgent on the Retains of these Peers
 ) {
@@ -134,7 +133,7 @@ func ExpectPeerRetainsWithError(
 
 // ExpectPeerReleases registers expectations on a MockAgent to release peers through the ReleasePeer function
 func ExpectPeerReleases(
-	agent *peertest.MockAgent,
+	agent *MockAgent,
 	peerStrs []string,
 	err error,
 ) {
