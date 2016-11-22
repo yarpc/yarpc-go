@@ -64,7 +64,6 @@ func (pl *RoundRobin) addAll(peerIDs []peer.Identifier) error {
 	for _, peerID := range peerIDs {
 		if err := pl.addPeerIdentifier(peerID); err != nil {
 			errs = append(errs, err)
-			continue
 		}
 	}
 
@@ -269,7 +268,6 @@ func (pl *RoundRobin) NotifyStatusChanged(pid peer.Identifier) {
 
 	if p, ok := pl.nonAvailablePeers[pid.Identifier()]; ok && p != nil {
 		pl.handleUnavailablePeerStatusChange(p)
-		return
 	}
 	// No action required
 }
