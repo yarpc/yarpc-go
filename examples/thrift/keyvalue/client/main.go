@@ -71,7 +71,7 @@ func main() {
 			},
 		},
 		Filters: yarpc.Filters{
-			UnaryFilter: cache,
+			Unary: cache,
 		},
 	})
 	if err := dispatcher.Start(); err != nil {

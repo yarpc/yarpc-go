@@ -81,14 +81,14 @@ type Outbounds map[string]transport.Outbounds
 
 // Filters contains the different type of filters
 type Filters struct {
-	UnaryFilter  transport.UnaryFilter
-	OnewayFilter transport.OnewayFilter
+	Unary  transport.UnaryFilter
+	Oneway transport.OnewayFilter
 }
 
 // Interceptors contains the different type of interceptors
 type Interceptors struct {
-	UnaryInterceptor  transport.UnaryInterceptor
-	OnewayInterceptor transport.OnewayInterceptor
+	Unary  transport.UnaryInterceptor
+	Oneway transport.OnewayInterceptor
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -120,12 +120,12 @@ func convertOutbounds(outbounds Outbounds, filters Filters) Outbounds {
 
 		// apply filters and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = transport.ApplyUnaryFilter(outs.Unary, filters.UnaryFilter)
+			unaryOutbound = transport.ApplyUnaryFilter(outs.Unary, filters.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = transport.ApplyOnewayFilter(outs.Oneway, filters.OnewayFilter)
+			onewayOutbound = transport.ApplyOnewayFilter(outs.Oneway, filters.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 
@@ -248,11 +248,11 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
 			h := transport.ApplyUnaryInterceptor(r.HandlerSpec.Unary(),
-				d.Interceptors.UnaryInterceptor)
+				d.Interceptors.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
 			h := transport.ApplyOnewayInterceptor(r.HandlerSpec.Oneway(),
-				d.Interceptors.OnewayInterceptor)
+				d.Interceptors.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",

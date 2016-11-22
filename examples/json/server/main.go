@@ -84,7 +84,7 @@ func main() {
 			http.NewInbound(":24034"),
 		},
 		Interceptors: yarpc.Interceptors{
-			UnaryInterceptor: requestLogInterceptor{},
+			Unary: requestLogInterceptor{},
 		},
 	})
 

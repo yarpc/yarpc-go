@@ -112,7 +112,7 @@ func main() {
 			},
 		},
 		Filters: yarpc.Filters{
-			UnaryFilter: yarpc.UnaryFilters(requestLogFilter{}),
+			Unary: yarpc.UnaryFilters(requestLogFilter{}),
 		},
 	})
 	if err := dispatcher.Start(); err != nil {

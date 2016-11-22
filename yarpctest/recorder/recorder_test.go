@@ -168,7 +168,7 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 			},
 		},
 		Filters: yarpc.Filters{
-			UnaryFilter: recorder,
+			Unary: recorder,
 		},
 	})
 	require.NoError(t, clientDisp.Start())
@@ -202,7 +202,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 			},
 		},
 		Filters: yarpc.Filters{
-			UnaryFilter: recorder,
+			Unary: recorder,
 		},
 	})
 	require.NoError(t, clientDisp.Start())
