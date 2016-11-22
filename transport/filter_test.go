@@ -40,7 +40,7 @@ func TestUnaryNopFilter(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := transporttest.NewMockUnaryOutbound(mockCtrl)
-	wrappedO := transport.ApplyUnaryFilter(o, transport.UnaryNopFilter)
+	wrappedO := transport.ApplyUnaryOutboundMiddleware(o, transport.NopUnaryOutboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -66,7 +66,7 @@ func TestOnewayNopFilter(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	o := transporttest.NewMockOnewayOutbound(mockCtrl)
-	wrappedO := transport.ApplyOnewayFilter(o, transport.OnewayNopFilter)
+	wrappedO := transport.ApplyOnewayOutboundMiddleware(o, transport.NopOnewayOutboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

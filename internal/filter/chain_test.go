@@ -48,7 +48,7 @@ func (c *countFilter) CallOneway(ctx context.Context, req *transport.Request, o 
 	return o.CallOneway(ctx, req)
 }
 
-var retryUnaryFilter transport.UnaryFilterFunc = func(
+var retryUnaryFilter transport.UnaryOutboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	res, err := o.Call(ctx, req)
 	if err != nil {
@@ -81,7 +81,7 @@ func TestUnaryChain(t *testing.T) {
 
 	before := &countFilter{}
 	after := &countFilter{}
-	gotRes, err := transport.ApplyUnaryFilter(
+	gotRes, err := transport.ApplyUnaryOutboundMiddleware(
 		o, UnaryChain(before, retryUnaryFilter, after)).Call(ctx, req)
 
 	assert.NoError(t, err, "expected success")
@@ -90,7 +90,7 @@ func TestUnaryChain(t *testing.T) {
 	assert.Equal(t, res, gotRes, "expected response to match")
 }
 
-var retryOnewayFilter transport.OnewayFilterFunc = func(
+var retryOnewayFilter transport.OnewayOutboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
 	res, err := o.CallOneway(ctx, req)
 	if err != nil {
@@ -121,7 +121,7 @@ func TestOnewayChain(t *testing.T) {
 
 	before := &countFilter{}
 	after := &countFilter{}
-	gotRes, err := transport.ApplyOnewayFilter(
+	gotRes, err := transport.ApplyOnewayOutboundMiddleware(
 		o, OnewayChain(before, retryOnewayFilter, after)).CallOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")

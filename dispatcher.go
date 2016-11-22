@@ -81,8 +81,8 @@ type Outbounds map[string]transport.Outbounds
 
 // Filters contains the different type of filters
 type Filters struct {
-	Unary  transport.UnaryFilter
-	Oneway transport.OnewayFilter
+	Unary  transport.UnaryOutboundMiddleware
+	Oneway transport.OnewayOutboundMiddleware
 }
 
 // Interceptors contains the different type of interceptors
@@ -120,12 +120,12 @@ func convertOutbounds(outbounds Outbounds, filters Filters) Outbounds {
 
 		// apply filters and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = transport.ApplyUnaryFilter(outs.Unary, filters.Unary)
+			unaryOutbound = transport.ApplyUnaryOutboundMiddleware(outs.Unary, filters.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = transport.ApplyOnewayFilter(outs.Oneway, filters.Oneway)
+			onewayOutbound = transport.ApplyOnewayOutboundMiddleware(outs.Oneway, filters.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 

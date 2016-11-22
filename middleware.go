@@ -28,7 +28,7 @@ import (
 
 // UnaryFilters combines the given collection of unary filters in-order into a
 // single UnaryFilter.
-func UnaryFilters(filters ...transport.UnaryFilter) transport.UnaryFilter {
+func UnaryFilters(filters ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
 	return filter.UnaryChain(filters...)
 }
 
@@ -40,7 +40,7 @@ func UnaryInterceptors(interceptors ...transport.UnaryInterceptor) transport.Una
 
 // OnewayFilters combines the given collection of oneway filters in-order into a
 // single OnewayFilter.
-func OnewayFilters(filters ...transport.OnewayFilter) transport.OnewayFilter {
+func OnewayFilters(filters ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
 	return filter.OnewayChain(filters...)
 }
 

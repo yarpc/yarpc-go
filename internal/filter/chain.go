@@ -27,10 +27,10 @@ import (
 )
 
 // UnaryChain combines a series of `UnaryFilter`s into a single `UnaryFilter`.
-func UnaryChain(filters ...transport.UnaryFilter) transport.UnaryFilter {
+func UnaryChain(filters ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
 	switch len(filters) {
 	case 0:
-		return transport.UnaryNopFilter
+		return transport.NopUnaryOutboundMiddleware
 	case 1:
 		return filters[0]
 	default:
@@ -38,11 +38,11 @@ func UnaryChain(filters ...transport.UnaryFilter) transport.UnaryFilter {
 	}
 }
 
-type unaryChain []transport.UnaryFilter
+type unaryChain []transport.UnaryOutboundMiddleware
 
 func (c unaryChain) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	return unaryChainExec{
-		Chain: []transport.UnaryFilter(c),
+		Chain: []transport.UnaryOutboundMiddleware(c),
 		Final: out,
 	}.Call(ctx, request)
 }
@@ -50,7 +50,7 @@ func (c unaryChain) Call(ctx context.Context, request *transport.Request, out tr
 // unaryChainExec adapts a series of `UnaryFilter`s into a `UnaryOutbound`. It
 // is scoped to a single call of a UnaryOutbound and is not thread-safe.
 type unaryChainExec struct {
-	Chain []transport.UnaryFilter
+	Chain []transport.UnaryOutboundMiddleware
 	Final transport.UnaryOutbound
 }
 
@@ -72,10 +72,10 @@ func (x unaryChainExec) Call(ctx context.Context, request *transport.Request) (*
 }
 
 // OnewayChain combines a series of `OnewayFilter`s into a single `OnewayFilter`.
-func OnewayChain(filters ...transport.OnewayFilter) transport.OnewayFilter {
+func OnewayChain(filters ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
 	switch len(filters) {
 	case 0:
-		return transport.OnewayNopFilter
+		return transport.NopOnewayOutboundMiddleware
 	case 1:
 		return filters[0]
 	default:
@@ -83,11 +83,11 @@ func OnewayChain(filters ...transport.OnewayFilter) transport.OnewayFilter {
 	}
 }
 
-type onewayChain []transport.OnewayFilter
+type onewayChain []transport.OnewayOutboundMiddleware
 
 func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	return onewayChainExec{
-		Chain: []transport.OnewayFilter(c),
+		Chain: []transport.OnewayOutboundMiddleware(c),
 		Final: out,
 	}.CallOneway(ctx, request)
 }
@@ -95,7 +95,7 @@ func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request,
 // onewayChainExec adapts a series of `OnewayFilter`s into a `OnewayOutbound`. It
 // is scoped to a single call of a OnewayOutbound and is not thread-safe.
 type onewayChainExec struct {
-	Chain []transport.OnewayFilter
+	Chain []transport.OnewayOutboundMiddleware
 	Final transport.OnewayOutbound
 }
 
