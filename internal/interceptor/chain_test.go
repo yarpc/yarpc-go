@@ -47,7 +47,7 @@ func (c *countInterceptor) HandleOneway(ctx context.Context, req *transport.Requ
 	return h.HandleOneway(ctx, req)
 }
 
-var retryUnaryInterceptor transport.UnaryInterceptorFunc = func(
+var retryUnaryInterceptor transport.UnaryInboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
 		return h.Handle(ctx, req, resw)
@@ -77,7 +77,7 @@ func TestUnaryChain(t *testing.T) {
 
 	before := &countInterceptor{}
 	after := &countInterceptor{}
-	err := transport.ApplyUnaryInterceptor(
+	err := transport.ApplyUnaryInboundMiddleware(
 		h, UnaryChain(before, retryUnaryInterceptor, after),
 	).Handle(ctx, req, resw)
 
@@ -86,7 +86,7 @@ func TestUnaryChain(t *testing.T) {
 	assert.Equal(t, 2, after.Count, "expected inner interceptor to be called twice")
 }
 
-var retryOnewayInterceptor transport.OnewayInterceptorFunc = func(
+var retryOnewayInterceptor transport.OnewayInboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	if err := h.HandleOneway(ctx, req); err != nil {
 		return h.HandleOneway(ctx, req)
@@ -115,7 +115,7 @@ func TestOnewayChain(t *testing.T) {
 
 	before := &countInterceptor{}
 	after := &countInterceptor{}
-	err := transport.ApplyOnewayInterceptor(
+	err := transport.ApplyOnewayInboundMiddleware(
 		h, OnewayChain(before, retryOnewayInterceptor, after),
 	).HandleOneway(ctx, req)
 

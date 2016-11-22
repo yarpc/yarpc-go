@@ -34,7 +34,7 @@ func UnaryFilters(filters ...transport.UnaryOutboundMiddleware) transport.UnaryO
 
 // UnaryInterceptors combines the given collection of unary interceptors
 // in-order into a single UnaryInterceptor.
-func UnaryInterceptors(interceptors ...transport.UnaryInterceptor) transport.UnaryInterceptor {
+func UnaryInterceptors(interceptors ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
 	return interceptor.UnaryChain(interceptors...)
 }
 
@@ -46,6 +46,6 @@ func OnewayFilters(filters ...transport.OnewayOutboundMiddleware) transport.Onew
 
 // OnewayInterceptors combines the given collection of oneway interceptors
 // in-order into a single OnewayInterceptor.
-func OnewayInterceptors(interceptors ...transport.OnewayInterceptor) transport.OnewayInterceptor {
+func OnewayInterceptors(interceptors ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
 	return interceptor.OnewayChain(interceptors...)
 }

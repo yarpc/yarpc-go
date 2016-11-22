@@ -40,7 +40,7 @@ func TestUnaryNopInterceptor(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	wrappedH := transport.ApplyUnaryInterceptor(h, transport.UnaryNopInterceptor)
+	wrappedH := transport.ApplyUnaryInboundMiddleware(h, transport.NopUnaryInboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -63,7 +63,7 @@ func TestOnewayNopInterceptor(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	h := transporttest.NewMockOnewayHandler(mockCtrl)
-	wrappedH := transport.ApplyOnewayInterceptor(h, transport.OnewayNopInterceptor)
+	wrappedH := transport.ApplyOnewayInboundMiddleware(h, transport.NopOnewayInboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

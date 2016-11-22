@@ -87,8 +87,8 @@ type Filters struct {
 
 // Interceptors contains the different type of interceptors
 type Interceptors struct {
-	Unary  transport.UnaryInterceptor
-	Oneway transport.OnewayInterceptor
+	Unary  transport.UnaryInboundMiddleware
+	Oneway transport.OnewayInboundMiddleware
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -247,11 +247,11 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 	for _, r := range rs {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
-			h := transport.ApplyUnaryInterceptor(r.HandlerSpec.Unary(),
+			h := transport.ApplyUnaryInboundMiddleware(r.HandlerSpec.Unary(),
 				d.Interceptors.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
-			h := transport.ApplyOnewayInterceptor(r.HandlerSpec.Oneway(),
+			h := transport.ApplyOnewayInboundMiddleware(r.HandlerSpec.Oneway(),
 				d.Interceptors.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
