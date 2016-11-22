@@ -65,7 +65,7 @@ type Config struct {
 	Inbounds  Inbounds
 	Outbounds Outbounds
 
-	// Filters and Interceptor that will be applied to all outgoing and
+	// Filters and Interceptors that will be applied to all outgoing and
 	// incoming requests respectively.
 	Filters      Filters
 	Interceptors Interceptors
