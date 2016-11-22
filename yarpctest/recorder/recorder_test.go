@@ -167,7 +167,7 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 				Unary: http.NewOutbound("http://localhost:65535"),
 			},
 		},
-		Filters: yarpc.Filters{
+		OutboundMiddlewares: yarpc.OutboundMiddlewares{
 			Unary: recorder,
 		},
 	})
@@ -201,7 +201,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 				Unary: http.NewOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr().String())),
 			},
 		},
-		Filters: yarpc.Filters{
+		OutboundMiddlewares: yarpc.OutboundMiddlewares{
 			Unary: recorder,
 		},
 	})
