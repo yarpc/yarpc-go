@@ -35,7 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnaryNopFilter(t *testing.T) {
+func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -61,7 +61,7 @@ func TestUnaryNopFilter(t *testing.T) {
 	}
 }
 
-func TestOnewayNopFilter(t *testing.T) {
+func TestOnewayNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

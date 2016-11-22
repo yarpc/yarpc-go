@@ -35,20 +35,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type countFilter struct{ Count int }
+type countOutboundMiddleware struct{ Count int }
 
-func (c *countFilter) Call(
+func (c *countOutboundMiddleware) Call(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	c.Count++
 	return o.Call(ctx, req)
 }
 
-func (c *countFilter) CallOneway(ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
+func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
 	c.Count++
 	return o.CallOneway(ctx, req)
 }
 
-var retryUnaryFilter transport.UnaryOutboundMiddlewareFunc = func(
+var retryUnaryOutboundMiddleware transport.UnaryOutboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	res, err := o.Call(ctx, req)
 	if err != nil {
@@ -79,18 +79,18 @@ func TestUnaryChain(t *testing.T) {
 		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
 	).Return(res, nil)
 
-	before := &countFilter{}
-	after := &countFilter{}
+	before := &countOutboundMiddleware{}
+	after := &countOutboundMiddleware{}
 	gotRes, err := transport.ApplyUnaryOutboundMiddleware(
-		o, UnaryChain(before, retryUnaryFilter, after)).Call(ctx, req)
+		o, UnaryChain(before, retryUnaryOutboundMiddleware, after)).Call(ctx, req)
 
 	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner filter to be called twice")
+	assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner middleware to be called twice")
 	assert.Equal(t, res, gotRes, "expected response to match")
 }
 
-var retryOnewayFilter transport.OnewayOutboundMiddlewareFunc = func(
+var retryOnewayOutboundMiddleware transport.OnewayOutboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
 	res, err := o.CallOneway(ctx, req)
 	if err != nil {
@@ -119,13 +119,13 @@ func TestOnewayChain(t *testing.T) {
 		o.EXPECT().CallOneway(ctx, req).Return(nil, errors.New("great sadness")),
 	).Return(res, nil)
 
-	before := &countFilter{}
-	after := &countFilter{}
+	before := &countOutboundMiddleware{}
+	after := &countOutboundMiddleware{}
 	gotRes, err := transport.ApplyOnewayOutboundMiddleware(
-		o, OnewayChain(before, retryOnewayFilter, after)).CallOneway(ctx, req)
+		o, OnewayChain(before, retryOnewayOutboundMiddleware, after)).CallOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner filter to be called twice")
+	assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner middleware to be called twice")
 	assert.Equal(t, res, gotRes, "expected response to match")
 }

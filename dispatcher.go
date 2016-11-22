@@ -107,8 +107,8 @@ func NewDispatcher(cfg Config) Dispatcher {
 	}
 }
 
-// convertOutbounds applys filters and creates validator outbounds
-func convertOutbounds(outbounds Outbounds, filters OutboundMiddlewares) Outbounds {
+// convertOutbounds applys outbound middlewares and creates validator outbounds
+func convertOutbounds(outbounds Outbounds, middlewares OutboundMiddlewares) Outbounds {
 	//TODO(apb): ensure we're not given the same underlying outbound for each RPC type
 	convertedOutbounds := make(Outbounds, len(outbounds))
 
@@ -118,14 +118,14 @@ func convertOutbounds(outbounds Outbounds, filters OutboundMiddlewares) Outbound
 			onewayOutbound transport.OnewayOutbound
 		)
 
-		// apply filters and create ValidatorOutbounds
+		// apply outbound middlewares and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = transport.ApplyUnaryOutboundMiddleware(outs.Unary, filters.Unary)
+			unaryOutbound = transport.ApplyUnaryOutboundMiddleware(outs.Unary, middlewares.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = transport.ApplyOnewayOutboundMiddleware(outs.Oneway, filters.Oneway)
+			onewayOutbound = transport.ApplyOnewayOutboundMiddleware(outs.Oneway, middlewares.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 

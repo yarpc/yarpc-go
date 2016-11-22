@@ -35,7 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnaryNopInterceptor(t *testing.T) {
+func TestUnaryNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -58,7 +58,7 @@ func TestUnaryNopInterceptor(t *testing.T) {
 	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
 }
 
-func TestOnewayNopInterceptor(t *testing.T) {
+func TestOnewayNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

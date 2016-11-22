@@ -31,7 +31,7 @@
 // NewRecorder() returns a Recorder, in the mode specified by the flag
 // `--recorder=replay|append|overwrite`. `replay` is the default.
 //
-// The new Recorder instance is a yarpc filter middleware. It takes a
+// The new Recorder instance is a yarpc outbound middleware. It takes a
 // `testing.T` or compatible as argument.
 //
 // Example:
@@ -41,7 +41,9 @@
 //    	Outbounds: transport.Outbounds{
 //    		...
 //    	},
-//    	Filter: recorder.NewRecorder(t),
+//      OutboundMiddlewares: yarpc.OutboundMiddlewares {
+//    	  Unary: recorder.NewRecorder(t),
+//      },
 //    })
 //  }
 //
@@ -153,8 +155,8 @@ type TestingT interface {
 // NewRecorder returns a Recorder in whatever mode specified via the
 // `--recorder` flag.
 //
-// The new Recorder instance is a yarpc filter middleware. It takes a logger as
-// argument compatible with `testing.T`.
+// The new Recorder instance is a yarpc unary outbound middleware. It takes a
+// logger as argument compatible with `testing.T`.
 //
 // See package documentation for more details.
 func NewRecorder(logger TestingT, opts ...Option) *Recorder {
@@ -279,7 +281,7 @@ func (r *Recorder) makeFilePath(request *transport.Request, hash string) string 
 	return filepath.Join(r.recordsDir, sanitizeFilename(s))
 }
 
-// Call implements the yarpc transport filter interface
+// Call implements the yarpc transport outbound middleware interface
 func (r *Recorder) Call(
 	ctx context.Context,
 	request *transport.Request,

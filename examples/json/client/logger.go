@@ -27,9 +27,9 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-type requestLogFilter struct{}
+type requestLogOutboundMiddleware struct{}
 
-func (requestLogFilter) Call(
+func (requestLogOutboundMiddleware) Call(
 	ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	fmt.Printf("sending request %q to service %q (encoding %q)\n", request.Procedure,
 		request.Service, request.Encoding)

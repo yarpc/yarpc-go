@@ -34,20 +34,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type countInterceptor struct{ Count int }
+type countInboundMiddleware struct{ Count int }
 
-func (c *countInterceptor) Handle(
+func (c *countInboundMiddleware) Handle(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	c.Count++
 	return h.Handle(ctx, req, resw)
 }
 
-func (c *countInterceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	c.Count++
 	return h.HandleOneway(ctx, req)
 }
 
-var retryUnaryInterceptor transport.UnaryInboundMiddlewareFunc = func(
+var retryUnaryInboundMiddleware transport.UnaryInboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
 		return h.Handle(ctx, req, resw)
@@ -75,18 +75,18 @@ func TestUnaryChain(t *testing.T) {
 		h.EXPECT().Handle(ctx, req, resw).Return(errors.New("great sadness")),
 	).Return(nil)
 
-	before := &countInterceptor{}
-	after := &countInterceptor{}
+	before := &countInboundMiddleware{}
+	after := &countInboundMiddleware{}
 	err := transport.ApplyUnaryInboundMiddleware(
-		h, UnaryChain(before, retryUnaryInterceptor, after),
+		h, UnaryChain(before, retryUnaryInboundMiddleware, after),
 	).Handle(ctx, req, resw)
 
 	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner interceptor to be called twice")
+	assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
 }
 
-var retryOnewayInterceptor transport.OnewayInboundMiddlewareFunc = func(
+var retryOnewayInboundMiddleware transport.OnewayInboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	if err := h.HandleOneway(ctx, req); err != nil {
 		return h.HandleOneway(ctx, req)
@@ -113,13 +113,13 @@ func TestOnewayChain(t *testing.T) {
 		h.EXPECT().HandleOneway(ctx, req).Return(errors.New("great sadness")),
 	).Return(nil)
 
-	before := &countInterceptor{}
-	after := &countInterceptor{}
+	before := &countInboundMiddleware{}
+	after := &countInboundMiddleware{}
 	err := transport.ApplyOnewayInboundMiddleware(
-		h, OnewayChain(before, retryOnewayInterceptor, after),
+		h, OnewayChain(before, retryOnewayInboundMiddleware, after),
 	).HandleOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner interceptor to be called twice")
+	assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
 }
