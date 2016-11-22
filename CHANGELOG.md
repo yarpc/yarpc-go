@@ -17,6 +17,7 @@ v0.5.0 (unreleased)
     objects without any changes.
 -   Introduced `yarpc.Inbounds` to be used instead of `[]transport.Inbound`
     when configuring a Dispatcher.
+-   Add support for peer lists in HTTP outbounds
 
 
 v0.4.0 (2016-11-11)
