@@ -4,7 +4,12 @@ Releases
 v0.6.0 (unreleased)
 -------------------
 
--   No changes yet.
+-   **Breaking**: Filter & Interceptor interfaces are renamed
+    UnaryInboundMiddleware & UnaryOutboundMiddleware respectively.
+-   **Breaking**: yarpc.Config doesn't take Filter & Interceptor anymore but
+    InboundMiddlewares and OutboundMiddlewares.
+-   Oneway middlewares are now available via OnewayInboundMiddleware
+    OnewayOutboundMiddlewares interfaces.
 
 
 v0.5.0 (2016-11-21)
