@@ -34,7 +34,7 @@ import (
 // NewRoundRobin creates a new round robin PeerList using
 func NewRoundRobin(peerIDs []peer.Identifier, agent peer.Agent) (*RoundRobin, error) {
 	rr := &RoundRobin{
-		nonAvailablePeers:  make(map[string]peer.Peer, len(peerIDs)),
+		unavailablePeers:   make(map[string]peer.Peer, len(peerIDs)),
 		availablePeerRing:  NewPeerRing(len(peerIDs)),
 		agent:              agent,
 		peerAvailableEvent: make(chan struct{}, 1),
@@ -48,7 +48,7 @@ func NewRoundRobin(peerIDs []peer.Identifier, agent peer.Agent) (*RoundRobin, er
 type RoundRobin struct {
 	lock sync.Mutex
 
-	nonAvailablePeers  map[string]peer.Peer
+	unavailablePeers   map[string]peer.Peer
 	availablePeerRing  *PeerRing
 	peerAvailableEvent chan struct{}
 	agent              peer.Agent
@@ -100,7 +100,7 @@ func (pl *RoundRobin) addPeer(p peer.Peer) error {
 
 // Must be run in a mutex.Lock()
 func (pl *RoundRobin) addToUnavailablePeers(p peer.Peer) error {
-	pl.nonAvailablePeers[p.Identifier()] = p
+	pl.unavailablePeers[p.Identifier()] = p
 	return nil
 }
 
@@ -145,14 +145,14 @@ func (pl *RoundRobin) clearPeers() error {
 	return yerrors.MultiError(errs)
 }
 
-// removeAllUnavailable will clear the nonAvailablePeers list and
+// removeAllUnavailable will clear the unavailablePeers list and
 // return all the Peers in the list in a slice
 // Must be run in a mutex.Lock()
 func (pl *RoundRobin) removeAllUnavailable() []peer.Peer {
-	peers := make([]peer.Peer, 0, len(pl.nonAvailablePeers))
-	for id, p := range pl.nonAvailablePeers {
+	peers := make([]peer.Peer, 0, len(pl.unavailablePeers))
+	for id, p := range pl.unavailablePeers {
 		peers = append(peers, p)
-		delete(pl.nonAvailablePeers, id)
+		delete(pl.unavailablePeers, id)
 	}
 	return peers
 }
@@ -190,7 +190,7 @@ func (pl *RoundRobin) removeByPeerIdentifier(pid peer.Identifier) error {
 		return pl.availablePeerRing.Remove(p)
 	}
 
-	if p, ok := pl.nonAvailablePeers[pid.Identifier()]; ok && p != nil {
+	if p, ok := pl.unavailablePeers[pid.Identifier()]; ok && p != nil {
 		pl.removeFromUnavailablePeers(p)
 		return nil
 	}
@@ -202,7 +202,7 @@ func (pl *RoundRobin) removeByPeerIdentifier(pid peer.Identifier) error {
 // the Peer should already be validated as non-nil and in the Unavailable list
 // Must be run in a mutex.Lock()
 func (pl *RoundRobin) removeFromUnavailablePeers(p peer.Peer) {
-	delete(pl.nonAvailablePeers, p.Identifier())
+	delete(pl.unavailablePeers, p.Identifier())
 }
 
 // ChoosePeer selects the next available peer in the round robin
@@ -267,7 +267,7 @@ func (pl *RoundRobin) NotifyStatusChanged(pid peer.Identifier) {
 		return
 	}
 
-	if p, ok := pl.nonAvailablePeers[pid.Identifier()]; ok && p != nil {
+	if p, ok := pl.unavailablePeers[pid.Identifier()]; ok && p != nil {
 		pl.handleUnavailablePeerStatusChange(p)
 		return
 	}
@@ -275,7 +275,7 @@ func (pl *RoundRobin) NotifyStatusChanged(pid peer.Identifier) {
 }
 
 // handleAvailablePeerStatusChange checks the connection status of a connected peer to potentially
-// move that Peer from the PeerRing to the nonAvailable peer map
+// move that Peer from the PeerRing to the unavailable peer map
 // Must be run in a mutex.Lock()
 func (pl *RoundRobin) handleAvailablePeerStatusChange(p peer.Peer) error {
 	if p.Status().ConnectionStatus == peer.Available {
@@ -293,7 +293,7 @@ func (pl *RoundRobin) handleAvailablePeerStatusChange(p peer.Peer) error {
 }
 
 // handleUnavailablePeerStatusChange checks the connection status of an unavailable peer to potentially
-// move that Peer from the nonAvailablePeerMap into the available Peer Ring
+// move that Peer from the unavailablePeerMap into the available Peer Ring
 // Must be run in a mutex.Lock()
 func (pl *RoundRobin) handleUnavailablePeerStatusChange(p peer.Peer) error {
 	if p.Status().ConnectionStatus != peer.Available {

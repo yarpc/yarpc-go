@@ -651,9 +651,9 @@ func TestRoundRobinList(t *testing.T) {
 				}
 			}
 
-			assert.Len(t, pl.nonAvailablePeers, len(tt.expectedUnavailablePeers), "invalid unavailable peerlist size")
+			assert.Len(t, pl.unavailablePeers, len(tt.expectedUnavailablePeers), "invalid unavailable peerlist size")
 			for _, expectedUnavailablePeer := range tt.expectedUnavailablePeers {
-				p, ok := pl.nonAvailablePeers[expectedUnavailablePeer]
+				p, ok := pl.unavailablePeers[expectedUnavailablePeer]
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in unavailable peerlist", expectedUnavailablePeer))
 				if ok {
 					assert.Equal(t, expectedUnavailablePeer, p.Identifier())
