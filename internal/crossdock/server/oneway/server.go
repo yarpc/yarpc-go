@@ -25,9 +25,9 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayserver"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayserver"
 	"go.uber.org/yarpc/transport/http"
 )
 

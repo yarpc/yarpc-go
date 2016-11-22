@@ -25,14 +25,14 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/encoding/raw"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoclient"
-	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/encoding/raw"
 
 	"github.com/crossdock/crossdock-go"
 )
