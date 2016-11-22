@@ -72,7 +72,7 @@ cover:
 # down.
 .PHONY: test-examples
 test-examples: build
-	make -C examples
+	make -C ./internal/examples
 
 
 .PHONY: crossdock
