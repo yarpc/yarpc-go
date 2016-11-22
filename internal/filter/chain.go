@@ -26,15 +26,15 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// UnaryChain combines a series of `UnaryFilter`s into a single `UnaryFilter`.
-func UnaryChain(filters ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
-	switch len(filters) {
+// UnaryChain combines a series of `UnaryOutboundMiddleware`s into a single `UnaryOutboundMiddleware`.
+func UnaryChain(middlewares ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
+	switch len(middlewares) {
 	case 0:
 		return transport.NopUnaryOutboundMiddleware
 	case 1:
-		return filters[0]
+		return middlewares[0]
 	default:
-		return unaryChain(filters)
+		return unaryChain(middlewares)
 	}
 }
 
@@ -47,7 +47,7 @@ func (c unaryChain) Call(ctx context.Context, request *transport.Request, out tr
 	}.Call(ctx, request)
 }
 
-// unaryChainExec adapts a series of `UnaryFilter`s into a `UnaryOutbound`. It
+// unaryChainExec adapts a series of `UnaryOutboundMiddleware`s into a `UnaryOutbound`. It
 // is scoped to a single call of a UnaryOutbound and is not thread-safe.
 type unaryChainExec struct {
 	Chain []transport.UnaryOutboundMiddleware
@@ -71,15 +71,15 @@ func (x unaryChainExec) Call(ctx context.Context, request *transport.Request) (*
 	return next.Call(ctx, request, x)
 }
 
-// OnewayChain combines a series of `OnewayFilter`s into a single `OnewayFilter`.
-func OnewayChain(filters ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
-	switch len(filters) {
+// OnewayChain combines a series of `OnewayOutboundMiddleware`s into a single `OnewayOutboundMiddleware`.
+func OnewayChain(middlewares ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
+	switch len(middlewares) {
 	case 0:
 		return transport.NopOnewayOutboundMiddleware
 	case 1:
-		return filters[0]
+		return middlewares[0]
 	default:
-		return onewayChain(filters)
+		return onewayChain(middlewares)
 	}
 }
 
@@ -92,7 +92,7 @@ func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request,
 	}.CallOneway(ctx, request)
 }
 
-// onewayChainExec adapts a series of `OnewayFilter`s into a `OnewayOutbound`. It
+// onewayChainExec adapts a series of `OnewayOutboundMiddleware`s into a `OnewayOutbound`. It
 // is scoped to a single call of a OnewayOutbound and is not thread-safe.
 type onewayChainExec struct {
 	Chain []transport.OnewayOutboundMiddleware
