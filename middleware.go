@@ -26,14 +26,26 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// Filters combines the given collection of filters in-order into a single
-// Filter.
-func Filters(filters ...transport.UnaryFilter) transport.UnaryFilter {
+// UnaryFilters combines the given collection of unary filters in-order into a
+// single UnaryFilter.
+func UnaryFilters(filters ...transport.UnaryFilter) transport.UnaryFilter {
 	return filter.UnaryChain(filters...)
 }
 
-// Interceptors combines the given collection of interceptors in-order into a
-// single Interceptor.
-func Interceptors(interceptors ...transport.UnaryInterceptor) transport.UnaryInterceptor {
+// UnaryInterceptors combines the given collection of unary interceptors
+// in-order into a single UnaryInterceptor.
+func UnaryInterceptors(interceptors ...transport.UnaryInterceptor) transport.UnaryInterceptor {
 	return interceptor.UnaryChain(interceptors...)
+}
+
+// OnewayFilters combines the given collection of oneway filters in-order into a
+// single OnewayFilter.
+func OnewayFilters(filters ...transport.OnewayFilter) transport.OnewayFilter {
+	return filter.OnewayChain(filters...)
+}
+
+// OnewayInterceptors combines the given collection of oneway interceptors
+// in-order into a single OnewayInterceptor.
+func OnewayInterceptors(interceptors ...transport.OnewayInterceptor) transport.OnewayInterceptor {
+	return interceptor.OnewayChain(interceptors...)
 }

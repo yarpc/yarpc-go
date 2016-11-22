@@ -74,9 +74,8 @@ func TestOnewayNopInterceptor(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	resw := new(transporttest.FakeResponseWriter)
 	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, req, resw).Return(err)
+	h.EXPECT().HandleOneway(ctx, req).Return(err)
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
 }

@@ -78,11 +78,10 @@ func TestOnewayNopFilter(t *testing.T) {
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
 
-	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
-	o.EXPECT().Call(ctx, req).Return(res, nil)
+	o.EXPECT().CallOneway(ctx, req).Return(nil, nil)
 
-	got, err := wrappedO.Call(ctx, req)
+	got, err := wrappedO.CallOneway(ctx, req)
 	if assert.NoError(t, err) {
-		assert.Equal(t, res, got)
+		assert.Equal(t, nil, got)
 	}
 }

@@ -111,7 +111,7 @@ func main() {
 				Unary: outbound,
 			},
 		},
-		Filter: yarpc.Filters(requestLogFilter{}),
+		Filter: yarpc.UnaryFilters(requestLogFilter{}),
 	})
 	if err := dispatcher.Start(); err != nil {
 		log.Fatalf("failed to start Dispatcher: %v", err)

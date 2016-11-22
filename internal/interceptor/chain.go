@@ -62,3 +62,40 @@ func (x unaryChainExec) Handle(ctx context.Context, req *transport.Request, resw
 	x.Chain = x.Chain[1:]
 	return next.Handle(ctx, req, resw, x)
 }
+
+// OnewayChain combines a series of `OnewayInterceptor`s into a single `Interceptor`.
+func OnewayChain(interceptors ...transport.OnewayInterceptor) transport.OnewayInterceptor {
+	switch len(interceptors) {
+	case 0:
+		return transport.OnewayNopInterceptor
+	case 1:
+		return interceptors[0]
+	default:
+		return onewayChain(interceptors)
+	}
+}
+
+type onewayChain []transport.OnewayInterceptor
+
+func (c onewayChain) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	return onewayChainExec{
+		Chain: []transport.OnewayInterceptor(c),
+		Final: h,
+	}.HandleOneway(ctx, req)
+}
+
+// onewayChainExec adapts a series of `OnewayInterceptor`s into a OnewayHandler.
+// It is scoped to a single request to the `Handler` and is not thread-safe.
+type onewayChainExec struct {
+	Chain []transport.OnewayInterceptor
+	Final transport.OnewayHandler
+}
+
+func (x onewayChainExec) HandleOneway(ctx context.Context, req *transport.Request) error {
+	if len(x.Chain) == 0 {
+		return x.Final.HandleOneway(ctx, req)
+	}
+	next := x.Chain[0]
+	x.Chain = x.Chain[1:]
+	return next.HandleOneway(ctx, req, x)
+}

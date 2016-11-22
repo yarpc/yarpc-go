@@ -70,3 +70,48 @@ func (x unaryChainExec) Call(ctx context.Context, request *transport.Request) (*
 	x.Chain = x.Chain[1:]
 	return next.Call(ctx, request, x)
 }
+
+// OnewayChain combines a series of `OnewayFilter`s into a single `OnewayFilter`.
+func OnewayChain(filters ...transport.OnewayFilter) transport.OnewayFilter {
+	switch len(filters) {
+	case 0:
+		return transport.OnewayNopFilter
+	case 1:
+		return filters[0]
+	default:
+		return onewayChain(filters)
+	}
+}
+
+type onewayChain []transport.OnewayFilter
+
+func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
+	return onewayChainExec{
+		Chain: []transport.OnewayFilter(c),
+		Final: out,
+	}.CallOneway(ctx, request)
+}
+
+// onewayChainExec adapts a series of `OnewayFilter`s into a `OnewayOutbound`. It
+// is scoped to a single call of a OnewayOutbound and is not thread-safe.
+type onewayChainExec struct {
+	Chain []transport.OnewayFilter
+	Final transport.OnewayOutbound
+}
+
+func (x onewayChainExec) Start(d transport.Deps) error {
+	return x.Final.Start(d)
+}
+
+func (x onewayChainExec) Stop() error {
+	return x.Final.Stop()
+}
+
+func (x onewayChainExec) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+	if len(x.Chain) == 0 {
+		return x.Final.CallOneway(ctx, request)
+	}
+	next := x.Chain[0]
+	x.Chain = x.Chain[1:]
+	return next.CallOneway(ctx, request, x)
+}
