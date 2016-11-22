@@ -1,7 +1,7 @@
 Releases
 ========
 
-v0.5.0 (unreleased)
+v0.5.0 (2016-11-21)
 -------------------
 
 -   **Breaking**: A detail of inbound transports has changed.
