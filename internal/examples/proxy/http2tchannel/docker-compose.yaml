@@ -1,0 +1,9 @@
+version: '2'
+
+services:
+    proxy:
+        build: proxy
+    caller:
+        build: caller
+    service:
+        build: service
