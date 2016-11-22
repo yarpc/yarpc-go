@@ -26,15 +26,15 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// UnaryChain combines a series of `UnaryInterceptor`s into a single `Interceptor`.
-func UnaryChain(interceptors ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
-	switch len(interceptors) {
+// UnaryChain combines a series of `UnaryInboundMiddleware`s into a single `InboundMiddleware`.
+func UnaryChain(middlewares ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
+	switch len(middlewares) {
 	case 0:
 		return transport.NopUnaryInboundMiddleware
 	case 1:
-		return interceptors[0]
+		return middlewares[0]
 	default:
-		return unaryChain(interceptors)
+		return unaryChain(middlewares)
 	}
 }
 
@@ -47,7 +47,7 @@ func (c unaryChain) Handle(ctx context.Context, req *transport.Request, resw tra
 	}.Handle(ctx, req, resw)
 }
 
-// unaryChainExec adapts a series of `UnaryInterceptor`s into a UnaryHandler.
+// unaryChainExec adapts a series of `UnaryInboundMiddleware`s into a UnaryHandler.
 // It is scoped to a single request to the `Handler` and is not thread-safe.
 type unaryChainExec struct {
 	Chain []transport.UnaryInboundMiddleware
@@ -63,15 +63,15 @@ func (x unaryChainExec) Handle(ctx context.Context, req *transport.Request, resw
 	return next.Handle(ctx, req, resw, x)
 }
 
-// OnewayChain combines a series of `OnewayInterceptor`s into a single `Interceptor`.
-func OnewayChain(interceptors ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
-	switch len(interceptors) {
+// OnewayChain combines a series of `OnewayInboundMiddleware`s into a single `InboundMiddleware`.
+func OnewayChain(middlewares ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
+	switch len(middlewares) {
 	case 0:
 		return transport.NopOnewayInboundMiddleware
 	case 1:
-		return interceptors[0]
+		return middlewares[0]
 	default:
-		return onewayChain(interceptors)
+		return onewayChain(middlewares)
 	}
 }
 
@@ -84,7 +84,7 @@ func (c onewayChain) HandleOneway(ctx context.Context, req *transport.Request, h
 	}.HandleOneway(ctx, req)
 }
 
-// onewayChainExec adapts a series of `OnewayInterceptor`s into a OnewayHandler.
+// onewayChainExec adapts a series of `OnewayInboundMiddleware`s into a OnewayHandler.
 // It is scoped to a single request to the `Handler` and is not thread-safe.
 type onewayChainExec struct {
 	Chain []transport.OnewayInboundMiddleware
