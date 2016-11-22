@@ -35,15 +35,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var retryFilter transport.UnaryFilterFunc = func(
-	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
-	res, err := o.Call(ctx, req)
-	if err != nil {
-		res, err = o.Call(ctx, req)
-	}
-	return res, err
-}
-
 type countFilter struct{ Count int }
 
 func (c *countFilter) Call(
@@ -52,7 +43,21 @@ func (c *countFilter) Call(
 	return o.Call(ctx, req)
 }
 
-func TestChain(t *testing.T) {
+func (c *countFilter) CallOneway(ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
+	c.Count++
+	return o.CallOneway(ctx, req)
+}
+
+var retryUnaryFilter transport.UnaryFilterFunc = func(
+	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
+	res, err := o.Call(ctx, req)
+	if err != nil {
+		res, err = o.Call(ctx, req)
+	}
+	return res, err
+}
+
+func TestUnaryChain(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -77,7 +82,47 @@ func TestChain(t *testing.T) {
 	before := &countFilter{}
 	after := &countFilter{}
 	gotRes, err := transport.ApplyUnaryFilter(
-		o, UnaryChain(before, retryFilter, after)).Call(ctx, req)
+		o, UnaryChain(before, retryUnaryFilter, after)).Call(ctx, req)
+
+	assert.NoError(t, err, "expected success")
+	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner filter to be called twice")
+	assert.Equal(t, res, gotRes, "expected response to match")
+}
+
+var retryOnewayFilter transport.OnewayFilterFunc = func(
+	ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
+	res, err := o.CallOneway(ctx, req)
+	if err != nil {
+		res, err = o.CallOneway(ctx, req)
+	}
+	return res, err
+}
+
+func TestOnewayChain(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  transport.Encoding("raw"),
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte{1, 2, 3}),
+	}
+	var res transport.Ack
+
+	o := transporttest.NewMockOnewayOutbound(mockCtrl)
+	o.EXPECT().CallOneway(ctx, req).After(
+		o.EXPECT().CallOneway(ctx, req).Return(nil, errors.New("great sadness")),
+	).Return(res, nil)
+
+	before := &countFilter{}
+	after := &countFilter{}
+	gotRes, err := transport.ApplyOnewayFilter(
+		o, OnewayChain(before, retryOnewayFilter, after)).CallOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")

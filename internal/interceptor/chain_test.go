@@ -34,14 +34,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var retryInterceptor transport.UnaryInterceptorFunc = func(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	if err := h.Handle(ctx, req, resw); err != nil {
-		return h.Handle(ctx, req, resw)
-	}
-	return nil
-}
-
 type countInterceptor struct{ Count int }
 
 func (c *countInterceptor) Handle(
@@ -50,7 +42,20 @@ func (c *countInterceptor) Handle(
 	return h.Handle(ctx, req, resw)
 }
 
-func TestChain(t *testing.T) {
+func (c *countInterceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	c.Count++
+	return h.HandleOneway(ctx, req)
+}
+
+var retryUnaryInterceptor transport.UnaryInterceptorFunc = func(
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	if err := h.Handle(ctx, req, resw); err != nil {
+		return h.Handle(ctx, req, resw)
+	}
+	return nil
+}
+
+func TestUnaryChain(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -73,8 +78,46 @@ func TestChain(t *testing.T) {
 	before := &countInterceptor{}
 	after := &countInterceptor{}
 	err := transport.ApplyUnaryInterceptor(
-		h, UnaryChain(before, retryInterceptor, after),
+		h, UnaryChain(before, retryUnaryInterceptor, after),
 	).Handle(ctx, req, resw)
+
+	assert.NoError(t, err, "expected success")
+	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner interceptor to be called twice")
+}
+
+var retryOnewayInterceptor transport.OnewayInterceptorFunc = func(
+	ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	if err := h.HandleOneway(ctx, req); err != nil {
+		return h.HandleOneway(ctx, req)
+	}
+	return nil
+}
+
+func TestOnewayChain(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  transport.Encoding("raw"),
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte{1, 2, 3}),
+	}
+
+	h := transporttest.NewMockOnewayHandler(mockCtrl)
+	h.EXPECT().HandleOneway(ctx, req).After(
+		h.EXPECT().HandleOneway(ctx, req).Return(errors.New("great sadness")),
+	).Return(nil)
+
+	before := &countInterceptor{}
+	after := &countInterceptor{}
+	err := transport.ApplyOnewayInterceptor(
+		h, OnewayChain(before, retryOnewayInterceptor, after),
+	).HandleOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
