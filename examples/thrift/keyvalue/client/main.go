@@ -70,7 +70,9 @@ func main() {
 				Unary: outbound,
 			},
 		},
-		Filter: cache,
+		Filters: yarpc.Filters{
+			UnaryFilter: cache,
+		},
 	})
 	if err := dispatcher.Start(); err != nil {
 		log.Fatalf("failed to start Dispatcher: %v", err)

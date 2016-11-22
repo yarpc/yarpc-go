@@ -124,7 +124,7 @@ func ApplyOnewayFilter(o OnewayOutbound, f OnewayFilter) OnewayOutbound {
 // OnewayFilterFunc adapts a function into a OnewayFilter.
 type OnewayFilterFunc func(context.Context, *Request, OnewayOutbound) (Ack, error)
 
-// Call for OnewayFilterFunc.
+// CallOneway for OnewayFilterFunc.
 func (f OnewayFilterFunc) CallOneway(ctx context.Context, request *Request, out OnewayOutbound) (Ack, error) {
 	return f(ctx, request, out)
 }

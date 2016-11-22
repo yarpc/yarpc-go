@@ -167,7 +167,9 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 				Unary: http.NewOutbound("http://localhost:65535"),
 			},
 		},
-		Filter: recorder,
+		Filters: yarpc.Filters{
+			UnaryFilter: recorder,
+		},
 	})
 	require.NoError(t, clientDisp.Start())
 	defer clientDisp.Stop()
@@ -199,7 +201,9 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 				Unary: http.NewOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr().String())),
 			},
 		},
-		Filter: recorder,
+		Filters: yarpc.Filters{
+			UnaryFilter: recorder,
+		},
 	})
 	require.NoError(t, clientDisp.Start())
 	defer clientDisp.Stop()

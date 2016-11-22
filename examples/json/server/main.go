@@ -83,7 +83,9 @@ func main() {
 			tch.NewInbound(channel, tch.ListenAddr(":28941")),
 			http.NewInbound(":24034"),
 		},
-		Interceptor: yarpc.UnaryInterceptors(requestLogInterceptor{}),
+		Interceptors: yarpc.Interceptors{
+			UnaryInterceptor: requestLogInterceptor{},
+		},
 	})
 
 	handler := handler{items: make(map[string]string)}
