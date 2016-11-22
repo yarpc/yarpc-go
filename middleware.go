@@ -21,31 +21,31 @@
 package yarpc
 
 import (
-	"go.uber.org/yarpc/internal/filter"
-	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/transport"
 )
 
-// UnaryFilters combines the given collection of unary filters in-order into a
-// single UnaryFilter.
-func UnaryFilters(filters ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
-	return filter.UnaryChain(filters...)
+// UnaryOutboundMiddlewares combines the given collection of unary outbound
+// middlewares in-order into a single UnaryOutboundMiddleware.
+func UnaryOutboundMiddlewares(middlewares ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
+	return outboundmiddleware.UnaryChain(middlewares...)
 }
 
-// UnaryInterceptors combines the given collection of unary interceptors
-// in-order into a single UnaryInterceptor.
-func UnaryInterceptors(interceptors ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
-	return interceptor.UnaryChain(interceptors...)
+// UnaryInboundMiddlewares combines the given collection of unary inbound
+// middleware in-order into a single UnaryInboundMiddleware.
+func UnaryInboundMiddlewares(middlewares ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
+	return inboundmiddleware.UnaryChain(middlewares...)
 }
 
-// OnewayFilters combines the given collection of oneway filters in-order into a
-// single OnewayFilter.
-func OnewayFilters(filters ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
-	return filter.OnewayChain(filters...)
+// OnewayOutboundMiddlewares combines the given collection of unary outbound
+// middlewares in-order into a single OnewayOutboundMiddleware.
+func OnewayOutboundMiddlewares(middlewares ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
+	return outboundmiddleware.OnewayChain(middlewares...)
 }
 
-// OnewayInterceptors combines the given collection of oneway interceptors
-// in-order into a single OnewayInterceptor.
-func OnewayInterceptors(interceptors ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
-	return interceptor.OnewayChain(interceptors...)
+// OnewayInboundMiddlewares combines the given collection of unary inbound
+// middleware in-order into a single OnewayInboundMiddleware.
+func OnewayInboundMiddlewares(middlewares ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
+	return inboundmiddleware.OnewayChain(middlewares...)
 }

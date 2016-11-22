@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package filter
+package inboundmiddleware
 
 import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
 	"testing"
 	"time"
 
@@ -35,26 +34,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type countFilter struct{ Count int }
+type countInterceptor struct{ Count int }
 
-func (c *countFilter) Call(
-	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
+func (c *countInterceptor) Handle(
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	c.Count++
-	return o.Call(ctx, req)
+	return h.Handle(ctx, req, resw)
 }
 
-func (c *countFilter) CallOneway(ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
+func (c *countInterceptor) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	c.Count++
-	return o.CallOneway(ctx, req)
+	return h.HandleOneway(ctx, req)
 }
 
-var retryUnaryFilter transport.UnaryOutboundMiddlewareFunc = func(
-	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
-	res, err := o.Call(ctx, req)
-	if err != nil {
-		res, err = o.Call(ctx, req)
+var retryUnaryInterceptor transport.UnaryInboundMiddlewareFunc = func(
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	if err := h.Handle(ctx, req, resw); err != nil {
+		return h.Handle(ctx, req, resw)
 	}
-	return res, err
+	return nil
 }
 
 func TestUnaryChain(t *testing.T) {
@@ -70,33 +68,30 @@ func TestUnaryChain(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	res := &transport.Response{
-		Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
-	}
+	resw := new(transporttest.FakeResponseWriter)
 
-	o := transporttest.NewMockUnaryOutbound(mockCtrl)
-	o.EXPECT().Call(ctx, req).After(
-		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
-	).Return(res, nil)
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
+	h.EXPECT().Handle(ctx, req, resw).After(
+		h.EXPECT().Handle(ctx, req, resw).Return(errors.New("great sadness")),
+	).Return(nil)
 
-	before := &countFilter{}
-	after := &countFilter{}
-	gotRes, err := transport.ApplyUnaryOutboundMiddleware(
-		o, UnaryChain(before, retryUnaryFilter, after)).Call(ctx, req)
+	before := &countInterceptor{}
+	after := &countInterceptor{}
+	err := transport.ApplyUnaryInboundMiddleware(
+		h, UnaryChain(before, retryUnaryInterceptor, after),
+	).Handle(ctx, req, resw)
 
 	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner filter to be called twice")
-	assert.Equal(t, res, gotRes, "expected response to match")
+	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner interceptor to be called twice")
 }
 
-var retryOnewayFilter transport.OnewayOutboundMiddlewareFunc = func(
-	ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
-	res, err := o.CallOneway(ctx, req)
-	if err != nil {
-		res, err = o.CallOneway(ctx, req)
+var retryOnewayInterceptor transport.OnewayInboundMiddlewareFunc = func(
+	ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	if err := h.HandleOneway(ctx, req); err != nil {
+		return h.HandleOneway(ctx, req)
 	}
-	return res, err
+	return nil
 }
 
 func TestOnewayChain(t *testing.T) {
@@ -112,20 +107,19 @@ func TestOnewayChain(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	var res transport.Ack
 
-	o := transporttest.NewMockOnewayOutbound(mockCtrl)
-	o.EXPECT().CallOneway(ctx, req).After(
-		o.EXPECT().CallOneway(ctx, req).Return(nil, errors.New("great sadness")),
-	).Return(res, nil)
+	h := transporttest.NewMockOnewayHandler(mockCtrl)
+	h.EXPECT().HandleOneway(ctx, req).After(
+		h.EXPECT().HandleOneway(ctx, req).Return(errors.New("great sadness")),
+	).Return(nil)
 
-	before := &countFilter{}
-	after := &countFilter{}
-	gotRes, err := transport.ApplyOnewayOutboundMiddleware(
-		o, OnewayChain(before, retryOnewayFilter, after)).CallOneway(ctx, req)
+	before := &countInterceptor{}
+	after := &countInterceptor{}
+	err := transport.ApplyOnewayInboundMiddleware(
+		h, OnewayChain(before, retryOnewayInterceptor, after),
+	).HandleOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner filter to be called twice")
-	assert.Equal(t, res, gotRes, "expected response to match")
+	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner interceptor to be called twice")
 }
