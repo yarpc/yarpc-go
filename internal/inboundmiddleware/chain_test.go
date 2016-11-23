@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package interceptor
+package inboundmiddleware
 
 import (
 	"bytes"
@@ -34,7 +34,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var retryInterceptor transport.InterceptorFunc = func(
+type countInboundMiddleware struct{ Count int }
+
+func (c *countInboundMiddleware) Handle(
+	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	c.Count++
+	return h.Handle(ctx, req, resw)
+}
+
+func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	c.Count++
+	return h.HandleOneway(ctx, req)
+}
+
+var retryUnaryInboundMiddleware transport.UnaryInboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
 		return h.Handle(ctx, req, resw)
@@ -42,15 +55,7 @@ var retryInterceptor transport.InterceptorFunc = func(
 	return nil
 }
 
-type countInterceptor struct{ Count int }
-
-func (c *countInterceptor) Handle(
-	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	c.Count++
-	return h.Handle(ctx, req, resw)
-}
-
-func TestChain(t *testing.T) {
+func TestUnaryChain(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -70,13 +75,51 @@ func TestChain(t *testing.T) {
 		h.EXPECT().Handle(ctx, req, resw).Return(errors.New("great sadness")),
 	).Return(nil)
 
-	before := &countInterceptor{}
-	after := &countInterceptor{}
-	err := transport.ApplyInterceptor(
-		h, Chain(before, retryInterceptor, after),
+	before := &countInboundMiddleware{}
+	after := &countInboundMiddleware{}
+	err := transport.ApplyUnaryInboundMiddleware(
+		h, UnaryChain(before, retryUnaryInboundMiddleware, after),
 	).Handle(ctx, req, resw)
 
 	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer interceptor to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner interceptor to be called twice")
+	assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
+}
+
+var retryOnewayInboundMiddleware transport.OnewayInboundMiddlewareFunc = func(
+	ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	if err := h.HandleOneway(ctx, req); err != nil {
+		return h.HandleOneway(ctx, req)
+	}
+	return nil
+}
+
+func TestOnewayChain(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  transport.Encoding("raw"),
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte{1, 2, 3}),
+	}
+
+	h := transporttest.NewMockOnewayHandler(mockCtrl)
+	h.EXPECT().HandleOneway(ctx, req).After(
+		h.EXPECT().HandleOneway(ctx, req).Return(errors.New("great sadness")),
+	).Return(nil)
+
+	before := &countInboundMiddleware{}
+	after := &countInboundMiddleware{}
+	err := transport.ApplyOnewayInboundMiddleware(
+		h, OnewayChain(before, retryOnewayInboundMiddleware, after),
+	).HandleOneway(ctx, req)
+
+	assert.NoError(t, err, "expected success")
+	assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
+	assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
 }

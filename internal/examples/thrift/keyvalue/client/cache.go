@@ -29,9 +29,9 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// CacheFilter is a filter
-type CacheFilter interface {
-	transport.Filter
+// CacheOutboundMiddleware is a OutboundMiddleware
+type CacheOutboundMiddleware interface {
+	transport.UnaryOutboundMiddleware
 
 	Invalidate()
 }
@@ -41,20 +41,20 @@ type entry struct {
 	Body    []byte
 }
 
-type cacheFilter map[string]entry
+type cacheOutboundMiddleware map[string]entry
 
-// NewCacheFilter builds a new CacheFilter.
-func NewCacheFilter() CacheFilter {
-	cache := make(cacheFilter)
+// NewCacheOutboundMiddleware builds a new CacheOutboundMiddleware.
+func NewCacheOutboundMiddleware() CacheOutboundMiddleware {
+	cache := make(cacheOutboundMiddleware)
 	return &cache
 }
 
-func (c *cacheFilter) Invalidate() {
+func (c *cacheOutboundMiddleware) Invalidate() {
 	fmt.Println("invalidating")
-	*c = make(cacheFilter)
+	*c = make(cacheOutboundMiddleware)
 }
 
-func (c *cacheFilter) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (c *cacheOutboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	data := *c
 
 	// Read the entire request body to match against the cache

@@ -23,7 +23,7 @@ package transport_test
 import (
 	"bytes"
 	"context"
-	"errors"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -35,12 +35,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNopInterceptor(t *testing.T) {
+func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	wrappedH := transport.ApplyInterceptor(h, transport.NopInterceptor)
+	o := transporttest.NewMockUnaryOutbound(mockCtrl)
+	wrappedO := transport.ApplyUnaryOutboundMiddleware(o, transport.NopUnaryOutboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -51,9 +51,37 @@ func TestNopInterceptor(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	resw := new(transporttest.FakeResponseWriter)
-	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, req, resw).Return(err)
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	o.EXPECT().Call(ctx, req).Return(res, nil)
+
+	got, err := wrappedO.Call(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, res, got)
+	}
+}
+
+func TestOnewayNopOutboundMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	o := transporttest.NewMockOnewayOutbound(mockCtrl)
+	wrappedO := transport.ApplyOnewayOutboundMiddleware(o, transport.NopOnewayOutboundMiddleware)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte{1, 2, 3}),
+	}
+
+	o.EXPECT().CallOneway(ctx, req).Return(nil, nil)
+
+	got, err := wrappedO.CallOneway(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, nil, got)
+	}
 }

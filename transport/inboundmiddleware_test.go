@@ -18,16 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package filter
+package transport_test
 
 import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -35,52 +35,47 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var retryFilter transport.FilterFunc = func(
-	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
-	res, err := o.Call(ctx, req)
-	if err != nil {
-		res, err = o.Call(ctx, req)
-	}
-	return res, err
-}
-
-type countFilter struct{ Count int }
-
-func (c *countFilter) Call(
-	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
-	c.Count++
-	return o.Call(ctx, req)
-}
-
-func TestChain(t *testing.T) {
+func TestUnaryNopInboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockUnaryHandler(mockCtrl)
+	wrappedH := transport.ApplyUnaryInboundMiddleware(h, transport.NopUnaryInboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	req := &transport.Request{
 		Caller:    "somecaller",
 		Service:   "someservice",
-		Encoding:  transport.Encoding("raw"),
+		Encoding:  raw.Encoding,
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	res := &transport.Response{
-		Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6})),
+	resw := new(transporttest.FakeResponseWriter)
+	err := errors.New("great sadness")
+	h.EXPECT().Handle(ctx, req, resw).Return(err)
+
+	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+}
+
+func TestOnewayNopInboundMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockOnewayHandler(mockCtrl)
+	wrappedH := transport.ApplyOnewayInboundMiddleware(h, transport.NopOnewayInboundMiddleware)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req := &transport.Request{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
+	err := errors.New("great sadness")
+	h.EXPECT().HandleOneway(ctx, req).Return(err)
 
-	o := transporttest.NewMockUnaryOutbound(mockCtrl)
-	o.EXPECT().Call(ctx, req).After(
-		o.EXPECT().Call(ctx, req).Return(nil, errors.New("great sadness")),
-	).Return(res, nil)
-
-	before := &countFilter{}
-	after := &countFilter{}
-	gotRes, err := transport.ApplyFilter(
-		o, Chain(before, retryFilter, after)).Call(ctx, req)
-
-	assert.NoError(t, err, "expected success")
-	assert.Equal(t, 1, before.Count, "expected outer filter to be called once")
-	assert.Equal(t, 2, after.Count, "expected inner filter to be called twice")
-	assert.Equal(t, res, gotRes, "expected response to match")
+	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
 }

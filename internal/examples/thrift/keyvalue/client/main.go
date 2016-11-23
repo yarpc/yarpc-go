@@ -62,7 +62,7 @@ func main() {
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}
 
-	cache := NewCacheFilter()
+	cache := NewCacheOutboundMiddleware()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue-client",
 		Outbounds: yarpc.Outbounds{
@@ -70,7 +70,9 @@ func main() {
 				Unary: outbound,
 			},
 		},
-		Filter: cache,
+		OutboundMiddleware: yarpc.OutboundMiddleware{
+			Unary: cache,
+		},
 	})
 	if err := dispatcher.Start(); err != nil {
 		log.Fatalf("failed to start Dispatcher: %v", err)
