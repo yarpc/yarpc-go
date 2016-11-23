@@ -65,10 +65,10 @@ type Config struct {
 	Inbounds  Inbounds
 	Outbounds Outbounds
 
-	// Filter and Interceptor that will be applied to all outgoing and incoming
-	// requests respectively.
-	Filter      transport.Filter
-	Interceptor transport.Interceptor
+	// Inbound and Outbound Middleware that will be applied to all incoming and
+	// outgoing requests respectively.
+	InboundMiddleware  InboundMiddleware
+	OutboundMiddleware OutboundMiddleware
 
 	Tracer opentracing.Tracer
 }
@@ -79,6 +79,18 @@ type Inbounds []transport.Inbound
 // Outbounds encapsulates a service and its outbounds
 type Outbounds map[string]transport.Outbounds
 
+// OutboundMiddleware contains the different type of outbound middleware
+type OutboundMiddleware struct {
+	Unary  transport.UnaryOutboundMiddleware
+	Oneway transport.OnewayOutboundMiddleware
+}
+
+// InboundMiddleware contains the different type of inbound middleware
+type InboundMiddleware struct {
+	Unary  transport.UnaryInboundMiddleware
+	Oneway transport.OnewayInboundMiddleware
+}
+
 // NewDispatcher builds a new Dispatcher using the specified Config.
 func NewDispatcher(cfg Config) Dispatcher {
 	if cfg.Name == "" {
@@ -86,17 +98,17 @@ func NewDispatcher(cfg Config) Dispatcher {
 	}
 
 	return dispatcher{
-		Name:        cfg.Name,
-		Registrar:   transport.NewMapRegistry(cfg.Name),
-		inbounds:    cfg.Inbounds,
-		outbounds:   convertOutbounds(cfg.Outbounds, cfg.Filter),
-		Interceptor: cfg.Interceptor,
-		deps:        transport.NoDeps.WithTracer(cfg.Tracer),
+		Name:              cfg.Name,
+		Registrar:         transport.NewMapRegistry(cfg.Name),
+		inbounds:          cfg.Inbounds,
+		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
+		InboundMiddleware: cfg.InboundMiddleware,
+		deps:              transport.NoDeps.WithTracer(cfg.Tracer),
 	}
 }
 
-// convertOutbounds applys filters and creates validator outbounds
-func convertOutbounds(outbounds Outbounds, filter transport.Filter) Outbounds {
+// convertOutbounds applys outbound middleware and creates validator outbounds
+func convertOutbounds(outbounds Outbounds, middleware OutboundMiddleware) Outbounds {
 	//TODO(apb): ensure we're not given the same underlying outbound for each RPC type
 	convertedOutbounds := make(Outbounds, len(outbounds))
 
@@ -106,14 +118,14 @@ func convertOutbounds(outbounds Outbounds, filter transport.Filter) Outbounds {
 			onewayOutbound transport.OnewayOutbound
 		)
 
-		// apply filters and create ValidatorOutbounds
+		// apply outbound middleware and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = transport.ApplyFilter(outs.Unary, filter)
+			unaryOutbound = transport.ApplyUnaryOutboundMiddleware(outs.Unary, middleware.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
-		// TODO(apb): apply oneway outbound filter
 		if outs.Oneway != nil {
+			onewayOutbound = transport.ApplyOnewayOutboundMiddleware(outs.Oneway, middleware.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 
@@ -137,7 +149,7 @@ type dispatcher struct {
 	inbounds  Inbounds
 	outbounds Outbounds
 
-	Interceptor transport.Interceptor
+	InboundMiddleware InboundMiddleware
 
 	deps transport.Deps
 }
@@ -235,10 +247,13 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 	for _, r := range rs {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
-			h := transport.ApplyInterceptor(r.HandlerSpec.Unary(), d.Interceptor)
+			h := transport.ApplyUnaryInboundMiddleware(r.HandlerSpec.Unary(),
+				d.InboundMiddleware.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
-			//TODO(apb): add oneway interceptors https://github.com/yarpc/yarpc-go/issues/413
+			h := transport.ApplyOnewayInboundMiddleware(r.HandlerSpec.Oneway(),
+				d.InboundMiddleware.Oneway)
+			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
 				r.HandlerSpec.Type(), r.Service, r.Procedure))

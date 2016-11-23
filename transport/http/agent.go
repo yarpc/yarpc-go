@@ -21,6 +21,7 @@
 package http
 
 import (
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -58,6 +59,21 @@ func NewAgent(opts ...AgentOption) *Agent {
 	return &Agent{
 		client: buildClient(&cfg),
 		peers:  make(map[string]*hostport.Peer),
+	}
+}
+
+func buildClient(cfg *agentConfig) *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			// options lifted from https://golang.org/src/net/http/transport.go
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: cfg.keepAlive,
+			}).Dial,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}
 }
 

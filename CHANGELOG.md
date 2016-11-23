@@ -1,6 +1,29 @@
 Releases
 ========
 
+v0.6.0 (unreleased)
+-------------------
+
+-   **Breaking**: Rename the `Interceptor` and `Filter` types to
+    `UnaryInboundMiddleware` and `UnaryOutboundMiddleware` respectively.
+-   **Breaking**: `yarpc.Config` now accepts middleware using the
+    `InboundMiddleware` and `OutboundMiddleware` fields.
+
+    Before:
+
+        yarpc.Config{Interceptor: myInterceptor, Filter: myFilter}
+
+    Now:
+
+        yarpc.Config{
+            InboundMiddleware: yarpc.InboundMiddleware{Unary: myInterceptor},
+            OutboundMiddleware: yarpc.OutboundMiddleware{Unary: myFilter},
+        }
+
+-   Add support for Oneway middleware via the `OnewayInboundMiddleware` and
+    `OnewayOutboundMiddleware` interfaces.
+
+
 v0.5.0 (2016-11-21)
 -------------------
 

@@ -21,19 +21,31 @@
 package yarpc
 
 import (
-	"go.uber.org/yarpc/internal/filter"
-	"go.uber.org/yarpc/internal/interceptor"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/transport"
 )
 
-// Filters combines the given collection of filters in-order into a single
-// Filter.
-func Filters(filters ...transport.Filter) transport.Filter {
-	return filter.Chain(filters...)
+// UnaryOutboundMiddleware combines the given collection of unary outbound
+// middleware in-order into a single UnaryOutboundMiddleware.
+func UnaryOutboundMiddleware(middleware ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
+	return outboundmiddleware.UnaryChain(middleware...)
 }
 
-// Interceptors combines the given collection of interceptors in-order into a
-// single Interceptor.
-func Interceptors(interceptors ...transport.Interceptor) transport.Interceptor {
-	return interceptor.Chain(interceptors...)
+// UnaryInboundMiddleware combines the given collection of unary inbound
+// middleware in-order into a single UnaryInboundMiddleware.
+func UnaryInboundMiddleware(middleware ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
+	return inboundmiddleware.UnaryChain(middleware...)
+}
+
+// OnewayOutboundMiddleware combines the given collection of unary outbound
+// middleware in-order into a single OnewayOutboundMiddleware.
+func OnewayOutboundMiddleware(middleware ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
+	return outboundmiddleware.OnewayChain(middleware...)
+}
+
+// OnewayInboundMiddleware combines the given collection of unary inbound
+// middleware in-order into a single OnewayInboundMiddleware.
+func OnewayInboundMiddleware(middleware ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
+	return inboundmiddleware.OnewayChain(middleware...)
 }
