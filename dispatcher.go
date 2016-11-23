@@ -65,8 +65,8 @@ type Config struct {
 	Inbounds  Inbounds
 	Outbounds Outbounds
 
-	// Inbound and Outbound Middleware that will be applied to all outgoing and
-	// incoming requests respectively.
+	// Inbound and Outbound Middleware that will be applied to all incoming and
+	// outgoing requests respectively.
 	InboundMiddleware  InboundMiddleware
 	OutboundMiddleware OutboundMiddleware
 
