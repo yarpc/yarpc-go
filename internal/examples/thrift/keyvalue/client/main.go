@@ -70,7 +70,7 @@ func main() {
 				Unary: outbound,
 			},
 		},
-		OutboundMiddlewares: yarpc.OutboundMiddlewares{
+		OutboundMiddleware: yarpc.OutboundMiddleware{
 			Unary: cache,
 		},
 	})

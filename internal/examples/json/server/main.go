@@ -83,7 +83,7 @@ func main() {
 			tch.NewInbound(channel, tch.ListenAddr(":28941")),
 			http.NewInbound(":24034"),
 		},
-		InboundMiddlewares: yarpc.InboundMiddlewares{
+		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: requestLogInboundMiddleware{},
 		},
 	})

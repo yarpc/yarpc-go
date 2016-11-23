@@ -41,7 +41,7 @@
 //    	Outbounds: transport.Outbounds{
 //    		...
 //    	},
-//      OutboundMiddlewares: yarpc.OutboundMiddlewares {
+//      OutboundMiddleware: yarpc.OutboundMiddleware {
 //    	  Unary: recorder.NewRecorder(t),
 //      },
 //    })

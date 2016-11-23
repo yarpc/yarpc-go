@@ -27,14 +27,14 @@ import (
 )
 
 // UnaryChain combines a series of `UnaryInboundMiddleware`s into a single `InboundMiddleware`.
-func UnaryChain(middlewares ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
-	switch len(middlewares) {
+func UnaryChain(middleware ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
+	switch len(middleware) {
 	case 0:
 		return transport.NopUnaryInboundMiddleware
 	case 1:
-		return middlewares[0]
+		return middleware[0]
 	default:
-		return unaryChain(middlewares)
+		return unaryChain(middleware)
 	}
 }
 
@@ -64,14 +64,14 @@ func (x unaryChainExec) Handle(ctx context.Context, req *transport.Request, resw
 }
 
 // OnewayChain combines a series of `OnewayInboundMiddleware`s into a single `InboundMiddleware`.
-func OnewayChain(middlewares ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
-	switch len(middlewares) {
+func OnewayChain(middleware ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
+	switch len(middleware) {
 	case 0:
 		return transport.NopOnewayInboundMiddleware
 	case 1:
-		return middlewares[0]
+		return middleware[0]
 	default:
-		return onewayChain(middlewares)
+		return onewayChain(middleware)
 	}
 }
 

@@ -65,10 +65,10 @@ type Config struct {
 	Inbounds  Inbounds
 	Outbounds Outbounds
 
-	// Outbound and Inbound Middlewares that will be applied to all outgoing
+	// Outbound and Inbound Middleware that will be applied to all outgoing
 	// and incoming requests respectively.
-	OutboundMiddlewares OutboundMiddlewares
-	InboundMiddlewares  InboundMiddlewares
+	OutboundMiddleware OutboundMiddleware
+	InboundMiddleware  InboundMiddleware
 
 	Tracer opentracing.Tracer
 }
@@ -79,14 +79,14 @@ type Inbounds []transport.Inbound
 // Outbounds encapsulates a service and its outbounds
 type Outbounds map[string]transport.Outbounds
 
-// OutboundMiddlewares contains the different type of outbound middlewares
-type OutboundMiddlewares struct {
+// OutboundMiddleware contains the different type of outbound middleware
+type OutboundMiddleware struct {
 	Unary  transport.UnaryOutboundMiddleware
 	Oneway transport.OnewayOutboundMiddleware
 }
 
-// InboundMiddlewares contains the different type of inbound middlewares
-type InboundMiddlewares struct {
+// InboundMiddleware contains the different type of inbound middleware
+type InboundMiddleware struct {
 	Unary  transport.UnaryInboundMiddleware
 	Oneway transport.OnewayInboundMiddleware
 }
@@ -98,17 +98,17 @@ func NewDispatcher(cfg Config) Dispatcher {
 	}
 
 	return dispatcher{
-		Name:               cfg.Name,
-		Registrar:          transport.NewMapRegistry(cfg.Name),
-		inbounds:           cfg.Inbounds,
-		outbounds:          convertOutbounds(cfg.Outbounds, cfg.OutboundMiddlewares),
-		InboundMiddlewares: cfg.InboundMiddlewares,
-		deps:               transport.NoDeps.WithTracer(cfg.Tracer),
+		Name:              cfg.Name,
+		Registrar:         transport.NewMapRegistry(cfg.Name),
+		inbounds:          cfg.Inbounds,
+		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
+		InboundMiddleware: cfg.InboundMiddleware,
+		deps:              transport.NoDeps.WithTracer(cfg.Tracer),
 	}
 }
 
-// convertOutbounds applys outbound middlewares and creates validator outbounds
-func convertOutbounds(outbounds Outbounds, middlewares OutboundMiddlewares) Outbounds {
+// convertOutbounds applys outbound middleware and creates validator outbounds
+func convertOutbounds(outbounds Outbounds, middleware OutboundMiddleware) Outbounds {
 	//TODO(apb): ensure we're not given the same underlying outbound for each RPC type
 	convertedOutbounds := make(Outbounds, len(outbounds))
 
@@ -118,14 +118,14 @@ func convertOutbounds(outbounds Outbounds, middlewares OutboundMiddlewares) Outb
 			onewayOutbound transport.OnewayOutbound
 		)
 
-		// apply outbound middlewares and create ValidatorOutbounds
+		// apply outbound middleware and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = transport.ApplyUnaryOutboundMiddleware(outs.Unary, middlewares.Unary)
+			unaryOutbound = transport.ApplyUnaryOutboundMiddleware(outs.Unary, middleware.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = transport.ApplyOnewayOutboundMiddleware(outs.Oneway, middlewares.Oneway)
+			onewayOutbound = transport.ApplyOnewayOutboundMiddleware(outs.Oneway, middleware.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 
@@ -149,7 +149,7 @@ type dispatcher struct {
 	inbounds  Inbounds
 	outbounds Outbounds
 
-	InboundMiddlewares InboundMiddlewares
+	InboundMiddleware InboundMiddleware
 
 	deps transport.Deps
 }
@@ -248,11 +248,11 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
 			h := transport.ApplyUnaryInboundMiddleware(r.HandlerSpec.Unary(),
-				d.InboundMiddlewares.Unary)
+				d.InboundMiddleware.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
 			h := transport.ApplyOnewayInboundMiddleware(r.HandlerSpec.Oneway(),
-				d.InboundMiddlewares.Oneway)
+				d.InboundMiddleware.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",

@@ -26,26 +26,26 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-// UnaryOutboundMiddlewares combines the given collection of unary outbound
-// middlewares in-order into a single UnaryOutboundMiddleware.
-func UnaryOutboundMiddlewares(middlewares ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
-	return outboundmiddleware.UnaryChain(middlewares...)
+// UnaryOutboundMiddleware combines the given collection of unary outbound
+// middleware in-order into a single UnaryOutboundMiddleware.
+func UnaryOutboundMiddleware(middleware ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
+	return outboundmiddleware.UnaryChain(middleware...)
 }
 
-// UnaryInboundMiddlewares combines the given collection of unary inbound
+// UnaryInboundMiddleware combines the given collection of unary inbound
 // middleware in-order into a single UnaryInboundMiddleware.
-func UnaryInboundMiddlewares(middlewares ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
-	return inboundmiddleware.UnaryChain(middlewares...)
+func UnaryInboundMiddleware(middleware ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
+	return inboundmiddleware.UnaryChain(middleware...)
 }
 
-// OnewayOutboundMiddlewares combines the given collection of unary outbound
-// middlewares in-order into a single OnewayOutboundMiddleware.
-func OnewayOutboundMiddlewares(middlewares ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
-	return outboundmiddleware.OnewayChain(middlewares...)
+// OnewayOutboundMiddleware combines the given collection of unary outbound
+// middleware in-order into a single OnewayOutboundMiddleware.
+func OnewayOutboundMiddleware(middleware ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
+	return outboundmiddleware.OnewayChain(middleware...)
 }
 
-// OnewayInboundMiddlewares combines the given collection of unary inbound
+// OnewayInboundMiddleware combines the given collection of unary inbound
 // middleware in-order into a single OnewayInboundMiddleware.
-func OnewayInboundMiddlewares(middlewares ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
-	return inboundmiddleware.OnewayChain(middlewares...)
+func OnewayInboundMiddleware(middleware ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
+	return inboundmiddleware.OnewayChain(middleware...)
 }
