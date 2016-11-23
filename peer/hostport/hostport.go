@@ -106,14 +106,13 @@ func (p *Peer) SetStatus(status peer.ConnectionStatus) {
 }
 
 // StartRequest runs at the beginning of a request and returns a callback for when the request finished
-func (p *Peer) StartRequest() func() {
+func (p *Peer) StartRequest() {
 	p.pending.Inc()
 	p.notifyStatusChanged()
-	return p.endRequest
 }
 
-// endRequest should be run after a request has finished
-func (p *Peer) endRequest() {
+// EndRequest should be run after a request has finished.
+func (p *Peer) EndRequest() {
 	p.pending.Dec()
 	p.notifyStatusChanged()
 }

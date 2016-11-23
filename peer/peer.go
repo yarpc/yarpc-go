@@ -59,10 +59,9 @@ type Peer interface {
 	// Get the status of the Peer
 	Status() Status
 
-	// Tell the peer that a request is starting/ending
-	// The callsite should look like:
-	//   done := peer.StartRequest()
-	//   defer done()
-	//   // Do request
-	StartRequest() (finish func())
+	// Tell the peer that a request is starting
+	StartRequest()
+
+	// Tell the peer that a request has finished
+	EndRequest()
 }

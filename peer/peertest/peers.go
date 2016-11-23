@@ -63,13 +63,12 @@ func (p *LightMockPeer) Status() peer.Status {
 }
 
 // StartRequest is run when a Request starts
-func (p *LightMockPeer) StartRequest() func() {
+func (p *LightMockPeer) StartRequest() {
 	p.PeerStatus.PendingRequestCount++
-	return p.endRequest
 }
 
-// endRequest should be run after a MockPeer request has finished
-func (p *LightMockPeer) endRequest() {
+// EndRequest should be run after a MockPeer request has finished
+func (p *LightMockPeer) EndRequest() {
 	p.PeerStatus.PendingRequestCount--
 }
 
