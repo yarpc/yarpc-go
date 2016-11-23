@@ -60,8 +60,8 @@ type Peer interface {
 	Status() Status
 
 	// Tell the peer that a request is starting
-	StartRequest()
+	StartRequest(dontNotify Subscriber)
 
 	// Tell the peer that a request has finished
-	EndRequest()
+	EndRequest(dontNotify Subscriber)
 }
