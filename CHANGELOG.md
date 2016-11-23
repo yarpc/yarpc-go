@@ -1,8 +1,8 @@
 Releases
 ========
 
-v0.6.0 (unreleased)
--------------------
+v1.0.0-rc1 (2016-11-23)
+-----------------------
 
 -   **Breaking**: Rename the `Interceptor` and `Filter` types to
     `UnaryInboundMiddleware` and `UnaryOutboundMiddleware` respectively.
