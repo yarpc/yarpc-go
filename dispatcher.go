@@ -65,10 +65,10 @@ type Config struct {
 	Inbounds  Inbounds
 	Outbounds Outbounds
 
-	// Outbound and Inbound Middleware that will be applied to all outgoing
-	// and incoming requests respectively.
-	OutboundMiddleware OutboundMiddleware
+	// Inbound and Outbound Middleware that will be applied to all outgoing and
+	// incoming requests respectively.
 	InboundMiddleware  InboundMiddleware
+	OutboundMiddleware OutboundMiddleware
 
 	Tracer opentracing.Tracer
 }

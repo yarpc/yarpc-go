@@ -42,7 +42,7 @@ type UnaryInboundMiddleware interface {
 	Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error
 }
 
-// UnaryNopInboundMiddleware is a inbound middleware that does not do anything special. It
+// NopUnaryInboundMiddleware is a inbound middleware that does not do anything special. It
 // simply calls the underlying Handler.
 var NopUnaryInboundMiddleware UnaryInboundMiddleware = nopUnaryInboundMiddleware{}
 
