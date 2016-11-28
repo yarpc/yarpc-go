@@ -142,7 +142,7 @@ func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dis
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			ytchannel.NewInbound(ch),
+			ytchannel.NewInbound(ch, ytchannel.WithTracer(tracer)),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
