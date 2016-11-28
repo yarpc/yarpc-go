@@ -37,8 +37,8 @@ type single struct {
 	started       bool
 }
 
-// NewSingle creates a static peer.List with a single Peer
-func NewSingle(pid peer.Identifier, agent peer.Agent) peer.List {
+// NewSingle creates a static peer.Chooser with a single Peer
+func NewSingle(pid peer.Identifier, agent peer.Agent) peer.Chooser {
 	return &single{
 		initialPeerID: pid,
 		agent:         agent,
