@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package channel
+package clientconfig
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ type multiOutbound struct {
 	Outbounds transport.Outbounds
 }
 
-// MultiOutbound constructs a Channel backed by multiple outbound types
+// MultiOutbound constructs a ClientConfig backed by multiple outbound types
 func MultiOutbound(caller, service string, Outbounds transport.Outbounds) transport.ClientConfig {
 	return multiOutbound{caller: caller, service: service, Outbounds: Outbounds}
 }

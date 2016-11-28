@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package channel
+package clientconfig
 
 import (
 	"testing"
@@ -33,7 +33,7 @@ const (
 	service = "service"
 )
 
-func TestChannelNames(t *testing.T) {
+func TestClientConfigNames(t *testing.T) {
 	outbounds := transport.Outbounds{}
 	c := MultiOutbound(caller, service, outbounds)
 
@@ -41,12 +41,12 @@ func TestChannelNames(t *testing.T) {
 	assert.Equal(t, c.Service(), service)
 }
 
-func TestChannelPanic(t *testing.T) {
+func TestClientConfigPanic(t *testing.T) {
 	c := MultiOutbound(caller, service, transport.Outbounds{})
 
 	assert.Panics(t, func() { c.GetUnaryOutbound() },
-		"expected channel to panic for nil UnaryOutbound")
+		"expected clientconfig to panic for nil UnaryOutbound")
 
 	assert.Panics(t, func() { c.GetOnewayOutbound() },
-		"expected channel to panic for nil OnewayOutbound")
+		"expected clientconfig to panic for nil OnewayOutbound")
 }
