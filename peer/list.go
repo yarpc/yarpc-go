@@ -26,10 +26,10 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/peer List,ChangeListener
+//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/peer Chooser,ChangeListener
 
-// List is a collection of Peers.  Outbounds request peers from the peer.List to determine where to send requests
-type List interface {
+// Chooser is a collection of Peers.  Outbounds request peers from the peer.Chooser to determine where to send requests
+type Chooser interface {
 	// Notify the PeerList that it will start receiving requests
 	Start() error
 

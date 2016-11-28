@@ -86,7 +86,7 @@ func parseURL(urlStr string) (*url.URL, string) {
 // for getting potential downstream hosts.
 // PeerList.ChoosePeer MUST return *hostport.Peer objects.
 // PeerList.Start MUST be called before Outbound.Start
-func NewPeerListOutbound(peerList peer.List, urlTemplate *url.URL) *Outbound {
+func NewPeerListOutbound(peerList peer.Chooser, urlTemplate *url.URL) *Outbound {
 	return &Outbound{
 		started:     atomic.NewBool(false),
 		peerList:    peerList,
@@ -98,7 +98,7 @@ func NewPeerListOutbound(peerList peer.List, urlTemplate *url.URL) *Outbound {
 type Outbound struct {
 	started     *atomic.Bool
 	deps        transport.Deps
-	peerList    peer.List
+	peerList    peer.Chooser
 	urlTemplate *url.URL
 }
 
