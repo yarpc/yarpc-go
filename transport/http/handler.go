@@ -45,7 +45,7 @@ func popHeader(h http.Header, n string) string {
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
 	Registry transport.Registry
-	Deps     transport.Deps
+	tracer   opentracing.Tracer
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -166,7 +166,7 @@ func updateSpanWithErr(span opentracing.Span, err error) error {
 func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
-	tracer := h.Deps.Tracer()
+	tracer := h.tracer
 	carrier := opentracing.HTTPHeadersCarrier(req.Header)
 	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
 	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent

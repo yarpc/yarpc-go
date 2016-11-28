@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -77,7 +78,7 @@ func TestHandlerSucces(t *testing.T) {
 		gomock.Any(),
 	).Return(nil)
 
-	httpHandler := handler{Registry: registry}
+	httpHandler := handler{Registry: registry, tracer: &opentracing.NoopTracer{}}
 	req := &http.Request{
 		Method: "POST",
 		Header: headers,
@@ -130,7 +131,7 @@ func TestHandlerHeaders(t *testing.T) {
 			WithProcedure("hello"),
 		).Return(spec, nil)
 
-		httpHandler := handler{Registry: registry}
+		httpHandler := handler{Registry: registry, tracer: &opentracing.NoopTracer{}}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
@@ -257,7 +258,7 @@ func TestHandlerFailures(t *testing.T) {
 			).Return(spec, nil)
 		}
 
-		h := handler{Registry: reg}
+		h := handler{Registry: reg, tracer: &opentracing.NoopTracer{}}
 
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
@@ -308,7 +309,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 		WithProcedure("hello"),
 	).Return(spec, nil)
 
-	httpHandler := handler{Registry: registry}
+	httpHandler := handler{Registry: registry, tracer: &opentracing.NoopTracer{}}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
 

@@ -117,7 +117,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":18080"),
+			http.NewInbound(":18080", http.WithTracer(tracer)),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
