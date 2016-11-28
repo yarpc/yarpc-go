@@ -29,7 +29,7 @@ import (
 
 var (
 	_clientBuilders = make(map[reflect.Type]reflect.Value)
-	_typeOfChannel  = reflect.TypeOf((*transport.Channel)(nil)).Elem()
+	_typeOfChannel  = reflect.TypeOf((*transport.ClientConfig)(nil)).Elem()
 )
 
 func getBuilderType(f interface{}) reflect.Type {
@@ -103,7 +103,7 @@ func RegisterClientBuilder(f interface{}) (forget func()) {
 // Builder functions for different client types may be registered using the
 // RegisterClientBuilder function. This function panics if an empty client
 // field without a registered constructor is encountered.
-func InjectClients(src transport.ChannelProvider, dest interface{}) {
+func InjectClients(src transport.ClientConfigProvider, dest interface{}) {
 	destV := reflect.ValueOf(dest)
 	destT := reflect.TypeOf(dest)
 	if destT.Kind() != reflect.Ptr || destT.Elem().Kind() != reflect.Struct {
@@ -139,7 +139,7 @@ func InjectClients(src transport.ChannelProvider, dest interface{}) {
 			panic(fmt.Sprintf("a constructor for %v has not been registered", fieldT))
 		}
 
-		channelV := reflect.ValueOf(src.Channel(service))
+		channelV := reflect.ValueOf(src.ClientConfig(service))
 		client := constructor.Call([]reflect.Value{channelV})[0]
 		fieldV.Set(client)
 	}

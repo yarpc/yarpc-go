@@ -44,7 +44,7 @@ type Client interface {
 }
 
 // New builds a new JSON client.
-func New(c transport.Channel) Client {
+func New(c transport.ClientConfig) Client {
 	return jsonClient{ch: c}
 }
 
@@ -53,7 +53,7 @@ func init() {
 }
 
 type jsonClient struct {
-	ch transport.Channel
+	ch transport.ClientConfig
 }
 
 func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {

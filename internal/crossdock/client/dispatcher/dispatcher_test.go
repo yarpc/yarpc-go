@@ -63,7 +63,7 @@ func TestCreate(t *testing.T) {
 			dispatcher := Create(ct)
 
 			// should get here only if the request succeeded
-			ch := dispatcher.Channel("yarpc-test")
+			ch := dispatcher.ClientConfig("yarpc-test")
 			assert.Equal(t, "client", ch.Caller())
 			assert.Equal(t, "yarpc-test", ch.Service())
 		})

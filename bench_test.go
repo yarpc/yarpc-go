@@ -139,7 +139,7 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 		server.Register(raw.Procedure("echo", yarpcEcho))
 		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
 			b.ResetTimer()
-			runYARPCClient(b, raw.New(client.Channel("server")))
+			runYARPCClient(b, raw.New(client.ClientConfig("server")))
 		})
 	})
 }
@@ -157,7 +157,7 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 	withHTTPServer(b, ":8998", httpEcho(b), func() {
 		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
 			b.ResetTimer()
-			runYARPCClient(b, raw.New(client.Channel("server")))
+			runYARPCClient(b, raw.New(client.ClientConfig("server")))
 		})
 	})
 }
@@ -211,7 +211,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 		}
 		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
 			b.ResetTimer()
-			runYARPCClient(b, raw.New(client.Channel("server")))
+			runYARPCClient(b, raw.New(client.ClientConfig("server")))
 		})
 	})
 }
@@ -238,7 +238,7 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 
 	withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
 		b.ResetTimer()
-		runYARPCClient(b, raw.New(client.Channel("server")))
+		runYARPCClient(b, raw.New(client.ClientConfig("server")))
 	})
 }
 

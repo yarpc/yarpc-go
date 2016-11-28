@@ -42,7 +42,7 @@ func Raw(t crossdock.T) {
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
-	client := raw.New(dispatcher.Channel("yarpc-test"))
+	client := raw.New(dispatcher.ClientConfig("yarpc-test"))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 

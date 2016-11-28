@@ -55,7 +55,7 @@ type jsonEcho struct {
 }
 
 func jsonCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
-	client := json.New(dispatcher.Channel(serverName))
+	client := json.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

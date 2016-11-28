@@ -25,7 +25,7 @@ func TestRegisterClientBuilderPanics(t *testing.T) {
 		{name: "wrong kind", give: 42},
 		{
 			name: "already registered",
-			give: func(transport.Channel) json.Client { return nil },
+			give: func(transport.ClientConfig) json.Client { return nil },
 		},
 		{
 			name: "wrong argument type",
@@ -33,15 +33,15 @@ func TestRegisterClientBuilderPanics(t *testing.T) {
 		},
 		{
 			name: "wrong return type",
-			give: func(transport.Channel) string { return "" },
+			give: func(transport.ClientConfig) string { return "" },
 		},
 		{
 			name: "wrong number of arguments",
-			give: func(transport.Channel, ...string) json.Client { return nil },
+			give: func(transport.ClientConfig, ...string) json.Client { return nil },
 		},
 		{
 			name: "wrong number of returns",
-			give: func(transport.Channel) (json.Client, error) { return nil, nil },
+			give: func(transport.ClientConfig) (json.Client, error) { return nil, nil },
 		},
 	}
 
@@ -99,7 +99,7 @@ func TestInjectClientSuccess(t *testing.T) {
 
 	type knownClient interface{}
 	clear := yarpc.RegisterClientBuilder(
-		func(transport.Channel) knownClient { return knownClient(struct{}{}) })
+		func(transport.ClientConfig) knownClient { return knownClient(struct{}{}) })
 	defer clear()
 
 	mockCtrl := gomock.NewController(t)

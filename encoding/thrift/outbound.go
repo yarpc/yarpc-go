@@ -54,7 +54,7 @@ type Config struct {
 	Service string
 
 	// Channel through which requests will be sent. Required.
-	Channel transport.Channel
+	Channel transport.ClientConfig
 }
 
 // New creates a new Thrift client.
@@ -100,7 +100,7 @@ func New(c Config, opts ...ClientOption) Client {
 }
 
 type thriftClient struct {
-	ch transport.Channel
+	ch transport.ClientConfig
 	p  protocol.Protocol
 
 	// name of the Thrift service

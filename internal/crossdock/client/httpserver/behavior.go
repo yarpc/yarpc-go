@@ -66,7 +66,7 @@ func runRaw(t crossdock.T, disp yarpc.Dispatcher) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	ch := raw.New(disp.Channel("yarpc-test"))
+	ch := raw.New(disp.ClientConfig("yarpc-test"))
 	_, _, err := ch.Call(ctx, yarpc.NewReqMeta().Procedure("handlertimeout/raw"), nil)
 	fatals.Error(err, "expected an error")
 

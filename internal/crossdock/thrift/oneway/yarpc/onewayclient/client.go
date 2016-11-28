@@ -26,9 +26,9 @@ package onewayclient
 import (
 	"context"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/encoding/thrift"
 )
 
 // Interface is a client for the Oneway service.
@@ -43,7 +43,7 @@ type Interface interface {
 // New builds a new client for the Oneway service.
 //
 // 	client := onewayclient.New(dispatcher.Channel("oneway"))
-func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
+func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
 		Service: "Oneway",
 		Channel: c,
@@ -51,7 +51,7 @@ func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
 }
 
 func init() {
-	yarpc.RegisterClientBuilder(func(c transport.Channel) Interface {
+	yarpc.RegisterClientBuilder(func(c transport.ClientConfig) Interface {
 		return New(c)
 	})
 }

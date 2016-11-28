@@ -468,7 +468,7 @@ func BuildDesc(tt TT) string {
 }
 
 func buildClient(t crossdock.T, desc string, service string, c Config) reflect.Value {
-	channel := c.Dispatcher.Channel(c.ServerName)
+	channel := c.Dispatcher.ClientConfig(c.ServerName)
 	opts := c.ClientOptions
 	if c.Envelope {
 		opts = append(opts, thrift.Enveloped)

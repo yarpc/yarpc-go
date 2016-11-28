@@ -89,7 +89,7 @@ func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
 
 func rawCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, procedure string,
 	token []byte) ([]byte, yarpc.CallResMeta, error) {
-	client := raw.New(dispatcher.Channel(serverName))
+	client := raw.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

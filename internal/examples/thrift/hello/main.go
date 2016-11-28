@@ -51,7 +51,7 @@ func main() {
 	})
 
 	dispatcher.Register(helloserver.New(&helloHandler{}))
-	client := helloclient.New(dispatcher.Channel("hello"))
+	client := helloclient.New(dispatcher.ClientConfig("hello"))
 
 	if err := dispatcher.Start(); err != nil {
 		log.Fatal(err)

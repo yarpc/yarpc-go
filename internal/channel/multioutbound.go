@@ -33,7 +33,7 @@ type multiOutbound struct {
 }
 
 // MultiOutbound constructs a Channel backed by multiple outbound types
-func MultiOutbound(caller, service string, Outbounds transport.Outbounds) transport.Channel {
+func MultiOutbound(caller, service string, Outbounds transport.Outbounds) transport.ClientConfig {
 	return multiOutbound{caller: caller, service: service, Outbounds: Outbounds}
 }
 

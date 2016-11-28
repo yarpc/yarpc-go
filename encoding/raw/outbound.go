@@ -39,7 +39,7 @@ type Client interface {
 }
 
 // New builds a new Raw client.
-func New(c transport.Channel) Client {
+func New(c transport.ClientConfig) Client {
 	return rawClient{ch: c}
 }
 
@@ -48,7 +48,7 @@ func init() {
 }
 
 type rawClient struct {
-	ch transport.Channel
+	ch transport.ClientConfig
 }
 
 func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {

@@ -110,9 +110,9 @@ func (_m *MockChannelProvider) EXPECT() *_MockChannelProviderRecorder {
 	return _m.recorder
 }
 
-func (_m *MockChannelProvider) Channel(_param0 string) transport.Channel {
+func (_m *MockChannelProvider) ClientConfig(_param0 string) transport.ClientConfig {
 	ret := _m.ctrl.Call(_m, "Channel", _param0)
-	ret0, _ := ret[0].(transport.Channel)
+	ret0, _ := ret[0].(transport.ClientConfig)
 	return ret0
 }
 
