@@ -28,7 +28,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/internal/channel"
+	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/transport"
 	ht "go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"

@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"sync"
 
-	"go.uber.org/yarpc/internal/channel"
+	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"

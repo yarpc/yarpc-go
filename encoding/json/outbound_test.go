@@ -29,7 +29,7 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/channel"
+	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
