@@ -43,16 +43,16 @@ type PeerAction interface {
 	Apply(*testing.T, *Peer, *Dependencies)
 }
 
-// StartStopReqAction will run a StartRequest and (optionally) a stop request
+// StartStopReqAction will run a StartRequest and (optionally) EndRequest
 type StartStopReqAction struct {
 	Stop bool
 }
 
-// Apply will run StartRequest and (optionally) the end closure
+// Apply will run StartRequest and (optionally) EndRequest
 func (sa StartStopReqAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
-	end := p.StartRequest()
+	p.StartRequest(nil)
 	if sa.Stop {
-		end()
+		p.EndRequest(nil)
 	}
 }
 

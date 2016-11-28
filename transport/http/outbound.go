@@ -130,8 +130,8 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	if err != nil {
 		return nil, err
 	}
-	endRequest := p.StartRequest()
-	defer endRequest()
+	p.StartRequest(nil)
+	defer p.EndRequest(nil)
 
 	req, err := o.createRequest(p, treq)
 	if err != nil {
@@ -202,8 +202,8 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	if err != nil {
 		return nil, err
 	}
-	endRequest := p.StartRequest()
-	defer endRequest()
+	p.StartRequest(nil)
+	defer p.EndRequest(nil)
 
 	req, err := o.createRequest(p, treq)
 	if err != nil {
