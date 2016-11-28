@@ -468,17 +468,17 @@ func BuildDesc(tt TT) string {
 }
 
 func buildClient(t crossdock.T, desc string, service string, c Config) reflect.Value {
-	channel := c.Dispatcher.ClientConfig(c.ServerName)
+	clientConfig := c.Dispatcher.ClientConfig(c.ServerName)
 	opts := c.ClientOptions
 	if c.Envelope {
 		opts = append(opts, thrift.Enveloped)
 	}
 	switch service {
 	case "", "ThriftTest":
-		client := thrifttestclient.New(channel, opts...)
+		client := thrifttestclient.New(clientConfig, opts...)
 		return reflect.ValueOf(client)
 	case "SecondService":
-		client := secondserviceclient.New(channel, opts...)
+		client := secondserviceclient.New(clientConfig, opts...)
 		return reflect.ValueOf(client)
 	default:
 		crossdock.Fatals(t).Fail("", "%v: unknown thrift service", desc)

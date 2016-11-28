@@ -55,7 +55,7 @@ type Option interface {
 //
 // It may be specified on the client side when the client is constructed.
 //
-// 	client := myserviceclient.New(channel, thrift.Enveloped)
+// 	client := myserviceclient.New(clientConfig, thrift.Enveloped)
 //
 // It may be specified on the server side when the handler is registered.
 //
@@ -82,7 +82,7 @@ func (e envelopedOption) applyRegisterOption(c *registerConfig) {
 //
 // Specify this option when constructing the Thrift client.
 //
-// 	client := myserviceclient.New(channel, thrift.Multiplexed)
+// 	client := myserviceclient.New(clientConfig, thrift.Multiplexed)
 var Multiplexed ClientOption = multiplexedOption{}
 
 type multiplexedOption struct{}
@@ -105,7 +105,7 @@ func (p protocolOption) applyRegisterOption(c *registerConfig) {
 // clients should use. It may be specified on the client side when the client
 // is constructed,
 //
-// 	client := myserviceclient.New(channel, thrift.Protocol(protocol.Binary))
+// 	client := myserviceclient.New(clientConfig, thrift.Protocol(protocol.Binary))
 //
 // It may be specified on the server side when the handler is registered.
 //

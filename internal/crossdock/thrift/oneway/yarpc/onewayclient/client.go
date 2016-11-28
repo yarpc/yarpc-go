@@ -42,11 +42,11 @@ type Interface interface {
 
 // New builds a new client for the Oneway service.
 //
-// 	client := onewayclient.New(dispatcher.Channel("oneway"))
+// 	client := onewayclient.New(dispatcher.ClientConfig("oneway"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service: "Oneway",
-		Channel: c,
+		Service:      "Oneway",
+		ClientConfig: c,
 	}, opts...)}
 }
 

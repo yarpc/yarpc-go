@@ -41,9 +41,9 @@
 // 	     |- myserviceclient
 // 	     |- myserviceserver
 //
-// The client package allows sending requests through a YARPC channel.
+// The client package allows sending requests through a YARPC dispatcher.
 //
-// 	client := myserviceclient.New(dispatcher.Channel("myservice"))
+// 	client := myserviceclient.New(dispatcher.ClientConfig("myservice"))
 //
 // The server package facilitates registration of service implementations with
 // a YARPC dispatcher.

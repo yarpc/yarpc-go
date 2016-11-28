@@ -109,7 +109,7 @@ func TestInjectClientSuccess(t *testing.T) {
 		name   string
 		target interface{}
 
-		// list of services for which Channel() should return successfully
+		// list of services for which ClientConfig() should return successfully
 		knownServices []string
 
 		// list of field names in target we expect to be nil or non-nil
@@ -192,8 +192,8 @@ func TestInjectClientSuccess(t *testing.T) {
 	}
 }
 
-// newMockClientConfigProvider builds a MockChannelProvider which expects Channel()
-// calls for the given services and returns mock channels for them.
+// newMockClientConfigProvider builds a MockClientConfigProvider which expects ClientConfig()
+// calls for the given services and returns mock ClientConfigs for them.
 func newMockClientConfigProvider(ctrl *gomock.Controller, services ...string) *transporttest.MockClientConfigProvider {
 	cp := transporttest.NewMockClientConfigProvider(ctrl)
 	for _, s := range services {

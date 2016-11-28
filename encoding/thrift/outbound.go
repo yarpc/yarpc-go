@@ -53,8 +53,8 @@ type Config struct {
 	// with the 'service' keyword.
 	Service string
 
-	// Channel through which requests will be sent. Required.
-	Channel transport.ClientConfig
+	// ClientConfig through which requests will be sent. Required.
+	ClientConfig transport.ClientConfig
 }
 
 // New creates a new Thrift client.
@@ -62,10 +62,10 @@ func New(c Config, opts ...ClientOption) Client {
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
 	//
-	// 	func New(ch transport.Channel, opts ...ClientOption) *MyServiceClient {
+	// 	func New(ch transport.ClientConfig, opts ...ClientOption) *MyServiceClient {
 	// 		c := thrift.New(thrift.Config{
 	// 			Service: "MyService",
-	// 			Channel: ch,
+	// 			ClientConfig: ch,
 	// 			Protocol: protocol.Binary,
 	// 		}, opts...)
 	// 		return &MyServiceClient{client: c}
@@ -93,7 +93,7 @@ func New(c Config, opts ...ClientOption) Client {
 
 	return thriftClient{
 		p:             p,
-		ch:            c.Channel,
+		ch:            c.ClientConfig,
 		thriftService: c.Service,
 		Enveloping:    cc.Enveloping,
 	}

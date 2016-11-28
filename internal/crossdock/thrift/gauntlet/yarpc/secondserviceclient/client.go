@@ -48,11 +48,11 @@ type Interface interface {
 
 // New builds a new client for the SecondService service.
 //
-// 	client := secondserviceclient.New(dispatcher.Channel("secondservice"))
+// 	client := secondserviceclient.New(dispatcher.ClientConfig("secondservice"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service: "SecondService",
-		Channel: c,
+		Service:      "SecondService",
+		ClientConfig: c,
 	}, opts...)}
 }
 
