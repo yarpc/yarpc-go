@@ -162,7 +162,7 @@ func (d dispatcher) Inbounds() Inbounds {
 
 func (d dispatcher) ClientConfig(service string) transport.ClientConfig {
 	if rs, ok := d.outbounds[service]; ok {
-		return channel.MultiOutbound(d.Name, service, rs)
+		return clientconfig.MultiOutbound(d.Name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }

@@ -125,7 +125,7 @@ func TestInjectClientSuccess(t *testing.T) {
 			target: &struct {
 				Client json.Client `service:"foo"`
 			}{
-				Client: json.New(channel.MultiOutbound(
+				Client: json.New(clientconfig.MultiOutbound(
 					"foo",
 					"bar",
 					transport.Outbounds{

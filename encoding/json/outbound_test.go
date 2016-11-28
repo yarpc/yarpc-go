@@ -100,7 +100,7 @@ func TestCall(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
-		client := New(channel.MultiOutbound(caller, service,
+		client := New(clientconfig.MultiOutbound(caller, service,
 			transport.Outbounds{
 				Unary: outbound,
 			}))
@@ -200,7 +200,7 @@ func TestCallOneway(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
-		client := New(channel.MultiOutbound(caller, service,
+		client := New(clientconfig.MultiOutbound(caller, service,
 			transport.Outbounds{
 				Oneway: outbound,
 			}))

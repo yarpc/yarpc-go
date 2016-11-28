@@ -20,17 +20,17 @@
 
 package transport
 
-//go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
+//go:generate mockgen -destination=transporttest/clientconfig.go -package=transporttest go.uber.org/yarpc/transport ClientConfig,ClientConfigProvider
 
-// ChannelProvider builds channels from the current service to other services.
+// ClientConfigProvider builds clientconfigs from the current service to other services.
 type ClientConfigProvider interface {
-	// Retrieves a new Channel that will make requests to the given service.
+	// Retrieves a new ClientConfig that will make requests to the given service.
 	//
 	// This MAY panic if the given service is unknown.
 	ClientConfig(service string) ClientConfig
 }
 
-// A Channel is a stream of communication between a single caller-service
+// A ClientConfig is a stream of communication between a single caller-service
 // pair.
 type ClientConfig interface {
 	// Name of the service making the request.
