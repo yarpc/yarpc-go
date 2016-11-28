@@ -81,9 +81,9 @@ func TestInjectClientsPanics(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cp := newMockChannelProvier(mockCtrl)
+		cp := newMockClientConfigProvider(mockCtrl)
 		for _, s := range tt.failOnServices {
-			cp.EXPECT().Channel(s).Do(func(s string) {
+			cp.EXPECT().ClientConfig(s).Do(func(s string) {
 				panic(fmt.Sprintf("unknown service %q", s))
 			})
 		}
@@ -175,7 +175,7 @@ func TestInjectClientSuccess(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cp := newMockChannelProvier(mockCtrl, tt.knownServices...)
+		cp := newMockClientConfigProvider(mockCtrl, tt.knownServices...)
 		assert.NotPanics(t, func() {
 			yarpc.InjectClients(cp, tt.target)
 		}, tt.name)
@@ -192,12 +192,12 @@ func TestInjectClientSuccess(t *testing.T) {
 	}
 }
 
-// newMockChannelProvier builds a MockChannelProvider which expects Channel()
+// newMockClientConfigProvider builds a MockChannelProvider which expects Channel()
 // calls for the given services and returns mock channels for them.
-func newMockChannelProvier(ctrl *gomock.Controller, services ...string) *transporttest.MockChannelProvider {
-	cp := transporttest.NewMockChannelProvider(ctrl)
+func newMockClientConfigProvider(ctrl *gomock.Controller, services ...string) *transporttest.MockClientConfigProvider {
+	cp := transporttest.NewMockClientConfigProvider(ctrl)
 	for _, s := range services {
-		cp.EXPECT().Channel(s).Return(transporttest.NewMockChannel(ctrl))
+		cp.EXPECT().ClientConfig(s).Return(transporttest.NewMockClientConfig(ctrl))
 	}
 	return cp
 }
