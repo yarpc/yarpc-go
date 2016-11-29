@@ -35,10 +35,10 @@ import (
 
 func TestInboundStartNew(t *testing.T) {
 	tests := []struct {
-		withInbound func(*tchannel.Channel, func(Inbound))
+		withInbound func(*tchannel.Channel, func(*Inbound))
 	}{
 		{
-			func(ch *tchannel.Channel, f func(Inbound)) {
+			func(ch *tchannel.Channel, f func(*Inbound)) {
 				i := NewInbound(ch)
 				service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 				// Can't do Equal because we want to match the pointer, not a
@@ -51,7 +51,7 @@ func TestInboundStartNew(t *testing.T) {
 			},
 		},
 		{
-			func(ch *tchannel.Channel, f func(Inbound)) {
+			func(ch *tchannel.Channel, f func(*Inbound)) {
 				i := NewInbound(ch, ListenAddr(":0"))
 				service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 				assert.True(t, ch == i.Channel(), "channel does not match")
@@ -66,7 +66,7 @@ func TestInboundStartNew(t *testing.T) {
 	for _, tt := range tests {
 		ch, err := tchannel.NewChannel("foo", nil)
 		require.NoError(t, err)
-		tt.withInbound(ch, func(i Inbound) {
+		tt.withInbound(ch, func(i *Inbound) {
 			assert.Equal(t, tchannel.ChannelListening, ch.State())
 			assert.NoError(t, i.Stop())
 			assert.Equal(t, tchannel.ChannelClosed, ch.State())

@@ -29,16 +29,8 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// Inbound is a TChannel Inbound.
-type Inbound interface {
-	transport.Inbound
-
-	// Returns the underlying Channel for this Inbound.
-	Channel() Channel
-}
-
 // InboundOption configures Inbound.
-type InboundOption func(*inbound)
+type InboundOption func(*Inbound)
 
 // ListenAddr changes the address on which the TChannel server will listen for
 // connections. By default, the server listens on an OS-assigned port.
@@ -46,12 +38,12 @@ type InboundOption func(*inbound)
 // This option has no effect if the Chanel provided to NewInbound is already
 // listening for connections when Start() is called.
 func ListenAddr(addr string) InboundOption {
-	return func(i *inbound) { i.addr = addr }
+	return func(i *Inbound) { i.addr = addr }
 }
 
 // WithTracer adds a tracer to a TChannel inbound.
 func WithTracer(tracer opentracing.Tracer) InboundOption {
-	return func(i *inbound) {
+	return func(i *Inbound) {
 		i.tracer = tracer
 	}
 }
@@ -59,8 +51,8 @@ func WithTracer(tracer opentracing.Tracer) InboundOption {
 // NewInbound builds a new TChannel inbound from the given Channel. Existing
 // methods registered on the channel remain registered and are preferred when
 // a call is received.
-func NewInbound(ch Channel, opts ...InboundOption) Inbound {
-	i := &inbound{ch: ch}
+func NewInbound(ch Channel, opts ...InboundOption) *Inbound {
+	i := &Inbound{ch: ch}
 	i.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
 		opt(i)
@@ -68,18 +60,22 @@ func NewInbound(ch Channel, opts ...InboundOption) Inbound {
 	return i
 }
 
-type inbound struct {
+// Inbound is a TChannel Inbound.
+type Inbound struct {
 	ch       Channel
 	addr     string
 	listener net.Listener
 	tracer   opentracing.Tracer
 }
 
-func (i *inbound) Channel() Channel {
+// Channel returns the underlying Channel for this Inbound.
+func (i *Inbound) Channel() Channel {
 	return i.ch
 }
 
-func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
+// Start starts the TChannel inbound transport. This immediately opens a listen
+// socket.
+func (i *Inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
 	sc.SetHandler(handler{existing: existing, Registry: service.Registry, tracer: i.tracer})
@@ -114,7 +110,11 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	return nil
 }
 
-func (i *inbound) Stop() error {
+// Stop stops the TChannel inbound transport. This immediately stops listening
+// for incoming connections. Existing connections begin to drain.
+// New inbound requests are rejected. When there are no further pending
+// requests, TChannel closes the connection.
+func (i *Inbound) Stop() error {
 	i.ch.Close()
 	return nil
 }
