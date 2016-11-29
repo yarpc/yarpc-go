@@ -42,8 +42,8 @@ func New(pid peer.Identifier, agent peer.Agent) *Single {
 	return s
 }
 
-// ChoosePeer returns the single peer
-func (s *Single) ChoosePeer(context.Context, *transport.Request) (peer.Peer, error) {
+// Choose returns the single peer
+func (s *Single) Choose(context.Context, *transport.Request) (peer.Peer, error) {
 	return s.p, s.err
 }
 

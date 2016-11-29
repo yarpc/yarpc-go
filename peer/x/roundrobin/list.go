@@ -208,8 +208,8 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 	delete(pl.unavailablePeers, p.Identifier())
 }
 
-// ChoosePeer selects the next available peer in the round robin
-func (pl *List) ChoosePeer(ctx context.Context, req *transport.Request) (peer.Peer, error) {
+// Choose selects the next available peer in the round robin
+func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, error) {
 	if !pl.started.Load() {
 		return nil, peer.ErrPeerListNotStarted("RoundRobinList")
 	}
