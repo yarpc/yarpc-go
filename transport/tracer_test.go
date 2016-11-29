@@ -121,7 +121,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: http.NewOutbound("http://127.0.0.1:18080"),
+				Unary: http.NewOutbound("http://127.0.0.1:18080").WithTracer(tracer),
 			},
 		},
 		Tracer: tracer,

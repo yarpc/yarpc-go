@@ -87,22 +87,27 @@ func NewChooserOutbound(chooser peer.Chooser, urlTemplate *url.URL) *Outbound {
 		started:     atomic.NewBool(false),
 		chooser:     chooser,
 		urlTemplate: urlTemplate,
+		tracer:      opentracing.GlobalTracer(),
 	}
 }
 
 // Outbound is an HTTP UnaryOutbound and OnewayOutbound
 type Outbound struct {
 	started     *atomic.Bool
-	deps        transport.Deps
 	chooser     peer.Chooser
 	urlTemplate *url.URL
+	tracer      opentracing.Tracer
+}
+
+// WithTracer configures a tracer for the outbound
+func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
+	o.tracer = tracer
+	return o
 }
 
 // Start the HTTP outbound
 func (o *Outbound) Start(d transport.Deps) error {
-	if !o.started.Swap(true) {
-		o.deps = d
-	}
+	o.started.Swap(true)
 	return nil
 }
 
@@ -266,7 +271,7 @@ func (o *Outbound) createRequest(p *hostport.Peer, treq *transport.Request) (*ht
 
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
-	tracer := o.deps.Tracer()
+	tracer := o.tracer
 	var parent opentracing.SpanContext // ok to be nil
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 		parent = parentSpan.Context()
