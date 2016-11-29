@@ -29,19 +29,14 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// InboundOption configures Inbound.
-type InboundOption func(*Inbound)
-
 // NewInbound builds a new TChannel inbound from the given Channel. Existing
 // methods registered on the channel remain registered and are preferred when
 // a call is received.
-func NewInbound(ch Channel, opts ...InboundOption) *Inbound {
-	i := &Inbound{ch: ch}
-	i.tracer = opentracing.GlobalTracer()
-	for _, opt := range opts {
-		opt(i)
+func NewInbound(ch Channel) *Inbound {
+	return &Inbound{
+		ch:     ch,
+		tracer: opentracing.GlobalTracer(),
 	}
-	return i
 }
 
 // Inbound is a TChannel Inbound.
