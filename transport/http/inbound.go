@@ -44,6 +44,13 @@ type Inbound interface {
 // InboundOption is an option for an HTTP inbound.
 type InboundOption func(*inbound)
 
+// WithTracer is a NewInbound option that adds a tracer
+func WithTracer(tracer opentracing.Tracer) InboundOption {
+	return func(i *inbound) {
+		i.tracer = tracer
+	}
+}
+
 // Mux specifies the ServeMux that the HTTP server should use and the pattern
 // under which the YARPC endpoint should be registered.
 func Mux(pattern string, mux *http.ServeMux) InboundOption {
@@ -56,6 +63,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 // NewInbound builds a new HTTP inbound that listens on the given address.
 func NewInbound(addr string, opts ...InboundOption) Inbound {
 	i := &inbound{addr: addr}
+	i.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
 		opt(i)
 	}
@@ -71,11 +79,10 @@ type inbound struct {
 }
 
 func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
-	i.tracer = d.Tracer()
 
 	var httpHandler http.Handler = handler{
 		Registry: service.Registry,
-		Deps:     d,
+		tracer:   i.tracer,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)

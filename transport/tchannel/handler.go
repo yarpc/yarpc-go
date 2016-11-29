@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/internal"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	ncontext "golang.org/x/net/context"
 )
@@ -78,7 +79,7 @@ func (c tchannelCall) Response() inboundCallResponse {
 type handler struct {
 	existing map[string]tchannel.Handler
 	Registry transport.Registry
-	deps     transport.Deps
+	tracer   opentracing.Tracer
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -133,7 +134,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	treq.Headers = headers
 
 	if tcall, ok := call.(tchannelCall); ok {
-		tracer := h.deps.Tracer()
+		tracer := h.tracer
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
 	}
 

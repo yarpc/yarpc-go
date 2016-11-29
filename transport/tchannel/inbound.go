@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc/transport"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 )
 
@@ -48,11 +49,19 @@ func ListenAddr(addr string) InboundOption {
 	return func(i *inbound) { i.addr = addr }
 }
 
+// WithTracer adds a tracer to a TChannel inbound.
+func WithTracer(tracer opentracing.Tracer) InboundOption {
+	return func(i *inbound) {
+		i.tracer = tracer
+	}
+}
+
 // NewInbound builds a new TChannel inbound from the given Channel. Existing
 // methods registered on the channel remain registered and are preferred when
 // a call is received.
 func NewInbound(ch Channel, opts ...InboundOption) Inbound {
 	i := &inbound{ch: ch}
+	i.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
 		opt(i)
 	}
@@ -63,7 +72,7 @@ type inbound struct {
 	ch       Channel
 	addr     string
 	listener net.Listener
-	deps     transport.Deps
+	tracer   opentracing.Tracer
 }
 
 func (i *inbound) Channel() Channel {
@@ -73,9 +82,7 @@ func (i *inbound) Channel() Channel {
 func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing: existing, Registry: service.Registry, deps: d})
-
-	i.deps = d
+	sc.SetHandler(handler{existing: existing, Registry: service.Registry, tracer: i.tracer})
 
 	if i.ch.State() == tchannel.ChannelListening {
 		// Channel.Start() was called before RPC.Start(). We still want to
