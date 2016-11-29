@@ -1,4 +1,4 @@
-package list
+package roundrobin
 
 import (
 	"context"
@@ -633,7 +633,7 @@ func TestRoundRobinList(t *testing.T) {
 			ExpectPeerRetainsWithError(agent, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(agent, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl, err := NewRoundRobin(pids, agent)
+			pl, err := New(pids, agent)
 			assert.Equal(t, tt.expectedCreateErr, err)
 
 			deps := ListActionDeps{
