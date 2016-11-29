@@ -48,10 +48,6 @@ var (
 	_ transport.OnewayOutbound = (*Outbound)(nil)
 )
 
-type outboundConfig struct {
-	keepAlive time.Duration
-}
-
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
 //
