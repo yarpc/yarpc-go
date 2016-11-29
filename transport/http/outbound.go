@@ -62,15 +62,15 @@ func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 	urlTemplate, hp := parseURL(urlStr)
 
 	peerID := hostport.PeerIdentifier(hp)
-	peerList := list.NewSingle(peerID, agent)
+	chooser := list.NewSingle(peerID, agent)
 
-	err := peerList.Start()
+	err := chooser.Start()
 	if err != nil {
 		// This should never happen, single shouldn't return an error here
 		panic(fmt.Sprintf("could not start single peerlist, err: %s", err))
 	}
 
-	return NewPeerListOutbound(peerList, urlTemplate)
+	return NewChooserOutbound(chooser, urlTemplate)
 }
 
 func parseURL(urlStr string) (*url.URL, string) {
@@ -82,14 +82,14 @@ func parseURL(urlStr string) (*url.URL, string) {
 	return parsedURL, parsedURL.Host
 }
 
-// NewPeerListOutbound builds a new HTTP outbound built around a PeerList
+// NewChooserOutbound builds a new HTTP outbound built around a PeerList
 // for getting potential downstream hosts.
-// PeerList.ChoosePeer MUST return *hostport.Peer objects.
-// PeerList.Start MUST be called before Outbound.Start
-func NewPeerListOutbound(peerList peer.Chooser, urlTemplate *url.URL) *Outbound {
+// Chooser.ChoosePeer MUST return *hostport.Peer objects.
+// Chooser.Start MUST be called before Outbound.Start
+func NewChooserOutbound(chooser peer.Chooser, urlTemplate *url.URL) *Outbound {
 	return &Outbound{
 		started:     atomic.NewBool(false),
-		peerList:    peerList,
+		chooser:     chooser,
 		urlTemplate: urlTemplate,
 	}
 }
@@ -98,7 +98,7 @@ func NewPeerListOutbound(peerList peer.Chooser, urlTemplate *url.URL) *Outbound 
 type Outbound struct {
 	started     *atomic.Bool
 	deps        transport.Deps
-	peerList    peer.Chooser
+	chooser     peer.Chooser
 	urlTemplate *url.URL
 }
 
@@ -246,7 +246,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
-	p, err := o.peerList.ChoosePeer(ctx, treq)
+	p, err := o.chooser.ChoosePeer(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
