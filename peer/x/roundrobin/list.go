@@ -40,7 +40,7 @@ func New(peerIDs []peer.Identifier, agent peer.Agent) (*List, error) {
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
 
-	err := rr.addAll(peerIDs)
+	err := rr.Update(peerIDs, nil)
 	return rr, err
 }
 
@@ -55,27 +55,28 @@ type List struct {
 	started            atomic.Bool
 }
 
-func (pl *List) addAll(peerIDs []peer.Identifier) error {
+// Update applies the additions and removals of peer Identifiers to the list
+// it returns a multi-error result of every failure that happened without
+// circuit breaking due to failures
+func (pl *List) Update(additions, removals []peer.Identifier) error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
 	var errs []error
 
-	for _, peerID := range peerIDs {
+	for _, peerID := range additions {
 		if err := pl.addPeerIdentifier(peerID); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	return yerrors.MultiError(errs)
-}
+	for _, peerID := range removals {
+		if err := pl.removePeerIdentifier(peerID); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
-// Add a peer identifier to the round robin
-func (pl *List) Add(pid peer.Identifier) error {
-	pl.lock.Lock()
-	err := pl.addPeerIdentifier(pid)
-	pl.lock.Unlock()
-	return err
+	return yerrors.MultiError(errs)
 }
 
 // Must be run inside a mutex.Lock()
@@ -168,12 +169,11 @@ func (pl *List) releaseAll(peers []peer.Peer) []error {
 	return errs
 }
 
-// Remove a peer identifier from the round robin
-func (pl *List) Remove(pid peer.Identifier) error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-
-	if err := pl.removeByPeerIdentifier(pid); err != nil {
+// removePeerIdentifier will go remove references to the peer identifier and release
+// it from the agent
+// Must be run in a mutex.Lock()
+func (pl *List) removePeerIdentifier(pid peer.Identifier) error {
+	if err := pl.removePeerIdentifierReferences(pid); err != nil {
 		// The peer has already been removed
 		return err
 	}
@@ -181,10 +181,10 @@ func (pl *List) Remove(pid peer.Identifier) error {
 	return pl.agent.ReleasePeer(pid, pl)
 }
 
-// removeByPeerIdentifier will search through the Available and Unavailable Peers
+// removePeerIdentifierReferences will search through the Available and Unavailable Peers
 // for the PeerID and remove it
 // Must be run in a mutex.Lock()
-func (pl *List) removeByPeerIdentifier(pid peer.Identifier) error {
+func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) error {
 	if p := pl.availablePeerRing.GetPeer(pid); p != nil {
 		return pl.availablePeerRing.Remove(p)
 	}
