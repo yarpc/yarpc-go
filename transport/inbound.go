@@ -32,7 +32,7 @@ type Inbound interface {
 	// the inbound is ready to start accepting new requests.
 	//
 	// Implementations can assume that this function is called at most once.
-	Start(service ServiceDetail, deps Deps) error
+	Start(service ServiceDetail) error
 
 	// Stops the inbound. No new requests will be processed.
 	//

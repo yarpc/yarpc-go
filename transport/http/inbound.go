@@ -63,9 +63,9 @@ func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
 	return i
 }
 
-// Start starts the inbound with a given service detail and transport
-// dependencies, opening a listening socket.
-func (i *Inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
+// Start starts the inbound with a given service detail, opening a listening
+// socket.
+func (i *Inbound) Start(service transport.ServiceDetail) error {
 
 	var httpHandler http.Handler = handler{
 		registry: service.Registry,

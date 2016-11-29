@@ -70,7 +70,7 @@ func (i *Inbound) Channel() Channel {
 
 // Start starts the TChannel inbound transport. This immediately opens a listen
 // socket.
-func (i *Inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
+func (i *Inbound) Start(service transport.ServiceDetail) error {
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
 	sc.SetHandler(handler{existing: existing, Registry: service.Registry, tracer: i.tracer})

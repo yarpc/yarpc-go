@@ -181,7 +181,7 @@ func (d dispatcher) Start() error {
 
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			if err := i.Start(service, d.deps); err != nil {
+			if err := i.Start(service); err != nil {
 				return err
 			}
 
