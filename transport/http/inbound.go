@@ -81,7 +81,7 @@ type inbound struct {
 func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 
 	var httpHandler http.Handler = handler{
-		Registry: service.Registry,
+		registry: service.Registry,
 		tracer:   i.tracer,
 	}
 	if i.mux != nil {

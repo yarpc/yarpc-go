@@ -44,7 +44,7 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	Registry transport.Registry
+	registry transport.Registry
 	tracer   opentracing.Tracer
 }
 
@@ -98,7 +98,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		return err
 	}
 
-	spec, err := h.Registry.Choose(ctx, treq)
+	spec, err := h.registry.Choose(ctx, treq)
 	if err != nil {
 		return updateSpanWithErr(span, err)
 	}
