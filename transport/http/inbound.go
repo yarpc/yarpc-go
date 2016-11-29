@@ -30,17 +30,12 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// InboundOption is an option for an HTTP inbound.
-type InboundOption func(*Inbound)
-
 // NewInbound builds a new HTTP inbound that listens on the given address.
-func NewInbound(addr string, opts ...InboundOption) *Inbound {
-	i := &Inbound{addr: addr}
-	i.tracer = opentracing.GlobalTracer()
-	for _, opt := range opts {
-		opt(i)
+func NewInbound(addr string) *Inbound {
+	return &Inbound{
+		addr:   addr,
+		tracer: opentracing.GlobalTracer(),
 	}
-	return i
 }
 
 // Inbound represents an HTTP Inbound. It is the same as the transport Inbound
