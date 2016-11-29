@@ -172,14 +172,9 @@ func (d dispatcher) Start() error {
 		startedOutbounds []transport.Outbound
 	)
 
-	service := transport.ServiceDetail{
-		Name:     d.Name,
-		Registry: d,
-	}
-
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			if err := i.Start(service); err != nil {
+			if err := i.Start(); err != nil {
 				return err
 			}
 
@@ -209,6 +204,7 @@ func (d dispatcher) Start() error {
 
 	var wait intsync.ErrorWaiter
 	for _, i := range d.inbounds {
+		i.SetRegistry(d)
 		wait.Submit(startInbound(i))
 	}
 

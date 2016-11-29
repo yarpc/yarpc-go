@@ -111,7 +111,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
 				}
@@ -137,10 +138,11 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
+					in.EXPECT().SetRegistry(gomock.Any())
 					if i == 6 {
-						in.EXPECT().Start(gomock.Any()).Return(errors.New("great sadness"))
+						in.EXPECT().Start().Return(errors.New("great sadness"))
 					} else {
-						in.EXPECT().Start(gomock.Any()).Return(nil)
+						in.EXPECT().Start().Return(nil)
 						in.EXPECT().Stop().Return(nil)
 					}
 					inbounds[i] = in
@@ -168,7 +170,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					if i == 7 {
 						in.EXPECT().Stop().Return(errors.New("great sadness"))
 					} else {
@@ -199,7 +202,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
 				}
@@ -231,7 +235,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
 				}

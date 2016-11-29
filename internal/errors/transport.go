@@ -135,3 +135,11 @@ type UnsupportedTypeError struct {
 func (e UnsupportedTypeError) Error() string {
 	return fmt.Sprintf(`unsupported RPC type %q for transport %q`, e.Type, e.Transport)
 }
+
+// NoRegistryError indicates that Start was called without first calling
+// SetRegistry for an inbound transport.
+type NoRegistryError struct{}
+
+func (e NoRegistryError) Error() string {
+	return `no registry configured for transport inbound`
+}
