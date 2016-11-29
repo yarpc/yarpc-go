@@ -32,6 +32,7 @@ build:
 
 .PHONY: generate
 generate:
+	go install ./vendor/golang.org/x/tools/cmd/stringer
 	go install ./vendor/go.uber.org/thriftrw
 	go install ./encoding/thrift/thriftrw-plugin-yarpc
 	go generate $(PACKAGES)
