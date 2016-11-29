@@ -26,9 +26,9 @@ package secondserviceserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc"
 )
 
