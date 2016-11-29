@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -48,6 +49,8 @@ var (
 	_ transport.OnewayOutbound = (*Outbound)(nil)
 )
 
+var defaultURLTemplate, _ = url.Parse("http://localhost")
+
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
 //
@@ -55,8 +58,7 @@ var (
 func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 	agent := NewAgent(opts...)
 
-	urlTemplate, hp := parseURL(urlStr)
-
+	_, hp := parseURL(urlStr)
 	peerID := hostport.PeerIdentifier(hp)
 	c := single.New(peerID, agent)
 
@@ -66,7 +68,7 @@ func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 		panic(fmt.Sprintf("could not start single peerChooser, err: %s", err))
 	}
 
-	return NewChooserOutbound(c, urlTemplate)
+	return NewChooserOutbound(c).WithURLTemplate(urlStr)
 }
 
 func parseURL(urlStr string) (*url.URL, string) {
@@ -82,11 +84,11 @@ func parseURL(urlStr string) (*url.URL, string) {
 // for getting potential downstream hosts.
 // Chooser.ChoosePeer MUST return *hostport.Peer objects.
 // Chooser.Start MUST be called before Outbound.Start
-func NewChooserOutbound(chooser peer.Chooser, urlTemplate *url.URL) *Outbound {
+func NewChooserOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
 		started:     atomic.NewBool(false),
 		chooser:     chooser,
-		urlTemplate: urlTemplate,
+		urlTemplate: defaultURLTemplate,
 		tracer:      opentracing.GlobalTracer(),
 	}
 }
@@ -99,6 +101,16 @@ type Outbound struct {
 	tracer      opentracing.Tracer
 }
 
+// WithURLTemplate configures an alternate URL template
+func (o *Outbound) WithURLTemplate(URL string) *Outbound {
+	parsedURL, err := url.Parse(URL)
+	if err != nil {
+		log.Fatalf("failed to configure HTTP outbound: invalid URL template %q: %s", URL, err)
+	}
+	o.urlTemplate = parsedURL
+	return o
+}
+
 // WithTracer configures a tracer for the outbound
 func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 	o.tracer = tracer
@@ -107,7 +119,8 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 
 // Start the HTTP outbound
 func (o *Outbound) Start(d transport.Deps) error {
-	o.started.Swap(true)
+	if o.started.Swap(true) {
+	}
 	return nil
 }
 
