@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package list
+package single
 
 import (
 	"context"
@@ -37,8 +37,8 @@ type single struct {
 	started       bool
 }
 
-// NewSingle creates a static peer.Chooser with a single Peer
-func NewSingle(pid peer.Identifier, agent peer.Agent) peer.Chooser {
+// New creates a static peer.Chooser with a single Peer
+func New(pid peer.Identifier, agent peer.Agent) peer.Chooser {
 	return &single{
 		initialPeerID: pid,
 		agent:         agent,
