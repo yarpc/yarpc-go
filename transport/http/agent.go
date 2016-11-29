@@ -85,7 +85,7 @@ type Agent struct {
 	peers  map[string]*hostport.Peer
 }
 
-// RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.List)
+// RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)
 func (a *Agent) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()

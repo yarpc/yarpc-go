@@ -80,12 +80,12 @@ func (_m *MockPeer) EXPECT() *_MockPeerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockPeer) EndRequest() {
-	_m.ctrl.Call(_m, "EndRequest")
+func (_m *MockPeer) EndRequest(_param0 peer.Subscriber) {
+	_m.ctrl.Call(_m, "EndRequest", _param0)
 }
 
-func (_mr *_MockPeerRecorder) EndRequest() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "EndRequest")
+func (_mr *_MockPeerRecorder) EndRequest(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "EndRequest", arg0)
 }
 
 func (_m *MockPeer) Identifier() string {
@@ -98,12 +98,12 @@ func (_mr *_MockPeerRecorder) Identifier() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Identifier")
 }
 
-func (_m *MockPeer) StartRequest() {
-	_m.ctrl.Call(_m, "StartRequest")
+func (_m *MockPeer) StartRequest(_param0 peer.Subscriber) {
+	_m.ctrl.Call(_m, "StartRequest", _param0)
 }
 
-func (_mr *_MockPeerRecorder) StartRequest() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "StartRequest")
+func (_mr *_MockPeerRecorder) StartRequest(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "StartRequest", arg0)
 }
 
 func (_m *MockPeer) Status() peer.Status {
