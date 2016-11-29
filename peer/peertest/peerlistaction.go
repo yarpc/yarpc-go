@@ -127,10 +127,10 @@ type AddAction struct {
 	ExpectedErr error
 }
 
-// Apply runs "Add" on the peerList after casting it to a PeerChangeListener
+// Apply runs "Add" on the peer.Chooser after casting it to a peer.List
 // and validates the error
 func (a AddAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
-	changeListener := pl.(peer.ChangeListener)
+	changeListener := pl.(peer.List)
 
 	err := changeListener.Add(MockPeerIdentifier(a.InputPeerID))
 	assert.Equal(t, a.ExpectedErr, err)
@@ -142,10 +142,10 @@ type RemoveAction struct {
 	ExpectedErr error
 }
 
-// Apply runs "Remove" on the peerList after casting it to a PeerChangeListener
+// Apply runs "Remove" on the peer.Chooser after casting it to a peer.List
 // and validates the error
 func (a RemoveAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
-	changeListener := pl.(peer.ChangeListener)
+	changeListener := pl.(peer.List)
 
 	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
 	assert.Equal(t, a.ExpectedErr, err)
