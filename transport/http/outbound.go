@@ -62,15 +62,15 @@ func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 	urlTemplate, hp := parseURL(urlStr)
 
 	peerID := hostport.PeerIdentifier(hp)
-	peerChooser := list.NewSingle(peerID, agent)
+	chooser := list.NewSingle(peerID, agent)
 
-	err := peerChooser.Start()
+	err := chooser.Start()
 	if err != nil {
 		// This should never happen, single shouldn't return an error here
 		panic(fmt.Sprintf("could not start single peerlist, err: %s", err))
 	}
 
-	return NewChooserOutbound(peerChooser, urlTemplate)
+	return NewChooserOutbound(chooser, urlTemplate)
 }
 
 func parseURL(urlStr string) (*url.URL, string) {
