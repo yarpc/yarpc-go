@@ -205,7 +205,8 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 			Name: "client",
 			Outbounds: yarpc.Outbounds{
 				"server": {
-					Unary: ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+					Unary: ytchannel.NewOutbound(clientCh).
+						WithHostPort(serverCh.PeerInfo().HostPort),
 				},
 			},
 		}
@@ -231,7 +232,8 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: ytchannel.NewOutbound(clientCh, ytchannel.HostPort(serverCh.PeerInfo().HostPort)),
+				Unary: ytchannel.NewOutbound(clientCh).
+					WithHostPort(serverCh.PeerInfo().HostPort),
 			},
 		},
 	}

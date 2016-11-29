@@ -45,7 +45,7 @@ var newOutbounds = []func(*tchannel.Channel, string) transport.UnaryOutbound{
 		return NewOutbound(ch)
 	},
 	func(ch *tchannel.Channel, hostPort string) transport.UnaryOutbound {
-		return NewOutbound(ch, HostPort(hostPort))
+		return NewOutbound(ch).WithHostPort(hostPort)
 	},
 }
 

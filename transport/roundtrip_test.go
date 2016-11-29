@@ -135,7 +135,7 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 		// handler.
 
 		client := testutils.NewClient(tt.t, clientOpts)
-		o := tch.NewOutbound(client, tch.HostPort(hostPort))
+		o := tch.NewOutbound(client).WithHostPort(hostPort)
 		require.NoError(tt.t, o.Start(transport.NoDeps), "failed to start outbound")
 		defer o.Stop()
 

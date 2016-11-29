@@ -85,7 +85,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build TChannel: %v", err)
 		}
-		outbound = tch.NewOutbound(ch, tch.HostPort(hostport))
+		outbound = tch.NewOutbound(ch).WithHostPort(hostport)
 	default:
 		return nil, nil, fmt.Errorf("unconfigured transport")
 	}

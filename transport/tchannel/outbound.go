@@ -35,28 +35,10 @@ import (
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("tchannel.Outbound")
 
-// OutboundOption configures Outbound.
-type OutboundOption func(*Outbound)
-
-// HostPort specifies that the requests made by this outbound should be to
-// the given address.
-//
-// By default, if HostPort was not specified, the Outbound will use the
-// TChannel global peer list.
-func HostPort(hostPort string) OutboundOption {
-	return func(o *Outbound) {
-		o.HostPort = hostPort
-	}
-}
-
 // NewOutbound builds a new TChannel outbound which uses the given Channel to
 // make requests.
-func NewOutbound(ch Channel, options ...OutboundOption) *Outbound {
-	o := &Outbound{channel: ch, started: atomic.NewBool(false)}
-	for _, opt := range options {
-		opt(o)
-	}
-	return o
+func NewOutbound(ch Channel) *Outbound {
+	return &Outbound{channel: ch, started: atomic.NewBool(false)}
 }
 
 // Outbound is a TChannel outbound transport.
@@ -67,6 +49,16 @@ type Outbound struct {
 	// If specified, this is the address to which the request will be made.
 	// Otherwise, the global peer list of the Channel will be used.
 	HostPort string
+}
+
+// WithHostPort specifies that the requests made by this outbound should be to
+// the given address.
+//
+// By default, if HostPort was not specified, the Outbound will use the
+// TChannel global peer list.
+func (o *Outbound) WithHostPort(hostPort string) *Outbound {
+	o.HostPort = hostPort
+	return o
 }
 
 // WithTracer configures a tracer for this outbound.

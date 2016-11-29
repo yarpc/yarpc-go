@@ -48,7 +48,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")
-		unaryOutbound = tch.NewOutbound(ch, tch.HostPort(server+":8082"))
+		unaryOutbound = tch.NewOutbound(ch).WithHostPort(server + ":8082")
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}

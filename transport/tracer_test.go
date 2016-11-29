@@ -146,7 +146,7 @@ func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dis
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: ytchannel.NewOutbound(ch, ytchannel.HostPort(hp)),
+				Unary: ytchannel.NewOutbound(ch).WithHostPort(hp),
 			},
 		},
 		Tracer: tracer,

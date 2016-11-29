@@ -51,7 +51,7 @@ func Run(t crossdock.T) {
 		Name: "yarpc-client",
 		Outbounds: yarpc.Outbounds{
 			serverName: {
-				Unary: tch.NewOutbound(ch, tch.HostPort(serverHostPort)),
+				Unary: tch.NewOutbound(ch).WithHostPort(serverHostPort),
 			},
 		},
 	})
