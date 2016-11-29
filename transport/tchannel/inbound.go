@@ -32,13 +32,6 @@ import (
 // InboundOption configures Inbound.
 type InboundOption func(*Inbound)
 
-
-// WithTracer adds a tracer to a TChannel inbound.
-func WithTracer(tracer opentracing.Tracer) InboundOption {
-	return func(i *Inbound) {
-		i.tracer = tracer
-	}
-}
 // NewInbound builds a new TChannel inbound from the given Channel. Existing
 // methods registered on the channel remain registered and are preferred when
 // a call is received.
@@ -66,6 +59,12 @@ type Inbound struct {
 // listening for connections when Start() is called.
 func (i *Inbound) WithListenAddr(addr string) *Inbound {
 	i.addr = addr
+	return i
+}
+
+// WithTracer configures a tracer on the TChannel inbound.
+func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
+	i.tracer = tracer
 	return i
 }
 
