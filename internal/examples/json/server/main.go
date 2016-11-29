@@ -80,7 +80,7 @@ func main() {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: yarpc.Inbounds{
-			tch.NewInbound(channel, tch.ListenAddr(":28941")),
+			tch.NewInbound(channel).WithListenAddr(":28941"),
 			http.NewInbound(":24034"),
 		},
 		InboundMiddleware: yarpc.InboundMiddleware{

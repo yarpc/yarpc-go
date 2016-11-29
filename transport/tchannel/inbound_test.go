@@ -52,7 +52,7 @@ func TestInboundStartNew(t *testing.T) {
 		},
 		{
 			func(ch *tchannel.Channel, f func(*Inbound)) {
-				i := NewInbound(ch, ListenAddr(":0"))
+				i := NewInbound(ch).WithListenAddr(":0")
 				service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start(service, transport.NoDeps))
@@ -102,7 +102,7 @@ func TestInboundStopWithoutStarting(t *testing.T) {
 func TestInboundInvalidAddress(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
-	i := NewInbound(ch, ListenAddr("not valid"))
+	i := NewInbound(ch).WithListenAddr("not valid")
 	service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 	assert.Error(t, i.Start(service, transport.NoDeps))
 }

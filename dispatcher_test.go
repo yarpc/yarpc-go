@@ -44,7 +44,7 @@ func basicDispatcher(t *testing.T) Dispatcher {
 	return NewDispatcher(Config{
 		Name: "test",
 		Inbounds: Inbounds{
-			tch.NewInbound(ch, tch.ListenAddr(":0")),
+			tch.NewInbound(ch).WithListenAddr(":0"),
 			http.NewInbound(":0"),
 		},
 	})

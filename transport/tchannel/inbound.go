@@ -32,14 +32,6 @@ import (
 // InboundOption configures Inbound.
 type InboundOption func(*Inbound)
 
-// ListenAddr changes the address on which the TChannel server will listen for
-// connections. By default, the server listens on an OS-assigned port.
-//
-// This option has no effect if the Chanel provided to NewInbound is already
-// listening for connections when Start() is called.
-func ListenAddr(addr string) InboundOption {
-	return func(i *Inbound) { i.addr = addr }
-}
 
 // WithTracer adds a tracer to a TChannel inbound.
 func WithTracer(tracer opentracing.Tracer) InboundOption {
@@ -47,7 +39,6 @@ func WithTracer(tracer opentracing.Tracer) InboundOption {
 		i.tracer = tracer
 	}
 }
-
 // NewInbound builds a new TChannel inbound from the given Channel. Existing
 // methods registered on the channel remain registered and are preferred when
 // a call is received.
@@ -66,6 +57,16 @@ type Inbound struct {
 	addr     string
 	listener net.Listener
 	tracer   opentracing.Tracer
+}
+
+// WithListenAddr changes the address on which the TChannel server will listen
+// for connections. By default, the server listens on an OS-assigned port.
+//
+// This option has no effect if the Chanel provided to NewInbound is already
+// listening for connections when Start() is called.
+func (i *Inbound) WithListenAddr(addr string) *Inbound {
+	i.addr = addr
+	return i
 }
 
 // Channel returns the underlying Channel for this Inbound.

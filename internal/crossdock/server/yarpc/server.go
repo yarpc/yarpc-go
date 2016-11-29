@@ -50,7 +50,7 @@ func Start() {
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
 			http.NewInbound(":8081"),
-			tch.NewInbound(ch, tch.ListenAddr(":8082")),
+			tch.NewInbound(ch).WithListenAddr(":8082"),
 		},
 	})
 

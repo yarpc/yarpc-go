@@ -337,7 +337,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "ctxclient",
 		Inbounds: yarpc.Inbounds{
-			tch.NewInbound(ch, tch.ListenAddr(":8087")),
+			tch.NewInbound(ch).WithListenAddr(":8087"),
 			ht.NewInbound(":8086"),
 		},
 		Outbounds: yarpc.Outbounds{
