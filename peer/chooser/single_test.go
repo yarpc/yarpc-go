@@ -1,4 +1,4 @@
-package list
+package chooser
 
 import (
 	"fmt"
@@ -11,11 +11,11 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-func TestSingleList(t *testing.T) {
+func TestSingleChooser(t *testing.T) {
 	type testStruct struct {
 		msg string
 
-		// PeerID that will be input into the PeerList
+		// PeerID that will be input into the PeerChooser
 		inputPeerID string
 
 		// PeerID that will be returned from the agent's OnRetain
@@ -30,16 +30,16 @@ func TestSingleList(t *testing.T) {
 		// Error that will be returned from the agent's OnRelease
 		releasedErr error
 
-		// Actions that will be applied on the PeerList
+		// Actions that will be applied on the PeerChooser
 		actions []PeerListAction
 
-		// Expected PeerID to be stored in the Single List
+		// Expected PeerID to be stored in the Single Chooser
 		expectedPeerID string
 
-		// Expected Peer to be stored in the Single List
+		// Expected Peer to be stored in the Single Chooser
 		expectedPeer string
 
-		// Expected state of the started flag in the List
+		// Expected state of the started flag in the Chooser
 		expectedStarted bool
 	}
 	tests := []testStruct{
