@@ -26,10 +26,10 @@ package echoclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 )
 
 // Interface is a client for the Echo service.
@@ -43,16 +43,16 @@ type Interface interface {
 
 // New builds a new client for the Echo service.
 //
-// 	client := echoclient.New(dispatcher.Channel("echo"))
-func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
+// 	client := echoclient.New(dispatcher.ClientConfig("echo"))
+func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service: "Echo",
-		Channel: c,
+		Service:      "Echo",
+		ClientConfig: c,
 	}, opts...)}
 }
 
 func init() {
-	yarpc.RegisterClientBuilder(func(c transport.Channel) Interface {
+	yarpc.RegisterClientBuilder(func(c transport.ClientConfig) Interface {
 		return New(c)
 	})
 }

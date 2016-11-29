@@ -18,35 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package channel
+package transport
 
-import (
-	"testing"
+//go:generate mockgen -destination=transporttest/clientconfig.go -package=transporttest go.uber.org/yarpc/transport ClientConfig,ClientConfigProvider
 
-	"go.uber.org/yarpc/transport"
-
-	"github.com/stretchr/testify/assert"
-)
-
-const (
-	caller  = "caller"
-	service = "service"
-)
-
-func TestChannelNames(t *testing.T) {
-	outbounds := transport.Outbounds{}
-	c := MultiOutbound(caller, service, outbounds)
-
-	assert.Equal(t, c.Caller(), caller)
-	assert.Equal(t, c.Service(), service)
+// ClientConfigProvider builds ClientConfigs from the current service to other services.
+type ClientConfigProvider interface {
+	// Retrieves a new ClientConfig that will make requests to the given service.
+	//
+	// This MAY panic if the given service is unknown.
+	ClientConfig(service string) ClientConfig
 }
 
-func TestChannelPanic(t *testing.T) {
-	c := MultiOutbound(caller, service, transport.Outbounds{})
+// A ClientConfig is a stream of communication between a single caller-service
+// pair.
+type ClientConfig interface {
+	// Name of the service making the request.
+	Caller() string
 
-	assert.Panics(t, func() { c.GetUnaryOutbound() },
-		"expected channel to panic for nil UnaryOutbound")
+	// Name of the service to which the request is being made.
+	Service() string
 
-	assert.Panics(t, func() { c.GetOnewayOutbound() },
-		"expected channel to panic for nil OnewayOutbound")
+	// Returns an outbound to send the request through or panics if there is no
+	// outbound for this service
+	//
+	// MAY be called multiple times for a request. The returned outbound MUST
+	// have already been started.
+	GetUnaryOutbound() UnaryOutbound
+	GetOnewayOutbound() OnewayOutbound
 }

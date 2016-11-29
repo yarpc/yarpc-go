@@ -22,7 +22,7 @@
 //
 // To make outbound requests,
 //
-// 	client := raw.New(channel)
+// 	client := raw.New(clientConfig)
 // 	resBody, resMeta, err := client.Call(
 // 		yarpc.NewReqMeta(ctx).Procedure("submit"),
 // 		[]byte{1, 2, 3},

@@ -8,7 +8,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/channel"
+	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -25,7 +25,7 @@ func TestRegisterClientBuilderPanics(t *testing.T) {
 		{name: "wrong kind", give: 42},
 		{
 			name: "already registered",
-			give: func(transport.Channel) json.Client { return nil },
+			give: func(transport.ClientConfig) json.Client { return nil },
 		},
 		{
 			name: "wrong argument type",
@@ -33,15 +33,15 @@ func TestRegisterClientBuilderPanics(t *testing.T) {
 		},
 		{
 			name: "wrong return type",
-			give: func(transport.Channel) string { return "" },
+			give: func(transport.ClientConfig) string { return "" },
 		},
 		{
 			name: "wrong number of arguments",
-			give: func(transport.Channel, ...string) json.Client { return nil },
+			give: func(transport.ClientConfig, ...string) json.Client { return nil },
 		},
 		{
 			name: "wrong number of returns",
-			give: func(transport.Channel) (json.Client, error) { return nil, nil },
+			give: func(transport.ClientConfig) (json.Client, error) { return nil, nil },
 		},
 	}
 
@@ -81,9 +81,9 @@ func TestInjectClientsPanics(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cp := newMockChannelProvier(mockCtrl)
+		cp := newMockClientConfigProvider(mockCtrl)
 		for _, s := range tt.failOnServices {
-			cp.EXPECT().Channel(s).Do(func(s string) {
+			cp.EXPECT().ClientConfig(s).Do(func(s string) {
 				panic(fmt.Sprintf("unknown service %q", s))
 			})
 		}
@@ -99,7 +99,7 @@ func TestInjectClientSuccess(t *testing.T) {
 
 	type knownClient interface{}
 	clear := yarpc.RegisterClientBuilder(
-		func(transport.Channel) knownClient { return knownClient(struct{}{}) })
+		func(transport.ClientConfig) knownClient { return knownClient(struct{}{}) })
 	defer clear()
 
 	mockCtrl := gomock.NewController(t)
@@ -109,7 +109,7 @@ func TestInjectClientSuccess(t *testing.T) {
 		name   string
 		target interface{}
 
-		// list of services for which Channel() should return successfully
+		// list of services for which ClientConfig() should return successfully
 		knownServices []string
 
 		// list of field names in target we expect to be nil or non-nil
@@ -125,7 +125,7 @@ func TestInjectClientSuccess(t *testing.T) {
 			target: &struct {
 				Client json.Client `service:"foo"`
 			}{
-				Client: json.New(channel.MultiOutbound(
+				Client: json.New(clientconfig.MultiOutbound(
 					"foo",
 					"bar",
 					transport.Outbounds{
@@ -175,7 +175,7 @@ func TestInjectClientSuccess(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cp := newMockChannelProvier(mockCtrl, tt.knownServices...)
+		cp := newMockClientConfigProvider(mockCtrl, tt.knownServices...)
 		assert.NotPanics(t, func() {
 			yarpc.InjectClients(cp, tt.target)
 		}, tt.name)
@@ -192,12 +192,12 @@ func TestInjectClientSuccess(t *testing.T) {
 	}
 }
 
-// newMockChannelProvier builds a MockChannelProvider which expects Channel()
-// calls for the given services and returns mock channels for them.
-func newMockChannelProvier(ctrl *gomock.Controller, services ...string) *transporttest.MockChannelProvider {
-	cp := transporttest.NewMockChannelProvider(ctrl)
+// newMockClientConfigProvider builds a MockClientConfigProvider which expects ClientConfig()
+// calls for the given services and returns mock ClientConfigs for them.
+func newMockClientConfigProvider(ctrl *gomock.Controller, services ...string) *transporttest.MockClientConfigProvider {
+	cp := transporttest.NewMockClientConfigProvider(ctrl)
 	for _, s := range services {
-		cp.EXPECT().Channel(s).Return(transporttest.NewMockChannel(ctrl))
+		cp.EXPECT().ClientConfig(s).Return(transporttest.NewMockClientConfig(ctrl))
 	}
 	return cp
 }

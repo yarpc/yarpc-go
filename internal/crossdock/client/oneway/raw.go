@@ -33,7 +33,7 @@ import (
 func Raw(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals := crossdock.Fatals(t)
 
-	client := raw.New(dispatcher.Channel("oneway-test"))
+	client := raw.New(dispatcher.ClientConfig("oneway-test"))
 	ctx := context.Background()
 
 	token := []byte(getRandomID())

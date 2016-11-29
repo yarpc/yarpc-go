@@ -171,16 +171,16 @@ type Interface interface {
 
 // New builds a new client for the <.Service.Name> service.
 //
-// 	client := <$pkgname>.New(dispatcher.Channel("<lower .Service.Name>"))
-func New(c <$transport>.Channel, opts ...<$thrift>.ClientOption) Interface {
+// 	client := <$pkgname>.New(dispatcher.ClientConfig("<lower .Service.Name>"))
+func New(c <$transport>.ClientConfig, opts ...<$thrift>.ClientOption) Interface {
 	return client{c: <$thrift>.New(<$thrift>.Config{
 		Service: "<.Service.Name>",
-		Channel: c,
+		ClientConfig: c,
 	}, opts...)}
 }
 
 func init() {
-	<$yarpc>.RegisterClientBuilder(func(c <$transport>.Channel) Interface {
+	<$yarpc>.RegisterClientBuilder(func(c <$transport>.ClientConfig) Interface {
 		return New(c)
 	})
 }

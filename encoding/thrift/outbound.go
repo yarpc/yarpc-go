@@ -53,8 +53,8 @@ type Config struct {
 	// with the 'service' keyword.
 	Service string
 
-	// Channel through which requests will be sent. Required.
-	Channel transport.Channel
+	// ClientConfig through which requests will be sent. Required.
+	ClientConfig transport.ClientConfig
 }
 
 // New creates a new Thrift client.
@@ -62,10 +62,10 @@ func New(c Config, opts ...ClientOption) Client {
 	// Code generated for Thrift client instantiation will probably be something
 	// like this:
 	//
-	// 	func New(ch transport.Channel, opts ...ClientOption) *MyServiceClient {
+	// 	func New(cc transport.ClientConfig, opts ...ClientOption) *MyServiceClient {
 	// 		c := thrift.New(thrift.Config{
 	// 			Service: "MyService",
-	// 			Channel: ch,
+	// 			ClientConfig: cc,
 	// 			Protocol: protocol.Binary,
 	// 		}, opts...)
 	// 		return &MyServiceClient{client: c}
@@ -93,14 +93,14 @@ func New(c Config, opts ...ClientOption) Client {
 
 	return thriftClient{
 		p:             p,
-		ch:            c.Channel,
+		cc:            c.ClientConfig,
 		thriftService: c.Service,
 		Enveloping:    cc.Enveloping,
 	}
 }
 
 type thriftClient struct {
-	ch transport.Channel
+	cc transport.ClientConfig
 	p  protocol.Protocol
 
 	// name of the Thrift service
@@ -123,7 +123,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	// 		return success, resMeta, err
 	// 	}
 
-	out := c.ch.GetUnaryOutbound()
+	out := c.cc.GetUnaryOutbound()
 
 	treq, proto, err := c.buildTransportRequest(reqMeta, reqBody)
 	if err != nil {
@@ -166,7 +166,7 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 }
 
 func (c thriftClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody envelope.Enveloper) (transport.Ack, error) {
-	out := c.ch.GetOnewayOutbound()
+	out := c.cc.GetOnewayOutbound()
 
 	treq, _, err := c.buildTransportRequest(reqMeta, reqBody)
 	if err != nil {
@@ -190,8 +190,8 @@ func (c thriftClient) buildTransportRequest(
 	}
 
 	treq := transport.Request{
-		Caller:   c.ch.Caller(),
-		Service:  c.ch.Service(),
+		Caller:   c.cc.Caller(),
+		Service:  c.cc.Service(),
 		Encoding: Encoding,
 	}
 	meta.ToTransportRequest(reqMeta, &treq)

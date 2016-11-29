@@ -22,7 +22,7 @@
 //
 // To make outbound requests using this encoding,
 //
-// 	client := json.New(channel)
+// 	client := json.New(clientConfig)
 // 	var resBody GetValueResponse
 // 	resMeta, err := client.Call(
 // 		yarpc.NewReqMeta(ctx).Procedure("getValue"),

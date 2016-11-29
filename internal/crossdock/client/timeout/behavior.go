@@ -48,8 +48,8 @@ func Run(t crossdock.T) {
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
-	ch := raw.New(dispatcher.Channel("yarpc-test"))
-	_, _, err := ch.Call(ctx, yarpc.NewReqMeta().Procedure("sleep/raw"), nil)
+	client := raw.New(dispatcher.ClientConfig("yarpc-test"))
+	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("sleep/raw"), nil)
 	fatals.Error(err, "expected a failure for timeout")
 
 	if transport.IsBadRequestError(err) {

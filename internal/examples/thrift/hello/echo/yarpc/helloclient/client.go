@@ -26,10 +26,10 @@ package helloclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/internal/examples/thrift/hello/echo"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/internal/examples/thrift/hello/echo"
+	"go.uber.org/yarpc/transport"
 )
 
 // Interface is a client for the Hello service.
@@ -43,16 +43,16 @@ type Interface interface {
 
 // New builds a new client for the Hello service.
 //
-// 	client := helloclient.New(dispatcher.Channel("hello"))
-func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
+// 	client := helloclient.New(dispatcher.ClientConfig("hello"))
+func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service: "Hello",
-		Channel: c,
+		Service:      "Hello",
+		ClientConfig: c,
 	}, opts...)}
 }
 
 func init() {
-	yarpc.RegisterClientBuilder(func(c transport.Channel) Interface {
+	yarpc.RegisterClientBuilder(func(c transport.ClientConfig) Interface {
 		return New(c)
 	})
 }

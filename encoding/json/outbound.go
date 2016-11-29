@@ -44,8 +44,8 @@ type Client interface {
 }
 
 // New builds a new JSON client.
-func New(c transport.Channel) Client {
-	return jsonClient{ch: c}
+func New(c transport.ClientConfig) Client {
+	return jsonClient{cc: c}
 }
 
 func init() {
@@ -53,13 +53,13 @@ func init() {
 }
 
 type jsonClient struct {
-	ch transport.Channel
+	cc transport.ClientConfig
 }
 
 func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
 	treq := transport.Request{
-		Caller:   c.ch.Caller(),
-		Service:  c.ch.Service(),
+		Caller:   c.cc.Caller(),
+		Service:  c.cc.Service(),
 		Encoding: Encoding,
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
@@ -70,7 +70,7 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.ch.GetUnaryOutbound().Call(ctx, &treq)
+	tres, err := c.cc.GetUnaryOutbound().Call(ctx, &treq)
 
 	if err != nil {
 		return nil, err
@@ -90,8 +90,8 @@ func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody
 
 func (c jsonClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}) (transport.Ack, error) {
 	treq := transport.Request{
-		Caller:   c.ch.Caller(),
-		Service:  c.ch.Service(),
+		Caller:   c.cc.Caller(),
+		Service:  c.cc.Service(),
 		Encoding: Encoding,
 	}
 	meta.ToTransportRequest(reqMeta, &treq)
@@ -103,5 +103,5 @@ func (c jsonClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, r
 
 	treq.Body = &buff
 
-	return c.ch.GetOnewayOutbound().CallOneway(ctx, &treq)
+	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)
 }

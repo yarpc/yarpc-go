@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"sync"
 
-	"go.uber.org/yarpc/internal/channel"
+	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
@@ -38,7 +38,7 @@ import (
 // enables an application to be transport-agnostic.
 type Dispatcher interface {
 	transport.Registrar
-	transport.ChannelProvider
+	transport.ClientConfigProvider
 
 	// Inbounds returns a copy of the list of inbounds for this RPC object.
 	//
@@ -160,9 +160,9 @@ func (d dispatcher) Inbounds() Inbounds {
 	return inbounds
 }
 
-func (d dispatcher) Channel(service string) transport.Channel {
+func (d dispatcher) ClientConfig(service string) transport.ClientConfig {
 	if rs, ok := d.outbounds[service]; ok {
-		return channel.MultiOutbound(d.Name, service, rs)
+		return clientconfig.MultiOutbound(d.Name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }

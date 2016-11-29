@@ -26,10 +26,10 @@ package keyvalueclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv"
+	"go.uber.org/yarpc/transport"
 )
 
 // Interface is a client for the KeyValue service.
@@ -50,16 +50,16 @@ type Interface interface {
 
 // New builds a new client for the KeyValue service.
 //
-// 	client := keyvalueclient.New(dispatcher.Channel("keyvalue"))
-func New(c transport.Channel, opts ...thrift.ClientOption) Interface {
+// 	client := keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
+func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{c: thrift.New(thrift.Config{
-		Service: "KeyValue",
-		Channel: c,
+		Service:      "KeyValue",
+		ClientConfig: c,
 	}, opts...)}
 }
 
 func init() {
-	yarpc.RegisterClientBuilder(func(c transport.Channel) Interface {
+	yarpc.RegisterClientBuilder(func(c transport.ClientConfig) Interface {
 		return New(c)
 	})
 }

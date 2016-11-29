@@ -4,7 +4,11 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   **Breaking**: Rename `Channel` to `ClientConfig` for both the dispatcher
+    method and the interface. `mydispatcher.Channel("myservice")` becomes
+    `mydispatcher.ClientConfig("myservice")`. The `ClientConfig` object can
+    then used to build a new Client as before:
+    `NewMyThriftClient(mydispatcher.ClientConfig("myservice"))`.
 
 
 v1.0.0-rc1 (2016-11-23)
