@@ -1,4 +1,4 @@
-package chooser
+package single
 
 import (
 	"fmt"
@@ -148,7 +148,7 @@ func TestSingleChooser(t *testing.T) {
 				ExpectPeerReleases(agent, []string{tt.releasedPeerID}, tt.releasedErr)
 			}
 
-			pl := NewSingle(MockPeerIdentifier(tt.inputPeerID), agent).(*single)
+			pl := New(MockPeerIdentifier(tt.inputPeerID), agent).(*single)
 
 			ApplyPeerListActions(t, pl, tt.actions, ListActionDeps{})
 

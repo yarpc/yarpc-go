@@ -31,8 +31,8 @@ import (
 
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/chooser"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
@@ -62,7 +62,7 @@ func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 	urlTemplate, hp := parseURL(urlStr)
 
 	peerID := hostport.PeerIdentifier(hp)
-	c := chooser.NewSingle(peerID, agent)
+	c := single.New(peerID, agent)
 
 	err := c.Start()
 	if err != nil {
