@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/atomic"
 )
@@ -66,6 +67,12 @@ type Outbound struct {
 	// If specified, this is the address to which the request will be made.
 	// Otherwise, the global peer list of the Channel will be used.
 	HostPort string
+}
+
+// WithTracer configures a tracer for this outbound.
+func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
+	// At this time, we delegate tracing responsibility to the underlying TChannel.
+	return o
 }
 
 // Start starts the TChannel outbound.
