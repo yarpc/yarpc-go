@@ -32,7 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/list"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
@@ -62,15 +62,15 @@ func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
 	urlTemplate, hp := parseURL(urlStr)
 
 	peerID := hostport.PeerIdentifier(hp)
-	chooser := list.NewSingle(peerID, agent)
+	c := single.New(peerID, agent)
 
-	err := chooser.Start()
+	err := c.Start()
 	if err != nil {
 		// This should never happen, single shouldn't return an error here
-		panic(fmt.Sprintf("could not start single peerlist, err: %s", err))
+		panic(fmt.Sprintf("could not start single peerChooser, err: %s", err))
 	}
 
-	return NewChooserOutbound(chooser, urlTemplate)
+	return NewChooserOutbound(c, urlTemplate)
 }
 
 func parseURL(urlStr string) (*url.URL, string) {
