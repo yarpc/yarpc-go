@@ -70,6 +70,12 @@ type Inbound struct {
 	tracer     opentracing.Tracer
 }
 
+// WithTracer configures a tracer on this inbound.
+func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
+	i.tracer = tracer
+	return i
+}
+
 // Start starts the inbound with a given service detail and transport
 // dependencies, opening a listening socket.
 func (i *Inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
