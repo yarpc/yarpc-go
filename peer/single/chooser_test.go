@@ -148,18 +148,18 @@ func TestSingleChooser(t *testing.T) {
 				ExpectPeerReleases(agent, []string{tt.releasedPeerID}, tt.releasedErr)
 			}
 
-			pl := New(MockPeerIdentifier(tt.inputPeerID), agent).(*single)
+			s := New(MockPeerIdentifier(tt.inputPeerID), agent).(*single)
 
-			ApplyPeerListActions(t, pl, tt.actions, ListActionDeps{})
+			ApplyPeerListActions(t, s, tt.actions, ListActionDeps{})
 
-			assert.Equal(t, agent, pl.agent)
-			assert.Equal(t, tt.expectedPeerID, pl.initialPeerID.Identifier())
+			assert.Equal(t, agent, s.agent)
+			assert.Equal(t, tt.expectedPeerID, s.initialPeerID.Identifier())
 			if tt.expectedPeer != "" {
-				assert.Equal(t, tt.expectedPeer, pl.p.Identifier())
+				assert.Equal(t, tt.expectedPeer, s.p.Identifier())
 			} else {
-				assert.Nil(t, pl.p)
+				assert.Nil(t, s.p)
 			}
-			assert.Equal(t, tt.expectedStarted, pl.started)
+			assert.Equal(t, tt.expectedStarted, s.started)
 		})
 	}
 }

@@ -46,50 +46,50 @@ func New(pid peer.Identifier, agent peer.Agent) peer.Chooser {
 	}
 }
 
-func (pl *single) Start() error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
-	if pl.started {
+func (s *single) Start() error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if s.started {
 		return peer.ErrPeerListAlreadyStarted("single")
 	}
-	pl.started = true
+	s.started = true
 
-	p, err := pl.agent.RetainPeer(pl.initialPeerID, pl)
+	p, err := s.agent.RetainPeer(s.initialPeerID, s)
 	if err != nil {
-		pl.started = false
+		s.started = false
 		return err
 	}
-	pl.p = p
+	s.p = p
 	return nil
 }
 
-func (pl *single) Stop() error {
-	pl.lock.Lock()
-	defer pl.lock.Unlock()
+func (s *single) Stop() error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
-	if !pl.started {
+	if !s.started {
 		return peer.ErrPeerListNotStarted("single")
 	}
-	pl.started = false
+	s.started = false
 
-	err := pl.agent.ReleasePeer(pl.initialPeerID, pl)
+	err := s.agent.ReleasePeer(s.initialPeerID, s)
 	if err != nil {
 		return err
 	}
 
-	pl.p = nil
+	s.p = nil
 	return nil
 }
 
-func (pl *single) ChoosePeer(context.Context, *transport.Request) (peer.Peer, error) {
-	pl.lock.RLock()
-	defer pl.lock.RUnlock()
+func (s *single) ChoosePeer(context.Context, *transport.Request) (peer.Peer, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 
-	if !pl.started {
+	if !s.started {
 		return nil, peer.ErrPeerListNotStarted("single")
 	}
-	return pl.p, nil
+	return s.p, nil
 }
 
 // NotifyStatusChanged when the Peer status changes
-func (pl *single) NotifyStatusChanged(peer.Identifier) {}
+func (s *single) NotifyStatusChanged(peer.Identifier) {}
