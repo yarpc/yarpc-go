@@ -114,7 +114,7 @@ func TestInboundMux(t *testing.T) {
 
 	// this should fail
 	o := NewOutbound(addr)
-	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -132,7 +132,7 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	o = NewOutbound(addr + "rpc/v1")
-	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 
 	spec := transport.NewUnaryHandlerSpec(h)

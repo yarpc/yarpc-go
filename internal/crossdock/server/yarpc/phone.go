@@ -90,7 +90,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 		return nil, nil, fmt.Errorf("unconfigured transport")
 	}
 
-	if err := outbound.Start(transport.NoDeps); err != nil {
+	if err := outbound.Start(); err != nil {
 		return nil, nil, err
 	}
 	defer outbound.Stop()

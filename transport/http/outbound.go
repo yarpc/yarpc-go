@@ -118,7 +118,7 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 }
 
 // Start the HTTP outbound
-func (o *Outbound) Start(d transport.Deps) error {
+func (o *Outbound) Start() error {
 	if o.started.Swap(true) {
 	}
 	return nil

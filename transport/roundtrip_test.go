@@ -103,7 +103,7 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
-	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
 }
@@ -115,7 +115,7 @@ func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transpor
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
-	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
 }
@@ -136,7 +136,7 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 
 		client := testutils.NewClient(tt.t, clientOpts)
 		o := tch.NewOutbound(client).WithHostPort(hostPort)
-		require.NoError(tt.t, o.Start(transport.NoDeps), "failed to start outbound")
+		require.NoError(tt.t, o.Start(), "failed to start outbound")
 		defer o.Stop()
 
 		f(o)

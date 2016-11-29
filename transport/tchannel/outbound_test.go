@@ -96,7 +96,7 @@ func TestOutboundHeaders(t *testing.T) {
 			out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 				ServiceName: "caller",
 			}), hostport)
-			require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
+			require.NoError(t, out.Start(), "failed to start outbound")
 			defer out.Stop()
 
 			ctx := tt.context
@@ -165,7 +165,7 @@ func TestCallSuccess(t *testing.T) {
 		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), serverHostPort)
-		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
+		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
@@ -246,7 +246,7 @@ func TestCallFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		out := tt.getOutbound(testutils.NewClient(t, nil), serverHostPort)
-		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
+		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
@@ -284,7 +284,7 @@ func TestStartMultiple(t *testing.T) {
 				defer wg.Done()
 				<-signal
 
-				err := out.Start(transport.NoDeps)
+				err := out.Start()
 				assert.NoError(t, err)
 			}()
 		}
@@ -301,7 +301,7 @@ func TestStopMultiple(t *testing.T) {
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
-		err := out.Start(transport.NoDeps)
+		err := out.Start()
 		require.NoError(t, err)
 
 		var wg sync.WaitGroup

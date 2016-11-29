@@ -198,7 +198,7 @@ func (d dispatcher) Start() error {
 				return nil
 			}
 
-			if err := o.Start(d.deps); err != nil {
+			if err := o.Start(); err != nil {
 				return err
 			}
 

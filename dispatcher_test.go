@@ -121,7 +121,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
@@ -151,7 +151,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
@@ -182,7 +182,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
@@ -210,9 +210,9 @@ func TestStartStopFailures(t *testing.T) {
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					if i == 5 {
-						out.EXPECT().Start(gomock.Any()).Return(errors.New("something went wrong"))
+						out.EXPECT().Start().Return(errors.New("something went wrong"))
 					} else {
-						out.EXPECT().Start(gomock.Any()).Return(nil)
+						out.EXPECT().Start().Return(nil)
 						out.EXPECT().Stop().Return(nil)
 					}
 					outbounds[fmt.Sprintf("service-%v", i)] =
@@ -241,7 +241,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					if i == 7 {
 						out.EXPECT().Stop().Return(errors.New("something went wrong"))
 					} else {

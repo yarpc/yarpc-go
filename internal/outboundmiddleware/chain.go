@@ -54,8 +54,8 @@ type unaryChainExec struct {
 	Final transport.UnaryOutbound
 }
 
-func (x unaryChainExec) Start(d transport.Deps) error {
-	return x.Final.Start(d)
+func (x unaryChainExec) Start() error {
+	return x.Final.Start()
 }
 
 func (x unaryChainExec) Stop() error {
@@ -99,8 +99,8 @@ type onewayChainExec struct {
 	Final transport.OnewayOutbound
 }
 
-func (x onewayChainExec) Start(d transport.Deps) error {
-	return x.Final.Start(d)
+func (x onewayChainExec) Start() error {
+	return x.Final.Start()
 }
 
 func (x onewayChainExec) Stop() error {
