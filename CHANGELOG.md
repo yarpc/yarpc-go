@@ -13,6 +13,12 @@ v1.0.0-dev (unreleased)
     understanding where they come from.
 
 
+-   **Breaking**: TChannel inbound and outbound constructors now return
+    pointers to Inbound and Outbound structs with private state satisfying the
+    `transport.Inbound` and `transport.Outbound` interfaces.  These were
+    previously transport specific Inbound and Outbound interfaces.
+    This eliminates unnecessary polymorphism in some cases.
+
 v1.0.0-rc1 (2016-11-23)
 -----------------------
 
