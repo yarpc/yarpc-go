@@ -219,7 +219,7 @@ func TestEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // clean up
+	//defer os.RemoveAll(dir) // clean up
 
 	// First we double check that our cache is empty.
 	recorder := NewRecorder(&tMock, RecordMode(Replay), RecordsPath(dir))
@@ -282,7 +282,8 @@ func TestEmptyReplay(t *testing.T) {
 }
 
 const refRecordFilename = `server.hello.254fa3bab61fc27f.yaml`
-const refRecordContent = `version: 1
+const refRecordContent = recordComment +
+	`version: 1
 request:
   caller: client
   service: server
