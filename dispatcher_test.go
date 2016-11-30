@@ -75,8 +75,9 @@ func TestInboundsOrderIsMaintained(t *testing.T) {
 	// Order must be maintained
 	assert.Implements(t,
 		(*tch.Inbound)(nil), dispatcher.Inbounds()[0], "first inbound must be TChannel")
-	assert.Implements(t,
-		(*http.Inbound)(nil), dispatcher.Inbounds()[1], "second inbound must be HTTP")
+
+	_, ok := dispatcher.Inbounds()[1].(*http.Inbound)
+	assert.True(t, ok, "second inbound must be HTTP")
 }
 
 func TestInboundsOrderAfterStart(t *testing.T) {
@@ -90,7 +91,7 @@ func TestInboundsOrderAfterStart(t *testing.T) {
 	tchInbound := inbounds[0].(tch.Inbound)
 	assert.NotEqual(t, "0.0.0.0:0", tchInbound.Channel().PeerInfo().HostPort)
 
-	httpInbound := inbounds[1].(http.Inbound)
+	httpInbound := inbounds[1].(*http.Inbound)
 	assert.NotNil(t, httpInbound.Addr(), "expected an HTTP addr")
 }
 

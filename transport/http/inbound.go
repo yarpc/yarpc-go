@@ -30,23 +30,12 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// Inbound represents an HTTP Inbound. It is the same as the transport Inbound
-// except it exposes the address on which the system is listening for
-// connections.
-type Inbound interface {
-	transport.Inbound
-
-	// Address on which the server is listening. Returns nil if Start has not
-	// been called yet.
-	Addr() net.Addr
-}
-
 // InboundOption is an option for an HTTP inbound.
-type InboundOption func(*inbound)
+type InboundOption func(*Inbound)
 
 // WithTracer is a NewInbound option that adds a tracer
 func WithTracer(tracer opentracing.Tracer) InboundOption {
-	return func(i *inbound) {
+	return func(i *Inbound) {
 		i.tracer = tracer
 	}
 }
@@ -54,15 +43,15 @@ func WithTracer(tracer opentracing.Tracer) InboundOption {
 // Mux specifies the ServeMux that the HTTP server should use and the pattern
 // under which the YARPC endpoint should be registered.
 func Mux(pattern string, mux *http.ServeMux) InboundOption {
-	return func(i *inbound) {
+	return func(i *Inbound) {
 		i.mux = mux
 		i.muxPattern = pattern
 	}
 }
 
 // NewInbound builds a new HTTP inbound that listens on the given address.
-func NewInbound(addr string, opts ...InboundOption) Inbound {
-	i := &inbound{addr: addr}
+func NewInbound(addr string, opts ...InboundOption) *Inbound {
+	i := &Inbound{addr: addr}
 	i.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
 		opt(i)
@@ -70,7 +59,10 @@ func NewInbound(addr string, opts ...InboundOption) Inbound {
 	return i
 }
 
-type inbound struct {
+// Inbound represents an HTTP Inbound. It is the same as the transport Inbound
+// except it exposes the address on which the system is listening for
+// connections.
+type Inbound struct {
 	addr       string
 	mux        *http.ServeMux
 	muxPattern string
@@ -78,7 +70,9 @@ type inbound struct {
 	tracer     opentracing.Tracer
 }
 
-func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
+// Start starts the inbound with a given service detail and transport
+// dependencies, opening a listening socket.
+func (i *Inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 
 	var httpHandler http.Handler = handler{
 		registry: service.Registry,
@@ -101,14 +95,17 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	return nil
 }
 
-func (i *inbound) Stop() error {
+// Stop the inbound, closing the listening socket.
+func (i *Inbound) Stop() error {
 	if i.server == nil {
 		return nil
 	}
 	return i.server.Stop()
 }
 
-func (i *inbound) Addr() net.Addr {
+// Addr returns the address on which the server is listening. Returns nil if
+// Start has not been called yet.
+func (i *Inbound) Addr() net.Addr {
 	if i.server == nil {
 		return nil
 	}
