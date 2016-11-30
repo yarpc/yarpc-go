@@ -70,6 +70,7 @@ type Config struct {
 	InboundMiddleware  InboundMiddleware
 	OutboundMiddleware OutboundMiddleware
 
+	// Tracer is deprecated. The dispatcher does nothing with this propery.
 	Tracer opentracing.Tracer
 }
 
@@ -103,7 +104,6 @@ func NewDispatcher(cfg Config) Dispatcher {
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		InboundMiddleware: cfg.InboundMiddleware,
-		deps:              transport.NoDeps.WithTracer(cfg.Tracer),
 	}
 }
 
@@ -150,8 +150,6 @@ type dispatcher struct {
 	outbounds Outbounds
 
 	InboundMiddleware InboundMiddleware
-
-	deps transport.Deps
 }
 
 func (d dispatcher) Inbounds() Inbounds {
