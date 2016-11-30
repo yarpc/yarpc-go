@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/transport/redis"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/crossdock/crossdock-go"
@@ -94,6 +95,12 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (yarpc.Dis
 				hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
 				http.NewTransport(),
 			))
+
+	case "redis":
+		outbound = redis.NewOnewayOutbound(
+			redis.NewRedis5Client("redis:6379"),
+			"yarpc/oneway")
+
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
