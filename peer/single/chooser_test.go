@@ -1,10 +1,8 @@
 package single
 
 import (
-	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc/peer"
 	. "go.uber.org/yarpc/peer/peertest"
 
 	"github.com/crossdock/crossdock-go/assert"
@@ -24,109 +22,27 @@ func TestSingleChooser(t *testing.T) {
 		// Error that will be returned from the agent's OnRetain
 		retainedErr error
 
-		// PeerID that will be released from the agent
-		releasedPeerID string
-
-		// Error that will be returned from the agent's OnRelease
-		releasedErr error
-
 		// Actions that will be applied on the PeerChooser
 		actions []PeerListAction
 
-		// Expected PeerID to be stored in the Single Chooser
-		expectedPeerID string
-
 		// Expected Peer to be stored in the Single Chooser
 		expectedPeer string
-
-		// Expected state of the started flag in the Chooser
-		expectedStarted bool
 	}
 	tests := []testStruct{
 		{
-			msg:             "setup",
-			inputPeerID:     "1",
-			expectedPeerID:  "1",
-			expectedStarted: false,
+			msg:            "setup",
+			inputPeerID:    "1",
+			retainedPeerID: "1",
+			expectedPeer:   "1",
 		},
 		{
-			msg:         "stop before start",
-			inputPeerID: "1",
-			actions: []PeerListAction{
-				StopAction{ExpectedErr: peer.ErrPeerListNotStarted("single")},
-			},
-			expectedPeerID:  "1",
-			expectedStarted: false,
-		},
-		{
-			msg:         "choose before start",
-			inputPeerID: "1",
-			actions: []PeerListAction{
-				ChooseAction{ExpectedErr: peer.ErrPeerListNotStarted("single")},
-			},
-			expectedPeerID:  "1",
-			expectedStarted: false,
-		},
-		{
-			msg:            "start and choose",
+			msg:            "choose",
 			inputPeerID:    "1",
 			retainedPeerID: "1",
 			actions: []PeerListAction{
-				StartAction{},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedPeerID:  "1",
-			expectedPeer:    "1",
-			expectedStarted: true,
-		},
-		{
-			msg:            "start with agent error",
-			inputPeerID:    "1",
-			retainedPeerID: "1",
-			retainedErr:    fmt.Errorf("test error"),
-			actions: []PeerListAction{
-				StartAction{ExpectedErr: fmt.Errorf("test error")},
-			},
-			expectedPeerID:  "1",
-			expectedStarted: false,
-		},
-		{
-			msg:            "start twice",
-			inputPeerID:    "1",
-			retainedPeerID: "1",
-			actions: []PeerListAction{
-				StartAction{},
-				StartAction{ExpectedErr: peer.ErrPeerListAlreadyStarted("single")},
-			},
-			expectedPeer:    "1",
-			expectedPeerID:  "1",
-			expectedStarted: true,
-		},
-		{
-			msg:            "start stop",
-			inputPeerID:    "1",
-			retainedPeerID: "1",
-			releasedPeerID: "1",
-			actions: []PeerListAction{
-				StartAction{},
-				StopAction{},
-			},
-			expectedPeerID:  "1",
-			expectedStarted: false,
-		},
-		{
-			msg:            "start stop release failure",
-			inputPeerID:    "1",
-			retainedPeerID: "1",
-			releasedPeerID: "1",
-			releasedErr:    peer.ErrAgentHasNoReferenceToPeer{},
-			actions: []PeerListAction{
-				StartAction{},
-				StopAction{ExpectedErr: peer.ErrAgentHasNoReferenceToPeer{}},
-			},
-			expectedPeerID:  "1",
-			expectedPeer:    "1",
-			expectedStarted: false,
+			expectedPeer: "1",
 		},
 	}
 
@@ -144,22 +60,16 @@ func TestSingleChooser(t *testing.T) {
 					ExpectPeerRetains(agent, []string{tt.retainedPeerID}, []string{})
 				}
 			}
-			if tt.releasedPeerID != "" {
-				ExpectPeerReleases(agent, []string{tt.releasedPeerID}, tt.releasedErr)
-			}
 
-			s := New(MockPeerIdentifier(tt.inputPeerID), agent).(*single)
+			s := New(MockPeerIdentifier(tt.inputPeerID), agent)
 
 			ApplyPeerListActions(t, s, tt.actions, ListActionDeps{})
 
-			assert.Equal(t, agent, s.agent)
-			assert.Equal(t, tt.expectedPeerID, s.initialPeerID.Identifier())
 			if tt.expectedPeer != "" {
 				assert.Equal(t, tt.expectedPeer, s.p.Identifier())
 			} else {
 				assert.Nil(t, s.p)
 			}
-			assert.Equal(t, tt.expectedStarted, s.started)
 		})
 	}
 }
