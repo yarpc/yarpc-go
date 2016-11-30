@@ -22,74 +22,42 @@ package single
 
 import (
 	"context"
-	"sync"
 
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/transport"
 )
 
-type single struct {
-	lock sync.RWMutex
-
-	initialPeerID peer.Identifier
-	p             peer.Peer
-	agent         peer.Agent
-	started       bool
+// Single implements the peer.Chooser interface for a single peer
+type Single struct {
+	p   peer.Peer
+	err error
 }
 
 // New creates a static peer.Chooser with a single Peer
-func New(pid peer.Identifier, agent peer.Agent) peer.Chooser {
-	return &single{
-		initialPeerID: pid,
-		agent:         agent,
-		started:       false,
-	}
-}
-
-func (s *single) Start() error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if s.started {
-		return peer.ErrPeerListAlreadyStarted("single")
-	}
-	s.started = true
-
-	p, err := s.agent.RetainPeer(s.initialPeerID, s)
-	if err != nil {
-		s.started = false
-		return err
-	}
+func New(pid peer.Identifier, agent peer.Agent) *Single {
+	s := &Single{}
+	p, err := agent.RetainPeer(pid, s)
 	s.p = p
-	return nil
+	s.err = err
+	return s
 }
 
-func (s *single) Stop() error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if !s.started {
-		return peer.ErrPeerListNotStarted("single")
-	}
-	s.started = false
-
-	err := s.agent.ReleasePeer(s.initialPeerID, s)
-	if err != nil {
-		return err
-	}
-
-	s.p = nil
-	return nil
-}
-
-func (s *single) ChoosePeer(context.Context, *transport.Request) (peer.Peer, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	if !s.started {
-		return nil, peer.ErrPeerListNotStarted("single")
-	}
-	return s.p, nil
+// ChoosePeer returns the single peer
+func (s *Single) ChoosePeer(context.Context, *transport.Request) (peer.Peer, error) {
+	return s.p, s.err
 }
 
 // NotifyStatusChanged when the Peer status changes
-func (s *single) NotifyStatusChanged(peer.Identifier) {}
+func (s *Single) NotifyStatusChanged(peer.Identifier) {}
+
+// Start is a noop
+func (s *Single) Start() error {
+	// TODO deprecated
+	return nil
+}
+
+// Stop is a noop
+func (s *Single) Stop() error {
+	// TODO deprecated
+	return nil
+}
