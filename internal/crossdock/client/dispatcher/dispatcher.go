@@ -25,8 +25,10 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
-	ht "go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/crossdock/crossdock-go"
@@ -40,11 +42,21 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
+	var httpAgent *http.Agent
+
 	var unaryOutbound transport.UnaryOutbound
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
-		unaryOutbound = ht.NewOutbound(fmt.Sprintf("http://%s:8081", server))
+		if httpAgent == nil {
+			httpAgent = http.NewAgent()
+		}
+		unaryOutbound = http.NewChooserOutbound(
+			single.New(
+				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", server)),
+				httpAgent,
+			),
+		)
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")

@@ -34,6 +34,8 @@ import (
 
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/registrytest"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -96,6 +98,9 @@ func TestInboundMux(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	agent := NewAgent()
+	// TODO agent lifecycle
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("healthy"))
@@ -120,7 +125,12 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	// this should fail
-	o := NewOutbound(addr)
+	o := NewChooserOutbound(
+		single.New(
+			hostport.PeerIdentifier(i.Addr().String()),
+			agent,
+		),
+	)
 	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 
@@ -138,7 +148,7 @@ func TestInboundMux(t *testing.T) {
 		assert.Equal(t, err.Error(), "404 page not found")
 	}
 
-	o = NewOutbound(addr + "rpc/v1")
+	o = o.WithURLTemplate("http://host:port/rpc/v1")
 	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 

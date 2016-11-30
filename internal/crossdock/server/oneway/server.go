@@ -28,6 +28,8 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayserver"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -35,8 +37,14 @@ var dispatcher yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
+	httpAgent := http.NewAgent()
 	h := onewayHandler{
-		Outbound: http.NewOutbound("http://127.0.0.1:8089"),
+		Outbound: http.NewChooserOutbound(
+			single.New(
+				hostport.PeerIdentifier("127.0.0.1:8089"),
+				httpAgent,
+			),
+		),
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{

@@ -29,6 +29,8 @@ import (
 	"go.uber.org/yarpc/internal/examples/thrift/hello/echo"
 	"go.uber.org/yarpc/internal/examples/thrift/hello/echo/yarpc/helloclient"
 	"go.uber.org/yarpc/internal/examples/thrift/hello/echo/yarpc/helloserver"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
@@ -38,6 +40,8 @@ import (
 
 func main() {
 
+	httpAgent := http.NewAgent()
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
@@ -45,7 +49,12 @@ func main() {
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
-				Unary: http.NewOutbound("http://127.0.0.1:8086"),
+				Unary: http.NewChooserOutbound(
+					single.New(
+						hostport.PeerIdentifier("127.0.0.1:8086"),
+						httpAgent,
+					),
+				),
 			},
 		},
 	})

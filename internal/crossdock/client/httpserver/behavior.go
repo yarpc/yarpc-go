@@ -29,8 +29,10 @@ import (
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
-	ht "go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/transport/http"
 
 	crossdock "github.com/crossdock/crossdock-go"
 )
@@ -42,11 +44,19 @@ func Run(t crossdock.T) {
 	server := t.Param(params.HTTPServer)
 	fatals.NotEmpty(server, "server is required")
 
+	httpAgent := http.NewAgent()
+	// TODO http agent lifecycle
+
 	disp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: ht.NewOutbound(fmt.Sprintf("http://%s:8085", server)),
+				Unary: http.NewChooserOutbound(
+					single.New(
+						hostport.PeerIdentifier(fmt.Sprintf("%s:8085", server)),
+						httpAgent,
+					),
+				),
 			},
 		},
 	})

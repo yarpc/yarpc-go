@@ -3,7 +3,6 @@ package recorder
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -13,6 +12,8 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 
@@ -160,11 +161,19 @@ func (t *testingTMock) Fatal(args ...interface{}) {
 }
 
 func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
+	httpAgent := http.NewAgent()
+	// TODO lifecycle
+
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewOutbound("http://localhost:65535"),
+				Unary: http.NewChooserOutbound(
+					single.New(
+						hostport.PeerIdentifier("127.0.0.1:65535"),
+						httpAgent,
+					),
+				),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
@@ -194,11 +203,19 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	require.NoError(t, serverDisp.Start())
 	defer serverDisp.Stop()
 
+	httpAgent := http.NewAgent()
+	// TODO http agent lifecycle
+
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr().String())),
+				Unary: http.NewChooserOutbound(
+					single.New(
+						hostport.PeerIdentifier(serverHTTP.Addr().String()),
+						httpAgent,
+					),
+				),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
