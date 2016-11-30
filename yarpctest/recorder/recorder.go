@@ -94,6 +94,9 @@ type Recorder struct {
 }
 
 const defaultRecorderDir = "testdata/recordings"
+const recordComment = `# In order to update this recording, setup your external dependencies and run
+# ` + "`" + `go test <insert test files here> --recorder=replay|append|overwrite` + "`\n"
+const currentRecordVersion = 1
 
 // Mode is the recording mode of the recorder.
 type Mode int
@@ -399,7 +402,16 @@ func (r *Recorder) saveRecord(filepath string, cachedRecord *record) {
 		r.logger.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(filepath, rawRecord, 0664); err != nil {
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+	if err != nil {
+		r.logger.Fatal(err)
+	}
+
+	if _, err := file.Write([]byte(recordComment)); err != nil {
+		r.logger.Fatal(err)
+	}
+
+	if _, err := file.Write(rawRecord); err != nil {
 		r.logger.Fatal(err)
 	}
 }
@@ -432,8 +444,6 @@ type responseRecord struct {
 	Headers map[string]string
 	Body    base64blob
 }
-
-const currentRecordVersion = 1
 
 type record struct {
 	Version  uint
