@@ -72,7 +72,7 @@ func TestCallSuccess(t *testing.T) {
 	// TODO transport lifecycle
 
 	parsedURL, _ := url.Parse(successServer.URL)
-	out := NewChooserOutbound(
+	out := NewOutbound(
 		single.New(
 			hostport.PeerIdentifier(parsedURL.Host),
 			httpTransport,
@@ -234,7 +234,7 @@ func TestStopMultiple(t *testing.T) {
 	httpTransport := NewTransport()
 	// TODO transport lifecycle
 
-	out := NewChooserOutbound(
+	out := NewOutbound(
 		single.New(
 			hostport.PeerIdentifier("127.0.0.1:9999"),
 			httpTransport,
@@ -265,7 +265,7 @@ func TestCallWithoutStarting(t *testing.T) {
 	httpTransport := NewTransport()
 	// TODO transport lifecycle
 
-	out := NewChooserOutbound(
+	out := NewOutbound(
 		single.New(
 			hostport.PeerIdentifier("127.0.0.1:9999"),
 			httpTransport,

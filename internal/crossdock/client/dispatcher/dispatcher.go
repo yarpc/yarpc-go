@@ -51,7 +51,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 		if httpTransport == nil {
 			httpTransport = http.NewTransport()
 		}
-		unaryOutbound = http.NewChooserOutbound(
+		unaryOutbound = http.NewOutbound(
 			single.New(
 				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", server)),
 				httpTransport,

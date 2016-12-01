@@ -49,7 +49,7 @@ func main() {
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
-				Unary: http.NewChooserOutbound(
+				Unary: http.NewOutbound(
 					single.New(
 						hostport.PeerIdentifier("127.0.0.1:8086"),
 						httpTransport,

@@ -51,40 +51,11 @@ var (
 
 var defaultURLTemplate, _ = url.Parse("http://localhost")
 
-// NewOutbound builds a new HTTP outbound that sends requests to the given
-// URL.
-//
-// Deprecated: create outbounds through NewPeerListOutbound instead
-func NewOutbound(urlStr string, opts ...TransportOption) *Outbound {
-	transport := NewTransport(opts...)
-
-	_, hp := parseURL(urlStr)
-	peerID := hostport.PeerIdentifier(hp)
-	c := single.New(peerID, transport)
-
-	err := c.Start()
-	if err != nil {
-		// This should never happen, single shouldn't return an error here
-		panic(fmt.Sprintf("could not start single peerChooser, err: %s", err))
-	}
-
-	return NewChooserOutbound(c).WithURLTemplate(urlStr)
-}
-
-func parseURL(urlStr string) (*url.URL, string) {
-	parsedURL, err := url.Parse(urlStr)
-	if err != nil {
-		panic(fmt.Sprintf("invalid url: %s, err: %s", urlStr, err))
-	}
-
-	return parsedURL, parsedURL.Host
-}
-
-// NewChooserOutbound builds a new HTTP outbound built around a peer.Chooser
+// NewOutbound builds a new HTTP outbound built around a peer.Chooser
 // for getting potential downstream hosts.
 // Chooser.Choose MUST return *hostport.Peer objects.
 // Chooser.Start MUST be called before Outbound.Start
-func NewChooserOutbound(chooser peer.Chooser) *Outbound {
+func NewOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
 		started:     atomic.NewBool(false),
 		chooser:     chooser,
@@ -101,7 +72,7 @@ func NewSingleOutbound(u string, t *Transport) *Outbound {
 	if err != nil {
 		panic(err.Error())
 	}
-	return NewChooserOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
+	return NewOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
 		WithURLTemplate(u)
 }
 

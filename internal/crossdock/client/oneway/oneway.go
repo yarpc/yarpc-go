@@ -73,7 +73,7 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"oneway-test": {
-				Oneway: http.NewChooserOutbound(single.New(
+				Oneway: http.NewOutbound(single.New(
 					hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
 					httpTransport,
 				)),

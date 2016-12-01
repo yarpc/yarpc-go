@@ -48,11 +48,11 @@ func Run(t crossdock.T) {
 	httpTransport := http.NewTransport()
 	hostPort := hostport.PeerIdentifier(fmt.Sprintf("%v:%v", server, serverPort))
 
-	thriftOutbound := http.NewChooserOutbound(single.New(hostPort, httpTransport)).
+	thriftOutbound := http.NewOutbound(single.New(hostPort, httpTransport)).
 		WithURLTemplate("http://host:port/thrift/ThriftTest")
-	secondOutbound := http.NewChooserOutbound(single.New(hostPort, httpTransport)).
+	secondOutbound := http.NewOutbound(single.New(hostPort, httpTransport)).
 		WithURLTemplate("http://host:port/thrift/SecondService")
-	multiplexOutbound := http.NewChooserOutbound(single.New(hostPort, httpTransport)).
+	multiplexOutbound := http.NewOutbound(single.New(hostPort, httpTransport)).
 		WithURLTemplate("http://host:port/thrift/multiplexed")
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
