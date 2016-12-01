@@ -12,6 +12,8 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	yhttp "go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
@@ -126,11 +128,14 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8999")},
 	}
 
+	httpAgent := yhttp.NewAgent()
 	clientCfg := yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: yhttp.NewOutbound("http://localhost:8999"),
+				Unary: yhttp.NewChooserOutbound(
+					single.New(hostport.PeerIdentifier("http://localhost:8999"), httpAgent),
+				),
 			},
 		},
 	}
@@ -145,11 +150,14 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 }
 
 func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
+	httpAgent := yhttp.NewAgent()
 	clientCfg := yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: yhttp.NewOutbound("http://localhost:8998"),
+				Unary: yhttp.NewChooserOutbound(
+					single.New(hostport.PeerIdentifier("http://localhost:8998"), httpAgent),
+				),
 			},
 		},
 	}

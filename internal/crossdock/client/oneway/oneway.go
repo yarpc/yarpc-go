@@ -28,6 +28,8 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
@@ -65,11 +67,16 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	crossdock.Fatals(t).NotEmpty(server, "server is required")
 
+	// TODO httpAgent lifecycle
+	httpAgent := http.NewAgent()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"oneway-test": {
-				Oneway: http.NewOutbound(fmt.Sprintf("http://%s:8084", server)),
+				Oneway: http.NewChooserOutbound(single.New(
+					hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
+					httpAgent,
+				)),
 			},
 		},
 		//for call back
@@ -78,6 +85,7 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 
 	// register procedure for remote server to call us back on
 	dispatcher.Register(raw.OnewayProcedure("call-back", callBack))
+
 	return dispatcher
 }
 

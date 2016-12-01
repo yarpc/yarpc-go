@@ -80,7 +80,7 @@ func parseURL(urlStr string) (*url.URL, string) {
 	return parsedURL, parsedURL.Host
 }
 
-// NewChooserOutbound builds a new HTTP outbound built around a PeerList
+// NewChooserOutbound builds a new HTTP outbound built around a peer.Chooser
 // for getting potential downstream hosts.
 // Chooser.Choose MUST return *hostport.Peer objects.
 // Chooser.Start MUST be called before Outbound.Start

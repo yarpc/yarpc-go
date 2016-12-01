@@ -26,12 +26,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
@@ -65,7 +68,16 @@ func TestCallSuccess(t *testing.T) {
 	))
 	defer successServer.Close()
 
-	out := NewOutbound(successServer.URL)
+	agent := NewAgent()
+	// TODO agent lifecycle
+
+	parsedURL, _ := url.Parse(successServer.URL)
+	out := NewChooserOutbound(
+		single.New(
+			hostport.PeerIdentifier(parsedURL.Host),
+			agent,
+		),
+	)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 
@@ -212,7 +224,15 @@ func TestStartMultiple(t *testing.T) {
 }
 
 func TestStopMultiple(t *testing.T) {
-	out := NewOutbound("http://localhost:9999")
+	agent := NewAgent()
+	// TODO agent lifecycle
+
+	out := NewChooserOutbound(
+		single.New(
+			hostport.PeerIdentifier("127.0.0.1:9999"),
+			agent,
+		),
+	)
 
 	err := out.Start()
 	require.NoError(t, err)
@@ -235,7 +255,15 @@ func TestStopMultiple(t *testing.T) {
 }
 
 func TestCallWithoutStarting(t *testing.T) {
-	out := NewOutbound("http://localhost:9999")
+	agent := NewAgent()
+	// TODO agent lifecycle
+
+	out := NewChooserOutbound(
+		single.New(
+			hostport.PeerIdentifier("127.0.0.1:9999"),
+			agent,
+		),
+	)
 	assert.Panics(t, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
