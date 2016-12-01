@@ -82,7 +82,7 @@ func parseURL(urlStr string) (*url.URL, string) {
 
 // NewChooserOutbound builds a new HTTP outbound built around a PeerList
 // for getting potential downstream hosts.
-// Chooser.ChoosePeer MUST return *hostport.Peer objects.
+// Chooser.Choose MUST return *hostport.Peer objects.
 // Chooser.Start MUST be called before Outbound.Start
 func NewChooserOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
@@ -260,7 +260,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
-	p, err := o.chooser.ChoosePeer(ctx, treq)
+	p, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
 		return nil, err
 	}

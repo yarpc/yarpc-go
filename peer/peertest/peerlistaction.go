@@ -67,13 +67,13 @@ func (a StopAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
-// ChooseMultiAction will run ChoosePeer multiple times on the PeerList
+// ChooseMultiAction will run Choose multiple times on the PeerList
 // It will assert if there are ANY failures
 type ChooseMultiAction struct {
 	ExpectedPeers []string
 }
 
-// Apply runs "ChoosePeer" on the peerList for every ExpectedPeer
+// Apply runs "Choose" on the peerList for every ExpectedPeer
 func (a ChooseMultiAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	for _, expectedPeer := range a.ExpectedPeers {
 		action := ChooseAction{
@@ -92,7 +92,7 @@ type ChooseAction struct {
 	ExpectedErr         error
 }
 
-// Apply runs "ChoosePeer" on the peerList and validates the peer && error
+// Apply runs "Choose" on the peerList and validates the peer && error
 func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	ctx := a.InputContext
 	if ctx == nil {
@@ -104,7 +104,7 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 		defer cancel()
 	}
 
-	p, err := pl.ChoosePeer(ctx, a.InputRequest)
+	p, err := pl.Choose(ctx, a.InputRequest)
 
 	if a.ExpectedErr != nil {
 		// Note that we're not verifying anything about ExpectedPeer here because

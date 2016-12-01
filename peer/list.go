@@ -37,7 +37,7 @@ type Chooser interface {
 	Stop() error
 
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
-	ChoosePeer(context.Context, *transport.Request) (Peer, error)
+	Choose(context.Context, *transport.Request) (Peer, error)
 }
 
 // List listens to adds and removes of Peers from a PeerProvider
