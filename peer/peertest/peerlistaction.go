@@ -130,9 +130,9 @@ type AddAction struct {
 // Apply runs "Add" on the peer.Chooser after casting it to a peer.List
 // and validates the error
 func (a AddAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
-	changeListener := pl.(peer.List)
+	list := pl.(peer.List)
 
-	err := changeListener.Add(MockPeerIdentifier(a.InputPeerID))
+	err := list.Update([]peer.Identifier{MockPeerIdentifier(a.InputPeerID)}, nil)
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
@@ -145,9 +145,9 @@ type RemoveAction struct {
 // Apply runs "Remove" on the peer.Chooser after casting it to a peer.List
 // and validates the error
 func (a RemoveAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
-	changeListener := pl.(peer.List)
+	list := pl.(peer.List)
 
-	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
+	err := list.Update(nil, []peer.Identifier{MockPeerIdentifier(a.InputPeerID)})
 	assert.Equal(t, a.ExpectedErr, err)
 }
 

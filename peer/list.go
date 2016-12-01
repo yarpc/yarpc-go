@@ -44,9 +44,6 @@ type Chooser interface {
 // A Chooser will implement the PeerChangeListener interface in order to receive
 // updates to the list of Peers it is keeping track of
 type List interface {
-	// Add a peer to the List (Called directly from a PeerProvider)
-	Add(Identifier) error
-
-	// Remove a peer from the List (Called directly from a PeerProvider)
-	Remove(Identifier) error
+	// Update performs the additions and removals to the Peer List
+	Update(additions, removals []Identifier) error
 }
