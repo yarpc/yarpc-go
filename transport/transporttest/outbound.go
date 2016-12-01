@@ -61,14 +61,14 @@ func (_mr *_MockUnaryOutboundRecorder) Call(arg0, arg1 interface{}) *gomock.Call
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Call", arg0, arg1)
 }
 
-func (_m *MockUnaryOutbound) Start(_param0 transport.Deps) error {
-	ret := _m.ctrl.Call(_m, "Start", _param0)
+func (_m *MockUnaryOutbound) Start() error {
+	ret := _m.ctrl.Call(_m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockUnaryOutboundRecorder) Start(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0)
+func (_mr *_MockUnaryOutboundRecorder) Start() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
 }
 
 func (_m *MockUnaryOutbound) Stop() error {
@@ -113,14 +113,14 @@ func (_mr *_MockOnewayOutboundRecorder) CallOneway(arg0, arg1 interface{}) *gomo
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "CallOneway", arg0, arg1)
 }
 
-func (_m *MockOnewayOutbound) Start(_param0 transport.Deps) error {
-	ret := _m.ctrl.Call(_m, "Start", _param0)
+func (_m *MockOnewayOutbound) Start() error {
+	ret := _m.ctrl.Call(_m, "Start")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockOnewayOutboundRecorder) Start(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0)
+func (_mr *_MockOnewayOutboundRecorder) Start() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
 }
 
 func (_m *MockOnewayOutbound) Stop() error {

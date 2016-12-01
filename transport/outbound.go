@@ -31,7 +31,7 @@ type Outbound interface {
 	// This MUST block until the outbound is ready to start sending requests.
 	// This MUST be idempotent and thread-safe. If called multiple times, only
 	// the first call's dependencies are used
-	Start(deps Deps) error
+	Start() error
 
 	// Stops the outbound, cleaning up any resources held by the Outbound.
 	//

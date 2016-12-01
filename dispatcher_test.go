@@ -111,7 +111,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
 				}
@@ -121,7 +122,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
@@ -137,10 +138,11 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
+					in.EXPECT().SetRegistry(gomock.Any())
 					if i == 6 {
-						in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(errors.New("great sadness"))
+						in.EXPECT().Start().Return(errors.New("great sadness"))
 					} else {
-						in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+						in.EXPECT().Start().Return(nil)
 						in.EXPECT().Stop().Return(nil)
 					}
 					inbounds[i] = in
@@ -151,7 +153,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
@@ -168,7 +170,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					if i == 7 {
 						in.EXPECT().Stop().Return(errors.New("great sadness"))
 					} else {
@@ -182,7 +185,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					out.EXPECT().Stop().Return(nil)
 					outbounds[fmt.Sprintf("service-%v", i)] =
 						transport.Outbounds{
@@ -199,7 +202,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
 				}
@@ -210,9 +214,9 @@ func TestStartStopFailures(t *testing.T) {
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
 					if i == 5 {
-						out.EXPECT().Start(gomock.Any()).Return(errors.New("something went wrong"))
+						out.EXPECT().Start().Return(errors.New("something went wrong"))
 					} else {
-						out.EXPECT().Start(gomock.Any()).Return(nil)
+						out.EXPECT().Start().Return(nil)
 						out.EXPECT().Stop().Return(nil)
 					}
 					outbounds[fmt.Sprintf("service-%v", i)] =
@@ -231,7 +235,8 @@ func TestStartStopFailures(t *testing.T) {
 				inbounds := make(Inbounds, 10)
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
-					in.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
 				}
@@ -241,7 +246,7 @@ func TestStartStopFailures(t *testing.T) {
 				outbounds := make(Outbounds, 10)
 				for i := 0; i < 10; i++ {
 					out := transporttest.NewMockUnaryOutbound(mockCtrl)
-					out.EXPECT().Start(gomock.Any()).Return(nil)
+					out.EXPECT().Start().Return(nil)
 					if i == 7 {
 						out.EXPECT().Stop().Return(errors.New("something went wrong"))
 					} else {

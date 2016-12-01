@@ -101,7 +101,9 @@ type Outbound struct {
 	tracer      opentracing.Tracer
 }
 
-// WithURLTemplate configures an alternate URL template
+// WithURLTemplate configures an alternate URL template.
+// The host:port portion of the URL template gets replaced by the chosen peer's
+// identifier for each outbound request.
 func (o *Outbound) WithURLTemplate(URL string) *Outbound {
 	parsedURL, err := url.Parse(URL)
 	if err != nil {
@@ -118,9 +120,8 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 }
 
 // Start the HTTP outbound
-func (o *Outbound) Start(d transport.Deps) error {
-	if o.started.Swap(true) {
-	}
+func (o *Outbound) Start() error {
+	o.started.Swap(true)
 	return nil
 }
 

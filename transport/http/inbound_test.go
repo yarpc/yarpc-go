@@ -44,9 +44,11 @@ import (
 
 func TestStartAddrInUse(t *testing.T) {
 	i1 := NewInbound(":0")
-	require.NoError(t, i1.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
+	i1.SetRegistry(new(transporttest.MockRegistry))
+	require.NoError(t, i1.Start(), "inbound 1 must start without an error")
 	i2 := NewInbound(i1.Addr().String())
-	err := i2.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps)
+	i2.SetRegistry(new(transporttest.MockRegistry))
+	err := i2.Start()
 
 	require.Error(t, err)
 	oe, ok := err.(*net.OpError)
@@ -61,7 +63,8 @@ func TestStartAddrInUse(t *testing.T) {
 
 func TestNilAddrAfterStop(t *testing.T) {
 	i := NewInbound(":0")
-	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
+	i.SetRegistry(new(transporttest.MockRegistry))
+	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NotNil(t, i.Addr())
 	assert.NoError(t, i.Stop())
@@ -70,13 +73,16 @@ func TestNilAddrAfterStop(t *testing.T) {
 
 func TestInboundStartAndStop(t *testing.T) {
 	i := NewInbound(":0")
-	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps))
+	i.SetRegistry(new(transporttest.MockRegistry))
+	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NoError(t, i.Stop())
 }
 
 func TestInboundStartError(t *testing.T) {
-	err := NewInbound("invalid").Start(transport.ServiceDetail{Name: "foo", Registry: new(transporttest.MockRegistry)}, transport.NoDeps)
+	err := NewInbound("invalid").
+		WithRegistry(new(transporttest.MockRegistry)).
+		Start()
 	assert.Error(t, err, "expected failure")
 }
 
@@ -98,7 +104,8 @@ func TestInboundMux(t *testing.T) {
 	i := NewInbound(":0").WithMux("/rpc/v1", mux)
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRegistry(mockCtrl)
-	require.NoError(t, i.Start(transport.ServiceDetail{Name: "foo", Registry: reg}, transport.NoDeps))
+	i.SetRegistry(reg)
+	require.NoError(t, i.Start())
 
 	defer i.Stop()
 
@@ -114,7 +121,7 @@ func TestInboundMux(t *testing.T) {
 
 	// this should fail
 	o := NewOutbound(addr)
-	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -132,7 +139,7 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	o = NewOutbound(addr + "rpc/v1")
-	require.NoError(t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 
 	spec := transport.NewUnaryHandlerSpec(h)

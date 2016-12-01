@@ -23,6 +23,7 @@ package tchannel
 import (
 	"net"
 
+	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
@@ -44,6 +45,7 @@ type Inbound struct {
 	ch       Channel
 	addr     string
 	listener net.Listener
+	registry transport.Registry
 	tracer   opentracing.Tracer
 }
 
@@ -63,6 +65,20 @@ func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
 	return i
 }
 
+// WithRegistry configures a registry to handle incoming requests,
+// as a chained method for convenience.
+func (i *Inbound) WithRegistry(registry transport.Registry) *Inbound {
+	i.registry = registry
+	return i
+}
+
+// SetRegistry configures a registry to handle incoming requests.
+// This satisfies the transport.Inbound interface, and would be called
+// by a dispatcher when it starts.
+func (i *Inbound) SetRegistry(registry transport.Registry) {
+	i.registry = registry
+}
+
 // Channel returns the underlying Channel for this Inbound.
 func (i *Inbound) Channel() Channel {
 	return i.ch
@@ -70,10 +86,14 @@ func (i *Inbound) Channel() Channel {
 
 // Start starts the TChannel inbound transport. This immediately opens a listen
 // socket.
-func (i *Inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
+func (i *Inbound) Start() error {
+	if i.registry == nil {
+		return errors.NoRegistryError{}
+	}
+
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing: existing, Registry: service.Registry, tracer: i.tracer})
+	sc.SetHandler(handler{existing: existing, Registry: i.registry, tracer: i.tracer})
 
 	if i.ch.State() == tchannel.ChannelListening {
 		// Channel.Start() was called before RPC.Start(). We still want to

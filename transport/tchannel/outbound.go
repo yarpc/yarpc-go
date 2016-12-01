@@ -68,7 +68,7 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 }
 
 // Start starts the TChannel outbound.
-func (o *Outbound) Start(d transport.Deps) error {
+func (o *Outbound) Start() error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
 	o.started.Swap(true)

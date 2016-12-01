@@ -97,25 +97,25 @@ func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Reques
 type httpTransport struct{ t *testing.T }
 
 func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
-	i := http.NewInbound("127.0.0.1:0")
-	require.NoError(ht.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
+	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
-	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
 }
 
 func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
-	i := http.NewInbound("127.0.0.1:0")
-	require.NoError(ht.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
+	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
 	addr := fmt.Sprintf("http://%v/", i.Addr().String())
 	o := http.NewOutbound(addr)
-	require.NoError(ht.t, o.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
 }
@@ -127,8 +127,8 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
-		i := tch.NewInbound(ch)
-		require.NoError(tt.t, i.Start(transport.ServiceDetail{Name: testService, Registry: r}, transport.NoDeps), "failed to start")
+		i := tch.NewInbound(ch).WithRegistry(r)
+		require.NoError(tt.t, i.Start(), "failed to start")
 
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
@@ -136,7 +136,7 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 
 		client := testutils.NewClient(tt.t, clientOpts)
 		o := tch.NewOutbound(client).WithHostPort(hostPort)
-		require.NoError(tt.t, o.Start(transport.NoDeps), "failed to start outbound")
+		require.NoError(tt.t, o.Start(), "failed to start outbound")
 		defer o.Stop()
 
 		f(o)

@@ -66,7 +66,7 @@ func TestCallSuccess(t *testing.T) {
 	defer successServer.Close()
 
 	out := NewOutbound(successServer.URL)
-	require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
+	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -129,7 +129,7 @@ func TestOutboundHeaders(t *testing.T) {
 		}
 
 		out := NewOutbound(server.URL)
-		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
+		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
 		res, err := out.Call(ctx, &transport.Request{
@@ -172,7 +172,7 @@ func TestCallFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		out := NewOutbound(tt.url)
-		require.NoError(t, out.Start(transport.NoDeps), "failed to start outbound")
+		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -203,7 +203,7 @@ func TestStartMultiple(t *testing.T) {
 			defer wg.Done()
 			<-signal
 
-			err := out.Start(transport.NoDeps)
+			err := out.Start()
 			assert.NoError(t, err)
 		}()
 	}
@@ -214,7 +214,7 @@ func TestStartMultiple(t *testing.T) {
 func TestStopMultiple(t *testing.T) {
 	out := NewOutbound("http://localhost:9999")
 
-	err := out.Start(transport.NoDeps)
+	err := out.Start()
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup

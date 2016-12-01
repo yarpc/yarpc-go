@@ -70,8 +70,8 @@ type unaryOutboundWithMiddleware struct {
 	f UnaryOutboundMiddleware
 }
 
-func (fo unaryOutboundWithMiddleware) Start(d Deps) error {
-	return fo.o.Start(d)
+func (fo unaryOutboundWithMiddleware) Start() error {
+	return fo.o.Start()
 }
 
 func (fo unaryOutboundWithMiddleware) Stop() error {
@@ -135,8 +135,8 @@ type onewayOutboundWithMiddleware struct {
 	f OnewayOutboundMiddleware
 }
 
-func (fo onewayOutboundWithMiddleware) Start(d Deps) error {
-	return fo.o.Start(d)
+func (fo onewayOutboundWithMiddleware) Start() error {
+	return fo.o.Start()
 }
 
 func (fo onewayOutboundWithMiddleware) Stop() error {

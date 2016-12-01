@@ -70,6 +70,7 @@ type Config struct {
 	InboundMiddleware  InboundMiddleware
 	OutboundMiddleware OutboundMiddleware
 
+	// Tracer is deprecated. The dispatcher does nothing with this propery.
 	Tracer opentracing.Tracer
 }
 
@@ -103,7 +104,6 @@ func NewDispatcher(cfg Config) Dispatcher {
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		InboundMiddleware: cfg.InboundMiddleware,
-		deps:              transport.NoDeps.WithTracer(cfg.Tracer),
 	}
 }
 
@@ -150,8 +150,6 @@ type dispatcher struct {
 	outbounds Outbounds
 
 	InboundMiddleware InboundMiddleware
-
-	deps transport.Deps
 }
 
 func (d dispatcher) Inbounds() Inbounds {
@@ -174,14 +172,9 @@ func (d dispatcher) Start() error {
 		startedOutbounds []transport.Outbound
 	)
 
-	service := transport.ServiceDetail{
-		Name:     d.Name,
-		Registry: d,
-	}
-
 	startInbound := func(i transport.Inbound) func() error {
 		return func() error {
-			if err := i.Start(service, d.deps); err != nil {
+			if err := i.Start(); err != nil {
 				return err
 			}
 
@@ -198,7 +191,7 @@ func (d dispatcher) Start() error {
 				return nil
 			}
 
-			if err := o.Start(d.deps); err != nil {
+			if err := o.Start(); err != nil {
 				return err
 			}
 
@@ -211,6 +204,7 @@ func (d dispatcher) Start() error {
 
 	var wait intsync.ErrorWaiter
 	for _, i := range d.inbounds {
+		i.SetRegistry(d)
 		wait.Submit(startInbound(i))
 	}
 
