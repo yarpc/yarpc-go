@@ -230,7 +230,7 @@ func TestTransport(t *testing.T) {
 					// attempt to remove subscribers and be sure that it doesn't error
 					assert.Len(t, expectedPeerNode.subscribers, p.NumSubscribers())
 					for _, sub := range expectedPeerNode.subscribers {
-						err := p.RemoveSubscriber(deps.Subscribers[sub])
+						err := p.Unsubscribe(deps.Subscribers[sub])
 						assert.NoError(t, err, "peer %s did not have reference to subscriber %s", p.Identifier(), sub)
 					}
 				}
