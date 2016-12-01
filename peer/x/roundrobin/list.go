@@ -59,19 +59,23 @@ type List struct {
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures
 func (pl *List) Update(additions, removals []peer.Identifier) error {
+	if len(additions) == 0 && len(removals) == 0 {
+		return nil
+	}
+
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
 	var errs []error
 
-	for _, peerID := range additions {
-		if err := pl.addPeerIdentifier(peerID); err != nil {
+	for _, peerID := range removals {
+		if err := pl.removePeerIdentifier(peerID); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	for _, peerID := range removals {
-		if err := pl.removePeerIdentifier(peerID); err != nil {
+	for _, peerID := range additions {
+		if err := pl.addPeerIdentifier(peerID); err != nil {
 			errs = append(errs, err)
 		}
 	}
