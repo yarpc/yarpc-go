@@ -20,7 +20,7 @@
 
 package peer
 
-//go:generate mockgen -destination=peertest/agent.go -package=peertest go.uber.org/yarpc/peer Agent,Subscriber
+//go:generate mockgen -destination=peertest/transport.go -package=peertest go.uber.org/yarpc/peer Transport,Subscriber
 
 // Subscriber listens to changes of a Peer over time.
 type Subscriber interface {
@@ -28,9 +28,9 @@ type Subscriber interface {
 	NotifyStatusChanged(Identifier)
 }
 
-// Agent manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
-// PeerIdentifier and the Agent has the ability to create a new Peer or return an existing one.
-type Agent interface {
+// Transport manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
+// PeerIdentifier and the Transport has the ability to create a new Peer or return an existing one.
+type Transport interface {
 	// Get or create a Peer for the Subscriber
 	RetainPeer(Identifier, Subscriber) (Peer, error)
 

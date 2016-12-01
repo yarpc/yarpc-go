@@ -37,12 +37,12 @@ var dispatcher yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
-	httpAgent := http.NewAgent()
+	httpTransport := http.NewTransport()
 	h := onewayHandler{
 		Outbound: http.NewChooserOutbound(
 			single.New(
 				hostport.PeerIdentifier("127.0.0.1:8089"),
-				httpAgent,
+				httpTransport,
 			),
 		),
 	}

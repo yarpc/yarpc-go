@@ -67,15 +67,15 @@ func newDispatcher(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	crossdock.Fatals(t).NotEmpty(server, "server is required")
 
-	// TODO httpAgent lifecycle
-	httpAgent := http.NewAgent()
+	// TODO httpTransport lifecycle
+	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"oneway-test": {
 				Oneway: http.NewChooserOutbound(single.New(
 					hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
-					httpAgent,
+					httpTransport,
 				)),
 			},
 		},

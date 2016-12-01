@@ -344,8 +344,8 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, serverDispatcher.Start())
 	defer serverDispatcher.Stop()
 
-	httpAgent := NewAgent()
-	// TODO http agent lifecycle
+	httpTransport := NewTransport()
+	// TODO http transport lifecycle
 
 	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test-client",
@@ -354,7 +354,7 @@ func TestHandlerPanic(t *testing.T) {
 				Unary: NewChooserOutbound(
 					single.New(
 						hostport.PeerIdentifier(inbound.Addr().String()),
-						httpAgent,
+						httpTransport,
 					),
 				),
 			},

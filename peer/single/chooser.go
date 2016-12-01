@@ -34,9 +34,9 @@ type Single struct {
 }
 
 // New creates a static peer.Chooser with a single Peer
-func New(pid peer.Identifier, agent peer.Agent) *Single {
+func New(pid peer.Identifier, transport peer.Transport) *Single {
 	s := &Single{}
-	p, err := agent.RetainPeer(pid, s)
+	p, err := transport.RetainPeer(pid, s)
 	s.p = p
 	s.err = err
 	return s

@@ -55,12 +55,12 @@ var defaultURLTemplate, _ = url.Parse("http://localhost")
 // URL.
 //
 // Deprecated: create outbounds through NewPeerListOutbound instead
-func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
-	agent := NewAgent(opts...)
+func NewOutbound(urlStr string, opts ...TransportOption) *Outbound {
+	transport := NewTransport(opts...)
 
 	_, hp := parseURL(urlStr)
 	peerID := hostport.PeerIdentifier(hp)
-	c := single.New(peerID, agent)
+	c := single.New(peerID, transport)
 
 	err := c.Start()
 	if err != nil {
@@ -308,14 +308,14 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 }
 
 func (o *Outbound) getHTTPClient(p *hostport.Peer) (*http.Client, error) {
-	agent, ok := p.Agent().(*Agent)
+	transport, ok := p.Transport().(*Transport)
 	if !ok {
-		return nil, peer.ErrInvalidAgentConversion{
-			Agent:        p.Agent(),
-			ExpectedType: "*http.Agent",
+		return nil, peer.ErrInvalidTransportConversion{
+			Transport:    p.Transport(),
+			ExpectedType: "*http.Transport",
 		}
 	}
-	return agent.client, nil
+	return transport.client, nil
 }
 
 func getErrFromResponse(response *http.Response) error {

@@ -32,11 +32,11 @@ import (
 )
 
 // New creates a new round robin PeerList
-func New(peerIDs []peer.Identifier, agent peer.Agent) (*List, error) {
+func New(peerIDs []peer.Identifier, transport peer.Transport) (*List, error) {
 	rr := &List{
 		unavailablePeers:   make(map[string]peer.Peer, len(peerIDs)),
 		availablePeerRing:  NewPeerRing(len(peerIDs)),
-		agent:              agent,
+		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
 
@@ -51,7 +51,7 @@ type List struct {
 	unavailablePeers   map[string]peer.Peer
 	availablePeerRing  *PeerRing
 	peerAvailableEvent chan struct{}
-	agent              peer.Agent
+	transport          peer.Transport
 	started            atomic.Bool
 }
 
@@ -85,7 +85,7 @@ func (pl *List) Update(additions, removals []peer.Identifier) error {
 
 // Must be run inside a mutex.Lock()
 func (pl *List) addPeerIdentifier(pid peer.Identifier) error {
-	p, err := pl.agent.RetainPeer(pid, pl)
+	p, err := pl.transport.RetainPeer(pid, pl)
 	if err != nil {
 		return err
 	}
@@ -162,11 +162,11 @@ func (pl *List) removeAllUnavailable() []peer.Peer {
 }
 
 // releaseAll will iterate through a list of peers and call release
-// on the agent
+// on the transport
 func (pl *List) releaseAll(peers []peer.Peer) []error {
 	var errs []error
 	for _, p := range peers {
-		if err := pl.agent.ReleasePeer(p, pl); err != nil {
+		if err := pl.transport.ReleasePeer(p, pl); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -174,7 +174,7 @@ func (pl *List) releaseAll(peers []peer.Peer) []error {
 }
 
 // removePeerIdentifier will go remove references to the peer identifier and release
-// it from the agent
+// it from the transport
 // Must be run in a mutex.Lock()
 func (pl *List) removePeerIdentifier(pid peer.Identifier) error {
 	if err := pl.removePeerIdentifierReferences(pid); err != nil {
@@ -182,7 +182,7 @@ func (pl *List) removePeerIdentifier(pid peer.Identifier) error {
 		return err
 	}
 
-	return pl.agent.ReleasePeer(pid, pl)
+	return pl.transport.ReleasePeer(pid, pl)
 }
 
 // removePeerIdentifierReferences will search through the Available and Unavailable Peers

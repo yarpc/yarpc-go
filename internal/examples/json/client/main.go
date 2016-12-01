@@ -92,18 +92,18 @@ func main() {
 
 	flag.Parse()
 
-	var httpAgent *http.Agent
+	var httpTransport *http.Transport
 
 	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
-		if httpAgent == nil {
-			httpAgent = http.NewAgent()
+		if httpTransport == nil {
+			httpTransport = http.NewTransport()
 		}
 		outbound = http.NewChooserOutbound(
 			single.New(
 				hostport.PeerIdentifier("127.0.0.1:24034"),
-				httpAgent,
+				httpTransport,
 			),
 		)
 	case "tchannel":

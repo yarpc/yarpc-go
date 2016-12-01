@@ -44,8 +44,8 @@ func Run(t crossdock.T) {
 	server := t.Param(params.HTTPServer)
 	fatals.NotEmpty(server, "server is required")
 
-	httpAgent := http.NewAgent()
-	// TODO http agent lifecycle
+	httpTransport := http.NewTransport()
+	// TODO http transport lifecycle
 
 	disp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
@@ -54,7 +54,7 @@ func Run(t crossdock.T) {
 				Unary: http.NewChooserOutbound(
 					single.New(
 						hostport.PeerIdentifier(fmt.Sprintf("%s:8085", server)),
-						httpAgent,
+						httpTransport,
 					),
 				),
 			},

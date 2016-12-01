@@ -128,13 +128,13 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8999")},
 	}
 
-	httpAgent := yhttp.NewAgent()
+	httpTransport := yhttp.NewTransport()
 	clientCfg := yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
 				Unary: yhttp.NewChooserOutbound(
-					single.New(hostport.PeerIdentifier("http://localhost:8999"), httpAgent),
+					single.New(hostport.PeerIdentifier("http://localhost:8999"), httpTransport),
 				),
 			},
 		},
@@ -150,13 +150,13 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 }
 
 func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
-	httpAgent := yhttp.NewAgent()
+	httpTransport := yhttp.NewTransport()
 	clientCfg := yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
 				Unary: yhttp.NewChooserOutbound(
-					single.New(hostport.PeerIdentifier("http://localhost:8998"), httpAgent),
+					single.New(hostport.PeerIdentifier("http://localhost:8998"), httpTransport),
 				),
 			},
 		},

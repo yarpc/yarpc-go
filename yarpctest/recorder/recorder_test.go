@@ -161,7 +161,7 @@ func (t *testingTMock) Fatal(args ...interface{}) {
 }
 
 func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
-	httpAgent := http.NewAgent()
+	httpTransport := http.NewTransport()
 	// TODO lifecycle
 
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
@@ -171,7 +171,7 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 				Unary: http.NewChooserOutbound(
 					single.New(
 						hostport.PeerIdentifier("127.0.0.1:65535"),
-						httpAgent,
+						httpTransport,
 					),
 				),
 			},
@@ -203,8 +203,8 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	require.NoError(t, serverDisp.Start())
 	defer serverDisp.Stop()
 
-	httpAgent := http.NewAgent()
-	// TODO http agent lifecycle
+	httpTransport := http.NewTransport()
+	// TODO http transport lifecycle
 
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
@@ -213,7 +213,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 				Unary: http.NewChooserOutbound(
 					single.New(
 						hostport.PeerIdentifier(serverHTTP.Addr().String()),
-						httpAgent,
+						httpTransport,
 					),
 				),
 			},
