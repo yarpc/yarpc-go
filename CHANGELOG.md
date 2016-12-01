@@ -13,6 +13,35 @@ v1.0.0-dev (unreleased)
     understanding where they come from.
 
 
+-   **Breaking**: TChannel inbound and outbound constructors now return
+    pointers to Inbound and Outbound structs with private state satisfying the
+    `transport.Inbound` and `transport.Outbound` interfaces.  These were
+    previously transport specific Inbound and Outbound interfaces.
+    This eliminates unnecessary polymorphism in some cases.
+
+-   **Breaking**: the HTTP and TChannel Inbound and Outbound transports no longer
+    support optional arguments.  Instead, you must chain `With*` methods.
+
+    Before:
+
+    ```go
+    tchannel.NewOutbound(channel, tchannel.HostPort("127.0.0.1:4040")
+    ```
+
+    Now:
+
+    ```go
+    tchannel.NewOutbound(channel).WithHostPort("127.0.0.1:4040")
+    ```
+
+    This change applies to:
+
+    -   WithHostPort on TChannel outbound
+    -   WithListenAddr on TChannel inbound
+    -   WithMux on HTTP inbound
+    -   WithURLTemplate on HTTP outbounds **new**
+    -   WithTracer on all transports **new**
+
 v1.0.0-rc1 (2016-11-23)
 -----------------------
 

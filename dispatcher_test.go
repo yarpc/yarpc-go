@@ -44,7 +44,7 @@ func basicDispatcher(t *testing.T) Dispatcher {
 	return NewDispatcher(Config{
 		Name: "test",
 		Inbounds: Inbounds{
-			tch.NewInbound(ch, tch.ListenAddr(":0")),
+			tch.NewInbound(ch).WithListenAddr(":0"),
 			http.NewInbound(":0"),
 		},
 	})
@@ -73,10 +73,11 @@ func TestInboundsOrderIsMaintained(t *testing.T) {
 	dispatcher := basicDispatcher(t)
 
 	// Order must be maintained
-	assert.Implements(t,
-		(*tch.Inbound)(nil), dispatcher.Inbounds()[0], "first inbound must be TChannel")
-	assert.Implements(t,
-		(*http.Inbound)(nil), dispatcher.Inbounds()[1], "second inbound must be HTTP")
+	_, ok := dispatcher.Inbounds()[0].(*tch.Inbound)
+	assert.True(t, ok, "first inbound must be TChannel")
+
+	_, ok = dispatcher.Inbounds()[1].(*http.Inbound)
+	assert.True(t, ok, "second inbound must be HTTP")
 }
 
 func TestInboundsOrderAfterStart(t *testing.T) {
@@ -87,10 +88,10 @@ func TestInboundsOrderAfterStart(t *testing.T) {
 
 	inbounds := dispatcher.Inbounds()
 
-	tchInbound := inbounds[0].(tch.Inbound)
+	tchInbound := inbounds[0].(*tch.Inbound)
 	assert.NotEqual(t, "0.0.0.0:0", tchInbound.Channel().PeerInfo().HostPort)
 
-	httpInbound := inbounds[1].(http.Inbound)
+	httpInbound := inbounds[1].(*http.Inbound)
 	assert.NotNil(t, httpInbound.Addr(), "expected an HTTP addr")
 }
 

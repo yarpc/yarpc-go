@@ -117,11 +117,11 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":18080", http.WithTracer(tracer)),
+			http.NewInbound(":18080").WithTracer(tracer),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: http.NewOutbound("http://127.0.0.1:18080"),
+				Unary: http.NewOutbound("http://127.0.0.1:18080").WithTracer(tracer),
 			},
 		},
 		Tracer: tracer,
@@ -142,11 +142,11 @@ func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dis
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			ytchannel.NewInbound(ch, ytchannel.WithTracer(tracer)),
+			ytchannel.NewInbound(ch).WithTracer(tracer),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: ytchannel.NewOutbound(ch, ytchannel.HostPort(hp)),
+				Unary: ytchannel.NewOutbound(ch).WithHostPort(hp),
 			},
 		},
 		Tracer: tracer,

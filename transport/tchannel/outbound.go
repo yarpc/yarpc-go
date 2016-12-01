@@ -28,60 +28,63 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/atomic"
 )
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("tchannel.Outbound")
 
-// OutboundOption configures Outbound.
-type OutboundOption func(*outbound)
-
-// HostPort specifies that the requests made by this outbound should be to
-// the given address.
-//
-// By default, if HostPort was not specified, the Outbound will use the
-// TChannel global peer list.
-func HostPort(hostPort string) OutboundOption {
-	return func(o *outbound) {
-		o.HostPort = hostPort
-	}
-}
-
 // NewOutbound builds a new TChannel outbound which uses the given Channel to
 // make requests.
-func NewOutbound(ch Channel, options ...OutboundOption) transport.UnaryOutbound {
-	o := outbound{Channel: ch, started: atomic.NewBool(false)}
-	for _, opt := range options {
-		opt(&o)
-	}
-	return o
+func NewOutbound(ch Channel) *Outbound {
+	return &Outbound{channel: ch, started: atomic.NewBool(false)}
 }
 
-type outbound struct {
+// Outbound is a TChannel outbound transport.
+type Outbound struct {
 	started *atomic.Bool
-	Channel Channel
+	channel Channel
 
 	// If specified, this is the address to which the request will be made.
 	// Otherwise, the global peer list of the Channel will be used.
 	HostPort string
 }
 
-func (o outbound) Start(d transport.Deps) error {
+// WithHostPort specifies that the requests made by this outbound should be to
+// the given address.
+//
+// By default, if HostPort was not specified, the Outbound will use the
+// TChannel global peer list.
+func (o *Outbound) WithHostPort(hostPort string) *Outbound {
+	o.HostPort = hostPort
+	return o
+}
+
+// WithTracer configures a tracer for this outbound.
+func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
+	// At this time, we delegate tracing responsibility to the underlying TChannel.
+	return o
+}
+
+// Start starts the TChannel outbound.
+func (o *Outbound) Start(d transport.Deps) error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
 	o.started.Swap(true)
 	return nil
 }
 
-func (o outbound) Stop() error {
+// Stop stops the TChannel outbound.
+func (o *Outbound) Stop() error {
 	if o.started.Swap(false) {
-		o.Channel.Close()
+		o.channel.Close()
 	}
 	return nil
 }
 
-func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+// Call sends an RPC over this TChannel outbound.
+func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
 		// panic because there's no recovery from this
 		panic(errOutboundNotStarted)
@@ -103,7 +106,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 	if o.HostPort != "" {
 		// If the hostport is given, we use the BeginCall on the channel
 		// instead of the subchannel.
-		call, err = o.Channel.BeginCall(
+		call, err = o.channel.BeginCall(
 			// TODO(abg): Set TimeoutPerAttempt in the context's retry options if
 			// TTL is set.
 			// (kris): Consider instead moving TimeoutPerAttempt to an outer
@@ -115,7 +118,7 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 			&callOptions,
 		)
 	} else {
-		call, err = o.Channel.GetSubChannel(req.Service).BeginCall(
+		call, err = o.channel.GetSubChannel(req.Service).BeginCall(
 			// TODO(abg): Set TimeoutPerAttempt in the context's retry options if
 			// TTL is set.
 			ctx,

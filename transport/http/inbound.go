@@ -30,47 +30,18 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
+// NewInbound builds a new HTTP inbound that listens on the given address.
+func NewInbound(addr string) *Inbound {
+	return &Inbound{
+		addr:   addr,
+		tracer: opentracing.GlobalTracer(),
+	}
+}
+
 // Inbound represents an HTTP Inbound. It is the same as the transport Inbound
 // except it exposes the address on which the system is listening for
 // connections.
-type Inbound interface {
-	transport.Inbound
-
-	// Address on which the server is listening. Returns nil if Start has not
-	// been called yet.
-	Addr() net.Addr
-}
-
-// InboundOption is an option for an HTTP inbound.
-type InboundOption func(*inbound)
-
-// WithTracer is a NewInbound option that adds a tracer
-func WithTracer(tracer opentracing.Tracer) InboundOption {
-	return func(i *inbound) {
-		i.tracer = tracer
-	}
-}
-
-// Mux specifies the ServeMux that the HTTP server should use and the pattern
-// under which the YARPC endpoint should be registered.
-func Mux(pattern string, mux *http.ServeMux) InboundOption {
-	return func(i *inbound) {
-		i.mux = mux
-		i.muxPattern = pattern
-	}
-}
-
-// NewInbound builds a new HTTP inbound that listens on the given address.
-func NewInbound(addr string, opts ...InboundOption) Inbound {
-	i := &inbound{addr: addr}
-	i.tracer = opentracing.GlobalTracer()
-	for _, opt := range opts {
-		opt(i)
-	}
-	return i
-}
-
-type inbound struct {
+type Inbound struct {
 	addr       string
 	mux        *http.ServeMux
 	muxPattern string
@@ -78,10 +49,26 @@ type inbound struct {
 	tracer     opentracing.Tracer
 }
 
-func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
+// WithMux specifies the ServeMux that the HTTP server should use and the
+// pattern under which the YARPC endpoint should be registered.
+func (i *Inbound) WithMux(pattern string, mux *http.ServeMux) *Inbound {
+	i.mux = mux
+	i.muxPattern = pattern
+	return i
+}
+
+// WithTracer configures a tracer on this inbound.
+func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
+	i.tracer = tracer
+	return i
+}
+
+// Start starts the inbound with a given service detail and transport
+// dependencies, opening a listening socket.
+func (i *Inbound) Start(service transport.ServiceDetail, d transport.Deps) error {
 
 	var httpHandler http.Handler = handler{
-		Registry: service.Registry,
+		registry: service.Registry,
 		tracer:   i.tracer,
 	}
 	if i.mux != nil {
@@ -101,14 +88,17 @@ func (i *inbound) Start(service transport.ServiceDetail, d transport.Deps) error
 	return nil
 }
 
-func (i *inbound) Stop() error {
+// Stop the inbound, closing the listening socket.
+func (i *Inbound) Stop() error {
 	if i.server == nil {
 		return nil
 	}
 	return i.server.Stop()
 }
 
-func (i *inbound) Addr() net.Addr {
+// Addr returns the address on which the server is listening. Returns nil if
+// Start has not been called yet.
+func (i *Inbound) Addr() net.Addr {
 	if i.server == nil {
 		return nil
 	}

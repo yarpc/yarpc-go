@@ -57,7 +57,7 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		outbound = tch.NewOutbound(channel, tch.HostPort("localhost:28941"))
+		outbound = tch.NewOutbound(channel).WithHostPort("localhost:28941")
 	default:
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}

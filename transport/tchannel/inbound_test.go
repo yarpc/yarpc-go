@@ -35,10 +35,10 @@ import (
 
 func TestInboundStartNew(t *testing.T) {
 	tests := []struct {
-		withInbound func(*tchannel.Channel, func(Inbound))
+		withInbound func(*tchannel.Channel, func(*Inbound))
 	}{
 		{
-			func(ch *tchannel.Channel, f func(Inbound)) {
+			func(ch *tchannel.Channel, f func(*Inbound)) {
 				i := NewInbound(ch)
 				service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 				// Can't do Equal because we want to match the pointer, not a
@@ -51,8 +51,8 @@ func TestInboundStartNew(t *testing.T) {
 			},
 		},
 		{
-			func(ch *tchannel.Channel, f func(Inbound)) {
-				i := NewInbound(ch, ListenAddr(":0"))
+			func(ch *tchannel.Channel, f func(*Inbound)) {
+				i := NewInbound(ch).WithListenAddr(":0")
 				service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start(service, transport.NoDeps))
@@ -66,7 +66,7 @@ func TestInboundStartNew(t *testing.T) {
 	for _, tt := range tests {
 		ch, err := tchannel.NewChannel("foo", nil)
 		require.NoError(t, err)
-		tt.withInbound(ch, func(i Inbound) {
+		tt.withInbound(ch, func(i *Inbound) {
 			assert.Equal(t, tchannel.ChannelListening, ch.State())
 			assert.NoError(t, i.Stop())
 			assert.Equal(t, tchannel.ChannelClosed, ch.State())
@@ -102,7 +102,7 @@ func TestInboundStopWithoutStarting(t *testing.T) {
 func TestInboundInvalidAddress(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
-	i := NewInbound(ch, ListenAddr("not valid"))
+	i := NewInbound(ch).WithListenAddr("not valid")
 	service := transport.ServiceDetail{Name: "derp", Registry: new(transporttest.MockRegistry)}
 	assert.Error(t, i.Start(service, transport.NoDeps))
 }

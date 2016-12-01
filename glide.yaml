@@ -5,6 +5,8 @@ import:
   subpackages:
   - context
   - context/ctxhttp
+- package: golang.org/x/tools
+  version: master
 - package: github.com/opentracing/opentracing-go
   version: ^1
 - package: github.com/uber/tchannel-go
