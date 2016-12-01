@@ -35,15 +35,15 @@ func (e ErrPeerHasNoReferenceToSubscriber) Error() string {
 	return fmt.Sprintf("peer (%v) has no reference to peer subscriber (%v)", e.PeerIdentifier, e.PeerSubscriber)
 }
 
-// ErrAgentHasNoReferenceToPeer is called when an agent is expected to
+// ErrTransportHasNoReferenceToPeer is called when a transport is expected to
 // operate on a Peer it has no reference to
-type ErrAgentHasNoReferenceToPeer struct {
-	AgentName      string
+type ErrTransportHasNoReferenceToPeer struct {
+	TransportName  string
 	PeerIdentifier string
 }
 
-func (e ErrAgentHasNoReferenceToPeer) Error() string {
-	return fmt.Sprintf("agent %q has no reference to peer %q", e.AgentName, e.PeerIdentifier)
+func (e ErrTransportHasNoReferenceToPeer) Error() string {
+	return fmt.Sprintf("transport %q has no reference to peer %q", e.TransportName, e.PeerIdentifier)
 }
 
 // ErrInvalidPeerType is when a specfic peer type is required, but
@@ -83,14 +83,14 @@ func (e ErrInvalidPeerConversion) Error() string {
 	return fmt.Sprintf("cannot convert peer (%v) to type %s", e.Peer, e.ExpectedType)
 }
 
-// ErrInvalidAgentConversion is called when an agent can't be properly converted
-type ErrInvalidAgentConversion struct {
-	Agent        Agent
+// ErrInvalidTransportConversion is called when a transport can't be properly converted
+type ErrInvalidTransportConversion struct {
+	Transport    Transport
 	ExpectedType string
 }
 
-func (e ErrInvalidAgentConversion) Error() string {
-	return fmt.Sprintf("cannot convert agent (%v) to type %s", e.Agent, e.ExpectedType)
+func (e ErrInvalidTransportConversion) Error() string {
+	return fmt.Sprintf("cannot convert transport (%v) to type %s", e.Transport, e.ExpectedType)
 }
 
 // ErrPeerAddAlreadyInList is returned to peer providers if the

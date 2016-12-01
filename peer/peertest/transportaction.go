@@ -29,20 +29,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// AgentDeps are passed through all the AgentActions in order to pass certain
+// TransportDeps are passed through all the TransportActions in order to pass certain
 // state in between Actions
-type AgentDeps struct {
+type TransportDeps struct {
 	PeerIdentifiers map[string]peer.Identifier
 	Subscribers     map[string]peer.Subscriber
 }
 
-// AgentAction defines actions that can be applied to an Agent
-type AgentAction interface {
-	// Apply runs a function on the Agent and asserts the result
-	Apply(*testing.T, peer.Agent, AgentDeps)
+// TransportAction defines actions that can be applied to an Transport
+type TransportAction interface {
+	// Apply runs a function on the Transport and asserts the result
+	Apply(*testing.T, peer.Transport, TransportDeps)
 }
 
-// RetainAction will execute the RetainPeer method on the Agent
+// RetainAction will execute the RetainPeer method on the Transport
 type RetainAction struct {
 	InputIdentifierID string
 	InputSubscriberID string
@@ -50,12 +50,12 @@ type RetainAction struct {
 	ExpectedPeerID    string
 }
 
-// Apply will execute the RetainPeer method on the Agent
-func (a RetainAction) Apply(t *testing.T, agent peer.Agent, deps AgentDeps) {
+// Apply will execute the RetainPeer method on the Transport
+func (a RetainAction) Apply(t *testing.T, transport peer.Transport, deps TransportDeps) {
 	peerID := deps.PeerIdentifiers[a.InputIdentifierID]
 	sub := deps.Subscribers[a.InputSubscriberID]
 
-	p, err := agent.RetainPeer(peerID, sub)
+	p, err := transport.RetainPeer(peerID, sub)
 
 	if a.ExpectedErr != nil {
 		assert.Equal(t, a.ExpectedErr, err)
@@ -68,19 +68,19 @@ func (a RetainAction) Apply(t *testing.T, agent peer.Agent, deps AgentDeps) {
 	}
 }
 
-// ReleaseAction will execute the ReleasePeer method on the Agent
+// ReleaseAction will execute the ReleasePeer method on the Transport
 type ReleaseAction struct {
 	InputIdentifierID string
 	InputSubscriberID string
 	ExpectedErrType   error
 }
 
-// Apply will execute the ReleasePeer method on the Agent
-func (a ReleaseAction) Apply(t *testing.T, agent peer.Agent, deps AgentDeps) {
+// Apply will execute the ReleasePeer method on the Transport
+func (a ReleaseAction) Apply(t *testing.T, transport peer.Transport, deps TransportDeps) {
 	peerID := deps.PeerIdentifiers[a.InputIdentifierID]
 	sub := deps.Subscribers[a.InputSubscriberID]
 
-	err := agent.ReleasePeer(peerID, sub)
+	err := transport.ReleasePeer(peerID, sub)
 
 	if a.ExpectedErrType != nil && assert.Error(t, err) {
 		assert.IsType(t, a.ExpectedErrType, err)
@@ -89,11 +89,11 @@ func (a ReleaseAction) Apply(t *testing.T, agent peer.Agent, deps AgentDeps) {
 	}
 }
 
-// ApplyAgentActions runs all the AgentActions on the peer Agent
-func ApplyAgentActions(t *testing.T, agent peer.Agent, actions []AgentAction, d AgentDeps) {
+// ApplyTransportActions runs all the TransportActions on the peer Transport
+func ApplyTransportActions(t *testing.T, transport peer.Transport, actions []TransportAction, d TransportDeps) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
-			action.Apply(t, agent, d)
+			action.Apply(t, transport, d)
 		})
 	}
 }

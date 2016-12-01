@@ -50,7 +50,7 @@ type Identifier interface {
 	Identifier() string
 }
 
-// Peer is a level on top of Identifier.  It should be created by a Agent so we
+// Peer is a level on top of Identifier.  It should be created by a Transport so we
 // can maintain multiple references to the same downstream peer (e.g. hostport).  This is
 // useful for load balancing requests to downstream services.
 type Peer interface {
