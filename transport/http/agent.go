@@ -99,7 +99,7 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 	}
 
 	p := a.getOrCreatePeer(hppid)
-	p.AddSubscriber(sub)
+	p.Subscribe(sub)
 	return p, nil
 }
 
@@ -130,7 +130,7 @@ func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 		}
 	}
 
-	if err := p.RemoveSubscriber(sub); err != nil {
+	if err := p.Unsubscribe(sub); err != nil {
 		return err
 	}
 

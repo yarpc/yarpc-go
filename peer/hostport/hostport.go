@@ -65,15 +65,15 @@ func (p *Peer) Transport() peer.Transport {
 	return p.transport
 }
 
-// AddSubscriber adds a subscriber to the peer's subscriber map
+// Subscribe adds a subscriber to the peer's subscriber map
 // This function isn't thread safe
-func (p *Peer) AddSubscriber(sub peer.Subscriber) {
+func (p *Peer) Subscribe(sub peer.Subscriber) {
 	p.subscribers[sub] = struct{}{}
 }
 
-// RemoveSubscriber removes a subscriber from the peer's subscriber map
+// Unsubscribe removes a subscriber from the peer's subscriber map
 // This function isn't thread safe
-func (p *Peer) RemoveSubscriber(sub peer.Subscriber) error {
+func (p *Peer) Unsubscribe(sub peer.Subscriber) error {
 	if _, ok := p.subscribers[sub]; !ok {
 		return peer.ErrPeerHasNoReferenceToSubscriber{
 			PeerIdentifier: p.PeerIdentifier,
