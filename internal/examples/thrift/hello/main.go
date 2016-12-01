@@ -40,7 +40,7 @@ import (
 
 func main() {
 
-	httpAgent := http.NewAgent()
+	httpTransport := http.NewTransport()
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
@@ -52,7 +52,7 @@ func main() {
 				Unary: http.NewChooserOutbound(
 					single.New(
 						hostport.PeerIdentifier("127.0.0.1:8086"),
-						httpAgent,
+						httpTransport,
 					),
 				),
 			},

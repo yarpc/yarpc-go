@@ -30,39 +30,39 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 )
 
-type agentConfig struct {
+type transportConfig struct {
 	keepAlive time.Duration
 }
 
-var defaultAgentConfig = agentConfig{keepAlive: 30 * time.Second}
+var defaultTransportConfig = transportConfig{keepAlive: 30 * time.Second}
 
-// AgentOption customizes the behavior of an HTTP agent.
-type AgentOption func(*agentConfig)
+// TransportOption customizes the behavior of an HTTP transport.
+type TransportOption func(*transportConfig)
 
 // KeepAlive specifies the keep-alive period for the network connection. If
 // zero, keep-alives are disabled.
 //
 // Defaults to 30 seconds.
-func KeepAlive(t time.Duration) AgentOption {
-	return func(c *agentConfig) {
+func KeepAlive(t time.Duration) TransportOption {
+	return func(c *transportConfig) {
 		c.keepAlive = t
 	}
 }
 
-// NewAgent creates a new http agent for managing peers and sending requests
-func NewAgent(opts ...AgentOption) *Agent {
-	cfg := defaultAgentConfig
+// NewTransport creates a new http transport for managing peers and sending requests
+func NewTransport(opts ...TransportOption) *Transport {
+	cfg := defaultTransportConfig
 	for _, o := range opts {
 		o(&cfg)
 	}
 
-	return &Agent{
+	return &Transport{
 		client: buildClient(&cfg),
 		peers:  make(map[string]*hostport.Peer),
 	}
 }
 
-func buildClient(cfg *agentConfig) *http.Client {
+func buildClient(cfg *transportConfig) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			// options lifted from https://golang.org/src/net/http/transport.go
@@ -77,8 +77,8 @@ func buildClient(cfg *agentConfig) *http.Client {
 	}
 }
 
-// Agent keeps track of http peers and the associated client with which the peer will call into.
-type Agent struct {
+// Transport keeps track of http peers and the associated client with which the peer will call into.
+type Transport struct {
 	lock sync.Mutex
 
 	client *http.Client
@@ -86,7 +86,7 @@ type Agent struct {
 }
 
 // RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)
-func (a *Agent) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
+func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -104,7 +104,7 @@ func (a *Agent) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer,
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Agent) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
+func (a *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
 	if p, ok := a.peers[pid.Identifier()]; ok {
 		return p
 	}
@@ -117,15 +117,15 @@ func (a *Agent) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
 	return p
 }
 
-// ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Agent if nothing is listening to it
-func (a *Agent) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
+// ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it
+func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
 	p, ok := a.peers[pid.Identifier()]
 	if !ok {
-		return peer.ErrAgentHasNoReferenceToPeer{
-			AgentName:      "http.Agent",
+		return peer.ErrTransportHasNoReferenceToPeer{
+			TransportName:  "http.Transport",
 			PeerIdentifier: pid.Identifier(),
 		}
 	}

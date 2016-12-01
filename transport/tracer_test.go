@@ -116,7 +116,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 	// TODO: Use port 0 once https://github.com/yarpc/yarpc-go/issues/381 is
 	// fixed.
 
-	httpAgent := http.NewAgent()
+	httpTransport := http.NewTransport()
 	// TODO lifecycle
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -129,7 +129,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 				Unary: http.NewChooserOutbound(
 					single.New(
 						hostport.PeerIdentifier("127.0.0.1:18080"),
-						httpAgent,
+						httpTransport,
 					),
 				).WithTracer(tracer),
 			},

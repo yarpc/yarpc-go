@@ -21,20 +21,20 @@ func TestRoundRobinList(t *testing.T) {
 		// PeerIDs that will be inserted into the PeerList at creation time
 		inputPeerIDs []string
 
-		// PeerIDs that will be returned from the agent's OnRetain with "Available" status
+		// PeerIDs that will be returned from the transport's OnRetain with "Available" status
 		retainedAvailablePeerIDs []string
 
-		// PeerIDs that will be returned from the agent's OnRetain with "Unavailable" status
+		// PeerIDs that will be returned from the transport's OnRetain with "Unavailable" status
 		retainedUnavailablePeerIDs []string
 
-		// PeerIDs that will be released from the agent
+		// PeerIDs that will be released from the transport
 		releasedPeerIDs []string
 
-		// PeerIDs that will return "retainErr" from the agent's OnRetain function
+		// PeerIDs that will return "retainErr" from the transport's OnRetain function
 		errRetainedPeerIDs []string
 		retainErr          error
 
-		// PeerIDs that will return "releaseErr" from the agent's OnRelease function
+		// PeerIDs that will return "releaseErr" from the transport's OnRelease function
 		errReleasedPeerIDs []string
 		releaseErr         error
 
@@ -162,11 +162,11 @@ func TestRoundRobinList(t *testing.T) {
 			inputPeerIDs:             []string{"1"},
 			retainedAvailablePeerIDs: []string{"1"},
 			errReleasedPeerIDs:       []string{"1"},
-			releaseErr:               peer.ErrAgentHasNoReferenceToPeer{},
+			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StopAction{
-					ExpectedErr: peer.ErrAgentHasNoReferenceToPeer{},
+					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
 				},
 			},
 			expectedStarted: false,
@@ -177,13 +177,13 @@ func TestRoundRobinList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1", "2", "3"},
 			releasedPeerIDs:          []string{"2"},
 			errReleasedPeerIDs:       []string{"1", "3"},
-			releaseErr:               peer.ErrAgentHasNoReferenceToPeer{},
+			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
 			peerListActions: []PeerListAction{
 				StartAction{},
 				StopAction{
 					ExpectedErr: yerrors.ErrorGroup{
-						peer.ErrAgentHasNoReferenceToPeer{},
-						peer.ErrAgentHasNoReferenceToPeer{},
+						peer.ErrTransportHasNoReferenceToPeer{},
+						peer.ErrTransportHasNoReferenceToPeer{},
 					},
 				},
 			},
@@ -324,13 +324,13 @@ func TestRoundRobinList(t *testing.T) {
 			inputPeerIDs:             []string{"1", "2"},
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			errReleasedPeerIDs:       []string{"2"},
-			releaseErr:               peer.ErrAgentHasNoReferenceToPeer{},
+			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
 				StartAction{},
 				RemoveAction{
 					InputPeerID: "2",
-					ExpectedErr: peer.ErrAgentHasNoReferenceToPeer{},
+					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
 				},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "1"},
@@ -619,21 +619,21 @@ func TestRoundRobinList(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			pids := CreatePeerIDs(tt.inputPeerIDs)
-			agent := NewMockAgent(mockCtrl)
+			transport := NewMockTransport(mockCtrl)
 
-			// Healthy Agent Retain/Release
+			// Healthy Transport Retain/Release
 			peerMap := ExpectPeerRetains(
-				agent,
+				transport,
 				tt.retainedAvailablePeerIDs,
 				tt.retainedUnavailablePeerIDs,
 			)
-			ExpectPeerReleases(agent, tt.releasedPeerIDs, nil)
+			ExpectPeerReleases(transport, tt.releasedPeerIDs, nil)
 
-			// Unhealthy Agent Retain/Release
-			ExpectPeerRetainsWithError(agent, tt.errRetainedPeerIDs, tt.retainErr)
-			ExpectPeerReleases(agent, tt.errReleasedPeerIDs, tt.releaseErr)
+			// Unhealthy Transport Retain/Release
+			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
+			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl, err := New(pids, agent)
+			pl, err := New(pids, transport)
 			assert.Equal(t, tt.expectedCreateErr, err)
 
 			deps := ListActionDeps{

@@ -68,14 +68,14 @@ func TestCallSuccess(t *testing.T) {
 	))
 	defer successServer.Close()
 
-	agent := NewAgent()
-	// TODO agent lifecycle
+	httpTransport := NewTransport()
+	// TODO transport lifecycle
 
 	parsedURL, _ := url.Parse(successServer.URL)
 	out := NewChooserOutbound(
 		single.New(
 			hostport.PeerIdentifier(parsedURL.Host),
-			agent,
+			httpTransport,
 		),
 	)
 	require.NoError(t, out.Start(), "failed to start outbound")
@@ -224,13 +224,13 @@ func TestStartMultiple(t *testing.T) {
 }
 
 func TestStopMultiple(t *testing.T) {
-	agent := NewAgent()
-	// TODO agent lifecycle
+	httpTransport := NewTransport()
+	// TODO transport lifecycle
 
 	out := NewChooserOutbound(
 		single.New(
 			hostport.PeerIdentifier("127.0.0.1:9999"),
-			agent,
+			httpTransport,
 		),
 	)
 
@@ -255,13 +255,13 @@ func TestStopMultiple(t *testing.T) {
 }
 
 func TestCallWithoutStarting(t *testing.T) {
-	agent := NewAgent()
-	// TODO agent lifecycle
+	httpTransport := NewTransport()
+	// TODO transport lifecycle
 
 	out := NewChooserOutbound(
 		single.New(
 			hostport.PeerIdentifier("127.0.0.1:9999"),
-			agent,
+			httpTransport,
 		),
 	)
 	assert.Panics(t, func() {

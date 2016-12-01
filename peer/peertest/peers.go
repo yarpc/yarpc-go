@@ -99,44 +99,44 @@ func CreatePeerIDs(peerIDStrs []string) []peer.Identifier {
 	return pids
 }
 
-// ExpectPeerRetains registers expectations on a MockAgent to generate peers on the RetainPeer function
+// ExpectPeerRetains registers expectations on a MockTransport to generate peers on the RetainPeer function
 func ExpectPeerRetains(
-	agent *MockAgent,
+	transport *MockTransport,
 	availablePeerStrs []string,
 	unavailablePeerStrs []string,
 ) map[string]*LightMockPeer {
 	peers := make(map[string]*LightMockPeer, len(availablePeerStrs)+len(unavailablePeerStrs))
 	for _, peerStr := range availablePeerStrs {
 		p := NewLightMockPeer(MockPeerIdentifier(peerStr), peer.Available)
-		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
+		transport.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
 		peers[p.Identifier()] = p
 	}
 	for _, peerStr := range unavailablePeerStrs {
 		p := NewLightMockPeer(MockPeerIdentifier(peerStr), peer.Unavailable)
-		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
+		transport.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(p, nil)
 		peers[p.Identifier()] = p
 	}
 	return peers
 }
 
-// ExpectPeerRetainsWithError registers expectations on a MockAgent return errors
+// ExpectPeerRetainsWithError registers expectations on a MockTransport return errors
 func ExpectPeerRetainsWithError(
-	agent *MockAgent,
+	transport *MockTransport,
 	peerStrs []string,
-	err error, // Will be returned from the MockAgent on the Retains of these Peers
+	err error, // Will be returned from the MockTransport on the Retains of these Peers
 ) {
 	for _, peerStr := range peerStrs {
-		agent.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(nil, err)
+		transport.EXPECT().RetainPeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(nil, err)
 	}
 }
 
-// ExpectPeerReleases registers expectations on a MockAgent to release peers through the ReleasePeer function
+// ExpectPeerReleases registers expectations on a MockTransport to release peers through the ReleasePeer function
 func ExpectPeerReleases(
-	agent *MockAgent,
+	transport *MockTransport,
 	peerStrs []string,
 	err error,
 ) {
 	for _, peerStr := range peerStrs {
-		agent.EXPECT().ReleasePeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(err)
+		transport.EXPECT().ReleasePeer(PeerIdentifierMatcher(peerStr), gomock.Any()).Return(err)
 	}
 }

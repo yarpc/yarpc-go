@@ -242,9 +242,9 @@ func TestPeer(t *testing.T) {
 				tt.expectedHostPort = "localhost:12345"
 			}
 
-			agent := NewMockAgent(mockCtrl)
+			transport := NewMockTransport(mockCtrl)
 
-			peer := NewPeer(PeerIdentifier(tt.inputPeerID), agent)
+			peer := NewPeer(PeerIdentifier(tt.inputPeerID), transport)
 
 			deps := &Dependencies{
 				Subscribers: CreateSubscriberMap(mockCtrl, tt.SubDefinitions),
@@ -254,7 +254,7 @@ func TestPeer(t *testing.T) {
 
 			assert.Equal(t, tt.expectedIdentifier, peer.Identifier())
 			assert.Equal(t, tt.expectedHostPort, peer.HostPort())
-			assert.Equal(t, agent, peer.Agent())
+			assert.Equal(t, transport, peer.Transport())
 			assert.Equal(t, tt.expectedStatus, peer.Status())
 
 			assert.Len(t, peer.subscribers, len(tt.expectedSubscribers))

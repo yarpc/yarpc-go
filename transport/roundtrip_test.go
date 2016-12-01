@@ -99,7 +99,7 @@ func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Reques
 type httpTransport struct{ t *testing.T }
 
 func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
-	httpAgent := http.NewAgent()
+	httpTransport := http.NewTransport()
 	// TODO lifecycle
 
 	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
@@ -109,7 +109,7 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 	o := http.NewChooserOutbound(
 		single.New(
 			hostport.PeerIdentifier(i.Addr().String()),
-			httpAgent,
+			httpTransport,
 		),
 	)
 	require.NoError(ht.t, o.Start(), "failed to start outbound")
@@ -118,7 +118,7 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 }
 
 func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
-	httpAgent := http.NewAgent()
+	httpTransport := http.NewTransport()
 	// TODO lifecycle
 
 	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
@@ -128,7 +128,7 @@ func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transpor
 	o := http.NewChooserOutbound(
 		single.New(
 			hostport.PeerIdentifier(i.Addr().String()),
-			httpAgent,
+			httpTransport,
 		),
 	)
 	require.NoError(ht.t, o.Start(), "failed to start outbound")

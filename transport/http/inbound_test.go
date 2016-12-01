@@ -98,8 +98,8 @@ func TestInboundMux(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	agent := NewAgent()
-	// TODO agent lifecycle
+	httpTransport := NewTransport()
+	// TODO transport lifecycle
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +128,7 @@ func TestInboundMux(t *testing.T) {
 	o := NewChooserOutbound(
 		single.New(
 			hostport.PeerIdentifier(i.Addr().String()),
-			agent,
+			httpTransport,
 		),
 	)
 	require.NoError(t, o.Start(), "failed to start outbound")

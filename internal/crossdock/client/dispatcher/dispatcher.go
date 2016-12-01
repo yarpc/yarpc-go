@@ -42,19 +42,19 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	var httpAgent *http.Agent
+	var httpTransport *http.Transport
 
 	var unaryOutbound transport.UnaryOutbound
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
-		if httpAgent == nil {
-			httpAgent = http.NewAgent()
+		if httpTransport == nil {
+			httpTransport = http.NewTransport()
 		}
 		unaryOutbound = http.NewChooserOutbound(
 			single.New(
 				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", server)),
-				httpAgent,
+				httpTransport,
 			),
 		)
 	case "tchannel":

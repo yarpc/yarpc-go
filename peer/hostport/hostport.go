@@ -34,21 +34,21 @@ func (p PeerIdentifier) Identifier() string {
 	return string(p)
 }
 
-// NewPeer creates a new hostport.Peer from a hostport.PeerIdentifier, peer.Agent, and peer.Subscriber
-func NewPeer(pid PeerIdentifier, agent peer.Agent) *Peer {
+// NewPeer creates a new hostport.Peer from a hostport.PeerIdentifier, peer.Transport, and peer.Subscriber
+func NewPeer(pid PeerIdentifier, transport peer.Transport) *Peer {
 	return &Peer{
 		PeerIdentifier:   pid,
-		agent:            agent,
+		transport:        transport,
 		subscribers:      make(map[peer.Subscriber]struct{}),
 		connectionStatus: peer.Unavailable,
 	}
 }
 
-// Peer keeps a subscriber to send status updates to it, and the peer.Agent that created it
+// Peer keeps a subscriber to send status updates to it, and the peer.Transport that created it
 type Peer struct {
 	PeerIdentifier
 
-	agent            peer.Agent
+	transport        peer.Transport
 	subscribers      map[peer.Subscriber]struct{}
 	pending          atomic.Int32
 	connectionStatus peer.ConnectionStatus
@@ -60,9 +60,9 @@ func (p *Peer) HostPort() string {
 	return string(p.PeerIdentifier)
 }
 
-// Agent returns the peer.Agent that is in charge of this hostport.Peer (and should be the one to handle requests)
-func (p *Peer) Agent() peer.Agent {
-	return p.agent
+// Transport returns the peer.Transport that is in charge of this hostport.Peer (and should be the one to handle requests)
+func (p *Peer) Transport() peer.Transport {
+	return p.transport
 }
 
 // AddSubscriber adds a subscriber to the peer's subscriber map
@@ -99,7 +99,7 @@ func (p *Peer) Status() peer.Status {
 	}
 }
 
-// SetStatus sets the status of the Peer (to be used by the peer.Agent)
+// SetStatus sets the status of the Peer (to be used by the peer.Transport)
 func (p *Peer) SetStatus(status peer.ConnectionStatus) {
 	p.connectionStatus = status
 	p.notifyStatusChanged(nil)

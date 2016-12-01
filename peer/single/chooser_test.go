@@ -16,10 +16,10 @@ func TestSingleChooser(t *testing.T) {
 		// PeerID that will be input into the PeerChooser
 		inputPeerID string
 
-		// PeerID that will be returned from the agent's OnRetain
+		// PeerID that will be returned from the transport's OnRetain
 		retainedPeerID string
 
-		// Error that will be returned from the agent's OnRetain
+		// Error that will be returned from the transport's OnRetain
 		retainedErr error
 
 		// Actions that will be applied on the PeerChooser
@@ -51,17 +51,17 @@ func TestSingleChooser(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			agent := NewMockAgent(mockCtrl)
+			transport := NewMockTransport(mockCtrl)
 
 			if tt.retainedPeerID != "" {
 				if tt.retainedErr != nil {
-					ExpectPeerRetainsWithError(agent, []string{tt.retainedPeerID}, tt.retainedErr)
+					ExpectPeerRetainsWithError(transport, []string{tt.retainedPeerID}, tt.retainedErr)
 				} else {
-					ExpectPeerRetains(agent, []string{tt.retainedPeerID}, []string{})
+					ExpectPeerRetains(transport, []string{tt.retainedPeerID}, []string{})
 				}
 			}
 
-			s := New(MockPeerIdentifier(tt.inputPeerID), agent)
+			s := New(MockPeerIdentifier(tt.inputPeerID), transport)
 
 			ApplyPeerListActions(t, s, tt.actions, ListActionDeps{})
 
