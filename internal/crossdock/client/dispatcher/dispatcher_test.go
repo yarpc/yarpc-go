@@ -75,3 +75,47 @@ func TestCreate(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateOneway(t *testing.T) {
+	tests := []struct {
+		params crossdock.Params
+		errOut string
+	}{
+		{
+			crossdock.Params{"server_oneway": "localhost"},
+			`unknown transport ""`,
+		},
+		{
+			crossdock.Params{"transport_oneway": "http"},
+			"oneway server is required",
+		},
+		{
+			crossdock.Params{"server_oneway": "localhost", "transport_oneway": "foo"},
+			`unknown transport "foo"`,
+		},
+		{
+			params: crossdock.Params{
+				"server_oneway":    "localhost",
+				"transport_oneway": "http",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		entries := crossdock.Run(tt.params, func(ct crossdock.T) {
+			dispatcher, callBackAddr := CreateOneway(ct, nil)
+
+			// should get here only if the request succeeded
+			clientConfig := dispatcher.ClientConfig("yarpc-test")
+			assert.Equal(t, "client", clientConfig.Caller())
+			assert.Equal(t, "yarpc-test", clientConfig.Service())
+			assert.NotNil(t, callBackAddr)
+		})
+
+		if tt.errOut != "" && assert.Len(t, entries, 1) {
+			e := entries[0]
+			assert.Equal(t, crossdock.Failed, e.Status())
+			assert.Contains(t, e.Output(), tt.errOut)
+		}
+	}
+}

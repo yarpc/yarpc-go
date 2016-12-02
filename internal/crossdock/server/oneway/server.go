@@ -24,12 +24,10 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc"
-
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayserver"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
+	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -37,29 +35,19 @@ var dispatcher yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
-	httpTransport := http.NewTransport()
-	h := onewayHandler{
-		Outbound: http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier("127.0.0.1:8089"),
-				httpTransport,
-			),
-		),
-	}
+	inbounds := []transport.Inbound{http.NewInbound(":8084")}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
-		Name: "oneway-test",
-		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":8084"),
-		},
-		Outbounds: yarpc.Outbounds{
-			"client": {Oneway: h.Outbound},
-		},
+		Name:     "oneway-server",
+		Inbounds: inbounds,
 	})
 
+	// Echo procedures make an RPC back to the caller with the same context,
+	// and body over http/raw
+	h := &onewayHandler{http.NewTransport()}
 	dispatcher.Register(raw.OnewayProcedure("echo/raw", h.EchoRaw))
 	dispatcher.Register(json.OnewayProcedure("echo/json", h.EchoJSON))
-	dispatcher.Register(onewayserver.New(&h))
+	dispatcher.Register(onewayserver.New(h))
 
 	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())

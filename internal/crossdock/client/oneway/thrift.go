@@ -30,14 +30,18 @@ import (
 )
 
 // Thrift starts an http oneway run using Thrift encoding
-func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
+func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
+	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
-	client := onewayclient.New(dispatcher.ClientConfig("oneway-test"))
-	ctx := context.Background()
-
+	client := onewayclient.New(dispatcher.ClientConfig("oneway-server"))
 	token := getRandomID()
-	ack, err := client.Echo(ctx, nil, &token)
+
+	ack, err := client.Echo(
+		context.Background(),
+		yarpc.NewReqMeta().
+			Headers(yarpc.NewHeaders().With("callBackAddr", callBackAddr)),
+		&token)
 
 	// ensure channel hasn't been filled yet
 	select {
@@ -50,5 +54,5 @@ func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals.NotNil(ack, "ack is nil")
 
 	serverToken := <-serverCalledBack
-	fatals.Equal(token, string(serverToken), "Client/Server token mismatch")
+	assert.Equal(token, string(serverToken), "Thrift token mismatch")
 }

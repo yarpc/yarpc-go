@@ -27,6 +27,9 @@ services:
             - AXIS_APACHETHRIFTSERVER=go
             - AXIS_GAUNTLET=go
             - AXIS_HTTPSERVER=go
+            - AXIS_CLIENT_ONEWAY=go
+            - AXIS_SERVER_ONEWAY=go
+            - AXIS_TRANSPORT_ONEWAY=http
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
@@ -45,6 +48,8 @@ services:
             # BEHAVIOR_INBOUNDTTL TODO
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
+            - BEHAVIOR_ONEWAY=client_oneway,server_oneway,transport_oneway,encoding
+
             - REPORT=compact
 
     go:
