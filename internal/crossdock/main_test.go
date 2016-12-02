@@ -137,6 +137,15 @@ func TestCrossdock(t *testing.T) {
 				"transport_oneway": []string{"http"},
 			},
 		},
+		{
+			name: "oneway_ctxpropagation",
+			params: params{
+				"server_oneway": "127.0.0.1",
+			},
+			axes: axes{
+				"transport_oneway": []string{"http"},
+			},
+		},
 	}
 
 	for _, bb := range behaviors {
