@@ -34,21 +34,21 @@ func (p PeerIdentifier) Identifier() string {
 	return string(p)
 }
 
-// NewPeer creates a new hostport.Peer from a hostport.PeerIdentifier, peer.Agent, and peer.Subscriber
-func NewPeer(pid PeerIdentifier, agent peer.Agent) *Peer {
+// NewPeer creates a new hostport.Peer from a hostport.PeerIdentifier, peer.Transport, and peer.Subscriber
+func NewPeer(pid PeerIdentifier, transport peer.Transport) *Peer {
 	return &Peer{
 		PeerIdentifier:   pid,
-		agent:            agent,
+		transport:        transport,
 		subscribers:      make(map[peer.Subscriber]struct{}),
 		connectionStatus: peer.Unavailable,
 	}
 }
 
-// Peer keeps a subscriber to send status updates to it, and the peer.Agent that created it
+// Peer keeps a subscriber to send status updates to it, and the peer.Transport that created it
 type Peer struct {
 	PeerIdentifier
 
-	agent            peer.Agent
+	transport        peer.Transport
 	subscribers      map[peer.Subscriber]struct{}
 	pending          atomic.Int32
 	connectionStatus peer.ConnectionStatus
@@ -60,20 +60,20 @@ func (p *Peer) HostPort() string {
 	return string(p.PeerIdentifier)
 }
 
-// Agent returns the peer.Agent that is in charge of this hostport.Peer (and should be the one to handle requests)
-func (p *Peer) Agent() peer.Agent {
-	return p.agent
+// Transport returns the peer.Transport that is in charge of this hostport.Peer (and should be the one to handle requests)
+func (p *Peer) Transport() peer.Transport {
+	return p.transport
 }
 
-// AddSubscriber adds a subscriber to the peer's subscriber map
+// Subscribe adds a subscriber to the peer's subscriber map
 // This function isn't thread safe
-func (p *Peer) AddSubscriber(sub peer.Subscriber) {
+func (p *Peer) Subscribe(sub peer.Subscriber) {
 	p.subscribers[sub] = struct{}{}
 }
 
-// RemoveSubscriber removes a subscriber from the peer's subscriber map
+// Unsubscribe removes a subscriber from the peer's subscriber map
 // This function isn't thread safe
-func (p *Peer) RemoveSubscriber(sub peer.Subscriber) error {
+func (p *Peer) Unsubscribe(sub peer.Subscriber) error {
 	if _, ok := p.subscribers[sub]; !ok {
 		return peer.ErrPeerHasNoReferenceToSubscriber{
 			PeerIdentifier: p.PeerIdentifier,
@@ -99,27 +99,28 @@ func (p *Peer) Status() peer.Status {
 	}
 }
 
-// SetStatus sets the status of the Peer (to be used by the peer.Agent)
+// SetStatus sets the status of the Peer (to be used by the peer.Transport)
 func (p *Peer) SetStatus(status peer.ConnectionStatus) {
 	p.connectionStatus = status
-	p.notifyStatusChanged()
+	p.notifyStatusChanged(nil)
 }
 
 // StartRequest runs at the beginning of a request and returns a callback for when the request finished
-func (p *Peer) StartRequest() func() {
+func (p *Peer) StartRequest(s peer.Subscriber) {
 	p.pending.Inc()
-	p.notifyStatusChanged()
-	return p.endRequest
+	p.notifyStatusChanged(s)
 }
 
-// endRequest should be run after a request has finished
-func (p *Peer) endRequest() {
+// EndRequest should be run after a request has finished.
+func (p *Peer) EndRequest(s peer.Subscriber) {
 	p.pending.Dec()
-	p.notifyStatusChanged()
+	p.notifyStatusChanged(s)
 }
 
-func (p *Peer) notifyStatusChanged() {
+func (p *Peer) notifyStatusChanged(dontNotify peer.Subscriber) {
 	for sub := range p.subscribers {
-		sub.NotifyStatusChanged(p)
+		if sub != dontNotify {
+			sub.NotifyStatusChanged(p)
+		}
 	}
 }

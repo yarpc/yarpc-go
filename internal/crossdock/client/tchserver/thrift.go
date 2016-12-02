@@ -60,7 +60,7 @@ func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 }
 
 func thriftCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
-	client := echoclient.New(dispatcher.Channel(serverName))
+	client := echoclient.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

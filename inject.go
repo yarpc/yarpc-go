@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	_clientBuilders = make(map[reflect.Type]reflect.Value)
-	_typeOfChannel  = reflect.TypeOf((*transport.Channel)(nil)).Elem()
+	_clientBuilders     = make(map[reflect.Type]reflect.Value)
+	_typeOfClientConfig = reflect.TypeOf((*transport.ClientConfig)(nil)).Elem()
 )
 
 func getBuilderType(f interface{}) reflect.Type {
@@ -42,8 +42,8 @@ func getBuilderType(f interface{}) reflect.Type {
 		panic(fmt.Sprintf("f must be a function, not %T", f))
 	}
 
-	if fT.NumIn() != 1 || fT.In(0) != _typeOfChannel {
-		panic(fmt.Sprintf("%v must accept only a transport.Channel", fT))
+	if fT.NumIn() != 1 || fT.In(0) != _typeOfClientConfig {
+		panic(fmt.Sprintf("%v must accept only a transport.ClientConfig", fT))
 	}
 
 	if fT.NumOut() != 1 || fT.Out(0).Kind() != reflect.Interface {
@@ -58,7 +58,7 @@ func getBuilderType(f interface{}) reflect.Type {
 //
 // Functions must have the signature,
 //
-// 	func(transport.Channel) T
+// 	func(transport.ClientConfig) T
 //
 // Where T is the type of the client. T MUST be an interface.
 //
@@ -97,13 +97,13 @@ func RegisterClientBuilder(f interface{}) (forget func()) {
 //
 // 	// InjectClients above is equivalent to,
 //
-// 	h.KeyValueClient = keyvalueclient.New(dispatcher.Channel("keyvalue"))
-// 	h.UserClient = json.New(dispatcher.Channel("users"))
+// 	h.KeyValueClient = keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
+// 	h.UserClient = json.New(dispatcher.ClientConfig("users"))
 //
 // Builder functions for different client types may be registered using the
 // RegisterClientBuilder function. This function panics if an empty client
 // field without a registered constructor is encountered.
-func InjectClients(src transport.ChannelProvider, dest interface{}) {
+func InjectClients(src transport.ClientConfigProvider, dest interface{}) {
 	destV := reflect.ValueOf(dest)
 	destT := reflect.TypeOf(dest)
 	if destT.Kind() != reflect.Ptr || destT.Elem().Kind() != reflect.Struct {
@@ -139,8 +139,8 @@ func InjectClients(src transport.ChannelProvider, dest interface{}) {
 			panic(fmt.Sprintf("a constructor for %v has not been registered", fieldT))
 		}
 
-		channelV := reflect.ValueOf(src.Channel(service))
-		client := constructor.Call([]reflect.Value{channelV})[0]
+		clientConfigV := reflect.ValueOf(src.ClientConfig(service))
+		client := constructor.Call([]reflect.Value{clientConfigV})[0]
 		fieldV.Set(client)
 	}
 }

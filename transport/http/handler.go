@@ -121,7 +121,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		if err != nil {
 			return err
 		}
-		err = handleOnewayRequest(ctx, span, treq, spec.Oneway())
+		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
 		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
@@ -131,7 +131,6 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 }
 
 func handleOnewayRequest(
-	ctx context.Context,
 	span opentracing.Span,
 	treq *transport.Request,
 	onewayHandler transport.OnewayHandler,
@@ -144,8 +143,12 @@ func handleOnewayRequest(
 	}
 	treq.Body = &buff
 
+	// create a new context for oneway requests since the HTTP handler cancels
+	// http.Request's context when ServeHTTP returns
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+
 	go func() {
-		// ensure the span lasts for length of the request in case of errors
+		// ensure the span lasts for length of the handler in case of errors
 		defer span.Finish()
 
 		err := internal.SafelyCallOnewayHandler(ctx, onewayHandler, treq)

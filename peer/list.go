@@ -26,10 +26,10 @@ import (
 	"go.uber.org/yarpc/transport"
 )
 
-//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/peer List,ChangeListener
+//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/peer Chooser,List
 
-// List is a collection of Peers.  Outbounds request peers from the peer.List to determine where to send requests
-type List interface {
+// Chooser is a collection of Peers.  Outbounds request peers from the peer.Chooser to determine where to send requests
+type Chooser interface {
 	// Notify the PeerList that it will start receiving requests
 	Start() error
 
@@ -37,16 +37,13 @@ type List interface {
 	Stop() error
 
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
-	ChoosePeer(context.Context, *transport.Request) (Peer, error)
+	Choose(context.Context, *transport.Request) (Peer, error)
 }
 
-// ChangeListener listens to adds and removes of Peers from a PeerProvider
-// A List will implement the PeerChangeListener interface in order to receive
+// List listens to adds and removes of Peers from a PeerProvider
+// A Chooser will implement the PeerChangeListener interface in order to receive
 // updates to the list of Peers it is keeping track of
-type ChangeListener interface {
-	// Add a peer to the List (Called directly from a PeerProvider)
-	Add(Identifier) error
-
-	// Remove a peer from the List (Called directly from a PeerProvider)
-	Remove(Identifier) error
+type List interface {
+	// Update performs the additions and removals to the Peer List
+	Update(additions, removals []Identifier) error
 }

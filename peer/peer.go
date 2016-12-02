@@ -50,7 +50,7 @@ type Identifier interface {
 	Identifier() string
 }
 
-// Peer is a level on top of Identifier.  It should be created by a Agent so we
+// Peer is a level on top of Identifier.  It should be created by a Transport so we
 // can maintain multiple references to the same downstream peer (e.g. hostport).  This is
 // useful for load balancing requests to downstream services.
 type Peer interface {
@@ -59,10 +59,9 @@ type Peer interface {
 	// Get the status of the Peer
 	Status() Status
 
-	// Tell the peer that a request is starting/ending
-	// The callsite should look like:
-	//   done := peer.StartRequest()
-	//   defer done()
-	//   // Do request
-	StartRequest() (finish func())
+	// Tell the peer that a request is starting
+	StartRequest(dontNotify Subscriber)
+
+	// Tell the peer that a request has finished
+	EndRequest(dontNotify Subscriber)
 }

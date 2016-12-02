@@ -18,35 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package channel
+package single
 
 import (
-	"testing"
+	"context"
 
+	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/transport"
-
-	"github.com/stretchr/testify/assert"
 )
 
-const (
-	caller  = "caller"
-	service = "service"
-)
-
-func TestChannelNames(t *testing.T) {
-	outbounds := transport.Outbounds{}
-	c := MultiOutbound(caller, service, outbounds)
-
-	assert.Equal(t, c.Caller(), caller)
-	assert.Equal(t, c.Service(), service)
+// Single implements the peer.Chooser interface for a single peer
+type Single struct {
+	p   peer.Peer
+	err error
 }
 
-func TestChannelPanic(t *testing.T) {
-	c := MultiOutbound(caller, service, transport.Outbounds{})
+// New creates a static peer.Chooser with a single Peer
+func New(pid peer.Identifier, transport peer.Transport) *Single {
+	s := &Single{}
+	p, err := transport.RetainPeer(pid, s)
+	s.p = p
+	s.err = err
+	return s
+}
 
-	assert.Panics(t, func() { c.GetUnaryOutbound() },
-		"expected channel to panic for nil UnaryOutbound")
+// Choose returns the single peer
+func (s *Single) Choose(context.Context, *transport.Request) (peer.Peer, error) {
+	return s.p, s.err
+}
 
-	assert.Panics(t, func() { c.GetOnewayOutbound() },
-		"expected channel to panic for nil OnewayOutbound")
+// NotifyStatusChanged when the Peer status changes
+func (s *Single) NotifyStatusChanged(peer.Identifier) {}
+
+// Start is a noop
+func (s *Single) Start() error {
+	// TODO deprecated
+	return nil
+}
+
+// Stop is a noop
+func (s *Single) Stop() error {
+	// TODO deprecated
+	return nil
 }

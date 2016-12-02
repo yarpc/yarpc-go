@@ -176,7 +176,7 @@ func Run(t crossdock.T) {
 			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
 			defer dispatcher.Stop()
 
-			jsonClient := json.New(dispatcher.Channel("yarpc-test"))
+			jsonClient := json.New(dispatcher.ClientConfig("yarpc-test"))
 			for name, handler := range tt.handlers {
 				handler.SetClient(jsonClient)
 				handler.SetTransport(tconfig)

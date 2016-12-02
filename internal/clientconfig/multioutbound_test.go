@@ -18,40 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package channel
+package clientconfig
 
 import (
-	"fmt"
+	"testing"
 
 	"go.uber.org/yarpc/transport"
+
+	"github.com/stretchr/testify/assert"
 )
 
-type multiOutbound struct {
-	caller    string
-	service   string
-	Outbounds transport.Outbounds
+const (
+	caller  = "caller"
+	service = "service"
+)
+
+func TestClientConfigNames(t *testing.T) {
+	outbounds := transport.Outbounds{}
+	c := MultiOutbound(caller, service, outbounds)
+
+	assert.Equal(t, c.Caller(), caller)
+	assert.Equal(t, c.Service(), service)
 }
 
-// MultiOutbound constructs a Channel backed by multiple outbound types
-func MultiOutbound(caller, service string, Outbounds transport.Outbounds) transport.Channel {
-	return multiOutbound{caller: caller, service: service, Outbounds: Outbounds}
-}
+func TestClientConfigPanic(t *testing.T) {
+	c := MultiOutbound(caller, service, transport.Outbounds{})
 
-func (c multiOutbound) Caller() string  { return c.caller }
-func (c multiOutbound) Service() string { return c.service }
+	assert.Panics(t, func() { c.GetUnaryOutbound() },
+		"expected ClientConfig to panic for nil UnaryOutbound")
 
-func (c multiOutbound) GetUnaryOutbound() transport.UnaryOutbound {
-	if c.Outbounds.Unary == nil {
-		panic(fmt.Sprintf("Service %q does not have a unary outbound", c.service))
-	}
-
-	return c.Outbounds.Unary
-}
-
-func (c multiOutbound) GetOnewayOutbound() transport.OnewayOutbound {
-	if c.Outbounds.Oneway == nil {
-		panic(fmt.Sprintf("Service %q does not have a oneway outbound", c.service))
-	}
-
-	return c.Outbounds.Oneway
+	assert.Panics(t, func() { c.GetOnewayOutbound() },
+		"expected ClientConfig to panic for nil OnewayOutbound")
 }

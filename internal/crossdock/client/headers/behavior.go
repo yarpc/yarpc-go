@@ -60,11 +60,11 @@ func Run(t crossdock.T) {
 	encoding := t.Param(params.Encoding)
 	switch encoding {
 	case "raw":
-		caller = rawCaller{raw.New(dispatcher.Channel("yarpc-test"))}
+		caller = rawCaller{raw.New(dispatcher.ClientConfig("yarpc-test"))}
 	case "json":
-		caller = jsonCaller{json.New(dispatcher.Channel("yarpc-test"))}
+		caller = jsonCaller{json.New(dispatcher.ClientConfig("yarpc-test"))}
 	case "thrift":
-		caller = thriftCaller{echoclient.New(dispatcher.Channel("yarpc-test"))}
+		caller = thriftCaller{echoclient.New(dispatcher.ClientConfig("yarpc-test"))}
 	default:
 		fatals.Fail("", "unknown encoding %q", encoding)
 	}

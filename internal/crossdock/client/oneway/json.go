@@ -37,7 +37,7 @@ type jsonToken struct {
 func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals := crossdock.Fatals(t)
 
-	client := json.New(dispatcher.Channel("oneway-test"))
+	client := json.New(dispatcher.ClientConfig("oneway-test"))
 	token := getRandomID()
 
 	ack, err := client.CallOneway(

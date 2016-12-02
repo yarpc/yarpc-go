@@ -42,7 +42,7 @@ type ListActionDeps struct {
 // PeerListAction defines actions that can be applied to a PeerList
 type PeerListAction interface {
 	// Apply runs a function on the PeerList and asserts the result
-	Apply(*testing.T, peer.List, ListActionDeps)
+	Apply(*testing.T, peer.Chooser, ListActionDeps)
 }
 
 // StartAction is an action for testing PeerList.Start
@@ -51,7 +51,7 @@ type StartAction struct {
 }
 
 // Apply runs "Start" on the peerList and validates the error
-func (a StartAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
+func (a StartAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	err := pl.Start()
 	assert.Equal(t, a.ExpectedErr, err)
 }
@@ -62,19 +62,19 @@ type StopAction struct {
 }
 
 // Apply runs "Stop" on the peerList and validates the error
-func (a StopAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
+func (a StopAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	err := pl.Stop()
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
-// ChooseMultiAction will run ChoosePeer multiple times on the PeerList
+// ChooseMultiAction will run Choose multiple times on the PeerList
 // It will assert if there are ANY failures
 type ChooseMultiAction struct {
 	ExpectedPeers []string
 }
 
-// Apply runs "ChoosePeer" on the peerList for every ExpectedPeer
-func (a ChooseMultiAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
+// Apply runs "Choose" on the peerList for every ExpectedPeer
+func (a ChooseMultiAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	for _, expectedPeer := range a.ExpectedPeers {
 		action := ChooseAction{
 			ExpectedPeer: expectedPeer,
@@ -92,8 +92,8 @@ type ChooseAction struct {
 	ExpectedErr         error
 }
 
-// Apply runs "ChoosePeer" on the peerList and validates the peer && error
-func (a ChooseAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
+// Apply runs "Choose" on the peerList and validates the peer && error
+func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	ctx := a.InputContext
 	if ctx == nil {
 		ctx = context.Background()
@@ -104,7 +104,7 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
 		defer cancel()
 	}
 
-	p, err := pl.ChoosePeer(ctx, a.InputRequest)
+	p, err := pl.Choose(ctx, a.InputRequest)
 
 	if a.ExpectedErr != nil {
 		// Note that we're not verifying anything about ExpectedPeer here because
@@ -121,33 +121,29 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
 	}
 }
 
-// AddAction is an action for adding a peer to the peerlist
-type AddAction struct {
-	InputPeerID string
-	ExpectedErr error
+// UpdateAction is an action for adding/removing multiple peers on the PeerList
+type UpdateAction struct {
+	AddedPeerIDs   []string
+	RemovedPeerIDs []string
+	ExpectedErr    error
 }
 
-// Apply runs "Add" on the peerList after casting it to a PeerChangeListener
+// Apply runs "Update" on the peer.Chooser after casting it to a peer.List
 // and validates the error
-func (a AddAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
-	changeListener := pl.(peer.ChangeListener)
+func (a UpdateAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
+	list := pl.(peer.List)
 
-	err := changeListener.Add(MockPeerIdentifier(a.InputPeerID))
-	assert.Equal(t, a.ExpectedErr, err)
-}
+	added := make([]peer.Identifier, 0, len(a.AddedPeerIDs))
+	for _, peerID := range a.AddedPeerIDs {
+		added = append(added, MockPeerIdentifier(peerID))
+	}
 
-// RemoveAction is an action for adding a peer to the peerlist
-type RemoveAction struct {
-	InputPeerID string
-	ExpectedErr error
-}
+	removed := make([]peer.Identifier, 0, len(a.RemovedPeerIDs))
+	for _, peerID := range a.RemovedPeerIDs {
+		removed = append(removed, MockPeerIdentifier(peerID))
+	}
 
-// Apply runs "Remove" on the peerList after casting it to a PeerChangeListener
-// and validates the error
-func (a RemoveAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
-	changeListener := pl.(peer.ChangeListener)
-
-	err := changeListener.Remove(MockPeerIdentifier(a.InputPeerID))
+	err := list.Update(added, removed)
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
@@ -159,7 +155,7 @@ type ConcurrentAction struct {
 
 // Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
 // between each action. Returns when all actions have finished executing
-func (a ConcurrentAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
+func (a ConcurrentAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(a.Actions))
@@ -188,7 +184,7 @@ type NotifyStatusChangeAction struct {
 }
 
 // Apply will run the NotifyStatusChanged function on the PeerList with the provided Peer
-func (a NotifyStatusChangeAction) Apply(t *testing.T, pl peer.List, deps ListActionDeps) {
+func (a NotifyStatusChangeAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	deps.Peers[a.PeerID].PeerStatus.ConnectionStatus = a.NewConnectionStatus
 
 	plSub := pl.(peer.Subscriber)
@@ -197,7 +193,7 @@ func (a NotifyStatusChangeAction) Apply(t *testing.T, pl peer.List, deps ListAct
 }
 
 // ApplyPeerListActions runs all the PeerListActions on the PeerList
-func ApplyPeerListActions(t *testing.T, pl peer.List, actions []PeerListAction, deps ListActionDeps) {
+func ApplyPeerListActions(t *testing.T, pl peer.Chooser, actions []PeerListAction, deps ListActionDeps) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
 			action.Apply(t, pl, deps)

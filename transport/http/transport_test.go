@@ -25,7 +25,7 @@ func createPeerIdentifierMap(ids []string) map[string]peer.Identifier {
 	return pids
 }
 
-func TestAgent(t *testing.T) {
+func TestTransport(t *testing.T) {
 	type testStruct struct {
 		msg string
 
@@ -37,11 +37,11 @@ func TestAgent(t *testing.T) {
 		// the actions up from so they can be generated and passed as deps
 		subscriberDefs []SubscriberDefinition
 
-		// actions are the actions that will be applied against the agent
-		actions []AgentAction
+		// actions are the actions that will be applied against the transport
+		actions []TransportAction
 
 		// expectedPeers are a list of peers (and those peer's subscribers)
-		// that are expected on the agent after the actions
+		// that are expected on the transport after the actions
 		expectedPeers []peerExpectation
 	}
 	tests := []testStruct{
@@ -51,7 +51,7 @@ func TestAgent(t *testing.T) {
 			subscriberDefs: []SubscriberDefinition{
 				{ID: "s1"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
 			},
 			expectedPeers: []peerExpectation{
@@ -64,7 +64,7 @@ func TestAgent(t *testing.T) {
 			subscriberDefs: []SubscriberDefinition{
 				{ID: "s1"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
 				ReleaseAction{InputIdentifierID: "i1", InputSubscriberID: "s1"},
 			},
@@ -77,7 +77,7 @@ func TestAgent(t *testing.T) {
 				{ID: "s2"},
 				{ID: "s3"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
@@ -94,7 +94,7 @@ func TestAgent(t *testing.T) {
 				{ID: "s2r"},
 				{ID: "s3"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2r", ExpectedPeerID: "i1"},
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
@@ -112,7 +112,7 @@ func TestAgent(t *testing.T) {
 				{ID: "s2"},
 				{ID: "s3"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s2", ExpectedPeerID: "i1"},
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s3", ExpectedPeerID: "i1"},
@@ -127,11 +127,11 @@ func TestAgent(t *testing.T) {
 			subscriberDefs: []SubscriberDefinition{
 				{ID: "s1"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				ReleaseAction{
 					InputIdentifierID: "i1",
 					InputSubscriberID: "s1",
-					ExpectedErrType:   peer.ErrAgentHasNoReferenceToPeer{},
+					ExpectedErrType:   peer.ErrTransportHasNoReferenceToPeer{},
 				},
 			},
 		},
@@ -142,7 +142,7 @@ func TestAgent(t *testing.T) {
 				{ID: "s1"},
 				{ID: "s2"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s1", ExpectedPeerID: "i1"},
 				ReleaseAction{
 					InputIdentifierID: "i1",
@@ -166,7 +166,7 @@ func TestAgent(t *testing.T) {
 				{ID: "s6rnd"},
 				{ID: "s7rnd"},
 			},
-			actions: []AgentAction{
+			actions: []TransportAction{
 				// Retains/Releases of i1 (Retain/Release the random peers at the end)
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s5rnd", ExpectedPeerID: "i1"},
 				RetainAction{InputIdentifierID: "i1", InputSubscriberID: "s6rnd", ExpectedPeerID: "i1"},
@@ -210,17 +210,17 @@ func TestAgent(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			agent := NewAgent()
+			transport := NewTransport()
 
-			deps := AgentDeps{
+			deps := TransportDeps{
 				PeerIdentifiers: createPeerIdentifierMap(tt.identifiers),
 				Subscribers:     CreateSubscriberMap(mockCtrl, tt.subscriberDefs),
 			}
-			ApplyAgentActions(t, agent, tt.actions, deps)
+			ApplyTransportActions(t, transport, tt.actions, deps)
 
-			assert.Len(t, agent.peers, len(tt.expectedPeers))
+			assert.Len(t, transport.peers, len(tt.expectedPeers))
 			for _, expectedPeerNode := range tt.expectedPeers {
-				p, ok := agent.peers[expectedPeerNode.id]
+				p, ok := transport.peers[expectedPeerNode.id]
 				assert.True(t, ok)
 
 				if assert.NotNil(t, p) {
@@ -230,7 +230,7 @@ func TestAgent(t *testing.T) {
 					// attempt to remove subscribers and be sure that it doesn't error
 					assert.Len(t, expectedPeerNode.subscribers, p.NumSubscribers())
 					for _, sub := range expectedPeerNode.subscribers {
-						err := p.RemoveSubscriber(deps.Subscribers[sub])
+						err := p.Unsubscribe(deps.Subscribers[sub])
 						assert.NoError(t, err, "peer %s did not have reference to subscriber %s", p.Identifier(), sub)
 					}
 				}
@@ -239,11 +239,11 @@ func TestAgent(t *testing.T) {
 	}
 }
 
-func TestAgentRetainWithInvalidPeerIdentifierType(t *testing.T) {
+func TestTransportRetainWithInvalidPeerIdentifierType(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	agent := NewAgent()
+	transport := NewTransport()
 	pid := NewMockIdentifier(mockCtrl)
 
 	expectedErr := peer.ErrInvalidPeerType{
@@ -251,21 +251,21 @@ func TestAgentRetainWithInvalidPeerIdentifierType(t *testing.T) {
 		PeerIdentifier: pid,
 	}
 
-	_, err := agent.RetainPeer(pid, NewMockSubscriber(mockCtrl))
+	_, err := transport.RetainPeer(pid, NewMockSubscriber(mockCtrl))
 
 	assert.Equal(t, expectedErr, err, "did not return error on invalid peer identifier")
 }
 
-func TestAgentClient(t *testing.T) {
-	agent := NewAgent()
+func TestTransportClient(t *testing.T) {
+	transport := NewTransport()
 
-	assert.NotNil(t, agent.client)
+	assert.NotNil(t, transport.client)
 }
 
-func TestAgentClientWithKeepAlive(t *testing.T) {
+func TestTransportClientWithKeepAlive(t *testing.T) {
 	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
 	// assert this worked
-	agent := NewAgent(KeepAlive(time.Second))
+	transport := NewTransport(KeepAlive(time.Second))
 
-	assert.NotNil(t, agent.client)
+	assert.NotNil(t, transport.client)
 }

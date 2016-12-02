@@ -352,7 +352,7 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, clientDispatcher.Start())
 	defer clientDispatcher.Stop()
 
-	client := raw.New(clientDispatcher.Channel("yarpc-test"))
+	client := raw.New(clientDispatcher.ClientConfig("yarpc-test"))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("panic"), []byte{})

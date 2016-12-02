@@ -174,7 +174,7 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 	require.NoError(t, clientDisp.Start())
 	defer clientDisp.Stop()
 
-	client := raw.New(clientDisp.Channel("server"))
+	client := raw.New(clientDisp.ClientConfig("server"))
 	f(client)
 }
 
@@ -208,7 +208,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	require.NoError(t, clientDisp.Start())
 	defer clientDisp.Stop()
 
-	client := raw.New(clientDisp.Channel("server"))
+	client := raw.New(clientDisp.ClientConfig("server"))
 	f(client)
 }
 
@@ -282,7 +282,8 @@ func TestEmptyReplay(t *testing.T) {
 }
 
 const refRecordFilename = `server.hello.254fa3bab61fc27f.yaml`
-const refRecordContent = `version: 1
+const refRecordContent = recordComment +
+	`version: 1
 request:
   caller: client
   service: server

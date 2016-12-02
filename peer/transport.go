@@ -18,32 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package peer
 
-//go:generate mockgen -destination=transporttest/channel.go -package=transporttest go.uber.org/yarpc/transport Channel,ChannelProvider
+//go:generate mockgen -destination=peertest/transport.go -package=peertest go.uber.org/yarpc/peer Transport,Subscriber
 
-// ChannelProvider builds channels from the current service to other services.
-type ChannelProvider interface {
-	// Retrieves a new Channel that will make requests to the given service.
-	//
-	// This MAY panic if the given service is unknown.
-	Channel(service string) Channel
+// Subscriber listens to changes of a Peer over time.
+type Subscriber interface {
+	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)
+	NotifyStatusChanged(Identifier)
 }
 
-// A Channel is a stream of communication between a single caller-service
-// pair.
-type Channel interface {
-	// Name of the service making the request.
-	Caller() string
+// Transport manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
+// PeerIdentifier and the Transport has the ability to create a new Peer or return an existing one.
+type Transport interface {
+	// Get or create a Peer for the Subscriber
+	RetainPeer(Identifier, Subscriber) (Peer, error)
 
-	// Name of the service to which the request is being made.
-	Service() string
-
-	// Returns an outbound to send the request through or panics if there is no
-	// outbound for this service
-	//
-	// MAY be called multiple times for a request. The returned outbound MUST
-	// have already been started.
-	GetUnaryOutbound() UnaryOutbound
-	GetOnewayOutbound() OnewayOutbound
+	// Unallocate a peer from the Subscriber
+	ReleasePeer(Identifier, Subscriber) error
 }

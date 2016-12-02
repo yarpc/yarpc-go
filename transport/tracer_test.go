@@ -159,7 +159,7 @@ func TestHTTPTracer(t *testing.T) {
 	tracer := mocktracer.New()
 	dispatcher := createHTTPDispatcher(tracer)
 
-	client := json.New(dispatcher.Channel("yarpc-test"))
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 
@@ -179,7 +179,7 @@ func TestTChannelTracer(t *testing.T) {
 	tracer := mocktracer.New()
 	dispatcher := createTChannelDispatcher(tracer, t)
 
-	client := json.New(dispatcher.Channel("yarpc-test"))
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 
@@ -216,7 +216,7 @@ func TestHTTPTracerDepth2(t *testing.T) {
 	tracer := mocktracer.New()
 	dispatcher := createHTTPDispatcher(tracer)
 
-	client := json.New(dispatcher.Channel("yarpc-test"))
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 
@@ -236,7 +236,7 @@ func TestTChannelTracerDepth2(t *testing.T) {
 	tracer := mocktracer.New()
 	dispatcher := createTChannelDispatcher(tracer, t)
 
-	client := json.New(dispatcher.Channel("yarpc-test"))
+	client := json.New(dispatcher.ClientConfig("yarpc-test"))
 	handler := handler{client: client, t: t}
 	handler.register(dispatcher)
 

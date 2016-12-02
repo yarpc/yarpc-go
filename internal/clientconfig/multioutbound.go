@@ -18,37 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package clientconfig
 
 import (
-	"bytes"
-	"context"
-	"time"
+	"fmt"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/raw"
-	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
-	"go.uber.org/yarpc/internal/crossdock/client/random"
-
-	"github.com/crossdock/crossdock-go"
+	"go.uber.org/yarpc/transport"
 )
 
-// Raw implements the 'raw' behavior.
-func Raw(t crossdock.T) {
-	t = createEchoT("raw", t)
-	fatals := crossdock.Fatals(t)
+type multiOutbound struct {
+	caller    string
+	service   string
+	Outbounds transport.Outbounds
+}
 
-	dispatcher := disp.Create(t)
-	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
-	defer dispatcher.Stop()
+// MultiOutbound constructs a ClientConfig backed by multiple outbound types
+func MultiOutbound(caller, service string, Outbounds transport.Outbounds) transport.ClientConfig {
+	return multiOutbound{caller: caller, service: service, Outbounds: Outbounds}
+}
 
-	client := raw.New(dispatcher.ClientConfig("yarpc-test"))
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+func (c multiOutbound) Caller() string  { return c.caller }
+func (c multiOutbound) Service() string { return c.service }
 
-	token := random.Bytes(5)
-	resBody, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("echo/raw"), token)
+func (c multiOutbound) GetUnaryOutbound() transport.UnaryOutbound {
+	if c.Outbounds.Unary == nil {
+		panic(fmt.Sprintf("Service %q does not have a unary outbound", c.service))
+	}
 
-	crossdock.Fatals(t).NoError(err, "call to echo/raw failed: %v", err)
-	crossdock.Assert(t).True(bytes.Equal(token, resBody), "server said: %v", resBody)
+	return c.Outbounds.Unary
+}
+
+func (c multiOutbound) GetOnewayOutbound() transport.OnewayOutbound {
+	if c.Outbounds.Oneway == nil {
+		panic(fmt.Sprintf("Service %q does not have a oneway outbound", c.service))
+	}
+
+	return c.Outbounds.Oneway
 }

@@ -33,7 +33,7 @@ import (
 func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals := crossdock.Fatals(t)
 
-	client := onewayclient.New(dispatcher.Channel("oneway-test"))
+	client := onewayclient.New(dispatcher.ClientConfig("oneway-test"))
 	ctx := context.Background()
 
 	token := getRandomID()

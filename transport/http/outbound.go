@@ -32,7 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/list"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
@@ -55,22 +55,22 @@ type outboundConfig struct {
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
 //
-// Deprecated: create outbounds through NewPeerListOutbound instead
-func NewOutbound(urlStr string, opts ...AgentOption) *Outbound {
-	agent := NewAgent(opts...)
+// Deprecated: create outbounds through NewChooserOutbound instead
+func NewOutbound(urlStr string, opts ...TransportOption) *Outbound {
+	transport := NewTransport(opts...)
 
 	urlTemplate, hp := parseURL(urlStr)
 
 	peerID := hostport.PeerIdentifier(hp)
-	peerList := list.NewSingle(peerID, agent)
+	c := single.New(peerID, transport)
 
-	err := peerList.Start()
+	err := c.Start()
 	if err != nil {
 		// This should never happen, single shouldn't return an error here
-		panic(fmt.Sprintf("could not start single peerlist, err: %s", err))
+		panic(fmt.Sprintf("could not start single peerChooser, err: %s", err))
 	}
 
-	return NewPeerListOutbound(peerList, urlTemplate)
+	return NewChooserOutbound(c, urlTemplate)
 }
 
 func parseURL(urlStr string) (*url.URL, string) {
@@ -82,14 +82,14 @@ func parseURL(urlStr string) (*url.URL, string) {
 	return parsedURL, parsedURL.Host
 }
 
-// NewPeerListOutbound builds a new HTTP outbound built around a PeerList
+// NewChooserOutbound builds a new HTTP outbound built around a PeerList
 // for getting potential downstream hosts.
-// PeerList.ChoosePeer MUST return *hostport.Peer objects.
-// PeerList.Start MUST be called before Outbound.Start
-func NewPeerListOutbound(peerList peer.List, urlTemplate *url.URL) *Outbound {
+// Chooser.Choose MUST return *hostport.Peer objects.
+// Chooser.Start MUST be called before Outbound.Start
+func NewChooserOutbound(chooser peer.Chooser, urlTemplate *url.URL) *Outbound {
 	return &Outbound{
 		started:     atomic.NewBool(false),
-		peerList:    peerList,
+		chooser:     chooser,
 		urlTemplate: urlTemplate,
 	}
 }
@@ -98,7 +98,7 @@ func NewPeerListOutbound(peerList peer.List, urlTemplate *url.URL) *Outbound {
 type Outbound struct {
 	started     *atomic.Bool
 	deps        transport.Deps
-	peerList    peer.List
+	chooser     peer.Chooser
 	urlTemplate *url.URL
 }
 
@@ -126,12 +126,41 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
 
+	return o.call(ctx, treq, start, ttl)
+}
+
+type ack struct {
+	time time.Time
+}
+
+func (a ack) String() string {
+	return a.time.String()
+}
+
+// CallOneway makes a oneway request
+func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
+	if !o.started.Load() {
+		// panic because there's no recovery from this
+		panic(errOutboundNotStarted)
+	}
+	start := time.Now()
+	var ttl time.Duration
+
+	_, err := o.call(ctx, treq, start, ttl)
+	if err != nil {
+		return nil, err
+	}
+
+	return ack{time: time.Now()}, nil
+}
+
+func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time.Time, ttl time.Duration) (*transport.Response, error) {
 	p, err := o.getPeerForRequest(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
-	endRequest := p.StartRequest()
-	defer endRequest()
+	p.StartRequest(nil)
+	defer p.EndRequest(nil)
 
 	req, err := o.createRequest(p, treq)
 	if err != nil {
@@ -183,70 +212,8 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return nil, getErrFromResponse(response)
 }
 
-type ack struct {
-	time time.Time
-}
-
-func (a ack) String() string {
-	return a.time.String()
-}
-
-// CallOneway makes a oneway request
-func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
-	}
-
-	p, err := o.getPeerForRequest(ctx, treq)
-	if err != nil {
-		return nil, err
-	}
-	endRequest := p.StartRequest()
-	defer endRequest()
-
-	req, err := o.createRequest(p, treq)
-	if err != nil {
-		return nil, err
-	}
-
-	start := time.Now()
-	var ttl time.Duration
-
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, req, span := o.withOpentracingSpan(ctx, req, treq, start)
-	defer span.Finish()
-	req = o.withCoreHeaders(req, treq, ttl)
-
-	client, err := o.getHTTPClient(p)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = client.Do(req.WithContext(ctx))
-	if err != nil {
-		// Workaround borrowed from ctxhttp until
-		// https://github.com/golang/go/issues/17711 is resolved.
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-		default:
-		}
-	}
-
-	sent := time.Now()
-
-	if err != nil {
-		span.SetTag("error", true)
-		span.LogEvent(err.Error())
-		return nil, err
-	}
-
-	return ack{time: sent}, nil
-}
-
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
-	p, err := o.peerList.ChoosePeer(ctx, treq)
+	p, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
@@ -326,14 +293,14 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 }
 
 func (o *Outbound) getHTTPClient(p *hostport.Peer) (*http.Client, error) {
-	agent, ok := p.Agent().(*Agent)
+	transport, ok := p.Transport().(*Transport)
 	if !ok {
-		return nil, peer.ErrInvalidAgentConversion{
-			Agent:        p.Agent(),
-			ExpectedType: "*http.Agent",
+		return nil, peer.ErrInvalidTransportConversion{
+			Transport:    p.Transport(),
+			ExpectedType: "*http.Transport",
 		}
 	}
-	return agent.client, nil
+	return transport.client, nil
 }
 
 func getErrFromResponse(response *http.Response) error {

@@ -43,16 +43,16 @@ type PeerAction interface {
 	Apply(*testing.T, *Peer, *Dependencies)
 }
 
-// StartStopReqAction will run a StartRequest and (optionally) a stop request
+// StartStopReqAction will run a StartRequest and (optionally) EndRequest
 type StartStopReqAction struct {
 	Stop bool
 }
 
-// Apply will run StartRequest and (optionally) the end closure
+// Apply will run StartRequest and (optionally) EndRequest
 func (sa StartStopReqAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
-	end := p.StartRequest()
+	p.StartRequest(nil)
 	if sa.Stop {
-		end()
+		p.EndRequest(nil)
 	}
 }
 
@@ -68,7 +68,7 @@ func (sa SetStatusAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
 	assert.Equal(t, sa.InputStatus, p.Status().ConnectionStatus)
 }
 
-// SubscribeAction will run an AddSubscriber on a Peer
+// SubscribeAction will run an Subscribe on a Peer
 type SubscribeAction struct {
 	// SubscriberID is a unique identifier for a subscriber that is
 	// contained in the Dependencies object passed in Apply
@@ -79,24 +79,24 @@ type SubscribeAction struct {
 	ExpectedSubCount int
 }
 
-// Apply will run AddSubscriber on a Peer
+// Apply will run Subscribe on a Peer
 func (sa SubscribeAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
 	sub, ok := d.Subscribers[sa.SubscriberID]
 	assert.True(t, ok, "referenced a subscriberID that does not exist %s", sa.SubscriberID)
 
-	p.AddSubscriber(sub)
+	p.Subscribe(sub)
 
 	assert.Equal(t, sa.ExpectedSubCount, p.NumSubscribers())
 }
 
-// UnsubscribeAction will run RemoveSubscriber on a Peer
+// UnsubscribeAction will run Unsubscribe on a Peer
 type UnsubscribeAction struct {
 	// SubscriberID is a unique identifier for a subscriber that is
 	// contained in the Dependencies object passed in Apply
 	SubscriberID string
 
 	// ExpectedErrType is the type of error that is expected to be returned
-	// from RemoveSubscriber
+	// from Unsubscribe
 	ExpectedErrType error
 
 	// ExpectedSubCount is the number of subscribers on the Peer after
@@ -104,12 +104,12 @@ type UnsubscribeAction struct {
 	ExpectedSubCount int
 }
 
-// Apply will run RemoveSubscriber from the Peer and assert on the result
+// Apply will run Unsubscribe from the Peer and assert on the result
 func (ua UnsubscribeAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
 	sub, ok := d.Subscribers[ua.SubscriberID]
 	assert.True(t, ok, "referenced a subscriberID that does not exist %s", ua.SubscriberID)
 
-	err := p.RemoveSubscriber(sub)
+	err := p.Unsubscribe(sub)
 
 	assert.Equal(t, ua.ExpectedSubCount, p.NumSubscribers())
 	if err != nil {

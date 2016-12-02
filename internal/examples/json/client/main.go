@@ -120,7 +120,7 @@ func main() {
 	}
 	defer dispatcher.Stop()
 
-	client := json.New(dispatcher.Channel("keyvalue"))
+	client := json.New(dispatcher.ClientConfig("keyvalue"))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()
