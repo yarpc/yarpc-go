@@ -55,7 +55,7 @@ type outboundConfig struct {
 // NewOutbound builds a new HTTP outbound that sends requests to the given
 // URL.
 //
-// Deprecated: create outbounds through NewPeerListOutbound instead
+// Deprecated: create outbounds through NewChooserOutbound instead
 func NewOutbound(urlStr string, opts ...TransportOption) *Outbound {
 	transport := NewTransport(opts...)
 
