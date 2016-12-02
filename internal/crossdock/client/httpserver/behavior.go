@@ -51,7 +51,7 @@ func Run(t crossdock.T) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: http.NewChooserOutbound(
+				Unary: http.NewOutbound(
 					single.New(
 						hostport.PeerIdentifier(fmt.Sprintf("%s:8085", server)),
 						httpTransport,

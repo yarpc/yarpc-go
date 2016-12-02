@@ -332,7 +332,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 		if httpTransport == nil {
 			httpTransport = http.NewTransport()
 		}
-		outbound = http.NewChooserOutbound(
+		outbound = http.NewOutbound(
 			single.New(
 				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", subject)),
 				httpTransport,

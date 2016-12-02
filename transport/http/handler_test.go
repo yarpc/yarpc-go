@@ -351,7 +351,7 @@ func TestHandlerPanic(t *testing.T) {
 		Name: "yarpc-test-client",
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: NewChooserOutbound(
+				Unary: NewOutbound(
 					single.New(
 						hostport.PeerIdentifier(inbound.Addr().String()),
 						httpTransport,

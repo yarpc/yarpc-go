@@ -126,7 +126,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: http.NewChooserOutbound(
+				Unary: http.NewOutbound(
 					single.New(
 						hostport.PeerIdentifier("127.0.0.1:18080"),
 						httpTransport,

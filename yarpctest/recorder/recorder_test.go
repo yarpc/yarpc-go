@@ -168,7 +168,7 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewChooserOutbound(
+				Unary: http.NewOutbound(
 					single.New(
 						hostport.PeerIdentifier("127.0.0.1:65535"),
 						httpTransport,
@@ -210,7 +210,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewChooserOutbound(
+				Unary: http.NewOutbound(
 					single.New(
 						hostport.PeerIdentifier(serverHTTP.Addr().String()),
 						httpTransport,

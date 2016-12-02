@@ -106,7 +106,7 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
-	o := http.NewChooserOutbound(
+	o := http.NewOutbound(
 		single.New(
 			hostport.PeerIdentifier(i.Addr().String()),
 			httpTransport,
@@ -125,7 +125,7 @@ func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transpor
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
-	o := http.NewChooserOutbound(
+	o := http.NewOutbound(
 		single.New(
 			hostport.PeerIdentifier(i.Addr().String()),
 			httpTransport,

@@ -125,7 +125,7 @@ func TestInboundMux(t *testing.T) {
 	}
 
 	// this should fail
-	o := NewChooserOutbound(
+	o := NewOutbound(
 		single.New(
 			hostport.PeerIdentifier(i.Addr().String()),
 			httpTransport,

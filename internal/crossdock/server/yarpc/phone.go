@@ -78,7 +78,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 	switch {
 	case body.Transport.HTTP != nil:
 		t := body.Transport.HTTP
-		outbound = http.NewChooserOutbound(
+		outbound = http.NewOutbound(
 			single.New(
 				hostport.PeerIdentifier(fmt.Sprintf("%s:%d", t.Host, t.Port)),
 				http.NewTransport(), // TODO transport lifecycle

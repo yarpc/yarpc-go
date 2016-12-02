@@ -133,7 +133,7 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: yhttp.NewChooserOutbound(
+				Unary: yhttp.NewOutbound(
 					single.New(hostport.PeerIdentifier("http://localhost:8999"), httpTransport),
 				),
 			},
@@ -155,7 +155,7 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: yhttp.NewChooserOutbound(
+				Unary: yhttp.NewOutbound(
 					single.New(hostport.PeerIdentifier("http://localhost:8998"), httpTransport),
 				),
 			},

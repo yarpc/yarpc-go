@@ -72,7 +72,7 @@ func TestCallSuccess(t *testing.T) {
 	// TODO transport lifecycle
 
 	parsedURL, _ := url.Parse(successServer.URL)
-	out := NewChooserOutbound(
+	out := NewOutbound(
 		single.New(
 			hostport.PeerIdentifier(parsedURL.Host),
 			httpTransport,
@@ -121,6 +121,9 @@ func TestOutboundHeaders(t *testing.T) {
 		},
 	}
 
+	httpTransport := NewTransport()
+	// TODO transport lifecycle
+
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +143,8 @@ func TestOutboundHeaders(t *testing.T) {
 			defer cancel()
 		}
 
-		out := NewOutbound(server.URL)
+		out := NewSingleOutbound(server.URL, httpTransport)
+
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
@@ -173,6 +177,8 @@ func TestCallFailures(t *testing.T) {
 		}))
 	defer internalErrorServer.Close()
 
+	httpTransport := NewTransport()
+
 	tests := []struct {
 		url      string
 		messages []string
@@ -183,7 +189,7 @@ func TestCallFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		out := NewOutbound(tt.url)
+		out := NewSingleOutbound(tt.url, httpTransport)
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
@@ -204,7 +210,8 @@ func TestCallFailures(t *testing.T) {
 }
 
 func TestStartMultiple(t *testing.T) {
-	out := NewOutbound("http://localhost:9999")
+	httpTransport := NewTransport()
+	out := NewSingleOutbound("http://localhost:9999", httpTransport)
 
 	var wg sync.WaitGroup
 	signal := make(chan struct{})
@@ -227,7 +234,7 @@ func TestStopMultiple(t *testing.T) {
 	httpTransport := NewTransport()
 	// TODO transport lifecycle
 
-	out := NewChooserOutbound(
+	out := NewOutbound(
 		single.New(
 			hostport.PeerIdentifier("127.0.0.1:9999"),
 			httpTransport,
@@ -258,7 +265,7 @@ func TestCallWithoutStarting(t *testing.T) {
 	httpTransport := NewTransport()
 	// TODO transport lifecycle
 
-	out := NewChooserOutbound(
+	out := NewOutbound(
 		single.New(
 			hostport.PeerIdentifier("127.0.0.1:9999"),
 			httpTransport,

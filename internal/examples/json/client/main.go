@@ -100,7 +100,7 @@ func main() {
 		if httpTransport == nil {
 			httpTransport = http.NewTransport()
 		}
-		outbound = http.NewChooserOutbound(
+		outbound = http.NewOutbound(
 			single.New(
 				hostport.PeerIdentifier("127.0.0.1:24034"),
 				httpTransport,
