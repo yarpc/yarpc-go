@@ -214,19 +214,23 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 }
 
 // Choose selects the next available peer in the round robin
-func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, error) {
+func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(), error) {
 	if !pl.isRunning() {
-		return nil, peer.ErrPeerListNotStarted("RoundRobinList")
+		return nil, nil, peer.ErrPeerListNotStarted("RoundRobinList")
 	}
 
 	for {
 		if nextPeer := pl.nextPeer(); nextPeer != nil {
 			pl.notifyPeerAvailable()
-			return nextPeer, nil
+			onFinish := func() {
+				nextPeer.EndRequest(pl)
+			}
+			nextPeer.StartRequest(pl)
+			return nextPeer, onFinish, nil
 		}
 
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 }
