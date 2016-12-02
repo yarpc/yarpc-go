@@ -70,6 +70,10 @@ type unaryOutboundWithMiddleware struct {
 	f UnaryOutboundMiddleware
 }
 
+func (fo unaryOutboundWithMiddleware) Transports() []Transport {
+	return fo.o.Transports()
+}
+
 func (fo unaryOutboundWithMiddleware) Start() error {
 	return fo.o.Start()
 }
@@ -133,6 +137,10 @@ func (f OnewayOutboundMiddlewareFunc) CallOneway(ctx context.Context, request *R
 type onewayOutboundWithMiddleware struct {
 	o OnewayOutbound
 	f OnewayOutboundMiddleware
+}
+
+func (fo onewayOutboundWithMiddleware) Transports() []Transport {
+	return fo.o.Transports()
 }
 
 func (fo onewayOutboundWithMiddleware) Start() error {
