@@ -121,33 +121,29 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 	}
 }
 
-// AddAction is an action for adding a peer to the peerlist
-type AddAction struct {
-	InputPeerID string
-	ExpectedErr error
+// UpdateAction is an action for adding/removing multiple peers on the PeerList
+type UpdateAction struct {
+	AddedPeerIDs   []string
+	RemovedPeerIDs []string
+	ExpectedErr    error
 }
 
-// Apply runs "Add" on the peer.Chooser after casting it to a peer.List
+// Apply runs "Update" on the peer.Chooser after casting it to a peer.List
 // and validates the error
-func (a AddAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
+func (a UpdateAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	list := pl.(peer.List)
 
-	err := list.Update([]peer.Identifier{MockPeerIdentifier(a.InputPeerID)}, nil)
-	assert.Equal(t, a.ExpectedErr, err)
-}
+	added := make([]peer.Identifier, 0, len(a.AddedPeerIDs))
+	for _, peerID := range a.AddedPeerIDs {
+		added = append(added, MockPeerIdentifier(peerID))
+	}
 
-// RemoveAction is an action for adding a peer to the peerlist
-type RemoveAction struct {
-	InputPeerID string
-	ExpectedErr error
-}
+	removed := make([]peer.Identifier, 0, len(a.RemovedPeerIDs))
+	for _, peerID := range a.RemovedPeerIDs {
+		removed = append(removed, MockPeerIdentifier(peerID))
+	}
 
-// Apply runs "Remove" on the peer.Chooser after casting it to a peer.List
-// and validates the error
-func (a RemoveAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
-	list := pl.(peer.List)
-
-	err := list.Update(nil, []peer.Identifier{MockPeerIdentifier(a.InputPeerID)})
+	err := list.Update(added, removed)
 	assert.Equal(t, a.ExpectedErr, err)
 }
 
