@@ -93,6 +93,18 @@ func NewChooserOutbound(chooser peer.Chooser) *Outbound {
 	}
 }
 
+// NewSingleOutbound creates an outbound from a single URL.
+// This form defers to the underlying HTTP agent's peer selection and load
+// balancing, using DNS.
+func NewSingleOutbound(u string, t *Transport) *Outbound {
+	parsedURL, err := url.Parse(u)
+	if err != nil {
+		panic(err.Error())
+	}
+	return NewChooserOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
+		WithURLTemplate(u)
+}
+
 // Outbound is an HTTP UnaryOutbound and OnewayOutbound
 type Outbound struct {
 	started     *atomic.Bool
