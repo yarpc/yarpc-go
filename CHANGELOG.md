@@ -96,7 +96,7 @@ v1.0.0-dev (unreleased)
     Before:
 
     ```go
-    inbound := tchannel.NewInbound(...)
+    inbound := tchannel.NewInbound(ch)
     err := inbound.Start(
         transport.ServiceDetail{
             Name: "service",
@@ -109,7 +109,8 @@ v1.0.0-dev (unreleased)
     Now:
 
     ```go
-    inbound := tchannel.NewInbound(...).WithRegistry(registry)
+    inbound := tchannel.NewInboundFromChannel(ch).
+        WithRegistry(registry)
     err := inbound.Start()
     ```
 
