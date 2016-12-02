@@ -4,6 +4,18 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
+-   **Breaking** Renamed `Agent` to `Transport`.
+-   **Breaking** Renamed `hostport.Peer`'s `AddSubscriber/RemoveSubscriber`
+    to `Subscribe/Unsubscribe`.
+-   **Breaking** Updated `Peer.StartRequest` to take a `dontNotify` `peer.Subscriber` to exempt
+    from updates.  Also added `Peer.EndRequest` function to replace the `finish` callback
+    from `Peer.StartRequest`.
+-   **Breaking** Renamed `peer.List` to `peer.Chooser`, `peer.ChangeListener` to `peer.List`
+    and `peer.Chooser.ChoosePeer` to `peer.Chooser.Choose`.
+-   Reduced complexity of `single` `peer.Chooser` to retain the passed in peer immediately.
+-   **Breaking** Moved `/peer/list/single.go` to `/peer/single/list.go`.
+-   **Breaking** Moved `/peer/x/list/roundrobin.go` to `/peer/x/roundrobin/list.go`.
+-   HTTP Oneway requests will now process http status codes and returns appropriate errors.
 -   **Breaking** Update `roundrobin.New` function to stop accepting an initial peer list.
     Use `list.Update` to initialize the peers in the list instead.
 -   **Breaking**: Rename `Channel` to `ClientConfig` for both the dispatcher
