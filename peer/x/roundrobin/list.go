@@ -31,17 +31,17 @@ import (
 	"go.uber.org/atomic"
 )
 
+const defaultCapacity = 10
+
 // New creates a new round robin PeerList
-func New(peerIDs []peer.Identifier, transport peer.Transport) (*List, error) {
+func New(transport peer.Transport) *List {
 	rr := &List{
-		unavailablePeers:   make(map[string]peer.Peer, len(peerIDs)),
-		availablePeerRing:  NewPeerRing(len(peerIDs)),
+		unavailablePeers:   make(map[string]peer.Peer, defaultCapacity),
+		availablePeerRing:  NewPeerRing(defaultCapacity),
 		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
-
-	err := rr.Update(peerIDs, nil)
-	return rr, err
+	return rr
 }
 
 // List is a PeerList which rotates which peers are to be selected in a circle

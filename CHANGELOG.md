@@ -4,6 +4,8 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
+-   **Breaking** Update `roundrobin.New` function to stop accepting an initial peer list.
+    Use `list.Update` to initialize the peers in the list instead.
 -   **Breaking**: Rename `Channel` to `ClientConfig` for both the dispatcher
     method and the interface. `mydispatcher.Channel("myservice")` becomes
     `mydispatcher.ClientConfig("myservice")`. The `ClientConfig` object can
