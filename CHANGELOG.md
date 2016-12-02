@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.0.0-dev (unreleased)
+v1.0.0-rc2 (2016-12-02)
 -----------------------
 
 -   **Breaking** Renamed `Agent` to `Transport`.
