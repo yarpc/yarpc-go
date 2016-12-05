@@ -21,7 +21,6 @@
 package transport
 
 import (
-	"bytes"
 	"context"
 	"time"
 
@@ -60,25 +59,6 @@ func CreateOpentracingSpan(
 
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	return ctx, span
-}
-
-// MarshalSpanContext marshals a span.Context() into bytes
-func MarshalSpanContext(tracer opentracing.Tracer, spanContext opentracing.SpanContext) ([]byte, error) {
-	carrier := bytes.NewBuffer([]byte{})
-	err := tracer.Inject(spanContext, opentracing.Binary, carrier)
-	return carrier.Bytes(), err
-}
-
-// UnmarshalSpanContext coverts bytes into a span.Context()
-func UnmarshalSpanContext(tracer opentracing.Tracer, spanContextBytes []byte) (opentracing.SpanContext, error) {
-	carrier := bytes.NewBuffer(spanContextBytes)
-	spanContext, err := tracer.Extract(opentracing.Binary, carrier)
-	// If no SpanContext was given, we return nil instead of erroring
-	// ExtractOpenTracingSpan safely accepts nil
-	if err == opentracing.ErrSpanContextNotFound {
-		return nil, nil
-	}
-	return spanContext, err
 }
 
 // ExtractOpenTracingSpan derives a new context from SpanContext. The created

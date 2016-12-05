@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package marshal
+package serialize
 
 import (
 	"bytes"
@@ -26,15 +26,15 @@ import (
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/marshal/internal"
+	"go.uber.org/yarpc/serialize/internal"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
 )
 
-// MarshalRPC encodes a SpanContext and Request into bytes
-func MarshalRPC(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req *transport.Request) ([]byte, error) {
-	spanBytes, err := transport.MarshalSpanContext(tracer, spanContext)
+// ToBytes encodes an opentracing.SpanContext and transport.Request into bytes
+func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req *transport.Request) ([]byte, error) {
+	spanBytes, err := spanContextToBytes(tracer, spanContext)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +68,8 @@ func MarshalRPC(tracer opentracing.Tracer, spanContext opentracing.SpanContext, 
 	return writer.Bytes(), err
 }
 
-// UnmarshalRPC decodes bytes into a SpanContext and Request
-func UnmarshalRPC(tracer opentracing.Tracer, request []byte) (opentracing.SpanContext, *transport.Request, error) {
+// FromBytes decodes bytes into a opentracing.SpanContext and transport.Request
+func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanContext, *transport.Request, error) {
 	reader := bytes.NewReader(request)
 	wireValue, err := protocol.Binary.Decode(reader, wire.TStruct)
 	if err != nil {
@@ -100,10 +100,27 @@ func UnmarshalRPC(tracer opentracing.Tracer, request []byte) (opentracing.SpanCo
 		req.RoutingDelegate = *rpc.RoutingDelegate
 	}
 
-	spanContext, err := transport.UnmarshalSpanContext(tracer, rpc.SpanContext)
+	spanContext, err := spanContextFromBytes(tracer, rpc.SpanContext)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return spanContext, &req, nil
+}
+
+func spanContextToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext) ([]byte, error) {
+	carrier := bytes.NewBuffer([]byte{})
+	err := tracer.Inject(spanContext, opentracing.Binary, carrier)
+	return carrier.Bytes(), err
+}
+
+func spanContextFromBytes(tracer opentracing.Tracer, spanContextBytes []byte) (opentracing.SpanContext, error) {
+	carrier := bytes.NewBuffer(spanContextBytes)
+	spanContext, err := tracer.Extract(opentracing.Binary, carrier)
+	// If no SpanContext was given, we return nil instead of erroring
+	// transport.ExtractOpenTracingSpan() safely accepts nil
+	if err == opentracing.ErrSpanContextNotFound {
+		return nil, nil
+	}
+	return spanContext, err
 }

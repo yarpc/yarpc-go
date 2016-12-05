@@ -18,11 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package marshal
+package serialize
 
 import (
 	"bytes"
+	"context"
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
@@ -30,9 +32,10 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	jaeger "github.com/uber/jaeger-client-go"
 )
 
-func TestRequestMarshaling(t *testing.T) {
+func TestSerialization(t *testing.T) {
 	tracer := opentracing.NoopTracer{}
 	spanContext := tracer.StartSpan("test-span").Context()
 
@@ -58,12 +61,76 @@ func TestRequestMarshaling(t *testing.T) {
 
 	matcher := transporttest.NewRequestMatcher(t, haveReq)
 
-	marshalledReq, err := MarshalRPC(tracer, spanContext, haveReq)
+	marshalledReq, err := ToBytes(tracer, spanContext, haveReq)
 	require.NoError(t, err, "could not marshal RPC to bytes")
 	assert.NotEmpty(t, marshalledReq)
 
-	_, gotReq, err := UnmarshalRPC(tracer, marshalledReq)
+	_, gotReq, err := FromBytes(tracer, marshalledReq)
 	require.NoError(t, err, "could not unmarshal RPC from bytes")
 
 	assert.True(t, matcher.Matches(gotReq))
+}
+
+func TestContextSerialization(t *testing.T) {
+	tracer, closer := initTracer()
+	defer closer()
+
+	req := &transport.Request{}
+	baggage := map[string]string{
+		"hello": "world",
+		"foo":   "bar",
+		":)":    ":(",
+	}
+
+	_, span := transport.CreateOpentracingSpan(
+		context.Background(),
+		req,
+		tracer,
+		"fake-transport",
+		time.Now())
+	addBaggage(span, baggage)
+	span.Finish()
+
+	spanCtxBytes, err := spanContextToBytes(tracer, span.Context())
+	assert.NoError(t, err)
+	assert.NotEmpty(t, spanCtxBytes)
+
+	spanContext, err := spanContextFromBytes(tracer, spanCtxBytes)
+	assert.NoError(t, err)
+	assert.NotNil(t, span)
+
+	_, span = transport.ExtractOpenTracingSpan(
+		context.Background(),
+		spanContext,
+		req,
+		tracer,
+		"fake-transport",
+		time.Now())
+	defer span.Finish()
+
+	assert.Equal(t, baggage, getBaggage(span))
+}
+
+func initTracer() (opentracing.Tracer, func() error) {
+	tracer, closer := jaeger.NewTracer(
+		"internal-propagation",
+		jaeger.NewConstSampler(true),
+		jaeger.NewNullReporter())
+	opentracing.InitGlobalTracer(tracer)
+	return tracer, closer.Close
+}
+
+func addBaggage(span opentracing.Span, baggage map[string]string) {
+	for k, v := range baggage {
+		span.SetBaggageItem(k, v)
+	}
+}
+func getBaggage(span opentracing.Span) map[string]string {
+	baggage := make(map[string]string)
+	span.Context().ForeachBaggageItem(func(k, v string) bool {
+		baggage[k] = v
+		return true
+	})
+
+	return baggage
 }
