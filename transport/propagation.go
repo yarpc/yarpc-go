@@ -28,10 +28,10 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
-// CreateOpentracingSpan creates a new context that has a reference to the
+// CreateOpenTracingSpan creates a new context that has a reference to the
 // started span.
 // This should be called before a Outbound makes a call
-func CreateOpentracingSpan(
+func CreateOpenTracingSpan(
 	ctx context.Context,
 	req *Request,
 	tracer opentracing.Tracer,

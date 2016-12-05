@@ -82,7 +82,7 @@ func TestContextSerialization(t *testing.T) {
 		":)":    ":(",
 	}
 
-	_, span := transport.CreateOpentracingSpan(
+	_, span := transport.CreateOpenTracingSpan(
 		context.Background(),
 		req,
 		tracer,
