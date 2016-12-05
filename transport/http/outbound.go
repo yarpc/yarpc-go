@@ -194,8 +194,21 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time
 	if err != nil {
 		return nil, err
 	}
-	defer onFinish()
 
+	resp, err := o.callWithPeer(ctx, treq, start, ttl, p)
+
+	// Call the onFinish method right before returning (with the error from call with peer)
+	onFinish(err)
+	return resp, err
+}
+
+func (o *Outbound) callWithPeer(
+	ctx context.Context,
+	treq *transport.Request,
+	start time.Time,
+	ttl time.Duration,
+	p *hostport.Peer,
+) (*transport.Response, error) {
 	req, err := o.createRequest(p, treq)
 	if err != nil {
 		return nil, err
@@ -246,7 +259,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time
 	return nil, getErrFromResponse(response)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(), error) {
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(error), error) {
 	p, onFinish, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
 		return nil, nil, err

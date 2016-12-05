@@ -42,12 +42,12 @@ func NewSingle(pid Identifier, transport Transport) *Single {
 }
 
 // Choose returns the single peer
-func (s *Single) Choose(context.Context, *transport.Request) (Peer, func(), error) {
+func (s *Single) Choose(context.Context, *transport.Request) (Peer, func(error), error) {
 	s.p.StartRequest(s)
 	return s.p, s.onFinish, s.err
 }
 
-func (s *Single) onFinish() {
+func (s *Single) onFinish(_ error) {
 	s.p.EndRequest(s)
 }
 
