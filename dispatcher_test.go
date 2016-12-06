@@ -28,24 +28,21 @@ import (
 	. "go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uber/tchannel-go"
 )
 
 func basicDispatcher(t *testing.T) Dispatcher {
-	ch, err := tchannel.NewChannel("test", nil)
-	require.NoError(t, err, "failed to create TChannel")
-
 	httpTransport := http.NewTransport()
+	tchannelTransport := tchannel.NewChannelTransport(tchannel.WithServiceName("test"))
 	return NewDispatcher(Config{
 		Name: "test",
 		Inbounds: Inbounds{
-			tch.NewInbound(ch).WithListenAddr(":0"),
+			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":0"),
 		},
 	})
@@ -74,7 +71,7 @@ func TestInboundsOrderIsMaintained(t *testing.T) {
 	dispatcher := basicDispatcher(t)
 
 	// Order must be maintained
-	_, ok := dispatcher.Inbounds()[0].(*tch.Inbound)
+	_, ok := dispatcher.Inbounds()[0].(*tchannel.ChannelInbound)
 	assert.True(t, ok, "first inbound must be TChannel")
 
 	_, ok = dispatcher.Inbounds()[1].(*http.Inbound)
@@ -89,7 +86,7 @@ func TestInboundsOrderAfterStart(t *testing.T) {
 
 	inbounds := dispatcher.Inbounds()
 
-	tchInbound := inbounds[0].(*tch.Inbound)
+	tchInbound := inbounds[0].(*tchannel.ChannelInbound)
 	assert.NotEqual(t, "0.0.0.0:0", tchInbound.Channel().PeerInfo().HostPort)
 
 	httpInbound := inbounds[1].(*http.Inbound)

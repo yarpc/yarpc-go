@@ -34,9 +34,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/transport/tchannel"
 )
 
 func main() {
@@ -49,17 +47,14 @@ func main() {
 	flag.Parse()
 
 	httpTransport := http.NewTransport()
+	tchannelTransport := tchannel.NewChannelTransport(tchannel.WithServiceName("keyvalue-client"))
 
 	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
 		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:24034")
 	case "tchannel":
-		channel, err := tchannel.NewChannel("keyvalue-client", nil)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		outbound = tch.NewOutbound(channel).WithHostPort("localhost:28941")
+		outbound = tchannelTransport.NewSingleOutbound("localhost:28941")
 	default:
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}

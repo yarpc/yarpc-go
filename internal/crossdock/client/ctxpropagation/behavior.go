@@ -36,7 +36,6 @@ import (
 
 	"github.com/crossdock/crossdock-go"
 	"github.com/opentracing/opentracing-go"
-	"github.com/uber/tchannel-go"
 )
 
 // Run verifies that opentracing context is propagated across multiple hops.
@@ -319,10 +318,8 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	fatals.NotEmpty(self, "ctxclient is required")
 	fatals.NotEmpty(subject, "ctxserver is required")
 
-	ch, err := tchannel.NewChannel("ctxclient", nil)
-	fatals.NoError(err, "failed to create TChannel")
-
 	httpTransport := http.NewTransport()
+	tchannelTransport := tch.NewChannelTransport(tch.WithListenAddr(":8087"), tch.WithServiceName("ctxclient"))
 
 	var outbound transport.UnaryOutbound
 	switch trans := t.Param(params.Transport); trans {
@@ -330,7 +327,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8081", subject))
 		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
 	case "tchannel":
-		outbound = tch.NewOutbound(ch).WithHostPort(fmt.Sprintf("%s:8082", subject))
+		outbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("%s:8082", subject))
 		tconfig.HTTP = &server.HTTPTransport{Host: self, Port: 8086}
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
@@ -339,7 +336,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "ctxclient",
 		Inbounds: yarpc.Inbounds{
-			tch.NewInbound(ch).WithListenAddr(":8087"),
+			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":8086"),
 		},
 		Outbounds: yarpc.Outbounds{

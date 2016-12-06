@@ -18,51 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchserver
+package tchannel
 
-import (
-	"fmt"
+import "go.uber.org/yarpc/internal/errors"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/crossdock/client/params"
-	"go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/crossdock/crossdock-go"
-)
-
-const (
-	serverPort = 8083
-	serverName = "tchannel-server"
-)
-
-// Run exercises a YARPC client against a tchannel server.
-func Run(t crossdock.T) {
-	fatals := crossdock.Fatals(t)
-
-	encoding := t.Param(params.Encoding)
-	server := t.Param(params.Server)
-	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
-
-	tchannelTransport := tchannel.NewChannelTransport(tchannel.WithServiceName("yarpc-client"))
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "yarpc-client",
-		Outbounds: yarpc.Outbounds{
-			serverName: {
-				Unary: tchannelTransport.NewSingleOutbound(serverHostPort),
-			},
-		},
-	})
-	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
-	defer dispatcher.Stop()
-
-	switch encoding {
-	case "raw":
-		runRaw(t, dispatcher)
-	case "json":
-		runJSON(t, dispatcher)
-	case "thrift":
-		runThrift(t, dispatcher)
-	default:
-		fatals.Fail("", "unknown encoding %q", encoding)
-	}
-}
+var errOutboundNotStarted = errors.ErrOutboundNotStarted("tchannel.Outbound")

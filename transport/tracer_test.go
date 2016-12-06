@@ -34,7 +34,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
-	"github.com/uber/tchannel-go"
 )
 
 type echoReqBody struct{}
@@ -132,22 +131,22 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 }
 
 func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dispatcher {
-	// Establish the TChannel
-	ch, err := tchannel.NewChannel("yarpc-test", &tchannel.ChannelOptions{
-		Tracer: tracer,
-	})
-	assert.NoError(t, err)
 	hp := "127.0.0.1:4040"
-	ch.ListenAndServe(hp)
+
+	tchannelTransport := ytchannel.NewChannelTransport(
+		ytchannel.WithListenAddr(hp),
+		ytchannel.WithTracer(tracer),
+		ytchannel.WithServiceName("yarpc-test"),
+	)
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			ytchannel.NewInbound(ch).WithTracer(tracer),
+			tchannelTransport.NewInbound(),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: ytchannel.NewOutbound(ch).WithHostPort(hp),
+				Unary: tchannelTransport.NewSingleOutbound(hp),
 			},
 		},
 		Tracer: tracer,

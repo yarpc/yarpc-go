@@ -34,28 +34,34 @@ import (
 
 func TestInboundStartNew(t *testing.T) {
 	tests := []struct {
-		withInbound func(*tchannel.Channel, func(*Inbound))
+		withInbound func(*tchannel.Channel, func(*ChannelInbound))
 	}{
 		{
-			func(ch *tchannel.Channel, f func(*Inbound)) {
-				i := NewInbound(ch)
+			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
+				x := NewChannelTransport(WithChannel(ch))
+				i := x.NewInbound()
 				i.SetRegistry(new(transporttest.MockRegistry))
 				// Can't do Equal because we want to match the pointer, not a
 				// DeepEqual.
 				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start())
 				defer i.Stop()
+				require.NoError(t, x.Start())
+				defer x.Stop()
 
 				f(i)
 			},
 		},
 		{
-			func(ch *tchannel.Channel, f func(*Inbound)) {
-				i := NewInbound(ch).WithListenAddr(":0")
+			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
+				x := NewChannelTransport(WithChannel(ch))
+				i := x.NewInbound()
 				i.SetRegistry(new(transporttest.MockRegistry))
 				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start())
 				defer i.Stop()
+				require.NoError(t, x.Start())
+				defer x.Stop()
 
 				f(i)
 			},
@@ -65,9 +71,11 @@ func TestInboundStartNew(t *testing.T) {
 	for _, tt := range tests {
 		ch, err := tchannel.NewChannel("foo", nil)
 		require.NoError(t, err)
-		tt.withInbound(ch, func(i *Inbound) {
+		tt.withInbound(ch, func(i *ChannelInbound) {
 			assert.Equal(t, tchannel.ChannelListening, ch.State())
 			assert.NoError(t, i.Stop())
+			x := i.Transports()[0]
+			assert.NoError(t, x.Stop())
 			assert.Equal(t, tchannel.ChannelClosed, ch.State())
 		})
 	}
@@ -80,13 +88,15 @@ func TestInboundStartAlreadyListening(t *testing.T) {
 	require.NoError(t, ch.ListenAndServe(":0"))
 	assert.Equal(t, tchannel.ChannelListening, ch.State())
 
-	i := NewInbound(ch)
+	x := NewChannelTransport(WithChannel(ch))
+	i := x.NewInbound()
 
 	i.SetRegistry(new(transporttest.MockRegistry))
 	require.NoError(t, i.Start())
-	defer i.Stop()
+	require.NoError(t, x.Start())
 
 	assert.NoError(t, i.Stop())
+	assert.NoError(t, x.Stop())
 	assert.Equal(t, tchannel.ChannelClosed, ch.State())
 }
 
@@ -94,16 +104,19 @@ func TestInboundStopWithoutStarting(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
 
-	i := NewInbound(ch)
+	x := NewChannelTransport(WithChannel(ch))
+	i := x.NewInbound()
 	assert.NoError(t, i.Stop())
 }
 
 func TestInboundInvalidAddress(t *testing.T) {
-	ch, err := tchannel.NewChannel("foo", nil)
-	require.NoError(t, err)
-	i := NewInbound(ch).WithListenAddr("not valid")
+	x := NewChannelTransport(WithServiceName("foo"), WithListenAddr("not valid"))
+	i := x.NewInbound()
 	i.SetRegistry(new(transporttest.MockRegistry))
-	assert.Error(t, i.Start())
+	assert.Nil(t, i.Start())
+	defer i.Stop()
+	assert.Error(t, x.Start())
+	defer x.Stop()
 }
 
 func TestInboundExistingMethods(t *testing.T) {
@@ -116,10 +129,13 @@ func TestInboundExistingMethods(t *testing.T) {
 		},
 	}, nil)
 
-	i := NewInbound(ch)
+	x := NewChannelTransport(WithChannel(ch))
+	i := x.NewInbound()
 	i.SetRegistry(new(transporttest.MockRegistry))
 	require.NoError(t, i.Start())
 	defer i.Stop()
+	require.NoError(t, x.Start())
+	defer x.Stop()
 
 	// Make a call to the "echo" method which should call our pre-registered method.
 	ctx, cancel := json.NewContext(time.Second)

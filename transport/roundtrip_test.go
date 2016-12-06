@@ -131,16 +131,20 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
-		i := tch.NewInbound(ch)
+		ix := tch.NewChannelTransport(tch.WithChannel(ch))
+		i := ix.NewInbound()
 		i.SetRegistry(r)
-		require.NoError(tt.t, i.Start(), "failed to start")
+		require.NoError(tt.t, ix.Start(), "failed to start inbound transport")
+		require.NoError(tt.t, i.Start(), "failed to start inbound")
 
 		defer i.Stop()
 		// ^ the server is already listening so this will just set up the
 		// handler.
 
 		client := testutils.NewClient(tt.t, clientOpts)
-		o := tch.NewOutbound(client).WithHostPort(hostPort)
+		ox := tch.NewChannelTransport(tch.WithChannel(client))
+		o := ox.NewSingleOutbound(hostPort)
+		require.NoError(tt.t, ox.Start(), "failed to start outbound transport")
 		require.NoError(tt.t, o.Start(), "failed to start outbound")
 		defer o.Stop()
 

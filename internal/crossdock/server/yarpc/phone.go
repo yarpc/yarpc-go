@@ -31,9 +31,7 @@ import (
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/transport/tchannel"
 )
 
 // HTTPTransport contains information about an HTTP transport.
@@ -74,6 +72,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 	var outbound transport.UnaryOutbound
 
 	httpTransport := http.NewTransport()
+	tchannelTransport := tchannel.NewChannelTransport(tchannel.WithServiceName("yarpc-test-client"))
 
 	switch {
 	case body.Transport.HTTP != nil:
@@ -82,11 +81,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 	case body.Transport.TChannel != nil:
 		t := body.Transport.TChannel
 		hostport := fmt.Sprintf("%s:%d", t.Host, t.Port)
-		ch, err := tchannel.NewChannel("yarpc-test-client", nil)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to build TChannel: %v", err)
-		}
-		outbound = tch.NewOutbound(ch).WithHostPort(hostport)
+		outbound = tchannelTransport.NewSingleOutbound(hostport)
 	default:
 		return nil, nil, fmt.Errorf("unconfigured transport")
 	}
