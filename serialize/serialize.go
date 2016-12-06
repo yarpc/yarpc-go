@@ -23,6 +23,7 @@ package serialize
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 
 	"go.uber.org/thriftrw/protocol"
@@ -32,6 +33,11 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 )
+
+// version indicates which underlying serialization method will be used
+// '0' indicates:
+// 		thrift serialization (request) + jaeger.binary format (ctx/tracing)
+const version = byte(0)
 
 // ToBytes encodes an opentracing.SpanContext and transport.Request into bytes
 func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req *transport.Request) ([]byte, error) {
@@ -65,21 +71,26 @@ func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req
 	}
 
 	var writer bytes.Buffer
+	// use the first byte to version the serialization
+	if err := writer.WriteByte(version); err != nil {
+		return nil, err
+	}
 	err = protocol.Binary.Encode(wireValue, &writer)
-
-	// prepend single byte to version the serialization
-	// '0' indicates:
-	// 	thrift serialization (request) + jaeger.binary format (ctx/tracing)
-	yarpcBytes := append([]byte{0}, writer.Bytes()...)
-	return yarpcBytes, err
+	return writer.Bytes(), err
 }
 
 // FromBytes decodes bytes into a opentracing.SpanContext and transport.Request
 func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanContext, *transport.Request, error) {
+	if len(request) <= 1 {
+		return nil, nil, errors.New("cannot deserialize empty request")
+	}
+
 	// check valid thrift serialization byte
 	if request[0] != 0 {
 		return nil, nil,
-			errors.New("unsupported YARPC serialization found during deserialization")
+			fmt.Errorf(
+				"unsupported YARPC serialization version '%v' found during deserialization",
+				request[0])
 	}
 
 	reader := bytes.NewReader(request[1:])
