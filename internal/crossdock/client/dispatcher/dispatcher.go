@@ -76,9 +76,9 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	})
 }
 
-// CreateOneway returns a started dispatcher and returns the address the
+// CreateOnewayDispatcher returns a started dispatcher and returns the address the
 // server should call back to (ie this host)
-func CreateOneway(t crossdock.T, handler raw.OnewayHandler) (yarpc.Dispatcher, string) {
+func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (yarpc.Dispatcher, string) {
 	fatals := crossdock.Fatals(t)
 
 	server := t.Param("server_oneway")

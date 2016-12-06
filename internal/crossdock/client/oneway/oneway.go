@@ -35,7 +35,7 @@ import (
 // Run starts the oneway behavior, testing a combination of encodings and transports
 func Run(t crossdock.T) {
 	callBackHandler, serverCalledBack := newCallBackHandler()
-	dispatcher, callBackAddr := dispatcher.CreateOneway(t, callBackHandler)
+	dispatcher, callBackAddr := dispatcher.CreateOnewayDispatcher(t, callBackHandler)
 	defer dispatcher.Stop()
 
 	encoding := t.Param(params.Encoding)
@@ -51,8 +51,7 @@ func Run(t crossdock.T) {
 	}
 }
 
-// newCallBackHandler creates a oneway handler that fills a channel
-// with the received body
+// newCallBackHandler creates a oneway handler that fills a channel with the body
 func newCallBackHandler() (raw.OnewayHandler, <-chan []byte) {
 	serverCalledBack := make(chan []byte)
 	handler := func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {

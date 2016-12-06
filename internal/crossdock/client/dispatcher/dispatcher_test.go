@@ -103,7 +103,7 @@ func TestCreateOneway(t *testing.T) {
 
 	for _, tt := range tests {
 		entries := crossdock.Run(tt.params, func(ct crossdock.T) {
-			dispatcher, callBackAddr := CreateOneway(ct, nil)
+			dispatcher, callBackAddr := CreateOnewayDispatcher(ct, nil)
 
 			// should get here only if the request succeeded
 			clientConfig := dispatcher.ClientConfig("yarpc-test")
