@@ -23,21 +23,28 @@ package oneway
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/transport/http"
 )
 
+const callBackAddrHeader = "callBackAddr"
+
 type onewayHandler struct {
-	Outbound transport.OnewayOutbound
+	httpTransport *http.Transport
 }
 
 // EchoRaw implements the echo/raw procedure.
 func (o *onewayHandler) EchoRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
-	//make call back to the client
-	o.callHome(body)
+	o.callHome(ctx, reqMeta, body, raw.Encoding)
 	return nil
 }
 
@@ -45,27 +52,44 @@ type jsonToken struct{ Token string }
 
 // EchoJSON implements the echo/json procedure.
 func (o *onewayHandler) EchoJSON(ctx context.Context, reqMeta yarpc.ReqMeta, token *jsonToken) error {
-	//make call back to the client
-	o.callHome([]byte(token.Token))
+	o.callHome(ctx, reqMeta, []byte(token.Token), json.Encoding)
 	return nil
 }
 
 // Echo implements the Oneway::Echo procedure.
 func (o *onewayHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, Token *string) error {
-	o.callHome([]byte(*Token))
+	o.callHome(ctx, reqMeta, []byte(*Token), thrift.Encoding)
 	return nil
 }
 
-func (o *onewayHandler) callHome(body []byte) {
+// callHome extracts the call back address from headers, and makes a raw HTTP
+// request using the same context and body
+func (o *onewayHandler) callHome(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte, encoding transport.Encoding) {
 	// reduce the chance of a race condition
 	time.Sleep(time.Millisecond * 100)
 
-	ctx := context.Background()
-	o.Outbound.CallOneway(ctx, &transport.Request{
-		Caller:    "oneway-test",
-		Service:   "client",
+	callBackAddr, exists := reqMeta.Headers().Get(callBackAddrHeader)
+	if !exists {
+		panic("could not find callBackAddr in headers")
+	}
+
+	out := http.NewOutbound(
+		single.New(
+			hostport.PeerIdentifier(callBackAddr),
+			o.httpTransport))
+
+	out.Start()
+	defer out.Stop()
+
+	_, err := out.CallOneway(ctx, &transport.Request{
+		Caller:    "oneway-server",
+		Service:   "oneway-client",
 		Procedure: "call-back",
 		Encoding:  raw.Encoding,
 		Body:      bytes.NewReader(body),
 	})
+
+	if err != nil {
+		panic(fmt.Sprintf("could not make call back to client: %s", err))
+	}
 }

@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/single"
@@ -73,4 +74,42 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 			},
 		},
 	})
+}
+
+// CreateOnewayDispatcher returns a started dispatcher and returns the address the
+// server should call back to (ie this host)
+func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (yarpc.Dispatcher, string) {
+	fatals := crossdock.Fatals(t)
+
+	server := t.Param("server_oneway")
+	fatals.NotEmpty(server, "oneway server is required")
+
+	var outbound transport.OnewayOutbound
+
+	trans := t.Param("transport_oneway")
+	switch trans {
+	case "http":
+		outbound = http.NewOutbound(
+			single.New(
+				hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
+				http.NewTransport(),
+			))
+	default:
+		fatals.Fail("", "unknown transport %q", trans)
+	}
+
+	callBackInbound := http.NewInbound(":0")
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: "oneway-client",
+		Outbounds: yarpc.Outbounds{
+			"oneway-server": {Oneway: outbound},
+		},
+		Inbounds: yarpc.Inbounds{callBackInbound},
+	})
+
+	// register procedure for server to call us back on
+	dispatcher.Register(raw.OnewayProcedure("call-back", raw.OnewayHandler(handler)))
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+
+	return dispatcher, callBackInbound.Addr().String()
 }

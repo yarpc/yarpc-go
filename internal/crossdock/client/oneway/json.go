@@ -34,15 +34,18 @@ type jsonToken struct {
 }
 
 // JSON starts an http run using JSON encoding
-func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
+func JSON(t crossdock.T, dispatcher yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
+	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
-	client := json.New(dispatcher.ClientConfig("oneway-test"))
+	client := json.New(dispatcher.ClientConfig("oneway-server"))
 	token := getRandomID()
 
 	ack, err := client.CallOneway(
 		context.Background(),
-		yarpc.NewReqMeta().Procedure("echo/json"),
+		yarpc.NewReqMeta().
+			Procedure("echo/json").
+			Headers(yarpc.NewHeaders().With("callBackAddr", callBackAddr)),
 		&jsonToken{Token: token},
 	)
 
@@ -57,5 +60,5 @@ func JSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	fatals.NotNil(ack, "ack is nil")
 
 	serverToken := <-serverCalledBack
-	fatals.Equal(token, string(serverToken), "Client/Server token mismatch")
+	assert.Equal(token, string(serverToken), "JSON token mismatch")
 }

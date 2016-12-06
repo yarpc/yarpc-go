@@ -22,78 +22,43 @@ package oneway
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
-	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
 )
 
-var serverCalledBack chan []byte
-
-// Run starts an http run using encoding types
+// Run starts the oneway behavior, testing a combination of encodings and transports
 func Run(t crossdock.T) {
-	encoding := t.Param(params.Encoding)
-	t.Tag("encoding", encoding)
-	t.Tag("server", t.Param(params.Server))
-
-	fatals := crossdock.Fatals(t)
-	dispatcher := newDispatcher(t)
-
-	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	callBackHandler, serverCalledBack := newCallBackHandler()
+	dispatcher, callBackAddr := dispatcher.CreateOnewayDispatcher(t, callBackHandler)
 	defer dispatcher.Stop()
 
-	serverCalledBack = make(chan []byte)
-
+	encoding := t.Param(params.Encoding)
 	switch encoding {
 	case "raw":
-		Raw(t, dispatcher)
+		Raw(t, dispatcher, serverCalledBack, callBackAddr)
 	case "json":
-		JSON(t, dispatcher)
+		JSON(t, dispatcher, serverCalledBack, callBackAddr)
 	case "thrift":
-		Thrift(t, dispatcher)
+		Thrift(t, dispatcher, serverCalledBack, callBackAddr)
 	default:
-		fatals.Fail("unknown encoding", "%v", encoding)
+		crossdock.Fatals(t).Fail("unknown encoding", "%v", encoding)
 	}
 }
 
-func newDispatcher(t crossdock.T) yarpc.Dispatcher {
-	server := t.Param(params.Server)
-	crossdock.Fatals(t).NotEmpty(server, "server is required")
-
-	// TODO httpTransport lifecycle
-	httpTransport := http.NewTransport()
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "client",
-		Outbounds: yarpc.Outbounds{
-			"oneway-test": {
-				Oneway: http.NewOutbound(single.New(
-					hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
-					httpTransport,
-				)),
-			},
-		},
-		//for call back
-		Inbounds: yarpc.Inbounds{http.NewInbound(fmt.Sprintf("%s:8089", server))},
-	})
-
-	// register procedure for remote server to call us back on
-	dispatcher.Register(raw.OnewayProcedure("call-back", callBack))
-
-	return dispatcher
+// newCallBackHandler creates a oneway handler that fills a channel with the body
+func newCallBackHandler() (raw.OnewayHandler, <-chan []byte) {
+	serverCalledBack := make(chan []byte)
+	handler := func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
+		serverCalledBack <- body
+		return nil
+	}
+	return handler, serverCalledBack
 }
 
-func getRandomID() string {
-	return random.String(10)
-}
-
-func callBack(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
-	serverCalledBack <- body
-	return nil
-}
+func getRandomID() string { return random.String(10) }

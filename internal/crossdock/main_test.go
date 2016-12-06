@@ -56,14 +56,7 @@ func TestCrossdock(t *testing.T) {
 		axes   axes
 	}{
 		{
-			name: "oneway",
-			axes: axes{
-				"encoding": []string{"raw", "json", "thrift"},
-			},
-		},
-		{
 			name: "raw",
-
 			axes: axes{"transport": []string{"http", "tchannel"}},
 		},
 		{
@@ -132,6 +125,16 @@ func TestCrossdock(t *testing.T) {
 			params: params{
 				"apachethriftserver": "127.0.0.1",
 				"apachethriftclient": "127.0.0.1",
+			},
+		},
+		{
+			name: "oneway",
+			params: params{
+				"server_oneway": "127.0.0.1",
+			},
+			axes: axes{
+				"encoding":         []string{"raw", "json", "thrift"},
+				"transport_oneway": []string{"http"},
 			},
 		},
 	}
