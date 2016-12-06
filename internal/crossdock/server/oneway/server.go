@@ -35,7 +35,8 @@ var dispatcher yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
-	inbounds := []transport.Inbound{http.NewInbound(":8084")}
+	httpTransport := http.NewTransport()
+	inbounds := []transport.Inbound{httpTransport.NewInbound(":8084")}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name:     "oneway-server",

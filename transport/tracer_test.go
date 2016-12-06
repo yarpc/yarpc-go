@@ -29,8 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
@@ -116,22 +114,15 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 	// TODO: Use port 0 once https://github.com/yarpc/yarpc-go/issues/381 is
 	// fixed.
 
-	httpTransport := http.NewTransport()
-	// TODO lifecycle
-
+	httpTransport := http.NewTransport(http.WithTracer(tracer))
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":18080").WithTracer(tracer),
+			httpTransport.NewInbound(":18080"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: http.NewOutbound(
-					single.New(
-						hostport.PeerIdentifier("127.0.0.1:18080"),
-						httpTransport,
-					),
-				).WithTracer(tracer),
+				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:18080"),
 			},
 		},
 		Tracer: tracer,

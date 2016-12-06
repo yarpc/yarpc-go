@@ -77,11 +77,12 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: yarpc.Inbounds{
 			tch.NewInbound(channel).WithListenAddr(":28941"),
-			http.NewInbound(":24034"),
+			httpTransport.NewInbound(":24034"),
 		},
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: requestLogInboundMiddleware{},

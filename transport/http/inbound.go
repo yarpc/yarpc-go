@@ -31,11 +31,12 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// NewInbound builds a new HTTP inbound that listens on the given address.
-func NewInbound(addr string) *Inbound {
+// NewInbound builds a new HTTP inbound that listens on the given address and
+// sharing this transport.
+func (t *Transport) NewInbound(addr string) *Inbound {
 	return &Inbound{
 		addr:   addr,
-		tracer: opentracing.GlobalTracer(),
+		tracer: t.tracer,
 	}
 }
 

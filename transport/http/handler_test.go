@@ -33,8 +33,6 @@ import (
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/registrytest"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/transporttest"
 
@@ -329,7 +327,8 @@ func (th panickedHandler) Handle(context.Context, *transport.Request, transport.
 }
 
 func TestHandlerPanic(t *testing.T) {
-	inbound := NewInbound("localhost:0")
+	httpTransport := NewTransport()
+	inbound := httpTransport.NewInbound("localhost:0")
 	serverDispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "yarpc-test",
 		Inbounds: yarpc.Inbounds{inbound},
@@ -344,19 +343,11 @@ func TestHandlerPanic(t *testing.T) {
 	require.NoError(t, serverDispatcher.Start())
 	defer serverDispatcher.Stop()
 
-	httpTransport := NewTransport()
-	// TODO http transport lifecycle
-
 	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test-client",
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: NewOutbound(
-					single.New(
-						hostport.PeerIdentifier(inbound.Addr().String()),
-						httpTransport,
-					),
-				),
+				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
 			},
 		},
 	})

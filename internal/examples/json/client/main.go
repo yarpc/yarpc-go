@@ -32,8 +32,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -92,20 +90,12 @@ func main() {
 
 	flag.Parse()
 
-	var httpTransport *http.Transport
+	httpTransport := http.NewTransport()
 
 	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
-		if httpTransport == nil {
-			httpTransport = http.NewTransport()
-		}
-		outbound = http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier("127.0.0.1:24034"),
-				httpTransport,
-			),
-		)
+		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:24034")
 	case "tchannel":
 		channel, err := tchannel.NewChannel("keyvalue-client", nil)
 		if err != nil {
