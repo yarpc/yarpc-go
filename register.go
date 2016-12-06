@@ -28,6 +28,58 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 )
 
+// TODO: Until golang/mock#4 is fixed, imports in the generated code have to
+// be fixed by hand. They use vendor/* import paths rather than direct.
+
+//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/transport UnaryHandler,OnewayHandler,Registry
+
+// ServiceProcedure represents a service and procedure registered against a
+// Registry.
+type ServiceProcedure struct {
+	Service   string
+	Procedure string
+}
+
+// Registrant specifies a single handler registered against the registry.
+type Registrant struct {
+	// Service name or empty to use the default service name.
+	Service string
+
+	// Name of the procedure.
+	Procedure string
+
+	// HandlerSpec specifiying which handler and rpc type.
+	HandlerSpec HandlerSpec
+}
+
+type ServiceProcedureInfo struct {
+	Service   string
+	Procedure string
+	Type      Type
+}
+
+// Registry maintains and provides access to a collection of procedures and
+// their handlers.
+type Registry interface {
+	// ServiceProcedures returns a list of services and their procedures that
+	// have been registered so far.
+	ServiceProcedures() []ServiceProcedureInfo
+
+	// Choose decides a handler based on a context and transport request
+	// metadata, or returns an UnrecognizedProcedureError if no handler exists
+	// for the request.  This is the interface for use in inbound transports to
+	// select a handler for a request.
+	Choose(ctx context.Context, req *Request) (HandlerSpec, error)
+}
+
+// Registrar provides access to a collection of procedures and their handlers.
+type Registrar interface {
+	Registry
+
+	// Registers zero or more registrants with the registry.
+	Register([]Registrant)
+}
+
 // MapRegistry is a Registry that maintains a map of the registered
 // procedures.
 type MapRegistry struct {
@@ -70,7 +122,7 @@ func (m MapRegistry) ServiceProcedures() []transport.ServiceProcedure {
 	for k := range m.entries {
 		procs = append(procs, k)
 	}
-	sort.Sort(byServiceProcedure(procs))
+	sort.Sort(byServiceProcedureInfo(procs))
 	return procs
 }
 
@@ -103,17 +155,17 @@ func (m MapRegistry) Choose(ctx context.Context, req *transport.Request) (transp
 
 type byServiceProcedure []transport.ServiceProcedure
 
-func (sp byServiceProcedure) Len() int {
+func (sp byServiceProcedureInfo) Len() int {
 	return len(sp)
 }
 
-func (sp byServiceProcedure) Less(i int, j int) bool {
+func (sp byServiceProcedureInfo) Less(i int, j int) bool {
 	if sp[i].Service == sp[j].Service {
 		return sp[i].Procedure < sp[j].Procedure
 	}
 	return sp[i].Service < sp[j].Service
 }
 
-func (sp byServiceProcedure) Swap(i int, j int) {
+func (sp byServiceProcedureInfo) Swap(i int, j int) {
 	sp[i], sp[j] = sp[j], sp[i]
 }
