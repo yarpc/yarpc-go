@@ -20,35 +20,27 @@
 
 package redis
 
-import (
-	"testing"
+import "time"
 
-	"go.uber.org/yarpc/transport/redis/redistest"
-	"go.uber.org/yarpc/transport/transporttest"
+//go:generate mockgen -destination=redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-)
+// Client is a subset of redis commands used to manage a queue
+type Client interface {
+	// Start creates the connection to redis
+	//
+	// This MAY be called more than once.
+	Start() error
+	// Stop ends the redis connection
+	//
+	// This May be called more than once.
+	Stop() error
 
-func TestOperationOrder(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	client := redistest.NewMockClient(mockCtrl)
-
-	startCall := client.EXPECT().Start()
-	getCall := client.EXPECT().
-		BRPopLPush(gomock.Any(), gomock.Any(), gomock.Any()).
-		After(startCall)
-	client.EXPECT().
-		LRem(gomock.Any(), gomock.Any()).
-		After(getCall)
-	client.EXPECT().Stop()
-
-	inbound := NewInbound(client, "queueKey", "processingKey", 0)
-	inbound.SetRegistry(&transporttest.MockRegistry{})
-
-	err := inbound.Start()
-	assert.NoError(t, err, "error starting redis inbound")
-
-	err = inbound.Stop()
-	assert.NoError(t, err, "error stopping redis inbound")
+	// LPush adds item to the queue
+	LPush(queue string, item []byte) error
+	// This MUST return an error if the blocking call does not receive an item
+	// BRPopLPush moves an item from the primary queue into a processing list.
+	// within the timeout.
+	BRPopLPush(from, to string, timeout time.Duration) ([]byte, error)
+	// LRem removes one item from the queue key
+	LRem(queue string, item []byte) error
 }

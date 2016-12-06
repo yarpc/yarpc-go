@@ -28,7 +28,7 @@ import (
 
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/redis/redistest"
+	"go.uber.org/yarpc/transport/x/redis/redistest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
