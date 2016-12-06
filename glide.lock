@@ -1,5 +1,5 @@
-hash: d07a774c552cf67c25cf338fd6bf8e6eacf7597f8baaa417b01d141b85a13ab4
-updated: 2016-11-14T15:42:41.962533657-08:00
+hash: 20edceacdd207bcd7a41691f98bcf86273401c6aec50d64ee780f59b4b6b0dea
+updated: 2016-11-18T14:07:30.713214673-08:00
 imports:
 - name: github.com/apache/thrift
   version: 4337983d157dd7041c17340107682f26d2c0c795
@@ -87,6 +87,16 @@ imports:
   version: 1529f889eb4b594d1f047f2fb8d5b3cc85c8f006
   subpackages:
   - go/ast/astutil
+- name: gopkg.in/bsm/ratelimit.v1
+  version: db14e161995a5177acef654cb0dd785e8ee8bc22
+- name: gopkg.in/redis.v5
+  version: b6bfe529a846fbb9a58c832ce71c61b6fde12c15
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
 testImports: []
