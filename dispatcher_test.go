@@ -295,3 +295,14 @@ func TestStartStopFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestNoOutboundsForService(t *testing.T) {
+	assert.Panics(t, func() {
+		NewDispatcher(Config{
+			Name: "test",
+			Outbounds: Outbounds{
+				"my-test-service": {},
+			},
+		})
+	})
+}

@@ -109,10 +109,13 @@ func NewDispatcher(cfg Config) Dispatcher {
 
 // convertOutbounds applys outbound middleware and creates validator outbounds
 func convertOutbounds(outbounds Outbounds, middleware OutboundMiddleware) Outbounds {
-	//TODO(apb): ensure we're not given the same underlying outbound for each RPC type
 	convertedOutbounds := make(Outbounds, len(outbounds))
 
 	for service, outs := range outbounds {
+		if outs.Unary == nil && outs.Oneway == nil {
+			panic(fmt.Sprintf("no outbound set for service %q in dispatcher", service))
+		}
+
 		var (
 			unaryOutbound  transport.UnaryOutbound
 			onewayOutbound transport.OnewayOutbound
