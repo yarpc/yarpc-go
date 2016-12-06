@@ -64,11 +64,34 @@ func TestSerialization(t *testing.T) {
 	marshalledReq, err := ToBytes(tracer, spanContext, haveReq)
 	require.NoError(t, err, "could not marshal RPC to bytes")
 	assert.NotEmpty(t, marshalledReq)
+	assert.Equal(t, byte(0), marshalledReq[0], "serialization byte invalid")
 
 	_, gotReq, err := FromBytes(tracer, marshalledReq)
 	require.NoError(t, err, "could not unmarshal RPC from bytes")
 
 	assert.True(t, matcher.Matches(gotReq))
+}
+
+func TestDeserializationFailure(t *testing.T) {
+	tracer := opentracing.NoopTracer{}
+	spanContext := tracer.StartSpan("test-span").Context()
+
+	req := &transport.Request{
+		Caller:    "Caller",
+		Service:   "ServiceName",
+		Procedure: "Procedure",
+		Body:      bytes.NewReader([]byte("someBODY")),
+	}
+
+	marshalledReq, err := ToBytes(tracer, spanContext, req)
+	require.NoError(t, err, "could not marshal RPC to bytes")
+	require.NotEmpty(t, marshalledReq)
+
+	// modify serialization byte to something unsupported
+	marshalledReq[0] = 1
+
+	_, _, err = FromBytes(tracer, marshalledReq)
+	assert.Error(t, err, "able to deserialize RPC from bytes")
 }
 
 func TestContextSerialization(t *testing.T) {

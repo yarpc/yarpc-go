@@ -22,6 +22,7 @@ package serialize
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 
 	"go.uber.org/thriftrw/protocol"
@@ -65,12 +66,23 @@ func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req
 
 	var writer bytes.Buffer
 	err = protocol.Binary.Encode(wireValue, &writer)
-	return writer.Bytes(), err
+
+	// prepend single byte to version the serialization
+	// '0' indicates:
+	// 	thrift serialization (request) + jaeger.binary format (ctx/tracing)
+	yarpcBytes := append([]byte{0}, writer.Bytes()...)
+	return yarpcBytes, err
 }
 
 // FromBytes decodes bytes into a opentracing.SpanContext and transport.Request
 func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanContext, *transport.Request, error) {
-	reader := bytes.NewReader(request)
+	// check valid thrift serialization byte
+	if request[0] != 0 {
+		return nil, nil,
+			errors.New("unsupported YARPC serialization found during deserialization")
+	}
+
+	reader := bytes.NewReader(request[1:])
 	wireValue, err := protocol.Binary.Decode(reader, wire.TStruct)
 	if err != nil {
 		return nil, nil, err
