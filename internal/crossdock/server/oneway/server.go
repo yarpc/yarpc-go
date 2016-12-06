@@ -22,6 +22,8 @@ package oneway
 
 import (
 	"fmt"
+	"os"
+	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
@@ -29,14 +31,24 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayserver"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/transport/x/redis"
 )
 
 var dispatcher yarpc.Dispatcher
+
+const redisAddr = "redis:6379"
 
 // Start starts the test server that clients will make requests to
 func Start() {
 	httpTransport := http.NewTransport()
 	inbounds := []transport.Inbound{httpTransport.NewInbound(":8084")}
+
+	if redisIsAvailable() {
+		rds := redis.NewInbound(
+			redis.NewRedis5Client(redisAddr),
+			"yarpc/oneway", "yarpc/oneway/processing", time.Second)
+		inbounds = append(inbounds, rds)
+	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name:     "oneway-server",
@@ -63,4 +75,9 @@ func Stop() {
 	if err := dispatcher.Stop(); err != nil {
 		fmt.Println("failed to stop:", err.Error())
 	}
+}
+
+// redisIsAvailable checks to see if a redis server is available
+func redisIsAvailable() bool {
+	return os.Getenv("REDIS") == "enabled"
 }

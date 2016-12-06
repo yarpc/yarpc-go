@@ -5,6 +5,7 @@ services:
         image: crossdock/crossdock
         dns_search: .
         links:
+            - redis
             - go
             - node
             - java
@@ -29,7 +30,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http
+            - AXIS_TRANSPORT_ONEWAY=http,redis
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
@@ -58,6 +59,8 @@ services:
         build: .
         ports:
             - "8080-8088"
+        environment:
+            - REDIS=enabled
 
     node:
         dns_search: .
@@ -84,3 +87,6 @@ services:
             - 8080
         environment:
             - SYNC=1
+
+    redis:
+        image: redis
