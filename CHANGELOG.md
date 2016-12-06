@@ -137,6 +137,9 @@ v1.0.0-dev (unreleased)
     -   WithURLTemplate on HTTP outbounds **new**
     -   WithTracer on all transports **new**
 
+-   Introduced OpenTracing helpers for transport authors.
+-   Created the `yarpc.Serialize` package for marshalling RPC messages at rest.
+    Useful for transports that persist RPC messages.
 
 v1.0.0-rc2 (2016-12-02)
 -----------------------
