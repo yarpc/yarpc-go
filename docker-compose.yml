@@ -49,6 +49,7 @@ services:
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
             - BEHAVIOR_ONEWAY=client_oneway,server_oneway,transport_oneway,encoding
+            - BEHAVIOR_ONEWAY_CTXPROPAGATION=client_oneway,server_oneway,transport_oneway
 
             - REPORT=compact
 

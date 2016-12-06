@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/headers"
 	"go.uber.org/yarpc/internal/crossdock/client/httpserver"
 	"go.uber.org/yarpc/internal/crossdock/client/oneway"
+	"go.uber.org/yarpc/internal/crossdock/client/onewayctxpropagation"
 	"go.uber.org/yarpc/internal/crossdock/client/tchclient"
 	"go.uber.org/yarpc/internal/crossdock/client/tchserver"
 	"go.uber.org/yarpc/internal/crossdock/client/timeout"
@@ -38,20 +39,21 @@ import (
 )
 
 var behaviors = crossdock.Behaviors{
-	"raw":               echo.Raw,
-	"json":              echo.JSON,
-	"thrift":            echo.Thrift,
-	"headers":           headers.Run,
-	"errors_httpclient": errorshttpclient.Run,
-	"errors_tchclient":  errorstchclient.Run,
-	"tchclient":         tchclient.Run,
-	"tchserver":         tchserver.Run,
-	"thriftgauntlet":    gauntlet.Run,
-	"timeout":           timeout.Run,
-	"ctxpropagation":    ctxpropagation.Run,
-	"httpserver":        httpserver.Run,
-	"apachethrift":      apachethrift.Run,
-	"oneway":            oneway.Run,
+	"raw":                   echo.Raw,
+	"json":                  echo.JSON,
+	"thrift":                echo.Thrift,
+	"headers":               headers.Run,
+	"errors_httpclient":     errorshttpclient.Run,
+	"errors_tchclient":      errorstchclient.Run,
+	"tchclient":             tchclient.Run,
+	"tchserver":             tchserver.Run,
+	"thriftgauntlet":        gauntlet.Run,
+	"timeout":               timeout.Run,
+	"ctxpropagation":        ctxpropagation.Run,
+	"httpserver":            httpserver.Run,
+	"apachethrift":          apachethrift.Run,
+	"oneway":                oneway.Run,
+	"oneway_ctxpropagation": onewayctxpropagation.Run,
 }
 
 // Start registers behaviors and begins the Crossdock client
