@@ -36,14 +36,17 @@ import (
 )
 
 func TestCall(t *testing.T) {
+	queueKey := "queueKey"
 	mockCtrl := gomock.NewController(t)
 	client := redistest.NewMockClient(mockCtrl)
 
 	client.EXPECT().Start()
-	client.EXPECT().LPush(gomock.Any(), gomock.Any())
+	client.EXPECT().LPush(queueKey, gomock.Any())
 	client.EXPECT().Stop()
 
-	out := NewOnewayOutbound(client, "queueKey")
+	out := NewOnewayOutbound(client, queueKey)
+	assert.Equal(t, queueKey, out.queueKey)
+
 	err := out.Start()
 	assert.NoError(t, err, "could not start redis outbound")
 
@@ -119,15 +122,16 @@ func TestCallWithoutStarting(t *testing.T) {
 
 	out := NewOnewayOutbound(client, "queueKey")
 
-	assert.Panics(t, func() {
-		out.CallOneway(
-			context.Background(),
-			&transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  raw.Encoding,
-				Procedure: "foo",
-				Body:      bytes.NewReader([]byte("sup")),
-			})
-	})
+	ack, err := out.CallOneway(
+		context.Background(),
+		&transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "foo",
+			Body:      bytes.NewReader([]byte("sup")),
+		})
+
+	assert.Nil(t, ack, "ack not nil")
+	assert.Error(t, err, "made call")
 }

@@ -22,6 +22,7 @@ package redis
 
 import (
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/transport/transporttest"
 	"go.uber.org/yarpc/transport/x/redis/redistest"
@@ -31,20 +32,26 @@ import (
 )
 
 func TestOperationOrder(t *testing.T) {
+	queueKey, processingKey := "queueKey", "processingKey"
+	timeout := time.Second
+
 	mockCtrl := gomock.NewController(t)
 	client := redistest.NewMockClient(mockCtrl)
 
 	startCall := client.EXPECT().Start()
 	getCall := client.EXPECT().
-		BRPopLPush(gomock.Any(), gomock.Any(), gomock.Any()).
+		BRPopLPush(queueKey, processingKey, timeout).
 		After(startCall)
 	client.EXPECT().
-		LRem(gomock.Any(), gomock.Any()).
+		LRem(queueKey, gomock.Any()).
 		After(getCall)
 	client.EXPECT().Stop()
 
-	inbound := NewInbound(client, "queueKey", "processingKey", 0)
+	inbound := NewInbound(client, queueKey, processingKey, timeout)
 	inbound.SetRegistry(&transporttest.MockRegistry{})
+
+	assert.Equal(t, queueKey, inbound.queueKey)
+	assert.Equal(t, processingKey, inbound.processingKey)
 
 	err := inbound.Start()
 	assert.NoError(t, err, "error starting redis inbound")

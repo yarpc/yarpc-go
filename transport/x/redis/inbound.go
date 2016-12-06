@@ -33,6 +33,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
+const transportName = "redis"
+
 // Inbound is a redis inbound that reads from the given queueKey. This will
 // wait for an item in the queue or until the timout is reached before trying
 // to read again.
@@ -48,13 +50,21 @@ type Inbound struct {
 	stop chan struct{}
 }
 
-// NewInbound creates a redis transport.Inbound
+// NewInbound creates a redis Inbound that satisfies transport.Inbound.
+//
+// queueKey - key for the queue in redis
+// processingKey - key for the list we'll store items we've popped from the queue
+// timeout - how long the inbound will block on reading from redis
 func NewInbound(client Client, queueKey, processingKey string, timeout time.Duration) *Inbound {
 	return &Inbound{
-		tracer:  opentracing.GlobalTracer(),
-		client:  client,
-		timeout: timeout,
-		stop:    make(chan struct{}),
+		tracer: opentracing.GlobalTracer(),
+
+		client:        client,
+		timeout:       timeout,
+		queueKey:      queueKey,
+		processingKey: processingKey,
+
+		stop: make(chan struct{}),
 	}
 }
 
@@ -99,6 +109,7 @@ func (i *Inbound) start() {
 		case <-i.stop:
 			return
 		default:
+			// TODO: logging
 			i.handle()
 		}
 	}
@@ -125,7 +136,7 @@ func (i *Inbound) handle() error {
 		return err
 	}
 
-	ctx, span := transport.ExtractOpenTracingSpan(context.Background(), spanContext, req, i.tracer, "redis", start)
+	ctx, span := transport.ExtractOpenTracingSpan(context.Background(), spanContext, req, i.tracer, transportName, start)
 	defer span.Finish()
 
 	v := request.Validator{Request: req}
@@ -140,7 +151,7 @@ func (i *Inbound) handle() error {
 	}
 
 	if spec.Type() != transport.Oneway {
-		err = errors.UnsupportedTypeError{Transport: "redis", Type: string(spec.Type())}
+		err = errors.UnsupportedTypeError{Transport: transportName, Type: string(spec.Type())}
 		return transport.UpdateSpanWithErr(span, err)
 	}
 

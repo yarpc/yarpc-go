@@ -27,12 +27,8 @@ import "time"
 // Client is a subset of redis commands used to manage a queue
 type Client interface {
 	// Start creates the connection to redis
-	//
-	// This MAY be called more than once.
 	Start() error
 	// Stop ends the redis connection
-	//
-	// This May be called more than once.
 	Stop() error
 
 	// LPush adds item to the queue

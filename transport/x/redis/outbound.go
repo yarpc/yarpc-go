@@ -34,7 +34,7 @@ import (
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("redis.Outbound")
 
-// Outbound is a redis OnewayOutbound
+// Outbound is a redis OnewayOutbound that puts an RPC into the given queue key
 type Outbound struct {
 	client   Client
 	tracer   opentracing.Tracer
@@ -43,12 +43,14 @@ type Outbound struct {
 	started *atomic.Bool
 }
 
-// NewOnewayOutbound creates a redis transport.OnewayOutbound
+// NewOnewayOutbound creates a redis Outbound that satisfies transport.OnewayOutbound
+// queueKey - key for the queue in redis
 func NewOnewayOutbound(client Client, queueKey string) *Outbound {
 	return &Outbound{
-		client:  client,
-		tracer:  opentracing.GlobalTracer(),
-		started: atomic.NewBool(false),
+		client:   client,
+		tracer:   opentracing.GlobalTracer(),
+		queueKey: queueKey,
+		started:  atomic.NewBool(false),
 	}
 }
 
@@ -60,29 +62,27 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 
 // Start creates connection to the redis instance
 func (o *Outbound) Start() error {
-	var err error
 	if !o.started.Swap(true) {
-		err = o.client.Start()
+		return o.client.Start()
 	}
-	return err
+	return nil
 }
 
 // Stop stops the redis connection
 func (o *Outbound) Stop() error {
-	var err error
 	if o.started.Swap(false) {
-		err = o.client.Stop()
+		return o.client.Stop()
 	}
-	return err
+	return nil
 }
 
 // CallOneway makes a oneway request using redis
 func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
 	if !o.started.Load() {
-		panic(errOutboundNotStarted)
+		return nil, errOutboundNotStarted
 	}
 
-	ctx, span := transport.CreateOpenTracingSpan(ctx, req, o.tracer, "redis", time.Now())
+	ctx, span := transport.CreateOpenTracingSpan(ctx, req, o.tracer, transportName, time.Now())
 	defer span.Finish()
 
 	marshalledRPC, err := serialize.ToBytes(o.tracer, span.Context(), req)
