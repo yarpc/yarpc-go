@@ -73,6 +73,8 @@ func main() {
 		},
 	})
 
+	yarpc.AddDebugPagesFor(dispatcher)
+
 	handler := handler{items: make(map[string]string)}
 	dispatcher.Register(keyvalueserver.New(&handler))
 

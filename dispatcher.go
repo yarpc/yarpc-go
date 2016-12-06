@@ -47,6 +47,8 @@ type StartStoppable interface {
 	//
 	// Blocks until the RPC has stopped.
 	Stop() error
+
+	ServiceName() string
 }
 
 // Config specifies the parameters of a new RPC constructed via New.
@@ -354,4 +356,8 @@ func (d *Dispatcher) Stop() error {
 		return errors.ErrorGroup(allErrs)
 	}
 	return nil
+}
+
+func (d dispatcher) ServiceName() string {
+	return d.Name
 }
