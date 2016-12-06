@@ -25,6 +25,7 @@ package keyvalueserver
 
 import (
 	"context"
+	"golang.org/x/net/trace"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
@@ -78,10 +79,18 @@ func (h handler) GetValue(
 		return thrift.Response{}, err
 	}
 
+	if tr, ok := trace.FromContext(ctx); ok {
+		tr.LazyPrintf("request: %s", &args)
+	}
+
 	success, resMeta, err := h.impl.GetValue(ctx, reqMeta, args.Key)
 
 	hadError := err != nil
 	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, err)
+
+	if tr, ok := trace.FromContext(ctx); ok {
+		tr.LazyPrintf("response: %s", result)
+	}
 
 	var response thrift.Response
 	if err == nil {
@@ -102,10 +111,18 @@ func (h handler) SetValue(
 		return thrift.Response{}, err
 	}
 
+	if tr, ok := trace.FromContext(ctx); ok {
+		tr.LazyPrintf("request: %s", &args)
+	}
+
 	resMeta, err := h.impl.SetValue(ctx, reqMeta, args.Key, args.Value)
 
 	hadError := err != nil
 	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(err)
+
+	if tr, ok := trace.FromContext(ctx); ok {
+		tr.LazyPrintf("response: %s", result)
+	}
 
 	var response thrift.Response
 	if err == nil {

@@ -22,6 +22,7 @@ package main
 
 import (
 	"context"
+	_ "expvar"
 	"fmt"
 	"sync"
 
@@ -30,6 +31,8 @@ import (
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	"github.com/uber/tchannel-go"
 )
 
 type handler struct {

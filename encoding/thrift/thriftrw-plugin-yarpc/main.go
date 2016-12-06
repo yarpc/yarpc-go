@@ -43,6 +43,7 @@ package <$pkgname>
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$transport := import "go.uber.org/yarpc/api/transport">
 <$context   := import "context">
+<$trace     := import "golang.org/x/net/trace">
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
@@ -115,6 +116,10 @@ func (h handler) <.Name>(
 		return <$thrift>.Response{}, err
 	}
 
+	if tr, ok := <$trace>.FromContext(ctx); ok {
+		tr.LazyPrintf("request: %s", &args)
+	}
+
 	<if .ReturnType>
 		success, resMeta, err := h.impl.<.Name>(ctx, reqMeta, <range .Arguments>args.<.Name>,<end>)
 	<else>
@@ -123,6 +128,10 @@ func (h handler) <.Name>(
 
 	hadError := err != nil
 	result, err := <$prefix>Helper.WrapResponse(<if .ReturnType>success,<end> err)
+
+	if tr, ok := trace.FromContext(ctx); ok {
+		tr.LazyPrintf("response: %s", result)
+	}
 
 	var response <$thrift>.Response
 	if err == nil {
