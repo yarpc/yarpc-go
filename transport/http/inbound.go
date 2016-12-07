@@ -66,13 +66,6 @@ func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
 	return i
 }
 
-// WithRegistry configures a registry to handle incoming requests,
-// as a chained method for convenience.
-func (i *Inbound) WithRegistry(registry transport.Registry) *Inbound {
-	i.registry = registry
-	return i
-}
-
 // SetRegistry configures a registry to handle incoming requests.
 // This satisfies the transport.Inbound interface, and would be called
 // by a dispatcher when it starts.
