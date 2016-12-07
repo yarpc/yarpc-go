@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"time"
 
+	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -42,6 +45,10 @@ func (outbound) Options() (o transport.Options) {
 }
 
 func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	start := time.Now()
+	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
+
 	requestBody, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, err
@@ -49,9 +56,10 @@ func (o outbound) Call(ctx context.Context, req *transport.Request) (*transport.
 
 	metadataHeaders := getRequestHeaders(ctx, req)
 	ctx = metadata.NewContext(ctx, metadataHeaders)
-
 	uri := fmt.Sprintf("/%s/%s", url.QueryEscape(req.Service), url.QueryEscape(req.Procedure))
-	return callDownstream(ctx, uri, &requestBody, o.conn)
+
+	response, err := callDownstream(ctx, uri, &requestBody, o.conn)
+	return response, getErrFromGRPCError(err, req, ttl)
 }
 
 func getRequestHeaders(ctx context.Context, req *transport.Request) metadata.MD {
@@ -80,4 +88,29 @@ func callDownstream(
 	closer := ioutil.NopCloser(buf)
 	headers := applicationHeaders.fromMetadata(responseHeaders, transport.Headers{})
 	return &transport.Response{Body: closer, Headers: headers}, nil
+}
+
+func getErrFromGRPCError(err error, treq *transport.Request, ttl time.Duration) error {
+	if err == nil {
+		return nil
+	}
+
+	switch grpc.Code(err) {
+	// TIMEOUT
+	case codes.DeadlineExceeded:
+		return errors.ClientTimeoutError(treq.Service, treq.Procedure, ttl)
+
+	// BAD REQUEST
+	case codes.Unimplemented, codes.InvalidArgument, codes.NotFound:
+		return errors.RemoteBadRequestError(grpc.ErrorDesc(err))
+
+	// UNEXPECTED
+	case codes.Canceled, codes.AlreadyExists, codes.PermissionDenied,
+		codes.Unauthenticated, codes.ResourceExhausted, codes.FailedPrecondition,
+		codes.Aborted, codes.OutOfRange, codes.Internal,
+		codes.Unavailable, codes.DataLoss, codes.Unknown:
+		fallthrough
+	default:
+		return errors.RemoteUnexpectedError(grpc.ErrorDesc(err))
+	}
 }
