@@ -82,7 +82,8 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (yarpc.Dis
 	case "redis":
 		outbound = redis.NewOnewayOutbound(
 			redis.NewRedis5Client("redis:6379"),
-			"yarpc/oneway")
+			"yarpc/oneway",
+		)
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}

@@ -46,7 +46,10 @@ func Start() {
 	if redisIsAvailable() {
 		rds := redis.NewInbound(
 			redis.NewRedis5Client(redisAddr),
-			"yarpc/oneway", "yarpc/oneway/processing", time.Second)
+			"yarpc/oneway",
+			"yarpc/oneway/processing",
+			time.Second,
+		)
 		inbounds = append(inbounds, rds)
 	}
 
