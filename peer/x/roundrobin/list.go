@@ -24,10 +24,11 @@ import (
 	"context"
 	"sync"
 
-	"go.uber.org/atomic"
 	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/transport"
+
+	"go.uber.org/atomic"
 )
 
 const defaultCapacity = 10
@@ -130,7 +131,7 @@ func (pl *List) Start() error {
 // Stop notifies the List that requests will stop coming
 func (pl *List) Stop() error {
 	pl.stopOnce.Do(func() {
-		pl.stopped.Swap(true)
+		pl.stopped.Store(true)
 		pl.stopErr = pl.clearPeers()
 	})
 
