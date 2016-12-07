@@ -295,3 +295,18 @@ func TestStartStopFailures(t *testing.T) {
 		}
 	}
 }
+
+func TestNoOutboundsForService(t *testing.T) {
+	defer func() {
+		r := recover()
+		require.NotNil(t, r, "did not panic")
+		assert.Equal(t, r, `no outbound set for service "my-test-service" in dispatcher`)
+	}()
+
+	NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {},
+		},
+	})
+}
