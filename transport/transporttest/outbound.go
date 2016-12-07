@@ -81,6 +81,16 @@ func (_mr *_MockUnaryOutboundRecorder) Stop() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
 }
 
+func (_m *MockUnaryOutbound) Transports() []transport.Transport {
+	ret := _m.ctrl.Call(_m, "Transports")
+	ret0, _ := ret[0].([]transport.Transport)
+	return ret0
+}
+
+func (_mr *_MockUnaryOutboundRecorder) Transports() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Transports")
+}
+
 // Mock of OnewayOutbound interface
 type MockOnewayOutbound struct {
 	ctrl     *gomock.Controller
@@ -131,4 +141,14 @@ func (_m *MockOnewayOutbound) Stop() error {
 
 func (_mr *_MockOnewayOutboundRecorder) Stop() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+}
+
+func (_m *MockOnewayOutbound) Transports() []transport.Transport {
+	ret := _m.ctrl.Call(_m, "Transports")
+	ret0, _ := ret[0].([]transport.Transport)
+	return ret0
+}
+
+func (_mr *_MockOnewayOutboundRecorder) Transports() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Transports")
 }

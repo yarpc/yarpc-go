@@ -26,6 +26,15 @@ import "context"
 
 // Outbound is the common interface for all outbounds
 type Outbound interface {
+	// Transports returns the transports that used by this outbound, so they
+	// can be collected for lifecycle management, typically by a Dispatcher.
+	//
+	// Though most outbounds only use a single transport, composite outbounds
+	// may use multiple transport protocols, particularly for shadowing traffic
+	// across multiple transport protocols during a transport protocol
+	// migration.
+	Transports() []Transport
+
 	// Sets up the outbound to start making calls.
 	//
 	// This MUST block until the outbound is ready to start sending requests.

@@ -103,6 +103,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 		Registrar:         transport.NewMapRegistry(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
+		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		InboundMiddleware: cfg.InboundMiddleware,
 	}
 }
@@ -141,6 +142,37 @@ func convertOutbounds(outbounds Outbounds, middleware OutboundMiddleware) Outbou
 	return convertedOutbounds
 }
 
+// collectTransports iterates over all inbounds and outbounds and collects all
+// of their unique underlying transports. Multiple inbounds and outbounds may
+// share a transport, and we only want the dispatcher to manage their lifecycle
+// once.
+func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Transport {
+	// Collect all unique transports from inbounds and outbounds.
+	transports := make(map[transport.Transport]struct{})
+	for _, inbound := range inbounds {
+		for _, transport := range inbound.Transports() {
+			transports[transport] = struct{}{}
+		}
+	}
+	for _, outbound := range outbounds {
+		if unary := outbound.Unary; unary != nil {
+			for _, transport := range unary.Transports() {
+				transports[transport] = struct{}{}
+			}
+		}
+		if oneway := outbound.Oneway; oneway != nil {
+			for _, transport := range oneway.Transports() {
+				transports[transport] = struct{}{}
+			}
+		}
+	}
+	keys := make([]transport.Transport, 0, len(transports))
+	for key := range transports {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
 // dispatcher is the standard RPC implementation.
 //
 // It allows use of multiple Inbounds and Outbounds together.
@@ -149,8 +181,9 @@ type dispatcher struct {
 
 	Name string
 
-	inbounds  Inbounds
-	outbounds Outbounds
+	inbounds   Inbounds
+	outbounds  Outbounds
+	transports []transport.Transport
 
 	InboundMiddleware InboundMiddleware
 }
@@ -170,9 +203,10 @@ func (d dispatcher) ClientConfig(service string) transport.ClientConfig {
 
 func (d dispatcher) Start() error {
 	var (
-		mu               sync.Mutex
-		startedInbounds  []transport.Inbound
-		startedOutbounds []transport.Outbound
+		mu                sync.Mutex
+		startedTransports []transport.Transport
+		startedInbounds   []transport.Inbound
+		startedOutbounds  []transport.Outbound
 	)
 
 	startInbound := func(i transport.Inbound) func() error {
@@ -205,6 +239,41 @@ func (d dispatcher) Start() error {
 		}
 	}
 
+	startTransport := func(t transport.Transport) func() error {
+		return func() error {
+			if err := t.Start(); err != nil {
+				return err
+			}
+
+			mu.Lock()
+			startedTransports = append(startedTransports, t)
+			mu.Unlock()
+			return nil
+		}
+	}
+
+	abort := func(errs []error) error {
+		// Failed to start so stop everything that was started.
+		wait := intsync.ErrorWaiter{}
+		for _, i := range startedInbounds {
+			wait.Submit(i.Stop)
+		}
+		for _, o := range startedOutbounds {
+			wait.Submit(o.Stop)
+		}
+		for _, t := range startedTransports {
+			wait.Submit(t.Stop)
+		}
+
+		if newErrors := wait.Wait(); len(newErrors) > 0 {
+			errs = append(errs, newErrors...)
+		}
+
+		return errors.ErrorGroup(errs)
+	}
+
+	// Start inbounds and outbounds in parallel
+
 	var wait intsync.ErrorWaiter
 	for _, i := range d.inbounds {
 		i.SetRegistry(d)
@@ -217,25 +286,25 @@ func (d dispatcher) Start() error {
 		wait.Submit(startOutbound(o.Oneway))
 	}
 
+	// Synchronize
 	errs := wait.Wait()
-	if len(errs) == 0 {
-		return nil
+	if len(errs) != 0 {
+		return abort(errs)
 	}
 
-	// Failed to start so stop everything that was started.
+	// Start transports
 	wait = intsync.ErrorWaiter{}
-	for _, i := range startedInbounds {
-		wait.Submit(i.Stop)
-	}
-	for _, o := range startedOutbounds {
-		wait.Submit(o.Stop)
+	for _, t := range d.transports {
+		wait.Submit(startTransport(t))
 	}
 
-	if newErrors := wait.Wait(); len(newErrors) > 0 {
-		errs = append(errs, newErrors...)
+	// Synchronize
+	errs = wait.Wait()
+	if len(errs) != 0 {
+		return abort(errs)
 	}
 
-	return errors.ErrorGroup(errs)
+	return nil
 }
 
 func (d dispatcher) Register(rs []transport.Registrant) {
@@ -275,6 +344,10 @@ func (d dispatcher) Stop() error {
 		if o.Oneway != nil {
 			wait.Submit(o.Oneway.Stop)
 		}
+	}
+
+	for _, t := range d.transports {
+		wait.Submit(t.Stop)
 	}
 
 	if errs := wait.Wait(); len(errs) > 0 {

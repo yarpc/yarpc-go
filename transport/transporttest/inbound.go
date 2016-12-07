@@ -76,3 +76,13 @@ func (_m *MockInbound) Stop() error {
 func (_mr *_MockInboundRecorder) Stop() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
 }
+
+func (_m *MockInbound) Transports() []transport.Transport {
+	ret := _m.ctrl.Call(_m, "Transports")
+	ret0, _ := ret[0].([]transport.Transport)
+	return ret0
+}
+
+func (_mr *_MockInboundRecorder) Transports() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Transports")
+}

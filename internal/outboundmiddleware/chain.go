@@ -54,6 +54,10 @@ type unaryChainExec struct {
 	Final transport.UnaryOutbound
 }
 
+func (x unaryChainExec) Transports() []transport.Transport {
+	return x.Final.Transports()
+}
+
 func (x unaryChainExec) Start() error {
 	return x.Final.Start()
 }
@@ -97,6 +101,10 @@ func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request,
 type onewayChainExec struct {
 	Chain []transport.OnewayOutboundMiddleware
 	Final transport.OnewayOutbound
+}
+
+func (x onewayChainExec) Transports() []transport.Transport {
+	return x.Final.Transports()
 }
 
 func (x onewayChainExec) Start() error {

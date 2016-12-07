@@ -67,6 +67,12 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 	return o
 }
 
+// Transports returns the underlying TChannel Transport for this outbound.
+func (o *Outbound) Transports() []transport.Transport {
+	// TODO factor out transport and return it here.
+	return []transport.Transport{}
+}
+
 // Start starts the TChannel outbound.
 func (o *Outbound) Start() error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
