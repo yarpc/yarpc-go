@@ -36,16 +36,14 @@ import (
 
 var dispatcher yarpc.Dispatcher
 
-const redisAddr = "redis:6379"
-
 // Start starts the test server that clients will make requests to
 func Start() {
 	httpTransport := http.NewTransport()
 	inbounds := []transport.Inbound{httpTransport.NewInbound(":8084")}
 
-	if redisIsAvailable() {
+	if redisIsExpectedRunning() {
 		rds := redis.NewInbound(
-			redis.NewRedis5Client(redisAddr),
+			redis.NewRedis5Client("redis:6379"),
 			"yarpc/oneway",
 			"yarpc/oneway/processing",
 			time.Second,
@@ -80,7 +78,8 @@ func Stop() {
 	}
 }
 
-// redisIsAvailable checks to see if a redis server is available
-func redisIsAvailable() bool {
+// redisIsExpectedRunning checks to see if a redis server is expected to be
+// available
+func redisIsExpectedRunning() bool {
 	return os.Getenv("REDIS") == "enabled"
 }

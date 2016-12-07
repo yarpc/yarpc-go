@@ -5,12 +5,12 @@ services:
         image: crossdock/crossdock
         dns_search: .
         links:
-            - redis
             - go
             - node
             - java
             - python
             - python-sync
+            - redis
         environment:
             - WAIT_FOR=go,node,java,python,python-sync
 
