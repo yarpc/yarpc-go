@@ -65,6 +65,8 @@ func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*
 		return nil, err
 	}
 
+	appHeaders := applicationHeaders.fromMetadata(ctxMetadata, transport.Headers{})
+
 	requestBody, err := getMsgBody(msgBodyDecoder)
 	if err != nil {
 		return nil, err
@@ -75,6 +77,7 @@ func getTRequest(ctx context.Context, msgBodyDecoder func(interface{}) error) (*
 		Procedure: procedure,
 		Caller:    caller,
 		Encoding:  transport.Encoding(encoding),
+		Headers:   appHeaders,
 		Body:      requestBody,
 	}
 	return treq, nil
@@ -163,13 +166,16 @@ func callHandler(
 
 	err = internal.SafelyCallHandler(ctx, handler, start, grpcOptions, treq, rw)
 
+	// Sends the headers back on the request
+	grpc.SendHeader(ctx, r.headers)
 	responseBody := r.body.Bytes()
 	return &responseBody, err
 }
 
 // The response object contains response information from the YARPC handler
 type response struct {
-	body bytes.Buffer
+	body    bytes.Buffer
+	headers metadata.MD
 }
 
 // Wrapper to control writes to the response object
@@ -186,7 +192,7 @@ func (rw responseWriter) Write(s []byte) (int, error) {
 }
 
 func (rw responseWriter) AddHeaders(h transport.Headers) {
-	// TODO support Headers
+	rw.r.headers = applicationHeaders.toMetadata(h, rw.r.headers)
 }
 
 func (responseWriter) SetApplicationError() {
