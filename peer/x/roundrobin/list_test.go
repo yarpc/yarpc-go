@@ -44,8 +44,8 @@ func TestRoundRobinList(t *testing.T) {
 		// PeerIDs expected to be in the PeerList's "Unavailable" list after the actions have been applied
 		expectedUnavailablePeers []string
 
-		// Boolean indicating whether the PeerList is "started" after the actions have been applied
-		expectedStarted bool
+		// Boolean indicating whether the PeerList is "running" after the actions have been applied
+		expectedRunning bool
 	}
 	tests := []testStruct{
 		{
@@ -77,7 +77,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedPeer: "1",
 				},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "start stop",
@@ -92,7 +92,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr: peer.ErrPeerListNotStarted("RoundRobinList"),
 				},
 			},
-			expectedStarted: false,
+			expectedRunning: false,
 		},
 		{
 			msg: "start many and choose",
@@ -109,7 +109,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "6"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "assure start is idempotent",
@@ -124,7 +124,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedPeer: "1",
 				},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "stop no start",
@@ -134,7 +134,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StopAction{},
 			},
-			expectedStarted: false,
+			expectedRunning: false,
 		},
 		{
 			msg:                "update retain error",
@@ -169,7 +169,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
 				},
 			},
-			expectedStarted: false,
+			expectedRunning: false,
 		},
 		{
 			msg: "assure stop is idempotent",
@@ -193,7 +193,7 @@ func TestRoundRobinList(t *testing.T) {
 					},
 				},
 			},
-			expectedStarted: false,
+			expectedRunning: false,
 		},
 		{
 			msg: "start stop release multiple errors",
@@ -211,7 +211,7 @@ func TestRoundRobinList(t *testing.T) {
 					},
 				},
 			},
-			expectedStarted: false,
+			expectedRunning: false,
 		},
 		{
 			msg: "choose before start",
@@ -226,7 +226,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr: peer.ErrPeerListNotStarted("RoundRobinList"),
 				},
 			},
-			expectedStarted: false,
+			expectedRunning: false,
 		},
 		{
 			msg: "start choose no peers",
@@ -237,7 +237,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr:         context.DeadlineExceeded,
 				},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "start then add",
@@ -251,7 +251,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "2"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "start remove",
@@ -264,7 +264,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{ExpectedPeer: "2"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "start add many and remove many",
@@ -286,7 +286,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "8-a"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "add retain error",
@@ -305,7 +305,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "2"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "add duplicate peer",
@@ -322,7 +322,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "2"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "remove peer not in list",
@@ -339,7 +339,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "2"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "remove release error",
@@ -357,7 +357,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "block until add",
@@ -377,7 +377,7 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "multiple blocking until add",
@@ -405,7 +405,7 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "block but added too late",
@@ -425,7 +425,7 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "block until new peer after removal of only peer",
@@ -448,7 +448,7 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				ChooseAction{ExpectedPeer: "2"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "no blocking with no context deadline",
@@ -459,7 +459,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr:  peer.ErrChooseContextHasNoDeadline("RoundRobinList"),
 				},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "add unavailable peer",
@@ -474,7 +474,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "remove unavailable peer",
@@ -489,7 +489,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr:         context.DeadlineExceeded,
 				},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is now available",
@@ -505,7 +505,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is still available",
@@ -518,7 +518,7 @@ func TestRoundRobinList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is now unavailable",
@@ -534,7 +534,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr:         context.DeadlineExceeded,
 				},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "notify peer is still unavailable",
@@ -549,7 +549,7 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr:         context.DeadlineExceeded,
 				},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "notify invalid peer",
@@ -561,7 +561,7 @@ func TestRoundRobinList(t *testing.T) {
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			// v: Available, u: Unavailable, a: Added, r: Removed
@@ -605,7 +605,7 @@ func TestRoundRobinList(t *testing.T) {
 				ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "8uav"}},
 				ChooseMultiAction{ExpectedPeers: []string{"1v", "2va", "8uav"}},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 		{
 			msg: "block until notify available",
@@ -626,7 +626,7 @@ func TestRoundRobinList(t *testing.T) {
 				},
 				ChooseAction{ExpectedPeer: "1"},
 			},
-			expectedStarted: true,
+			expectedRunning: true,
 		},
 	}
 
@@ -675,7 +675,7 @@ func TestRoundRobinList(t *testing.T) {
 				}
 			}
 
-			assert.Equal(t, tt.expectedStarted, pl.started.Load())
+			assert.Equal(t, tt.expectedRunning, pl.isRunning())
 		})
 	}
 }
