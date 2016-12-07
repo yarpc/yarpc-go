@@ -85,9 +85,9 @@ func TestInboundStartAndStop(t *testing.T) {
 
 func TestInboundStartError(t *testing.T) {
 	x := NewTransport()
-	err := x.NewInbound("invalid").
-		WithRegistry(new(transporttest.MockRegistry)).
-		Start()
+	i := x.NewInbound("invalid")
+	i.SetRegistry(new(transporttest.MockRegistry))
+	err := i.Start()
 	assert.Error(t, err, "expected failure")
 }
 
