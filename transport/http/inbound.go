@@ -31,13 +31,30 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
+// InboundOption can be added as a variadic argument to the NewInbound
+// constructor.
+type InboundOption func(*Inbound)
+
+// Mux specifies the ServeMux that the HTTP server should use and the pattern
+// under which the YARPC endpoint should be registered.
+func Mux(pattern string, mux *http.ServeMux) InboundOption {
+	return func(i *Inbound) {
+		i.mux = mux
+		i.muxPattern = pattern
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
-func (t *Transport) NewInbound(addr string) *Inbound {
-	return &Inbound{
+func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
+	i := &Inbound{
 		addr:   addr,
 		tracer: t.tracer,
 	}
+	for _, opt := range opts {
+		opt(i)
+	}
+	return i
 }
 
 // Inbound represents an HTTP Inbound. It is the same as the transport Inbound
@@ -52,16 +69,8 @@ type Inbound struct {
 	tracer     opentracing.Tracer
 }
 
-// WithMux specifies the ServeMux that the HTTP server should use and the
-// pattern under which the YARPC endpoint should be registered.
-func (i *Inbound) WithMux(pattern string, mux *http.ServeMux) *Inbound {
-	i.mux = mux
-	i.muxPattern = pattern
-	return i
-}
-
-// WithTracer configures a tracer on this inbound.
-func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
+// Tracer configures a tracer on this inbound.
+func (i *Inbound) Tracer(tracer opentracing.Tracer) *Inbound {
 	i.tracer = tracer
 	return i
 }

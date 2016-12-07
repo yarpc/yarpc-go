@@ -58,8 +58,8 @@ func (h *handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *stri
 
 func main() {
 	tchannelTransport := tchannel.NewChannelTransport(
-		tchannel.WithServiceName("keyvalue"),
-		tchannel.WithListenAddr(":28941"),
+		tchannel.ServiceName("keyvalue"),
+		tchannel.ListenAddr(":28941"),
 	)
 	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

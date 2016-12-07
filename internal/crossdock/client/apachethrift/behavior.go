@@ -46,12 +46,18 @@ func Run(t crossdock.T) {
 	httpTransport := http.NewTransport()
 	url := fmt.Sprintf("http://%v:%v/", server, serverPort)
 
-	thriftOutbound := httpTransport.NewSingleOutbound(url).
-		WithURLTemplate("http://host:port/thrift/ThriftTest")
-	secondOutbound := httpTransport.NewSingleOutbound(url).
-		WithURLTemplate("http://host:port/thrift/SecondService")
-	multiplexOutbound := httpTransport.NewSingleOutbound(url).
-		WithURLTemplate("http://host:port/thrift/multiplexed")
+	thriftOutbound := httpTransport.NewSingleOutbound(
+		url,
+		http.URLTemplate("http://host:port/thrift/ThriftTest"),
+	)
+	secondOutbound := httpTransport.NewSingleOutbound(
+		url,
+		http.URLTemplate("http://host:port/thrift/SecondService"),
+	)
+	multiplexOutbound := httpTransport.NewSingleOutbound(
+		url,
+		http.URLTemplate("http://host:port/thrift/multiplexed"),
+	)
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "apache-thrift-client",

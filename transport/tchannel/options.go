@@ -42,8 +42,8 @@ type transportConfig struct {
 // TransportOption will eventually also be suitable for passing to NewTransport.
 type TransportOption func(*transportConfig)
 
-// WithTracer is an option that configures the tracer for a TChannel transport.
-func WithTracer(tracer opentracing.Tracer) TransportOption {
+// Tracer is an option that configures the tracer for a TChannel transport.
+func Tracer(tracer opentracing.Tracer) TransportOption {
 	return func(t *transportConfig) {
 		t.tracer = tracer
 	}
@@ -60,19 +60,19 @@ func WithChannel(ch Channel) TransportOption {
 	}
 }
 
-// WithListenAddr informs a transport constructor what address (in the form of
+// ListenAddr informs a transport constructor what address (in the form of
 // host:port) to listen on. This option does not apply to NewChannelTransport
 // if it is called with WithChannel and a channel that is already listening.
-func WithListenAddr(addr string) TransportOption {
+func ListenAddr(addr string) TransportOption {
 	return func(t *transportConfig) {
 		t.addr = addr
 	}
 }
 
-// WithServiceName informs the NewChannelTransport constructor which service
+// ServiceName informs the NewChannelTransport constructor which service
 // name to use if it needs to construct a root Channel object, as when called
 // without the WithChannel option.
-func WithServiceName(name string) TransportOption {
+func ServiceName(name string) TransportOption {
 	return func(t *transportConfig) {
 		t.name = name
 	}

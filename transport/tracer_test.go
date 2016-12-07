@@ -113,7 +113,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 	// TODO: Use port 0 once https://github.com/yarpc/yarpc-go/issues/381 is
 	// fixed.
 
-	httpTransport := http.NewTransport(http.WithTracer(tracer))
+	httpTransport := http.NewTransport(http.Tracer(tracer))
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
@@ -134,9 +134,9 @@ func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dis
 	hp := "127.0.0.1:4040"
 
 	tchannelTransport := ytchannel.NewChannelTransport(
-		ytchannel.WithListenAddr(hp),
-		ytchannel.WithTracer(tracer),
-		ytchannel.WithServiceName("yarpc-test"),
+		ytchannel.ListenAddr(hp),
+		ytchannel.Tracer(tracer),
+		ytchannel.ServiceName("yarpc-test"),
 	)
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
