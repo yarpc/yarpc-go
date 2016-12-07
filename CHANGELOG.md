@@ -4,17 +4,30 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
--   **Breaking**: the HTTP inbound constructor now accepts only a
-    `peer.Chooser`.  For convenience, the common case of an outbound to a
-    single peer may use a single peer chooser. Peer choosers require a
-    transport to get the unique peer for a peer identifier.
+-   **Breaking**: This version overhauls the code required for constructing
+    inbounds and outbounds.
+
+    Inbounds and Outbounds now share an underlying Transport, of which there
+    should be one for each transport protocol, so one HTTP Transport for all
+    HTTP inbounds and outbounds, and a TChannel transport for all TChannel
+    inbounds and outbounds.
 
     Before:
 
     ```go
+    ch, err := tchannelProper.NewChannel("example-service", nil)
+    if err != nil {
+        log.Fatalln(err)
+    }
     yarpc.NewDispatcher(yarpc.Config{
+        Name: "example-service",
+        yarpc.Inbounds{
+            http.NewInbound(":80"),
+            tchannel.NewInbound(ch, tchannel.ListenAddr(":4040")),
+        },
         yarpc.Outbounds{
-            "callee": http.NewOutbound("http://127.0.0.1:80/rpc/v1")
+            http.NewOutbound("http://example-service/rpc/v1"),
+            tchannel.NewOutbound(ch, tchannel.HostPort("127.0.0.1:4040")),
         },
     })
     ```
@@ -23,12 +36,60 @@ v1.0.0-dev (unreleased)
 
     ```go
     httpTransport := http.NewTransport()
+    tchannelTransport := tchannel.NewChannelTransport(
+		tchannel.ServiceName("example-service"),
+		tchannel.ListenAddr(":4040"),
+    )
     yarpc.NewDispatcher(yarpc.Config{
+        Name: "example-service",
+        yarpc.Inbounds{
+            httpTransport.NewInbound(":80"),
+            tchannelTransport.NewInbound(),
+        },
         yarpc.Outbounds{
-            "callee": http.NewOutbound(single.New(
-                hostport.PeerIdentifier("127.0.0.1:80"),
-                httpTransport,
-            )).WithURLTemplate("http://host:port/rpc/v1")
+            httpTransport.NewSingleOutbound("http://example-service/rpc/v1"),
+            tchannelTransport.NewSingleOutbound("127.0.0.1:4040"),
+        },
+    })
+    ```
+
+    The dispatcher now collects all of the unique transport instances from
+    inbounds and outbounds and manages their lifecycle independently.
+
+    This version repurposed the name `NewOutbound` for outbounds with a peer
+    chooser, whereas `NewSingleOutbound` is a convenience for creating an
+    outbound addressing a specific single peer.
+    You may need to rename existing usage. The compiler will complain that
+    strings are not `peer.Chooser` instances.
+
+    This version introduces support for peer choosers, peer lists, and peer
+    providers for HTTP outbounds. This is made possible by the above
+    change that introduces a concrete instance of a Transport for each
+    protocol, which deduplicates peer instances across all inbounds and
+    outbounds, making connection sharing and load balancing possible,
+    eventually for all transport protocols.
+
+    Note that we use `NewChannelTransport`, as opposed to `NewTransport`.
+    We reserve this name for a future minor release that will provide
+    parity with HTTP for outbounds with peer choosers.
+
+    The new ChannelTransport constructor can still use a shared TChannel
+    Channel instance, if that is required.
+
+    ```go
+    ch, err := tchannelProper.NewChannel("example-service", nil)
+    if err != nil {
+        log.Fatalln(err)
+    }
+    tchannelTransport := tchannel.NewChannelTransport(
+        tchannel.WithChannel(ch),
+		tchannel.ServiceName("example-service"),
+		tchannel.ListenAddr(":4040"),
+    )
+    yarpc.NewDispatcher(yarpc.Config{
+        Name: "example-service",
+        yarpc.Inbounds{
+            tchannelTransport.NewInbound(),
         },
     })
     ```
@@ -38,8 +99,8 @@ v1.0.0-dev (unreleased)
 
     The dispatcher no longer threads a dependencies object through the start
     method of every configured transport. The only existing dependency was an
-    opentracing Tracer, which you must now manually configure on each
-    transport.
+    opentracing Tracer, which you can now thread through Transport constructor
+    options instead.
 
     Before:
 
@@ -59,14 +120,21 @@ v1.0.0-dev (unreleased)
 
     ```go
     tracer := opentracing.GlobalTracer()
+    httpTransport := http.NewTransport(
+        http.Tracer(tracer),
+    )
+    tchannelTransport := tchannel.NewChannelTransport(
+        tchannel.Tracer(tracer),
+    )
     yarpc.NewDispatcher(yarpc.Config{
+        Name: "example-service",
         yarpc.Inbounds{
-            http.NewInbound(...)
-                .WithTracer(tracer),
+            httpTransport.NewInbound(":80"),
+            tchannelTransport.NewInbound(),
         },
         yarpc.Outbounds{
-            "callee": http.NewOutbound(...).
-                WithTracer(tracer)
+            httpTransport.NewSingleOutbound("http://example-service/rpc/v1"),
+            tchannelTransport.NewSingleOutbound("127.0.0.1:4040"),
         },
     })
     ```
@@ -102,7 +170,9 @@ v1.0.0-dev (unreleased)
     Now:
 
     ```go
-    inbound := tchannel.NewInbound(...).WithRegistry(registry)
+    transport := tchannel.NewTransport()
+    inbound := transport.NewInbound()
+    inbound.SetRegistry(registry)
     err := inbound.Start()
     ```
 
@@ -113,29 +183,6 @@ v1.0.0-dev (unreleased)
     `transport.Inbound` and `transport.Outbound` interfaces.  These were
     previously transport specific Inbound and Outbound interfaces.
     This eliminates unnecessary polymorphism in some cases.
-
--   **Breaking**: the HTTP and TChannel Inbound and Outbound transports no longer
-    support optional arguments.  Instead, you must chain `With*` methods.
-
-    Before:
-
-    ```go
-    tchannel.NewOutbound(channel, tchannel.HostPort("127.0.0.1:4040")
-    ```
-
-    Now:
-
-    ```go
-    tchannel.NewOutbound(channel).WithHostPort("127.0.0.1:4040")
-    ```
-
-    This change applies to:
-
-    -   WithHostPort on TChannel outbound
-    -   WithListenAddr on TChannel inbound
-    -   WithMux on HTTP inbound
-    -   WithURLTemplate on HTTP outbounds **new**
-    -   WithTracer on all transports **new**
 
 -   Introduced OpenTracing helpers for transport authors.
 -   Created the `yarpc.Serialize` package for marshalling RPC messages at rest.
