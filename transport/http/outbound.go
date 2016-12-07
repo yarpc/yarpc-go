@@ -162,8 +162,8 @@ func (o *Outbound) Stop() error {
 // Call makes a HTTP request
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
+		// TODO replace with "panicInDebug"
+		return nil, errOutboundNotStarted
 	}
 	start := time.Now()
 	deadline, _ := ctx.Deadline()
@@ -175,8 +175,8 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 // CallOneway makes a oneway request
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
+		// TODO replace with "panicInDebug"
+		return nil, errOutboundNotStarted
 	}
 	start := time.Now()
 	var ttl time.Duration

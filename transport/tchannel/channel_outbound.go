@@ -86,8 +86,8 @@ func (o *ChannelOutbound) Stop() error {
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {
-		// panic because there's no recovery from this
-		panic(errOutboundNotStarted)
+		// TODO replace with "panicInDebug"
+		return nil, errOutboundNotStarted
 	}
 
 	// NB(abg): Under the current API, the local service's name is required
