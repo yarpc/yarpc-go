@@ -79,6 +79,9 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 		OnewayMethods: map[string]<$thrift>.OnewayHandler{
 			<range .Service.Functions><if .OneWay>"<.ThriftName>": <$thrift>.OnewayHandlerFunc(h.<.Name>),<end>
 		<end>},
+		Signatures: map[string]string{
+			<range .Service.Functions>"<.ThriftName>": "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
+		<end>},
 	}
 	return <$thrift>.BuildRegistrants(service, opts...)
 }

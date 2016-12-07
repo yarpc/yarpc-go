@@ -79,6 +79,8 @@ type Service struct {
 	Name          string
 	Methods       map[string]UnaryHandler
 	OnewayMethods map[string]OnewayHandler
+
+	Signatures map[string]string
 }
 
 // BuildRegistrants builds a list of Registrants from a Thrift service
@@ -103,10 +105,13 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 			Protocol:     proto,
 			Enveloping:   rc.Enveloping,
 		})
+		signature, _ := s.Signatures[methodName]
 
 		rs = append(rs, transport.Registrant{
 			Procedure:   procedureName(s.Name, methodName),
 			HandlerSpec: spec,
+			Encoding:    string(Encoding),
+			Signature:   signature,
 		})
 	}
 
@@ -117,10 +122,13 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 			Protocol:      proto,
 			Enveloping:    rc.Enveloping,
 		})
+		signature, _ := s.Signatures[methodName]
 
 		rs = append(rs, transport.Registrant{
 			Procedure:   procedureName(s.Name, methodName),
 			HandlerSpec: spec,
+			Encoding:    string(Encoding),
+			Signature:   signature,
 		})
 	}
 

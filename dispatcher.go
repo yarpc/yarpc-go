@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/clientconfig"
+	"go.uber.org/yarpc/internal/debug"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
@@ -48,7 +49,7 @@ type StartStoppable interface {
 	// Blocks until the RPC has stopped.
 	Stop() error
 
-	ServiceName() string
+	Debug() debug.Dispatcher
 }
 
 // Config specifies the parameters of a new RPC constructed via New.
@@ -356,8 +357,4 @@ func (d *Dispatcher) Stop() error {
 		return errors.ErrorGroup(allErrs)
 	}
 	return nil
-}
-
-func (d dispatcher) ServiceName() string {
-	return d.Name
 }
