@@ -112,15 +112,14 @@ func TestRoundRobinList(t *testing.T) {
 			expectedStarted: true,
 		},
 		{
-			msg: "start twice",
+			msg: "assure start is idempotent",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
-				StartAction{
-					ExpectedErr: peer.ErrPeerListAlreadyStarted("RoundRobinList"),
-				},
+				StartAction{},
+				StartAction{},
 				ChooseAction{
 					ExpectedPeer: "1",
 				},
@@ -130,12 +129,10 @@ func TestRoundRobinList(t *testing.T) {
 		{
 			msg: "stop no start",
 			retainedAvailablePeerIDs: []string{"1"},
-			expectedAvailablePeers:   []string{"1"},
+			releasedPeerIDs:          []string{"1"},
 			peerListActions: []PeerListAction{
 				UpdateAction{AddedPeerIDs: []string{"1"}},
-				StopAction{
-					ExpectedErr: peer.ErrPeerListNotStarted("RoundRobinList"),
-				},
+				StopAction{},
 			},
 			expectedStarted: false,
 		},
@@ -170,6 +167,30 @@ func TestRoundRobinList(t *testing.T) {
 				StartAction{},
 				StopAction{
 					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
+				},
+			},
+			expectedStarted: false,
+		},
+		{
+			msg: "assure stop is idempotent",
+			retainedAvailablePeerIDs: []string{"1"},
+			errReleasedPeerIDs:       []string{"1"},
+			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1"}},
+				StartAction{},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						StopAction{
+							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
+						},
+						StopAction{
+							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
+						},
+						StopAction{
+							ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
+						},
+					},
 				},
 			},
 			expectedStarted: false,

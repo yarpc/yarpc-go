@@ -53,6 +53,10 @@ type List struct {
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 	started            atomic.Bool
+
+	// Stop error is the error that was returned from the `Stop` function
+	stopErr  error
+	stopOnce sync.Once
 }
 
 // Update applies the additions and removals of peer Identifiers to the list
@@ -120,20 +124,21 @@ func (pl *List) addToAvailablePeers(p peer.Peer) error {
 
 // Start notifies the List that requests will start coming
 func (pl *List) Start() error {
-	if pl.started.Swap(true) {
-		return peer.ErrPeerListAlreadyStarted("RoundRobinList")
-	}
+	pl.started.Swap(true)
 	return nil
 }
 
 // Stop notifies the List that requests will stop coming
 func (pl *List) Stop() error {
-	if !pl.started.Swap(false) {
-		return peer.ErrPeerListNotStarted("RoundRobinList")
-	}
-	return pl.clearPeers()
+	pl.started.Swap(false)
+	pl.stopOnce.Do(func() {
+		pl.stopErr = pl.clearPeers()
+	})
+
+	return pl.stopErr
 }
 
+// clearPeers will release all the peers from the list
 func (pl *List) clearPeers() error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
