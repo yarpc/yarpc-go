@@ -133,14 +133,6 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 	return o.call(ctx, treq, start, ttl)
 }
 
-type ack struct {
-	time time.Time
-}
-
-func (a ack) String() string {
-	return a.time.String()
-}
-
 // CallOneway makes a oneway request
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
 	if !o.started.Load() {
@@ -155,7 +147,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		return nil, err
 	}
 
-	return ack{time: time.Now()}, nil
+	return time.Now(), nil
 }
 
 func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time.Time, ttl time.Duration) (*transport.Response, error) {
@@ -297,14 +289,14 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 }
 
 func (o *Outbound) getHTTPClient(p *hostport.Peer) (*http.Client, error) {
-	transport, ok := p.Transport().(*Transport)
+	t, ok := p.Transport().(*Transport)
 	if !ok {
 		return nil, peer.ErrInvalidTransportConversion{
 			Transport:    p.Transport(),
 			ExpectedType: "*http.Transport",
 		}
 	}
-	return transport.client, nil
+	return t.client, nil
 }
 
 func getErrFromResponse(response *http.Response) error {

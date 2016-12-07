@@ -44,7 +44,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHandlerSucces(t *testing.T) {
+func TestHandlerSuccess(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
