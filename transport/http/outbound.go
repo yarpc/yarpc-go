@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc/internal/errors"
@@ -68,7 +69,6 @@ func URLTemplate(template string) OutboundOption {
 // Chooser.Start MUST be called before Outbound.Start
 func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 	o := &Outbound{
-		started:     atomic.NewBool(false),
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
@@ -82,7 +82,6 @@ func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 // Chooser.Start MUST be called before Outbound.Start
 func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
-		started:     atomic.NewBool(false),
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      opentracing.GlobalTracer(),
@@ -112,10 +111,15 @@ func (t *Transport) NewSingleOutbound(URL string, opts ...OutboundOption) *Outbo
 
 // Outbound is an HTTP UnaryOutbound and OnewayOutbound
 type Outbound struct {
-	started     *atomic.Bool
 	chooser     peer.Chooser
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
+
+	started   atomic.Bool
+	startOnce sync.Once
+	startErr  error
+	stopOnce  sync.Once
+	stopErr   error
 }
 
 // setURLTemplate configures an alternate URL template.
@@ -137,14 +141,22 @@ func (o *Outbound) Transports() []transport.Transport {
 
 // Start the HTTP outbound
 func (o *Outbound) Start() error {
-	o.started.Swap(true)
-	return nil
+	o.startOnce.Do(func() {
+		o.started.Store(true)
+		o.startErr = o.chooser.Start()
+	})
+
+	return o.startErr
 }
 
 // Stop the HTTP outbound
 func (o *Outbound) Stop() error {
-	o.started.Swap(false)
-	return nil
+	o.stopOnce.Do(func() {
+		o.started.Store(false)
+		o.stopErr = o.chooser.Stop()
+	})
+
+	return o.stopErr
 }
 
 // Call makes a HTTP request
