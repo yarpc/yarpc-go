@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestGetServiceAndProcedureFromMethod(t *testing.T) {
@@ -49,6 +51,91 @@ func TestGetServiceAndProcedureFromMethod(t *testing.T) {
 		assert.Equal(t, tt.wantError, err)
 		assert.Equal(t, tt.wantService, service)
 		assert.Equal(t, tt.wantProcedure, procedure)
+	}
+}
+
+func TestGetContextMetadata(t *testing.T) {
+	type testStruct struct {
+		ctx       context.Context
+		wantMD    metadata.MD
+		wantError error
+	}
+	tests := []testStruct{
+		func() (s testStruct) {
+			s.wantMD = metadata.MD{
+				"key1": []string{"value1"},
+				"key2": []string{"value2"},
+			}
+			s.ctx = metadata.NewContext(context.Background(), s.wantMD)
+			s.wantError = nil
+			return
+		}(),
+		func() (s testStruct) {
+			s.ctx = context.Background()
+			s.wantMD = nil
+			s.wantError = errCantExtractMetadata{ctx: s.ctx}
+			return
+		}(),
+	}
+
+	for _, tt := range tests {
+		md, err := getContextMetadata(tt.ctx)
+
+		assert.Equal(t, tt.wantMD, md)
+		assert.Equal(t, tt.wantError, err)
+	}
+
+}
+
+func TestExtractMetadataHeader(t *testing.T) {
+	type testStruct struct {
+		headerName      string
+		md              metadata.MD
+		wantHeaderValue string
+		wantError       error
+	}
+	tests := []testStruct{
+		func() (s testStruct) {
+			s.headerName = "key"
+			s.wantHeaderValue = "value"
+			s.md = metadata.MD{
+				s.headerName: []string{s.wantHeaderValue},
+			}
+			s.wantError = nil
+			return
+		}(),
+		func() (s testStruct) {
+			s.headerName = "key"
+			s.wantHeaderValue = ""
+			s.md = metadata.MD{}
+			s.wantError = errCantExtractHeader{MD: s.md, Name: s.headerName}
+			return
+		}(),
+		func() (s testStruct) {
+			s.headerName = "key"
+			s.wantHeaderValue = ""
+			s.md = metadata.MD{
+				s.headerName: []string{},
+			}
+			s.wantError = errCantExtractHeader{MD: s.md, Name: s.headerName}
+			return
+		}(),
+		func() (s testStruct) {
+			s.headerName = "key"
+			s.wantHeaderValue = ""
+			s.md = metadata.MD{
+				s.headerName: []string{"test1", "test2", "test3"},
+			}
+			s.wantError = errCantExtractHeader{MD: s.md, Name: s.headerName}
+			return
+		}(),
+	}
+
+	for _, tt := range tests {
+		headerValue, err := extractMetadataHeader(tt.md, tt.headerName)
+
+		assert.Equal(t, tt.wantError, err)
+		assert.Equal(t, tt.wantHeaderValue, headerValue)
 	}
 }
 
