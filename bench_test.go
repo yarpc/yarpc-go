@@ -197,7 +197,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{ytchannel.NewInbound(serverCh)},
+		Inbounds: yarpc.Inbounds{ytchannel.NewInboundFromChannel(serverCh)},
 	}
 
 	clientCh, err := tchannel.NewChannel("client", nil)
@@ -258,7 +258,7 @@ func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
 
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{ytchannel.NewInbound(serverCh)},
+		Inbounds: yarpc.Inbounds{ytchannel.NewInboundFromChannel(serverCh)},
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {

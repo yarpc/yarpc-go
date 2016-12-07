@@ -30,10 +30,10 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// NewInbound builds a new TChannel inbound from the given Channel. Existing
+// NewInboundFromChannel builds a new TChannel inbound from the given Channel. Existing
 // methods registered on the channel remain registered and are preferred when
 // a call is received.
-func NewInbound(ch Channel) *Inbound {
+func NewInboundFromChannel(ch Channel) *Inbound {
 	return &Inbound{
 		ch:     ch,
 		tracer: opentracing.GlobalTracer(),
@@ -52,8 +52,8 @@ type Inbound struct {
 // WithListenAddr changes the address on which the TChannel server will listen
 // for connections. By default, the server listens on an OS-assigned port.
 //
-// This option has no effect if the Chanel provided to NewInbound is already
-// listening for connections when Start() is called.
+// This option has no effect if the Chanel provided to NewInboundFromChannel is
+// already listening for connections when Start() is called.
 func (i *Inbound) WithListenAddr(addr string) *Inbound {
 	i.addr = addr
 	return i
