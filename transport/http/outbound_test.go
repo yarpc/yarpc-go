@@ -143,7 +143,7 @@ func TestOutboundHeaders(t *testing.T) {
 			defer cancel()
 		}
 
-		out := NewSingleOutbound(server.URL, httpTransport)
+		out := httpTransport.NewSingleOutbound(server.URL)
 
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
@@ -189,7 +189,7 @@ func TestCallFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		out := NewSingleOutbound(tt.url, httpTransport)
+		out := httpTransport.NewSingleOutbound(tt.url)
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
@@ -211,7 +211,7 @@ func TestCallFailures(t *testing.T) {
 
 func TestStartMultiple(t *testing.T) {
 	httpTransport := NewTransport()
-	out := NewSingleOutbound("http://localhost:9999", httpTransport)
+	out := httpTransport.NewSingleOutbound("http://localhost:9999")
 
 	var wg sync.WaitGroup
 	signal := make(chan struct{})
@@ -232,14 +232,7 @@ func TestStartMultiple(t *testing.T) {
 
 func TestStopMultiple(t *testing.T) {
 	httpTransport := NewTransport()
-	// TODO transport lifecycle
-
-	out := NewOutbound(
-		single.New(
-			hostport.PeerIdentifier("127.0.0.1:9999"),
-			httpTransport,
-		),
-	)
+	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
 
 	err := out.Start()
 	require.NoError(t, err)
@@ -263,14 +256,7 @@ func TestStopMultiple(t *testing.T) {
 
 func TestCallWithoutStarting(t *testing.T) {
 	httpTransport := NewTransport()
-	// TODO transport lifecycle
-
-	out := NewOutbound(
-		single.New(
-			hostport.PeerIdentifier("127.0.0.1:9999"),
-			httpTransport,
-		),
-	)
+	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
 	assert.Panics(t, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()

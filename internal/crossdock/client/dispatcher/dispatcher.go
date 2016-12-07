@@ -26,8 +26,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -43,21 +41,13 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	var httpTransport *http.Transport
+	httpTransport := http.NewTransport()
 
 	var unaryOutbound transport.UnaryOutbound
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
-		if httpTransport == nil {
-			httpTransport = http.NewTransport()
-		}
-		unaryOutbound = http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", server)),
-				httpTransport,
-			),
-		)
+		unaryOutbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8081", server))
 	case "tchannel":
 		ch, err := tchannel.NewChannel("client", nil)
 		fatals.NoError(err, "couldn't create tchannel")
@@ -84,21 +74,18 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (yarpc.Dis
 	server := t.Param("server_oneway")
 	fatals.NotEmpty(server, "oneway server is required")
 
+	httpTransport := http.NewTransport()
 	var outbound transport.OnewayOutbound
 
 	trans := t.Param("transport_oneway")
 	switch trans {
 	case "http":
-		outbound = http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier(fmt.Sprintf("%s:8084", server)),
-				http.NewTransport(),
-			))
+		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8084", server))
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	callBackInbound := http.NewInbound(":0")
+	callBackInbound := httpTransport.NewInbound(":0")
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "oneway-client",
 		Outbounds: yarpc.Outbounds{

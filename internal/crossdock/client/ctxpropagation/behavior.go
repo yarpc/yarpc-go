@@ -30,8 +30,6 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	server "go.uber.org/yarpc/internal/crossdock/server/yarpc"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -324,20 +322,12 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	ch, err := tchannel.NewChannel("ctxclient", nil)
 	fatals.NoError(err, "failed to create TChannel")
 
-	var httpTransport *http.Transport
+	httpTransport := http.NewTransport()
 
 	var outbound transport.UnaryOutbound
 	switch trans := t.Param(params.Transport); trans {
 	case "http":
-		if httpTransport == nil {
-			httpTransport = http.NewTransport()
-		}
-		outbound = http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier(fmt.Sprintf("%s:8081", subject)),
-				httpTransport,
-			),
-		)
+		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8081", subject))
 		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
 	case "tchannel":
 		outbound = tch.NewOutbound(ch).WithHostPort(fmt.Sprintf("%s:8082", subject))
@@ -350,7 +340,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 		Name: "ctxclient",
 		Inbounds: yarpc.Inbounds{
 			tch.NewInbound(ch).WithListenAddr(":8087"),
-			http.NewInbound(":8086"),
+			httpTransport.NewInbound(":8086"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {

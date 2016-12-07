@@ -29,8 +29,6 @@ import (
 	"go.uber.org/yarpc/internal/examples/thrift/hello/echo"
 	"go.uber.org/yarpc/internal/examples/thrift/hello/echo/yarpc/helloclient"
 	"go.uber.org/yarpc/internal/examples/thrift/hello/echo/yarpc/helloserver"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
@@ -39,22 +37,15 @@ import (
 //go:generate thriftrw --plugin=yarpc echo.thrift
 
 func main() {
-
 	httpTransport := http.NewTransport()
-
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":8086"),
+			httpTransport.NewInbound(":8086"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
-				Unary: http.NewOutbound(
-					single.New(
-						hostport.PeerIdentifier("127.0.0.1:8086"),
-						httpTransport,
-					),
-				),
+				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:8086"),
 			},
 		},
 	})

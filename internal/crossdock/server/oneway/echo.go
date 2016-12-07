@@ -30,8 +30,6 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 )
@@ -73,11 +71,7 @@ func (o *onewayHandler) callHome(ctx context.Context, reqMeta yarpc.ReqMeta, bod
 		panic("could not find callBackAddr in headers")
 	}
 
-	out := http.NewOutbound(
-		single.New(
-			hostport.PeerIdentifier(callBackAddr),
-			o.httpTransport))
-
+	out := o.httpTransport.NewSingleOutbound("http://" + callBackAddr)
 	out.Start()
 	defer out.Stop()
 

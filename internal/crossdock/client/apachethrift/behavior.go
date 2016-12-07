@@ -26,8 +26,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/client/gauntlet"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/crossdock/crossdock-go"
@@ -46,13 +44,13 @@ func Run(t crossdock.T) {
 	fatals.NotEmpty(server, "apachethriftserver is required")
 
 	httpTransport := http.NewTransport()
-	hostPort := hostport.PeerIdentifier(fmt.Sprintf("%v:%v", server, serverPort))
+	url := fmt.Sprintf("http://%v:%v/", server, serverPort)
 
-	thriftOutbound := http.NewOutbound(single.New(hostPort, httpTransport)).
+	thriftOutbound := httpTransport.NewSingleOutbound(url).
 		WithURLTemplate("http://host:port/thrift/ThriftTest")
-	secondOutbound := http.NewOutbound(single.New(hostPort, httpTransport)).
+	secondOutbound := httpTransport.NewSingleOutbound(url).
 		WithURLTemplate("http://host:port/thrift/SecondService")
-	multiplexOutbound := http.NewOutbound(single.New(hostPort, httpTransport)).
+	multiplexOutbound := httpTransport.NewSingleOutbound(url).
 		WithURLTemplate("http://host:port/thrift/multiplexed")
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

@@ -28,10 +28,13 @@ import (
 
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 type transportConfig struct {
 	keepAlive time.Duration
+	tracer    opentracing.Tracer
 }
 
 var defaultTransportConfig = transportConfig{keepAlive: 30 * time.Second}
@@ -49,9 +52,18 @@ func KeepAlive(t time.Duration) TransportOption {
 	}
 }
 
+// WithTracer configures a tracer for the transport and all its inbounds and
+// outbounds.
+func WithTracer(tracer opentracing.Tracer) TransportOption {
+	return func(c *transportConfig) {
+		c.tracer = tracer
+	}
+}
+
 // NewTransport creates a new http transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
 	cfg := defaultTransportConfig
+	cfg.tracer = opentracing.GlobalTracer()
 	for _, o := range opts {
 		o(&cfg)
 	}
@@ -59,6 +71,7 @@ func NewTransport(opts ...TransportOption) *Transport {
 	return &Transport{
 		client: buildClient(&cfg),
 		peers:  make(map[string]*hostport.Peer),
+		tracer: cfg.tracer,
 	}
 }
 
@@ -83,6 +96,8 @@ type Transport struct {
 
 	client *http.Client
 	peers  map[string]*hostport.Peer
+
+	tracer opentracing.Tracer
 }
 
 // RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)

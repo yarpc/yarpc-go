@@ -29,8 +29,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/clientconfig"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -75,15 +73,12 @@ type PhoneResponse struct {
 func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
 	var outbound transport.UnaryOutbound
 
+	httpTransport := http.NewTransport()
+
 	switch {
 	case body.Transport.HTTP != nil:
 		t := body.Transport.HTTP
-		outbound = http.NewOutbound(
-			single.New(
-				hostport.PeerIdentifier(fmt.Sprintf("%s:%d", t.Host, t.Port)),
-				http.NewTransport(), // TODO transport lifecycle
-			),
-		)
+		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:%d", t.Host, t.Port))
 	case body.Transport.TChannel != nil:
 		t := body.Transport.TChannel
 		hostport := fmt.Sprintf("%s:%d", t.Host, t.Port)

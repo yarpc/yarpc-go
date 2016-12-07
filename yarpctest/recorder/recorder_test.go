@@ -3,6 +3,7 @@ package recorder
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -12,8 +13,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 
@@ -162,18 +161,12 @@ func (t *testingTMock) Fatal(args ...interface{}) {
 
 func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	httpTransport := http.NewTransport()
-	// TODO lifecycle
 
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewOutbound(
-					single.New(
-						hostport.PeerIdentifier("127.0.0.1:65535"),
-						httpTransport,
-					),
-				),
+				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:65535"),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
@@ -188,8 +181,8 @@ func withDisconnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)
 }
 
 func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
-	serverHTTP := http.NewInbound(":0")
-
+	httpTransport := http.NewTransport()
+	serverHTTP := httpTransport.NewInbound(":0")
 	serverDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "server",
 		Inbounds: yarpc.Inbounds{serverHTTP},
@@ -203,19 +196,11 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	require.NoError(t, serverDisp.Start())
 	defer serverDisp.Stop()
 
-	httpTransport := http.NewTransport()
-	// TODO http transport lifecycle
-
 	clientDisp := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: http.NewOutbound(
-					single.New(
-						hostport.PeerIdentifier(serverHTTP.Addr().String()),
-						httpTransport,
-					),
-				),
+				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr())),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{

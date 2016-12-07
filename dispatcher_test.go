@@ -41,11 +41,12 @@ func basicDispatcher(t *testing.T) Dispatcher {
 	ch, err := tchannel.NewChannel("test", nil)
 	require.NoError(t, err, "failed to create TChannel")
 
+	httpTransport := http.NewTransport()
 	return NewDispatcher(Config{
 		Name: "test",
 		Inbounds: Inbounds{
 			tch.NewInbound(ch).WithListenAddr(":0"),
-			http.NewInbound(":0"),
+			httpTransport.NewInbound(":0"),
 		},
 	})
 }

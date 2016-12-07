@@ -12,8 +12,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	yhttp "go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
@@ -123,19 +121,17 @@ func runTChannelClient(b *testing.B, c *tchannel.Channel, hostPort string) {
 }
 
 func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
+	httpTransport := yhttp.NewTransport()
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8999")},
+		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8999")},
 	}
 
-	httpTransport := yhttp.NewTransport()
 	clientCfg := yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: yhttp.NewOutbound(
-					single.New(hostport.PeerIdentifier("http://localhost:8999"), httpTransport),
-				),
+				Unary: httpTransport.NewSingleOutbound("http://localhost:8999"),
 			},
 		},
 	}
@@ -155,9 +151,7 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: yhttp.NewOutbound(
-					single.New(hostport.PeerIdentifier("http://localhost:8998"), httpTransport),
-				),
+				Unary: httpTransport.NewSingleOutbound("http://localhost:8998"),
 			},
 		},
 	}
@@ -171,9 +165,10 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 }
 
 func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
+	httpTransport := yhttp.NewTransport()
 	serverCfg := yarpc.Config{
 		Name:     "server",
-		Inbounds: yarpc.Inbounds{yhttp.NewInbound(":8996")},
+		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8996")},
 	}
 
 	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {

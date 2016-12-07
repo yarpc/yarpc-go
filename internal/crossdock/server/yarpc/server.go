@@ -46,10 +46,11 @@ func Start() {
 		log.Fatalln("couldn't create tchannel: %v", err)
 	}
 
+	httpTransport := http.NewTransport()
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":8081"),
+			httpTransport.NewInbound(":8081"),
 			tch.NewInbound(ch).WithListenAddr(":8082"),
 		},
 	})

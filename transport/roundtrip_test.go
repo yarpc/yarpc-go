@@ -30,8 +30,6 @@ import (
 
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
@@ -100,18 +98,13 @@ type httpTransport struct{ t *testing.T }
 
 func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
 	httpTransport := http.NewTransport()
-	// TODO lifecycle
 
-	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
+	i := httpTransport.NewInbound("127.0.0.1:0")
+	i.SetRegistry(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
-	o := http.NewOutbound(
-		single.New(
-			hostport.PeerIdentifier(i.Addr().String()),
-			httpTransport,
-		),
-	)
+	o := httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", i.Addr().String()))
 	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
@@ -119,18 +112,13 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 
 func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
 	httpTransport := http.NewTransport()
-	// TODO lifecycle
 
-	i := http.NewInbound("127.0.0.1:0").WithRegistry(r)
+	i := httpTransport.NewInbound("127.0.0.1:0")
+	i.SetRegistry(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
-	o := http.NewOutbound(
-		single.New(
-			hostport.PeerIdentifier(i.Addr().String()),
-			httpTransport,
-		),
-	)
+	o := httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", i.Addr().String()))
 	require.NoError(ht.t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 	f(o)
@@ -143,7 +131,8 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
-		i := tch.NewInbound(ch).WithRegistry(r)
+		i := tch.NewInbound(ch)
+		i.SetRegistry(r)
 		require.NoError(tt.t, i.Start(), "failed to start")
 
 		defer i.Stop()
