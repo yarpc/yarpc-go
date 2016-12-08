@@ -22,14 +22,21 @@ package redis
 
 import (
 	"errors"
+	"sync"
 	"time"
 
+	"go.uber.org/atomic"
 	redis5 "gopkg.in/redis.v5"
 )
+
+var errNotStarted = errors.New("redis5client not started")
 
 type redis5Client struct {
 	addr   string
 	client *redis5.Client
+
+	started atomic.Bool
+	once    sync.Once
 }
 
 // NewRedis5Client creates a new Client implementation using gopkg.in/redis.v5
@@ -38,18 +45,28 @@ func NewRedis5Client(addr string) Client {
 }
 
 func (c *redis5Client) Start() error {
-	c.client = redis5.NewClient(
-		&redis5.Options{Addr: c.addr},
-	)
+	c.once.Do(func() {
+		c.client = redis5.NewClient(
+			&redis5.Options{Addr: c.addr},
+		)
+		c.started.Store(true)
+	})
 
 	return c.client.Ping().Err()
 }
 
 func (c *redis5Client) Stop() error {
-	return c.client.Close()
+	if c.started.Swap(false) {
+		return c.client.Close()
+	}
+	return nil
 }
 
 func (c *redis5Client) LPush(queueKey string, item []byte) error {
+	if !c.started.Load() {
+		return errNotStarted
+	}
+
 	cmd := c.client.LPush(queueKey, item)
 	if cmd.Err() != nil {
 		return errors.New("could not push item onto queue")
@@ -58,6 +75,10 @@ func (c *redis5Client) LPush(queueKey string, item []byte) error {
 }
 
 func (c *redis5Client) BRPopLPush(queueKey, processingKey string, timeout time.Duration) ([]byte, error) {
+	if !c.started.Load() {
+		return nil, errNotStarted
+	}
+
 	cmd := c.client.BRPopLPush(queueKey, processingKey, timeout)
 
 	item, _ := cmd.Bytes()
@@ -71,6 +92,10 @@ func (c *redis5Client) BRPopLPush(queueKey, processingKey string, timeout time.D
 }
 
 func (c *redis5Client) LRem(key string, item []byte) error {
+	if !c.started.Load() {
+		return errNotStarted
+	}
+
 	removed := c.client.LRem(key, 1, item).Val()
 	if removed <= 0 {
 		return errors.New("could not remove item from queue")

@@ -26,14 +26,14 @@
 //    that's acting as a queue
 //  - the inbound uses the atomic `BRPOPLPUSH` operation to dequeue items and
 //    place them in a processing list
-//  - all failures/success cause a permanent removal of an item
+//  - processing failure/success cause a permanent removal of an item
 //
 // Sample usage:
 //
 //   client-side:
 //      redisOutbound := redis.NewOutbound(
 //          redis.NewRedis5Client(redisAddr),
-//          "my-queue-key",   // where to put items
+//          "my-queue-key",   // where to enqueue items
 //      )
 //      ...
 //      dispatcher := yarpc.NewDispatcher(Config{
@@ -47,15 +47,19 @@
 //   server-side:
 //      redisInbound := redis.NewInbound(
 //          redis.NewRedis5Client(redisAddr),
-//          "my-queue-key",       // where to get items from
+//          "my-queue-key",       // where to dequeue items from
 //          "my-processing-key",  // where to put items while processing
 //          time.Second,          // wait for up to timeout, when reading queue
 //      )
 //      ...
 //      dispatcher := yarpc.NewDispatcher(Config{
-//                      ...
+//                      Name: "some-service",
 //                      Inbounds: yarpc.Inbounds{ redisInbound },
+//                      ...
 //                  })
+//
+// From here, standard Oneway RPCs made from the client to 'some-service' will
+// be transported to the server through a Redis queue.
 //
 // USE OF THIS PACKAGE SHOULD BE FOR EXPERIMENTAL PURPOSES ONLY.
 // BEHAVIOR IS EXPECTED TO CHANGE.
