@@ -26,15 +26,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/single"
 	"go.uber.org/yarpc/transport"
 
 	"github.com/stretchr/testify/assert"
@@ -69,15 +66,7 @@ func TestCallSuccess(t *testing.T) {
 	defer successServer.Close()
 
 	httpTransport := NewTransport()
-	// TODO transport lifecycle
-
-	parsedURL, _ := url.Parse(successServer.URL)
-	out := NewOutbound(
-		single.New(
-			hostport.PeerIdentifier(parsedURL.Host),
-			httpTransport,
-		),
-	)
+	out := httpTransport.NewSingleOutbound(successServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 

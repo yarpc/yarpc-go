@@ -18,23 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package single
+package peer
 
 import (
 	"context"
 
-	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/transport"
 )
 
-// Single implements the peer.Chooser interface for a single peer
+// Single implements the Chooser interface for a single peer
 type Single struct {
-	p   peer.Peer
+	p   Peer
 	err error
 }
 
-// New creates a static peer.Chooser with a single Peer
-func New(pid peer.Identifier, transport peer.Transport) *Single {
+// NewSingle creates a static Chooser with a single Peer
+func NewSingle(pid Identifier, transport Transport) *Single {
 	s := &Single{}
 	p, err := transport.RetainPeer(pid, s)
 	s.p = p
@@ -43,21 +42,21 @@ func New(pid peer.Identifier, transport peer.Transport) *Single {
 }
 
 // Choose returns the single peer
-func (s *Single) Choose(context.Context, *transport.Request) (peer.Peer, error) {
+func (s *Single) Choose(context.Context, *transport.Request) (Peer, error) {
 	return s.p, s.err
 }
 
-// NotifyStatusChanged when the Peer status changes
-func (s *Single) NotifyStatusChanged(peer.Identifier) {}
+// NotifyStatusChanged receives notifications from the transport when the peer
+// connects, disconnects, accepts a request, and so on.
+func (s *Single) NotifyStatusChanged(_ Identifier) {
+}
 
 // Start is a noop
 func (s *Single) Start() error {
-	// TODO deprecated
 	return nil
 }
 
 // Stop is a noop
 func (s *Single) Stop() error {
-	// TODO deprecated
 	return nil
 }
