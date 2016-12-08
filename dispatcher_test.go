@@ -207,9 +207,9 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Transports()
-					in.EXPECT().SetRegistry(gomock.Any())
-					in.EXPECT().Start().Return(nil)
-					in.EXPECT().Stop().Return(nil)
+					in.EXPECT().SetRegistry(gomock.Any()).Times(0)
+					in.EXPECT().Start().Times(0)
+					in.EXPECT().Stop().Times(0)
 					inbounds[i] = in
 				}
 				return inbounds
@@ -272,35 +272,37 @@ func TestStartStopFailures(t *testing.T) {
 		},
 	}
 
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-		dispatcher := NewDispatcher(Config{
-			Name:      "test",
-			Inbounds:  tt.inbounds(mockCtrl),
-			Outbounds: tt.outbounds(mockCtrl),
-		})
+			dispatcher := NewDispatcher(Config{
+				Name:      "test",
+				Inbounds:  tt.inbounds(mockCtrl),
+				Outbounds: tt.outbounds(mockCtrl),
+			})
 
-		err := dispatcher.Start()
-		if tt.wantStartErr != "" {
-			if assert.Error(t, err, "%v: expected Start() to fail", tt.desc) {
-				assert.Contains(t, err.Error(), tt.wantStartErr, tt.desc)
+			err := dispatcher.Start()
+			if tt.wantStartErr != "" {
+				if assert.Error(t, err, "%v: expected Start() to fail") {
+					assert.Contains(t, err.Error(), tt.wantStartErr)
+				}
+				return
 			}
-			continue
-		}
-		if !assert.NoError(t, err, "%v: expected Start() to succeed", tt.desc) {
-			continue
-		}
+			if !assert.NoError(t, err, "%v: expected Start() to succeed") {
+				return
+			}
 
-		err = dispatcher.Stop()
-		if tt.wantStopErr == "" {
-			assert.NoError(t, err, "%v: expected Stop() to succeed", tt.desc)
-			continue
-		}
-		if assert.Error(t, err, "%v: expected Stop() to fail", tt.desc) {
-			assert.Contains(t, err.Error(), tt.wantStopErr, tt.desc)
-		}
+			err = dispatcher.Stop()
+			if tt.wantStopErr == "" {
+				assert.NoError(t, err, "%v: expected Stop() to succeed")
+				return
+			}
+			if assert.Error(t, err, "%v: expected Stop() to fail") {
+				assert.Contains(t, err.Error(), tt.wantStopErr)
+			}
+		})
 	}
 }
 
