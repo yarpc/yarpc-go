@@ -33,6 +33,21 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
+// StartStoppable objects are used to define a common Start/Stop functionality
+// across different dispatcher objects
+type StartStoppable interface {
+	// Starts the RPC allowing it to accept and process new incoming
+	// requests.
+	//
+	// Blocks until the RPC is ready to start accepting new requests.
+	Start() error
+
+	// Stops the RPC. No new requests will be accepted.
+	//
+	// Blocks until the RPC has stopped.
+	Stop() error
+}
+
 // Dispatcher object is used to configure a YARPC application; it is used by
 // Clients to send RPCs, and by Procedures to recieve them. This object is what
 // enables an application to be transport-agnostic.
@@ -46,7 +61,7 @@ type Dispatcher interface {
 	// configuration.
 	Inbounds() Inbounds
 
-	// Starts the RPC allowing it to accept and processing new incoming
+	// Starts the RPC allowing it to accept and process new incoming
 	// requests.
 	//
 	// Blocks until the RPC is ready to start accepting new requests.
@@ -201,112 +216,6 @@ func (d dispatcher) ClientConfig(service string) transport.ClientConfig {
 	panic(noOutboundForService{Service: service})
 }
 
-func (d dispatcher) Start() error {
-	var (
-		mu                sync.Mutex
-		startedTransports []transport.Transport
-		startedInbounds   []transport.Inbound
-		startedOutbounds  []transport.Outbound
-	)
-
-	startInbound := func(i transport.Inbound) func() error {
-		return func() error {
-			if err := i.Start(); err != nil {
-				return err
-			}
-
-			mu.Lock()
-			startedInbounds = append(startedInbounds, i)
-			mu.Unlock()
-			return nil
-		}
-	}
-
-	startOutbound := func(o transport.Outbound) func() error {
-		return func() error {
-			if o == nil {
-				return nil
-			}
-
-			if err := o.Start(); err != nil {
-				return err
-			}
-
-			mu.Lock()
-			startedOutbounds = append(startedOutbounds, o)
-			mu.Unlock()
-			return nil
-		}
-	}
-
-	startTransport := func(t transport.Transport) func() error {
-		return func() error {
-			if err := t.Start(); err != nil {
-				return err
-			}
-
-			mu.Lock()
-			startedTransports = append(startedTransports, t)
-			mu.Unlock()
-			return nil
-		}
-	}
-
-	abort := func(errs []error) error {
-		// Failed to start so stop everything that was started.
-		wait := intsync.ErrorWaiter{}
-		for _, i := range startedInbounds {
-			wait.Submit(i.Stop)
-		}
-		for _, o := range startedOutbounds {
-			wait.Submit(o.Stop)
-		}
-		for _, t := range startedTransports {
-			wait.Submit(t.Stop)
-		}
-
-		if newErrors := wait.Wait(); len(newErrors) > 0 {
-			errs = append(errs, newErrors...)
-		}
-
-		return errors.ErrorGroup(errs)
-	}
-
-	// Start inbounds and outbounds in parallel
-
-	var wait intsync.ErrorWaiter
-	for _, i := range d.inbounds {
-		i.SetRegistry(d)
-		wait.Submit(startInbound(i))
-	}
-
-	// TODO record the name of the service whose outbound failed
-	for _, o := range d.outbounds {
-		wait.Submit(startOutbound(o.Unary))
-		wait.Submit(startOutbound(o.Oneway))
-	}
-
-	// Synchronize
-	errs := wait.Wait()
-	if len(errs) != 0 {
-		return abort(errs)
-	}
-
-	// Start transports
-	wait = intsync.ErrorWaiter{}
-	for _, t := range d.transports {
-		wait.Submit(startTransport(t))
-	}
-
-	// Synchronize
-	errs = wait.Wait()
-	if len(errs) != 0 {
-		return abort(errs)
-	}
-
-	return nil
-}
-
 func (d dispatcher) Register(rs []transport.Registrant) {
 	registrants := make([]transport.Registrant, 0, len(rs))
 
@@ -331,12 +240,103 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 	d.Registrar.Register(registrants)
 }
 
+// Start goes through the Transports, Outbounds and Inbounds and starts them
+// *NOTE* there can be problems if we don't start these in a particular order
+// The order should be: Transports -> Outbounds -> Inbounds
+// If the Outbounds are started before the Transports we might get a network
+// request before the Transports are ready.
+// If the Inbounds are started before the Outbounds an Inbound request might
+// hit an Outbound before that Outbound is ready to take requests
+func (d dispatcher) Start() error {
+	var (
+		mu         sync.Mutex
+		allStarted []StartStoppable
+	)
+
+	start := func(s StartStoppable) func() error {
+		return func() error {
+			if s == nil {
+				return nil
+			}
+
+			if err := s.Start(); err != nil {
+				return err
+			}
+
+			mu.Lock()
+			allStarted = append(allStarted, s)
+			mu.Unlock()
+			return nil
+		}
+	}
+
+	abort := func(errs []error) error {
+		// Failed to start so stop everything that was started.
+		wait := intsync.ErrorWaiter{}
+		for _, s := range allStarted {
+			wait.Submit(s.Stop)
+		}
+		if newErrors := wait.Wait(); len(newErrors) > 0 {
+			errs = append(errs, newErrors...)
+		}
+
+		return errors.ErrorGroup(errs)
+	}
+
+	// Start Transports
+	wait := intsync.ErrorWaiter{}
+	for _, t := range d.transports {
+		wait.Submit(start(t))
+	}
+	if errs := wait.Wait(); len(errs) != 0 {
+		return abort(errs)
+	}
+
+	// Start Outbounds
+	wait = intsync.ErrorWaiter{}
+	for _, o := range d.outbounds {
+		wait.Submit(start(o.Unary))
+		wait.Submit(start(o.Oneway))
+	}
+	if errs := wait.Wait(); len(errs) != 0 {
+		return abort(errs)
+	}
+
+	// Start Inbounds
+	wait = intsync.ErrorWaiter{}
+	for _, i := range d.inbounds {
+		i.SetRegistry(d)
+		wait.Submit(start(i))
+	}
+	if errs := wait.Wait(); len(errs) != 0 {
+		return abort(errs)
+	}
+
+	return nil
+}
+
+// Stop goes through the Transports, Outbounds and Inbounds and stops them
+// *NOTE* there can be problems if we don't stop these in a particular order
+// The order should be: Inbounds -> Outbounds -> Transports
+// If the Outbounds are stopped before the Inbounds we might get a network
+// request to a stopped Outbound from a still-going Inbound.
+// If the Transports are stopped before the Outbounds the `peers` contained in
+// the Outbound might be `deleted` from the Transports perspective and cause
+// issues
 func (d dispatcher) Stop() error {
-	var wait intsync.ErrorWaiter
+	var allErrs []error
+
+	// Stop Inbounds
+	wait := intsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
 		wait.Submit(i.Stop)
 	}
+	if errs := wait.Wait(); len(errs) > 0 {
+		allErrs = append(allErrs, errs...)
+	}
 
+	// Stop Outbounds
+	wait = intsync.ErrorWaiter{}
 	for _, o := range d.outbounds {
 		if o.Unary != nil {
 			wait.Submit(o.Unary.Stop)
@@ -345,14 +345,21 @@ func (d dispatcher) Stop() error {
 			wait.Submit(o.Oneway.Stop)
 		}
 	}
+	if errs := wait.Wait(); len(errs) > 0 {
+		allErrs = append(allErrs, errs...)
+	}
 
+	// Stop Transports
+	wait = intsync.ErrorWaiter{}
 	for _, t := range d.transports {
 		wait.Submit(t.Stop)
 	}
-
 	if errs := wait.Wait(); len(errs) > 0 {
-		return errors.ErrorGroup(errs)
+		allErrs = append(allErrs, errs...)
 	}
 
+	if len(allErrs) > 0 {
+		return errors.ErrorGroup(allErrs)
+	}
 	return nil
 }
