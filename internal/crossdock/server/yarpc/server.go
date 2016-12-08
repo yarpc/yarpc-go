@@ -22,7 +22,6 @@ package yarpc
 
 import (
 	"fmt"
-	"log"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
@@ -32,26 +31,23 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/thrifttestserver"
 	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/transport/tchannel"
 )
 
 var dispatcher yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
-	ch, err := tchannel.NewChannel("yarpc-test", nil)
-	if err != nil {
-		log.Fatalln("couldn't create tchannel: %v", err)
-	}
-
+	tchannelTransport := tchannel.NewChannelTransport(
+		tchannel.WithListenAddr(":8082"),
+		tchannel.WithServiceName("yarpc-test"),
+	)
 	httpTransport := http.NewTransport()
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
 		Inbounds: yarpc.Inbounds{
+			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":8081"),
-			tch.NewInbound(ch).WithListenAddr(":8082"),
 		},
 	})
 

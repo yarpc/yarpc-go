@@ -41,11 +41,13 @@ import (
 // and a hostPort
 var newOutbounds = []func(*tchannel.Channel, string) transport.UnaryOutbound{
 	func(ch *tchannel.Channel, hostPort string) transport.UnaryOutbound {
+		x := NewChannelTransport(WithChannel(ch))
 		ch.Peers().Add(hostPort)
-		return NewOutbound(ch)
+		return x.NewOutbound()
 	},
 	func(ch *tchannel.Channel, hostPort string) transport.UnaryOutbound {
-		return NewOutbound(ch).WithHostPort(hostPort)
+		x := NewChannelTransport(WithChannel(ch))
+		return x.NewSingleOutbound(hostPort)
 	},
 }
 

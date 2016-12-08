@@ -23,16 +23,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv"
 	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv/yarpc/keyvalueserver"
 	"go.uber.org/yarpc/transport/http"
-	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/transport/tchannel"
 )
 
 type handler struct {
@@ -60,16 +57,15 @@ func (h *handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *stri
 }
 
 func main() {
-	channel, err := tchannel.NewChannel("keyvalue", nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
+	tchannelTransport := tchannel.NewChannelTransport(
+		tchannel.WithServiceName("keyvalue"),
+		tchannel.WithListenAddr(":28941"),
+	)
 	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: yarpc.Inbounds{
-			tch.NewInbound(channel).WithListenAddr(":28941"),
+			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":24034"),
 		},
 	})
