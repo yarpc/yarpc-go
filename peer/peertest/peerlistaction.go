@@ -104,7 +104,7 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 		defer cancel()
 	}
 
-	p, err := pl.Choose(ctx, a.InputRequest)
+	p, _, err := pl.Choose(ctx, a.InputRequest)
 
 	if a.ExpectedErr != nil {
 		// Note that we're not verifying anything about ExpectedPeer here because

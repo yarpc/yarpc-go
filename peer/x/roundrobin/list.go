@@ -214,19 +214,20 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 }
 
 // Choose selects the next available peer in the round robin
-func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, error) {
+func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if !pl.isRunning() {
-		return nil, peer.ErrPeerListNotStarted("RoundRobinList")
+		return nil, nil, peer.ErrPeerListNotStarted("RoundRobinList")
 	}
 
 	for {
 		if nextPeer := pl.nextPeer(); nextPeer != nil {
 			pl.notifyPeerAvailable()
-			return nextPeer, nil
+			nextPeer.StartRequest(pl)
+			return nextPeer, pl.getOnFinishFunc(nextPeer), nil
 		}
 
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 }
@@ -250,6 +251,13 @@ func (pl *List) notifyPeerAvailable() {
 	select {
 	case pl.peerAvailableEvent <- struct{}{}:
 	default:
+	}
+}
+
+// getOnFinishFunc creates a closure that will be run at the end of the request
+func (pl *List) getOnFinishFunc(p peer.Peer) func(error) {
+	return func(_ error) {
+		p.EndRequest(pl)
 	}
 }
 

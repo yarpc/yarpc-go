@@ -190,13 +190,25 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 }
 
 func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time.Time, ttl time.Duration) (*transport.Response, error) {
-	p, err := o.getPeerForRequest(ctx, treq)
+	p, onFinish, err := o.getPeerForRequest(ctx, treq)
 	if err != nil {
 		return nil, err
 	}
-	p.StartRequest(nil)
-	defer p.EndRequest(nil)
 
+	resp, err := o.callWithPeer(ctx, treq, start, ttl, p)
+
+	// Call the onFinish method right before returning (with the error from call with peer)
+	onFinish(err)
+	return resp, err
+}
+
+func (o *Outbound) callWithPeer(
+	ctx context.Context,
+	treq *transport.Request,
+	start time.Time,
+	ttl time.Duration,
+	p *hostport.Peer,
+) (*transport.Response, error) {
 	req, err := o.createRequest(p, treq)
 	if err != nil {
 		return nil, err
@@ -247,21 +259,21 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time
 	return nil, getErrFromResponse(response)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, error) {
-	p, err := o.chooser.Choose(ctx, treq)
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(error), error) {
+	p, onFinish, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	hpPeer, ok := p.(*hostport.Peer)
 	if !ok {
-		return nil, peer.ErrInvalidPeerConversion{
+		return nil, nil, peer.ErrInvalidPeerConversion{
 			Peer:         p,
 			ExpectedType: "*hostport.Peer",
 		}
 	}
 
-	return hpPeer, nil
+	return hpPeer, onFinish, nil
 }
 
 func (o *Outbound) createRequest(p *hostport.Peer, treq *transport.Request) (*http.Request, error) {
