@@ -332,19 +332,19 @@ func TestCallWithoutStarting(t *testing.T) {
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
-		assert.Panics(t, func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-			defer cancel()
-			out.Call(
-				ctx,
-				&transport.Request{
-					Caller:    "caller",
-					Service:   "service",
-					Encoding:  raw.Encoding,
-					Procedure: "foo",
-					Body:      bytes.NewReader([]byte("sup")),
-				},
-			)
-		})
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		_, err := out.Call(
+			ctx,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "foo",
+				Body:      bytes.NewReader([]byte("sup")),
+			},
+		)
+
+		assert.Equal(t, errOutboundNotStarted, err)
 	}
 }

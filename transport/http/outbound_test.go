@@ -246,18 +246,19 @@ func TestStopMultiple(t *testing.T) {
 func TestCallWithoutStarting(t *testing.T) {
 	httpTransport := NewTransport()
 	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
-	assert.Panics(t, func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-		defer cancel()
-		out.Call(
-			ctx,
-			&transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  raw.Encoding,
-				Procedure: "foo",
-				Body:      bytes.NewReader([]byte("sup")),
-			},
-		)
-	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_, err := out.Call(
+		ctx,
+		&transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "foo",
+			Body:      bytes.NewReader([]byte("sup")),
+		},
+	)
+
+	assert.Equal(t, errOutboundNotStarted, err)
 }
