@@ -39,8 +39,8 @@ var dispatcher yarpc.Dispatcher
 // Start starts the test server that clients will make requests to
 func Start() {
 	tchannelTransport := tchannel.NewChannelTransport(
-		tchannel.WithListenAddr(":8082"),
-		tchannel.WithServiceName("yarpc-test"),
+		tchannel.ListenAddr(":8082"),
+		tchannel.ServiceName("yarpc-test"),
 	)
 	httpTransport := http.NewTransport()
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{

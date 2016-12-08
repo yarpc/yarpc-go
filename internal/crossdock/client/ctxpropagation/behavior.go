@@ -319,7 +319,7 @@ func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server
 	fatals.NotEmpty(subject, "ctxserver is required")
 
 	httpTransport := http.NewTransport()
-	tchannelTransport := tch.NewChannelTransport(tch.WithListenAddr(":8087"), tch.WithServiceName("ctxclient"))
+	tchannelTransport := tch.NewChannelTransport(tch.ListenAddr(":8087"), tch.ServiceName("ctxclient"))
 
 	var outbound transport.UnaryOutbound
 	switch trans := t.Param(params.Transport); trans {

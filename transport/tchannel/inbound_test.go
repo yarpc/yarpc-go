@@ -110,7 +110,7 @@ func TestInboundStopWithoutStarting(t *testing.T) {
 }
 
 func TestInboundInvalidAddress(t *testing.T) {
-	x := NewChannelTransport(WithServiceName("foo"), WithListenAddr("not valid"))
+	x := NewChannelTransport(ServiceName("foo"), ListenAddr("not valid"))
 	i := x.NewInbound()
 	i.SetRegistry(new(transporttest.MockRegistry))
 	assert.Nil(t, i.Start())

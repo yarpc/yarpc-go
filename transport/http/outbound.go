@@ -51,16 +51,15 @@ var (
 
 var defaultURLTemplate, _ = url.Parse("http://localhost")
 
-// NewOutbound builds a new HTTP outbound built around a peer.Chooser
-// for getting potential downstream hosts.
-// Chooser.Choose MUST return *hostport.Peer objects.
-// Chooser.Start MUST be called before Outbound.Start
-func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
-	return &Outbound{
-		started:     atomic.NewBool(false),
-		chooser:     chooser,
-		urlTemplate: defaultURLTemplate,
-		tracer:      t.tracer,
+// OutboundOption is suitable as an argument to NewOutbound
+type OutboundOption func(*Outbound)
+
+// URLTemplate specifies a template for URLs to this outbound.
+// The peer (host:port) may vary from call to call.
+// The URL template specifies the protocol and path.
+func URLTemplate(template string) OutboundOption {
+	return func(o *Outbound) {
+		o.setURLTemplate(template)
 	}
 }
 
@@ -68,26 +67,48 @@ func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 // for getting potential downstream hosts.
 // Chooser.Choose MUST return *hostport.Peer objects.
 // Chooser.Start MUST be called before Outbound.Start
-func NewOutbound(chooser peer.Chooser) *Outbound {
-	return &Outbound{
+func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
+	o := &Outbound{
+		started:     atomic.NewBool(false),
+		chooser:     chooser,
+		urlTemplate: defaultURLTemplate,
+		tracer:      t.tracer,
+	}
+	return o
+}
+
+// NewOutbound builds a new HTTP outbound built around a peer.Chooser
+// for getting potential downstream hosts.
+// Chooser.Choose MUST return *hostport.Peer objects.
+// Chooser.Start MUST be called before Outbound.Start
+func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
+	o := &Outbound{
 		started:     atomic.NewBool(false),
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      opentracing.GlobalTracer(),
 	}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
 }
 
 // NewSingleOutbound creates an outbound from a single URL (a bare host:port is
 // not sufficient).
 // This form defers to the underlying HTTP agent's peer selection and load
 // balancing, using DNS.
-func (t *Transport) NewSingleOutbound(URL string) *Outbound {
+func (t *Transport) NewSingleOutbound(URL string, opts ...OutboundOption) *Outbound {
 	parsedURL, err := url.Parse(URL)
 	if err != nil {
 		panic(err.Error())
 	}
-	return t.NewOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t)).
-		WithURLTemplate(URL)
+	o := t.NewOutbound(single.New(hostport.PeerIdentifier(parsedURL.Host), t))
+	o.setURLTemplate(URL)
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
 }
 
 // Outbound is an HTTP UnaryOutbound and OnewayOutbound
@@ -98,22 +119,15 @@ type Outbound struct {
 	tracer      opentracing.Tracer
 }
 
-// WithURLTemplate configures an alternate URL template.
+// setURLTemplate configures an alternate URL template.
 // The host:port portion of the URL template gets replaced by the chosen peer's
 // identifier for each outbound request.
-func (o *Outbound) WithURLTemplate(URL string) *Outbound {
+func (o *Outbound) setURLTemplate(URL string) {
 	parsedURL, err := url.Parse(URL)
 	if err != nil {
 		log.Fatalf("failed to configure HTTP outbound: invalid URL template %q: %s", URL, err)
 	}
 	o.urlTemplate = parsedURL
-	return o
-}
-
-// WithTracer configures a tracer for the outbound
-func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
-	o.tracer = tracer
-	return o
 }
 
 // Transports returns the outbound's HTTP transport.

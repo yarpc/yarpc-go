@@ -72,7 +72,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 	var outbound transport.UnaryOutbound
 
 	httpTransport := http.NewTransport()
-	tchannelTransport := tchannel.NewChannelTransport(tchannel.WithServiceName("yarpc-test-client"))
+	tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("yarpc-test-client"))
 
 	switch {
 	case body.Transport.HTTP != nil:

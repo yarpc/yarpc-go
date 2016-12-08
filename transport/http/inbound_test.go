@@ -110,7 +110,7 @@ func TestInboundMux(t *testing.T) {
 		w.Write([]byte("healthy"))
 	})
 
-	i := httpTransport.NewInbound(":0").WithMux("/rpc/v1", mux)
+	i := httpTransport.NewInbound(":0", Mux("/rpc/v1", mux))
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRegistry(mockCtrl)
 	i.SetRegistry(reg)
@@ -147,7 +147,7 @@ func TestInboundMux(t *testing.T) {
 		assert.Equal(t, err.Error(), "404 page not found")
 	}
 
-	o = o.WithURLTemplate("http://host:port/rpc/v1")
+	o.setURLTemplate("http://host:port/rpc/v1")
 	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 

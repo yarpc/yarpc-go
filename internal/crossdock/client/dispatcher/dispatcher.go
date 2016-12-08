@@ -47,7 +47,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 		httpTransport := http.NewTransport()
 		unaryOutbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8081", server))
 	case "tchannel":
-		tchannelTransport := tchannel.NewChannelTransport(tchannel.WithServiceName("client"))
+		tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("client"))
 		unaryOutbound = tchannelTransport.NewSingleOutbound(server + ":8082")
 	default:
 		fatals.Fail("", "unknown transport %q", trans)

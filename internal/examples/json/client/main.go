@@ -89,7 +89,7 @@ func main() {
 	flag.Parse()
 
 	httpTransport := http.NewTransport()
-	tchannelTransport := tchannel.NewChannelTransport(tchannel.WithServiceName("keyvalue-client"))
+	tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("keyvalue-client"))
 
 	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {

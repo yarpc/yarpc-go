@@ -52,9 +52,9 @@ func KeepAlive(t time.Duration) TransportOption {
 	}
 }
 
-// WithTracer configures a tracer for the transport and all its inbounds and
+// Tracer configures a tracer for the transport and all its inbounds and
 // outbounds.
-func WithTracer(tracer opentracing.Tracer) TransportOption {
+func Tracer(tracer opentracing.Tracer) TransportOption {
 	return func(c *transportConfig) {
 		c.tracer = tracer
 	}
