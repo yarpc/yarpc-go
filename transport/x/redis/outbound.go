@@ -54,6 +54,12 @@ func NewOnewayOutbound(client Client, queueKey string) *Outbound {
 	}
 }
 
+// Transports returns nil for now
+func (o *Outbound) Transports() []transport.Transport {
+	// TODO
+	return nil
+}
+
 // WithTracer configures a tracer for the outbound
 func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 	o.tracer = tracer

@@ -68,6 +68,12 @@ func NewInbound(client Client, queueKey, processingKey string, timeout time.Dura
 	}
 }
 
+// Transports returns nil for now
+func (i *Inbound) Transports() []transport.Transport {
+	// TODO
+	return nil
+}
+
 // WithTracer configures a tracer on this inbound.
 func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
 	i.tracer = tracer
