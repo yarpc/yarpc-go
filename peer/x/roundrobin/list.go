@@ -52,7 +52,11 @@ type List struct {
 	availablePeerRing  *PeerRing
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
-	started            atomic.Bool
+
+	started  atomic.Bool
+	stopped  atomic.Bool
+	stopOnce sync.Once
+	stopErr  error
 }
 
 // Update applies the additions and removals of peer Identifiers to the list
@@ -120,20 +124,21 @@ func (pl *List) addToAvailablePeers(p peer.Peer) error {
 
 // Start notifies the List that requests will start coming
 func (pl *List) Start() error {
-	if pl.started.Swap(true) {
-		return peer.ErrPeerListAlreadyStarted("RoundRobinList")
-	}
+	pl.started.Store(true)
 	return nil
 }
 
 // Stop notifies the List that requests will stop coming
 func (pl *List) Stop() error {
-	if !pl.started.Swap(false) {
-		return peer.ErrPeerListNotStarted("RoundRobinList")
-	}
-	return pl.clearPeers()
+	pl.stopOnce.Do(func() {
+		pl.stopped.Store(true)
+		pl.stopErr = pl.clearPeers()
+	})
+
+	return pl.stopErr
 }
 
+// clearPeers will release all the peers from the list
 func (pl *List) clearPeers() error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
@@ -210,7 +215,7 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 
 // Choose selects the next available peer in the round robin
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, error) {
-	if !pl.started.Load() {
+	if !pl.isRunning() {
 		return nil, peer.ErrPeerListNotStarted("RoundRobinList")
 	}
 
@@ -224,6 +229,10 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			return nil, err
 		}
 	}
+}
+
+func (pl *List) isRunning() bool {
+	return pl.started.Load() && !pl.stopped.Load()
 }
 
 // nextPeer grabs the next available peer from the PeerRing and returns it,
