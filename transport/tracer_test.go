@@ -44,7 +44,7 @@ type handler struct {
 	t      *testing.T
 }
 
-func (h handler) register(dispatcher yarpc.Dispatcher) {
+func (h handler) register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(json.Procedure("echo", h.handleEcho))
 	dispatcher.Register(json.Procedure("echoecho", h.handleEchoEcho))
 }
@@ -109,7 +109,7 @@ func (h handler) assertBaggage(ctx context.Context) {
 	assert.Equal(h.t, "knife", weapon, "baggage should propagate")
 }
 
-func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
+func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 	// TODO: Use port 0 once https://github.com/yarpc/yarpc-go/issues/381 is
 	// fixed.
 
@@ -130,7 +130,7 @@ func createHTTPDispatcher(tracer opentracing.Tracer) yarpc.Dispatcher {
 	return dispatcher
 }
 
-func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) yarpc.Dispatcher {
+func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) *yarpc.Dispatcher {
 	hp := "127.0.0.1:4040"
 
 	tchannelTransport := ytchannel.NewChannelTransport(

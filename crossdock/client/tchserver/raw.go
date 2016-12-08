@@ -34,12 +34,12 @@ import (
 	"github.com/crossdock/crossdock-go"
 )
 
-func runRaw(t crossdock.T, dispatcher yarpc.Dispatcher) {
+func runRaw(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	hello(t, dispatcher)
 	remoteTimeout(t, dispatcher)
 }
 
-func hello(t crossdock.T, dispatcher yarpc.Dispatcher) {
+func hello(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
@@ -61,7 +61,7 @@ func hello(t crossdock.T, dispatcher yarpc.Dispatcher) {
 // remoteTimeout tests if a yarpc client returns a remote timeout error behind
 // the TimeoutError interface when a remote tchannel handler returns a handler
 // timeout.
-func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
+func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 
 	headers := yarpc.NewHeaders()
@@ -87,7 +87,7 @@ func remoteTimeout(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	assert.True(form, "must be a remote handler timeout: %q", err.Error())
 }
 
-func rawCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, procedure string,
+func rawCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, procedure string,
 	token []byte) ([]byte, yarpc.CallResMeta, error) {
 	client := raw.New(dispatcher.ClientConfig(serverName))
 

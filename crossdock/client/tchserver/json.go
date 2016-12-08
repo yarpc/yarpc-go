@@ -32,7 +32,7 @@ import (
 	"github.com/crossdock/crossdock-go"
 )
 
-func runJSON(t crossdock.T, dispatcher yarpc.Dispatcher) {
+func runJSON(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
@@ -54,7 +54,7 @@ type jsonEcho struct {
 	Token string `json:"token"`
 }
 
-func jsonCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+func jsonCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
 	client := json.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

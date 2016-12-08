@@ -35,7 +35,7 @@ import (
 )
 
 // Create creates an RPC from the given parameters or fails the whole behavior.
-func Create(t crossdock.T) yarpc.Dispatcher {
+func Create(t crossdock.T) *yarpc.Dispatcher {
 	fatals := crossdock.Fatals(t)
 
 	server := t.Param(params.Server)
@@ -66,7 +66,7 @@ func Create(t crossdock.T) yarpc.Dispatcher {
 
 // CreateOnewayDispatcher returns a started dispatcher and returns the address the
 // server should call back to (ie this host)
-func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (yarpc.Dispatcher, string) {
+func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Dispatcher, string) {
 	fatals := crossdock.Fatals(t)
 
 	server := t.Param("server_oneway")

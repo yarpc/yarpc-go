@@ -36,7 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func basicDispatcher(t *testing.T) Dispatcher {
+func basicDispatcher(t *testing.T) *Dispatcher {
 	httpTransport := http.NewTransport()
 	tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("test"))
 	return NewDispatcher(Config{

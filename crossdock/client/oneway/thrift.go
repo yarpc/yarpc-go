@@ -30,7 +30,7 @@ import (
 )
 
 // Thrift starts an http oneway run using Thrift encoding
-func Thrift(t crossdock.T, dispatcher yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
+func Thrift(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 

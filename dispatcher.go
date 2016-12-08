@@ -49,31 +49,6 @@ type StartStoppable interface {
 	Stop() error
 }
 
-// Dispatcher object is used to configure a YARPC application; it is used by
-// Clients to send RPCs, and by Procedures to recieve them. This object is what
-// enables an application to be transport-agnostic.
-type Dispatcher interface {
-	transport.Registrar
-	transport.ClientConfigProvider
-
-	// Inbounds returns a copy of the list of inbounds for this RPC object.
-	//
-	// The Inbounds will be returned in the same order that was used in the
-	// configuration.
-	Inbounds() Inbounds
-
-	// Starts the RPC allowing it to accept and process new incoming
-	// requests.
-	//
-	// Blocks until the RPC is ready to start accepting new requests.
-	Start() error
-
-	// Stops the RPC. No new requests will be accepted.
-	//
-	// Blocks until the RPC has stopped.
-	Stop() error
-}
-
 // Config specifies the parameters of a new RPC constructed via New.
 type Config struct {
 	Name string
@@ -109,12 +84,12 @@ type InboundMiddleware struct {
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
-func NewDispatcher(cfg Config) Dispatcher {
+func NewDispatcher(cfg Config) *Dispatcher {
 	if cfg.Name == "" {
 		panic("a service name is required")
 	}
 
-	return dispatcher{
+	return &Dispatcher{
 		Name:              cfg.Name,
 		Registrar:         NewMapRegistry(cfg.Name),
 		inbounds:          cfg.Inbounds,
@@ -189,10 +164,10 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 	return keys
 }
 
-// dispatcher is the standard RPC implementation.
-//
-// It allows use of multiple Inbounds and Outbounds together.
-type dispatcher struct {
+// Dispatcher object is used to configure a YARPC application; it is used by
+// Clients to send RPCs, and by Procedures to recieve them. This object is what
+// enables an application to be transport-agnostic.
+type Dispatcher struct {
 	transport.Registrar
 
 	Name string
@@ -204,20 +179,31 @@ type dispatcher struct {
 	InboundMiddleware InboundMiddleware
 }
 
-func (d dispatcher) Inbounds() Inbounds {
+// Inbounds returns a copy of the list of inbounds for this RPC object.
+//
+// The Inbounds will be returned in the same order that was used in the
+// configuration.
+func (d *Dispatcher) Inbounds() Inbounds {
 	inbounds := make(Inbounds, len(d.inbounds))
 	copy(inbounds, d.inbounds)
 	return inbounds
 }
 
-func (d dispatcher) ClientConfig(service string) transport.ClientConfig {
+// ClientConfig produces a configuration object for an encoding-specific
+// outbound RPC client.
+//
+// For example, pass the returned configuration object to client.New() for any
+// generated Thrift client.
+func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 	if rs, ok := d.outbounds[service]; ok {
 		return clientconfig.MultiOutbound(d.Name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }
 
-func (d dispatcher) Register(rs []transport.Registrant) {
+// Register configures the dispatcher's registry to route inbound requests to a
+// collection of procedure handlers.
+func (d *Dispatcher) Register(rs []transport.Registrant) {
 	registrants := make([]transport.Registrant, 0, len(rs))
 
 	for _, r := range rs {
@@ -241,6 +227,11 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 	d.Registrar.Register(registrants)
 }
 
+// Start Start the RPC allowing it to accept and processing new incoming
+// requests.
+//
+// Blocks until the RPC is ready to start accepting new requests.
+//
 // Start goes through the Transports, Outbounds and Inbounds and starts them
 // *NOTE* there can be problems if we don't start these in a particular order
 // The order should be: Transports -> Outbounds -> Inbounds
@@ -248,7 +239,7 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 // request before the Transports are ready.
 // If the Inbounds are started before the Outbounds an Inbound request might
 // hit an Outbound before that Outbound is ready to take requests
-func (d dispatcher) Start() error {
+func (d *Dispatcher) Start() error {
 	var (
 		mu         sync.Mutex
 		allStarted []StartStoppable
@@ -324,7 +315,7 @@ func (d dispatcher) Start() error {
 // If the Transports are stopped before the Outbounds the `peers` contained in
 // the Outbound might be `deleted` from the Transports perspective and cause
 // issues
-func (d dispatcher) Stop() error {
+func (d *Dispatcher) Stop() error {
 	var allErrs []error
 
 	// Stop Inbounds

@@ -85,7 +85,7 @@ const (
 
 // Config configures a gauntlet run
 type Config struct {
-	Dispatcher yarpc.Dispatcher
+	Dispatcher *yarpc.Dispatcher
 
 	// Name of the outbound to which the requests will be sent
 	ServerName string

@@ -34,7 +34,7 @@ type jsonToken struct {
 }
 
 // JSON starts an http run using JSON encoding
-func JSON(t crossdock.T, dispatcher yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
+func JSON(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
