@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/serialize"
-	"go.uber.org/yarpc/transport/internal"
 
 	"github.com/opentracing/opentracing-go"
 )
@@ -166,5 +165,5 @@ func (i *Inbound) handle() error {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
-	return internal.SafelyCallOnewayHandler(ctx, spec.Oneway(), req)
+	return transport.DispatchOnewayHandler(ctx, spec.Oneway(), req)
 }

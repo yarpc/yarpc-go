@@ -187,6 +187,9 @@ v1.0.0-dev (unreleased)
 -   Introduced OpenTracing helpers for transport authors.
 -   Created the `yarpc.Serialize` package for marshalling RPC messages at rest.
     Useful for transports that persist RPC messages.
+-   Tranports have access to `DispatchOnewayHandler` and `DispatchUnaryHandler`.
+    These should be called by all `transport.Inbounds` instead of directly
+    calling handlers.
 
 v1.0.0-rc2 (2016-12-02)
 -----------------------
