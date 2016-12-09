@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
-	"go.uber.org/yarpc/transport/internal"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
@@ -162,7 +161,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	case transport.Unary:
 		treq, err = request.ValidateUnary(ctx, treq)
 		if err == nil {
-			err = internal.SafelyCallUnaryHandler(ctx, spec.Unary(), start, treq, rw)
+			err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
 		}
 
 	default:

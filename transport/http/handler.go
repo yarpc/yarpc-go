@@ -30,7 +30,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
-	"go.uber.org/yarpc/transport/internal"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -114,7 +113,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		if err != nil {
 			return err
 		}
-		err = internal.SafelyCallUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
+		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
 
 	case transport.Oneway:
 		treq, err = v.ValidateOneway(ctx)
@@ -151,7 +150,7 @@ func handleOnewayRequest(
 		// ensure the span lasts for length of the handler in case of errors
 		defer span.Finish()
 
-		err := internal.SafelyCallOnewayHandler(ctx, onewayHandler, treq)
+		err := transport.DispatchOnewayHandler(ctx, onewayHandler, treq)
 		updateSpanWithErr(span, err)
 	}()
 	return nil

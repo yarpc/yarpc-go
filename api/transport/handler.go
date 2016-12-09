@@ -20,7 +20,15 @@
 
 package transport
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"log"
+	"runtime/debug"
+	"time"
+
+	"go.uber.org/yarpc/internal/errors"
+)
 
 //go:generate mockgen -destination=transporttest/handler.go -package=transporttest go.uber.org/yarpc/api/transport UnaryHandler,OnewayHandler
 
@@ -81,4 +89,48 @@ type OnewayHandler interface {
 	//
 	// An error may be returned in case of failures.
 	HandleOneway(ctx context.Context, req *Request) error
+}
+
+// DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
+// converting them to yarpc errors. All other errors are passed trough.
+func DispatchUnaryHandler(
+	ctx context.Context,
+	h UnaryHandler,
+	start time.Time,
+	req *Request,
+	resq ResponseWriter,
+) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	err = h.Handle(ctx, req, resq)
+
+	// The handler stopped work on context deadline.
+	if err == context.DeadlineExceeded && err == ctx.Err() {
+		deadline, _ := ctx.Deadline()
+		err = errors.HandlerTimeoutError(req.Caller, req.Service,
+			req.Procedure, deadline.Sub(start))
+	}
+	return err
+}
+
+// DispatchOnewayHandler calls the oneway handler, recovering from panics as
+// errors
+func DispatchOnewayHandler(
+	ctx context.Context,
+	h OnewayHandler,
+	req *Request,
+) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Oneway handler panicked: %v\n%s", r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	return h.HandleOneway(ctx, req)
 }
