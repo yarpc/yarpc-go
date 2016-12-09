@@ -38,6 +38,7 @@ type Interface interface {
 		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		Key *string,
+		Hops *int8,
 	) (string, yarpc.CallResMeta, error)
 
 	SetValue(
@@ -45,6 +46,7 @@ type Interface interface {
 		reqMeta yarpc.CallReqMeta,
 		Key *string,
 		Value *string,
+		Hops *int8,
 	) (yarpc.CallResMeta, error)
 }
 
@@ -70,9 +72,10 @@ func (c client) GetValue(
 	ctx context.Context,
 	reqMeta yarpc.CallReqMeta,
 	_Key *string,
+	_Hops *int8,
 ) (success string, resMeta yarpc.CallResMeta, err error) {
 
-	args := kv.KeyValue_GetValue_Helper.Args(_Key)
+	args := kv.KeyValue_GetValue_Helper.Args(_Key, _Hops)
 
 	var body wire.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
@@ -94,9 +97,10 @@ func (c client) SetValue(
 	reqMeta yarpc.CallReqMeta,
 	_Key *string,
 	_Value *string,
+	_Hops *int8,
 ) (resMeta yarpc.CallResMeta, err error) {
 
-	args := kv.KeyValue_SetValue_Helper.Args(_Key, _Value)
+	args := kv.KeyValue_SetValue_Helper.Args(_Key, _Value, _Hops)
 
 	var body wire.Value
 	body, resMeta, err = c.c.Call(ctx, reqMeta, args)

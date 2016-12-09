@@ -32,11 +32,12 @@ import (
 type KeyValue_SetValue_Args struct {
 	Key   *string `json:"key,omitempty"`
 	Value *string `json:"value,omitempty"`
+	Hops  *int8   `json:"hops,omitempty"`
 }
 
 func (v *KeyValue_SetValue_Args) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -55,6 +56,14 @@ func (v *KeyValue_SetValue_Args) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.Hops != nil {
+		w, err = wire.NewValueI8(*(v.Hops)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -82,13 +91,22 @@ func (v *KeyValue_SetValue_Args) FromWire(w wire.Value) error {
 					return err
 				}
 			}
+		case 3:
+			if field.Value.Type() == wire.TI8 {
+				var x int8
+				x, err = field.Value.GetI8(), error(nil)
+				v.Hops = &x
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
 }
 
 func (v *KeyValue_SetValue_Args) String() string {
-	var fields [2]string
+	var fields [3]string
 	i := 0
 	if v.Key != nil {
 		fields[i] = fmt.Sprintf("Key: %v", *(v.Key))
@@ -96,6 +114,10 @@ func (v *KeyValue_SetValue_Args) String() string {
 	}
 	if v.Value != nil {
 		fields[i] = fmt.Sprintf("Value: %v", *(v.Value))
+		i++
+	}
+	if v.Hops != nil {
+		fields[i] = fmt.Sprintf("Hops: %v", *(v.Hops))
 		i++
 	}
 	return fmt.Sprintf("KeyValue_SetValue_Args{%v}", strings.Join(fields[:i], ", "))
@@ -110,15 +132,15 @@ func (v *KeyValue_SetValue_Args) EnvelopeType() wire.EnvelopeType {
 }
 
 var KeyValue_SetValue_Helper = struct {
-	Args           func(key *string, value *string) *KeyValue_SetValue_Args
+	Args           func(key *string, value *string, hops *int8) *KeyValue_SetValue_Args
 	IsException    func(error) bool
 	WrapResponse   func(error) (*KeyValue_SetValue_Result, error)
 	UnwrapResponse func(*KeyValue_SetValue_Result) error
 }{}
 
 func init() {
-	KeyValue_SetValue_Helper.Args = func(key *string, value *string) *KeyValue_SetValue_Args {
-		return &KeyValue_SetValue_Args{Key: key, Value: value}
+	KeyValue_SetValue_Helper.Args = func(key *string, value *string, hops *int8) *KeyValue_SetValue_Args {
+		return &KeyValue_SetValue_Args{Key: key, Value: value, Hops: hops}
 	}
 	KeyValue_SetValue_Helper.IsException = func(err error) bool {
 		switch err.(type) {

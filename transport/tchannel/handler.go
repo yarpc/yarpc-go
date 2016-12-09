@@ -138,7 +138,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
 	}
 
-	tr := trace.New(treq.Service, treq.Procedure)
+	tr := trace.New(treq.Service+" (inbound)", treq.Procedure)
 	tr.LazyPrintf("transport: tchannel")
 	tr.LazyPrintf("caller: %s", treq.Caller)
 	tr.LazyPrintf("encoding: %s", treq.Encoding)

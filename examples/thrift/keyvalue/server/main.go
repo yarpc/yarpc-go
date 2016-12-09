@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
+	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
 	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -36,10 +37,17 @@ import (
 type handler struct {
 	sync.RWMutex
 
-	items map[string]string
+	items  map[string]string
+	client keyvalueclient.Interface
 }
 
-func (h *handler) GetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string) (string, yarpc.ResMeta, error) {
+func (h *handler) GetValue(ctx context.Context, reqMeta yarpc.ReqMeta,
+	key *string, hopcnt *int8) (string, yarpc.ResMeta, error) {
+	if hopcnt != nil && *hopcnt > 0 {
+		*hopcnt--
+		value, _, err := h.client.GetValue(ctx, nil, key, hopcnt)
+		return value, nil, err
+	}
 	h.RLock()
 	defer h.RUnlock()
 
@@ -50,7 +58,14 @@ func (h *handler) GetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *stri
 	return "", nil, &kv.ResourceDoesNotExist{Key: *key}
 }
 
-func (h *handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string, value *string) (yarpc.ResMeta, error) {
+func (h *handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta,
+	key *string, value *string, hopcnt *int8) (yarpc.ResMeta, error) {
+	if hopcnt != nil && *hopcnt > 0 {
+		*hopcnt--
+		_, err := h.client.SetValue(ctx, nil, key, value, hopcnt)
+		return nil, err
+	}
+
 	h.Lock()
 	h.items[*key] = *value
 	h.Unlock()
@@ -64,8 +79,8 @@ func main() {
 	)
 	httpTransport := http.NewTransport()
 
-	outboundhttp := httpTransport.NewSingleOutbound("http://127.0.0.1:2424")
-	outboundtch := tchannelTransport.NewSingleOutbound("localhost:4242")
+	outboundhttp := httpTransport.NewSingleOutbound("http://127.0.0.1:24034")
+	outboundtch := tchannelTransport.NewSingleOutbound("localhost:28941")
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
@@ -74,10 +89,10 @@ func main() {
 			httpTransport.NewInbound(":24034"),
 		},
 		Outbounds: yarpc.Outbounds{
-			"keyvalue1": {
+			"keyvalue_http": {
 				Unary: outboundhttp,
 			},
-			"keyvalue2": {
+			"keyvalue": {
 				Unary: outboundtch,
 			},
 		},
@@ -85,7 +100,8 @@ func main() {
 
 	yarpc.AddDebugPagesFor(dispatcher)
 
-	handler := handler{items: make(map[string]string)}
+	client := keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
+	handler := handler{items: make(map[string]string), client: client}
 	dispatcher.Register(keyvalueserver.New(&handler))
 
 	if err := dispatcher.Start(); err != nil {

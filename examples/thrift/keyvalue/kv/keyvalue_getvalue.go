@@ -31,12 +31,13 @@ import (
 )
 
 type KeyValue_GetValue_Args struct {
-	Key *string `json:"key,omitempty"`
+	Key  *string `json:"key,omitempty"`
+	Hops *int8   `json:"hops,omitempty"`
 }
 
 func (v *KeyValue_GetValue_Args) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -47,6 +48,14 @@ func (v *KeyValue_GetValue_Args) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.Hops != nil {
+		w, err = wire.NewValueI8(*(v.Hops)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -65,16 +74,29 @@ func (v *KeyValue_GetValue_Args) FromWire(w wire.Value) error {
 					return err
 				}
 			}
+		case 2:
+			if field.Value.Type() == wire.TI8 {
+				var x int8
+				x, err = field.Value.GetI8(), error(nil)
+				v.Hops = &x
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
 }
 
 func (v *KeyValue_GetValue_Args) String() string {
-	var fields [1]string
+	var fields [2]string
 	i := 0
 	if v.Key != nil {
 		fields[i] = fmt.Sprintf("Key: %v", *(v.Key))
+		i++
+	}
+	if v.Hops != nil {
+		fields[i] = fmt.Sprintf("Hops: %v", *(v.Hops))
 		i++
 	}
 	return fmt.Sprintf("KeyValue_GetValue_Args{%v}", strings.Join(fields[:i], ", "))
@@ -89,15 +111,15 @@ func (v *KeyValue_GetValue_Args) EnvelopeType() wire.EnvelopeType {
 }
 
 var KeyValue_GetValue_Helper = struct {
-	Args           func(key *string) *KeyValue_GetValue_Args
+	Args           func(key *string, hops *int8) *KeyValue_GetValue_Args
 	IsException    func(error) bool
 	WrapResponse   func(string, error) (*KeyValue_GetValue_Result, error)
 	UnwrapResponse func(*KeyValue_GetValue_Result) (string, error)
 }{}
 
 func init() {
-	KeyValue_GetValue_Helper.Args = func(key *string) *KeyValue_GetValue_Args {
-		return &KeyValue_GetValue_Args{Key: key}
+	KeyValue_GetValue_Helper.Args = func(key *string, hops *int8) *KeyValue_GetValue_Args {
+		return &KeyValue_GetValue_Args{Key: key, Hops: hops}
 	}
 	KeyValue_GetValue_Helper.IsException = func(err error) bool {
 		switch err.(type) {

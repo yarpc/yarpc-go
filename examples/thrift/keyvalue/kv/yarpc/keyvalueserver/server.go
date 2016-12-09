@@ -39,6 +39,7 @@ type Interface interface {
 		ctx context.Context,
 		reqMeta yarpc.ReqMeta,
 		Key *string,
+		Hops *int8,
 	) (string, yarpc.ResMeta, error)
 
 	SetValue(
@@ -46,6 +47,7 @@ type Interface interface {
 		reqMeta yarpc.ReqMeta,
 		Key *string,
 		Value *string,
+		Hops *int8,
 	) (yarpc.ResMeta, error)
 }
 
@@ -64,8 +66,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{},
 		Signatures: map[string]string{
-			"getValue": "GetValue(Key *string) (string)",
-			"setValue": "SetValue(Key *string, Value *string)",
+			"getValue": "GetValue(Key *string, Hops *int8) (string)",
+			"setValue": "SetValue(Key *string, Value *string, Hops *int8)",
 		},
 	}
 	return thrift.BuildRegistrants(service, opts...)
@@ -87,7 +89,7 @@ func (h handler) GetValue(
 		tr.LazyPrintf("request: %s", &args)
 	}
 
-	success, resMeta, err := h.impl.GetValue(ctx, reqMeta, args.Key)
+	success, resMeta, err := h.impl.GetValue(ctx, reqMeta, args.Key, args.Hops)
 
 	hadError := err != nil
 	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, err)
@@ -119,7 +121,7 @@ func (h handler) SetValue(
 		tr.LazyPrintf("request: %s", &args)
 	}
 
-	resMeta, err := h.impl.SetValue(ctx, reqMeta, args.Key, args.Value)
+	resMeta, err := h.impl.SetValue(ctx, reqMeta, args.Key, args.Value, args.Hops)
 
 	hadError := err != nil
 	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(err)

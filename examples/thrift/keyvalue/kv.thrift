@@ -4,7 +4,7 @@ exception ResourceDoesNotExist {
 }
 
 service KeyValue {
-    string getValue(1: string key)
+    string getValue(1: string key, 2: optional i8 hops)
         throws (1: ResourceDoesNotExist doesNotExist)
-    void setValue(1: string key, 2: string value)
+    void setValue(1: string key, 2: string value, 3: optional i8 hops)
 }

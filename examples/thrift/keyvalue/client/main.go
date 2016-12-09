@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,9 +68,9 @@ func main() {
 				Unary: outbound,
 			},
 		},
-		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: cache,
-		},
+		//OutboundMiddleware: yarpc.OutboundMiddleware{
+		//Unary: cache,
+		//},
 	})
 	if err := dispatcher.Start(); err != nil {
 		log.Fatalf("failed to start Dispatcher: %v", err)
@@ -93,16 +94,25 @@ func main() {
 		switch cmd {
 
 		case "get":
-			if len(args) != 1 {
-				fmt.Println("usage: get key")
+			if len(args) < 1 || len(args) > 2 {
+				fmt.Println("usage: get key [hopcnt]")
 				continue
 			}
 			key := args[0]
+			var hopcnt int8
+			if len(args) == 2 {
+				fmt.Printf("-> '%s'", args[1])
+				if v, err := strconv.ParseInt(args[1], 10, 8); err == nil {
+					hopcnt = int8(v)
+					fmt.Printf("#> '%d'", hopcnt)
+				}
+			}
 
 			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			defer cancel()
 
-			if value, _, err := client.GetValue(ctx, nil, &key); err != nil {
+			fmt.Printf("hopcnt %d\n", hopcnt)
+			if value, _, err := client.GetValue(ctx, nil, &key, &hopcnt); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -110,17 +120,23 @@ func main() {
 			continue
 
 		case "set":
-			if len(args) != 2 {
-				fmt.Println("usage: set key value")
+			if len(args) < 2 || len(args) > 3 {
+				fmt.Println("usage: set key value [hopcnt]")
 				continue
 			}
 			key, value := args[0], args[1]
+			var hopcnt int8
+			if len(args) == 3 {
+				if v, err := strconv.ParseInt(args[2], 10, 8); err == nil {
+					hopcnt = int8(v)
+				}
+			}
 
 			cache.Invalidate()
 			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			defer cancel()
 
-			if _, err := client.SetValue(ctx, nil, &key, &value); err != nil {
+			if _, err := client.SetValue(ctx, nil, &key, &value, &hopcnt); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue

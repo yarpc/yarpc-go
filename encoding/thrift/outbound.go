@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"golang.org/x/net/trace"
+
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
@@ -129,6 +131,15 @@ func (c thriftClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBo
 	if err != nil {
 		return wire.Value{}, nil, err
 	}
+
+	tr := trace.New(treq.Service+" (outbound)", treq.Procedure)
+	tr.LazyPrintf("caller: %s", treq.Caller)
+	tr.LazyPrintf("encoding: %s", treq.Encoding)
+	for k, v := range treq.Headers.Items() {
+		tr.LazyPrintf("request header - %s: %s", k, v)
+	}
+	ctx = trace.NewContext(ctx, tr)
+	defer tr.Finish()
 
 	tres, err := out.Call(ctx, treq)
 	if err != nil {

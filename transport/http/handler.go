@@ -201,7 +201,7 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 	ext.PeerService.Set(span, treq.Caller)
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	tr := trace.New(treq.Service, treq.Procedure)
+	tr := trace.New(treq.Service+" (inbound)", treq.Procedure)
 	tr.LazyPrintf("transport: http")
 	tr.LazyPrintf("caller: %s", treq.Caller)
 	tr.LazyPrintf("encoding: %s", treq.Encoding)
