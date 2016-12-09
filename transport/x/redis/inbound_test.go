@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/transport/x/redis/redistest"
 
 	"github.com/golang/mock/gomock"

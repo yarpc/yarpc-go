@@ -55,7 +55,10 @@ func (m MapRegistry) Register(rs []transport.Registrant) {
 			panic("Expected procedure name not to be empty string in registration")
 		}
 
-		sp := transport.ServiceProcedure{r.Service, r.Procedure}
+		sp := transport.ServiceProcedure{
+			Service:   r.Service,
+			Procedure: r.Procedure,
+		}
 		m.entries[sp] = r.HandlerSpec
 	}
 }
@@ -78,7 +81,11 @@ func (m MapRegistry) ChooseProcedure(service, procedure string) (transport.Handl
 		service = m.defaultService
 	}
 
-	if spec, ok := m.entries[transport.ServiceProcedure{service, procedure}]; ok {
+	sp := transport.ServiceProcedure{
+		Service:   service,
+		Procedure: procedure,
+	}
+	if spec, ok := m.entries[sp]; ok {
 		return spec, nil
 	}
 

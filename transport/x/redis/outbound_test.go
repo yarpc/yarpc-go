@@ -26,8 +26,8 @@ import (
 	"sync"
 	"testing"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/x/redis/redistest"
 
 	"github.com/golang/mock/gomock"
