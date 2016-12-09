@@ -149,7 +149,6 @@ func (i *Inbound) Debug() debug.Inbound {
 	return debug.Inbound{
 		Transport: "http",
 		Endpoint:  i.Addr().String(),
-		Peer:      "N/A",
 		State:     state,
 	}
 }

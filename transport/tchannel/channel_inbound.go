@@ -97,7 +97,6 @@ func (i *ChannelInbound) Debug() debug.Inbound {
 	return debug.Inbound{
 		Transport: "tchannel",
 		Endpoint:  i.transport.ListenAddr(),
-		Peer:      c.PeerInfo().PeerInfo.String(),
 		State:     c.State().String(),
 	}
 }

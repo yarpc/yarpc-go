@@ -19,14 +19,19 @@ type Procedure struct {
 type Inbound struct {
 	Transport string
 	Endpoint  string
-	Peer      string
 	State     string
 }
 
 type Outbound struct {
 	Name      string
+	Flavor    string
 	Transport string
 	Endpoint  string
-	Peer      string
 	State     string
+	Peers     []Peer
+}
+
+type Peer struct {
+	Identifier string
+	Status     string
 }

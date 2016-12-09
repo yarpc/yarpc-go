@@ -25,6 +25,8 @@ import (
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/debug"
+	"go.uber.org/yarpc/transport"
 )
 
 // UnaryChain combines a series of `UnaryOutbound`s into a single `UnaryOutbound`.
@@ -123,4 +125,8 @@ func (x onewayChainExec) CallOneway(ctx context.Context, request *transport.Requ
 	next := x.Chain[0]
 	x.Chain = x.Chain[1:]
 	return next.CallOneway(ctx, request, x)
+}
+
+func (x onewayChainExec) Debug() debug.Outbound {
+	return x.Final.Debug()
 }

@@ -20,7 +20,11 @@
 
 package transport
 
-import "context"
+import (
+	"context"
+
+	"go.uber.org/yarpc/internal/debug"
+)
 
 //go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/api/transport UnaryOutbound,OnewayOutbound
 
@@ -60,6 +64,8 @@ type UnaryOutbound interface {
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
 	Call(ctx context.Context, request *Request) (*Response, error)
+
+	Debug() debug.Outbound
 }
 
 // OnewayOutbound is a transport that knows how to send oneway requests for
@@ -74,6 +80,8 @@ type OnewayOutbound interface {
 	// MAY panic if called without calling Start(). This MUST be safe to call
 	// concurrently.
 	CallOneway(ctx context.Context, request *Request) (Ack, error)
+
+	Debug() debug.Outbound
 }
 
 // Outbounds encapsulates outbound types for a service

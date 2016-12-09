@@ -63,11 +63,23 @@ func main() {
 		tchannel.ListenAddr(":28941"),
 	)
 	httpTransport := http.NewTransport()
+
+	outboundhttp := httpTransport.NewSingleOutbound("http://127.0.0.1:2424")
+	outboundtch := tchannelTransport.NewSingleOutbound("localhost:4242")
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
 		Inbounds: yarpc.Inbounds{
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":24034"),
+		},
+		Outbounds: yarpc.Outbounds{
+			"keyvalue1": {
+				Unary: outboundhttp,
+			},
+			"keyvalue2": {
+				Unary: outboundtch,
+			},
 		},
 	})
 

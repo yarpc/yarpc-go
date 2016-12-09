@@ -33,6 +33,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/debug"
 	"go.uber.org/yarpc/internal/errors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -374,4 +375,17 @@ func getErrFromResponse(response *http.Response) error {
 	}
 
 	return errors.RemoteUnexpectedError(message)
+}
+
+func (o *Outbound) Debug() debug.Outbound {
+	state := "Stopped"
+	if o.started.Load() {
+		state = "Started"
+	}
+	return debug.Outbound{
+		Transport: "http",
+		Endpoint:  o.urlTemplate.String(),
+		State:     state,
+		Peers:     o.chooser.Debug(),
+	}
 }

@@ -22,9 +22,12 @@ package peer
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/debug"
+	"go.uber.org/yarpc/transport"
 )
 
 // Single implements the Chooser interface for a single peer
@@ -65,4 +68,24 @@ func (s *Single) Start() error {
 // Stop is a noop
 func (s *Single) Stop() error {
 	return nil
+}
+
+func (s *Single) Debug() []debug.Peer {
+	st := s.p.Status()
+	var constate string
+	switch st.ConnectionStatus {
+	case Unavailable:
+		constate = "Unavailable"
+	case Connecting:
+		constate = "Connecting"
+	case Available:
+		constate = "Available"
+	}
+	status := fmt.Sprintf("%s, %d connections", constate, st.PendingRequestCount)
+	return []debug.Peer{
+		{
+			Identifier: s.p.Identifier(),
+			Status:     status,
+		},
+	}
 }

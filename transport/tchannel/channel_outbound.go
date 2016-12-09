@@ -25,6 +25,7 @@ import (
 	"io"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/debug"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 
@@ -164,6 +165,25 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	return &transport.Response{Headers: headers, Body: resBody}, nil
+}
+
+func (o *ChannelOutbound) Debug() debug.Outbound {
+	state := "Stopped"
+	if o.started.Load() {
+		state = "Started"
+	}
+	return debug.Outbound{
+		Transport: "tchannel",
+		Endpoint:  o.transport.addr,
+		State:     state,
+		Peers: []debug.Peer{
+			{
+				//Identifier: o.channel.PeerInfo().String(),
+				Identifier: o.transport.Channel().PeerInfo().String(),
+				Status:     o.channel.State().String(),
+			},
+		},
+	}
 }
 
 func writeBody(body io.Reader, call *tchannel.OutboundCall) error {

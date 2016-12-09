@@ -24,6 +24,8 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/debug"
+	"go.uber.org/yarpc/transport"
 )
 
 //go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List
@@ -38,6 +40,8 @@ type Chooser interface {
 
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
 	Choose(context.Context, *transport.Request) (peer Peer, onFinish func(error), err error)
+
+	Debug() []debug.Peer
 }
 
 // List listens to adds and removes of Peers from a PeerProvider

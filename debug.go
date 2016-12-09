@@ -41,11 +41,27 @@ func (d *dispatcher) Debug() debug.Dispatcher {
 	for _, i := range d.inbounds {
 		inbounds = append(inbounds, i.Debug())
 	}
+	var outbounds []debug.Outbound
+	for name, o := range d.outbounds {
+		if o.Oneway != nil {
+			d := o.Oneway.Debug()
+			d.Name = name
+			d.Flavor = "oneway"
+			outbounds = append(outbounds, d)
+		}
+		if o.Unary != nil {
+			d := o.Unary.Debug()
+			d.Name = name
+			d.Flavor = "unary"
+			outbounds = append(outbounds, d)
+		}
+	}
 	return debug.Dispatcher{
 		Name:       d.Name,
 		ID:         fmt.Sprintf("%p", d),
 		Procedures: d.DebugProcedures(),
 		Inbounds:   inbounds,
+		Outbounds:  outbounds,
 	}
 }
 
@@ -119,39 +135,45 @@ const pageHTML = `
 		</tr>
 		{{end}}
 	</table>
-	<h4>Inbound</h4>
+	<h4>Inbounds</h4>
 	<table>
 		<tr>
 			<th>Transport</th>
 			<th>Endpoint</th>
-			<th>Peer</th>
 			<th>State</th>
 		</tr>
 		{{range .Inbounds}}
 		<tr>
 			<td>{{.Transport}}</td>
 			<td>{{.Endpoint}}</td>
-			<td>{{.Peer}}</td>
 			<td>{{.State}}</td>
 		</tr>
 		{{end}}
 	</table>
-	<h4>Outbound</h4>
+	<h4>Outbounds</h4>
 	<table>
 		<tr>
 			<th>Name</th>
+			<th>Flavor</th>
 			<th>Transport</th>
 			<th>Endpoint</th>
-			<th>Peer</th>
 			<th>State</th>
+			<th>Peers</th>
 		</tr>
 		{{range .Outbounds}}
 		<tr>
 			<td>{{.Name}}</td>
+			<td>{{.Flavor}}</td>
 			<td>{{.Transport}}</td>
 			<td>{{.Endpoint}}</td>
-			<td>{{.Peer}}</td>
 			<td>{{.State}}</td>
+			<td>
+			{{range .Peers}}
+				<ul>
+					<li>{{.Identifier}} ({{.Status}})</li>
+				</ul>
+			{{end}}
+			</td>
 		</tr>
 		{{end}}
 	</table>
