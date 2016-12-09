@@ -174,15 +174,8 @@ func (o *ChannelOutbound) Debug() debug.Outbound {
 	}
 	return debug.Outbound{
 		Transport: "tchannel",
-		Endpoint:  o.transport.addr,
+		Endpoint:  o.addr,
 		State:     state,
-		Peers: []debug.Peer{
-			{
-				//Identifier: o.channel.PeerInfo().String(),
-				Identifier: o.transport.Channel().PeerInfo().String(),
-				Status:     o.channel.State().String(),
-			},
-		},
 	}
 }
 
