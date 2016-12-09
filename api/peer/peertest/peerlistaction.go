@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/peer"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -21,7 +21,7 @@
 package hostport
 
 import (
-	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/api/peer"
 
 	"go.uber.org/atomic"
 )

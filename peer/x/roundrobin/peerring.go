@@ -23,7 +23,7 @@ package roundrobin
 import (
 	"container/ring"
 
-	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/api/peer"
 )
 
 // NewPeerRing creates a new PeerRing with an initial capacity

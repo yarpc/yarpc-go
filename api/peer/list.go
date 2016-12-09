@@ -20,20 +20,30 @@
 
 package peer
 
-//go:generate mockgen -destination=peertest/transport.go -package=peertest go.uber.org/yarpc/peer Transport,Subscriber
+import (
+	"context"
 
-// Subscriber listens to changes of a Peer over time.
-type Subscriber interface {
-	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)
-	NotifyStatusChanged(Identifier)
+	"go.uber.org/yarpc/api/transport"
+)
+
+//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List
+
+// Chooser is a collection of Peers.  Outbounds request peers from the peer.Chooser to determine where to send requests
+type Chooser interface {
+	// Notify the PeerList that it will start receiving requests
+	Start() error
+
+	// Notify the PeerList that it will stop receiving requests
+	Stop() error
+
+	// Choose a Peer for the next call, block until a peer is available (or timeout)
+	Choose(context.Context, *transport.Request) (peer Peer, onFinish func(error), err error)
 }
 
-// Transport manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific
-// PeerIdentifier and the Transport has the ability to create a new Peer or return an existing one.
-type Transport interface {
-	// Get or create a Peer for the Subscriber
-	RetainPeer(Identifier, Subscriber) (Peer, error)
-
-	// Unallocate a peer from the Subscriber
-	ReleasePeer(Identifier, Subscriber) error
+// List listens to adds and removes of Peers from a PeerProvider
+// A Chooser will implement the PeerChangeListener interface in order to receive
+// updates to the list of Peers it is keeping track of
+type List interface {
+	// Update performs the additions and removals to the Peer List
+	Update(additions, removals []Identifier) error
 }
