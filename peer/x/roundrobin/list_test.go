@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/peer"
+	. "go.uber.org/yarpc/api/peer/peertest"
 	yerrors "go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/peer"
-	. "go.uber.org/yarpc/peer/peertest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

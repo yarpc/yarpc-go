@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/opentracing/opentracing-go"

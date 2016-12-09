@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/api/peer"
+	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/peer/hostport"
-	. "go.uber.org/yarpc/peer/peertest"
 
 	"github.com/crossdock/crossdock-go/assert"
 	"github.com/golang/mock/gomock"

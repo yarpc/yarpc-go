@@ -21,7 +21,7 @@
 package peertest
 
 import (
-	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/api/peer"
 
 	"github.com/golang/mock/gomock"
 )

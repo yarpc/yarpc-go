@@ -20,9 +20,7 @@
 
 package peer
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // ErrPeerHasNoReferenceToSubscriber is called when a Peer is expected
 // to operate on a PeerSubscriber it has no reference to

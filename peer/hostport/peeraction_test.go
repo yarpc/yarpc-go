@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/api/peer"
 
 	"github.com/stretchr/testify/assert"
 )
