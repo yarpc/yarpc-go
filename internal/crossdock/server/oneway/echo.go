@@ -27,10 +27,10 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 )
 

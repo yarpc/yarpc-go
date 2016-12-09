@@ -21,31 +21,31 @@
 package yarpc
 
 import (
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
-	"go.uber.org/yarpc/transport"
 )
 
 // UnaryOutboundMiddleware combines the given collection of unary outbound
 // middleware in-order into a single UnaryOutboundMiddleware.
-func UnaryOutboundMiddleware(middleware ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
-	return outboundmiddleware.UnaryChain(middleware...)
+func UnaryOutboundMiddleware(mw ...middleware.UnaryOutboundMiddleware) middleware.UnaryOutboundMiddleware {
+	return outboundmiddleware.UnaryChain(mw...)
 }
 
 // UnaryInboundMiddleware combines the given collection of unary inbound
 // middleware in-order into a single UnaryInboundMiddleware.
-func UnaryInboundMiddleware(middleware ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
-	return inboundmiddleware.UnaryChain(middleware...)
+func UnaryInboundMiddleware(mw ...middleware.UnaryInboundMiddleware) middleware.UnaryInboundMiddleware {
+	return inboundmiddleware.UnaryChain(mw...)
 }
 
 // OnewayOutboundMiddleware combines the given collection of unary outbound
 // middleware in-order into a single OnewayOutboundMiddleware.
-func OnewayOutboundMiddleware(middleware ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
-	return outboundmiddleware.OnewayChain(middleware...)
+func OnewayOutboundMiddleware(mw ...middleware.OnewayOutboundMiddleware) middleware.OnewayOutboundMiddleware {
+	return outboundmiddleware.OnewayChain(mw...)
 }
 
 // OnewayInboundMiddleware combines the given collection of unary inbound
 // middleware in-order into a single OnewayInboundMiddleware.
-func OnewayInboundMiddleware(middleware ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
-	return inboundmiddleware.OnewayChain(middleware...)
+func OnewayInboundMiddleware(mw ...middleware.OnewayInboundMiddleware) middleware.OnewayInboundMiddleware {
+	return inboundmiddleware.OnewayChain(mw...)
 }

@@ -28,8 +28,8 @@ import (
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/serialize/internal"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
 )

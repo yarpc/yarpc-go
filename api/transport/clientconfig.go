@@ -20,7 +20,7 @@
 
 package transport
 
-//go:generate mockgen -destination=transporttest/clientconfig.go -package=transporttest go.uber.org/yarpc/transport ClientConfig,ClientConfigProvider
+//go:generate mockgen -destination=transporttest/clientconfig.go -package=transporttest go.uber.org/yarpc/api/transport ClientConfig,ClientConfigProvider
 
 // ClientConfigProvider builds ClientConfigs from the current service to other services.
 type ClientConfigProvider interface {

@@ -26,9 +26,9 @@ import (
 	"encoding/json"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
-	"go.uber.org/yarpc/transport"
 )
 
 // Client makes JSON requests to a single service.

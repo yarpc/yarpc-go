@@ -28,12 +28,13 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/transport"
+	trans "go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -181,7 +182,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 			requestBody:   "foo",
 			responseError: errors.HandlerUnexpectedError(fmt.Errorf("great sadness")),
 			wantError: func(err error) {
-				assert.True(t, transport.IsUnexpectedError(err), err)
+				assert.True(t, trans.IsUnexpectedError(err), err)
 				assert.Equal(t, "UnexpectedError: great sadness", err.Error())
 			},
 		},
@@ -189,7 +190,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 			requestBody:   "bar",
 			responseError: errors.HandlerBadRequestError(fmt.Errorf("missing service name")),
 			wantError: func(err error) {
-				assert.True(t, transport.IsBadRequestError(err))
+				assert.True(t, trans.IsBadRequestError(err))
 				assert.Equal(t, "BadRequest: missing service name", err.Error())
 			},
 		},
@@ -199,7 +200,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
 			),
 			wantError: func(err error) {
-				assert.True(t, transport.IsUnexpectedError(err))
+				assert.True(t, trans.IsUnexpectedError(err))
 				assert.Equal(t,
 					`UnexpectedError: error for procedure "hello" of service "testService": `+
 						`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
@@ -212,7 +213,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`BadRequest: unrecognized procedure "echo" for service "derp"`,
 			),
 			wantError: func(err error) {
-				assert.True(t, transport.IsUnexpectedError(err))
+				assert.True(t, trans.IsUnexpectedError(err))
 				assert.Equal(t,
 					`UnexpectedError: error for procedure "hello" of service "testService": `+
 						`BadRequest: unrecognized procedure "echo" for service "derp"`,

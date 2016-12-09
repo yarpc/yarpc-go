@@ -20,7 +20,7 @@
 
 package registrytest
 
-import "go.uber.org/yarpc/transport"
+import "go.uber.org/yarpc/api/transport"
 
 // Criterion is an argument that adds criteria to a transport request and
 // context matcher.

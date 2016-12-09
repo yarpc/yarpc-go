@@ -26,9 +26,9 @@ import (
 	"reflect"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
-	"go.uber.org/yarpc/transport"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level

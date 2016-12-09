@@ -18,9 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package middleware
 
-import "context"
+import (
+	"context"
+
+	"go.uber.org/yarpc/api/transport"
+)
 
 // UnaryOutboundMiddleware defines transport-level middleware for
 // `UnaryOutbound`s.
@@ -41,7 +45,7 @@ import "context"
 // UnaryOutboundMiddleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type UnaryOutboundMiddleware interface {
-	Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error)
+	Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error)
 }
 
 // NopUnaryOutboundMiddleware is a unary outbound middleware that does not do
@@ -50,7 +54,7 @@ var NopUnaryOutboundMiddleware UnaryOutboundMiddleware = nopUnaryOutboundMiddlew
 
 // ApplyUnaryOutboundMiddleware applies the given UnaryOutboundMiddleware to
 // the given UnaryOutbound.
-func ApplyUnaryOutboundMiddleware(o UnaryOutbound, f UnaryOutboundMiddleware) UnaryOutbound {
+func ApplyUnaryOutboundMiddleware(o transport.UnaryOutbound, f UnaryOutboundMiddleware) transport.UnaryOutbound {
 	if f == nil {
 		return o
 	}
@@ -58,19 +62,19 @@ func ApplyUnaryOutboundMiddleware(o UnaryOutbound, f UnaryOutboundMiddleware) Un
 }
 
 // UnaryOutboundMiddlewareFunc adapts a function into a UnaryOutboundMiddleware.
-type UnaryOutboundMiddlewareFunc func(context.Context, *Request, UnaryOutbound) (*Response, error)
+type UnaryOutboundMiddlewareFunc func(context.Context, *transport.Request, transport.UnaryOutbound) (*transport.Response, error)
 
 // Call for UnaryOutboundMiddlewareFunc.
-func (f UnaryOutboundMiddlewareFunc) Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
+func (f UnaryOutboundMiddlewareFunc) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	return f(ctx, request, out)
 }
 
 type unaryOutboundWithMiddleware struct {
-	o UnaryOutbound
+	o transport.UnaryOutbound
 	f UnaryOutboundMiddleware
 }
 
-func (fo unaryOutboundWithMiddleware) Transports() []Transport {
+func (fo unaryOutboundWithMiddleware) Transports() []transport.Transport {
 	return fo.o.Transports()
 }
 
@@ -82,13 +86,13 @@ func (fo unaryOutboundWithMiddleware) Stop() error {
 	return fo.o.Stop()
 }
 
-func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *Request) (*Response, error) {
+func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	return fo.f.Call(ctx, request, fo.o)
 }
 
 type nopUnaryOutboundMiddleware struct{}
 
-func (nopUnaryOutboundMiddleware) Call(ctx context.Context, request *Request, out UnaryOutbound) (*Response, error) {
+func (nopUnaryOutboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	return out.Call(ctx, request)
 }
 
@@ -110,7 +114,7 @@ func (nopUnaryOutboundMiddleware) Call(ctx context.Context, request *Request, ou
 // OnewayOutboundMiddleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type OnewayOutboundMiddleware interface {
-	CallOneway(ctx context.Context, request *Request, out OnewayOutbound) (Ack, error)
+	CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error)
 }
 
 // NopOnewayOutboundMiddleware is a oneway outbound middleware that does not do
@@ -119,7 +123,7 @@ var NopOnewayOutboundMiddleware OnewayOutboundMiddleware = nopOnewayOutboundMidd
 
 // ApplyOnewayOutboundMiddleware applies the given OnewayOutboundMiddleware to
 // the given OnewayOutbound.
-func ApplyOnewayOutboundMiddleware(o OnewayOutbound, f OnewayOutboundMiddleware) OnewayOutbound {
+func ApplyOnewayOutboundMiddleware(o transport.OnewayOutbound, f OnewayOutboundMiddleware) transport.OnewayOutbound {
 	if f == nil {
 		return o
 	}
@@ -127,19 +131,19 @@ func ApplyOnewayOutboundMiddleware(o OnewayOutbound, f OnewayOutboundMiddleware)
 }
 
 // OnewayOutboundMiddlewareFunc adapts a function into a OnewayOutboundMiddleware.
-type OnewayOutboundMiddlewareFunc func(context.Context, *Request, OnewayOutbound) (Ack, error)
+type OnewayOutboundMiddlewareFunc func(context.Context, *transport.Request, transport.OnewayOutbound) (transport.Ack, error)
 
 // CallOneway for OnewayOutboundMiddlewareFunc.
-func (f OnewayOutboundMiddlewareFunc) CallOneway(ctx context.Context, request *Request, out OnewayOutbound) (Ack, error) {
+func (f OnewayOutboundMiddlewareFunc) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	return f(ctx, request, out)
 }
 
 type onewayOutboundWithMiddleware struct {
-	o OnewayOutbound
+	o transport.OnewayOutbound
 	f OnewayOutboundMiddleware
 }
 
-func (fo onewayOutboundWithMiddleware) Transports() []Transport {
+func (fo onewayOutboundWithMiddleware) Transports() []transport.Transport {
 	return fo.o.Transports()
 }
 
@@ -151,12 +155,12 @@ func (fo onewayOutboundWithMiddleware) Stop() error {
 	return fo.o.Stop()
 }
 
-func (fo onewayOutboundWithMiddleware) CallOneway(ctx context.Context, request *Request) (Ack, error) {
+func (fo onewayOutboundWithMiddleware) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	return fo.f.CallOneway(ctx, request, fo.o)
 }
 
 type nopOnewayOutboundMiddleware struct{}
 
-func (nopOnewayOutboundMiddleware) CallOneway(ctx context.Context, request *Request, out OnewayOutbound) (Ack, error) {
+func (nopOnewayOutboundMiddleware) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	return out.CallOneway(ctx, request)
 }

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
@@ -34,7 +35,6 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/thriftrw/ptr"

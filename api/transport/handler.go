@@ -22,6 +22,8 @@ package transport
 
 import "context"
 
+//go:generate mockgen -destination=transporttest/handler.go -package=transporttest go.uber.org/yarpc/api/transport UnaryHandler,OnewayHandler
+
 // Type is an enum of RPC types
 type Type int
 

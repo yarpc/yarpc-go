@@ -18,9 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package middleware
 
-import "context"
+import (
+	"context"
+
+	"go.uber.org/yarpc/api/transport"
+)
 
 // UnaryInboundMiddleware defines a transport-level middleware for
 // `UnaryHandler`s.
@@ -39,7 +43,7 @@ import "context"
 // UnaryInboundMiddleware is re-used across requests and MAY be called multiple times
 // for the same request.
 type UnaryInboundMiddleware interface {
-	Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error
+	Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error
 }
 
 // NopUnaryInboundMiddleware is a inbound middleware that does not do anything special. It
@@ -47,7 +51,7 @@ type UnaryInboundMiddleware interface {
 var NopUnaryInboundMiddleware UnaryInboundMiddleware = nopUnaryInboundMiddleware{}
 
 // ApplyUnaryInboundMiddleware applies the given InboundMiddleware to the given Handler.
-func ApplyUnaryInboundMiddleware(h UnaryHandler, i UnaryInboundMiddleware) UnaryHandler {
+func ApplyUnaryInboundMiddleware(h transport.UnaryHandler, i UnaryInboundMiddleware) transport.UnaryHandler {
 	if i == nil {
 		return h
 	}
@@ -55,25 +59,25 @@ func ApplyUnaryInboundMiddleware(h UnaryHandler, i UnaryInboundMiddleware) Unary
 }
 
 // UnaryInboundMiddlewareFunc adapts a function into an InboundMiddleware.
-type UnaryInboundMiddlewareFunc func(context.Context, *Request, ResponseWriter, UnaryHandler) error
+type UnaryInboundMiddlewareFunc func(context.Context, *transport.Request, transport.ResponseWriter, transport.UnaryHandler) error
 
 // Handle for UnaryInboundMiddlewareFunc
-func (f UnaryInboundMiddlewareFunc) Handle(ctx context.Context, req *Request, resw ResponseWriter, h UnaryHandler) error {
+func (f UnaryInboundMiddlewareFunc) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	return f(ctx, req, resw, h)
 }
 
 type unaryHandlerWithMiddleware struct {
-	h UnaryHandler
+	h transport.UnaryHandler
 	i UnaryInboundMiddleware
 }
 
-func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *Request, resw ResponseWriter) error {
+func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	return h.i.Handle(ctx, req, resw, h.h)
 }
 
 type nopUnaryInboundMiddleware struct{}
 
-func (nopUnaryInboundMiddleware) Handle(ctx context.Context, req *Request, resw ResponseWriter, handler UnaryHandler) error {
+func (nopUnaryInboundMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.UnaryHandler) error {
 	return handler.Handle(ctx, req, resw)
 }
 
@@ -92,7 +96,7 @@ func (nopUnaryInboundMiddleware) Handle(ctx context.Context, req *Request, resw 
 // OnewayInboundMiddleware is re-used across requests and MAY be called
 // multiple times for the same request.
 type OnewayInboundMiddleware interface {
-	HandleOneway(ctx context.Context, req *Request, h OnewayHandler) error
+	HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error
 }
 
 // NopOnewayInboundMiddleware is an inbound middleware that does not do
@@ -101,7 +105,7 @@ var NopOnewayInboundMiddleware OnewayInboundMiddleware = nopOnewayInboundMiddlew
 
 // ApplyOnewayInboundMiddleware applies the given OnewayInboundMiddleware to
 // the given OnewayHandler.
-func ApplyOnewayInboundMiddleware(h OnewayHandler, i OnewayInboundMiddleware) OnewayHandler {
+func ApplyOnewayInboundMiddleware(h transport.OnewayHandler, i OnewayInboundMiddleware) transport.OnewayHandler {
 	if i == nil {
 		return h
 	}
@@ -109,24 +113,24 @@ func ApplyOnewayInboundMiddleware(h OnewayHandler, i OnewayInboundMiddleware) On
 }
 
 // OnewayInboundMiddlewareFunc adapts a function into a OnwayInboundMiddleware.
-type OnewayInboundMiddlewareFunc func(context.Context, *Request, OnewayHandler) error
+type OnewayInboundMiddlewareFunc func(context.Context, *transport.Request, transport.OnewayHandler) error
 
 // HandleOneway for OnewayInboundMiddlewareFunc
-func (f OnewayInboundMiddlewareFunc) HandleOneway(ctx context.Context, req *Request, h OnewayHandler) error {
+func (f OnewayInboundMiddlewareFunc) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	return f(ctx, req, h)
 }
 
 type onewayHandlerWithMiddleware struct {
-	h OnewayHandler
+	h transport.OnewayHandler
 	i OnewayInboundMiddleware
 }
 
-func (h onewayHandlerWithMiddleware) HandleOneway(ctx context.Context, req *Request) error {
+func (h onewayHandlerWithMiddleware) HandleOneway(ctx context.Context, req *transport.Request) error {
 	return h.i.HandleOneway(ctx, req, h.h)
 }
 
 type nopOnewayInboundMiddleware struct{}
 
-func (nopOnewayInboundMiddleware) HandleOneway(ctx context.Context, req *Request, handler OnewayHandler) error {
+func (nopOnewayInboundMiddleware) HandleOneway(ctx context.Context, req *transport.Request, handler transport.OnewayHandler) error {
 	return handler.HandleOneway(ctx, req)
 }

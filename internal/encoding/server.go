@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"strings"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/transport"
 )
 
 type serverEncodingError struct {

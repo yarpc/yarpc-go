@@ -24,12 +24,12 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/secondserviceserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/thrifttestserver"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 )

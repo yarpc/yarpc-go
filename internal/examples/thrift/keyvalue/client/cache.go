@@ -26,12 +26,13 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // CacheOutboundMiddleware is a OutboundMiddleware
 type CacheOutboundMiddleware interface {
-	transport.UnaryOutboundMiddleware
+	middleware.UnaryOutboundMiddleware
 
 	Invalidate()
 }

@@ -24,9 +24,9 @@ import (
 	"context"
 	"io/ioutil"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
-	"go.uber.org/yarpc/transport"
 )
 
 // rawUnaryHandler adapts a Handler into a transport.UnaryHandler

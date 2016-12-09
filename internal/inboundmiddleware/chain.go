@@ -23,26 +23,27 @@ package inboundmiddleware
 import (
 	"context"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // UnaryChain combines a series of `UnaryInboundMiddleware`s into a single `InboundMiddleware`.
-func UnaryChain(middleware ...transport.UnaryInboundMiddleware) transport.UnaryInboundMiddleware {
-	switch len(middleware) {
+func UnaryChain(mw ...middleware.UnaryInboundMiddleware) middleware.UnaryInboundMiddleware {
+	switch len(mw) {
 	case 0:
-		return transport.NopUnaryInboundMiddleware
+		return middleware.NopUnaryInboundMiddleware
 	case 1:
-		return middleware[0]
+		return mw[0]
 	default:
-		return unaryChain(middleware)
+		return unaryChain(mw)
 	}
 }
 
-type unaryChain []transport.UnaryInboundMiddleware
+type unaryChain []middleware.UnaryInboundMiddleware
 
 func (c unaryChain) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	return unaryChainExec{
-		Chain: []transport.UnaryInboundMiddleware(c),
+		Chain: []middleware.UnaryInboundMiddleware(c),
 		Final: h,
 	}.Handle(ctx, req, resw)
 }
@@ -50,7 +51,7 @@ func (c unaryChain) Handle(ctx context.Context, req *transport.Request, resw tra
 // unaryChainExec adapts a series of `UnaryInboundMiddleware`s into a UnaryHandler.
 // It is scoped to a single request to the `Handler` and is not thread-safe.
 type unaryChainExec struct {
-	Chain []transport.UnaryInboundMiddleware
+	Chain []middleware.UnaryInboundMiddleware
 	Final transport.UnaryHandler
 }
 
@@ -64,22 +65,22 @@ func (x unaryChainExec) Handle(ctx context.Context, req *transport.Request, resw
 }
 
 // OnewayChain combines a series of `OnewayInboundMiddleware`s into a single `InboundMiddleware`.
-func OnewayChain(middleware ...transport.OnewayInboundMiddleware) transport.OnewayInboundMiddleware {
-	switch len(middleware) {
+func OnewayChain(mw ...middleware.OnewayInboundMiddleware) middleware.OnewayInboundMiddleware {
+	switch len(mw) {
 	case 0:
-		return transport.NopOnewayInboundMiddleware
+		return middleware.NopOnewayInboundMiddleware
 	case 1:
-		return middleware[0]
+		return mw[0]
 	default:
-		return onewayChain(middleware)
+		return onewayChain(mw)
 	}
 }
 
-type onewayChain []transport.OnewayInboundMiddleware
+type onewayChain []middleware.OnewayInboundMiddleware
 
 func (c onewayChain) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	return onewayChainExec{
-		Chain: []transport.OnewayInboundMiddleware(c),
+		Chain: []middleware.OnewayInboundMiddleware(c),
 		Final: h,
 	}.HandleOneway(ctx, req)
 }
@@ -87,7 +88,7 @@ func (c onewayChain) HandleOneway(ctx context.Context, req *transport.Request, h
 // onewayChainExec adapts a series of `OnewayInboundMiddleware`s into a OnewayHandler.
 // It is scoped to a single request to the `Handler` and is not thread-safe.
 type onewayChainExec struct {
-	Chain []transport.OnewayInboundMiddleware
+	Chain []middleware.OnewayInboundMiddleware
 	Final transport.OnewayHandler
 }
 

@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

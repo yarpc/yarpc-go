@@ -23,7 +23,7 @@ package clientconfig
 import (
 	"fmt"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 type multiOutbound struct {

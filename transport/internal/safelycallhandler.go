@@ -27,8 +27,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/transport"
 )
 
 // SafelyCallUnaryHandler calls the handler h, recovering panics and timeout errors,

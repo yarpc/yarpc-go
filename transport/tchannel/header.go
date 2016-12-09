@@ -25,7 +25,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel/internal"
 
 	"github.com/uber/tchannel-go"

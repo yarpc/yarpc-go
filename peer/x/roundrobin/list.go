@@ -24,9 +24,9 @@ import (
 	"context"
 	"sync"
 
+	"go.uber.org/yarpc/api/transport"
 	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/transport"
 
 	"go.uber.org/atomic"
 )

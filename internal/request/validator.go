@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"time"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // Validator helps validate requests.

@@ -23,26 +23,27 @@ package outboundmiddleware
 import (
 	"context"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // UnaryChain combines a series of `UnaryOutboundMiddleware`s into a single `UnaryOutboundMiddleware`.
-func UnaryChain(middleware ...transport.UnaryOutboundMiddleware) transport.UnaryOutboundMiddleware {
-	switch len(middleware) {
+func UnaryChain(mw ...middleware.UnaryOutboundMiddleware) middleware.UnaryOutboundMiddleware {
+	switch len(mw) {
 	case 0:
-		return transport.NopUnaryOutboundMiddleware
+		return middleware.NopUnaryOutboundMiddleware
 	case 1:
-		return middleware[0]
+		return mw[0]
 	default:
-		return unaryChain(middleware)
+		return unaryChain(mw)
 	}
 }
 
-type unaryChain []transport.UnaryOutboundMiddleware
+type unaryChain []middleware.UnaryOutboundMiddleware
 
 func (c unaryChain) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	return unaryChainExec{
-		Chain: []transport.UnaryOutboundMiddleware(c),
+		Chain: []middleware.UnaryOutboundMiddleware(c),
 		Final: out,
 	}.Call(ctx, request)
 }
@@ -50,7 +51,7 @@ func (c unaryChain) Call(ctx context.Context, request *transport.Request, out tr
 // unaryChainExec adapts a series of `UnaryOutboundMiddleware`s into a `UnaryOutbound`. It
 // is scoped to a single call of a UnaryOutbound and is not thread-safe.
 type unaryChainExec struct {
-	Chain []transport.UnaryOutboundMiddleware
+	Chain []middleware.UnaryOutboundMiddleware
 	Final transport.UnaryOutbound
 }
 
@@ -76,22 +77,22 @@ func (x unaryChainExec) Call(ctx context.Context, request *transport.Request) (*
 }
 
 // OnewayChain combines a series of `OnewayOutboundMiddleware`s into a single `OnewayOutboundMiddleware`.
-func OnewayChain(middleware ...transport.OnewayOutboundMiddleware) transport.OnewayOutboundMiddleware {
-	switch len(middleware) {
+func OnewayChain(mw ...middleware.OnewayOutboundMiddleware) middleware.OnewayOutboundMiddleware {
+	switch len(mw) {
 	case 0:
-		return transport.NopOnewayOutboundMiddleware
+		return middleware.NopOnewayOutboundMiddleware
 	case 1:
-		return middleware[0]
+		return mw[0]
 	default:
-		return onewayChain(middleware)
+		return onewayChain(mw)
 	}
 }
 
-type onewayChain []transport.OnewayOutboundMiddleware
+type onewayChain []middleware.OnewayOutboundMiddleware
 
 func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
 	return onewayChainExec{
-		Chain: []transport.OnewayOutboundMiddleware(c),
+		Chain: []middleware.OnewayOutboundMiddleware(c),
 		Final: out,
 	}.CallOneway(ctx, request)
 }
@@ -99,7 +100,7 @@ func (c onewayChain) CallOneway(ctx context.Context, request *transport.Request,
 // onewayChainExec adapts a series of `OnewayOutboundMiddleware`s into a `OnewayOutbound`. It
 // is scoped to a single call of a OnewayOutbound and is not thread-safe.
 type onewayChainExec struct {
-	Chain []transport.OnewayOutboundMiddleware
+	Chain []middleware.OnewayOutboundMiddleware
 	Final transport.OnewayOutbound
 }
 

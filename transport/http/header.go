@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"strings"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // headerConverter converts HTTP headers to and from transport headers.

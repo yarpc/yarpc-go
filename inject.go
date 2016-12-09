@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 var (

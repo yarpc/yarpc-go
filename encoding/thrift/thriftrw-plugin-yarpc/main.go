@@ -41,7 +41,7 @@ package <$pkgname>
 
 <$yarpc     := import "go.uber.org/yarpc">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
-<$transport := import "go.uber.org/yarpc/transport">
+<$transport := import "go.uber.org/yarpc/api/transport">
 <$context   := import "context">
 
 // Interface is the server-side interface for the <.Service.Name> service.
@@ -144,7 +144,7 @@ const clientTemplate = `
 package <$pkgname>
 
 <$yarpc     := import "go.uber.org/yarpc">
-<$transport := import "go.uber.org/yarpc/transport">
+<$transport := import "go.uber.org/yarpc/api/transport">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$context   := import "context">
 

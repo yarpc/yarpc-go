@@ -31,8 +31,8 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 )

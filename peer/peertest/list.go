@@ -26,8 +26,8 @@ package peertest
 import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
+	transport "go.uber.org/yarpc/api/transport"
 	peer "go.uber.org/yarpc/peer"
-	transport "go.uber.org/yarpc/transport"
 )
 
 // Mock of Chooser interface

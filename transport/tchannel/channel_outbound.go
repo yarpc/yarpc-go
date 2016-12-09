@@ -24,9 +24,9 @@ import (
 	"context"
 	"io"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/atomic"
