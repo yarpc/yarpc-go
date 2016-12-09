@@ -37,10 +37,15 @@ var (
 )
 
 func (d *dispatcher) Debug() debug.Dispatcher {
+	var inbounds []debug.Inbound
+	for _, i := range d.inbounds {
+		inbounds = append(inbounds, i.Debug())
+	}
 	return debug.Dispatcher{
 		Name:       d.Name,
 		ID:         fmt.Sprintf("%p", d),
 		Procedures: d.DebugProcedures(),
+		Inbounds:   inbounds,
 	}
 }
 
@@ -117,24 +122,36 @@ const pageHTML = `
 	<h4>Inbound</h4>
 	<table>
 		<tr>
-			<th>Inbound</th>
+			<th>Transport</th>
+			<th>Endpoint</th>
+			<th>Peer</th>
+			<th>State</th>
 		</tr>
-		{{range $i := .Inbounds}}
+		{{range .Inbounds}}
 		<tr>
-			<td>{{$i}}</td>
+			<td>{{.Transport}}</td>
+			<td>{{.Endpoint}}</td>
+			<td>{{.Peer}}</td>
+			<td>{{.State}}</td>
 		</tr>
 		{{end}}
 	</table>
 	<h4>Outbound</h4>
 	<table>
 		<tr>
-			<th>Service</th>
-			<th>Outbound</th>
+			<th>Name</th>
+			<th>Transport</th>
+			<th>Endpoint</th>
+			<th>Peer</th>
+			<th>State</th>
 		</tr>
-		{{range $k, $v := .Outbounds}}
+		{{range .Outbounds}}
 		<tr>
-			<td>{{$k}}</td>
-			<td>{{$v}}</td>
+			<td>{{.Name}}</td>
+			<td>{{.Transport}}</td>
+			<td>{{.Endpoint}}</td>
+			<td>{{.Peer}}</td>
+			<td>{{.State}}</td>
 		</tr>
 		{{end}}
 	</table>

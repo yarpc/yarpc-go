@@ -16,5 +16,17 @@ type Procedure struct {
 	Signature string
 }
 
-type Inbound struct{}
-type Outbound struct{}
+type Inbound struct {
+	Transport string
+	Endpoint  string
+	Peer      string
+	State     string
+}
+
+type Outbound struct {
+	Name      string
+	Transport string
+	Endpoint  string
+	Peer      string
+	State     string
+}

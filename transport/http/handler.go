@@ -97,15 +97,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
 	defer cancel()
 
-	ctx, span := h.createSpan(ctx, req, treq, start)
-
-	tr := trace.New(treq.Service, treq.Procedure)
-	tr.LazyPrintf("caller: %s", treq.Caller)
-	tr.LazyPrintf("encoding: %s", treq.Encoding)
-	for k, v := range treq.Headers.Items() {
-		tr.LazyPrintf("request header - %s: %s", k, v)
-	}
-	ctx = trace.NewContext(ctx, tr)
+	ctx, span, tr := h.createSpan(ctx, req, treq, start)
 
 	treq, err := v.Validate(ctx)
 	if err != nil {
@@ -136,14 +128,10 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		if err != nil {
 			return err
 		}
-		err = handleOnewayRequest(span, treq, spec.Oneway())
+		err = handleOnewayRequest(span, tr, treq, spec.Oneway())
 
 	default:
 		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
-	}
-
-	for k, v := range treq.Headers.Items() {
-		tr.LazyPrintf("request header - %s: %s", k, v)
 	}
 
 	if err != nil {
@@ -155,6 +143,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 func handleOnewayRequest(
 	span opentracing.Span,
+	tr trace.Trace,
 	treq *transport.Request,
 	onewayHandler transport.OnewayHandler,
 ) error {
@@ -173,6 +162,7 @@ func handleOnewayRequest(
 	go func() {
 		// ensure the span lasts for length of the handler in case of errors
 		defer span.Finish()
+		defer tr.Finish()
 
 		err := transport.DispatchOnewayHandler(ctx, onewayHandler, treq)
 		updateSpanWithErr(span, err)
@@ -189,7 +179,7 @@ func updateSpanWithErr(span opentracing.Span, err error) error {
 	return err
 }
 
-func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span) {
+func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, opentracing.Span, trace.Trace) {
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
 	tracer := h.tracer
@@ -210,7 +200,17 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 	)
 	ext.PeerService.Set(span, treq.Caller)
 	ctx = opentracing.ContextWithSpan(ctx, span)
-	return ctx, span
+
+	tr := trace.New(treq.Service, treq.Procedure)
+	tr.LazyPrintf("transport: http")
+	tr.LazyPrintf("caller: %s", treq.Caller)
+	tr.LazyPrintf("encoding: %s", treq.Encoding)
+	for k, v := range treq.Headers.Items() {
+		tr.LazyPrintf("request header - %s: %s", k, v)
+	}
+	ctx = trace.NewContext(ctx, tr)
+
+	return ctx, span, tr
 }
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.

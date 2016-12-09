@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/debug"
 	"go.uber.org/yarpc/internal/errors"
 
 	"github.com/opentracing/opentracing-go"
@@ -89,4 +90,14 @@ func (i *ChannelInbound) Start() error {
 // Stop stops the TChannel outbound. This currently does nothing.
 func (i *ChannelInbound) Stop() error {
 	return nil
+}
+
+func (i *ChannelInbound) Debug() debug.Inbound {
+	c := i.transport.Channel()
+	return debug.Inbound{
+		Transport: "tchannel",
+		Endpoint:  i.transport.ListenAddr(),
+		Peer:      c.PeerInfo().PeerInfo.String(),
+		State:     c.State().String(),
+	}
 }

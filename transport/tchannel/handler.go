@@ -33,6 +33,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	ncontext "golang.org/x/net/context"
+	"golang.org/x/net/trace"
 )
 
 // inboundCall provides an interface similiar tchannel.InboundCall.
@@ -136,6 +137,16 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		tracer := h.tracer
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
 	}
+
+	tr := trace.New(treq.Service, treq.Procedure)
+	tr.LazyPrintf("transport: tchannel")
+	tr.LazyPrintf("caller: %s", treq.Caller)
+	tr.LazyPrintf("encoding: %s", treq.Encoding)
+	for k, v := range treq.Headers.Items() {
+		tr.LazyPrintf("request header - %s: %s", k, v)
+	}
+	ctx = trace.NewContext(ctx, tr)
+	defer tr.Finish()
 
 	body, err := call.Arg3Reader()
 	if err != nil {
