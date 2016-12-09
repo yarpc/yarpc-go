@@ -32,10 +32,10 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/registrytest"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

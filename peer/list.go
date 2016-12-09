@@ -23,7 +23,7 @@ package peer
 import (
 	"context"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 //go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/peer Chooser,List

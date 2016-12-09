@@ -24,7 +24,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 type requestLogOutboundMiddleware struct{}

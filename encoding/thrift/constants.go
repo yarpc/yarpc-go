@@ -20,7 +20,7 @@
 
 package thrift
 
-import "go.uber.org/yarpc/transport"
+import "go.uber.org/yarpc/api/transport"
 
 // Encoding is the name of this encoding.
 const Encoding transport.Encoding = "thrift"

@@ -18,13 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport_test
+package yarpc_test
 
 import (
 	"testing"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestMapRegistry(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	m := transport.NewMapRegistry("myservice")
+	m := yarpc.NewMapRegistry("myservice")
 
 	foo := transporttest.NewMockUnaryHandler(mockCtrl)
 	bar := transporttest.NewMockUnaryHandler(mockCtrl)
@@ -79,7 +80,7 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	m := transport.NewMapRegistry("myservice")
+	m := yarpc.NewMapRegistry("myservice")
 
 	bar := transporttest.NewMockUnaryHandler(mockCtrl)
 	foo := transporttest.NewMockUnaryHandler(mockCtrl)
@@ -122,7 +123,7 @@ func TestMapRegistry_ServiceProcedures(t *testing.T) {
 }
 
 func TestEmptyProcedureRegistration(t *testing.T) {
-	m := transport.NewMapRegistry("test-service-name")
+	m := yarpc.NewMapRegistry("test-service-name")
 
 	registrants := []transport.Registrant{
 		{

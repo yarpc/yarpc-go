@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/serialize"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
 )

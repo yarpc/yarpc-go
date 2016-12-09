@@ -23,7 +23,7 @@ package request
 import (
 	"context"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // UnaryValidatorOutbound wraps an Outbound to validate all outgoing unary requests.

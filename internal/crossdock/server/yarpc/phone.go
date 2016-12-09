@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/clientconfig"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 )

@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/crossdock/crossdock-go"
 )

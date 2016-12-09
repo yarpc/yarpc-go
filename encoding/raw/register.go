@@ -24,7 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // Register calls the Registrar's Register method.

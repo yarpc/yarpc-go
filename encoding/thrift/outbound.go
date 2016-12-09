@@ -27,10 +27,10 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/meta"
-	"go.uber.org/yarpc/transport"
 
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"

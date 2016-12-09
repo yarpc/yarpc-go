@@ -24,9 +24,9 @@ import (
 	"net"
 	"net/http"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	intnet "go.uber.org/yarpc/internal/net"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
 )

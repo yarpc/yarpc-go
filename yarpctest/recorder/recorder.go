@@ -68,7 +68,7 @@ import (
 	"strings"
 	"unicode"
 
-	"go.uber.org/yarpc/transport"
+	"go.uber.org/yarpc/api/transport"
 
 	"gopkg.in/yaml.v2"
 )

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/stretchr/testify/assert"

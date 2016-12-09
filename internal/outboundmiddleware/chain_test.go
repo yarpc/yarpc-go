@@ -28,8 +28,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport
 	return o.CallOneway(ctx, req)
 }
 
-var retryUnaryOutboundMiddleware transport.UnaryOutboundMiddlewareFunc = func(
+var retryUnaryOutboundMiddleware middleware.UnaryOutboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	res, err := o.Call(ctx, req)
 	if err != nil {
@@ -81,7 +82,7 @@ func TestUnaryChain(t *testing.T) {
 
 	before := &countOutboundMiddleware{}
 	after := &countOutboundMiddleware{}
-	gotRes, err := transport.ApplyUnaryOutboundMiddleware(
+	gotRes, err := middleware.ApplyUnaryOutboundMiddleware(
 		o, UnaryChain(before, retryUnaryOutboundMiddleware, after)).Call(ctx, req)
 
 	assert.NoError(t, err, "expected success")
@@ -90,7 +91,7 @@ func TestUnaryChain(t *testing.T) {
 	assert.Equal(t, res, gotRes, "expected response to match")
 }
 
-var retryOnewayOutboundMiddleware transport.OnewayOutboundMiddlewareFunc = func(
+var retryOnewayOutboundMiddleware middleware.OnewayOutboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
 	res, err := o.CallOneway(ctx, req)
 	if err != nil {
@@ -121,7 +122,7 @@ func TestOnewayChain(t *testing.T) {
 
 	before := &countOutboundMiddleware{}
 	after := &countOutboundMiddleware{}
-	gotRes, err := transport.ApplyOnewayOutboundMiddleware(
+	gotRes, err := middleware.ApplyOnewayOutboundMiddleware(
 		o, OnewayChain(before, retryOnewayOutboundMiddleware, after)).CallOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")

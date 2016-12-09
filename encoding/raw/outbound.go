@@ -26,8 +26,8 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/meta"
-	"go.uber.org/yarpc/transport"
 )
 
 // Client makes Raw requests to a single service.

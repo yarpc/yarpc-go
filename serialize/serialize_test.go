@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"

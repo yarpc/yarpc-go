@@ -24,11 +24,12 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
-	"go.uber.org/yarpc/transport"
 
 	"github.com/opentracing/opentracing-go"
 )
@@ -97,14 +98,14 @@ type Outbounds map[string]transport.Outbounds
 
 // OutboundMiddleware contains the different type of outbound middleware
 type OutboundMiddleware struct {
-	Unary  transport.UnaryOutboundMiddleware
-	Oneway transport.OnewayOutboundMiddleware
+	Unary  middleware.UnaryOutboundMiddleware
+	Oneway middleware.OnewayOutboundMiddleware
 }
 
 // InboundMiddleware contains the different type of inbound middleware
 type InboundMiddleware struct {
-	Unary  transport.UnaryInboundMiddleware
-	Oneway transport.OnewayInboundMiddleware
+	Unary  middleware.UnaryInboundMiddleware
+	Oneway middleware.OnewayInboundMiddleware
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -115,7 +116,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 
 	return dispatcher{
 		Name:              cfg.Name,
-		Registrar:         transport.NewMapRegistry(cfg.Name),
+		Registrar:         NewMapRegistry(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
@@ -124,7 +125,7 @@ func NewDispatcher(cfg Config) Dispatcher {
 }
 
 // convertOutbounds applys outbound middleware and creates validator outbounds
-func convertOutbounds(outbounds Outbounds, middleware OutboundMiddleware) Outbounds {
+func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	convertedOutbounds := make(Outbounds, len(outbounds))
 
 	for service, outs := range outbounds {
@@ -139,12 +140,12 @@ func convertOutbounds(outbounds Outbounds, middleware OutboundMiddleware) Outbou
 
 		// apply outbound middleware and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = transport.ApplyUnaryOutboundMiddleware(outs.Unary, middleware.Unary)
+			unaryOutbound = middleware.ApplyUnaryOutboundMiddleware(outs.Unary, mw.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = transport.ApplyOnewayOutboundMiddleware(outs.Oneway, middleware.Oneway)
+			onewayOutbound = middleware.ApplyOnewayOutboundMiddleware(outs.Oneway, mw.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 
@@ -222,11 +223,11 @@ func (d dispatcher) Register(rs []transport.Registrant) {
 	for _, r := range rs {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
-			h := transport.ApplyUnaryInboundMiddleware(r.HandlerSpec.Unary(),
+			h := middleware.ApplyUnaryInboundMiddleware(r.HandlerSpec.Unary(),
 				d.InboundMiddleware.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
-			h := transport.ApplyOnewayInboundMiddleware(r.HandlerSpec.Oneway(),
+			h := middleware.ApplyOnewayInboundMiddleware(r.HandlerSpec.Oneway(),
 				d.InboundMiddleware.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:

@@ -26,10 +26,10 @@ package keyvalueclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/internal/examples/thrift/keyvalue/kv"
 )
 
 // Interface is a client for the KeyValue service.

@@ -27,8 +27,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +48,7 @@ func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transpor
 	return h.HandleOneway(ctx, req)
 }
 
-var retryUnaryInboundMiddleware transport.UnaryInboundMiddlewareFunc = func(
+var retryUnaryInboundMiddleware middleware.UnaryInboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
 		return h.Handle(ctx, req, resw)
@@ -77,7 +78,7 @@ func TestUnaryChain(t *testing.T) {
 
 	before := &countInboundMiddleware{}
 	after := &countInboundMiddleware{}
-	err := transport.ApplyUnaryInboundMiddleware(
+	err := middleware.ApplyUnaryInboundMiddleware(
 		h, UnaryChain(before, retryUnaryInboundMiddleware, after),
 	).Handle(ctx, req, resw)
 
@@ -86,7 +87,7 @@ func TestUnaryChain(t *testing.T) {
 	assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
 }
 
-var retryOnewayInboundMiddleware transport.OnewayInboundMiddlewareFunc = func(
+var retryOnewayInboundMiddleware middleware.OnewayInboundMiddlewareFunc = func(
 	ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	if err := h.HandleOneway(ctx, req); err != nil {
 		return h.HandleOneway(ctx, req)
@@ -115,7 +116,7 @@ func TestOnewayChain(t *testing.T) {
 
 	before := &countInboundMiddleware{}
 	after := &countInboundMiddleware{}
-	err := transport.ApplyOnewayInboundMiddleware(
+	err := middleware.ApplyOnewayInboundMiddleware(
 		h, OnewayChain(before, retryOnewayInboundMiddleware, after),
 	).HandleOneway(ctx, req)
 

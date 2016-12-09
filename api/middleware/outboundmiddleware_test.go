@@ -18,29 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport_test
+package middleware_test
 
 import (
 	"bytes"
 	"context"
-	"errors"
+	"io/ioutil"
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/transport/transporttest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnaryNopInboundMiddleware(t *testing.T) {
+func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	wrappedH := transport.ApplyUnaryInboundMiddleware(h, transport.NopUnaryInboundMiddleware)
+	o := transporttest.NewMockUnaryOutbound(mockCtrl)
+	wrappedO := middleware.ApplyUnaryOutboundMiddleware(o, middleware.NopUnaryOutboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -51,19 +52,22 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	resw := new(transporttest.FakeResponseWriter)
-	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, req, resw).Return(err)
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	o.EXPECT().Call(ctx, req).Return(res, nil)
+
+	got, err := wrappedO.Call(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, res, got)
+	}
 }
 
-func TestOnewayNopInboundMiddleware(t *testing.T) {
+func TestOnewayNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockOnewayHandler(mockCtrl)
-	wrappedH := transport.ApplyOnewayInboundMiddleware(h, transport.NopOnewayInboundMiddleware)
+	o := transporttest.NewMockOnewayOutbound(mockCtrl)
+	wrappedO := middleware.ApplyOnewayOutboundMiddleware(o, middleware.NopOnewayOutboundMiddleware)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -74,8 +78,11 @@ func TestOnewayNopInboundMiddleware(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	err := errors.New("great sadness")
-	h.EXPECT().HandleOneway(ctx, req).Return(err)
 
-	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
+	o.EXPECT().CallOneway(ctx, req).Return(nil, nil)
+
+	got, err := wrappedO.CallOneway(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, nil, got)
+	}
 }
