@@ -4,6 +4,20 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
+-   Moved the `yarpc/internal/crossdock/` and `yarpc/internal/examples`
+    folders to `yarpc/crossdock/` and `yarpc/examples` respectively.
+
+-   **Breaking**: Relocated the `go.uber.org/yarpc/transport` package to
+    `go.uber.org/yarpc/api/transport`.  In the process the `middleware`
+    logic from transport has been moved to `go.uber.org/yarpc/api/middleware`
+    and the concrete implementation of the Registry has been moved from
+    `transport.MapRegistry` to `yarpc.MapRegistry`.  This did **not** move the
+    concrete implementations of http/tchannel from the `yarpc/transport/` directory.
+
+-   **Breaking**: Relocated the `go.uber.org/yarpc/peer` package to
+    `go.uber.org/yarpc/api/peer`. This does not include the concrete
+    implementations still in the `/yarpc/peer/` directory.
+
 -   **Breaking**: This version overhauls the code required for constructing
     inbounds and outbounds.
 
