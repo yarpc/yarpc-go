@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.0.0-dev (unreleased)
+v1.0.0-rc3 (2016-12-09)
 -----------------------
 
 -   Moved the `yarpc/internal/crossdock/` and `yarpc/internal/examples`
