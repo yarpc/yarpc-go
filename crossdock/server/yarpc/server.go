@@ -34,7 +34,7 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 )
 
-var dispatcher yarpc.Dispatcher
+var dispatcher *yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {

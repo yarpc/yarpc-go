@@ -35,7 +35,7 @@ import (
 	"github.com/crossdock/crossdock-go"
 )
 
-func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
+func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
@@ -59,7 +59,7 @@ func runThrift(t crossdock.T, dispatcher yarpc.Dispatcher) {
 	})
 }
 
-func thriftCall(dispatcher yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+func thriftCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
 	client := echoclient.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

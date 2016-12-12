@@ -60,7 +60,7 @@ func Run(t crossdock.T) {
 
 // runRaw tests if a yarpc client returns a remote timeout error behind the
 // TimeoutError interface when a remote http handler returns a handler timeout.
-func runRaw(t crossdock.T, disp yarpc.Dispatcher) {
+func runRaw(t crossdock.T, disp *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 

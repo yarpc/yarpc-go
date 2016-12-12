@@ -310,7 +310,7 @@ func (h *multiHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, bod
 	return map[string]interface{}{}, resMeta, err
 }
 
-func buildDispatcher(t crossdock.T) (dispatcher yarpc.Dispatcher, tconfig server.TransportConfig) {
+func buildDispatcher(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig server.TransportConfig) {
 	fatals := crossdock.Fatals(t)
 
 	self := t.Param("ctxclient")

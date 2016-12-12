@@ -30,7 +30,7 @@ import (
 )
 
 // Raw starts an http run using raw encoding
-func Raw(t crossdock.T, dispatcher yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
+func Raw(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 

@@ -51,7 +51,7 @@ func (t tchannelEcho) OnError(ctx ncontext.Context, err error) {
 	t.t.Fatalf("request failed: %v", err)
 }
 
-func withDispatcher(t testing.TB, cfg yarpc.Config, f func(yarpc.Dispatcher)) {
+func withDispatcher(t testing.TB, cfg yarpc.Config, f func(*yarpc.Dispatcher)) {
 	d := yarpc.NewDispatcher(cfg)
 	require.NoError(t, d.Start(), "failed to start server")
 	defer d.Stop()
@@ -136,9 +136,9 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 		},
 	}
 
-	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
+	withDispatcher(b, serverCfg, func(server *yarpc.Dispatcher) {
 		server.Register(raw.Procedure("echo", yarpcEcho))
-		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+		withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
 			b.ResetTimer()
 			runYARPCClient(b, raw.New(client.ClientConfig("server")))
 		})
@@ -157,7 +157,7 @@ func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
 	}
 
 	withHTTPServer(b, ":8998", httpEcho(b), func() {
-		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+		withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
 			b.ResetTimer()
 			runYARPCClient(b, raw.New(client.ClientConfig("server")))
 		})
@@ -171,7 +171,7 @@ func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
 		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8996")},
 	}
 
-	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
+	withDispatcher(b, serverCfg, func(server *yarpc.Dispatcher) {
 		server.Register(raw.Procedure("echo", yarpcEcho))
 
 		b.ResetTimer()
@@ -201,7 +201,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 
 	// no defer close on channels because YARPC will take care of that
 
-	withDispatcher(b, serverCfg, func(server yarpc.Dispatcher) {
+	withDispatcher(b, serverCfg, func(server *yarpc.Dispatcher) {
 		server.Register(raw.Procedure("echo", yarpcEcho))
 
 		// Need server already started to build client config
@@ -213,7 +213,7 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 				},
 			},
 		}
-		withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+		withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
 			b.ResetTimer()
 			runYARPCClient(b, raw.New(client.ClientConfig("server")))
 		})
@@ -238,7 +238,7 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 		},
 	}
 
-	withDispatcher(b, clientCfg, func(client yarpc.Dispatcher) {
+	withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
 		b.ResetTimer()
 		runYARPCClient(b, raw.New(client.ClientConfig("server")))
 	})
@@ -254,7 +254,7 @@ func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
 		Inbounds: yarpc.Inbounds{tchannelTransport.NewInbound()},
 	}
 
-	withDispatcher(b, serverCfg, func(dispatcher yarpc.Dispatcher) {
+	withDispatcher(b, serverCfg, func(dispatcher *yarpc.Dispatcher) {
 		dispatcher.Register(raw.Procedure("echo", yarpcEcho))
 
 		clientCh, err := tchannel.NewChannel("client", nil)
