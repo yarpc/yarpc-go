@@ -160,7 +160,7 @@ type Interface interface {
 			ctx <$context>.Context,
 			reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 				<.Name> <formatType .Type>,<end>
-		)<if .OneWay> (<$transport>.Ack, error)
+		)<if .OneWay> (<$yarpc>.Ack, error)
 		<else if .ReturnType> (<formatType .ReturnType>, <$yarpc>.CallResMeta, error)
 		<else> (<$yarpc>.CallResMeta, error)
 		<end>
@@ -196,7 +196,7 @@ func (c client) <.Name>(
 	ctx <$context>.Context,
 	reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
-<if .OneWay>) (<$transport>.Ack, error) {
+<if .OneWay>) (<$yarpc>.Ack, error) {
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 	return c.c.CallOneway(ctx, reqMeta, args)
 }

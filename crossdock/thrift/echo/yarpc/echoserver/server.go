@@ -26,10 +26,10 @@ package echoserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/crossdock/thrift/echo"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/crossdock/thrift/echo"
+	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the Echo service.

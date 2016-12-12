@@ -26,10 +26,10 @@ package thrifttestclient
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/crossdock/thrift/gauntlet"
+	"go.uber.org/yarpc"
 )
 
 // Interface is a client for the ThriftTest service.
@@ -128,7 +128,7 @@ type Interface interface {
 		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		SecondsToSleep *int32,
-	) (transport.Ack, error)
+	) (yarpc.Ack, error)
 
 	TestSet(
 		ctx context.Context,
@@ -516,7 +516,7 @@ func (c client) TestOneway(
 	ctx context.Context,
 	reqMeta yarpc.CallReqMeta,
 	_SecondsToSleep *int32,
-) (transport.Ack, error) {
+) (yarpc.Ack, error) {
 	args := gauntlet.ThriftTest_TestOneway_Helper.Args(_SecondsToSleep)
 	return c.c.CallOneway(ctx, reqMeta, args)
 }
