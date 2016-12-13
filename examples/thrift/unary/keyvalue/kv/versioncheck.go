@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package kv
 
 import "go.uber.org/thriftrw/version"
 
 func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.0.0", "go.uber.org/yarpc/examples/thrift/hello/echo")
+	version.CheckCompatWithGeneratedCodeAt("1.0.0", "go.uber.org/yarpc/examples/thrift/unary/keyvalue/kv")
 }

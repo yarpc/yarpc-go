@@ -27,7 +27,7 @@ import (
 	"context"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/examples/thrift/hello/echo"
+	"go.uber.org/yarpc/examples/thrift/unary/hello/echo"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
 )

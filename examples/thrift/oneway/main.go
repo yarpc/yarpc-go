@@ -25,9 +25,9 @@ import (
 	"log"
 	"time"
 
-	"go.uber.org/yarpc/internal/examples/redis/sink"
-	"go.uber.org/yarpc/internal/examples/redis/sink/yarpc/helloclient"
-	"go.uber.org/yarpc/internal/examples/redis/sink/yarpc/helloserver"
+	"go.uber.org/yarpc/examples/thrift/oneway/sink"
+	"go.uber.org/yarpc/examples/thrift/oneway/sink/yarpc/helloclient"
+	"go.uber.org/yarpc/examples/thrift/oneway/sink/yarpc/helloserver"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
@@ -36,13 +36,19 @@ import (
 
 //go:generate thriftrw --plugin=yarpc sink.thrift
 
+// This example illustrates how to make oneway calls using different oneway
+// transports.
+//
+// Note: Enabling redis requires a local instance running on 'localhost:6379'
 func main() {
 	httpTransport := http.NewTransport()
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
-			httpTransport.NewInbound(":8086"),
+			// Listen for HTTP connections
+			httpTransport.NewInbound(":8888"),
+			// listen for redis
 			redis.NewInbound(
 				redis.NewRedis5Client("localhost:6379"),
 				"yarpc-queue",
@@ -52,32 +58,37 @@ func main() {
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
-				Oneway: httpTransport.NewSingleOutbound("http://127.0.0.1:8080"),
+				Oneway: httpTransport.NewSingleOutbound("http://127.0.0.1:8888"),
+				// Swap http with redis to make outbound calls over redis
 				// Oneway: redis.NewOnewayOutbound(
 				// 	redis.NewRedis5Client("localhost:6379"),
-				// 	"yarpc-queue",
-				// ),
+				// 	"yarpc-queue"),
 			},
 		},
 	})
 
+	// register the server handler, implemented below
 	dispatcher.Register(helloserver.New(&helloHandler{}))
+	// create a client to talk to our server
 	client := helloclient.New(dispatcher.ClientConfig("hello"))
 
+	// start the dispatcher
 	if err := dispatcher.Start(); err != nil {
 		log.Fatal(err)
 	}
 	defer dispatcher.Stop()
 
+	// Make outbound call every 500ms
 	for {
 		time.Sleep(time.Second / 2)
-		client.Sink(context.Background(), nil, &sink.SinkRequest{Message: "yo", Count: 1})
+		client.Sink(context.Background(), nil, &sink.SinkRequest{Message: "hello!"})
 	}
 }
 
 type helloHandler struct{}
 
+// Sink is our server-side handler implementation
 func (h *helloHandler) Sink(ctx context.Context, reqMeta yarpc.ReqMeta, snk *sink.SinkRequest) error {
-	log.Println("got message: ", snk.Message)
+	log.Println("received message:", snk.Message)
 	return nil
 }

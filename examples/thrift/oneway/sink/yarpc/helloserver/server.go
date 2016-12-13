@@ -6,9 +6,9 @@ package helloserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/examples/thrift/oneway/sink"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/transport"
-	"go.uber.org/yarpc/internal/examples/redis/sink"
 	"go.uber.org/yarpc"
 )
 
