@@ -48,7 +48,7 @@ type List interface {
 	Update(updates ListUpdates) error
 }
 
-// ListUpdates is a wrapper around the list of additions and removals used in List.Update
+// ListUpdates specifies the updates to be made to a List
 type ListUpdates struct {
 	// Additions are the identifiers that should be added to the list
 	Additions []Identifier
