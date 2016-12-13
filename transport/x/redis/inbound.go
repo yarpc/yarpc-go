@@ -141,7 +141,13 @@ func (i *Inbound) handle() error {
 		return err
 	}
 
-	ctx, span := transport.ExtractOpenTracingSpan(context.Background(), spanContext, req, i.tracer, transportName, start)
+	extractOpenTracingSpan := transport.ExtractOpenTracingSpan{
+		ParentSpanContext: spanContext,
+		Tracer:            i.tracer,
+		TransportName:     transportName,
+		StartTime:         start,
+	}
+	ctx, span := extractOpenTracingSpan.Do(context.Background(), req)
 	defer span.Finish()
 
 	v := request.Validator{Request: req}
