@@ -85,9 +85,12 @@ script:
     crossdock)
       # run crossdock, and then dump logs if crossdock fails
       # finally, exit with the exit code of "make crossdock"
-      $(make crossdock); code=$?
-      docker-compose logs
-      exit $code
+      if ! out=$(make crossdock); then
+        code=$?
+        echo $out
+        docker-compose logs
+        exit $code
+      fi
       ;;
   esac
   set +e
