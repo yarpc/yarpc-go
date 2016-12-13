@@ -29,7 +29,7 @@ import (
 // UnaryOutbound defines transport-level middleware for
 // `UnaryOutbound`s.
 //
-// UnaryOutbound MAY
+// UnaryOutbound middleware MAY
 //
 // - change the context
 // - change the request
@@ -37,12 +37,12 @@ import (
 // - handle the returned error
 // - call the given outbound zero or more times
 //
-// UnaryOutbound MUST
+// UnaryOutbound middleware MUST
 //
 // - always return a non-nil Response or error.
 // - be thread-safe
 //
-// UnaryOutbound is re-used across requests and MAY be called
+// UnaryOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type UnaryOutbound interface {
 	Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error)
@@ -52,8 +52,8 @@ type UnaryOutbound interface {
 // anything special. It simply calls the underlying UnaryOutbound.
 var NopUnaryOutbound UnaryOutbound = nopUnaryOutbound{}
 
-// ApplyUnaryOutbound applies the given UnaryOutbound to
-// the given UnaryOutbound.
+// ApplyUnaryOutbound applies the given UnaryOutbound middleware to
+// the given UnaryOutbound transport.
 func ApplyUnaryOutbound(o transport.UnaryOutbound, f UnaryOutbound) transport.UnaryOutbound {
 	if f == nil {
 		return o
@@ -61,7 +61,7 @@ func ApplyUnaryOutbound(o transport.UnaryOutbound, f UnaryOutbound) transport.Un
 	return unaryOutboundWithMiddleware{o: o, f: f}
 }
 
-// UnaryOutboundFunc adapts a function into a UnaryOutbound.
+// UnaryOutboundFunc adapts a function into a UnaryOutbound middleware.
 type UnaryOutboundFunc func(context.Context, *transport.Request, transport.UnaryOutbound) (*transport.Response, error)
 
 // Call for UnaryOutboundFunc.
@@ -98,7 +98,7 @@ func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, ou
 
 // OnewayOutbound defines transport-level middleware for `OnewayOutbound`s.
 //
-// OnewayOutbound MAY
+// OnewayOutbound middleware MAY
 //
 // - change the context
 // - change the request
@@ -106,23 +106,23 @@ func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, ou
 // - handle the returned error
 // - call the given outbound zero or more times
 //
-// OnewayOutbound MUST
+// OnewayOutbound middleware MUST
 //
 // - always return an Ack (nil or not) or an error.
 // - be thread-safe
 //
-// OnewayOutbound is re-used across requests and MAY be called
+// OnewayOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.
 type OnewayOutbound interface {
 	CallOneway(ctx context.Context, request *transport.Request, out transport.OnewayOutbound) (transport.Ack, error)
 }
 
 // NopOnewayOutbound is a oneway outbound middleware that does not do
-// anything special. It simply calls the underlying OnewayOutbound.
+// anything special. It simply calls the underlying OnewayOutbound transport.
 var NopOnewayOutbound OnewayOutbound = nopOnewayOutbound{}
 
-// ApplyOnewayOutbound applies the given OnewayOutbound to
-// the given OnewayOutbound.
+// ApplyOnewayOutbound applies the given OnewayOutbound middleware to
+// the given OnewayOutbound transport.
 func ApplyOnewayOutbound(o transport.OnewayOutbound, f OnewayOutbound) transport.OnewayOutbound {
 	if f == nil {
 		return o
@@ -130,7 +130,7 @@ func ApplyOnewayOutbound(o transport.OnewayOutbound, f OnewayOutbound) transport
 	return onewayOutboundWithMiddleware{o: o, f: f}
 }
 
-// OnewayOutboundFunc adapts a function into a OnewayOutbound.
+// OnewayOutboundFunc adapts a function into a OnewayOutbound middleware.
 type OnewayOutboundFunc func(context.Context, *transport.Request, transport.OnewayOutbound) (transport.Ack, error)
 
 // CallOneway for OnewayOutboundFunc.

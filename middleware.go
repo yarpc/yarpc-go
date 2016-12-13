@@ -27,25 +27,25 @@ import (
 )
 
 // UnaryOutboundMiddleware combines the given collection of unary outbound
-// middleware in-order into a single UnaryOutbound.
+// middleware in-order into a single UnaryOutbound middleware.
 func UnaryOutboundMiddleware(mw ...middleware.UnaryOutbound) middleware.UnaryOutbound {
 	return outboundmiddleware.UnaryChain(mw...)
 }
 
 // UnaryInboundMiddleware combines the given collection of unary inbound
-// middleware in-order into a single UnaryInbound.
+// middleware in-order into a single UnaryInbound middleware.
 func UnaryInboundMiddleware(mw ...middleware.UnaryInbound) middleware.UnaryInbound {
 	return inboundmiddleware.UnaryChain(mw...)
 }
 
 // OnewayOutboundMiddleware combines the given collection of unary outbound
-// middleware in-order into a single OnewayOutbound.
+// middleware in-order into a single OnewayOutbound middleware.
 func OnewayOutboundMiddleware(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
 	return outboundmiddleware.OnewayChain(mw...)
 }
 
 // OnewayInboundMiddleware combines the given collection of unary inbound
-// middleware in-order into a single OnewayInbound.
+// middleware in-order into a single OnewayInbound middleware.
 func OnewayInboundMiddleware(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
 	return inboundmiddleware.OnewayChain(mw...)
 }

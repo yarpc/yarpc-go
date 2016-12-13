@@ -29,7 +29,7 @@ import (
 // UnaryInbound defines a transport-level middleware for
 // `UnaryHandler`s.
 //
-// UnaryInbound MAY
+// UnaryInbound middleware MAY
 //
 // - change the context
 // - change the request
@@ -38,9 +38,9 @@ import (
 // - handle the returned error
 // - call the given handler zero or more times
 //
-// UnaryInbound MUST be thread-safe.
+// UnaryInbound middleware MUST be thread-safe.
 //
-// UnaryInbound is re-used across requests and MAY be called multiple times
+// UnaryInbound middleware is re-used across requests and MAY be called multiple times
 // for the same request.
 type UnaryInbound interface {
 	Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error
@@ -84,16 +84,16 @@ func (nopUnaryInbound) Handle(ctx context.Context, req *transport.Request, resw 
 // OnewayInbound defines a transport-level middleware for
 // `OnewayHandler`s.
 //
-// OnewayInbound MAY
+// OnewayInbound middleware MAY
 //
 // - change the context
 // - change the request
 // - handle the returned error
 // - call the given handler zero or more times
 //
-// OnewayInbound MUST be thread-safe.
+// OnewayInbound middleware MUST be thread-safe.
 //
-// OnewayInbound is re-used across requests and MAY be called
+// OnewayInbound middleware is re-used across requests and MAY be called
 // multiple times for the same request.
 type OnewayInbound interface {
 	HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error
@@ -103,7 +103,7 @@ type OnewayInbound interface {
 // anything special. It simply calls the underlying OnewayHandler.
 var NopOnewayInbound OnewayInbound = nopOnewayInbound{}
 
-// ApplyOnewayInbound applies the given OnewayInbound to
+// ApplyOnewayInbound applies the given OnewayInbound middleware to
 // the given OnewayHandler.
 func ApplyOnewayInbound(h transport.OnewayHandler, i OnewayInbound) transport.OnewayHandler {
 	if i == nil {
@@ -112,7 +112,7 @@ func ApplyOnewayInbound(h transport.OnewayHandler, i OnewayInbound) transport.On
 	return onewayHandlerWithMiddleware{h: h, i: i}
 }
 
-// OnewayInboundFunc adapts a function into a OnwayInboundMiddleware.
+// OnewayInboundFunc adapts a function into a OnewayInbound Middleware.
 type OnewayInboundFunc func(context.Context, *transport.Request, transport.OnewayHandler) error
 
 // HandleOneway for OnewayInboundFunc
