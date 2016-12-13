@@ -28,30 +28,33 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
-// CreateOpenTracingSpan creates a new context that has a reference to the
-// started span.
+// CreateOpenTracingSpan is used to create a new context with a started span
+type CreateOpenTracingSpan struct {
+	Tracer        opentracing.Tracer
+	TransportName string
+	Start         time.Time
+}
+
+// Do creates a new context that has a reference to the started span.
 // This should be called before a Outbound makes a call
-func CreateOpenTracingSpan(
+func (c *CreateOpenTracingSpan) Do(
 	ctx context.Context,
 	req *Request,
-	tracer opentracing.Tracer,
-	transportName string,
-	start time.Time,
 ) (context.Context, opentracing.Span) {
 	var parent opentracing.SpanContext
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 		parent = parentSpan.Context()
 	}
 
-	span := tracer.StartSpan(
+	span := c.Tracer.StartSpan(
 		req.Procedure,
-		opentracing.StartTime(start),
+		opentracing.StartTime(c.Start),
 		opentracing.ChildOf(parent),
 		opentracing.Tags{
 			"rpc.caller":    req.Caller,
 			"rpc.service":   req.Service,
 			"rpc.encoding":  req.Encoding,
-			"rpc.transport": transportName,
+			"rpc.transport": c.TransportName,
 		},
 	)
 	ext.PeerService.Set(span, req.Service)
@@ -61,29 +64,33 @@ func CreateOpenTracingSpan(
 	return ctx, span
 }
 
-// ExtractOpenTracingSpan derives a new context from SpanContext. The created
-// context has a reference to the started span. parentSpanCtx may be nil.
+// ExtractOpenTracingSpan is used to derive a context and associated span
+type ExtractOpenTracingSpan struct {
+	ParentSpanCtx opentracing.SpanContext
+	Tracer        opentracing.Tracer
+	TransportName string
+	Start         time.Time
+}
+
+// Do derives a new context from SpanContext. The created context has a
+// reference to the started span. parentSpanCtx may be nil.
 // This should be called before a Inbound handles a request
-func ExtractOpenTracingSpan(
+func (e *ExtractOpenTracingSpan) Do(
 	ctx context.Context,
-	parentSpanCtx opentracing.SpanContext,
 	req *Request,
-	tracer opentracing.Tracer,
-	transportName string,
-	start time.Time,
 ) (context.Context, opentracing.Span) {
-	span := tracer.StartSpan(
+	span := e.Tracer.StartSpan(
 		req.Procedure,
-		opentracing.StartTime(start),
+		opentracing.StartTime(e.Start),
 		opentracing.Tags{
 			"rpc.caller":    req.Caller,
 			"rpc.service":   req.Service,
 			"rpc.encoding":  req.Encoding,
-			"rpc.transport": transportName,
+			"rpc.transport": e.TransportName,
 		},
 		// parentSpanCtx may be nil
 		// this implies ChildOf
-		ext.RPCServerOption(parentSpanCtx),
+		ext.RPCServerOption(e.ParentSpanCtx),
 	)
 	ext.PeerService.Set(span, req.Caller)
 	ext.SpanKindRPCServer.Set(span)

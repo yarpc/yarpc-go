@@ -88,7 +88,12 @@ func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (tran
 		return nil, errOutboundNotStarted
 	}
 
-	ctx, span := transport.CreateOpenTracingSpan(ctx, req, o.tracer, transportName, time.Now())
+	createOpenTracingSpan := transport.CreateOpenTracingSpan{
+		Tracer:        o.tracer,
+		TransportName: transportName,
+		Start:         time.Now(),
+	}
+	ctx, span := createOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 
 	marshalledRPC, err := serialize.ToBytes(o.tracer, span.Context(), req)

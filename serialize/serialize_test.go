@@ -105,12 +105,16 @@ func TestContextSerialization(t *testing.T) {
 		":)":    ":(",
 	}
 
-	_, span := transport.CreateOpenTracingSpan(
+	createOpenTracingSpan := transport.CreateOpenTracingSpan{
+		Tracer:        tracer,
+		TransportName: "fake-transport",
+		Start:         time.Now(),
+	}
+
+	_, span := createOpenTracingSpan.Do(
 		context.Background(),
 		req,
-		tracer,
-		"fake-transport",
-		time.Now())
+	)
 	addBaggage(span, baggage)
 	span.Finish()
 
@@ -122,13 +126,14 @@ func TestContextSerialization(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, span)
 
-	_, span = transport.ExtractOpenTracingSpan(
-		context.Background(),
-		spanContext,
-		req,
-		tracer,
-		"fake-transport",
-		time.Now())
+	extractOpenTracingSpan := transport.ExtractOpenTracingSpan{
+		ParentSpanCtx: spanContext,
+		Tracer:        tracer,
+		TransportName: "fake-transport",
+		Start:         time.Now(),
+	}
+
+	_, span = extractOpenTracingSpan.Do(context.Background(), req)
 	defer span.Finish()
 
 	assert.Equal(t, baggage, getBaggage(span))
