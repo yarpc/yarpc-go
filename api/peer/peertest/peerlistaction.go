@@ -143,7 +143,12 @@ func (a UpdateAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 		removed = append(removed, MockPeerIdentifier(peerID))
 	}
 
-	err := list.Update(added, removed)
+	err := list.Update(
+		peer.ListUpdates{
+			Additions: added,
+			Removals:  removed,
+		},
+	)
 	assert.Equal(t, a.ExpectedErr, err)
 }
 

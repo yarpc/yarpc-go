@@ -4,6 +4,8 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
+-   **Breaking**: Changed `peer.List.Update` to accept a `peer.ListUpdates`
+    struct instead of a list of additions and removals
 -   **Breaking**: yarpc.NewDispatcher now returns a pointer to a
     yarpc.Dispatcher. Previously, yarpc.Dispatcher was an interface, now a
     concrete struct.

@@ -62,7 +62,10 @@ type List struct {
 // Update applies the additions and removals of peer Identifiers to the list
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures
-func (pl *List) Update(additions, removals []peer.Identifier) error {
+func (pl *List) Update(updates peer.ListUpdates) error {
+	additions := updates.Additions
+	removals := updates.Removals
+
 	if len(additions) == 0 && len(removals) == 0 {
 		return nil
 	}
