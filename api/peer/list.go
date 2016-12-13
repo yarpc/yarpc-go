@@ -41,9 +41,18 @@ type Chooser interface {
 }
 
 // List listens to adds and removes of Peers from a PeerProvider
-// A Chooser will implement the PeerChangeListener interface in order to receive
+// A Chooser will implement the List interface in order to receive
 // updates to the list of Peers it is keeping track of
 type List interface {
 	// Update performs the additions and removals to the Peer List
-	Update(additions, removals []Identifier) error
+	Update(updates ListUpdates) error
+}
+
+// ListUpdates is a wrapper around the list of additions and removals used in List.Update
+type ListUpdates struct {
+	// Additions are the identifiers that should be added to the list
+	Additions []Identifier
+
+	// Removals are the identifiers that should be removed to the list
+	Removals []Identifier
 }
