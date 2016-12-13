@@ -26,26 +26,26 @@ import (
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 )
 
-// UnaryOutbound combines the given collection of unary outbound
+// UnaryOutboundMiddleware combines the given collection of unary outbound
 // middleware in-order into a single UnaryOutbound.
-func UnaryOutbound(mw ...middleware.UnaryOutbound) middleware.UnaryOutbound {
+func UnaryOutboundMiddleware(mw ...middleware.UnaryOutbound) middleware.UnaryOutbound {
 	return outboundmiddleware.UnaryChain(mw...)
 }
 
-// UnaryInbound combines the given collection of unary inbound
+// UnaryInboundMiddleware combines the given collection of unary inbound
 // middleware in-order into a single UnaryInbound.
-func UnaryInbound(mw ...middleware.UnaryInbound) middleware.UnaryInbound {
+func UnaryInboundMiddleware(mw ...middleware.UnaryInbound) middleware.UnaryInbound {
 	return inboundmiddleware.UnaryChain(mw...)
 }
 
-// OnewayOutbound combines the given collection of unary outbound
+// OnewayOutboundMiddleware combines the given collection of unary outbound
 // middleware in-order into a single OnewayOutbound.
-func OnewayOutbound(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
+func OnewayOutboundMiddleware(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
 	return outboundmiddleware.OnewayChain(mw...)
 }
 
-// OnewayInbound combines the given collection of unary inbound
+// OnewayInboundMiddleware combines the given collection of unary inbound
 // middleware in-order into a single OnewayInbound.
-func OnewayInbound(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
+func OnewayInboundMiddleware(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
 	return inboundmiddleware.OnewayChain(mw...)
 }

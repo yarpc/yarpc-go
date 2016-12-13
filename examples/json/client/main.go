@@ -109,7 +109,7 @@ func main() {
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: yarpc.UnaryOutbound(requestLogOutboundMiddleware{}),
+			Unary: yarpc.UnaryOutboundMiddleware(requestLogOutboundMiddleware{}),
 		},
 	})
 	if err := dispatcher.Start(); err != nil {
