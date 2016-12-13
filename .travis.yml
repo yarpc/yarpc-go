@@ -83,13 +83,15 @@ script:
       travis_retry goveralls -coverprofile=cover.out -service=travis-ci || true
       ;;
     crossdock)
-      make crossdock
-      # moved this to it's own line, since this will never fire if "make crossdock" fails :|
-      #docker-compose logs
+      # run crossdock, and then dump logs if crossdock fails
+      # finally, exit with the exit code of "make crossdock"
+      $(make crossdock)
+      e=$?
+      docker-compose logs
+      exit $e
       ;;
   esac
   set +e
-- docker-compose logs
 
 after_success:
 - |
