@@ -1,4 +1,4 @@
 .PHONY: all
 all:
-	cd client; go build -i
-	cd server; go build -i
+	cd unary/client; go build -i
+	cd unary/server; go build -i

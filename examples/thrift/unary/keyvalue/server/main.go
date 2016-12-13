@@ -26,8 +26,8 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueserver"
+	"go.uber.org/yarpc/examples/thrift/unary/keyvalue/kv"
+	"go.uber.org/yarpc/examples/thrift/unary/keyvalue/kv/yarpc/keyvalueserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 )

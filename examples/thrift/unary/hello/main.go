@@ -26,9 +26,9 @@ import (
 	"log"
 	"time"
 
-	"go.uber.org/yarpc/examples/thrift/hello/echo"
-	"go.uber.org/yarpc/examples/thrift/hello/echo/yarpc/helloclient"
-	"go.uber.org/yarpc/examples/thrift/hello/echo/yarpc/helloserver"
+	"go.uber.org/yarpc/examples/thrift/unary/hello/echo"
+	"go.uber.org/yarpc/examples/thrift/unary/hello/echo/yarpc/helloclient"
+	"go.uber.org/yarpc/examples/thrift/unary/hello/echo/yarpc/helloserver"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"

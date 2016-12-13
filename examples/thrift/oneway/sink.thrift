@@ -4,5 +4,4 @@ service Hello {
 
 struct SinkRequest {
     1: required string message;
-    2: required i16 count;
 }

@@ -27,7 +27,7 @@ import (
 	"context"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv"
+	"go.uber.org/yarpc/examples/thrift/unary/keyvalue/kv"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
 )

@@ -32,7 +32,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/examples/thrift/keyvalue/kv/yarpc/keyvalueclient"
+	"go.uber.org/yarpc/examples/thrift/unary/keyvalue/kv/yarpc/keyvalueclient"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 )
