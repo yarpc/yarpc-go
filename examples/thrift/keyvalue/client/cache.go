@@ -32,7 +32,7 @@ import (
 
 // CacheOutboundMiddleware is a OutboundMiddleware
 type CacheOutboundMiddleware interface {
-	middleware.UnaryOutboundMiddleware
+	middleware.UnaryOutbound
 
 	Invalidate()
 }

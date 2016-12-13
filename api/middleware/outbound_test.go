@@ -23,7 +23,7 @@ package middleware_test
 import (
 	"bytes"
 	"context"
-	"errors"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -36,12 +36,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnaryNopInboundMiddleware(t *testing.T) {
+func TestUnaryNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	wrappedH := middleware.ApplyUnaryInboundMiddleware(h, middleware.NopUnaryInboundMiddleware)
+	o := transporttest.NewMockUnaryOutbound(mockCtrl)
+	wrappedO := middleware.ApplyUnaryOutbound(o, middleware.NopUnaryOutbound)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -52,19 +52,22 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	resw := new(transporttest.FakeResponseWriter)
-	err := errors.New("great sadness")
-	h.EXPECT().Handle(ctx, req, resw).Return(err)
 
-	assert.Equal(t, err, wrappedH.Handle(ctx, req, resw))
+	res := &transport.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte{4, 5, 6}))}
+	o.EXPECT().Call(ctx, req).Return(res, nil)
+
+	got, err := wrappedO.Call(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, res, got)
+	}
 }
 
-func TestOnewayNopInboundMiddleware(t *testing.T) {
+func TestOnewayNopOutboundMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	h := transporttest.NewMockOnewayHandler(mockCtrl)
-	wrappedH := middleware.ApplyOnewayInboundMiddleware(h, middleware.NopOnewayInboundMiddleware)
+	o := transporttest.NewMockOnewayOutbound(mockCtrl)
+	wrappedO := middleware.ApplyOnewayOutbound(o, middleware.NopOnewayOutbound)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -75,8 +78,11 @@ func TestOnewayNopInboundMiddleware(t *testing.T) {
 		Procedure: "hello",
 		Body:      bytes.NewReader([]byte{1, 2, 3}),
 	}
-	err := errors.New("great sadness")
-	h.EXPECT().HandleOneway(ctx, req).Return(err)
 
-	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
+	o.EXPECT().CallOneway(ctx, req).Return(nil, nil)
+
+	got, err := wrappedO.CallOneway(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, nil, got)
+	}
 }

@@ -4,6 +4,8 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
+-   **Breaking**: Rename `middleware.{Oneway,Unary}{Inbound,Outbound}Middleware`
+    to `middleware.{Oneway,Unary}{Inbound,Outbound}`
 -   **Breaking**: Changed `peer.List.Update` to accept a `peer.ListUpdates`
     struct instead of a list of additions and removals
 -   **Breaking**: yarpc.NewDispatcher now returns a pointer to a
