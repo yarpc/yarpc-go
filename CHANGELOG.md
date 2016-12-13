@@ -4,8 +4,13 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   **Breaking**: yarpc.NewDispatcher now returns a pointer to a
+    yarpc.Dispatcher. Previously, yarpc.Dispatcher was an interface, now a
+    concrete struct.
 
+    This change will allow us to extend the Dispatcher after the 1.0.0 release
+    without breaking tests depending on the rigidity of the Dispatcher
+    interface.
 
 v1.0.0-rc3 (2016-12-09)
 -----------------------
