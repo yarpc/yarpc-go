@@ -142,10 +142,10 @@ func (i *Inbound) handle() error {
 	}
 
 	extractOpenTracingSpan := transport.ExtractOpenTracingSpan{
-		ParentSpanCtx: spanContext,
-		Tracer:        i.tracer,
-		TransportName: transportName,
-		Start:         start,
+		ParentSpanContext: spanContext,
+		Tracer:            i.tracer,
+		TransportName:     transportName,
+		StartTime:         start,
 	}
 	ctx, span := extractOpenTracingSpan.Do(context.Background(), req)
 	defer span.Finish()

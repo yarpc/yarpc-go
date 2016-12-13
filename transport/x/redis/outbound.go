@@ -91,7 +91,7 @@ func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (tran
 	createOpenTracingSpan := transport.CreateOpenTracingSpan{
 		Tracer:        o.tracer,
 		TransportName: transportName,
-		Start:         time.Now(),
+		StartTime:     time.Now(),
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()

@@ -108,13 +108,10 @@ func TestContextSerialization(t *testing.T) {
 	createOpenTracingSpan := transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
 		TransportName: "fake-transport",
-		Start:         time.Now(),
+		StartTime:     time.Now(),
 	}
 
-	_, span := createOpenTracingSpan.Do(
-		context.Background(),
-		req,
-	)
+	_, span := createOpenTracingSpan.Do(context.Background(), req)
 	addBaggage(span, baggage)
 	span.Finish()
 
@@ -127,10 +124,10 @@ func TestContextSerialization(t *testing.T) {
 	assert.NotNil(t, span)
 
 	extractOpenTracingSpan := transport.ExtractOpenTracingSpan{
-		ParentSpanCtx: spanContext,
-		Tracer:        tracer,
-		TransportName: "fake-transport",
-		Start:         time.Now(),
+		ParentSpanContext: spanContext,
+		Tracer:            tracer,
+		TransportName:     "fake-transport",
+		StartTime:         time.Now(),
 	}
 
 	_, span = extractOpenTracingSpan.Do(context.Background(), req)

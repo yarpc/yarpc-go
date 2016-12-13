@@ -28,11 +28,11 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
-// CreateOpenTracingSpan is used to create a new context with a started span
+// CreateOpenTracingSpan creates a new context with a started span
 type CreateOpenTracingSpan struct {
 	Tracer        opentracing.Tracer
 	TransportName string
-	Start         time.Time
+	StartTime     time.Time
 }
 
 // Do creates a new context that has a reference to the started span.
@@ -48,7 +48,7 @@ func (c *CreateOpenTracingSpan) Do(
 
 	span := c.Tracer.StartSpan(
 		req.Procedure,
-		opentracing.StartTime(c.Start),
+		opentracing.StartTime(c.StartTime),
 		opentracing.ChildOf(parent),
 		opentracing.Tags{
 			"rpc.caller":    req.Caller,
@@ -64,12 +64,12 @@ func (c *CreateOpenTracingSpan) Do(
 	return ctx, span
 }
 
-// ExtractOpenTracingSpan is used to derive a context and associated span
+// ExtractOpenTracingSpan derives a context and associated span
 type ExtractOpenTracingSpan struct {
-	ParentSpanCtx opentracing.SpanContext
-	Tracer        opentracing.Tracer
-	TransportName string
-	Start         time.Time
+	ParentSpanContext opentracing.SpanContext
+	Tracer            opentracing.Tracer
+	TransportName     string
+	StartTime         time.Time
 }
 
 // Do derives a new context from SpanContext. The created context has a
@@ -81,7 +81,7 @@ func (e *ExtractOpenTracingSpan) Do(
 ) (context.Context, opentracing.Span) {
 	span := e.Tracer.StartSpan(
 		req.Procedure,
-		opentracing.StartTime(e.Start),
+		opentracing.StartTime(e.StartTime),
 		opentracing.Tags{
 			"rpc.caller":    req.Caller,
 			"rpc.service":   req.Service,
@@ -90,7 +90,7 @@ func (e *ExtractOpenTracingSpan) Do(
 		},
 		// parentSpanCtx may be nil
 		// this implies ChildOf
-		ext.RPCServerOption(e.ParentSpanCtx),
+		ext.RPCServerOption(e.ParentSpanContext),
 	)
 	ext.PeerService.Set(span, req.Caller)
 	ext.SpanKindRPCServer.Set(span)
