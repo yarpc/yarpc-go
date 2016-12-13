@@ -73,14 +73,14 @@ type Outbounds map[string]transport.Outbounds
 
 // OutboundMiddleware contains the different type of outbound middleware
 type OutboundMiddleware struct {
-	Unary  middleware.UnaryOutboundMiddleware
-	Oneway middleware.OnewayOutboundMiddleware
+	Unary  middleware.UnaryOutbound
+	Oneway middleware.OnewayOutbound
 }
 
 // InboundMiddleware contains the different type of inbound middleware
 type InboundMiddleware struct {
-	Unary  middleware.UnaryInboundMiddleware
-	Oneway middleware.OnewayInboundMiddleware
+	Unary  middleware.UnaryInbound
+	Oneway middleware.OnewayInbound
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
@@ -115,12 +115,12 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 
 		// apply outbound middleware and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = middleware.ApplyUnaryOutboundMiddleware(outs.Unary, mw.Unary)
+			unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, mw.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = middleware.ApplyOnewayOutboundMiddleware(outs.Oneway, mw.Oneway)
+			onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 
@@ -209,11 +209,11 @@ func (d *Dispatcher) Register(rs []transport.Registrant) {
 	for _, r := range rs {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
-			h := middleware.ApplyUnaryInboundMiddleware(r.HandlerSpec.Unary(),
+			h := middleware.ApplyUnaryInbound(r.HandlerSpec.Unary(),
 				d.InboundMiddleware.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
-			h := middleware.ApplyOnewayInboundMiddleware(r.HandlerSpec.Oneway(),
+			h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
 				d.InboundMiddleware.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:

@@ -26,26 +26,26 @@ import (
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 )
 
-// UnaryOutboundMiddleware combines the given collection of unary outbound
-// middleware in-order into a single UnaryOutboundMiddleware.
-func UnaryOutboundMiddleware(mw ...middleware.UnaryOutboundMiddleware) middleware.UnaryOutboundMiddleware {
+// UnaryOutbound combines the given collection of unary outbound
+// middleware in-order into a single UnaryOutbound.
+func UnaryOutbound(mw ...middleware.UnaryOutbound) middleware.UnaryOutbound {
 	return outboundmiddleware.UnaryChain(mw...)
 }
 
-// UnaryInboundMiddleware combines the given collection of unary inbound
-// middleware in-order into a single UnaryInboundMiddleware.
-func UnaryInboundMiddleware(mw ...middleware.UnaryInboundMiddleware) middleware.UnaryInboundMiddleware {
+// UnaryInbound combines the given collection of unary inbound
+// middleware in-order into a single UnaryInbound.
+func UnaryInbound(mw ...middleware.UnaryInbound) middleware.UnaryInbound {
 	return inboundmiddleware.UnaryChain(mw...)
 }
 
-// OnewayOutboundMiddleware combines the given collection of unary outbound
-// middleware in-order into a single OnewayOutboundMiddleware.
-func OnewayOutboundMiddleware(mw ...middleware.OnewayOutboundMiddleware) middleware.OnewayOutboundMiddleware {
+// OnewayOutbound combines the given collection of unary outbound
+// middleware in-order into a single OnewayOutbound.
+func OnewayOutbound(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
 	return outboundmiddleware.OnewayChain(mw...)
 }
 
-// OnewayInboundMiddleware combines the given collection of unary inbound
-// middleware in-order into a single OnewayInboundMiddleware.
-func OnewayInboundMiddleware(mw ...middleware.OnewayInboundMiddleware) middleware.OnewayInboundMiddleware {
+// OnewayInbound combines the given collection of unary inbound
+// middleware in-order into a single OnewayInbound.
+func OnewayInbound(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
 	return inboundmiddleware.OnewayChain(mw...)
 }
