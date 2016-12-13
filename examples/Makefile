@@ -1,4 +1,4 @@
-EXAMPLES = json thrift
+EXAMPLES = thrift-hello thrift-keyvalue json-keyvalue oneway
 TRANSPORTS = http tchannel
 
 ENV = env
