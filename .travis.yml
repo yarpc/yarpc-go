@@ -71,7 +71,6 @@ install:
 
 script:
 - |
-  set -e
   case "$TYPE" in
     lint)
       make lint
@@ -83,15 +82,10 @@ script:
       travis_retry goveralls -coverprofile=cover.out -service=travis-ci || true
       ;;
     crossdock)
-      # run crossdock, and then dump logs if crossdock fails
-      # finally, exit with the exit code of "make crossdock"
-      out=$(make crossdock); code=$?
-      echo $out
+      make crossdock
       docker-compose logs
-      exit $code
       ;;
   esac
-  set +e
 
 after_success:
 - |
