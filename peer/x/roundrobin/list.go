@@ -225,7 +225,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	for {
 		if nextPeer := pl.nextPeer(); nextPeer != nil {
 			pl.notifyPeerAvailable()
-			nextPeer.StartRequest(pl)
+			nextPeer.StartRequest()
 			return nextPeer, pl.getOnFinishFunc(nextPeer), nil
 		}
 
@@ -260,7 +260,7 @@ func (pl *List) notifyPeerAvailable() {
 // getOnFinishFunc creates a closure that will be run at the end of the request
 func (pl *List) getOnFinishFunc(p peer.Peer) func(error) {
 	return func(_ error) {
-		p.EndRequest(pl)
+		p.EndRequest()
 	}
 }
 

@@ -102,25 +102,23 @@ func (p *Peer) Status() peer.Status {
 // SetStatus sets the status of the Peer (to be used by the peer.Transport)
 func (p *Peer) SetStatus(status peer.ConnectionStatus) {
 	p.connectionStatus = status
-	p.notifyStatusChanged(nil)
+	p.notifyStatusChanged()
 }
 
 // StartRequest runs at the beginning of a request and returns a callback for when the request finished
-func (p *Peer) StartRequest(s peer.Subscriber) {
+func (p *Peer) StartRequest() {
 	p.pending.Inc()
-	p.notifyStatusChanged(s)
+	p.notifyStatusChanged()
 }
 
 // EndRequest should be run after a request has finished.
-func (p *Peer) EndRequest(s peer.Subscriber) {
+func (p *Peer) EndRequest() {
 	p.pending.Dec()
-	p.notifyStatusChanged(s)
+	p.notifyStatusChanged()
 }
 
-func (p *Peer) notifyStatusChanged(dontNotify peer.Subscriber) {
+func (p *Peer) notifyStatusChanged() {
 	for sub := range p.subscribers {
-		if sub != dontNotify {
-			sub.NotifyStatusChanged(p)
-		}
+		sub.NotifyStatusChanged(p)
 	}
 }
