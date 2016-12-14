@@ -238,10 +238,10 @@ func (d *Dispatcher) Register(rs []transport.Registrant) {
 func (d *Dispatcher) Start() error {
 	var (
 		mu         sync.Mutex
-		allStarted []transport.StartStoppable
+		allStarted []transport.Lifecycle
 	)
 
-	start := func(s transport.StartStoppable) func() error {
+	start := func(s transport.Lifecycle) func() error {
 		return func() error {
 			if s == nil {
 				return nil
