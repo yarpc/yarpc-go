@@ -79,6 +79,10 @@ type Service struct {
 	Name          string
 	Methods       map[string]UnaryHandler
 	OnewayMethods map[string]OnewayHandler
+
+	// Snippet of Go code representing the function definition of the different
+	// handlers. This is useful for introspection.
+	Signatures map[string]string
 }
 
 // BuildProcedures builds a list of Procedures from a Thrift service
@@ -103,10 +107,13 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 			Protocol:     proto,
 			Enveloping:   rc.Enveloping,
 		})
+		signature, _ := s.Signatures[methodName]
 
 		rs = append(rs, transport.Procedure{
 			Name:        procedureName(s.Name, methodName),
 			HandlerSpec: spec,
+			Encoding:    Encoding,
+			Signature:   signature,
 		})
 	}
 
@@ -117,10 +124,13 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 			Protocol:      proto,
 			Enveloping:    rc.Enveloping,
 		})
+		signature, _ := s.Signatures[methodName]
 
 		rs = append(rs, transport.Procedure{
 			Name:        procedureName(s.Name, methodName),
 			HandlerSpec: spec,
+			Encoding:    Encoding,
+			Signature:   signature,
 		})
 	}
 

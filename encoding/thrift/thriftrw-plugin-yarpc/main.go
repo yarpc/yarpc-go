@@ -51,6 +51,7 @@ const serverTemplate = `
 
 <$pkgname := printf "%sserver" (lower .Service.Name)>
 package <$pkgname>
+
 <$yarpc     := import "go.uber.org/yarpc">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$transport := import "go.uber.org/yarpc/api/transport">
@@ -95,6 +96,9 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 				<$onewayWrapperFunc := .OnewayWrapperFunc>
 				<range .Service.Functions>
 					<if .OneWay>"<.ThriftName>": <import $onewayWrapperImport>.<$onewayWrapperFunc>(h.<.Name>),<end>
+			<end>},
+			Signatures: map[string]string{
+				<range .Service.Functions>"<.ThriftName>": "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
 			<end>},
 	}
 	return <$thrift>.BuildProcedures(service, opts...)
