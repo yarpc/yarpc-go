@@ -34,16 +34,21 @@ import (
 )
 
 var (
-	_wrapper = flag.Bool("wrapper", false, "generate code with the handler wrappers")
-
-	_context       = flag.String("context", "context", "generate code with the provided context")
-	_wrapperImport = flag.String("wrapper-import", "", "wrapper import path where handler function wrappers are implemented")
+	_context             = flag.String("context", "context", "generate code with the provided context")
+	_unaryHandlerWrapper = flag.String("unary-handler-wrapper",
+		"go.uber.org/yarpc/encoding/thrift.UnaryHandlerFunc",
+		"wrapper for import path where unary handler functions or wrappers are implemented")
+	_onewayHandlerWrapper = flag.String("oneway-handler-wrapper",
+		"go.uber.org/yarpc/encoding/thrift.OnewayHandlerFunc",
+		"wrapper import path where oneway handler functions or wrappers are implemented")
 )
 
 type userContext struct {
-	Wrapper       bool
 	CustomContext string
-	WrapperImport string
+	UnaryImport   string
+	UnaryFunc     string
+	OnewayImport  string
+	OnewayFunc    string
 }
 
 const serverTemplate = `
@@ -85,23 +90,14 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 	h := handler{impl}
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
-		<if .UserContext.Wrapper>
-			<$unaryWrapper := printf "%s.UnaryHandlerFuncWrapper" (import .UserContext.WrapperImport)>
-			<$onewayWrapper := printf "%s.OnewayHandlerFuncWrapper" (import .UserContext.WrapperImport) >
+			<$unaryFunc := printf "%s.%s" (import .UserContext.UnaryImport) .UserContext.UnaryFunc>
+			<$onewayFunc := printf "%s.%s" (import .UserContext.OnewayImport) .UserContext.OnewayFunc>
 			Methods: map[string]<$thrift>.UnaryHandler{
-				<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$unaryWrapper>(h.<.Name>),<end>
+				<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$unaryFunc>(h.<.Name>),<end>
 			<end>},
 			OnewayMethods: map[string]<$thrift>.OnewayHandler{
-				<range .Service.Functions><if .OneWay>"<.ThriftName>": <$onewayWrapper>(h.<.Name>),<end>
+				<range .Service.Functions><if .OneWay>"<.ThriftName>": <$onewayFunc>(h.<.Name>),<end>
 			<end>},
-		<else>
-			Methods: map[string]<$thrift>.UnaryHandler{
-				<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$thrift>.UnaryHandlerFunc(h.<.Name>),<end>
-			<end>},
-			OnewayMethods: map[string]<$thrift>.OnewayHandler{
-				<range .Service.Functions><if .OneWay>"<.ThriftName>": <$thrift>.OnewayHandlerFunc(h.<.Name>),<end>
-			<end>},
-		<end>
 	}
 	return <$thrift>.BuildRegistrants(service, opts...)
 }
@@ -267,6 +263,14 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 			parentModule = req.Modules[parent.ModuleID]
 		}
 
+		unary := *_unaryHandlerWrapper
+		unaryImport := unary[0:strings.LastIndex(unary, ".")]
+		unaryWrapper := unary[strings.LastIndex(unary, ".")+1 : len(unary)]
+
+		oneway := *_onewayHandlerWrapper
+		onewayImport := oneway[0:strings.LastIndex(oneway, ".")]
+		onewayWrapper := oneway[strings.LastIndex(oneway, ".")+1 : len(oneway)]
+
 		templateData := struct {
 			Module       *api.Module
 			Service      *api.Service
@@ -280,9 +284,11 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 			ParentModule: parentModule,
 
 			UserContext: &userContext{
-				Wrapper:       *_wrapper,
 				CustomContext: *_context,
-				WrapperImport: *_wrapperImport,
+				UnaryImport:   unaryImport,
+				UnaryFunc:     unaryWrapper,
+				OnewayImport:  onewayImport,
+				OnewayFunc:    onewayWrapper,
 			},
 		}
 
