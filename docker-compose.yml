@@ -30,7 +30,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis
+            - AXIS_TRANSPORT_ONEWAY=http,redis,redispubsub
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
