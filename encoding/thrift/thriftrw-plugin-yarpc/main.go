@@ -38,16 +38,12 @@ var (
 
 	_context       = flag.String("context", "context", "generate code with the provided context")
 	_wrapperImport = flag.String("wrapper-import", "", "wrapper import path where handler function wrappers are implemented")
-	_param         = flag.String("param", "", "parameter name for the input parameter")
-	_paramImport   = flag.String("param-import", "", "input parameter provide for the New handler function")
 )
 
 type userContext struct {
 	Wrapper       bool
 	CustomContext string
 	WrapperImport string
-	Param         string
-	ParamImport   string
 }
 
 const serverTemplate = `
@@ -85,25 +81,18 @@ type Interface interface {
 //
 // 	handler := <.Service.Name>Handler{}
 // 	dispatcher.Register(<$pkgname>.New(handler))
-<if .UserContext.Wrapper>
-	<$ParamImport := printf "%s.%s" (import .UserContext.ParamImport) .UserContext.Param>
-	<$parameterName := lower .UserContext.Param>
-	func New(<$parameterName> <$ParamImport>, impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Registrant {
-<else>
-	func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Registrant {
-<end>
+func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Registrant {
 	h := handler{impl}
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
 		<if .UserContext.Wrapper>
 			<$unaryWrapper := printf "%s.UnaryHandlerFuncWrapper" (import .UserContext.WrapperImport)>
 			<$onewayWrapper := printf "%s.OnewayHandlerFuncWrapper" (import .UserContext.WrapperImport) >
-			<$parameterName := lower .UserContext.Param>
 			Methods: map[string]<$thrift>.UnaryHandler{
-				<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$unaryWrapper>(<$parameterName>, h.<.Name>),<end>
+				<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$unaryWrapper>(h.<.Name>),<end>
 			<end>},
 			OnewayMethods: map[string]<$thrift>.OnewayHandler{
-				<range .Service.Functions><if .OneWay>"<.ThriftName>": <$onewayWrapper>(<$parameterName>, h.<.Name>),<end>
+				<range .Service.Functions><if .OneWay>"<.ThriftName>": <$onewayWrapper>(h.<.Name>),<end>
 			<end>},
 		<else>
 			Methods: map[string]<$thrift>.UnaryHandler{
@@ -294,8 +283,6 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 				Wrapper:       *_wrapper,
 				CustomContext: *_context,
 				WrapperImport: *_wrapperImport,
-				Param:         *_param,
-				ParamImport:   *_paramImport,
 			},
 		}
 
