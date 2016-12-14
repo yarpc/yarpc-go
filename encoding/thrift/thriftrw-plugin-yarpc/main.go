@@ -84,13 +84,17 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 	h := handler{impl}
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
-			<$unaryWrapperFunc := printf "%s.%s" (import .UnaryWrapperImport) .UnaryWrapperFunc>
-			<$onewayWrapperFunc := printf "%s.%s" (import .OnewayWrapperImport) .OnewayWrapperFunc>
 			Methods: map[string]<$thrift>.UnaryHandler{
-				<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$unaryWrapperFunc>(h.<.Name>),<end>
+				<$unaryWrapperImport := .UnaryWrapperImport>
+				<$unaryWrapperFunc := .UnaryWrapperFunc>
+				<range .Service.Functions>
+					<if not .OneWay>"<.ThriftName>": <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),<end>
 			<end>},
 			OnewayMethods: map[string]<$thrift>.OnewayHandler{
-				<range .Service.Functions><if .OneWay>"<.ThriftName>": <$onewayWrapperFunc>(h.<.Name>),<end>
+				<$onewayWrapperImport := .OnewayWrapperImport>
+				<$onewayWrapperFunc := .OnewayWrapperFunc>
+				<range .Service.Functions>
+					<if .OneWay>"<.ThriftName>": <import $onewayWrapperImport>.<$onewayWrapperFunc>(h.<.Name>),<end>
 			<end>},
 	}
 	return <$thrift>.BuildRegistrants(service, opts...)
