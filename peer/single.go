@@ -44,12 +44,12 @@ func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
 
 // Choose returns the single peer
 func (s *Single) Choose(context.Context, *transport.Request) (peer.Peer, func(error), error) {
-	s.p.StartRequest(s)
+	s.p.StartRequest()
 	return s.p, s.onFinish, s.err
 }
 
 func (s *Single) onFinish(_ error) {
-	s.p.EndRequest(s)
+	s.p.EndRequest()
 }
 
 // NotifyStatusChanged receives notifications from the transport when the peer

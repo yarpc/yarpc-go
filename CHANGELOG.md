@@ -13,6 +13,9 @@ v1.0.0-dev (unreleased)
     This change will allow us to extend the Dispatcher after the 1.0.0 release
     without breaking tests depending on the rigidity of the Dispatcher
     interface.
+-   **Breaking**: `Peer.StartRequest` and `Peer.EndRequest` no longer accept a
+    `dontNotify` argument.
+
 
 v1.0.0-rc3 (2016-12-09)
 -----------------------
