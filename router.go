@@ -101,23 +101,6 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 	}
 }
 
-type byServiceProcedure []transport.Procedure
-
-func (sp byServiceProcedure) Len() int {
-	return len(sp)
-}
-
-func (sp byServiceProcedure) Less(i int, j int) bool {
-	if sp[i].Service == sp[j].Service {
-		return sp[i].Name < sp[j].Name
-	}
-	return sp[i].Service < sp[j].Service
-}
-
-func (sp byServiceProcedure) Swap(i int, j int) {
-	sp[i], sp[j] = sp[j], sp[i]
-}
-
 type proceduresByServiceProcedure []transport.Procedure
 
 func (sp proceduresByServiceProcedure) Len() int {
