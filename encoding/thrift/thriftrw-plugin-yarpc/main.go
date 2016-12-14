@@ -39,10 +39,10 @@ var (
 		"Import path at which Context is available")
 	_unaryHandlerWrapper = flag.String("unary-handler-wrapper",
 		"go.uber.org/yarpc/encoding/thrift.UnaryHandlerFunc",
-		"Function used to wrap generic Thrift function handlers into YARPC handlers")
+		"Function used to wrap generic Thrift unary function handlers into YARPC handlers")
 	_onewayHandlerWrapper = flag.String("oneway-handler-wrapper",
 		"go.uber.org/yarpc/encoding/thrift.OnewayHandlerFunc",
-		"Function used to wrap generic Thrift function handlers into YARPC handlers")
+		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
 )
 
 const serverTemplate = `
@@ -315,7 +315,8 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 }
 
 func splitFunctionPath(input string) (string, string) {
-	return input[0:strings.LastIndex(input, ".")], input[strings.LastIndex(input, ".")+1 : len(input)]
+	i := strings.LastIndex(input, ".")
+	return input[:i], input[i+1:]
 }
 
 func main() {
