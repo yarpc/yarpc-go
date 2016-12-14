@@ -22,6 +22,14 @@ package transport
 
 import "go.uber.org/yarpc/internal/errors"
 
+// BadRequestError builds an error which indicates a bad request with the
+// given error as the reason.
+//
+// Transport implementations treat BadRequestErrors as user errors.
+func BadRequestError(err error) error {
+	return errors.HandlerBadRequestError(err)
+}
+
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.
 func IsBadRequestError(err error) bool {
@@ -29,11 +37,9 @@ func IsBadRequestError(err error) bool {
 	return ok
 }
 
-// IsUnexpectedError returns true if the server failed to process the request
-// because of an unhandled error.
+// IsUnexpectedError returns true if the server panicked or failed to process
+// the request with an unhandled error.
 func IsUnexpectedError(err error) bool {
-	// TODO: Add "or it panicked while processing the request." to the doc when
-	// #111 is resolved.
 	_, ok := err.(errors.UnexpectedError)
 	return ok
 }
