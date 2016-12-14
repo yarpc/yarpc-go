@@ -37,6 +37,13 @@ type Procedure struct {
 
 	// HandlerSpec specifiying which handler and rpc type.
 	HandlerSpec HandlerSpec
+
+	// Encoding of the handler, for introspection.
+	Encoding Encoding
+
+	// Signature of the handler, for introspection. This should be a snippet of
+	// Go code representing the function definition.
+	Signature string
 }
 
 // Router maintains and provides access to a collection of procedures
@@ -59,4 +66,23 @@ type RouteTable interface {
 
 	// Registers zero or more procedures with the route table.
 	Register([]Procedure)
+}
+
+// ProceduresByServiceProcedure offers to sort a slice of Procedure by Service
+// & Procedure.
+type ProceduresByServiceProcedure []Procedure
+
+func (sp ProceduresByServiceProcedure) Len() int {
+	return len(sp)
+}
+
+func (sp ProceduresByServiceProcedure) Less(i int, j int) bool {
+	if sp[i].Service == sp[j].Service {
+		return sp[i].Name < sp[j].Name
+	}
+	return sp[i].Service < sp[j].Service
+}
+
+func (sp ProceduresByServiceProcedure) Swap(i int, j int) {
+	sp[i], sp[j] = sp[j], sp[i]
 }
