@@ -35,21 +35,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// StartStoppable objects are used to define a common Start/Stop functionality
-// across different dispatcher objects
-type StartStoppable interface {
-	// Starts the RPC allowing it to accept and process new incoming
-	// requests.
-	//
-	// Blocks until the RPC is ready to start accepting new requests.
-	Start() error
-
-	// Stops the RPC. No new requests will be accepted.
-	//
-	// Blocks until the RPC has stopped.
-	Stop() error
-}
-
 // Config specifies the parameters of a new RPC constructed via New.
 type Config struct {
 	Name string
@@ -253,10 +238,10 @@ func (d *Dispatcher) Register(rs []transport.Registrant) {
 func (d *Dispatcher) Start() error {
 	var (
 		mu         sync.Mutex
-		allStarted []StartStoppable
+		allStarted []transport.Lifecycle
 	)
 
-	start := func(s StartStoppable) func() error {
+	start := func(s transport.Lifecycle) func() error {
 		return func() error {
 			if s == nil {
 				return nil
