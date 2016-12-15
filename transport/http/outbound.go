@@ -160,6 +160,11 @@ func (o *Outbound) Stop() error {
 	return o.stopErr
 }
 
+// IsRunning returns whether the Outbound is running.
+func (o *Outbound) IsRunning() bool {
+	return o.started.Load()
+}
+
 // Call makes a HTTP request
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {

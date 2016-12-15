@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/serialize"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber-go/atomic"
 )
 
 const transportName = "redis"
@@ -46,6 +47,8 @@ type Inbound struct {
 	processingKey string
 
 	stop chan struct{}
+
+	running atomic.Bool
 }
 
 // NewInbound creates a redis Inbound that satisfies transport.Inbound.
@@ -97,6 +100,7 @@ func (i *Inbound) Start() error {
 	if i.router == nil {
 		return errors.ErrNoRouter
 	}
+	i.running.Store(true)
 
 	err := i.client.Start()
 	if err != nil {
@@ -121,8 +125,14 @@ func (i *Inbound) start() {
 
 // Stop ends the connection to redis
 func (i *Inbound) Stop() error {
+	i.running.Store(false)
 	close(i.stop)
 	return i.client.Stop()
+}
+
+// IsRunning returns whether the inbound is still processing requests.
+func (i *Inbound) IsRunning() bool {
+	return i.running.Load()
 }
 
 func (i *Inbound) handle() error {

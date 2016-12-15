@@ -83,6 +83,11 @@ func (o *ChannelOutbound) Stop() error {
 	return nil
 }
 
+// IsRunning returns whether the ChannelOutbound is running.
+func (o *ChannelOutbound) IsRunning() bool {
+	return o.started.Load()
+}
+
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if !o.started.Load() {

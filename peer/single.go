@@ -66,3 +66,8 @@ func (s *Single) Start() error {
 func (s *Single) Stop() error {
 	return nil
 }
+
+// IsRunning is a noop
+func (s *Single) IsRunning() bool {
+	return true
+}

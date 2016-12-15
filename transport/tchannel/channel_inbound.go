@@ -25,6 +25,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber/tchannel-go"
 )
 
 // ChannelInbound is a TChannel Inbound backed by a pre-existing TChannel
@@ -89,4 +90,10 @@ func (i *ChannelInbound) Start() error {
 // Stop stops the TChannel outbound. This currently does nothing.
 func (i *ChannelInbound) Stop() error {
 	return nil
+}
+
+// IsRunning returns whether the ChannelInbound is running.
+func (i *ChannelInbound) IsRunning() bool {
+	// ChannelListening means the tchannel is accepting new requests at this time.
+	return i.ch.State() == tchannel.ChannelListening
 }

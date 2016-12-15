@@ -86,6 +86,10 @@ func (fo unaryOutboundWithMiddleware) Stop() error {
 	return fo.o.Stop()
 }
 
+func (fo unaryOutboundWithMiddleware) IsRunning() bool {
+	return fo.o.IsRunning()
+}
+
 func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	return fo.f.Call(ctx, request, fo.o)
 }
@@ -153,6 +157,10 @@ func (fo onewayOutboundWithMiddleware) Start() error {
 
 func (fo onewayOutboundWithMiddleware) Stop() error {
 	return fo.o.Stop()
+}
+
+func (fo onewayOutboundWithMiddleware) IsRunning() bool {
+	return fo.o.IsRunning()
 }
 
 func (fo onewayOutboundWithMiddleware) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {

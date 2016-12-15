@@ -135,3 +135,10 @@ func (t *ChannelTransport) Stop() error {
 	t.ch.Close()
 	return nil
 }
+
+// IsRunning returns whether the ChannelTransport is running.
+func (t *ChannelTransport) IsRunning() bool {
+	// ChannelClosed means the tchannel client has been stopped/closed.
+	// ChannelClient means the tchannel client hasn't been started yet.
+	return t.ch.State() != tchannel.ChannelClosed && t.ch.State() != tchannel.ChannelClient
+}
