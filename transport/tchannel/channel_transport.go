@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber-go/atomic"
 	"github.com/uber/tchannel-go"
 )
 
@@ -75,6 +76,8 @@ type ChannelTransport struct {
 	err    error
 	addr   string
 	tracer opentracing.Tracer
+
+	running atomic.Bool
 }
 
 // Channel returns the underlying TChannel "Channel" instance.
@@ -92,6 +95,7 @@ func (t *ChannelTransport) ListenAddr() string {
 //
 // All inbounds must have been assigned a router to accept inbound requests.
 func (t *ChannelTransport) Start() error {
+	t.running.Store(true)
 	// Return error deferred from constructor for the construction of a TChannel.
 	if t.err != nil {
 		return t.err
@@ -132,13 +136,12 @@ func (t *ChannelTransport) Start() error {
 //
 // Stop blocks until the program can gracefully exit.
 func (t *ChannelTransport) Stop() error {
+	t.running.Store(false)
 	t.ch.Close()
 	return nil
 }
 
 // IsRunning returns whether the ChannelTransport is running.
 func (t *ChannelTransport) IsRunning() bool {
-	// ChannelClosed means the tchannel client has been stopped/closed.
-	// ChannelClient means the tchannel client hasn't been started yet.
-	return t.ch.State() != tchannel.ChannelClosed && t.ch.State() != tchannel.ChannelClient
+	return t.running.Load()
 }
