@@ -27,7 +27,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/meta"
 )
 
 // Client makes Raw requests to a single service.
@@ -47,18 +46,28 @@ func init() {
 	yarpc.RegisterClientBuilder(New)
 }
 
+type resMeta struct{ *transport.Response }
+
+func (rm resMeta) Headers() yarpc.Headers {
+	return yarpc.Headers(rm.Response.Headers)
+}
+
 type rawClient struct {
 	cc transport.ClientConfig
 }
 
 func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
 	treq := transport.Request{
-		Caller:   c.cc.Caller(),
-		Service:  c.cc.Service(),
-		Encoding: Encoding,
-		Body:     bytes.NewReader(body),
+		Caller:          c.cc.Caller(),
+		Service:         c.cc.Service(),
+		Procedure:       reqMeta.GetProcedure(),
+		Encoding:        Encoding,
+		Body:            bytes.NewReader(body),
+		ShardKey:        reqMeta.GetShardKey(),
+		RoutingKey:      reqMeta.GetRoutingKey(),
+		RoutingDelegate: reqMeta.GetRoutingDelegate(),
+		Headers:         transport.Headers(reqMeta.GetHeaders()),
 	}
-	meta.ToTransportRequest(reqMeta, &treq)
 
 	tres, err := c.cc.GetUnaryOutbound().Call(ctx, &treq)
 	if err != nil {
@@ -71,17 +80,20 @@ func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []b
 		return nil, nil, err
 	}
 
-	return resBody, meta.FromTransportResponse(tres), nil
+	return resBody, resMeta{tres}, nil
 }
 
 func (c rawClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error) {
 	treq := transport.Request{
-		Caller:   c.cc.Caller(),
-		Service:  c.cc.Service(),
-		Encoding: Encoding,
-		Body:     bytes.NewReader(body),
+		Caller:          c.cc.Caller(),
+		Service:         c.cc.Service(),
+		Procedure:       reqMeta.GetProcedure(),
+		Encoding:        Encoding,
+		Body:            bytes.NewReader(body),
+		ShardKey:        reqMeta.GetShardKey(),
+		RoutingKey:      reqMeta.GetRoutingKey(),
+		RoutingDelegate: reqMeta.GetRoutingDelegate(),
+		Headers:         transport.Headers(reqMeta.GetHeaders()),
 	}
-	meta.ToTransportRequest(reqMeta, &treq)
-
 	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)
 }

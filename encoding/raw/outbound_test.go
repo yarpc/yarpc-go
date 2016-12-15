@@ -30,12 +30,39 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/clientconfig"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/tchannel-go/testutils/testreader"
 )
+
+type clientConfig struct {
+	caller, service string
+	unary           transport.UnaryOutbound
+	oneway          transport.OnewayOutbound
+}
+
+func (cc *clientConfig) Caller() string {
+	return cc.caller
+}
+
+func (cc *clientConfig) Service() string {
+	return cc.service
+}
+
+func (cc *clientConfig) GetUnaryOutbound() transport.UnaryOutbound {
+	if cc.unary != nil {
+		return cc.unary
+	}
+	panic("unary unsupported")
+}
+
+func (cc *clientConfig) GetOnewayOutbound() transport.OnewayOutbound {
+	if cc.oneway != nil {
+		return cc.oneway
+	}
+	panic("oneway unsupported")
+}
 
 func TestCall(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
@@ -80,10 +107,11 @@ func TestCall(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
-		client := New(clientconfig.MultiOutbound(caller, service,
-			transport.Outbounds{
-				Unary: outbound,
-			}))
+		client := New(&clientConfig{
+			caller:  caller,
+			service: service,
+			unary:   outbound,
+		})
 
 		writer, responseBody := testreader.ChunkReader()
 		for _, chunk := range tt.responseBody {
@@ -161,10 +189,11 @@ func TestCallOneway(t *testing.T) {
 
 	for _, tt := range tests {
 		outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
-		client := New(clientconfig.MultiOutbound(caller, service,
-			transport.Outbounds{
-				Oneway: outbound,
-			}))
+		client := New(&clientConfig{
+			caller:  caller,
+			service: service,
+			oneway:  outbound,
+		})
 
 		outbound.EXPECT().CallOneway(gomock.Any(),
 			transporttest.NewRequestMatcher(t,
@@ -205,10 +234,11 @@ func TestCallOnewayFailure(t *testing.T) {
 	body := []byte{1, 2, 3}
 
 	outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
-	client := New(clientconfig.MultiOutbound(caller, service,
-		transport.Outbounds{
-			Oneway: outbound,
-		}))
+	client := New(&clientConfig{
+		caller:  caller,
+		service: service,
+		oneway:  outbound,
+	})
 
 	outbound.EXPECT().CallOneway(gomock.Any(),
 		transporttest.NewRequestMatcher(t,
