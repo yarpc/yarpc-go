@@ -21,6 +21,7 @@
 package yarpc
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -90,12 +91,12 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	}
 
 	return &Dispatcher{
-		Name:              cfg.Name,
-		Registrar:         NewMapRegistry(cfg.Name),
+		name:              cfg.Name,
+		registrar:         NewMapRegistry(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
-		InboundMiddleware: cfg.InboundMiddleware,
+		inboundMiddleware: cfg.InboundMiddleware,
 	}
 }
 
@@ -168,15 +169,13 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 // Clients to send RPCs, and by Procedures to recieve them. This object is what
 // enables an application to be transport-agnostic.
 type Dispatcher struct {
-	transport.Registrar
-
-	Name string
-
+	registrar  transport.Registrar
+	name       string
 	inbounds   Inbounds
 	outbounds  Outbounds
 	transports []transport.Transport
 
-	InboundMiddleware InboundMiddleware
+	inboundMiddleware InboundMiddleware
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -196,9 +195,21 @@ func (d *Dispatcher) Inbounds() Inbounds {
 // generated Thrift client.
 func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 	if rs, ok := d.outbounds[service]; ok {
-		return clientconfig.MultiOutbound(d.Name, service, rs)
+		return clientconfig.MultiOutbound(d.name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
+}
+
+// ServiceProcedures returns a list of services and procedures that have been
+// registered with this Dispatcher.
+func (d *Dispatcher) ServiceProcedures() []transport.ServiceProcedure {
+	return d.registrar.ServiceProcedures()
+}
+
+// Choose picks a handler for the given request or returns an error if a
+// handler for this request does not exist.
+func (d *Dispatcher) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+	return d.registrar.Choose(ctx, req)
 }
 
 // Register configures the dispatcher's registry to route inbound requests to a
@@ -210,11 +221,11 @@ func (d *Dispatcher) Register(rs []transport.Registrant) {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
 			h := middleware.ApplyUnaryInbound(r.HandlerSpec.Unary(),
-				d.InboundMiddleware.Unary)
+				d.inboundMiddleware.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
 			h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
-				d.InboundMiddleware.Oneway)
+				d.inboundMiddleware.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
@@ -224,7 +235,7 @@ func (d *Dispatcher) Register(rs []transport.Registrant) {
 		registrants = append(registrants, r)
 	}
 
-	d.Registrar.Register(registrants)
+	d.registrar.Register(registrants)
 }
 
 // Start Start the RPC allowing it to accept and processing new incoming
