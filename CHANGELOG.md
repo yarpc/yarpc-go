@@ -17,6 +17,8 @@ v1.0.0-dev (unreleased)
     interface.
 -   **Breaking**: `Peer.StartRequest` and `Peer.EndRequest` no longer accept a
     `dontNotify` argument.
+-   Added a `transport.BadRequestError` function to build errors which satisfy
+    `transport.IsBadRequestError`.
 
 
 v1.0.0-rc3 (2016-12-09)
