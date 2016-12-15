@@ -30,6 +30,7 @@ type Inbound interface {
 	// SetRouter configures the inbound to dispatch requests through a
 	// router, typically called by a Dispatcher with its RouteTable of handled
 	// procedures.
+	// Inbound.Start MAY panic if SetRouter was not called.
 	SetRouter(Router)
 
 	// Transport returns any transports that the inbound uses, so they can be
