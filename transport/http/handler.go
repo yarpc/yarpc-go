@@ -45,6 +45,8 @@ func popHeader(h http.Header, n string) string {
 type handler struct {
 	registry transport.Registry
 	tracer   opentracing.Tracer
+	fallback transport.HandlerSpec
+
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -94,7 +96,10 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
 	spec, err := h.registry.Choose(ctx, treq)
-	if err != nil {
+	// There is no matching handler and from provided registry, we use default fallback handler if have one set
+	if err != nil && h.fallback != nil {
+		spec = h.fallback
+	} else if err != nil {
 		return updateSpanWithErr(span, err)
 	}
 

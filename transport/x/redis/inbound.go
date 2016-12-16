@@ -125,6 +125,11 @@ func (i *Inbound) Stop() error {
 	return i.client.Stop()
 }
 
+// SetFallbackHandler sets the default handler. Does nothing for now
+func (i *Inbound) SetFallbackHandler(h HandlerSpec) {
+	
+}
+
 func (i *Inbound) handle() error {
 	// TODO: logging
 	item, err := i.client.BRPopLPush(i.queueKey, i.processingKey, i.timeout)

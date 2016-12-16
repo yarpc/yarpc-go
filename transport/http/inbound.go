@@ -67,6 +67,7 @@ type Inbound struct {
 	server     *intnet.HTTPServer
 	registry   transport.Registry
 	tracer     opentracing.Tracer
+	fallback   transport.HandlerSpec
 }
 
 // Tracer configures a tracer on this inbound.
@@ -98,6 +99,7 @@ func (i *Inbound) Start() error {
 	var httpHandler http.Handler = handler{
 		registry: i.registry,
 		tracer:   i.tracer,
+		fallback: i.fallback,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
@@ -137,4 +139,9 @@ func (i *Inbound) Addr() net.Addr {
 	}
 
 	return listener.Addr()
+}
+
+// SetFallbackHandler sets the default handler for all requests for this TChannel inbound
+func (i *Inbound) SetFallbackHandler(h HandlerSpec) {
+	i.fallback = h
 }
