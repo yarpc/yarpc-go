@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package request
+package transport_test
 
 import (
 	"context"
@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/request"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -36,8 +37,7 @@ func TestValidator(t *testing.T) {
 		transportType transport.Type
 		ttl           time.Duration
 
-		wantErr     error
-		wantMessage string
+		wantErr string
 	}{
 		{
 			// No error
@@ -56,10 +56,7 @@ func TestValidator(t *testing.T) {
 				Service:   "service",
 				Procedure: "hello",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"encoding"},
-			},
-			wantMessage: "missing encoding",
+			wantErr: "missing encoding",
 		},
 		{
 			req: &transport.Request{
@@ -67,10 +64,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"caller name"},
-			},
-			wantMessage: "missing caller name",
+			wantErr: "missing caller name",
 		},
 		{
 			req: &transport.Request{
@@ -78,10 +72,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"service name"},
-			},
-			wantMessage: "missing service name",
+			wantErr: "missing service name",
 		},
 		{
 			req: &transport.Request{
@@ -89,10 +80,7 @@ func TestValidator(t *testing.T) {
 				Service:  "service",
 				Encoding: "raw",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"procedure"},
-			},
-			wantMessage: "missing procedure",
+			wantErr: "missing procedure",
 		},
 		{
 			req: &transport.Request{
@@ -102,30 +90,20 @@ func TestValidator(t *testing.T) {
 				Encoding:  "raw",
 			},
 			transportType: transport.Unary,
-			wantErr: missingParametersError{
-				Parameters: []string{"TTL"},
-			},
-			wantMessage: "missing TTL",
+			wantErr:       "missing TTL",
 		},
 		{
-			req: &transport.Request{},
-			wantErr: missingParametersError{
-				Parameters: []string{
-					"service name", "procedure", "caller name", "encoding",
-				},
-			},
-			wantMessage: "missing service name, procedure, caller name, and encoding",
+			req:     &transport.Request{},
+			wantErr: "missing service name, procedure, caller name, and encoding",
 		},
 	}
 
 	for _, tt := range tests {
-		v := Validator{Request: tt.req}
-
 		ctx := context.Background()
-		err := v.ValidateCommon(ctx)
+		err := transport.ValidateRequest(tt.req)
 
 		if err == nil && tt.transportType == transport.Oneway {
-			err = v.ValidateOneway(ctx)
+			err = request.ValidateOnewayContext(ctx)
 		} else if err == nil { // default to unary
 			var cancel func()
 
@@ -134,13 +112,12 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			err = v.ValidateUnary(ctx)
+			err = request.ValidateUnaryContext(ctx)
 		}
 
-		if tt.wantErr != nil {
-			assert.Equal(t, tt.wantErr, err)
-			if tt.wantMessage != "" && err != nil {
-				assert.Equal(t, tt.wantMessage, err.Error())
+		if tt.wantErr != "" {
+			if assert.Error(t, err) {
+				assert.Equal(t, tt.wantErr, err.Error())
 			}
 		} else {
 			assert.NoError(t, err)

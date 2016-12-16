@@ -150,8 +150,7 @@ func (i *Inbound) handle() error {
 	ctx, span := extractOpenTracingSpan.Do(context.Background(), req)
 	defer span.Finish()
 
-	v := request.Validator{Request: req}
-	if err := v.ValidateCommon(ctx); err != nil {
+	if err := transport.ValidateRequest(req); err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
@@ -165,7 +164,7 @@ func (i *Inbound) handle() error {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
-	if err := v.ValidateOneway(ctx); err != nil {
+	if err := request.ValidateOnewayContext(ctx); err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 

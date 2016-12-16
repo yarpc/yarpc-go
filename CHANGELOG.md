@@ -19,6 +19,8 @@ v1.0.0-dev (unreleased)
     `dontNotify` argument.
 -   Added a `transport.BadRequestError` function to build errors which satisfy
     `transport.IsBadRequestError`.
+-   Added a `transport.ValidateRequest` function to validate
+    `transport.Request`s.
 
 
 v1.0.0-rc3 (2016-12-09)

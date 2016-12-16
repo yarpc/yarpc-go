@@ -83,18 +83,15 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Body:      req.Body,
 	}
+	if err := transport.ValidateRequest(treq); err != nil {
+		return err
+	}
 
 	ctx := req.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
-
 	ctx, span := h.createSpan(ctx, req, treq, start)
-
-	v := request.Validator{Request: treq}
-	if err := v.ValidateCommon(ctx); err != nil {
-		return err
-	}
 
 	spec, err := h.registry.Choose(ctx, treq)
 	if err != nil {
@@ -108,13 +105,13 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 			return parseTTLErr
 		}
 
-		if err := v.ValidateUnary(ctx); err != nil {
+		if err := request.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
 
 	case transport.Oneway:
-		if err := v.ValidateOneway(ctx); err != nil {
+		if err := request.ValidateOnewayContext(ctx); err != nil {
 			return err
 		}
 		err = handleOnewayRequest(span, treq, spec.Oneway())

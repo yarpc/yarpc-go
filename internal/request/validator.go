@@ -23,75 +23,22 @@ package request
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/errors"
 )
 
-// Validator helps validate requests.
-//
-//	v := Validator{Request: request}
-//	v.ValidateCommon(ctx)
-//	...
-//	err := v.ValidateUnary(ctx)
-type Validator struct {
-	Request *transport.Request
-}
-
-// ValidateUnary validates a unary request.
-func ValidateUnary(ctx context.Context, req *transport.Request) error {
-	v := Validator{Request: req}
-	if err := v.ValidateCommon(ctx); err != nil {
-		return err
-	}
-	return v.ValidateUnary(ctx)
-}
-
-// ValidateOneway validates a oneway request.
-func ValidateOneway(ctx context.Context, req *transport.Request) error {
-	v := Validator{Request: req}
-	if err := v.ValidateCommon(ctx); err != nil {
-		return err
-	}
-	return v.ValidateOneway(ctx)
-}
-
-// ValidateCommon checks validity of the common attributes of the request.
-// This should be used to check ALL requests prior to calling
-// RPC-type-specific validators.
-func (v *Validator) ValidateCommon(ctx context.Context) error {
-	// check missing params
-	var missingParams []string
-	if v.Request.Service == "" {
-		missingParams = append(missingParams, "service name")
-	}
-	if v.Request.Procedure == "" {
-		missingParams = append(missingParams, "procedure")
-	}
-	if v.Request.Caller == "" {
-		missingParams = append(missingParams, "caller name")
-	}
-	if v.Request.Encoding == "" {
-		missingParams = append(missingParams, "encoding")
-	}
-	if len(missingParams) > 0 {
-		return missingParametersError{Parameters: missingParams}
-	}
-
-	return nil
-}
-
-// ValidateUnary validates a unary request. This should be used after a
-// successful v.ValidateCommon()
-func (v *Validator) ValidateUnary(ctx context.Context) error {
+// ValidateUnaryContext validates that a context for a unary request is valid
+// and contains all required information.
+func ValidateUnaryContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return missingParametersError{Parameters: []string{"TTL"}}
+		return errors.MissingParameters([]string{"TTL"})
 	}
 
 	return nil
 }
 
-// ValidateOneway validates a oneway request. This should be used after a
-// successful ValidateCommon()
-func (v *Validator) ValidateOneway(ctx context.Context) error {
+// ValidateOnewayContext validates that a context for a oneway request is
+// valid.
+func ValidateOnewayContext(ctx context.Context) error {
 	// Currently, no extra checks for oneway requests are required
 	return nil
 }
