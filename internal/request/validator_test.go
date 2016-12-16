@@ -34,9 +34,7 @@ func TestValidator(t *testing.T) {
 	tests := []struct {
 		req           *transport.Request
 		transportType transport.Type
-
-		ttl       time.Duration
-		ttlString string // set to try parseTTL
+		ttl           time.Duration
 
 		wantErr     error
 		wantMessage string
@@ -118,38 +116,6 @@ func TestValidator(t *testing.T) {
 			},
 			wantMessage: "missing service name, procedure, caller name, and encoding",
 		},
-		{
-			req: &transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  "raw",
-				Procedure: "hello",
-			},
-			transportType: transport.Unary,
-			ttlString:     "-1000",
-			wantErr: invalidTTLError{
-				Service:   "service",
-				Procedure: "hello",
-				TTL:       "-1000",
-			},
-			wantMessage: `invalid TTL "-1000" for procedure "hello" of service "service": must be positive integer`,
-		},
-		{
-			req: &transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  "raw",
-				Procedure: "hello",
-			},
-			transportType: transport.Unary,
-			ttlString:     "not an integer",
-			wantErr: invalidTTLError{
-				Service:   "service",
-				Procedure: "hello",
-				TTL:       "not an integer",
-			},
-			wantMessage: `invalid TTL "not an integer" for procedure "hello" of service "service": must be positive integer`,
-		},
 	}
 
 	for _, tt := range tests {
@@ -165,11 +131,6 @@ func TestValidator(t *testing.T) {
 
 			if tt.ttl != 0 {
 				ctx, cancel = context.WithTimeout(ctx, tt.ttl)
-				defer cancel()
-			}
-
-			if tt.ttlString != "" {
-				ctx, cancel = v.ParseTTL(ctx, tt.ttlString)
 				defer cancel()
 			}
 

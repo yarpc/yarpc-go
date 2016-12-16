@@ -22,9 +22,6 @@ package request
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 )
@@ -34,11 +31,9 @@ import (
 //	v := Validator{Request: request}
 //	v.ValidateCommon(ctx)
 //	...
-//	v.ParseTTL(ttlstring)
-//	request, err := v.ValidateUnary(ctx)
+//	err := v.ValidateUnary(ctx)
 type Validator struct {
 	Request *transport.Request
-	errTTL  error
 }
 
 // ValidateUnary validates a unary request.
@@ -57,38 +52,6 @@ func ValidateOneway(ctx context.Context, req *transport.Request) error {
 		return err
 	}
 	return v.ValidateOneway(ctx)
-}
-
-// ParseTTL takes a context parses the given TTL, clamping the context to that TTL
-// and as a side-effect, tracking any errors encountered while attempting to
-// parse and validate that TTL. Should only be used for unary requests
-func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, func()) {
-	if ttl == "" {
-		// The TTL is missing so set it to 0 and let ValidateUnary() fail with
-		// the correct error message.
-		return ctx, func() {}
-	}
-
-	ttlms, err := strconv.Atoi(ttl)
-	if err != nil {
-		v.errTTL = invalidTTLError{
-			Service:   v.Request.Service,
-			Procedure: v.Request.Procedure,
-			TTL:       ttl,
-		}
-		return ctx, func() {}
-	}
-	// negative TTLs are invalid
-	if ttlms < 0 {
-		v.errTTL = invalidTTLError{
-			Service:   v.Request.Service,
-			Procedure: v.Request.Procedure,
-			TTL:       fmt.Sprint(ttlms),
-		}
-		return ctx, func() {}
-	}
-
-	return context.WithTimeout(ctx, time.Duration(ttlms)*time.Millisecond)
 }
 
 // ValidateCommon checks validity of the common attributes of the request.
@@ -119,10 +82,6 @@ func (v *Validator) ValidateCommon(ctx context.Context) error {
 // ValidateUnary validates a unary request. This should be used after a
 // successful v.ValidateCommon()
 func (v *Validator) ValidateUnary(ctx context.Context) error {
-	if v.errTTL != nil {
-		return v.errTTL
-	}
-
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 		return missingParametersError{Parameters: []string{"TTL"}}
 	}
