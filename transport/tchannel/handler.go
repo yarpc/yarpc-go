@@ -147,8 +147,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	rw := newResponseWriter(treq, call)
 	defer rw.Close() // TODO(abg): log if this errors
 
-	v := request.Validator{Request: treq}
-	if err := v.ValidateCommon(ctx); err != nil {
+	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
 
@@ -159,7 +158,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	switch spec.Type() {
 	case transport.Unary:
-		if err := v.ValidateUnary(ctx); err != nil {
+		if err := request.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
