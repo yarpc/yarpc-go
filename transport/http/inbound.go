@@ -91,9 +91,8 @@ func (i *Inbound) Transports() []transport.Transport {
 // Start starts the inbound with a given service detail, opening a listening
 // socket.
 func (i *Inbound) Start() error {
-
 	if i.registry == nil {
-		return errors.NoRegistryError{}
+		return errors.ErrNoRegistry
 	}
 
 	var httpHandler http.Handler = handler{

@@ -73,7 +73,7 @@ func (i *ChannelInbound) Channel() Channel {
 // underlying ChannelTransport.
 func (i *ChannelInbound) Start() error {
 	if i.registry == nil {
-		return errors.NoRegistryError{}
+		return errors.ErrNoRegistry
 	}
 
 	// Set up handlers. This must occur after construction because the

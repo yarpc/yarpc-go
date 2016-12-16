@@ -96,7 +96,7 @@ func (i *Inbound) SetRegistry(registry transport.Registry) {
 // Start starts the inbound, reading from the queueKey
 func (i *Inbound) Start() error {
 	if i.registry == nil {
-		return errors.NoRegistryError{}
+		return errors.ErrNoRegistry
 	}
 
 	err := i.client.Start()
