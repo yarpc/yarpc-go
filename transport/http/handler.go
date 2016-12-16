@@ -85,15 +85,14 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	}
 
 	ctx := req.Context()
-
-	v := request.Validator{Request: treq}
-	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
+	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()
 
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
-	err := v.ValidateCommon(ctx)
-	if err != nil {
+	v := request.Validator{Request: treq}
+	if err := v.ValidateCommon(ctx); err != nil {
 		return err
 	}
 
@@ -105,6 +104,9 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	switch spec.Type() {
 	case transport.Unary:
 		defer span.Finish()
+		if parseTTLErr != nil {
+			return parseTTLErr
+		}
 
 		if err := v.ValidateUnary(ctx); err != nil {
 			return err

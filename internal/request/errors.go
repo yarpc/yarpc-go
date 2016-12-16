@@ -57,22 +57,3 @@ func (e missingParametersError) Error() string {
 	s += fmt.Sprintf(", and %s", ps[len(ps)-1])
 	return s
 }
-
-// invalidTTLError is a failure to process a request because the TTL was in an
-// invalid format.
-type invalidTTLError struct {
-	Service   string
-	Procedure string
-	TTL       string
-}
-
-func (e invalidTTLError) AsHandlerError() errors.HandlerError {
-	return errors.HandlerBadRequestError(e)
-}
-
-func (e invalidTTLError) Error() string {
-	return fmt.Sprintf(
-		`invalid TTL %q for procedure %q of service %q: must be positive integer`,
-		e.TTL, e.Procedure, e.Service,
-	)
-}

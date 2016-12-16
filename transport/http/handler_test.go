@@ -265,7 +265,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		code := rw.Code
 		assert.True(t, code >= 400 && code < 500, "expected 400 level code")
-		assert.Equal(t, rw.Body.String(), tt.msg)
+		assert.Equal(t, tt.msg, rw.Body.String())
 	}
 }
 
