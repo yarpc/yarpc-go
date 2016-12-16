@@ -67,6 +67,10 @@ type Encoding string
 
 // ValidateRequest validates the given request. An error is returned if the
 // request is invalid.
+//
+// Inbound transport implementations may use this to validate requests before
+// handling them. Outbound implementations don't need to validate requests;
+// they are always validated before the outbound is called.
 func ValidateRequest(req *Request) error {
 	var missingParams []string
 	if req.Service == "" {
