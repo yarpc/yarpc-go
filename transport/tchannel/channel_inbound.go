@@ -95,8 +95,7 @@ func (i *ChannelInbound) start() error {
 
 // Stop stops the TChannel outbound. This currently does nothing.
 func (i *ChannelInbound) Stop() error {
-	i.once.SetStopped()
-	return nil
+	return i.once.Stop(nil)
 }
 
 // IsRunning returns whether the ChannelInbound is running.

@@ -72,8 +72,7 @@ func (o *ChannelOutbound) Transports() []transport.Transport {
 func (o *ChannelOutbound) Start() error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
-	o.once.SetStarted()
-	return nil
+	return o.once.Start(nil)
 }
 
 // Stop stops the TChannel outbound.

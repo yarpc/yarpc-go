@@ -123,8 +123,7 @@ func (pl *List) addToAvailablePeers(p peer.Peer) error {
 
 // Start notifies the List that requests will start coming
 func (pl *List) Start() error {
-	pl.once.SetStarted()
-	return nil
+	return pl.once.Start(nil)
 }
 
 // Stop notifies the List that requests will stop coming
