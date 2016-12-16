@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/serialize"
 
 	"github.com/opentracing/opentracing-go"
@@ -161,10 +160,6 @@ func (i *Inbound) handle() error {
 
 	if spec.Type() != transport.Oneway {
 		err = errors.UnsupportedTypeError{Transport: transportName, Type: string(spec.Type())}
-		return transport.UpdateSpanWithErr(span, err)
-	}
-
-	if err := request.ValidateOnewayContext(ctx); err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 

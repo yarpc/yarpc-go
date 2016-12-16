@@ -51,9 +51,5 @@ func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transp
 		return nil, err
 	}
 
-	if err := ValidateOnewayContext(ctx); err != nil {
-		return nil, err
-	}
-
 	return o.OnewayOutbound.CallOneway(ctx, request)
 }
