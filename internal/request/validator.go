@@ -35,10 +35,3 @@ func ValidateUnaryContext(ctx context.Context) error {
 
 	return nil
 }
-
-// ValidateOnewayContext validates that a context for a oneway request is
-// valid.
-func ValidateOnewayContext(ctx context.Context) error {
-	// Currently, no extra checks for oneway requests are required
-	return nil
-}

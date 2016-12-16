@@ -111,9 +111,6 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
 
 	case transport.Oneway:
-		if err := request.ValidateOnewayContext(ctx); err != nil {
-			return err
-		}
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:

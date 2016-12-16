@@ -102,9 +102,7 @@ func TestValidator(t *testing.T) {
 		ctx := context.Background()
 		err := transport.ValidateRequest(tt.req)
 
-		if err == nil && tt.transportType == transport.Oneway {
-			err = request.ValidateOnewayContext(ctx)
-		} else if err == nil { // default to unary
+		if err == nil && tt.transportType == transport.Unary {
 			var cancel func()
 
 			if tt.ttl != 0 {
