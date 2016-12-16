@@ -44,16 +44,18 @@ func TestParseTTL(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, cancel, err := parseTTL(context.Background(), req, tt.ttlString)
-		defer cancel()
+		t.Run(tt.ttlString, func(t *testing.T) {
+			ctx, cancel, err := parseTTL(context.Background(), req, tt.ttlString)
+			defer cancel()
 
-		if tt.wantErr != nil && assert.Error(t, err) {
-			assert.Equal(t, tt.wantErr, err)
-			assert.Equal(t, tt.wantMessage, err.Error())
-		} else {
-			assert.NoError(t, err)
-			_, ok := ctx.Deadline()
-			assert.True(t, ok)
-		}
+			if tt.wantErr != nil && assert.Error(t, err) {
+				assert.Equal(t, tt.wantErr, err)
+				assert.Equal(t, tt.wantMessage, err.Error())
+			} else {
+				assert.NoError(t, err)
+				_, ok := ctx.Deadline()
+				assert.True(t, ok)
+			}
+		})
 	}
 }
