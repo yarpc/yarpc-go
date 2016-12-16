@@ -22,6 +22,7 @@ func TestParseTTL(t *testing.T) {
 		wantErr     error
 		wantMessage string
 	}{
+		{ttlString: "1"},
 		{
 			ttlString: "-1000",
 			wantErr: invalidTTLError{
