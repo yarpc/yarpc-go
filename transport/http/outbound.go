@@ -119,6 +119,7 @@ type Outbound struct {
 	started   atomic.Bool
 	startOnce sync.Once
 	startErr  error
+	stopped   atomic.Bool
 	stopOnce  sync.Once
 	stopErr   error
 }
@@ -153,7 +154,7 @@ func (o *Outbound) Start() error {
 // Stop the HTTP outbound
 func (o *Outbound) Stop() error {
 	o.stopOnce.Do(func() {
-		o.started.Store(false)
+		o.stopped.Store(true)
 		o.stopErr = o.chooser.Stop()
 	})
 
@@ -162,7 +163,7 @@ func (o *Outbound) Stop() error {
 
 // IsRunning returns whether the Outbound is running.
 func (o *Outbound) IsRunning() bool {
-	return o.started.Load()
+	return o.started.Load() && !o.stopped.Load()
 }
 
 // Call makes a HTTP request

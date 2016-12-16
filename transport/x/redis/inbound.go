@@ -28,6 +28,8 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/serialize"
 
+	"sync"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber-go/atomic"
 )
@@ -48,7 +50,12 @@ type Inbound struct {
 
 	stop chan struct{}
 
-	running atomic.Bool
+	started   atomic.Bool
+	startOnce sync.Once
+	startErr  error
+	stopped   atomic.Bool
+	stopOnce  sync.Once
+	stopErr   error
 }
 
 // NewInbound creates a redis Inbound that satisfies transport.Inbound.
@@ -97,21 +104,29 @@ func (i *Inbound) SetRouter(router transport.Router) {
 
 // Start starts the inbound, reading from the queueKey
 func (i *Inbound) Start() error {
+	i.startOnce.Do(func() {
+		i.started.Store(true)
+		i.startErr = i.start()
+	})
+
+	return i.startErr
+}
+
+func (i *Inbound) start() error {
 	if i.router == nil {
 		return errors.ErrNoRouter
 	}
-	i.running.Store(true)
 
 	err := i.client.Start()
 	if err != nil {
 		return err
 	}
 
-	go i.start()
+	go i.startLoop()
 	return nil
 }
 
-func (i *Inbound) start() {
+func (i *Inbound) startLoop() {
 	for {
 		select {
 		case <-i.stop:
@@ -125,14 +140,18 @@ func (i *Inbound) start() {
 
 // Stop ends the connection to redis
 func (i *Inbound) Stop() error {
-	i.running.Store(false)
-	close(i.stop)
-	return i.client.Stop()
+	i.stopOnce.Do(func() {
+		i.stopped.Store(true)
+		close(i.stop)
+		i.stopErr = i.client.Stop()
+	})
+
+	return i.stopErr
 }
 
 // IsRunning returns whether the inbound is still processing requests.
 func (i *Inbound) IsRunning() bool {
-	return i.running.Load()
+	return i.started.Load() && !i.stopped.Load()
 }
 
 func (i *Inbound) handle() error {

@@ -22,6 +22,7 @@ package redis
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.uber.org/atomic"
@@ -40,7 +41,12 @@ type Outbound struct {
 	tracer   opentracing.Tracer
 	queueKey string
 
-	started *atomic.Bool
+	started   atomic.Bool
+	startOnce sync.Once
+	startErr  error
+	stopped   atomic.Bool
+	stopOnce  sync.Once
+	stopErr   error
 }
 
 // NewOnewayOutbound creates a redis Outbound that satisfies transport.OnewayOutbound
@@ -50,7 +56,6 @@ func NewOnewayOutbound(client Client, queueKey string) *Outbound {
 		client:   client,
 		tracer:   opentracing.GlobalTracer(),
 		queueKey: queueKey,
-		started:  atomic.NewBool(false),
 	}
 }
 
@@ -68,23 +73,27 @@ func (o *Outbound) WithTracer(tracer opentracing.Tracer) *Outbound {
 
 // Start creates connection to the redis instance
 func (o *Outbound) Start() error {
-	if !o.started.Swap(true) {
-		return o.client.Start()
-	}
-	return nil
+	o.startOnce.Do(func() {
+		o.started.Store(true)
+		o.startErr = o.client.Start()
+	})
+
+	return o.startErr
 }
 
 // Stop stops the redis connection
 func (o *Outbound) Stop() error {
-	if o.started.Swap(false) {
-		return o.client.Stop()
-	}
-	return nil
+	o.stopOnce.Do(func() {
+		o.stopped.Store(true)
+		o.stopErr = o.client.Stop()
+	})
+
+	return o.stopErr
 }
 
 // IsRunning returns whether the Outbound is running.
 func (o *Outbound) IsRunning() bool {
-	return o.started.Load()
+	return o.started.Load() && !o.stopped.Load()
 }
 
 // CallOneway makes a oneway request using redis

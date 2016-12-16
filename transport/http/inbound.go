@@ -23,6 +23,7 @@ package http
 import (
 	"net"
 	"net/http"
+	"sync"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
@@ -68,7 +69,13 @@ type Inbound struct {
 	server     *intnet.HTTPServer
 	router     transport.Router
 	tracer     opentracing.Tracer
-	running    atomic.Bool
+
+	started   atomic.Bool
+	startOnce sync.Once
+	startErr  error
+	stopped   atomic.Bool
+	stopOnce  sync.Once
+	stopErr   error
 }
 
 // Tracer configures a tracer on this inbound.
@@ -93,7 +100,15 @@ func (i *Inbound) Transports() []transport.Transport {
 // Start starts the inbound with a given service detail, opening a listening
 // socket.
 func (i *Inbound) Start() error {
-	i.running.Store(true)
+	i.startOnce.Do(func() {
+		i.started.Store(true)
+		i.startErr = i.start()
+	})
+
+	return i.startErr
+}
+
+func (i *Inbound) start() error {
 	if i.router == nil {
 		return errors.ErrNoRouter
 	}
@@ -121,7 +136,15 @@ func (i *Inbound) Start() error {
 
 // Stop the inbound, closing the listening socket.
 func (i *Inbound) Stop() error {
-	i.running.Store(false)
+	i.stopOnce.Do(func() {
+		i.stopped.Store(true)
+		i.stopErr = i.stop()
+	})
+
+	return i.stopErr
+}
+
+func (i *Inbound) stop() error {
 	if i.server == nil {
 		return nil
 	}
@@ -130,7 +153,7 @@ func (i *Inbound) Stop() error {
 
 // IsRunning returns whether the inbound is currently running
 func (i *Inbound) IsRunning() bool {
-	return i.running.Load()
+	return i.started.Load() && !i.stopped.Load()
 }
 
 // Addr returns the address on which the server is listening. Returns nil if

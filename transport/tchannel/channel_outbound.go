@@ -53,13 +53,15 @@ func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 
 // ChannelOutbound is an outbound transport using a shared TChannel.
 type ChannelOutbound struct {
-	started   atomic.Bool
 	channel   Channel
 	transport *ChannelTransport
 
 	// If specified, this is the address to which requests will be made.
 	// Otherwise, the global peer list of the Channel will be used.
 	addr string
+
+	started atomic.Bool
+	stopped atomic.Bool
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.
@@ -71,13 +73,13 @@ func (o *ChannelOutbound) Transports() []transport.Transport {
 func (o *ChannelOutbound) Start() error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
-	o.started.Swap(true)
+	o.started.Store(true)
 	return nil
 }
 
 // Stop stops the TChannel outbound.
 func (o *ChannelOutbound) Stop() error {
-	if o.started.Swap(false) {
+	if !o.stopped.Swap(true) {
 		o.channel.Close()
 	}
 	return nil
@@ -85,7 +87,7 @@ func (o *ChannelOutbound) Stop() error {
 
 // IsRunning returns whether the ChannelOutbound is running.
 func (o *ChannelOutbound) IsRunning() bool {
-	return o.started.Load()
+	return o.started.Load() && !o.stopped.Load()
 }
 
 // Call sends an RPC over this TChannel outbound.
