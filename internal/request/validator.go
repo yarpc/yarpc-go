@@ -32,31 +32,30 @@ import (
 // Validator helps validate requests.
 //
 //	v := Validator{Request: request}
-//	v.Validate()
+//	v.ValidateCommon(ctx)
 //	...
 //	v.ParseTTL(ttlstring)
-//	request, err := v.ValidateUnary()
+//	request, err := v.ValidateUnary(ctx)
 type Validator struct {
 	Request *transport.Request
 	errTTL  error
 }
 
-// Validate is a shortcut for the case where a request needs to be validated
-// without changing the TTL. This should be used to validate all request types
-func Validate(ctx context.Context, req *transport.Request) (*transport.Request, error) {
+// ValidateUnary validates a unary request.
+func ValidateUnary(ctx context.Context, req *transport.Request) error {
 	v := Validator{Request: req}
-	return v.Validate(ctx)
-}
-
-// ValidateUnary validates a unary request. This should be used after a successful Validate()
-func ValidateUnary(ctx context.Context, req *transport.Request) (*transport.Request, error) {
-	v := Validator{Request: req}
+	if err := v.ValidateCommon(ctx); err != nil {
+		return err
+	}
 	return v.ValidateUnary(ctx)
 }
 
-// ValidateOneway validates a oneway request. This should be used after a successful Validate()
-func ValidateOneway(ctx context.Context, req *transport.Request) (*transport.Request, error) {
+// ValidateOneway validates a oneway request.
+func ValidateOneway(ctx context.Context, req *transport.Request) error {
 	v := Validator{Request: req}
+	if err := v.ValidateCommon(ctx); err != nil {
+		return err
+	}
 	return v.ValidateOneway(ctx)
 }
 
@@ -65,8 +64,8 @@ func ValidateOneway(ctx context.Context, req *transport.Request) (*transport.Req
 // parse and validate that TTL. Should only be used for unary requests
 func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, func()) {
 	if ttl == "" {
-		// The TTL is missing so set it to 0 and let Validate() fail with the
-		// correct error message.
+		// The TTL is missing so set it to 0 and let ValidateUnary() fail with
+		// the correct error message.
 		return ctx, func() {}
 	}
 
@@ -92,10 +91,10 @@ func (v *Validator) ParseTTL(ctx context.Context, ttl string) (context.Context, 
 	return context.WithTimeout(ctx, time.Duration(ttlms)*time.Millisecond)
 }
 
-// Validate checks that the request inside this validator is valid and returns
-// either the validated request or an error. This should be used to check all
-// requests, prior to the RPC type specifc validation.
-func (v *Validator) Validate(ctx context.Context) (*transport.Request, error) {
+// ValidateCommon checks validity of the common attributes of the request.
+// This should be used to check ALL requests prior to calling
+// RPC-type-specific validators.
+func (v *Validator) ValidateCommon(ctx context.Context) error {
 	// check missing params
 	var missingParams []string
 	if v.Request.Service == "" {
@@ -111,29 +110,29 @@ func (v *Validator) Validate(ctx context.Context) (*transport.Request, error) {
 		missingParams = append(missingParams, "encoding")
 	}
 	if len(missingParams) > 0 {
-		return nil, missingParametersError{Parameters: missingParams}
+		return missingParametersError{Parameters: missingParams}
 	}
 
-	return v.Request, nil
+	return nil
 }
 
-// ValidateUnary validates a unary request. This should be used after a successful v.Validate()
-func (v *Validator) ValidateUnary(ctx context.Context) (*transport.Request, error) {
+// ValidateUnary validates a unary request. This should be used after a
+// successful v.ValidateCommon()
+func (v *Validator) ValidateUnary(ctx context.Context) error {
 	if v.errTTL != nil {
-		return nil, v.errTTL
+		return v.errTTL
 	}
 
-	_, hasDeadline := ctx.Deadline()
-
-	if !hasDeadline {
-		return nil, missingParametersError{Parameters: []string{"TTL"}}
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		return missingParametersError{Parameters: []string{"TTL"}}
 	}
 
-	return v.Request, nil
+	return nil
 }
 
-// ValidateOneway validates a oneway request. This should be used after a successful Validate()
-func (v *Validator) ValidateOneway(ctx context.Context) (*transport.Request, error) {
+// ValidateOneway validates a oneway request. This should be used after a
+// successful ValidateCommon()
+func (v *Validator) ValidateOneway(ctx context.Context) error {
 	// Currently, no extra checks for oneway requests are required
-	return v.Request, nil
+	return nil
 }

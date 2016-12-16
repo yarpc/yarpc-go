@@ -156,10 +156,10 @@ func TestValidator(t *testing.T) {
 		v := Validator{Request: tt.req}
 
 		ctx := context.Background()
-		_, err := v.Validate(ctx)
+		err := v.ValidateCommon(ctx)
 
 		if err == nil && tt.transportType == transport.Oneway {
-			_, err = v.ValidateOneway(ctx)
+			err = v.ValidateOneway(ctx)
 		} else if err == nil { // default to unary
 			var cancel func()
 
@@ -173,7 +173,7 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			_, err = v.ValidateUnary(ctx)
+			err = v.ValidateUnary(ctx)
 		}
 
 		if tt.wantErr != nil {

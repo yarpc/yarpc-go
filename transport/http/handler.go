@@ -92,7 +92,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
-	treq, err := v.Validate(ctx)
+	err := v.ValidateCommon(ctx)
 	if err != nil {
 		return err
 	}
@@ -106,18 +106,13 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	case transport.Unary:
 		defer span.Finish()
 
-		ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
-		defer cancel()
-
-		treq, err = v.ValidateUnary(ctx)
-		if err != nil {
+		if err := v.ValidateUnary(ctx); err != nil {
 			return err
 		}
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
 
 	case transport.Oneway:
-		treq, err = v.ValidateOneway(ctx)
-		if err != nil {
+		if err := v.ValidateOneway(ctx); err != nil {
 			return err
 		}
 		err = handleOnewayRequest(span, treq, spec.Oneway())
