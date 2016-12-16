@@ -9,11 +9,11 @@ import (
 )
 
 func TestOnce(t *testing.T) {
-	once := Once{}
+	var once Once
 	onceCalls := atomic.NewInt32(0)
 	expectedErr := errors.New("test error")
 
-	wait := ErrorWaiter{}
+	var wait ErrorWaiter
 	for i := 0; i < 10; i++ {
 		wait.Submit(func() error {
 			return once.Do(func() error {
@@ -32,15 +32,15 @@ func TestOnce(t *testing.T) {
 }
 
 func TestOnceNotFinished(t *testing.T) {
-	once := Once{}
+	var once Once
 
 	assert.False(t, once.Done())
 }
 
-func TestOnceSetDone(t *testing.T) {
-	once := Once{}
+func TestOnceDoWithNil(t *testing.T) {
+	var once Once
 
-	once.SetDone()
+	once.Do(nil)
 
 	assert.True(t, once.Done())
 }
