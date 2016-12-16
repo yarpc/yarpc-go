@@ -34,13 +34,7 @@ type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
 
 // Call performs the given request, failing early if the request is invalid.
 func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	request, err := Validate(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-
-	request, err = ValidateUnary(ctx, request)
-	if err != nil {
+	if err := ValidateUnary(ctx, request); err != nil {
 		return nil, err
 	}
 
@@ -49,13 +43,7 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 
 // CallOneway performs the given request, failing early if the request is invalid.
 func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
-	request, err := Validate(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-
-	request, err = ValidateOneway(ctx, request)
-	if err != nil {
+	if err := ValidateOneway(ctx, request); err != nil {
 		return nil, err
 	}
 

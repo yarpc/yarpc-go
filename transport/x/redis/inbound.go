@@ -151,8 +151,7 @@ func (i *Inbound) handle() error {
 	defer span.Finish()
 
 	v := request.Validator{Request: req}
-	req, err = v.Validate(ctx)
-	if err != nil {
+	if err := v.ValidateCommon(ctx); err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
@@ -166,8 +165,7 @@ func (i *Inbound) handle() error {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
-	req, err = v.ValidateOneway(ctx)
-	if err != nil {
+	if err := v.ValidateOneway(ctx); err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 

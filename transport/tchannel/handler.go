@@ -147,8 +147,8 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	rw := newResponseWriter(treq, call)
 	defer rw.Close() // TODO(abg): log if this errors
 
-	treq, err = request.Validate(ctx, treq)
-	if err != nil {
+	v := request.Validator{Request: treq}
+	if err := v.ValidateCommon(ctx); err != nil {
 		return err
 	}
 
@@ -159,10 +159,10 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	switch spec.Type() {
 	case transport.Unary:
-		treq, err = request.ValidateUnary(ctx, treq)
-		if err == nil {
-			err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
+		if err := v.ValidateUnary(ctx); err != nil {
+			return err
 		}
+		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
 
 	default:
 		err = errors.UnsupportedTypeError{Transport: "TChannel", Type: string(spec.Type())}
