@@ -21,13 +21,11 @@
 package tchannel
 
 import (
-	"sync"
-
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/uber-go/atomic"
 )
 
 // ChannelInbound is a TChannel Inbound backed by a pre-existing TChannel
@@ -39,10 +37,7 @@ type ChannelInbound struct {
 	tracer    opentracing.Tracer
 	transport *ChannelTransport
 
-	started   atomic.Bool
-	startOnce sync.Once
-	startErr  error
-	stopped   atomic.Bool
+	once sync.LifecycleOnce
 }
 
 // NewInbound returns a new TChannel inbound backed by a shared TChannel
@@ -80,12 +75,7 @@ func (i *ChannelInbound) Channel() Channel {
 // Start does not start listening sockets. That occurs when you Start the
 // underlying ChannelTransport.
 func (i *ChannelInbound) Start() error {
-	i.startOnce.Do(func() {
-		i.started.Store(true)
-		i.startErr = i.start()
-	})
-
-	return i.startErr
+	return i.once.Start(i.start)
 }
 
 func (i *ChannelInbound) start() error {
@@ -105,11 +95,11 @@ func (i *ChannelInbound) start() error {
 
 // Stop stops the TChannel outbound. This currently does nothing.
 func (i *ChannelInbound) Stop() error {
-	i.stopped.Store(true)
+	i.once.SetStopped()
 	return nil
 }
 
 // IsRunning returns whether the ChannelInbound is running.
 func (i *ChannelInbound) IsRunning() bool {
-	return i.started.Load() && !i.stopped.Load()
+	return i.once.IsRunning()
 }

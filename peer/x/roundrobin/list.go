@@ -27,8 +27,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yerrors "go.uber.org/yarpc/internal/errors"
-
-	"go.uber.org/atomic"
+	ysync "go.uber.org/yarpc/internal/sync"
 )
 
 const defaultCapacity = 10
@@ -53,10 +52,7 @@ type List struct {
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
-	started  atomic.Bool
-	stopped  atomic.Bool
-	stopOnce sync.Once
-	stopErr  error
+	once ysync.LifecycleOnce
 }
 
 // Update applies the additions and removals of peer Identifiers to the list
@@ -127,18 +123,13 @@ func (pl *List) addToAvailablePeers(p peer.Peer) error {
 
 // Start notifies the List that requests will start coming
 func (pl *List) Start() error {
-	pl.started.Store(true)
+	pl.once.SetStarted()
 	return nil
 }
 
 // Stop notifies the List that requests will stop coming
 func (pl *List) Stop() error {
-	pl.stopOnce.Do(func() {
-		pl.stopped.Store(true)
-		pl.stopErr = pl.clearPeers()
-	})
-
-	return pl.stopErr
+	return pl.once.Stop(pl.clearPeers)
 }
 
 // clearPeers will release all the peers from the list
@@ -237,7 +228,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 
 // IsRunning returns whether the peer list is running.
 func (pl *List) IsRunning() bool {
-	return pl.started.Load() && !pl.stopped.Load()
+	return pl.once.IsRunning()
 }
 
 // nextPeer grabs the next available peer from the PeerRing and returns it,

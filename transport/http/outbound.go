@@ -28,18 +28,17 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"go.uber.org/atomic"
 )
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("http.Outbound")
@@ -116,12 +115,7 @@ type Outbound struct {
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
 
-	started   atomic.Bool
-	startOnce sync.Once
-	startErr  error
-	stopped   atomic.Bool
-	stopOnce  sync.Once
-	stopErr   error
+	once sync.LifecycleOnce
 }
 
 // setURLTemplate configures an alternate URL template.
@@ -143,32 +137,22 @@ func (o *Outbound) Transports() []transport.Transport {
 
 // Start the HTTP outbound
 func (o *Outbound) Start() error {
-	o.startOnce.Do(func() {
-		o.started.Store(true)
-		o.startErr = o.chooser.Start()
-	})
-
-	return o.startErr
+	return o.once.Start(o.chooser.Start)
 }
 
 // Stop the HTTP outbound
 func (o *Outbound) Stop() error {
-	o.stopOnce.Do(func() {
-		o.stopped.Store(true)
-		o.stopErr = o.chooser.Stop()
-	})
-
-	return o.stopErr
+	return o.once.Stop(o.chooser.Stop)
 }
 
 // IsRunning returns whether the Outbound is running.
 func (o *Outbound) IsRunning() bool {
-	return o.started.Load() && !o.stopped.Load()
+	return o.once.IsRunning()
 }
 
 // Call makes a HTTP request
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	if !o.started.Load() {
+	if !o.IsRunning() {
 		// TODO replace with "panicInDebug"
 		return nil, errOutboundNotStarted
 	}
@@ -181,7 +165,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 
 // CallOneway makes a oneway request
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	if !o.started.Load() {
+	if !o.IsRunning() {
 		// TODO replace with "panicInDebug"
 		return nil, errOutboundNotStarted
 	}

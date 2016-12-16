@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 
 	"github.com/uber/tchannel-go"
-	"go.uber.org/atomic"
+	"go.uber.org/yarpc/internal/sync"
 )
 
 // NewOutbound builds a new TChannel outbound using the transport's shared
@@ -60,8 +60,7 @@ type ChannelOutbound struct {
 	// Otherwise, the global peer list of the Channel will be used.
 	addr string
 
-	started atomic.Bool
-	stopped atomic.Bool
+	once sync.LifecycleOnce
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.
@@ -73,26 +72,28 @@ func (o *ChannelOutbound) Transports() []transport.Transport {
 func (o *ChannelOutbound) Start() error {
 	// TODO: Should we create the connection to HostPort (if specified) here or
 	// wait for the first call?
-	o.started.Store(true)
+	o.once.SetStarted()
 	return nil
 }
 
 // Stop stops the TChannel outbound.
 func (o *ChannelOutbound) Stop() error {
-	if !o.stopped.Swap(true) {
-		o.channel.Close()
-	}
+	return o.once.Stop(o.stop)
+}
+
+func (o *ChannelOutbound) stop() error {
+	o.channel.Close()
 	return nil
 }
 
 // IsRunning returns whether the ChannelOutbound is running.
 func (o *ChannelOutbound) IsRunning() bool {
-	return o.started.Load() && !o.stopped.Load()
+	return o.once.IsRunning()
 }
 
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if !o.started.Load() {
+	if !o.IsRunning() {
 		// TODO replace with "panicInDebug"
 		return nil, errOutboundNotStarted
 	}
