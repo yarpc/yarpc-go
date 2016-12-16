@@ -79,6 +79,7 @@ type handler struct {
 	existing map[string]tchannel.Handler
 	Registry transport.Registry
 	tracer   opentracing.Tracer
+	fallback transport.HandlerSpec
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
@@ -153,8 +154,10 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	}
 
 	spec, err := h.Registry.Choose(ctx, treq)
-	if err != nil {
-		return err
+
+	// There is no matching handler on TChannel and from provided registry, we use default fallback handler if have one set
+	if err != nil && h.fallback != nil {
+		spec = h.fallback
 	}
 
 	switch spec.Type() {

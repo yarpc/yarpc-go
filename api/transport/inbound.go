@@ -50,6 +50,10 @@ type Inbound interface {
 	// This MAY block while the server drains ongoing requests.
 	Stop() error
 
+	// SetFallbackHandler sets the fallback handler for this inbound. This is an optional function
+	// When no handler is found for incoming reuqest, this fallback handler is used
+	SetFallbackHandler(HandlerSpec)
+
 	// TODO some way for the inbound to expose the host and port it's
 	// listening on
 }

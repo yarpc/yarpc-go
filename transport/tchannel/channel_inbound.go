@@ -35,6 +35,7 @@ type ChannelInbound struct {
 	registry  transport.Registry
 	tracer    opentracing.Tracer
 	transport *ChannelTransport
+	fallback  transport.HandlerSpec
 }
 
 // NewInbound returns a new TChannel inbound backed by a shared TChannel
@@ -81,12 +82,18 @@ func (i *ChannelInbound) Start() error {
 	// This also means that starting inbounds should block starting the transport.
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing: existing, Registry: i.registry, tracer: i.tracer})
+	sc.SetHandler(handler{existing: existing, Registry: i.registry, tracer: i.tracer, fallback: i.fallback})
 
 	return nil
 }
 
-// Stop stops the TChannel outbound. This currently does nothing.
+// Stop stops the TChannel inbound. This currently does nothing.
 func (i *ChannelInbound) Stop() error {
 	return nil
 }
+
+// SetFallbackHandler sets the default handler for all requests for this TChannel inbound
+func (i *ChannelInbound) SetFallbackHandler(h HandlerSpec) {
+	i.fallback = h
+}
+
