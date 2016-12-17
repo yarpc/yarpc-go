@@ -21,7 +21,7 @@
 package oneway
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -64,7 +64,7 @@ func Start() {
 	dispatcher.Register(onewayserver.New(h))
 
 	if err := dispatcher.Start(); err != nil {
-		fmt.Println("error:", err.Error())
+		log.Println("oneway server dispatcher failed to load:", err.Error())
 	}
 }
 
@@ -74,7 +74,7 @@ func Stop() {
 		return
 	}
 	if err := dispatcher.Stop(); err != nil {
-		fmt.Println("failed to stop:", err.Error())
+		log.Println("oneway server dispatcher failed to stop:", err.Error())
 	}
 }
 

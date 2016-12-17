@@ -99,7 +99,7 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 
 	// register procedure for server to call us back on
 	dispatcher.Register(raw.OnewayProcedure("call-back", raw.OnewayHandler(handler)))
-	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	fatals.NoError(dispatcher.Start(), "could not start oneway Dispatcher")
 
 	return dispatcher, callBackInbound.Addr().String()
 }
