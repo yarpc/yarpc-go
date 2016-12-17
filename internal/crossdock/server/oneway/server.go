@@ -48,6 +48,7 @@ func Start() {
 			"yarpc/oneway/processing",
 			time.Second,
 		)
+		waitForRedis(rds)
 		inbounds = append(inbounds, rds)
 	}
 
@@ -82,4 +83,15 @@ func Stop() {
 // available
 func redisIsExpectedRunning() bool {
 	return os.Getenv("REDIS") == "enabled"
+}
+
+func waitForRedis(in *redis.Inbound) {
+	for i := 5; i > 0; i-- {
+		if err := in.Start(); err != nil {
+			time.Sleep(time.Millisecond * 100)
+		} else {
+			return
+		}
+	}
+	log.Println("oneway server could not connect to redis")
 }
