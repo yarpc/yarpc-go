@@ -10,7 +10,7 @@ services:
             - java
             - python
             - python-sync
-            # - redis
+            - redis
         environment:
             - WAIT_FOR=go,node,java,python,python-sync
 
@@ -30,7 +30,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http #,redis
+            - AXIS_TRANSPORT_ONEWAY=http,redis
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
@@ -60,7 +60,7 @@ services:
         ports:
             - "8080-8088"
         environment:
-            # - REDIS=enabled
+            - REDIS=enabled
 
     node:
         dns_search: .
@@ -88,7 +88,7 @@ services:
         environment:
             - SYNC=1
 
-    # redis:
-    #     image: redis
-    #     ports:
-    #         - 6379
+    redis:
+        image: redis
+        ports:
+            - 6379
