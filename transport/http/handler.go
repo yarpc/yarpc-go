@@ -43,8 +43,8 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	registry transport.Registry
-	tracer   opentracing.Tracer
+	router transport.Router
+	tracer opentracing.Tracer
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -93,7 +93,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	defer cancel()
 	ctx, span := h.createSpan(ctx, req, treq, start)
 
-	spec, err := h.registry.Choose(ctx, treq)
+	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		return updateSpanWithErr(span, err)
 	}

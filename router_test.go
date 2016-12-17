@@ -31,23 +31,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMapRegistry(t *testing.T) {
+func TestMapRouter(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	m := yarpc.NewMapRegistry("myservice")
+	m := yarpc.NewMapRouter("myservice")
 
 	foo := transporttest.NewMockUnaryHandler(mockCtrl)
 	bar := transporttest.NewMockUnaryHandler(mockCtrl)
-	m.Register([]transport.Registrant{
+	m.Register([]transport.Procedure{
 		{
-			Procedure:   "foo",
-			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
+			ProcedureName: "foo",
+			HandlerSpec:   transport.NewUnaryHandlerSpec(foo),
 		},
 		{
-			Service:     "anotherservice",
-			Procedure:   "bar",
-			HandlerSpec: transport.NewUnaryHandlerSpec(bar),
+			ServiceName:   "anotherservice",
+			ProcedureName: "bar",
+			HandlerSpec:   transport.NewUnaryHandlerSpec(bar),
 		},
 	})
 
@@ -76,63 +76,66 @@ func TestMapRegistry(t *testing.T) {
 	}
 }
 
-func TestMapRegistry_ServiceProcedures(t *testing.T) {
+func TestMapRouter_Procedures(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	m := yarpc.NewMapRegistry("myservice")
+	m := yarpc.NewMapRouter("myservice")
 
-	bar := transporttest.NewMockUnaryHandler(mockCtrl)
-	foo := transporttest.NewMockUnaryHandler(mockCtrl)
-	aww := transporttest.NewMockUnaryHandler(mockCtrl)
-	m.Register([]transport.Registrant{
+	bar := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
+	foo := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
+	aww := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
+	m.Register([]transport.Procedure{
 		{
-			Service:     "anotherservice",
-			Procedure:   "bar",
-			HandlerSpec: transport.NewUnaryHandlerSpec(bar),
+			ServiceName:   "anotherservice",
+			ProcedureName: "bar",
+			HandlerSpec:   bar,
 		},
 		{
-			Procedure:   "foo",
-			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
+			ProcedureName: "foo",
+			HandlerSpec:   foo,
 		},
 		{
-			Service:     "anotherservice",
-			Procedure:   "aww",
-			HandlerSpec: transport.NewUnaryHandlerSpec(aww),
+			ServiceName:   "anotherservice",
+			ProcedureName: "aww",
+			HandlerSpec:   aww,
 		},
 	})
 
-	expectedOrderedServiceProcedures := []transport.ServiceProcedure{
+	expectedOrderedProcedures := []transport.Procedure{
 		{
-			Service:   "anotherservice",
-			Procedure: "aww",
+			ServiceName:   "anotherservice",
+			ProcedureName: "aww",
+			HandlerSpec:   aww,
 		},
 		{
-			Service:   "anotherservice",
-			Procedure: "bar",
+			ServiceName:   "anotherservice",
+			ProcedureName: "bar",
+			HandlerSpec:   bar,
 		},
 		{
-			Service:   "myservice",
-			Procedure: "foo",
+			ServiceName:   "myservice",
+			ProcedureName: "foo",
+			HandlerSpec:   foo,
 		},
 	}
 
-	serviceProcedures := m.ServiceProcedures()
+	serviceProcedures := m.Procedures()
 
-	assert.Equal(t, expectedOrderedServiceProcedures, serviceProcedures)
+	assert.Equal(t, expectedOrderedProcedures, serviceProcedures)
 }
 
 func TestEmptyProcedureRegistration(t *testing.T) {
-	m := yarpc.NewMapRegistry("test-service-name")
+	m := yarpc.NewMapRouter("test-service-name")
 
-	registrants := []transport.Registrant{
+	procedures := []transport.Procedure{
 		{
-			Service:   "test",
-			Procedure: "",
+			ServiceName:   "test",
+			ProcedureName: "",
 		},
 	}
 
 	assert.Panics(t,
-		func() { m.Register(registrants) },
-		"expected registry panic")
+		func() { m.Register(procedures) },
+		"expected router panic")
 }

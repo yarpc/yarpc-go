@@ -30,13 +30,13 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-// Register calls the Registrar's Register method.
+// Register calls the RouteTable's Register method.
 //
 // This function exists for backwards compatibility only. It will be removed
 // in a future version.
 //
-// Deprecated: Use the Registrar's Register method directly.
-func Register(r transport.Registrar, rs []transport.Registrant) {
+// Deprecated: Use the RouteTable's Register method directly.
+func Register(r transport.RouteTable, rs []transport.Procedure) {
 	r.Register(rs)
 }
 
@@ -81,9 +81,9 @@ type Service struct {
 	OnewayMethods map[string]OnewayHandler
 }
 
-// BuildRegistrants builds a list of Registrants from a Thrift service
+// BuildProcedures builds a list of Procedures from a Thrift service
 // specification.
-func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant {
+func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 	var rc registerConfig
 	for _, opt := range opts {
 		opt.applyRegisterOption(&rc)
@@ -94,7 +94,7 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 		proto = rc.Protocol
 	}
 
-	rs := make([]transport.Registrant, 0, len(s.Methods))
+	rs := make([]transport.Procedure, 0, len(s.Methods))
 
 	// unary procedures
 	for methodName, handler := range s.Methods {
@@ -104,9 +104,9 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 			Enveloping:   rc.Enveloping,
 		})
 
-		rs = append(rs, transport.Registrant{
-			Procedure:   procedureName(s.Name, methodName),
-			HandlerSpec: spec,
+		rs = append(rs, transport.Procedure{
+			ProcedureName: procedureName(s.Name, methodName),
+			HandlerSpec:   spec,
 		})
 	}
 
@@ -118,9 +118,9 @@ func BuildRegistrants(s Service, opts ...RegisterOption) []transport.Registrant 
 			Enveloping:    rc.Enveloping,
 		})
 
-		rs = append(rs, transport.Registrant{
-			Procedure:   procedureName(s.Name, methodName),
-			HandlerSpec: spec,
+		rs = append(rs, transport.Procedure{
+			ProcedureName: procedureName(s.Name, methodName),
+			HandlerSpec:   spec,
 		})
 	}
 

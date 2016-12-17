@@ -171,7 +171,7 @@ type Interface interface {
 //
 // 	handler := ThriftTestHandler{}
 // 	dispatcher.Register(thrifttestserver.New(handler))
-func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "ThriftTest",
@@ -203,7 +203,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 			"testOneway": thrift.OnewayHandlerFunc(h.TestOneway),
 		},
 	}
-	return thrift.BuildRegistrants(service, opts...)
+	return thrift.BuildProcedures(service, opts...)
 }
 
 type handler struct{ impl Interface }

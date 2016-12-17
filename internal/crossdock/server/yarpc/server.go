@@ -68,7 +68,7 @@ func Stop() {
 	}
 }
 
-func register(reg transport.Registrar) {
+func register(reg transport.RouteTable) {
 	reg.Register(raw.Procedure("echo/raw", EchoRaw))
 	reg.Register(json.Procedure("echo", EchoJSON))
 
