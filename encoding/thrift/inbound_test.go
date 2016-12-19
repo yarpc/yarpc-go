@@ -36,7 +36,7 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-//go:generate mockgen -destination=mock_handler_test.go -package=thrift go.uber.org/yarpc/encoding/thrift UnaryHandler
+//go:generate mockgen -source=register.go -destination=mock_handler_test.go -package=thrift
 //go:generate mockgen -destination=mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 
 func TestThriftHandler(t *testing.T) {
