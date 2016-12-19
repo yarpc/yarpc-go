@@ -49,6 +49,10 @@ type Config struct {
 
 	// Tracer is deprecated. The dispatcher does nothing with this propery.
 	Tracer opentracing.Tracer
+
+	// RouteTable is a customized routing table to control how requests are routed.
+	// If this value is nil, we will fall back to creating a default routing table
+	RouteTable transport.RouteTable
 }
 
 // Inbounds contains a list of inbound transports
@@ -77,12 +81,21 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	return &Dispatcher{
 		name:              cfg.Name,
-		table:             NewMapRouter(cfg.Name),
+		table:             extractRouteTable(cfg),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		inboundMiddleware: cfg.InboundMiddleware,
 	}
+}
+
+// extractRouteTable will return the RouteTable specified in the config or a default
+// MapRouter
+func extractRouteTable(cfg Config) transport.RouteTable {
+	if cfg.RouteTable != nil {
+		return cfg.RouteTable
+	}
+	return NewMapRouter(cfg.Name)
 }
 
 // convertOutbounds applys outbound middleware and creates validator outbounds

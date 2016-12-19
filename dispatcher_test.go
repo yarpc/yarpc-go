@@ -21,6 +21,7 @@
 package yarpc_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -319,4 +320,26 @@ func TestNoOutboundsForService(t *testing.T) {
 			"my-test-service": {},
 		},
 	})
+}
+
+func TestCustomRouter(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+	req := &transport.Request{}
+	expectedSpec := transport.HandlerSpec{}
+
+	table := transporttest.NewMockRouteTable(mockCtrl)
+	table.EXPECT().Choose(ctx, req).Times(1).Return(expectedSpec, nil)
+
+	d := NewDispatcher(Config{
+		Name:       "test",
+		RouteTable: table,
+	})
+
+	actualSpec, err := d.Choose(ctx, req)
+
+	assert.Equal(t, expectedSpec, actualSpec, "handler spec returned from route table did not match")
+	assert.Nil(t, err)
 }
