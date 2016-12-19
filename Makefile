@@ -2,6 +2,11 @@
 # lint results.
 LINT_EXCLUDES_EXTRAS =
 
+# List of executables needed for 'make generate'
+GENERATE_DEPENDENCIES = \
+	golang.org/x/tools/cmd/stringer \
+	go.uber.org/thriftrw
+
 ##############################################################################
 export GO15VENDOREXPERIMENT=1
 
@@ -24,6 +29,25 @@ FILTER_LINT := grep -v $(patsubst %,-e %, $(LINT_EXCLUDES))
 
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
+
+##############################################################################
+
+_GENERATE_DEPS_DIR = $(shell pwd)/.tmp
+$(_GENERATE_DEPS_DIR):
+	mkdir $(_GENERATE_DEPS_DIR)
+
+# Full paths to executables needed for 'make generate'
+_GENERATE_DEPS_EXECUTABLES =
+
+define generatedeprule
+_GENERATE_DEPS_EXECUTABLES += $(_GENERATE_DEPS_DIR)/$(shell basename $1)
+
+$(_GENERATE_DEPS_DIR)/$(shell basename $1): vendor/$1/*.go glide.lock $(_GENERATE_DEPS_DIR)
+	./scripts/vendor-build.sh $(_GENERATE_DEPS_DIR) $1
+endef
+
+$(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
+
 ##############################################################################
 
 .PHONY: build
@@ -31,11 +55,9 @@ build:
 	go build $(PACKAGES)
 
 .PHONY: generate
-generate:
-	go install ./vendor/golang.org/x/tools/cmd/stringer
-	go install ./vendor/go.uber.org/thriftrw
+generate: $(_GENERATE_DEPS_EXECUTABLES)
 	go install ./encoding/thrift/thriftrw-plugin-yarpc
-	go generate $(PACKAGES)
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH go generate $(PACKAGES)
 
 .PHONY: lint
 lint:
