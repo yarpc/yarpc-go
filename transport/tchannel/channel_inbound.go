@@ -23,6 +23,7 @@ package tchannel
 import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
@@ -101,4 +102,14 @@ func (i *ChannelInbound) Stop() error {
 // IsRunning returns whether the ChannelInbound is running.
 func (i *ChannelInbound) IsRunning() bool {
 	return i.once.IsRunning()
+}
+
+// Introspect returns the state of the inbound for introspection purposes.
+func (i *ChannelInbound) Introspect() introspection.InboundStatus {
+	c := i.transport.Channel()
+	return introspection.InboundStatus{
+		Transport: "tchannel",
+		Endpoint:  i.transport.ListenAddr(),
+		State:     c.State().String(),
+	}
 }

@@ -22,10 +22,12 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
 
@@ -193,4 +195,14 @@ func (i *Inbound) handle() (err error) {
 	}
 
 	return transport.DispatchOnewayHandler(ctx, spec.Oneway(), req)
+}
+
+// Introspect returns the state of the inbound for introspection purposes.
+func (i *Inbound) Introspect() introspection.InboundStatus {
+	return introspection.InboundStatus{
+		Transport: "redis",
+		Endpoint: fmt.Sprintf("%s (queue: %s)",
+			i.client.Endpoint(), i.queueKey),
+		State: i.client.ConState(),
+	}
 }

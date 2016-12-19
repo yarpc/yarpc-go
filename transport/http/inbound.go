@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/internal/sync"
 
@@ -153,4 +154,17 @@ func (i *Inbound) Addr() net.Addr {
 	}
 
 	return listener.Addr()
+}
+
+// Introspect returns the state of the inbound for introspection purposes.
+func (i *Inbound) Introspect() introspection.InboundStatus {
+	state := "Stopped"
+	if i.server != nil {
+		state = "Started"
+	}
+	return introspection.InboundStatus{
+		Transport: "http",
+		Endpoint:  i.Addr().String(),
+		State:     state,
+	}
 }
