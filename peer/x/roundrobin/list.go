@@ -22,11 +22,13 @@ package roundrobin
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yerrors "go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/introspection"
 	ysync "go.uber.org/yarpc/internal/sync"
 )
 
@@ -319,4 +321,47 @@ func (pl *List) handleUnavailablePeerStatusChange(p peer.Peer) error {
 	pl.removeFromUnavailablePeers(p)
 
 	return pl.addToAvailablePeers(p)
+}
+
+// Introspect returns a ChooserStatus with a summary of the Peers.
+func (pl *List) Introspect() introspection.ChooserStatus {
+	state := "Stopped"
+	if pl.IsRunning() {
+		state = "Running"
+	}
+
+	pl.lock.Lock()
+	availables := pl.availablePeerRing.All()
+	unavailables := make([]peer.Peer, 0, len(pl.unavailablePeers))
+	for _, peer := range pl.unavailablePeers {
+		unavailables = append(unavailables, peer)
+	}
+	pl.lock.Unlock()
+
+	peersStatus := make([]introspection.PeerStatus, 0,
+		len(availables)+len(unavailables))
+
+	buildPeerStatus := func(peer peer.Peer) introspection.PeerStatus {
+		return introspection.PeerStatus{
+			Identifier: peer.Identifier(),
+			State: fmt.Sprintf("%s, %d pending request(s)",
+				peer.Status().ConnectionStatus.String(),
+				peer.Status().PendingRequestCount),
+		}
+	}
+
+	for _, peer := range availables {
+		peersStatus = append(peersStatus, buildPeerStatus(peer))
+	}
+
+	for _, peer := range unavailables {
+		peersStatus = append(peersStatus, buildPeerStatus(peer))
+	}
+
+	return introspection.ChooserStatus{
+		Name: "Single",
+		State: fmt.Sprintf("%s (%d/%d available)", state, len(availables),
+			len(availables)+len(unavailables)),
+		Peers: peersStatus,
+	}
 }
