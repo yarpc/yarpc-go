@@ -58,7 +58,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	service := thrift.Service{
 		Name: "KeyValue",
 		Methods: map[string]thrift.UnaryHandler{
+
 			"getValue": thrift.UnaryHandlerFunc(h.GetValue),
+
 			"setValue": thrift.UnaryHandlerFunc(h.SetValue),
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{},

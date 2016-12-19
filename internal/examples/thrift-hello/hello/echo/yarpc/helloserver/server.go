@@ -51,6 +51,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	service := thrift.Service{
 		Name: "Hello",
 		Methods: map[string]thrift.UnaryHandler{
+
 			"echo": thrift.UnaryHandlerFunc(h.Echo),
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{},

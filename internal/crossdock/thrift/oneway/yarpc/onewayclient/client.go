@@ -27,8 +27,8 @@ import (
 	"context"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway"
+	"go.uber.org/yarpc/encoding/thrift"
 )
 
 // Interface is a client for the Oneway service.

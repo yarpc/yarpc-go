@@ -52,6 +52,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Name:    "Hello",
 		Methods: map[string]thrift.UnaryHandler{},
 		OnewayMethods: map[string]thrift.OnewayHandler{
+
 			"sink": thrift.OnewayHandlerFunc(h.Sink),
 		},
 	}

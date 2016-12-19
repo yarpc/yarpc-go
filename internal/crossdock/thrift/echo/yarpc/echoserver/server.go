@@ -26,10 +26,10 @@ package echoserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the Echo service.
@@ -51,6 +51,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	service := thrift.Service{
 		Name: "Echo",
 		Methods: map[string]thrift.UnaryHandler{
+
 			"echo": thrift.UnaryHandlerFunc(h.Echo),
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{},

@@ -35,4 +35,4 @@ package thrift
 
 // Run this last
 
-//go:generate ../../scripts/updateLicenses.sh
+//go:generate ../../../scripts/updateLicenses.sh
