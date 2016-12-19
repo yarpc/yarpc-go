@@ -25,33 +25,25 @@ import "context"
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=transporttest/register.go -package=transporttest go.uber.org/yarpc/api/transport Registry,Registrar
+//go:generate mockgen -destination=transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
 
-// ServiceProcedure represents a service and procedure registered against a
-// Registry.
-type ServiceProcedure struct {
-	Service   string
-	Procedure string
-}
-
-// Registrant specifies a single handler registered against the registry.
-type Registrant struct {
-	// Service name or empty to use the default service name.
-	Service string
-
+// Procedure specifies a single handler registered in the RouteTable.
+type Procedure struct {
 	// Name of the procedure.
-	Procedure string
+	Name string
+
+	// Service or empty to use the default service name.
+	Service string
 
 	// HandlerSpec specifiying which handler and rpc type.
 	HandlerSpec HandlerSpec
 }
 
-// Registry maintains and provides access to a collection of procedures and
-// their handlers.
-type Registry interface {
-	// ServiceProcedures returns a list of services and their procedures that
+// Router maintains and provides access to a collection of procedures
+type Router interface {
+	// Procedures returns a list of procedures that
 	// have been registered so far.
-	ServiceProcedures() []ServiceProcedure
+	Procedures() []Procedure
 
 	// Choose decides a handler based on a context and transport request
 	// metadata, or returns an UnrecognizedProcedureError if no handler exists
@@ -60,10 +52,11 @@ type Registry interface {
 	Choose(ctx context.Context, req *Request) (HandlerSpec, error)
 }
 
-// Registrar provides access to a collection of procedures and their handlers.
-type Registrar interface {
-	Registry
+// RouteTable is an mutable interface for a Router that allows Registering new
+// Procedures
+type RouteTable interface {
+	Router
 
-	// Registers zero or more registrants with the registry.
-	Register([]Registrant)
+	// Registers zero or more procedures with the route table.
+	Register([]Procedure)
 }

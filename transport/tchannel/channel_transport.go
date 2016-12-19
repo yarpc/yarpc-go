@@ -90,7 +90,7 @@ func (t *ChannelTransport) ListenAddr() string {
 // Start starts a TChannel transport, opening listening sockets and accepting
 // inbound requests, and opening connections to retained peers.
 //
-// All inbounds must have been assigned a registry to accept inbound requests.
+// All inbounds must have been assigned a router to accept inbound requests.
 func (t *ChannelTransport) Start() error {
 	// Return error deferred from constructor for the construction of a TChannel.
 	if t.err != nil {

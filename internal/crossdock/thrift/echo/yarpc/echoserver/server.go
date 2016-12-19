@@ -46,7 +46,7 @@ type Interface interface {
 //
 // 	handler := EchoHandler{}
 // 	dispatcher.Register(echoserver.New(handler))
-func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "Echo",
@@ -55,7 +55,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{},
 	}
-	return thrift.BuildRegistrants(service, opts...)
+	return thrift.BuildProcedures(service, opts...)
 }
 
 type handler struct{ impl Interface }

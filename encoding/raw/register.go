@@ -27,24 +27,24 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-// Register calls the Registrar's Register method.
+// Register calls the RouteTable's Register method.
 //
 // This function exists for backwards compatibility only. It will be removed
 // in a future version.
 //
-// Deprecated: Use the Registrar's Register method directly.
-func Register(r transport.Registrar, rs []transport.Registrant) {
+// Deprecated: Use the RouteTable's Register method directly.
+func Register(r transport.RouteTable, rs []transport.Procedure) {
 	r.Register(rs)
 }
 
 // UnaryHandler implements a single, unary procedure.
 type UnaryHandler func(context.Context, yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
 
-// Procedure builds a Registrant from the given raw handler.
-func Procedure(name string, handler UnaryHandler) []transport.Registrant {
-	return []transport.Registrant{
+// Procedure builds a Procedure from the given raw handler.
+func Procedure(name string, handler UnaryHandler) []transport.Procedure {
+	return []transport.Procedure{
 		{
-			Procedure:   name,
+			Name:        name,
 			HandlerSpec: transport.NewUnaryHandlerSpec(rawUnaryHandler{handler}),
 		},
 	}
@@ -53,11 +53,11 @@ func Procedure(name string, handler UnaryHandler) []transport.Registrant {
 // OnewayHandler implements a single, onweway procedure
 type OnewayHandler func(context.Context, yarpc.ReqMeta, []byte) error
 
-// OnewayProcedure builds a Registrant from the given raw handler
-func OnewayProcedure(name string, handler OnewayHandler) []transport.Registrant {
-	return []transport.Registrant{
+// OnewayProcedure builds a Procedure from the given raw handler
+func OnewayProcedure(name string, handler OnewayHandler) []transport.Procedure {
+	return []transport.Procedure{
 		{
-			Procedure:   name,
+			Name:        name,
 			HandlerSpec: transport.NewOnewayHandlerSpec(rawOnewayHandler{handler}),
 		},
 	}

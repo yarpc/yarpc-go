@@ -77,7 +77,7 @@ func (c tchannelCall) Response() inboundCallResponse {
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
 	existing map[string]tchannel.Handler
-	Registry transport.Registry
+	router   transport.Router
 	tracer   opentracing.Tracer
 }
 
@@ -151,7 +151,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		return err
 	}
 
-	spec, err := h.Registry.Choose(ctx, treq)
+	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		return err
 	}

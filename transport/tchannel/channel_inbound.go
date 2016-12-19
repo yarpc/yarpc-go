@@ -32,7 +32,7 @@ import (
 type ChannelInbound struct {
 	ch        Channel
 	addr      string
-	registry  transport.Registry
+	router    transport.Router
 	tracer    opentracing.Tracer
 	transport *ChannelTransport
 }
@@ -48,11 +48,11 @@ func (t *ChannelTransport) NewInbound() *ChannelInbound {
 	}
 }
 
-// SetRegistry configures a registry to handle incoming requests.
+// SetRouter configures a router to handle incoming requests.
 // This satisfies the transport.Inbound interface, and would be called
 // by a dispatcher when it starts.
-func (i *ChannelInbound) SetRegistry(registry transport.Registry) {
-	i.registry = registry
+func (i *ChannelInbound) SetRouter(router transport.Router) {
+	i.router = router
 }
 
 // Transports returns a slice containing the ChannelInbound's underlying
@@ -67,21 +67,21 @@ func (i *ChannelInbound) Channel() Channel {
 }
 
 // Start starts a TChannel inbound. This arranges for registration of the
-// request handler based on the registry given by SetRegistry.
+// request handler based on the router given by SetRouter.
 //
 // Start does not start listening sockets. That occurs when you Start the
 // underlying ChannelTransport.
 func (i *ChannelInbound) Start() error {
-	if i.registry == nil {
-		return errors.ErrNoRegistry
+	if i.router == nil {
+		return errors.ErrNoRouter
 	}
 
 	// Set up handlers. This must occur after construction because the
-	// dispatcher, or its equivalent, calls SetRegistry before Start.
+	// dispatcher, or its equivalent, calls SetRouter before Start.
 	// This also means that starting inbounds should block starting the transport.
 	sc := i.ch.GetSubChannel(i.ch.ServiceName())
 	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing: existing, Registry: i.registry, tracer: i.tracer})
+	sc.SetHandler(handler{existing: existing, router: i.router, tracer: i.tracer})
 
 	return nil
 }

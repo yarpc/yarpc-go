@@ -35,7 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/registrytest"
+	"go.uber.org/yarpc/internal/routertest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -45,11 +45,11 @@ import (
 func TestStartAddrInUse(t *testing.T) {
 	t1 := NewTransport()
 	i1 := t1.NewInbound(":0")
-	i1.SetRegistry(new(transporttest.MockRegistry))
+	i1.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i1.Start(), "inbound 1 must start without an error")
 	t2 := NewTransport()
 	i2 := t2.NewInbound(i1.Addr().String())
-	i2.SetRegistry(new(transporttest.MockRegistry))
+	i2.SetRouter(new(transporttest.MockRouter))
 	err := i2.Start()
 
 	require.Error(t, err)
@@ -66,7 +66,7 @@ func TestStartAddrInUse(t *testing.T) {
 func TestNilAddrAfterStop(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound(":0")
-	i.SetRegistry(new(transporttest.MockRegistry))
+	i.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NotNil(t, i.Addr())
@@ -77,7 +77,7 @@ func TestNilAddrAfterStop(t *testing.T) {
 func TestInboundStartAndStop(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound(":0")
-	i.SetRegistry(new(transporttest.MockRegistry))
+	i.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NoError(t, i.Stop())
@@ -86,7 +86,7 @@ func TestInboundStartAndStop(t *testing.T) {
 func TestInboundStartError(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound("invalid")
-	i.SetRegistry(new(transporttest.MockRegistry))
+	i.SetRouter(new(transporttest.MockRouter))
 	err := i.Start()
 	assert.Error(t, err, "expected failure")
 }
@@ -112,8 +112,8 @@ func TestInboundMux(t *testing.T) {
 
 	i := httpTransport.NewInbound(":0", Mux("/rpc/v1", mux))
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
-	reg := transporttest.NewMockRegistry(mockCtrl)
-	i.SetRegistry(reg)
+	reg := transporttest.NewMockRouter(mockCtrl)
+	i.SetRouter(reg)
 	require.NoError(t, i.Start())
 
 	defer i.Stop()
@@ -152,7 +152,7 @@ func TestInboundMux(t *testing.T) {
 	defer o.Stop()
 
 	spec := transport.NewUnaryHandlerSpec(h)
-	reg.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+	reg.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithCaller("foo").
 		WithService("bar").
 		WithProcedure("hello"),
