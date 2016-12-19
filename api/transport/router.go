@@ -29,8 +29,8 @@ import "context"
 
 // Procedure specifies a single handler registered in the RouteTable.
 type Procedure struct {
-	// ServiceName or empty to use the default service name.
-	ServiceName string
+	// Service or empty to use the default service name.
+	Service string
 
 	// ProcedureName of the procedure.
 	ProcedureName string

@@ -45,7 +45,7 @@ func TestMapRouter(t *testing.T) {
 			HandlerSpec:   transport.NewUnaryHandlerSpec(foo),
 		},
 		{
-			ServiceName:   "anotherservice",
+			Service:       "anotherservice",
 			ProcedureName: "bar",
 			HandlerSpec:   transport.NewUnaryHandlerSpec(bar),
 		},
@@ -87,7 +87,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 	aww := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
 	m.Register([]transport.Procedure{
 		{
-			ServiceName:   "anotherservice",
+			Service:       "anotherservice",
 			ProcedureName: "bar",
 			HandlerSpec:   bar,
 		},
@@ -96,7 +96,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 			HandlerSpec:   foo,
 		},
 		{
-			ServiceName:   "anotherservice",
+			Service:       "anotherservice",
 			ProcedureName: "aww",
 			HandlerSpec:   aww,
 		},
@@ -104,17 +104,17 @@ func TestMapRouter_Procedures(t *testing.T) {
 
 	expectedOrderedProcedures := []transport.Procedure{
 		{
-			ServiceName:   "anotherservice",
+			Service:       "anotherservice",
 			ProcedureName: "aww",
 			HandlerSpec:   aww,
 		},
 		{
-			ServiceName:   "anotherservice",
+			Service:       "anotherservice",
 			ProcedureName: "bar",
 			HandlerSpec:   bar,
 		},
 		{
-			ServiceName:   "myservice",
+			Service:       "myservice",
 			ProcedureName: "foo",
 			HandlerSpec:   foo,
 		},
@@ -130,7 +130,7 @@ func TestEmptyProcedureRegistration(t *testing.T) {
 
 	procedures := []transport.Procedure{
 		{
-			ServiceName:   "test",
+			Service:       "test",
 			ProcedureName: "",
 		},
 	}

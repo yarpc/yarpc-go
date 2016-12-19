@@ -52,8 +52,8 @@ func NewMapRouter(defaultService string) MapRouter {
 // Register registers the procedure with the MapRouter.
 func (m MapRouter) Register(rs []transport.Procedure) {
 	for _, r := range rs {
-		if r.ServiceName == "" {
-			r.ServiceName = m.defaultService
+		if r.Service == "" {
+			r.Service = m.defaultService
 		}
 
 		if r.ProcedureName == "" {
@@ -61,7 +61,7 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 		}
 
 		sp := serviceProcedure{
-			service:   r.ServiceName,
+			service:   r.Service,
 			procedure: r.ProcedureName,
 		}
 		m.entries[sp] = r.HandlerSpec
@@ -74,7 +74,7 @@ func (m MapRouter) Procedures() []transport.Procedure {
 	procs := make([]transport.Procedure, 0, len(m.entries))
 	for sp, handler := range m.entries {
 		procs = append(procs, transport.Procedure{
-			ServiceName:   sp.service,
+			Service:       sp.service,
 			ProcedureName: sp.procedure,
 			HandlerSpec:   handler,
 		})
@@ -117,10 +117,10 @@ func (sp byServiceProcedure) Len() int {
 }
 
 func (sp byServiceProcedure) Less(i int, j int) bool {
-	if sp[i].ServiceName == sp[j].ServiceName {
+	if sp[i].Service == sp[j].Service {
 		return sp[i].ProcedureName < sp[j].ProcedureName
 	}
-	return sp[i].ServiceName < sp[j].ServiceName
+	return sp[i].Service < sp[j].Service
 }
 
 func (sp byServiceProcedure) Swap(i int, j int) {

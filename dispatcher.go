@@ -214,7 +214,7 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
-				r.HandlerSpec.Type(), r.ServiceName, r.ProcedureName))
+				r.HandlerSpec.Type(), r.Service, r.ProcedureName))
 		}
 
 		procedures = append(procedures, r)
