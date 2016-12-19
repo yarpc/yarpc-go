@@ -22,9 +22,11 @@ package peer
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/introspection"
 )
 
 // Single implements the Chooser interface for a single peer
@@ -70,4 +72,20 @@ func (s *Single) Stop() error {
 // IsRunning is a noop
 func (s *Single) IsRunning() bool {
 	return true
+}
+
+// Introspect returns a ChooserStatus with a single PeerStatus.
+func (s *Single) Introspect() introspection.ChooserStatus {
+	peerStatus := s.p.Status()
+	peer := introspection.PeerStatus{
+		Identifier: s.p.Identifier(),
+		State: fmt.Sprintf("%s, %d pending request(s)",
+			peerStatus.ConnectionStatus.String(),
+			peerStatus.PendingRequestCount),
+	}
+
+	return introspection.ChooserStatus{
+		Name:  "Single",
+		Peers: []introspection.PeerStatus{peer},
+	}
 }

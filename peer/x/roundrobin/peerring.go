@@ -101,6 +101,15 @@ func (pr *PeerRing) RemoveAll() []peer.Peer {
 	return peers
 }
 
+// All returns a snapshot of all the peers from the ring as a list.
+func (pr *PeerRing) All() []peer.Peer {
+	peers := make([]peer.Peer, 0, len(pr.peerToNode))
+	for _, node := range pr.peerToNode {
+		peers = append(peers, getPeerForRingNode(node))
+	}
+	return peers
+}
+
 func (pr *PeerRing) popNode(node *ring.Ring) peer.Peer {
 	p := getPeerForRingNode(node)
 
