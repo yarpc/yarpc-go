@@ -70,7 +70,7 @@ func (r staticRouter) Register([]transport.Procedure) {
 }
 
 func (r staticRouter) Procedures() []transport.Procedure {
-	return []transport.Procedure{{Service: testService, ProcedureName: testProcedure}}
+	return []transport.Procedure{{Name: testProcedure, Service: testService}}
 }
 
 func (r staticRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {

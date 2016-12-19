@@ -44,8 +44,8 @@ type UnaryHandler func(context.Context, yarpc.ReqMeta, []byte) ([]byte, yarpc.Re
 func Procedure(name string, handler UnaryHandler) []transport.Procedure {
 	return []transport.Procedure{
 		{
-			ProcedureName: name,
-			HandlerSpec:   transport.NewUnaryHandlerSpec(rawUnaryHandler{handler}),
+			Name:        name,
+			HandlerSpec: transport.NewUnaryHandlerSpec(rawUnaryHandler{handler}),
 		},
 	}
 }
@@ -57,8 +57,8 @@ type OnewayHandler func(context.Context, yarpc.ReqMeta, []byte) error
 func OnewayProcedure(name string, handler OnewayHandler) []transport.Procedure {
 	return []transport.Procedure{
 		{
-			ProcedureName: name,
-			HandlerSpec:   transport.NewOnewayHandlerSpec(rawOnewayHandler{handler}),
+			Name:        name,
+			HandlerSpec: transport.NewOnewayHandlerSpec(rawOnewayHandler{handler}),
 		},
 	}
 }

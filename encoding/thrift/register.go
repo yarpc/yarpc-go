@@ -105,8 +105,8 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		})
 
 		rs = append(rs, transport.Procedure{
-			ProcedureName: procedureName(s.Name, methodName),
-			HandlerSpec:   spec,
+			Name:        procedureName(s.Name, methodName),
+			HandlerSpec: spec,
 		})
 	}
 
@@ -119,8 +119,8 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		})
 
 		rs = append(rs, transport.Procedure{
-			ProcedureName: procedureName(s.Name, methodName),
-			HandlerSpec:   spec,
+			Name:        procedureName(s.Name, methodName),
+			HandlerSpec: spec,
 		})
 	}
 

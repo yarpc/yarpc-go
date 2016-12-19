@@ -56,13 +56,13 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 			r.Service = m.defaultService
 		}
 
-		if r.ProcedureName == "" {
+		if r.Name == "" {
 			panic("Expected procedure name not to be empty string in registration")
 		}
 
 		sp := serviceProcedure{
 			service:   r.Service,
-			procedure: r.ProcedureName,
+			procedure: r.Name,
 		}
 		m.entries[sp] = r.HandlerSpec
 	}
@@ -74,9 +74,9 @@ func (m MapRouter) Procedures() []transport.Procedure {
 	procs := make([]transport.Procedure, 0, len(m.entries))
 	for sp, handler := range m.entries {
 		procs = append(procs, transport.Procedure{
-			Service:       sp.service,
-			ProcedureName: sp.procedure,
-			HandlerSpec:   handler,
+			Service:     sp.service,
+			Name:        sp.procedure,
+			HandlerSpec: handler,
 		})
 	}
 	sort.Sort(byServiceProcedure(procs))
@@ -118,7 +118,7 @@ func (sp byServiceProcedure) Len() int {
 
 func (sp byServiceProcedure) Less(i int, j int) bool {
 	if sp[i].Service == sp[j].Service {
-		return sp[i].ProcedureName < sp[j].ProcedureName
+		return sp[i].Name < sp[j].Name
 	}
 	return sp[i].Service < sp[j].Service
 }

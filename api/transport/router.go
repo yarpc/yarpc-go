@@ -29,11 +29,11 @@ import "context"
 
 // Procedure specifies a single handler registered in the RouteTable.
 type Procedure struct {
+	// Name of the procedure.
+	Name string
+
 	// Service or empty to use the default service name.
 	Service string
-
-	// ProcedureName of the procedure.
-	ProcedureName string
 
 	// HandlerSpec specifiying which handler and rpc type.
 	HandlerSpec HandlerSpec
@@ -41,7 +41,7 @@ type Procedure struct {
 
 // Router maintains and provides access to a collection of procedures
 type Router interface {
-	// Procedures returns a list of services and their procedures that
+	// Procedures returns a list of procedures that
 	// have been registered so far.
 	Procedures() []Procedure
 
@@ -52,7 +52,8 @@ type Router interface {
 	Choose(ctx context.Context, req *Request) (HandlerSpec, error)
 }
 
-// RouteTable provides access to a collection of procedures and their handlers.
+// RouteTable is an mutable interface for a Router that allows Registering new
+// Procedures
 type RouteTable interface {
 	Router
 

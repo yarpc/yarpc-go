@@ -41,13 +41,13 @@ func TestMapRouter(t *testing.T) {
 	bar := transporttest.NewMockUnaryHandler(mockCtrl)
 	m.Register([]transport.Procedure{
 		{
-			ProcedureName: "foo",
-			HandlerSpec:   transport.NewUnaryHandlerSpec(foo),
+			Name:        "foo",
+			HandlerSpec: transport.NewUnaryHandlerSpec(foo),
 		},
 		{
-			Service:       "anotherservice",
-			ProcedureName: "bar",
-			HandlerSpec:   transport.NewUnaryHandlerSpec(bar),
+			Name:        "bar",
+			Service:     "anotherservice",
+			HandlerSpec: transport.NewUnaryHandlerSpec(bar),
 		},
 	})
 
@@ -87,36 +87,36 @@ func TestMapRouter_Procedures(t *testing.T) {
 	aww := transport.NewUnaryHandlerSpec(transporttest.NewMockUnaryHandler(mockCtrl))
 	m.Register([]transport.Procedure{
 		{
-			Service:       "anotherservice",
-			ProcedureName: "bar",
-			HandlerSpec:   bar,
+			Name:        "bar",
+			Service:     "anotherservice",
+			HandlerSpec: bar,
 		},
 		{
-			ProcedureName: "foo",
-			HandlerSpec:   foo,
+			Name:        "foo",
+			HandlerSpec: foo,
 		},
 		{
-			Service:       "anotherservice",
-			ProcedureName: "aww",
-			HandlerSpec:   aww,
+			Name:        "aww",
+			Service:     "anotherservice",
+			HandlerSpec: aww,
 		},
 	})
 
 	expectedOrderedProcedures := []transport.Procedure{
 		{
-			Service:       "anotherservice",
-			ProcedureName: "aww",
-			HandlerSpec:   aww,
+			Name:        "aww",
+			Service:     "anotherservice",
+			HandlerSpec: aww,
 		},
 		{
-			Service:       "anotherservice",
-			ProcedureName: "bar",
-			HandlerSpec:   bar,
+			Name:        "bar",
+			Service:     "anotherservice",
+			HandlerSpec: bar,
 		},
 		{
-			Service:       "myservice",
-			ProcedureName: "foo",
-			HandlerSpec:   foo,
+			Name:        "foo",
+			Service:     "myservice",
+			HandlerSpec: foo,
 		},
 	}
 
@@ -130,8 +130,8 @@ func TestEmptyProcedureRegistration(t *testing.T) {
 
 	procedures := []transport.Procedure{
 		{
-			Service:       "test",
-			ProcedureName: "",
+			Name:    "",
+			Service: "test",
 		},
 	}
 

@@ -335,8 +335,8 @@ func TestHandlerPanic(t *testing.T) {
 	})
 	serverDispatcher.Register([]transport.Procedure{
 		{
-			ProcedureName: "panic",
-			HandlerSpec:   transport.NewUnaryHandlerSpec(panickedHandler{}),
+			Name:        "panic",
+			HandlerSpec: transport.NewUnaryHandlerSpec(panickedHandler{}),
 		},
 	})
 

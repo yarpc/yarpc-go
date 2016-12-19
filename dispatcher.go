@@ -77,7 +77,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	return &Dispatcher{
 		name:              cfg.Name,
-		routeTable:        NewMapRouter(cfg.Name),
+		table:             NewMapRouter(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
@@ -154,7 +154,7 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 // Clients to send RPCs, and by Procedures to recieve them. This object is what
 // enables an application to be transport-agnostic.
 type Dispatcher struct {
-	routeTable transport.RouteTable
+	table      transport.RouteTable
 	name       string
 	inbounds   Inbounds
 	outbounds  Outbounds
@@ -188,13 +188,13 @@ func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 // Procedures returns a list of services and procedures that have been
 // registered with this Dispatcher.
 func (d *Dispatcher) Procedures() []transport.Procedure {
-	return d.routeTable.Procedures()
+	return d.table.Procedures()
 }
 
 // Choose picks a handler for the given request or returns an error if a
 // handler for this request does not exist.
 func (d *Dispatcher) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	return d.routeTable.Choose(ctx, req)
+	return d.table.Choose(ctx, req)
 }
 
 // Register configures the dispatcher's router to route inbound requests to a
@@ -214,13 +214,13 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
-				r.HandlerSpec.Type(), r.Service, r.ProcedureName))
+				r.HandlerSpec.Type(), r.Service, r.Name))
 		}
 
 		procedures = append(procedures, r)
 	}
 
-	d.routeTable.Register(procedures)
+	d.table.Register(procedures)
 }
 
 // Start Start the RPC allowing it to accept and processing new incoming

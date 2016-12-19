@@ -57,7 +57,7 @@ func Register(r transport.RouteTable, rs []transport.Procedure) {
 func Procedure(name string, handler interface{}) []transport.Procedure {
 	return []transport.Procedure{
 		{
-			ProcedureName: name,
+			Name: name,
 			HandlerSpec: transport.NewUnaryHandlerSpec(
 				wrapUnaryHandler(name, handler),
 			),
@@ -74,7 +74,7 @@ func Procedure(name string, handler interface{}) []transport.Procedure {
 func OnewayProcedure(name string, handler interface{}) []transport.Procedure {
 	return []transport.Procedure{
 		{
-			ProcedureName: name,
+			Name: name,
 			HandlerSpec: transport.NewOnewayHandlerSpec(
 				wrapOnewayHandler(name, handler)),
 		},
