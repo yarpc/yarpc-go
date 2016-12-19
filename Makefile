@@ -58,6 +58,7 @@ build:
 generate: $(_GENERATE_DEPS_EXECUTABLES)
 	go install ./encoding/thrift/thriftrw-plugin-yarpc
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH go generate $(PACKAGES)
+	./scripts/updateLicenses.sh
 
 .PHONY: lint
 lint:

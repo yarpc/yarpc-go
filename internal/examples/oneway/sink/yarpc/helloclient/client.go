@@ -37,7 +37,7 @@ type Interface interface {
 		ctx context.Context,
 		reqMeta yarpc.CallReqMeta,
 		Snk *sink.SinkRequest,
-	) (transport.Ack, error)
+	) (yarpc.Ack, error)
 }
 
 // New builds a new client for the Hello service.
@@ -62,7 +62,7 @@ func (c client) Sink(
 	ctx context.Context,
 	reqMeta yarpc.CallReqMeta,
 	_Snk *sink.SinkRequest,
-) (transport.Ack, error) {
+) (yarpc.Ack, error) {
 	args := sink.Hello_Sink_Helper.Args(_Snk)
 	return c.c.CallOneway(ctx, reqMeta, args)
 }
