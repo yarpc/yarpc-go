@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/introspection"
 )
 
 // UnaryOutbound defines transport-level middleware for
@@ -88,6 +89,13 @@ func (fo unaryOutboundWithMiddleware) Stop() error {
 
 func (fo unaryOutboundWithMiddleware) IsRunning() bool {
 	return fo.o.IsRunning()
+}
+
+func (fo unaryOutboundWithMiddleware) Introspect() introspection.OutboundStatus {
+	if o, ok := fo.o.(introspection.IntrospectableOutbound); ok {
+		return o.Introspect()
+	}
+	return introspection.OutboundStatus{}
 }
 
 func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
@@ -165,6 +173,13 @@ func (fo onewayOutboundWithMiddleware) IsRunning() bool {
 
 func (fo onewayOutboundWithMiddleware) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	return fo.f.CallOneway(ctx, request, fo.o)
+}
+
+func (fo onewayOutboundWithMiddleware) Introspect() introspection.OutboundStatus {
+	if o, ok := fo.o.(introspection.IntrospectableOutbound); ok {
+		return o.Introspect()
+	}
+	return introspection.OutboundStatus{}
 }
 
 type nopOnewayOutbound struct{}
