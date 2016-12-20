@@ -197,6 +197,6 @@ func (rw responseWriter) AddHeaders(h transport.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
-func (responseWriter) SetApplicationError() {
-	// Nothing to do.
+func (rw responseWriter) SetApplicationError() {
+	rw.w.Header().Add(ApplicationStatusHeader, ApplicationErrorStatus)
 }
