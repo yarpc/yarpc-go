@@ -22,6 +22,7 @@ function die() {
 }
 
 function abspath() {
+	# We use a subshell here so the directory change isn't persisted.
 	(cd "$1" || die "Directory $1 does not exist"; pwd)
 }
 
