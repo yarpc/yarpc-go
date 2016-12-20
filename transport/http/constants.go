@@ -61,6 +61,10 @@ const (
 	// whether the response body represents an application error.
 	ApplicationStatusHeader = "Rpc-Status"
 
+	// ApplicationSuccessStatus is the value for ApplicationStatusHeader for
+	// successful requests.
+	ApplicationSuccessStatus = "success"
+
 	// ApplicationErrorStatus is the value for ApplicationStatusHeader for
 	// errant requests.
 	ApplicationErrorStatus = "error"
