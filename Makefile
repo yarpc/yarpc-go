@@ -1,6 +1,7 @@
 # Paths besides auto-detected generated files that should be excluded from
 # lint results.
-LINT_EXCLUDES_EXTRAS =
+# TODO: remove encoding/protobuf/inbound.go
+LINT_EXCLUDES_EXTRAS = encoding/protobuf/inbound.go
 
 ##############################################################################
 export GO15VENDOREXPERIMENT=1
@@ -24,6 +25,9 @@ FILTER_LINT := grep -v $(patsubst %,-e %, $(LINT_EXCLUDES))
 
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
+
+PROTO_EXAMPLE_OUTBOUND ?= tchannel
+PROTO_EXAMPLE_OUTBOUND_FLAG = -outbound $(PROTO_EXAMPLE_OUTBOUND)
 ##############################################################################
 
 .PHONY: build
@@ -35,6 +39,8 @@ generate:
 	go install ./vendor/golang.org/x/tools/cmd/stringer
 	go install ./vendor/go.uber.org/thriftrw
 	go install ./encoding/thrift/thriftrw-plugin-yarpc
+	go install github.com/golang/protobuf/protoc-gen-go
+	go install ./encoding/protobuf/protoc-gen-yarpc-go
 	go generate $(PACKAGES)
 
 .PHONY: lint
@@ -108,3 +114,13 @@ verify_version:
 		echo "CHANGELOG : $(CHANGELOG_VERSION)"; \
 		exit 1; \
 	fi
+
+.PHONY: proto-example-build
+proto-example-build:
+	go install github.com/golang/protobuf/protoc-gen-go
+	go install ./encoding/protobuf/protoc-gen-yarpc-go
+	go generate ./internal/examples/protobuf-keyvalue/kv
+
+.PHONY: proto-example-run
+proto-example-run: proto-example-build
+	cat internal/examples/protobuf-keyvalue/test.txt | go run ./internal/examples/protobuf-keyvalue/main.go $(PROTO_EXAMPLE_OUTBOUND_FLAG)

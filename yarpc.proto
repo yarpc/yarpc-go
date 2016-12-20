@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+package yarpc;
+
+option go_package = "protobuf";
+
+// MethodErrorType represents a protobuf message type that is
+// returned as a potential error for an rpc method on a service.
+//
+// By designating this is a potential error type, the corresponding
+// YARPC library will have a corresponding language-specific error pattern
+// that will return an error that contains the protobuf message.
+message MethodErrorType {
+  // The message name as registered with github.com/golang/protobuf/proto#RegisterType.
+  //
+  // There is a generic way to represent message names (including package paths)
+  // that is used in google/protobuf/descriptor.proto, this should be used.
+  string name = 1;
+}
+
+// TODO: split this into annotations.proto
+
+extend google.protobuf.MethodOptions {
+  // TODO: register as global method option with protobuf-global-extension-registry@google.com
+  repeated MethodErrorType error_type = 50001;
+}
