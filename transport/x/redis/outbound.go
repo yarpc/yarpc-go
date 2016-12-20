@@ -22,14 +22,21 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
 
 	"github.com/opentracing/opentracing-go"
+)
+
+var (
+	_ transport.OnewayOutbound             = (*Outbound)(nil)
+	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
 )
 
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("redis.Outbound")
@@ -107,4 +114,14 @@ func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (tran
 	}
 
 	return ack, nil
+}
+
+// Introspect returns basic status about this outbound.
+func (o *Outbound) Introspect() introspection.OutboundStatus {
+	return introspection.OutboundStatus{
+		Transport: transportName,
+		Endpoint:  o.client.Endpoint(),
+		State: fmt.Sprintf("%s (queue: %s)", o.client.ConState(),
+			o.queueKey),
+	}
 }
