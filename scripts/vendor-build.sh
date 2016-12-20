@@ -31,7 +31,7 @@ function findGlideLock() {
 		return
 	fi
 
-	if [[ src == "$(basename "$1")" ]]; then
+	if [[ "$GOPATH/src" == "$1" ]]; then
 		return
 	fi
 
