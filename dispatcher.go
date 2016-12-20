@@ -50,9 +50,8 @@ type Config struct {
 	// Tracer is deprecated. The dispatcher does nothing with this propery.
 	Tracer opentracing.Tracer
 
-	// RouteTable is a customized routing table to control how requests are routed.
-	// If this value is nil, we will fall back to creating a default routing table
-	RouterMiddleware RouterMiddleware
+	// RouterMiddleware is middleware to control how requests are routed.
+	RouterMiddleware middleware.Router
 }
 
 // Inbounds contains a list of inbound transports
@@ -73,9 +72,6 @@ type InboundMiddleware struct {
 	Oneway middleware.OnewayInbound
 }
 
-// RouterMiddleware wraps the Router middleware
-type RouterMiddleware middleware.Router
-
 // NewDispatcher builds a new Dispatcher using the specified Config.
 func NewDispatcher(cfg Config) *Dispatcher {
 	if cfg.Name == "" {
@@ -84,12 +80,11 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	return &Dispatcher{
 		name:              cfg.Name,
-		table:             NewMapRouter(cfg.Name),
+		table:             middleware.ApplyRouter(NewMapRouter(cfg.Name), cfg.RouterMiddleware),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		inboundMiddleware: cfg.InboundMiddleware,
-		routerMiddleware:  cfg.RouterMiddleware,
 	}
 }
 
@@ -169,7 +164,6 @@ type Dispatcher struct {
 	transports []transport.Transport
 
 	inboundMiddleware InboundMiddleware
-	routerMiddleware  RouterMiddleware
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -197,18 +191,12 @@ func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 // Procedures returns a list of services and procedures that have been
 // registered with this Dispatcher.
 func (d *Dispatcher) Procedures() []transport.Procedure {
-	if d.routerMiddleware != nil {
-		return d.routerMiddleware.Procedures(d.table)
-	}
 	return d.table.Procedures()
 }
 
 // Choose picks a handler for the given request or returns an error if a
 // handler for this request does not exist.
 func (d *Dispatcher) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	if d.routerMiddleware != nil {
-		return d.routerMiddleware.Choose(ctx, req, d.table)
-	}
 	return d.table.Choose(ctx, req)
 }
 
