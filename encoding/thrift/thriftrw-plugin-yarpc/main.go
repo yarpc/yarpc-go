@@ -80,7 +80,7 @@ type Interface interface {
 //
 // 	handler := <.Service.Name>Handler{}
 // 	dispatcher.Register(<$pkgname>.New(handler))
-func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Registrant {
+func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Procedure {
 	h := handler{impl}
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
@@ -97,7 +97,7 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Regist
 					<if .OneWay>"<.ThriftName>": <import $onewayWrapperImport>.<$onewayWrapperFunc>(h.<.Name>),<end>
 			<end>},
 	}
-	return <$thrift>.BuildRegistrants(service, opts...)
+	return <$thrift>.BuildProcedures(service, opts...)
 }
 
 type handler struct{ impl Interface }

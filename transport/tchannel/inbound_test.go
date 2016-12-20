@@ -40,7 +40,7 @@ func TestInboundStartNew(t *testing.T) {
 			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
 				x := NewChannelTransport(WithChannel(ch))
 				i := x.NewInbound()
-				i.SetRegistry(new(transporttest.MockRegistry))
+				i.SetRouter(new(transporttest.MockRouter))
 				// Can't do Equal because we want to match the pointer, not a
 				// DeepEqual.
 				assert.True(t, ch == i.Channel(), "channel does not match")
@@ -56,7 +56,7 @@ func TestInboundStartNew(t *testing.T) {
 			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
 				x := NewChannelTransport(WithChannel(ch))
 				i := x.NewInbound()
-				i.SetRegistry(new(transporttest.MockRegistry))
+				i.SetRouter(new(transporttest.MockRouter))
 				assert.True(t, ch == i.Channel(), "channel does not match")
 				require.NoError(t, i.Start())
 				defer i.Stop()
@@ -91,7 +91,7 @@ func TestInboundStartAlreadyListening(t *testing.T) {
 	x := NewChannelTransport(WithChannel(ch))
 	i := x.NewInbound()
 
-	i.SetRegistry(new(transporttest.MockRegistry))
+	i.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i.Start())
 	require.NoError(t, x.Start())
 
@@ -112,7 +112,7 @@ func TestInboundStopWithoutStarting(t *testing.T) {
 func TestInboundInvalidAddress(t *testing.T) {
 	x := NewChannelTransport(ServiceName("foo"), ListenAddr("not valid"))
 	i := x.NewInbound()
-	i.SetRegistry(new(transporttest.MockRegistry))
+	i.SetRouter(new(transporttest.MockRouter))
 	assert.Nil(t, i.Start())
 	defer i.Stop()
 	assert.Error(t, x.Start())
@@ -131,7 +131,7 @@ func TestInboundExistingMethods(t *testing.T) {
 
 	x := NewChannelTransport(WithChannel(ch))
 	i := x.NewInbound()
-	i.SetRegistry(new(transporttest.MockRegistry))
+	i.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i.Start())
 	defer i.Stop()
 	require.NoError(t, x.Start())

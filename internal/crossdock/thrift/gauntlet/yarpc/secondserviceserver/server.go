@@ -26,10 +26,10 @@ package secondserviceserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the SecondService service.
@@ -51,17 +51,19 @@ type Interface interface {
 //
 // 	handler := SecondServiceHandler{}
 // 	dispatcher.Register(secondserviceserver.New(handler))
-func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "SecondService",
 		Methods: map[string]thrift.UnaryHandler{
-			"blahBlah":         thrift.UnaryHandlerFunc(h.BlahBlah),
+
+			"blahBlah": thrift.UnaryHandlerFunc(h.BlahBlah),
+
 			"secondtestString": thrift.UnaryHandlerFunc(h.SecondtestString),
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{},
 	}
-	return thrift.BuildRegistrants(service, opts...)
+	return thrift.BuildProcedures(service, opts...)
 }
 
 type handler struct{ impl Interface }

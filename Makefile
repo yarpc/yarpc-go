@@ -3,6 +3,11 @@
 # TODO: remove encoding/protobuf/inbound.go
 LINT_EXCLUDES_EXTRAS = encoding/protobuf/inbound.go
 
+# List of executables needed for 'make generate'
+GENERATE_DEPENDENCIES = \
+	golang.org/x/tools/cmd/stringer \
+	go.uber.org/thriftrw
+
 ##############################################################################
 export GO15VENDOREXPERIMENT=1
 
@@ -30,18 +35,35 @@ PROTO_EXAMPLE_OUTBOUND ?= tchannel
 PROTO_EXAMPLE_OUTBOUND_FLAG = -outbound $(PROTO_EXAMPLE_OUTBOUND)
 ##############################################################################
 
+_GENERATE_DEPS_DIR = $(shell pwd)/.tmp
+$(_GENERATE_DEPS_DIR):
+	mkdir $(_GENERATE_DEPS_DIR)
+
+# Full paths to executables needed for 'make generate'
+_GENERATE_DEPS_EXECUTABLES =
+
+define generatedeprule
+_GENERATE_DEPS_EXECUTABLES += $(_GENERATE_DEPS_DIR)/$(shell basename $1)
+
+$(_GENERATE_DEPS_DIR)/$(shell basename $1): vendor/$1/*.go glide.lock $(_GENERATE_DEPS_DIR)
+	./scripts/vendor-build.sh $(_GENERATE_DEPS_DIR) $1
+endef
+
+$(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
+
+##############################################################################
+
 .PHONY: build
 build:
 	go build $(PACKAGES)
 
 .PHONY: generate
-generate:
-	go install ./vendor/golang.org/x/tools/cmd/stringer
-	go install ./vendor/go.uber.org/thriftrw
+generate: $(_GENERATE_DEPS_EXECUTABLES)
 	go install ./encoding/thrift/thriftrw-plugin-yarpc
 	go install github.com/golang/protobuf/protoc-gen-go
 	go install ./encoding/protobuf/protoc-gen-yarpc-go
-	go generate $(PACKAGES)
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH go generate $(PACKAGES)
+	./scripts/updateLicenses.sh
 
 .PHONY: lint
 lint:

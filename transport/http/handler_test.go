@@ -34,7 +34,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/registrytest"
+	"go.uber.org/yarpc/internal/routertest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
@@ -53,11 +53,11 @@ func TestHandlerSuccess(t *testing.T) {
 	headers.Set(ProcedureHeader, "nyuck")
 	headers.Set(ServiceHeader, "curly")
 
-	registry := transporttest.NewMockRegistry(mockCtrl)
+	router := transporttest.NewMockRouter(mockCtrl)
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 	spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-	registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithService("curly").
 		WithProcedure("nyuck"),
 	).Return(spec, nil)
@@ -78,7 +78,7 @@ func TestHandlerSuccess(t *testing.T) {
 		gomock.Any(),
 	).Return(nil)
 
-	httpHandler := handler{registry: registry, tracer: &opentracing.NoopTracer{}}
+	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
 	req := &http.Request{
 		Method: "POST",
 		Header: headers,
@@ -122,16 +122,16 @@ func TestHandlerHeaders(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		registry := transporttest.NewMockRegistry(mockCtrl)
+		router := transporttest.NewMockRouter(mockCtrl)
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
 		spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-		registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService("service").
 			WithProcedure("hello"),
 		).Return(spec, nil)
 
-		httpHandler := handler{registry: registry, tracer: &opentracing.NoopTracer{}}
+		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
@@ -246,26 +246,26 @@ func TestHandlerFailures(t *testing.T) {
 			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
 		}
 
-		reg := transporttest.NewMockRegistry(mockCtrl)
+		reg := transporttest.NewMockRouter(mockCtrl)
 
 		if tt.errTTL {
 			// since TTL is checked after we've determined the transport type, if we have an
-			// error with TTL it will be discovered after we read from the registry
+			// error with TTL it will be discovered after we read from the router
 			spec := transport.NewUnaryHandlerSpec(panickedHandler{})
-			reg.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+			reg.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 				WithService(service).
 				WithProcedure(procedure),
 			).Return(spec, nil)
 		}
 
-		h := handler{registry: reg, tracer: &opentracing.NoopTracer{}}
+		h := handler{router: reg, tracer: &opentracing.NoopTracer{}}
 
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 
 		code := rw.Code
 		assert.True(t, code >= 400 && code < 500, "expected 400 level code")
-		assert.Equal(t, rw.Body.String(), tt.msg)
+		assert.Equal(t, tt.msg, rw.Body.String())
 	}
 }
 
@@ -301,15 +301,15 @@ func TestHandlerInternalFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(fmt.Errorf("great sadness"))
 
-	registry := transporttest.NewMockRegistry(mockCtrl)
+	router := transporttest.NewMockRouter(mockCtrl)
 	spec := transport.NewUnaryHandlerSpec(rpcHandler)
 
-	registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 		WithService("fake").
 		WithProcedure("hello"),
 	).Return(spec, nil)
 
-	httpHandler := handler{registry: registry, tracer: &opentracing.NoopTracer{}}
+	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
 	httpResponse := httptest.NewRecorder()
 	httpHandler.ServeHTTP(httpResponse, &request)
 
@@ -333,9 +333,9 @@ func TestHandlerPanic(t *testing.T) {
 		Name:     "yarpc-test",
 		Inbounds: yarpc.Inbounds{inbound},
 	})
-	serverDispatcher.Register([]transport.Registrant{
+	serverDispatcher.Register([]transport.Procedure{
 		{
-			Procedure:   "panic",
+			Name:        "panic",
 			HandlerSpec: transport.NewUnaryHandlerSpec(panickedHandler{}),
 		},
 	})

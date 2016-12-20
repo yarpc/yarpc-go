@@ -21,4 +21,4 @@
 package main
 
 //go:generate thriftrw --plugin=yarpc echo.thrift
-//go:generate ../../../scripts/updateLicenses.sh
+//go:generate ../../../../scripts/updateLicenses.sh

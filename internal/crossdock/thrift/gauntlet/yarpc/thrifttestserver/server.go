@@ -26,10 +26,10 @@ package thrifttestserver
 import (
 	"context"
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the ThriftTest service.
@@ -171,39 +171,58 @@ type Interface interface {
 //
 // 	handler := ThriftTestHandler{}
 // 	dispatcher.Register(thrifttestserver.New(handler))
-func New(impl Interface, opts ...thrift.RegisterOption) []transport.Registrant {
+func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "ThriftTest",
 		Methods: map[string]thrift.UnaryHandler{
-			"testBinary":         thrift.UnaryHandlerFunc(h.TestBinary),
-			"testByte":           thrift.UnaryHandlerFunc(h.TestByte),
-			"testDouble":         thrift.UnaryHandlerFunc(h.TestDouble),
-			"testEnum":           thrift.UnaryHandlerFunc(h.TestEnum),
-			"testException":      thrift.UnaryHandlerFunc(h.TestException),
-			"testI32":            thrift.UnaryHandlerFunc(h.TestI32),
-			"testI64":            thrift.UnaryHandlerFunc(h.TestI64),
-			"testInsanity":       thrift.UnaryHandlerFunc(h.TestInsanity),
-			"testList":           thrift.UnaryHandlerFunc(h.TestList),
-			"testMap":            thrift.UnaryHandlerFunc(h.TestMap),
-			"testMapMap":         thrift.UnaryHandlerFunc(h.TestMapMap),
-			"testMulti":          thrift.UnaryHandlerFunc(h.TestMulti),
-			"testMultiException": thrift.UnaryHandlerFunc(h.TestMultiException),
-			"testNest":           thrift.UnaryHandlerFunc(h.TestNest),
 
-			"testSet":       thrift.UnaryHandlerFunc(h.TestSet),
-			"testString":    thrift.UnaryHandlerFunc(h.TestString),
+			"testBinary": thrift.UnaryHandlerFunc(h.TestBinary),
+
+			"testByte": thrift.UnaryHandlerFunc(h.TestByte),
+
+			"testDouble": thrift.UnaryHandlerFunc(h.TestDouble),
+
+			"testEnum": thrift.UnaryHandlerFunc(h.TestEnum),
+
+			"testException": thrift.UnaryHandlerFunc(h.TestException),
+
+			"testI32": thrift.UnaryHandlerFunc(h.TestI32),
+
+			"testI64": thrift.UnaryHandlerFunc(h.TestI64),
+
+			"testInsanity": thrift.UnaryHandlerFunc(h.TestInsanity),
+
+			"testList": thrift.UnaryHandlerFunc(h.TestList),
+
+			"testMap": thrift.UnaryHandlerFunc(h.TestMap),
+
+			"testMapMap": thrift.UnaryHandlerFunc(h.TestMapMap),
+
+			"testMulti": thrift.UnaryHandlerFunc(h.TestMulti),
+
+			"testMultiException": thrift.UnaryHandlerFunc(h.TestMultiException),
+
+			"testNest": thrift.UnaryHandlerFunc(h.TestNest),
+
+			"testSet": thrift.UnaryHandlerFunc(h.TestSet),
+
+			"testString": thrift.UnaryHandlerFunc(h.TestString),
+
 			"testStringMap": thrift.UnaryHandlerFunc(h.TestStringMap),
-			"testStruct":    thrift.UnaryHandlerFunc(h.TestStruct),
-			"testTypedef":   thrift.UnaryHandlerFunc(h.TestTypedef),
-			"testVoid":      thrift.UnaryHandlerFunc(h.TestVoid),
+
+			"testStruct": thrift.UnaryHandlerFunc(h.TestStruct),
+
+			"testTypedef": thrift.UnaryHandlerFunc(h.TestTypedef),
+
+			"testVoid": thrift.UnaryHandlerFunc(h.TestVoid),
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{
 
 			"testOneway": thrift.OnewayHandlerFunc(h.TestOneway),
 		},
 	}
-	return thrift.BuildRegistrants(service, opts...)
+	return thrift.BuildProcedures(service, opts...)
 }
 
 type handler struct{ impl Interface }

@@ -28,47 +28,56 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 )
 
-// MapRegistry is a Registry that maintains a map of the registered
-// procedures.
-type MapRegistry struct {
-	defaultService string
-	entries        map[transport.ServiceProcedure]transport.HandlerSpec
+type serviceProcedure struct {
+	service   string
+	procedure string
 }
 
-// NewMapRegistry builds a new MapRegistry that uses the given name as the
+// MapRouter is a Router that maintains a map of the registered
+// procedures.
+type MapRouter struct {
+	defaultService string
+	entries        map[serviceProcedure]transport.HandlerSpec
+}
+
+// NewMapRouter builds a new MapRouter that uses the given name as the
 // default service name.
-func NewMapRegistry(defaultService string) MapRegistry {
-	return MapRegistry{
+func NewMapRouter(defaultService string) MapRouter {
+	return MapRouter{
 		defaultService: defaultService,
-		entries:        make(map[transport.ServiceProcedure]transport.HandlerSpec),
+		entries:        make(map[serviceProcedure]transport.HandlerSpec),
 	}
 }
 
-// Register registers the procedure with the MapRegistry.
-func (m MapRegistry) Register(rs []transport.Registrant) {
+// Register registers the procedure with the MapRouter.
+func (m MapRouter) Register(rs []transport.Procedure) {
 	for _, r := range rs {
 		if r.Service == "" {
 			r.Service = m.defaultService
 		}
 
-		if r.Procedure == "" {
+		if r.Name == "" {
 			panic("Expected procedure name not to be empty string in registration")
 		}
 
-		sp := transport.ServiceProcedure{
-			Service:   r.Service,
-			Procedure: r.Procedure,
+		sp := serviceProcedure{
+			service:   r.Service,
+			procedure: r.Name,
 		}
 		m.entries[sp] = r.HandlerSpec
 	}
 }
 
-// ServiceProcedures returns a list of services and their procedures that
+// Procedures returns a list procedures that
 // have been registered so far.
-func (m MapRegistry) ServiceProcedures() []transport.ServiceProcedure {
-	procs := make([]transport.ServiceProcedure, 0, len(m.entries))
-	for k := range m.entries {
-		procs = append(procs, k)
+func (m MapRouter) Procedures() []transport.Procedure {
+	procs := make([]transport.Procedure, 0, len(m.entries))
+	for sp, handler := range m.entries {
+		procs = append(procs, transport.Procedure{
+			Service:     sp.service,
+			Name:        sp.procedure,
+			HandlerSpec: handler,
+		})
 	}
 	sort.Sort(byServiceProcedure(procs))
 	return procs
@@ -76,14 +85,14 @@ func (m MapRegistry) ServiceProcedures() []transport.ServiceProcedure {
 
 // ChooseProcedure retrieves the HandlerSpec for the given Procedure or returns an
 // error.
-func (m MapRegistry) ChooseProcedure(service, procedure string) (transport.HandlerSpec, error) {
+func (m MapRouter) ChooseProcedure(service, procedure string) (transport.HandlerSpec, error) {
 	if service == "" {
 		service = m.defaultService
 	}
 
-	sp := transport.ServiceProcedure{
-		Service:   service,
-		Procedure: procedure,
+	sp := serviceProcedure{
+		service:   service,
+		procedure: procedure,
 	}
 	if spec, ok := m.entries[sp]; ok {
 		return spec, nil
@@ -97,11 +106,11 @@ func (m MapRegistry) ChooseProcedure(service, procedure string) (transport.Handl
 
 // Choose retrives the HandlerSpec for the service and procedure noted on the
 // transport request, or returns an error.
-func (m MapRegistry) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
 	return m.ChooseProcedure(req.Service, req.Procedure)
 }
 
-type byServiceProcedure []transport.ServiceProcedure
+type byServiceProcedure []transport.Procedure
 
 func (sp byServiceProcedure) Len() int {
 	return len(sp)
@@ -109,7 +118,7 @@ func (sp byServiceProcedure) Len() int {
 
 func (sp byServiceProcedure) Less(i int, j int) bool {
 	if sp[i].Service == sp[j].Service {
-		return sp[i].Procedure < sp[j].Procedure
+		return sp[i].Name < sp[j].Name
 	}
 	return sp[i].Service < sp[j].Service
 }

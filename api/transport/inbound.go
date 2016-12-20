@@ -25,31 +25,16 @@ package transport
 // Inbound is a transport that knows how to receive requests for procedure
 // calls.
 type Inbound interface {
-	// SetRegistry configures the inbound to dispatch requests through a
-	// registry, typically called by a Dispatcher with its Registrar of handled
+	Lifecycle
+
+	// SetRouter configures the inbound to dispatch requests through a
+	// router, typically called by a Dispatcher with its RouteTable of handled
 	// procedures.
-	SetRegistry(Registry)
+	// Inbound.Start MAY panic if SetRouter was not called.
+	SetRouter(Router)
 
 	// Transport returns any transports that the inbound uses, so they can be
 	// collected for lifecycle management, typically by a Dispatcher.
 	// An inbound may submit zero or more transports.
 	Transports() []Transport
-
-	// Starts accepting new requests.
-	//
-	// The inbound must have a configured registry.
-	//
-	// The function MUST return immediately, although it SHOULD block until
-	// the inbound is ready to start accepting new requests.
-	//
-	// Implementations can assume that this function is called at most once.
-	Start() error
-
-	// Stops the inbound. No new requests will be processed.
-	//
-	// This MAY block while the server drains ongoing requests.
-	Stop() error
-
-	// TODO some way for the inbound to expose the host and port it's
-	// listening on
 }

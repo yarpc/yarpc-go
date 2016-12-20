@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package request
+package transport_test
 
 import (
 	"context"
@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/request"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -34,12 +35,9 @@ func TestValidator(t *testing.T) {
 	tests := []struct {
 		req           *transport.Request
 		transportType transport.Type
+		ttl           time.Duration
 
-		ttl       time.Duration
-		ttlString string // set to try parseTTL
-
-		wantErr     error
-		wantMessage string
+		wantErr string
 	}{
 		{
 			// No error
@@ -58,10 +56,7 @@ func TestValidator(t *testing.T) {
 				Service:   "service",
 				Procedure: "hello",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"encoding"},
-			},
-			wantMessage: "missing encoding",
+			wantErr: "missing encoding",
 		},
 		{
 			req: &transport.Request{
@@ -69,10 +64,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"caller name"},
-			},
-			wantMessage: "missing caller name",
+			wantErr: "missing caller name",
 		},
 		{
 			req: &transport.Request{
@@ -80,10 +72,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"service name"},
-			},
-			wantMessage: "missing service name",
+			wantErr: "missing service name",
 		},
 		{
 			req: &transport.Request{
@@ -91,10 +80,7 @@ func TestValidator(t *testing.T) {
 				Service:  "service",
 				Encoding: "raw",
 			},
-			wantErr: missingParametersError{
-				Parameters: []string{"procedure"},
-			},
-			wantMessage: "missing procedure",
+			wantErr: "missing procedure",
 		},
 		{
 			req: &transport.Request{
@@ -104,63 +90,19 @@ func TestValidator(t *testing.T) {
 				Encoding:  "raw",
 			},
 			transportType: transport.Unary,
-			wantErr: missingParametersError{
-				Parameters: []string{"TTL"},
-			},
-			wantMessage: "missing TTL",
+			wantErr:       "missing TTL",
 		},
 		{
-			req: &transport.Request{},
-			wantErr: missingParametersError{
-				Parameters: []string{
-					"service name", "procedure", "caller name", "encoding",
-				},
-			},
-			wantMessage: "missing service name, procedure, caller name, and encoding",
-		},
-		{
-			req: &transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  "raw",
-				Procedure: "hello",
-			},
-			transportType: transport.Unary,
-			ttlString:     "-1000",
-			wantErr: invalidTTLError{
-				Service:   "service",
-				Procedure: "hello",
-				TTL:       "-1000",
-			},
-			wantMessage: `invalid TTL "-1000" for procedure "hello" of service "service": must be positive integer`,
-		},
-		{
-			req: &transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  "raw",
-				Procedure: "hello",
-			},
-			transportType: transport.Unary,
-			ttlString:     "not an integer",
-			wantErr: invalidTTLError{
-				Service:   "service",
-				Procedure: "hello",
-				TTL:       "not an integer",
-			},
-			wantMessage: `invalid TTL "not an integer" for procedure "hello" of service "service": must be positive integer`,
+			req:     &transport.Request{},
+			wantErr: "missing service name, procedure, caller name, and encoding",
 		},
 	}
 
 	for _, tt := range tests {
-		v := Validator{Request: tt.req}
-
 		ctx := context.Background()
-		_, err := v.Validate(ctx)
+		err := transport.ValidateRequest(tt.req)
 
-		if err == nil && tt.transportType == transport.Oneway {
-			_, err = v.ValidateOneway(ctx)
-		} else if err == nil { // default to unary
+		if err == nil && tt.transportType == transport.Unary {
 			var cancel func()
 
 			if tt.ttl != 0 {
@@ -168,18 +110,12 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			if tt.ttlString != "" {
-				ctx, cancel = v.ParseTTL(ctx, tt.ttlString)
-				defer cancel()
-			}
-
-			_, err = v.ValidateUnary(ctx)
+			err = request.ValidateUnaryContext(ctx)
 		}
 
-		if tt.wantErr != nil {
-			assert.Equal(t, tt.wantErr, err)
-			if tt.wantMessage != "" && err != nil {
-				assert.Equal(t, tt.wantMessage, err.Error())
+		if tt.wantErr != "" {
+			if assert.Error(t, err) {
+				assert.Equal(t, tt.wantErr, err.Error())
 			}
 		} else {
 			assert.NoError(t, err)

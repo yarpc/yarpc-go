@@ -18,44 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package request
+package http
 
 import (
+	"context"
 	"fmt"
-	"strings"
+	"strconv"
+	"time"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 )
 
-// missingParametersError is a failure to process a request because it was
-// missing required parameters.
-type missingParametersError struct {
-	// Names of the missing parameters.
-	//
-	// Precondition: len(Parameters) > 0
-	Parameters []string
-}
-
-func (e missingParametersError) AsHandlerError() errors.HandlerError {
-	return errors.HandlerBadRequestError(e)
-}
-
-func (e missingParametersError) Error() string {
-	s := "missing "
-	ps := e.Parameters
-	if len(ps) == 1 {
-		s += ps[0]
-		return s
+// parseTTL takes a context parses the given TTL, clamping the context to that
+// TTL and as a side-effect, tracking any errors encountered while attempting
+// to parse and validate that TTL.
+//
+// Leaves the context unchanged if the TTL is empty.
+func parseTTL(ctx context.Context, req *transport.Request, ttl string) (_ context.Context, cancel func(), _ error) {
+	if ttl == "" {
+		return ctx, func() {}, nil
 	}
 
-	if len(ps) == 2 {
-		s += fmt.Sprintf("%s and %s", ps[0], ps[1])
-		return s
+	ttlms, err := strconv.Atoi(ttl)
+	if err != nil {
+		return ctx, func() {}, invalidTTLError{
+			Service:   req.Service,
+			Procedure: req.Procedure,
+			TTL:       ttl,
+		}
 	}
 
-	s += strings.Join(ps[:len(ps)-1], ", ")
-	s += fmt.Sprintf(", and %s", ps[len(ps)-1])
-	return s
+	// negative TTLs are invalid
+	if ttlms < 0 {
+		return ctx, func() {}, invalidTTLError{
+			Service:   req.Service,
+			Procedure: req.Procedure,
+			TTL:       fmt.Sprint(ttlms),
+		}
+	}
+
+	ctx, cancel = context.WithTimeout(ctx, time.Duration(ttlms)*time.Millisecond)
+	return ctx, cancel, nil
 }
 
 // invalidTTLError is a failure to process a request because the TTL was in an

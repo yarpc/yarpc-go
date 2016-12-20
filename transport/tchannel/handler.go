@@ -77,7 +77,7 @@ func (c tchannelCall) Response() inboundCallResponse {
 // handler wraps a transport.UnaryHandler into a TChannel Handler.
 type handler struct {
 	existing map[string]tchannel.Handler
-	Registry transport.Registry
+	router   transport.Router
 	tracer   opentracing.Tracer
 }
 
@@ -147,22 +147,21 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	rw := newResponseWriter(treq, call)
 	defer rw.Close() // TODO(abg): log if this errors
 
-	treq, err = request.Validate(ctx, treq)
-	if err != nil {
+	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
 
-	spec, err := h.Registry.Choose(ctx, treq)
+	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		return err
 	}
 
 	switch spec.Type() {
 	case transport.Unary:
-		treq, err = request.ValidateUnary(ctx, treq)
-		if err == nil {
-			err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
+		if err := request.ValidateUnaryContext(ctx); err != nil {
+			return err
 		}
+		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
 
 	default:
 		err = errors.UnsupportedTypeError{Transport: "TChannel", Type: string(spec.Type())}

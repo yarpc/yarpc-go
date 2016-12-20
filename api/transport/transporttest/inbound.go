@@ -49,12 +49,12 @@ func (_m *MockInbound) EXPECT() *_MockInboundRecorder {
 	return _m.recorder
 }
 
-func (_m *MockInbound) SetRegistry(_param0 transport.Registry) {
-	_m.ctrl.Call(_m, "SetRegistry", _param0)
+func (_m *MockInbound) SetRouter(_param0 transport.Router) {
+	_m.ctrl.Call(_m, "SetRouter", _param0)
 }
 
-func (_mr *_MockInboundRecorder) SetRegistry(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetRegistry", arg0)
+func (_mr *_MockInboundRecorder) SetRouter(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetRouter", arg0)
 }
 
 func (_m *MockInbound) Start() error {

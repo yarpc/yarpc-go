@@ -30,11 +30,7 @@ import (
 
 // Chooser is a collection of Peers.  Outbounds request peers from the peer.Chooser to determine where to send requests
 type Chooser interface {
-	// Notify the PeerList that it will start receiving requests
-	Start() error
-
-	// Notify the PeerList that it will stop receiving requests
-	Stop() error
+	transport.Lifecycle
 
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
 	Choose(context.Context, *transport.Request) (peer Peer, onFinish func(error), err error)

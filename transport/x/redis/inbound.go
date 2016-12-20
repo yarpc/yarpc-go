@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/serialize"
 
 	"github.com/opentracing/opentracing-go"
@@ -38,8 +37,8 @@ const transportName = "redis"
 // wait for an item in the queue or until the timout is reached before trying
 // to read again.
 type Inbound struct {
-	registry transport.Registry
-	tracer   opentracing.Tracer
+	router transport.Router
+	tracer opentracing.Tracer
 
 	client        Client
 	timeout       time.Duration
@@ -79,24 +78,24 @@ func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
 	return i
 }
 
-// WithRegistry configures a registry to handle incoming requests,
+// WithRouter configures a router to handle incoming requests,
 // as a chained method for convenience.
-func (i *Inbound) WithRegistry(registry transport.Registry) *Inbound {
-	i.registry = registry
+func (i *Inbound) WithRouter(router transport.Router) *Inbound {
+	i.router = router
 	return i
 }
 
-// SetRegistry configures a registry to handle incoming requests.
+// SetRouter configures a router to handle incoming requests.
 // This satisfies the transport.Inbound interface, and would be called
 // by a dispatcher when it starts.
-func (i *Inbound) SetRegistry(registry transport.Registry) {
-	i.registry = registry
+func (i *Inbound) SetRouter(router transport.Router) {
+	i.router = router
 }
 
 // Start starts the inbound, reading from the queueKey
 func (i *Inbound) Start() error {
-	if i.registry == nil {
-		return errors.NoRegistryError{}
+	if i.router == nil {
+		return errors.ErrNoRouter
 	}
 
 	err := i.client.Start()
@@ -150,24 +149,17 @@ func (i *Inbound) handle() error {
 	ctx, span := extractOpenTracingSpan.Do(context.Background(), req)
 	defer span.Finish()
 
-	v := request.Validator{Request: req}
-	req, err = v.Validate(ctx)
-	if err != nil {
+	if err := transport.ValidateRequest(req); err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
-	spec, err := i.registry.Choose(ctx, req)
+	spec, err := i.router.Choose(ctx, req)
 	if err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
 	if spec.Type() != transport.Oneway {
 		err = errors.UnsupportedTypeError{Transport: transportName, Type: string(spec.Type())}
-		return transport.UpdateSpanWithErr(span, err)
-	}
-
-	req, err = v.ValidateOneway(ctx)
-	if err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 

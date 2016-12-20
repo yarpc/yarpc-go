@@ -37,27 +37,27 @@ var (
 	_interfaceEmptyType = reflect.TypeOf((*interface{})(nil)).Elem()
 )
 
-// Register calls the Registrar's Register method.
+// Register calls the RouteTable's Register method.
 //
 // This function exists for backwards compatibility only. It will be removed
 // in a future version.
 //
-// Deprecated: Use the Registrar's Register method directly.
-func Register(r transport.Registrar, rs []transport.Registrant) {
+// Deprecated: Use the RouteTable's Register method directly.
+func Register(r transport.RouteTable, rs []transport.Procedure) {
 	r.Register(rs)
 }
 
-// Procedure builds a Registrant from the given JSON handler. handler must be
+// Procedure builds a Procedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
 // 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
 //
 // Where $reqBody and $resBody are a map[string]interface{} or pointers to
 // structs.
-func Procedure(name string, handler interface{}) []transport.Registrant {
-	return []transport.Registrant{
+func Procedure(name string, handler interface{}) []transport.Procedure {
+	return []transport.Procedure{
 		{
-			Procedure: name,
+			Name: name,
 			HandlerSpec: transport.NewUnaryHandlerSpec(
 				wrapUnaryHandler(name, handler),
 			),
@@ -65,16 +65,16 @@ func Procedure(name string, handler interface{}) []transport.Registrant {
 	}
 }
 
-// OnewayProcedure builds a Registrant from the given JSON handler. handler must be
+// OnewayProcedure builds a Procedure from the given JSON handler. handler must be
 // a function with a signature similar to,
 //
 // 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) error
 //
 // Where $reqBody is a map[string]interface{} or pointer to a struct.
-func OnewayProcedure(name string, handler interface{}) []transport.Registrant {
-	return []transport.Registrant{
+func OnewayProcedure(name string, handler interface{}) []transport.Procedure {
+	return []transport.Procedure{
 		{
-			Procedure: name,
+			Name: name,
 			HandlerSpec: transport.NewOnewayHandlerSpec(
 				wrapOnewayHandler(name, handler)),
 		},

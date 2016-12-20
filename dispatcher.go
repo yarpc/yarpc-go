@@ -77,7 +77,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	return &Dispatcher{
 		name:              cfg.Name,
-		registrar:         NewMapRegistry(cfg.Name),
+		table:             NewMapRouter(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
@@ -154,7 +154,7 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 // Clients to send RPCs, and by Procedures to recieve them. This object is what
 // enables an application to be transport-agnostic.
 type Dispatcher struct {
-	registrar  transport.Registrar
+	table      transport.RouteTable
 	name       string
 	inbounds   Inbounds
 	outbounds  Outbounds
@@ -185,22 +185,22 @@ func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 	panic(noOutboundForService{Service: service})
 }
 
-// ServiceProcedures returns a list of services and procedures that have been
+// Procedures returns a list of services and procedures that have been
 // registered with this Dispatcher.
-func (d *Dispatcher) ServiceProcedures() []transport.ServiceProcedure {
-	return d.registrar.ServiceProcedures()
+func (d *Dispatcher) Procedures() []transport.Procedure {
+	return d.table.Procedures()
 }
 
 // Choose picks a handler for the given request or returns an error if a
 // handler for this request does not exist.
 func (d *Dispatcher) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	return d.registrar.Choose(ctx, req)
+	return d.table.Choose(ctx, req)
 }
 
-// Register configures the dispatcher's registry to route inbound requests to a
+// Register configures the dispatcher's router to route inbound requests to a
 // collection of procedure handlers.
-func (d *Dispatcher) Register(rs []transport.Registrant) {
-	registrants := make([]transport.Registrant, 0, len(rs))
+func (d *Dispatcher) Register(rs []transport.Procedure) {
+	procedures := make([]transport.Procedure, 0, len(rs))
 
 	for _, r := range rs {
 		switch r.HandlerSpec.Type() {
@@ -214,13 +214,13 @@ func (d *Dispatcher) Register(rs []transport.Registrant) {
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
-				r.HandlerSpec.Type(), r.Service, r.Procedure))
+				r.HandlerSpec.Type(), r.Service, r.Name))
 		}
 
-		registrants = append(registrants, r)
+		procedures = append(procedures, r)
 	}
 
-	d.registrar.Register(registrants)
+	d.table.Register(procedures)
 }
 
 // Start Start the RPC allowing it to accept and processing new incoming
@@ -293,7 +293,7 @@ func (d *Dispatcher) Start() error {
 	// Start Inbounds
 	wait = intsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
-		i.SetRegistry(d)
+		i.SetRouter(d)
 		wait.Submit(start(i))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {

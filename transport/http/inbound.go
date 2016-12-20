@@ -65,7 +65,7 @@ type Inbound struct {
 	mux        *http.ServeMux
 	muxPattern string
 	server     *intnet.HTTPServer
-	registry   transport.Registry
+	router     transport.Router
 	tracer     opentracing.Tracer
 }
 
@@ -75,11 +75,11 @@ func (i *Inbound) Tracer(tracer opentracing.Tracer) *Inbound {
 	return i
 }
 
-// SetRegistry configures a registry to handle incoming requests.
+// SetRouter configures a router to handle incoming requests.
 // This satisfies the transport.Inbound interface, and would be called
 // by a dispatcher when it starts.
-func (i *Inbound) SetRegistry(registry transport.Registry) {
-	i.registry = registry
+func (i *Inbound) SetRouter(router transport.Router) {
+	i.router = router
 }
 
 // Transports returns the inbound's HTTP transport.
@@ -91,14 +91,13 @@ func (i *Inbound) Transports() []transport.Transport {
 // Start starts the inbound with a given service detail, opening a listening
 // socket.
 func (i *Inbound) Start() error {
-
-	if i.registry == nil {
-		return errors.NoRegistryError{}
+	if i.router == nil {
+		return errors.ErrNoRouter
 	}
 
 	var httpHandler http.Handler = handler{
-		registry: i.registry,
-		tracer:   i.tracer,
+		router: i.router,
+		tracer: i.tracer,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
