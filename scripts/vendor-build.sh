@@ -17,8 +17,13 @@ if [[ ! -d vendor ]]; then
 fi
 
 function die() {
-	echo "$1"
+	echo "$1" >&2
 	exit 1
+}
+
+function abspath() {
+	# We use a subshell here so the directory change isn't persisted.
+	(cd "$1" || die "Directory $1 does not exist"; pwd)
 }
 
 # findGlideLock dir looks for glide.lock in dir or any of its parent
@@ -35,7 +40,7 @@ function findGlideLock() {
 		return
 	fi
 
-	findGlideLock "$(realpath --no-symlinks "$1/..")"
+	findGlideLock "$(abspath "$1/..")"
 }
 
 outputDir="$1"
