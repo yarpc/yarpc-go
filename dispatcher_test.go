@@ -21,11 +21,13 @@
 package yarpc_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
 	. "go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware/middlewaretest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/transport/http"
@@ -319,4 +321,26 @@ func TestNoOutboundsForService(t *testing.T) {
 			"my-test-service": {},
 		},
 	})
+}
+
+func TestCustomRouter(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+	req := &transport.Request{}
+	expectedSpec := transport.HandlerSpec{}
+
+	routerMiddleware := middlewaretest.NewMockRouter(mockCtrl)
+	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
+
+	d := NewDispatcher(Config{
+		Name:             "test",
+		RouterMiddleware: routerMiddleware,
+	})
+
+	actualSpec, err := d.Choose(ctx, req)
+
+	assert.Equal(t, expectedSpec, actualSpec, "handler spec returned from route table did not match")
+	assert.Nil(t, err)
 }

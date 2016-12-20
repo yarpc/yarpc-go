@@ -49,6 +49,9 @@ type Config struct {
 
 	// Tracer is deprecated. The dispatcher does nothing with this propery.
 	Tracer opentracing.Tracer
+
+	// RouterMiddleware is middleware to control how requests are routed.
+	RouterMiddleware middleware.Router
 }
 
 // Inbounds contains a list of inbound transports
@@ -77,7 +80,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	return &Dispatcher{
 		name:              cfg.Name,
-		table:             NewMapRouter(cfg.Name),
+		table:             middleware.ApplyRouter(NewMapRouter(cfg.Name), cfg.RouterMiddleware),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
