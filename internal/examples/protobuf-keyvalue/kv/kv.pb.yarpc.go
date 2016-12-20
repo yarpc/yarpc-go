@@ -56,10 +56,10 @@ type APIServer interface {
 	SetValue(context.Context, yarpc.ReqMeta, *SetValueRequest) (*SetValueResponse, yarpc.ResMeta, error)
 }
 
-// BuildAPIRegistrants prepares an implementation of the API service for registration.
-func BuildAPIRegistrants(server APIServer, opts ...protobuf.RegisterOption) []transport.Registrant {
+// BuildAPIProcedures prepares an implementation of the API service for registration.
+func BuildAPIProcedures(server APIServer, opts ...protobuf.RegisterOption) []transport.Procedure {
 	handler := &_APIHandler{server}
-	return protobuf.BuildRegistrants(
+	return protobuf.BuildProcedures(
 		"API",
 		map[string]protobuf.UnaryHandler{
 			"GetValue": protobuf.NewUnaryHandler(handler.GetValue, newAPI_GetValueRequest),

@@ -78,7 +78,7 @@ func startServer() error {
 			},
 		},
 	)
-	dispatcher.Register(kv.BuildAPIRegistrants(newAPIServer()))
+	dispatcher.Register(kv.BuildAPIProcedures(newAPIServer()))
 	return dispatcher.Start()
 }
 

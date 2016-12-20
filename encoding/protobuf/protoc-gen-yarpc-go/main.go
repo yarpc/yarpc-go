@@ -85,10 +85,10 @@ type {{$service.GetName}}Server interface {
 	{{end}}{{end}}{{end}}
 }
 
-// Build{{$service.GetName}}Registrants prepares an implementation of the {{$service.GetName}} service for registration.
-func Build{{$service.GetName}}Registrants(server {{$service.GetName}}Server, opts ...protobuf.RegisterOption) []transport.Registrant {
+// Build{{$service.GetName}}Procedures prepares an implementation of the {{$service.GetName}} service for registration.
+func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server, opts ...protobuf.RegisterOption) []transport.Procedure {
 	handler := &_{{$service.GetName}}Handler{server}
-	return protobuf.BuildRegistrants(
+	return protobuf.BuildProcedures(
 		"{{$service.GetName}}",
 		map[string]protobuf.UnaryHandler{
 		{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),

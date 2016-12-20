@@ -22,20 +22,20 @@ package protobuf
 
 import "go.uber.org/yarpc/api/transport"
 
-// BuildRegistrants builds the transport.Registrants.
+// BuildProcedures builds the transport.Procedures.
 //
-// Users should use the generated BuildRegistrants rather than using this directly.
-func BuildRegistrants(serviceName string, serviceMethods map[string]UnaryHandler, opts ...RegisterOption) []transport.Registrant {
+// Users should use the generated BuildProcedures rather than using this directly.
+func BuildProcedures(serviceName string, serviceMethods map[string]UnaryHandler, opts ...RegisterOption) []transport.Procedure {
 	registerConfig := &registerConfig{}
 	for _, opt := range opts {
 		opt.applyRegisterOption(registerConfig)
 	}
-	registrants := make([]transport.Registrant, 0, len(serviceMethods))
+	procedures := make([]transport.Procedure, 0, len(serviceMethods))
 	for methodName, unaryHandler := range serviceMethods {
-		registrants = append(
-			registrants,
-			transport.Registrant{
-				Procedure: toProcedureName(serviceName, methodName),
+		procedures = append(
+			procedures,
+			transport.Procedure{
+				Name: toProcedureName(serviceName, methodName),
 				HandlerSpec: transport.NewUnaryHandlerSpec(
 					newTransportUnaryHandler(
 						unaryHandler,
@@ -44,5 +44,5 @@ func BuildRegistrants(serviceName string, serviceMethods map[string]UnaryHandler
 			},
 		)
 	}
-	return registrants
+	return procedures
 }
