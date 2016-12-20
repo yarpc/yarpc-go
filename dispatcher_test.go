@@ -35,6 +35,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/middleware/middlewaretest"
 )
 
 func basicDispatcher(t *testing.T) *Dispatcher {
@@ -365,12 +366,12 @@ func TestCustomRouter(t *testing.T) {
 	req := &transport.Request{}
 	expectedSpec := transport.HandlerSpec{}
 
-	table := transporttest.NewMockRouteTable(mockCtrl)
-	table.EXPECT().Choose(ctx, req).Times(1).Return(expectedSpec, nil)
+	routerMiddleware := middlewaretest.NewMockRouter(mockCtrl)
+	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
 
 	d := NewDispatcher(Config{
-		Name:       "test",
-		RouteTable: table,
+		Name:             "test",
+		RouterMiddleware: routerMiddleware,
 	})
 
 	actualSpec, err := d.Choose(ctx, req)
