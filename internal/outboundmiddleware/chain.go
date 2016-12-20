@@ -67,6 +67,10 @@ func (x unaryChainExec) Stop() error {
 	return x.Final.Stop()
 }
 
+func (x unaryChainExec) IsRunning() bool {
+	return x.Final.IsRunning()
+}
+
 func (x unaryChainExec) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if len(x.Chain) == 0 {
 		return x.Final.Call(ctx, request)
@@ -114,6 +118,10 @@ func (x onewayChainExec) Start() error {
 
 func (x onewayChainExec) Stop() error {
 	return x.Final.Stop()
+}
+
+func (x onewayChainExec) IsRunning() bool {
+	return x.Final.IsRunning()
 }
 
 func (x onewayChainExec) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {

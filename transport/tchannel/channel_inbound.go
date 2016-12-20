@@ -25,6 +25,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber-go/atomic"
 )
 
 // ChannelInbound is a TChannel Inbound backed by a pre-existing TChannel
@@ -35,6 +36,8 @@ type ChannelInbound struct {
 	router    transport.Router
 	tracer    opentracing.Tracer
 	transport *ChannelTransport
+
+	running atomic.Bool
 }
 
 // NewInbound returns a new TChannel inbound backed by a shared TChannel
@@ -75,6 +78,7 @@ func (i *ChannelInbound) Start() error {
 	if i.router == nil {
 		return errors.ErrNoRouter
 	}
+	i.running.Store(true)
 
 	// Set up handlers. This must occur after construction because the
 	// dispatcher, or its equivalent, calls SetRouter before Start.
@@ -88,5 +92,11 @@ func (i *ChannelInbound) Start() error {
 
 // Stop stops the TChannel outbound. This currently does nothing.
 func (i *ChannelInbound) Stop() error {
+	i.running.Store(false)
 	return nil
+}
+
+// IsRunning returns whether the ChannelInbound is running.
+func (i *ChannelInbound) IsRunning() bool {
+	return i.running.Load()
 }

@@ -82,6 +82,11 @@ func (o *Outbound) Stop() error {
 	return nil
 }
 
+// IsRunning returns whether the Outbound is running.
+func (o *Outbound) IsRunning() bool {
+	return o.started.Load()
+}
+
 // CallOneway makes a oneway request using redis
 func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
 	if !o.started.Load() {

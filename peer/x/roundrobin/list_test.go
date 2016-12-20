@@ -675,7 +675,7 @@ func TestRoundRobinList(t *testing.T) {
 				}
 			}
 
-			assert.Equal(t, tt.expectedRunning, pl.isRunning())
+			assert.Equal(t, tt.expectedRunning, pl.IsRunning())
 		})
 	}
 }
