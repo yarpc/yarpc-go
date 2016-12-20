@@ -23,16 +23,5 @@ package transport
 // Transport is the interface needed by a Dispatcher to manage the life cycle
 // of a transport.
 type Transport interface {
-	// Start starts a transport, opening listening sockets and accepting
-	// inbound requests, and opening connections to retained outbound peers.
-	//
-	// Start should block until the transport is ready to receive inbound
-	// requests.
-	Start() error
-
-	// Stop stops a transport, closing listening sockets, rejecting inbound
-	// requests, and draining existing peers of all pending requests.
-	//
-	// Stop should block until all pending requests have drained.
-	Stop() error
+	Lifecycle
 }

@@ -26,6 +26,8 @@ import "context"
 
 // Outbound is the common interface for all outbounds
 type Outbound interface {
+	Lifecycle
+
 	// Transports returns the transports that used by this outbound, so they
 	// can be collected for lifecycle management, typically by a Dispatcher.
 	//
@@ -34,18 +36,6 @@ type Outbound interface {
 	// across multiple transport protocols during a transport protocol
 	// migration.
 	Transports() []Transport
-
-	// Sets up the outbound to start making calls.
-	//
-	// This MUST block until the outbound is ready to start sending requests.
-	// This MUST be idempotent and thread-safe. If called multiple times, only
-	// the first call's dependencies are used
-	Start() error
-
-	// Stops the outbound, cleaning up any resources held by the Outbound.
-	//
-	// This MUST be idempotent and thread-safe. This MAY be called more than once
-	Stop() error
 }
 
 // UnaryOutbound is a transport that knows how to send unary requests for procedure
