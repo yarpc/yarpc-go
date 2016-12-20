@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	. "go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware/middlewaretest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/transport/http"
@@ -35,7 +36,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/middleware/middlewaretest"
 )
 
 func basicDispatcher(t *testing.T) *Dispatcher {
