@@ -61,6 +61,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			"setValue": thrift.UnaryHandlerFunc(h.SetValue),
 		},
 		OnewayMethods: map[string]thrift.OnewayHandler{},
+		Signatures: map[string]string{
+			"getValue": "GetValue(Key *string) (string)",
+			"setValue": "SetValue(Key *string, Value *string)",
+		},
 	}
 	return thrift.BuildProcedures(service, opts...)
 }
