@@ -25,6 +25,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -49,6 +50,11 @@ type handler struct {
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
+
+	if req.URL != nil && strings.HasPrefix(req.URL.Path, "/debug/") {
+		http.DefaultServeMux.ServeHTTP(w, req)
+		return
+	}
 
 	defer req.Body.Close()
 	if req.Method != "POST" {
