@@ -20,7 +20,9 @@
 
 package transport
 
-// Ack represents and acknowledgement from a oneway request
+import "fmt"
+
+// Ack represents and acknowledgement from a oneway request.
 type Ack interface {
-	String() string
+	fmt.Stringer
 }
