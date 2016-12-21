@@ -106,7 +106,8 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
+			//onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
+			// TODO: I think the parameter should be onewayOutbound, this was caught by staticcheck
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 

@@ -72,7 +72,9 @@ func (o *onewayHandler) callHome(ctx context.Context, reqMeta yarpc.ReqMeta, bod
 	}
 
 	out := o.httpTransport.NewSingleOutbound("http://" + callBackAddr)
-	out.Start()
+	if err := out.Start(); err != nil {
+		panic(fmt.Sprintf("could not start outbound: %s", err))
+	}
 	defer out.Stop()
 
 	_, err := out.CallOneway(ctx, &transport.Request{

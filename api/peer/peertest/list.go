@@ -51,10 +51,10 @@ func (_m *MockChooser) EXPECT() *_MockChooserRecorder {
 	return _m.recorder
 }
 
-func (_m *MockChooser) Choose(_param0 context.Context, _param1 *transport.Request) (peer.Peer, func(error), error) {
+func (_m *MockChooser) Choose(_param0 context.Context, _param1 *transport.Request) (peer.Peer, func(error) error, error) {
 	ret := _m.ctrl.Call(_m, "Choose", _param0, _param1)
 	ret0, _ := ret[0].(peer.Peer)
-	ret1, _ := ret[1].(func(error))
+	ret1, _ := ret[1].(func(error) error)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }

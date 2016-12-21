@@ -25,7 +25,7 @@ package peer
 // Subscriber listens to changes of a Peer over time.
 type Subscriber interface {
 	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)
-	NotifyStatusChanged(Identifier)
+	NotifyStatusChanged(Identifier) error
 }
 
 // Transport manages Peers across different Subscribers.  A Subscriber will request a Peer for a specific

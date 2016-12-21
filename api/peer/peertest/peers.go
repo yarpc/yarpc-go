@@ -63,13 +63,15 @@ func (p *LightMockPeer) Status() peer.Status {
 }
 
 // StartRequest is run when a Request starts
-func (p *LightMockPeer) StartRequest() {
+func (p *LightMockPeer) StartRequest() error {
 	p.PeerStatus.PendingRequestCount++
+	return nil
 }
 
 // EndRequest should be run after a MockPeer request has finished
-func (p *LightMockPeer) EndRequest() {
+func (p *LightMockPeer) EndRequest() error {
 	p.PeerStatus.PendingRequestCount--
+	return nil
 }
 
 // PeerIdentifierMatcher is used to match a Peer/PeerIdentifier by comparing

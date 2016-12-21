@@ -22,6 +22,7 @@ package hostport
 
 import (
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/errors"
 
 	"go.uber.org/atomic"
 )
@@ -100,25 +101,29 @@ func (p *Peer) Status() peer.Status {
 }
 
 // SetStatus sets the status of the Peer (to be used by the peer.Transport)
-func (p *Peer) SetStatus(status peer.ConnectionStatus) {
+func (p *Peer) SetStatus(status peer.ConnectionStatus) error {
 	p.connectionStatus = status
-	p.notifyStatusChanged()
+	return p.notifyStatusChanged()
 }
 
 // StartRequest runs at the beginning of a request and returns a callback for when the request finished
-func (p *Peer) StartRequest() {
+func (p *Peer) StartRequest() error {
 	p.pending.Inc()
-	p.notifyStatusChanged()
+	return p.notifyStatusChanged()
 }
 
 // EndRequest should be run after a request has finished.
-func (p *Peer) EndRequest() {
+func (p *Peer) EndRequest() error {
 	p.pending.Dec()
-	p.notifyStatusChanged()
+	return p.notifyStatusChanged()
 }
 
-func (p *Peer) notifyStatusChanged() {
+func (p *Peer) notifyStatusChanged() error {
+	var errs []error
 	for sub := range p.subscribers {
-		sub.NotifyStatusChanged(p)
+		if err := sub.NotifyStatusChanged(p); err != nil {
+			errs = append(errs, err)
+		}
 	}
+	return errors.MultiError(errs)
 }

@@ -189,8 +189,7 @@ func (o *Outbound) call(ctx context.Context, treq *transport.Request, start time
 	resp, err := o.callWithPeer(ctx, treq, start, ttl, p)
 
 	// Call the onFinish method right before returning (with the error from call with peer)
-	onFinish(err)
-	return resp, err
+	return resp, errors.CombineErrors(err, onFinish(err))
 }
 
 func (o *Outbound) callWithPeer(
@@ -206,7 +205,10 @@ func (o *Outbound) callWithPeer(
 	}
 
 	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
-	ctx, req, span := o.withOpentracingSpan(ctx, req, treq, start)
+	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
+	if err != nil {
+		return nil, err
+	}
 	defer span.Finish()
 	req = o.withCoreHeaders(req, treq, ttl)
 
@@ -250,7 +252,7 @@ func (o *Outbound) callWithPeer(
 	return nil, getErrFromResponse(response)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(error), error) {
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(error) error, error) {
 	p, onFinish, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
 		return nil, nil, err
@@ -273,7 +275,7 @@ func (o *Outbound) createRequest(p *hostport.Peer, treq *transport.Request) (*ht
 	return http.NewRequest("POST", newURL.String(), treq.Body)
 }
 
-func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span) {
+func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
 	tracer := o.tracer
 	var parent opentracing.SpanContext // ok to be nil
@@ -296,13 +298,13 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 	ext.HTTPUrl.Set(span, req.URL.String())
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	tracer.Inject(
+	err := tracer.Inject(
 		span.Context(),
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(req.Header),
 	)
 
-	return ctx, req, span
+	return ctx, req, span, err
 }
 
 func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {

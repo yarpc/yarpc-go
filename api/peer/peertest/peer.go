@@ -80,8 +80,10 @@ func (_m *MockPeer) EXPECT() *_MockPeerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockPeer) EndRequest() {
-	_m.ctrl.Call(_m, "EndRequest")
+func (_m *MockPeer) EndRequest() error {
+	ret := _m.ctrl.Call(_m, "EndRequest")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 func (_mr *_MockPeerRecorder) EndRequest() *gomock.Call {
@@ -98,8 +100,10 @@ func (_mr *_MockPeerRecorder) Identifier() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Identifier")
 }
 
-func (_m *MockPeer) StartRequest() {
-	_m.ctrl.Call(_m, "StartRequest")
+func (_m *MockPeer) StartRequest() error {
+	ret := _m.ctrl.Call(_m, "StartRequest")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 func (_mr *_MockPeerRecorder) StartRequest() *gomock.Call {

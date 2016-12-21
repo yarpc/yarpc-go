@@ -33,7 +33,7 @@ type Chooser interface {
 	transport.Lifecycle
 
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
-	Choose(context.Context, *transport.Request) (peer Peer, onFinish func(error), err error)
+	Choose(context.Context, *transport.Request) (peer Peer, onFinish func(error) error, err error)
 }
 
 // List listens to adds and removes of Peers from a PeerProvider
