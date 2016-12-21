@@ -24,8 +24,9 @@ import "io"
 
 // Response is the low level response representation.
 type Response struct {
-	Headers Headers
-	Body    io.ReadCloser
+	Headers          Headers
+	Body             io.ReadCloser
+	ApplicationError bool
 }
 
 // ResponseWriter allows Handlers to write responses in a streaming fashion.
