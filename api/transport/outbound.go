@@ -22,8 +22,6 @@ package transport
 
 import "context"
 
-//go:generate mockgen -destination=transporttest/outbound.go -package=transporttest go.uber.org/yarpc/api/transport UnaryOutbound,OnewayOutbound
-
 // Outbound is the common interface for all outbounds
 type Outbound interface {
 	Lifecycle

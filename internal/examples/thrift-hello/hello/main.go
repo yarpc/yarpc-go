@@ -34,8 +34,6 @@ import (
 	"go.uber.org/yarpc/transport/http"
 )
 
-//go:generate thriftrw --plugin=yarpc echo.thrift
-
 func main() {
 	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

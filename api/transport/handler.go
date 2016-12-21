@@ -30,12 +30,8 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 )
 
-//go:generate mockgen -destination=transporttest/handler.go -package=transporttest go.uber.org/yarpc/api/transport UnaryHandler,OnewayHandler
-
 // Type is an enum of RPC types
 type Type int
-
-//go:generate stringer -type=Type
 
 const (
 	// Unary types are traditional request/response RPCs

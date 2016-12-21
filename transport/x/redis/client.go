@@ -22,8 +22,6 @@ package redis
 
 import "time"
 
-//go:generate mockgen -destination=redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
-
 // Client is a subset of redis commands used to manage a queue
 type Client interface {
 	// Start creates the connection to redis
