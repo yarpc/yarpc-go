@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	intnet "go.uber.org/yarpc/internal/net"
+	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
 )
@@ -67,6 +68,8 @@ type Inbound struct {
 	server     *intnet.HTTPServer
 	router     transport.Router
 	tracer     opentracing.Tracer
+
+	once sync.LifecycleOnce
 }
 
 // Tracer configures a tracer on this inbound.
@@ -91,6 +94,10 @@ func (i *Inbound) Transports() []transport.Transport {
 // Start starts the inbound with a given service detail, opening a listening
 // socket.
 func (i *Inbound) Start() error {
+	return i.once.Start(i.start)
+}
+
+func (i *Inbound) start() error {
 	if i.router == nil {
 		return errors.ErrNoRouter
 	}
@@ -118,10 +125,19 @@ func (i *Inbound) Start() error {
 
 // Stop the inbound, closing the listening socket.
 func (i *Inbound) Stop() error {
+	return i.once.Stop(i.stop)
+}
+
+func (i *Inbound) stop() error {
 	if i.server == nil {
 		return nil
 	}
 	return i.server.Stop()
+}
+
+// IsRunning returns whether the inbound is currently running
+func (i *Inbound) IsRunning() bool {
+	return i.once.IsRunning()
 }
 
 // Addr returns the address on which the server is listening. Returns nil if

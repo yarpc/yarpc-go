@@ -62,6 +62,11 @@ func (c *redis5Client) Stop() error {
 	return nil
 }
 
+// IsRunning returns whether the redis client is running.
+func (c *redis5Client) IsRunning() bool {
+	return c.started.Load()
+}
+
 func (c *redis5Client) LPush(queueKey string, item []byte) error {
 	if !c.started.Load() {
 		return errNotStarted

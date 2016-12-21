@@ -18,56 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peer
+package sync
 
 import (
-	"context"
+	"sync"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
+	"github.com/uber-go/atomic"
 )
 
-// Single implements the Chooser interface for a single peer
-type Single struct {
-	p   peer.Peer
-	err error
+// Once is a wrapper around sync.Once in order to simplify returning the
+// same error multiple times from the same function.
+type Once struct {
+	done atomic.Bool
+	once sync.Once
+	err  error
 }
 
-// NewSingle creates a static Chooser with a single Peer
-func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
-	s := &Single{}
-	p, err := transport.RetainPeer(pid, s)
-	s.p = p
-	s.err = err
-	return s
+// Do is a wrapper around the sync.Once `Do` method. This version takes a function that
+// returns an error, and every subsequent call to the `Do` function will be returned the
+// `err` of the `f` func.
+// If f is nil we will replace it with a noop function.
+func (o *Once) Do(f func() error) error {
+	if f == nil {
+		f = func() error { return nil }
+	}
+
+	o.once.Do(func() {
+		o.err = f()
+		o.done.Store(true)
+	})
+
+	return o.err
 }
 
-// Choose returns the single peer
-func (s *Single) Choose(context.Context, *transport.Request) (peer.Peer, func(error), error) {
-	s.p.StartRequest()
-	return s.p, s.onFinish, s.err
-}
-
-func (s *Single) onFinish(_ error) {
-	s.p.EndRequest()
-}
-
-// NotifyStatusChanged receives notifications from the transport when the peer
-// connects, disconnects, accepts a request, and so on.
-func (s *Single) NotifyStatusChanged(_ peer.Identifier) {
-}
-
-// Start is a noop
-func (s *Single) Start() error {
-	return nil
-}
-
-// Stop is a noop
-func (s *Single) Stop() error {
-	return nil
-}
-
-// IsRunning is a noop
-func (s *Single) IsRunning() bool {
-	return true
+// Done returns whether the finished flag has been set and thus sync.Once has been run.
+func (o *Once) Done() bool {
+	return o.done.Load()
 }

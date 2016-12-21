@@ -17,8 +17,13 @@ if [[ ! -d vendor ]]; then
 fi
 
 function die() {
-	echo "$1"
+	echo "$1" >&2
 	exit 1
+}
+
+function abspath() {
+	# We use a subshell here so the directory change isn't persisted.
+	(cd "$1" || die "Directory $1 does not exist"; pwd)
 }
 
 # findGlideLock dir looks for glide.lock in dir or any of its parent
@@ -31,11 +36,11 @@ function findGlideLock() {
 		return
 	fi
 
-	if [[ src == "$(basename "$1")" ]]; then
+	if [[ "$GOPATH/src" == "$1" ]]; then
 		return
 	fi
 
-	findGlideLock "$(realpath --no-symlinks "$1/..")"
+	findGlideLock "$(abspath "$1/..")"
 }
 
 outputDir="$1"
@@ -55,7 +60,7 @@ cd "$GOPATH/src/$importPath" || die "Cannot find $importPath"
 # We have dependencies
 glideLock=$(findGlideLock "$GOPATH/src/$importPath")
 if [[ -n "$glideLock" ]]; then
-	glide install || die "Could not install dependencies"
+	(cd "$(dirname "$glideLock")" && glide install) || die "Could not install dependencies"
 	trap 'rm -rf $(dirname $glideLock)/vendor' EXIT
 fi
 

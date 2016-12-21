@@ -4,6 +4,11 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
+-   **Breaking**: Start and Stop for Inbound and Outbound are now expected to
+    be idempotent.
+-   **Breaking**: Combine `ServiceProcedure` and `Registrant` into `Procedure`.
+-   **Breaking**: Rename `Registrar` to `RouteTable`.
+-   **Breaking**: Rename `Registry` to `Router`.
 -   **Breaking**: Rename `middleware.{Oneway,Unary}{Inbound,Outbound}Middleware`
     to `middleware.{Oneway,Unary}{Inbound,Outbound}`
 -   **Breaking**: Changed `peer.List.Update` to accept a `peer.ListUpdates`

@@ -18,56 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package peer
+package sync
 
-import (
-	"context"
-
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-)
-
-// Single implements the Chooser interface for a single peer
-type Single struct {
-	p   peer.Peer
-	err error
+// LifecycleOnce is a helper for implementing transport.Lifecycles
+// with similar behavior.
+type LifecycleOnce struct {
+	start Once
+	stop  Once
 }
 
-// NewSingle creates a static Chooser with a single Peer
-func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
-	s := &Single{}
-	p, err := transport.RetainPeer(pid, s)
-	s.p = p
-	s.err = err
-	return s
+// Start will run the `f` function once and return the error
+func (l *LifecycleOnce) Start(f func() error) error {
+	return l.start.Do(f)
 }
 
-// Choose returns the single peer
-func (s *Single) Choose(context.Context, *transport.Request) (peer.Peer, func(error), error) {
-	s.p.StartRequest()
-	return s.p, s.onFinish, s.err
+// Stop will run the `f` function once and return the error
+func (l *LifecycleOnce) Stop(f func() error) error {
+	return l.stop.Do(f)
 }
 
-func (s *Single) onFinish(_ error) {
-	s.p.EndRequest()
-}
-
-// NotifyStatusChanged receives notifications from the transport when the peer
-// connects, disconnects, accepts a request, and so on.
-func (s *Single) NotifyStatusChanged(_ peer.Identifier) {
-}
-
-// Start is a noop
-func (s *Single) Start() error {
-	return nil
-}
-
-// Stop is a noop
-func (s *Single) Stop() error {
-	return nil
-}
-
-// IsRunning is a noop
-func (s *Single) IsRunning() bool {
-	return true
+// IsRunning will return true if the start has been run, and the stop has not
+func (l *LifecycleOnce) IsRunning() bool {
+	return l.start.Done() && !l.stop.Done()
 }

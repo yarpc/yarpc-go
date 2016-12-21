@@ -30,4 +30,9 @@ type Lifecycle interface {
 	// Stop the lifecycle object, returns an error if it cannot be stopped.
 	// Stop MUST be idempotent.
 	Stop() error
+
+	// IsRunning returns whether the Lifecycle is currently running.
+	// *NOTE* This is only for introspection purposes, this function
+	// should NOT be used to assert the state of the lifecycle.
+	IsRunning() bool
 }
