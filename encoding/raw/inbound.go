@@ -22,11 +22,11 @@ package raw
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/meta"
 )
 
 // rawUnaryHandler adapts a Handler into a transport.UnaryHandler
@@ -35,8 +35,39 @@ type rawUnaryHandler struct{ UnaryHandler }
 // rawOnewayHandler adapts a Handler into a transport.OnewayHandler
 type rawOnewayHandler struct{ OnewayHandler }
 
+type reqMeta struct{ *transport.Request }
+
+func (rm reqMeta) Caller() string {
+	return rm.Request.Caller
+}
+
+func (rm reqMeta) Encoding() transport.Encoding {
+	return rm.Request.Encoding
+}
+
+func (rm reqMeta) Headers() yarpc.Headers {
+	return yarpc.Headers(rm.Request.Headers)
+}
+
+func (rm reqMeta) Procedure() string {
+	return rm.Request.Procedure
+}
+
+func (rm reqMeta) Service() string {
+	return rm.Request.Service
+}
+
+func checkEncoding(treq *transport.Request) error {
+	if treq.Encoding == Encoding {
+		return nil
+	}
+	return transport.BadRequestError(fmt.Errorf(
+		"failed to decode request body for procedure %q of service %q from caller %q: "+
+			`expected encoding "raw" but got %q`, treq.Procedure, treq.Service, treq.Caller, treq.Encoding))
+}
+
 func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := checkEncoding(treq); err != nil {
 		return err
 	}
 
@@ -45,14 +76,17 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 		return err
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
+	reqMeta := reqMeta{treq}
 	resBody, resMeta, err := r.UnaryHandler(ctx, reqMeta, reqBody)
 	if err != nil {
 		return err
 	}
 
 	if resMeta != nil {
-		meta.ToTransportResponseWriter(resMeta, rw)
+		headers := transport.Headers(resMeta.GetHeaders())
+		if headers.Len() > 0 {
+			rw.AddHeaders(headers)
+		}
 	}
 
 	if _, err := rw.Write(resBody); err != nil {
@@ -63,7 +97,7 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 }
 
 func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := checkEncoding(treq); err != nil {
 		return err
 	}
 
@@ -72,6 +106,5 @@ func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Requ
 		return err
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
-	return r.OnewayHandler(ctx, reqMeta, reqBody)
+	return r.OnewayHandler(ctx, reqMeta{treq}, reqBody)
 }
