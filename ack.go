@@ -20,7 +20,9 @@
 
 package yarpc
 
-// Ack represents and acknowledgement from a oneway request
+import "fmt"
+
+// Ack represents an acknowledgement from a oneway request.
 type Ack interface {
-	String() string
+	fmt.Stringer
 }
