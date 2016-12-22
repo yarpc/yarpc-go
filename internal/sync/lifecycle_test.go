@@ -142,16 +142,16 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          20 * time.Millisecond,
 							ExpectedState: Running,
 						},
 						GetStateAction{ExpectedState: Starting},
 						StopAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          20 * time.Millisecond,
 							ExpectedState: Stopped,
 						},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 40 * time.Millisecond,
 				},
 			},
 			expectedFinalState: Stopped,

@@ -58,22 +58,27 @@ const (
 type LifecycleOnce struct {
 	lock sync.Mutex
 
-	state     atomic.Int32
-	startOnce sync.Once
-	startErr  error
-	stopOnce  sync.Once
-	stopErr   error
+	state    atomic.Int32
+	startErr error
+	stopErr  error
 }
 
-// Start will run the `f` function once and return the error
+// Start will run the `f` function once and return the error.
+// If Start is called multiple times it will return the error
+// from the first time it was called.
 func (l *LifecycleOnce) Start(f func() error) error {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
+	// If we've already moved on from the idle state we've either
+	// called the start function already, or called the stop function
+	// in which case we should exit now and return the result of the
+	// last start command (or nil).
 	if LifecycleState(l.state.Load()) != Idle {
 		return l.startErr
 	}
 
+	// Set a nil function to an empty function
 	if f == nil {
 		f = func() error { return nil }
 	}
@@ -89,8 +94,9 @@ func (l *LifecycleOnce) Start(f func() error) error {
 	return l.startErr
 }
 
-// Stop will run the `f` function once and return the error for every
-// subsequent calls
+// Stop will run the `f` function once and return the error.
+// If Stop is called multiple times it will return the error
+// from the first time it was called.
 func (l *LifecycleOnce) Stop(f func() error) error {
 	l.lock.Lock()
 	defer l.lock.Unlock()
