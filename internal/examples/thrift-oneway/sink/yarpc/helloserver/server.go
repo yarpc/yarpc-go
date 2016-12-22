@@ -25,11 +25,12 @@ package helloserver
 
 import (
 	"context"
+
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/examples/oneway/sink"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
 )
 
 // Interface is the server-side interface for the Hello service.
