@@ -137,26 +137,6 @@ func TestLifecycleOnce(t *testing.T) {
 			expectedFinalState: Stopped,
 		},
 		{
-			msg: "Assure Stop waits for Start to finish",
-			actions: []LifecycleAction{
-				ConcurrentAction{
-					Actions: []LifecycleAction{
-						StartAction{
-							Wait:          20 * time.Millisecond,
-							ExpectedState: Running,
-						},
-						GetStateAction{ExpectedState: Starting},
-						StopAction{
-							Wait:          20 * time.Millisecond,
-							ExpectedState: Stopped,
-						},
-					},
-					Wait: 40 * time.Millisecond,
-				},
-			},
-			expectedFinalState: Stopped,
-		},
-		{
 			msg: "Stress test",
 			actions: []LifecycleAction{
 				ConcurrentAction{
