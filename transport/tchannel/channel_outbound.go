@@ -170,7 +170,11 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, err
 	}
 
-	return &transport.Response{Headers: headers, Body: resBody}, nil
+	return &transport.Response{
+		Headers:          headers,
+		Body:             resBody,
+		ApplicationError: res.ApplicationError(),
+	}, nil
 }
 
 func writeBody(body io.Reader, call *tchannel.OutboundCall) error {

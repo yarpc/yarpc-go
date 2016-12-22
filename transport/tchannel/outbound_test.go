@@ -187,6 +187,8 @@ func TestCallSuccess(t *testing.T) {
 			continue
 		}
 
+		assert.Equal(t, false, res.ApplicationError, "not application error")
+
 		foo, ok := res.Headers.Get("foo")
 		assert.True(t, ok, "value for foo expected")
 		assert.Equal(t, "bar", foo, "foo value mismatch")
@@ -266,6 +268,73 @@ func TestCallFailures(t *testing.T) {
 
 		assert.Error(t, err, "expected failure")
 		assert.Contains(t, err.Error(), tt.message)
+	}
+}
+
+func TestCallError(t *testing.T) {
+	server := testutils.NewServer(t, nil)
+	defer server.Close()
+	serverHostPort := server.PeerInfo().HostPort
+
+	server.GetSubChannel("service").SetHandler(tchannel.HandlerFunc(
+		func(ctx context.Context, call *tchannel.InboundCall) {
+			assert.Equal(t, "caller", call.CallerName())
+			assert.Equal(t, "service", call.ServiceName())
+			assert.Equal(t, tchannel.Raw, call.Format())
+			assert.Equal(t, "hello", call.MethodString())
+
+			headers, body, err := readArgs(call)
+			if assert.NoError(t, err, "failed to read request") {
+				assert.Equal(t, []byte{0x00, 0x00}, headers)
+				assert.Equal(t, []byte("world"), body)
+			}
+
+			dl, ok := ctx.Deadline()
+			assert.True(t, ok, "deadline expected")
+			assert.WithinDuration(t, time.Now(), dl, 200*time.Millisecond)
+
+			call.Response().SetApplicationError()
+
+			err = writeArgs(
+				call.Response(),
+				[]byte{0x00, 0x00},
+				[]byte("such fail"),
+			)
+			assert.NoError(t, err, "failed to write response")
+		}))
+
+	for _, getOutbound := range newOutbounds {
+		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+			ServiceName: "caller",
+		}), serverHostPort)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		res, err := out.Call(
+			ctx,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "hello",
+				Body:      bytes.NewReader([]byte("world")),
+			},
+		)
+
+		if !assert.NoError(t, err, "failed to make call") {
+			continue
+		}
+
+		assert.Equal(t, true, res.ApplicationError, "application error")
+
+		body, err := ioutil.ReadAll(res.Body)
+		if assert.NoError(t, err, "failed to read response body") {
+			assert.Equal(t, []byte("such fail"), body)
+		}
+
+		assert.NoError(t, res.Body.Close(), "failed to close response body")
 	}
 }
 
