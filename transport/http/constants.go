@@ -56,4 +56,16 @@ const (
 	// service that can proxy for the destined service and perform
 	// application-specific routing.
 	RoutingDelegateHeader = "Rpc-Routing-Delegate"
+
+	// ApplicationStatusHeader is the HTTP response header used to express
+	// whether the response body represents an application error.
+	ApplicationStatusHeader = "Rpc-Status"
+
+	// ApplicationSuccessStatus is the value for ApplicationStatusHeader for
+	// successful requests.
+	ApplicationSuccessStatus = "success"
+
+	// ApplicationErrorStatus is the value for ApplicationStatusHeader for
+	// errant requests.
+	ApplicationErrorStatus = "error"
 )

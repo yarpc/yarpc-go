@@ -111,7 +111,6 @@ func TestOutboundHeaders(t *testing.T) {
 	}
 
 	httpTransport := NewTransport()
-	// TODO transport lifecycle
 
 	for _, tt := range tests {
 		server := httptest.NewServer(http.HandlerFunc(
@@ -145,6 +144,69 @@ func TestOutboundHeaders(t *testing.T) {
 			Procedure: "hello",
 			Body:      bytes.NewReader([]byte("world")),
 		})
+
+		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
+			continue
+		}
+
+		if !assert.NoError(t, res.Body.Close(), "%v: failed to close response body") {
+			continue
+		}
+	}
+}
+
+func TestOutboundApplicationError(t *testing.T) {
+	tests := []struct {
+		desc     string
+		status   string
+		appError bool
+	}{
+		{
+			desc:     "ok",
+			status:   "success",
+			appError: false,
+		},
+		{
+			desc:     "error",
+			status:   "error",
+			appError: true,
+		},
+		{
+			desc:     "not an error",
+			status:   "lolwut",
+			appError: false,
+		},
+	}
+
+	httpTransport := NewTransport()
+
+	for _, tt := range tests {
+		server := httptest.NewServer(http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Add("Rpc-Status", tt.status)
+				defer r.Body.Close()
+			},
+		))
+		defer server.Close()
+
+		out := httpTransport.NewSingleOutbound(server.URL)
+
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
+
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		defer cancel()
+
+		res, err := out.Call(ctx, &transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+			Body:      bytes.NewReader([]byte("world")),
+		})
+
+		assert.Equal(t, res.ApplicationError, tt.appError, "%v: application status", tt.desc)
 
 		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
 			continue
