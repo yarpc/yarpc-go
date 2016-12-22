@@ -21,7 +21,7 @@
 package oneway
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -48,6 +48,7 @@ func Start() {
 			"yarpc/oneway/processing",
 			time.Second,
 		)
+		waitForRedis(rds)
 		inbounds = append(inbounds, rds)
 	}
 
@@ -64,7 +65,7 @@ func Start() {
 	dispatcher.Register(onewayserver.New(h))
 
 	if err := dispatcher.Start(); err != nil {
-		fmt.Println("error:", err.Error())
+		log.Println("oneway server dispatcher failed to load:", err.Error())
 	}
 }
 
@@ -74,7 +75,7 @@ func Stop() {
 		return
 	}
 	if err := dispatcher.Stop(); err != nil {
-		fmt.Println("failed to stop:", err.Error())
+		log.Println("oneway server dispatcher failed to stop:", err.Error())
 	}
 }
 
@@ -82,4 +83,15 @@ func Stop() {
 // available
 func redisIsExpectedRunning() bool {
 	return os.Getenv("REDIS") == "enabled"
+}
+
+func waitForRedis(in *redis.Inbound) {
+	for i := 5; i > 0; i-- {
+		if err := in.Start(); err != nil {
+			time.Sleep(time.Millisecond * 100)
+		} else {
+			return
+		}
+	}
+	log.Println("oneway server could not connect to redis")
 }
