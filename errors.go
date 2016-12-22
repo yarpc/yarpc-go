@@ -22,6 +22,8 @@ package yarpc
 
 import (
 	"fmt"
+
+	"go.uber.org/yarpc/api/transport"
 )
 
 type noOutboundForService struct {
@@ -30,4 +32,21 @@ type noOutboundForService struct {
 
 func (e noOutboundForService) Error() string {
 	return fmt.Sprintf("no configured outbound transport for service %q", e.Service)
+}
+
+// IsBadRequestError returns true if the request could not be processed
+// because it was invalid.
+func IsBadRequestError(err error) bool {
+	return transport.IsBadRequestError(err)
+}
+
+// IsUnexpectedError returns true if the server panicked or failed to process
+// the request with an unhandled error.
+func IsUnexpectedError(err error) bool {
+	return transport.IsUnexpectedError(err)
+}
+
+// IsTimeoutError return true if the given error is a TimeoutError.
+func IsTimeoutError(err error) bool {
+	return transport.IsTimeoutError(err)
 }
