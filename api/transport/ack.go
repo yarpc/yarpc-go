@@ -22,7 +22,7 @@ package transport
 
 import "fmt"
 
-// Ack represents and acknowledgement from a oneway request.
+// Ack represents an acknowledgement from a oneway request.
 type Ack interface {
 	fmt.Stringer
 }
