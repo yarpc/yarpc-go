@@ -55,7 +55,7 @@ func MultiError(errors []error) error {
 		}
 	}
 
-	return ErrorGroup(newErrors)
+	return newErrors
 }
 
 // CombineErrors combines the given collection of errors together. nil values
