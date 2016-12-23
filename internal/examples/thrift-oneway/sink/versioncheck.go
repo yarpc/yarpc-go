@@ -26,5 +26,5 @@ package sink
 import "go.uber.org/thriftrw/version"
 
 func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.0.0", "go.uber.org/yarpc/internal/examples/oneway/sink")
+	version.CheckCompatWithGeneratedCodeAt("1.0.0", "go.uber.org/yarpc/internal/examples/thrift-oneway/sink")
 }
