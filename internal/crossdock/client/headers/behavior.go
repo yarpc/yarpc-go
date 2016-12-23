@@ -161,16 +161,24 @@ func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
+	var (
+		opts       []yarpc.CallOption
+		resHeaders yarpc.Headers
+	)
+	for _, k := range h.Keys() {
+		if v, ok := h.Get(k); ok {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
+	}
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
 	var resBody interface{}
-	res, err := c.c.Call(
-		ctx,
-		yarpc.NewReqMeta().Headers(h).Procedure("echo"),
-		map[string]interface{}{}, &resBody)
+	err := c.c.Call(ctx, "echo", map[string]interface{}{}, &resBody, opts...)
 
 	if err != nil {
 		return yarpc.Headers{}, err
 	}
-	return res.Headers(), nil
+	return resHeaders, nil
 }
 
 type thriftCaller struct{ c echoclient.Interface }

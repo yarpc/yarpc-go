@@ -133,20 +133,26 @@ func TestCall(t *testing.T) {
 		}
 		resBody := reflect.Zero(wantType).Interface()
 
-		res, err := client.Call(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body,
-			&resBody,
+		var (
+			opts       []yarpc.CallOption
+			resHeaders yarpc.Headers
 		)
 
+		for _, k := range tt.headers.Keys() {
+			if v, ok := tt.headers.Get(k); ok {
+				opts = append(opts, yarpc.WithHeader(k, v))
+			}
+		}
+		opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+		err := client.Call(ctx, tt.procedure, tt.body, &resBody, opts...)
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
 				assert.Contains(t, err.Error(), tt.wantErr)
 			}
 		} else {
 			if assert.NoError(t, err) {
-				assert.Equal(t, tt.wantHeaders, res.Headers())
+				assert.Equal(t, tt.wantHeaders, resHeaders)
 				assert.Equal(t, tt.want, resBody)
 			}
 		}
@@ -229,11 +235,15 @@ func TestCallOneway(t *testing.T) {
 			}
 		}
 
-		ack, err := client.CallOneway(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body)
+		var opts []yarpc.CallOption
 
+		for _, k := range tt.headers.Keys() {
+			if v, ok := tt.headers.Get(k); ok {
+				opts = append(opts, yarpc.WithHeader(k, v))
+			}
+		}
+
+		ack, err := client.CallOneway(ctx, tt.procedure, tt.body, opts...)
 		if tt.wantErr != "" {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tt.wantErr)

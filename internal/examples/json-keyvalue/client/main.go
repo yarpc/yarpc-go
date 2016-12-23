@@ -57,12 +57,7 @@ func get(ctx context.Context, c json.Client, k string) (string, error) {
 	var response getResponse
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	_, err := c.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("get"),
-		&getRequest{Key: k},
-		&response,
-	)
+	err := c.Call(ctx, "get", &getRequest{Key: k}, &response)
 	return response.Value, err
 }
 
@@ -70,13 +65,7 @@ func set(ctx context.Context, c json.Client, k string, v string) error {
 	var response setResponse
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	_, err := c.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("set"),
-		&setRequest{Key: k, Value: v},
-		&response,
-	)
-	return err
+	return c.Call(ctx, "set", &setRequest{Key: k, Value: v}, &response)
 }
 
 func main() {
