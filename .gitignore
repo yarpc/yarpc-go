@@ -10,5 +10,3 @@ node_modules
 /cover.out
 /TAGS
 /.tmp
-internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote/second_service-remote.go
-internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote/thrift_test-remote.go
