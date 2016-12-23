@@ -24,8 +24,11 @@ import (
 
 var _reqBody = []byte("hello")
 
-func yarpcEcho(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-	return body, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
+func yarpcEcho(ctx context.Context, body []byte) ([]byte, error) {
+	for _, k := range yarpc.HeaderNames(ctx) {
+		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	}
+	return body, nil
 }
 
 func httpEcho(t testing.TB) http.HandlerFunc {

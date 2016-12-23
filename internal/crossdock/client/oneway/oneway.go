@@ -23,7 +23,6 @@ package oneway
 import (
 	"context"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
@@ -54,11 +53,10 @@ func Run(t crossdock.T) {
 // newCallBackHandler creates a oneway handler that fills a channel with the body
 func newCallBackHandler() (raw.OnewayHandler, <-chan []byte) {
 	serverCalledBack := make(chan []byte)
-	handler := func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
+	return func(ctx context.Context, body []byte) error {
 		serverCalledBack <- body
 		return nil
-	}
-	return handler, serverCalledBack
+	}, serverCalledBack
 }
 
 func getRandomID() string { return random.String(10) }

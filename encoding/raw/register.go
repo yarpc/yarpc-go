@@ -23,7 +23,6 @@ package raw
 import (
 	"context"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 )
 
@@ -38,7 +37,7 @@ func Register(r transport.RouteTable, rs []transport.Procedure) {
 }
 
 // UnaryHandler implements a single, unary procedure.
-type UnaryHandler func(context.Context, yarpc.ReqMeta, []byte) ([]byte, yarpc.ResMeta, error)
+type UnaryHandler func(context.Context, []byte) ([]byte, error)
 
 // Procedure builds a Procedure from the given raw handler.
 func Procedure(name string, handler UnaryHandler) []transport.Procedure {
@@ -51,7 +50,7 @@ func Procedure(name string, handler UnaryHandler) []transport.Procedure {
 }
 
 // OnewayHandler implements a single, onweway procedure
-type OnewayHandler func(context.Context, yarpc.ReqMeta, []byte) error
+type OnewayHandler func(context.Context, []byte) error
 
 // OnewayProcedure builds a Procedure from the given raw handler
 func OnewayProcedure(name string, handler OnewayHandler) []transport.Procedure {
