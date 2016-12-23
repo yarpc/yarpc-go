@@ -131,8 +131,7 @@ func (i *Inbound) startLoop() {
 		case <-i.stop:
 			return
 		default:
-			// TODO: logging
-			// TODO: handle error
+			// TODO: log error
 			_ = i.handle()
 		}
 	}

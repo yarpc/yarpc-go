@@ -119,17 +119,17 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) (*hostport.Peer, error) {
+func (a *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
 	if p, ok := a.peers[pid.Identifier()]; ok {
-		return p, nil
+		return pl
 	}
 
 	p := hostport.NewPeer(pid, a)
-	err := p.SetStatus(peer.Available)
+	p.SetStatus(peer.Available)
 
 	a.peers[p.Identifier()] = p
 
-	return p, err
+	return p
 }
 
 // ReleasePeer releases a peer from the peer.Subscriber and removes that peer from the Transport if nothing is listening to it

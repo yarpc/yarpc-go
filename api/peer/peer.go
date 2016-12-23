@@ -62,8 +62,8 @@ type Peer interface {
 	Status() Status
 
 	// Tell the peer that a request is starting
-	StartRequest() error
+	StartRequest()
 
 	// Tell the peer that a request has finished
-	EndRequest() error
+	EndRequest()
 }

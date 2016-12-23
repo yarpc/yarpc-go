@@ -207,7 +207,7 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 }
 
 // Choose selects the next available peer in the round robin
-func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error) error, error) {
+func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if !pl.IsRunning() {
 		return nil, nil, peer.ErrPeerListNotStarted("RoundRobinList")
 	}
@@ -215,9 +215,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	for {
 		if nextPeer := pl.nextPeer(); nextPeer != nil {
 			pl.notifyPeerAvailable()
-			if err := nextPeer.StartRequest(); err != nil {
-				return nil, nil, err
-			}
+			nextPeer.StartRequest()
 			return nextPeer, pl.getOnFinishFunc(nextPeer), nil
 		}
 
@@ -251,9 +249,9 @@ func (pl *List) notifyPeerAvailable() {
 }
 
 // getOnFinishFunc creates a closure that will be run at the end of the request
-func (pl *List) getOnFinishFunc(p peer.Peer) func(error) error {
-	return func(_ error) error {
-		return p.EndRequest()
+func (pl *List) getOnFinishFunc(p peer.Peer) func(error) {
+	return func(_ error) {
+		p.EndRequest()
 	}
 }
 
@@ -274,19 +272,21 @@ func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 }
 
 // NotifyStatusChanged when the peer's status changes
-func (pl *List) NotifyStatusChanged(pid peer.Identifier) error {
+func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
 	if p := pl.availablePeerRing.GetPeer(pid); p != nil {
-		return pl.handleAvailablePeerStatusChange(p)
+		// TODO: log error
+		_ = pl.handleAvailablePeerStatusChange(p)
+		return
 	}
 
 	if p, ok := pl.unavailablePeers[pid.Identifier()]; ok && p != nil {
-		return pl.handleUnavailablePeerStatusChange(p)
+		// TODO: log error
+		_ = pl.handleUnavailablePeerStatusChange(p)
 	}
 	// No action required
-	return nil
 }
 
 // handleAvailablePeerStatusChange checks the connection status of a connected peer to potentially

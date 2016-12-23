@@ -186,7 +186,6 @@ type NotifyStatusChangeAction struct {
 
 	// NewConnectionStatus is the new ConnectionStatus of the Peer
 	NewConnectionStatus peer.ConnectionStatus
-	ExpectedErr         error
 }
 
 // Apply will run the NotifyStatusChanged function on the PeerList with the provided Peer
@@ -195,8 +194,7 @@ func (a NotifyStatusChangeAction) Apply(t *testing.T, pl peer.Chooser, deps List
 
 	plSub := pl.(peer.Subscriber)
 
-	err := plSub.NotifyStatusChanged(deps.Peers[a.PeerID])
-	assert.Equal(t, a.ExpectedErr, err)
+	plSub.NotifyStatusChanged(deps.Peers[a.PeerID])
 }
 
 // ApplyPeerListActions runs all the PeerListActions on the PeerList

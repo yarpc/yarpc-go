@@ -91,10 +91,8 @@ func (_m *MockSubscriber) EXPECT() *_MockSubscriberRecorder {
 	return _m.recorder
 }
 
-func (_m *MockSubscriber) NotifyStatusChanged(_param0 peer.Identifier) error {
-	ret := _m.ctrl.Call(_m, "NotifyStatusChanged", _param0)
-	ret0, _ := ret[0].(error)
-	return ret0
+func (_m *MockSubscriber) NotifyStatusChanged(_param0 peer.Identifier) {
+	_m.ctrl.Call(_m, "NotifyStatusChanged", _param0)
 }
 
 func (_mr *_MockSubscriberRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
