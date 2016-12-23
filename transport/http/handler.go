@@ -43,8 +43,8 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	registry transport.Registry
-	tracer   opentracing.Tracer
+	router transport.Router
+	tracer opentracing.Tracer
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -83,21 +83,17 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Body:      req.Body,
 	}
-
-	ctx := req.Context()
-
-	v := request.Validator{Request: treq}
-	ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
-	defer cancel()
-
-	ctx, span := h.createSpan(ctx, req, treq, start)
-
-	treq, err := v.Validate(ctx)
-	if err != nil {
+	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
 
-	spec, err := h.registry.Choose(ctx, treq)
+	ctx := req.Context()
+	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	// parseTTLErr != nil is a problem only if the request is unary.
+	defer cancel()
+	ctx, span := h.createSpan(ctx, req, treq, start)
+
+	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		return updateSpanWithErr(span, err)
 	}
@@ -105,21 +101,16 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 	switch spec.Type() {
 	case transport.Unary:
 		defer span.Finish()
+		if parseTTLErr != nil {
+			return parseTTLErr
+		}
 
-		ctx, cancel := v.ParseTTL(ctx, popHeader(req.Header, TTLMSHeader))
-		defer cancel()
-
-		treq, err = v.ValidateUnary(ctx)
-		if err != nil {
+		if err := request.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
 
 	case transport.Oneway:
-		treq, err = v.ValidateOneway(ctx)
-		if err != nil {
-			return err
-		}
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
@@ -195,6 +186,7 @@ type responseWriter struct {
 }
 
 func newResponseWriter(w http.ResponseWriter) responseWriter {
+	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
 	return responseWriter{w: w}
 }
 
@@ -206,6 +198,6 @@ func (rw responseWriter) AddHeaders(h transport.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
-func (responseWriter) SetApplicationError() {
-	// Nothing to do.
+func (rw responseWriter) SetApplicationError() {
+	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
 }

@@ -110,7 +110,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Transports()
-					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().SetRouter(gomock.Any())
 					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in
@@ -139,7 +139,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Transports()
-					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().SetRouter(gomock.Any())
 					if i == 6 {
 						in.EXPECT().Start().Return(errors.New("great sadness"))
 					} else {
@@ -173,7 +173,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Transports()
-					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().SetRouter(gomock.Any())
 					in.EXPECT().Start().Return(nil)
 					if i == 7 {
 						in.EXPECT().Stop().Return(errors.New("great sadness"))
@@ -207,7 +207,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Transports()
-					in.EXPECT().SetRegistry(gomock.Any()).Times(0)
+					in.EXPECT().SetRouter(gomock.Any()).Times(0)
 					in.EXPECT().Start().Times(0)
 					in.EXPECT().Stop().Times(0)
 					inbounds[i] = in
@@ -242,7 +242,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Transports()
-					in.EXPECT().SetRegistry(gomock.Any())
+					in.EXPECT().SetRouter(gomock.Any())
 					in.EXPECT().Start().Return(nil)
 					in.EXPECT().Stop().Return(nil)
 					inbounds[i] = in

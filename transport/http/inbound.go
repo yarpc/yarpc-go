@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	intnet "go.uber.org/yarpc/internal/net"
+	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
 )
@@ -65,8 +66,10 @@ type Inbound struct {
 	mux        *http.ServeMux
 	muxPattern string
 	server     *intnet.HTTPServer
-	registry   transport.Registry
+	router     transport.Router
 	tracer     opentracing.Tracer
+
+	once sync.LifecycleOnce
 }
 
 // Tracer configures a tracer on this inbound.
@@ -75,11 +78,11 @@ func (i *Inbound) Tracer(tracer opentracing.Tracer) *Inbound {
 	return i
 }
 
-// SetRegistry configures a registry to handle incoming requests.
+// SetRouter configures a router to handle incoming requests.
 // This satisfies the transport.Inbound interface, and would be called
 // by a dispatcher when it starts.
-func (i *Inbound) SetRegistry(registry transport.Registry) {
-	i.registry = registry
+func (i *Inbound) SetRouter(router transport.Router) {
+	i.router = router
 }
 
 // Transports returns the inbound's HTTP transport.
@@ -91,14 +94,17 @@ func (i *Inbound) Transports() []transport.Transport {
 // Start starts the inbound with a given service detail, opening a listening
 // socket.
 func (i *Inbound) Start() error {
+	return i.once.Start(i.start)
+}
 
-	if i.registry == nil {
-		return errors.NoRegistryError{}
+func (i *Inbound) start() error {
+	if i.router == nil {
+		return errors.ErrNoRouter
 	}
 
 	var httpHandler http.Handler = handler{
-		registry: i.registry,
-		tracer:   i.tracer,
+		router: i.router,
+		tracer: i.tracer,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
@@ -119,10 +125,19 @@ func (i *Inbound) Start() error {
 
 // Stop the inbound, closing the listening socket.
 func (i *Inbound) Stop() error {
+	return i.once.Stop(i.stop)
+}
+
+func (i *Inbound) stop() error {
 	if i.server == nil {
 		return nil
 	}
 	return i.server.Stop()
+}
+
+// IsRunning returns whether the inbound is currently running
+func (i *Inbound) IsRunning() bool {
+	return i.once.IsRunning()
 }
 
 // Addr returns the address on which the server is listening. Returns nil if

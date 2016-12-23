@@ -48,7 +48,7 @@ func TestOperationOrder(t *testing.T) {
 	client.EXPECT().Stop()
 
 	inbound := NewInbound(client, queueKey, processingKey, timeout)
-	inbound.SetRegistry(&transporttest.MockRegistry{})
+	inbound.SetRouter(&transporttest.MockRouter{})
 
 	assert.Equal(t, queueKey, inbound.queueKey)
 	assert.Equal(t, processingKey, inbound.processingKey)

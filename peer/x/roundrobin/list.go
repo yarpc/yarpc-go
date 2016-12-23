@@ -27,8 +27,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	yerrors "go.uber.org/yarpc/internal/errors"
-
-	"go.uber.org/atomic"
+	ysync "go.uber.org/yarpc/internal/sync"
 )
 
 const defaultCapacity = 10
@@ -53,16 +52,16 @@ type List struct {
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
-	started  atomic.Bool
-	stopped  atomic.Bool
-	stopOnce sync.Once
-	stopErr  error
+	once ysync.LifecycleOnce
 }
 
 // Update applies the additions and removals of peer Identifiers to the list
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures
-func (pl *List) Update(additions, removals []peer.Identifier) error {
+func (pl *List) Update(updates peer.ListUpdates) error {
+	additions := updates.Additions
+	removals := updates.Removals
+
 	if len(additions) == 0 && len(removals) == 0 {
 		return nil
 	}
@@ -124,18 +123,12 @@ func (pl *List) addToAvailablePeers(p peer.Peer) error {
 
 // Start notifies the List that requests will start coming
 func (pl *List) Start() error {
-	pl.started.Store(true)
-	return nil
+	return pl.once.Start(nil)
 }
 
 // Stop notifies the List that requests will stop coming
 func (pl *List) Stop() error {
-	pl.stopOnce.Do(func() {
-		pl.stopped.Store(true)
-		pl.stopErr = pl.clearPeers()
-	})
-
-	return pl.stopErr
+	return pl.once.Stop(pl.clearPeers)
 }
 
 // clearPeers will release all the peers from the list
@@ -215,14 +208,14 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 
 // Choose selects the next available peer in the round robin
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
-	if !pl.isRunning() {
+	if !pl.IsRunning() {
 		return nil, nil, peer.ErrPeerListNotStarted("RoundRobinList")
 	}
 
 	for {
 		if nextPeer := pl.nextPeer(); nextPeer != nil {
 			pl.notifyPeerAvailable()
-			nextPeer.StartRequest(pl)
+			nextPeer.StartRequest()
 			return nextPeer, pl.getOnFinishFunc(nextPeer), nil
 		}
 
@@ -232,8 +225,9 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 }
 
-func (pl *List) isRunning() bool {
-	return pl.started.Load() && !pl.stopped.Load()
+// IsRunning returns whether the peer list is running.
+func (pl *List) IsRunning() bool {
+	return pl.once.IsRunning()
 }
 
 // nextPeer grabs the next available peer from the PeerRing and returns it,
@@ -257,7 +251,7 @@ func (pl *List) notifyPeerAvailable() {
 // getOnFinishFunc creates a closure that will be run at the end of the request
 func (pl *List) getOnFinishFunc(p peer.Peer) func(error) {
 	return func(_ error) {
-		p.EndRequest(pl)
+		p.EndRequest()
 	}
 }
 

@@ -30,20 +30,25 @@ import (
 
 // Chooser is a collection of Peers.  Outbounds request peers from the peer.Chooser to determine where to send requests
 type Chooser interface {
-	// Notify the PeerList that it will start receiving requests
-	Start() error
-
-	// Notify the PeerList that it will stop receiving requests
-	Stop() error
+	transport.Lifecycle
 
 	// Choose a Peer for the next call, block until a peer is available (or timeout)
 	Choose(context.Context, *transport.Request) (peer Peer, onFinish func(error), err error)
 }
 
 // List listens to adds and removes of Peers from a PeerProvider
-// A Chooser will implement the PeerChangeListener interface in order to receive
+// A Chooser will implement the List interface in order to receive
 // updates to the list of Peers it is keeping track of
 type List interface {
 	// Update performs the additions and removals to the Peer List
-	Update(additions, removals []Identifier) error
+	Update(updates ListUpdates) error
+}
+
+// ListUpdates specifies the updates to be made to a List
+type ListUpdates struct {
+	// Additions are the identifiers that should be added to the list
+	Additions []Identifier
+
+	// Removals are the identifiers that should be removed to the list
+	Removals []Identifier
 }

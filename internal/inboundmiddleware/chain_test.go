@@ -48,7 +48,7 @@ func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transpor
 	return h.HandleOneway(ctx, req)
 }
 
-var retryUnaryInboundMiddleware middleware.UnaryInboundMiddlewareFunc = func(
+var retryUnaryInbound middleware.UnaryInboundFunc = func(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
 		return h.Handle(ctx, req, resw)
@@ -78,8 +78,8 @@ func TestUnaryChain(t *testing.T) {
 
 	before := &countInboundMiddleware{}
 	after := &countInboundMiddleware{}
-	err := middleware.ApplyUnaryInboundMiddleware(
-		h, UnaryChain(before, retryUnaryInboundMiddleware, after),
+	err := middleware.ApplyUnaryInbound(
+		h, UnaryChain(before, retryUnaryInbound, after),
 	).Handle(ctx, req, resw)
 
 	assert.NoError(t, err, "expected success")
@@ -87,7 +87,7 @@ func TestUnaryChain(t *testing.T) {
 	assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
 }
 
-var retryOnewayInboundMiddleware middleware.OnewayInboundMiddlewareFunc = func(
+var retryOnewayInbound middleware.OnewayInboundFunc = func(
 	ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
 	if err := h.HandleOneway(ctx, req); err != nil {
 		return h.HandleOneway(ctx, req)
@@ -116,8 +116,8 @@ func TestOnewayChain(t *testing.T) {
 
 	before := &countInboundMiddleware{}
 	after := &countInboundMiddleware{}
-	err := middleware.ApplyOnewayInboundMiddleware(
-		h, OnewayChain(before, retryOnewayInboundMiddleware, after),
+	err := middleware.ApplyOnewayInbound(
+		h, OnewayChain(before, retryOnewayInbound, after),
 	).HandleOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")

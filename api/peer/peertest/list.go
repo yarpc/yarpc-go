@@ -63,6 +63,16 @@ func (_mr *_MockChooserRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Choose", arg0, arg1)
 }
 
+func (_m *MockChooser) IsRunning() bool {
+	ret := _m.ctrl.Call(_m, "IsRunning")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+func (_mr *_MockChooserRecorder) IsRunning() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
+}
+
 func (_m *MockChooser) Start() error {
 	ret := _m.ctrl.Call(_m, "Start")
 	ret0, _ := ret[0].(error)
@@ -104,12 +114,12 @@ func (_m *MockList) EXPECT() *_MockListRecorder {
 	return _m.recorder
 }
 
-func (_m *MockList) Update(_param0 []peer.Identifier, _param1 []peer.Identifier) error {
-	ret := _m.ctrl.Call(_m, "Update", _param0, _param1)
+func (_m *MockList) Update(_param0 peer.ListUpdates) error {
+	ret := _m.ctrl.Call(_m, "Update", _param0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockListRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Update", arg0, arg1)
+func (_mr *_MockListRecorder) Update(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Update", arg0)
 }

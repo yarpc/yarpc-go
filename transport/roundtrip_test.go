@@ -54,40 +54,40 @@ const (
 // roundTripTransport provides a function that sets up and tears down an
 // Inbound, and provides an Outbound which knows how to call that Inbound.
 type roundTripTransport interface {
-	// Set up an Inbound serving Registry r, and call f with an Outbound that
+	// Set up an Inbound serving Router r, and call f with an Outbound that
 	// knows how to talk to that Inbound.
-	WithRegistry(r transport.Registry, f func(transport.UnaryOutbound))
-	WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound))
+	WithRouter(r transport.Router, f func(transport.UnaryOutbound))
+	WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound))
 }
 
-type staticRegistry struct {
+type staticRouter struct {
 	Handler       transport.UnaryHandler
 	OnewayHandler transport.OnewayHandler
 }
 
-func (r staticRegistry) Register([]transport.Registrant) {
-	panic("cannot register methods on a static registry")
+func (r staticRouter) Register([]transport.Procedure) {
+	panic("cannot register methods on a static router")
 }
 
-func (r staticRegistry) ServiceProcedures() []transport.ServiceProcedure {
-	return []transport.ServiceProcedure{{Service: testService, Procedure: testProcedure}}
+func (r staticRouter) Procedures() []transport.Procedure {
+	return []transport.Procedure{{Name: testProcedure, Service: testService}}
 }
 
-func (r staticRegistry) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+func (r staticRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
 	if req.Procedure == testProcedure {
 		return transport.NewUnaryHandlerSpec(r.Handler), nil
 	}
 	return transport.NewOnewayHandlerSpec(r.OnewayHandler), nil
 }
 
-// handlerFunc wraps a function into a transport.Registry
+// handlerFunc wraps a function into a transport.Router
 type unaryHandlerFunc func(context.Context, *transport.Request, transport.ResponseWriter) error
 
 func (f unaryHandlerFunc) Handle(ctx context.Context, r *transport.Request, w transport.ResponseWriter) error {
 	return f(ctx, r, w)
 }
 
-// onewayHandlerFunc wraps a function into a transport.Registry
+// onewayHandlerFunc wraps a function into a transport.Router
 type onewayHandlerFunc func(context.Context, *transport.Request) error
 
 func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Request) error {
@@ -97,11 +97,11 @@ func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *transport.Reques
 // httpTransport implements a roundTripTransport for HTTP.
 type httpTransport struct{ t *testing.T }
 
-func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
+func (ht httpTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
 	httpTransport := http.NewTransport()
 
 	i := httpTransport.NewInbound("127.0.0.1:0")
-	i.SetRegistry(r)
+	i.SetRouter(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
@@ -111,11 +111,11 @@ func (ht httpTransport) WithRegistry(r transport.Registry, f func(transport.Unar
 	f(o)
 }
 
-func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
+func (ht httpTransport) WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound)) {
 	httpTransport := http.NewTransport()
 
 	i := httpTransport.NewInbound("127.0.0.1:0")
-	i.SetRegistry(r)
+	i.SetRouter(r)
 	require.NoError(ht.t, i.Start(), "failed to start")
 	defer i.Stop()
 
@@ -128,13 +128,13 @@ func (ht httpTransport) WithRegistryOneway(r transport.Registry, f func(transpor
 // tchannelTransport implements a roundTripTransport for TChannel.
 type tchannelTransport struct{ t *testing.T }
 
-func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.UnaryOutbound)) {
+func (tt tchannelTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
 		ix := tch.NewChannelTransport(tch.WithChannel(ch))
 		i := ix.NewInbound()
-		i.SetRegistry(r)
+		i.SetRouter(r)
 		require.NoError(tt.t, ix.Start(), "failed to start inbound transport")
 		require.NoError(tt.t, i.Start(), "failed to start inbound")
 
@@ -153,7 +153,7 @@ func (tt tchannelTransport) WithRegistry(r transport.Registry, f func(transport.
 	})
 }
 
-func (tt tchannelTransport) WithRegistryOneway(r transport.Registry, f func(transport.OnewayOutbound)) {
+func (tt tchannelTransport) WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound)) {
 	panic("tchannel does not support oneway calls")
 }
 
@@ -253,8 +253,8 @@ func TestSimpleRoundTrip(t *testing.T) {
 			ctx, cancel := context.WithTimeout(rootCtx, 200*time.Millisecond)
 			defer cancel()
 
-			registry := staticRegistry{Handler: handler}
-			trans.WithRegistry(registry, func(o transport.UnaryOutbound) {
+			router := staticRouter{Handler: handler}
+			trans.WithRouter(router, func(o transport.UnaryOutbound) {
 				res, err := o.Call(ctx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
@@ -338,9 +338,9 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 				return nil
 			})
 
-			registry := staticRegistry{OnewayHandler: onewayHandler}
+			router := staticRouter{OnewayHandler: onewayHandler}
 
-			trans.WithRegistryOneway(registry, func(o transport.OnewayOutbound) {
+			trans.WithRouterOneway(router, func(o transport.OnewayOutbound) {
 				ack, err := o.CallOneway(rootCtx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,

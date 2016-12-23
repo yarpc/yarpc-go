@@ -20,7 +20,10 @@
 
 package errors
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // HandlerError represents handler errors on the handler side.
 //
@@ -136,10 +139,6 @@ func (e UnsupportedTypeError) Error() string {
 	return fmt.Sprintf(`unsupported RPC type %q for transport %q`, e.Type, e.Transport)
 }
 
-// NoRegistryError indicates that Start was called without first calling
-// SetRegistry for an inbound transport.
-type NoRegistryError struct{}
-
-func (e NoRegistryError) Error() string {
-	return `no registry configured for transport inbound`
-}
+// ErrNoRouter indicates that Start was called without first calling
+// SetRouter for an inbound transport.
+var ErrNoRouter = errors.New("no router configured for transport inbound")

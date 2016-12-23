@@ -33,7 +33,7 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/registrytest"
+	"go.uber.org/yarpc/internal/routertest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -69,12 +69,12 @@ func TestHandlerErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
-		registry := transporttest.NewMockRegistry(mockCtrl)
+		router := transporttest.NewMockRouter(mockCtrl)
 
 		spec := transport.NewUnaryHandlerSpec(rpcHandler)
-		tchHandler := handler{Registry: registry}
+		tchHandler := handler{router: router}
 
-		registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService("service").
 			WithProcedure("hello"),
 		).Return(spec, nil)
@@ -338,13 +338,13 @@ func TestHandlerFailures(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.sendCall.resp = resp
 
-		registry := transporttest.NewMockRegistry(mockCtrl)
-		registry.EXPECT().Choose(gomock.Any(), registrytest.NewMatcher().
+		router := transporttest.NewMockRouter(mockCtrl)
+		router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
 			WithService(tt.sendCall.service).
 			WithProcedure(tt.sendCall.method),
 		).Return(spec, nil).AnyTimes()
 
-		handler{Registry: registry}.handle(ctx, tt.sendCall)
+		handler{router: router}.handle(ctx, tt.sendCall)
 		err := resp.systemErr
 		require.Error(t, err, "expected error for %q", tt.desc)
 

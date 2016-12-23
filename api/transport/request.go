@@ -20,7 +20,11 @@
 
 package transport
 
-import "io"
+import (
+	"io"
+
+	"go.uber.org/yarpc/internal/errors"
+)
 
 // Request is the low level request representation.
 type Request struct {
@@ -60,3 +64,29 @@ type Request struct {
 
 // Encoding represents an encoding format for requests.
 type Encoding string
+
+// ValidateRequest validates the given request. An error is returned if the
+// request is invalid.
+//
+// Inbound transport implementations may use this to validate requests before
+// handling them. Outbound implementations don't need to validate requests;
+// they are always validated before the outbound is called.
+func ValidateRequest(req *Request) error {
+	var missingParams []string
+	if req.Service == "" {
+		missingParams = append(missingParams, "service name")
+	}
+	if req.Procedure == "" {
+		missingParams = append(missingParams, "procedure")
+	}
+	if req.Caller == "" {
+		missingParams = append(missingParams, "caller name")
+	}
+	if req.Encoding == "" {
+		missingParams = append(missingParams, "encoding")
+	}
+	if len(missingParams) > 0 {
+		return errors.MissingParameters(missingParams)
+	}
+	return nil
+}

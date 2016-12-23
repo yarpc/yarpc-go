@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
 
 	"github.com/opentracing/opentracing-go"
@@ -34,12 +34,16 @@ import (
 
 const transportName = "redis"
 
+const maxConnectRetries = 100
+
+var connectRetryDelay = 10 * time.Millisecond
+
 // Inbound is a redis inbound that reads from the given queueKey. This will
 // wait for an item in the queue or until the timout is reached before trying
 // to read again.
 type Inbound struct {
-	registry transport.Registry
-	tracer   opentracing.Tracer
+	router transport.Router
+	tracer opentracing.Tracer
 
 	client        Client
 	timeout       time.Duration
@@ -47,6 +51,8 @@ type Inbound struct {
 	processingKey string
 
 	stop chan struct{}
+
+	once sync.LifecycleOnce
 }
 
 // NewInbound creates a redis Inbound that satisfies transport.Inbound.
@@ -79,36 +85,47 @@ func (i *Inbound) WithTracer(tracer opentracing.Tracer) *Inbound {
 	return i
 }
 
-// WithRegistry configures a registry to handle incoming requests,
+// WithRouter configures a router to handle incoming requests,
 // as a chained method for convenience.
-func (i *Inbound) WithRegistry(registry transport.Registry) *Inbound {
-	i.registry = registry
+func (i *Inbound) WithRouter(router transport.Router) *Inbound {
+	i.router = router
 	return i
 }
 
-// SetRegistry configures a registry to handle incoming requests.
+// SetRouter configures a router to handle incoming requests.
 // This satisfies the transport.Inbound interface, and would be called
 // by a dispatcher when it starts.
-func (i *Inbound) SetRegistry(registry transport.Registry) {
-	i.registry = registry
+func (i *Inbound) SetRouter(router transport.Router) {
+	i.router = router
 }
 
 // Start starts the inbound, reading from the queueKey
 func (i *Inbound) Start() error {
-	if i.registry == nil {
-		return errors.NoRegistryError{}
+	return i.once.Start(i.start)
+}
+
+func (i *Inbound) start() error {
+	if i.router == nil {
+		return errors.ErrNoRouter
 	}
 
-	err := i.client.Start()
+	var err error
+	for attempt := 0; attempt < maxConnectRetries; attempt++ {
+		err = i.client.Start()
+		if err == nil {
+			break
+		}
+		time.Sleep(connectRetryDelay)
+	}
 	if err != nil {
 		return err
 	}
 
-	go i.start()
+	go i.startLoop()
 	return nil
 }
 
-func (i *Inbound) start() {
+func (i *Inbound) startLoop() {
 	for {
 		select {
 		case <-i.stop:
@@ -122,8 +139,17 @@ func (i *Inbound) start() {
 
 // Stop ends the connection to redis
 func (i *Inbound) Stop() error {
+	return i.once.Stop(i.stopClient)
+}
+
+func (i *Inbound) stopClient() error {
 	close(i.stop)
 	return i.client.Stop()
+}
+
+// IsRunning returns whether the inbound is still processing requests.
+func (i *Inbound) IsRunning() bool {
+	return i.once.IsRunning()
 }
 
 func (i *Inbound) handle() error {
@@ -141,27 +167,26 @@ func (i *Inbound) handle() error {
 		return err
 	}
 
-	ctx, span := transport.ExtractOpenTracingSpan(context.Background(), spanContext, req, i.tracer, transportName, start)
+	extractOpenTracingSpan := transport.ExtractOpenTracingSpan{
+		ParentSpanContext: spanContext,
+		Tracer:            i.tracer,
+		TransportName:     transportName,
+		StartTime:         start,
+	}
+	ctx, span := extractOpenTracingSpan.Do(context.Background(), req)
 	defer span.Finish()
 
-	v := request.Validator{Request: req}
-	req, err = v.Validate(ctx)
-	if err != nil {
+	if err := transport.ValidateRequest(req); err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
-	spec, err := i.registry.Choose(ctx, req)
+	spec, err := i.router.Choose(ctx, req)
 	if err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
 	if spec.Type() != transport.Oneway {
 		err = errors.UnsupportedTypeError{Transport: transportName, Type: string(spec.Type())}
-		return transport.UpdateSpanWithErr(span, err)
-	}
-
-	req, err = v.ValidateOneway(ctx)
-	if err != nil {
 		return transport.UpdateSpanWithErr(span, err)
 	}
 

@@ -21,11 +21,13 @@
 package yarpc
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
@@ -33,21 +35,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 )
-
-// StartStoppable objects are used to define a common Start/Stop functionality
-// across different dispatcher objects
-type StartStoppable interface {
-	// Starts the RPC allowing it to accept and process new incoming
-	// requests.
-	//
-	// Blocks until the RPC is ready to start accepting new requests.
-	Start() error
-
-	// Stops the RPC. No new requests will be accepted.
-	//
-	// Blocks until the RPC has stopped.
-	Stop() error
-}
 
 // Config specifies the parameters of a new RPC constructed via New.
 type Config struct {
@@ -73,29 +60,32 @@ type Outbounds map[string]transport.Outbounds
 
 // OutboundMiddleware contains the different type of outbound middleware
 type OutboundMiddleware struct {
-	Unary  middleware.UnaryOutboundMiddleware
-	Oneway middleware.OnewayOutboundMiddleware
+	Unary  middleware.UnaryOutbound
+	Oneway middleware.OnewayOutbound
 }
 
 // InboundMiddleware contains the different type of inbound middleware
 type InboundMiddleware struct {
-	Unary  middleware.UnaryInboundMiddleware
-	Oneway middleware.OnewayInboundMiddleware
+	Unary  middleware.UnaryInbound
+	Oneway middleware.OnewayInbound
 }
 
 // NewDispatcher builds a new Dispatcher using the specified Config.
 func NewDispatcher(cfg Config) *Dispatcher {
 	if cfg.Name == "" {
-		panic("a service name is required")
+		panic("yarpc.NewDispatcher expects a service name")
+	}
+	if err := internal.ValidateServiceName(cfg.Name); err != nil {
+		panic("yarpc.NewDispatcher expects a valid service name: %s" + err.Error())
 	}
 
 	return &Dispatcher{
-		Name:              cfg.Name,
-		Registrar:         NewMapRegistry(cfg.Name),
+		name:              cfg.Name,
+		table:             NewMapRouter(cfg.Name),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
-		InboundMiddleware: cfg.InboundMiddleware,
+		inboundMiddleware: cfg.InboundMiddleware,
 	}
 }
 
@@ -115,12 +105,12 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 
 		// apply outbound middleware and create ValidatorOutbounds
 		if outs.Unary != nil {
-			unaryOutbound = middleware.ApplyUnaryOutboundMiddleware(outs.Unary, mw.Unary)
+			unaryOutbound = middleware.ApplyUnaryOutbound(outs.Unary, mw.Unary)
 			unaryOutbound = request.UnaryValidatorOutbound{UnaryOutbound: unaryOutbound}
 		}
 
 		if outs.Oneway != nil {
-			onewayOutbound = middleware.ApplyOnewayOutboundMiddleware(outs.Oneway, mw.Oneway)
+			onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
 		}
 
@@ -168,15 +158,13 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 // Clients to send RPCs, and by Procedures to recieve them. This object is what
 // enables an application to be transport-agnostic.
 type Dispatcher struct {
-	transport.Registrar
-
-	Name string
-
+	table      transport.RouteTable
+	name       string
 	inbounds   Inbounds
 	outbounds  Outbounds
 	transports []transport.Transport
 
-	InboundMiddleware InboundMiddleware
+	inboundMiddleware InboundMiddleware
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -196,35 +184,47 @@ func (d *Dispatcher) Inbounds() Inbounds {
 // generated Thrift client.
 func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 	if rs, ok := d.outbounds[service]; ok {
-		return clientconfig.MultiOutbound(d.Name, service, rs)
+		return clientconfig.MultiOutbound(d.name, service, rs)
 	}
 	panic(noOutboundForService{Service: service})
 }
 
-// Register configures the dispatcher's registry to route inbound requests to a
+// Procedures returns a list of services and procedures that have been
+// registered with this Dispatcher.
+func (d *Dispatcher) Procedures() []transport.Procedure {
+	return d.table.Procedures()
+}
+
+// Choose picks a handler for the given request or returns an error if a
+// handler for this request does not exist.
+func (d *Dispatcher) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+	return d.table.Choose(ctx, req)
+}
+
+// Register configures the dispatcher's router to route inbound requests to a
 // collection of procedure handlers.
-func (d *Dispatcher) Register(rs []transport.Registrant) {
-	registrants := make([]transport.Registrant, 0, len(rs))
+func (d *Dispatcher) Register(rs []transport.Procedure) {
+	procedures := make([]transport.Procedure, 0, len(rs))
 
 	for _, r := range rs {
 		switch r.HandlerSpec.Type() {
 		case transport.Unary:
-			h := middleware.ApplyUnaryInboundMiddleware(r.HandlerSpec.Unary(),
-				d.InboundMiddleware.Unary)
+			h := middleware.ApplyUnaryInbound(r.HandlerSpec.Unary(),
+				d.inboundMiddleware.Unary)
 			r.HandlerSpec = transport.NewUnaryHandlerSpec(h)
 		case transport.Oneway:
-			h := middleware.ApplyOnewayInboundMiddleware(r.HandlerSpec.Oneway(),
-				d.InboundMiddleware.Oneway)
+			h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
+				d.inboundMiddleware.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
-				r.HandlerSpec.Type(), r.Service, r.Procedure))
+				r.HandlerSpec.Type(), r.Service, r.Name))
 		}
 
-		registrants = append(registrants, r)
+		procedures = append(procedures, r)
 	}
 
-	d.Registrar.Register(registrants)
+	d.table.Register(procedures)
 }
 
 // Start Start the RPC allowing it to accept and processing new incoming
@@ -242,10 +242,10 @@ func (d *Dispatcher) Register(rs []transport.Registrant) {
 func (d *Dispatcher) Start() error {
 	var (
 		mu         sync.Mutex
-		allStarted []StartStoppable
+		allStarted []transport.Lifecycle
 	)
 
-	start := func(s StartStoppable) func() error {
+	start := func(s transport.Lifecycle) func() error {
 		return func() error {
 			if s == nil {
 				return nil
@@ -297,7 +297,7 @@ func (d *Dispatcher) Start() error {
 	// Start Inbounds
 	wait = intsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
-		i.SetRegistry(d)
+		i.SetRouter(d)
 		wait.Submit(start(i))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {

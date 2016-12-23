@@ -36,6 +36,8 @@ const (
 	Available
 )
 
+//go:generate stringer -type=ConnectionStatus
+
 // Status holds all the information about a peer's state that would be useful to Subscribers
 type Status struct {
 	// Current number of pending requests on this peer
@@ -60,8 +62,8 @@ type Peer interface {
 	Status() Status
 
 	// Tell the peer that a request is starting
-	StartRequest(dontNotify Subscriber)
+	StartRequest()
 
 	// Tell the peer that a request has finished
-	EndRequest(dontNotify Subscriber)
+	EndRequest()
 }

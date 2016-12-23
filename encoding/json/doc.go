@@ -37,8 +37,8 @@
 // Where '$reqBody' and '$resBody' are either pointers to structs representing
 // your request and response objects, or map[string]interface{}.
 //
-// Use the Procedure function to build registrants to register against a
-// Registry.
+// Use the Procedure function to build procedures to register against a
+// Router.
 //
 //  dispatcher.Register(json.Procedure("getValue", GetValue))
 //  dispatcher.Register(json.Procedure("setValue", SetValue))
@@ -50,8 +50,8 @@
 //
 // Where $reqBody is a map[string]interface{} or pointer to a struct.
 //
-// Use the OnewayProcedure function to build registrants to register against a
-// Registry.
+// Use the OnewayProcedure function to build procedures to register against a
+// Router.
 //
 //  dispatcher.Register(json.OnewayProcedure("setValue", SetValue))
 //  dispatcher.Register(json.OnewayProcedure("runTask", RunTask))

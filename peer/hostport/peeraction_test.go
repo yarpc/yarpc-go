@@ -50,9 +50,9 @@ type StartStopReqAction struct {
 
 // Apply will run StartRequest and (optionally) EndRequest
 func (sa StartStopReqAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
-	p.StartRequest(nil)
+	p.StartRequest()
 	if sa.Stop {
-		p.EndRequest(nil)
+		p.EndRequest()
 	}
 }
 

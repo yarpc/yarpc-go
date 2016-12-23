@@ -28,8 +28,8 @@
 // 		[]byte{1, 2, 3},
 // 	)
 //
-// Use the Procedure function to build registrants to register against a
-// Registry.
+// Use the Procedure function to build procedures to register against a
+// Router.
 //
 // 	func Submit(reqMeta yarpc.ReqMeta, reqBody []byte) ([]byte, yarpc.ResMeta, error) {
 // 		// ...
@@ -37,8 +37,8 @@
 //
 // 	dispatcher.Register(raw.Procedure("submit", Submit))
 //
-// Similarly, use the OnewayProcedure function to build registrants to register
-// against a Registry.
+// Similarly, use the OnewayProcedure function to build procedures to register
+// against a Router.
 //
 // 	func RunTask(reqMeta yarpc.ReqMeta, reqBody []byte) error {
 // 		// ...

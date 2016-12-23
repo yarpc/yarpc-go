@@ -25,11 +25,24 @@
 package main
 
 import (
+	"flag"
 	"path/filepath"
 	"strings"
 
 	"go.uber.org/thriftrw/plugin"
 	"go.uber.org/thriftrw/plugin/api"
+)
+
+var (
+	_context = flag.String("context-import-path",
+		"context",
+		"Import path at which Context is available")
+	_unaryHandlerWrapper = flag.String("unary-handler-wrapper",
+		"go.uber.org/yarpc/encoding/thrift.UnaryHandlerFunc",
+		"Function used to wrap generic Thrift unary function handlers into YARPC handlers")
+	_onewayHandlerWrapper = flag.String("oneway-handler-wrapper",
+		"go.uber.org/yarpc/encoding/thrift.OnewayHandlerFunc",
+		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
 )
 
 const serverTemplate = `
@@ -38,11 +51,10 @@ const serverTemplate = `
 
 <$pkgname := printf "%sserver" (lower .Service.Name)>
 package <$pkgname>
-
 <$yarpc     := import "go.uber.org/yarpc">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$transport := import "go.uber.org/yarpc/api/transport">
-<$context   := import "context">
+<$context   := import .ContextImportPath>
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
@@ -68,18 +80,24 @@ type Interface interface {
 //
 // 	handler := <.Service.Name>Handler{}
 // 	dispatcher.Register(<$pkgname>.New(handler))
-func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Registrant {
+func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Procedure {
 	h := handler{impl}
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
-		Methods: map[string]<$thrift>.UnaryHandler{
-			<range .Service.Functions><if not .OneWay>"<.ThriftName>": <$thrift>.UnaryHandlerFunc(h.<.Name>),<end>
-		<end>},
-		OnewayMethods: map[string]<$thrift>.OnewayHandler{
-			<range .Service.Functions><if .OneWay>"<.ThriftName>": <$thrift>.OnewayHandlerFunc(h.<.Name>),<end>
-		<end>},
+			Methods: map[string]<$thrift>.UnaryHandler{
+				<$unaryWrapperImport := .UnaryWrapperImport>
+				<$unaryWrapperFunc := .UnaryWrapperFunc>
+				<range .Service.Functions>
+					<if not .OneWay>"<.ThriftName>": <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),<end>
+			<end>},
+			OnewayMethods: map[string]<$thrift>.OnewayHandler{
+				<$onewayWrapperImport := .OnewayWrapperImport>
+				<$onewayWrapperFunc := .OnewayWrapperFunc>
+				<range .Service.Functions>
+					<if .OneWay>"<.ThriftName>": <import $onewayWrapperImport>.<$onewayWrapperFunc>(h.<.Name>),<end>
+			<end>},
 	}
-	return <$thrift>.BuildRegistrants(service, opts...)
+	return <$thrift>.BuildProcedures(service, opts...)
 }
 
 type handler struct{ impl Interface }
@@ -160,7 +178,7 @@ type Interface interface {
 			ctx <$context>.Context,
 			reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 				<.Name> <formatType .Type>,<end>
-		)<if .OneWay> (<$transport>.Ack, error)
+		)<if .OneWay> (<$yarpc>.Ack, error)
 		<else if .ReturnType> (<formatType .ReturnType>, <$yarpc>.CallResMeta, error)
 		<else> (<$yarpc>.CallResMeta, error)
 		<end>
@@ -196,7 +214,7 @@ func (c client) <.Name>(
 	ctx <$context>.Context,
 	reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
-<if .OneWay>) (<$transport>.Ack, error) {
+<if .OneWay>) (<$yarpc>.Ack, error) {
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 	return c.c.CallOneway(ctx, reqMeta, args)
 }
@@ -243,16 +261,31 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 			parentModule = req.Modules[parent.ModuleID]
 		}
 
+		unaryWrapperImport, unaryWrapperFunc := splitFunctionPath(*_unaryHandlerWrapper)
+		onewayWrapperImport, onewayWrapperFunc := splitFunctionPath(*_onewayHandlerWrapper)
+
 		templateData := struct {
 			Module       *api.Module
 			Service      *api.Service
 			Parent       *api.Service
 			ParentModule *api.Module
+
+			ContextImportPath   string
+			UnaryWrapperImport  string
+			UnaryWrapperFunc    string
+			OnewayWrapperImport string
+			OnewayWrapperFunc   string
 		}{
 			Module:       module,
 			Service:      service,
 			Parent:       parent,
 			ParentModule: parentModule,
+
+			ContextImportPath:   *_context,
+			UnaryWrapperImport:  unaryWrapperImport,
+			UnaryWrapperFunc:    unaryWrapperFunc,
+			OnewayWrapperImport: onewayWrapperImport,
+			OnewayWrapperFunc:   onewayWrapperFunc,
 		}
 
 		// kv.thrift => .../kv/yarpc
@@ -285,6 +318,12 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 	return &api.GenerateServiceResponse{Files: files}, nil
 }
 
+func splitFunctionPath(input string) (string, string) {
+	i := strings.LastIndex(input, ".")
+	return input[:i], input[i+1:]
+}
+
 func main() {
+	flag.Parse()
 	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: generator{}})
 }

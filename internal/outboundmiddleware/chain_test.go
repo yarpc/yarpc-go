@@ -49,7 +49,7 @@ func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport
 	return o.CallOneway(ctx, req)
 }
 
-var retryUnaryOutboundMiddleware middleware.UnaryOutboundMiddlewareFunc = func(
+var retryUnaryOutbound middleware.UnaryOutboundFunc = func(
 	ctx context.Context, req *transport.Request, o transport.UnaryOutbound) (*transport.Response, error) {
 	res, err := o.Call(ctx, req)
 	if err != nil {
@@ -82,8 +82,8 @@ func TestUnaryChain(t *testing.T) {
 
 	before := &countOutboundMiddleware{}
 	after := &countOutboundMiddleware{}
-	gotRes, err := middleware.ApplyUnaryOutboundMiddleware(
-		o, UnaryChain(before, retryUnaryOutboundMiddleware, after)).Call(ctx, req)
+	gotRes, err := middleware.ApplyUnaryOutbound(
+		o, UnaryChain(before, retryUnaryOutbound, after)).Call(ctx, req)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")
@@ -91,7 +91,7 @@ func TestUnaryChain(t *testing.T) {
 	assert.Equal(t, res, gotRes, "expected response to match")
 }
 
-var retryOnewayOutboundMiddleware middleware.OnewayOutboundMiddlewareFunc = func(
+var retryOnewayOutbound middleware.OnewayOutboundFunc = func(
 	ctx context.Context, req *transport.Request, o transport.OnewayOutbound) (transport.Ack, error) {
 	res, err := o.CallOneway(ctx, req)
 	if err != nil {
@@ -122,8 +122,8 @@ func TestOnewayChain(t *testing.T) {
 
 	before := &countOutboundMiddleware{}
 	after := &countOutboundMiddleware{}
-	gotRes, err := middleware.ApplyOnewayOutboundMiddleware(
-		o, OnewayChain(before, retryOnewayOutboundMiddleware, after)).CallOneway(ctx, req)
+	gotRes, err := middleware.ApplyOnewayOutbound(
+		o, OnewayChain(before, retryOnewayOutbound, after)).CallOneway(ctx, req)
 
 	assert.NoError(t, err, "expected success")
 	assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")

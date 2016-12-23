@@ -4,7 +4,30 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   **Breaking**: Start and Stop for Inbound and Outbound are now expected to
+    be idempotent.
+-   **Breaking**: Combine `ServiceProcedure` and `Registrant` into `Procedure`.
+-   **Breaking**: Rename `Registrar` to `RouteTable`.
+-   **Breaking**: Rename `Registry` to `Router`.
+-   **Breaking**: Rename `middleware.{Oneway,Unary}{Inbound,Outbound}Middleware`
+    to `middleware.{Oneway,Unary}{Inbound,Outbound}`
+-   **Breaking**: Changed `peer.List.Update` to accept a `peer.ListUpdates`
+    struct instead of a list of additions and removals
+-   **Breaking**: yarpc.NewDispatcher now returns a pointer to a
+    yarpc.Dispatcher. Previously, yarpc.Dispatcher was an interface, now a
+    concrete struct.
+
+    This change will allow us to extend the Dispatcher after the 1.0.0 release
+    without breaking tests depending on the rigidity of the Dispatcher
+    interface.
+-   **Breaking**: `Peer.StartRequest` and `Peer.EndRequest` no longer accept a
+    `dontNotify` argument.
+-   Added `yarpc.IsBadRequestError`, `yarpc.IsUnexpectedError` and
+    `yarpc.IsTimeoutError` functions.
+-   Added a `transport.BadRequestError` function to build errors which satisfy
+    `transport.IsBadRequestError`.
+-   Added a `transport.ValidateRequest` function to validate
+    `transport.Request`s.
 
 
 v1.0.0-rc3 (2016-12-09)
