@@ -25,19 +25,18 @@ package helloclient
 
 import (
 	"context"
-
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
+	"go.uber.org/yarpc/encoding/thrift"
 )
 
 // Interface is a client for the Hello service.
 type Interface interface {
 	Sink(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Snk *sink.SinkRequest,
+		opts ...yarpc.CallOption,
 	) (yarpc.Ack, error)
 }
 
@@ -61,9 +60,9 @@ type client struct{ c thrift.Client }
 
 func (c client) Sink(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Snk *sink.SinkRequest,
+	opts ...yarpc.CallOption,
 ) (yarpc.Ack, error) {
 	args := sink.Hello_Sink_Helper.Args(_Snk)
-	return c.c.CallOneway(ctx, reqMeta, args)
+	return c.c.CallOneway(ctx, args, opts...)
 }

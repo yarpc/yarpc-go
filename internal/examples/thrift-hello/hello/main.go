@@ -76,14 +76,16 @@ func call(client helloclient.Interface, message string) (*echo.EchoResponse, yar
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	resBody, resMeta, err := client.Echo(
+	var resHeaders yarpc.Headers
+	resBody, err := client.Echo(
 		ctx,
-		yarpc.NewReqMeta().Headers(yarpc.NewHeaders().With("from", "self")),
 		&echo.EchoRequest{Message: message, Count: 1},
+		yarpc.WithHeader("from", "self"),
+		yarpc.ResponseHeaders(&resHeaders),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return resBody, resMeta.Headers()
+	return resBody, resHeaders
 }

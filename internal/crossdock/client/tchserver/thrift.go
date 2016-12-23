@@ -42,13 +42,13 @@ func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	headers := yarpc.NewHeaders().With("hello", "thrift")
 	token := random.String(5)
 
-	resBody, resMeta, err := thriftCall(dispatcher, headers, token)
+	resBody, resHeaders, err := thriftCall(dispatcher, headers, token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders := internal.RemoveVariableHeaderKeys(resMeta.Headers())
+		resHeaders = internal.RemoveVariableHeaderKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 
@@ -59,18 +59,31 @@ func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	})
 }
 
-func thriftCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+func thriftCall(
+	dispatcher *yarpc.Dispatcher,
+	headers yarpc.Headers,
+	token string,
+) (string, yarpc.Headers, error) {
 	client := echoclient.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta().Headers(headers)
-	ping := &echo.Ping{Beep: token}
-
-	resBody, resMeta, err := client.Echo(ctx, reqMeta, ping)
-	if err != nil {
-		return "", nil, err
+	var (
+		opts       []yarpc.CallOption
+		resHeaders yarpc.Headers
+	)
+	for _, k := range headers.Keys() {
+		if v, ok := headers.Get(k); ok {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
 	}
-	return resBody.Boop, resMeta, err
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+	ping := &echo.Ping{Beep: token}
+	resBody, err := client.Echo(ctx, ping, opts...)
+	if err != nil {
+		return "", resHeaders, err
+	}
+	return resBody.Boop, resHeaders, err
 }
