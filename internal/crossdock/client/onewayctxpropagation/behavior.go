@@ -65,11 +65,10 @@ func Run(t crossdock.T) {
 // with the received body
 func newCallBackHandler() (raw.OnewayHandler, <-chan map[string]string) {
 	serverCalledBack := make(chan map[string]string)
-	handler := func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
+	return func(ctx context.Context, body []byte) error {
 		serverCalledBack <- extractBaggage(ctx)
 		return nil
-	}
-	return handler, serverCalledBack
+	}, serverCalledBack
 }
 
 func newContextWithBaggage(baggage map[string]string) context.Context {

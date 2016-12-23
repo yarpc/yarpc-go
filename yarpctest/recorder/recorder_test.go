@@ -189,8 +189,8 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 	})
 
 	serverDisp.Register(raw.Procedure("hello",
-		func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-			return append(body, []byte(", World")...), nil, nil
+		func(ctx context.Context, body []byte) ([]byte, error) {
+			return append(body, []byte(", World")...), nil
 		}))
 
 	require.NoError(t, serverDisp.Start())
