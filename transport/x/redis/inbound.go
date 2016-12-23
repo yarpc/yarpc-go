@@ -34,6 +34,10 @@ import (
 
 const transportName = "redis"
 
+const maxConnectRetries = 100
+
+var connectRetryDelay = 10 * time.Millisecond
+
 // Inbound is a redis inbound that reads from the given queueKey. This will
 // wait for an item in the queue or until the timout is reached before trying
 // to read again.
@@ -105,7 +109,14 @@ func (i *Inbound) start() error {
 		return errors.ErrNoRouter
 	}
 
-	err := i.client.Start()
+	var err error
+	for attempt := 0; attempt < maxConnectRetries; attempt++ {
+		err = i.client.Start()
+		if err == nil {
+			break
+		}
+		time.Sleep(connectRetryDelay)
+	}
 	if err != nil {
 		return err
 	}

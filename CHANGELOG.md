@@ -22,6 +22,8 @@ v1.0.0-dev (unreleased)
     interface.
 -   **Breaking**: `Peer.StartRequest` and `Peer.EndRequest` no longer accept a
     `dontNotify` argument.
+-   Added `yarpc.IsBadRequestError`, `yarpc.IsUnexpectedError` and
+    `yarpc.IsTimeoutError` functions.
 -   Added a `transport.BadRequestError` function to build errors which satisfy
     `transport.IsBadRequestError`.
 -   Added a `transport.ValidateRequest` function to validate

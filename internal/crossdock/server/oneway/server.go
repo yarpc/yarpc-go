@@ -21,7 +21,7 @@
 package oneway
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -41,7 +41,7 @@ func Start() {
 	httpTransport := http.NewTransport()
 	inbounds := []transport.Inbound{httpTransport.NewInbound(":8084")}
 
-	if redisIsExpectedRunning() {
+	if useRedis() {
 		rds := redis.NewInbound(
 			redis.NewRedis5Client("redis:6379"),
 			"yarpc/oneway",
@@ -64,7 +64,7 @@ func Start() {
 	dispatcher.Register(onewayserver.New(h))
 
 	if err := dispatcher.Start(); err != nil {
-		fmt.Println("error:", err.Error())
+		log.Println("oneway server dispatcher failed to load:", err.Error())
 	}
 }
 
@@ -74,12 +74,12 @@ func Stop() {
 		return
 	}
 	if err := dispatcher.Stop(); err != nil {
-		fmt.Println("failed to stop:", err.Error())
+		log.Println("oneway server dispatcher failed to stop:", err.Error())
 	}
 }
 
-// redisIsExpectedRunning checks to see if a redis server is expected to be
+// useRedis checks to see if a redis server is expected to be
 // available
-func redisIsExpectedRunning() bool {
+func useRedis() bool {
 	return os.Getenv("REDIS") == "enabled"
 }
