@@ -41,14 +41,13 @@ func Start() {
 	httpTransport := http.NewTransport()
 	inbounds := []transport.Inbound{httpTransport.NewInbound(":8084")}
 
-	if redisIsExpectedRunning() {
+	if useRedis() {
 		rds := redis.NewInbound(
 			redis.NewRedis5Client("redis:6379"),
 			"yarpc/oneway",
 			"yarpc/oneway/processing",
 			time.Second,
 		)
-		waitForRedis(rds)
 		inbounds = append(inbounds, rds)
 	}
 
@@ -79,19 +78,8 @@ func Stop() {
 	}
 }
 
-// redisIsExpectedRunning checks to see if a redis server is expected to be
+// useRedis checks to see if a redis server is expected to be
 // available
-func redisIsExpectedRunning() bool {
+func useRedis() bool {
 	return os.Getenv("REDIS") == "enabled"
-}
-
-func waitForRedis(in *redis.Inbound) {
-	for i := 5; i > 0; i-- {
-		if err := in.Start(); err != nil {
-			time.Sleep(time.Millisecond * 100)
-		} else {
-			return
-		}
-	}
-	log.Println("oneway server could not connect to redis")
 }
