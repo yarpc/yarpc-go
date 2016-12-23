@@ -54,18 +54,18 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) Get(ctx context.Context, reqMeta yarpc.ReqMeta, body *getRequest) (*getResponse, yarpc.ResMeta, error) {
+func (h *handler) Get(ctx context.Context, body *getRequest) (*getResponse, error) {
 	h.RLock()
 	result := &getResponse{Value: h.items[body.Key]}
 	h.RUnlock()
-	return result, nil, nil
+	return result, nil
 }
 
-func (h *handler) Set(ctx context.Context, reqMeta yarpc.ReqMeta, body *setRequest) (*setResponse, yarpc.ResMeta, error) {
+func (h *handler) Set(ctx context.Context, body *setRequest) (*setResponse, error) {
 	h.Lock()
 	h.items[body.Key] = body.Value
 	h.Unlock()
-	return &setResponse{}, nil, nil
+	return &setResponse{}, nil
 }
 
 func main() {

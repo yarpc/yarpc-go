@@ -50,8 +50,8 @@ func (o *onewayHandler) EchoRaw(ctx context.Context, body []byte) error {
 type jsonToken struct{ Token string }
 
 // EchoJSON implements the echo/json procedure.
-func (o *onewayHandler) EchoJSON(ctx context.Context, reqMeta yarpc.ReqMeta, token *jsonToken) error {
-	callBackAddr, _ := reqMeta.Headers().Get(callBackAddrHeader)
+func (o *onewayHandler) EchoJSON(ctx context.Context, token *jsonToken) error {
+	callBackAddr := yarpc.Header(ctx, callBackAddrHeader)
 	o.callHome(ctx, callBackAddr, []byte(token.Token), json.Encoding)
 	return nil
 }

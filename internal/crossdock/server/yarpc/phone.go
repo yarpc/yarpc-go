@@ -68,7 +68,7 @@ type PhoneResponse struct {
 }
 
 // Phone implements the phone procedure
-func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
+func Phone(ctx context.Context, body *PhoneRequest) (*PhoneResponse, error) {
 	var outbound transport.UnaryOutbound
 
 	httpTransport := http.NewTransport()
@@ -83,11 +83,11 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 		hostport := fmt.Sprintf("%s:%d", t.Host, t.Port)
 		outbound = tchannelTransport.NewSingleOutbound(hostport)
 	default:
-		return nil, nil, fmt.Errorf("unconfigured transport")
+		return nil, fmt.Errorf("unconfigured transport")
 	}
 
 	if err := outbound.Start(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer outbound.Stop()
 
@@ -97,7 +97,7 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 	}))
 	resBody := PhoneResponse{
 		Service:   "yarpc-test", // TODO use reqMeta.Service
-		Procedure: reqMeta.Procedure(),
+		Procedure: yarpc.Procedure(ctx),
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
@@ -108,8 +108,8 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 		body.Body,
 		&resBody.Body)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return &resBody, nil, nil
+	return &resBody, nil
 }
