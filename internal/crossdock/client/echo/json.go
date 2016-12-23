@@ -24,7 +24,6 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
@@ -52,12 +51,7 @@ func JSON(t crossdock.T) {
 
 	var response jsonEcho
 	token := random.String(5)
-	_, err := client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echo"),
-		&jsonEcho{Token: token},
-		&response,
-	)
+	err := client.Call(ctx, "echo", &jsonEcho{Token: token}, &response)
 	crossdock.Fatals(t).NoError(err, "call to echo failed: %v", err)
 	crossdock.Assert(t).Equal(token, response.Token, "server said: %v", response.Token)
 }

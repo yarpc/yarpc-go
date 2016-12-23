@@ -57,38 +57,16 @@ func (h handler) handleEcho(ctx context.Context, reqBody *echoReqBody) (*echoRes
 func (h handler) handleEchoEcho(ctx context.Context, reqBody *echoReqBody) (*echoResBody, error) {
 	h.assertBaggage(ctx)
 	var resBody echoResBody
-	_, err := h.client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echo"),
-		reqBody,
-		&resBody,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &resBody, nil
+	err := h.client.Call(ctx, "echo", reqBody, &resBody)
+	return &resBody, err
 }
 
 func (h handler) echo(ctx context.Context) error {
-	var resBody echoResBody
-	_, err := h.client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echo"),
-		&echoReqBody{},
-		&resBody,
-	)
-	return err
+	return h.client.Call(ctx, "echo", &echoReqBody{}, &echoResBody{})
 }
 
 func (h handler) echoEcho(ctx context.Context) error {
-	var resBody echoResBody
-	_, err := h.client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echoecho"),
-		&echoReqBody{},
-		&resBody,
-	)
-	return err
+	return h.client.Call(ctx, "echoecho", &echoReqBody{}, &echoResBody{})
 }
 
 func (h handler) createContextWithBaggage(tracer opentracing.Tracer) (context.Context, func()) {
