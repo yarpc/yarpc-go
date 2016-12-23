@@ -102,12 +102,8 @@ func Phone(ctx context.Context, body *PhoneRequest) (*PhoneResponse, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
-	_, err := client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure(body.Procedure),
-		body.Body,
-		&resBody.Body)
-	if err != nil {
+
+	if err := client.Call(ctx, body.Procedure, body.Body, &resBody.Body); err != nil {
 		return nil, err
 	}
 

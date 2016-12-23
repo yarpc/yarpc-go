@@ -190,9 +190,9 @@ func Run(t crossdock.T) {
 			defer cancel()
 
 			var resp js.RawMessage
-			_, err := jsonClient.Call(
+			err := jsonClient.Call(
 				ctx,
-				yarpc.NewReqMeta().Procedure("phone"),
+				"phone",
 				&server.PhoneRequest{
 					Service:   "ctxclient",
 					Procedure: procedure,
@@ -297,23 +297,27 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 	}
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	var reqHeaders yarpc.Headers
+	var (
+		opts            []yarpc.CallOption
+		phoneResHeaders yarpc.Headers
+	)
+
 	for _, k := range yarpc.HeaderNames(ctx) {
-		reqHeaders = reqHeaders.With(k, yarpc.Header(ctx, k))
+		opts = append(opts, yarpc.WithHeader(k, yarpc.Header(ctx, k)))
 	}
+	opts = append(opts, yarpc.ResponseHeaders(&phoneResHeaders))
 
 	var resp js.RawMessage
-	phoneResMeta, err := h.phoneClient.Call(
+	err := h.phoneClient.Call(
 		ctx,
-		yarpc.NewReqMeta().Procedure("phone").Headers(reqHeaders),
+		"phone",
 		&server.PhoneRequest{
 			Service:   "ctxclient",
 			Procedure: h.phoneCallTo,
 			Transport: h.phoneCallTransport,
 			Body:      &js.RawMessage{'{', '}'},
-		}, &resp)
+		}, &resp, opts...)
 
-	phoneResHeaders := phoneResMeta.Headers()
 	for _, k := range phoneResHeaders.Keys() {
 		if v, ok := phoneResHeaders.Get(k); ok {
 			yarpc.WriteResponseHeader(ctx, k, v)

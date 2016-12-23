@@ -24,11 +24,7 @@
 //
 // 	client := json.New(clientConfig)
 // 	var resBody GetValueResponse
-// 	resMeta, err := client.Call(
-// 		yarpc.NewReqMeta(ctx).Procedure("getValue"),
-// 		&GetValueRequest{...},
-// 		&resBody,
-// 	)
+// 	err := client.Call(ctx, "getValue", &GetValueRequest{...}, &resBody)
 //
 // To register a JSON procedure, define functions in the format,
 //
