@@ -49,13 +49,9 @@ func Run(t crossdock.T) {
 	client := raw.New(dispatcher.ClientConfig("oneway-server"))
 
 	// make call
+	ctx := newContextWithBaggage(baggage)
 	ack, err := client.CallOneway(
-		newContextWithBaggage(baggage),
-		yarpc.NewReqMeta().
-			Procedure("echo/raw").
-			Headers(yarpc.NewHeaders().
-				With("callBackAddr", callBackAddr)),
-		[]byte{})
+		ctx, "echo/raw", []byte{}, yarpc.WithHeader("callBackAddr", callBackAddr))
 
 	fatals.NoError(err, "call to oneway/raw failed: %v", err)
 	fatals.NotNil(ack, "ack is nil")

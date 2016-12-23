@@ -138,15 +138,21 @@ func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	_, res, err := c.c.Call(
-		ctx,
-		yarpc.NewReqMeta().Headers(h).Procedure("echo/raw"),
-		[]byte("hello"))
+	var (
+		opts       []yarpc.CallOption
+		resHeaders yarpc.Headers
+	)
+	for _, k := range h.Keys() {
+		if v, ok := h.Get(k); ok {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
+	}
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 
-	if err != nil {
+	if _, err := c.c.Call(ctx, "echo/raw", []byte("hello"), opts...); err != nil {
 		return yarpc.Headers{}, err
 	}
-	return res.Headers(), nil
+	return resHeaders, nil
 }
 
 type jsonCaller struct{ c json.Client }
