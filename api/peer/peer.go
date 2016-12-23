@@ -36,6 +36,8 @@ const (
 	Available
 )
 
+//go:generate stringer -type=ConnectionStatus
+
 // Status holds all the information about a peer's state that would be useful to Subscribers
 type Status struct {
 	// Current number of pending requests on this peer
