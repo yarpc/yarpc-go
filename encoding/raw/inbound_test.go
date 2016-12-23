@@ -37,9 +37,9 @@ import (
 func TestRawHandler(t *testing.T) {
 	// handler to use for test cases where the handler should not be called
 	handlerNotCalled :=
-		func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-			t.Errorf("unexpected call handle(%v, %v)", reqMeta, body)
-			return nil, nil, fmt.Errorf("unexpected call handle(%v, %v)", reqMeta, body)
+		func(ctx context.Context, body []byte) ([]byte, error) {
+			t.Errorf("unexpected call handle(%v)", body)
+			return nil, fmt.Errorf("unexpected call handle(%v)", body)
 		}
 
 	tests := []struct {
@@ -58,10 +58,10 @@ func TestRawHandler(t *testing.T) {
 				{1, 2, 3},
 				{4, 5, 6},
 			},
-			handler: func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-				assert.Equal(t, "foo", reqMeta.Procedure())
+			handler: func(ctx context.Context, body []byte) ([]byte, error) {
+				assert.Equal(t, "foo", yarpc.Procedure(ctx))
 				assert.Equal(t, []byte{1, 2, 3, 4, 5, 6}, body)
-				return []byte("hello"), nil, nil
+				return []byte("hello"), nil
 			},
 			wantBody: []byte("hello"),
 		},
@@ -79,18 +79,18 @@ func TestRawHandler(t *testing.T) {
 		{
 			procedure:  "baz",
 			bodyChunks: [][]byte{},
-			handler: func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
+			handler: func(ctx context.Context, body []byte) ([]byte, error) {
 				assert.Equal(t, []byte{}, body)
-				return nil, nil, fmt.Errorf("great sadness")
+				return nil, fmt.Errorf("great sadness")
 			},
 			wantErr: "great sadness",
 		},
 		{
 			procedure:  "responseHeaders",
 			bodyChunks: [][]byte{},
-			handler: func(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-				resMeta := yarpc.NewResMeta().Headers(yarpc.NewHeaders().With("hello", "world"))
-				return []byte{}, resMeta, nil
+			handler: func(ctx context.Context, body []byte) ([]byte, error) {
+				yarpc.WriteResponseHeader(ctx, "hello", "world")
+				return []byte{}, nil
 			},
 			wantHeaders: transport.NewHeaders().With("hello", "world"),
 		},

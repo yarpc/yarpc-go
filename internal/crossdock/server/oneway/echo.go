@@ -41,8 +41,9 @@ type onewayHandler struct {
 }
 
 // EchoRaw implements the echo/raw procedure.
-func (o *onewayHandler) EchoRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) error {
-	o.callHome(ctx, reqMeta, body, raw.Encoding)
+func (o *onewayHandler) EchoRaw(ctx context.Context, body []byte) error {
+	callBackAddr := yarpc.Header(ctx, callBackAddrHeader)
+	o.callHome(ctx, callBackAddr, body, raw.Encoding)
 	return nil
 }
 
@@ -50,24 +51,25 @@ type jsonToken struct{ Token string }
 
 // EchoJSON implements the echo/json procedure.
 func (o *onewayHandler) EchoJSON(ctx context.Context, reqMeta yarpc.ReqMeta, token *jsonToken) error {
-	o.callHome(ctx, reqMeta, []byte(token.Token), json.Encoding)
+	callBackAddr, _ := reqMeta.Headers().Get(callBackAddrHeader)
+	o.callHome(ctx, callBackAddr, []byte(token.Token), json.Encoding)
 	return nil
 }
 
 // Echo implements the Oneway::Echo procedure.
 func (o *onewayHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, Token *string) error {
-	o.callHome(ctx, reqMeta, []byte(*Token), thrift.Encoding)
+	callBackAddr, _ := reqMeta.Headers().Get(callBackAddrHeader)
+	o.callHome(ctx, callBackAddr, []byte(*Token), thrift.Encoding)
 	return nil
 }
 
 // callHome extracts the call back address from headers, and makes a raw HTTP
 // request using the same context and body
-func (o *onewayHandler) callHome(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte, encoding transport.Encoding) {
+func (o *onewayHandler) callHome(ctx context.Context, callBackAddr string, body []byte, encoding transport.Encoding) {
 	// reduce the chance of a race condition
 	time.Sleep(time.Millisecond * 100)
 
-	callBackAddr, exists := reqMeta.Headers().Get(callBackAddrHeader)
-	if !exists {
+	if callBackAddr == "" {
 		panic("could not find callBackAddr in headers")
 	}
 
