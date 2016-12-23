@@ -26,12 +26,12 @@ type simpleResponse struct {
 }
 
 func TestHandleStructSuccess(t *testing.T) {
-	h := func(ctx context.Context, r yarpc.ReqMeta, body *simpleRequest) (*simpleResponse, yarpc.ResMeta, error) {
-		assert.Equal(t, "simpleCall", r.Procedure())
+	h := func(ctx context.Context, body *simpleRequest) (*simpleResponse, error) {
+		assert.Equal(t, "simpleCall", yarpc.Procedure(ctx))
 		assert.Equal(t, "foo", body.Name)
 		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
 
-		return &simpleResponse{Success: true}, nil, nil
+		return &simpleResponse{Success: true}, nil
 	}
 
 	handler := jsonHandler{
@@ -54,11 +54,11 @@ func TestHandleStructSuccess(t *testing.T) {
 }
 
 func TestHandleMapSuccess(t *testing.T) {
-	h := func(ctx context.Context, _ yarpc.ReqMeta, body map[string]interface{}) (map[string]string, yarpc.ResMeta, error) {
+	h := func(ctx context.Context, body map[string]interface{}) (map[string]string, error) {
 		assert.Equal(t, 42.0, body["foo"])
 		assert.Equal(t, []interface{}{"a", "b", "c"}, body["bar"])
 
-		return map[string]string{"success": "true"}, nil, nil
+		return map[string]string{"success": "true"}, nil
 	}
 
 	handler := jsonHandler{
@@ -80,8 +80,8 @@ func TestHandleMapSuccess(t *testing.T) {
 }
 
 func TestHandleInterfaceEmptySuccess(t *testing.T) {
-	h := func(ctx context.Context, _ yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
-		return body, nil, nil
+	h := func(ctx context.Context, body interface{}) (interface{}, error) {
+		return body, nil
 	}
 
 	handler := jsonHandler{reader: ifaceEmptyReader{}, handler: reflect.ValueOf(h)}
@@ -98,9 +98,9 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 }
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
-	h := func(ctx context.Context, r yarpc.ReqMeta, _ *simpleRequest) (*simpleResponse, yarpc.ResMeta, error) {
-		resMeta := yarpc.NewResMeta().Headers(yarpc.NewHeaders().With("foo", "bar"))
-		return &simpleResponse{Success: true}, resMeta, nil
+	h := func(ctx context.Context, _ *simpleRequest) (*simpleResponse, error) {
+		yarpc.WriteResponseHeader(ctx, "foo", "bar")
+		return &simpleResponse{Success: true}, nil
 	}
 
 	handler := jsonHandler{
