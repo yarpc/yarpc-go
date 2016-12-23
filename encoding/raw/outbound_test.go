@@ -107,11 +107,19 @@ func TestCall(t *testing.T) {
 				Headers: transport.Headers(tt.wantHeaders),
 			}, nil)
 
-		resBody, res, err := client.Call(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body)
+		var (
+			opts       []yarpc.CallOption
+			resHeaders yarpc.Headers
+		)
 
+		for _, k := range tt.headers.Keys() {
+			if v, ok := tt.headers.Get(k); ok {
+				opts = append(opts, yarpc.WithHeader(k, v))
+			}
+		}
+		opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+		resBody, err := client.Call(ctx, tt.procedure, tt.body, opts...)
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
 				assert.Equal(t, err.Error(), tt.wantErr)
@@ -119,7 +127,7 @@ func TestCall(t *testing.T) {
 		} else {
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.want, resBody)
-				assert.Equal(t, tt.wantHeaders, res.Headers())
+				assert.Equal(t, tt.wantHeaders, resHeaders)
 			}
 		}
 	}
@@ -145,8 +153,7 @@ func TestCallOneway(t *testing.T) {
 		headers   yarpc.Headers
 		body      []byte
 
-		wantErr     string
-		wantHeaders yarpc.Headers
+		wantErr string
 	}{
 		{
 			procedure: "foo",
@@ -178,11 +185,14 @@ func TestCallOneway(t *testing.T) {
 				}),
 		).Return(&successAck{}, nil)
 
-		ack, err := client.CallOneway(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body)
+		var opts []yarpc.CallOption
+		for _, k := range tt.headers.Keys() {
+			if v, ok := tt.headers.Get(k); ok {
+				opts = append(opts, yarpc.WithHeader(k, v))
+			}
+		}
 
+		ack, err := client.CallOneway(ctx, tt.procedure, tt.body, opts...)
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
 				assert.Equal(t, err.Error(), tt.wantErr)
@@ -221,10 +231,6 @@ func TestCallOnewayFailure(t *testing.T) {
 			}),
 	).Return(nil, errors.New("some error"))
 
-	_, err := client.CallOneway(
-		ctx,
-		yarpc.NewReqMeta().Procedure(procedure),
-		body)
-
+	_, err := client.CallOneway(ctx, procedure, body)
 	assert.Error(t, err)
 }

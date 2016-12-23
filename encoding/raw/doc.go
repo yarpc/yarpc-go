@@ -23,10 +23,7 @@
 // To make outbound requests,
 //
 // 	client := raw.New(clientConfig)
-// 	resBody, resMeta, err := client.Call(
-// 		yarpc.NewReqMeta(ctx).Procedure("submit"),
-// 		[]byte{1, 2, 3},
-// 	)
+// 	resBody, err := client.Call(ctx, "submit", []byte{1, 2, 3})
 //
 // Use the Procedure function to build procedures to register against a
 // Router.
