@@ -25,7 +25,6 @@ package peertest
 
 import (
 	context "context"
-
 	gomock "github.com/golang/mock/gomock"
 	peer "go.uber.org/yarpc/api/peer"
 	transport "go.uber.org/yarpc/api/transport"
