@@ -1,0 +1,12 @@
+vendor
+node_modules
+*.o
+*.a
+*.so
+*.exe
+*.prof
+/cover
+/cover.html
+/cover.out
+/TAGS
+/.tmp

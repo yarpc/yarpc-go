@@ -114,6 +114,14 @@ crossdock-fresh: install
 	docker-compose build
 	docker-compose run crossdock
 
+.PHONY: docker-build
+docker-build:
+	docker build -t yarpc_go .
+
+.PHONY: docker-test
+docker-test: docker-build
+	docker run yarpc_go make test
+
 .PHONY: test_ci
 test_ci: verify_version
 	./scripts/cover.sh $(shell go list $(PACKAGES))
