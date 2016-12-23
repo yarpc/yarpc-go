@@ -113,15 +113,15 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 		}
 	}
 
-	p, err := a.getOrCreatePeer(hppid)
+	p := a.getOrCreatePeer(hppid)
 	p.Subscribe(sub)
-	return p, err
+	return p, nil
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
 func (a *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
 	if p, ok := a.peers[pid.Identifier()]; ok {
-		return pl
+		return p
 	}
 
 	p := hostport.NewPeer(pid, a)
