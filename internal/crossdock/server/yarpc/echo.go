@@ -36,8 +36,11 @@ func EchoRaw(ctx context.Context, body []byte) ([]byte, error) {
 }
 
 // EchoJSON implements the echo procedure.
-func EchoJSON(ctx context.Context, reqMeta yarpc.ReqMeta, body map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
-	return body, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
+func EchoJSON(ctx context.Context, body map[string]interface{}) (map[string]interface{}, error) {
+	for _, k := range yarpc.HeaderNames(ctx) {
+		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	}
+	return body, nil
 }
 
 // EchoThrift implements the Thrift Echo service.

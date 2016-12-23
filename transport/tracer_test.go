@@ -49,12 +49,12 @@ func (h handler) register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(json.Procedure("echoecho", h.handleEchoEcho))
 }
 
-func (h handler) handleEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+func (h handler) handleEcho(ctx context.Context, reqBody *echoReqBody) (*echoResBody, error) {
 	h.assertBaggage(ctx)
-	return &echoResBody{}, nil, nil
+	return &echoResBody{}, nil
 }
 
-func (h handler) handleEchoEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+func (h handler) handleEchoEcho(ctx context.Context, reqBody *echoReqBody) (*echoResBody, error) {
 	h.assertBaggage(ctx)
 	var resBody echoResBody
 	_, err := h.client.Call(
@@ -64,9 +64,9 @@ func (h handler) handleEchoEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqB
 		&resBody,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return &resBody, nil, nil
+	return &resBody, nil
 }
 
 func (h handler) echo(ctx context.Context) error {

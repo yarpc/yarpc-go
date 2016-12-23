@@ -24,8 +24,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"go.uber.org/yarpc"
 )
 
 // SleepRaw responds to raw requests over any transport by sleeping for one
@@ -37,9 +35,9 @@ func SleepRaw(ctx context.Context, body []byte) ([]byte, error) {
 
 // Sleep responds to json requests over any transport by sleeping for one
 // second.
-func Sleep(ctx context.Context, reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+func Sleep(ctx context.Context, body interface{}) (interface{}, error) {
 	time.Sleep(1 * time.Second)
-	return nil, nil, nil
+	return nil, nil
 }
 
 // WaitForTimeoutRaw waits after the context deadline then returns the context
