@@ -18,11 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package internal
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+)
 
-// Ack represents an acknowledgement from a oneway request.
-type Ack interface {
-	fmt.Stringer
+var (
+	// Must starts with [a-z].
+	// Can contain [a-z] and 0-9] with non-consecutive dashes.
+	validNameRegex = regexp.MustCompile("^[a-z]+([a-z0-9]|[^-]-)*[^-]$")
+
+	// We disallow UUIDs explicitly (they would be accepted by validNameRegex alone)
+	uuidRegex = regexp.MustCompile("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")
+)
+
+// ValidateServiceName returns an error if the given name is not a valid
+// service name.
+func ValidateServiceName(name string) error {
+	if !validNameRegex.MatchString(name) {
+		return fmt.Errorf("service name must begin with a letter and consist only of dash-delimited lower-case ASCII alphanumeric words")
+	}
+	if uuidRegex.MatchString(name) {
+		return fmt.Errorf("service name must not contain a UUID")
+	}
+	return nil
 }

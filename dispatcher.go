@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
@@ -72,7 +73,10 @@ type InboundMiddleware struct {
 // NewDispatcher builds a new Dispatcher using the specified Config.
 func NewDispatcher(cfg Config) *Dispatcher {
 	if cfg.Name == "" {
-		panic("a service name is required")
+		panic("yarpc.NewDispatcher expects a service name")
+	}
+	if err := internal.ValidateServiceName(cfg.Name); err != nil {
+		panic("yarpc.NewDispatcher expects a valid service name: %s" + err.Error())
 	}
 
 	return &Dispatcher{

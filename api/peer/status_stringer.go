@@ -18,11 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package peer
 
 import "fmt"
 
-// Ack represents an acknowledgement from a oneway request.
-type Ack interface {
-	fmt.Stringer
+func (s Status) String() string {
+	return fmt.Sprintf("{%v Pending:%d}", s.ConnectionStatus, s.PendingRequestCount)
 }
