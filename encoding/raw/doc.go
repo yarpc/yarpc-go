@@ -28,7 +28,7 @@
 // Use the Procedure function to build procedures to register against a
 // Router.
 //
-// 	func Submit(reqMeta yarpc.ReqMeta, reqBody []byte) ([]byte, yarpc.ResMeta, error) {
+// 	func Submit(ctx context.Context, reqBody []byte) ([]byte, error) {
 // 		// ...
 // 	}
 //
@@ -37,7 +37,7 @@
 // Similarly, use the OnewayProcedure function to build procedures to register
 // against a Router.
 //
-// 	func RunTask(reqMeta yarpc.ReqMeta, reqBody []byte) error {
+// 	func RunTask(ctx context.Context, reqBody []byte) error {
 // 		// ...
 // 	}
 //
