@@ -92,8 +92,8 @@ script:
       set -e
       exit $code
       ;;
-  set +e
   esac
+  set +e
 
 after_success:
 - |
