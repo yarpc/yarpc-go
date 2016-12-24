@@ -37,7 +37,11 @@ $(_GENERATE_DEPS_DIR):
 	mkdir $(_GENERATE_DEPS_DIR)
 
 # Full paths to executables needed for 'make generate'
-_GENERATE_DEPS_EXECUTABLES =
+_GENERATE_DEPS_EXECUTABLES = $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc
+
+# Special-case for local executables
+$(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go $(_GENERATE_DEPS_DIR)
+	go build -o $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
 
 define generatedeprule
 _GENERATE_DEPS_EXECUTABLES += $(_GENERATE_DEPS_DIR)/$(shell basename $1)
@@ -56,7 +60,6 @@ build:
 
 .PHONY: generate
 generate: $(_GENERATE_DEPS_EXECUTABLES)
-	go install ./encoding/thrift/thriftrw-plugin-yarpc
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH go generate $(PACKAGES)
 	./scripts/updateLicenses.sh
 
