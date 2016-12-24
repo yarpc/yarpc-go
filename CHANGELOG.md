@@ -4,6 +4,49 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
+-   **Breaking**: Removed the `yarpc.ReqMeta` and `yarpc.ResMeta` types. To
+    migrate your handlers, simply drop the argument and the return value from
+    your handler definition.
+
+    Before:
+
+    ```go
+    func (h *myHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, ...) (..., yarpc.ResMeta, error) {
+        // ...
+    }
+    ```
+
+    After:
+
+    ```go
+    func (h *myHandler) Handle(ctx context.Context, ...) (..., error) {
+        // ...
+    }
+    ```
+
+    To access information previously available in the `yarpc.ReqMeta`, use the
+    `context.Context` accessors provided in the `yarpc` package. To write
+    response headers, use `yarpc.WriteResponseHeader`.
+
+-   **Breaking**: Removed the `yarpc.CallReqMeta` and `yarpc.CallResMeta`
+    types. To migrate your call sites, drop the argument and remove the return
+    value.
+
+    Before:
+
+    ```go
+    res, resMeta, err := client.Call(ctx, reqMeta, ...)
+    ```
+
+    After:
+
+    ```go
+    res, err := client.Call(ctx, ...)
+    ```
+
+    Use `yarpc.CallOption`s to specify per-request options and
+    `yarpc.ResponseHeaders` to receive response headers for the call.
+
 -   **Breaking**: Start and Stop for Inbound and Outbound are now expected to
     be idempotent.
 -   **Breaking**: Combine `ServiceProcedure` and `Registrant` into `Procedure`.
