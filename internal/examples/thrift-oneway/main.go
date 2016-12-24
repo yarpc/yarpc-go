@@ -25,9 +25,9 @@ import (
 	"log"
 	"time"
 
-	"go.uber.org/yarpc/internal/examples/oneway/sink"
-	"go.uber.org/yarpc/internal/examples/oneway/sink/yarpc/helloclient"
-	"go.uber.org/yarpc/internal/examples/oneway/sink/yarpc/helloserver"
+	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
+	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/yarpc/helloclient"
+	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/yarpc/helloserver"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"

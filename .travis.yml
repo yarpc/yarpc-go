@@ -83,8 +83,14 @@ script:
       travis_retry goveralls -coverprofile=cover.out -service=travis-ci || true
       ;;
     crossdock)
-      make crossdock
+      # break out of "set -e" to manage exiting explicitly.
+      # run crossdock then capture the exit code,
+      # output the logs then finally exit with the captured exit code.
+      set +e
+      make crossdock; code=$?
       docker-compose logs
+      set -e
+      exit $code
       ;;
   esac
   set +e
