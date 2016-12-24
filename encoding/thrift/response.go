@@ -20,16 +20,11 @@
 
 package thrift
 
-import (
-	"go.uber.org/yarpc"
-
-	"go.uber.org/thriftrw/envelope"
-)
+import "go.uber.org/thriftrw/envelope"
 
 // Response contains the raw response from a generated Thrift handler.
 type Response struct {
 	Body envelope.Enveloper
-	Meta yarpc.ResMeta
 
 	IsApplicationError bool
 }

@@ -39,22 +39,22 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) GetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string) (string, yarpc.ResMeta, error) {
+func (h *handler) GetValue(ctx context.Context, key *string) (string, error) {
 	h.RLock()
 	defer h.RUnlock()
 
 	if value, ok := h.items[*key]; ok {
-		return value, nil, nil
+		return value, nil
 	}
 
-	return "", nil, &kv.ResourceDoesNotExist{Key: *key}
+	return "", &kv.ResourceDoesNotExist{Key: *key}
 }
 
-func (h *handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string, value *string) (yarpc.ResMeta, error) {
+func (h *handler) SetValue(ctx context.Context, key *string, value *string) error {
 	h.Lock()
 	h.items[*key] = *value
 	h.Unlock()
-	return nil, nil
+	return nil
 }
 
 func main() {

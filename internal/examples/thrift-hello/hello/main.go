@@ -66,10 +66,12 @@ func main() {
 
 type helloHandler struct{}
 
-func (h helloHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, e *echo.EchoRequest) (*echo.EchoResponse, yarpc.ResMeta, error) {
-	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1},
-		yarpc.NewResMeta().Headers(reqMeta.Headers()),
-		nil
+func (h helloHandler) Echo(ctx context.Context, e *echo.EchoRequest) (*echo.EchoResponse, error) {
+	for _, k := range yarpc.HeaderNames(ctx) {
+		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	}
+
+	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1}, nil
 }
 
 func call(client helloclient.Interface, message string) (*echo.EchoResponse, yarpc.Headers) {

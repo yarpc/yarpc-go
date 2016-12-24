@@ -29,21 +29,18 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the SecondService service.
 type Interface interface {
 	BlahBlah(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
-	) (yarpc.ResMeta, error)
+	) error
 
 	SecondtestString(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *string,
-	) (string, yarpc.ResMeta, error)
+	) (string, error)
 }
 
 // New prepares an implementation of the SecondService service for
@@ -68,17 +65,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) BlahBlah(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) BlahBlah(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.SecondService_BlahBlah_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	resMeta, err := h.impl.BlahBlah(ctx, reqMeta)
+	err := h.impl.BlahBlah(ctx)
 
 	hadError := err != nil
 	result, err := gauntlet.SecondService_BlahBlah_Helper.WrapResponse(err)
@@ -86,23 +79,18 @@ func (h handler) BlahBlah(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) SecondtestString(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) SecondtestString(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.SecondService_SecondtestString_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.SecondtestString(ctx, reqMeta, args.Thing)
+	success, err := h.impl.SecondtestString(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.SecondService_SecondtestString_Helper.WrapResponse(success, err)
@@ -110,7 +98,6 @@ func (h handler) SecondtestString(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err

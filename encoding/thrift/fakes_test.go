@@ -20,15 +20,7 @@
 
 package thrift
 
-import (
-	"fmt"
-	"reflect"
-
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-
-	"go.uber.org/thriftrw/wire"
-)
+import "go.uber.org/thriftrw/wire"
 
 type fakeEnveloper wire.EnvelopeType
 
@@ -42,40 +34,4 @@ func (e fakeEnveloper) EnvelopeType() wire.EnvelopeType {
 
 func (fakeEnveloper) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{}), nil
-}
-
-type fakeReqMeta struct {
-	caller    string
-	service   string
-	procedure string
-	encoding  transport.Encoding
-	headers   yarpc.Headers
-}
-
-func (f fakeReqMeta) Matches(x interface{}) bool {
-	reqMeta, ok := x.(yarpc.ReqMeta)
-	if !ok {
-		return false
-	}
-
-	if f.caller != reqMeta.Caller() {
-		return false
-	}
-	if f.service != reqMeta.Service() {
-		return false
-	}
-	if f.procedure != reqMeta.Procedure() {
-		return false
-	}
-	if f.encoding != reqMeta.Encoding() {
-		return false
-	}
-	if !reflect.DeepEqual(f.headers, reqMeta.Headers()) {
-		return false
-	}
-	return true
-}
-
-func (f fakeReqMeta) String() string {
-	return fmt.Sprintf("%#v", f)
 }

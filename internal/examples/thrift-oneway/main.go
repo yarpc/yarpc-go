@@ -88,7 +88,7 @@ func main() {
 type helloHandler struct{}
 
 // Sink is our server-side handler implementation
-func (h *helloHandler) Sink(ctx context.Context, reqMeta yarpc.ReqMeta, snk *sink.SinkRequest) error {
+func (h *helloHandler) Sink(ctx context.Context, snk *sink.SinkRequest) error {
 	log.Println("received message:", snk.Message)
 	return nil
 }

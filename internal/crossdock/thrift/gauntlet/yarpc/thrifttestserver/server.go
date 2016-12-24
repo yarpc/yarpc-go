@@ -29,141 +29,119 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the ThriftTest service.
 type Interface interface {
 	TestBinary(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing []byte,
-	) ([]byte, yarpc.ResMeta, error)
+	) ([]byte, error)
 
 	TestByte(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *int8,
-	) (int8, yarpc.ResMeta, error)
+	) (int8, error)
 
 	TestDouble(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *float64,
-	) (float64, yarpc.ResMeta, error)
+	) (float64, error)
 
 	TestEnum(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *gauntlet.Numberz,
-	) (gauntlet.Numberz, yarpc.ResMeta, error)
+	) (gauntlet.Numberz, error)
 
 	TestException(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Arg *string,
-	) (yarpc.ResMeta, error)
+	) error
 
 	TestI32(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *int32,
-	) (int32, yarpc.ResMeta, error)
+	) (int32, error)
 
 	TestI64(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *int64,
-	) (int64, yarpc.ResMeta, error)
+	) (int64, error)
 
 	TestInsanity(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Argument *gauntlet.Insanity,
-	) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, yarpc.ResMeta, error)
+	) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, error)
 
 	TestList(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing []int32,
-	) ([]int32, yarpc.ResMeta, error)
+	) ([]int32, error)
 
 	TestMap(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing map[int32]int32,
-	) (map[int32]int32, yarpc.ResMeta, error)
+	) (map[int32]int32, error)
 
 	TestMapMap(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Hello *int32,
-	) (map[int32]map[int32]int32, yarpc.ResMeta, error)
+	) (map[int32]map[int32]int32, error)
 
 	TestMulti(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Arg0 *int8,
 		Arg1 *int32,
 		Arg2 *int64,
 		Arg3 map[int16]string,
 		Arg4 *gauntlet.Numberz,
 		Arg5 *gauntlet.UserId,
-	) (*gauntlet.Xtruct, yarpc.ResMeta, error)
+	) (*gauntlet.Xtruct, error)
 
 	TestMultiException(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Arg0 *string,
 		Arg1 *string,
-	) (*gauntlet.Xtruct, yarpc.ResMeta, error)
+	) (*gauntlet.Xtruct, error)
 
 	TestNest(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *gauntlet.Xtruct2,
-	) (*gauntlet.Xtruct2, yarpc.ResMeta, error)
+	) (*gauntlet.Xtruct2, error)
 
 	TestOneway(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		SecondsToSleep *int32,
 	) error
 
 	TestSet(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing map[int32]struct{},
-	) (map[int32]struct{}, yarpc.ResMeta, error)
+	) (map[int32]struct{}, error)
 
 	TestString(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *string,
-	) (string, yarpc.ResMeta, error)
+	) (string, error)
 
 	TestStringMap(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing map[string]string,
-	) (map[string]string, yarpc.ResMeta, error)
+	) (map[string]string, error)
 
 	TestStruct(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *gauntlet.Xtruct,
-	) (*gauntlet.Xtruct, yarpc.ResMeta, error)
+	) (*gauntlet.Xtruct, error)
 
 	TestTypedef(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Thing *gauntlet.UserId,
-	) (gauntlet.UserId, yarpc.ResMeta, error)
+	) (gauntlet.UserId, error)
 
 	TestVoid(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
-	) (yarpc.ResMeta, error)
+	) error
 }
 
 // New prepares an implementation of the ThriftTest service for
@@ -227,17 +205,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) TestBinary(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestBinary(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestBinary_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestBinary(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestBinary(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestBinary_Helper.WrapResponse(success, err)
@@ -245,23 +219,18 @@ func (h handler) TestBinary(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestByte(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestByte(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestByte_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestByte(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestByte(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestByte_Helper.WrapResponse(success, err)
@@ -269,23 +238,18 @@ func (h handler) TestByte(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestDouble(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestDouble(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestDouble_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestDouble(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestDouble(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestDouble_Helper.WrapResponse(success, err)
@@ -293,23 +257,18 @@ func (h handler) TestDouble(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestEnum(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestEnum(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestEnum_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestEnum(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestEnum(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestEnum_Helper.WrapResponse(success, err)
@@ -317,23 +276,18 @@ func (h handler) TestEnum(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestException(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestException(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestException_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	resMeta, err := h.impl.TestException(ctx, reqMeta, args.Arg)
+	err := h.impl.TestException(ctx, args.Arg)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestException_Helper.WrapResponse(err)
@@ -341,23 +295,18 @@ func (h handler) TestException(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestI32(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestI32(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestI32_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestI32(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestI32(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestI32_Helper.WrapResponse(success, err)
@@ -365,23 +314,18 @@ func (h handler) TestI32(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestI64(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestI64(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestI64_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestI64(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestI64(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestI64_Helper.WrapResponse(success, err)
@@ -389,23 +333,18 @@ func (h handler) TestI64(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestInsanity(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestInsanity(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestInsanity_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestInsanity(ctx, reqMeta, args.Argument)
+	success, err := h.impl.TestInsanity(ctx, args.Argument)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestInsanity_Helper.WrapResponse(success, err)
@@ -413,23 +352,18 @@ func (h handler) TestInsanity(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestList(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestList(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestList_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestList(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestList(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestList_Helper.WrapResponse(success, err)
@@ -437,23 +371,18 @@ func (h handler) TestList(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestMap(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestMap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMap_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestMap(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestMap(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestMap_Helper.WrapResponse(success, err)
@@ -461,23 +390,18 @@ func (h handler) TestMap(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestMapMap(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestMapMap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMapMap_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestMapMap(ctx, reqMeta, args.Hello)
+	success, err := h.impl.TestMapMap(ctx, args.Hello)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestMapMap_Helper.WrapResponse(success, err)
@@ -485,23 +409,18 @@ func (h handler) TestMapMap(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestMulti(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestMulti(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMulti_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestMulti(ctx, reqMeta, args.Arg0, args.Arg1, args.Arg2, args.Arg3, args.Arg4, args.Arg5)
+	success, err := h.impl.TestMulti(ctx, args.Arg0, args.Arg1, args.Arg2, args.Arg3, args.Arg4, args.Arg5)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestMulti_Helper.WrapResponse(success, err)
@@ -509,23 +428,18 @@ func (h handler) TestMulti(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestMultiException(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestMultiException(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestMultiException_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestMultiException(ctx, reqMeta, args.Arg0, args.Arg1)
+	success, err := h.impl.TestMultiException(ctx, args.Arg0, args.Arg1)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestMultiException_Helper.WrapResponse(success, err)
@@ -533,23 +447,18 @@ func (h handler) TestMultiException(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestNest(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestNest(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestNest_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestNest(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestNest(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestNest_Helper.WrapResponse(success, err)
@@ -557,36 +466,27 @@ func (h handler) TestNest(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestOneway(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) error {
+func (h handler) TestOneway(ctx context.Context, body wire.Value) error {
 	var args gauntlet.ThriftTest_TestOneway_Args
 	if err := args.FromWire(body); err != nil {
 		return err
 	}
 
-	return h.impl.TestOneway(ctx, reqMeta, args.SecondsToSleep)
+	return h.impl.TestOneway(ctx, args.SecondsToSleep)
 }
 
-func (h handler) TestSet(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestSet(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestSet_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestSet(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestSet(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestSet_Helper.WrapResponse(success, err)
@@ -594,23 +494,18 @@ func (h handler) TestSet(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestString(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestString(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestString_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestString(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestString(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestString_Helper.WrapResponse(success, err)
@@ -618,23 +513,18 @@ func (h handler) TestString(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestStringMap(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestStringMap(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestStringMap_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestStringMap(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestStringMap(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestStringMap_Helper.WrapResponse(success, err)
@@ -642,23 +532,18 @@ func (h handler) TestStringMap(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestStruct(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestStruct(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestStruct_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestStruct(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestStruct(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestStruct_Helper.WrapResponse(success, err)
@@ -666,23 +551,18 @@ func (h handler) TestStruct(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestTypedef(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestTypedef(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestTypedef_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.TestTypedef(ctx, reqMeta, args.Thing)
+	success, err := h.impl.TestTypedef(ctx, args.Thing)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestTypedef_Helper.WrapResponse(success, err)
@@ -690,23 +570,18 @@ func (h handler) TestTypedef(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) TestVoid(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) TestVoid(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args gauntlet.ThriftTest_TestVoid_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	resMeta, err := h.impl.TestVoid(ctx, reqMeta)
+	err := h.impl.TestVoid(ctx)
 
 	hadError := err != nil
 	result, err := gauntlet.ThriftTest_TestVoid_Helper.WrapResponse(err)
@@ -714,7 +589,6 @@ func (h handler) TestVoid(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err

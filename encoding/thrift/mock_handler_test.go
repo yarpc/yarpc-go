@@ -7,7 +7,6 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	wire "go.uber.org/thriftrw/wire"
-	yarpc "go.uber.org/yarpc"
 )
 
 // Mock of UnaryHandler interface
@@ -31,15 +30,15 @@ func (_m *MockUnaryHandler) EXPECT() *_MockUnaryHandlerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockUnaryHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) (Response, error) {
-	ret := _m.ctrl.Call(_m, "Handle", ctx, reqMeta, body)
+func (_m *MockUnaryHandler) Handle(ctx context.Context, body wire.Value) (Response, error) {
+	ret := _m.ctrl.Call(_m, "Handle", ctx, body)
 	ret0, _ := ret[0].(Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockUnaryHandlerRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Handle", arg0, arg1, arg2)
+func (_mr *_MockUnaryHandlerRecorder) Handle(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Handle", arg0, arg1)
 }
 
 // Mock of OnewayHandler interface
@@ -63,12 +62,12 @@ func (_m *MockOnewayHandler) EXPECT() *_MockOnewayHandlerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockOnewayHandler) HandleOneway(ctx context.Context, reqMeta yarpc.ReqMeta, body wire.Value) error {
-	ret := _m.ctrl.Call(_m, "HandleOneway", ctx, reqMeta, body)
+func (_m *MockOnewayHandler) HandleOneway(ctx context.Context, body wire.Value) error {
+	ret := _m.ctrl.Call(_m, "HandleOneway", ctx, body)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockOnewayHandlerRecorder) HandleOneway(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "HandleOneway", arg0, arg1, arg2)
+func (_mr *_MockOnewayHandlerRecorder) HandleOneway(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "HandleOneway", arg0, arg1)
 }

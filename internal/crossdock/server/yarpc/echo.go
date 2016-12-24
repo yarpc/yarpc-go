@@ -47,6 +47,9 @@ func EchoJSON(ctx context.Context, body map[string]interface{}) (map[string]inte
 type EchoThrift struct{}
 
 // Echo endpoint for the Echo service.
-func (EchoThrift) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, ping *echo.Ping) (*echo.Pong, yarpc.ResMeta, error) {
-	return &echo.Pong{Boop: ping.Beep}, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
+func (EchoThrift) Echo(ctx context.Context, ping *echo.Ping) (*echo.Pong, error) {
+	for _, k := range yarpc.HeaderNames(ctx) {
+		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	}
+	return &echo.Pong{Boop: ping.Beep}, nil
 }
