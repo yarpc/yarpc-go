@@ -55,5 +55,34 @@ func MultiError(errors []error) error {
 		}
 	}
 
-	return ErrorGroup(newErrors)
+	return newErrors
+}
+
+// CombineErrors combines the given collection of errors together. nil values
+// will be ignored.
+//
+// The intention for this is to help chain togeter errors from multiple failing
+// operations.
+//
+// 	CombineErrors(
+// 		reader.Close(),
+// 		writer.Close(),
+// 	)
+//
+// This may also be used like so,
+//
+// 	err := reader.Close()
+// 	err = internal.CombineErrors(err, writer.Close())
+// 	if someCondition {
+// 		err = internal.CombineErrors(err, transport.Close())
+// 	}
+func CombineErrors(errors ...error) error {
+	newErrors := errors[:0] // zero-alloc filtering
+	for _, err := range errors {
+		if err != nil {
+			newErrors = append(newErrors, err)
+		}
+	}
+
+	return MultiError(newErrors)
 }

@@ -43,7 +43,9 @@ func Start() {
 		log.WithFields(tchannel.ErrField(err)).Fatal("Couldn't create new channel.")
 	}
 
-	register(ch)
+	if err := register(ch); err != nil {
+		log.WithFields(tchannel.ErrField(err)).Fatal("Couldn't register channel.")
+	}
 
 	if err := ch.ListenAndServe(hostPort); err != nil {
 		log.WithFields(
@@ -61,16 +63,19 @@ func Stop() {
 }
 
 // Register the different endpoints of the test subject
-func register(ch *tchannel.Channel) {
+func register(ch *tchannel.Channel) error {
 	ch.Register(raw.Wrap(echoRawHandler{}), "echo/raw")
 	ch.Register(raw.Wrap(handlerTimeoutRawHandler{}), "handlertimeout/raw")
 
-	json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError)
+	if err := json.Register(ch, json.Handlers{"echo": echoJSONHandler}, onError); err != nil {
+		return err
+	}
 
 	tserver := thrift.NewServer(ch)
 	tserver.Register(echo.NewTChanEchoServer(&echoThriftHandler{}))
 	tserver.Register(gauntlet_tchannel.NewTChanThriftTestServer(&thriftTestHandler{}))
 	tserver.Register(gauntlet_tchannel.NewTChanSecondServiceServer(&secondServiceHandler{}))
+	return nil
 }
 
 func onError(ctx context.Context, err error) {

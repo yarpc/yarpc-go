@@ -131,8 +131,8 @@ func (i *Inbound) startLoop() {
 		case <-i.stop:
 			return
 		default:
-			// TODO: logging
-			i.handle()
+			// TODO: log error
+			_ = i.handle()
 		}
 	}
 }
@@ -152,13 +152,15 @@ func (i *Inbound) IsRunning() bool {
 	return i.once.IsRunning()
 }
 
-func (i *Inbound) handle() error {
+func (i *Inbound) handle() (err error) {
 	// TODO: logging
 	item, err := i.client.BRPopLPush(i.queueKey, i.processingKey, i.timeout)
 	if err != nil {
 		return err
 	}
-	defer i.client.LRem(i.queueKey, item)
+	defer func() {
+		err = errors.CombineErrors(err, i.client.LRem(i.queueKey, item))
+	}()
 
 	start := time.Now()
 

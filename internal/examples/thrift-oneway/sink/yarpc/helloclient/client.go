@@ -21,55 +21,49 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package helloserver
+package helloclient
 
 import (
 	"context"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/examples/oneway/sink"
-	"go.uber.org/yarpc/encoding/thrift"
+
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
 )
 
-// Interface is the server-side interface for the Hello service.
+// Interface is a client for the Hello service.
 type Interface interface {
 	Sink(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
+		reqMeta yarpc.CallReqMeta,
 		Snk *sink.SinkRequest,
-	) error
+	) (yarpc.Ack, error)
 }
 
-// New prepares an implementation of the Hello service for
-// registration.
+// New builds a new client for the Hello service.
 //
-// 	handler := HelloHandler{}
-// 	dispatcher.Register(helloserver.New(handler))
-func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
-	h := handler{impl}
-	service := thrift.Service{
-		Name:    "Hello",
-		Methods: map[string]thrift.UnaryHandler{},
-		OnewayMethods: map[string]thrift.OnewayHandler{
-
-			"sink": thrift.OnewayHandlerFunc(h.Sink),
-		},
-	}
-	return thrift.BuildProcedures(service, opts...)
+// 	client := helloclient.New(dispatcher.ClientConfig("hello"))
+func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
+	return client{c: thrift.New(thrift.Config{
+		Service:      "Hello",
+		ClientConfig: c,
+	}, opts...)}
 }
 
-type handler struct{ impl Interface }
+func init() {
+	yarpc.RegisterClientBuilder(func(c transport.ClientConfig) Interface {
+		return New(c)
+	})
+}
 
-func (h handler) Sink(
+type client struct{ c thrift.Client }
+
+func (c client) Sink(
 	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) error {
-	var args sink.Hello_Sink_Args
-	if err := args.FromWire(body); err != nil {
-		return err
-	}
-
-	return h.impl.Sink(ctx, reqMeta, args.Snk)
+	reqMeta yarpc.CallReqMeta,
+	_Snk *sink.SinkRequest,
+) (yarpc.Ack, error) {
+	args := sink.Hello_Sink_Helper.Args(_Snk)
+	return c.c.CallOneway(ctx, reqMeta, args)
 }
