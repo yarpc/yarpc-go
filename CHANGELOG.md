@@ -24,9 +24,8 @@ v1.0.0-dev (unreleased)
     }
     ```
 
-    To access information previously available in the `yarpc.ReqMeta`, use the
-    `context.Context` accessors provided in the `yarpc` package. To write
-    response headers, use `yarpc.WriteResponseHeader`.
+    To access information previously available in the `yarpc.ReqMeta` or to
+    write response headers, use the `yarpc.CallFromContext` function.
 
 -   **Breaking**: Removed the `yarpc.CallReqMeta` and `yarpc.CallResMeta`
     types. To migrate your call sites, drop the argument and remove the return

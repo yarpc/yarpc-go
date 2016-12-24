@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/api/transport/transporttest"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go/testutils/testreader"
 )
 
@@ -59,7 +60,7 @@ func TestRawHandler(t *testing.T) {
 				{4, 5, 6},
 			},
 			handler: func(ctx context.Context, body []byte) ([]byte, error) {
-				assert.Equal(t, "foo", yarpc.Procedure(ctx))
+				assert.Equal(t, "foo", yarpc.CallFromContext(ctx).Procedure())
 				assert.Equal(t, []byte{1, 2, 3, 4, 5, 6}, body)
 				return []byte("hello"), nil
 			},
@@ -89,7 +90,7 @@ func TestRawHandler(t *testing.T) {
 			procedure:  "responseHeaders",
 			bodyChunks: [][]byte{},
 			handler: func(ctx context.Context, body []byte) ([]byte, error) {
-				yarpc.WriteResponseHeader(ctx, "hello", "world")
+				require.NoError(t, yarpc.CallFromContext(ctx).WriteResponseHeader("hello", "world"))
 				return []byte{}, nil
 			},
 			wantHeaders: transport.NewHeaders().With("hello", "world"),

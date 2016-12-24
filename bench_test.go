@@ -25,8 +25,11 @@ import (
 var _reqBody = []byte("hello")
 
 func yarpcEcho(ctx context.Context, body []byte) ([]byte, error) {
-	for _, k := range yarpc.HeaderNames(ctx) {
-		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
 	}
 	return body, nil
 }

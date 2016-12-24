@@ -256,8 +256,11 @@ func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
 func (h *singleHopHandler) Handle(ctx context.Context, body interface{}) (interface{}, error) {
 	assertBaggageMatches(ctx, h.t, h.wantBaggage)
-	for _, k := range yarpc.HeaderNames(ctx) {
-		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
 	}
 	return map[string]interface{}{}, nil
 }
@@ -302,8 +305,10 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 		phoneResHeaders yarpc.Headers
 	)
 
-	for _, k := range yarpc.HeaderNames(ctx) {
-		opts = append(opts, yarpc.WithHeader(k, yarpc.Header(ctx, k)))
+	call := yarpc.CallFromContext(ctx)
+
+	for _, k := range call.HeaderNames() {
+		opts = append(opts, yarpc.WithHeader(k, call.Header(k)))
 	}
 	opts = append(opts, yarpc.ResponseHeaders(&phoneResHeaders))
 
@@ -320,7 +325,9 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 
 	for _, k := range phoneResHeaders.Keys() {
 		if v, ok := phoneResHeaders.Get(k); ok {
-			yarpc.WriteResponseHeader(ctx, k, v)
+			if err := call.WriteResponseHeader(k, v); err != nil {
+				return nil, err
+			}
 		}
 	}
 

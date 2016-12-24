@@ -42,7 +42,7 @@ type onewayHandler struct {
 
 // EchoRaw implements the echo/raw procedure.
 func (o *onewayHandler) EchoRaw(ctx context.Context, body []byte) error {
-	callBackAddr := yarpc.Header(ctx, callBackAddrHeader)
+	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
 	o.callHome(ctx, callBackAddr, body, raw.Encoding)
 	return nil
 }
@@ -51,14 +51,14 @@ type jsonToken struct{ Token string }
 
 // EchoJSON implements the echo/json procedure.
 func (o *onewayHandler) EchoJSON(ctx context.Context, token *jsonToken) error {
-	callBackAddr := yarpc.Header(ctx, callBackAddrHeader)
+	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
 	o.callHome(ctx, callBackAddr, []byte(token.Token), json.Encoding)
 	return nil
 }
 
 // Echo implements the Oneway::Echo procedure.
 func (o *onewayHandler) Echo(ctx context.Context, Token *string) error {
-	callBackAddr := yarpc.Header(ctx, callBackAddrHeader)
+	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
 	o.callHome(ctx, callBackAddr, []byte(*Token), thrift.Encoding)
 	return nil
 }

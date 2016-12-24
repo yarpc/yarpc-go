@@ -29,16 +29,22 @@ import (
 
 // EchoRaw implements the echo/raw procedure.
 func EchoRaw(ctx context.Context, body []byte) ([]byte, error) {
-	for _, k := range yarpc.HeaderNames(ctx) {
-		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
 	}
 	return body, nil
 }
 
 // EchoJSON implements the echo procedure.
 func EchoJSON(ctx context.Context, body map[string]interface{}) (map[string]interface{}, error) {
-	for _, k := range yarpc.HeaderNames(ctx) {
-		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
 	}
 	return body, nil
 }
@@ -48,8 +54,11 @@ type EchoThrift struct{}
 
 // Echo endpoint for the Echo service.
 func (EchoThrift) Echo(ctx context.Context, ping *echo.Ping) (*echo.Pong, error) {
-	for _, k := range yarpc.HeaderNames(ctx) {
-		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
 	}
 	return &echo.Pong{Boop: ping.Beep}, nil
 }
