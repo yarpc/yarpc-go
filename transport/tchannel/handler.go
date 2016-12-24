@@ -98,7 +98,8 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	}
 
 	if _, ok := err.(tchannel.SystemError); ok {
-		call.Response().SendSystemError(err)
+		// TODO: log error
+		_ = call.Response().SendSystemError(err)
 		return
 	}
 
@@ -110,7 +111,8 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		status = tchannel.ErrCodeTimeout
 	}
 
-	call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
+	// TODO: log error
+	_ = call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
 }
 
 func (h handler) callHandler(ctx context.Context, call inboundCall, start time.Time) error {
