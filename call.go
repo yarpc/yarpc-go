@@ -149,7 +149,7 @@ type inboundCallKey struct{} // context key for *InboundCall
 
 // NewInboundCall builds a new InboundCall with the given context.
 //
-// A new context is returned and must be used in place of the original.
+// A request context is returned and must be used in place of the original.
 func NewInboundCall(ctx context.Context) (context.Context, *InboundCall) {
 	call := &InboundCall{}
 	return context.WithValue(ctx, inboundCallKey{}, call), call
@@ -190,61 +190,72 @@ func (ic *InboundCall) WriteToResponse(resw transport.ResponseWriter) error {
 	return nil
 }
 
-// WriteResponseHeader writes headers to the response of this request context.
-//
-// The operation will fail if the context is not an inbound request context.
-func WriteResponseHeader(ctx context.Context, k, v string) error {
-	call, ok := getInboundCall(ctx)
-	if !ok {
-		return errors.New("failed to write response header: " +
-			"make sure that the context is a inbound request context")
-	}
+// Call provides information about the current request inside handlers.
+type Call struct{ ic *InboundCall }
 
-	call.resHeaders = append(call.resHeaders, keyValuePair{k: k, v: v})
+// CallFromContext retrieves information about the current incoming request
+// from the given context. Returns nil if the context is not a valid request
+// context.
+//
+// The object is valid only as long as the request is ongoing.
+func CallFromContext(ctx context.Context) *Call {
+	if ic, ok := getInboundCall(ctx); ok {
+		return &Call{ic}
+	}
+	return nil
+}
+
+// WriteResponseHeader writes headers to the response of this call.
+func (c *Call) WriteResponseHeader(k, v string) error {
+	if c == nil {
+		return errors.New(
+			"failed to write response header: " +
+				"Call was nil, make sure CallFromContext was called with a request context")
+	}
+	c.ic.resHeaders = append(c.ic.resHeaders, keyValuePair{k: k, v: v})
 	return nil
 }
 
 // Caller returns the name of the service making this request.
-func Caller(ctx context.Context) string {
-	if call, ok := getInboundCall(ctx); ok {
-		return call.req.Caller
+func (c *Call) Caller() string {
+	if c == nil {
+		return ""
 	}
-	return ""
+	return c.ic.req.Caller
 }
 
 // Service returns the name of the service being called.
-func Service(ctx context.Context) string {
-	if call, ok := getInboundCall(ctx); ok {
-		return call.req.Service
+func (c *Call) Service() string {
+	if c == nil {
+		return ""
 	}
-	return ""
+	return c.ic.req.Service
 }
 
 // Procedure returns the name of the procedure being called.
-func Procedure(ctx context.Context) string {
-	if call, ok := getInboundCall(ctx); ok {
-		return call.req.Procedure
+func (c *Call) Procedure() string {
+	if c == nil {
+		return ""
 	}
-	return ""
+	return c.ic.req.Procedure
 }
 
 // Encoding returns the encoding for this request.
-func Encoding(ctx context.Context) transport.Encoding {
-	if call, ok := getInboundCall(ctx); ok {
-		return call.req.Encoding
+func (c *Call) Encoding() transport.Encoding {
+	if c == nil {
+		return ""
 	}
-	return ""
+	return c.ic.req.Encoding
 }
 
 // Header returns the value of the given request header provided with the
 // request.
-func Header(ctx context.Context, k string) string {
-	call, ok := getInboundCall(ctx)
-	if !ok {
+func (c *Call) Header(k string) string {
+	if c == nil {
 		return ""
 	}
 
-	if v, ok := call.req.Headers.Get(k); ok {
+	if v, ok := c.ic.req.Headers.Get(k); ok {
 		return v
 	}
 
@@ -253,14 +264,13 @@ func Header(ctx context.Context, k string) string {
 
 // HeaderNames returns a sorted list of the names of user defined headers
 // provided with this request.
-func HeaderNames(ctx context.Context) []string {
-	call, ok := getInboundCall(ctx)
-	if !ok {
+func (c *Call) HeaderNames() []string {
+	if c == nil {
 		return nil
 	}
 
 	var names []string
-	for k := range call.req.Headers.Items() {
+	for k := range c.ic.req.Headers.Items() {
 		names = append(names, k)
 	}
 	sort.Strings(names)
@@ -268,25 +278,25 @@ func HeaderNames(ctx context.Context) []string {
 }
 
 // ShardKey returns the shard key for this request.
-func ShardKey(ctx context.Context) string {
-	if call, ok := getInboundCall(ctx); ok {
-		return call.req.ShardKey
+func (c *Call) ShardKey() string {
+	if c == nil {
+		return ""
 	}
-	return ""
+	return c.ic.req.ShardKey
 }
 
 // RoutingKey returns the routing key for this request.
-func RoutingKey(ctx context.Context) string {
-	if call, ok := getInboundCall(ctx); ok {
-		return call.req.RoutingKey
+func (c *Call) RoutingKey() string {
+	if c == nil {
+		return ""
 	}
-	return ""
+	return c.ic.req.RoutingKey
 }
 
 // RoutingDelegate returns the routing delegate for this request.
-func RoutingDelegate(ctx context.Context) string {
-	if call, ok := getInboundCall(ctx); ok {
-		return call.req.RoutingDelegate
+func (c *Call) RoutingDelegate() string {
+	if c == nil {
+		return ""
 	}
-	return ""
+	return c.ic.req.RoutingDelegate
 }

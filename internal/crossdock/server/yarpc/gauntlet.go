@@ -30,8 +30,11 @@ import (
 )
 
 func copyRequestHeaders(ctx context.Context) {
-	for _, k := range yarpc.HeaderNames(ctx) {
-		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			panic(err)
+		}
 	}
 }
 

@@ -27,7 +27,7 @@ type simpleResponse struct {
 
 func TestHandleStructSuccess(t *testing.T) {
 	h := func(ctx context.Context, body *simpleRequest) (*simpleResponse, error) {
-		assert.Equal(t, "simpleCall", yarpc.Procedure(ctx))
+		assert.Equal(t, "simpleCall", yarpc.CallFromContext(ctx).Procedure())
 		assert.Equal(t, "foo", body.Name)
 		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
 
@@ -99,7 +99,7 @@ func TestHandleInterfaceEmptySuccess(t *testing.T) {
 
 func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	h := func(ctx context.Context, _ *simpleRequest) (*simpleResponse, error) {
-		yarpc.WriteResponseHeader(ctx, "foo", "bar")
+		require.NoError(t, yarpc.CallFromContext(ctx).WriteResponseHeader("foo", "bar"))
 		return &simpleResponse{Success: true}, nil
 	}
 

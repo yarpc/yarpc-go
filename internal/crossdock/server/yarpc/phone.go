@@ -97,7 +97,7 @@ func Phone(ctx context.Context, body *PhoneRequest) (*PhoneResponse, error) {
 	}))
 	resBody := PhoneResponse{
 		Service:   "yarpc-test", // TODO use yarpc.Service
-		Procedure: yarpc.Procedure(ctx),
+		Procedure: yarpc.CallFromContext(ctx).Procedure(),
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)

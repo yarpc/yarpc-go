@@ -67,8 +67,11 @@ func main() {
 type helloHandler struct{}
 
 func (h helloHandler) Echo(ctx context.Context, e *echo.EchoRequest) (*echo.EchoResponse, error) {
-	for _, k := range yarpc.HeaderNames(ctx) {
-		yarpc.WriteResponseHeader(ctx, k, yarpc.Header(ctx, k))
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
 	}
 
 	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1}, nil
