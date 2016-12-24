@@ -36,14 +36,14 @@ import (
 type Interface interface {
 	BlahBlah(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
-	) (yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) error
 
 	SecondtestString(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *string,
-	) (string, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (string, error)
 }
 
 // New builds a new client for the SecondService service.
@@ -66,13 +66,13 @@ type client struct{ c thrift.Client }
 
 func (c client) BlahBlah(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
-) (resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (err error) {
 
 	args := gauntlet.SecondService_BlahBlah_Helper.Args()
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -88,14 +88,14 @@ func (c client) BlahBlah(
 
 func (c client) SecondtestString(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *string,
-) (success string, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success string, err error) {
 
 	args := gauntlet.SecondService_SecondtestString_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}

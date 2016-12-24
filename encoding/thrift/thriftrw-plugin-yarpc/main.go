@@ -175,12 +175,12 @@ type Interface interface {
 
 	<range .Service.Functions>
 		<.Name>(
-			ctx <$context>.Context,
-			reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
-				<.Name> <formatType .Type>,<end>
+			ctx <$context>.Context, <range .Arguments>
+			<.Name> <formatType .Type>,<end>
+			opts ...<$yarpc>.CallOption,
 		)<if .OneWay> (<$yarpc>.Ack, error)
-		<else if .ReturnType> (<formatType .ReturnType>, <$yarpc>.CallResMeta, error)
-		<else> (<$yarpc>.CallResMeta, error)
+		<else if .ReturnType> (<formatType .ReturnType>, error)
+		<else> error
 		<end>
 	<end>
 }
@@ -211,19 +211,19 @@ type client struct{ c <$thrift>.Client }
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
 func (c client) <.Name>(
-	ctx <$context>.Context,
-	reqMeta <$yarpc>.CallReqMeta, <range .Arguments>
+	ctx <$context>.Context, <range .Arguments>
 	_<.Name> <formatType .Type>,<end>
+	opts ...<$yarpc>.CallOption,
 <if .OneWay>) (<$yarpc>.Ack, error) {
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
-	return c.c.CallOneway(ctx, reqMeta, args)
+	return c.c.CallOneway(ctx, args, opts...)
 }
-<else>) (<if .ReturnType>success <formatType .ReturnType>,<end> resMeta <$yarpc>.CallResMeta, err error) {
+<else>) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	<$wire := import "go.uber.org/thriftrw/wire">
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	var body <$wire>.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}

@@ -191,7 +191,7 @@ func TestClient(t *testing.T) {
 				}),
 		}, opts...)
 
-		_, _, err := c.Call(ctx, nil, tt.giveRequestBody)
+		_, err := c.Call(ctx, tt.giveRequestBody)
 		if tt.wantError != "" {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)
@@ -310,7 +310,7 @@ func TestClientOneway(t *testing.T) {
 				}),
 		}, opts...)
 
-		ack, err := c.CallOneway(ctx, nil, tt.giveRequestBody)
+		ack, err := c.CallOneway(ctx, tt.giveRequestBody)
 		if tt.wantError != "" {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
 				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)

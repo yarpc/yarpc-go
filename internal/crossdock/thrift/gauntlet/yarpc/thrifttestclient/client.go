@@ -36,134 +36,134 @@ import (
 type Interface interface {
 	TestBinary(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing []byte,
-	) ([]byte, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) ([]byte, error)
 
 	TestByte(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *int8,
-	) (int8, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (int8, error)
 
 	TestDouble(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *float64,
-	) (float64, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (float64, error)
 
 	TestEnum(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *gauntlet.Numberz,
-	) (gauntlet.Numberz, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (gauntlet.Numberz, error)
 
 	TestException(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Arg *string,
-	) (yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) error
 
 	TestI32(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *int32,
-	) (int32, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (int32, error)
 
 	TestI64(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *int64,
-	) (int64, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (int64, error)
 
 	TestInsanity(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Argument *gauntlet.Insanity,
-	) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, error)
 
 	TestList(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing []int32,
-	) ([]int32, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) ([]int32, error)
 
 	TestMap(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing map[int32]int32,
-	) (map[int32]int32, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (map[int32]int32, error)
 
 	TestMapMap(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Hello *int32,
-	) (map[int32]map[int32]int32, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (map[int32]map[int32]int32, error)
 
 	TestMulti(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Arg0 *int8,
 		Arg1 *int32,
 		Arg2 *int64,
 		Arg3 map[int16]string,
 		Arg4 *gauntlet.Numberz,
 		Arg5 *gauntlet.UserId,
-	) (*gauntlet.Xtruct, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (*gauntlet.Xtruct, error)
 
 	TestMultiException(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Arg0 *string,
 		Arg1 *string,
-	) (*gauntlet.Xtruct, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (*gauntlet.Xtruct, error)
 
 	TestNest(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *gauntlet.Xtruct2,
-	) (*gauntlet.Xtruct2, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (*gauntlet.Xtruct2, error)
 
 	TestOneway(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		SecondsToSleep *int32,
+		opts ...yarpc.CallOption,
 	) (yarpc.Ack, error)
 
 	TestSet(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing map[int32]struct{},
-	) (map[int32]struct{}, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (map[int32]struct{}, error)
 
 	TestString(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *string,
-	) (string, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (string, error)
 
 	TestStringMap(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing map[string]string,
-	) (map[string]string, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (map[string]string, error)
 
 	TestStruct(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *gauntlet.Xtruct,
-	) (*gauntlet.Xtruct, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (*gauntlet.Xtruct, error)
 
 	TestTypedef(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Thing *gauntlet.UserId,
-	) (gauntlet.UserId, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (gauntlet.UserId, error)
 
 	TestVoid(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
-	) (yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) error
 }
 
 // New builds a new client for the ThriftTest service.
@@ -186,14 +186,14 @@ type client struct{ c thrift.Client }
 
 func (c client) TestBinary(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing []byte,
-) (success []byte, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success []byte, err error) {
 
 	args := gauntlet.ThriftTest_TestBinary_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -209,14 +209,14 @@ func (c client) TestBinary(
 
 func (c client) TestByte(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *int8,
-) (success int8, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success int8, err error) {
 
 	args := gauntlet.ThriftTest_TestByte_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -232,14 +232,14 @@ func (c client) TestByte(
 
 func (c client) TestDouble(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *float64,
-) (success float64, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success float64, err error) {
 
 	args := gauntlet.ThriftTest_TestDouble_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -255,14 +255,14 @@ func (c client) TestDouble(
 
 func (c client) TestEnum(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *gauntlet.Numberz,
-) (success gauntlet.Numberz, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success gauntlet.Numberz, err error) {
 
 	args := gauntlet.ThriftTest_TestEnum_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -278,14 +278,14 @@ func (c client) TestEnum(
 
 func (c client) TestException(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Arg *string,
-) (resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (err error) {
 
 	args := gauntlet.ThriftTest_TestException_Helper.Args(_Arg)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -301,14 +301,14 @@ func (c client) TestException(
 
 func (c client) TestI32(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *int32,
-) (success int32, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success int32, err error) {
 
 	args := gauntlet.ThriftTest_TestI32_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -324,14 +324,14 @@ func (c client) TestI32(
 
 func (c client) TestI64(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *int64,
-) (success int64, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success int64, err error) {
 
 	args := gauntlet.ThriftTest_TestI64_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -347,14 +347,14 @@ func (c client) TestI64(
 
 func (c client) TestInsanity(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Argument *gauntlet.Insanity,
-) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, err error) {
 
 	args := gauntlet.ThriftTest_TestInsanity_Helper.Args(_Argument)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -370,14 +370,14 @@ func (c client) TestInsanity(
 
 func (c client) TestList(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing []int32,
-) (success []int32, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success []int32, err error) {
 
 	args := gauntlet.ThriftTest_TestList_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -393,14 +393,14 @@ func (c client) TestList(
 
 func (c client) TestMap(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing map[int32]int32,
-) (success map[int32]int32, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success map[int32]int32, err error) {
 
 	args := gauntlet.ThriftTest_TestMap_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -416,14 +416,14 @@ func (c client) TestMap(
 
 func (c client) TestMapMap(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Hello *int32,
-) (success map[int32]map[int32]int32, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success map[int32]map[int32]int32, err error) {
 
 	args := gauntlet.ThriftTest_TestMapMap_Helper.Args(_Hello)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -439,19 +439,19 @@ func (c client) TestMapMap(
 
 func (c client) TestMulti(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Arg0 *int8,
 	_Arg1 *int32,
 	_Arg2 *int64,
 	_Arg3 map[int16]string,
 	_Arg4 *gauntlet.Numberz,
 	_Arg5 *gauntlet.UserId,
-) (success *gauntlet.Xtruct, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success *gauntlet.Xtruct, err error) {
 
 	args := gauntlet.ThriftTest_TestMulti_Helper.Args(_Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -467,15 +467,15 @@ func (c client) TestMulti(
 
 func (c client) TestMultiException(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Arg0 *string,
 	_Arg1 *string,
-) (success *gauntlet.Xtruct, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success *gauntlet.Xtruct, err error) {
 
 	args := gauntlet.ThriftTest_TestMultiException_Helper.Args(_Arg0, _Arg1)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -491,14 +491,14 @@ func (c client) TestMultiException(
 
 func (c client) TestNest(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *gauntlet.Xtruct2,
-) (success *gauntlet.Xtruct2, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success *gauntlet.Xtruct2, err error) {
 
 	args := gauntlet.ThriftTest_TestNest_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -514,23 +514,23 @@ func (c client) TestNest(
 
 func (c client) TestOneway(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_SecondsToSleep *int32,
+	opts ...yarpc.CallOption,
 ) (yarpc.Ack, error) {
 	args := gauntlet.ThriftTest_TestOneway_Helper.Args(_SecondsToSleep)
-	return c.c.CallOneway(ctx, reqMeta, args)
+	return c.c.CallOneway(ctx, args, opts...)
 }
 
 func (c client) TestSet(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing map[int32]struct{},
-) (success map[int32]struct{}, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success map[int32]struct{}, err error) {
 
 	args := gauntlet.ThriftTest_TestSet_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -546,14 +546,14 @@ func (c client) TestSet(
 
 func (c client) TestString(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *string,
-) (success string, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success string, err error) {
 
 	args := gauntlet.ThriftTest_TestString_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -569,14 +569,14 @@ func (c client) TestString(
 
 func (c client) TestStringMap(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing map[string]string,
-) (success map[string]string, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success map[string]string, err error) {
 
 	args := gauntlet.ThriftTest_TestStringMap_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -592,14 +592,14 @@ func (c client) TestStringMap(
 
 func (c client) TestStruct(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *gauntlet.Xtruct,
-) (success *gauntlet.Xtruct, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success *gauntlet.Xtruct, err error) {
 
 	args := gauntlet.ThriftTest_TestStruct_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -615,14 +615,14 @@ func (c client) TestStruct(
 
 func (c client) TestTypedef(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Thing *gauntlet.UserId,
-) (success gauntlet.UserId, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success gauntlet.UserId, err error) {
 
 	args := gauntlet.ThriftTest_TestTypedef_Helper.Args(_Thing)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -638,13 +638,13 @@ func (c client) TestTypedef(
 
 func (c client) TestVoid(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
-) (resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (err error) {
 
 	args := gauntlet.ThriftTest_TestVoid_Helper.Args()
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
