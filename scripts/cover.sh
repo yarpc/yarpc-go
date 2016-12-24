@@ -3,7 +3,7 @@
 set -e
 
 COVER=cover
-ROOT_PKG=go.uber.org/yarpc/
+ROOT_PKG=go.uber.org/yarpc
 
 if [[ -d "$COVER" ]]; then
 	rm -rf "$COVER"
