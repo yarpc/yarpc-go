@@ -4,6 +4,8 @@ LINT_EXCLUDES_EXTRAS =
 
 # List of executables needed for 'make generate'
 GENERATE_DEPENDENCIES = \
+	github.com/golang/mock/mockgen \
+	github.com/uber/tchannel-go/thrift/thrift-gen \
 	golang.org/x/tools/cmd/stringer \
 	go.uber.org/thriftrw
 
@@ -26,6 +28,10 @@ LINT_EXCLUDES := $(GENERATED_GO_FILES) $(LINT_EXCLUDES_EXTRAS)
 
 # Pipe lint output into this to filter out ignored files.
 FILTER_LINT := grep -v $(patsubst %,-e %, $(LINT_EXCLUDES))
+
+ERRCHECK_FLAGS ?= -ignoretests
+ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
+FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
@@ -63,20 +69,42 @@ generate: $(_GENERATE_DEPS_EXECUTABLES)
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH go generate $(PACKAGES)
 	./scripts/updateLicenses.sh
 
-.PHONY: lint
-lint:
+.PHONY: gofmt
+gofmt:
 	$(eval FMT_LOG := $(shell mktemp -t gofmt.XXXXX))
 	@gofmt -e -s -l $(GO_FILES) | $(FILTER_LINT) > $(FMT_LOG) || true
 	@[ ! -s "$(FMT_LOG)" ] || (echo "gofmt failed:" | cat - $(FMT_LOG) && false)
 
+.PHONY: govet
+govet:
 	$(eval VET_LOG := $(shell mktemp -t govet.XXXXX))
 	@go vet $(PACKAGES) 2>&1 | grep -v '^exit status' | $(FILTER_LINT) > $(VET_LOG) || true
 	@[ ! -s "$(VET_LOG)" ] || (echo "govet failed:" | cat - $(VET_LOG) && false)
 
+.PHONY: golint
+golint:
+	@go get github.com/golang/lint/golint
 	$(eval LINT_LOG := $(shell mktemp -t golint.XXXXX))
 	@cat /dev/null > $(LINT_LOG)
 	@$(foreach pkg, $(PACKAGES), golint $(pkg) | $(FILTER_LINT) >> $(LINT_LOG) || true;)
 	@[ ! -s "$(LINT_LOG)" ] || (echo "golint failed:" | cat - $(LINT_LOG) && false)
+
+.PHONY: staticcheck
+staticcheck:
+	@go get honnef.co/go/staticcheck/cmd/staticcheck
+	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
+	@staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
+	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
+
+.PHONY: errcheck
+errcheck:
+	@go get github.com/kisielk/errcheck
+	$(eval ERRCHECK_LOG := $(shell mktemp -t errcheck.XXXXX))
+	@errcheck $(ERRCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) | $(FILTER_ERRCHECK) > $(ERRCHECK_LOG) || true
+	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
+
+.PHONY: lint
+lint: gofmt govet golint staticcheck errcheck
 
 .PHONY: install
 install:

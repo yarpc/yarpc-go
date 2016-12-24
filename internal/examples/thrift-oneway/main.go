@@ -81,7 +81,9 @@ func main() {
 	// Make outbound call every 500ms
 	for {
 		time.Sleep(time.Second / 2)
-		client.Sink(context.Background(), nil, &sink.SinkRequest{Message: "hello!"})
+		if _, err := client.Sink(context.Background(), nil, &sink.SinkRequest{Message: "hello!"}); err != nil {
+			log.Print(err)
+		}
 	}
 }
 
