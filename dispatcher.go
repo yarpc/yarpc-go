@@ -111,7 +111,7 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 
 		if outs.Oneway != nil {
 			onewayOutbound = middleware.ApplyOnewayOutbound(outs.Oneway, mw.Oneway)
-			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: outs.Oneway}
+			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
 		}
 
 		convertedOutbounds[service] = transport.Outbounds{

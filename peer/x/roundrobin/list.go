@@ -277,12 +277,14 @@ func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 	defer pl.lock.Unlock()
 
 	if p := pl.availablePeerRing.GetPeer(pid); p != nil {
-		pl.handleAvailablePeerStatusChange(p)
+		// TODO: log error
+		_ = pl.handleAvailablePeerStatusChange(p)
 		return
 	}
 
 	if p, ok := pl.unavailablePeers[pid.Identifier()]; ok && p != nil {
-		pl.handleUnavailablePeerStatusChange(p)
+		// TODO: log error
+		_ = pl.handleUnavailablePeerStatusChange(p)
 	}
 	// No action required
 }
