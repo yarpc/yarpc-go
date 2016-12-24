@@ -20,19 +20,16 @@
 
 package yarpc
 
-import (
-	"context"
-
-	"go.uber.org/yarpc"
-)
+import "context"
 
 // secondService implements the SecondService.
 type secondService struct{}
 
-func (secondService) BlahBlah(ctx context.Context, reqMeta yarpc.ReqMeta) (yarpc.ResMeta, error) {
-	return nil, nil
+func (secondService) BlahBlah(ctx context.Context) error {
+	return nil
 }
 
-func (secondService) SecondtestString(ctx context.Context, reqMeta yarpc.ReqMeta, thing *string) (string, yarpc.ResMeta, error) {
-	return *thing, resMetaFromReqMeta(reqMeta), nil
+func (secondService) SecondtestString(ctx context.Context, thing *string) (string, error) {
+	copyRequestHeaders(ctx)
+	return *thing, nil
 }

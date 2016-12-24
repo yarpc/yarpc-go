@@ -51,7 +51,6 @@ const serverTemplate = `
 
 <$pkgname := printf "%sserver" (lower .Service.Name)>
 package <$pkgname>
-<$yarpc     := import "go.uber.org/yarpc">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$transport := import "go.uber.org/yarpc/api/transport">
 <$context   := import .ContextImportPath>
@@ -65,12 +64,11 @@ type Interface interface {
 
 	<range .Service.Functions>
 		<.Name>(
-			ctx <$context>.Context,
-			reqMeta <$yarpc>.ReqMeta, <range .Arguments>
+			ctx <$context>.Context, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
 		)<if .OneWay> error
-		<else if .ReturnType> (<formatType .ReturnType>, <$yarpc>.ResMeta, error)
-		<else> (<$yarpc>.ResMeta, error)
+		<else if .ReturnType> (<formatType .ReturnType>, error)
+		<else> error
 		<end>
 	<end>
 }
@@ -110,33 +108,25 @@ type handler struct{ impl Interface }
 <$wire := import "go.uber.org/thriftrw/wire">
 
 <if .OneWay>
-func (h handler) <.Name>(
-	ctx <$context>.Context,
-	reqMeta <$yarpc>.ReqMeta,
-	body <$wire>.Value,
-) error {
+func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) error {
 	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
 		return err
 	}
 
-	return h.impl.<.Name>(ctx, reqMeta, <range .Arguments>args.<.Name>,<end>)
+	return h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 }
 <else>
-func (h handler) <.Name>(
-	ctx <$context>.Context,
-	reqMeta <$yarpc>.ReqMeta,
-	body <$wire>.Value,
-) (<$thrift>.Response, error) {
+func (h handler) <.Name>(ctx <$context>.Context, body <$wire>.Value) (<$thrift>.Response, error) {
 	var args <$prefix>Args
 	if err := args.FromWire(body); err != nil {
 		return <$thrift>.Response{}, err
 	}
 
 	<if .ReturnType>
-		success, resMeta, err := h.impl.<.Name>(ctx, reqMeta, <range .Arguments>args.<.Name>,<end>)
+		success, err := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<else>
-		resMeta, err := h.impl.<.Name>(ctx, reqMeta, <range .Arguments>args.<.Name>,<end>)
+		err := h.impl.<.Name>(ctx, <range .Arguments>args.<.Name>,<end>)
 	<end>
 
 	hadError := err != nil
@@ -145,7 +135,6 @@ func (h handler) <.Name>(
 	var response <$thrift>.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err

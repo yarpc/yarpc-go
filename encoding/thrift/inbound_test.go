@@ -134,13 +134,7 @@ func TestThriftHandler(t *testing.T) {
 		h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
 
 		if tt.expectHandle {
-			reqMeta := fakeReqMeta{
-				caller:    "caller",
-				service:   "service",
-				encoding:  Encoding,
-				procedure: "MyService::someMethod",
-			}
-			handler.EXPECT().Handle(ctx, reqMeta, requestBody).
+			handler.EXPECT().Handle(gomock.Any(), requestBody).
 				Return(Response{
 					Body:               fakeEnveloper(tt.responseEnvelopeType),
 					IsApplicationError: tt.responseIsAppError,

@@ -57,8 +57,8 @@ func (o *onewayHandler) EchoJSON(ctx context.Context, token *jsonToken) error {
 }
 
 // Echo implements the Oneway::Echo procedure.
-func (o *onewayHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, Token *string) error {
-	callBackAddr, _ := reqMeta.Headers().Get(callBackAddrHeader)
+func (o *onewayHandler) Echo(ctx context.Context, Token *string) error {
+	callBackAddr := yarpc.Header(ctx, callBackAddrHeader)
 	o.callHome(ctx, callBackAddr, []byte(*Token), thrift.Encoding)
 	return nil
 }
