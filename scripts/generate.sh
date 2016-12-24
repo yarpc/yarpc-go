@@ -16,14 +16,12 @@ mockgen -destination=api/transport/transporttest/router.go -package=transporttes
 mockgen -destination=encoding/thrift/mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 mockgen -destination=encoding/thrift/mock_handler_test.go -package=thrift -source=encoding/thrift/register.go
 mockgen -destination=transport/x/redis/redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
-stringer -type=ConnectionStatus api/peer || true
+stringer -type=ConnectionStatus api/peer
 stringer -type=Type api/transport || true # this fails still
 thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
 thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
 thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/gauntlet.thrift
-thriftrw --plugin=yarpc --out=internal/examples/oneway internal/examples/oneway/sink.thrift
-thriftrw --plugin=yarpc --out=internal/examples/oneway internal/examples/oneway/sink.thrift
-thriftrw --plugin=yarpc --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
+thriftrw --plugin=yarpc --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
 thriftrw --plugin=yarpc --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
 thriftrw --plugin=yarpc --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
 thriftrw --out=encoding/thrift encoding/thrift/internal.thrift
