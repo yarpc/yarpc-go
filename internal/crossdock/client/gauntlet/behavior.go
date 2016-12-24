@@ -49,7 +49,7 @@ type TT struct {
 	Oneway   bool   // if the function is a oneway function
 
 	Details string        // optional extra details about what this test does
-	Give    []interface{} // arguments besides ReqMeta
+	Give    []interface{} // arguments besides context
 
 	Want          interface{} // expected response; nil for void
 	WantError     error       // expected error

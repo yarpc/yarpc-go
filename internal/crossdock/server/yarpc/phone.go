@@ -91,12 +91,12 @@ func Phone(ctx context.Context, body *PhoneRequest) (*PhoneResponse, error) {
 	}
 	defer outbound.Stop()
 
-	// TODO use reqMeta.Service for caller
+	// TODO use yarpc.Service for caller
 	client := json.New(clientconfig.MultiOutbound("yarpc-test", body.Service, transport.Outbounds{
 		Unary: outbound,
 	}))
 	resBody := PhoneResponse{
-		Service:   "yarpc-test", // TODO use reqMeta.Service
+		Service:   "yarpc-test", // TODO use yarpc.Service
 		Procedure: yarpc.Procedure(ctx),
 	}
 
