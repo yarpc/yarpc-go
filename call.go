@@ -134,11 +134,10 @@ func WithRoutingDelegate(rd string) CallOption {
 	return CallOption{func(o *OutboundCall) { o.routingDelegate = &rd }}
 }
 
-// InboundCall is an incoming call. It holds information about the inbound
-// call and its response.
+// InboundCall holds information about the inbound call and its response.
 //
 // Encoding authors may use InboundCall to provide information about the
-// incoming request on the Context and receive response headers through
+// incoming request on the Context and send response headers through
 // WriteResponseHeader.
 type InboundCall struct {
 	resHeaders []keyValuePair
