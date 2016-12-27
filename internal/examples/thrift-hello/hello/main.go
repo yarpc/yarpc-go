@@ -22,6 +22,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -75,7 +76,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(res)
+	fmt.Println(res)
 
 	select {}
 }
