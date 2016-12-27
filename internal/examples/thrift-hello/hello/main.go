@@ -40,14 +40,15 @@ func main() {
 	// configure a dispatcher for the service "hello",
 	// expose the service over an HTTP inbound on port 8086,
 	// and configure outbound calls to service "hello" over HTTP port 8086 as well
+	http := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
-			http.NewTransport().NewInbound(":8086"),
+			http.NewInbound(":8086"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
-				Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1:8086"),
+				Unary: http.NewSingleOutbound("http://127.0.0.1:8086"),
 			},
 		},
 	})
