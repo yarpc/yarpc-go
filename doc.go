@@ -18,16 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package yarpc provides the YARPC service framework.
 package yarpc
 
-import "go.uber.org/yarpc/api/transport"
-
-// CanonicalizeHeaderKey canonicalizes the given header key to the same form
-// used by the headers map returned by ResponseHeaders.
-//
-// 	var headers map[string]string
-// 	res, err := client.Call(ctx, "hello", requestBody, ResponseHeaders(&headers))
-// 	email, ok := headers[CanonicalizeHeaderKey("User-Email-Address")]
-func CanonicalizeHeaderKey(k string) string {
-	return transport.CanonicalizeHeaderKey(k)
-}
+// TODO: Add more package-level docs

@@ -34,19 +34,35 @@ func (e noOutboundForService) Error() string {
 	return fmt.Sprintf("no configured outbound transport for service %q", e.Service)
 }
 
-// IsBadRequestError returns true if the request could not be processed
-// because it was invalid.
+// IsBadRequestError returns true on an error returned by RPC clients if the
+// request was rejected by YARPC because it was invalid.
+//
+// 	res, err := client.Call(...)
+// 	if yarpc.IsBadRequestError(err) {
+// 		fmt.Println("invalid request:", err)
+// 	}
 func IsBadRequestError(err error) bool {
 	return transport.IsBadRequestError(err)
 }
 
-// IsUnexpectedError returns true if the server panicked or failed to process
-// the request with an unhandled error.
+// IsUnexpectedError returns true on an error returned by RPC clients if the
+// server panicked or failed with an unhandled error.
+//
+// 	res, err := client.Call(...)
+// 	if yarpc.IsUnexpectedError(err) {
+// 		fmt.Println("internal server error:", err)
+// 	}
 func IsUnexpectedError(err error) bool {
 	return transport.IsUnexpectedError(err)
 }
 
-// IsTimeoutError return true if the given error is a TimeoutError.
+// IsTimeoutError return true on an error returned by RPC clients if the given
+// error is a TimeoutError.
+//
+// 	res, err := client.Call(...)
+// 	if yarpc.IsTimeoutError(err) {
+// 		fmt.Println("request timed out:", err)
+// 	}
 func IsTimeoutError(err error) bool {
 	return transport.IsTimeoutError(err)
 }
