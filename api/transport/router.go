@@ -46,6 +46,14 @@ type Procedure struct {
 	Signature string
 }
 
+// Less returns true if a.(Service, Name) < b.(Service, Name).
+func (a Procedure) Less(b Procedure) bool {
+	if a.Service == b.Service {
+		return a.Name < b.Name
+	}
+	return a.Service < b.Service
+}
+
 // Router maintains and provides access to a collection of procedures
 type Router interface {
 	// Procedures returns a list of procedures that
@@ -66,23 +74,4 @@ type RouteTable interface {
 
 	// Registers zero or more procedures with the route table.
 	Register([]Procedure)
-}
-
-// ProceduresByServiceProcedure offers to sort a slice of Procedure by Service
-// & Procedure.
-type ProceduresByServiceProcedure []Procedure
-
-func (sp ProceduresByServiceProcedure) Len() int {
-	return len(sp)
-}
-
-func (sp ProceduresByServiceProcedure) Less(i int, j int) bool {
-	if sp[i].Service == sp[j].Service {
-		return sp[i].Name < sp[j].Name
-	}
-	return sp[i].Service < sp[j].Service
-}
-
-func (sp ProceduresByServiceProcedure) Swap(i int, j int) {
-	sp[i], sp[j] = sp[j], sp[i]
 }
