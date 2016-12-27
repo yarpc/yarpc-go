@@ -153,51 +153,217 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "ThriftTest",
-		Methods: map[string]thrift.UnaryHandler{
+		Methods: []thrift.Method{
 
-			"testBinary": thrift.UnaryHandlerFunc(h.TestBinary),
+			thrift.Method{
+				Name: "testBinary",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testByte": thrift.UnaryHandlerFunc(h.TestByte),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestBinary),
+				},
+				Signature: "TestBinary(Thing []byte) ([]byte)",
+			},
 
-			"testDouble": thrift.UnaryHandlerFunc(h.TestDouble),
+			thrift.Method{
+				Name: "testByte",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testEnum": thrift.UnaryHandlerFunc(h.TestEnum),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestByte),
+				},
+				Signature: "TestByte(Thing *int8) (int8)",
+			},
 
-			"testException": thrift.UnaryHandlerFunc(h.TestException),
+			thrift.Method{
+				Name: "testDouble",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testI32": thrift.UnaryHandlerFunc(h.TestI32),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestDouble),
+				},
+				Signature: "TestDouble(Thing *float64) (float64)",
+			},
 
-			"testI64": thrift.UnaryHandlerFunc(h.TestI64),
+			thrift.Method{
+				Name: "testEnum",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testInsanity": thrift.UnaryHandlerFunc(h.TestInsanity),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestEnum),
+				},
+				Signature: "TestEnum(Thing *gauntlet.Numberz) (gauntlet.Numberz)",
+			},
 
-			"testList": thrift.UnaryHandlerFunc(h.TestList),
+			thrift.Method{
+				Name: "testException",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testMap": thrift.UnaryHandlerFunc(h.TestMap),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestException),
+				},
+				Signature: "TestException(Arg *string)",
+			},
 
-			"testMapMap": thrift.UnaryHandlerFunc(h.TestMapMap),
+			thrift.Method{
+				Name: "testI32",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testMulti": thrift.UnaryHandlerFunc(h.TestMulti),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestI32),
+				},
+				Signature: "TestI32(Thing *int32) (int32)",
+			},
 
-			"testMultiException": thrift.UnaryHandlerFunc(h.TestMultiException),
+			thrift.Method{
+				Name: "testI64",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testNest": thrift.UnaryHandlerFunc(h.TestNest),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestI64),
+				},
+				Signature: "TestI64(Thing *int64) (int64)",
+			},
 
-			"testSet": thrift.UnaryHandlerFunc(h.TestSet),
+			thrift.Method{
+				Name: "testInsanity",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testString": thrift.UnaryHandlerFunc(h.TestString),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestInsanity),
+				},
+				Signature: "TestInsanity(Argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity)",
+			},
 
-			"testStringMap": thrift.UnaryHandlerFunc(h.TestStringMap),
+			thrift.Method{
+				Name: "testList",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testStruct": thrift.UnaryHandlerFunc(h.TestStruct),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestList),
+				},
+				Signature: "TestList(Thing []int32) ([]int32)",
+			},
 
-			"testTypedef": thrift.UnaryHandlerFunc(h.TestTypedef),
+			thrift.Method{
+				Name: "testMap",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"testVoid": thrift.UnaryHandlerFunc(h.TestVoid),
-		},
-		OnewayMethods: map[string]thrift.OnewayHandler{
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestMap),
+				},
+				Signature: "TestMap(Thing map[int32]int32) (map[int32]int32)",
+			},
 
-			"testOneway": thrift.OnewayHandlerFunc(h.TestOneway),
+			thrift.Method{
+				Name: "testMapMap",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestMapMap),
+				},
+				Signature: "TestMapMap(Hello *int32) (map[int32]map[int32]int32)",
+			},
+
+			thrift.Method{
+				Name: "testMulti",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestMulti),
+				},
+				Signature: "TestMulti(Arg0 *int8, Arg1 *int32, Arg2 *int64, Arg3 map[int16]string, Arg4 *gauntlet.Numberz, Arg5 *gauntlet.UserId) (*gauntlet.Xtruct)",
+			},
+
+			thrift.Method{
+				Name: "testMultiException",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestMultiException),
+				},
+				Signature: "TestMultiException(Arg0 *string, Arg1 *string) (*gauntlet.Xtruct)",
+			},
+
+			thrift.Method{
+				Name: "testNest",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestNest),
+				},
+				Signature: "TestNest(Thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2)",
+			},
+
+			thrift.Method{
+				Name: "testOneway",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Oneway,
+					Oneway: thrift.OnewayHandler(h.TestOneway),
+				},
+				Signature: "TestOneway(SecondsToSleep *int32)",
+			},
+
+			thrift.Method{
+				Name: "testSet",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestSet),
+				},
+				Signature: "TestSet(Thing map[int32]struct{}) (map[int32]struct{})",
+			},
+
+			thrift.Method{
+				Name: "testString",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestString),
+				},
+				Signature: "TestString(Thing *string) (string)",
+			},
+
+			thrift.Method{
+				Name: "testStringMap",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestStringMap),
+				},
+				Signature: "TestStringMap(Thing map[string]string) (map[string]string)",
+			},
+
+			thrift.Method{
+				Name: "testStruct",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestStruct),
+				},
+				Signature: "TestStruct(Thing *gauntlet.Xtruct) (*gauntlet.Xtruct)",
+			},
+
+			thrift.Method{
+				Name: "testTypedef",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestTypedef),
+				},
+				Signature: "TestTypedef(Thing *gauntlet.UserId) (gauntlet.UserId)",
+			},
+
+			thrift.Method{
+				Name: "testVoid",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.TestVoid),
+				},
+				Signature: "TestVoid()",
+			},
 		},
 	}
 	return thrift.BuildProcedures(service, opts...)

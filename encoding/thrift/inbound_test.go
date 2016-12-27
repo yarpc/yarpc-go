@@ -36,7 +36,6 @@ import (
 	"go.uber.org/thriftrw/wire"
 )
 
-//go:generate mockgen -source=register.go -destination=mock_handler_test.go -package=thrift
 //go:generate mockgen -destination=mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 
 func TestThriftHandler(t *testing.T) {
@@ -130,16 +129,18 @@ func TestThriftHandler(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		handler := NewMockUnaryHandler(mockCtrl)
-		h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
+		handler := func(ctx context.Context, w wire.Value) (Response,
+			error) {
 
-		if tt.expectHandle {
-			handler.EXPECT().Handle(gomock.Any(), requestBody).
-				Return(Response{
-					Body:               fakeEnveloper(tt.responseEnvelopeType),
-					IsApplicationError: tt.responseIsAppError,
-				}, nil)
+			if tt.expectHandle {
+				assert.Equal(t, requestBody, w)
+			}
+			return Response{
+				Body:               fakeEnveloper(tt.responseEnvelopeType),
+				IsApplicationError: tt.responseIsAppError,
+			}, nil
 		}
+		h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
 
 		rw := new(transporttest.FakeResponseWriter)
 		err := h.Handle(ctx, &transport.Request{

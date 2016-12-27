@@ -47,11 +47,18 @@ type Interface interface {
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
-		Name:    "Oneway",
-		Methods: map[string]thrift.UnaryHandler{},
-		OnewayMethods: map[string]thrift.OnewayHandler{
+		Name: "Oneway",
+		Methods: []thrift.Method{
 
-			"echo": thrift.OnewayHandlerFunc(h.Echo),
+			thrift.Method{
+				Name: "echo",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Oneway,
+					Oneway: thrift.OnewayHandler(h.Echo),
+				},
+				Signature: "Echo(Token *string)",
+			},
 		},
 	}
 	return thrift.BuildProcedures(service, opts...)

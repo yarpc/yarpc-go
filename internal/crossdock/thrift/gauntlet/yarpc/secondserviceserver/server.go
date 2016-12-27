@@ -52,13 +52,28 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
 		Name: "SecondService",
-		Methods: map[string]thrift.UnaryHandler{
+		Methods: []thrift.Method{
 
-			"blahBlah": thrift.UnaryHandlerFunc(h.BlahBlah),
+			thrift.Method{
+				Name: "blahBlah",
+				HandlerSpec: thrift.HandlerSpec{
 
-			"secondtestString": thrift.UnaryHandlerFunc(h.SecondtestString),
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.BlahBlah),
+				},
+				Signature: "BlahBlah()",
+			},
+
+			thrift.Method{
+				Name: "secondtestString",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.SecondtestString),
+				},
+				Signature: "SecondtestString(Thing *string) (string)",
+			},
 		},
-		OnewayMethods: map[string]thrift.OnewayHandler{},
 	}
 	return thrift.BuildProcedures(service, opts...)
 }
