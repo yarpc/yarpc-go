@@ -100,7 +100,7 @@ func Run(t crossdock.T) {
 		{
 			"empty map",
 			map[string]string{},
-			nil,
+			map[string]string{},
 		},
 		{
 			"varying casing",
@@ -123,7 +123,13 @@ func Run(t crossdock.T) {
 		gotHeaders, err := caller.Call(tt.give)
 		if checks.NoError(err, "%v: call failed", tt.desc) {
 			internal.RemoveVariableMapKeys(gotHeaders)
-			assert.Equal(tt.want, gotHeaders, "%v: returns valid headers", tt.desc)
+
+			// assert.Equal doesn't work with nil maps
+			if len(tt.want) == 0 {
+				assert.Empty(gotHeaders, "%v: returns valid headers", tt.desc)
+			} else {
+				assert.Equal(tt.want, gotHeaders, "%v: returns valid headers", tt.desc)
+			}
 		}
 	}
 }
