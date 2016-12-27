@@ -49,7 +49,7 @@ type OutboundCall struct {
 	routingDelegate *string
 
 	// If non-nil, response headers should be written here.
-	responseHeaders *Headers
+	responseHeaders *map[string]string
 }
 
 // NewOutboundCall constructs a new OutboundCall with the given options.
@@ -90,8 +90,14 @@ func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Reques
 // This should be called only if the request is unary.
 func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Response) (context.Context, error) {
 	// We're not using ctx right now but we may in the future.
-	if c.responseHeaders != nil {
-		*c.responseHeaders = Headers(res.Headers)
+	if c.responseHeaders != nil && res.Headers.Len() > 0 {
+		// We make a copy of the response headers because Headers.Items() must
+		// never be mutated.
+		headers := make(map[string]string, res.Headers.Len())
+		for k, v := range res.Headers.Items() {
+			headers[k] = v
+		}
+		*c.responseHeaders = headers
 	}
 
 	// NB(abg): context and error are unused for now but we want to leave room
@@ -100,11 +106,16 @@ func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Resp
 }
 
 // ResponseHeaders specifies that headers received in response to this request
-// should be fed into the given object.
+// should be fed into the given map.
 //
-// 	var resHeaders yarpc.Headers
+// Header keys in the map are normalized using the CanonicalizeHeaderKey
+// function.
+//
+// 	var resHeaders map[string]string
 // 	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&resHeaders))
-func ResponseHeaders(h *Headers) CallOption {
+// 	value, ok := resHeaders[yarpc.CanonicalizeHeaderKey("foo")]
+//
+func ResponseHeaders(h *map[string]string) CallOption {
 	return CallOption{func(o *OutboundCall) { o.responseHeaders = h }}
 }
 

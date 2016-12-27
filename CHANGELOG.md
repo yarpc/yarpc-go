@@ -46,6 +46,7 @@ v1.0.0-dev (unreleased)
     Use `yarpc.CallOption`s to specify per-request options and
     `yarpc.ResponseHeaders` to receive response headers for the call.
 
+-   **Breaking**: Removed `yarpc.Headers` in favor of `map[string]string`.
 -   **Breaking**: Start and Stop for Inbound and Outbound are now expected to
     be idempotent.
 -   **Breaking**: Combine `ServiceProcedure` and `Registrant` into `Procedure`.

@@ -48,13 +48,13 @@ func TestCall(t *testing.T) {
 
 	tests := []struct {
 		procedure    string
-		headers      yarpc.Headers
+		headers      map[string]string
 		body         []byte
 		responseBody [][]byte
 
 		want        []byte
 		wantErr     string
-		wantHeaders yarpc.Headers
+		wantHeaders map[string]string
 	}{
 		{
 			procedure:    "foo",
@@ -70,11 +70,11 @@ func TestCall(t *testing.T) {
 		},
 		{
 			procedure:    "headers",
-			headers:      yarpc.NewHeaders().With("x", "y"),
+			headers:      map[string]string{"x": "y"},
 			body:         []byte{},
 			responseBody: [][]byte{},
 			want:         []byte{},
-			wantHeaders:  yarpc.NewHeaders().With("a", "b"),
+			wantHeaders:  map[string]string{"a": "b"},
 		},
 	}
 
@@ -97,25 +97,23 @@ func TestCall(t *testing.T) {
 					Caller:    caller,
 					Service:   service,
 					Procedure: tt.procedure,
-					Headers:   transport.Headers(tt.headers),
+					Headers:   transport.HeadersFromMap(tt.headers),
 					Encoding:  Encoding,
 					Body:      bytes.NewReader(tt.body),
 				}),
 		).Return(
 			&transport.Response{
 				Body:    ioutil.NopCloser(responseBody),
-				Headers: transport.Headers(tt.wantHeaders),
+				Headers: transport.HeadersFromMap(tt.wantHeaders),
 			}, nil)
 
 		var (
 			opts       []yarpc.CallOption
-			resHeaders yarpc.Headers
+			resHeaders map[string]string
 		)
 
-		for _, k := range tt.headers.Keys() {
-			if v, ok := tt.headers.Get(k); ok {
-				opts = append(opts, yarpc.WithHeader(k, v))
-			}
+		for k, v := range tt.headers {
+			opts = append(opts, yarpc.WithHeader(k, v))
 		}
 		opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 
@@ -150,7 +148,7 @@ func TestCallOneway(t *testing.T) {
 
 	tests := []struct {
 		procedure string
-		headers   yarpc.Headers
+		headers   map[string]string
 		body      []byte
 
 		wantErr string
@@ -161,7 +159,7 @@ func TestCallOneway(t *testing.T) {
 		},
 		{
 			procedure: "headers",
-			headers:   yarpc.NewHeaders().With("x", "y"),
+			headers:   map[string]string{"x": "y"},
 			body:      []byte{},
 		},
 	}
@@ -179,17 +177,15 @@ func TestCallOneway(t *testing.T) {
 					Caller:    caller,
 					Service:   service,
 					Procedure: tt.procedure,
-					Headers:   transport.Headers(tt.headers),
+					Headers:   transport.HeadersFromMap(tt.headers),
 					Encoding:  Encoding,
 					Body:      bytes.NewReader(tt.body),
 				}),
 		).Return(&successAck{}, nil)
 
 		var opts []yarpc.CallOption
-		for _, k := range tt.headers.Keys() {
-			if v, ok := tt.headers.Get(k); ok {
-				opts = append(opts, yarpc.WithHeader(k, v))
-			}
+		for k, v := range tt.headers {
+			opts = append(opts, yarpc.WithHeader(k, v))
 		}
 
 		ack, err := client.CallOneway(ctx, tt.procedure, tt.body, opts...)

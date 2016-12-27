@@ -77,11 +77,11 @@ func (h helloHandler) Echo(ctx context.Context, e *echo.EchoRequest) (*echo.Echo
 	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1}, nil
 }
 
-func call(client helloclient.Interface, message string) (*echo.EchoResponse, yarpc.Headers) {
+func call(client helloclient.Interface, message string) (*echo.EchoResponse, map[string]string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	var resHeaders yarpc.Headers
+	var resHeaders map[string]string
 	resBody, err := client.Echo(
 		ctx,
 		&echo.EchoRequest{Message: message, Count: 1},

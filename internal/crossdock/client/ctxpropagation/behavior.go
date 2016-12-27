@@ -302,7 +302,7 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 
 	var (
 		opts            []yarpc.CallOption
-		phoneResHeaders yarpc.Headers
+		phoneResHeaders map[string]string
 	)
 
 	call := yarpc.CallFromContext(ctx)
@@ -323,11 +323,9 @@ func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interfa
 			Body:      &js.RawMessage{'{', '}'},
 		}, &resp, opts...)
 
-	for _, k := range phoneResHeaders.Keys() {
-		if v, ok := phoneResHeaders.Get(k); ok {
-			if err := call.WriteResponseHeader(k, v); err != nil {
-				return nil, err
-			}
+	for k, v := range phoneResHeaders {
+		if err := call.WriteResponseHeader(k, v); err != nil {
+			return nil, err
 		}
 	}
 

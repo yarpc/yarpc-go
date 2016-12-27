@@ -39,7 +39,7 @@ func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	headers := yarpc.NewHeaders().With("hello", "thrift")
+	headers := map[string]string{"hello": "thrift"}
 	token := random.String(5)
 
 	resBody, resHeaders, err := thriftCall(dispatcher, headers, token)
@@ -48,7 +48,7 @@ func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	}
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders = internal.RemoveVariableHeaderKeys(resHeaders)
+		internal.RemoveVariableMapKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 
@@ -61,9 +61,9 @@ func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 
 func thriftCall(
 	dispatcher *yarpc.Dispatcher,
-	headers yarpc.Headers,
+	headers map[string]string,
 	token string,
-) (string, yarpc.Headers, error) {
+) (string, map[string]string, error) {
 	client := echoclient.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -71,12 +71,10 @@ func thriftCall(
 
 	var (
 		opts       []yarpc.CallOption
-		resHeaders yarpc.Headers
+		resHeaders map[string]string
 	)
-	for _, k := range headers.Keys() {
-		if v, ok := headers.Get(k); ok {
-			opts = append(opts, yarpc.WithHeader(k, v))
-		}
+	for k, v := range headers {
+		opts = append(opts, yarpc.WithHeader(k, v))
 	}
 	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 

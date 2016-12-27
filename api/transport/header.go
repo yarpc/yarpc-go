@@ -20,65 +20,86 @@
 
 package transport
 
-import "go.uber.org/yarpc/internal"
+import "strings"
 
 // CanonicalizeHeaderKey canonicalizes the given header key for storage into
-// the Headers map.
+// Headers.
 func CanonicalizeHeaderKey(k string) string {
-	return internal.CanonicalizeHeaderKey(k)
+	// TODO: Deal with unsupported header keys (anything that's not a valid HTTP
+	// header key).
+	return strings.ToLower(k)
 }
 
 // Headers is the transport-level representation of application headers.
 //
-// Keys in the map MUST be canonicalized with CanonicalizeHeaderKey.
-//
-// You probably want to look at yarpc.Headers instead.
-type Headers internal.Headers
+// 	var headers transport.Headers
+// 	headers = headers.With("foo", "bar")
+// 	headers = headers.With("baz", "qux")
+type Headers struct {
+	// This representation allows us to make zero-value valid
+	items map[string]string
+}
 
 // NewHeaders builds a new Headers object.
 func NewHeaders() Headers {
 	return Headers{}
 }
 
-// NewHeadersWithCapacity builds a new Headers object with the given capacity.
+// NewHeadersWithCapacity allocates a new Headers object with the given
+// capacity. A capacity of zero or less is ignored.
 func NewHeadersWithCapacity(capacity int) Headers {
-	return Headers(internal.NewHeadersWithCapacity(capacity))
+	if capacity <= 0 {
+		return Headers{}
+	}
+	return Headers{items: make(map[string]string, capacity)}
 }
 
 // With returns a Headers object with the given key-value pair added to it.
+//
 // The returned object MAY not point to the same Headers underlying data store
 // as the original Headers so the returned Headers MUST always be used instead
 // of the original object.
 //
 // 	headers = headers.With("foo", "bar").With("baz", "qux")
 func (h Headers) With(k, v string) Headers {
-	return Headers(internal.Headers(h).With(k, v))
+	if h.items == nil {
+		h.items = make(map[string]string)
+	}
+
+	h.items[CanonicalizeHeaderKey(k)] = v
+	return h
 }
 
 // Del deletes the header with the given name from the Headers map.
 //
 // This is a no-op if the key does not exist.
 func (h Headers) Del(k string) {
-	internal.Headers(h).Del(k)
+	delete(h.items, CanonicalizeHeaderKey(k))
 }
 
 // Get retrieves the value associated with the given header name.
 func (h Headers) Get(k string) (string, bool) {
-	return internal.Headers(h).Get(k)
+	v, ok := h.items[CanonicalizeHeaderKey(k)]
+	return v, ok
 }
 
 // Len returns the number of headers defined on this object.
 func (h Headers) Len() int {
-	return internal.Headers(h).Len()
+	return len(h.items)
 }
 
-// Items returns the underlying map for this Headers map.
+// Global empty map used by Items() for the case where h.items is nil.
+var emptyMap = map[string]string{}
+
+// Items returns the underlying map for this Headers object. The returned map
+// MUST NOT be changed. Doing so will result in undefined behavior.
 //
 // Keys in the map are normalized using CanonicalizeHeaderKey.
-//
-// The returned map MUST NOT be mutated.
 func (h Headers) Items() map[string]string {
-	return internal.Headers(h).Items()
+	if h.items == nil {
+		return emptyMap
+	}
+	return h.items
 }
 
 // HeadersFromMap builds a new Headers object from the given map of header
