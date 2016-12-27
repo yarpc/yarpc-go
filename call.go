@@ -106,7 +106,7 @@ func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Resp
 }
 
 // ResponseHeaders specifies that headers received in response to this request
-// should be fed into the given map.
+// should replace the given map.
 //
 // Header keys in the map are normalized using the CanonicalizeHeaderKey
 // function.
@@ -115,6 +115,13 @@ func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Resp
 // 	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&resHeaders))
 // 	value, ok := resHeaders[yarpc.CanonicalizeHeaderKey("foo")]
 //
+// Note that the map is replaced completely. Entries it had before making the
+// call will not be available afterwards.
+//
+// 	headers := map[string]string{"hello": "world"}
+// 	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&headers))
+// 	_, ok := headers["hello"]
+// 	fmt.Println(ok)  // false
 func ResponseHeaders(h *map[string]string) CallOption {
 	return CallOption{func(o *OutboundCall) { o.responseHeaders = h }}
 }
