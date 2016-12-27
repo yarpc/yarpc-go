@@ -114,3 +114,17 @@ func (sp proceduresByServiceProcedure) Less(i int, j int) bool {
 func (sp proceduresByServiceProcedure) Swap(i int, j int) {
 	sp[i], sp[j] = sp[j], sp[i]
 }
+
+type proceduresByServiceProcedure []transport.Procedure
+
+func (sp proceduresByServiceProcedure) Len() int {
+	return len(sp)
+}
+
+func (sp proceduresByServiceProcedure) Less(i int, j int) bool {
+	return sp[i].Less(sp[j])
+}
+
+func (sp proceduresByServiceProcedure) Swap(i int, j int) {
+	sp[i], sp[j] = sp[j], sp[i]
+}
