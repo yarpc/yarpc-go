@@ -22,9 +22,13 @@ package yarpc
 
 import (
 	"context"
+	"errors"
+	"sort"
 
 	"go.uber.org/yarpc/api/transport"
 )
+
+type keyValuePair struct{ k, v string }
 
 // CallOption defines options that may be passed in at call sites to other
 // services.
@@ -32,15 +36,14 @@ import (
 // These may be used to add or alter the request.
 type CallOption struct{ apply func(*OutboundCall) }
 
-type callHeader struct{ k, v string }
-
-// OutboundCall represents an outgoing call.
+// OutboundCall is an outgoing call. It holds per-call options for a request.
 //
-// It holds any per-call options for a request. Encoding authors may use
-// OutboundCall to hydrate Requests from call-site options.
+// Encoding authors may use OutboundCall to provide a CallOption-based request
+// customization mechanism, including returning response headers through
+// ResponseHeaders.
 type OutboundCall struct {
 	// request attributes to fill if non-nil
-	headers         []callHeader
+	headers         []keyValuePair
 	shardKey        *string
 	routingKey      *string
 	routingDelegate *string
@@ -112,7 +115,7 @@ func ResponseHeaders(h *Headers) CallOption {
 // 	resBody, err := client.GetValue(ctx, reqBody, yarpc.WithHeader("Token", "10"))
 func WithHeader(k, v string) CallOption {
 	return CallOption{func(o *OutboundCall) {
-		o.headers = append(o.headers, callHeader{k: k, v: v})
+		o.headers = append(o.headers, keyValuePair{k: k, v: v})
 	}}
 }
 
@@ -129,4 +132,170 @@ func WithRoutingKey(rk string) CallOption {
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
 	return CallOption{func(o *OutboundCall) { o.routingDelegate = &rd }}
+}
+
+// InboundCall holds information about the inbound call and its response.
+//
+// Encoding authors may use InboundCall to provide information about the
+// incoming request on the Context and send response headers through
+// WriteResponseHeader.
+type InboundCall struct {
+	resHeaders []keyValuePair
+	req        *transport.Request
+}
+
+type inboundCallKey struct{} // context key for *InboundCall
+
+// NewInboundCall builds a new InboundCall with the given context.
+//
+// A request context is returned and must be used in place of the original.
+func NewInboundCall(ctx context.Context) (context.Context, *InboundCall) {
+	call := &InboundCall{}
+	return context.WithValue(ctx, inboundCallKey{}, call), call
+}
+
+// getInboundCall returns the inbound call on this context or nil.
+func getInboundCall(ctx context.Context) (*InboundCall, bool) {
+	call, ok := ctx.Value(inboundCallKey{}).(*InboundCall)
+	return call, ok
+}
+
+// ReadFromRequest reads information from the given request.
+//
+// This information may be queried on the context using functions like Caller,
+// Service, Procedure, etc.
+func (ic *InboundCall) ReadFromRequest(req *transport.Request) error {
+	// TODO(abg): Maybe we should copy attributes over so that changes to the
+	// Request don't change the output.
+	ic.req = req
+	return nil
+}
+
+// WriteToResponse writes response information from the InboundCall onto the
+// given ResponseWriter.
+//
+// If used, this must be called before writing the response body to the
+// ResponseWriter.
+func (ic *InboundCall) WriteToResponse(resw transport.ResponseWriter) error {
+	var headers transport.Headers
+	for _, h := range ic.resHeaders {
+		headers = headers.With(h.k, h.v)
+	}
+
+	if headers.Len() > 0 {
+		resw.AddHeaders(headers)
+	}
+
+	return nil
+}
+
+// Call provides information about the current request inside handlers.
+type Call struct{ ic *InboundCall }
+
+// CallFromContext retrieves information about the current incoming request
+// from the given context. Returns nil if the context is not a valid request
+// context.
+//
+// The object is valid only as long as the request is ongoing.
+func CallFromContext(ctx context.Context) *Call {
+	if ic, ok := getInboundCall(ctx); ok {
+		return &Call{ic}
+	}
+	return nil
+}
+
+// WriteResponseHeader writes headers to the response of this call.
+func (c *Call) WriteResponseHeader(k, v string) error {
+	if c == nil {
+		return errors.New(
+			"failed to write response header: " +
+				"Call was nil, make sure CallFromContext was called with a request context")
+	}
+	c.ic.resHeaders = append(c.ic.resHeaders, keyValuePair{k: k, v: v})
+	return nil
+}
+
+// Caller returns the name of the service making this request.
+func (c *Call) Caller() string {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.Caller
+}
+
+// Service returns the name of the service being called.
+func (c *Call) Service() string {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.Service
+}
+
+// Procedure returns the name of the procedure being called.
+func (c *Call) Procedure() string {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.Procedure
+}
+
+// Encoding returns the encoding for this request.
+func (c *Call) Encoding() transport.Encoding {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.Encoding
+}
+
+// Header returns the value of the given request header provided with the
+// request.
+func (c *Call) Header(k string) string {
+	if c == nil {
+		return ""
+	}
+
+	if v, ok := c.ic.req.Headers.Get(k); ok {
+		return v
+	}
+
+	return ""
+}
+
+// HeaderNames returns a sorted list of the names of user defined headers
+// provided with this request.
+func (c *Call) HeaderNames() []string {
+	if c == nil {
+		return nil
+	}
+
+	var names []string
+	for k := range c.ic.req.Headers.Items() {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// ShardKey returns the shard key for this request.
+func (c *Call) ShardKey() string {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.ShardKey
+}
+
+// RoutingKey returns the routing key for this request.
+func (c *Call) RoutingKey() string {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.RoutingKey
+}
+
+// RoutingDelegate returns the routing delegate for this request.
+func (c *Call) RoutingDelegate() string {
+	if c == nil {
+		return ""
+	}
+	return c.ic.req.RoutingDelegate
 }

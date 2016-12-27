@@ -47,13 +47,13 @@ func hello(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	headers := yarpc.NewHeaders().With("hello", "raw")
 	token := random.Bytes(5)
 
-	resBody, resMeta, err := rawCall(dispatcher, headers, "echo/raw", token)
+	resBody, resHeaders, err := rawCall(dispatcher, headers, "echo/raw", token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders := internal.RemoveVariableHeaderKeys(resMeta.Headers())
+		resHeaders = internal.RemoveVariableHeaderKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 }
@@ -87,15 +87,28 @@ func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert.True(form, "must be a remote handler timeout: %q", err.Error())
 }
 
-func rawCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, procedure string,
-	token []byte) ([]byte, yarpc.CallResMeta, error) {
+func rawCall(
+	dispatcher *yarpc.Dispatcher,
+	headers yarpc.Headers,
+	procedure string,
+	token []byte,
+) ([]byte, yarpc.Headers, error) {
 	client := raw.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta().Procedure(procedure).Headers(headers)
-	resBody, resMeta, err := client.Call(ctx, reqMeta, token)
+	var (
+		opts       []yarpc.CallOption
+		resHeaders yarpc.Headers
+	)
+	for _, k := range headers.Keys() {
+		if v, ok := headers.Get(k); ok {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
+	}
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 
-	return resBody, resMeta, err
+	res, err := client.Call(ctx, procedure, token, opts...)
+	return res, resHeaders, err
 }

@@ -29,14 +29,12 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the Oneway service.
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Token *string,
 	) error
 }
@@ -61,15 +59,11 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) Echo(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) error {
+func (h handler) Echo(ctx context.Context, body wire.Value) error {
 	var args oneway.Oneway_Echo_Args
 	if err := args.FromWire(body); err != nil {
 		return err
 	}
 
-	return h.impl.Echo(ctx, reqMeta, args.Token)
+	return h.impl.Echo(ctx, args.Token)
 }

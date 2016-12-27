@@ -35,8 +35,8 @@ import (
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Token *string,
+		opts ...yarpc.CallOption,
 	) (yarpc.Ack, error)
 }
 
@@ -60,9 +60,9 @@ type client struct{ c thrift.Client }
 
 func (c client) Echo(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Token *string,
+	opts ...yarpc.CallOption,
 ) (yarpc.Ack, error) {
 	args := oneway.Oneway_Echo_Helper.Args(_Token)
-	return c.c.CallOneway(ctx, reqMeta, args)
+	return c.c.CallOneway(ctx, args, opts...)
 }

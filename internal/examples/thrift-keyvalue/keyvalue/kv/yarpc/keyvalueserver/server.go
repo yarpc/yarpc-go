@@ -29,23 +29,20 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the KeyValue service.
 type Interface interface {
 	GetValue(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Key *string,
-	) (string, yarpc.ResMeta, error)
+	) (string, error)
 
 	SetValue(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Key *string,
 		Value *string,
-	) (yarpc.ResMeta, error)
+	) error
 }
 
 // New prepares an implementation of the KeyValue service for
@@ -70,17 +67,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) GetValue(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) GetValue(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args kv.KeyValue_GetValue_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.GetValue(ctx, reqMeta, args.Key)
+	success, err := h.impl.GetValue(ctx, args.Key)
 
 	hadError := err != nil
 	result, err := kv.KeyValue_GetValue_Helper.WrapResponse(success, err)
@@ -88,23 +81,18 @@ func (h handler) GetValue(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err
 }
 
-func (h handler) SetValue(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) SetValue(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args kv.KeyValue_SetValue_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	resMeta, err := h.impl.SetValue(ctx, reqMeta, args.Key, args.Value)
+	err := h.impl.SetValue(ctx, args.Key, args.Value)
 
 	hadError := err != nil
 	result, err := kv.KeyValue_SetValue_Helper.WrapResponse(err)
@@ -112,7 +100,6 @@ func (h handler) SetValue(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err

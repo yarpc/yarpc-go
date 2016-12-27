@@ -36,9 +36,9 @@ import (
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Ping *echo.Ping,
-	) (*echo.Pong, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (*echo.Pong, error)
 }
 
 // New builds a new client for the Echo service.
@@ -61,14 +61,14 @@ type client struct{ c thrift.Client }
 
 func (c client) Echo(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Ping *echo.Ping,
-) (success *echo.Pong, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success *echo.Pong, err error) {
 
 	args := echo.Echo_Echo_Helper.Args(_Ping)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}

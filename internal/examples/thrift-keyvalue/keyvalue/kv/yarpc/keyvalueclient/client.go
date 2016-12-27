@@ -36,16 +36,16 @@ import (
 type Interface interface {
 	GetValue(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Key *string,
-	) (string, yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) (string, error)
 
 	SetValue(
 		ctx context.Context,
-		reqMeta yarpc.CallReqMeta,
 		Key *string,
 		Value *string,
-	) (yarpc.CallResMeta, error)
+		opts ...yarpc.CallOption,
+	) error
 }
 
 // New builds a new client for the KeyValue service.
@@ -68,14 +68,14 @@ type client struct{ c thrift.Client }
 
 func (c client) GetValue(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Key *string,
-) (success string, resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (success string, err error) {
 
 	args := kv.KeyValue_GetValue_Helper.Args(_Key)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}
@@ -91,15 +91,15 @@ func (c client) GetValue(
 
 func (c client) SetValue(
 	ctx context.Context,
-	reqMeta yarpc.CallReqMeta,
 	_Key *string,
 	_Value *string,
-) (resMeta yarpc.CallResMeta, err error) {
+	opts ...yarpc.CallOption,
+) (err error) {
 
 	args := kv.KeyValue_SetValue_Helper.Args(_Key, _Value)
 
 	var body wire.Value
-	body, resMeta, err = c.c.Call(ctx, reqMeta, args)
+	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {
 		return
 	}

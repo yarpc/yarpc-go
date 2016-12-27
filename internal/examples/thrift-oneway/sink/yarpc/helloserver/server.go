@@ -25,19 +25,16 @@ package helloserver
 
 import (
 	"context"
-
 	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
+	"go.uber.org/yarpc/encoding/thrift"
 )
 
 // Interface is the server-side interface for the Hello service.
 type Interface interface {
 	Sink(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Snk *sink.SinkRequest,
 	) error
 }
@@ -62,15 +59,11 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) Sink(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) error {
+func (h handler) Sink(ctx context.Context, body wire.Value) error {
 	var args sink.Hello_Sink_Args
 	if err := args.FromWire(body); err != nil {
 		return err
 	}
 
-	return h.impl.Sink(ctx, reqMeta, args.Snk)
+	return h.impl.Sink(ctx, args.Snk)
 }

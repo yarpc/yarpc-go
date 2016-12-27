@@ -49,7 +49,7 @@ type TT struct {
 	Oneway   bool   // if the function is a oneway function
 
 	Details string        // optional extra details about what this test does
-	Give    []interface{} // arguments besides ReqMeta
+	Give    []interface{} // arguments besides context
 
 	Want          interface{} // expected response; nil for void
 	WantError     error       // expected error
@@ -431,8 +431,8 @@ func RunGauntlet(t crossdock.T, c Config) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		args := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(yarpc.NewReqMeta())}
-		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give, 2); ok {
+		args := []reflect.Value{reflect.ValueOf(ctx)}
+		if give, ok := BuildArgs(t, desc, f.Type(), tt.Give, len(args)); ok {
 			args = append(args, give...)
 		} else {
 			continue
@@ -489,10 +489,6 @@ func buildClient(t crossdock.T, desc string, service string, c Config) reflect.V
 // BuildArgs creates an args slice than can be used to make a f.Call(args)
 func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}, initialArgs int) (_ []reflect.Value, ok bool) {
 	check := crossdock.Checks(t)
-	wantIn := len(give) + initialArgs // +2 for ctx and reqMeta
-	if !check.Equal(wantIn, ft.NumIn(), "%v: should accept %d arguments", desc, wantIn) {
-		return nil, false
-	}
 
 	var args []reflect.Value
 	for i, v := range give {
@@ -525,15 +521,14 @@ func isUnrecognizedProcedure(err error) bool {
 
 func extractCallResponse(t crossdock.T, desc string, returns []reflect.Value) (got interface{}, err error) {
 	switch len(returns) {
-	case 2:
-		e := returns[1].Interface()
+	case 1:
+		e := returns[0].Interface()
 		if e != nil {
 			err = e.(error)
 		}
-	case 3:
+	case 2:
 		got = returns[0].Interface()
-		e := returns[2].Interface()
-		if e != nil {
+		if e := returns[1].Interface(); e != nil {
 			err = e.(error)
 		}
 	default:

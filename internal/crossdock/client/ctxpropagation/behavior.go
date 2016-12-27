@@ -190,9 +190,9 @@ func Run(t crossdock.T) {
 			defer cancel()
 
 			var resp js.RawMessage
-			_, err := jsonClient.Call(
+			err := jsonClient.Call(
 				ctx,
-				yarpc.NewReqMeta().Procedure("phone"),
+				"phone",
 				&server.PhoneRequest{
 					Service:   "ctxclient",
 					Procedure: procedure,
@@ -208,7 +208,7 @@ func Run(t crossdock.T) {
 type handler interface {
 	SetClient(json.Client)
 	SetTransport(server.TransportConfig)
-	Handle(context.Context, yarpc.ReqMeta, interface{}) (interface{}, yarpc.ResMeta, error)
+	Handle(context.Context, interface{}) (interface{}, error)
 }
 
 func assertBaggageMatches(ctx context.Context, t crossdock.T, want map[string]string) bool {
@@ -254,10 +254,15 @@ type singleHopHandler struct {
 func (*singleHopHandler) SetClient(json.Client)               {}
 func (*singleHopHandler) SetTransport(server.TransportConfig) {}
 
-func (h *singleHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+func (h *singleHopHandler) Handle(ctx context.Context, body interface{}) (interface{}, error) {
 	assertBaggageMatches(ctx, h.t, h.wantBaggage)
-	resMeta := yarpc.NewResMeta().Headers(reqMeta.Headers())
-	return map[string]interface{}{}, resMeta, nil
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
+	}
+	return map[string]interface{}{}, nil
 }
 
 // multiHopHandler provides a JSON handler which verfiies that it receives the
@@ -282,7 +287,7 @@ func (h *multiHopHandler) SetTransport(tc server.TransportConfig) {
 	h.phoneCallTransport = tc
 }
 
-func (h *multiHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, body interface{}) (interface{}, yarpc.ResMeta, error) {
+func (h *multiHopHandler) Handle(ctx context.Context, body interface{}) (interface{}, error) {
 	if h.phoneClient == nil {
 		panic("call SetClient() and SetTransport() first")
 	}
@@ -295,19 +300,38 @@ func (h *multiHopHandler) Handle(ctx context.Context, reqMeta yarpc.ReqMeta, bod
 	}
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
+	var (
+		opts            []yarpc.CallOption
+		phoneResHeaders yarpc.Headers
+	)
+
+	call := yarpc.CallFromContext(ctx)
+
+	for _, k := range call.HeaderNames() {
+		opts = append(opts, yarpc.WithHeader(k, call.Header(k)))
+	}
+	opts = append(opts, yarpc.ResponseHeaders(&phoneResHeaders))
+
 	var resp js.RawMessage
-	phoneResMeta, err := h.phoneClient.Call(
+	err := h.phoneClient.Call(
 		ctx,
-		yarpc.NewReqMeta().Procedure("phone").Headers(reqMeta.Headers()),
+		"phone",
 		&server.PhoneRequest{
 			Service:   "ctxclient",
 			Procedure: h.phoneCallTo,
 			Transport: h.phoneCallTransport,
 			Body:      &js.RawMessage{'{', '}'},
-		}, &resp)
+		}, &resp, opts...)
 
-	resMeta := yarpc.NewResMeta().Headers(phoneResMeta.Headers())
-	return map[string]interface{}{}, resMeta, err
+	for _, k := range phoneResHeaders.Keys() {
+		if v, ok := phoneResHeaders.Get(k); ok {
+			if err := call.WriteResponseHeader(k, v); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return map[string]interface{}{}, err
 }
 
 func buildDispatcher(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig server.TransportConfig) {

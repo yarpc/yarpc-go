@@ -357,7 +357,7 @@ func TestHandlerPanic(t *testing.T) {
 	client := raw.New(clientDispatcher.ClientConfig("yarpc-test"))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("panic"), []byte{})
+	_, err := client.Call(ctx, "panic", []byte{})
 
 	assert.True(t, transport.IsUnexpectedError(err), "Must be an UnexpectedError")
 	assert.Equal(t,

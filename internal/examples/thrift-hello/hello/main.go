@@ -66,24 +66,31 @@ func main() {
 
 type helloHandler struct{}
 
-func (h helloHandler) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, e *echo.EchoRequest) (*echo.EchoResponse, yarpc.ResMeta, error) {
-	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1},
-		yarpc.NewResMeta().Headers(reqMeta.Headers()),
-		nil
+func (h helloHandler) Echo(ctx context.Context, e *echo.EchoRequest) (*echo.EchoResponse, error) {
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
+	}
+
+	return &echo.EchoResponse{Message: e.Message, Count: e.Count + 1}, nil
 }
 
 func call(client helloclient.Interface, message string) (*echo.EchoResponse, yarpc.Headers) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	resBody, resMeta, err := client.Echo(
+	var resHeaders yarpc.Headers
+	resBody, err := client.Echo(
 		ctx,
-		yarpc.NewReqMeta().Headers(yarpc.NewHeaders().With("from", "self")),
 		&echo.EchoRequest{Message: message, Count: 1},
+		yarpc.WithHeader("from", "self"),
+		yarpc.ResponseHeaders(&resHeaders),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return resBody, resMeta.Headers()
+	return resBody, resHeaders
 }

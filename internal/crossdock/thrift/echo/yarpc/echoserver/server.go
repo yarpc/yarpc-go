@@ -29,16 +29,14 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 )
 
 // Interface is the server-side interface for the Echo service.
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		reqMeta yarpc.ReqMeta,
 		Ping *echo.Ping,
-	) (*echo.Pong, yarpc.ResMeta, error)
+	) (*echo.Pong, error)
 }
 
 // New prepares an implementation of the Echo service for
@@ -61,17 +59,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) Echo(
-	ctx context.Context,
-	reqMeta yarpc.ReqMeta,
-	body wire.Value,
-) (thrift.Response, error) {
+func (h handler) Echo(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args echo.Echo_Echo_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, resMeta, err := h.impl.Echo(ctx, reqMeta, args.Ping)
+	success, err := h.impl.Echo(ctx, args.Ping)
 
 	hadError := err != nil
 	result, err := echo.Echo_Echo_Helper.WrapResponse(success, err)
@@ -79,7 +73,6 @@ func (h handler) Echo(
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
-		response.Meta = resMeta
 		response.Body = result
 	}
 	return response, err

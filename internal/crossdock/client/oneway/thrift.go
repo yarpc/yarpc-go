@@ -37,11 +37,7 @@ func Thrift(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan
 	client := onewayclient.New(dispatcher.ClientConfig("oneway-server"))
 	token := getRandomID()
 
-	ack, err := client.Echo(
-		context.Background(),
-		yarpc.NewReqMeta().
-			Headers(yarpc.NewHeaders().With("callBackAddr", callBackAddr)),
-		&token)
+	ack, err := client.Echo(context.Background(), &token, yarpc.WithHeader("callBackAddr", callBackAddr))
 
 	// ensure channel hasn't been filled yet
 	select {

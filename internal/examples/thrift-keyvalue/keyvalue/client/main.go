@@ -103,7 +103,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			defer cancel()
 
-			if value, _, err := client.GetValue(ctx, nil, &key); err != nil {
+			if value, err := client.GetValue(ctx, &key); err != nil {
 				fmt.Printf("get %q failed: %s\n", key, err)
 			} else {
 				fmt.Println(key, "=", value)
@@ -121,7 +121,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(rootCtx, 100*time.Millisecond)
 			defer cancel()
 
-			if _, err := client.SetValue(ctx, nil, &key, &value); err != nil {
+			if err := client.SetValue(ctx, &key, &value); err != nil {
 				fmt.Printf("set %q = %q failed: %v\n", key, value, err.Error())
 			}
 			continue
