@@ -36,7 +36,7 @@ func runJSON(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	headers := yarpc.NewHeaders().With("hello", "json")
+	headers := map[string]string{"hello": "json"}
 	token := random.String(5)
 
 	resBody, resHeaders, err := jsonCall(dispatcher, headers, token)
@@ -45,7 +45,7 @@ func runJSON(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	}
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders = internal.RemoveVariableHeaderKeys(resHeaders)
+		internal.RemoveVariableMapKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 }
@@ -56,9 +56,9 @@ type jsonEcho struct {
 
 func jsonCall(
 	dispatcher *yarpc.Dispatcher,
-	headers yarpc.Headers,
+	headers map[string]string,
 	token string,
-) (string, yarpc.Headers, error) {
+) (string, map[string]string, error) {
 	client := json.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -66,14 +66,12 @@ func jsonCall(
 
 	var (
 		opts       []yarpc.CallOption
-		resHeaders yarpc.Headers
+		resHeaders map[string]string
 		resBody    jsonEcho
 	)
 
-	for _, k := range headers.Keys() {
-		if v, ok := headers.Get(k); ok {
-			opts = append(opts, yarpc.WithHeader(k, v))
-		}
+	for k, v := range headers {
+		opts = append(opts, yarpc.WithHeader(k, v))
 	}
 	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 

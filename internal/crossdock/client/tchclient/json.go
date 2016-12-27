@@ -42,7 +42,7 @@ func runJSON(t crossdock.T, call call) {
 	resp, respHeaders, err := jsonCall(call, headers, token)
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resp.Token, "body echoed")
-		respHeaders = internal.RemoveVariableMapKeys(respHeaders)
+		internal.RemoveVariableMapKeys(respHeaders)
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 }

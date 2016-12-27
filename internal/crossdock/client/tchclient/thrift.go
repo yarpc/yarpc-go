@@ -50,7 +50,7 @@ func runThrift(t crossdock.T, call call) {
 	resp, respHeaders, err := thriftCall(client, headers, token)
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resp.Boop, "body echoed")
-		respHeaders = internal.RemoveVariableMapKeys(respHeaders)
+		internal.RemoveVariableMapKeys(respHeaders)
 		assert.Equal(headers, respHeaders, "headers echoed")
 	}
 

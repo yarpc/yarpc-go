@@ -6,4 +6,4 @@ Test code:
 
   $ $TESTDIR/hello/hello &
   $ sleep 0.250
-  EchoResponse{Message: Hi There, Count: 2} {map[from:self]}
+  EchoResponse{Message: Hi There, Count: 2} map[from:self]

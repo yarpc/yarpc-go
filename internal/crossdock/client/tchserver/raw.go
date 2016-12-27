@@ -44,7 +44,7 @@ func hello(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	checks := crossdock.Checks(t)
 
 	// TODO headers should be at yarpc, not transport
-	headers := yarpc.NewHeaders().With("hello", "raw")
+	headers := map[string]string{"hello": "raw"}
 	token := random.Bytes(5)
 
 	resBody, resHeaders, err := rawCall(dispatcher, headers, "echo/raw", token)
@@ -53,7 +53,7 @@ func hello(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	}
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders = internal.RemoveVariableHeaderKeys(resHeaders)
+		internal.RemoveVariableMapKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 }
@@ -64,10 +64,9 @@ func hello(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 
-	headers := yarpc.NewHeaders()
 	token := random.Bytes(5)
 
-	_, _, err := rawCall(dispatcher, headers, "handlertimeout/raw", token)
+	_, _, err := rawCall(dispatcher, nil, "handlertimeout/raw", token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
@@ -89,10 +88,10 @@ func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 
 func rawCall(
 	dispatcher *yarpc.Dispatcher,
-	headers yarpc.Headers,
+	headers map[string]string,
 	procedure string,
 	token []byte,
-) ([]byte, yarpc.Headers, error) {
+) ([]byte, map[string]string, error) {
 	client := raw.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -100,12 +99,10 @@ func rawCall(
 
 	var (
 		opts       []yarpc.CallOption
-		resHeaders yarpc.Headers
+		resHeaders map[string]string
 	)
-	for _, k := range headers.Keys() {
-		if v, ok := headers.Get(k); ok {
-			opts = append(opts, yarpc.WithHeader(k, v))
-		}
+	for k, v := range headers {
+		opts = append(opts, yarpc.WithHeader(k, v))
 	}
 	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 
