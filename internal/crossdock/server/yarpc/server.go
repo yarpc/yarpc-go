@@ -24,7 +24,6 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoserver"
@@ -68,7 +67,7 @@ func Stop() {
 	}
 }
 
-func register(reg transport.RouteTable) {
+func register(reg *yarpc.Dispatcher) {
 	reg.Register(raw.Procedure("echo/raw", EchoRaw))
 	reg.Register(json.Procedure("echo", EchoJSON))
 
