@@ -37,7 +37,7 @@ import (
 //go:generate thriftrw --plugin=yarpc echo.thrift
 
 func main() {
-	// configure a dispatcher for the service "hello",
+	// configure a YARPC dispatcher for the service "hello",
 	// expose the service over an HTTP inbound on port 8086,
 	// and configure outbound calls to service "hello" over HTTP port 8086 as well
 	http := http.NewTransport()
