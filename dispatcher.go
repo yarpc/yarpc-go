@@ -21,7 +21,6 @@
 package yarpc
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
@@ -189,18 +188,6 @@ func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 	panic(noOutboundForService{Service: service})
 }
 
-// Procedures returns a list of services and procedures that have been
-// registered with this Dispatcher.
-func (d *Dispatcher) Procedures() []transport.Procedure {
-	return d.table.Procedures()
-}
-
-// Choose picks a handler for the given request or returns an error if a
-// handler for this request does not exist.
-func (d *Dispatcher) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	return d.table.Choose(ctx, req)
-}
-
 // Register configures the dispatcher's router to route inbound requests to a
 // collection of procedure handlers.
 func (d *Dispatcher) Register(rs []transport.Procedure) {
@@ -297,7 +284,7 @@ func (d *Dispatcher) Start() error {
 	// Start Inbounds
 	wait = intsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
-		i.SetRouter(d)
+		i.SetRouter(d.table)
 		wait.Submit(start(i))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {

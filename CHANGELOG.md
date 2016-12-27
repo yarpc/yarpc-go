@@ -47,6 +47,8 @@ v1.0.0-dev (unreleased)
     `yarpc.ResponseHeaders` to receive response headers for the call.
 
 -   **Breaking**: Removed `yarpc.Headers` in favor of `map[string]string`.
+-   **Breaking**: `yarpc.Dispatcher` no longer implements the
+    `transport.Router` interface.
 -   **Breaking**: Start and Stop for Inbound and Outbound are now expected to
     be idempotent.
 -   **Breaking**: Combine `ServiceProcedure` and `Registrant` into `Procedure`.
