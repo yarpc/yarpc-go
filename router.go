@@ -83,9 +83,10 @@ func (m MapRouter) Procedures() []transport.Procedure {
 	return procs
 }
 
-// ChooseProcedure retrieves the HandlerSpec for the given Procedure or returns an
-// error.
-func (m MapRouter) ChooseProcedure(service, procedure string) (transport.HandlerSpec, error) {
+// Choose retrives the HandlerSpec for the service and procedure noted on the
+// transport request, or returns an error.
+func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+	service, procedure := req.Service, req.Procedure
 	if service == "" {
 		service = m.defaultService
 	}
@@ -102,12 +103,6 @@ func (m MapRouter) ChooseProcedure(service, procedure string) (transport.Handler
 		Service:   service,
 		Procedure: procedure,
 	}
-}
-
-// Choose retrives the HandlerSpec for the service and procedure noted on the
-// transport request, or returns an error.
-func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	return m.ChooseProcedure(req.Service, req.Procedure)
 }
 
 type byServiceProcedure []transport.Procedure
