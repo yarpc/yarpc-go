@@ -159,7 +159,7 @@ func (i *Inbound) Addr() net.Addr {
 // Introspect returns the state of the inbound for introspection purposes.
 func (i *Inbound) Introspect() introspection.InboundStatus {
 	state := "Stopped"
-	if i.server != nil {
+	if i.IsRunning() {
 		state = "Started"
 	}
 	return introspection.InboundStatus{
