@@ -429,7 +429,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 	return dispatcherStatus{
 		Name:       d.name,
 		ID:         fmt.Sprintf("%p", d),
-		Procedures: d.Procedures(),
+		Procedures: d.table.Procedures(),
 		Inbounds:   inbounds,
 		Outbounds:  outbounds,
 	}
