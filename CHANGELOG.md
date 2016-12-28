@@ -69,8 +69,8 @@ v1.0.0-dev (unreleased)
     `dontNotify` argument.
 -   Added `yarpc.IsBadRequestError`, `yarpc.IsUnexpectedError` and
     `yarpc.IsTimeoutError` functions.
--   Added a `transport.BadRequestError` function to build errors which satisfy
-    `transport.IsBadRequestError`.
+-   Added a `transport.InboundBadRequestError` function to build errors which
+    satisfy `transport.IsBadRequestError`.
 -   Added a `transport.ValidateRequest` function to validate
     `transport.Request`s.
 
