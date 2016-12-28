@@ -46,6 +46,7 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 	return o.UnaryOutbound.Call(ctx, request)
 }
 
+// Introspect returns the introspection status of the underlying outbound.
 func (o UnaryValidatorOutbound) Introspect() introspection.OutboundStatus {
 	if o, ok := o.UnaryOutbound.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
@@ -62,6 +63,7 @@ func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transp
 	return o.OnewayOutbound.CallOneway(ctx, request)
 }
 
+// Introspect returns the introspection status of the underlying outbound.
 func (o OnewayValidatorOutbound) Introspect() introspection.OutboundStatus {
 	if o, ok := o.OnewayOutbound.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
