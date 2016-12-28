@@ -413,7 +413,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 			} else {
 				status.Transport = "Introspection not supported"
 			}
-			status.Flavor = "unary"
+			status.Type = "unary"
 		}
 		if o.Oneway != nil {
 			if o, ok := o.Oneway.(introspection.IntrospectableOutbound); ok {
@@ -421,7 +421,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 			} else {
 				status.Transport = "Introspection not supported"
 			}
-			status.Flavor = "oneway"
+			status.Type = "oneway"
 		}
 		status.Service = destService
 		outbounds = append(outbounds, status)
