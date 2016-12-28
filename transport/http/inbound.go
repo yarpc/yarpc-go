@@ -33,12 +33,15 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// InboundOption can be added as a variadic argument to the NewInbound
-// constructor.
+// InboundOption customizes the behavior of an HTTP Inbound constructed with
+// NewInbound.
 type InboundOption func(*Inbound)
 
-// Mux specifies the ServeMux that the HTTP server should use and the pattern
-// under which the YARPC endpoint should be registered.
+// Mux specifies that the HTTP server should make the YARPC endpoint available
+// under the given pattern on the given ServeMux. By default, the YARPC
+// service is made available on all paths of the HTTP server. By specifying a
+// ServeMux, users can narrow the endpoints under which the YARPC service is
+// available and offer their own non-YARPC endpoints.
 func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	return func(i *Inbound) {
 		i.mux = mux
@@ -59,9 +62,8 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	return i
 }
 
-// Inbound represents an HTTP Inbound. It is the same as the transport Inbound
-// except it exposes the address on which the system is listening for
-// connections.
+// Inbound receives YARPC requests using an HTTP server. It may be constructed
+// using the NewInbound method on the Transport.
 type Inbound struct {
 	addr       string
 	mux        *http.ServeMux

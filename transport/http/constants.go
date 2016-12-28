@@ -20,52 +20,53 @@
 
 package http
 
+// HTTP headers used in requests and responses to send YARPC metadata.
 const (
-	// ApplicationHeaderPrefix is the prefix added to application headers over
-	// the wire.
-	ApplicationHeaderPrefix = "Rpc-Header-"
-
-	// TODO(abg): Allow customizing header prefixes
-
-	// CallerHeader is the HTTP header used to indiate the service doing the calling
+	// Name of the service sending the request. This corresponds to the
+	// Request.Caller attribute.
 	CallerHeader = "Rpc-Caller"
 
-	// EncodingHeader is the HTTP header used to specify the name of the
-	// encoding.
+	// Name of the encoding used for the request body. This corresponds to the
+	// Request.Encoding attribute.
 	EncodingHeader = "Rpc-Encoding"
 
-	// TTLMSHeader is the HTTP header used to indicate the ttl in ms
+	// Amount of time (in milliseconds) within which the request is expected
+	// to finish.
 	TTLMSHeader = "Context-TTL-MS"
 
-	// ProcedureHeader is the HTTP header used to indicate the procedure
+	// Name of the procedure being called. This corresponds to the
+	// Request.Procedure attribute.
 	ProcedureHeader = "Rpc-Procedure"
 
-	// ServiceHeader is the HTTP header used to indicate the service
+	// Name of the service to which the request is being sent. This
+	// corresponds to the Request.Service attribute.
 	ServiceHeader = "Rpc-Service"
 
-	// ShardKeyHeader is the HTTP header used by a clustered service to
-	// identify the node responsible for handling the request.
+	// Shard key used by the destined service to shard the request. This
+	// corresponds to the Request.ShardKey attribute.
 	ShardKeyHeader = "Rpc-Shard-Key"
 
-	// RoutingKeyHeader is the HTTP header used by a relay to identify
-	// the traffic group responsible for handling the request, overriding the
-	// service name when available.
+	// The traffic group responsible for handling the request. This
+	// corresponds to the Request.RoutingKey attribute.
 	RoutingKeyHeader = "Rpc-Routing-Key"
 
-	// RoutingDelegateHeader is the HTTP header used by a relay to identify a
-	// service that can proxy for the destined service and perform
-	// application-specific routing.
+	// A service that can proxy the destined service. This corresponds to the
+	// Request.RoutingDelegate attribute.
 	RoutingDelegateHeader = "Rpc-Routing-Delegate"
 
-	// ApplicationStatusHeader is the HTTP response header used to express
-	// whether the response body represents an application error.
+	// Whether the response body contains an application error.
 	ApplicationStatusHeader = "Rpc-Status"
+)
 
-	// ApplicationSuccessStatus is the value for ApplicationStatusHeader for
-	// successful requests.
+// Valid values for the Rpc-Status header.
+const (
+	// The request was successful.
 	ApplicationSuccessStatus = "success"
 
-	// ApplicationErrorStatus is the value for ApplicationStatusHeader for
-	// errant requests.
+	// An error occurred. The response body contains an application header.
 	ApplicationErrorStatus = "error"
 )
+
+// ApplicationHeaderPrefix is the prefix added to application header keys to
+// send them in requests or responses.
+const ApplicationHeaderPrefix = "Rpc-Header-"
