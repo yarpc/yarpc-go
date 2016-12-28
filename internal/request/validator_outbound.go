@@ -50,7 +50,7 @@ func (o UnaryValidatorOutbound) Introspect() introspection.OutboundStatus {
 	if o, ok := o.UnaryOutbound.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
 	}
-	return introspection.OutboundStatus{}
+	return introspection.OutboundStatusNotSupported
 }
 
 // CallOneway performs the given request, failing early if the request is invalid.
@@ -66,5 +66,5 @@ func (o OnewayValidatorOutbound) Introspect() introspection.OutboundStatus {
 	if o, ok := o.OnewayOutbound.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
 	}
-	return introspection.OutboundStatus{}
+	return introspection.OutboundStatusNotSupported
 }

@@ -34,3 +34,7 @@ type OutboundStatus struct {
 	Chooser   ChooserStatus
 	Service   string
 }
+
+// OutboundStatusNotSupported is returned when not valid OutboundStatus can be
+// produced.
+var OutboundStatusNotSupported = OutboundStatus{}

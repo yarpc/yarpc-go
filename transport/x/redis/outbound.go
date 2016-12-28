@@ -121,7 +121,7 @@ func (o *Outbound) Introspect() introspection.OutboundStatus {
 	return introspection.OutboundStatus{
 		Transport: transportName,
 		Endpoint:  o.client.Endpoint(),
-		State: fmt.Sprintf("%s (queue: %s)", o.client.ConState(),
+		State: fmt.Sprintf("%s (queue: %s)", o.client.ConnectionState(),
 			o.queueKey),
 	}
 }

@@ -85,7 +85,7 @@ func (x unaryChainExec) Introspect() introspection.OutboundStatus {
 	if o, ok := x.Final.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
 	}
-	return introspection.OutboundStatus{}
+	return introspection.OutboundStatusNotSupported
 }
 
 // OnewayChain combines a series of `OnewayOutbound`s into a single `OnewayOutbound`.
@@ -145,5 +145,5 @@ func (x onewayChainExec) Introspect() introspection.OutboundStatus {
 	if o, ok := x.Final.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
 	}
-	return introspection.OutboundStatus{}
+	return introspection.OutboundStatusNotSupported
 }

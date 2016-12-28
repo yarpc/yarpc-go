@@ -95,7 +95,7 @@ func (fo unaryOutboundWithMiddleware) Introspect() introspection.OutboundStatus 
 	if o, ok := fo.o.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
 	}
-	return introspection.OutboundStatus{}
+	return introspection.OutboundStatusNotSupported
 }
 
 func (fo unaryOutboundWithMiddleware) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
@@ -179,7 +179,7 @@ func (fo onewayOutboundWithMiddleware) Introspect() introspection.OutboundStatus
 	if o, ok := fo.o.(introspection.IntrospectableOutbound); ok {
 		return o.Introspect()
 	}
-	return introspection.OutboundStatus{}
+	return introspection.OutboundStatusNotSupported
 }
 
 type nopOnewayOutbound struct{}
