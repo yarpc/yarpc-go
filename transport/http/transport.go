@@ -60,7 +60,7 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
-// NewTransport creates a new http transport for managing peers and sending requests
+// NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
 	cfg := defaultTransportConfig
 	cfg.tracer = opentracing.GlobalTracer()
@@ -90,7 +90,9 @@ func buildClient(cfg *transportConfig) *http.Client {
 	}
 }
 
-// Transport keeps track of http peers and the associated client with which the peer will call into.
+// Transport keeps track of HTTP peers and the associated HTTP client. It
+// allows using a single HTTP client to make requests to multiple YARPC
+// services and pooling the resources needed therein.
 type Transport struct {
 	lock sync.Mutex
 

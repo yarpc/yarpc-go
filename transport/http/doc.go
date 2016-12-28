@@ -18,9 +18,49 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package http implements the HTTP inbound and outbound transports for YARPC.
+// Package http implements a YARPC transport based on the HTTP/1.1 protocol.
+// The HTTP transport provides first class support for Unary RPCs and
+// experimental support for Oneway RPCs.
 //
-// Note that the Close method for the HTTP Inbound does NOT immediately close
-// the ongoing connections. The connection will remain open until all clients
-// have disconnected.
+// Usage
+//
+// An HTTP Transport must be constructed to use this transport.
+//
+// 	httpTransport := http.NewTransport()
+//
+// To serve your YARPC application over HTTP, pass the HTTP inbound in your
+// yarpc.Config.
+//
+// 	myInbound := httpTransport.NewInbound(":8080")
+// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+// 		Name: "myservice",
+// 		Inbounds: yarpc.Inbounds{myInbound},
+// 	})
+//
+// To make requests to a YARPC application that supports HTTP, pass the HTTP
+// outbound in your yarpc.Config.
+//
+// 	myserviceOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:8080")
+// 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+// 		Name: "myclient",
+// 		Outbounds: yarpc.Outbounds{
+// 			"myservice": {Unary: myserviceOutbound},
+// 		},
+// 	})
+//
+// Note that stopping an HTTP transport does NOT immediately terminate ongoing
+// requests. Connections will remain open until all clients have disconnected.
+//
+// Wire Representation
+//
+// YARPC requests and responses are sent as plain HTTP requests and responses.
+// YARPC metadata is sent inside reserved HTTP headers. Application headers
+// for requests and responses are sent as HTTP headers with the header names
+// prefixed with a pre-defined string. See Constants for more information on
+// the names of these headers. The request and response bodies are sent as-is
+// in the HTTP request or response body.
+//
+// See Also
+//
+// YARPC Properties: https://github.com/yarpc/yarpc/blob/master/properties.md
 package http
