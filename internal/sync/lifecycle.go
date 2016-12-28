@@ -58,6 +58,11 @@ const (
 type LifecycleOnce struct {
 	lock sync.Mutex
 
+	// TODO(abg): We don't need a mutex if we use atomics correctly. Right
+	// now, the only reason we have an atomic is so that we can safely query
+	// the state of the lifecycle while Start() is still running. We should
+	// just switch this to an atomic instead.
+
 	state    atomic.Int32
 	startErr error
 	stopErr  error
