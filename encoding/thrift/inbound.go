@@ -81,7 +81,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 
-	res, err := t.UnaryHandler.Handle(ctx, envelope.Value)
+	res, err := t.UnaryHandler(ctx, envelope.Value)
 	if err != nil {
 		return err
 	}
@@ -153,5 +153,5 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 
-	return t.OnewayHandler.HandleOneway(ctx, envelope.Value)
+	return t.OnewayHandler(ctx, envelope.Value)
 }
