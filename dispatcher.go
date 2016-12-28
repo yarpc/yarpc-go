@@ -324,6 +324,7 @@ func (d *Dispatcher) Start() error {
 		return abort(errs)
 	}
 
+	addDispatcherToDebugPages(d)
 	return nil
 }
 
@@ -380,6 +381,8 @@ func (d *Dispatcher) Stop() error {
 	if len(allErrs) > 0 {
 		return errors.ErrorGroup(allErrs)
 	}
+
+	removeDispatcherFromDebugPages(d)
 	return nil
 }
 
