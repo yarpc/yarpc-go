@@ -24,6 +24,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo"
@@ -79,7 +82,12 @@ func main() {
 	}
 	fmt.Println(res)
 
-	select {}
+	// Gracefully shut down if we receive an interrupt (^C) or a kill signal.
+	// Upon returning, this will unravel cancel() to abort the outbound request
+	// and dispatcher.Stop() which will block until graceful shutdown.
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	<-signals
 }
 
 type helloHandler struct{}
