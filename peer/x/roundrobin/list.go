@@ -342,11 +342,12 @@ func (pl *List) Introspect() introspection.ChooserStatus {
 		len(availables)+len(unavailables))
 
 	buildPeerStatus := func(peer peer.Peer) introspection.PeerStatus {
+		ps := peer.Status()
 		return introspection.PeerStatus{
 			Identifier: peer.Identifier(),
 			State: fmt.Sprintf("%s, %d pending request(s)",
-				peer.Status().ConnectionStatus.String(),
-				peer.Status().PendingRequestCount),
+				ps.ConnectionStatus.String(),
+				ps.PendingRequestCount),
 		}
 	}
 
