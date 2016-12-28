@@ -59,4 +59,8 @@
 // prefixed with a pre-defined string. See Constants for more information on
 // the names of these headers. The request and response bodies are sent as-is
 // in the HTTP request or response body.
+//
+// See Also
+//
+// YARPC Properties: https://github.com/yarpc/yarpc/blob/master/properties.md
 package http
