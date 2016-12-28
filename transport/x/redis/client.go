@@ -43,6 +43,6 @@ type Client interface {
 	// Endpoint returns the enpoint configured for this client.
 	Endpoint() string
 
-	// ConState returns the status of the connection(s).
-	ConState() string
+	// ConnectionState returns the status of the connection(s).
+	ConnectionState() string
 }

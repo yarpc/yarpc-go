@@ -203,6 +203,6 @@ func (i *Inbound) Introspect() introspection.InboundStatus {
 		Transport: "redis",
 		Endpoint: fmt.Sprintf("%s (queue: %s)",
 			i.client.Endpoint(), i.queueKey),
-		State: i.client.ConState(),
+		State: i.client.ConnectionState(),
 	}
 }
