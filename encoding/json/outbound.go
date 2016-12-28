@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 
 	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 )
@@ -56,7 +57,7 @@ type jsonClient struct {
 }
 
 func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
-	call := yarpc.NewOutboundCall(opts...)
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
 		Caller:    c.cc.Caller(),
 		Service:   c.cc.Service(),
@@ -94,7 +95,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 }
 
 func (c jsonClient) CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error) {
-	call := yarpc.NewOutboundCall(opts...)
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
 		Caller:    c.cc.Caller(),
 		Service:   c.cc.Service(),

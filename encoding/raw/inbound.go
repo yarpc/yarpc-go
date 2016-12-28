@@ -24,7 +24,7 @@ import (
 	"context"
 	"io/ioutil"
 
-	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 )
@@ -40,7 +40,7 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 		return err
 	}
 
-	ctx, call := yarpc.NewInboundCall(ctx)
+	ctx, call := encodingapi.NewInboundCall(ctx)
 	if err := call.ReadFromRequest(treq); err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Requ
 		return err
 	}
 
-	ctx, call := yarpc.NewInboundCall(ctx)
+	ctx, call := encodingapi.NewInboundCall(ctx)
 	if err := call.ReadFromRequest(treq); err != nil {
 		return err
 	}

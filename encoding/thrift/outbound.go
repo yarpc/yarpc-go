@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
 	"go.uber.org/yarpc/internal/encoding"
@@ -129,7 +130,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 		return wire.Value{}, err
 	}
 
-	call := yarpc.NewOutboundCall(opts...)
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	ctx, err = call.WriteToRequest(ctx, treq)
 	if err != nil {
 		return wire.Value{}, err
@@ -183,7 +184,7 @@ func (c thriftClient) CallOneway(ctx context.Context, reqBody envelope.Enveloper
 		return nil, err
 	}
 
-	call := yarpc.NewOutboundCall(opts...)
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	ctx, err = call.WriteToRequest(ctx, treq)
 	if err != nil {
 		return nil, err
