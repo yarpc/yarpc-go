@@ -44,13 +44,14 @@ func removeDispatcherFromDebugPages(disp *Dispatcher) {
 	dispatchersLock.Lock()
 	defer dispatchersLock.Unlock()
 
-	var filtered []*Dispatcher
-	for _, x := range dispatchers {
-		if x != disp {
-			filtered = append(filtered, x)
+	for i, x := range dispatchers {
+		if x == disp {
+			copy(dispatchers[i:], dispatchers[i+1:])
+			dispatchers[len(dispatchers)-1] = nil
+			dispatchers = dispatchers[:len(dispatchers)-1]
+			break
 		}
 	}
-	dispatchers = filtered
 }
 
 func init() {
