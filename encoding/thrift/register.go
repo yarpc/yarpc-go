@@ -105,7 +105,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 				Enveloping:    rc.Enveloping,
 			})
 		default:
-			panic(fmt.Sprintf("Invalid handler type for %q", method.HandlerSpec))
+			panic(fmt.Sprintf("Invalid handler type for %T", method))
 		}
 
 		rs = append(rs, transport.Procedure{
