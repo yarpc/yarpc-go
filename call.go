@@ -126,11 +126,14 @@ func ResponseHeaders(h *map[string]string) CallOption {
 	return CallOption{func(o *OutboundCall) { o.responseHeaders = h }}
 }
 
-// TODO(abg): Example tests to document the different options
-
-// WithHeader adds a new header to the request.
+// WithHeader adds a new header to the request. Header keys are case
+// insensitive.
 //
-// 	resBody, err := client.GetValue(ctx, reqBody, yarpc.WithHeader("Token", "10"))
+// 	_, err := client.GetValue(ctx, reqBody, yarpc.WithHeader("Token", "10"))
+// 	// ==> {"token": "10"}
+//
+// If multiple entries have the same normalized header name, newer entries
+// override older ones.
 func WithHeader(k, v string) CallOption {
 	return CallOption{func(o *OutboundCall) {
 		o.headers = append(o.headers, keyValuePair{k: k, v: v})
@@ -155,8 +158,9 @@ func WithRoutingDelegate(rd string) CallOption {
 // InboundCall holds information about the inbound call and its response.
 //
 // Encoding authors may use InboundCall to provide information about the
-// incoming request on the Context and send response headers through
-// WriteResponseHeader.
+// incoming request on the Context. Response headers written to the context
+// using Call.WriteResponseHeader will be recorded and may be written to a
+// ResponseWriter using WriteToResponse.
 type InboundCall struct {
 	resHeaders []keyValuePair
 	req        *transport.Request
@@ -164,9 +168,11 @@ type InboundCall struct {
 
 type inboundCallKey struct{} // context key for *InboundCall
 
-// NewInboundCall builds a new InboundCall with the given context.
+// NewInboundCall builds a new InboundCall with the given context. A request
+// context is returned and must be used in place of the original.
 //
-// A request context is returned and must be used in place of the original.
+// This may be used by encoding authors to provide information about the
+// incoming request on the Context.
 func NewInboundCall(ctx context.Context) (context.Context, *InboundCall) {
 	call := &InboundCall{}
 	return context.WithValue(ctx, inboundCallKey{}, call), call
@@ -207,7 +213,18 @@ func (ic *InboundCall) WriteToResponse(resw transport.ResponseWriter) error {
 	return nil
 }
 
-// Call provides information about the current request inside handlers.
+// Call provides information about the current request inside handlers. An
+// instance of Call for the current request can be obtained by calling
+// CallFromContext on the request context.
+//
+// 	func Get(ctx context.Context, req *GetRequest) (*GetResponse, error) {
+// 		call := yarpc.CallFromContext(ctx)
+// 		fmt.Println("Received request from", call.Caller())
+// 		if err := call.WriteResponseHeader("hello", "world"); err != nil {
+// 			return nil, err
+// 		}
+// 		return response, nil
+// 	}
 type Call struct{ ic *InboundCall }
 
 // CallFromContext retrieves information about the current incoming request

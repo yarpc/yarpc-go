@@ -81,28 +81,36 @@ func RegisterClientBuilder(f interface{}) (forget func()) {
 	return func() { delete(_clientBuilders, t) }
 }
 
-// InjectClients injects clients from the given Dispatcher into the given
-// struct. dest must be a pointer to a struct with zero or more exported
-// fields Thrift client fields. Only fields with nil values and a `service`
-// tag will be populated; everything else will be left unchanged.
+// InjectClients injects clients from a Dispatcher into the given struct. dest
+// must be a pointer to a struct with zero or more exported fields which hold
+// YARPC client types. This includes json.Client, raw.Client, and any
+// generated Thrift service client. Fields with nil values and a `service` tag
+// will be populated with clients using that service`s ClientConfig.
+//
+// Given,
 //
 // 	type Handler struct {
 // 		KeyValueClient keyvalueclient.Interface `service:"keyvalue"`
 // 		UserClient json.Client `service:"users"`
-// 		TagClient tagclient.Interface  // will not be changed
+// 		TagClient tagclient.Interface  // no tag; will be left unchanged
 // 	}
+//
+// The call,
 //
 // 	var h Handler
 // 	yarpc.InjectClients(dispatcher, &h)
 //
-// 	// InjectClients above is equivalent to,
+// Is equivalent to,
 //
+// 	var h Handler
 // 	h.KeyValueClient = keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
 // 	h.UserClient = json.New(dispatcher.ClientConfig("users"))
 //
 // Builder functions for different client types may be registered using the
-// RegisterClientBuilder function. This function panics if an empty client
-// field without a registered constructor is encountered.
+// RegisterClientBuilder function.
+//
+// This function panics if a field with an unknown type and nil value has the
+// `service` tag.
 func InjectClients(src transport.ClientConfigProvider, dest interface{}) {
 	destV := reflect.ValueOf(dest)
 	destT := reflect.TypeOf(dest)
