@@ -60,6 +60,26 @@ func (_mr *_MockClientRecorder) BRPopLPush(arg0, arg1, arg2 interface{}) *gomock
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "BRPopLPush", arg0, arg1, arg2)
 }
 
+func (_m *MockClient) ConnectionState() string {
+	ret := _m.ctrl.Call(_m, "ConnectionState")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+func (_mr *_MockClientRecorder) ConnectionState() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "ConnectionState")
+}
+
+func (_m *MockClient) Endpoint() string {
+	ret := _m.ctrl.Call(_m, "Endpoint")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+func (_mr *_MockClientRecorder) Endpoint() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Endpoint")
+}
+
 func (_m *MockClient) LPush(_param0 string, _param1 []byte) error {
 	ret := _m.ctrl.Call(_m, "LPush", _param0, _param1)
 	ret0, _ := ret[0].(error)

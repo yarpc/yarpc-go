@@ -22,6 +22,7 @@ package redis
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -106,4 +107,16 @@ func (c *redis5Client) LRem(key string, item []byte) error {
 		return errors.New("could not remove item from queue")
 	}
 	return nil
+}
+
+// Endpoint returns the endpoint configured for this client.
+func (c *redis5Client) Endpoint() string {
+	return c.addr
+}
+
+// ConState returns the status of the connection(s).
+func (c *redis5Client) ConnectionState() string {
+	ps := c.client.PoolStats()
+	active := ps.TotalConns - ps.FreeConns
+	return fmt.Sprintf("%d/%d connection(s)", active, ps.TotalConns)
 }

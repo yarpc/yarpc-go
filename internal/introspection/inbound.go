@@ -18,31 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package redis
+package introspection
 
-import "time"
+// IntrospectableInbound extends the Inbound interface.
+type IntrospectableInbound interface {
+	Introspect() InboundStatus
+}
 
-//go:generate mockgen -destination=redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
-
-// Client is a subset of redis commands used to manage a queue
-type Client interface {
-	// Start creates the connection to redis
-	Start() error
-	// Stop ends the redis connection
-	Stop() error
-
-	// LPush adds item to the queue
-	LPush(queue string, item []byte) error
-	// This MUST return an error if the blocking call does not receive an item
-	// BRPopLPush moves an item from the primary queue into a processing list.
-	// within the timeout.
-	BRPopLPush(from, to string, timeout time.Duration) ([]byte, error)
-	// LRem removes one item from the queue key
-	LRem(queue string, item []byte) error
-
-	// Endpoint returns the enpoint configured for this client.
-	Endpoint() string
-
-	// ConnectionState returns the status of the connection(s).
-	ConnectionState() string
+// InboundStatus is a collection of basics info about an Inbound.
+type InboundStatus struct {
+	Transport string
+	Endpoint  string
+	State     string
 }
