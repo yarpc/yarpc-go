@@ -9,7 +9,7 @@ import (
 
 func TestBadRequestError(t *testing.T) {
 	err := errors.New("derp")
-	err = BadRequestError(err)
+	err = InboundBadRequestError(err)
 	assert.True(t, IsBadRequestError(err))
 	assert.Equal(t, "BadRequest: derp", err.Error())
 }
