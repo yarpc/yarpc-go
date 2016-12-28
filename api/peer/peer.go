@@ -21,6 +21,7 @@
 package peer
 
 //go:generate mockgen -destination=peertest/peer.go -package=peertest go.uber.org/yarpc/api/peer Identifier,Peer
+//go:generate stringer -type=ConnectionStatus
 
 // ConnectionStatus maintains information about the Peer's connection state
 type ConnectionStatus int
