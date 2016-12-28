@@ -119,7 +119,6 @@ func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbo
 	for _, opt := range opts {
 		opt(o)
 	}
-
 	o.setURLTemplate(uri)
 	return o
 }
