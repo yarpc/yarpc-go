@@ -26,8 +26,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-
-	"golang.org/x/net/trace"
 )
 
 var (
@@ -46,7 +44,7 @@ func removeDispatcherFromDebugPages(disp *Dispatcher) {
 	dispatchersLock.Lock()
 	defer dispatchersLock.Unlock()
 
-	filtered := dispatchers[:0]
+	var filtered []*Dispatcher
 	for _, x := range dispatchers {
 		if x != disp {
 			filtered = append(filtered, x)
@@ -57,17 +55,12 @@ func removeDispatcherFromDebugPages(disp *Dispatcher) {
 
 func init() {
 	http.HandleFunc("/debug/yarpc", func(w http.ResponseWriter, req *http.Request) {
-		any, sensitive := trace.AuthRequest(req)
-		if !any {
-			http.Error(w, "not allowed", http.StatusUnauthorized)
-			return
-		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(w, req, sensitive)
+		render(w, req)
 	})
 }
 
-func render(w io.Writer, req *http.Request, sensitive bool) {
+func render(w io.Writer, req *http.Request) {
 	var data struct {
 		Dispatchers []dispatcherStatus
 	}
@@ -119,7 +112,7 @@ const pageHTML = `
 
 {{range .Dispatchers}}
 	<hr />
-	<h3>Dispatcher "{{.Name}}" <small>({{.ID}})</small></h3>
+	<h2>Dispatcher "{{.Name}}" <small>({{.ID}})</small></h2>
 	<table>
 		<tr>
 			<th>Service</th>
@@ -138,7 +131,7 @@ const pageHTML = `
 		</tr>
 		{{end}}
 	</table>
-	<h4>Inbounds</h4>
+	<h3>Inbounds</h3>
 	<table>
 		<tr>
 			<th>Transport</th>
@@ -153,7 +146,7 @@ const pageHTML = `
 		</tr>
 		{{end}}
 	</table>
-	<h4>Outbounds</h4>
+	<h3>Outbounds</h3>
 	<table>
 		<thead>
 		<tr>
