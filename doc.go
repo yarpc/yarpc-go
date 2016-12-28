@@ -19,6 +19,36 @@
 // THE SOFTWARE.
 
 // Package yarpc provides the YARPC service framework.
+//
+// With hundreds to thousands of services communicating with RPC, transport
+// protocols (like HTTP and TChannel), encoding protocols (like JSON or
+// Thrift), and peer choosers are the concepts that vary year over year.
+// Separating these concerns allows services to change transports and wire
+// protocols without changing call sites or request handlers, build proxies and
+// wire protocol bridges, or experiment with load balancing strategies.
+// YARPC is a toolkit for services and proxies.
+//
+// YARPC breaks RPC into interchangeable encodings, transports, and peer
+// choosers.
+// YARPC for Go provides reference implementations for HTTP/1.1 and TChannel
+// transports, and also raw, JSON, and Thrift encodings.
+// YARPC for Go provides experimental implementations for a Redis transport and a
+// round robin peer chooser.
+// YARPC for Go plans to provide a Protobuf 3 encoding, a gRPC transport, and a
+// load balancer that uses a least-pending-requests strategy.
+// Peer choosers can implement any strategy, including load balancing or sharding,
+// in turn backed by a pluggable peer provider.
+//
+// Regardless of transport, every RPC has some common properties: caller name,
+// service name, procedure name, encoding name, deadline or TTL, headers,
+// baggage (multi-hop headers), and tracing.
+// Each RPC can also have an optional shard key, routing key, or routing
+// delegate for advanced routing.
+// YARPC transports use a shared API for capturing RPC metadata, so middleware
+// can apply to requests over any transport.
+//
+// Each YARPC transport protocol can implement inbound handlers and outbound
+// callers. Each of these can support different RPC types, like unary (request and
+// response) or oneway (request and receipt) RPC. A future release of YARPC will
+// add support for other RPC types including variations on streaming and pubsub.
 package yarpc
-
-// TODO: Add more package-level docs
