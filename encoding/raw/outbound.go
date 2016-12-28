@@ -26,7 +26,9 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/encoding"
 )
 
 // Client makes Raw requests to a single service.
@@ -52,7 +54,7 @@ type rawClient struct {
 }
 
 func (c rawClient) Call(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) ([]byte, error) {
-	call := yarpc.NewOutboundCall(opts...)
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
 		Caller:    c.cc.Caller(),
 		Service:   c.cc.Service(),
@@ -86,7 +88,7 @@ func (c rawClient) Call(ctx context.Context, procedure string, body []byte, opts
 }
 
 func (c rawClient) CallOneway(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) (transport.Ack, error) {
-	call := yarpc.NewOutboundCall(opts...)
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
 		Caller:    c.cc.Caller(),
 		Service:   c.cc.Service(),

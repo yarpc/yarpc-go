@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 )
@@ -46,7 +46,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 		return err
 	}
 
-	ctx, call := yarpc.NewInboundCall(ctx)
+	ctx, call := encodingapi.NewInboundCall(ctx)
 	if err := call.ReadFromRequest(treq); err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (h jsonHandler) HandleOneway(ctx context.Context, treq *transport.Request) 
 		return err
 	}
 
-	ctx, call := yarpc.NewInboundCall(ctx)
+	ctx, call := encodingapi.NewInboundCall(ctx)
 	if err := call.ReadFromRequest(treq); err != nil {
 		return err
 	}
