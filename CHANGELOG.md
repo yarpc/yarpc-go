@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.0.0-dev (unreleased)
+v1.0.0-rc4 (2016-12-28)
 -----------------------
 
 -   **Breaking**: Removed the `yarpc.ReqMeta` and `yarpc.ResMeta` types. To
