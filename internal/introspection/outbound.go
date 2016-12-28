@@ -28,7 +28,7 @@ type IntrospectableOutbound interface {
 // OutboundStatus is a collection of basics info about an Outbound.
 type OutboundStatus struct {
 	Transport string
-	Flavor    string
+	Type      string
 	Endpoint  string
 	State     string
 	Chooser   ChooserStatus
