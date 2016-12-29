@@ -32,7 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoclient"
+	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 
 	"github.com/crossdock/crossdock-go"
 )

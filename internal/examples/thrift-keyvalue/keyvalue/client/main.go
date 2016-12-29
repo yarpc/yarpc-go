@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/yarpc/keyvalueclient"
+	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"

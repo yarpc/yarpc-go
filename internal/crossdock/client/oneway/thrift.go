@@ -24,7 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayclient"
+	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayclient"
 
 	"github.com/crossdock/crossdock-go"
 )

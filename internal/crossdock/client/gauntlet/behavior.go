@@ -33,8 +33,8 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
-	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/secondserviceclient"
-	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/thrifttestclient"
+	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceclient"
+	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestclient"
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/thriftrw/ptr"
