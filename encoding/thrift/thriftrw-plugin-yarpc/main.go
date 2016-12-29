@@ -64,7 +64,7 @@ package <$pkgname>
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sserver" .ParentModule.ImportPath (lower .Parent.Name)>
+		<$parentPath := printf "%s/%sserver" .ParentModule.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -168,7 +168,7 @@ package <$pkgname>
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
-		<$parentPath := printf "%s/yarpc/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
+		<$parentPath := printf "%s/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
 		<import $parentPath>.Interface
 	<end>
 
@@ -287,15 +287,15 @@ func (generator) Generate(req *api.GenerateServiceRequest) (*api.GenerateService
 			OnewayWrapperFunc:   onewayWrapperFunc,
 		}
 
-		// kv.thrift => .../kv/yarpc
-		baseDir := filepath.Join(module.Directory, "yarpc")
+		// kv.thrift => .../kv
+		baseDir := module.Directory
 
 		serverPackageName := strings.ToLower(service.Name) + "server"
 		clientPackageName := strings.ToLower(service.Name) + "client"
 
 		// kv.thrift =>
-		//   .../yarpc/keyvalueserver/server.go
-		//   .../yarpc/keyvalueclient/client.go
+		//   .../kv/keyvalueserver/server.go
+		//   .../kv/keyvalueclient/client.go
 		serverFilePath := filepath.Join(baseDir, serverPackageName, "server.go")
 		clientFilePath := filepath.Join(baseDir, clientPackageName, "client.go")
 

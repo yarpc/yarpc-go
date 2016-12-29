@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/yarpc/onewayserver"
+	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/x/redis"
 )

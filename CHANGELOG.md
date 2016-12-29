@@ -6,6 +6,9 @@ v1.0.0-dev (unreleased)
 
 -   **Breaking**: `NewChannelTransport` can now return an error upon
     construction.
+-   **Breaking**: The ThriftRW plugin now generates code under the subpackages
+    `${service}server` and `$[service}client` rather than
+    `yarpc/${service}server` and `yarpc/${service}client`.
 
 
 v1.0.0-rc4 (2016-12-28)
