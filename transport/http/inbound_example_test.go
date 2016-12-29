@@ -15,10 +15,14 @@ func ExampleInbound() {
 	transport := http.NewTransport()
 	inbound := transport.NewInbound(":8888")
 
-	yarpc.NewDispatcher(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "myservice",
 		Inbounds: yarpc.Inbounds{inbound},
 	})
+	if err := dispatcher.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer dispatcher.Stop()
 }
 
 func ExampleMux() {

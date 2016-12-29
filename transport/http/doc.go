@@ -28,7 +28,7 @@
 //
 // 	httpTransport := http.NewTransport()
 //
-// To serve your YARPC application over HTTP, pass the HTTP inbound in your
+// To serve your YARPC application over HTTP, pass an HTTP inbound in your
 // yarpc.Config.
 //
 // 	myInbound := httpTransport.NewInbound(":8080")
@@ -37,7 +37,7 @@
 // 		Inbounds: yarpc.Inbounds{myInbound},
 // 	})
 //
-// To make requests to a YARPC application that supports HTTP, pass the HTTP
+// To make requests to a YARPC application that supports HTTP, pass an HTTP
 // outbound in your yarpc.Config.
 //
 // 	myserviceOutbound := httpTransport.NewSingleOutbound("http://127.0.0.1:8080")
