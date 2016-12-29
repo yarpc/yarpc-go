@@ -25,10 +25,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Channel is top-level TChannel.
+// Channel is the interface exposed by TChannel. The TChannel transport for
+// YARPC is built on top of this interface.
 //
 // See https://godoc.org/github.com/uber/tchannel-go#Channel for more
-// information.
+// information about these methods.
 type Channel interface {
 	BeginCall(
 		ctx context.Context,

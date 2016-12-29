@@ -29,8 +29,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-// ChannelInbound is a TChannel Inbound backed by a pre-existing TChannel
-// Channel.
+// ChannelInbound receives YARPC requests over TChannel. It may be constructed
+// using the NewInbound method on ChannelTransport.
 type ChannelInbound struct {
 	ch        Channel
 	addr      string
@@ -70,11 +70,9 @@ func (i *ChannelInbound) Channel() Channel {
 	return i.ch
 }
 
-// Start starts a TChannel inbound. This arranges for registration of the
-// request handler based on the router given by SetRouter.
-//
-// Start does not start listening sockets. That occurs when you Start the
-// underlying ChannelTransport.
+// Start starts this Inbound. Note that this does not start listening for
+// connections; that occurs when you start the underlying ChannelTransport is
+// started.
 func (i *ChannelInbound) Start() error {
 	return i.once.Start(i.start)
 }
