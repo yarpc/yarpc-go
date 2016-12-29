@@ -1,6 +1,7 @@
 # Paths besides auto-detected generated files that should be excluded from
 # lint results.
-LINT_EXCLUDES_EXTRAS =
+# TODO: remove encoding/protobuf/inbound.go
+LINT_EXCLUDES_EXTRAS = encoding/protobuf/inbound.go
 
 # List of executables needed for 'make generate'
 GENERATE_DEPENDENCIES = \
@@ -36,6 +37,8 @@ FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
 
+PROTO_EXAMPLE_OUTBOUND ?= tchannel
+PROTO_EXAMPLE_OUTBOUND_FLAG = -outbound $(PROTO_EXAMPLE_OUTBOUND)
 ##############################################################################
 
 _GENERATE_DEPS_DIR = $(shell pwd)/.tmp
@@ -66,6 +69,8 @@ build:
 
 .PHONY: generate
 generate: $(_GENERATE_DEPS_EXECUTABLES)
+	go install github.com/golang/protobuf/protoc-gen-go
+	go install ./encoding/protobuf/protoc-gen-yarpc-go
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH go generate $(PACKAGES)
 	./scripts/updateLicenses.sh
 
@@ -170,3 +175,13 @@ verify_version:
 		echo "CHANGELOG : $(CHANGELOG_VERSION)"; \
 		exit 1; \
 	fi
+
+.PHONY: proto-example-build
+proto-example-build:
+	go install github.com/golang/protobuf/protoc-gen-go
+	go install ./encoding/protobuf/protoc-gen-yarpc-go
+	go generate ./internal/examples/protobuf-keyvalue/kv
+
+.PHONY: proto-example-run
+proto-example-run: proto-example-build
+	cat internal/examples/protobuf-keyvalue/test.txt | go run ./internal/examples/protobuf-keyvalue/main.go $(PROTO_EXAMPLE_OUTBOUND_FLAG)

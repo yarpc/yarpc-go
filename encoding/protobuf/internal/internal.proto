@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package internal;
+
+// ApplicationError is an error that occured in the application on the server-side.
+message ApplicationError {
+  // The message name as registered with github.com/golang/protobuf/proto#RegisterType.
+  //
+  // There is a generic way to represent message names (including package paths)
+  // that is used in google/protobuf/descriptor.proto, this should be used.
+  //
+  // Note this is optional, if this is not set, payload is intepreted as a
+  // protobuf string (either UTF-8 or 7-bit ASCII) as a generic error message.
+  //
+  // the method must have this message name marked as a potential error type using
+  // option (yarpc.error_types). See yarpc.proto.
+  string message_name = 1;
+  // The payload, either a protobuf message with name specified by message_name,
+  // or a generic error. If a generic error, this will be a protobuf string.
+  bytes payload = 2;
+}
+
+// Response contains the server-side response.
+message Response {
+  // The payload of the protobuf response. Type information is not needed
+  // since this is part of the protobuf spec.
+  bytes payload = 1;
+  // An error, if one occurred.
+  ApplicationError ApplicationError = 2;
+}

@@ -31,3 +31,4 @@ import:
   version: ^1
 - package: gopkg.in/yaml.v2
 - package: gopkg.in/redis.v5
+- package: github.com/golang/protobuf
