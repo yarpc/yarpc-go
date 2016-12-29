@@ -38,7 +38,9 @@ func TestInboundStartNew(t *testing.T) {
 	}{
 		{
 			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
-				x := NewChannelTransport(WithChannel(ch))
+				x, err := NewChannelTransport(WithChannel(ch))
+				require.NoError(t, err)
+
 				i := x.NewInbound()
 				i.SetRouter(new(transporttest.MockRouter))
 				// Can't do Equal because we want to match the pointer, not a
@@ -54,7 +56,9 @@ func TestInboundStartNew(t *testing.T) {
 		},
 		{
 			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
-				x := NewChannelTransport(WithChannel(ch))
+				x, err := NewChannelTransport(WithChannel(ch))
+				require.NoError(t, err)
+
 				i := x.NewInbound()
 				i.SetRouter(new(transporttest.MockRouter))
 				assert.True(t, ch == i.Channel(), "channel does not match")
@@ -88,7 +92,9 @@ func TestInboundStartAlreadyListening(t *testing.T) {
 	require.NoError(t, ch.ListenAndServe(":0"))
 	assert.Equal(t, tchannel.ChannelListening, ch.State())
 
-	x := NewChannelTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch))
+	require.NoError(t, err)
+
 	i := x.NewInbound()
 
 	i.SetRouter(new(transporttest.MockRouter))
@@ -104,13 +110,17 @@ func TestInboundStopWithoutStarting(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
 
-	x := NewChannelTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch))
+	require.NoError(t, err)
+
 	i := x.NewInbound()
 	assert.NoError(t, i.Stop())
 }
 
 func TestInboundInvalidAddress(t *testing.T) {
-	x := NewChannelTransport(ServiceName("foo"), ListenAddr("not valid"))
+	x, err := NewChannelTransport(ServiceName("foo"), ListenAddr("not valid"))
+	require.NoError(t, err)
+
 	i := x.NewInbound()
 	i.SetRouter(new(transporttest.MockRouter))
 	assert.Nil(t, i.Start())
@@ -129,7 +139,9 @@ func TestInboundExistingMethods(t *testing.T) {
 		},
 	}, nil)
 
-	x := NewChannelTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch))
+	require.NoError(t, err)
+
 	i := x.NewInbound()
 	i.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i.Start())

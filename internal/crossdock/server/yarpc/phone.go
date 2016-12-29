@@ -72,7 +72,10 @@ func Phone(ctx context.Context, body *PhoneRequest) (*PhoneResponse, error) {
 	var outbound transport.UnaryOutbound
 
 	httpTransport := http.NewTransport()
-	tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("yarpc-test-client"))
+	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("yarpc-test-client"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to build ChannelTransport: %v", err)
+	}
 
 	switch {
 	case body.Transport.HTTP != nil:

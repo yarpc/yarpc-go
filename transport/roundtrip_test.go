@@ -132,7 +132,9 @@ func (tt tchannelTransport) WithRouter(r transport.Router, f func(transport.Unar
 	serverOpts := testutils.NewOpts().SetServiceName(testService)
 	clientOpts := testutils.NewOpts().SetServiceName(testCaller)
 	testutils.WithServer(tt.t, serverOpts, func(ch *tchannel.Channel, hostPort string) {
-		ix := tch.NewChannelTransport(tch.WithChannel(ch))
+		ix, err := tch.NewChannelTransport(tch.WithChannel(ch))
+		require.NoError(tt.t, err)
+
 		i := ix.NewInbound()
 		i.SetRouter(r)
 		require.NoError(tt.t, ix.Start(), "failed to start inbound transport")
@@ -143,7 +145,9 @@ func (tt tchannelTransport) WithRouter(r transport.Router, f func(transport.Unar
 		// handler.
 
 		client := testutils.NewClient(tt.t, clientOpts)
-		ox := tch.NewChannelTransport(tch.WithChannel(client))
+		ox, err := tch.NewChannelTransport(tch.WithChannel(client))
+		require.NoError(tt.t, err)
+
 		o := ox.NewSingleOutbound(hostPort)
 		require.NoError(tt.t, ox.Start(), "failed to start outbound transport")
 		require.NoError(tt.t, o.Start(), "failed to start outbound")

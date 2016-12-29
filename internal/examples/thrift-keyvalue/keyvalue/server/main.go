@@ -23,6 +23,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
@@ -58,10 +59,14 @@ func (h *handler) SetValue(ctx context.Context, key *string, value *string) erro
 }
 
 func main() {
-	tchannelTransport := tchannel.NewChannelTransport(
+	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName("keyvalue"),
 		tchannel.ListenAddr(":28941"),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",
