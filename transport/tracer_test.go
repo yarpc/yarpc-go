@@ -111,11 +111,12 @@ func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) *yarpc.Dispatcher {
 	hp := "127.0.0.1:4040"
 
-	tchannelTransport := ytchannel.NewChannelTransport(
+	tchannelTransport, err := ytchannel.NewChannelTransport(
 		ytchannel.ListenAddr(hp),
 		ytchannel.Tracer(tracer),
 		ytchannel.ServiceName("yarpc-test"),
 	)
+	require.NoError(t, err)
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",

@@ -38,7 +38,9 @@ import (
 
 func basicDispatcher(t *testing.T) *Dispatcher {
 	httpTransport := http.NewTransport()
-	tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("test"))
+	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("test"))
+	require.NoError(t, err)
+
 	return NewDispatcher(Config{
 		Name: "test",
 		Inbounds: Inbounds{

@@ -8,7 +8,11 @@ import (
 )
 
 func ExampleChannelInbound() {
-	transport := tchannel.NewChannelTransport(tchannel.ServiceName("myservice"))
+	transport, err := tchannel.NewChannelTransport(tchannel.ServiceName("myservice"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "myservice",
 		Inbounds: yarpc.Inbounds{transport.NewInbound()},
@@ -21,7 +25,11 @@ func ExampleChannelInbound() {
 }
 
 func ExampleChannelOutbound() {
-	transport := tchannel.NewChannelTransport(tchannel.ServiceName("myclient"))
+	transport, err := tchannel.NewChannelTransport(tchannel.ServiceName("myclient"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "myclient",
 		Outbounds: yarpc.Outbounds{
@@ -36,7 +44,11 @@ func ExampleChannelOutbound() {
 }
 
 func ExampleChannelOutbound_single() {
-	transport := tchannel.NewChannelTransport(tchannel.ServiceName("myclient"))
+	transport, err := tchannel.NewChannelTransport(tchannel.ServiceName("myclient"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "myclient",
 		Outbounds: yarpc.Outbounds{

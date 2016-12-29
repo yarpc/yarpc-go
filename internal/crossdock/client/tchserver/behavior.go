@@ -43,7 +43,9 @@ func Run(t crossdock.T) {
 	server := t.Param(params.Server)
 	serverHostPort := fmt.Sprintf("%v:%v", server, serverPort)
 
-	tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("yarpc-client"))
+	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("yarpc-client"))
+	fatals.NoError(err, "Failed to build ChannelTransport")
+
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-client",
 		Outbounds: yarpc.Outbounds{

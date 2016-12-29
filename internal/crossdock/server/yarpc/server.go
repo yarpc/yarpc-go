@@ -22,6 +22,7 @@ package yarpc
 
 import (
 	"fmt"
+	"log"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
@@ -37,10 +38,14 @@ var dispatcher *yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
-	tchannelTransport := tchannel.NewChannelTransport(
+	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ListenAddr(":8082"),
 		tchannel.ServiceName("yarpc-test"),
 	)
+	if err != nil {
+		log.Panicf("failed to build ChannelTransport: %v", err)
+	}
+
 	httpTransport := http.NewTransport()
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",

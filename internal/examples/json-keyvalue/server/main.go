@@ -23,6 +23,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -69,10 +70,14 @@ func (h *handler) Set(ctx context.Context, body *setRequest) (*setResponse, erro
 }
 
 func main() {
-	tchannelTransport := tchannel.NewChannelTransport(
+	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName("keyvalue"),
 		tchannel.ListenAddr(":28941"),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",

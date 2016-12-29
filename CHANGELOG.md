@@ -4,7 +4,9 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   **Breaking**: `NewChannelTransport` can now return an error upon
+    construction.
+
 
 v1.0.0-rc4 (2016-12-28)
 -----------------------
