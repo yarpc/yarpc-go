@@ -32,7 +32,8 @@ type Lifecycle interface {
 	Stop() error
 
 	// IsRunning returns whether the Lifecycle is currently running.
-	// *NOTE* This is only for introspection purposes, this function
-	// should NOT be used to assert the state of the lifecycle.
+	//
+	// This function exists for introspection purposes only. It should not be
+	// used to assert the state of the lifecycle.
 	IsRunning() bool
 }
