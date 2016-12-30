@@ -22,11 +22,11 @@ package transport
 
 import "go.uber.org/yarpc/internal/errors"
 
-// BadRequestError builds an error which indicates a bad request with the
-// given error as the reason.
+// InboundBadRequestError builds an error which indicates that an inbound
+// cannot process a request because it is a bad request.
 //
-// Transport implementations treat BadRequestErrors as user errors.
-func BadRequestError(err error) error {
+// IsBadRequestError returns true for these errors.
+func InboundBadRequestError(err error) error {
 	return errors.HandlerBadRequestError(err)
 }
 

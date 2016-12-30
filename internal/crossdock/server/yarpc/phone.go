@@ -68,11 +68,14 @@ type PhoneResponse struct {
 }
 
 // Phone implements the phone procedure
-func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*PhoneResponse, yarpc.ResMeta, error) {
+func Phone(ctx context.Context, body *PhoneRequest) (*PhoneResponse, error) {
 	var outbound transport.UnaryOutbound
 
 	httpTransport := http.NewTransport()
-	tchannelTransport := tchannel.NewChannelTransport(tchannel.ServiceName("yarpc-test-client"))
+	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("yarpc-test-client"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to build ChannelTransport: %v", err)
+	}
 
 	switch {
 	case body.Transport.HTTP != nil:
@@ -83,33 +86,29 @@ func Phone(ctx context.Context, reqMeta yarpc.ReqMeta, body *PhoneRequest) (*Pho
 		hostport := fmt.Sprintf("%s:%d", t.Host, t.Port)
 		outbound = tchannelTransport.NewSingleOutbound(hostport)
 	default:
-		return nil, nil, fmt.Errorf("unconfigured transport")
+		return nil, fmt.Errorf("unconfigured transport")
 	}
 
 	if err := outbound.Start(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer outbound.Stop()
 
-	// TODO use reqMeta.Service for caller
+	// TODO use yarpc.Service for caller
 	client := json.New(clientconfig.MultiOutbound("yarpc-test", body.Service, transport.Outbounds{
 		Unary: outbound,
 	}))
 	resBody := PhoneResponse{
-		Service:   "yarpc-test", // TODO use reqMeta.Service
-		Procedure: reqMeta.Procedure(),
+		Service:   "yarpc-test", // TODO use yarpc.Service
+		Procedure: yarpc.CallFromContext(ctx).Procedure(),
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
-	_, err := client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure(body.Procedure),
-		body.Body,
-		&resBody.Body)
-	if err != nil {
-		return nil, nil, err
+
+	if err := client.Call(ctx, body.Procedure, body.Body, &resBody.Body); err != nil {
+		return nil, err
 	}
 
-	return &resBody, nil, nil
+	return &resBody, nil
 }

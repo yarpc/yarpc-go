@@ -32,7 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoclient"
+	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 
 	"github.com/crossdock/crossdock-go"
 )
@@ -74,112 +74,124 @@ func Run(t crossdock.T) {
 
 	tests := []struct {
 		desc string
-		give yarpc.Headers
-		want yarpc.Headers
+		give map[string]string
+		want map[string]string
 	}{
 		{
 			"valid headers",
-			yarpc.NewHeaders().With("token1", token1).With("token2", token2),
-			yarpc.NewHeaders().With("token1", token1).With("token2", token2),
+			map[string]string{"token1": token1, "token2": token2},
+			map[string]string{"token1": token1, "token2": token2},
 		},
 		{
 			"non-string values",
-			yarpc.NewHeaders().With("token", "42"),
-			yarpc.NewHeaders().With("token", "42"),
+			map[string]string{"token": "42"},
+			map[string]string{"token": "42"},
 		},
 		{
 			"empty strings",
-			yarpc.NewHeaders().With("token", ""),
-			yarpc.NewHeaders().With("token", ""),
+			map[string]string{"token": ""},
+			map[string]string{"token": ""},
 		},
 		{
 			"no headers",
-			yarpc.Headers{},
-			yarpc.NewHeaders(),
+			nil,
+			nil,
 		},
 		{
 			"empty map",
-			yarpc.NewHeaders(),
-			yarpc.NewHeaders(),
+			map[string]string{},
+			map[string]string{},
 		},
 		{
 			"varying casing",
-			yarpc.NewHeaders().With("ToKeN1", token1).With("tOkEn2", token2),
-			yarpc.NewHeaders().With("token1", token1).With("token2", token2),
+			map[string]string{"ToKeN1": token1, "tOkEn2": token2},
+			map[string]string{"token1": token1, "token2": token2},
 		},
 		{
 			"http header conflict",
-			yarpc.NewHeaders().With("Rpc-Procedure", "does not exist"),
-			yarpc.NewHeaders().With("rpc-procedure", "does not exist"),
+			map[string]string{"Rpc-Procedure": "does not exist"},
+			map[string]string{"rpc-procedure": "does not exist"},
 		},
 		{
 			"mixed case value",
-			yarpc.NewHeaders().With("token", "MIXED case Value"),
-			yarpc.NewHeaders().With("token", "MIXED case Value"),
+			map[string]string{"token": "MIXED case Value"},
+			map[string]string{"token": "MIXED case Value"},
 		},
 	}
 
 	for _, tt := range tests {
-		got, err := caller.Call(tt.give)
+		gotHeaders, err := caller.Call(tt.give)
 		if checks.NoError(err, "%v: call failed", tt.desc) {
-			gotHeaders := internal.RemoveVariableHeaderKeys(got)
-			assert.Equal(tt.want, gotHeaders, "%v: returns valid headers", tt.desc)
+			internal.RemoveVariableMapKeys(gotHeaders)
+
+			// assert.Equal doesn't work with nil maps
+			if len(tt.want) == 0 {
+				assert.Empty(gotHeaders, "%v: returns valid headers", tt.desc)
+			} else {
+				assert.Equal(tt.want, gotHeaders, "%v: returns valid headers", tt.desc)
+			}
 		}
 	}
 }
 
 type headerCaller interface {
-	Call(yarpc.Headers) (yarpc.Headers, error)
+	Call(map[string]string) (map[string]string, error)
 }
 
 type rawCaller struct{ c raw.Client }
 
-func (c rawCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
+func (c rawCaller) Call(h map[string]string) (map[string]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	_, res, err := c.c.Call(
-		ctx,
-		yarpc.NewReqMeta().Headers(h).Procedure("echo/raw"),
-		[]byte("hello"))
-
-	if err != nil {
-		return yarpc.Headers{}, err
+	var (
+		opts       []yarpc.CallOption
+		resHeaders map[string]string
+	)
+	for k, v := range h {
+		opts = append(opts, yarpc.WithHeader(k, v))
 	}
-	return res.Headers(), nil
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+	_, err := c.c.Call(ctx, "echo/raw", []byte("hello"), opts...)
+	return resHeaders, err
 }
 
 type jsonCaller struct{ c json.Client }
 
-func (c jsonCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
+func (c jsonCaller) Call(h map[string]string) (map[string]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	var resBody interface{}
-	res, err := c.c.Call(
-		ctx,
-		yarpc.NewReqMeta().Headers(h).Procedure("echo"),
-		map[string]interface{}{}, &resBody)
-
-	if err != nil {
-		return yarpc.Headers{}, err
+	var (
+		opts       []yarpc.CallOption
+		resHeaders map[string]string
+	)
+	for k, v := range h {
+		opts = append(opts, yarpc.WithHeader(k, v))
 	}
-	return res.Headers(), nil
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+	var resBody interface{}
+	err := c.c.Call(ctx, "echo", map[string]interface{}{}, &resBody, opts...)
+	return resHeaders, err
 }
 
 type thriftCaller struct{ c echoclient.Interface }
 
-func (c thriftCaller) Call(h yarpc.Headers) (yarpc.Headers, error) {
+func (c thriftCaller) Call(h map[string]string) (map[string]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	_, res, err := c.c.Echo(
-		ctx,
-		yarpc.NewReqMeta().Headers(h),
-		&echo.Ping{Beep: "hello"})
-
-	if err != nil {
-		return yarpc.Headers{}, err
+	var (
+		opts       []yarpc.CallOption
+		resHeaders map[string]string
+	)
+	for k, v := range h {
+		opts = append(opts, yarpc.WithHeader(k, v))
 	}
-	return res.Headers(), nil
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+	_, err := c.c.Echo(ctx, &echo.Ping{Beep: "hello"}, opts...)
+	return resHeaders, err
 }

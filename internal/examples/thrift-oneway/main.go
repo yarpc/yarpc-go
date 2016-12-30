@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
-	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/yarpc/helloclient"
-	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/yarpc/helloserver"
+	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloclient"
+	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloserver"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
@@ -79,7 +79,7 @@ func main() {
 	// Make outbound call every 500ms
 	for {
 		time.Sleep(time.Second / 2)
-		if _, err := client.Sink(context.Background(), nil, &sink.SinkRequest{Message: "hello!"}); err != nil {
+		if _, err := client.Sink(context.Background(), &sink.SinkRequest{Message: "hello!"}); err != nil {
 			log.Print(err)
 		}
 	}
@@ -88,7 +88,7 @@ func main() {
 type helloHandler struct{}
 
 // Sink is our server-side handler implementation
-func (h *helloHandler) Sink(ctx context.Context, reqMeta yarpc.ReqMeta, snk *sink.SinkRequest) error {
+func (h *helloHandler) Sink(ctx context.Context, snk *sink.SinkRequest) error {
 	log.Println("received message:", snk.Message)
 	return nil
 }

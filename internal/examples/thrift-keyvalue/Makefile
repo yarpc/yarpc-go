@@ -1,4 +1,12 @@
-.PHONY: all
-all:
-	cd keyvalue/client; go build -i
-	cd keyvalue/server; go build -i
+.PHONY: all hello kvserver kvclient
+
+all: kvserver kvclient
+
+gen:
+	cd keyvalue && go generate
+
+kvclient:
+	cd keyvalue/client && go build -i
+
+kvserver:
+	cd keyvalue/server && go build -i

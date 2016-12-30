@@ -37,32 +37,38 @@ type transportConfig struct {
 	name   string
 }
 
-// TransportOption is for variadic arguments to NewChannelTransport.
-//
-// TransportOption will eventually also be suitable for passing to NewTransport.
+// TransportOption customizes the behavior of a TChannel Transport.
 type TransportOption func(*transportConfig)
 
-// Tracer is an option that configures the tracer for a TChannel transport.
+// Tracer specifies the request tracer used for RPCs passing through the
+// TChannel transport.
 func Tracer(tracer opentracing.Tracer) TransportOption {
 	return func(t *transportConfig) {
 		t.tracer = tracer
 	}
 }
 
-// WithChannel informs NewChannelTransport that it should reuse an existing
-// underlying TChannel Channel instance. This instance may already have
-// handlers and be listening before this transport starts. Otherwise,
-// The TransportChannel will listen on start, albeit with the default address
-// ":0" (all interfaces, any port).
+// WithChannel specifies the TChannel Channel to use to send and receive YARPC
+// requests. The instance may already have handlers registered against it;
+// these will be left unchanged.
+//
+// If this option is not passed, the Transport will build and manage its own
+// Channel. The behavior of that Tchannel may be customized using the
+// ListenAddr and ServiceName options.
 func WithChannel(ch Channel) TransportOption {
 	return func(t *transportConfig) {
 		t.ch = ch
 	}
 }
 
-// ListenAddr informs a transport constructor what address (in the form of
-// host:port) to listen on. This option does not apply to NewChannelTransport
-// if it is called with WithChannel and a channel that is already listening.
+// ListenAddr specifies the YARPC-owned TChannel Channel should listen on. If
+// the WithChannel option is not specified, the TChannel Transport will build
+// its own TChannel Channel and listen on this address. This defaults to ":0"
+// (all interfaces, OS-assigned port).
+//
+// 	transport := NewChannelTransport(ServiceName("myservice"), ListenAddr(":4040"))
+//
+// This option has no effect if WithChannel was used.
 func ListenAddr(addr string) TransportOption {
 	return func(t *transportConfig) {
 		t.addr = addr
@@ -72,6 +78,17 @@ func ListenAddr(addr string) TransportOption {
 // ServiceName informs the NewChannelTransport constructor which service
 // name to use if it needs to construct a root Channel object, as when called
 // without the WithChannel option.
+
+// ServiceName specifies the name of the current service for the YARPC-owned
+// TChannel Channel. If the WithChannel option is not specified, the TChannel
+// Transport will build its own TChannel Chanel and use this name for that
+// Channel.
+//
+// This option MUST be specified if WithChannel was not used. Note that this
+// is the name of the LOCAL service, not the service you are trying to send
+// requests to.
+//
+// This option has no effect if WithChannel was used.
 func ServiceName(name string) TransportOption {
 	return func(t *transportConfig) {
 		t.name = name

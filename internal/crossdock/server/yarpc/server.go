@@ -22,14 +22,14 @@ package yarpc
 
 import (
 	"fmt"
+	"log"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoserver"
-	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/secondserviceserver"
-	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/yarpc/thrifttestserver"
+	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoserver"
+	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceserver"
+	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 )
@@ -38,10 +38,14 @@ var dispatcher *yarpc.Dispatcher
 
 // Start starts the test server that clients will make requests to
 func Start() {
-	tchannelTransport := tchannel.NewChannelTransport(
+	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ListenAddr(":8082"),
 		tchannel.ServiceName("yarpc-test"),
 	)
+	if err != nil {
+		log.Panicf("failed to build ChannelTransport: %v", err)
+	}
+
 	httpTransport := http.NewTransport()
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",
@@ -68,7 +72,7 @@ func Stop() {
 	}
 }
 
-func register(reg transport.RouteTable) {
+func register(reg *yarpc.Dispatcher) {
 	reg.Register(raw.Procedure("echo/raw", EchoRaw))
 	reg.Register(json.Procedure("echo", EchoJSON))
 

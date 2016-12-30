@@ -43,10 +43,9 @@ func JSON(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan [
 
 	ack, err := client.CallOneway(
 		context.Background(),
-		yarpc.NewReqMeta().
-			Procedure("echo/json").
-			Headers(yarpc.NewHeaders().With("callBackAddr", callBackAddr)),
+		"echo/json",
 		&jsonToken{Token: token},
+		yarpc.WithHeader("callBackAddr", callBackAddr),
 	)
 
 	// ensure channel hasn't been filled yet

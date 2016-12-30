@@ -23,6 +23,7 @@ package yarpc
 import (
 	"context"
 
+	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 )
 
@@ -30,103 +31,127 @@ import (
 // services.
 //
 // These may be used to add or alter the request.
-type CallOption struct{ apply func(*OutboundCall) }
-
-type callHeader struct{ k, v string }
-
-// OutboundCall represents an outgoing call.
-//
-// It holds any per-call options for a request. Encoding authors may use
-// OutboundCall to hydrate Requests from call-site options.
-type OutboundCall struct {
-	// request attributes to fill if non-nil
-	headers         []callHeader
-	shardKey        *string
-	routingKey      *string
-	routingDelegate *string
-
-	// If non-nil, response headers should be written here.
-	responseHeaders *Headers
-}
-
-// NewOutboundCall constructs a new OutboundCall with the given options.
-func NewOutboundCall(options ...CallOption) *OutboundCall {
-	var call OutboundCall
-	for _, opt := range options {
-		opt.apply(&call)
-	}
-	return &call
-}
-
-// WriteToRequest fills the given request with request-specific options from
-// the call.
-//
-// The context MAY be replaced by the OutboundCall.
-func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Request) (context.Context, error) {
-	for _, h := range c.headers {
-		req.Headers = req.Headers.With(h.k, h.v)
-	}
-
-	if c.shardKey != nil {
-		req.ShardKey = *c.shardKey
-	}
-	if c.routingKey != nil {
-		req.RoutingKey = *c.routingKey
-	}
-	if c.routingDelegate != nil {
-		req.RoutingDelegate = *c.routingDelegate
-	}
-
-	// NB(abg): context and error are unused for now but we want to leave room
-	// for CallOptions which can fail or modify the context.
-	return ctx, nil
-}
-
-// ReadFromResponse reads information from the response for this call.
-//
-// This should be called only if the request is unary.
-func (c *OutboundCall) ReadFromResponse(ctx context.Context, res *transport.Response) (context.Context, error) {
-	// We're not using ctx right now but we may in the future.
-	if c.responseHeaders != nil {
-		*c.responseHeaders = Headers(res.Headers)
-	}
-
-	// NB(abg): context and error are unused for now but we want to leave room
-	// for CallOptions which can fail or modify the context.
-	return ctx, nil
-}
+type CallOption encoding.CallOption
 
 // ResponseHeaders specifies that headers received in response to this request
-// should be fed into the given object.
+// should replace the given map.
 //
-// 	var resHeaders yarpc.Headers
+// Header keys in the map are normalized using the CanonicalizeHeaderKey
+// function.
+//
+// 	var resHeaders map[string]string
 // 	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&resHeaders))
-func ResponseHeaders(h *Headers) CallOption {
-	return CallOption{func(o *OutboundCall) { o.responseHeaders = h }}
+// 	value, ok := resHeaders[yarpc.CanonicalizeHeaderKey("foo")]
+//
+// Note that the map is replaced completely. Entries it had before making the
+// call will not be available afterwards.
+//
+// 	headers := map[string]string{"hello": "world"}
+// 	resBody, err := client.SetValue(ctx, key, value, yarpc.ResponseHeaders(&headers))
+// 	_, ok := headers["hello"]
+// 	fmt.Println(ok)  // false
+func ResponseHeaders(h *map[string]string) CallOption {
+	return CallOption(encoding.ResponseHeaders(h))
 }
 
-// TODO(abg): Example tests to document the different options
-
-// WithHeader adds a new header to the request.
+// WithHeader adds a new header to the request. Header keys are case
+// insensitive.
 //
-// 	resBody, err := client.GetValue(ctx, reqBody, yarpc.WithHeader("Token", "10"))
+// 	_, err := client.GetValue(ctx, reqBody, yarpc.WithHeader("Token", "10"))
+// 	// ==> {"token": "10"}
+//
+// If multiple entries have the same normalized header name, newer entries
+// override older ones.
 func WithHeader(k, v string) CallOption {
-	return CallOption{func(o *OutboundCall) {
-		o.headers = append(o.headers, callHeader{k: k, v: v})
-	}}
+	return CallOption(encoding.WithHeader(k, v))
 }
 
 // WithShardKey sets the shard key for the request.
 func WithShardKey(sk string) CallOption {
-	return CallOption{func(o *OutboundCall) { o.shardKey = &sk }}
+	return CallOption(encoding.WithShardKey(sk))
 }
 
 // WithRoutingKey sets the routing key for the request.
 func WithRoutingKey(rk string) CallOption {
-	return CallOption{func(o *OutboundCall) { o.routingKey = &rk }}
+	return CallOption(encoding.WithRoutingKey(rk))
 }
 
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
-	return CallOption{func(o *OutboundCall) { o.routingDelegate = &rd }}
+	return CallOption(encoding.WithRoutingDelegate(rd))
+}
+
+// Call provides information about the current request inside handlers. An
+// instance of Call for the current request can be obtained by calling
+// CallFromContext on the request context.
+//
+// 	func Get(ctx context.Context, req *GetRequest) (*GetResponse, error) {
+// 		call := yarpc.CallFromContext(ctx)
+// 		fmt.Println("Received request from", call.Caller())
+// 		if err := call.WriteResponseHeader("hello", "world"); err != nil {
+// 			return nil, err
+// 		}
+// 		return response, nil
+// 	}
+type Call encoding.Call
+
+// CallFromContext retrieves information about the current incoming request
+// from the given context. Returns nil if the context is not a valid request
+// context.
+//
+// The object is valid only as long as the request is ongoing.
+func CallFromContext(ctx context.Context) *Call {
+	return (*Call)(encoding.CallFromContext(ctx))
+}
+
+// WriteResponseHeader writes headers to the response of this call.
+func (c *Call) WriteResponseHeader(k, v string) error {
+	return (*encoding.Call)(c).WriteResponseHeader(k, v)
+}
+
+// Caller returns the name of the service making this request.
+func (c *Call) Caller() string {
+	return (*encoding.Call)(c).Caller()
+}
+
+// Service returns the name of the service being called.
+func (c *Call) Service() string {
+	return (*encoding.Call)(c).Service()
+}
+
+// Procedure returns the name of the procedure being called.
+func (c *Call) Procedure() string {
+	return (*encoding.Call)(c).Procedure()
+}
+
+// Encoding returns the encoding for this request.
+func (c *Call) Encoding() transport.Encoding {
+	return (*encoding.Call)(c).Encoding()
+}
+
+// Header returns the value of the given request header provided with the
+// request.
+func (c *Call) Header(k string) string {
+	return (*encoding.Call)(c).Header(k)
+}
+
+// HeaderNames returns a sorted list of the names of user defined headers
+// provided with this request.
+func (c *Call) HeaderNames() []string {
+	return (*encoding.Call)(c).HeaderNames()
+}
+
+// ShardKey returns the shard key for this request.
+func (c *Call) ShardKey() string {
+	return (*encoding.Call)(c).ShardKey()
+}
+
+// RoutingKey returns the routing key for this request.
+func (c *Call) RoutingKey() string {
+	return (*encoding.Call)(c).RoutingKey()
+}
+
+// RoutingDelegate returns the routing delegate for this request.
+func (c *Call) RoutingDelegate() string {
+	return (*encoding.Call)(c).RoutingDelegate()
 }

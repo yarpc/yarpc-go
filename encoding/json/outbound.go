@@ -26,9 +26,9 @@ import (
 	"encoding/json"
 
 	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/meta"
 )
 
 // Client makes JSON requests to a single service.
@@ -39,8 +39,8 @@ type Client interface {
 	// json.Unmarshal.
 	//
 	// Returns the response or an error if the request failed.
-	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error)
-	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}) (transport.Ack, error)
+	Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error
+	CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error)
 }
 
 // New builds a new JSON client.
@@ -56,51 +56,62 @@ type jsonClient struct {
 	cc transport.ClientConfig
 }
 
-func (c jsonClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}, resBodyOut interface{}) (yarpc.CallResMeta, error) {
+func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interface{}, resBodyOut interface{}, opts ...yarpc.CallOption) error {
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
-		Caller:   c.cc.Caller(),
-		Service:  c.cc.Service(),
-		Encoding: Encoding,
+		Caller:    c.cc.Caller(),
+		Service:   c.cc.Service(),
+		Procedure: procedure,
+		Encoding:  Encoding,
 	}
-	meta.ToTransportRequest(reqMeta, &treq)
+
+	ctx, err := call.WriteToRequest(ctx, &treq)
+	if err != nil {
+		return err
+	}
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, encoding.RequestBodyEncodeError(&treq, err)
+		return encoding.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(encoded)
 	tres, err := c.cc.GetUnaryOutbound().Call(ctx, &treq)
-
 	if err != nil {
-		return nil, err
+		return err
+	}
+
+	ctx, err = call.ReadFromResponse(ctx, tres)
+	if err != nil {
+		return err
 	}
 
 	dec := json.NewDecoder(tres.Body)
 	if err := dec.Decode(resBodyOut); err != nil {
-		return nil, encoding.ResponseBodyDecodeError(&treq, err)
+		return encoding.ResponseBodyDecodeError(&treq, err)
 	}
 
-	if err := tres.Body.Close(); err != nil {
-		return nil, err
-	}
-
-	return meta.FromTransportResponse(tres), nil
+	return tres.Body.Close()
 }
 
-func (c jsonClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, reqBody interface{}) (transport.Ack, error) {
+func (c jsonClient) CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error) {
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
-		Caller:   c.cc.Caller(),
-		Service:  c.cc.Service(),
-		Encoding: Encoding,
+		Caller:    c.cc.Caller(),
+		Service:   c.cc.Service(),
+		Procedure: procedure,
+		Encoding:  Encoding,
 	}
-	meta.ToTransportRequest(reqMeta, &treq)
+
+	ctx, err := call.WriteToRequest(ctx, &treq)
+	if err != nil {
+		return nil, err
+	}
 
 	var buff bytes.Buffer
 	if err := json.NewEncoder(&buff).Encode(reqBody); err != nil {
 		return nil, encoding.RequestBodyEncodeError(&treq, err)
 	}
-
 	treq.Body = &buff
 
 	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)

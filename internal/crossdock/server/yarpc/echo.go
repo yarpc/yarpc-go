@@ -28,19 +28,37 @@ import (
 )
 
 // EchoRaw implements the echo/raw procedure.
-func EchoRaw(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-	return body, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
+func EchoRaw(ctx context.Context, body []byte) ([]byte, error) {
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
+	}
+	return body, nil
 }
 
 // EchoJSON implements the echo procedure.
-func EchoJSON(ctx context.Context, reqMeta yarpc.ReqMeta, body map[string]interface{}) (map[string]interface{}, yarpc.ResMeta, error) {
-	return body, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
+func EchoJSON(ctx context.Context, body map[string]interface{}) (map[string]interface{}, error) {
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
+	}
+	return body, nil
 }
 
 // EchoThrift implements the Thrift Echo service.
 type EchoThrift struct{}
 
 // Echo endpoint for the Echo service.
-func (EchoThrift) Echo(ctx context.Context, reqMeta yarpc.ReqMeta, ping *echo.Ping) (*echo.Pong, yarpc.ResMeta, error) {
-	return &echo.Pong{Boop: ping.Beep}, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
+func (EchoThrift) Echo(ctx context.Context, ping *echo.Ping) (*echo.Pong, error) {
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
+	}
+	return &echo.Pong{Boop: ping.Beep}, nil
 }

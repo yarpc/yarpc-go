@@ -27,7 +27,7 @@ import (
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoclient"
+	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 
 	"github.com/crossdock/crossdock-go"
 )
@@ -47,7 +47,7 @@ func Thrift(t crossdock.T) {
 
 	token := random.String(5)
 
-	pong, _, err := client.Echo(ctx, nil, &echo.Ping{Beep: token})
+	pong, err := client.Echo(ctx, &echo.Ping{Beep: token})
 
 	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
 	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)

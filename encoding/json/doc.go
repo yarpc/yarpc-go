@@ -24,15 +24,11 @@
 //
 // 	client := json.New(clientConfig)
 // 	var resBody GetValueResponse
-// 	resMeta, err := client.Call(
-// 		yarpc.NewReqMeta(ctx).Procedure("getValue"),
-// 		&GetValueRequest{...},
-// 		&resBody,
-// 	)
+// 	err := client.Call(ctx, "getValue", &GetValueRequest{...}, &resBody)
 //
 // To register a JSON procedure, define functions in the format,
 //
-// 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
+// 	f(ctx context.Context, body $reqBody) ($resBody, error)
 //
 // Where '$reqBody' and '$resBody' are either pointers to structs representing
 // your request and response objects, or map[string]interface{}.
@@ -46,7 +42,7 @@
 // Similarly, to register a oneway JSON procedure, define functions in the
 // format,
 //
-// 	f(ctx context.Context, reqMeta yarpc.ReqMeta, body $reqBody) error
+// 	f(ctx context.Context, body $reqBody) error
 //
 // Where $reqBody is a map[string]interface{} or pointer to a struct.
 //

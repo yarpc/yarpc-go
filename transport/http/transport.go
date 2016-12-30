@@ -27,6 +27,8 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
+	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/opentracing/opentracing-go"
@@ -60,7 +62,7 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
-// NewTransport creates a new http transport for managing peers and sending requests
+// NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
 	cfg := defaultTransportConfig
 	cfg.tracer = opentracing.GlobalTracer()
@@ -90,14 +92,38 @@ func buildClient(cfg *transportConfig) *http.Client {
 	}
 }
 
-// Transport keeps track of http peers and the associated client with which the peer will call into.
+// Transport keeps track of HTTP peers and the associated HTTP client. It
+// allows using a single HTTP client to make requests to multiple YARPC
+// services and pooling the resources needed therein.
 type Transport struct {
 	lock sync.Mutex
+	once intsync.LifecycleOnce
 
 	client *http.Client
 	peers  map[string]*hostport.Peer
 
 	tracer opentracing.Tracer
+}
+
+var _ transport.Transport = (*Transport)(nil)
+
+// Start starts the HTTP transport.
+func (a *Transport) Start() error {
+	return a.once.Start(func() error {
+		return nil // Nothing to do
+	})
+}
+
+// Stop stops the HTTP transport.
+func (a *Transport) Stop() error {
+	return a.once.Stop(func() error {
+		return nil // Nothing to do
+	})
+}
+
+// IsRunning returns whether the HTTP transport is running.
+func (a *Transport) IsRunning() bool {
+	return a.once.IsRunning()
 }
 
 // RetainPeer gets or creates a Peer for the specified peer.Subscriber (usually a peer.Chooser)

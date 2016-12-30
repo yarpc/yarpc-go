@@ -23,6 +23,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -54,25 +55,29 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) Get(ctx context.Context, reqMeta yarpc.ReqMeta, body *getRequest) (*getResponse, yarpc.ResMeta, error) {
+func (h *handler) Get(ctx context.Context, body *getRequest) (*getResponse, error) {
 	h.RLock()
 	result := &getResponse{Value: h.items[body.Key]}
 	h.RUnlock()
-	return result, nil, nil
+	return result, nil
 }
 
-func (h *handler) Set(ctx context.Context, reqMeta yarpc.ReqMeta, body *setRequest) (*setResponse, yarpc.ResMeta, error) {
+func (h *handler) Set(ctx context.Context, body *setRequest) (*setResponse, error) {
 	h.Lock()
 	h.items[body.Key] = body.Value
 	h.Unlock()
-	return &setResponse{}, nil, nil
+	return &setResponse{}, nil
 }
 
 func main() {
-	tchannelTransport := tchannel.NewChannelTransport(
+	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName("keyvalue"),
 		tchannel.ListenAddr(":28941"),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",

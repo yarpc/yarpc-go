@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -45,41 +46,52 @@ var errOutboundNotStarted = errors.ErrOutboundNotStarted("http.Outbound")
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
 var (
-	_ transport.UnaryOutbound  = (*Outbound)(nil)
-	_ transport.OnewayOutbound = (*Outbound)(nil)
+	_ transport.UnaryOutbound              = (*Outbound)(nil)
+	_ transport.OnewayOutbound             = (*Outbound)(nil)
+	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
 )
 
 var defaultURLTemplate, _ = url.Parse("http://localhost")
 
-// OutboundOption is suitable as an argument to NewOutbound
+// OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
 
-// URLTemplate specifies a template for URLs to this outbound.
-// The peer (host:port) may vary from call to call.
-// The URL template specifies the protocol and path.
+// URLTemplate specifies the URL this outbound makes requests to. For
+// peer.Chooser-based outbounds, the peer (host:port) spection of the URL may
+// vary from call to call but the rest will remain unchanged. For single-peer
+// outbounds, the URL will be used as-is.
 func URLTemplate(template string) OutboundOption {
 	return func(o *Outbound) {
 		o.setURLTemplate(template)
 	}
 }
 
-// NewOutbound builds a new HTTP outbound built around a peer.Chooser
-// for getting potential downstream hosts.
-// Chooser.Choose MUST return *hostport.Peer objects.
-// Chooser.Start MUST be called before Outbound.Start
-func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
+// NewOutbound builds an HTTP outbound which sends requests to peers supplied
+// by the given peer.Chooser. The URL template for used for the different
+// peers may be customized using the URLTemplate option.
+//
+// Peer Choosers used with the HTTP outbound MUST yield *hostport.Peer
+// objects. Also note that the Chooser MUST have started before Outbound.Start
+// is called.
+func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
 	}
+	for _, opt := range opts {
+		opt(o)
+	}
 	return o
 }
 
-// NewOutbound builds a new HTTP outbound built around a peer.Chooser
-// for getting potential downstream hosts.
-// Chooser.Choose MUST return *hostport.Peer objects.
-// Chooser.Start MUST be called before Outbound.Start
+// NewOutbound builds an HTTP outbound which sends requests to peers supplied
+// by the given peer.Chooser. The URL template for used for the different
+// peers may be customized using the URLTemplate option.
+//
+// Peer Choosers used with the HTTP outbound MUST yield *hostport.Peer
+// objects. Also note that the Chooser MUST have started before Outbound.Start
+// is called.
 func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
 		chooser:     chooser,
@@ -92,24 +104,30 @@ func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	return o
 }
 
-// NewSingleOutbound creates an outbound from a single URL (a bare host:port is
-// not sufficient).
-// This form defers to the underlying HTTP agent's peer selection and load
-// balancing, using DNS.
-func (t *Transport) NewSingleOutbound(URL string, opts ...OutboundOption) *Outbound {
-	parsedURL, err := url.Parse(URL)
+// NewSingleOutbound builds an outbound which sends YARPC requests over HTTP
+// to the specified URL.
+//
+// The URLTemplate option has no effect in this form.
+func (t *Transport) NewSingleOutbound(uri string, opts ...OutboundOption) *Outbound {
+	parsedURL, err := url.Parse(uri)
 	if err != nil {
 		panic(err.Error())
 	}
-	o := t.NewOutbound(peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t))
-	o.setURLTemplate(URL)
+
+	chooser := peerchooser.NewSingle(hostport.PeerIdentifier(parsedURL.Host), t)
+	o := t.NewOutbound(chooser)
 	for _, opt := range opts {
 		opt(o)
 	}
+	o.setURLTemplate(uri)
 	return o
 }
 
-// Outbound is an HTTP UnaryOutbound and OnewayOutbound
+// Outbound sends YARPC requests over HTTP. It may be constructed using the
+// NewOutbound function or the NewOutbound or NewSingleOutbound methods on the
+// HTTP Transport. It is recommended that services use a single HTTP transport
+// to construct all HTTP outbounds, ensuring efficient sharing of resources
+// across the different outbounds.
 type Outbound struct {
 	chooser     peer.Chooser
 	urlTemplate *url.URL
@@ -369,4 +387,26 @@ func getErrFromResponse(response *http.Response) error {
 	}
 
 	return errors.RemoteUnexpectedError(message)
+}
+
+// Introspect returns basic status about this outbound.
+func (o *Outbound) Introspect() introspection.OutboundStatus {
+	state := "Stopped"
+	if o.IsRunning() {
+		state = "Running"
+	}
+	var chooser introspection.ChooserStatus
+	if i, ok := o.chooser.(introspection.IntrospectableChooser); ok {
+		chooser = i.Introspect()
+	} else {
+		chooser = introspection.ChooserStatus{
+			Name: "Introspection not available",
+		}
+	}
+	return introspection.OutboundStatus{
+		Transport: "http",
+		Endpoint:  o.urlTemplate.String(),
+		State:     state,
+		Chooser:   chooser,
+	}
 }

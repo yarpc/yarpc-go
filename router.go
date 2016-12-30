@@ -37,7 +37,7 @@ type serviceProcedure struct {
 // procedures.
 type MapRouter struct {
 	defaultService string
-	entries        map[serviceProcedure]transport.HandlerSpec
+	entries        map[serviceProcedure]transport.Procedure
 }
 
 // NewMapRouter builds a new MapRouter that uses the given name as the
@@ -45,7 +45,7 @@ type MapRouter struct {
 func NewMapRouter(defaultService string) MapRouter {
 	return MapRouter{
 		defaultService: defaultService,
-		entries:        make(map[serviceProcedure]transport.HandlerSpec),
+		entries:        make(map[serviceProcedure]transport.Procedure),
 	}
 }
 
@@ -64,7 +64,7 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 			service:   r.Service,
 			procedure: r.Name,
 		}
-		m.entries[sp] = r.HandlerSpec
+		m.entries[sp] = r
 	}
 }
 
@@ -72,20 +72,17 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 // have been registered so far.
 func (m MapRouter) Procedures() []transport.Procedure {
 	procs := make([]transport.Procedure, 0, len(m.entries))
-	for sp, handler := range m.entries {
-		procs = append(procs, transport.Procedure{
-			Service:     sp.service,
-			Name:        sp.procedure,
-			HandlerSpec: handler,
-		})
+	for _, v := range m.entries {
+		procs = append(procs, v)
 	}
-	sort.Sort(byServiceProcedure(procs))
+	sort.Sort(proceduresByServiceProcedure(procs))
 	return procs
 }
 
-// ChooseProcedure retrieves the HandlerSpec for the given Procedure or returns an
-// error.
-func (m MapRouter) ChooseProcedure(service, procedure string) (transport.HandlerSpec, error) {
+// Choose retrives the HandlerSpec for the service and procedure noted on the
+// transport request, or returns an error.
+func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
+	service, procedure := req.Service, req.Procedure
 	if service == "" {
 		service = m.defaultService
 	}
@@ -94,8 +91,8 @@ func (m MapRouter) ChooseProcedure(service, procedure string) (transport.Handler
 		service:   service,
 		procedure: procedure,
 	}
-	if spec, ok := m.entries[sp]; ok {
-		return spec, nil
+	if procedure, ok := m.entries[sp]; ok {
+		return procedure.HandlerSpec, nil
 	}
 
 	return transport.HandlerSpec{}, errors.UnrecognizedProcedureError{
@@ -104,25 +101,16 @@ func (m MapRouter) ChooseProcedure(service, procedure string) (transport.Handler
 	}
 }
 
-// Choose retrives the HandlerSpec for the service and procedure noted on the
-// transport request, or returns an error.
-func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	return m.ChooseProcedure(req.Service, req.Procedure)
-}
+type proceduresByServiceProcedure []transport.Procedure
 
-type byServiceProcedure []transport.Procedure
-
-func (sp byServiceProcedure) Len() int {
+func (sp proceduresByServiceProcedure) Len() int {
 	return len(sp)
 }
 
-func (sp byServiceProcedure) Less(i int, j int) bool {
-	if sp[i].Service == sp[j].Service {
-		return sp[i].Name < sp[j].Name
-	}
-	return sp[i].Service < sp[j].Service
+func (sp proceduresByServiceProcedure) Less(i int, j int) bool {
+	return sp[i].Less(sp[j])
 }
 
-func (sp byServiceProcedure) Swap(i int, j int) {
+func (sp proceduresByServiceProcedure) Swap(i int, j int) {
 	sp[i], sp[j] = sp[j], sp[i]
 }

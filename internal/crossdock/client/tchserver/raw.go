@@ -44,16 +44,16 @@ func hello(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	checks := crossdock.Checks(t)
 
 	// TODO headers should be at yarpc, not transport
-	headers := yarpc.NewHeaders().With("hello", "raw")
+	headers := map[string]string{"hello": "raw"}
 	token := random.Bytes(5)
 
-	resBody, resMeta, err := rawCall(dispatcher, headers, "echo/raw", token)
+	resBody, resHeaders, err := rawCall(dispatcher, headers, "echo/raw", token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "raw: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders := internal.RemoveVariableHeaderKeys(resMeta.Headers())
+		internal.RemoveVariableMapKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 }
@@ -64,10 +64,9 @@ func hello(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 
-	headers := yarpc.NewHeaders()
 	token := random.Bytes(5)
 
-	_, _, err := rawCall(dispatcher, headers, "handlertimeout/raw", token)
+	_, _, err := rawCall(dispatcher, nil, "handlertimeout/raw", token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
@@ -87,15 +86,26 @@ func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert.True(form, "must be a remote handler timeout: %q", err.Error())
 }
 
-func rawCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, procedure string,
-	token []byte) ([]byte, yarpc.CallResMeta, error) {
+func rawCall(
+	dispatcher *yarpc.Dispatcher,
+	headers map[string]string,
+	procedure string,
+	token []byte,
+) ([]byte, map[string]string, error) {
 	client := raw.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta().Procedure(procedure).Headers(headers)
-	resBody, resMeta, err := client.Call(ctx, reqMeta, token)
+	var (
+		opts       []yarpc.CallOption
+		resHeaders map[string]string
+	)
+	for k, v := range headers {
+		opts = append(opts, yarpc.WithHeader(k, v))
+	}
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 
-	return resBody, resMeta, err
+	res, err := client.Call(ctx, procedure, token, opts...)
+	return res, resHeaders, err
 }

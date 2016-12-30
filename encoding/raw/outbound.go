@@ -26,16 +26,18 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/meta"
+	"go.uber.org/yarpc/internal/encoding"
 )
 
 // Client makes Raw requests to a single service.
 type Client interface {
 	// Call performs a unary outbound Raw request.
-	Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error)
+	Call(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) ([]byte, error)
+
 	// CallOneway performs a oneway outbound Raw request.
-	CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error)
+	CallOneway(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) (transport.Ack, error)
 }
 
 // New builds a new Raw client.
@@ -51,37 +53,54 @@ type rawClient struct {
 	cc transport.ClientConfig
 }
 
-func (c rawClient) Call(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) ([]byte, yarpc.CallResMeta, error) {
+func (c rawClient) Call(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) ([]byte, error) {
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
-		Caller:   c.cc.Caller(),
-		Service:  c.cc.Service(),
-		Encoding: Encoding,
-		Body:     bytes.NewReader(body),
+		Caller:    c.cc.Caller(),
+		Service:   c.cc.Service(),
+		Procedure: procedure,
+		Encoding:  Encoding,
+		Body:      bytes.NewReader(body),
 	}
-	meta.ToTransportRequest(reqMeta, &treq)
+
+	ctx, err := call.WriteToRequest(ctx, &treq)
+	if err != nil {
+		return nil, err
+	}
 
 	tres, err := c.cc.GetUnaryOutbound().Call(ctx, &treq)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer tres.Body.Close()
 
+	ctx, err = call.ReadFromResponse(ctx, tres)
+	if err != nil {
+		return nil, err
+	}
+
 	resBody, err := ioutil.ReadAll(tres.Body)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return resBody, meta.FromTransportResponse(tres), nil
+	return resBody, nil
 }
 
-func (c rawClient) CallOneway(ctx context.Context, reqMeta yarpc.CallReqMeta, body []byte) (transport.Ack, error) {
+func (c rawClient) CallOneway(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) (transport.Ack, error) {
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
 	treq := transport.Request{
-		Caller:   c.cc.Caller(),
-		Service:  c.cc.Service(),
-		Encoding: Encoding,
-		Body:     bytes.NewReader(body),
+		Caller:    c.cc.Caller(),
+		Service:   c.cc.Service(),
+		Procedure: procedure,
+		Encoding:  Encoding,
+		Body:      bytes.NewReader(body),
 	}
-	meta.ToTransportRequest(reqMeta, &treq)
+
+	ctx, err := call.WriteToRequest(ctx, &treq)
+	if err != nil {
+		return nil, err
+	}
 
 	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)
 }

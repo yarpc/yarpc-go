@@ -23,15 +23,12 @@
 // To make outbound requests,
 //
 // 	client := raw.New(clientConfig)
-// 	resBody, resMeta, err := client.Call(
-// 		yarpc.NewReqMeta(ctx).Procedure("submit"),
-// 		[]byte{1, 2, 3},
-// 	)
+// 	resBody, err := client.Call(ctx, "submit", []byte{1, 2, 3})
 //
 // Use the Procedure function to build procedures to register against a
 // Router.
 //
-// 	func Submit(reqMeta yarpc.ReqMeta, reqBody []byte) ([]byte, yarpc.ResMeta, error) {
+// 	func Submit(ctx context.Context, reqBody []byte) ([]byte, error) {
 // 		// ...
 // 	}
 //
@@ -40,7 +37,7 @@
 // Similarly, use the OnewayProcedure function to build procedures to register
 // against a Router.
 //
-// 	func RunTask(reqMeta yarpc.ReqMeta, reqBody []byte) error {
+// 	func RunTask(ctx context.Context, reqBody []byte) error {
 // 		// ...
 // 	}
 //

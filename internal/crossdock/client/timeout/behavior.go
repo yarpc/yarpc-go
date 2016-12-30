@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
@@ -49,7 +48,7 @@ func Run(t crossdock.T) {
 	defer dispatcher.Stop()
 
 	client := raw.New(dispatcher.ClientConfig("yarpc-test"))
-	_, _, err := client.Call(ctx, yarpc.NewReqMeta().Procedure("sleep/raw"), nil)
+	_, err := client.Call(ctx, "sleep/raw", nil)
 	fatals.Error(err, "expected a failure for timeout")
 
 	if transport.IsBadRequestError(err) {

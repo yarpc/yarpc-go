@@ -24,8 +24,14 @@ import (
 
 var _reqBody = []byte("hello")
 
-func yarpcEcho(ctx context.Context, reqMeta yarpc.ReqMeta, body []byte) ([]byte, yarpc.ResMeta, error) {
-	return body, yarpc.NewResMeta().Headers(reqMeta.Headers()), nil
+func yarpcEcho(ctx context.Context, body []byte) ([]byte, error) {
+	call := yarpc.CallFromContext(ctx)
+	for _, k := range call.HeaderNames() {
+		if err := call.WriteResponseHeader(k, call.Header(k)); err != nil {
+			return nil, err
+		}
+	}
+	return body, nil
 }
 
 func httpEcho(t testing.TB) http.HandlerFunc {
@@ -77,7 +83,7 @@ func runYARPCClient(b *testing.B, c raw.Client) {
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		_, _, err := c.Call(ctx, yarpc.NewReqMeta().Procedure("echo"), _reqBody)
+		_, err := c.Call(ctx, "echo", _reqBody)
 		require.NoError(b, err, "request %d failed", i+1)
 	}
 }
@@ -187,17 +193,16 @@ func Benchmark_HTTP_NetHTTPToNetHTTP(b *testing.B) {
 }
 
 func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
-	serverTChannel := ytchannel.NewChannelTransport(
-		ytchannel.ServiceName("server"),
-	)
+	serverTChannel, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("server"))
+	require.NoError(b, err)
+
 	serverCfg := yarpc.Config{
 		Name:     "server",
 		Inbounds: yarpc.Inbounds{serverTChannel.NewInbound()},
 	}
 
-	clientTChannel := ytchannel.NewChannelTransport(
-		ytchannel.ServiceName("client"),
-	)
+	clientTChannel, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("client"))
+	require.NoError(b, err)
 
 	// no defer close on channels because YARPC will take care of that
 
@@ -228,7 +233,9 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 	serverCh.Register(traw.Wrap(tchannelEcho{t: b}), "echo")
 	require.NoError(b, serverCh.ListenAndServe(":0"), "failed to start up TChannel")
 
-	clientTChannel := ytchannel.NewChannelTransport(ytchannel.ServiceName("client"))
+	clientTChannel, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("client"))
+	require.NoError(b, err)
+
 	clientCfg := yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
@@ -245,9 +252,8 @@ func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
 }
 
 func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
-	tchannelTransport := ytchannel.NewChannelTransport(
-		ytchannel.ServiceName("server"),
-	)
+	tchannelTransport, err := ytchannel.NewChannelTransport(ytchannel.ServiceName("server"))
+	require.NoError(b, err)
 
 	serverCfg := yarpc.Config{
 		Name:     "server",

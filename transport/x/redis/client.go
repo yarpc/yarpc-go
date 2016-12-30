@@ -37,4 +37,10 @@ type Client interface {
 	BRPopLPush(from, to string, timeout time.Duration) ([]byte, error)
 	// LRem removes one item from the queue key
 	LRem(queue string, item []byte) error
+
+	// Endpoint returns the enpoint configured for this client.
+	Endpoint() string
+
+	// ConnectionState returns the status of the connection(s).
+	ConnectionState() string
 }

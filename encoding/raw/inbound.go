@@ -24,9 +24,9 @@ import (
 	"context"
 	"io/ioutil"
 
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/meta"
 )
 
 // rawUnaryHandler adapts a Handler into a transport.UnaryHandler
@@ -40,19 +40,23 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 		return err
 	}
 
+	ctx, call := encodingapi.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(treq); err != nil {
+		return err
+	}
+
 	reqBody, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
 		return err
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
-	resBody, resMeta, err := r.UnaryHandler(ctx, reqMeta, reqBody)
+	resBody, err := r.UnaryHandler(ctx, reqBody)
 	if err != nil {
 		return err
 	}
 
-	if resMeta != nil {
-		meta.ToTransportResponseWriter(resMeta, rw)
+	if err := call.WriteToResponse(rw); err != nil {
+		return err
 	}
 
 	if _, err := rw.Write(resBody); err != nil {
@@ -67,11 +71,15 @@ func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Requ
 		return err
 	}
 
+	ctx, call := encodingapi.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(treq); err != nil {
+		return err
+	}
+
 	reqBody, err := ioutil.ReadAll(treq.Body)
 	if err != nil {
 		return err
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
-	return r.OnewayHandler(ctx, reqMeta, reqBody)
+	return r.OnewayHandler(ctx, reqBody)
 }

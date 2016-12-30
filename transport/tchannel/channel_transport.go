@@ -21,7 +21,7 @@
 package tchannel
 
 import (
-	"fmt"
+	"errors"
 
 	"go.uber.org/yarpc/internal/sync"
 
@@ -29,14 +29,23 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// NewChannelTransport creates a ChannelTransport, suitable for creating inbounds
-// and outbounds with an existing, shared channel.
+var errChannelOrServiceNameIsRequired = errors.New(
+	"cannot instantiate tchannel.ChannelTransport: " +
+		"please provide a service name with the ServiceName option " +
+		"or an existing Channel with the WithChannel option")
+
+// NewChannelTransport is a YARPC transport that facilitates sending and
+// receiving YARPC requests through TChannel. It uses a shared TChannel
+// Channel for both, incoming and outgoing requests, ensuring reuse of
+// connections and other resources.
 //
-// The ChannelTransport uses the underlying TChannel load balancing and peer
-// management, so it is not suitable for use with a peer.Chooser.
-// A future version of YARPC will add a NewTransport constructor that returns
-// a transport suitable for custom peer selection.
-func NewChannelTransport(opts ...TransportOption) *ChannelTransport {
+// Either the local service name (with the ServiceName option) or a user-owned
+// TChannel (with the WithChannel option) MUST be specified.
+//
+// ChannelTransport uses the underlying TChannel Channel for load balancing
+// and peer managament. A future version of YARPC will include support for
+// peer.Chooser-based TChannel transports.
+func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 	var config transportConfig
 	config.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
@@ -48,33 +57,28 @@ func NewChannelTransport(opts ...TransportOption) *ChannelTransport {
 	// an error return.
 	var err error
 	ch := config.ch
-	if config.ch == nil {
+
+	if ch == nil {
 		if config.name == "" {
-			err = fmt.Errorf("can't instantiate TChannelChannelTransport without channel or service name option")
+			err = errChannelOrServiceNameIsRequired
 		} else {
-			ch, err = tchannel.NewChannel(config.name, &tchannel.ChannelOptions{
-				Tracer: config.tracer,
-			})
+			opts := tchannel.ChannelOptions{Tracer: config.tracer}
+			ch, err = tchannel.NewChannel(config.name, &opts)
 		}
 	}
 
 	return &ChannelTransport{
 		ch:     ch,
-		err:    err,
 		addr:   config.addr,
 		tracer: config.tracer,
-	}
+	}, err
 }
 
 // ChannelTransport maintains TChannel peers and creates inbounds and outbounds for
 // TChannel.
-//
-// In a future version, the channel will be suitable for managing peers in a
-// peer.List or other peer.Chooser.
 type ChannelTransport struct {
 	ch     Channel
 	name   string
-	err    error
 	addr   string
 	tracer opentracing.Tracer
 
@@ -91,20 +95,14 @@ func (t *ChannelTransport) ListenAddr() string {
 	return t.addr
 }
 
-// Start starts a TChannel transport, opening listening sockets and accepting
-// inbound requests, and opening connections to retained peers.
-//
-// All inbounds must have been assigned a router to accept inbound requests.
+// Start starts the TChannel transport. This starts making connections and
+// accepting inbound requests. All inbounds must have been assigned a router
+// to accept inbound requests before this is called.
 func (t *ChannelTransport) Start() error {
 	return t.once.Start(t.start)
 }
 
 func (t *ChannelTransport) start() error {
-	// Return error deferred from constructor for the construction of a TChannel.
-	if t.err != nil {
-		return t.err
-	}
-
 	if t.ch.State() == tchannel.ChannelListening {
 		// Channel.Start() was called before RPC.Start(). We still want to
 		// update the Handler and what t.addr means, but nothing else.
@@ -135,10 +133,9 @@ func (t *ChannelTransport) start() error {
 	return nil
 }
 
-// Stop stops a TChannel transport, closing listening sockets, rejecting
-// inbound requests, draining pending requests, and closing all connections.
-//
-// Stop blocks until the program can gracefully exit.
+// Stop stops the TChannel transport. It starts rejecting incoming requests
+// and draining connections before closing them. Stop blocks until the
+// underlying channel has closed completely.
 func (t *ChannelTransport) Stop() error {
 	return t.once.Stop(t.stop)
 }

@@ -39,15 +39,18 @@ import (
 
 // Different ways in which outbounds can be constructed from a client Channel
 // and a hostPort
-var newOutbounds = []func(*tchannel.Channel, string) transport.UnaryOutbound{
-	func(ch *tchannel.Channel, hostPort string) transport.UnaryOutbound {
-		x := NewChannelTransport(WithChannel(ch))
+var newOutbounds = []func(*tchannel.Channel, string) (transport.UnaryOutbound, error){
+	func(ch *tchannel.Channel, hostPort string) (transport.UnaryOutbound, error) {
+		x, err := NewChannelTransport(WithChannel(ch))
 		ch.Peers().Add(hostPort)
-		return x.NewOutbound()
+		return x.NewOutbound(), err
 	},
-	func(ch *tchannel.Channel, hostPort string) transport.UnaryOutbound {
-		x := NewChannelTransport(WithChannel(ch))
-		return x.NewSingleOutbound(hostPort)
+	func(ch *tchannel.Channel, hostPort string) (transport.UnaryOutbound, error) {
+		x, err := NewChannelTransport(WithChannel(ch))
+		if err == nil {
+			return x.NewSingleOutbound(hostPort), nil
+		}
+		return nil, err
 	},
 }
 
@@ -95,9 +98,10 @@ func TestOutboundHeaders(t *testing.T) {
 			}))
 
 		for _, getOutbound := range newOutbounds {
-			out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+			out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 				ServiceName: "caller",
 			}), hostport)
+			require.NoError(t, err)
 			require.NoError(t, out.Start(), "failed to start outbound")
 			defer out.Stop()
 
@@ -164,9 +168,10 @@ func TestCallSuccess(t *testing.T) {
 		}))
 
 	for _, getOutbound := range newOutbounds {
-		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), serverHostPort)
+		require.NoError(t, err)
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
@@ -223,7 +228,7 @@ func TestCallFailures(t *testing.T) {
 
 	type testCase struct {
 		procedure   string
-		getOutbound func(*tchannel.Channel, string) transport.UnaryOutbound
+		getOutbound func(*tchannel.Channel, string) (transport.UnaryOutbound, error)
 		message     string
 	}
 
@@ -249,13 +254,14 @@ func TestCallFailures(t *testing.T) {
 	tests = newTests
 
 	for _, tt := range tests {
-		out := tt.getOutbound(testutils.NewClient(t, nil), serverHostPort)
+		out, err := tt.getOutbound(testutils.NewClient(t, nil), serverHostPort)
+		require.NoError(t, err)
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
-		_, err := out.Call(
+		_, err = out.Call(
 			ctx,
 			&transport.Request{
 				Caller:    "caller",
@@ -304,9 +310,10 @@ func TestCallError(t *testing.T) {
 		}))
 
 	for _, getOutbound := range newOutbounds {
-		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), serverHostPort)
+		require.NoError(t, err)
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
@@ -340,9 +347,10 @@ func TestCallError(t *testing.T) {
 
 func TestStartMultiple(t *testing.T) {
 	for _, getOutbound := range newOutbounds {
-		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), "localhost:4040")
+		require.NoError(t, err)
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
@@ -366,14 +374,14 @@ func TestStartMultiple(t *testing.T) {
 
 func TestStopMultiple(t *testing.T) {
 	for _, getOutbound := range newOutbounds {
-		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), "localhost:4040")
+		require.NoError(t, err)
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
-		err := out.Start()
-		require.NoError(t, err)
+		require.NoError(t, out.Start())
 
 		var wg sync.WaitGroup
 		signal := make(chan struct{})
@@ -395,15 +403,16 @@ func TestStopMultiple(t *testing.T) {
 
 func TestCallWithoutStarting(t *testing.T) {
 	for _, getOutbound := range newOutbounds {
-		out := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
+		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), "localhost:4040")
+		require.NoError(t, err)
 		// TODO: If we change Start() to establish a connection to the host, this
 		// hostport will have to be changed to a real server.
 
 		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
-		_, err := out.Call(
+		_, err = out.Call(
 			ctx,
 			&transport.Request{
 				Caller:    "caller",

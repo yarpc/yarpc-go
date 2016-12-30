@@ -48,13 +48,13 @@ func TestCall(t *testing.T) {
 
 	tests := []struct {
 		procedure    string
-		headers      yarpc.Headers
+		headers      map[string]string
 		body         []byte
 		responseBody [][]byte
 
 		want        []byte
 		wantErr     string
-		wantHeaders yarpc.Headers
+		wantHeaders map[string]string
 	}{
 		{
 			procedure:    "foo",
@@ -70,11 +70,11 @@ func TestCall(t *testing.T) {
 		},
 		{
 			procedure:    "headers",
-			headers:      yarpc.NewHeaders().With("x", "y"),
+			headers:      map[string]string{"x": "y"},
 			body:         []byte{},
 			responseBody: [][]byte{},
 			want:         []byte{},
-			wantHeaders:  yarpc.NewHeaders().With("a", "b"),
+			wantHeaders:  map[string]string{"a": "b"},
 		},
 	}
 
@@ -97,21 +97,27 @@ func TestCall(t *testing.T) {
 					Caller:    caller,
 					Service:   service,
 					Procedure: tt.procedure,
-					Headers:   transport.Headers(tt.headers),
+					Headers:   transport.HeadersFromMap(tt.headers),
 					Encoding:  Encoding,
 					Body:      bytes.NewReader(tt.body),
 				}),
 		).Return(
 			&transport.Response{
 				Body:    ioutil.NopCloser(responseBody),
-				Headers: transport.Headers(tt.wantHeaders),
+				Headers: transport.HeadersFromMap(tt.wantHeaders),
 			}, nil)
 
-		resBody, res, err := client.Call(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body)
+		var (
+			opts       []yarpc.CallOption
+			resHeaders map[string]string
+		)
 
+		for k, v := range tt.headers {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
+		opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+		resBody, err := client.Call(ctx, tt.procedure, tt.body, opts...)
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
 				assert.Equal(t, err.Error(), tt.wantErr)
@@ -119,7 +125,7 @@ func TestCall(t *testing.T) {
 		} else {
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.want, resBody)
-				assert.Equal(t, tt.wantHeaders, res.Headers())
+				assert.Equal(t, tt.wantHeaders, resHeaders)
 			}
 		}
 	}
@@ -142,11 +148,10 @@ func TestCallOneway(t *testing.T) {
 
 	tests := []struct {
 		procedure string
-		headers   yarpc.Headers
+		headers   map[string]string
 		body      []byte
 
-		wantErr     string
-		wantHeaders yarpc.Headers
+		wantErr string
 	}{
 		{
 			procedure: "foo",
@@ -154,7 +159,7 @@ func TestCallOneway(t *testing.T) {
 		},
 		{
 			procedure: "headers",
-			headers:   yarpc.NewHeaders().With("x", "y"),
+			headers:   map[string]string{"x": "y"},
 			body:      []byte{},
 		},
 	}
@@ -172,17 +177,18 @@ func TestCallOneway(t *testing.T) {
 					Caller:    caller,
 					Service:   service,
 					Procedure: tt.procedure,
-					Headers:   transport.Headers(tt.headers),
+					Headers:   transport.HeadersFromMap(tt.headers),
 					Encoding:  Encoding,
 					Body:      bytes.NewReader(tt.body),
 				}),
 		).Return(&successAck{}, nil)
 
-		ack, err := client.CallOneway(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body)
+		var opts []yarpc.CallOption
+		for k, v := range tt.headers {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
 
+		ack, err := client.CallOneway(ctx, tt.procedure, tt.body, opts...)
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
 				assert.Equal(t, err.Error(), tt.wantErr)
@@ -221,10 +227,6 @@ func TestCallOnewayFailure(t *testing.T) {
 			}),
 	).Return(nil, errors.New("some error"))
 
-	_, err := client.CallOneway(
-		ctx,
-		yarpc.NewReqMeta().Procedure(procedure),
-		body)
-
+	_, err := client.CallOneway(ctx, procedure, body)
 	assert.Error(t, err)
 }

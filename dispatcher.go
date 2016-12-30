@@ -21,7 +21,6 @@
 package yarpc
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
@@ -30,21 +29,35 @@ import (
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
 )
 
-// Config specifies the parameters of a new RPC constructed via New.
+// Config specifies the parameters of a new Dispatcher constructed via
+// NewDispatcher.
 type Config struct {
+	// Name of the service. This is the name used by other services when
+	// making requests to this service.
 	Name string
 
-	Inbounds  Inbounds
+	// Inbounds define how this service receives incoming requests from other
+	// services.
+	//
+	// This may be nil if this service does not receive any requests.
+	Inbounds Inbounds
+
+	// Outbounds defines how this service makes requests to other services.
+	//
+	// This may be nil if this service does not send any requests.
 	Outbounds Outbounds
 
-	// Inbound and Outbound Middleware that will be applied to all incoming and
-	// outgoing requests respectively.
+	// Inbound and Outbound Middleware that will be applied to all incoming
+	// and outgoing requests respectively.
+	//
+	// These may be nil if there is no middleware to apply.
 	InboundMiddleware  InboundMiddleware
 	OutboundMiddleware OutboundMiddleware
 
@@ -52,25 +65,31 @@ type Config struct {
 	Tracer opentracing.Tracer
 }
 
-// Inbounds contains a list of inbound transports
+// Inbounds contains a list of inbound transports. Each inbound transport
+// specifies a source through which incoming requests are received.
 type Inbounds []transport.Inbound
 
-// Outbounds encapsulates a service and its outbounds
+// Outbounds provides access to outbounds for a remote service. Outbounds
+// define how requests are sent from this service to the remote service.
 type Outbounds map[string]transport.Outbounds
 
-// OutboundMiddleware contains the different type of outbound middleware
+// OutboundMiddleware contains the different types of outbound middlewares.
 type OutboundMiddleware struct {
 	Unary  middleware.UnaryOutbound
 	Oneway middleware.OnewayOutbound
 }
 
-// InboundMiddleware contains the different type of inbound middleware
+// InboundMiddleware contains the different types of inbound middlewares.
 type InboundMiddleware struct {
 	Unary  middleware.UnaryInbound
 	Oneway middleware.OnewayInbound
 }
 
-// NewDispatcher builds a new Dispatcher using the specified Config.
+// NewDispatcher builds a new Dispatcher using the specified Config. At
+// minimum, a service name must be specified.
+//
+// Invalid configurations or errors in constructing the Dispatcher will cause
+// panics.
 func NewDispatcher(cfg Config) *Dispatcher {
 	if cfg.Name == "" {
 		panic("yarpc.NewDispatcher expects a service name")
@@ -154,9 +173,8 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 	return keys
 }
 
-// Dispatcher object is used to configure a YARPC application; it is used by
-// Clients to send RPCs, and by Procedures to recieve them. This object is what
-// enables an application to be transport-agnostic.
+// Dispatcher encapsulates a YARPC application. It acts as the entry point to
+// send and receive YARPC requests in a transport and encoding agnostic way.
 type Dispatcher struct {
 	table      transport.RouteTable
 	name       string
@@ -177,11 +195,13 @@ func (d *Dispatcher) Inbounds() Inbounds {
 	return inbounds
 }
 
-// ClientConfig produces a configuration object for an encoding-specific
-// outbound RPC client.
+// ClientConfig provides the configuration needed to talk to the given
+// service. This configuration may be directly passed into encoding-specific
+// RPC clients.
 //
-// For example, pass the returned configuration object to client.New() for any
-// generated Thrift client.
+// 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
+//
+// This function panics if the service name is not known.
 func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 	if rs, ok := d.outbounds[service]; ok {
 		return clientconfig.MultiOutbound(d.name, service, rs)
@@ -189,20 +209,9 @@ func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
 	panic(noOutboundForService{Service: service})
 }
 
-// Procedures returns a list of services and procedures that have been
-// registered with this Dispatcher.
-func (d *Dispatcher) Procedures() []transport.Procedure {
-	return d.table.Procedures()
-}
-
-// Choose picks a handler for the given request or returns an error if a
-// handler for this request does not exist.
-func (d *Dispatcher) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
-	return d.table.Choose(ctx, req)
-}
-
-// Register configures the dispatcher's router to route inbound requests to a
-// collection of procedure handlers.
+// Register registers zero or more procedures with this dispatcher. Incoming
+// requests to these procedures will be routed to the handlers specified in
+// the given Procedures.
 func (d *Dispatcher) Register(rs []transport.Procedure) {
 	procedures := make([]transport.Procedure, 0, len(rs))
 
@@ -227,19 +236,30 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 	d.table.Register(procedures)
 }
 
-// Start Start the RPC allowing it to accept and processing new incoming
-// requests.
+// Start starts the Dispatcher, allowing it to accept and processing new
+// incoming requests.
 //
-// Blocks until the RPC is ready to start accepting new requests.
+// This starts all inbounds and outbounds configured on this Dispatcher.
 //
-// Start goes through the Transports, Outbounds and Inbounds and starts them
-// *NOTE* there can be problems if we don't start these in a particular order
-// The order should be: Transports -> Outbounds -> Inbounds
-// If the Outbounds are started before the Transports we might get a network
-// request before the Transports are ready.
-// If the Inbounds are started before the Outbounds an Inbound request might
-// hit an Outbound before that Outbound is ready to take requests
+// This function returns immediately after everything has been started.
+// Servers should add a `select {}` to block to process all incoming requests.
+//
+// 	if err := dispatcher.Start(); err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	defer dispatcher.Stop()
+//
+// 	select {}
 func (d *Dispatcher) Start() error {
+	// NOTE: These MUST be started in the order transports, outbounds, and
+	// then inbounds.
+	//
+	// If the outbounds are started before the transports, we might get a
+	// network request before the transports are ready.
+	//
+	// If the inbounds are started before the outbounds, an inbound request
+	// might result in an outbound call before the outbound is ready.
+
 	var (
 		mu         sync.Mutex
 		allStarted []transport.Lifecycle
@@ -297,25 +317,33 @@ func (d *Dispatcher) Start() error {
 	// Start Inbounds
 	wait = intsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
-		i.SetRouter(d)
+		i.SetRouter(d.table)
 		wait.Submit(start(i))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {
 		return abort(errs)
 	}
 
+	addDispatcherToDebugPages(d)
 	return nil
 }
 
-// Stop goes through the Transports, Outbounds and Inbounds and stops them
-// *NOTE* there can be problems if we don't stop these in a particular order
-// The order should be: Inbounds -> Outbounds -> Transports
-// If the Outbounds are stopped before the Inbounds we might get a network
-// request to a stopped Outbound from a still-going Inbound.
-// If the Transports are stopped before the Outbounds the `peers` contained in
-// the Outbound might be `deleted` from the Transports perspective and cause
-// issues
+// Stop stops the Dispatcher.
+//
+// This stops all outbounds and inbounds owned by this Dispatcher.
+//
+// This function returns after everything has been stopped.
 func (d *Dispatcher) Stop() error {
+	// NOTE: These MUST be stopped in the order inbounds, outbounds, and then
+	// transports.
+	//
+	// If the outbounds are stopped before the inbounds, we might receive a
+	// request which needs to use a stopped outbound from a still-going
+	// inbound.
+	//
+	// If the transports are stopped before the outbounds, the peers contained
+	// in the outbound might be deleted from the transport's perspective and
+	// cause issues.
 	var allErrs []error
 
 	// Stop Inbounds
@@ -353,5 +381,59 @@ func (d *Dispatcher) Stop() error {
 	if len(allErrs) > 0 {
 		return errors.ErrorGroup(allErrs)
 	}
+
+	removeDispatcherFromDebugPages(d)
 	return nil
+}
+
+type dispatcherStatus struct {
+	Name       string
+	ID         string
+	Procedures []transport.Procedure
+	Inbounds   []introspection.InboundStatus
+	Outbounds  []introspection.OutboundStatus
+}
+
+func (d *Dispatcher) introspect() dispatcherStatus {
+	var inbounds []introspection.InboundStatus
+	for _, i := range d.inbounds {
+		var status introspection.InboundStatus
+		if i, ok := i.(introspection.IntrospectableInbound); ok {
+			status = i.Introspect()
+		} else {
+			status = introspection.InboundStatus{
+				Transport: "Introspection not supported",
+			}
+		}
+		inbounds = append(inbounds, status)
+	}
+	var outbounds []introspection.OutboundStatus
+	for destService, o := range d.outbounds {
+		var status introspection.OutboundStatus
+		if o.Unary != nil {
+			if o, ok := o.Unary.(introspection.IntrospectableOutbound); ok {
+				status = o.Introspect()
+			} else {
+				status.Transport = "Introspection not supported"
+			}
+			status.Type = "unary"
+		}
+		if o.Oneway != nil {
+			if o, ok := o.Oneway.(introspection.IntrospectableOutbound); ok {
+				status = o.Introspect()
+			} else {
+				status.Transport = "Introspection not supported"
+			}
+			status.Type = "oneway"
+		}
+		status.Service = destService
+		outbounds = append(outbounds, status)
+	}
+	return dispatcherStatus{
+		Name:       d.name,
+		ID:         fmt.Sprintf("%p", d),
+		Procedures: d.table.Procedures(),
+		Inbounds:   inbounds,
+		Outbounds:  outbounds,
+	}
 }

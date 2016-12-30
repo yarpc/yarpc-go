@@ -35,6 +35,21 @@ type Procedure struct {
 
 	// HandlerSpec specifiying which handler and rpc type.
 	HandlerSpec HandlerSpec
+
+	// Encoding of the handler, for introspection.
+	Encoding Encoding
+
+	// Signature of the handler, for introspection. This should be a snippet of
+	// Go code representing the function definition.
+	Signature string
+}
+
+// Less returns true if a.(Service, Name) < b.(Service, Name).
+func (a Procedure) Less(b Procedure) bool {
+	if a.Service == b.Service {
+		return a.Name < b.Name
+	}
+	return a.Service < b.Service
 }
 
 // Router maintains and provides access to a collection of procedures

@@ -49,46 +49,24 @@ func (h handler) register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(json.Procedure("echoecho", h.handleEchoEcho))
 }
 
-func (h handler) handleEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+func (h handler) handleEcho(ctx context.Context, reqBody *echoReqBody) (*echoResBody, error) {
 	h.assertBaggage(ctx)
-	return &echoResBody{}, nil, nil
+	return &echoResBody{}, nil
 }
 
-func (h handler) handleEchoEcho(ctx context.Context, reqMeta yarpc.ReqMeta, reqBody *echoReqBody) (*echoResBody, yarpc.ResMeta, error) {
+func (h handler) handleEchoEcho(ctx context.Context, reqBody *echoReqBody) (*echoResBody, error) {
 	h.assertBaggage(ctx)
 	var resBody echoResBody
-	_, err := h.client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echo"),
-		reqBody,
-		&resBody,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	return &resBody, nil, nil
+	err := h.client.Call(ctx, "echo", reqBody, &resBody)
+	return &resBody, err
 }
 
 func (h handler) echo(ctx context.Context) error {
-	var resBody echoResBody
-	_, err := h.client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echo"),
-		&echoReqBody{},
-		&resBody,
-	)
-	return err
+	return h.client.Call(ctx, "echo", &echoReqBody{}, &echoResBody{})
 }
 
 func (h handler) echoEcho(ctx context.Context) error {
-	var resBody echoResBody
-	_, err := h.client.Call(
-		ctx,
-		yarpc.NewReqMeta().Procedure("echoecho"),
-		&echoReqBody{},
-		&resBody,
-	)
-	return err
+	return h.client.Call(ctx, "echoecho", &echoReqBody{}, &echoResBody{})
 }
 
 func (h handler) createContextWithBaggage(tracer opentracing.Tracer) (context.Context, func()) {
@@ -133,11 +111,12 @@ func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 func createTChannelDispatcher(tracer opentracing.Tracer, t *testing.T) *yarpc.Dispatcher {
 	hp := "127.0.0.1:4040"
 
-	tchannelTransport := ytchannel.NewChannelTransport(
+	tchannelTransport, err := ytchannel.NewChannelTransport(
 		ytchannel.ListenAddr(hp),
 		ytchannel.Tracer(tracer),
 		ytchannel.ServiceName("yarpc-test"),
 	)
+	require.NoError(t, err)
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "yarpc-test",

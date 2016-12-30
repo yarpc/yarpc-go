@@ -23,10 +23,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
-	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/yarpc/keyvalueserver"
+	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueserver"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
@@ -39,29 +40,33 @@ type handler struct {
 	items map[string]string
 }
 
-func (h *handler) GetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string) (string, yarpc.ResMeta, error) {
+func (h *handler) GetValue(ctx context.Context, key *string) (string, error) {
 	h.RLock()
 	defer h.RUnlock()
 
 	if value, ok := h.items[*key]; ok {
-		return value, nil, nil
+		return value, nil
 	}
 
-	return "", nil, &kv.ResourceDoesNotExist{Key: *key}
+	return "", &kv.ResourceDoesNotExist{Key: *key}
 }
 
-func (h *handler) SetValue(ctx context.Context, reqMeta yarpc.ReqMeta, key *string, value *string) (yarpc.ResMeta, error) {
+func (h *handler) SetValue(ctx context.Context, key *string, value *string) error {
 	h.Lock()
 	h.items[*key] = *value
 	h.Unlock()
-	return nil, nil
+	return nil
 }
 
 func main() {
-	tchannelTransport := tchannel.NewChannelTransport(
+	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName("keyvalue"),
 		tchannel.ListenAddr(":28941"),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "keyvalue",

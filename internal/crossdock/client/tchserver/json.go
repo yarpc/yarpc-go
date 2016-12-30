@@ -36,16 +36,16 @@ func runJSON(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	headers := yarpc.NewHeaders().With("hello", "json")
+	headers := map[string]string{"hello": "json"}
 	token := random.String(5)
 
-	resBody, resMeta, err := jsonCall(dispatcher, headers, token)
+	resBody, resHeaders, err := jsonCall(dispatcher, headers, token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "json: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders := internal.RemoveVariableHeaderKeys(resMeta.Headers())
+		internal.RemoveVariableMapKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 }
@@ -54,16 +54,28 @@ type jsonEcho struct {
 	Token string `json:"token"`
 }
 
-func jsonCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+func jsonCall(
+	dispatcher *yarpc.Dispatcher,
+	headers map[string]string,
+	token string,
+) (string, map[string]string, error) {
 	client := json.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta().Procedure("echo").Headers(headers)
-	reqBody := &jsonEcho{Token: token}
+	var (
+		opts       []yarpc.CallOption
+		resHeaders map[string]string
+		resBody    jsonEcho
+	)
 
-	var resBody jsonEcho
-	resMeta, err := client.Call(ctx, reqMeta, reqBody, &resBody)
-	return resBody.Token, resMeta, err
+	for k, v := range headers {
+		opts = append(opts, yarpc.WithHeader(k, v))
+	}
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+	reqBody := &jsonEcho{Token: token}
+	err := client.Call(ctx, "echo", reqBody, &resBody, opts...)
+	return resBody.Token, resHeaders, err
 }

@@ -25,9 +25,9 @@ import (
 	"context"
 	"io/ioutil"
 
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/meta"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
@@ -49,6 +49,11 @@ type thriftOnewayHandler struct {
 
 func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
+		return err
+	}
+
+	ctx, call := encodingapi.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(treq); err != nil {
 		return err
 	}
 
@@ -76,8 +81,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
-	res, err := t.UnaryHandler.Handle(ctx, reqMeta, envelope.Value)
+	res, err := t.UnaryHandler(ctx, envelope.Value)
 	if err != nil {
 		return err
 	}
@@ -96,9 +100,8 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 		rw.SetApplicationError()
 	}
 
-	resMeta := res.Meta
-	if resMeta != nil {
-		meta.ToTransportResponseWriter(resMeta, rw)
+	if err := call.WriteToResponse(rw); err != nil {
+		return err
 	}
 
 	err = proto.EncodeEnveloped(wire.Envelope{
@@ -115,8 +118,14 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 }
 
 // TODO(apb): reduce commonality between Handle and HandleOneway
+
 func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
 	if err := encoding.Expect(treq, Encoding); err != nil {
+		return err
+	}
+
+	ctx, call := encodingapi.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(treq); err != nil {
 		return err
 	}
 
@@ -144,6 +153,5 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
-	return t.OnewayHandler.HandleOneway(ctx, reqMeta, envelope.Value)
+	return t.OnewayHandler(ctx, envelope.Value)
 }

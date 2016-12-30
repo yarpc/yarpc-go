@@ -127,22 +127,18 @@ func TestThriftHandler(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		handler := NewMockUnaryHandler(mockCtrl)
-		h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
+		handler := func(ctx context.Context, w wire.Value) (Response,
+			error) {
 
-		if tt.expectHandle {
-			reqMeta := fakeReqMeta{
-				caller:    "caller",
-				service:   "service",
-				encoding:  Encoding,
-				procedure: "MyService::someMethod",
+			if tt.expectHandle {
+				assert.Equal(t, requestBody, w)
 			}
-			handler.EXPECT().Handle(ctx, reqMeta, requestBody).
-				Return(Response{
-					Body:               fakeEnveloper(tt.responseEnvelopeType),
-					IsApplicationError: tt.responseIsAppError,
-				}, nil)
+			return Response{
+				Body:               fakeEnveloper(tt.responseEnvelopeType),
+				IsApplicationError: tt.responseIsAppError,
+			}, nil
 		}
+		h := thriftUnaryHandler{Protocol: proto, UnaryHandler: handler, Enveloping: true}
 
 		rw := new(transporttest.FakeResponseWriter)
 		err := h.Handle(ctx, &transport.Request{

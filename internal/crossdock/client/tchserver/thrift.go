@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
-	"go.uber.org/yarpc/internal/crossdock/thrift/echo/yarpc/echoclient"
+	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 
 	"github.com/crossdock/crossdock-go"
 )
@@ -39,16 +39,16 @@ func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	assert := crossdock.Assert(t)
 	checks := crossdock.Checks(t)
 
-	headers := yarpc.NewHeaders().With("hello", "thrift")
+	headers := map[string]string{"hello": "thrift"}
 	token := random.String(5)
 
-	resBody, resMeta, err := thriftCall(dispatcher, headers, token)
+	resBody, resHeaders, err := thriftCall(dispatcher, headers, token)
 	if skipOnConnRefused(t, err) {
 		return
 	}
 	if checks.NoError(err, "thrift: call failed") {
 		assert.Equal(token, resBody, "body echoed")
-		resHeaders := internal.RemoveVariableHeaderKeys(resMeta.Headers())
+		internal.RemoveVariableMapKeys(resHeaders)
 		assert.Equal(headers, resHeaders, "headers echoed")
 	}
 
@@ -59,18 +59,29 @@ func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 	})
 }
 
-func thriftCall(dispatcher *yarpc.Dispatcher, headers yarpc.Headers, token string) (string, yarpc.CallResMeta, error) {
+func thriftCall(
+	dispatcher *yarpc.Dispatcher,
+	headers map[string]string,
+	token string,
+) (string, map[string]string, error) {
 	client := echoclient.New(dispatcher.ClientConfig(serverName))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	reqMeta := yarpc.NewReqMeta().Headers(headers)
-	ping := &echo.Ping{Beep: token}
-
-	resBody, resMeta, err := client.Echo(ctx, reqMeta, ping)
-	if err != nil {
-		return "", nil, err
+	var (
+		opts       []yarpc.CallOption
+		resHeaders map[string]string
+	)
+	for k, v := range headers {
+		opts = append(opts, yarpc.WithHeader(k, v))
 	}
-	return resBody.Boop, resMeta, err
+	opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+	ping := &echo.Ping{Beep: token}
+	resBody, err := client.Echo(ctx, ping, opts...)
+	if err != nil {
+		return "", resHeaders, err
+	}
+	return resBody.Boop, resHeaders, err
 }

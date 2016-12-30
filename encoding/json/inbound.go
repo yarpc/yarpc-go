@@ -25,10 +25,9 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"go.uber.org/yarpc"
+	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/meta"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
@@ -36,7 +35,7 @@ import (
 //
 // The wrapped function must already be in the correct format:
 //
-// 	f(reqMeta yarpc.ReqMeta, body $reqBody) ($resBody, yarpc.ResMeta, error)
+// 	f(ctx context.Context, body $reqBody) ($resBody, error)
 type jsonHandler struct {
 	reader  requestReader
 	handler reflect.Value
@@ -47,20 +46,24 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 		return err
 	}
 
+	ctx, call := encodingapi.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(treq); err != nil {
+		return err
+	}
+
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
-	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqMeta), reqBody})
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
 
-	if err := results[2].Interface(); err != nil {
+	if err := results[1].Interface(); err != nil {
 		return err.(error)
 	}
 
-	if resMeta, ok := results[1].Interface().(yarpc.ResMeta); ok {
-		meta.ToTransportResponseWriter(resMeta, rw)
+	if err := call.WriteToResponse(rw); err != nil {
+		return err
 	}
 
 	result := results[0].Interface()
@@ -76,13 +79,17 @@ func (h jsonHandler) HandleOneway(ctx context.Context, treq *transport.Request) 
 		return err
 	}
 
+	ctx, call := encodingapi.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(treq); err != nil {
+		return err
+	}
+
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
 
-	reqMeta := meta.FromTransportRequest(treq)
-	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(reqMeta), reqBody})
+	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
 
 	if err := results[0].Interface(); err != nil {
 		return err.(error)

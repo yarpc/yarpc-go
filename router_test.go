@@ -23,6 +23,8 @@ package yarpc_test
 import (
 	"testing"
 
+	"golang.org/x/net/context"
+
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -64,12 +66,15 @@ func TestMapRouter(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got, err := m.ChooseProcedure(tt.service, tt.procedure)
+		got, err := m.Choose(context.Background(), &transport.Request{
+			Service:   tt.service,
+			Procedure: tt.procedure,
+		})
 		if tt.want != nil {
 			assert.NoError(t, err,
-				"ChooseProcedure(%q, %q) failed", tt.service, tt.procedure)
+				"Choose(%q, %q) failed", tt.service, tt.procedure)
 			assert.True(t, tt.want == got.Unary(), // want == match, not deep equals
-				"ChooseProcedure(%q, %q) did not match", tt.service, tt.procedure)
+				"Choose(%q, %q) did not match", tt.service, tt.procedure)
 		} else {
 			assert.Error(t, err)
 		}

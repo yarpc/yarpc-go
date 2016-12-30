@@ -51,7 +51,7 @@ func TestCall(t *testing.T) {
 
 	tests := []struct {
 		procedure       string
-		headers         yarpc.Headers
+		headers         map[string]string
 		body            interface{}
 		encodedRequest  string
 		encodedResponse string
@@ -61,7 +61,7 @@ func TestCall(t *testing.T) {
 
 		// Either want, or wantType and wantErr must be set.
 		want        interface{} // expected response body
-		wantHeaders yarpc.Headers
+		wantHeaders map[string]string
 		wantType    reflect.Type // type of response body
 		wantErr     string       // error message
 	}{
@@ -89,12 +89,12 @@ func TestCall(t *testing.T) {
 		},
 		{
 			procedure:       "requestHeaders",
-			headers:         yarpc.NewHeaders().With("user-id", "42"),
+			headers:         map[string]string{"user-id": "42"},
 			body:            map[string]interface{}{},
 			encodedRequest:  "{}",
 			encodedResponse: "{}",
 			want:            map[string]interface{}{},
-			wantHeaders:     yarpc.NewHeaders().With("success", "true"),
+			wantHeaders:     map[string]string{"success": "true"},
 		},
 	}
 
@@ -113,14 +113,14 @@ func TestCall(t *testing.T) {
 						Service:   service,
 						Procedure: tt.procedure,
 						Encoding:  Encoding,
-						Headers:   transport.Headers(tt.headers),
+						Headers:   transport.HeadersFromMap(tt.headers),
 						Body:      bytes.NewReader([]byte(tt.encodedRequest)),
 					}),
 			).Return(
 				&transport.Response{
 					Body: ioutil.NopCloser(
 						bytes.NewReader([]byte(tt.encodedResponse))),
-					Headers: transport.Headers(tt.wantHeaders),
+					Headers: transport.HeadersFromMap(tt.wantHeaders),
 				}, nil)
 		}
 
@@ -133,20 +133,24 @@ func TestCall(t *testing.T) {
 		}
 		resBody := reflect.Zero(wantType).Interface()
 
-		res, err := client.Call(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body,
-			&resBody,
+		var (
+			opts       []yarpc.CallOption
+			resHeaders map[string]string
 		)
 
+		for k, v := range tt.headers {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
+		opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
+
+		err := client.Call(ctx, tt.procedure, tt.body, &resBody, opts...)
 		if tt.wantErr != "" {
 			if assert.Error(t, err) {
 				assert.Contains(t, err.Error(), tt.wantErr)
 			}
 		} else {
 			if assert.NoError(t, err) {
-				assert.Equal(t, tt.wantHeaders, res.Headers())
+				assert.Equal(t, tt.wantHeaders, resHeaders)
 				assert.Equal(t, tt.want, resBody)
 			}
 		}
@@ -170,7 +174,7 @@ func TestCallOneway(t *testing.T) {
 
 	tests := []struct {
 		procedure      string
-		headers        yarpc.Headers
+		headers        map[string]string
 		body           interface{}
 		encodedRequest string
 
@@ -192,7 +196,7 @@ func TestCallOneway(t *testing.T) {
 		},
 		{
 			procedure:      "requestHeaders",
-			headers:        yarpc.NewHeaders().With("user-id", "42"),
+			headers:        map[string]string{"user-id": "42"},
 			body:           map[string]interface{}{},
 			encodedRequest: "{}\n",
 		},
@@ -212,7 +216,7 @@ func TestCallOneway(t *testing.T) {
 					Service:   service,
 					Procedure: tt.procedure,
 					Encoding:  Encoding,
-					Headers:   transport.Headers(tt.headers),
+					Headers:   transport.HeadersFromMap(tt.headers),
 					Body:      bytes.NewReader([]byte(tt.encodedRequest)),
 				})
 
@@ -229,11 +233,13 @@ func TestCallOneway(t *testing.T) {
 			}
 		}
 
-		ack, err := client.CallOneway(
-			ctx,
-			yarpc.NewReqMeta().Procedure(tt.procedure).Headers(tt.headers),
-			tt.body)
+		var opts []yarpc.CallOption
 
+		for k, v := range tt.headers {
+			opts = append(opts, yarpc.WithHeader(k, v))
+		}
+
+		ack, err := client.CallOneway(ctx, tt.procedure, tt.body, opts...)
 		if tt.wantErr != "" {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tt.wantErr)
