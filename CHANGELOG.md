@@ -4,11 +4,25 @@ Releases
 v1.0.0-dev (unreleased)
 -----------------------
 
--   **Breaking**: `NewChannelTransport` can now return an error upon
-    construction.
 -   **Breaking**: The ThriftRW plugin now generates code under the subpackages
     `${service}server` and `$[service}client` rather than
     `yarpc/${service}server` and `yarpc/${service}client`.
+
+    Given a `kv.thrift` that defines a `KeyValue` service, previously the
+    imports would be,
+
+        import ".../kv/yarpc/keyvalueserver"
+        import ".../kv/yarpc/keyvalueclient"
+
+    The same packages will now be available at,
+
+        import ".../kv/keyvalueserver"
+        import ".../kv/keyvalueclient"
+
+-   **Breaking**: `NewChannelTransport` can now return an error upon
+    construction.
+-   **Breaking**: `http.URLTemplate` has no effect on `http.NewSingleOutbound`.
+-   `http.Transport.NewOutbound` now accepts `http.OutboundOption`s.
 
 
 v1.0.0-rc4 (2016-12-28)
