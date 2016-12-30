@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.0.0-dev (unreleased)
+v1.0.0-rc5 (2016-12-30)
 -----------------------
 
 -   **Breaking**: The ThriftRW plugin now generates code under the subpackages
