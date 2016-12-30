@@ -71,7 +71,7 @@ generate: $(_GENERATE_DEPS_EXECUTABLES)
 .PHONY: nogogenerate
 nogogenerate:
 	$(eval NOGOGENERATE_LOG := $(shell mktemp -t nogogenerate.XXXXX))
-	@grep -n -R \/\/go:generate $(GO_FILES) 2>&1 > $(NOGOGENERATE_LOG) || true
+	@grep -n \/\/go:generate $(GO_FILES) 2>&1 > $(NOGOGENERATE_LOG) || true
 	@[ ! -s "$(NOGOGENERATE_LOG)" ] || (echo "do not use //go:generate, add to scripts/generate.sh instead:" | cat - $(NOGOGENERATE_LOG) && false)
 
 .PHONY: gofmt
