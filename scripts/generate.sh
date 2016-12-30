@@ -14,7 +14,6 @@ mockgen -destination=api/transport/transporttest/inbound.go -package=transportte
 mockgen -destination=api/transport/transporttest/outbound.go -package=transporttest go.uber.org/yarpc/api/transport UnaryOutbound,OnewayOutbound
 mockgen -destination=api/transport/transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
 mockgen -destination=encoding/thrift/mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
-mockgen -destination=encoding/thrift/mock_handler_test.go -package=thrift -source=encoding/thrift/register.go
 mockgen -destination=transport/x/redis/redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
 
 stringer -type=ConnectionStatus api/peer
