@@ -10,22 +10,26 @@ This document outlines how to create a release of yarpc-go
 
 4. Alter CHANGELOG.md from `v<version>-dev (unreleased)` to `v<version_to_release> (YYYY-MM-DD)`
 
-5. Alter version.go to have the same version as `version_to_release`
+5. Alter `version.go` to have the same version as `version_to_release`
 
-6. Create a commit with the title `Preparing for release <version_to_release>`
+6. Run `make verify_version`
 
-7. Create a git tag for the version using `git tag -a v<version_to_release> -m v<version_to_release` (e.g. `git tag -a v1.0.0 -m v1.0.0`)
+7. Create a commit with the title `Preparing for release <version_to_release>`
 
-8. Push the tag to origin `git push --tags origin v<version_to_release>`
+8. Create a git tag for the version using `git tag -a v<version_to_release> -m v<version_to_release` (e.g. `git tag -a v1.0.0 -m v1.0.0`)
 
-9. `git push origin master`
+9. Push the tag to origin `git push --tags origin v<version_to_release>`
 
-10. Go to https://github.com/yarpc/yarpc-go/tags and edit the release notes of the new tag (copy the changelog into the release notes and make the release name the version number)
+10. `git push origin master`
 
-11. `git checkout dev`
+11. Go to https://github.com/yarpc/yarpc-go/tags and edit the release notes of the new tag (copy the changelog into the release notes and make the release name the version number)
 
-12. `git merge master`
+12. `git checkout dev`
 
-13. Update CHANGELOG.md and version.go to have a new `v<version>-dev (unreleased)` and put into a commit with title `Back to development`
+13. `git merge master`
 
-14. `git push origin dev`
+14. Update `CHANGELOG.md` and `version.go` to have a new `v<version>-dev (unreleased)` and put into a commit with title `Back to development`
+
+15. Run `make verify_version`
+
+16. `git push origin dev`
