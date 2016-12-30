@@ -5,6 +5,17 @@ set -Ee
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 cd "${DIR}"
 
+# Run stringer
+#
+# https://github.com/golang/go/issues/10249
+#
+# $1: type
+# $2: go package
+generate_stringer() {
+  go install "${2}"
+  stringer "-type=${1}" "${2}"
+}
+
 mockgen -destination=api/peer/peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List
 mockgen -destination=api/peer/peertest/peer.go -package=peertest go.uber.org/yarpc/api/peer Identifier,Peer
 mockgen -destination=api/peer/peertest/transport.go -package=peertest go.uber.org/yarpc/api/peer Transport,Subscriber
@@ -16,8 +27,8 @@ mockgen -destination=api/transport/transporttest/router.go -package=transporttes
 mockgen -destination=encoding/thrift/mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 mockgen -destination=transport/x/redis/redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
 
-stringer -type=ConnectionStatus api/peer
-stringer -type=Type api/transport || true # this fails still
+generate_stringer ConnectionStatus ./api/peer
+generate_stringer Type ./api/transport
 
 thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
 thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/oneway.thrift
