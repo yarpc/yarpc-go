@@ -20,8 +20,6 @@
 
 package peer
 
-//go:generate mockgen -destination=peertest/transport.go -package=peertest go.uber.org/yarpc/api/peer Transport,Subscriber
-
 // Subscriber listens to changes of a Peer over time.
 type Subscriber interface {
 	// The Peer Notifies the Subscriber when its status changes (e.g. connections status, pending requests)

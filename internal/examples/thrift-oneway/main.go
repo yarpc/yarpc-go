@@ -34,8 +34,6 @@ import (
 	"go.uber.org/yarpc/transport/x/redis"
 )
 
-//go:generate thriftrw --plugin=yarpc sink.thrift
-
 // This example illustrates how to make oneway calls using different oneway
 // transports.
 //

@@ -66,8 +66,13 @@ build:
 
 .PHONY: generate
 generate: $(_GENERATE_DEPS_EXECUTABLES)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH go generate $(PACKAGES)
-	./scripts/updateLicenses.sh
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
+
+.PHONY: nogogenerate
+nogogenerate:
+	$(eval NOGOGENERATE_LOG := $(shell mktemp -t nogogenerate.XXXXX))
+	@grep -n \/\/go:generate $(GO_FILES) 2>&1 > $(NOGOGENERATE_LOG) || true
+	@[ ! -s "$(NOGOGENERATE_LOG)" ] || (echo "do not use //go:generate, add to scripts/generate.sh instead:" | cat - $(NOGOGENERATE_LOG) && false)
 
 .PHONY: gofmt
 gofmt:
@@ -104,7 +109,7 @@ errcheck:
 	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
 
 .PHONY: lint
-lint: gofmt govet golint staticcheck errcheck
+lint: nogogenerate gofmt govet golint staticcheck errcheck
 
 .PHONY: install
 install:

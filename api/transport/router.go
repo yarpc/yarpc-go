@@ -25,8 +25,6 @@ import "context"
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
 
-//go:generate mockgen -destination=transporttest/router.go -package=transporttest go.uber.org/yarpc/api/transport Router,RouteTable
-
 // Procedure specifies a single handler registered in the RouteTable.
 type Procedure struct {
 	// Name of the procedure.

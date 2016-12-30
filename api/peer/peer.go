@@ -20,9 +20,6 @@
 
 package peer
 
-//go:generate mockgen -destination=peertest/peer.go -package=peertest go.uber.org/yarpc/api/peer Identifier,Peer
-//go:generate stringer -type=ConnectionStatus
-
 // ConnectionStatus maintains information about the Peer's connection state
 type ConnectionStatus int
 
@@ -36,8 +33,6 @@ const (
 	// Available indicates the Peer is available for requests
 	Available
 )
-
-//go:generate stringer -type=ConnectionStatus
 
 // Status holds all the information about a peer's state that would be useful to Subscribers
 type Status struct {

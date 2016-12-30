@@ -26,8 +26,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-//go:generate mockgen -destination=peertest/list.go -package=peertest go.uber.org/yarpc/api/peer Chooser,List
-
 // Chooser is a collection of Peers.  Outbounds request peers from the peer.Chooser to determine where to send requests
 type Chooser interface {
 	transport.Lifecycle

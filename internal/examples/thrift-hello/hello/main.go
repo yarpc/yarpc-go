@@ -37,8 +37,6 @@ import (
 	"go.uber.org/yarpc/transport/http"
 )
 
-//go:generate thriftrw --plugin=yarpc echo.thrift
-
 func main() {
 	// configure a YARPC dispatcher for the service "hello",
 	// expose the service over an HTTP inbound on port 8086,
