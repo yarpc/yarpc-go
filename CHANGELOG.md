@@ -1,10 +1,11 @@
 Releases
 ========
 
-v1.0.0-dev (unreleased)
------------------------
+v1.0.0 (2016-12-30)
+-------------------
 
--   No changes yet.
+-   Stable release: No more breaking changes will be made in the 1.x release
+    series.
 
 
 v1.0.0-rc5 (2016-12-30)
