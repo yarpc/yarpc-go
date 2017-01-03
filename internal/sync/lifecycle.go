@@ -55,14 +55,15 @@ const (
 
 // LifecycleOnce is a helper for implementing transport.Lifecycles
 // with similar behavior.
+//
+// We use the sync.Mutex in order to guarantee that multiple calls
+// to Start/Stop will wait until the first call finishes and return
+// the same error (stored in startErr/stopErr).
+//
+// State is stored in an atomic so that we can read it from the `IsRunning`
+// function without having to worry about race conditions with Start/Stop.
 type LifecycleOnce struct {
-	lock sync.Mutex
-
-	// TODO(abg): We don't need a mutex if we use atomics correctly. Right
-	// now, the only reason we have an atomic is so that we can safely query
-	// the state of the lifecycle while Start() is still running. We should
-	// just switch this to an atomic instead.
-
+	lock     sync.Mutex
 	state    atomic.Int32
 	startErr error
 	stopErr  error
