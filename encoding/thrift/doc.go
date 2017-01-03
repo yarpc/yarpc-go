@@ -20,7 +20,7 @@
 
 // Package thrift implements Thrift encoding support for YARPC.
 //
-// To use this package, you must install ThriftRW 0.2.0 or newer.
+// To use this package, you must install ThriftRW 1.0 or newer.
 //
 // 	go get go.uber.org/thriftrw
 //
@@ -32,14 +32,13 @@
 //
 // 	thriftrw --plugin yarpc myservice.thrift
 //
-// In addition to generating code for types specified in your THrift file,
+// In addition to generating code for types specified in your Thrift file,
 // this will generate two packages for each service in the file: a client
 // package and a server package.
 //
 // 	myservice
-// 	 |- yarpc
-// 	     |- myserviceclient
-// 	     |- myserviceserver
+// 	   |- myserviceclient
+// 	   |- myserviceserver
 //
 // The client package allows sending requests through a YARPC dispatcher.
 //
