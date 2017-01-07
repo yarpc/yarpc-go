@@ -61,14 +61,13 @@ func WithChannel(ch Channel) TransportOption {
 	}
 }
 
-// ListenAddr specifies the YARPC-owned TChannel Channel should listen on. If
-// the WithChannel option is not specified, the TChannel Transport will build
-// its own TChannel Channel and listen on this address. This defaults to ":0"
-// (all interfaces, OS-assigned port).
+// ListenAddr specifies the port the TChannel should listen on.  This defaults
+// to ":0" (all interfaces, OS-assigned port).
 //
 // 	transport := NewChannelTransport(ServiceName("myservice"), ListenAddr(":4040"))
 //
-// This option has no effect if WithChannel was used.
+// This option has no effect if WithChannel was used and the TChannel was
+// already listening.
 func ListenAddr(addr string) TransportOption {
 	return func(t *transportConfig) {
 		t.addr = addr
