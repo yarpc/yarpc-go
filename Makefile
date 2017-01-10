@@ -120,8 +120,8 @@ install:
 
 
 .PHONY: test
-test: verify_version
-	go test $(PACKAGES)
+test: verify_version $(THRIFTRW)
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH go test $(PACKAGES)
 
 
 .PHONY: cover
