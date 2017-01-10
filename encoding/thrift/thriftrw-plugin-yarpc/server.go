@@ -43,6 +43,11 @@ package <$pkgname>
 <$unaryWrapperImport  := .UnaryWrapperImport>
 <$unaryWrapperFunc    := .UnaryWrapperFunc>
 
+</* Note that we import things like "context" inside loops rather than at the
+    top-level because they will end up unused if the service does not have any
+    functions.
+ */>
+
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
 	<if .Parent>
