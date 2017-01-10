@@ -30,10 +30,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -100,9 +100,8 @@ func TestCodeIsUpToDate(t *testing.T) {
 		newHash, err := dirhash(newPackageDir)
 		require.NoError(t, err, "could not hash %q", newPackageDir)
 
-		if newHash != currentHash {
-			t.Fatalf("Generated code for %q is out of date.", thriftFile)
-		}
+		assert.Equal(t, currentHash, newHash,
+			"Generated code for %q is out of date.", thriftFile)
 	}
 }
 
@@ -113,9 +112,8 @@ func thriftrw(args ...string) error {
 	return cmd.Run()
 }
 
-func dirhash(dir string) (string, error) {
+func dirhash(dir string) (map[string]string, error) {
 	fileHashes := make(map[string]string)
-
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -139,24 +137,8 @@ func dirhash(dir string) (string, error) {
 		fileHashes[path] = fileHash
 		return nil
 	})
-	if err != nil {
-		return "", err
-	}
 
-	fileNames := make([]string, 0, len(fileHashes))
-	for name := range fileHashes {
-		fileNames = append(fileNames, name)
-	}
-	sort.Strings(fileNames)
-
-	h := sha1.New()
-	for _, name := range fileNames {
-		if _, err := fmt.Fprintf(h, "%v\t%v\n", name, fileHashes[name]); err != nil {
-			return "", err
-		}
-	}
-
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
+	return fileHashes, err
 }
 
 func hash(name string) (string, error) {
