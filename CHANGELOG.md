@@ -4,11 +4,9 @@ Releases
 v1.0.1-dev (unreleased)
 -----------------------
 
--   Bugfix: Thrift: Code generated for empty services would fail to compile.
--   Bugfix: Thrift: Clients for services that inherit other services did not
-    satisfy the client Interface.
--   Bugfix: Thrift: Handlers failed to register procedures for inherited
-    methods.
+-   Thrift: Fixed code generation for empty services.
+-   Thrift: Fixed code generation for Thrift services that inherit other Thrift
+    services.
 
 
 v1.0.0 (2016-12-30)
