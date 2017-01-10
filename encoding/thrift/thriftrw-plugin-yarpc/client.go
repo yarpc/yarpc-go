@@ -37,7 +37,6 @@ package <$pkgname>
 <$yarpc     := import "go.uber.org/yarpc">
 <$transport := import "go.uber.org/yarpc/api/transport">
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
-<$context   := import "context">
 
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {
@@ -47,6 +46,7 @@ type Interface interface {
 	<end>
 
 	<range .Service.Functions>
+		<$context := import "context">
 		<.Name>(
 			ctx <$context>.Context, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
@@ -64,10 +64,14 @@ type Interface interface {
 //
 // 	client := <$pkgname>.New(dispatcher.ClientConfig("<lower .Service.Name>"))
 func New(c <$transport>.ClientConfig, opts ...<$thrift>.ClientOption) Interface {
-	return client{c: <$thrift>.New(<$thrift>.Config{
-		Service: "<.Service.Name>",
-		ClientConfig: c,
-	}, opts...)}
+	return client{
+		c: <$thrift>.New(<$thrift>.Config{
+			Service: "<.Service.Name>",
+			ClientConfig: c,
+		}, opts...),<if .Parent>
+		<$parentPath := printf "%s/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
+		Interface: <import $parentPath>.New(c),<end>
+	}
 }
 
 func init() {
@@ -76,11 +80,18 @@ func init() {
 	})
 }
 
-type client struct{ c <$thrift>.Client }
+type client struct {
+	<if .Parent>
+		<$parentPath := printf "%s/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
+		<import $parentPath>.Interface
+	<end>
+	c <$thrift>.Client
+}
 
 <$service := .Service>
 <$module := .Module>
 <range .Service.Functions>
+<$context := import "context">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
 func (c client) <.Name>(

@@ -4,7 +4,11 @@ Releases
 v1.1.0-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   Bugfix: Thrift: Code generated for empty services would fail to compile.
+-   Bugfix: Thrift: Clients for services that inherit other services did not
+    satisfy the client Interface.
+-   Bugfix: Thrift: Handlers failed to register procedures for inherited
+    methods.
 
 
 v1.0.0 (2016-12-30)

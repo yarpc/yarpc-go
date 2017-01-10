@@ -52,10 +52,12 @@ type Interface interface {
 //
 // 	client := keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
-	return client{c: thrift.New(thrift.Config{
-		Service:      "KeyValue",
-		ClientConfig: c,
-	}, opts...)}
+	return client{
+		c: thrift.New(thrift.Config{
+			Service:      "KeyValue",
+			ClientConfig: c,
+		}, opts...),
+	}
 }
 
 func init() {
@@ -64,7 +66,9 @@ func init() {
 	})
 }
 
-type client struct{ c thrift.Client }
+type client struct {
+	c thrift.Client
+}
 
 func (c client) GetValue(
 	ctx context.Context,
