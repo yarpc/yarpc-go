@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.1.0-dev (unreleased)
+v1.0.1-dev (unreleased)
 -----------------------
 
 -   Bugfix: Thrift: Code generated for empty services would fail to compile.
