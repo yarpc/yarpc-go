@@ -4,7 +4,8 @@ Releases
 v1.0.2-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   Thrift: You can now use the `-gomock` flag with the ThriftRW plugin to
+    generate gomock-compatible mocks for service clients.
 
 
 v1.0.1 (2017-01-11)

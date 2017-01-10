@@ -32,13 +32,19 @@
 //
 // 	thriftrw --plugin yarpc myservice.thrift
 //
+// Pass "-gomock" to the plugin to generate gomock-compatible mock clients for
+// the Thrift services.
+//
+// 	thriftrw --plugin "yarpc -gomock" myservice.thrift
+//
 // In addition to generating code for types specified in your Thrift file,
 // this will generate two packages for each service in the file: a client
-// package and a server package.
+// package, a server package, and if you requested mocks, a test package.
 //
 // 	myservice
 // 	   |- myserviceclient
 // 	   |- myserviceserver
+// 	   |- myservicetest
 //
 // The client package allows sending requests through a YARPC dispatcher.
 //
@@ -49,4 +55,10 @@
 //
 // 	handler := myHandler{}
 // 	dispatcher.Register(myserviceserver.New(handler))
+//
+// The test package provides a gomock-compatible mock client.
+//
+// 	mockCtrl := gomock.NewController(t)
+// 	client := myservicetest.NewMockClient(mockCtrl)
+// 	client.EXPECT().Hello(request).Return(response, nil)
 package thrift

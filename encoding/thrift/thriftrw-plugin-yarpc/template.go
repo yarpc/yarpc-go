@@ -40,6 +40,28 @@ type Svc struct {
 	Parents []*Svc
 }
 
+// AllFunctions returns a list of all functions for this service including
+// inherited functions.
+func (s *Svc) AllFunctions() []*api.Function {
+	var (
+		functions []*api.Function
+		added     = make(map[string]struct{})
+		services  = append([]*Svc{s}, s.Parents...)
+	)
+
+	for _, s := range services {
+		for _, f := range s.Functions {
+			if _, taken := added[f.ThriftName]; taken {
+				continue
+			}
+
+			functions = append(functions, f)
+		}
+	}
+
+	return functions
+}
+
 // Parent returns the immediate parent of this service or nil if it doesn't
 // have any.
 func (s *Svc) Parent() *api.Service {
@@ -59,6 +81,12 @@ func (s *Svc) ServerPackagePath() string {
 // service.
 func (s *Svc) ClientPackagePath() string {
 	return fmt.Sprintf("%s/%sclient", s.Module.ImportPath, strings.ToLower(s.Name))
+}
+
+// TestPackagePath returns the import path to the testpackage for this
+// service.
+func (s *Svc) TestPackagePath() string {
+	return fmt.Sprintf("%s/%stest", s.Module.ImportPath, strings.ToLower(s.Name))
 }
 
 // templateData contains all the data needed for the different code gen

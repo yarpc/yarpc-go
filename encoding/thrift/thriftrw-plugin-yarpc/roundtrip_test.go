@@ -39,6 +39,8 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceserver"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyserver"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyclient"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/stretchr/testify/assert"
@@ -75,6 +77,13 @@ func TestRoundTrip(t *testing.T) {
 			desc:          "base: healthy",
 			procedures:    baseserviceserver.New(extendEmptyHandler{}),
 			newClientFunc: baseserviceclient.New,
+			method:        "Healthy",
+			wantResult:    true,
+		},
+		{
+			desc:          "extend only: healthy",
+			procedures:    extendonlyserver.New(&storeHandler{healthy: true}),
+			newClientFunc: extendonlyclient.New,
 			method:        "Healthy",
 			wantResult:    true,
 		},
