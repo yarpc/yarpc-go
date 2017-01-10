@@ -50,11 +50,8 @@ package <$pkgname>
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
-	<if .Parent>
-		<$parentPath := printf "%s/%sserver" .ParentModule.ImportPath (lower .Parent.Name)>
-		<import $parentPath>.Interface
+	<if .Parent><import .ParentServerPackagePath>.Interface
 	<end>
-
 	<range .Service.Functions>
 		<$context := import $contextImportPath>
 		<.Name>(
@@ -94,10 +91,9 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 		<end>},
 	}
 
-	procedures := make([]<$transport>.Procedure, 0, <len .Service.Functions>)<if .Parent>
-	<$parentPath := printf "%s/%sserver" .ParentModule.ImportPath (lower .Parent.Name)>
-	procedures = append(procedures, <import $parentPath>.New(impl, opts...)...)<end>
-	procedures = append(procedures, <$thrift>.BuildProcedures(service, opts...)...)
+	procedures := make([]<$transport>.Procedure, 0, <len .Service.Functions>)
+	<if .Parent> procedures = append(procedures, <import .ParentServerPackagePath>.New(impl, opts...)...)
+	<end>        procedures = append(procedures, <$thrift>.BuildProcedures(service, opts...)...)
 	return procedures
 }
 

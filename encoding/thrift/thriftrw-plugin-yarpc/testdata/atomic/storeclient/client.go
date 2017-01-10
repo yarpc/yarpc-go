@@ -52,7 +52,6 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Store",
 			ClientConfig: c,
 		}, opts...),
-
 		Interface: baseserviceclient.New(c),
 	}
 }

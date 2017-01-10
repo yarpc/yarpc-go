@@ -45,11 +45,8 @@ package <$pkgname>
 
 // Interface is a client for the <.Service.Name> service.
 type Interface interface {
-	<if .Parent>
-		<$parentPath := printf "%s/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
-		<import $parentPath>.Interface
+	<if .Parent><import .ParentClientPackagePath>.Interface
 	<end>
-
 	<range .Service.Functions>
 		<$context := import "context">
 		<.Name>(
@@ -73,10 +70,9 @@ func New(c <$transport>.ClientConfig, opts ...<$thrift>.ClientOption) Interface 
 		c: <$thrift>.New(<$thrift>.Config{
 			Service: "<.Service.Name>",
 			ClientConfig: c,
-		}, opts...),<if .Parent>
-		<$parentPath := printf "%s/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
-		Interface: <import $parentPath>.New(c),<end>
-	}
+		}, opts...),
+		<if .Parent> Interface: <import .ParentClientPackagePath>.New(c),
+		<end>}
 }
 
 func init() {
@@ -86,9 +82,7 @@ func init() {
 }
 
 type client struct {
-	<if .Parent>
-		<$parentPath := printf "%s/%sclient" .ParentModule.ImportPath (lower .Parent.Name)>
-		<import $parentPath>.Interface
+	<if .Parent><import .ParentClientPackagePath>.Interface
 	<end>
 	c <$thrift>.Client
 }

@@ -32,7 +32,6 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "ExtendEmpty",
 			ClientConfig: c,
 		}, opts...),
-
 		Interface: emptyserviceclient.New(c),
 	}
 }
