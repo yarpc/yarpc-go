@@ -79,8 +79,6 @@ func TestCodeIsUpToDate(t *testing.T) {
 	require.NoError(t, err, "failed to create temporary directory")
 	defer os.RemoveAll(outputDir)
 
-	// TODO: compile plugin and put it on the path
-
 	for _, thriftFile := range thriftFiles {
 		packageName := strings.TrimSuffix(filepath.Base(thriftFile), ".thrift")
 		currentPackageDir := filepath.Join("testdata", packageName)
