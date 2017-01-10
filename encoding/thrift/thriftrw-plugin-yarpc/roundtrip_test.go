@@ -209,7 +209,7 @@ func TestRoundTrip(t *testing.T) {
 			require.Equal(t, reflect.Interface, clientType.Kind(),
 				"invalid test: newClientFunc must return an Interface")
 
-			// The following blob equivalent to,
+			// The following blob is equivalent to,
 			//
 			// 	var clientHolder struct {
 			// 		Client ${service}client.Interface `service:"roundtrip-server"`
