@@ -28,13 +28,43 @@ import (
 	"go.uber.org/thriftrw/plugin/api"
 )
 
+// Svc is a Thrift service.
+type Svc struct {
+	*api.Service
+
+	Module *api.Module
+
+	// Ordered list of parents of this service. If the list is non-empty, the
+	// immediate parent of this service is the first item in the list, its
+	// parent service is next, and so on.
+	Parents []*Svc
+}
+
+// Parent returns the immediate parent of this service or nil if it doesn't
+// have any.
+func (s *Svc) Parent() *api.Service {
+	if len(s.Parents) > 0 {
+		return s.Parents[0].Service
+	}
+	return nil
+}
+
+// ServerPackagePath returns the import path to the server package for this
+// service.
+func (s *Svc) ServerPackagePath() string {
+	return fmt.Sprintf("%s/%sserver", s.Module.ImportPath, strings.ToLower(s.Name))
+}
+
+// ClientPackagePath returns the import path to the server package for this
+// service.
+func (s *Svc) ClientPackagePath() string {
+	return fmt.Sprintf("%s/%sclient", s.Module.ImportPath, strings.ToLower(s.Name))
+}
+
 // templateData contains all the data needed for the different code gen
 // templates used by this plugin.
 type templateData struct {
-	Module       *api.Module
-	Service      *api.Service
-	Parent       *api.Service
-	ParentModule *api.Module
+	*Svc
 
 	ContextImportPath   string
 	UnaryWrapperImport  string
@@ -43,24 +73,24 @@ type templateData struct {
 	OnewayWrapperFunc   string
 }
 
-// ParentServerPackagePath returns the import path for the parent service's
-// YARPC server package or an empty string if this service doesn't extend
-// another service.
+// ParentServerPackagePath returns the import path for the immediate parent
+// service's YARPC server package or an empty string if this service doesn't
+// extend another service.
 func (d *templateData) ParentServerPackagePath() string {
-	if d.Parent == nil {
+	if len(d.Parents) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("%s/%sserver", d.ParentModule.ImportPath, strings.ToLower(d.Parent.Name))
+	return d.Parents[0].ServerPackagePath()
 }
 
-// ParentClientPackagePath returns the import path for the parent service's
-// YARPC client package or an empty string if this service doesn't extend
-// another service.
+// ParentClientPackagePath returns the import path for the immediate parent
+// service's YARPC client package or an empty string if this service doesn't
+// extend another service.
 func (d *templateData) ParentClientPackagePath() string {
-	if d.Parent == nil {
+	if len(d.Parents) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("%s/%sclient", d.ParentModule.ImportPath, strings.ToLower(d.Parent.Name))
+	return d.Parents[0].ClientPackagePath()
 }
 
 // genFunc is a function that generates some part of the code needed by the
