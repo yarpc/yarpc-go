@@ -80,11 +80,8 @@ func (t *fakeTestReporter) Errorf(msg string, args ...interface{}) {
 }
 
 func (t *fakeTestReporter) Fatalf(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args)
-	}
+	t.Errorf(msg, args...)
 	t.result.Status = Fatal
-	t.result.Errors = append(t.result.Errors, msg)
 
 	// this kills the current goroutine, unwinding deferred functions.
 	runtime.Goexit()
