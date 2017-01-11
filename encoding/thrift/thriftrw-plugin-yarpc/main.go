@@ -43,15 +43,15 @@ var (
 	_onewayHandlerWrapper = flag.String("oneway-handler-wrapper",
 		"go.uber.org/yarpc/encoding/thrift.OnewayHandler",
 		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
-	_gomock = flag.Bool("gomock", false,
-		"Generate gomock-compatible mocks for service clients.")
+	_noGomock = flag.Bool("no-gomock", false,
+		"Don't generate gomock mocks for service clients")
 )
 
 type g struct{}
 
 func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
 	generators := []genFunc{clientGenerator, serverGenerator}
-	if *_gomock {
+	if !*_noGomock {
 		generators = append(generators, gomockGenerator)
 	}
 

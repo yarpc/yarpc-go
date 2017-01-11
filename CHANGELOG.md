@@ -4,8 +4,9 @@ Releases
 v1.0.2-dev (unreleased)
 -----------------------
 
--   Thrift: You can now use the `-gomock` flag with the ThriftRW plugin to
-    generate gomock-compatible mocks for service clients.
+-   Thrift: Mock clients compatible with gomock are now generated for each
+    service inside a test subpackage. Disable this by passing a `-no-gomock`
+    flag to the plugin.
 
 
 v1.0.1 (2017-01-11)

@@ -92,7 +92,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 			"--out", outputDir,
 			"--pkg-prefix", _testPackage,
 			"--thrift-root", thriftRoot,
-			"--plugin", "yarpc -gomock",
+			"--plugin", "yarpc",
 			thriftFile,
 		)
 		require.NoError(t, err, "failed to generate code for %q", thriftFile)
