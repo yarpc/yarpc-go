@@ -2,6 +2,13 @@
 
 set -euo pipefail
 
+# Regular expression for file paths that don't need licenses.
+#
+# We need to ignore internal/tests for licenses so that the golden test for
+# thriftrw-plugin-yarpc can verify the contents of the generated code without
+# running updateLicenses on it.
+LICENSE_FILTER="/internal/tests/"
+
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 cd "${DIR}"
 
@@ -39,8 +46,8 @@ thriftrw --plugin=yarpc --out=internal/examples/thrift-keyvalue/keyvalue interna
 thriftrw --out=encoding/thrift encoding/thrift/internal.thrift
 thriftrw --out=serialize serialize/internal.thrift
 
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/testdata encoding/thrift/thriftrw-plugin-yarpc/testdata/common.thrift
-thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/testdata encoding/thrift/thriftrw-plugin-yarpc/testdata/atomic.thrift
+thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common.thrift
+thriftrw --no-recurse --plugin=yarpc --out=encoding/thrift/thriftrw-plugin-yarpc/internal/tests encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic.thrift
 
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/echo.thrift
 thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --inputFile internal/crossdock/thrift/gauntlet_tchannel.thrift
@@ -52,6 +59,7 @@ touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
 
 # this must come at the end
-python scripts/updateLicense.py $(go list -json $(glide nv) | jq -r '.Dir + "/" + (.GoFiles | .[])')
+python scripts/updateLicense.py $(go list -json $(glide nv) | \
+	jq -r '.Dir + "/" + (.GoFiles | .[]) | select(test("'"$LICENSE_FILTER"'") | not)')
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed

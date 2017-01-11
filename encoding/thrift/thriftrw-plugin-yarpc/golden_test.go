@@ -37,10 +37,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// This implements a test that verifies that the code in testdata/ is up to
+// This implements a test that verifies that the code in interna/tests/ is up to
 // date.
 
-const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/testdata"
+const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests"
 
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -69,8 +69,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestCodeIsUpToDate(t *testing.T) {
-	thriftRoot, err := filepath.Abs("testdata")
-	require.NoError(t, err, "could not resolve absolute path to testdata")
+	thriftRoot, err := filepath.Abs("internal/tests")
+	require.NoError(t, err, "could not resolve absolute path to internal/tests")
 
 	thriftFiles, err := filepath.Glob(thriftRoot + "/*.thrift")
 	require.NoError(t, err)
@@ -81,7 +81,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 
 	for _, thriftFile := range thriftFiles {
 		packageName := strings.TrimSuffix(filepath.Base(thriftFile), ".thrift")
-		currentPackageDir := filepath.Join("testdata", packageName)
+		currentPackageDir := filepath.Join("internal/tests", packageName)
 		newPackageDir := filepath.Join(outputDir, packageName)
 
 		currentHash, err := dirhash(currentPackageDir)

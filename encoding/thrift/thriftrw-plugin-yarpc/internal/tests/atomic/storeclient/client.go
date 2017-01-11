@@ -8,8 +8,8 @@ import (
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/testdata/atomic"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/testdata/common/baseserviceclient"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
 	"go.uber.org/yarpc"
 )
 
