@@ -36,21 +36,24 @@ package <$pkgname>
 
 <$thrift    := import "go.uber.org/yarpc/encoding/thrift">
 <$transport := import "go.uber.org/yarpc/api/transport">
-<$context   := import .ContextImportPath>
 
+<$contextImportPath   := .ContextImportPath>
 <$onewayWrapperImport := .OnewayWrapperImport>
-<$onewayWrapperFunc := .OnewayWrapperFunc>
-<$unaryWrapperImport := .UnaryWrapperImport>
-<$unaryWrapperFunc := .UnaryWrapperFunc>
+<$onewayWrapperFunc   := .OnewayWrapperFunc>
+<$unaryWrapperImport  := .UnaryWrapperImport>
+<$unaryWrapperFunc    := .UnaryWrapperFunc>
+
+</* Note that we import things like "context" inside loops rather than at the
+    top-level because they will end up unused if the service does not have any
+    functions.
+ */>
 
 // Interface is the server-side interface for the <.Service.Name> service.
 type Interface interface {
-	<if .Parent>
-		<$parentPath := printf "%s/%sserver" .ParentModule.ImportPath (lower .Parent.Name)>
-		<import $parentPath>.Interface
+	<if .Parent><import .ParentServerPackagePath>.Interface
 	<end>
-
 	<range .Service.Functions>
+		<$context := import $contextImportPath>
 		<.Name>(
 			ctx <$context>.Context, <range .Arguments>
 			<.Name> <formatType .Type>,<end>
@@ -67,7 +70,7 @@ type Interface interface {
 // 	handler := <.Service.Name>Handler{}
 // 	dispatcher.Register(<$pkgname>.New(handler))
 func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Procedure {
-	h := handler{impl}
+	<if .Service.Functions>h := handler{impl}<end>
 	service := <$thrift>.Service{
 		Name: "<.Service.Name>",
 		Methods: []<$thrift>.Method{
@@ -87,7 +90,11 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 				},
 		<end>},
 	}
-	return <$thrift>.BuildProcedures(service, opts...)
+
+	procedures := make([]<$transport>.Procedure, 0, <len .Service.Functions>)
+	<if .Parent> procedures = append(procedures, <import .ParentServerPackagePath>.New(impl, opts...)...)
+	<end>        procedures = append(procedures, <$thrift>.BuildProcedures(service, opts...)...)
+	return procedures
 }
 
 type handler struct{ impl Interface }
@@ -95,6 +102,7 @@ type handler struct{ impl Interface }
 <$service := .Service>
 <$module := .Module>
 <range .Service.Functions>
+<$context := import $contextImportPath>
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
 
 <$wire := import "go.uber.org/thriftrw/wire">

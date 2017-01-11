@@ -21,6 +21,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"go.uber.org/thriftrw/plugin"
@@ -40,6 +41,26 @@ type templateData struct {
 	UnaryWrapperFunc    string
 	OnewayWrapperImport string
 	OnewayWrapperFunc   string
+}
+
+// ParentServerPackagePath returns the import path for the parent service's
+// YARPC server package or an empty string if this service doesn't extend
+// another service.
+func (d *templateData) ParentServerPackagePath() string {
+	if d.Parent == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s/%sserver", d.ParentModule.ImportPath, strings.ToLower(d.Parent.Name))
+}
+
+// ParentClientPackagePath returns the import path for the parent service's
+// YARPC client package or an empty string if this service doesn't extend
+// another service.
+func (d *templateData) ParentClientPackagePath() string {
+	if d.Parent == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s/%sclient", d.ParentModule.ImportPath, strings.ToLower(d.Parent.Name))
 }
 
 // genFunc is a function that generates some part of the code needed by the

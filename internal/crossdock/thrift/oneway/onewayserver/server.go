@@ -61,7 +61,10 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 		},
 	}
-	return thrift.BuildProcedures(service, opts...)
+
+	procedures := make([]transport.Procedure, 0, 1)
+	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
+	return procedures
 }
 
 type handler struct{ impl Interface }

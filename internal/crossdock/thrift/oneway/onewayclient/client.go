@@ -44,10 +44,12 @@ type Interface interface {
 //
 // 	client := onewayclient.New(dispatcher.ClientConfig("oneway"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
-	return client{c: thrift.New(thrift.Config{
-		Service:      "Oneway",
-		ClientConfig: c,
-	}, opts...)}
+	return client{
+		c: thrift.New(thrift.Config{
+			Service:      "Oneway",
+			ClientConfig: c,
+		}, opts...),
+	}
 }
 
 func init() {
@@ -56,7 +58,9 @@ func init() {
 	})
 }
 
-type client struct{ c thrift.Client }
+type client struct {
+	c thrift.Client
+}
 
 func (c client) Echo(
 	ctx context.Context,
