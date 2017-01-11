@@ -1,8 +1,8 @@
 Releases
 ========
 
-v1.0.1-dev (unreleased)
------------------------
+v1.0.1 (2017-01-11)
+-------------------
 
 -   Thrift: Fixed code generation for empty services.
 -   Thrift: Fixed code generation for Thrift services that inherit other Thrift
