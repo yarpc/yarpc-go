@@ -46,7 +46,7 @@ type FakeTestResult struct {
 
 // withFakeTestReporter yields a TestReporter that records its results and
 // exposes them in FakeTestResult.
-func withFakeTestReporter(f func(gomock.TestReporter)) *FakeTestResult {
+func withFakeTestReporter(f func(gomock.TestReporter)) FakeTestResult {
 	var (
 		r FakeTestResult
 		t = fakeTestReporter{&r}
@@ -67,7 +67,7 @@ func withFakeTestReporter(f func(gomock.TestReporter)) *FakeTestResult {
 	}()
 	<-done
 
-	return &r
+	return r
 }
 
 type fakeTestReporter struct{ result *FakeTestResult }
