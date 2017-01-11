@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoretest"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storetest"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseservicetest"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyservicetest"
@@ -18,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMockStoreClient(t *testing.T) {
+func TestMockClients(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
@@ -138,6 +139,28 @@ func TestMockStoreClient(t *testing.T) {
 
 				_, err := c.Healthy(ctx)
 				assert.Equal(t, errors.New("great sadness"), err)
+			},
+		},
+		{
+			desc: "readonly store: integer: missing",
+			withController: func(ctrl *gomock.Controller) {
+				c := readonlystoretest.NewMockClient(ctrl)
+				c.EXPECT().Integer(gomock.Any(), ptr.String("foo")).Return(int64(42), nil)
+			},
+			wantStatus: Fatal,
+			wantErrorsLike: []string{
+				"missing call(s) to [*readonlystoretest.MockClient.Integer(is anything",
+				"aborting test due to missing call(s)",
+			},
+		},
+		{
+			desc: "store: integer: expected",
+			withController: func(ctrl *gomock.Controller) {
+				c := storetest.NewMockClient(ctrl)
+				c.EXPECT().Integer(gomock.Any(), ptr.String("foo")).Return(int64(42), nil)
+				result, err := c.Integer(ctx, ptr.String("foo"))
+				assert.NoError(t, err)
+				assert.Equal(t, int64(42), result)
 			},
 		},
 		{

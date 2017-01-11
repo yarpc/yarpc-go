@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-type Store_Integer_Args struct {
+type ReadOnlyStore_Integer_Args struct {
 	Key *string `json:"key,omitempty"`
 }
 
-func (v *Store_Integer_Args) ToWire() (wire.Value, error) {
+func (v *ReadOnlyStore_Integer_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -32,7 +32,7 @@ func (v *Store_Integer_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func (v *Store_Integer_Args) FromWire(w wire.Value) error {
+func (v *ReadOnlyStore_Integer_Args) FromWire(w wire.Value) error {
 	var err error
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
@@ -50,36 +50,36 @@ func (v *Store_Integer_Args) FromWire(w wire.Value) error {
 	return nil
 }
 
-func (v *Store_Integer_Args) String() string {
+func (v *ReadOnlyStore_Integer_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.Key != nil {
 		fields[i] = fmt.Sprintf("Key: %v", *(v.Key))
 		i++
 	}
-	return fmt.Sprintf("Store_Integer_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ReadOnlyStore_Integer_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-func (v *Store_Integer_Args) MethodName() string {
+func (v *ReadOnlyStore_Integer_Args) MethodName() string {
 	return "integer"
 }
 
-func (v *Store_Integer_Args) EnvelopeType() wire.EnvelopeType {
+func (v *ReadOnlyStore_Integer_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-var Store_Integer_Helper = struct {
-	Args           func(key *string) *Store_Integer_Args
+var ReadOnlyStore_Integer_Helper = struct {
+	Args           func(key *string) *ReadOnlyStore_Integer_Args
 	IsException    func(error) bool
-	WrapResponse   func(int64, error) (*Store_Integer_Result, error)
-	UnwrapResponse func(*Store_Integer_Result) (int64, error)
+	WrapResponse   func(int64, error) (*ReadOnlyStore_Integer_Result, error)
+	UnwrapResponse func(*ReadOnlyStore_Integer_Result) (int64, error)
 }{}
 
 func init() {
-	Store_Integer_Helper.Args = func(key *string) *Store_Integer_Args {
-		return &Store_Integer_Args{Key: key}
+	ReadOnlyStore_Integer_Helper.Args = func(key *string) *ReadOnlyStore_Integer_Args {
+		return &ReadOnlyStore_Integer_Args{Key: key}
 	}
-	Store_Integer_Helper.IsException = func(err error) bool {
+	ReadOnlyStore_Integer_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *KeyDoesNotExist:
 			return true
@@ -87,20 +87,20 @@ func init() {
 			return false
 		}
 	}
-	Store_Integer_Helper.WrapResponse = func(success int64, err error) (*Store_Integer_Result, error) {
+	ReadOnlyStore_Integer_Helper.WrapResponse = func(success int64, err error) (*ReadOnlyStore_Integer_Result, error) {
 		if err == nil {
-			return &Store_Integer_Result{Success: &success}, nil
+			return &ReadOnlyStore_Integer_Result{Success: &success}, nil
 		}
 		switch e := err.(type) {
 		case *KeyDoesNotExist:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for Store_Integer_Result.DoesNotExist")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for ReadOnlyStore_Integer_Result.DoesNotExist")
 			}
-			return &Store_Integer_Result{DoesNotExist: e}, nil
+			return &ReadOnlyStore_Integer_Result{DoesNotExist: e}, nil
 		}
 		return nil, err
 	}
-	Store_Integer_Helper.UnwrapResponse = func(result *Store_Integer_Result) (success int64, err error) {
+	ReadOnlyStore_Integer_Helper.UnwrapResponse = func(result *ReadOnlyStore_Integer_Result) (success int64, err error) {
 		if result.DoesNotExist != nil {
 			err = result.DoesNotExist
 			return
@@ -114,12 +114,12 @@ func init() {
 	}
 }
 
-type Store_Integer_Result struct {
+type ReadOnlyStore_Integer_Result struct {
 	Success      *int64           `json:"success,omitempty"`
 	DoesNotExist *KeyDoesNotExist `json:"doesNotExist,omitempty"`
 }
 
-func (v *Store_Integer_Result) ToWire() (wire.Value, error) {
+func (v *ReadOnlyStore_Integer_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
 		i      int = 0
@@ -143,7 +143,7 @@ func (v *Store_Integer_Result) ToWire() (wire.Value, error) {
 		i++
 	}
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("Store_Integer_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("ReadOnlyStore_Integer_Result should have exactly one field: got %v fields", i)
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -154,7 +154,7 @@ func _KeyDoesNotExist_Read(w wire.Value) (*KeyDoesNotExist, error) {
 	return &v, err
 }
 
-func (v *Store_Integer_Result) FromWire(w wire.Value) error {
+func (v *ReadOnlyStore_Integer_Result) FromWire(w wire.Value) error {
 	var err error
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
@@ -184,12 +184,12 @@ func (v *Store_Integer_Result) FromWire(w wire.Value) error {
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("Store_Integer_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("ReadOnlyStore_Integer_Result should have exactly one field: got %v fields", count)
 	}
 	return nil
 }
 
-func (v *Store_Integer_Result) String() string {
+func (v *ReadOnlyStore_Integer_Result) String() string {
 	var fields [2]string
 	i := 0
 	if v.Success != nil {
@@ -200,13 +200,13 @@ func (v *Store_Integer_Result) String() string {
 		fields[i] = fmt.Sprintf("DoesNotExist: %v", v.DoesNotExist)
 		i++
 	}
-	return fmt.Sprintf("Store_Integer_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ReadOnlyStore_Integer_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-func (v *Store_Integer_Result) MethodName() string {
+func (v *ReadOnlyStore_Integer_Result) MethodName() string {
 	return "integer"
 }
 
-func (v *Store_Integer_Result) EnvelopeType() wire.EnvelopeType {
+func (v *ReadOnlyStore_Integer_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

@@ -31,6 +31,8 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeserver"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
@@ -95,6 +97,13 @@ func TestRoundTrip(t *testing.T) {
 			wantResult:    true,
 		},
 		{
+			desc:          "store: healthy with base client",
+			procedures:    storeserver.New(&storeHandler{healthy: true}),
+			newClientFunc: baseserviceclient.New,
+			method:        "Healthy",
+			wantResult:    true,
+		},
+		{
 			desc:          "store: unhealthy",
 			procedures:    storeserver.New(&storeHandler{}),
 			newClientFunc: storeclient.New,
@@ -144,12 +153,48 @@ func TestRoundTrip(t *testing.T) {
 			},
 		},
 		{
-			desc:          "store: integer",
+			desc:          "store: integer with readonly client",
 			procedures:    storeserver.New(&storeHandler{integer: 42}),
+			newClientFunc: readonlystoreclient.New,
+			method:        "Integer",
+			methodArgs:    []interface{}{ptr.String("foo")},
+			wantResult:    int64(42),
+		},
+		{
+			desc: "readonly store: integer error with rw client",
+			procedures: readonlystoreserver.New(&storeHandler{
+				failWith: &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
+			}),
+			newClientFunc: storeclient.New,
+			method:        "Integer",
+			methodArgs:    []interface{}{ptr.String("foo")},
+			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
+		},
+		{
+			desc:          "readonly store: integer with readonly client",
+			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}),
+			newClientFunc: readonlystoreclient.New,
+			method:        "Integer",
+			methodArgs:    []interface{}{ptr.String("foo")},
+			wantResult:    int64(42),
+		},
+		{
+			desc:          "readonly store: integer with rw client",
+			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}),
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
 			wantResult:    int64(42),
+		},
+		{
+			desc: "readonly store: integer failure with rw client",
+			procedures: readonlystoreserver.New(&storeHandler{
+				failWith: &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
+			}),
+			newClientFunc: storeclient.New,
+			method:        "Integer",
+			methodArgs:    []interface{}{ptr.String("foo")},
+			wantError:     &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
 		},
 		{
 			desc: "store: integer failure",

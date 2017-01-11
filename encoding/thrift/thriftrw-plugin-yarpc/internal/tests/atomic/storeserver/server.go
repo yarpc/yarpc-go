@@ -9,12 +9,12 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceserver"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
 )
 
 // Interface is the server-side interface for the Store service.
 type Interface interface {
-	baseserviceserver.Interface
+	readonlystoreserver.Interface
 
 	CompareAndSwap(
 		ctx context.Context,
@@ -31,11 +31,6 @@ type Interface interface {
 		Key *string,
 		Value *int64,
 	) error
-
-	Integer(
-		ctx context.Context,
-		Key *string,
-	) (int64, error)
 }
 
 // New prepares an implementation of the Store service for
@@ -78,21 +73,11 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				},
 				Signature: "Increment(Key *string, Value *int64)",
 			},
-
-			thrift.Method{
-				Name: "integer",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Integer),
-				},
-				Signature: "Integer(Key *string) (int64)",
-			},
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 4)
-	procedures = append(procedures, baseserviceserver.New(impl, opts...)...)
+	procedures := make([]transport.Procedure, 0, 3)
+	procedures = append(procedures, readonlystoreserver.New(impl, opts...)...)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -137,25 +122,6 @@ func (h handler) Increment(ctx context.Context, body wire.Value) (thrift.Respons
 
 	hadError := err != nil
 	result, err := atomic.Store_Increment_Helper.WrapResponse(err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) Integer(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args atomic.Store_Integer_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.Integer(ctx, args.Key)
-
-	hadError := err != nil
-	result, err := atomic.Store_Integer_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
