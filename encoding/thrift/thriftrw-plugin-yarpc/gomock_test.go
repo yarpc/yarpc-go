@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoretest"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storetest"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/thriftrw/ptr"
 )
 
 func TestMockClients(t *testing.T) {
