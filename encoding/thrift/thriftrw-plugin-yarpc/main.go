@@ -55,28 +55,14 @@ func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse
 
 	files := make(map[string][]byte)
 	for _, serviceID := range req.RootServices {
-		service := req.Services[serviceID]
-		module := req.Modules[service.ModuleID]
-
-		var (
-			parent       *api.Service
-			parentModule *api.Module
-		)
-		if service.ParentID != nil {
-			parent = req.Services[*service.ParentID]
-			parentModule = req.Modules[parent.ModuleID]
-		}
-
+		svc := buildSvc(serviceID, req)
 		data := templateData{
+			Svc:                 svc,
 			ContextImportPath:   *_context,
 			UnaryWrapperImport:  unaryWrapperImport,
 			UnaryWrapperFunc:    unaryWrapperFunc,
 			OnewayWrapperImport: onewayWrapperImport,
 			OnewayWrapperFunc:   onewayWrapperFunc,
-			Module:              module,
-			Service:             service,
-			Parent:              parent,
-			ParentModule:        parentModule,
 		}
 
 		for _, gen := range generators {
@@ -91,6 +77,24 @@ func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse
 func splitFunctionPath(input string) (string, string) {
 	i := strings.LastIndex(input, ".")
 	return input[:i], input[i+1:]
+}
+
+func buildSvc(serviceID api.ServiceID, req *api.GenerateServiceRequest) *Svc {
+	service := req.Services[serviceID]
+	module := req.Modules[service.ModuleID]
+
+	var parents []*Svc
+	if service.ParentID != nil {
+		parentSvc := buildSvc(*service.ParentID, req)
+		parents = append(parents, parentSvc)
+		parents = append(parents, parentSvc.Parents...)
+	}
+
+	return &Svc{
+		Service: service,
+		Module:  module,
+		Parents: parents,
+	}
 }
 
 func main() {
