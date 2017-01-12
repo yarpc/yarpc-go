@@ -4,7 +4,9 @@ Releases
 v1.0.2-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   Thrift: Mock clients compatible with gomock are now generated for each
+    service inside a test subpackage. Disable this by passing a `-no-gomock`
+    flag to the plugin.
 
 
 v1.0.1 (2017-01-11)

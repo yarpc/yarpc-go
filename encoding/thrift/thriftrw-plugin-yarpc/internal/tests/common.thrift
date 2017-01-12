@@ -7,3 +7,7 @@ service ExtendEmpty extends EmptyService {
 service BaseService {
     bool healthy()
 }
+
+service ExtendOnly extends BaseService {
+    // A service without any functions except inherited ones
+}

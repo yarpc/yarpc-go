@@ -9,13 +9,13 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
+	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
 	"go.uber.org/yarpc"
 )
 
 // Interface is a client for the Store service.
 type Interface interface {
-	baseserviceclient.Interface
+	readonlystoreclient.Interface
 
 	CompareAndSwap(
 		ctx context.Context,
@@ -35,12 +35,6 @@ type Interface interface {
 		Value *int64,
 		opts ...yarpc.CallOption,
 	) error
-
-	Integer(
-		ctx context.Context,
-		Key *string,
-		opts ...yarpc.CallOption,
-	) (int64, error)
 }
 
 // New builds a new client for the Store service.
@@ -52,7 +46,7 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Store",
 			ClientConfig: c,
 		}, opts...),
-		Interface: baseserviceclient.New(c),
+		Interface: readonlystoreclient.New(c),
 	}
 }
 
@@ -63,7 +57,7 @@ func init() {
 }
 
 type client struct {
-	baseserviceclient.Interface
+	readonlystoreclient.Interface
 
 	c thrift.Client
 }
@@ -121,28 +115,5 @@ func (c client) Increment(
 	}
 
 	err = atomic.Store_Increment_Helper.UnwrapResponse(&result)
-	return
-}
-
-func (c client) Integer(
-	ctx context.Context,
-	_Key *string,
-	opts ...yarpc.CallOption,
-) (success int64, err error) {
-
-	args := atomic.Store_Integer_Helper.Args(_Key)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result atomic.Store_Integer_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	success, err = atomic.Store_Integer_Helper.UnwrapResponse(&result)
 	return
 }
