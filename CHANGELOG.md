@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.0.2-dev (unreleased)
+v1.1.0 (2017-01-24)
 -----------------------
 
 -   Thrift: Mock clients compatible with gomock are now generated for each
