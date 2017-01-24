@@ -7,15 +7,14 @@ services:
         links:
             - go
             - node
-            - java
             - python
             - python-sync
             - redis
         environment:
-            - WAIT_FOR=go,node,java,python,python-sync
+            - WAIT_FOR=go,node,python,python-sync
 
-            - AXIS_CLIENT=go,node,java,python,python-sync
-            - AXIS_SERVER=go,node,java,python
+            - AXIS_CLIENT=go,node,python,python-sync
+            - AXIS_SERVER=go,node,python
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift
             - AXIS_ERRORS_HTTPCLIENT=go # pending update to node test
@@ -65,12 +64,6 @@ services:
     node:
         dns_search: .
         image: yarpc/yarpc-node
-        ports:
-            - "8080-8087"
-
-    java:
-        dns_search: .
-        image: yarpc/yarpc-java
         ports:
             - "8080-8087"
 
