@@ -142,8 +142,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 	}
 	defer tres.Body.Close()
 
-	ctx, err = call.ReadFromResponse(ctx, tres)
-	if err != nil {
+	if _, err = call.ReadFromResponse(ctx, tres); err != nil {
 		return wire.Value{}, err
 	}
 
