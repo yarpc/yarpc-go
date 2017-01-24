@@ -209,7 +209,7 @@ func TestStartStopFailures(t *testing.T) {
 				for i := range inbounds {
 					in := transporttest.NewMockInbound(mockCtrl)
 					in.EXPECT().Transports()
-					in.EXPECT().SetRouter(gomock.Any()).Times(0)
+					in.EXPECT().SetRouter(gomock.Any())
 					in.EXPECT().Start().Times(0)
 					in.EXPECT().Stop().Times(0)
 					inbounds[i] = in

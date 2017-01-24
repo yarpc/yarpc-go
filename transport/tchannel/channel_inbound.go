@@ -22,20 +22,13 @@ package tchannel
 
 import (
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
-
-	"github.com/opentracing/opentracing-go"
 )
 
 // ChannelInbound receives YARPC requests over TChannel. It may be constructed
 // using the NewInbound method on ChannelTransport.
 type ChannelInbound struct {
-	ch        Channel
-	addr      string
-	router    transport.Router
-	tracer    opentracing.Tracer
 	transport *ChannelTransport
 
 	once sync.LifecycleOnce
@@ -46,8 +39,6 @@ type ChannelInbound struct {
 // and uses TChannel's own internal load balancing peer selection.
 func (t *ChannelTransport) NewInbound() *ChannelInbound {
 	return &ChannelInbound{
-		ch:        t.ch,
-		tracer:    t.tracer,
 		transport: t,
 	}
 }
@@ -56,7 +47,7 @@ func (t *ChannelTransport) NewInbound() *ChannelInbound {
 // This satisfies the transport.Inbound interface, and would be called
 // by a dispatcher when it starts.
 func (i *ChannelInbound) SetRouter(router transport.Router) {
-	i.router = router
+	i.transport.router = router
 }
 
 // Transports returns a slice containing the ChannelInbound's underlying
@@ -67,29 +58,14 @@ func (i *ChannelInbound) Transports() []transport.Transport {
 
 // Channel returns the underlying Channel for this Inbound.
 func (i *ChannelInbound) Channel() Channel {
-	return i.ch
+	return i.transport.ch
 }
 
 // Start starts this Inbound. Note that this does not start listening for
 // connections; that occurs when you start the underlying ChannelTransport is
 // started.
 func (i *ChannelInbound) Start() error {
-	return i.once.Start(i.start)
-}
-
-func (i *ChannelInbound) start() error {
-	if i.router == nil {
-		return errors.ErrNoRouter
-	}
-
-	// Set up handlers. This must occur after construction because the
-	// dispatcher, or its equivalent, calls SetRouter before Start.
-	// This also means that starting inbounds should block starting the transport.
-	sc := i.ch.GetSubChannel(i.ch.ServiceName())
-	existing := sc.GetHandlers()
-	sc.SetHandler(handler{existing: existing, router: i.router, tracer: i.tracer})
-
-	return nil
+	return i.once.Start(nil)
 }
 
 // Stop stops the TChannel outbound. This currently does nothing.
