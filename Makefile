@@ -162,7 +162,7 @@ docker-test: docker-build
 	docker run yarpc_go make test
 
 .PHONY: test_ci
-test_ci: verify_version $(THRIFTRW)
+test_ci: install verify_version $(THRIFTRW)
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
 
 .PHONY: verify_version
