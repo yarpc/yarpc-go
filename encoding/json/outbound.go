@@ -81,7 +81,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 		return err
 	}
 
-	ctx, err = call.ReadFromResponse(ctx, tres)
+	_, err = call.ReadFromResponse(ctx, tres)
 	if err != nil {
 		return err
 	}
