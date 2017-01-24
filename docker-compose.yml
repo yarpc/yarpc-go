@@ -7,6 +7,7 @@ services:
         links:
             - go
             - node
+            - java
             - python
             - python-sync
             - redis
@@ -64,6 +65,12 @@ services:
     node:
         dns_search: .
         image: yarpc/yarpc-node
+        ports:
+            - "8080-8087"
+
+    java:
+        dns_search: .
+        image: yarpc/yarpc-java
         ports:
             - "8080-8087"
 
