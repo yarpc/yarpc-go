@@ -39,9 +39,14 @@ import (
 
 // Different ways in which outbounds can be constructed from a client Channel
 // and a hostPort
-var newOutbounds = []func(*tchannel.Channel, string) (transport.UnaryOutbound, error){
+var newChannelOutbounds = []func(*tchannel.Channel, string) (transport.UnaryOutbound, error){
 	func(ch *tchannel.Channel, hostPort string) (transport.UnaryOutbound, error) {
-		x, err := NewTransport(WithChannel(ch))
+		x, err := NewChannelTransport(WithChannel(ch))
+		ch.Peers().Add(hostPort)
+		return x.NewOutbound(), err
+	},
+	func(ch *tchannel.Channel, hostPort string) (transport.UnaryOutbound, error) {
+		x, err := NewChannelTransport(WithChannel(ch))
 		if err == nil {
 			return x.NewSingleOutbound(hostPort), nil
 		}
@@ -49,7 +54,7 @@ var newOutbounds = []func(*tchannel.Channel, string) (transport.UnaryOutbound, e
 	},
 }
 
-func TestOutboundHeaders(t *testing.T) {
+func TestChannelOutboundHeaders(t *testing.T) {
 	tests := []struct {
 		context context.Context
 		headers transport.Headers
@@ -92,7 +97,7 @@ func TestOutboundHeaders(t *testing.T) {
 				assert.NoError(t, err, "failed to write response")
 			}))
 
-		for _, getOutbound := range newOutbounds {
+		for _, getOutbound := range newChannelOutbounds {
 			out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 				ServiceName: "caller",
 			}), hostport)
@@ -131,7 +136,7 @@ func TestOutboundHeaders(t *testing.T) {
 	}
 }
 
-func TestCallSuccess(t *testing.T) {
+func TestChannelCallSuccess(t *testing.T) {
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
 	serverHostPort := server.PeerInfo().HostPort
@@ -162,7 +167,7 @@ func TestCallSuccess(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	for _, getOutbound := range newOutbounds {
+	for _, getOutbound := range newChannelOutbounds {
 		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), serverHostPort)
@@ -202,7 +207,7 @@ func TestCallSuccess(t *testing.T) {
 	}
 }
 
-func TestCallFailures(t *testing.T) {
+func TestChannelCallFailures(t *testing.T) {
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
 	serverHostPort := server.PeerInfo().HostPort
@@ -238,10 +243,10 @@ func TestCallFailures(t *testing.T) {
 		},
 	}
 
-	// cross product with newOutbounds
-	newTests := make([]testCase, 0, len(tests)*len(newOutbounds))
+	// cross product with newChannelOutbounds
+	newTests := make([]testCase, 0, len(tests)*len(newChannelOutbounds))
 	for _, tt := range tests {
-		for _, getOutbound := range newOutbounds {
+		for _, getOutbound := range newChannelOutbounds {
 			tt.getOutbound = getOutbound
 			newTests = append(newTests, tt)
 		}
@@ -272,7 +277,7 @@ func TestCallFailures(t *testing.T) {
 	}
 }
 
-func TestCallError(t *testing.T) {
+func TestChannelCallError(t *testing.T) {
 	server := testutils.NewServer(t, nil)
 	defer server.Close()
 	serverHostPort := server.PeerInfo().HostPort
@@ -304,7 +309,7 @@ func TestCallError(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	for _, getOutbound := range newOutbounds {
+	for _, getOutbound := range newChannelOutbounds {
 		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), serverHostPort)
@@ -340,8 +345,8 @@ func TestCallError(t *testing.T) {
 	}
 }
 
-func TestStartMultiple(t *testing.T) {
-	for _, getOutbound := range newOutbounds {
+func TestChannelStartMultiple(t *testing.T) {
+	for _, getOutbound := range newChannelOutbounds {
 		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), "localhost:4040")
@@ -367,8 +372,8 @@ func TestStartMultiple(t *testing.T) {
 	}
 }
 
-func TestStopMultiple(t *testing.T) {
-	for _, getOutbound := range newOutbounds {
+func TestChannelStopMultiple(t *testing.T) {
+	for _, getOutbound := range newChannelOutbounds {
 		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), "localhost:4040")
@@ -396,8 +401,8 @@ func TestStopMultiple(t *testing.T) {
 	}
 }
 
-func TestCallWithoutStarting(t *testing.T) {
-	for _, getOutbound := range newOutbounds {
+func TestChannelCallWithoutStarting(t *testing.T) {
+	for _, getOutbound := range newChannelOutbounds {
 		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
 			ServiceName: "caller",
 		}), "localhost:4040")

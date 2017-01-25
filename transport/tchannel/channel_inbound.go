@@ -26,8 +26,10 @@ import (
 	"go.uber.org/yarpc/internal/sync"
 )
 
-// ChannelInbound receives YARPC requests over TChannel. It may be constructed
-// using the NewInbound method on ChannelTransport.
+// ChannelInbound receives YARPC requests over TChannel.
+// It may be constructed using the NewInbound method on ChannelTransport.
+// If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
+// instead (instead of the tchannel.ChannelTransport).
 type ChannelInbound struct {
 	transport *ChannelTransport
 
@@ -37,6 +39,11 @@ type ChannelInbound struct {
 // NewInbound returns a new TChannel inbound backed by a shared TChannel
 // transport.  The returned ChannelInbound does not support peer.Chooser
 // and uses TChannel's own internal load balancing peer selection.
+// If you have a YARPC peer.Chooser, use the unqualified tchannel.NewInbound
+// instead.
+// There should only be one inbound for TChannel since all outbounds send the
+// listening port over non-ephemeral connections so a service can deduplicate
+// locally- and remotely-initiated persistent connections.
 func (t *ChannelTransport) NewInbound() *ChannelInbound {
 	return &ChannelInbound{
 		transport: t,

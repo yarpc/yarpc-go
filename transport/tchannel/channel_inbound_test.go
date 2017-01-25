@@ -32,13 +32,13 @@ import (
 	"github.com/uber/tchannel-go/json"
 )
 
-func TestInboundStartNew(t *testing.T) {
+func TestChannelInboundStartNew(t *testing.T) {
 	tests := []struct {
-		withInbound func(*tchannel.Channel, func(*Inbound))
+		withInbound func(*tchannel.Channel, func(*ChannelInbound))
 	}{
 		{
-			func(ch *tchannel.Channel, f func(*Inbound)) {
-				x, err := NewTransport(WithChannel(ch))
+			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
+				x, err := NewChannelTransport(WithChannel(ch))
 				require.NoError(t, err)
 
 				i := x.NewInbound()
@@ -55,8 +55,8 @@ func TestInboundStartNew(t *testing.T) {
 			},
 		},
 		{
-			func(ch *tchannel.Channel, f func(*Inbound)) {
-				x, err := NewTransport(WithChannel(ch))
+			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
+				x, err := NewChannelTransport(WithChannel(ch))
 				require.NoError(t, err)
 
 				i := x.NewInbound()
@@ -75,7 +75,7 @@ func TestInboundStartNew(t *testing.T) {
 	for _, tt := range tests {
 		ch, err := tchannel.NewChannel("foo", nil)
 		require.NoError(t, err)
-		tt.withInbound(ch, func(i *Inbound) {
+		tt.withInbound(ch, func(i *ChannelInbound) {
 			assert.Equal(t, tchannel.ChannelListening, ch.State())
 			assert.NoError(t, i.Stop())
 			x := i.Transports()[0]
@@ -85,14 +85,14 @@ func TestInboundStartNew(t *testing.T) {
 	}
 }
 
-func TestInboundStartAlreadyListening(t *testing.T) {
+func TestChannelInboundStartAlreadyListening(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
 
 	require.NoError(t, ch.ListenAndServe(":0"))
 	assert.Equal(t, tchannel.ChannelListening, ch.State())
 
-	x, err := NewTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch))
 	require.NoError(t, err)
 
 	i := x.NewInbound()
@@ -106,19 +106,19 @@ func TestInboundStartAlreadyListening(t *testing.T) {
 	assert.Equal(t, tchannel.ChannelClosed, ch.State())
 }
 
-func TestInboundStopWithoutStarting(t *testing.T) {
+func TestChannelInboundStopWithoutStarting(t *testing.T) {
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
 
-	x, err := NewTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch))
 	require.NoError(t, err)
 
 	i := x.NewInbound()
 	assert.NoError(t, i.Stop())
 }
 
-func TestInboundInvalidAddress(t *testing.T) {
-	x, err := NewTransport(ServiceName("foo"), ListenAddr("not valid"))
+func TestChannelInboundInvalidAddress(t *testing.T) {
+	x, err := NewChannelTransport(ServiceName("foo"), ListenAddr("not valid"))
 	require.NoError(t, err)
 
 	i := x.NewInbound()
@@ -129,7 +129,7 @@ func TestInboundInvalidAddress(t *testing.T) {
 	defer x.Stop()
 }
 
-func TestInboundExistingMethods(t *testing.T) {
+func TestChannelInboundExistingMethods(t *testing.T) {
 	// Create a channel with an existing "echo" method.
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestInboundExistingMethods(t *testing.T) {
 		},
 	}, nil)
 
-	x, err := NewTransport(WithChannel(ch))
+	x, err := NewChannelTransport(WithChannel(ch))
 	require.NoError(t, err)
 
 	i := x.NewInbound()
