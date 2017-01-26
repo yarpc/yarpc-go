@@ -23,6 +23,7 @@ package tchannel
 import (
 	"errors"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
@@ -81,6 +82,7 @@ type ChannelTransport struct {
 	name   string
 	addr   string
 	tracer opentracing.Tracer
+	router transport.Router
 
 	once sync.LifecycleOnce
 }
@@ -103,6 +105,17 @@ func (t *ChannelTransport) Start() error {
 }
 
 func (t *ChannelTransport) start() error {
+
+	if t.router != nil {
+		// Set up handlers. This must occur after construction because the
+		// dispatcher, or its equivalent, calls SetRouter before Start.
+		// This also means that SetRouter should be called on every inbound
+		// before calling Start on any transport or inbound.
+		sc := t.ch.GetSubChannel(t.ch.ServiceName())
+		existing := sc.GetHandlers()
+		sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer})
+	}
+
 	if t.ch.State() == tchannel.ChannelListening {
 		// Channel.Start() was called before RPC.Start(). We still want to
 		// update the Handler and what t.addr means, but nothing else.

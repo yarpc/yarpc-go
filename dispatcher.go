@@ -295,6 +295,11 @@ func (d *Dispatcher) Start() error {
 		return errors.ErrorGroup(errs)
 	}
 
+	// Set router for all inbounds
+	for _, i := range d.inbounds {
+		i.SetRouter(d.table)
+	}
+
 	// Start Transports
 	wait := intsync.ErrorWaiter{}
 	for _, t := range d.transports {
@@ -317,7 +322,6 @@ func (d *Dispatcher) Start() error {
 	// Start Inbounds
 	wait = intsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
-		i.SetRouter(d.table)
 		wait.Submit(start(i))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {
