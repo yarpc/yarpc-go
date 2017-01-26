@@ -115,7 +115,7 @@ func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (tran
 		TransportName: transportName,
 		StartTime:     time.Now(),
 	}
-	ctx, span := createOpenTracingSpan.Do(ctx, req)
+	_, span := createOpenTracingSpan.Do(ctx, req)
 	defer span.Finish()
 
 	marshalledRPC, err := serialize.ToBytes(o.tracer, span.Context(), req)

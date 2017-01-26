@@ -18,31 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cherami_test
+package cherami
 
 import (
 	"testing"
 
-	"go.uber.org/yarpc/transport/x/cherami"
-	"go.uber.org/yarpc/transport/x/cherami/test/mocks"
+	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/transport/x/cherami/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func TestOutbound(t *testing.T) {
-	mock_publisher := &mocks.Publisher{}
-	mock_publisher.On(`Close`)
+func TestInbound(t *testing.T) {
+	mock_consumer := &mocks.Consumer{}
+	mock_consumer.On(`Close`)
 	mock_factory := &mocks.ClientFactory{}
-	mock_factory.On(`GetPublisher`, nil, mock.Anything, mock.Anything).Return(mock_publisher, nil, nil)
-	transport := cherami.NewTransport(nil, cherami.TransportConfig{})
-	outbound := transport.NewOutbound(cherami.OutboundConfig{
-		Destination: `dest`,
+	mock_factory.On(`GetConsumer`, mock.Anything, mock.Anything).Return(mock_consumer, nil, nil)
+	transport := NewTransport(nil, TransportConfig{})
+	inbound := transport.NewInbound(InboundConfig{
+		Destination:   `dest`,
+		ConsumerGroup: `cg`,
 	})
-	outbound.SetClientFactory(mock_factory)
-	err := outbound.Start()
+	inbound.SetClientFactory(mock_factory)
+	inbound.SetRouter(&transporttest.MockRouter{})
+	err := inbound.Start()
 	assert.Nil(t, err)
 
-	err = outbound.Stop()
+	err = inbound.Stop()
 	assert.Nil(t, err)
 }
