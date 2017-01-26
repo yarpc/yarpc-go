@@ -25,7 +25,6 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example/exampleserviceserver"
 )
@@ -53,30 +52,37 @@ func NewService(config ServerConfig) *Service {
 func (s *Service) Start() error {
 	// frontend ip is only needed in local testing
 	// for a real production server, frontend ip can be empty and hyperbahn will be used to connect to cherami
-	frontend, err := getLocalIP()
-	if err != nil {
-		return nil
-	}
+	frontend := `127.0.0.1`
 	port := 4922
+
+	transport := cherami.NewTransport(cherami.TransportConfig{
+		ServiceName: `example`,
+		FrontendIP:  frontend,
+		Port:        port,
+	})
+
+	if err := transport.Start(); err != nil {
+		return err
+	}
 
 	// Server side needs to start the server dispatcher and register itself which implements the procedures
 	s.dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "server",
-		Inbounds: []transport.Inbound{cherami.NewInbound(cherami.InboundConfig{
+		Inbounds: yarpc.Inbounds{transport.NewInbound(cherami.InboundConfig{
 			Destination:   s.config.destination,
 			ConsumerGroup: s.config.consumerGroup,
-			Frontend:      frontend,
-			Port:          port,
 		})},
 	})
+
+	// Now register the service to dispatcher
+	s.dispatcher.Register(exampleserviceserver.New(s))
+
 	if err := s.dispatcher.Start(); err != nil {
 		return err
 	}
 
 	serverCalled = make(chan string)
 
-	// Now register the service to dispatcher
-	s.dispatcher.Register(exampleserviceserver.New(&Service{}))
 	return nil
 }
 

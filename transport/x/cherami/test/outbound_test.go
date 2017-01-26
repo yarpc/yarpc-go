@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/transport/x/cherami"
-	"go.uber.org/yarpc/transport/x/cherami/mocks"
+	"go.uber.org/yarpc/transport/x/cherami/test/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,13 +33,17 @@ import (
 func TestOutbound(t *testing.T) {
 	mock_publisher := &mocks.Publisher{}
 	mock_publisher.On(`Close`)
-	mock_factory := &mocks.CheramiFactory{}
-	mock_factory.On(`GetClientWithHyperbahn`).Return(nil, nil)
+	mock_factory := &mocks.ClientFactory{}
+	mock_factory.On(`GetClientWithHyperbahn`, mock.Anything, mock.Anything).Return(nil, nil)
 	mock_factory.On(`GetPublisher`, nil, mock.Anything, mock.Anything).Return(mock_publisher, nil, nil)
-	outbound := cherami.NewOutbound(cherami.OutboundConfig{
+	transport := cherami.NewTransport(cherami.TransportConfig{
+		ServiceName:       `s`,
+		HyperbahnHostFile: `/etc/host.json`,
+	})
+	outbound := transport.NewOutbound(cherami.OutboundConfig{
 		Destination: `dest`,
 	})
-	outbound.SetCheramiFactory(mock_factory)
+	outbound.SetClientFactory(mock_factory)
 	err := outbound.Start()
 	assert.Nil(t, err)
 

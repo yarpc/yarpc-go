@@ -25,10 +25,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example/exampleserviceclient"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // This example will create a yarpc client (using cherami transport), and issue an one way rpc call to the server
@@ -52,19 +53,24 @@ func TestCherami_YARPC(t *testing.T) {
 
 	// frontend ip is only needed in local testing
 	// for a real production server, frontend ip can be empty and hyperbahn will be used to connect to cherami
-	frontend, err := getLocalIP()
-	assert.NoError(err)
+	frontend := `127.0.0.1`
 	port := 4922
+
+	transport := cherami.NewTransport(cherami.TransportConfig{
+		ServiceName: `example`,
+		FrontendIP:  frontend,
+		Port:        port,
+	})
+	err = transport.Start()
+	assert.NoError(err)
 
 	// Client side needs to start the client dispatcher
 	client := yarpc.NewDispatcher(yarpc.Config{
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Oneway: cherami.NewOutbound(cherami.OutboundConfig{
+				Oneway: transport.NewOutbound(cherami.OutboundConfig{
 					Destination: destination,
-					Frontend:    frontend,
-					Port:        port,
 				}),
 			},
 		},

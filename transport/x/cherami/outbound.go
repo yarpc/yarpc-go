@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
+	"go.uber.org/yarpc/transport/x/cherami/internal"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
@@ -36,20 +37,17 @@ import (
 var errOutboundNotStarted = errors.ErrOutboundNotStarted("cherami.Outbound")
 
 // OutboundConfig defines the config in order to create a Outbound.
-// if frontend is provided, we'll connect to the provided frontend
-// otherwise, hyperbahn will be used to connect to cherami
 type OutboundConfig struct {
 	Destination string
-	Frontend    string
-	Port        int
 }
 
 // Outbound is a outbound that uses cherami as the transport
 type Outbound struct {
-	config         OutboundConfig
-	publisher      cherami.Publisher
-	tracer         opentracing.Tracer
-	cheramiFactory CheramiFactory
+	config        OutboundConfig
+	publisher     cherami.Publisher
+	tracer        opentracing.Tracer
+	client        cherami.Client
+	clientFactory internal.ClientFactory
 
 	once sync.LifecycleOnce
 }
@@ -61,11 +59,12 @@ func (r receipt) String() string {
 }
 
 // NewOutbound builds a new cherami outbound
-func NewOutbound(config OutboundConfig) *Outbound {
+func (t *Transport) NewOutbound(config OutboundConfig) *Outbound {
 	return &Outbound{
-		config:         config,
-		tracer:         opentracing.GlobalTracer(),
-		cheramiFactory: NewCheramiFactory(),
+		config:        config,
+		tracer:        t.tracer,
+		client:        t.client,
+		clientFactory: t.clientFactory,
 	}
 }
 
@@ -85,19 +84,8 @@ func (o *Outbound) Start() error {
 }
 
 func (o *Outbound) start() error {
-
-	var client cherami.Client
 	var err error
-	if len(o.config.Frontend) > 0 {
-		client, err = o.cheramiFactory.GetClientWithFrontEnd(o.config.Frontend, o.config.Port)
-	} else {
-		client, err = o.cheramiFactory.GetClientWithHyperbahn()
-	}
-	if err != nil {
-		return err
-	}
-
-	o.publisher, err = o.cheramiFactory.GetPublisher(client, o.config.Destination)
+	o.publisher, err = o.clientFactory.GetPublisher(o.client, o.config.Destination)
 	return err
 }
 
@@ -111,9 +99,9 @@ func (o *Outbound) stop() error {
 	return nil
 }
 
-// SetCheramiFactory sets a cherami factory, used for testing
-func (o *Outbound) SetCheramiFactory(factory CheramiFactory) {
-	o.cheramiFactory = factory
+// SetClientFactory sets a cherami client factory, used for testing
+func (o *Outbound) SetClientFactory(factory internal.ClientFactory) {
+	o.clientFactory = factory
 }
 
 // CallOneway makes a oneway request using cherami

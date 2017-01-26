@@ -25,7 +25,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/transport/x/cherami"
-	"go.uber.org/yarpc/transport/x/cherami/mocks"
+	"go.uber.org/yarpc/transport/x/cherami/test/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -34,14 +34,18 @@ import (
 func TestInbound(t *testing.T) {
 	mock_consumer := &mocks.Consumer{}
 	mock_consumer.On(`Close`)
-	mock_factory := &mocks.CheramiFactory{}
-	mock_factory.On(`GetClientWithHyperbahn`).Return(nil, nil)
-	mock_factory.On(`GetConsumer`, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mock_consumer, nil, nil)
-	inbound := cherami.NewInbound(cherami.InboundConfig{
+	mock_factory := &mocks.ClientFactory{}
+	mock_factory.On(`GetClientWithHyperbahn`, mock.Anything, mock.Anything).Return(nil, nil)
+	mock_factory.On(`GetConsumer`, mock.Anything, mock.Anything).Return(mock_consumer, nil, nil)
+	transport := cherami.NewTransport(cherami.TransportConfig{
+		ServiceName:       `s`,
+		HyperbahnHostFile: `/etc/host.json`,
+	})
+	inbound := transport.NewInbound(cherami.InboundConfig{
 		Destination:   `dest`,
 		ConsumerGroup: `cg`,
 	})
-	inbound.SetCheramiFactory(mock_factory)
+	inbound.SetClientFactory(mock_factory)
 	inbound.SetRouter(&transporttest.MockRouter{})
 	err := inbound.Start()
 	assert.Nil(t, err)

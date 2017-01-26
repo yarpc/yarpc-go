@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
+	"go.uber.org/yarpc/transport/x/cherami/internal"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
@@ -39,49 +40,45 @@ const (
 
 	defaultPrefetchCount = 10
 
-	defaultCheramiTimeoutInSec = 15
+	defaultCheramiTimeout = 15 * time.Second
 )
 
-// InboundConfig defines the config in order to create a Inbound
-// if frontend is provided, we'll connect to the provided frontend
-// otherwise, hyperbahn will be used to connect to cherami
+// InboundConfig defines the config in order to create a Inbound.
 // PrefetchCount controls the number of messages to buffer locally.
-// Inbounds which process messages very fast may want to specify larger value
-// for PrefetchCount for faster throughput.  On the flip side larger values for
-// PrefetchCount will result in more messages being buffered locally causing high memory foot print
-
+// Inbounds which process messages very fast may want to specify larger value for PrefetchCount for faster throughput.
+// On the flip side larger values for PrefetchCount will result in more messages being buffered locally causing high memory footprint.
 type InboundConfig struct {
-	Destination         string
-	ConsumerGroup       string
-	Frontend            string
-	Port                int
-	PrefetchCount       int
-	CheramiTimeoutInSec int
+	Destination   string
+	ConsumerGroup string
+	PrefetchCount int
+	Timeout       time.Duration
 }
 
 // Inbound is a inbound that uses cherami as the transport
 type Inbound struct {
-	config         InboundConfig
-	consumer       cherami.Consumer
-	router         transport.Router
-	tracer         opentracing.Tracer
-	cheramiFactory CheramiFactory
+	config        InboundConfig
+	consumer      cherami.Consumer
+	router        transport.Router
+	tracer        opentracing.Tracer
+	client        cherami.Client
+	clientFactory internal.ClientFactory
 
 	once sync.LifecycleOnce
 }
 
 // NewInbound builds a new cherami inbound
-func NewInbound(config InboundConfig) *Inbound {
+func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 	if config.PrefetchCount == 0 {
 		config.PrefetchCount = defaultPrefetchCount
 	}
-	if config.CheramiTimeoutInSec == 0 {
-		config.CheramiTimeoutInSec = defaultCheramiTimeoutInSec
+	if config.Timeout/time.Second <= 0 {
+		config.Timeout = defaultCheramiTimeout
 	}
 	return &Inbound{
-		config:         config,
-		tracer:         opentracing.GlobalTracer(),
-		cheramiFactory: NewCheramiFactory(),
+		config:        config,
+		tracer:        t.tracer,
+		client:        t.client,
+		clientFactory: t.clientFactory,
 	}
 }
 
@@ -112,18 +109,12 @@ func (i *Inbound) start() error {
 		return errors.ErrNoRouter
 	}
 
-	var client cherami.Client
-	var err error
-	if len(i.config.Frontend) > 0 {
-		client, err = i.cheramiFactory.GetClientWithFrontEnd(i.config.Frontend, i.config.Port)
-	} else {
-		client, err = i.cheramiFactory.GetClientWithHyperbahn()
-	}
-	if err != nil {
-		return err
-	}
-
-	consumer, ch, err := i.cheramiFactory.GetConsumer(client, i.config.Destination, i.config.ConsumerGroup, i.config.PrefetchCount, i.config.CheramiTimeoutInSec)
+	consumer, ch, err := i.clientFactory.GetConsumer(i.client, internal.ConsumerConfig{
+		Destination:   i.config.Destination,
+		ConsumerGroup: i.config.ConsumerGroup,
+		PrefetchCount: i.config.PrefetchCount,
+		Timeout:       i.config.Timeout,
+	})
 	if err != nil {
 		return err
 	}
@@ -135,7 +126,9 @@ func (i *Inbound) start() error {
 			// checksum verification before accessing message payload data
 			if !delivery.VerifyChecksum() {
 				log.Printf("checksum verification failed for ack_token: %s, asking for redelivery\n", delivery.GetDeliveryToken())
-				delivery.Nack()
+				if err = delivery.Nack(); err != nil {
+					log.Printf("nack failed for ack_token: %s\n", delivery.GetDeliveryToken())
+				}
 				continue
 			}
 
@@ -146,9 +139,8 @@ func (i *Inbound) start() error {
 					log.Printf("ack failed for ack_token: %s\n", delivery.GetDeliveryToken())
 				}
 			} else {
-				if err = delivery.Nack(); err != nil {
-					log.Printf("nack failed for ack_token: %s\n", delivery.GetDeliveryToken())
-				}
+				err = errors.CombineErrors(err, delivery.Nack())
+				log.Printf("handle message failure: %v\n", err)
 			}
 		}
 	}()
@@ -165,9 +157,9 @@ func (i *Inbound) stop() error {
 	return nil
 }
 
-// SetCheramiFactory sets a cherami factory, used for testing
-func (i *Inbound) SetCheramiFactory(factory CheramiFactory) {
-	i.cheramiFactory = factory
+// SetClientFactory sets a cherami client factory, used for testing
+func (i *Inbound) SetClientFactory(factory internal.ClientFactory) {
+	i.clientFactory = factory
 }
 
 func (i *Inbound) handleMsg(msg []byte) error {

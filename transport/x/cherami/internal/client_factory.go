@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cherami
+package internal
 
 import (
 	"os"
@@ -27,66 +27,67 @@ import (
 	"github.com/uber/cherami-client-go/client/cherami"
 )
 
-const (
-	cheramiClientName = `cherami_yarpc`
-)
-
-// CheramiFactory provides all the interfaces that are used to get cherami entities
-type CheramiFactory interface {
+// ClientFactory provides all the interfaces that are used to get cherami entities
+type ClientFactory interface {
 
 	// GetClientWithHyperbahn returns a cherami client using hyperbahn
-	GetClientWithHyperbahn() (cherami.Client, error)
+	GetClientWithHyperbahn(serviceName string, hostFile string) (cherami.Client, error)
 
 	// GetClientWithFrontEnd returns a cherami client that connects to a specific ip and port
-	GetClientWithFrontEnd(ip string, port int) (cherami.Client, error)
+	GetClientWithFrontEnd(serviceName string, ip string, port int) (cherami.Client, error)
 
 	// GetPublisher returns a cherami publisher
 	GetPublisher(client cherami.Client, destination string) (cherami.Publisher, error)
 
 	// GetConsumer returns a cherami consumer
-	GetConsumer(client cherami.Client, destination string, consumerGroup string, prefetchCount int, timeoutInSec int) (cherami.Consumer, chan cherami.Delivery, error)
+	GetConsumer(client cherami.Client, config ConsumerConfig) (cherami.Consumer, chan cherami.Delivery, error)
 }
 
-type cheramiFactoryImp struct {
+type ConsumerConfig struct {
+	Destination   string
+	ConsumerGroup string
+	PrefetchCount int
+	Timeout       time.Duration
 }
 
-func NewCheramiFactory() CheramiFactory {
-	return &cheramiFactoryImp{}
+type clientFactoryImp struct {
 }
 
-func (c *cheramiFactoryImp) GetClientWithHyperbahn() (cherami.Client, error) {
-	return cherami.NewHyperbahnClient(cheramiClientName, `/etc/uber/hyperbahn/hosts.json`, nil)
+func NewClientFactory() ClientFactory {
+	return &clientFactoryImp{}
 }
 
-func (c *cheramiFactoryImp) GetClientWithFrontEnd(ip string, port int) (cherami.Client, error) {
-	return cherami.NewClient(cheramiClientName, ip, port, nil)
+func (c *clientFactoryImp) GetClientWithHyperbahn(serviceName string, hostFile string) (cherami.Client, error) {
+	return cherami.NewHyperbahnClient(serviceName, hostFile, nil)
 }
 
-func (c *cheramiFactoryImp) GetPublisher(client cherami.Client, destination string) (cherami.Publisher, error) {
+func (c *clientFactoryImp) GetClientWithFrontEnd(serviceName string, ip string, port int) (cherami.Client, error) {
+	return cherami.NewClient(serviceName, ip, port, nil)
+}
+
+func (c *clientFactoryImp) GetPublisher(client cherami.Client, destination string) (cherami.Publisher, error) {
 	publisher := client.CreatePublisher(&cherami.CreatePublisherRequest{
 		Path: destination,
 	})
-	if err := publisher.Open(); err != nil {
-		return nil, err
-	}
-	return publisher, nil
+	err := publisher.Open()
+	return publisher, err
 }
 
-func (c *cheramiFactoryImp) GetConsumer(client cherami.Client, destination string, consumerGroup string, prefetchCount int, timeoutInSec int) (cherami.Consumer, chan cherami.Delivery, error) {
+func (c *clientFactoryImp) GetConsumer(client cherami.Client, config ConsumerConfig) (cherami.Consumer, chan cherami.Delivery, error) {
 	hostName, _ := os.Hostname()
 	consumerName := "yarpc_cherami_" + hostName
 
 	consumer := client.CreateConsumer(&cherami.CreateConsumerRequest{
-		Path:              destination,
-		ConsumerGroupName: consumerGroup,
+		Path:              config.Destination,
+		ConsumerGroupName: config.ConsumerGroup,
 		ConsumerName:      consumerName,
-		PrefetchCount:     prefetchCount,
+		PrefetchCount:     config.PrefetchCount,
 		Options: &cherami.ClientOptions{
-			Timeout: (time.Duration(timeoutInSec) * time.Second),
+			Timeout: config.Timeout,
 		},
 	})
 
-	ch := make(chan cherami.Delivery, prefetchCount)
+	ch := make(chan cherami.Delivery, config.PrefetchCount)
 	if _, err := consumer.Open(ch); err != nil {
 		return nil, nil, err
 	}
