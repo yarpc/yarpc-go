@@ -27,6 +27,8 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example/exampleserviceserver"
+
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 )
 
 // ServerConfig is the configuration needed to create a ExampleService
@@ -50,17 +52,16 @@ func NewService(config ServerConfig) *Service {
 
 // Start starts the service
 func (s *Service) Start() error {
-	// frontend ip is only needed in local testing
-	// for a real production server, frontend ip can be empty and hyperbahn will be used to connect to cherami
+	// using frontend ip and port to create the cherami client is only needed in local testing
+	// for a real production server, NewHyperbahnClient() should be used
 	frontend := `127.0.0.1`
 	port := 4922
+	cheramiClient, err := cherami_client.NewClient(`example`, frontend, port, nil)
+	if err != nil {
+		return err
+	}
 
-	transport := cherami.NewTransport(cherami.TransportConfig{
-		ServiceName: `example`,
-		FrontendIP:  frontend,
-		Port:        port,
-	})
-
+	transport := cherami.NewTransport(cheramiClient, cherami.TransportConfig{})
 	if err := transport.Start(); err != nil {
 		return err
 	}

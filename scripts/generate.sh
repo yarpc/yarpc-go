@@ -43,6 +43,7 @@ thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrif
 thriftrw --plugin=yarpc --out=internal/examples/thrift-oneway internal/examples/thrift-oneway/sink.thrift
 thriftrw --plugin=yarpc --out=internal/examples/thrift-hello/hello internal/examples/thrift-hello/hello/echo.thrift
 thriftrw --plugin=yarpc --out=internal/examples/thrift-keyvalue/keyvalue internal/examples/thrift-keyvalue/keyvalue/kv.thrift
+thriftrw --plugin=yarpc --out=transport/x/cherami/example/thrift transport/x/cherami/example/thrift/example.thrift
 thriftrw --out=encoding/thrift encoding/thrift/internal.thrift
 thriftrw --out=serialize serialize/internal.thrift
 

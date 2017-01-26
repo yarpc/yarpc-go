@@ -35,12 +35,8 @@ func TestInbound(t *testing.T) {
 	mock_consumer := &mocks.Consumer{}
 	mock_consumer.On(`Close`)
 	mock_factory := &mocks.ClientFactory{}
-	mock_factory.On(`GetClientWithHyperbahn`, mock.Anything, mock.Anything).Return(nil, nil)
 	mock_factory.On(`GetConsumer`, mock.Anything, mock.Anything).Return(mock_consumer, nil, nil)
-	transport := cherami.NewTransport(cherami.TransportConfig{
-		ServiceName:       `s`,
-		HyperbahnHostFile: `/etc/host.json`,
-	})
+	transport := cherami.NewTransport(nil, cherami.TransportConfig{})
 	inbound := transport.NewInbound(cherami.InboundConfig{
 		Destination:   `dest`,
 		ConsumerGroup: `cg`,

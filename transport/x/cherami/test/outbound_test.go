@@ -34,12 +34,8 @@ func TestOutbound(t *testing.T) {
 	mock_publisher := &mocks.Publisher{}
 	mock_publisher.On(`Close`)
 	mock_factory := &mocks.ClientFactory{}
-	mock_factory.On(`GetClientWithHyperbahn`, mock.Anything, mock.Anything).Return(nil, nil)
 	mock_factory.On(`GetPublisher`, nil, mock.Anything, mock.Anything).Return(mock_publisher, nil, nil)
-	transport := cherami.NewTransport(cherami.TransportConfig{
-		ServiceName:       `s`,
-		HyperbahnHostFile: `/etc/host.json`,
-	})
+	transport := cherami.NewTransport(nil, cherami.TransportConfig{})
 	outbound := transport.NewOutbound(cherami.OutboundConfig{
 		Destination: `dest`,
 	})

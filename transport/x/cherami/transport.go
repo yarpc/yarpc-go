@@ -21,8 +21,6 @@
 package cherami
 
 import (
-	"fmt"
-
 	"go.uber.org/yarpc/api/transport"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
@@ -32,20 +30,15 @@ import (
 )
 
 // TransportConfig defines the config in order to create a cherami transport
-// ServiceName should be the name of the service that is using yarpc
-// if HyperbahnHostFile is provided, hyperbahn will be used to connect to cherami
-// Otherwise, the provided frontend IP and port will be used to connect to cherami
+// Currently it just servers as a placeholder
 type TransportConfig struct {
-	ServiceName       string
-	HyperbahnHostFile string
-	FrontendIP        string
-	Port              int
 }
 
 // NewTransport creates a new cherami transport for shared objects between inbound and outbound
-func NewTransport(config TransportConfig) *Transport {
+func NewTransport(client cherami.Client, config TransportConfig) *Transport {
 	return &Transport{
 		config:        config,
+		client:        client,
 		tracer:        opentracing.GlobalTracer(),
 		clientFactory: internal.NewClientFactory(),
 	}
@@ -66,27 +59,13 @@ var _ transport.Transport = (*Transport)(nil)
 // Start starts the cherami transport.
 func (t *Transport) Start() error {
 	return t.once.Start(func() error {
-		if len(t.config.ServiceName) == 0 {
-			return fmt.Errorf(`service name cannot be empty`)
-		}
-
-		serviceName := fmt.Sprintf("yarpc-cherami-%s", t.config.ServiceName)
-
-		var err error
-		if len(t.config.HyperbahnHostFile) > 0 {
-			t.client, err = t.clientFactory.GetClientWithHyperbahn(serviceName, t.config.HyperbahnHostFile)
-
-		} else {
-			t.client, err = t.clientFactory.GetClientWithFrontEnd(serviceName, t.config.FrontendIP, t.config.Port)
-		}
-		return err
+		return nil
 	})
 }
 
 // Stop stops the cherami transport.
 func (t *Transport) Stop() error {
 	return t.once.Stop(func() error {
-		t.client.Close()
 		return nil
 	})
 }
