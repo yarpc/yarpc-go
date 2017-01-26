@@ -115,7 +115,9 @@ lint: nogogenerate gofmt govet golint staticcheck errcheck
 
 .PHONY: install
 install:
-	glide --version || go get github.com/Masterminds/glide
+	# all we want is go get -u github.com/Masterminds/glide
+	# but have to pin to 0.12.3 due to https://github.com/Masterminds/glide/issues/745
+	./scripts/glide-install.sh
 	glide install
 
 
@@ -162,7 +164,7 @@ docker-test: docker-build
 	docker run yarpc_go make test
 
 .PHONY: test_ci
-test_ci: verify_version $(THRIFTRW)
+test_ci: install verify_version $(THRIFTRW)
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
 
 .PHONY: verify_version
