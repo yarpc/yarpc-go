@@ -30,15 +30,15 @@ import (
 )
 
 func TestOutbound(t *testing.T) {
-	mock_publisher := &mocks.Publisher{}
-	mock_publisher.On(`Close`)
-	mock_factory := &mocks.ClientFactory{}
-	mock_factory.On(`GetPublisher`, nil, mock.Anything, mock.Anything).Return(mock_publisher, nil, nil)
+	mockPublisher := &mocks.Publisher{}
+	mockPublisher.On(`Close`)
+	mockFactory := &mocks.ClientFactory{}
+	mockFactory.On(`GetPublisher`, nil, mock.Anything, mock.Anything).Return(mockPublisher, nil, nil)
 	transport := NewTransport(nil, TransportConfig{})
 	outbound := transport.NewOutbound(OutboundConfig{
 		Destination: `dest`,
 	})
-	outbound.SetClientFactory(mock_factory)
+	outbound.SetClientFactory(mockFactory)
 	err := outbound.Start()
 	assert.Nil(t, err)
 

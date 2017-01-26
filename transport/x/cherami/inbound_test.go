@@ -31,16 +31,16 @@ import (
 )
 
 func TestInbound(t *testing.T) {
-	mock_consumer := &mocks.Consumer{}
-	mock_consumer.On(`Close`)
-	mock_factory := &mocks.ClientFactory{}
-	mock_factory.On(`GetConsumer`, mock.Anything, mock.Anything).Return(mock_consumer, nil, nil)
+	mockConsumer := &mocks.Consumer{}
+	mockConsumer.On(`Close`)
+	mockFactory := &mocks.ClientFactory{}
+	mockFactory.On(`GetConsumer`, mock.Anything, mock.Anything).Return(mockConsumer, nil, nil)
 	transport := NewTransport(nil, TransportConfig{})
 	inbound := transport.NewInbound(InboundConfig{
 		Destination:   `dest`,
 		ConsumerGroup: `cg`,
 	})
-	inbound.SetClientFactory(mock_factory)
+	inbound.SetClientFactory(mockFactory)
 	inbound.SetRouter(&transporttest.MockRouter{})
 	err := inbound.Start()
 	assert.Nil(t, err)
