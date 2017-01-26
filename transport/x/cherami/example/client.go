@@ -33,10 +33,10 @@ import (
 	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 )
 
-// This example will create a yarpc client (using cherami transport), and issue an one way rpc call to the server
+// TestCheramiYARPC will create a yarpc client (using cherami transport), and issue an one way rpc call to the server
 // To run this example, the cherami server(https://github.com/uber/cherami-server) needs to be started locally first
 // And the destination(/test/dest) and consumer group(/test/dest_cg) needs to be created using cherami-cli
-func TestCherami_YARPC(t *testing.T) {
+func TestCheramiYARPC(t *testing.T) {
 	assert := assert.New(t)
 
 	destination := `/test/dest`

@@ -43,6 +43,7 @@ type ClientFactory interface {
 	GetConsumer(client cherami.Client, config ConsumerConfig) (cherami.Consumer, chan cherami.Delivery, error)
 }
 
+// ConsumerConfig is the configuration needed to create a consumer object
 type ConsumerConfig struct {
 	Destination   string
 	ConsumerGroup string
@@ -53,6 +54,7 @@ type ConsumerConfig struct {
 type clientFactoryImp struct {
 }
 
+// NewClientFactory creates a client factory object
 func NewClientFactory() ClientFactory {
 	return &clientFactoryImp{}
 }
