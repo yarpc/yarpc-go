@@ -67,6 +67,6 @@ type OnewayOutbound interface {
 // Outbounds encapsulates outbound types for a service
 type Outbounds struct {
 	ServiceName string
-	Unary  UnaryOutbound
-	Oneway OnewayOutbound
+	Unary       UnaryOutbound
+	Oneway      OnewayOutbound
 }
