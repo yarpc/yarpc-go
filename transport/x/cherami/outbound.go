@@ -70,7 +70,7 @@ func (t *Transport) NewOutbound(config OutboundConfig) *Outbound {
 	}
 }
 
-// Transport returns the transport that the outbound uses.
+// Transports returns the transport that the outbound uses.
 func (o *Outbound) Transports() []transport.Transport {
 	return []transport.Transport{o.transport}
 }

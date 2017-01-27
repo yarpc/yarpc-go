@@ -61,7 +61,7 @@ func (s *Service) Start() error {
 		return err
 	}
 
-	transport := cherami.NewTransport(cheramiClient, cherami.TransportConfig{})
+	transport := cherami.NewTransport(cheramiClient)
 	if err := transport.Start(); err != nil {
 		return err
 	}

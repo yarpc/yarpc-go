@@ -59,7 +59,7 @@ func TestCheramiYARPC(t *testing.T) {
 	cheramiClient, err := cherami_client.NewClient(`example`, frontend, port, nil)
 	assert.NoError(err)
 
-	transport := cherami.NewTransport(cheramiClient, cherami.TransportConfig{})
+	transport := cherami.NewTransport(cheramiClient)
 	err = transport.Start()
 	assert.NoError(err)
 

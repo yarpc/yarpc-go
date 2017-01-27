@@ -87,7 +87,7 @@ func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 	}
 }
 
-// Transport returns the transport that the inbound uses.
+// Transports returns the transport that the inbound uses.
 func (i *Inbound) Transports() []transport.Transport {
 	return []transport.Transport{i.transport}
 }
