@@ -64,7 +64,7 @@ type StopAction struct {
 // Apply runs "Stop" on the peerList and validates the error
 func (a StopAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	err := pl.Stop()
-	assert.Equal(t, a.ExpectedErr, err)
+	assert.Equal(t, a.ExpectedErr, err, "Stop action expected error %v, got %v", a.ExpectedErr, err)
 }
 
 // ChooseMultiAction will run Choose multiple times on the PeerList
@@ -77,7 +77,8 @@ type ChooseMultiAction struct {
 func (a ChooseMultiAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
 	for _, expectedPeer := range a.ExpectedPeers {
 		action := ChooseAction{
-			ExpectedPeer: expectedPeer,
+			ExpectedPeer:        expectedPeer,
+			InputContextTimeout: 20 * time.Millisecond,
 		}
 		action.Apply(t, pl, deps)
 	}
@@ -104,7 +105,10 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 		defer cancel()
 	}
 
-	p, _, err := pl.Choose(ctx, a.InputRequest)
+	p, finish, err := pl.Choose(ctx, a.InputRequest)
+	if err == nil {
+		finish(nil)
+	}
 
 	if a.ExpectedErr != nil {
 		// Note that we're not verifying anything about ExpectedPeer here because
@@ -119,6 +123,7 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 	if assert.NoError(t, err) && assert.NotNil(t, p) {
 		assert.Equal(t, a.ExpectedPeer, p.Identifier())
 	}
+
 }
 
 // UpdateAction is an action for adding/removing multiple peers on the PeerList
