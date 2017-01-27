@@ -44,9 +44,12 @@ const (
 )
 
 // InboundConfig defines the config in order to create a Inbound.
-// PrefetchCount controls the number of messages to buffer locally.
-// Inbounds which process messages very fast may want to specify larger value for PrefetchCount for faster throughput.
-// On the flip side larger values for PrefetchCount will result in more messages being buffered locally causing high memory footprint.
+//
+// PrefetchCount controls the number of messages to buffer locally. Inbounds
+// which process messages very fast may want to specify larger value for
+// PrefetchCount for faster throughput. On the flip side larger values for
+// PrefetchCount will result in more messages being buffered locally causing
+// high memory footprint.
 type InboundConfig struct {
 	Destination   string
 	ConsumerGroup string
@@ -54,7 +57,7 @@ type InboundConfig struct {
 	Timeout       time.Duration
 }
 
-// Inbound is a inbound that uses cherami as the transport
+// Inbound receives Oneway YARPC requests over Cherami.
 type Inbound struct {
 	config        InboundConfig
 	consumer      cherami.Consumer
@@ -66,7 +69,7 @@ type Inbound struct {
 	once sync.LifecycleOnce
 }
 
-// NewInbound builds a new cherami inbound
+// NewInbound builds a new Cherami inbound.
 func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 	if config.PrefetchCount == 0 {
 		config.PrefetchCount = defaultPrefetchCount
