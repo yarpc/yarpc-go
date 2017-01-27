@@ -29,52 +29,6 @@ type ClientFactory struct {
 	mock.Mock
 }
 
-// GetClientWithFrontEnd provides a mock function with given fields: serviceName, ip, port
-func (_m *ClientFactory) GetClientWithFrontEnd(serviceName string, ip string, port int) (cherami.Client, error) {
-	ret := _m.Called(serviceName, ip, port)
-
-	var r0 cherami.Client
-	if rf, ok := ret.Get(0).(func(string, string, int) cherami.Client); ok {
-		r0 = rf(serviceName, ip, port)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(cherami.Client)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, int) error); ok {
-		r1 = rf(serviceName, ip, port)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetClientWithHyperbahn provides a mock function with given fields: serviceName, hostFile
-func (_m *ClientFactory) GetClientWithHyperbahn(serviceName string, hostFile string) (cherami.Client, error) {
-	ret := _m.Called(serviceName, hostFile)
-
-	var r0 cherami.Client
-	if rf, ok := ret.Get(0).(func(string, string) cherami.Client); ok {
-		r0 = rf(serviceName, hostFile)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(cherami.Client)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(serviceName, hostFile)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetConsumer provides a mock function with given fields: client, config
 func (_m *ClientFactory) GetConsumer(client cherami.Client, config internal.ConsumerConfig) (cherami.Consumer, chan cherami.Delivery, error) {
 	ret := _m.Called(client, config)

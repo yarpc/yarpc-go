@@ -29,13 +29,6 @@ import (
 
 // ClientFactory provides all the interfaces that are used to get cherami entities
 type ClientFactory interface {
-
-	// GetClientWithHyperbahn returns a cherami client using hyperbahn
-	GetClientWithHyperbahn(serviceName string, hostFile string) (cherami.Client, error)
-
-	// GetClientWithFrontEnd returns a cherami client that connects to a specific ip and port
-	GetClientWithFrontEnd(serviceName string, ip string, port int) (cherami.Client, error)
-
 	// GetPublisher returns a cherami publisher
 	GetPublisher(client cherami.Client, destination string) (cherami.Publisher, error)
 
@@ -57,14 +50,6 @@ type clientFactoryImp struct {
 // NewClientFactory creates a client factory object
 func NewClientFactory() ClientFactory {
 	return &clientFactoryImp{}
-}
-
-func (c *clientFactoryImp) GetClientWithHyperbahn(serviceName string, hostFile string) (cherami.Client, error) {
-	return cherami.NewHyperbahnClient(serviceName, hostFile, nil)
-}
-
-func (c *clientFactoryImp) GetClientWithFrontEnd(serviceName string, ip string, port int) (cherami.Client, error) {
-	return cherami.NewClient(serviceName, ip, port, nil)
 }
 
 func (c *clientFactoryImp) GetPublisher(client cherami.Client, destination string) (cherami.Publisher, error) {

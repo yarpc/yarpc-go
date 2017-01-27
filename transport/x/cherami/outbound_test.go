@@ -34,11 +34,11 @@ func TestOutbound(t *testing.T) {
 	mockPublisher.On(`Close`)
 	mockFactory := &mocks.ClientFactory{}
 	mockFactory.On(`GetPublisher`, nil, mock.Anything, mock.Anything).Return(mockPublisher, nil, nil)
-	transport := NewTransport(nil, TransportConfig{})
+	transport := NewTransport(nil)
 	outbound := transport.NewOutbound(OutboundConfig{
 		Destination: `dest`,
 	})
-	outbound.SetClientFactory(mockFactory)
+	outbound.setClientFactory(mockFactory)
 	err := outbound.Start()
 	assert.Nil(t, err)
 

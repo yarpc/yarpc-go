@@ -35,12 +35,12 @@ func TestInbound(t *testing.T) {
 	mockConsumer.On(`Close`)
 	mockFactory := &mocks.ClientFactory{}
 	mockFactory.On(`GetConsumer`, mock.Anything, mock.Anything).Return(mockConsumer, nil, nil)
-	transport := NewTransport(nil, TransportConfig{})
+	transport := NewTransport(nil)
 	inbound := transport.NewInbound(InboundConfig{
 		Destination:   `dest`,
 		ConsumerGroup: `cg`,
 	})
-	inbound.SetClientFactory(mockFactory)
+	inbound.setClientFactory(mockFactory)
 	inbound.SetRouter(&transporttest.MockRouter{})
 	err := inbound.Start()
 	assert.Nil(t, err)

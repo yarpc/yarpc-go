@@ -59,6 +59,7 @@ type InboundConfig struct {
 
 // Inbound receives Oneway YARPC requests over Cherami.
 type Inbound struct {
+	transport     *Transport
 	config        InboundConfig
 	consumer      cherami.Consumer
 	router        transport.Router
@@ -78,6 +79,7 @@ func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 		config.Timeout = defaultCheramiTimeout
 	}
 	return &Inbound{
+		transport:     t,
 		config:        config,
 		tracer:        t.tracer,
 		client:        t.client,
@@ -85,9 +87,9 @@ func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 	}
 }
 
-// Transports returns nil for now
+// Transport returns the transport that the inbound uses.
 func (i *Inbound) Transports() []transport.Transport {
-	return nil
+	return []transport.Transport{i.transport}
 }
 
 // SetRouter configures a router to handle incoming requests.
@@ -102,7 +104,7 @@ func (i *Inbound) IsRunning() bool {
 	return i.once.IsRunning()
 }
 
-// Start starts the inbound, reading and handling messages from cherami
+// Start starts the inbound, reads and handle messages from Cherami.
 func (i *Inbound) Start() error {
 	return i.once.Start(i.start)
 }
@@ -150,7 +152,7 @@ func (i *Inbound) start() error {
 	return nil
 }
 
-// Stop ends the connection to cherami
+// Stop ends the connection to Cherami.
 func (i *Inbound) Stop() error {
 	return i.once.Stop(i.stop)
 }
@@ -160,8 +162,8 @@ func (i *Inbound) stop() error {
 	return nil
 }
 
-// SetClientFactory sets a cherami client factory, used for testing
-func (i *Inbound) SetClientFactory(factory internal.ClientFactory) {
+// setClientFactory sets a cherami client factory, used for testing
+func (i *Inbound) setClientFactory(factory internal.ClientFactory) {
 	i.clientFactory = factory
 }
 

@@ -41,8 +41,9 @@ type OutboundConfig struct {
 	Destination string
 }
 
-// Outbound is a outbound that uses cherami as the transport
+// Outbound is a outbound that uses Cherami as the transport.
 type Outbound struct {
+	transport     *Transport
 	config        OutboundConfig
 	publisher     cherami.Publisher
 	tracer        opentracing.Tracer
@@ -58,9 +59,10 @@ func (r receipt) String() string {
 	return r.Receipt
 }
 
-// NewOutbound builds a new cherami outbound
+// NewOutbound builds a new cherami outbound.
 func (t *Transport) NewOutbound(config OutboundConfig) *Outbound {
 	return &Outbound{
+		transport:     t,
 		config:        config,
 		tracer:        t.tracer,
 		client:        t.client,
@@ -68,9 +70,9 @@ func (t *Transport) NewOutbound(config OutboundConfig) *Outbound {
 	}
 }
 
-// Transports returns nil for now
+// Transport returns the transport that the outbound uses.
 func (o *Outbound) Transports() []transport.Transport {
-	return nil
+	return []transport.Transport{o.transport}
 }
 
 // IsRunning returns whether the outbound is still running.
@@ -78,7 +80,7 @@ func (o *Outbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
 
-// Start starts the outbound
+// Start starts the outbound.
 func (o *Outbound) Start() error {
 	return o.once.Start(o.start)
 }
@@ -89,7 +91,7 @@ func (o *Outbound) start() error {
 	return err
 }
 
-// Stop ends the connection to cherami
+// Stop ends the connection to Cherami.
 func (o *Outbound) Stop() error {
 	return o.once.Stop(o.stop)
 }
@@ -99,12 +101,12 @@ func (o *Outbound) stop() error {
 	return nil
 }
 
-// SetClientFactory sets a cherami client factory, used for testing
-func (o *Outbound) SetClientFactory(factory internal.ClientFactory) {
+// setClientFactory sets a cherami client factory, used for testing.
+func (o *Outbound) setClientFactory(factory internal.ClientFactory) {
 	o.clientFactory = factory
 }
 
-// CallOneway makes a oneway request using cherami
+// CallOneway makes a oneway request using Cherami.
 func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
 	if !o.IsRunning() {
 		return nil, errOutboundNotStarted

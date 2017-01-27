@@ -29,26 +29,19 @@ import (
 	"github.com/uber/cherami-client-go/client/cherami"
 )
 
-// TransportConfig defines the config in order to create a cherami transport
-// Currently it just servers as a placeholder
-type TransportConfig struct {
-}
-
-// NewTransport creates a new cherami transport for shared objects between inbound and outbound
-func NewTransport(client cherami.Client, config TransportConfig) *Transport {
+// NewTransport creates a new cherami transport for shared objects between inbound and outbound.
+func NewTransport(client cherami.Client) *Transport {
 	return &Transport{
-		config:        config,
 		client:        client,
 		tracer:        opentracing.GlobalTracer(),
 		clientFactory: internal.NewClientFactory(),
 	}
 }
 
-// Transport keeps shared objects between inbound and outbound
+// Transport keeps shared objects between inbound and outbound.
 type Transport struct {
 	once intsync.LifecycleOnce
 
-	config        TransportConfig
 	client        cherami.Client
 	clientFactory internal.ClientFactory
 	tracer        opentracing.Tracer
