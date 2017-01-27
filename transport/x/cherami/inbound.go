@@ -126,30 +126,32 @@ func (i *Inbound) start() error {
 
 	i.consumer = consumer
 
-	go func() {
-		for delivery := range ch {
-			// checksum verification before accessing message payload data
-			if !delivery.VerifyChecksum() {
-				log.Printf("checksum verification failed for ack_token: %s, asking for redelivery\n", delivery.GetDeliveryToken())
-				if err = delivery.Nack(); err != nil {
-					log.Printf("nack failed for ack_token: %s\n", delivery.GetDeliveryToken())
-				}
-				continue
-			}
-
-			msg := delivery.GetMessage()
-
-			if err = i.handleMsg(msg.Payload.Data); err == nil {
-				if err = delivery.Ack(); err != nil {
-					log.Printf("ack failed for ack_token: %s\n", delivery.GetDeliveryToken())
-				}
-			} else {
-				err = errors.CombineErrors(err, delivery.Nack())
-				log.Printf("handle message failure: %v\n", err)
-			}
-		}
-	}()
+	go i.loop(ch)
 	return nil
+}
+
+func (i *Inbound) loop(ch chan cherami.Delivery) {
+	for delivery := range ch {
+		// checksum verification before accessing message payload data
+		if !delivery.VerifyChecksum() {
+			log.Printf("checksum verification failed for ack_token: %s, asking for redelivery\n", delivery.GetDeliveryToken())
+			if err := delivery.Nack(); err != nil {
+				log.Printf("nack failed for ack_token: %s\n", delivery.GetDeliveryToken())
+			}
+			continue
+		}
+
+		msg := delivery.GetMessage()
+
+		if err := i.handleMsg(msg.Payload.Data); err == nil {
+			if err = delivery.Ack(); err != nil {
+				log.Printf("ack failed for ack_token: %s\n", delivery.GetDeliveryToken())
+			}
+		} else {
+			err = errors.CombineErrors(err, delivery.Nack())
+			log.Printf("handle message failure: %v\n", err)
+		}
+	}
 }
 
 // Stop ends the connection to Cherami.
