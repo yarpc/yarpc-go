@@ -6,6 +6,34 @@ v1.2.0-dev (unreleased)
 
 -   Added experimental `transports/x/cherami` for transporting RPCs through
     [Cherami](https://eng.uber.com/cherami/).
+-   Added ability to specify a ServiceName for outbounds on the
+    transport.Outbounds object.  This will allow defining outbounds with a
+    `key` that is different from the service name they will use for requests.
+    If no ServiceName is specified, the ServiceName will fallback to the
+    config.Outbounds map `key`.
+
+    Before:
+
+    ```go
+    config.Outbounds['service'] := transport.Outbounds{
+        Unary: httpTransport.NewSingleOutbound(...)
+    }
+    ...
+    cc := dispatcher.ClientConfig('service')
+    cc.Service() // returns 'service'
+    ```
+
+    After (optional):
+
+    ```go
+    config.Outbounds['service-key'] := transport.Outbounds{
+        ServiceName: 'service'
+        Unary: httpTransport.NewSingleOutbound(...)
+    }
+    ...
+    cc := dispatcher.ClientConfig('service-key')
+    cc.Service() // returns 'service'
+    ```
 
 
 v1.1.0 (2017-01-24)

@@ -110,17 +110,18 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 // convertOutbounds applys outbound middleware and creates validator outbounds
 func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
-	convertedOutbounds := make(Outbounds, len(outbounds))
+	outboundSpecs := make(Outbounds, len(outbounds))
 
-	for service, outs := range outbounds {
+	for outboundKey, outs := range outbounds {
 		if outs.Unary == nil && outs.Oneway == nil {
-			panic(fmt.Sprintf("no outbound set for service %q in dispatcher", service))
+			panic(fmt.Sprintf("no outbound set for outbound key %q in dispatcher", outboundKey))
 		}
 
 		var (
 			unaryOutbound  transport.UnaryOutbound
 			onewayOutbound transport.OnewayOutbound
 		)
+		serviceName := outboundKey
 
 		// apply outbound middleware and create ValidatorOutbounds
 		if outs.Unary != nil {
@@ -133,13 +134,18 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
 		}
 
-		convertedOutbounds[service] = transport.Outbounds{
-			Unary:  unaryOutbound,
-			Oneway: onewayOutbound,
+		if outs.ServiceName != "" {
+			serviceName = outs.ServiceName
+		}
+
+		outboundSpecs[outboundKey] = transport.Outbounds{
+			ServiceName: serviceName,
+			Unary:       unaryOutbound,
+			Oneway:      onewayOutbound,
 		}
 	}
 
-	return convertedOutbounds
+	return outboundSpecs
 }
 
 // collectTransports iterates over all inbounds and outbounds and collects all
@@ -196,17 +202,17 @@ func (d *Dispatcher) Inbounds() Inbounds {
 }
 
 // ClientConfig provides the configuration needed to talk to the given
-// service. This configuration may be directly passed into encoding-specific
-// RPC clients.
+// service through an outboundKey. This configuration may be directly
+// passed into encoding-specific RPC clients.
 //
 // 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
 //
-// This function panics if the service name is not known.
-func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
-	if rs, ok := d.outbounds[service]; ok {
-		return clientconfig.MultiOutbound(d.name, service, rs)
+// This function panics if the outboundKey is not known.
+func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
+	if rs, ok := d.outbounds[outboundKey]; ok {
+		return clientconfig.MultiOutbound(d.name, rs.ServiceName, rs)
 	}
-	panic(noOutboundForService{Service: service})
+	panic(noOutboundForOutboundKey{OutboundKey: outboundKey})
 }
 
 // Register registers zero or more procedures with this dispatcher. Incoming
@@ -412,7 +418,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 		inbounds = append(inbounds, status)
 	}
 	var outbounds []introspection.OutboundStatus
-	for destService, o := range d.outbounds {
+	for _, o := range d.outbounds {
 		var status introspection.OutboundStatus
 		if o.Unary != nil {
 			if o, ok := o.Unary.(introspection.IntrospectableOutbound); ok {
@@ -430,7 +436,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 			}
 			status.Type = "oneway"
 		}
-		status.Service = destService
+		status.Service = o.ServiceName
 		outbounds = append(outbounds, status)
 	}
 	return dispatcherStatus{
