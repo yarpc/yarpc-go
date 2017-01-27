@@ -112,15 +112,16 @@ func NewDispatcher(cfg Config) *Dispatcher {
 func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	convertedOutbounds := make(Outbounds, len(outbounds))
 
-	for service, outs := range outbounds {
+	for outboundKey, outs := range outbounds {
 		if outs.Unary == nil && outs.Oneway == nil {
-			panic(fmt.Sprintf("no outbound set for service %q in dispatcher", service))
+			panic(fmt.Sprintf("no outbound set for outbound key %q in dispatcher", outboundKey))
 		}
 
 		var (
 			unaryOutbound  transport.UnaryOutbound
 			onewayOutbound transport.OnewayOutbound
 		)
+		serviceName := outboundKey
 
 		// apply outbound middleware and create ValidatorOutbounds
 		if outs.Unary != nil {
@@ -133,9 +134,14 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
 		}
 
-		convertedOutbounds[service] = transport.Outbounds{
-			Unary:  unaryOutbound,
-			Oneway: onewayOutbound,
+		if outs.ServiceName != "" {
+			serviceName = outs.ServiceName
+		}
+
+		convertedOutbounds[outboundKey] = transport.Outbounds{
+			ServiceName: serviceName,
+			Unary:       unaryOutbound,
+			Oneway:      onewayOutbound,
 		}
 	}
 
@@ -201,12 +207,12 @@ func (d *Dispatcher) Inbounds() Inbounds {
 //
 // 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
 //
-// This function panics if the service name is not known.
-func (d *Dispatcher) ClientConfig(service string) transport.ClientConfig {
-	if rs, ok := d.outbounds[service]; ok {
-		return clientconfig.MultiOutbound(d.name, service, rs)
+// This function panics if the outboundKey is not known.
+func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
+	if rs, ok := d.outbounds[outboundKey]; ok {
+		return clientconfig.MultiOutbound(d.name, rs.ServiceName, rs)
 	}
-	panic(noOutboundForService{Service: service})
+	panic(noOutboundForOutboundKey{OutboundKey: outboundKey})
 }
 
 // Register registers zero or more procedures with this dispatcher. Incoming

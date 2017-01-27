@@ -312,7 +312,7 @@ func TestNoOutboundsForService(t *testing.T) {
 	defer func() {
 		r := recover()
 		require.NotNil(t, r, "did not panic")
-		assert.Equal(t, r, `no outbound set for service "my-test-service" in dispatcher`)
+		assert.Equal(t, r, `no outbound set for outbound key "my-test-service" in dispatcher`)
 	}()
 
 	NewDispatcher(Config{
@@ -321,4 +321,37 @@ func TestNoOutboundsForService(t *testing.T) {
 			"my-test-service": {},
 		},
 	})
+}
+
+func TestClientConfig(t *testing.T) {
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1:1234"),
+			},
+		},
+	})
+
+	cc := dispatcher.ClientConfig("my-test-service")
+
+	assert.Equal(t, "test", cc.Caller())
+	assert.Equal(t, "my-test-service", cc.Service())
+}
+
+func TestClientConfigWithOutboundServiceNameOverride(t *testing.T) {
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				ServiceName: "my-real-service",
+				Unary:       http.NewTransport().NewSingleOutbound("http://127.0.0.1:1234"),
+			},
+		},
+	})
+
+	cc := dispatcher.ClientConfig("my-test-service")
+
+	assert.Equal(t, "test", cc.Caller())
+	assert.Equal(t, "my-real-service", cc.Service())
 }

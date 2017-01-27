@@ -26,12 +26,12 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-type noOutboundForService struct {
-	Service string
+type noOutboundForOutboundKey struct {
+	OutboundKey string
 }
 
-func (e noOutboundForService) Error() string {
-	return fmt.Sprintf("no configured outbound transport for service %q", e.Service)
+func (e noOutboundForOutboundKey) Error() string {
+	return fmt.Sprintf("no configured outbound transport for outbound key %q", e.OutboundKey)
 }
 
 // IsBadRequestError returns true on an error returned by RPC clients if the
