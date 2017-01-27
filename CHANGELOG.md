@@ -10,6 +10,8 @@ v1.2.0-dev (unreleased)
 v1.1.0 (2017-01-24)
 -----------------------
 
+-   Added experimental `transports/x/cherami` for transporting RPCs through
+    [Cherami](https://eng.uber.com/cherami/).
 -   Thrift: Mock clients compatible with gomock are now generated for each
     service inside a test subpackage. Disable this by passing a `-no-gomock`
     flag to the plugin.
