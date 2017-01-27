@@ -110,7 +110,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 // convertOutbounds applys outbound middleware and creates validator outbounds
 func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
-	convertedOutbounds := make(Outbounds, len(outbounds))
+	outboundSpecs := make(Outbounds, len(outbounds))
 
 	for outboundKey, outs := range outbounds {
 		if outs.Unary == nil && outs.Oneway == nil {
@@ -138,14 +138,14 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 			serviceName = outs.ServiceName
 		}
 
-		convertedOutbounds[outboundKey] = transport.Outbounds{
+		outboundSpecs[outboundKey] = transport.Outbounds{
 			ServiceName: serviceName,
 			Unary:       unaryOutbound,
 			Oneway:      onewayOutbound,
 		}
 	}
 
-	return convertedOutbounds
+	return outboundSpecs
 }
 
 // collectTransports iterates over all inbounds and outbounds and collects all
@@ -202,8 +202,8 @@ func (d *Dispatcher) Inbounds() Inbounds {
 }
 
 // ClientConfig provides the configuration needed to talk to the given
-// service. This configuration may be directly passed into encoding-specific
-// RPC clients.
+// service through an outboundKey. This configuration may be directly
+// passed into encoding-specific RPC clients.
 //
 // 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
 //
@@ -418,7 +418,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 		inbounds = append(inbounds, status)
 	}
 	var outbounds []introspection.OutboundStatus
-	for destService, o := range d.outbounds {
+	for _, o := range d.outbounds {
 		var status introspection.OutboundStatus
 		if o.Unary != nil {
 			if o, ok := o.Unary.(introspection.IntrospectableOutbound); ok {
@@ -436,7 +436,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 			}
 			status.Type = "oneway"
 		}
-		status.Service = destService
+		status.Service = o.ServiceName
 		outbounds = append(outbounds, status)
 	}
 	return dispatcherStatus{
