@@ -21,13 +21,11 @@
 package yarpc_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
 
 	. "go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/middleware/middlewaretest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/transport/http"
@@ -36,7 +34,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/api/middleware"
 )
 
 func basicDispatcher(t *testing.T) *Dispatcher {
@@ -357,23 +354,4 @@ func TestClientConfigWithOutboundServiceNameOverride(t *testing.T) {
 
 	assert.Equal(t, "test", cc.Caller())
 	assert.Equal(t, "my-real-service", cc.Service())
-}
-
-func TestCustomRouter(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	ctx := context.Background()
-	req := &transport.Request{}
-	expectedSpec := transport.HandlerSpec{}
-
-	routerMiddleware := middlewaretest.NewMockRouter(mockCtrl)
-	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
-
-	router := middleware.ApplyRouter(NewMapRouter("service"), routerMiddleware)
-
-	actualSpec, err := router.Choose(ctx, req)
-
-	assert.Equal(t, expectedSpec, actualSpec, "handler spec returned from route table did not match")
-	assert.Nil(t, err)
 }
