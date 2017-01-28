@@ -47,6 +47,7 @@ mockgen -destination=api/transport/transporttest/router.go -package=transporttes
 mockgen -destination=api/transport/transporttest/transport.go -package=transporttest go.uber.org/yarpc/api/transport Transport
 mockgen -source=vendor/go.uber.org/thriftrw/protocol/protocol.go -destination=encoding/thrift/mock_protocol_test.go -package=thrift go.uber.org/thriftrw/protocol Protocol
 mockgen -destination=transport/x/redis/redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
+mockgen -destination=peer/x/hashring/mocks.go -package=hashring go.uber.org/yarpc/peer/x/hashring EventHandler
 
 generate_stringer ConnectionStatus ./api/peer
 generate_stringer LifecycleState ./internal/sync
