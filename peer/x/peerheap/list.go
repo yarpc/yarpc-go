@@ -209,7 +209,7 @@ func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 	ps.NotifyStatusChanged(pid)
 }
 
-func (pl *List) notifyStatusChanged(ps *peerScore) {
+func (pl *List) peerScoreChanged(ps *peerScore) {
 	pl.mu.Lock()
 	pl.rescorePeer(ps)
 	pl.mu.Unlock()

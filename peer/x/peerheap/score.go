@@ -28,7 +28,7 @@ func (ps *peerScore) NotifyStatusChanged(_ peer.Identifier) {
 		return
 	}
 	ps.status = status
-	ps.list.notifyStatusChanged(ps)
+	ps.list.peerScoreChanged(ps)
 }
 
 func (ps *peerScore) finish(error) {
