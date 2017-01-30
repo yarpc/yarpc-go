@@ -74,6 +74,7 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 	return yerrors.MultiError(errs)
 }
 
+// retainPeer must be called with the mutex locked.
 func (pl *List) retainPeer(pid peer.Identifier) error {
 	if _, ok := pl.byIdentifier[pid.Identifier()]; ok {
 		return peer.ErrPeerAddAlreadyInList(pid.Identifier())
@@ -94,6 +95,7 @@ func (pl *List) retainPeer(pid peer.Identifier) error {
 	return nil
 }
 
+// releasePeer must be called with the mutex locked.
 func (pl *List) releasePeer(pid peer.Identifier) error {
 	ps, ok := pl.byIdentifier[pid.Identifier()]
 	if !ok {
