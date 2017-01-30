@@ -18,7 +18,7 @@ type peerScore struct {
 func (ps *peerScore) NotifyStatusChanged(_ peer.Identifier) {
 	if ps == nil || ps.list == nil {
 		// The subscriber is no longer retained by the peer list, or caller
-		// odbtained a nil subscriber (happens in tests).
+		// obtained a nil subscriber (happens in tests).
 		return
 	}
 	status := ps.peer.Status()
@@ -32,9 +32,3 @@ func (ps *peerScore) NotifyStatusChanged(_ peer.Identifier) {
 func (ps *peerScore) finish(error) {
 	ps.peer.EndRequest()
 }
-
-type _noSub struct{}
-
-func (_noSub) NotifyStatusChanged(peer.Identifier) {}
-
-var noSub = _noSub{}

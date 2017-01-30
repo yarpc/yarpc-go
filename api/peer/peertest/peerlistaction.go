@@ -123,7 +123,6 @@ func (a ChooseAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) 
 	if assert.NoError(t, err) && assert.NotNil(t, p) {
 		assert.Equal(t, a.ExpectedPeer, p.Identifier())
 	}
-
 }
 
 // UpdateAction is an action for adding/removing multiple peers on the PeerList

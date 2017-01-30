@@ -11,9 +11,7 @@ import (
 	ysync "go.uber.org/yarpc/internal/sync"
 )
 
-const (
-	unavailablePenalty = math.MaxInt32
-)
+const unavailablePenalty = math.MaxInt32
 
 // List is a peer list and peer chooser that favors the peer with the least
 // pending requests, and then favors the least recently used or most recently
@@ -26,8 +24,6 @@ type List struct {
 
 	byScore      peerHeap
 	byIdentifier map[string]*peerScore
-
-	added int // incrementing counter for when a peer was pushed.
 
 	peerAvailableEvent chan struct{}
 }
@@ -172,7 +168,7 @@ func (pl *List) get() (*peerScore, bool) {
 		return nil, false
 	}
 
-	// Note: We push the peer back to reset the "last" timestamp.
+	// Note: We push the peer back to reset the "next" counter.
 	// This gives us round-robin behavior.
 	pl.byScore.pushPeer(ps)
 

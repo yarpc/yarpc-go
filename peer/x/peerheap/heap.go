@@ -73,7 +73,7 @@ func (ph *peerHeap) delete(idx int) {
 
 func (ph *peerHeap) validate(ps *peerScore) error {
 	if ps.idx < 0 || ps.idx >= ph.Len() || ph.peers[ps.idx] != ps {
-		return fmt.Errorf("peer list bug: %+v has bad index %v (len %v)", ps, ps.idx, ph.Len())
+		return fmt.Errorf("peerHeap bug: %+v has bad index %v (len %v)", ps, ps.idx, ph.Len())
 	}
 	return nil
 }
