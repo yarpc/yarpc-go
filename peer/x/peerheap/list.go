@@ -19,7 +19,7 @@ const (
 // pending requests, and then favors the least recently used or most recently
 // introduced peer.
 type List struct {
-	sync.Mutex
+	mu   sync.Mutex
 	once ysync.LifecycleOnce
 
 	transport peer.Transport
@@ -64,8 +64,8 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 
 	var errs []error
 
-	pl.Lock()
-	defer pl.Unlock()
+	pl.mu.Lock()
+	defer pl.mu.Unlock()
 
 	for _, pid := range remove {
 		if err := pl.releasePeer(pid); err != nil {
@@ -120,8 +120,8 @@ func (pl *List) releasePeer(pid peer.Identifier) error {
 }
 
 func (pl *List) clearPeers() error {
-	pl.Lock()
-	defer pl.Unlock()
+	pl.mu.Lock()
+	defer pl.mu.Unlock()
 
 	var errs []error
 
@@ -164,8 +164,8 @@ func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, fu
 }
 
 func (pl *List) get() (*peerScore, bool) {
-	pl.Lock()
-	defer pl.Unlock()
+	pl.mu.Lock()
+	defer pl.mu.Unlock()
 
 	ps, ok := pl.byScore.popPeer()
 	if !ok {
@@ -209,19 +209,19 @@ func (pl *List) notifyPeerAvailable() {
 // This method satisfies peer.Subscriber and is only used for tests, since
 // the peer heap has a subscriber for each invividual peer.
 func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
-	pl.Lock()
+	pl.mu.Lock()
 	ps := pl.byIdentifier[pid.Identifier()]
-	pl.Unlock()
+	pl.mu.Unlock()
 	ps.NotifyStatusChanged(pid)
 }
 
 func (pl *List) notifyStatusChanged(ps *peerScore) {
-	pl.Lock()
+	pl.mu.Lock()
 	p := ps.peer
 	ps.status = p.Status()
 	ps.score = scorePeer(p)
 	pl.byScore.update(ps.idx)
-	pl.Unlock()
+	pl.mu.Unlock()
 
 	if p.Status().ConnectionStatus == peer.Available {
 		pl.notifyPeerAvailable()
