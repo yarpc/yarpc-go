@@ -79,14 +79,13 @@ func (pl *List) retainPeer(pid peer.Identifier) error {
 		return peer.ErrPeerAddAlreadyInList(pid.Identifier())
 	}
 
-	ps := &peerScore{list: pl}
+	ps := &peerScore{id: pid, list: pl}
 	p, err := pl.transport.RetainPeer(pid, ps)
 	if err != nil {
 		return err
 	}
 
 	ps.peer = p
-	ps.id = pid
 	ps.score = scorePeer(p)
 	ps.boundFinish = ps.finish
 	pl.byIdentifier[pid.Identifier()] = ps
