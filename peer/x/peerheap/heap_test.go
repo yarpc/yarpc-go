@@ -74,10 +74,10 @@ func TestPeerHeapDelete(t *testing.T) {
 	// The first peer is the lowest, remove it so it swaps with the last peer.
 	h.delete(0)
 
-	// Now when we pop a peer, we expect peers[1].
-	got, ok := h.popPeer()
-	require.True(t, ok, "Failed to get peer from non-empty peer heap")
-	assert.Equal(t, peers[1], got, "Got incorrect peer after peer 0 was removed")
+	// Now when we pop peers, we expect peers 1 to N.
+	want := peers[1:]
+	popped := popAndVerifyHeap(t, &h)
+	assert.Equal(t, want, popped, "Unexpected peers after delete peer 0")
 }
 
 func TestPeerHeapValidate(t *testing.T) {
