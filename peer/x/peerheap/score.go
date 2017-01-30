@@ -9,7 +9,7 @@ type peerScore struct {
 	peer        peer.Peer
 	id          peer.Identifier
 	status      peer.Status
-	score       int
+	score       int64
 	idx         int // index in the peer list.
 	last        int // snapshot of the heap's incrementing counter.
 	boundFinish func(error)

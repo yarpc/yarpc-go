@@ -67,7 +67,7 @@ func TestPeerHeapDelete(t *testing.T) {
 	var h peerHeap
 	peers := make([]*peerScore, numPeers)
 	for i := range peers {
-		peers[i] = &peerScore{score: i}
+		peers[i] = &peerScore{score: int64(i)}
 		h.pushPeer(peers[i])
 	}
 
@@ -93,7 +93,7 @@ func TestPeerHeapValidate(t *testing.T) {
 func popAndVerifyHeap(t *testing.T, h *peerHeap) []*peerScore {
 	var popped []*peerScore
 
-	lastScore := -1
+	lastScore := int64(-1)
 	for h.Len() > 0 {
 		verifyIndexes(t, h)
 

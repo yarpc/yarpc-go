@@ -235,11 +235,11 @@ func (pl *List) internalNotifyStatusChanged(ps *peerScore) {
 	}
 }
 
-func scorePeer(p peer.Peer) int {
+func scorePeer(p peer.Peer) int64 {
 	status := p.Status()
-	score := status.PendingRequestCount
+	score := int64(status.PendingRequestCount)
 	if status.ConnectionStatus != peer.Available {
-		score += unavailablePenalty
+		score += int64(unavailablePenalty)
 	}
 	return score
 }
