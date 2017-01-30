@@ -55,20 +55,17 @@ func New(transport peer.Transport) *List {
 // Update satisfies the peer.List interface, so a peer provider can manage the
 // retained peers.
 func (pl *List) Update(updates peer.ListUpdates) error {
-	add := updates.Additions
-	remove := updates.Removals
-
 	var errs []error
 
 	pl.mu.Lock()
 	defer pl.mu.Unlock()
 
-	for _, pid := range remove {
+	for _, pid := range updates.Removals {
 		if err := pl.releasePeer(pid); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	for _, pid := range add {
+	for _, pid := range updates.Additions {
 		if err := pl.retainPeer(pid); err != nil {
 			errs = append(errs, err)
 		}
