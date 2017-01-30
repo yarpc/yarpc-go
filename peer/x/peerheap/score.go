@@ -5,14 +5,16 @@ import "go.uber.org/yarpc/api/peer"
 // peerScore is a book-keeping object for each retained peer and
 // gets
 type peerScore struct {
-	list        *List
+	// immutable after creation
 	peer        peer.Peer
 	id          peer.Identifier
-	status      peer.Status
-	score       int64
-	idx         int // index in the peer list.
-	last        int // snapshot of the heap's incrementing counter.
+	list        *List
 	boundFinish func(error)
+
+	status peer.Status
+	score  int64
+	idx    int // index in the peer list.
+	last   int // snapshot of the heap's incrementing counter.
 }
 
 func (ps *peerScore) NotifyStatusChanged(_ peer.Identifier) {

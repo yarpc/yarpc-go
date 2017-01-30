@@ -209,26 +209,27 @@ func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 
 func (pl *List) notifyStatusChanged(ps *peerScore) {
 	pl.mu.Lock()
-	p := ps.peer
-	ps.status = p.Status()
-	ps.score = scorePeer(p)
-	pl.byScore.update(ps.idx)
+	pl.rescorePeer(ps)
 	pl.mu.Unlock()
 
-	if p.Status().ConnectionStatus == peer.Available {
+	if ps.peer.Status().ConnectionStatus == peer.Available {
 		pl.notifyPeerAvailable()
 	}
 }
 
 func (pl *List) internalNotifyStatusChanged(ps *peerScore) {
+	pl.rescorePeer(ps)
+
+	if ps.peer.Status().ConnectionStatus == peer.Available {
+		pl.notifyPeerAvailable()
+	}
+}
+
+func (pl *List) rescorePeer(ps *peerScore) {
 	p := ps.peer
 	ps.status = p.Status()
 	ps.score = scorePeer(p)
 	pl.byScore.update(ps.idx)
-
-	if p.Status().ConnectionStatus == peer.Available {
-		pl.notifyPeerAvailable()
-	}
 }
 
 func scorePeer(p peer.Peer) int64 {
