@@ -120,7 +120,7 @@ const pageHTML = `
 			<th>Procedure</th>
 			<th>Encoding</th>
 			<th>Signature</th>
-			<th>Flavor</th>
+			<th>Type</th>
 		</tr>
 		{{range .Procedures}}
 		<tr>
@@ -153,7 +153,7 @@ const pageHTML = `
 		<tr>
 			<th>Service</th>
 			<th>Transport</th>
-			<th>Flavor</th>
+			<th>Type</th>
 			<th>Endpoint</th>
 			<th>State</th>
 			<th colspan="3">Chooser</th>
@@ -174,7 +174,7 @@ const pageHTML = `
 		<tr>
 			<td>{{.Service}}</td>
 			<td>{{.Transport}}</td>
-			<td>{{.Flavor}}</td>
+			<td>{{.Type}}</td>
 			<td>{{.Endpoint}}</td>
 			<td>{{.State}}</td>
 			<td>{{.Chooser.Name}}</td>
