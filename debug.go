@@ -151,6 +151,7 @@ const pageHTML = `
 	<table>
 		<thead>
 		<tr>
+			<th>Outbound Key</th>
 			<th>Service</th>
 			<th>Transport</th>
 			<th>RPC Type</th>
@@ -172,6 +173,7 @@ const pageHTML = `
 		<tbody>
 		{{range .Outbounds}}
 		<tr>
+			<td>{{.OutboundKey}}</td>
 			<td>{{.Service}}</td>
 			<td>{{.Transport}}</td>
 			<td>{{.RPCType}}</td>
