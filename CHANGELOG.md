@@ -4,6 +4,8 @@ Releases
 v1.2.0-dev (unreleased)
 -----------------------
 
+-   Added `RouterMiddleware` parameter to `yarpc.Config`, which, if provided,
+    will allow customizing routing to handlers.
 -   Added experimental `transports/x/cherami` for transporting RPCs through
     [Cherami](https://eng.uber.com/cherami/).
 -   Added ability to specify a ServiceName for outbounds on the
