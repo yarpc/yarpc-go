@@ -120,7 +120,7 @@ const pageHTML = `
 			<th>Procedure</th>
 			<th>Encoding</th>
 			<th>Signature</th>
-			<th>Type</th>
+			<th>RPC Type</th>
 		</tr>
 		{{range .Procedures}}
 		<tr>
@@ -153,7 +153,7 @@ const pageHTML = `
 		<tr>
 			<th>Service</th>
 			<th>Transport</th>
-			<th>Type</th>
+			<th>RPC Type</th>
 			<th>Endpoint</th>
 			<th>State</th>
 			<th colspan="3">Chooser</th>
