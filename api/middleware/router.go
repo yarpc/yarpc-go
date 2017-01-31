@@ -29,18 +29,17 @@ import (
 // Router is a middleware for defining a customized routing experience for procedures
 type Router interface {
 	// Procedures returns the list of procedures that can be called on this router.
-	// Procedures MUST call into router that is passed in.
+	// Procedures SHOULD call into router that is passed in.
 	Procedures(transport.Router) []transport.Procedure
 
-	// Choose returns a handlerspec for the given request and transport.
+	// Choose returns a HandlerSpec for the given request and transport.
 	// If the Router cannot determine what to call it should call into the router that was
 	// passed in.
 	Choose(context.Context, *transport.Request, transport.Router) (transport.HandlerSpec, error)
 }
 
-// ApplyRouter applies the given Router middleware to
-// the given Router.
-func ApplyRouter(r transport.RouteTable, m Router) transport.RouteTable {
+// ApplyRouteTable applies the given Router middleware to the given Router.
+func ApplyRouteTable(r transport.RouteTable, m Router) transport.RouteTable {
 	if m == nil {
 		return r
 	}

@@ -157,7 +157,7 @@ func TestRouterWithMiddleware(t *testing.T) {
 	routerMiddleware := middlewaretest.NewMockRouter(mockCtrl)
 	routerMiddleware.EXPECT().Choose(ctx, req, gomock.Any()).Times(1).Return(expectedSpec, nil)
 
-	router := middleware.ApplyRouter(yarpc.NewMapRouter("service"), routerMiddleware)
+	router := middleware.ApplyRouteTable(yarpc.NewMapRouter("service"), routerMiddleware)
 
 	actualSpec, err := router.Choose(ctx, req)
 

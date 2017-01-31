@@ -106,7 +106,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 
 	return &Dispatcher{
 		name:              cfg.Name,
-		table:             middleware.ApplyRouter(NewMapRouter(cfg.Name), cfg.RouterMiddleware),
+		table:             middleware.ApplyRouteTable(NewMapRouter(cfg.Name), cfg.RouterMiddleware),
 		inbounds:          cfg.Inbounds,
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
