@@ -174,7 +174,7 @@ const pageHTML = `
 		<tr>
 			<td>{{.Service}}</td>
 			<td>{{.Transport}}</td>
-			<td>{{.Type}}</td>
+			<td>{{.RPCType}}</td>
 			<td>{{.Endpoint}}</td>
 			<td>{{.State}}</td>
 			<td>{{.Chooser.Name}}</td>
