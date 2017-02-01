@@ -432,7 +432,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 			} else {
 				status.Transport = "Introspection not supported"
 			}
-			status.Type = "unary"
+			status.RPCType = "unary"
 		}
 		if o.Oneway != nil {
 			if o, ok := o.Oneway.(introspection.IntrospectableOutbound); ok {
@@ -440,7 +440,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 			} else {
 				status.Transport = "Introspection not supported"
 			}
-			status.Type = "oneway"
+			status.RPCType = "oneway"
 		}
 		status.Service = o.ServiceName
 		outbounds = append(outbounds, status)
