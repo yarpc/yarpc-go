@@ -37,18 +37,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Different ways in which outbounds can be constructed from a client Channel
-// and a hostPort
-var newOutbounds = []func(*tchannel.Channel, string) (transport.UnaryOutbound, error){
-	func(ch *tchannel.Channel, hostPort string) (transport.UnaryOutbound, error) {
-		x, err := NewTransport(WithChannel(ch))
-		if err == nil {
-			return x.NewSingleOutbound(hostPort), nil
-		}
-		return nil, err
-	},
-}
-
 func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {
 		context context.Context
@@ -92,40 +80,38 @@ func TestOutboundHeaders(t *testing.T) {
 				assert.NoError(t, err, "failed to write response")
 			}))
 
-		for _, getOutbound := range newOutbounds {
-			out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
-				ServiceName: "caller",
-			}), hostport)
-			require.NoError(t, err)
-			require.NoError(t, out.Start(), "failed to start outbound")
-			defer out.Stop()
+		x, err := NewChannelTransport(ServiceName("foo"))
+		require.NoError(t, err)
+		out := x.NewSingleOutbound(hostport)
+		require.NoError(t, err)
+		require.NoError(t, out.Start(), "failed to start outbound")
+		defer out.Stop()
 
-			ctx := tt.context
-			if ctx == nil {
-				ctx = context.Background()
+		ctx := tt.context
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+
+		res, err := out.Call(
+			ctx,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "hello",
+				Headers:   tt.headers,
+				Body:      bytes.NewReader([]byte("world")),
+			},
+		)
+		if tt.wantError != "" {
+			if assert.Error(t, err, "expected error") {
+				assert.Contains(t, err.Error(), tt.wantError)
 			}
-			ctx, cancel := context.WithTimeout(ctx, time.Second)
-			defer cancel()
-
-			res, err := out.Call(
-				ctx,
-				&transport.Request{
-					Caller:    "caller",
-					Service:   "service",
-					Encoding:  raw.Encoding,
-					Procedure: "hello",
-					Headers:   tt.headers,
-					Body:      bytes.NewReader([]byte("world")),
-				},
-			)
-			if tt.wantError != "" {
-				if assert.Error(t, err, "expected error") {
-					assert.Contains(t, err.Error(), tt.wantError)
-				}
-			} else {
-				if assert.NoError(t, err, "call failed") {
-					defer res.Body.Close()
-				}
+		} else {
+			if assert.NoError(t, err, "call failed") {
+				defer res.Body.Close()
 			}
 		}
 	}
@@ -162,44 +148,42 @@ func TestCallSuccess(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	for _, getOutbound := range newOutbounds {
-		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
-			ServiceName: "caller",
-		}), serverHostPort)
-		require.NoError(t, err)
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+	x, err := NewTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	out := x.NewSingleOutbound(serverHostPort)
+	require.NoError(t, err)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-		defer cancel()
-		res, err := out.Call(
-			ctx,
-			&transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  raw.Encoding,
-				Procedure: "hello",
-				Body:      bytes.NewReader([]byte("world")),
-			},
-		)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	res, err := out.Call(
+		ctx,
+		&transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+			Body:      bytes.NewReader([]byte("world")),
+		},
+	)
 
-		if !assert.NoError(t, err, "failed to make call") {
-			continue
-		}
-
-		assert.Equal(t, false, res.ApplicationError, "not application error")
-
-		foo, ok := res.Headers.Get("foo")
-		assert.True(t, ok, "value for foo expected")
-		assert.Equal(t, "bar", foo, "foo value mismatch")
-
-		body, err := ioutil.ReadAll(res.Body)
-		if assert.NoError(t, err, "failed to read response body") {
-			assert.Equal(t, []byte("great success"), body)
-		}
-
-		assert.NoError(t, res.Body.Close(), "failed to close response body")
+	if !assert.NoError(t, err, "failed to make call") {
+		return
 	}
+
+	assert.Equal(t, false, res.ApplicationError, "not application error")
+
+	foo, ok := res.Headers.Get("foo")
+	assert.True(t, ok, "value for foo expected")
+	assert.Equal(t, "bar", foo, "foo value mismatch")
+
+	body, err := ioutil.ReadAll(res.Body)
+	if assert.NoError(t, err, "failed to read response body") {
+		assert.Equal(t, []byte("great success"), body)
+	}
+
+	assert.NoError(t, res.Body.Close(), "failed to close response body")
 }
 
 func TestCallFailures(t *testing.T) {
@@ -222,9 +206,8 @@ func TestCallFailures(t *testing.T) {
 		}))
 
 	type testCase struct {
-		procedure   string
-		getOutbound func(*tchannel.Channel, string) (transport.UnaryOutbound, error)
-		message     string
+		procedure string
+		message   string
 	}
 
 	tests := []testCase{
@@ -238,19 +221,12 @@ func TestCallFailures(t *testing.T) {
 		},
 	}
 
-	// cross product with newOutbounds
-	newTests := make([]testCase, 0, len(tests)*len(newOutbounds))
 	for _, tt := range tests {
-		for _, getOutbound := range newOutbounds {
-			tt.getOutbound = getOutbound
-			newTests = append(newTests, tt)
-		}
-	}
-	tests = newTests
-
-	for _, tt := range tests {
-		out, err := tt.getOutbound(testutils.NewClient(t, nil), serverHostPort)
+		x, err := NewTransport(ServiceName("caller"))
+		require.NoError(t, x.Start())
+		defer x.Stop()
 		require.NoError(t, err)
+		out := x.NewSingleOutbound(serverHostPort)
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
@@ -304,120 +280,114 @@ func TestCallError(t *testing.T) {
 			assert.NoError(t, err, "failed to write response")
 		}))
 
-	for _, getOutbound := range newOutbounds {
-		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
-			ServiceName: "caller",
-		}), serverHostPort)
-		require.NoError(t, err)
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+	x, err := NewTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	out := x.NewSingleOutbound(serverHostPort)
+	require.NoError(t, out.Start(), "failed to start outbound")
+	defer out.Stop()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-		defer cancel()
-		res, err := out.Call(
-			ctx,
-			&transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  raw.Encoding,
-				Procedure: "hello",
-				Body:      bytes.NewReader([]byte("world")),
-			},
-		)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	res, err := out.Call(
+		ctx,
+		&transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "hello",
+			Body:      bytes.NewReader([]byte("world")),
+		},
+	)
 
-		if !assert.NoError(t, err, "failed to make call") {
-			continue
-		}
-
-		assert.Equal(t, true, res.ApplicationError, "application error")
-
-		body, err := ioutil.ReadAll(res.Body)
-		if assert.NoError(t, err, "failed to read response body") {
-			assert.Equal(t, []byte("such fail"), body)
-		}
-
-		assert.NoError(t, res.Body.Close(), "failed to close response body")
+	if !assert.NoError(t, err, "failed to make call") {
+		return
 	}
+
+	assert.Equal(t, true, res.ApplicationError, "application error")
+
+	body, err := ioutil.ReadAll(res.Body)
+	if assert.NoError(t, err, "failed to read response body") {
+		assert.Equal(t, []byte("such fail"), body)
+	}
+
+	assert.NoError(t, res.Body.Close(), "failed to close response body")
 }
 
 func TestStartMultiple(t *testing.T) {
-	for _, getOutbound := range newOutbounds {
-		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
-			ServiceName: "caller",
-		}), "localhost:4040")
-		require.NoError(t, err)
-		// TODO: If we change Start() to establish a connection to the host, this
-		// hostport will have to be changed to a real server.
+	serverHostPort := "localhost:4040"
+	x, err := NewTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	out := x.NewSingleOutbound(serverHostPort)
+	require.NoError(t, err)
+	// TODO: If we change Start() to establish a connection to the host, this
+	// hostport will have to be changed to a real server.
 
-		var wg sync.WaitGroup
-		signal := make(chan struct{})
+	var wg sync.WaitGroup
+	signal := make(chan struct{})
 
-		for i := 0; i < 10; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				<-signal
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-signal
 
-				err := out.Start()
-				assert.NoError(t, err)
-			}()
-		}
-		close(signal)
-		wg.Wait()
+			err := out.Start()
+			assert.NoError(t, err)
+		}()
 	}
+	close(signal)
+	wg.Wait()
 }
 
 func TestStopMultiple(t *testing.T) {
-	for _, getOutbound := range newOutbounds {
-		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
-			ServiceName: "caller",
-		}), "localhost:4040")
-		require.NoError(t, err)
-		// TODO: If we change Start() to establish a connection to the host, this
-		// hostport will have to be changed to a real server.
+	serverHostPort := "localhost:4040"
+	x, err := NewTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	out := x.NewSingleOutbound(serverHostPort)
+	require.NoError(t, err)
+	// TODO: If we change Start() to establish a connection to the host, this
+	// hostport will have to be changed to a real server.
 
-		require.NoError(t, out.Start())
+	require.NoError(t, out.Start())
 
-		var wg sync.WaitGroup
-		signal := make(chan struct{})
+	var wg sync.WaitGroup
+	signal := make(chan struct{})
 
-		for i := 0; i < 10; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				<-signal
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-signal
 
-				err := out.Stop()
-				assert.NoError(t, err)
-			}()
-		}
-		close(signal)
-		wg.Wait()
+			err := out.Stop()
+			assert.NoError(t, err)
+		}()
 	}
+	close(signal)
+	wg.Wait()
 }
 
 func TestCallWithoutStarting(t *testing.T) {
-	for _, getOutbound := range newOutbounds {
-		out, err := getOutbound(testutils.NewClient(t, &testutils.ChannelOpts{
-			ServiceName: "caller",
-		}), "localhost:4040")
-		require.NoError(t, err)
-		// TODO: If we change Start() to establish a connection to the host, this
-		// hostport will have to be changed to a real server.
+	serverHostPort := "localhost:4040"
+	x, err := NewTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	out := x.NewSingleOutbound(serverHostPort)
+	require.NoError(t, err)
+	// TODO: If we change Start() to establish a connection to the host, this
+	// hostport will have to be changed to a real server.
 
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-		defer cancel()
-		_, err = out.Call(
-			ctx,
-			&transport.Request{
-				Caller:    "caller",
-				Service:   "service",
-				Encoding:  raw.Encoding,
-				Procedure: "foo",
-				Body:      bytes.NewReader([]byte("sup")),
-			},
-		)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_, err = out.Call(
+		ctx,
+		&transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "foo",
+			Body:      bytes.NewReader([]byte("sup")),
+		},
+	)
 
-		assert.Equal(t, errOutboundNotStarted, err)
-	}
+	assert.Equal(t, errOutboundNotStarted, err)
 }

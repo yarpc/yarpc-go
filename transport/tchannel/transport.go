@@ -1,6 +1,7 @@
 package tchannel
 
 import (
+	"fmt"
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
@@ -49,15 +50,18 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 	// Defer the error until Start since NewChannelTransport does not have
 	// an error return.
 	var err error
-	ch := config.ch
 
-	if ch == nil {
-		if config.name == "" {
-			err = errChannelOrServiceNameIsRequired
-		} else {
-			opts := tchannel.ChannelOptions{Tracer: config.tracer}
-			ch, err = tchannel.NewChannel(config.name, &opts)
-		}
+	if config.ch != nil {
+		return nil, fmt.Errorf("NewTransport does not accept WithChannel, use NewChannelTransport")
+	}
+	// if config.name == "" {
+	// 	return nil, errChannelOrServiceNameIsRequired
+	// }
+
+	chopts := tchannel.ChannelOptions{Tracer: config.tracer}
+	ch, err := tchannel.NewChannel(config.name, &chopts)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Transport{
