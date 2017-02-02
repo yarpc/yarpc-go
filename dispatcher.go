@@ -424,7 +424,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 		inbounds = append(inbounds, status)
 	}
 	var outbounds []introspection.OutboundStatus
-	for _, o := range d.outbounds {
+	for outboundKey, o := range d.outbounds {
 		var status introspection.OutboundStatus
 		if o.Unary != nil {
 			if o, ok := o.Unary.(introspection.IntrospectableOutbound); ok {
@@ -443,6 +443,7 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 			status.RPCType = "oneway"
 		}
 		status.Service = o.ServiceName
+		status.OutboundKey = outboundKey
 		outbounds = append(outbounds, status)
 	}
 	return dispatcherStatus{
