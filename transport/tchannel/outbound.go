@@ -158,14 +158,14 @@ func (o *Outbound) Transports() []transport.Transport {
 // Start starts the TChannel outbound.
 func (o *Outbound) Start() error {
 	return o.once.Start(func() error {
-		return nil // Nothing to do
+		return o.chooser.Start()
 	})
 }
 
 // Stop stops the TChannel outbound.
 func (o *Outbound) Stop() error {
 	return o.once.Stop(func() error {
-		return nil // Nothing to do
+		return o.chooser.Stop()
 	})
 }
 

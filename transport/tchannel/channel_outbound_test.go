@@ -110,7 +110,8 @@ func TestChannelOutboundHeaders(t *testing.T) {
 
 							err = writeArgs(call.Response(), []byte{0x00, 0x00}, []byte("bye!"))
 							assert.NoError(t, err, "failed to write response")
-						}))
+						},
+					))
 
 					out, err := constructor.new(testutils.NewClient(t, &testutils.ChannelOpts{
 						ServiceName: "caller",

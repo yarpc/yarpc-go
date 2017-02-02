@@ -37,25 +37,16 @@ func (i *Inbound) Transports() []transport.Transport {
 	return []transport.Transport{i.transport}
 }
 
-// Channel returns the underlying Channel for this Inbound.
-func (i *Inbound) Channel() Channel {
-	return i.transport.ch
-}
-
 // Start starts this Inbound. Note that this does not start listening for
 // connections; that occurs when you start the underlying ChannelTransport is
 // started.
 func (i *Inbound) Start() error {
-	return i.once.Start(func() error {
-		return nil // Nothing to do
-	})
+	return i.once.Start(nil)
 }
 
 // Stop stops the TChannel outbound. This currently does nothing.
 func (i *Inbound) Stop() error {
-	return i.once.Stop(func() error {
-		return nil // Nothing to do
-	})
+	return i.once.Stop(nil)
 }
 
 // IsRunning returns whether the Inbound is running.
