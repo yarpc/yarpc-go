@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.2.0-dev (unreleased)
+v1.2.0 (2017-02-02)
 -----------------------
 
 -   Added heap based PeerList under `peer/x/peerheap`.
