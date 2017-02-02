@@ -4,6 +4,7 @@ Releases
 v1.2.0-dev (unreleased)
 -----------------------
 
+-   Added heap based PeerList under `peer/x/peerheap`.
 -   Added `RouterMiddleware` parameter to `yarpc.Config`, which, if provided,
     will allow customizing routing to handlers.
 -   Added experimental `transports/x/cherami` for transporting RPCs through
