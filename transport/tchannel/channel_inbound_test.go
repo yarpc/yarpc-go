@@ -33,56 +33,24 @@ import (
 )
 
 func TestChannelInboundStartNew(t *testing.T) {
-	tests := []struct {
-		withInbound func(*tchannel.Channel, func(*ChannelInbound))
-	}{
-		{
-			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
-				x, err := NewChannelTransport(WithChannel(ch))
-				require.NoError(t, err)
+	ch, err := tchannel.NewChannel("foo", nil)
+	require.NoError(t, err)
 
-				i := x.NewInbound()
-				i.SetRouter(new(transporttest.MockRouter))
-				// Can't do Equal because we want to match the pointer, not a
-				// DeepEqual.
-				assert.True(t, ch == i.Channel(), "channel does not match")
-				require.NoError(t, i.Start())
-				defer i.Stop()
-				require.NoError(t, x.Start())
-				defer x.Stop()
+	x, err := NewChannelTransport(WithChannel(ch))
+	require.NoError(t, err)
 
-				f(i)
-			},
-		},
-		{
-			func(ch *tchannel.Channel, f func(*ChannelInbound)) {
-				x, err := NewChannelTransport(WithChannel(ch))
-				require.NoError(t, err)
+	i := x.NewInbound()
+	i.SetRouter(new(transporttest.MockRouter))
+	// Can't do Equal because we want to match the pointer, not a
+	// DeepEqual.
+	assert.True(t, ch == i.Channel(), "channel does not match")
+	require.NoError(t, i.Start())
+	require.NoError(t, x.Start())
 
-				i := x.NewInbound()
-				i.SetRouter(new(transporttest.MockRouter))
-				assert.True(t, ch == i.Channel(), "channel does not match")
-				require.NoError(t, i.Start())
-				defer i.Stop()
-				require.NoError(t, x.Start())
-				defer x.Stop()
-
-				f(i)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		ch, err := tchannel.NewChannel("foo", nil)
-		require.NoError(t, err)
-		tt.withInbound(ch, func(i *ChannelInbound) {
-			assert.Equal(t, tchannel.ChannelListening, ch.State())
-			assert.NoError(t, i.Stop())
-			x := i.Transports()[0]
-			assert.NoError(t, x.Stop())
-			assert.Equal(t, tchannel.ChannelClosed, ch.State())
-		})
-	}
+	assert.Equal(t, tchannel.ChannelListening, ch.State())
+	assert.NoError(t, i.Stop())
+	assert.NoError(t, x.Stop())
+	assert.Equal(t, tchannel.ChannelClosed, ch.State())
 }
 
 func TestChannelInboundStartAlreadyListening(t *testing.T) {
@@ -100,6 +68,7 @@ func TestChannelInboundStartAlreadyListening(t *testing.T) {
 	i.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i.Start())
 	require.NoError(t, x.Start())
+	assert.Equal(t, tchannel.ChannelListening, ch.State())
 
 	assert.NoError(t, i.Stop())
 	assert.NoError(t, x.Stop())
