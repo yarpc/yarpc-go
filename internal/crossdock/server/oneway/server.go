@@ -32,6 +32,10 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/x/redis"
+	"go.uber.org/yarpc/transport/x/cherami"
+
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
+	cherami_type "github.com/uber/cherami-thrift/.generated/go/cherami"
 )
 
 var dispatcher *yarpc.Dispatcher
@@ -50,6 +54,42 @@ func Start() {
 		)
 		inbounds = append(inbounds, rds)
 	}
+
+	destination := `/test/dest`
+	consumerGroup := `/test/dest_cg`
+	consumedRetention := int32(300)
+	unconsumedRetention := int32(600)
+	cheramiClient, err := cherami_client.NewClient(`example`, `172.18.0.9`, 4922, nil)
+	if err != nil {
+		return
+	}
+
+	_, err = cheramiClient.CreateDestination(&cherami_type.CreateDestinationRequest{
+		Path: &destination,
+		ConsumedMessagesRetention:   &consumedRetention,
+		UnconsumedMessagesRetention: &unconsumedRetention,
+	})
+	if err != nil {
+		return
+	}
+
+	_, err = cheramiClient.CreateConsumerGroup(&cherami_type.CreateConsumerGroupRequest{
+		DestinationPath: &destination,
+		ConsumerGroupName: &consumerGroup,
+	})
+	if err != nil {
+		return
+	}
+
+	transport := cherami.NewTransport(cheramiClient)
+	if err := transport.Start(); err != nil {
+		return
+	}
+
+	inbounds = append(inbounds, transport.NewInbound(cherami.InboundConfig{
+			Destination: `/test/dest`,
+			ConsumerGroup: `/test/dest_cg`,
+		}))
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name:     "oneway-server",

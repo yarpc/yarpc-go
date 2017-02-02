@@ -11,8 +11,10 @@ services:
             - python
             - python-sync
             - redis
+            - cherami
         environment:
-            - WAIT_FOR=go,node,python,python-sync
+            - WAIT_FOR=go,node,python,python-sync,cherami
+            - WAIT_FOR_TIMEOUT=60s
 
             - AXIS_CLIENT=go,node,python,python-sync
             - AXIS_SERVER=go,node,python
@@ -30,7 +32,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis
+            - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
@@ -92,3 +94,9 @@ services:
         image: redis
         ports:
             - 6379
+
+    cherami:
+        dns_search: .
+        image: datoug/cherami-server
+        ports:
+            - 8080
