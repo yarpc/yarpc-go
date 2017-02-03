@@ -144,7 +144,7 @@ crossdock:
 	docker-compose kill go
 	docker-compose rm -f go
 	docker-compose build go
-	docker-compose run crossdock
+	docker-compose up crossdock
 
 
 .PHONY: crossdock-fresh
@@ -153,7 +153,7 @@ crossdock-fresh: install
 	docker-compose rm --force
 	docker-compose pull
 	docker-compose build
-	docker-compose run crossdock
+	docker-compose up crossdock
 
 .PHONY: docker-build
 docker-build:

@@ -23,6 +23,7 @@ package oneway
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -34,8 +35,8 @@ import (
 	"go.uber.org/yarpc/transport/x/redis"
 	"go.uber.org/yarpc/transport/x/cherami"
 
-	cherami_client "github.com/uber/cherami-client-go/client/cherami"
-	cherami_type "github.com/uber/cherami-thrift/.generated/go/cherami"
+	 cherami_client "github.com/uber/cherami-client-go/client/cherami"
+	 cherami_type "github.com/uber/cherami-thrift/.generated/go/cherami"
 )
 
 var dispatcher *yarpc.Dispatcher
@@ -59,8 +60,9 @@ func Start() {
 	consumerGroup := `/test/dest_cg`
 	consumedRetention := int32(300)
 	unconsumedRetention := int32(600)
-	cheramiClient, err := cherami_client.NewClient(`example`, `172.18.0.9`, 4922, nil)
+	cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
 	if err != nil {
+		log.Println(`error creating cherami client %v`, err)
 		return
 	}
 
@@ -69,7 +71,8 @@ func Start() {
 		ConsumedMessagesRetention:   &consumedRetention,
 		UnconsumedMessagesRetention: &unconsumedRetention,
 	})
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
+		log.Println(`error creating destination %v`, err)
 		return
 	}
 
@@ -77,18 +80,20 @@ func Start() {
 		DestinationPath: &destination,
 		ConsumerGroupName: &consumerGroup,
 	})
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
+		log.Println(`error creating consumer group %v`, err)
 		return
 	}
 
-	transport := cherami.NewTransport(cheramiClient)
-	if err := transport.Start(); err != nil {
+	cheramiTransport := cherami.NewTransport(cheramiClient)
+	if err := cheramiTransport.Start(); err != nil {
+		log.Println(`error starting cherami transport`)
 		return
 	}
 
-	inbounds = append(inbounds, transport.NewInbound(cherami.InboundConfig{
-			Destination: `/test/dest`,
-			ConsumerGroup: `/test/dest_cg`,
+	inbounds = append(inbounds, cheramiTransport.NewInbound(cherami.InboundConfig{
+			Destination: destination,
+			ConsumerGroup: consumerGroup,
 		}))
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{

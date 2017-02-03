@@ -89,7 +89,7 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 			"yarpc/oneway",
 		)
 	case "cherami":
-		cheramiClient, err := cherami_client.NewClient(`example`, `172.18.0.9`, 4922, nil)
+		cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
 		fatals.NoError(err, "couldn't create cherami client")
 
 		transport := cherami.NewTransport(cheramiClient)
