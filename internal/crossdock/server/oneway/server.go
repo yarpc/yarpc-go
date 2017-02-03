@@ -32,11 +32,11 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 	"go.uber.org/yarpc/transport/http"
-	"go.uber.org/yarpc/transport/x/redis"
 	"go.uber.org/yarpc/transport/x/cherami"
+	"go.uber.org/yarpc/transport/x/redis"
 
-	 cherami_client "github.com/uber/cherami-client-go/client/cherami"
-	 cherami_type "github.com/uber/cherami-thrift/.generated/go/cherami"
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
+	cherami_type "github.com/uber/cherami-thrift/.generated/go/cherami"
 )
 
 var dispatcher *yarpc.Dispatcher
@@ -56,45 +56,47 @@ func Start() {
 		inbounds = append(inbounds, rds)
 	}
 
-	destination := `/test/dest`
-	consumerGroup := `/test/dest_cg`
-	consumedRetention := int32(300)
-	unconsumedRetention := int32(600)
-	cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
-	if err != nil {
-		log.Println(`error creating cherami client %v`, err)
-		return
-	}
+	if useCherami() {
+		destination := `/test/dest`
+		consumerGroup := `/test/dest_cg`
+		consumedRetention := int32(300)
+		unconsumedRetention := int32(600)
+		cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
+		if err != nil {
+			log.Println(`error creating cherami client %v`, err)
+			return
+		}
 
-	_, err = cheramiClient.CreateDestination(&cherami_type.CreateDestinationRequest{
-		Path: &destination,
-		ConsumedMessagesRetention:   &consumedRetention,
-		UnconsumedMessagesRetention: &unconsumedRetention,
-	})
-	if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
-		log.Println(`error creating destination %v`, err)
-		return
-	}
+		_, err = cheramiClient.CreateDestination(&cherami_type.CreateDestinationRequest{
+			Path: &destination,
+			ConsumedMessagesRetention:   &consumedRetention,
+			UnconsumedMessagesRetention: &unconsumedRetention,
+		})
+		if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
+			log.Println(`error creating destination %v`, err)
+			return
+		}
 
-	_, err = cheramiClient.CreateConsumerGroup(&cherami_type.CreateConsumerGroupRequest{
-		DestinationPath: &destination,
-		ConsumerGroupName: &consumerGroup,
-	})
-	if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
-		log.Println(`error creating consumer group %v`, err)
-		return
-	}
+		_, err = cheramiClient.CreateConsumerGroup(&cherami_type.CreateConsumerGroupRequest{
+			DestinationPath:   &destination,
+			ConsumerGroupName: &consumerGroup,
+		})
+		if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
+			log.Println(`error creating consumer group %v`, err)
+			return
+		}
 
-	cheramiTransport := cherami.NewTransport(cheramiClient)
-	if err := cheramiTransport.Start(); err != nil {
-		log.Println(`error starting cherami transport`)
-		return
-	}
+		cheramiTransport := cherami.NewTransport(cheramiClient)
+		if err := cheramiTransport.Start(); err != nil {
+			log.Println(`error starting cherami transport`)
+			return
+		}
 
-	inbounds = append(inbounds, cheramiTransport.NewInbound(cherami.InboundConfig{
-			Destination: destination,
+		inbounds = append(inbounds, cheramiTransport.NewInbound(cherami.InboundConfig{
+			Destination:   destination,
 			ConsumerGroup: consumerGroup,
 		}))
+	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name:     "oneway-server",
@@ -127,4 +129,10 @@ func Stop() {
 // available
 func useRedis() bool {
 	return os.Getenv("REDIS") == "enabled"
+}
+
+// useCherami checks to see if a cherami server is expected to be
+// available
+func useCherami() bool {
+	return os.Getenv("CHERAMI") == "enabled"
 }

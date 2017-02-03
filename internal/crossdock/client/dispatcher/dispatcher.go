@@ -29,8 +29,8 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/transport/x/redis"
 	"go.uber.org/yarpc/transport/x/cherami"
+	"go.uber.org/yarpc/transport/x/redis"
 
 	"github.com/crossdock/crossdock-go"
 	cherami_client "github.com/uber/cherami-client-go/client/cherami"

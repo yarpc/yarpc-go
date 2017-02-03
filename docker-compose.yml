@@ -69,6 +69,7 @@ services:
             - "8080-8088"
         environment:
             - REDIS=enabled
+            - CHERAMI=enabled
 
     node:
         dns_search: .
