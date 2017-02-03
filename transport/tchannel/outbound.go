@@ -173,3 +173,24 @@ func (o *Outbound) Stop() error {
 func (o *Outbound) IsRunning() bool {
 	return o.once.IsRunning()
 }
+
+// Introspect returns basic status about this outbound.
+func (o *Outbound) Introspect() introspection.OutboundStatus {
+	state := "Stopped"
+	if o.IsRunning() {
+		state = "Running"
+	}
+	var chooser introspection.ChooserStatus
+	if i, ok := o.chooser.(introspection.IntrospectableChooser); ok {
+		chooser = i.Introspect()
+	} else {
+		chooser = introspection.ChooserStatus{
+			Name: "Introspection not available",
+		}
+	}
+	return introspection.OutboundStatus{
+		Transport: "tchannel",
+		State:     state,
+		Chooser:   chooser,
+	}
+}

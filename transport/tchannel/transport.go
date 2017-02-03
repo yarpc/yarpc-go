@@ -6,7 +6,6 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/introspection"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
 
@@ -200,16 +199,4 @@ func (t *Transport) stop() error {
 // IsRunning returns whether the TChannel transport is running.
 func (t *Transport) IsRunning() bool {
 	return t.once.IsRunning()
-}
-
-// Introspect returns basic status about this outbound.
-func (o *Outbound) Introspect() introspection.OutboundStatus {
-	state := "Stopped"
-	if o.IsRunning() {
-		state = "Running"
-	}
-	return introspection.OutboundStatus{
-		Transport: "tchannel",
-		State:     state,
-	}
 }
