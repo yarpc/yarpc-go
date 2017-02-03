@@ -44,8 +44,8 @@ var errChannelOrServiceNameIsRequired = errors.New(
 // TChannel (with the WithChannel option) MUST be specified.
 //
 // ChannelTransport uses the underlying TChannel Channel for load balancing
-// and peer managament. A future version of YARPC will include support for
-// peer.Chooser-based TChannel transports.
+// and peer managament.
+// Use NewTransport and its NewOutbound to support YARPC peer.Choosers.
 func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 	var config transportConfig
 	config.tracer = opentracing.GlobalTracer()
@@ -77,6 +77,8 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 
 // ChannelTransport maintains TChannel peers and creates inbounds and outbounds for
 // TChannel.
+// If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
+// instead.
 type ChannelTransport struct {
 	ch     Channel
 	name   string
@@ -147,8 +149,9 @@ func (t *ChannelTransport) start() error {
 }
 
 // Stop stops the TChannel transport. It starts rejecting incoming requests
-// and draining connections before closing them. Stop blocks until the
-// underlying channel has closed completely.
+// and draining connections before closing them.
+// In a future version of YARPC, Stop will block until the underlying channel
+// has closed completely.
 func (t *ChannelTransport) Stop() error {
 	return t.once.Stop(t.stop)
 }

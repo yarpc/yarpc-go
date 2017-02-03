@@ -4,7 +4,20 @@ Releases
 v1.3.0-dev (unreleased)
 -----------------------
 
--   No changes yet.
+-   Added a `tchannel.NewTransport`. The new transport, a replacement for the
+    temporary `tchannel.NewChannelTransport`, supports YARPC peer choosers.
+
+    ```go
+    transport, err := tchannel.NewTransport(tchannel.ServiceName("keyvalue"))
+    chooser := peerheap.New(transport)
+    outbound := transport.NewOutbound(chooser)
+    ```
+
+    The new transport hides the implementation of TChannel entirely to give us
+    flexibility going forward to relieve TChannel of all RPC-related
+    responsibilities, leaving only the wire protocol at its core.
+    As a consequence, you cannot thread an existing Channel through this
+    transport.
 
 v1.2.0 (2017-02-02)
 -----------------------

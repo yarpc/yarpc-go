@@ -40,6 +40,7 @@ type Channel interface {
 	GetSubChannel(serviceName string, opts ...tchannel.SubChannelOption) *tchannel.SubChannel
 	ListenAndServe(hostPort string) error
 	PeerInfo() tchannel.LocalPeerInfo
+	RootPeers() *tchannel.RootPeerList
 	ServiceName() string
 	State() tchannel.ChannelState
 }

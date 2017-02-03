@@ -58,8 +58,10 @@ func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 }
 
 // ChannelOutbound sends YARPC requests over TChannel. It may be constructed
-// using the NewOutbound or NewSingleOutbound methods on the TChannel
-// Transport.
+// using the NewOutbound or NewSingleOutbound methods on the
+// tchannel.ChannelTransport.
+// If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
+// instead (instead of the tchannel.ChannelTransport).
 type ChannelOutbound struct {
 	channel   Channel
 	transport *ChannelTransport
