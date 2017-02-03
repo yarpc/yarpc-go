@@ -68,7 +68,7 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 		addr:   config.addr,
 		tracer: config.tracer,
 		peers:  make(map[string]*hostport.Peer),
-	}, err
+	}, nil
 }
 
 // ListenAddr exposes the listen address of the transport.

@@ -10,7 +10,7 @@ v1.3.0-dev (unreleased)
     ```go
     transport, err := tchannel.NewTransport(tchannel.ServiceName("keyvalue"))
     chooser := peerheap.New(transport)
-    outbound := x.NewOutbound(chooser)
+    outbound := transport.NewOutbound(chooser)
     ```
 
     The new transport hides the implementation of TChannel entirely to give us
