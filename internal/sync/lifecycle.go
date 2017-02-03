@@ -21,6 +21,8 @@
 package sync
 
 import (
+	"context"
+	"errors"
 	"sync"
 
 	"go.uber.org/atomic"
@@ -53,6 +55,10 @@ const (
 	Errored
 )
 
+// ErrAlreadyStopped is an error that indicates that WaitForStart returned
+// early because the component has already stopped.
+var ErrAlreadyStopped = errors.New("component has stopped")
+
 // LifecycleOnce is a helper for implementing transport.Lifecycles
 // with similar behavior.
 type LifecycleOnce struct {
@@ -70,6 +76,37 @@ type LifecycleOnce struct {
 	state    atomic.Int32
 	startErr error
 	stopErr  error
+	started  chan struct{}
+}
+
+// WaitForStart blocks until the lifecycle has started, or the context expires.
+// Returns context.DeadlineExceeded if the context expires first.
+// Returns sync.AlreadyStopped if the lifecycle has already stopped.
+func (l *LifecycleOnce) WaitForStart(ctx context.Context) error {
+	state := LifecycleState(l.state.Load())
+	// Fast success in the common case
+	if state == Running {
+		return nil
+	}
+	// Fast fail if we ran already
+	if state > Running {
+		return ErrAlreadyStopped
+	}
+
+	// Create a started channel if none exists. Do so in a lock so we're not
+	// racing Start to set up for blocking.
+	l.lock.Lock()
+	if l.started == nil {
+		l.started = make(chan struct{}, 0)
+	}
+	l.lock.Unlock()
+
+	select {
+	case <-l.started:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // Start will run the `f` function once and return the error.
@@ -83,21 +120,23 @@ func (l *LifecycleOnce) Start(f func() error) error {
 	// called the start function already, or called the stop function
 	// in which case we should exit now and return the result of the
 	// last start command (or nil).
-	if LifecycleState(l.state.Load()) != Idle {
+	if state := LifecycleState(l.state.Load()); state != Idle {
 		return l.startErr
 	}
 
-	// Set a nil function to an empty function
-	if f == nil {
-		f = func() error { return nil }
-	}
-
 	l.state.Store(int32(Starting))
-	l.startErr = f()
+	if f != nil {
+		l.startErr = f()
+	}
 	if l.startErr == nil {
 		l.state.Store(int32(Running))
 	} else {
 		l.state.Store(int32(Errored))
+	}
+
+	// Unblock WaitForStart callers, if there are any.
+	if l.started != nil {
+		close(l.started)
 	}
 
 	return l.startErr
@@ -115,12 +154,15 @@ func (l *LifecycleOnce) Stop(f func() error) error {
 		return l.stopErr
 	}
 
-	if f == nil {
-		f = func() error { return nil }
+	// Unblock WaitForStart callers (ccounting Stop() without Start())
+	if l.started != nil {
+		close(l.started)
 	}
 
 	l.state.Store(int32(Stopping))
-	l.stopErr = f()
+	if f != nil {
+		l.stopErr = f()
+	}
 	if l.stopErr == nil {
 		l.state.Store(int32(Stopped))
 	} else {
