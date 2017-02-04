@@ -9,7 +9,6 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	yerrors "go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -90,7 +89,7 @@ func TestPeerHeapList(t *testing.T) {
 				StartAction{},
 				StopAction{},
 				ChooseAction{
-					ExpectedErr:         sync.ErrAlreadyStopped,
+					ExpectedErr:         context.DeadlineExceeded,
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},

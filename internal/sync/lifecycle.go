@@ -22,17 +22,12 @@ package sync
 
 import (
 	"context"
-	"errors"
 
 	"go.uber.org/atomic"
 )
 
 // LifecycleState represents `states` that a lifecycle object can be in.
 type LifecycleState int
-
-// ErrAlreadyStopped is returned by WhenRunning to escape early if a lifecycle
-// has ended already.
-var ErrAlreadyStopped = errors.New("already stopped")
 
 const (
 	// Idle indicates the Lifecycle hasn't been operated on yet.
@@ -127,7 +122,7 @@ func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
 	case <-l.startCh:
 		return nil
 	case <-l.stopCh:
-		return ErrAlreadyStopped
+		return context.DeadlineExceeded
 	case <-ctx.Done():
 		return ctx.Err()
 	}

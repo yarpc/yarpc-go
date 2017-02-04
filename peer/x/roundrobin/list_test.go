@@ -221,11 +221,11 @@ func TestRoundRobinList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
-					ExpectedErr:         peer.ErrPeerListNotStarted("RoundRobinList"),
+					ExpectedErr:         context.DeadlineExceeded,
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 				ChooseAction{
-					ExpectedErr:         peer.ErrPeerListNotStarted("RoundRobinList"),
+					ExpectedErr:         context.DeadlineExceeded,
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},

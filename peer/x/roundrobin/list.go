@@ -211,7 +211,7 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 // Choose selects the next available peer in the round robin
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if err := pl.once.WhenRunning(ctx); err != nil {
-		return nil, nil, peer.ErrPeerListNotStarted("RoundRobinList")
+		return nil, nil, err
 	}
 
 	for {
