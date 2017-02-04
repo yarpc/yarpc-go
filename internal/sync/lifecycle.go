@@ -51,7 +51,14 @@ const (
 
 // LifecycleOnce is a helper for implementing transport.Lifecycles
 // with similar behavior.
-type LifecycleOnce struct {
+type LifecycleOnce interface {
+	Start(func() error) error
+	Stop(func() error) error
+	LifecycleState() LifecycleState
+	IsRunning() bool
+}
+
+type lifecycleOnce struct {
 	starting atomic.Bool
 	started  atomic.Bool
 	startCh  chan struct{}
@@ -63,9 +70,15 @@ type LifecycleOnce struct {
 	stopErr  error
 }
 
-// Once returns an initialized lifecycle.
+// Once returns a lifecycle controller.
+// 0. The observable lifecycle state must only go forward from birth to death.
+// 1. Start() must block until the state is >= Running
+// 2. Stop() must block until the state is >= Stopped
+// 3. Stop() must pre-empt Start() if it occurs first
+// 4. Start() and Stop() may be backed by a do actual work function, and that
+//    function must be called at most once.
 func Once() LifecycleOnce {
-	return LifecycleOnce{
+	return &lifecycleOnce{
 		startCh: make(chan struct{}, 0),
 		stopCh:  make(chan struct{}, 0),
 	}
@@ -74,7 +87,7 @@ func Once() LifecycleOnce {
 // Start will run the `f` function once and return the error.
 // If Start is called multiple times it will return the error
 // from the first time it was called.
-func (l *LifecycleOnce) Start(f func() error) error {
+func (l *lifecycleOnce) Start(f func() error) error {
 	if l.starting.Swap(true) {
 		<-l.startCh
 		return l.startErr
@@ -98,7 +111,7 @@ func (l *LifecycleOnce) Start(f func() error) error {
 // Stop will run the `f` function once and return the error.
 // If Stop is called multiple times it will return the error
 // from the first time it was called.
-func (l *LifecycleOnce) Stop(f func() error) error {
+func (l *lifecycleOnce) Stop(f func() error) error {
 	if l.stopping.Swap(true) {
 		<-l.stopCh
 		return l.stopErr
@@ -129,7 +142,7 @@ func (l *LifecycleOnce) Stop(f func() error) error {
 // start to full stop.
 // The function only guarantees that the lifecycle has at least passed through
 // the returned state and may have progressed further in the intervening time.
-func (l *LifecycleOnce) LifecycleState() LifecycleState {
+func (l *lifecycleOnce) LifecycleState() LifecycleState {
 	switch {
 	case l.errored.Load():
 		return Errored
@@ -147,6 +160,6 @@ func (l *LifecycleOnce) LifecycleState() LifecycleState {
 }
 
 // IsRunning will return true if current state of the Lifecycle is running
-func (l *LifecycleOnce) IsRunning() bool {
+func (l *lifecycleOnce) IsRunning() bool {
 	return l.LifecycleState() == Running
 }

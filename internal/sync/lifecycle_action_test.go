@@ -32,7 +32,7 @@ import (
 // LifecycleAction defines actions that can be applied to a Lifecycle
 type LifecycleAction interface {
 	// Apply runs a function on the PeerList and asserts the result
-	Apply(*testing.T, *LifecycleOnce)
+	Apply(*testing.T, LifecycleOnce)
 }
 
 // StartAction is an action for testing LifecycleOnce.Start
@@ -44,7 +44,7 @@ type StartAction struct {
 }
 
 // Apply runs "Start" on the LifecycleOnce and validates the error
-func (a StartAction) Apply(t *testing.T, l *LifecycleOnce) {
+func (a StartAction) Apply(t *testing.T, l LifecycleOnce) {
 	err := l.Start(func() error {
 		if a.Wait > 0 {
 			time.Sleep(a.Wait)
@@ -65,7 +65,7 @@ type StopAction struct {
 }
 
 // Apply runs "Stop" on the LifecycleOnce and validates the error
-func (a StopAction) Apply(t *testing.T, l *LifecycleOnce) {
+func (a StopAction) Apply(t *testing.T, l LifecycleOnce) {
 	err := l.Stop(func() error {
 		if a.Wait > 0 {
 			time.Sleep(a.Wait)
@@ -83,7 +83,7 @@ type GetStateAction struct {
 }
 
 // Apply Checks the state on the LifecycleOnce
-func (a GetStateAction) Apply(t *testing.T, l *LifecycleOnce) {
+func (a GetStateAction) Apply(t *testing.T, l LifecycleOnce) {
 	assert.Equal(t, a.ExpectedState, l.LifecycleState())
 }
 
@@ -98,7 +98,7 @@ type ConcurrentAction struct {
 
 // Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
 // between each action. Returns when all actions have finished executing
-func (a ConcurrentAction) Apply(t *testing.T, l *LifecycleOnce) {
+func (a ConcurrentAction) Apply(t *testing.T, l LifecycleOnce) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(a.Actions))
@@ -117,7 +117,7 @@ func (a ConcurrentAction) Apply(t *testing.T, l *LifecycleOnce) {
 }
 
 // ApplyLifecycleActions runs all the LifecycleActions on the LifecycleOnce
-func ApplyLifecycleActions(t *testing.T, l *LifecycleOnce, actions []LifecycleAction) {
+func ApplyLifecycleActions(t *testing.T, l LifecycleOnce, actions []LifecycleAction) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
 			action.Apply(t, l)

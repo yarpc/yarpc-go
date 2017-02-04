@@ -236,7 +236,7 @@ func TestLifecycleOnce(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			once := Once()
-			ApplyLifecycleActions(t, &once, tt.actions)
+			ApplyLifecycleActions(t, once, tt.actions)
 
 			assert.Equal(t, tt.expectedFinalState, once.LifecycleState())
 		})
