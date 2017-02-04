@@ -137,13 +137,13 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 		return l.stopErr
 	}
 
-	// Pre-empt start
 	if !l.starting.Swap(true) {
+		// Was not already starting:
+		// Pre-empt start
 		l.started.Store(true)
 		close(l.startCh)
-	}
-
-	if l.started.Swap(true) {
+	} else if l.started.Swap(true) {
+		// Starting, but not yet started:
 		// Wait for concurrent start to finish
 		<-l.startCh
 	}
