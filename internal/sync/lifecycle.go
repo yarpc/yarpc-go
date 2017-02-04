@@ -64,15 +64,36 @@ type LifecycleOnce interface {
 }
 
 type lifecycleOnce struct {
+	// startCh closes to allow goroutines to resume after the lifecycle is in
+	// the Running state or beyond.
+	startCh chan struct{}
+	// stopCh closes to allow goroutines to resume after the lifecycle is in
+	// the Stopped state or Errored.
+	stopCh chan struct{}
+	// err is the error, if any, that Start() or Stop() returned and all
+	// subsequent Start() or Stop() calls will return. The right to set
+	// err is conferred to whichever goroutine is starting or stopping, until
+	// it has started or stopped, after which `err` becomes immutable.
+	err error
+	// starting indicates that the lifecycle is at least starting.
+	// Losing the race to set "starting" means that your goroutine must block
+	// on "startCh".
 	starting atomic.Bool
-	started  atomic.Bool
-	startCh  chan struct{}
+	// started indicates that the lifecycle is at least running.
+	// Winning the race to set "started" means that the goroutine must close
+	// "startCh".
+	started atomic.Bool
+	// stopping indicates that the lifecycle is at least stopping.
+	// Losing the race to set "stopping" means that the goroutine must block on
+	// "stopCh".
 	stopping atomic.Bool
-	stopped  atomic.Bool
-	stopCh   chan struct{}
-	errored  atomic.Bool
-	startErr error
-	stopErr  error
+	// stopped indicates that the lifecycle is at least stopped.
+	// Winning the race to set "stopped" means that the goroutine must close
+	// "stopCh".
+	stopped atomic.Bool
+	// errored indicates that the lifecycle produced an error either while
+	// starting or stopping.
+	errored atomic.Bool
 }
 
 // Once returns a lifecycle controller.
@@ -95,13 +116,13 @@ func Once() LifecycleOnce {
 func (l *lifecycleOnce) Start(f func() error) error {
 	if l.starting.Swap(true) {
 		<-l.startCh
-		return l.startErr
+		return l.err
 	}
 	if f != nil {
-		l.startErr = f()
+		l.err = f()
 	}
 	// skip forward to error state
-	if l.startErr != nil {
+	if l.err != nil {
 		l.errored.Store(true)
 		l.stopped.Store(true)
 		l.stopping.Store(true)
@@ -110,7 +131,7 @@ func (l *lifecycleOnce) Start(f func() error) error {
 	l.started.Store(true)
 	close(l.startCh)
 
-	return l.startErr
+	return l.err
 }
 
 func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
@@ -134,7 +155,7 @@ func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
 func (l *lifecycleOnce) Stop(f func() error) error {
 	if l.stopping.Swap(true) {
 		<-l.stopCh
-		return l.stopErr
+		return l.err
 	}
 
 	if !l.starting.Swap(true) {
@@ -149,13 +170,13 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 	}
 
 	if f != nil {
-		l.stopErr = f()
+		l.err = f()
 	}
-	l.errored.Store(l.stopErr != nil)
+	l.errored.Store(l.err != nil)
 	l.stopped.Store(true)
 	close(l.stopCh)
 
-	return l.stopErr
+	return l.err
 }
 
 // LifecycleState returns the state of the object within its life cycle, from
