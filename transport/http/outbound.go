@@ -75,6 +75,7 @@ func URLTemplate(template string) OutboundOption {
 // is called.
 func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
+		once:        sync.Once(),
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,

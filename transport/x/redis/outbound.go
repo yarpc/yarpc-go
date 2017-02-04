@@ -54,6 +54,7 @@ type Outbound struct {
 // queueKey - key for the queue in redis
 func NewOnewayOutbound(client Client, queueKey string) *Outbound {
 	return &Outbound{
+		once:     sync.Once(),
 		client:   client,
 		tracer:   opentracing.GlobalTracer(),
 		queueKey: queueKey,

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -137,7 +138,67 @@ func TestLifecycleOnce(t *testing.T) {
 			expectedFinalState: Stopped,
 		},
 		{
-			msg: "Stress test",
+			msg: "Pre-empting start after stop",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StopAction{
+							Wait:          10 * time.Millisecond,
+							ExpectedState: Stopped,
+						},
+						StartAction{
+							Err:           fmt.Errorf("start action should not run"),
+							Wait:          500 * time.Second,
+							ExpectedState: Stopped,
+						},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Overlapping start after stop",
+			// ms: timeline
+			// 00: 0: start.............starting
+			// 20: |  1: stop
+			// 40: X..|.................running
+			// "":    | (wait 20)       stopping
+			// 60:    X.................stopped
+			// 80:       2: start
+			//           X
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Wait:          40 * time.Millisecond,
+							ExpectedState: Running,
+						},
+						StopAction{
+							Wait:          20 * time.Millisecond,
+							ExpectedState: Stopped,
+						},
+						StartAction{
+							Wait:          20 * time.Millisecond,
+							ExpectedState: Stopped,
+						},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Start completes before overlapping stop completes",
+			// ms: timeline
+			// 00: 0: start.............starting
+			// 10: |  1: start
+			// 20: |  |  2: stop
+			// 30: |  |  | 3: start
+			// 40: |  |  | |  4: stop
+			// 40: X  X  | X  |..........running
+			//           |    |..........stopping
+			// 60:       X    X..........stopped
 			actions: []LifecycleAction{
 				ConcurrentAction{
 					Actions: []LifecycleAction{
@@ -155,7 +216,7 @@ func TestLifecycleOnce(t *testing.T) {
 						},
 						StartAction{
 							Wait:          40 * time.Millisecond,
-							ExpectedState: Stopped,
+							ExpectedState: Running,
 						},
 						StopAction{
 							Wait:          40 * time.Millisecond,
@@ -174,10 +235,10 @@ func TestLifecycleOnce(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			once := &LifecycleOnce{}
-			ApplyLifecycleActions(t, once, tt.actions)
+			once := Once()
+			ApplyLifecycleActions(t, &once, tt.actions)
 
-			assert.Equal(t, tt.expectedFinalState, LifecycleState(once.state.Load()))
+			assert.Equal(t, tt.expectedFinalState, once.LifecycleState())
 		})
 	}
 }

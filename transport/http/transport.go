@@ -71,6 +71,7 @@ func NewTransport(opts ...TransportOption) *Transport {
 	}
 
 	return &Transport{
+		once:   intsync.Once(),
 		client: buildClient(&cfg),
 		peers:  make(map[string]*hostport.Peer),
 		tracer: cfg.tracer,

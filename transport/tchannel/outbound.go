@@ -32,6 +32,7 @@ type Outbound struct {
 // request using the given peer chooser.
 func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
+		once:      intsync.Once(),
 		transport: t,
 		chooser:   chooser,
 	}

@@ -42,6 +42,7 @@ var (
 // channel to make requests to any connected peer.
 func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 	return &ChannelOutbound{
+		once:      sync.Once(),
 		channel:   t.ch,
 		transport: t,
 	}
@@ -51,6 +52,7 @@ func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 // channel to a specific peer.
 func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 	return &ChannelOutbound{
+		once:      sync.Once(),
 		channel:   t.ch,
 		transport: t,
 		addr:      addr,

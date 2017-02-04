@@ -46,6 +46,7 @@ func (pl *List) Stop() error {
 // New returns a new peer heap-chooser-list for the given transport.
 func New(transport peer.Transport) *List {
 	return &List{
+		once:               ysync.Once(),
 		transport:          transport,
 		byIdentifier:       make(map[string]*peerScore),
 		peerAvailableEvent: make(chan struct{}, 1),

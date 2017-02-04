@@ -36,13 +36,13 @@ const defaultCapacity = 10
 
 // New creates a new round robin PeerList
 func New(transport peer.Transport) *List {
-	rr := &List{
+	return &List{
+		once:               ysync.Once(),
 		unavailablePeers:   make(map[string]peer.Peer, defaultCapacity),
 		availablePeerRing:  NewPeerRing(defaultCapacity),
 		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
-	return rr
 }
 
 // List is a PeerList which rotates which peers are to be selected in a circle

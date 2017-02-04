@@ -52,7 +52,8 @@ func (a StartAction) Apply(t *testing.T, l *LifecycleOnce) {
 		return a.Err
 	})
 	assert.Equal(t, a.ExpectedErr, err)
-	assert.Equal(t, a.ExpectedState, LifecycleState(l.state.Load()))
+	state := l.LifecycleState()
+	assert.True(t, a.ExpectedState <= state, "expected %v (or more advanced), got %v after start", a.ExpectedState, state)
 }
 
 // StopAction is an action for testing LifecycleOnce.Stop
@@ -73,7 +74,7 @@ func (a StopAction) Apply(t *testing.T, l *LifecycleOnce) {
 	})
 
 	assert.Equal(t, a.ExpectedErr, err)
-	assert.Equal(t, a.ExpectedState, LifecycleState(l.state.Load()))
+	assert.Equal(t, a.ExpectedState, l.LifecycleState())
 }
 
 // GetStateAction is an action for checking the LifecycleOnce's state
@@ -83,10 +84,13 @@ type GetStateAction struct {
 
 // Apply Checks the state on the LifecycleOnce
 func (a GetStateAction) Apply(t *testing.T, l *LifecycleOnce) {
-	assert.Equal(t, a.ExpectedState, LifecycleState(l.state.Load()))
+	assert.Equal(t, a.ExpectedState, l.LifecycleState())
 }
 
-// ConcurrentAction will run a series of actions in parallel
+// ConcurrentAction executes a plan of actions, with a given interval between
+// applying actions, but allowing every action to run concurrently in a
+// goroutine until its independent completion time.
+// The ConcurrentAction allows us to observe overlapping actions.
 type ConcurrentAction struct {
 	Actions []LifecycleAction
 	Wait    time.Duration

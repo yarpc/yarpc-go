@@ -79,6 +79,7 @@ func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 		config.Timeout = defaultCheramiTimeout
 	}
 	return &Inbound{
+		once:          sync.Once(),
 		transport:     t,
 		config:        config,
 		tracer:        t.tracer,

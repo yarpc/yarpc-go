@@ -62,6 +62,7 @@ func (r receipt) String() string {
 // NewOutbound builds a new cherami outbound.
 func (t *Transport) NewOutbound(config OutboundConfig) *Outbound {
 	return &Outbound{
+		once:          sync.Once(),
 		transport:     t,
 		config:        config,
 		tracer:        t.tracer,

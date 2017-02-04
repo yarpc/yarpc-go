@@ -64,6 +64,7 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 	}
 
 	return &Transport{
+		once:   intsync.Once(),
 		ch:     ch,
 		addr:   config.addr,
 		tracer: config.tracer,

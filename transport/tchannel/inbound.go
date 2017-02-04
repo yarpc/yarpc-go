@@ -20,6 +20,7 @@ type Inbound struct {
 // locally- and remotely-initiated persistent connections.
 func (t *Transport) NewInbound() *Inbound {
 	return &Inbound{
+		once:      sync.Once(),
 		transport: t,
 	}
 }
