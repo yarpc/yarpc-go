@@ -20,10 +20,19 @@
 
 package sync
 
-import "go.uber.org/atomic"
+import (
+	"context"
+	"errors"
+
+	"go.uber.org/atomic"
+)
 
 // LifecycleState represents `states` that a lifecycle object can be in.
 type LifecycleState int
+
+// ErrAlreadyStopped is returned by WhenRunning to escape early if a lifecycle
+// has ended already.
+var ErrAlreadyStopped = errors.New("already stopped")
 
 const (
 	// Idle indicates the Lifecycle hasn't been operated on yet.
@@ -56,6 +65,7 @@ type LifecycleOnce interface {
 	Stop(func() error) error
 	LifecycleState() LifecycleState
 	IsRunning() bool
+	WhenRunning(context.Context) error
 }
 
 type lifecycleOnce struct {
@@ -106,6 +116,21 @@ func (l *lifecycleOnce) Start(f func() error) error {
 	close(l.startCh)
 
 	return l.startErr
+}
+
+func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
+	if !l.stopping.Load() && l.started.Load() {
+		return nil
+	}
+
+	select {
+	case <-l.startCh:
+		return nil
+	case <-l.stopCh:
+		return ErrAlreadyStopped
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // Stop will run the `f` function once and return the error.

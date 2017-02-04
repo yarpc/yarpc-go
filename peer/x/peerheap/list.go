@@ -141,8 +141,8 @@ func (pl *List) clearPeers() error {
 // The peer heap does not use the given *transport.Request and can safely
 // receive nil.
 func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
-	if !pl.IsRunning() {
-		return nil, nil, peer.ErrPeerListNotStarted("PeerHeap")
+	if err := pl.once.WhenRunning(ctx); err != nil {
+		return nil, nil, err
 	}
 
 	for {
