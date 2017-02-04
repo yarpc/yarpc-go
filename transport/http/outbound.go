@@ -42,8 +42,6 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
-var errOutboundNotStarted = errors.ErrOutboundNotStarted("http.Outbound")
-
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
 var (
 	_ transport.UnaryOutbound              = (*Outbound)(nil)

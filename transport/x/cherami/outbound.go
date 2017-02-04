@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
@@ -33,8 +32,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
 )
-
-var errOutboundNotStarted = errors.ErrOutboundNotStarted("cherami.Outbound")
 
 // OutboundConfig defines the config in order to create a Outbound.
 type OutboundConfig struct {
@@ -109,8 +106,8 @@ func (o *Outbound) setClientFactory(factory internal.ClientFactory) {
 
 // CallOneway makes a oneway request using Cherami.
 func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	if !o.IsRunning() {
-		return nil, errOutboundNotStarted
+	if err := o.once.WhenRunning(ctx); err != nil {
+		return nil, err
 	}
 
 	createOpenTracingSpan := transport.CreateOpenTracingSpan{

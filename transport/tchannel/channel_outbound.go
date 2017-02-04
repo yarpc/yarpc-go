@@ -105,8 +105,7 @@ func (o *ChannelOutbound) IsRunning() bool {
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if err := o.once.WhenRunning(ctx); err != nil {
-		// TODO replace with "panicInDebug"
-		return nil, errOutboundNotStarted
+		return nil, err
 	}
 
 	// NB(abg): Under the current API, the local service's name is required

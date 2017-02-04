@@ -22,9 +22,12 @@ package sync
 
 import (
 	"context"
+	"errors"
 
 	"go.uber.org/atomic"
 )
+
+var errDeadlineRequired = errors.New("deadline required")
 
 // LifecycleState represents `states` that a lifecycle object can be in.
 type LifecycleState int
@@ -137,6 +140,10 @@ func (l *lifecycleOnce) Start(f func() error) error {
 func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
 	if !l.stopping.Load() && l.started.Load() {
 		return nil
+	}
+
+	if _, ok := ctx.Deadline(); !ok {
+		return errDeadlineRequired
 	}
 
 	select {

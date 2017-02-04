@@ -448,7 +448,7 @@ func TestChannelCallWithoutStarting(t *testing.T) {
 				},
 			)
 
-			assert.Equal(t, errOutboundNotStarted, err)
+			assert.Equal(t, context.DeadlineExceeded, err)
 		})
 	}
 }

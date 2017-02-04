@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
@@ -38,8 +37,6 @@ var (
 	_ transport.OnewayOutbound             = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
 )
-
-var errOutboundNotStarted = errors.ErrOutboundNotStarted("redis.Outbound")
 
 // Outbound is a redis OnewayOutbound that puts an RPC into the given queue key
 type Outbound struct {
@@ -90,8 +87,8 @@ func (o *Outbound) IsRunning() bool {
 
 // CallOneway makes a oneway request using redis
 func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	if !o.IsRunning() {
-		return nil, errOutboundNotStarted
+	if err := o.once.WhenRunning(ctx); err != nil {
+		return nil, err
 	}
 
 	createOpenTracingSpan := transport.CreateOpenTracingSpan{
