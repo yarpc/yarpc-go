@@ -170,10 +170,14 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 		// Pre-empt start
 		l.started.Store(true)
 		close(l.startCh)
-	} else if !l.started.Swap(true) {
+	} else if !l.started.Load() {
 		// Starting, but not yet started:
 		// Wait for concurrent start to finish
 		<-l.startCh
+	}
+
+	if l.err != nil {
+		return l.err
 	}
 
 	if f != nil {

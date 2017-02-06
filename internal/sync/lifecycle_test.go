@@ -97,6 +97,37 @@ func TestLifecycleOnce(t *testing.T) {
 			expectedFinalState: Errored,
 		},
 		{
+			msg: "Successful Start followed by failed Stop",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Wait:          10 * time.Millisecond,
+							ExpectedState: Running,
+						},
+						StopAction{
+							Wait:          10 * time.Millisecond,
+							Err:           errors.New("expected error"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+						StartAction{
+							Err:           errors.New("not expected error 2"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+						StopAction{
+							Err:           errors.New("not expected error 2"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+					},
+					Wait: 30 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Errored,
+		},
+		{
 			msg: "Stop assure only called once and returns the same error",
 			actions: []LifecycleAction{
 				StartAction{
@@ -181,6 +212,32 @@ func TestLifecycleOnce(t *testing.T) {
 				},
 			},
 			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Overlapping stop after start error",
+			// ms: timeline
+			// 00: 0: start..............starting
+			// 10: |  1. stop............stopping
+			// 50: X  X..................errored
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Wait:          50 * time.Millisecond,
+							Err:           errors.New("expected error"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+						StopAction{
+							Wait:          10 * time.Millisecond,
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+					},
+					Wait: 10 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Errored,
 		},
 		{
 			msg: "Overlapping start after stop",
