@@ -170,10 +170,10 @@ func (o *Outbound) IsRunning() bool {
 
 // Call makes a HTTP request
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	if !o.IsRunning() {
-		// TODO replace with "panicInDebug"
-		return nil, errOutboundNotStarted
+	if err := o.once.WaitForStart(ctx); err != nil {
+		return nil, err
 	}
+
 	start := time.Now()
 	deadline, _ := ctx.Deadline()
 	ttl := deadline.Sub(start)
@@ -183,10 +183,10 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 
 // CallOneway makes a oneway request
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	if !o.IsRunning() {
-		// TODO replace with "panicInDebug"
-		return nil, errOutboundNotStarted
+	if err := o.once.WaitForStart(ctx); err != nil {
+		return nil, err
 	}
+
 	start := time.Now()
 	var ttl time.Duration
 

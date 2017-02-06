@@ -102,7 +102,7 @@ func (o *ChannelOutbound) IsRunning() bool {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if !o.IsRunning() {
+	if err := o.once.WaitForStart(ctx); err != nil {
 		// TODO replace with "panicInDebug"
 		return nil, errOutboundNotStarted
 	}
