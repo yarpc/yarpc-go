@@ -27,12 +27,18 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber-go/atomic"
 )
+
+type wrappedLifecycleOnce struct {
+	LifecycleOnce
+	running *atomic.Bool
+}
 
 // LifecycleAction defines actions that can be applied to a Lifecycle
 type LifecycleAction interface {
 	// Apply runs a function on the PeerList and asserts the result
-	Apply(*testing.T, LifecycleOnce)
+	Apply(*testing.T, wrappedLifecycleOnce)
 }
 
 // StartAction is an action for testing LifecycleOnce.Start
@@ -44,11 +50,13 @@ type StartAction struct {
 }
 
 // Apply runs "Start" on the LifecycleOnce and validates the error
-func (a StartAction) Apply(t *testing.T, l LifecycleOnce) {
+func (a StartAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	err := l.Start(func() error {
+		assert.False(t, l.running.Swap(true), "expected no other running action")
 		if a.Wait > 0 {
 			time.Sleep(a.Wait)
 		}
+		assert.True(t, l.running.Swap(false), "expected no other running action")
 		return a.Err
 	})
 	assert.Equal(t, a.ExpectedErr, err)
@@ -65,11 +73,13 @@ type StopAction struct {
 }
 
 // Apply runs "Stop" on the LifecycleOnce and validates the error
-func (a StopAction) Apply(t *testing.T, l LifecycleOnce) {
+func (a StopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	err := l.Stop(func() error {
+		assert.False(t, l.running.Swap(true), "expected no other running action")
 		if a.Wait > 0 {
 			time.Sleep(a.Wait)
 		}
+		assert.True(t, l.running.Swap(false), "expected no other running action")
 		return a.Err
 	})
 
@@ -83,7 +93,7 @@ type GetStateAction struct {
 }
 
 // Apply Checks the state on the LifecycleOnce
-func (a GetStateAction) Apply(t *testing.T, l LifecycleOnce) {
+func (a GetStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	assert.Equal(t, a.ExpectedState, l.LifecycleState())
 }
 
@@ -98,7 +108,7 @@ type ConcurrentAction struct {
 
 // Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
 // between each action. Returns when all actions have finished executing
-func (a ConcurrentAction) Apply(t *testing.T, l LifecycleOnce) {
+func (a ConcurrentAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(a.Actions))
@@ -118,9 +128,14 @@ func (a ConcurrentAction) Apply(t *testing.T, l LifecycleOnce) {
 
 // ApplyLifecycleActions runs all the LifecycleActions on the LifecycleOnce
 func ApplyLifecycleActions(t *testing.T, l LifecycleOnce, actions []LifecycleAction) {
+	wrapLife := wrappedLifecycleOnce{
+		LifecycleOnce: l,
+		running:       atomic.NewBool(false),
+	}
+
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
-			action.Apply(t, l)
+			action.Apply(t, wrapLife)
 		})
 	}
 }
