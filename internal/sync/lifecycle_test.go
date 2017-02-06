@@ -204,8 +204,8 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Stopped,
 						},
 						StartAction{
-							Wait:          20 * time.Millisecond,
-							ExpectedState: Stopped,
+							Err:           fmt.Errorf("start action should not run"),
+							ExpectedState: Stopping,
 						},
 					},
 					Wait: 20 * time.Millisecond,
@@ -232,7 +232,7 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Running,
 						},
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Err:           fmt.Errorf("start action should not run"),
 							ExpectedState: Running,
 						},
 						StopAction{
@@ -240,11 +240,11 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Stopped,
 						},
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Err:           fmt.Errorf("start action should not run"),
 							ExpectedState: Running,
 						},
 						StopAction{
-							Wait:          40 * time.Millisecond,
+							Err:           fmt.Errorf("stop action should not run"),
 							ExpectedState: Stopped,
 						},
 					},
