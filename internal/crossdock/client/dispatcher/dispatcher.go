@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/redis"
+	"go.uber.org/yarpc/transport/x/redispubsub"
 
 	"github.com/crossdock/crossdock-go"
 )
@@ -85,6 +86,11 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 		outbound = redis.NewOnewayOutbound(
 			redis.NewRedis5Client("redis:6379"),
 			"yarpc/oneway",
+		)
+	case "redispubsub":
+		outbound = redispubsub.NewOnewayOutbound(
+			redispubsub.NewRedis5Client("redis:6379"),
+			"yarpc/pubsub",
 		)
 	default:
 		fatals.Fail("", "unknown transport %q", trans)

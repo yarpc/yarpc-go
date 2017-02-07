@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/x/redis"
+	"go.uber.org/yarpc/transport/x/redispubsub"
 )
 
 var dispatcher *yarpc.Dispatcher
@@ -48,7 +49,13 @@ func Start() {
 			"yarpc/oneway/processing",
 			time.Second,
 		)
-		inbounds = append(inbounds, rds)
+
+		rdsPubSub := redispubsub.NewInbound(
+			redispubsub.NewRedis5Client("redis:6379"),
+			"yarpc/pubsub",
+		)
+
+		inbounds = append(inbounds, rds, rdsPubSub)
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
