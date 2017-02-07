@@ -17,7 +17,6 @@ services:
             - cherami
         environment:
             - WAIT_FOR=go,node,python,python-sync
-            - WAIT_FOR_TIMEOUT=60s
 
             - AXIS_CLIENT=go,node,python,python-sync
             - AXIS_SERVER=go,node,python

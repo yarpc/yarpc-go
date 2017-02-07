@@ -57,45 +57,11 @@ func Start() {
 	}
 
 	if useCherami() {
-		destination := `/test/dest`
-		consumerGroup := `/test/dest_cg`
-		consumedRetention := int32(300)
-		unconsumedRetention := int32(600)
-		cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
+		cheramiInboud, err := initCheramiInbound()
 		if err != nil {
-			log.Println(`error creating cherami client %v`, err)
-			return
+			log.Printf(`error init cherami inbound %v\n`, err)
 		}
-
-		_, err = cheramiClient.CreateDestination(&cherami_type.CreateDestinationRequest{
-			Path: &destination,
-			ConsumedMessagesRetention:   &consumedRetention,
-			UnconsumedMessagesRetention: &unconsumedRetention,
-		})
-		if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
-			log.Println(`error creating destination %v`, err)
-			return
-		}
-
-		_, err = cheramiClient.CreateConsumerGroup(&cherami_type.CreateConsumerGroupRequest{
-			DestinationPath:   &destination,
-			ConsumerGroupName: &consumerGroup,
-		})
-		if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
-			log.Println(`error creating consumer group %v`, err)
-			return
-		}
-
-		cheramiTransport := cherami.NewTransport(cheramiClient)
-		if err := cheramiTransport.Start(); err != nil {
-			log.Println(`error starting cherami transport`)
-			return
-		}
-
-		inbounds = append(inbounds, cheramiTransport.NewInbound(cherami.InboundConfig{
-			Destination:   destination,
-			ConsumerGroup: consumerGroup,
-		}))
+		inbounds = append(inbounds, cheramiInboud)
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
@@ -135,4 +101,46 @@ func useRedis() bool {
 // available
 func useCherami() bool {
 	return os.Getenv("CHERAMI") == "enabled"
+}
+
+func initCheramiInbound() (*cherami.Inbound, error) {
+	destination := `/test/dest`
+	consumerGroup := `/test/dest_cg`
+	consumedRetention := int32(300)
+	unconsumedRetention := int32(600)
+	cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
+	if err != nil {
+		log.Printf(`error creating cherami client %v\n`, err)
+		return nil, err
+	}
+
+	_, err = cheramiClient.CreateDestination(&cherami_type.CreateDestinationRequest{
+		Path: &destination,
+		ConsumedMessagesRetention:   &consumedRetention,
+		UnconsumedMessagesRetention: &unconsumedRetention,
+	})
+	if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
+		log.Printf(`error creating destination %v\n`, err)
+		return nil, err
+	}
+
+	_, err = cheramiClient.CreateConsumerGroup(&cherami_type.CreateConsumerGroupRequest{
+		DestinationPath:   &destination,
+		ConsumerGroupName: &consumerGroup,
+	})
+	if err != nil && !strings.Contains(err.Error(), `EntityAlreadyExistsError`) {
+		log.Printf(`error creating consumer group %v\n`, err)
+		return nil, err
+	}
+
+	cheramiTransport := cherami.NewTransport(cheramiClient)
+	if err := cheramiTransport.Start(); err != nil {
+		log.Println(`error starting cherami transport`)
+		return nil, err
+	}
+
+	return cheramiTransport.NewInbound(cherami.InboundConfig{
+		Destination:   destination,
+		ConsumerGroup: consumerGroup,
+	}), nil
 }
