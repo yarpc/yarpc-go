@@ -1,7 +1,14 @@
 Releases
 ========
 
-v1.3.0-dev (unreleased)
+
+v1.4.0 (unreleased)
+-----------------------
+
+-   Nothing yet.
+
+
+v1.3.0 (2017-02-06)
 -----------------------
 
 -   Added a `tchannel.NewTransport`. The new transport, a replacement for the
@@ -18,6 +25,13 @@ v1.3.0-dev (unreleased)
     responsibilities, leaving only the wire protocol at its core.
     As a consequence, you cannot thread an existing Channel through this
     transport.
+
+-   All outbounds now support `Call` before `Start` and all peer choosers now
+    support `Choose` before `Start`, within the context deadline.
+    These would previously return an error indicating that the component was
+    not yet started.  They now wait for the component to start, or for their
+    deadline to expire.
+
 
 v1.2.0 (2017-02-02)
 -----------------------
