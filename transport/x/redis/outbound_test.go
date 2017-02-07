@@ -25,6 +25,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
@@ -50,7 +51,11 @@ func TestCall(t *testing.T) {
 	err := out.Start()
 	assert.NoError(t, err, "could not start redis outbound")
 
-	ack, err := out.CallOneway(context.Background(), &transport.Request{
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	ack, err := out.CallOneway(ctx, &transport.Request{
 		Caller:    "caller",
 		Service:   "service",
 		Encoding:  raw.Encoding,
@@ -116,6 +121,31 @@ func TestStopMultiple(t *testing.T) {
 }
 
 func TestCallWithoutStarting(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	client := redistest.NewMockClient(mockCtrl)
+	client.EXPECT().Start().Times(1).Return(nil)
+
+	out := NewOnewayOutbound(client, "queueKey")
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+	defer cancel()
+
+	ack, err := out.CallOneway(
+		ctx,
+		&transport.Request{
+			Caller:    "caller",
+			Service:   "service",
+			Encoding:  raw.Encoding,
+			Procedure: "foo",
+			Body:      bytes.NewReader([]byte("sup")),
+		})
+
+	assert.Nil(t, ack, "ack not nil")
+	assert.Error(t, err, "made call")
+}
+
+func TestCallWithoutDeadline(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	client := redistest.NewMockClient(mockCtrl)
 	client.EXPECT().Start().Times(1).Return(nil)

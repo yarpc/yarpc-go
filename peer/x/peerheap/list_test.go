@@ -89,7 +89,8 @@ func TestPeerHeapList(t *testing.T) {
 				StartAction{},
 				StopAction{},
 				ChooseAction{
-					ExpectedErr: peer.ErrPeerListNotStarted("PeerHeap"),
+					ExpectedErr:         context.DeadlineExceeded,
+					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
 			expectedRunning: false,
@@ -220,10 +221,12 @@ func TestPeerHeapList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
-					ExpectedErr: peer.ErrPeerListNotStarted("PeerHeap"),
+					ExpectedErr:         context.DeadlineExceeded,
+					InputContextTimeout: 10 * time.Millisecond,
 				},
 				ChooseAction{
-					ExpectedErr: peer.ErrPeerListNotStarted("PeerHeap"),
+					ExpectedErr:         context.DeadlineExceeded,
+					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
 			expectedRunning: false,

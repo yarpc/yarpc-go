@@ -69,6 +69,7 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 	}
 
 	return &ChannelTransport{
+		once:   sync.Once(),
 		ch:     ch,
 		addr:   config.addr,
 		tracer: config.tracer,

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -96,6 +97,37 @@ func TestLifecycleOnce(t *testing.T) {
 			expectedFinalState: Errored,
 		},
 		{
+			msg: "Successful Start followed by failed Stop",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Wait:          10 * time.Millisecond,
+							ExpectedState: Running,
+						},
+						StopAction{
+							Wait:          10 * time.Millisecond,
+							Err:           errors.New("expected error"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+						StartAction{
+							Err:           errors.New("not expected error 2"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+						StopAction{
+							Err:           errors.New("not expected error 2"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+					},
+					Wait: 30 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Errored,
+		},
+		{
 			msg: "Stop assure only called once and returns the same error",
 			actions: []LifecycleAction{
 				StartAction{
@@ -137,7 +169,118 @@ func TestLifecycleOnce(t *testing.T) {
 			expectedFinalState: Stopped,
 		},
 		{
-			msg: "Stress test",
+			msg: "Pre-empting start after stop",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StopAction{
+							Wait:          10 * time.Millisecond,
+							ExpectedState: Stopped,
+						},
+						StartAction{
+							Err:           fmt.Errorf("start action should not run"),
+							Wait:          500 * time.Second,
+							ExpectedState: Stopped,
+						},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Overlapping stop after start",
+			// ms: timeline
+			// 00: 0: start..............starting
+			// 10: |  1. stop
+			// 50: X..|..................running
+			//        |..................stopping
+			// 60:    X..................stopped
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Wait:          50 * time.Millisecond,
+							ExpectedState: Running,
+						},
+						StopAction{
+							Wait:          10 * time.Millisecond,
+							ExpectedState: Stopped,
+						},
+					},
+					Wait: 10 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Overlapping stop after start error",
+			// ms: timeline
+			// 00: 0: start..............starting
+			// 10: |  1. stop............stopping
+			// 50: X  X..................errored
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Wait:          50 * time.Millisecond,
+							Err:           errors.New("expected error"),
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+						StopAction{
+							Wait:          10 * time.Millisecond,
+							ExpectedState: Errored,
+							ExpectedErr:   errors.New("expected error"),
+						},
+					},
+					Wait: 10 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Errored,
+		},
+		{
+			msg: "Overlapping start after stop",
+			// ms: timeline
+			// 00: 0: start.............starting
+			// 20: |  1: stop
+			// 40: X..|.................running
+			//        | (wait 20)       stopping
+			// 60:    X.................stopped
+			// 80:       2: start
+			//           X
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Wait:          40 * time.Millisecond,
+							ExpectedState: Running,
+						},
+						StopAction{
+							Wait:          20 * time.Millisecond,
+							ExpectedState: Stopped,
+						},
+						StartAction{
+							Err:           fmt.Errorf("start action should not run"),
+							ExpectedState: Stopping,
+						},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Start completes before overlapping stop completes",
+			// ms: timeline
+			// 00: 0: start............starting
+			// 10: |  1: start
+			// 20: |  |  2: stop
+			// 30: |  |  |  3: start
+			// 40: |  |  |  |  4: stop
+			//     X  X  |  X  |.......running
+			//           |     |.......stopping
+			// 60:       X     X.......stopped
 			actions: []LifecycleAction{
 				ConcurrentAction{
 					Actions: []LifecycleAction{
@@ -146,7 +289,7 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Running,
 						},
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Err:           fmt.Errorf("start action should not run"),
 							ExpectedState: Running,
 						},
 						StopAction{
@@ -154,11 +297,11 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Stopped,
 						},
 						StartAction{
-							Wait:          40 * time.Millisecond,
-							ExpectedState: Stopped,
+							Err:           fmt.Errorf("start action should not run"),
+							ExpectedState: Running,
 						},
 						StopAction{
-							Wait:          40 * time.Millisecond,
+							Err:           fmt.Errorf("stop action should not run"),
 							ExpectedState: Stopped,
 						},
 					},
@@ -174,10 +317,10 @@ func TestLifecycleOnce(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			once := &LifecycleOnce{}
+			once := Once()
 			ApplyLifecycleActions(t, once, tt.actions)
 
-			assert.Equal(t, tt.expectedFinalState, LifecycleState(once.state.Load()))
+			assert.Equal(t, tt.expectedFinalState, once.LifecycleState())
 		})
 	}
 }

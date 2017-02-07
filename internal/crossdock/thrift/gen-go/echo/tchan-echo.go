@@ -63,6 +63,10 @@ func (c *tchanEchoClient) Echo(ctx thrift.Context, ping *Ping) (*Pong, error) {
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "echo", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for echo")
+		}
 	}
 
 	return resp.GetSuccess(), err

@@ -46,6 +46,7 @@ type ChannelInbound struct {
 // locally- and remotely-initiated persistent connections.
 func (t *ChannelTransport) NewInbound() *ChannelInbound {
 	return &ChannelInbound{
+		once:      sync.Once(),
 		transport: t,
 	}
 }

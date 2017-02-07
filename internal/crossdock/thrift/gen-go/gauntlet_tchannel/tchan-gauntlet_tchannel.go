@@ -86,6 +86,10 @@ func (c *tchanSecondServiceClient) BlahBlah(ctx thrift.Context) error {
 	args := SecondServiceBlahBlahArgs{}
 	success, err := c.client.Call(ctx, c.thriftService, "blahBlah", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for blahBlah")
+		}
 	}
 
 	return err
@@ -98,6 +102,10 @@ func (c *tchanSecondServiceClient) SecondtestString(ctx thrift.Context, thing st
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "secondtestString", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for secondtestString")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -201,6 +209,10 @@ func (c *tchanThriftTestClient) TestBinary(ctx thrift.Context, thing []byte) ([]
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testBinary", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testBinary")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -213,6 +225,10 @@ func (c *tchanThriftTestClient) TestByte(ctx thrift.Context, thing int8) (int8, 
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testByte", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testByte")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -225,6 +241,10 @@ func (c *tchanThriftTestClient) TestDouble(ctx thrift.Context, thing float64) (f
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testDouble", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testDouble")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -237,6 +257,10 @@ func (c *tchanThriftTestClient) TestEnum(ctx thrift.Context, thing Numberz) (Num
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testEnum", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testEnum")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -249,8 +273,11 @@ func (c *tchanThriftTestClient) TestException(ctx thrift.Context, arg string) er
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testException", &args, &resp)
 	if err == nil && !success {
-		if e := resp.Err1; e != nil {
-			err = e
+		switch {
+		case resp.Err1 != nil:
+			err = resp.Err1
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testException")
 		}
 	}
 
@@ -264,6 +291,10 @@ func (c *tchanThriftTestClient) TestI32(ctx thrift.Context, thing int32) (int32,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testI32", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testI32")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -276,6 +307,10 @@ func (c *tchanThriftTestClient) TestI64(ctx thrift.Context, thing int64) (int64,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testI64", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testI64")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -288,6 +323,10 @@ func (c *tchanThriftTestClient) TestInsanity(ctx thrift.Context, argument *Insan
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testInsanity", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testInsanity")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -300,6 +339,10 @@ func (c *tchanThriftTestClient) TestList(ctx thrift.Context, thing []int32) ([]i
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testList", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testList")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -312,6 +355,10 @@ func (c *tchanThriftTestClient) TestMap(ctx thrift.Context, thing map[int32]int3
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testMap", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testMap")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -324,6 +371,10 @@ func (c *tchanThriftTestClient) TestMapMap(ctx thrift.Context, hello int32) (map
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testMapMap", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testMapMap")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -341,6 +392,10 @@ func (c *tchanThriftTestClient) TestMulti(ctx thrift.Context, arg0 int8, arg1 in
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testMulti", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testMulti")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -354,11 +409,13 @@ func (c *tchanThriftTestClient) TestMultiException(ctx thrift.Context, arg0 stri
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testMultiException", &args, &resp)
 	if err == nil && !success {
-		if e := resp.Err1; e != nil {
-			err = e
-		}
-		if e := resp.Err2; e != nil {
-			err = e
+		switch {
+		case resp.Err1 != nil:
+			err = resp.Err1
+		case resp.Err2 != nil:
+			err = resp.Err2
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testMultiException")
 		}
 	}
 
@@ -372,6 +429,10 @@ func (c *tchanThriftTestClient) TestNest(ctx thrift.Context, thing *Xtruct2) (*X
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testNest", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testNest")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -384,6 +445,10 @@ func (c *tchanThriftTestClient) TestSet(ctx thrift.Context, thing map[int32]bool
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testSet", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testSet")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -396,6 +461,10 @@ func (c *tchanThriftTestClient) TestString(ctx thrift.Context, thing string) (st
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testString", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testString")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -408,6 +477,10 @@ func (c *tchanThriftTestClient) TestStringMap(ctx thrift.Context, thing map[stri
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testStringMap", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testStringMap")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -420,6 +493,10 @@ func (c *tchanThriftTestClient) TestStruct(ctx thrift.Context, thing *Xtruct) (*
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testStruct", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testStruct")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -432,6 +509,10 @@ func (c *tchanThriftTestClient) TestTypedef(ctx thrift.Context, thing UserId) (U
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "testTypedef", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testTypedef")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -442,6 +523,10 @@ func (c *tchanThriftTestClient) TestVoid(ctx thrift.Context) error {
 	args := ThriftTestTestVoidArgs{}
 	success, err := c.client.Call(ctx, c.thriftService, "testVoid", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for testVoid")
+		}
 	}
 
 	return err

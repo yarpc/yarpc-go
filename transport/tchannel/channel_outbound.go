@@ -42,6 +42,7 @@ var (
 // channel to make requests to any connected peer.
 func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 	return &ChannelOutbound{
+		once:      sync.Once(),
 		channel:   t.ch,
 		transport: t,
 	}
@@ -51,6 +52,7 @@ func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 // channel to a specific peer.
 func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 	return &ChannelOutbound{
+		once:      sync.Once(),
 		channel:   t.ch,
 		transport: t,
 		addr:      addr,
@@ -102,9 +104,8 @@ func (o *ChannelOutbound) IsRunning() bool {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if !o.IsRunning() {
-		// TODO replace with "panicInDebug"
-		return nil, errOutboundNotStarted
+	if err := o.once.WhenRunning(ctx); err != nil {
+		return nil, err
 	}
 
 	// NB(abg): Under the current API, the local service's name is required
