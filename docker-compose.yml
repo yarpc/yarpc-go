@@ -103,4 +103,4 @@ services:
 
     cherami:
         dns_search: .
-        image: datoug/cherami-server
+        image: ubercherami/cherami-server-standalone
