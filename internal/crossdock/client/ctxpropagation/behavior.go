@@ -172,8 +172,6 @@ func Run(t crossdock.T) {
 			}
 
 			dispatcher, tconfig := buildDispatcher(t)
-			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
-			defer dispatcher.Stop()
 
 			jsonClient := json.New(dispatcher.ClientConfig("yarpc-test"))
 			for name, handler := range tt.handlers {
@@ -181,6 +179,9 @@ func Run(t crossdock.T) {
 				handler.SetTransport(tconfig)
 				dispatcher.Register(json.Procedure(name, handler.Handle))
 			}
+
+			fatals.NoError(dispatcher.Start(), "%v: Dispatcher failed to start", tt.desc)
+			defer dispatcher.Stop()
 
 			ctx := context.Background()
 			if tt.initCtx != nil {
