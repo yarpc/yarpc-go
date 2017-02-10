@@ -91,7 +91,7 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 		)
 	case "cherami":
 		cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, &cherami_client.ClientOptions{
-			Timeout: 			5 * time.Second,
+			Timeout: 5 * time.Second,
 			ReconfigurationPollingInterval: 1 * time.Second,
 		})
 		fatals.NoError(err, "couldn't create cherami client")
