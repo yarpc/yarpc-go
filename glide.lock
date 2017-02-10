@@ -1,8 +1,8 @@
 hash: 41299379074d597b053894c96b24a3a512ace69e445cc4ee2fd714a990ae8e4d
-updated: 2017-01-18T14:41:33.52551281-08:00
+updated: 2017-02-10T10:31:53.537197614-08:00
 imports:
 - name: github.com/apache/thrift
-  version: e0ccbd6e62e14f32d7c5fe0f9cec6eff3259b863
+  version: e1832c354391deb0e0ce94a62ff32e8ce1c83fd3
   subpackages:
   - lib/go/thrift
 - name: github.com/cactus/go-statsd-client
@@ -25,7 +25,7 @@ imports:
 - name: github.com/gorilla/websocket
   version: bb547c6c5c59732c29a3266d7125a84f6c3fce32
 - name: github.com/opentracing/opentracing-go
-  version: 0c3154a3c2ce79d3271985848659870599dfb77c
+  version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
   - ext
   - log
@@ -41,7 +41,7 @@ imports:
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
-  version: 2402e8e7a02fc811447d11f881aa9746cdc57983
+  version: 4d4bfba8f1d1027c4fdbe371823030df51419987
   subpackages:
   - assert
   - mock
@@ -51,7 +51,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: github.com/uber/cherami-client-go
-  version: 6eaab19b8d6995792376acf65ad3ec6b5668cc86
+  version: 5b008bbffe389a329274ff5ceaaa68e0b17348f9
   subpackages:
   - client/cherami
   - common
@@ -73,10 +73,11 @@ imports:
   - transport
   - utils
 - name: github.com/uber/tchannel-go
-  version: 2caa315516e1836b7b2eff70d2fcbd23538d1b22
+  version: 79387824978f91318be3bfb43ae12e04c38cfe97
   subpackages:
   - hyperbahn
   - hyperbahn/gen-go/hyperbahn
+  - internal/argreader
   - json
   - raw
   - relay
@@ -109,7 +110,7 @@ imports:
   - version
   - wire
 - name: golang.org/x/net
-  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
+  version: a689eb3bc4b53af70390acc3cf68c9f549b6b8d6
   subpackages:
   - context
   - context/ctxhttp
@@ -118,7 +119,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: add1aac04e65808e1f3ea9969c10e4494fd39d93
+  version: 44492e23b4afd3e75591994228422613777ee4ee
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5

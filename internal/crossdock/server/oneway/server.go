@@ -108,7 +108,10 @@ func initCheramiInbound() (*cherami.Inbound, error) {
 	consumerGroup := `/test/dest_cg`
 	consumedRetention := int32(300)
 	unconsumedRetention := int32(600)
-	cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
+	cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, &cherami_client.ClientOptions{
+			Timeout: 			5 * time.Second,
+			ReconfigurationPollingInterval: 1 * time.Second,
+		})
 	if err != nil {
 		log.Printf(`error creating cherami client %v\n`, err)
 		return nil, err

@@ -22,6 +22,7 @@ package dispatcher
 
 import (
 	"fmt"
+	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -89,7 +90,10 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 			"yarpc/oneway",
 		)
 	case "cherami":
-		cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, nil)
+		cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, &cherami_client.ClientOptions{
+			Timeout: 			5 * time.Second,
+			ReconfigurationPollingInterval: 1 * time.Second,
+		})
 		fatals.NoError(err, "couldn't create cherami client")
 
 		transport := cherami.NewTransport(cheramiClient)
