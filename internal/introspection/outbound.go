@@ -27,12 +27,13 @@ type IntrospectableOutbound interface {
 
 // OutboundStatus is a collection of basics info about an Outbound.
 type OutboundStatus struct {
-	Transport string
-	Type      string
-	Endpoint  string
-	State     string
-	Chooser   ChooserStatus
-	Service   string
+	Transport   string
+	RPCType     string
+	Endpoint    string
+	State       string
+	Chooser     ChooserStatus
+	Service     string
+	OutboundKey string
 }
 
 // OutboundStatusNotSupported is returned when not valid OutboundStatus can be

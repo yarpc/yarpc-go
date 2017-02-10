@@ -53,6 +53,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
+		once:   sync.Once(),
 		addr:   addr,
 		tracer: t.tracer,
 	}

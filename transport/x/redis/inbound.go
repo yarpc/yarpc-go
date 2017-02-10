@@ -65,6 +65,7 @@ type Inbound struct {
 func NewInbound(client Client, queueKey, processingKey string, timeout time.Duration) *Inbound {
 	return &Inbound{
 		tracer: opentracing.GlobalTracer(),
+		once:   sync.Once(),
 
 		client:        client,
 		timeout:       timeout,

@@ -21,32 +21,44 @@
 package tchannel
 
 import (
-	"errors"
+	"fmt"
+	"sync"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 )
 
-var errChannelOrServiceNameIsRequired = errors.New(
-	"cannot instantiate tchannel.ChannelTransport: " +
-		"please provide a service name with the ServiceName option " +
-		"or an existing Channel with the WithChannel option")
+// Transport is a TChannel transport suitable for use with YARPC's peer
+// selection system.
+// The transport implements peer.Transport so multiple peer.List
+// implementations can retain and release shared peers.
+// The transport implements transport.Transport so it is suitable for lifecycle
+// management.
+type Transport struct {
+	lock sync.Mutex
+	once intsync.LifecycleOnce
 
-// NewChannelTransport is a YARPC transport that facilitates sending and
-// receiving YARPC requests through TChannel. It uses a shared TChannel
-// Channel for both, incoming and outgoing requests, ensuring reuse of
-// connections and other resources.
+	ch     Channel
+	router transport.Router
+	tracer opentracing.Tracer
+	addr   string
+
+	peers map[string]*hostport.Peer
+}
+
+// NewTransport is a YARPC transport that facilitates sending and receiving
+// YARPC requests through TChannel.
+// It uses a shared TChannel Channel for both, incoming and outgoing requests,
+// ensuring reuse of connections and other resources.
 //
 // Either the local service name (with the ServiceName option) or a user-owned
 // TChannel (with the WithChannel option) MUST be specified.
-//
-// ChannelTransport uses the underlying TChannel Channel for load balancing
-// and peer managament.
-// Use NewTransport and its NewOutbound to support YARPC peer.Choosers.
-func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
+func NewTransport(opts ...TransportOption) (*Transport, error) {
 	var config transportConfig
 	config.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
@@ -57,57 +69,100 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 	// Defer the error until Start since NewChannelTransport does not have
 	// an error return.
 	var err error
-	ch := config.ch
 
-	if ch == nil {
-		if config.name == "" {
-			err = errChannelOrServiceNameIsRequired
-		} else {
-			opts := tchannel.ChannelOptions{Tracer: config.tracer}
-			ch, err = tchannel.NewChannel(config.name, &opts)
-		}
+	if config.ch != nil {
+		return nil, fmt.Errorf("NewTransport does not accept WithChannel, use NewChannelTransport")
+	}
+	// if config.name == "" {
+	// 	return nil, errChannelOrServiceNameIsRequired
+	// }
+
+	chopts := tchannel.ChannelOptions{Tracer: config.tracer}
+	ch, err := tchannel.NewChannel(config.name, &chopts)
+	if err != nil {
+		return nil, err
 	}
 
-	return &ChannelTransport{
-		once:   sync.Once(),
+	return &Transport{
+		once:   intsync.Once(),
 		ch:     ch,
 		addr:   config.addr,
 		tracer: config.tracer,
-	}, err
-}
-
-// ChannelTransport maintains TChannel peers and creates inbounds and outbounds for
-// TChannel.
-// If you have a YARPC peer.Chooser, use the unqualified tchannel.Transport
-// instead.
-type ChannelTransport struct {
-	ch     Channel
-	name   string
-	addr   string
-	tracer opentracing.Tracer
-	router transport.Router
-
-	once sync.LifecycleOnce
-}
-
-// Channel returns the underlying TChannel "Channel" instance.
-func (t *ChannelTransport) Channel() Channel {
-	return t.ch
+		peers:  make(map[string]*hostport.Peer),
+	}, nil
 }
 
 // ListenAddr exposes the listen address of the transport.
-func (t *ChannelTransport) ListenAddr() string {
+func (t *Transport) ListenAddr() string {
 	return t.addr
+}
+
+// RetainPeer adds a peer subscriber (typically a peer chooser) and causes the
+// transport to maintain persistent connections with that peer.
+func (t *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.Peer, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	hppid, ok := pid.(hostport.PeerIdentifier)
+	if !ok {
+		return nil, peer.ErrInvalidPeerType{
+			ExpectedType:   "hostport.PeerIdentifier",
+			PeerIdentifier: pid,
+		}
+	}
+
+	p := t.getOrCreatePeer(hppid)
+	p.Subscribe(sub)
+	return p, nil
+}
+
+// **NOTE** should only be called while the lock write mutex is acquired
+func (t *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
+	if p, ok := t.peers[pid.Identifier()]; ok {
+		return p
+	}
+
+	p := hostport.NewPeer(pid, t)
+	p.SetStatus(peer.Available)
+
+	t.peers[p.Identifier()] = p
+
+	return p
+}
+
+// ReleasePeer releases a peer from the peer.Subscriber and removes that peer
+// from the Transport if nothing is listening to it.
+func (t *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	p, ok := t.peers[pid.Identifier()]
+	if !ok {
+		return peer.ErrTransportHasNoReferenceToPeer{
+			TransportName:  "tchannel.Transport",
+			PeerIdentifier: pid.Identifier(),
+		}
+	}
+
+	if err := p.Unsubscribe(sub); err != nil {
+		return err
+	}
+
+	if p.NumSubscribers() == 0 {
+		delete(t.peers, pid.Identifier())
+	}
+
+	return nil
 }
 
 // Start starts the TChannel transport. This starts making connections and
 // accepting inbound requests. All inbounds must have been assigned a router
 // to accept inbound requests before this is called.
-func (t *ChannelTransport) Start() error {
+func (t *Transport) Start() error {
 	return t.once.Start(t.start)
 }
 
-func (t *ChannelTransport) start() error {
+func (t *Transport) start() error {
 
 	if t.router != nil {
 		// Set up handlers. This must occur after construction because the
@@ -153,16 +208,16 @@ func (t *ChannelTransport) start() error {
 // and draining connections before closing them.
 // In a future version of YARPC, Stop will block until the underlying channel
 // has closed completely.
-func (t *ChannelTransport) Stop() error {
+func (t *Transport) Stop() error {
 	return t.once.Stop(t.stop)
 }
 
-func (t *ChannelTransport) stop() error {
+func (t *Transport) stop() error {
 	t.ch.Close()
 	return nil
 }
 
-// IsRunning returns whether the ChannelTransport is running.
-func (t *ChannelTransport) IsRunning() bool {
+// IsRunning returns whether the TChannel transport is running.
+func (t *Transport) IsRunning() bool {
 	return t.once.IsRunning()
 }

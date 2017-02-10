@@ -21,10 +21,13 @@
 package sync
 
 import (
-	"sync"
+	"context"
+	"errors"
 
 	"go.uber.org/atomic"
 )
+
+var errDeadlineRequired = errors.New("deadline required")
 
 // LifecycleState represents `states` that a lifecycle object can be in.
 type LifecycleState int
@@ -55,85 +58,160 @@ const (
 
 // LifecycleOnce is a helper for implementing transport.Lifecycles
 // with similar behavior.
-type LifecycleOnce struct {
-	// We use the sync.Mutex in order to guarantee that multiple calls
-	// to Start/Stop will wait until the first call finishes and return
-	// the same error (stored in startErr/stopErr).  This is not possible
-	// with atomics because atomics will not block and we want the same error
-	// to be returned for multiple calls to Start/Stop.
-	//
-	// State is stored in an atomic so that we can read it from the `IsRunning`
-	// function without having to worry about race conditions with Start/Stop.
-	// A RWMutex is not used because we don't want IsRunning to wait until
-	// Start/Stop are finished.
-	lock     sync.Mutex
-	state    atomic.Int32
-	startErr error
-	stopErr  error
+type LifecycleOnce interface {
+	Start(func() error) error
+	Stop(func() error) error
+	LifecycleState() LifecycleState
+	IsRunning() bool
+	WhenRunning(context.Context) error
+}
+
+type lifecycleOnce struct {
+	// startCh closes to allow goroutines to resume after the lifecycle is in
+	// the Running state or beyond.
+	startCh chan struct{}
+	// stopCh closes to allow goroutines to resume after the lifecycle is in
+	// the Stopped state or Errored.
+	stopCh chan struct{}
+	// err is the error, if any, that Start() or Stop() returned and all
+	// subsequent Start() or Stop() calls will return. The right to set
+	// err is conferred to whichever goroutine is starting or stopping, until
+	// it has started or stopped, after which `err` becomes immutable.
+	err error
+	// starting indicates that the lifecycle is at least starting.
+	// Losing the race to set "starting" means that your goroutine must block
+	// on "startCh".
+	starting atomic.Bool
+	// started indicates that the lifecycle is at least running.
+	// Winning the race to set "started" means that the goroutine must close
+	// "startCh".
+	started atomic.Bool
+	// stopping indicates that the lifecycle is at least stopping.
+	// Losing the race to set "stopping" means that the goroutine must block on
+	// "stopCh".
+	stopping atomic.Bool
+	// stopped indicates that the lifecycle is at least stopped.
+	// Winning the race to set "stopped" means that the goroutine must close
+	// "stopCh".
+	stopped atomic.Bool
+	// errored indicates that the lifecycle produced an error either while
+	// starting or stopping.
+	errored atomic.Bool
+}
+
+// Once returns a lifecycle controller.
+// 0. The observable lifecycle state must only go forward from birth to death.
+// 1. Start() must block until the state is >= Running
+// 2. Stop() must block until the state is >= Stopped
+// 3. Stop() must pre-empt Start() if it occurs first
+// 4. Start() and Stop() may be backed by a do actual work function, and that
+//    function must be called at most once.
+func Once() LifecycleOnce {
+	return &lifecycleOnce{
+		startCh: make(chan struct{}, 0),
+		stopCh:  make(chan struct{}, 0),
+	}
 }
 
 // Start will run the `f` function once and return the error.
 // If Start is called multiple times it will return the error
 // from the first time it was called.
-func (l *LifecycleOnce) Start(f func() error) error {
-	l.lock.Lock()
-	defer l.lock.Unlock()
+func (l *lifecycleOnce) Start(f func() error) error {
+	if l.starting.Swap(true) {
+		<-l.startCh
+		return l.err
+	}
+	if f != nil {
+		l.err = f()
+	}
+	// skip forward to error state
+	if l.err != nil {
+		l.errored.Store(true)
+		l.stopped.Store(true)
+		l.stopping.Store(true)
+		close(l.stopCh)
+	}
+	l.started.Store(true)
+	close(l.startCh)
 
-	// If we've already moved on from the idle state we've either
-	// called the start function already, or called the stop function
-	// in which case we should exit now and return the result of the
-	// last start command (or nil).
-	if LifecycleState(l.state.Load()) != Idle {
-		return l.startErr
+	return l.err
+}
+
+func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
+	if !l.stopping.Load() && l.started.Load() {
+		return nil
 	}
 
-	// Set a nil function to an empty function
-	if f == nil {
-		f = func() error { return nil }
+	if _, ok := ctx.Deadline(); !ok {
+		return errDeadlineRequired
 	}
 
-	l.state.Store(int32(Starting))
-	l.startErr = f()
-	if l.startErr == nil {
-		l.state.Store(int32(Running))
-	} else {
-		l.state.Store(int32(Errored))
+	select {
+	case <-l.startCh:
+		return nil
+	case <-l.stopCh:
+		return context.DeadlineExceeded
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-
-	return l.startErr
 }
 
 // Stop will run the `f` function once and return the error.
 // If Stop is called multiple times it will return the error
 // from the first time it was called.
-func (l *LifecycleOnce) Stop(f func() error) error {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	// If the lifecycle is already stopped or errored, don't execute the stop func
-	if LifecycleState(l.state.Load()) == Stopped || LifecycleState(l.state.Load()) == Errored {
-		return l.stopErr
+func (l *lifecycleOnce) Stop(f func() error) error {
+	if l.stopping.Swap(true) {
+		<-l.stopCh
+		return l.err
 	}
 
-	if f == nil {
-		f = func() error { return nil }
+	if !l.starting.Swap(true) {
+		// Was not already starting:
+		// Pre-empt start
+		l.started.Store(true)
+		close(l.startCh)
+	} else if !l.started.Load() {
+		// Starting, but not yet started:
+		// Wait for concurrent start to finish
+		<-l.startCh
 	}
 
-	l.state.Store(int32(Stopping))
-	l.stopErr = f()
-	if l.stopErr == nil {
-		l.state.Store(int32(Stopped))
-	} else {
-		l.state.Store(int32(Errored))
+	if l.err != nil {
+		return l.err
 	}
 
-	return l.stopErr
+	if f != nil {
+		l.err = f()
+	}
+	l.errored.Store(l.err != nil)
+	l.stopped.Store(true)
+	close(l.stopCh)
+
+	return l.err
+}
+
+// LifecycleState returns the state of the object within its life cycle, from
+// start to full stop.
+// The function only guarantees that the lifecycle has at least passed through
+// the returned state and may have progressed further in the intervening time.
+func (l *lifecycleOnce) LifecycleState() LifecycleState {
+	switch {
+	case l.errored.Load():
+		return Errored
+	case l.stopped.Load():
+		return Stopped
+	case l.stopping.Load():
+		return Stopping
+	case l.started.Load():
+		return Running
+	case l.starting.Load():
+		return Starting
+	default:
+		return Idle
+	}
 }
 
 // IsRunning will return true if current state of the Lifecycle is running
-func (l *LifecycleOnce) IsRunning() bool {
-	state := LifecycleState(l.state.Load())
-	return state == Starting ||
-		state == Running ||
-		state == Stopping
+func (l *lifecycleOnce) IsRunning() bool {
+	return l.LifecycleState() == Running
 }

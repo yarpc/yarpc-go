@@ -73,6 +73,7 @@ func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 		config.PrefetchCount = defaultPrefetchCount
 	}
 	return &Inbound{
+		once:          sync.Once(),
 		transport:     t,
 		config:        config,
 		tracer:        t.tracer,

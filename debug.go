@@ -120,7 +120,7 @@ const pageHTML = `
 			<th>Procedure</th>
 			<th>Encoding</th>
 			<th>Signature</th>
-			<th>Flavor</th>
+			<th>RPC Type</th>
 		</tr>
 		{{range .Procedures}}
 		<tr>
@@ -151,9 +151,10 @@ const pageHTML = `
 	<table>
 		<thead>
 		<tr>
+			<th>Outbound Key</th>
 			<th>Service</th>
 			<th>Transport</th>
-			<th>Flavor</th>
+			<th>RPC Type</th>
 			<th>Endpoint</th>
 			<th>State</th>
 			<th colspan="3">Chooser</th>
@@ -172,9 +173,10 @@ const pageHTML = `
 		<tbody>
 		{{range .Outbounds}}
 		<tr>
+			<td>{{.OutboundKey}}</td>
 			<td>{{.Service}}</td>
 			<td>{{.Transport}}</td>
-			<td>{{.Flavor}}</td>
+			<td>{{.RPCType}}</td>
 			<td>{{.Endpoint}}</td>
 			<td>{{.State}}</td>
 			<td>{{.Chooser.Name}}</td>

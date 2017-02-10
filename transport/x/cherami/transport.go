@@ -32,6 +32,7 @@ import (
 // NewTransport creates a new cherami transport for shared objects between inbound and outbound.
 func NewTransport(client cherami.Client) *Transport {
 	return &Transport{
+		once:          intsync.Once(),
 		client:        client,
 		tracer:        opentracing.GlobalTracer(),
 		clientFactory: internal.NewClientFactory(),

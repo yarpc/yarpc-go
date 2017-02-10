@@ -1,9 +1,42 @@
 Releases
 ========
 
-v1.2.0-dev (unreleased)
+
+v1.4.0 (unreleased)
 -----------------------
 
+-   Nothing yet.
+
+
+v1.3.0 (2017-02-06)
+-----------------------
+
+-   Added a `tchannel.NewTransport`. The new transport, a replacement for the
+    temporary `tchannel.NewChannelTransport`, supports YARPC peer choosers.
+
+    ```go
+    transport, err := tchannel.NewTransport(tchannel.ServiceName("keyvalue"))
+    chooser := peerheap.New(transport)
+    outbound := transport.NewOutbound(chooser)
+    ```
+
+    The new transport hides the implementation of TChannel entirely to give us
+    flexibility going forward to relieve TChannel of all RPC-related
+    responsibilities, leaving only the wire protocol at its core.
+    As a consequence, you cannot thread an existing Channel through this
+    transport.
+
+-   All outbounds now support `Call` before `Start` and all peer choosers now
+    support `Choose` before `Start`, within the context deadline.
+    These would previously return an error indicating that the component was
+    not yet started.  They now wait for the component to start, or for their
+    deadline to expire.
+
+
+v1.2.0 (2017-02-02)
+-----------------------
+
+-   Added heap based PeerList under `peer/x/peerheap`.
 -   Added `RouterMiddleware` parameter to `yarpc.Config`, which, if provided,
     will allow customizing routing to handlers.
 -   Added experimental `transports/x/cherami` for transporting RPCs through
