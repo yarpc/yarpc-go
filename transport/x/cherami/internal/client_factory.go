@@ -22,7 +22,6 @@ package internal
 
 import (
 	"os"
-	"time"
 
 	"github.com/uber/cherami-client-go/client/cherami"
 )
@@ -41,7 +40,6 @@ type ConsumerConfig struct {
 	Destination   string
 	ConsumerGroup string
 	PrefetchCount int
-	Timeout       time.Duration
 }
 
 type clientFactoryImp struct {
@@ -69,9 +67,6 @@ func (c *clientFactoryImp) GetConsumer(client cherami.Client, config ConsumerCon
 		ConsumerGroupName: config.ConsumerGroup,
 		ConsumerName:      consumerName,
 		PrefetchCount:     config.PrefetchCount,
-		Options: &cherami.ClientOptions{
-			Timeout: config.Timeout,
-		},
 	})
 
 	ch := make(chan cherami.Delivery, config.PrefetchCount)

@@ -39,8 +39,6 @@ const (
 	transportName = "cherami"
 
 	defaultPrefetchCount = 10
-
-	defaultCheramiTimeout = 15 * time.Second
 )
 
 // InboundConfig defines the config in order to create a Inbound.
@@ -54,7 +52,6 @@ type InboundConfig struct {
 	Destination   string
 	ConsumerGroup string
 	PrefetchCount int
-	Timeout       time.Duration
 }
 
 // Inbound receives Oneway YARPC requests over Cherami.
@@ -74,9 +71,6 @@ type Inbound struct {
 func (t *Transport) NewInbound(config InboundConfig) *Inbound {
 	if config.PrefetchCount == 0 {
 		config.PrefetchCount = defaultPrefetchCount
-	}
-	if config.Timeout/time.Second <= 0 {
-		config.Timeout = defaultCheramiTimeout
 	}
 	return &Inbound{
 		once:          sync.Once(),
@@ -119,7 +113,6 @@ func (i *Inbound) start() error {
 		Destination:   i.config.Destination,
 		ConsumerGroup: i.config.ConsumerGroup,
 		PrefetchCount: i.config.PrefetchCount,
-		Timeout:       i.config.Timeout,
 	})
 	if err != nil {
 		return err

@@ -1,9 +1,12 @@
-version: '2'
+version: '2.1'
 
 services:
     crossdock:
         image: crossdock/crossdock
         dns_search: .
+        depends_on:
+          cherami:
+            condition: service_healthy
         links:
             - go
             - node
@@ -11,6 +14,7 @@ services:
             - python
             - python-sync
             - redis
+            - cherami
         environment:
             - WAIT_FOR=go,node,python,python-sync
 
@@ -30,7 +34,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis
+            - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
 
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
@@ -56,11 +60,15 @@ services:
 
     go:
         dns_search: .
+        depends_on:
+          cherami:
+            condition: service_healthy
         build: .
         ports:
             - "8080-8088"
         environment:
             - REDIS=enabled
+            - CHERAMI=enabled
 
     node:
         dns_search: .
@@ -92,3 +100,7 @@ services:
         image: redis
         ports:
             - 6379
+
+    cherami:
+        dns_search: .
+        image: ubercherami/cherami-server-standalone

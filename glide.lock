@@ -1,8 +1,8 @@
-hash: ca5c3c79daa476f268a20dd660becd53adecf7d0cc827c55352862c845944656
-updated: 2017-02-01T17:59:45.779066488-08:00
+hash: 41299379074d597b053894c96b24a3a512ace69e445cc4ee2fd714a990ae8e4d
+updated: 2017-02-10T10:31:53.537197614-08:00
 imports:
 - name: github.com/apache/thrift
-  version: de9c330b24c9190078eefb68c864d2a41a4dee07
+  version: e1832c354391deb0e0ce94a62ff32e8ce1c83fd3
   subpackages:
   - lib/go/thrift
 - name: github.com/cactus/go-statsd-client
@@ -25,7 +25,7 @@ imports:
 - name: github.com/gorilla/websocket
   version: c36f2fe5c330f0ac404b616b96c438b8616b1aaf
 - name: github.com/opentracing/opentracing-go
-  version: 0c3154a3c2ce79d3271985848659870599dfb77c
+  version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
   - ext
   - log
@@ -41,7 +41,7 @@ imports:
 - name: github.com/stretchr/objx
   version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
-  version: 2402e8e7a02fc811447d11f881aa9746cdc57983
+  version: 4d4bfba8f1d1027c4fdbe371823030df51419987
   subpackages:
   - assert
   - mock
@@ -51,7 +51,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: 0c9e689d64f004564b79d9a663634756df322902
 - name: github.com/uber/cherami-client-go
-  version: f6da4234a00f2494cacf22e364b92c3972e2050a
+  version: 5b008bbffe389a329274ff5ceaaa68e0b17348f9
   subpackages:
   - client/cherami
   - common
@@ -110,7 +110,7 @@ imports:
   - version
   - wire
 - name: golang.org/x/net
-  version: 007e530097ad7f954752df63046b4036f98ba6a6
+  version: a689eb3bc4b53af70390acc3cf68c9f549b6b8d6
   subpackages:
   - context
   - context/ctxhttp
@@ -119,7 +119,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: f8ed2e405fdcbb42c55233531ad98721e6d1cb3e
+  version: 44492e23b4afd3e75591994228422613777ee4ee
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/bsm/ratelimit.v1

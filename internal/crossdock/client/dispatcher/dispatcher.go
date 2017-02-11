@@ -22,6 +22,7 @@ package dispatcher
 
 import (
 	"fmt"
+	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -29,9 +30,11 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/redis"
 
 	"github.com/crossdock/crossdock-go"
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 )
 
 // Create creates an RPC from the given parameters or fails the whole behavior.
@@ -86,6 +89,19 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 			redis.NewRedis5Client("redis:6379"),
 			"yarpc/oneway",
 		)
+	case "cherami":
+		cheramiClient, err := cherami_client.NewClient(`example`, `cherami`, 4922, &cherami_client.ClientOptions{
+			Timeout: 5 * time.Second,
+			ReconfigurationPollingInterval: 1 * time.Second,
+		})
+		fatals.NoError(err, "couldn't create cherami client")
+
+		transport := cherami.NewTransport(cheramiClient)
+		err = transport.Start()
+		fatals.NoError(err, "couldn't start cherami transport")
+
+		outbound = transport.NewOutbound(cherami.OutboundConfig{
+			Destination: `/test/dest`})
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
