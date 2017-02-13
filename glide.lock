@@ -1,8 +1,8 @@
-hash: 979ab6d0a9a7df66f6b33230751c1faee0f7caf5d3b0c2112bd61a2093d324b8
-updated: 2017-02-12T23:31:29.435239478-05:00
+hash: 0907b00470931cc8d88368dd3a88b9396e1f46ff18cd22920703d342d5963280
+updated: 2017-02-13T16:25:47.699945516-05:00
 imports:
 - name: github.com/apache/thrift
-  version: e1832c354391deb0e0ce94a62ff32e8ce1c83fd3
+  version: 9549b25c77587b29be4e0b5c258221a4ed85d37a
   subpackages:
   - lib/go/thrift
 - name: github.com/cactus/go-statsd-client
@@ -10,7 +10,7 @@ imports:
   subpackages:
   - statsd
 - name: github.com/codahale/hdrhistogram
-  version: 3a0bb77429bd3a61596f5e8a3172445844342120
+  version: f8ad88b59a584afeee9d334eff879b104439117b
 - name: github.com/crossdock/crossdock-go
   version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
   subpackages:
@@ -125,7 +125,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 13507735c40b4afd2626062b27c40578748f7f95
+  version: 8524ce5143c569852232960af38dc05cad8c6189
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/bsm/ratelimit.v1
