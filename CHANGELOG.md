@@ -5,7 +5,7 @@ Releases
 v1.4.0 (unreleased)
 -----------------------
 
--   Nothing yet.
+-   Relaxed version constraint for `jaeger-client-go` to `>= 1, < 3`.
 
 
 v1.3.0 (2017-02-06)
