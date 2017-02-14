@@ -115,7 +115,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
-		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: string(spec.Type())}
+		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: spec.Type().String()}
 	}
 
 	updateSpanWithErr(span, err)

@@ -189,7 +189,7 @@ func (i *Inbound) handleMsg(msg []byte) error {
 	}
 
 	if spec.Type() != transport.Oneway {
-		err = errors.UnsupportedTypeError{Transport: transportName, Type: string(spec.Type())}
+		err = errors.UnsupportedTypeError{Transport: transportName, Type: spec.Type().String()}
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
