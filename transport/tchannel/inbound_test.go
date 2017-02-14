@@ -29,10 +29,8 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,10 +40,7 @@ func TestInboundStartNew(t *testing.T) {
 	require.NoError(t, err)
 
 	i := x.NewInbound()
-	mctrl := gomock.NewController(t)
-	router := transporttest.NewMockRouter(mctrl)
-	router.EXPECT().Procedures().Return(nil)
-	i.SetRouter(router)
+	i.SetRouter(yarpc.NewMapRouter("foo"))
 	require.NoError(t, i.Start())
 	require.NoError(t, x.Start())
 	require.NoError(t, i.Stop())
@@ -64,10 +59,7 @@ func TestInboundInvalidAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	i := x.NewInbound()
-	mctrl := gomock.NewController(t)
-	router := transporttest.NewMockRouter(mctrl)
-	router.EXPECT().Procedures().Return(nil)
-	i.SetRouter(router)
+	i.SetRouter(yarpc.NewMapRouter("foo"))
 	assert.Nil(t, i.Start())
 	defer i.Stop()
 	assert.Error(t, x.Start())
