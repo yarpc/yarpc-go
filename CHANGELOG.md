@@ -1,11 +1,13 @@
 Releases
 ========
 
-
-v1.4.0 (unreleased)
+v1.4.0 (2017-02-14)
 -----------------------
 
 -   Relaxed version constraint for `jaeger-client-go` to `>= 1, < 3`.
+-   TChannel transport now supports procedures with a different service name
+    than the default taken from the dispatcher. This brings the TChannel
+	transport up to par with HTTP.
 
 
 v1.3.0 (2017-02-06)
