@@ -151,7 +151,6 @@ func TestCallSuccess(t *testing.T) {
 	x, err := NewTransport(ServiceName("caller"))
 	require.NoError(t, err)
 	out := x.NewSingleOutbound(serverHostPort)
-	require.NoError(t, err)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 

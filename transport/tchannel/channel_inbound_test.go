@@ -21,15 +21,21 @@
 package tchannel
 
 import (
+	"bytes"
+	"context"
+	"io/ioutil"
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/raw"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/json"
+	"github.com/uber/tchannel-go/testutils"
 )
 
 func TestChannelInboundStartNew(t *testing.T) {
@@ -40,7 +46,7 @@ func TestChannelInboundStartNew(t *testing.T) {
 	require.NoError(t, err)
 
 	i := x.NewInbound()
-	i.SetRouter(new(transporttest.MockRouter))
+	i.SetRouter(yarpc.NewMapRouter("foo"))
 	// Can't do Equal because we want to match the pointer, not a
 	// DeepEqual.
 	assert.True(t, ch == i.Channel(), "channel does not match")
@@ -65,7 +71,7 @@ func TestChannelInboundStartAlreadyListening(t *testing.T) {
 
 	i := x.NewInbound()
 
-	i.SetRouter(new(transporttest.MockRouter))
+	i.SetRouter(yarpc.NewMapRouter("foo"))
 	require.NoError(t, i.Start())
 	require.NoError(t, x.Start())
 	assert.Equal(t, tchannel.ChannelListening, ch.State())
@@ -91,7 +97,7 @@ func TestChannelInboundInvalidAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	i := x.NewInbound()
-	i.SetRouter(new(transporttest.MockRouter))
+	i.SetRouter(yarpc.NewMapRouter("foo"))
 	assert.Nil(t, i.Start())
 	defer i.Stop()
 	assert.Error(t, x.Start())
@@ -112,7 +118,7 @@ func TestChannelInboundExistingMethods(t *testing.T) {
 	require.NoError(t, err)
 
 	i := x.NewInbound()
-	i.SetRouter(new(transporttest.MockRouter))
+	i.SetRouter(yarpc.NewMapRouter("foo"))
 	require.NoError(t, i.Start())
 	defer i.Stop()
 	require.NoError(t, x.Start())
@@ -130,4 +136,76 @@ func TestChannelInboundExistingMethods(t *testing.T) {
 	err = json.CallPeer(ctx, peer, svc, "echo", arg, &resp)
 	require.NoError(t, err, "Call failed")
 	assert.Equal(t, arg, resp, "Response mismatch")
+}
+
+func TestChannelInboundSubServices(t *testing.T) {
+	chserv := testutils.NewServer(t, nil)
+	defer chserv.Close()
+	chservEndpoint := chserv.PeerInfo().HostPort
+
+	itransport, err := NewChannelTransport(ServiceName("myservice"), WithChannel(chserv))
+	require.NoError(t, err)
+
+	router := yarpc.NewMapRouter("myservice")
+
+	i := itransport.NewInbound()
+	i.SetRouter(router)
+
+	nophandlerspec := transport.NewUnaryHandlerSpec(nophandler{})
+
+	router.Register([]transport.Procedure{
+		{Name: "hello", HandlerSpec: nophandlerspec},
+		{Service: "subservice", Name: "hello", HandlerSpec: nophandlerspec},
+		{Service: "subservice", Name: "world", HandlerSpec: nophandlerspec},
+		{Service: "subservice2", Name: "hello", HandlerSpec: nophandlerspec},
+		{Service: "subservice2", Name: "monde", HandlerSpec: nophandlerspec},
+	})
+
+	require.NoError(t, i.Start())
+	require.NoError(t, itransport.Start())
+
+	otransport, err := NewChannelTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	o := otransport.NewSingleOutbound(chservEndpoint)
+
+	require.NoError(t, o.Start())
+	defer o.Stop()
+
+	for _, tt := range []struct {
+		service   string
+		procedure string
+	}{
+		{"myservice", "hello"},
+		{"subservice", "hello"},
+		{"subservice", "world"},
+		{"subservice2", "hello"},
+		{"subservice2", "monde"},
+	} {
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		res, err := o.Call(
+			ctx,
+			&transport.Request{
+				Caller:    "caller",
+				Service:   tt.service,
+				Procedure: tt.procedure,
+				Encoding:  raw.Encoding,
+				Body:      bytes.NewReader([]byte{}),
+			},
+		)
+		if !assert.NoError(t, err, "failed to make call") {
+			continue
+		}
+		if !assert.Equal(t, false, res.ApplicationError, "not application error") {
+			continue
+		}
+		body, err := ioutil.ReadAll(res.Body)
+		if !assert.NoError(t, err) {
+			continue
+		}
+		assert.Equal(t, string(body), tt.service)
+	}
+
+	require.NoError(t, i.Stop())
+	require.NoError(t, itransport.Stop())
 }

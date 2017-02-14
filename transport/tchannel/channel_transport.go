@@ -114,9 +114,16 @@ func (t *ChannelTransport) start() error {
 		// dispatcher, or its equivalent, calls SetRouter before Start.
 		// This also means that SetRouter should be called on every inbound
 		// before calling Start on any transport or inbound.
-		sc := t.ch.GetSubChannel(t.ch.ServiceName())
-		existing := sc.GetHandlers()
-		sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer})
+		services := make(map[string]struct{})
+		for _, p := range t.router.Procedures() {
+			services[p.Service] = struct{}{}
+		}
+
+		for s := range services {
+			sc := t.ch.GetSubChannel(s)
+			existing := sc.GetHandlers()
+			sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer})
+		}
 	}
 
 	if t.ch.State() == tchannel.ChannelListening {
