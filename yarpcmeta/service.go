@@ -48,16 +48,16 @@ func Register(d *yarpc.Dispatcher) *Service {
 }
 
 type procedure struct {
-	Service   string
-	Name      string
-	Encoding  string
-	Signature string
-	RPCType   string
+	Service   string `json:"service"`
+	Name      string `json:"name"`
+	Encoding  string `json:"encoding"`
+	Signature string `json:"signature"`
+	RPCType   string `json:"rpcType"`
 }
 
 type procsResponse struct {
-	Name     string
-	Services map[string][]procedure
+	Name     string                 `json:"name"`
+	Services map[string][]procedure `json:"services"`
 }
 
 func (m *Service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
@@ -86,7 +86,7 @@ func (m *Service) Procedures() []transport.Procedure {
 		Handler   interface{}
 		Signature string
 	}{
-		{"procedures", m.procs, `procs() {"Name": "...", "Services": {"...": [{"Name": "..."}]}}`},
+		{"procedures", m.procs, `procs() {"name": "...", "services": {"...": [{"name": "..."}]}}`},
 	}
 	var r []transport.Procedure
 	for _, m := range methods {
