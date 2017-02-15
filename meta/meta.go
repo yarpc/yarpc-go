@@ -29,14 +29,15 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 )
 
-type MetaService struct {
+// Service exposes dispatcher informations via Procedures().
+type Service struct {
 	disp *yarpc.Dispatcher
 }
 
 // NewMetaService allocates a new meta service, exposing the list of services
 // and registered procedures of the dispatcher.
-func NewMetaService(d *yarpc.Dispatcher) *MetaService {
-	return &MetaService{d}
+func NewMetaService(d *yarpc.Dispatcher) *Service {
+	return &Service{d}
 }
 
 type procedure struct {
@@ -53,7 +54,7 @@ type procsResponse struct {
 	Procedures []procedure
 }
 
-func (m *MetaService) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
+func (m *Service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
 	routerProcs := m.disp.Router().Procedures()
 	procedures := make([]procedure, 0, len(routerProcs))
 	servicesMap := make(map[string]struct{})
@@ -80,7 +81,7 @@ func (m *MetaService) procs(ctx context.Context, body interface{}) (*procsRespon
 }
 
 // Procedures returns the procedures to register on a dispatcher.
-func (m *MetaService) Procedures() []transport.Procedure {
+func (m *Service) Procedures() []transport.Procedure {
 	methods := []struct {
 		Name      string
 		Handler   interface{}
