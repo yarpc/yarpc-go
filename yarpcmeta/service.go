@@ -48,7 +48,6 @@ func Register(d *yarpc.Dispatcher) *Service {
 }
 
 type procedure struct {
-	Service   string `json:"service"`
 	Name      string `json:"name"`
 	Encoding  string `json:"encoding"`
 	Signature string `json:"signature"`
@@ -56,26 +55,24 @@ type procedure struct {
 }
 
 type procsResponse struct {
-	Name     string                 `json:"name"`
-	Services map[string][]procedure `json:"services"`
+	Service    string      `json:"service"`
+	Procedures []procedure `json:"procedures"`
 }
 
 func (m *Service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
 	routerProcs := m.disp.Router().Procedures()
-	services := make(map[string][]procedure)
+	procedures := make([]procedure, 0, len(routerProcs))
 	for _, p := range routerProcs {
-		pinfo := procedure{
-			Service:   p.Service,
+		procedures = append(procedures, procedure{
 			Name:      p.Name,
 			Encoding:  string(p.Encoding),
 			Signature: p.Signature,
 			RPCType:   p.HandlerSpec.Type().String(),
-		}
-		services[p.Service] = append(services[p.Service], pinfo)
+		})
 	}
 	return &procsResponse{
-		Name:     m.disp.Name(),
-		Services: services,
+		Service:    m.disp.Name(),
+		Procedures: procedures,
 	}, nil
 }
 
@@ -86,7 +83,8 @@ func (m *Service) Procedures() []transport.Procedure {
 		Handler   interface{}
 		Signature string
 	}{
-		{"yarpc/procedures", m.procs, `procs() {"name": "...", "services": {"...": [{"name": "..."}]}}`},
+		{"yarpc/procedures", m.procs,
+			`procs() {"service": "...", "procedures": [{"name": "..."}]}`},
 	}
 	var r []transport.Procedure
 	for _, m := range methods {
