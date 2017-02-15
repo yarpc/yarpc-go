@@ -58,6 +58,7 @@ func Procedure(name string, handler interface{}) []transport.Procedure {
 			HandlerSpec: transport.NewUnaryHandlerSpec(
 				wrapUnaryHandler(name, handler),
 			),
+			Encoding: Encoding,
 		},
 	}
 }
@@ -74,6 +75,7 @@ func OnewayProcedure(name string, handler interface{}) []transport.Procedure {
 			Name: name,
 			HandlerSpec: transport.NewOnewayHandlerSpec(
 				wrapOnewayHandler(name, handler)),
+			Encoding: Encoding,
 		},
 	}
 }
