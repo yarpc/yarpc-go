@@ -454,3 +454,13 @@ func (d *Dispatcher) introspect() dispatcherStatus {
 		Outbounds:  outbounds,
 	}
 }
+
+// Router returns the procedure router.
+func (d *Dispatcher) Router() transport.Router {
+	return d.table
+}
+
+// Name returns the name of the dispatcher.
+func (d *Dispatcher) Name() string {
+	return d.name
+}
