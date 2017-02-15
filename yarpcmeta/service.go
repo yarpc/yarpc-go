@@ -86,12 +86,11 @@ func (m *Service) Procedures() []transport.Procedure {
 		Handler   interface{}
 		Signature string
 	}{
-		{"procedures", m.procs, `procs() {"name": "...", "services": {"...": [{"name": "..."}]}}`},
+		{"yarpc/procedures", m.procs, `procs() {"name": "...", "services": {"...": [{"name": "..."}]}}`},
 	}
 	var r []transport.Procedure
 	for _, m := range methods {
 		p := json.Procedure(m.Name, m.Handler)[0]
-		p.Service = "yarpc"
 		p.Signature = m.Signature
 		r = append(r, p)
 	}
