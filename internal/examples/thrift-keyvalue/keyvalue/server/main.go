@@ -61,7 +61,11 @@ func (h *handler) SetValue(ctx context.Context, key *string, value *string) erro
 }
 
 func main() {
-	go func() { gohttp.ListenAndServe(":3242", nil) }()
+	go func() {
+		if err := gohttp.ListenAndServe(":3242", nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
 	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName("keyvalue"),
 		tchannel.ListenAddr(":28941"),
