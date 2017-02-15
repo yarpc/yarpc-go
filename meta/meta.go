@@ -40,6 +40,14 @@ func NewMetaService(d *yarpc.Dispatcher) *Service {
 	return &Service{d}
 }
 
+// Register allocates a new meta service from the dispatcher and registers it
+// right away on it.
+func Register(d *yarpc.Dispatcher) *Service {
+	ms := NewMetaService(d)
+	d.Register(ms.Procedures())
+	return ms
+}
+
 type procedure struct {
 	Service   string
 	Name      string

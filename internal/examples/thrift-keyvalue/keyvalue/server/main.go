@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueserver"
+	"go.uber.org/yarpc/meta"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
@@ -80,6 +81,8 @@ func main() {
 
 	handler := handler{items: make(map[string]string)}
 	dispatcher.Register(keyvalueserver.New(&handler))
+
+	meta.Register(dispatcher)
 
 	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())
