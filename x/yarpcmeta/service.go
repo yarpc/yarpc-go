@@ -28,23 +28,16 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 )
 
-// Service exposes dispatcher informations via Procedures().
-type Service struct {
-	disp *yarpc.Dispatcher
-}
-
-// NewMetaService allocates a new yarpc meta service, exposing the list of
-// services and registered procedures of the dispatcher via Procedures().
-func NewMetaService(d *yarpc.Dispatcher) *Service {
-	return &Service{d}
-}
-
-// Register allocates a new yarpc meta service from the dispatcher and
-// registers it right away on it.
-func Register(d *yarpc.Dispatcher) *Service {
-	ms := NewMetaService(d)
+// Register new yarpc meta procedures a dispatcher, exposing information about
+// the dispatcher itself.
+func Register(d *yarpc.Dispatcher) {
+	ms := &service{d}
 	d.Register(ms.Procedures())
-	return ms
+}
+
+// service exposes dispatcher informations via Procedures().
+type service struct {
+	disp *yarpc.Dispatcher
 }
 
 type procedure struct {
@@ -59,7 +52,7 @@ type procsResponse struct {
 	Procedures []procedure `json:"procedures"`
 }
 
-func (m *Service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
+func (m *service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
 	routerProcs := m.disp.Router().Procedures()
 	procedures := make([]procedure, 0, len(routerProcs))
 	for _, p := range routerProcs {
@@ -77,7 +70,7 @@ func (m *Service) procs(ctx context.Context, body interface{}) (*procsResponse, 
 }
 
 // Procedures returns the procedures to register on a dispatcher.
-func (m *Service) Procedures() []transport.Procedure {
+func (m *service) Procedures() []transport.Procedure {
 	methods := []struct {
 		Name      string
 		Handler   interface{}
