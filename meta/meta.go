@@ -22,7 +22,6 @@ package meta
 
 import (
 	"context"
-	"sort"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -57,34 +56,26 @@ type procedure struct {
 }
 
 type procsResponse struct {
-	Name       string
-	Services   []string
-	Procedures []procedure
+	Name     string
+	Services map[string][]procedure
 }
 
 func (m *Service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
 	routerProcs := m.disp.Router().Procedures()
-	procedures := make([]procedure, 0, len(routerProcs))
-	servicesMap := make(map[string]struct{})
+	services := make(map[string][]procedure)
 	for _, p := range routerProcs {
-		procedures = append(procedures, procedure{
+		pinfo := procedure{
 			Service:   p.Service,
 			Name:      p.Name,
 			Encoding:  string(p.Encoding),
 			Signature: p.Signature,
 			RPCType:   p.HandlerSpec.Type().String(),
-		})
-		servicesMap[p.Service] = struct{}{}
+		}
+		services[p.Service] = append(services[p.Service], pinfo)
 	}
-	services := make([]string, 0, len(servicesMap))
-	for k := range servicesMap {
-		services = append(services, k)
-	}
-	sort.Strings(services)
 	return &procsResponse{
-		Name:       m.disp.Name(),
-		Services:   services,
-		Procedures: procedures,
+		Name:     m.disp.Name(),
+		Services: services,
 	}, nil
 }
 
@@ -95,7 +86,7 @@ func (m *Service) Procedures() []transport.Procedure {
 		Handler   interface{}
 		Signature string
 	}{
-		{"procedures", m.procs, `procs() json(registered procedures)`},
+		{"procedures", m.procs, `procs() {"Name": "...", "Services": {"...": [{"Name": "..."}]}}`},
 	}
 	var r []transport.Procedure
 	for _, m := range methods {
