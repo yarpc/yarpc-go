@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package meta
+package yarpcmeta
 
 import (
 	"context"
@@ -33,14 +33,14 @@ type Service struct {
 	disp *yarpc.Dispatcher
 }
 
-// NewMetaService allocates a new meta service, exposing the list of services
-// and registered procedures of the dispatcher.
+// NewMetaService allocates a new yarpc meta service, exposing the list of
+// services and registered procedures of the dispatcher via Procedures().
 func NewMetaService(d *yarpc.Dispatcher) *Service {
 	return &Service{d}
 }
 
-// Register allocates a new meta service from the dispatcher and registers it
-// right away on it.
+// Register allocates a new yarpc meta service from the dispatcher and
+// registers it right away on it.
 func Register(d *yarpc.Dispatcher) *Service {
 	ms := NewMetaService(d)
 	d.Register(ms.Procedures())
@@ -91,7 +91,7 @@ func (m *Service) Procedures() []transport.Procedure {
 	var r []transport.Procedure
 	for _, m := range methods {
 		p := json.Procedure(m.Name, m.Handler)[0]
-		p.Service = "meta"
+		p.Service = "yarpc"
 		p.Signature = m.Signature
 		r = append(r, p)
 	}
