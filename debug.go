@@ -65,10 +65,10 @@ func init() {
 
 func render(w io.Writer, req *http.Request) {
 	data := struct {
-		Dispatchers  []introspection.DispatcherStatus
-		Dependencies []introspection.Dependence
+		Dispatchers     []introspection.DispatcherStatus
+		PackageVersions []introspection.PackageVersion
 	}{
-		Dependencies: Dependencies,
+		PackageVersions: PackageVersions,
 	}
 
 	for _, disp := range dispatchers {
@@ -133,7 +133,7 @@ const pageHTML = `
 <header>
 <h1>/debug/yarpc</h1>
 <div class="dependencies">
-	{{range .Dependencies}}
+	{{range .PackageVersions}}
 	<span>{{.Name}}={{.Version}}</span>
 	{{end}}
 </div>
