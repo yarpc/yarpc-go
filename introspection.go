@@ -22,7 +22,10 @@ package yarpc
 
 import (
 	"fmt"
+	"runtime"
 
+	tchannel "github.com/uber/tchannel-go"
+	thriftrw "go.uber.org/thriftrw/version"
 	"go.uber.org/yarpc/internal/introspection"
 )
 
@@ -68,10 +71,19 @@ func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 	}
 	procedures := introspection.IntrospectProcedures(d.table.Procedures())
 	return introspection.DispatcherStatus{
-		Name:       d.name,
-		ID:         fmt.Sprintf("%p", d),
-		Procedures: procedures,
-		Inbounds:   inbounds,
-		Outbounds:  outbounds,
+		Name:         d.name,
+		ID:           fmt.Sprintf("%p", d),
+		Procedures:   procedures,
+		Inbounds:     inbounds,
+		Outbounds:    outbounds,
+		Dependencies: Dependencies,
 	}
+}
+
+// Dependencies is a list of yarpc dependencies with corresponding versions.
+var Dependencies = []introspection.Dependence{
+	{Name: "yarpc", Version: Version},
+	{Name: "tch", Version: tchannel.VersionInfo},
+	{Name: "go", Version: runtime.Version()},
+	{Name: "thriftrw", Version: thriftrw.Version},
 }
