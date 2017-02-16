@@ -67,7 +67,7 @@ func (m *service) Procedures() []transport.Procedure {
 		Signature string
 	}{
 		{"yarpc/procedures", m.procs,
-			`procs() {"service": "...", "procedures": [{"name": "..."}]}`},
+			`procedures() {"service": "...", "procedures": [{"name": "..."}]}`},
 		{"yarpc/introspect", m.introspect,
 			`introspect() {...}`},
 	}
