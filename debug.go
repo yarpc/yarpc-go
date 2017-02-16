@@ -64,8 +64,11 @@ func init() {
 }
 
 func render(w io.Writer, req *http.Request) {
-	var data struct {
-		Dispatchers []introspection.DispatcherStatus
+	data := struct {
+		Dispatchers     []introspection.DispatcherStatus
+		PackageVersions []introspection.PackageVersion
+	}{
+		PackageVersions: PackageVersions,
 	}
 
 	for _, disp := range dispatchers {
@@ -107,11 +110,34 @@ const pageHTML = `
 			border-color: #3A3A3A;
 			background-color: #ffffff;
 		}
+		header::after {
+			content: "";
+			clear: both;
+			display: table;
+		}
+		h1 {
+			width: 40%;
+			float: left;
+			margin: 0;
+		}
+		div.dependencies {
+			width: 60%;
+			float: left;
+			font-size: small;
+			text-align: right;
+		}
 	</style>
 	</head>
 	<body>
 
+<header>
 <h1>/debug/yarpc</h1>
+<div class="dependencies">
+	{{range .PackageVersions}}
+	<span>{{.Name}}={{.Version}}</span>
+	{{end}}
+</div>
+</header>
 
 {{range .Dispatchers}}
 	<hr />
@@ -193,7 +219,6 @@ const pageHTML = `
 		{{end}}
 	</table>
 {{end}}
-
 	</body>
 </html>
 `

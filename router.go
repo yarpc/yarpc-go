@@ -28,6 +28,10 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 )
 
+var (
+	_ transport.Router = (*MapRouter)(nil)
+)
+
 type serviceProcedure struct {
 	service   string
 	procedure string
