@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
@@ -400,59 +399,6 @@ func (d *Dispatcher) Stop() error {
 
 	removeDispatcherFromDebugPages(d)
 	return nil
-}
-
-type dispatcherStatus struct {
-	Name       string
-	ID         string
-	Procedures []transport.Procedure
-	Inbounds   []introspection.InboundStatus
-	Outbounds  []introspection.OutboundStatus
-}
-
-func (d *Dispatcher) introspect() dispatcherStatus {
-	var inbounds []introspection.InboundStatus
-	for _, i := range d.inbounds {
-		var status introspection.InboundStatus
-		if i, ok := i.(introspection.IntrospectableInbound); ok {
-			status = i.Introspect()
-		} else {
-			status = introspection.InboundStatus{
-				Transport: "Introspection not supported",
-			}
-		}
-		inbounds = append(inbounds, status)
-	}
-	var outbounds []introspection.OutboundStatus
-	for outboundKey, o := range d.outbounds {
-		var status introspection.OutboundStatus
-		if o.Unary != nil {
-			if o, ok := o.Unary.(introspection.IntrospectableOutbound); ok {
-				status = o.Introspect()
-			} else {
-				status.Transport = "Introspection not supported"
-			}
-			status.RPCType = "unary"
-		}
-		if o.Oneway != nil {
-			if o, ok := o.Oneway.(introspection.IntrospectableOutbound); ok {
-				status = o.Introspect()
-			} else {
-				status.Transport = "Introspection not supported"
-			}
-			status.RPCType = "oneway"
-		}
-		status.Service = o.ServiceName
-		status.OutboundKey = outboundKey
-		outbounds = append(outbounds, status)
-	}
-	return dispatcherStatus{
-		Name:       d.name,
-		ID:         fmt.Sprintf("%p", d),
-		Procedures: d.table.Procedures(),
-		Inbounds:   inbounds,
-		Outbounds:  outbounds,
-	}
 }
 
 // Router returns the procedure router.

@@ -27,13 +27,13 @@ type IntrospectableChooser interface {
 
 // ChooserStatus is a collection of basic chooser info.
 type ChooserStatus struct {
-	Name  string
-	State string
-	Peers []PeerStatus
+	Name  string       `json:"name"`
+	State string       `json:"state"`
+	Peers []PeerStatus `json:"peers"`
 }
 
 // PeerStatus is a collection of basic peers info.
 type PeerStatus struct {
-	Identifier string
-	State      string
+	Identifier string `json:"identifier"`
+	State      string `json:"state"`
 }

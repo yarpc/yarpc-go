@@ -4,6 +4,9 @@ Releases
 v1.5.0 (unreleased)
 -----------------------
 
+-   x/yarpcmeta make it easy to expose the list of procedures and other
+    introspection information of a dispatcher on itself.
+
 v1.4.0 (2017-02-14)
 -----------------------
 

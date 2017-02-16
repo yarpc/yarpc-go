@@ -26,6 +26,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/internal/introspection"
 )
 
 // Register new yarpc meta procedures a dispatcher, exposing information about
@@ -40,33 +41,22 @@ type service struct {
 	disp *yarpc.Dispatcher
 }
 
-type procedure struct {
-	Name      string `json:"name"`
-	Encoding  string `json:"encoding"`
-	Signature string `json:"signature"`
-	RPCType   string `json:"rpcType"`
-}
-
 type procsResponse struct {
-	Service    string      `json:"service"`
-	Procedures []procedure `json:"procedures"`
+	Service    string                    `json:"service"`
+	Procedures []introspection.Procedure `json:"procedures"`
 }
 
 func (m *service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
-	routerProcs := m.disp.Router().Procedures()
-	procedures := make([]procedure, 0, len(routerProcs))
-	for _, p := range routerProcs {
-		procedures = append(procedures, procedure{
-			Name:      p.Name,
-			Encoding:  string(p.Encoding),
-			Signature: p.Signature,
-			RPCType:   p.HandlerSpec.Type().String(),
-		})
-	}
+	procedures := introspection.IntrospectProcedures(m.disp.Router().Procedures())
 	return &procsResponse{
 		Service:    m.disp.Name(),
 		Procedures: procedures,
 	}, nil
+}
+
+func (m *service) introspect(ctx context.Context, body interface{}) (*introspection.DispatcherStatus, error) {
+	status := m.disp.Introspect()
+	return &status, nil
 }
 
 // Procedures returns the procedures to register on a dispatcher.
@@ -77,7 +67,9 @@ func (m *service) Procedures() []transport.Procedure {
 		Signature string
 	}{
 		{"yarpc/procedures", m.procs,
-			`procs() {"service": "...", "procedures": [{"name": "..."}]}`},
+			`procedures() {"service": "...", "procedures": [{"name": "..."}]}`},
+		{"yarpc/introspect", m.introspect,
+			`introspect() {...}`},
 	}
 	var r []transport.Procedure
 	for _, m := range methods {
