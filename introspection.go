@@ -83,7 +83,7 @@ func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 // PackageVersions is a list of packages with corresponding versions.
 var PackageVersions = []introspection.PackageVersion{
 	{Name: "yarpc", Version: Version},
-	{Name: "tch", Version: tchannel.VersionInfo},
+	{Name: "tchannel", Version: tchannel.VersionInfo},
 	{Name: "thriftrw", Version: thriftrw.Version},
 	{Name: "go", Version: runtime.Version()},
 }
