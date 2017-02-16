@@ -24,10 +24,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	gohttp "net/http"
 	"sync"
 
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueserver"
+	"go.uber.org/yarpc/x/yarpcmeta"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
@@ -59,6 +61,11 @@ func (h *handler) SetValue(ctx context.Context, key *string, value *string) erro
 }
 
 func main() {
+	go func() {
+		if err := gohttp.ListenAndServe(":3242", nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
 	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName("keyvalue"),
 		tchannel.ListenAddr(":28941"),
@@ -78,6 +85,8 @@ func main() {
 
 	handler := handler{items: make(map[string]string)}
 	dispatcher.Register(keyvalueserver.New(&handler))
+
+	yarpcmeta.Register(dispatcher)
 
 	if err := dispatcher.Start(); err != nil {
 		fmt.Println("error:", err.Error())
