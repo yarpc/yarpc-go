@@ -1,4 +1,3 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +19,30 @@
 
 package introspection
 
-// IntrospectableInbound extends the Inbound interface.
-type IntrospectableInbound interface {
-	Introspect() InboundStatus
+import (
+	"go.uber.org/yarpc/api/transport"
+)
+
+// Procedure represent a registered procedure on a dispatcher.
+type Procedure struct {
+	Name      string `json:"name"`
+	Encoding  string `json:"encoding"`
+	Signature string `json:"signature"`
+	RPCType   string `json:"rpcType"`
 }
 
-// InboundStatus is a collection of basics info about an Inbound.
-type InboundStatus struct {
-	Transport string `json:"transport"`
-	Endpoint  string `json:"endpoint"`
-	State     string `json:"state"`
+// IntrospectProcedures is a convenience function that translate yarpc a slice
+// of transport.Procedure to a slice of introspection.Procedure. This output is
+// used in debug and yarpcmeta.
+func IntrospectProcedures(routerProcs []transport.Procedure) []Procedure {
+	procedures := make([]Procedure, 0, len(routerProcs))
+	for _, p := range routerProcs {
+		procedures = append(procedures, Procedure{
+			Name:      p.Name,
+			Encoding:  string(p.Encoding),
+			Signature: p.Signature,
+			RPCType:   p.HandlerSpec.Type().String(),
+		})
+	}
+	return procedures
 }

@@ -1,4 +1,3 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +19,12 @@
 
 package introspection
 
-// IntrospectableInbound extends the Inbound interface.
-type IntrospectableInbound interface {
-	Introspect() InboundStatus
-}
-
-// InboundStatus is a collection of basics info about an Inbound.
-type InboundStatus struct {
-	Transport string `json:"transport"`
-	Endpoint  string `json:"endpoint"`
-	State     string `json:"state"`
+// DispatcherStatus represent detailed introspection information about a
+// dispatcher.
+type DispatcherStatus struct {
+	Name       string           `json:"name"`
+	ID         string           `json:"id"`
+	Procedures []Procedure      `json:"procedures"`
+	Inbounds   []InboundStatus  `json:"inbounds"`
+	Outbounds  []OutboundStatus `json:"outbounds"`
 }

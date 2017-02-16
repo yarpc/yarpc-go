@@ -26,6 +26,8 @@ import (
 	"log"
 	"net/http"
 	"sync"
+
+	"go.uber.org/yarpc/internal/introspection"
 )
 
 var (
@@ -63,11 +65,11 @@ func init() {
 
 func render(w io.Writer, req *http.Request) {
 	var data struct {
-		Dispatchers []dispatcherStatus
+		Dispatchers []introspection.DispatcherStatus
 	}
 
 	for _, disp := range dispatchers {
-		data.Dispatchers = append(data.Dispatchers, disp.introspect())
+		data.Dispatchers = append(data.Dispatchers, disp.Introspect())
 	}
 
 	if err := pageTmpl.ExecuteTemplate(w, "Page", data); err != nil {
@@ -116,7 +118,6 @@ const pageHTML = `
 	<h2>Dispatcher "{{.Name}}" <small>({{.ID}})</small></h2>
 	<table>
 		<tr>
-			<th>Service</th>
 			<th>Procedure</th>
 			<th>Encoding</th>
 			<th>Signature</th>
@@ -124,11 +125,10 @@ const pageHTML = `
 		</tr>
 		{{range .Procedures}}
 		<tr>
-			<td>{{.Service}}</td>
 			<td>{{.Name}}</td>
 			<td>{{.Encoding}}</td>
 			<td>{{.Signature}}</td>
-			<td>{{.HandlerSpec.Type}}</td>
+			<td>{{.RPCType}}</td>
 		</tr>
 		{{end}}
 	</table>
