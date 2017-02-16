@@ -31,8 +31,8 @@ type Procedure struct {
 	RPCType   string `json:"rpcType"`
 }
 
-// IntrospectProcedures is a convenience function that translate yarpc a slice
-// of transport.Procedure to a slice of introspection.Procedure. This output is
+// IntrospectProcedures is a convenience function that translate a slice of
+// transport.Procedure to a slice of introspection.Procedure. This output is
 // used in debug and yarpcmeta.
 func IntrospectProcedures(routerProcs []transport.Procedure) []Procedure {
 	procedures := make([]Procedure, 0, len(routerProcs))
