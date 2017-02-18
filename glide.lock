@@ -1,8 +1,8 @@
-hash: 0907b00470931cc8d88368dd3a88b9396e1f46ff18cd22920703d342d5963280
-updated: 2017-02-13T16:25:47.699945516-05:00
+hash: 1f78c3e930a9c9e5c2f0f80ce79c91ddb216966e60a884795555c8819c9a1a2b
+updated: 2017-02-13T15:01:10.358513497-08:00
 imports:
 - name: github.com/apache/thrift
-  version: 9549b25c77587b29be4e0b5c258221a4ed85d37a
+  version: 4f710aa4f47e051d41c863aa7aa9239dab5b9636
   subpackages:
   - lib/go/thrift
 - name: github.com/cactus/go-statsd-client
@@ -17,7 +17,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
   subpackages:
   - spew
 - name: github.com/golang/mock
@@ -26,6 +26,8 @@ imports:
   - gomock
 - name: github.com/gorilla/websocket
   version: c36f2fe5c330f0ac404b616b96c438b8616b1aaf
+- name: github.com/mitchellh/mapstructure
+  version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/opentracing/opentracing-go
   version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
@@ -125,7 +127,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 8524ce5143c569852232960af38dc05cad8c6189
+  version: 6e7ee5a9ec598d425ca86d6aab6e76e21baf328c
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/bsm/ratelimit.v1
