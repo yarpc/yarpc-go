@@ -51,6 +51,12 @@
 // Note that stopping an HTTP transport does NOT immediately terminate ongoing
 // requests. Connections will remain open until all clients have disconnected.
 //
+// Configuration
+//
+// An HTTP Transport may be configured using YARPC's configuration system. See
+// TransportConfig, InboundConfig, and OutboundConfig for details on the
+// different configuration parameters supported by this transport.
+//
 // Wire Representation
 //
 // YARPC requests and responses are sent as plain HTTP requests and responses.
