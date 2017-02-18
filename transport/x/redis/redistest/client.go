@@ -80,6 +80,16 @@ func (_mr *_MockClientRecorder) Endpoint() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Endpoint")
 }
 
+func (_m *MockClient) IsRunning() bool {
+	ret := _m.ctrl.Call(_m, "IsRunning")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+func (_mr *_MockClientRecorder) IsRunning() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
+}
+
 func (_m *MockClient) LPush(_param0 string, _param1 []byte) error {
 	ret := _m.ctrl.Call(_m, "LPush", _param0, _param1)
 	ret0, _ := ret[0].(error)
