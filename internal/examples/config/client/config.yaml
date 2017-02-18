@@ -1,0 +1,16 @@
+name: myservice-client
+outbounds:
+  myservice:
+    unary:
+      # tchannel:
+      #   address: localhost:4040
+      http:
+        url: http://localhost:8080/
+    oneway:
+      redis:
+        queueKey: requests
+transports:
+  tchannel:
+    service: myservice-client
+  redis:
+    address: localhost:6379
