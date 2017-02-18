@@ -1,0 +1,14 @@
+name: myservice
+inbounds:
+  http:
+    address: ":8080"
+  redis:
+    queueKey: requests
+    processingKey: processing
+  # tchannel: {}
+transports:
+  # tchannel:
+  #   address: ":4040"
+  #   service: myservice
+  redis:
+    address: localhost:6379
