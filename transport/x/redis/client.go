@@ -20,14 +20,15 @@
 
 package redis
 
-import "time"
+import (
+	"time"
+
+	"go.uber.org/yarpc/api/transport"
+)
 
 // Client is a subset of redis commands used to manage a queue
 type Client interface {
-	// Start creates the connection to redis
-	Start() error
-	// Stop ends the redis connection
-	Stop() error
+	transport.Lifecycle
 
 	// LPush adds item to the queue
 	LPush(queue string, item []byte) error
