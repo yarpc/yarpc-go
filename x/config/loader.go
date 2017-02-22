@@ -128,7 +128,7 @@ func (l Loader) spec(name string) (transportSpec, error) {
 }
 
 // LoadYAML loads a YARPC configuration from YAML.
-func (l *Loader) LoadYAML(b []byte) (*YARPC, error) {
+func (l *Loader) LoadYAML(b []byte) (*Builder, error) {
 	var data map[string]interface{}
 	if err := yaml.Unmarshal(b, &data); err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (l *Loader) LoadYAML(b []byte) (*YARPC, error) {
 }
 
 // Load a YARPC configuration from the given data map.
-func (l *Loader) Load(data map[string]interface{}) (*YARPC, error) {
+func (l *Loader) Load(data map[string]interface{}) (*Builder, error) {
 	var cfg yarpcConfig
 	if err := decode.Decode(&cfg, data); err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (l *Loader) Load(data map[string]interface{}) (*YARPC, error) {
 
 	// Set of transports we actually need
 	needTransports := make(map[string]struct{})
-	result := YARPC{Name: cfg.Name}
+	result := Builder{Name: cfg.Name}
 
 	for _, inbound := range cfg.Inbounds {
 		if inbound.Disabled {

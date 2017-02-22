@@ -27,8 +27,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-// YARPC TODO
-type YARPC struct {
+// Builder TODO
+type Builder struct {
 	Name       string
 	Inbounds   []InboundConfig
 	Outbounds  []OutboundConfig
@@ -36,11 +36,11 @@ type YARPC struct {
 }
 
 // Build TODO
-func (c *YARPC) Build() (yarpc.Config, error) {
-	cfg := yarpc.Config{Name: c.Name, Outbounds: make(yarpc.Outbounds)}
+func (b *Builder) Build() (yarpc.Config, error) {
+	cfg := yarpc.Config{Name: b.Name, Outbounds: make(yarpc.Outbounds)}
 
 	transports := make(map[string]transport.Transport)
-	for _, tcfg := range c.Transports {
+	for _, tcfg := range b.Transports {
 		t, err := tcfg.Builder.BuildTransport()
 		if err != nil {
 			return cfg, fmt.Errorf("failed to build transport %q: %v", tcfg.Name, err)
@@ -48,7 +48,7 @@ func (c *YARPC) Build() (yarpc.Config, error) {
 		transports[tcfg.Name] = t
 	}
 
-	for _, icfg := range c.Inbounds {
+	for _, icfg := range b.Inbounds {
 		tname := icfg.TransportName
 		// TODO: error if transport not found in map
 		inbound, err := icfg.Builder.BuildInbound(transports[tname])
@@ -58,7 +58,7 @@ func (c *YARPC) Build() (yarpc.Config, error) {
 		cfg.Inbounds = append(cfg.Inbounds, inbound)
 	}
 
-	for _, ocfg := range c.Outbounds {
+	for _, ocfg := range b.Outbounds {
 		outbounds := transport.Outbounds{ServiceName: ocfg.Service}
 		if ocfg.Oneway != nil {
 			tname := ocfg.Oneway.TransportName
