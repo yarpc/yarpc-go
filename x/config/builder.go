@@ -36,14 +36,14 @@ type Builder struct {
 }
 
 // Build TODO
-func (b *Builder) Build() (yarpc.Config, error) {
+func (b *Builder) Build() (*yarpc.Dispatcher, error) {
 	cfg := yarpc.Config{Name: b.Name, Outbounds: make(yarpc.Outbounds)}
 
 	transports := make(map[string]transport.Transport)
 	for _, tcfg := range b.Transports {
 		t, err := tcfg.Builder.BuildTransport()
 		if err != nil {
-			return cfg, fmt.Errorf("failed to build transport %q: %v", tcfg.Name, err)
+			return nil, fmt.Errorf("failed to build transport %q: %v", tcfg.Name, err)
 		}
 		transports[tcfg.Name] = t
 	}
@@ -53,7 +53,7 @@ func (b *Builder) Build() (yarpc.Config, error) {
 		// TODO: error if transport not found in map
 		inbound, err := icfg.Builder.BuildInbound(transports[tname])
 		if err != nil {
-			return cfg, fmt.Errorf("failed to build inbound %q: %v", tname, err)
+			return nil, fmt.Errorf("failed to build inbound %q: %v", tname, err)
 		}
 		cfg.Inbounds = append(cfg.Inbounds, inbound)
 	}
@@ -65,7 +65,7 @@ func (b *Builder) Build() (yarpc.Config, error) {
 			// TODO: error if transport not found in map
 			oneway, err := ocfg.Oneway.Builder.BuildOnewayOutbound(transports[tname])
 			if err != nil {
-				return cfg, fmt.Errorf("failed to build oneway outbound %q: %v", ocfg.Name, err)
+				return nil, fmt.Errorf("failed to build oneway outbound %q: %v", ocfg.Name, err)
 			}
 			outbounds.Oneway = oneway
 		}
@@ -74,14 +74,14 @@ func (b *Builder) Build() (yarpc.Config, error) {
 			// TODO: error if transport not found in map
 			unary, err := ocfg.Unary.Builder.BuildUnaryOutbound(transports[tname])
 			if err != nil {
-				return cfg, fmt.Errorf("failed to build unary outbound %q: %v", ocfg.Name, err)
+				return nil, fmt.Errorf("failed to build unary outbound %q: %v", ocfg.Name, err)
 			}
 			outbounds.Unary = unary
 		}
 		cfg.Outbounds[ocfg.Name] = outbounds
 	}
 
-	return cfg, nil
+	return yarpc.NewDispatcher(cfg), nil
 }
 
 // TransportConfig TODO
