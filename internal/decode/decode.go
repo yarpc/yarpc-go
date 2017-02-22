@@ -216,9 +216,10 @@ func _decoderDecodeHook(from, to reflect.Type, data reflect.Value) (reflect.Valu
 		return data, nil
 	}
 
-	// value := new(foo)
-	// err := value.Decode(...)
-	// return *value, err
+	// The following lines are roughly equivalent to,
+	// 	value := new(foo)
+	// 	err := value.Decode(...)
+	// 	return *value, err
 	value := reflect.New(to)
 	err := value.Interface().(Decoder).Decode(decodeFrom(data.Interface()))
 	if err != nil {
