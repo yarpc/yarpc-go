@@ -34,15 +34,11 @@ const _tagName = "config"
 
 var _typeOfDecoder = reflect.TypeOf((*Decoder)(nil)).Elem()
 
-// Into is a function that attempts to decode the source data into the given
-// destination. dst MUST be a pointer to a value.
-//
-// 	var (
-// 		decode decode.Into = ...
-// 		value map[string]MyStruct
-// 	)
-// 	err := decode(&value)
-type Into func(dst interface{}) error
+// Decode from src into dest. dest may implement Decoder to customize how src
+// is read into it.
+func Decode(dest, src interface{}) error {
+	return decodeFrom(src)(dest)
+}
 
 // Decoder is any type which has custom decoding logic. Types may implement
 // Decode and rely on the given Decode function to read values.
@@ -70,19 +66,23 @@ type Decoder interface {
 	Decode(Into) error
 }
 
-// Decode from src into dst. dst may implement Decoder to customize how src is
-// read into it.
-func Decode(dst, src interface{}) error {
-	return decodeFrom(src)(dst)
-}
+// Into is a function that attempts to decode the source data into the given
+// destination. dest MUST be a pointer to a value.
+//
+// 	var (
+// 		decode decode.Into = ...
+// 		value map[string]MyStruct
+// 	)
+// 	err := decode(&value)
+type Into func(dest interface{}) error
 
 // decodeFrom builds a decode Into function that reads the given value into
 // the destination.
 func decodeFrom(src interface{}) Into {
-	return func(dst interface{}) error {
+	return func(dest interface{}) error {
 		cfg := mapstructure.DecoderConfig{
 			ErrorUnused: true,
-			Result:      dst,
+			Result:      dest,
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
 				decoderDecodeHook,
