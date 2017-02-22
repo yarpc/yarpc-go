@@ -82,40 +82,52 @@ func decodeFrom(src interface{}) Into {
 // decoderDecodeHook is a DecodeHook for mapstructure which recognizes types
 // that implement the Decoder interface.
 func decoderDecodeHook(from, to reflect.Type, data interface{}) (interface{}, error) {
+	if data == nil {
+		return data, nil
+	}
+	out, err := _decoderDecodeHook(from, to, reflect.ValueOf(data))
+	return out.Interface(), err
+}
+
+func _decoderDecodeHook(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
+	// Get rid of pointers in either direction. This lets us parse **foo into
+	// a foo where *foo implements Decoder, for example.
 	switch {
 	case from == to:
-		// Decoding from the same type
 		return data, nil
-	case from == reflect.PtrTo(to):
-		// Decoding from a pointer to the target type
-		value := reflect.New(to).Elem()
-		value.Set(reflect.ValueOf(data).Elem())
-		return value.Interface(), nil
-	case reflect.PtrTo(from) == to:
-		// Decoding from a value to a pointer of the target type
-		value := reflect.New(to.Elem())
-		value.Elem().Set(reflect.ValueOf(data))
-		return value.Interface(), nil
+	case from.Kind() == reflect.Ptr: // *foo => foo
+		return _decoderDecodeHook(from.Elem(), to, data.Elem())
+	case to.Kind() == reflect.Ptr: // foo => *foo
+		out, err := _decoderDecodeHook(from, to.Elem(), data)
+		if err != nil {
+			return out, err
+		}
+
+		// If we didn't know what to do with the input, the returned value
+		// will just be the data as-is and it won't have the correct type.
+		if !out.Type().AssignableTo(to.Elem()) {
+			return data, nil
+		}
+
+		result := reflect.New(to.Elem())
+		result.Elem().Set(out)
+		return result, nil
 	}
 
-	var (
-		value reflect.Value
-		dec   Decoder
-	)
+	// After eliminating pointers, only destinations whose pointers implement
+	// Decoder are supported. Everything else gets the value unchanged.
 
-	if to.Kind() == reflect.Ptr && to.Implements(_typeOfDecoder) {
-		value = reflect.New(to.Elem())
-		dec = value.Interface().(Decoder)
-	} else if reflect.PtrTo(to).Implements(_typeOfDecoder) {
-		value = reflect.New(to).Elem()
-		dec = value.Addr().Interface().(Decoder)
-	} else {
+	if !reflect.PtrTo(to).Implements(_typeOfDecoder) {
 		return data, nil
 	}
 
-	err := dec.Decode(decodeFrom(data))
+	// value := new(foo)
+	// err := value.Decode(...)
+	// return *value, err
+	value := reflect.New(to)
+	err := value.Interface().(Decoder).Decode(decodeFrom(data.Interface()))
 	if err != nil {
-		err = fmt.Errorf("could not decode %v: %v", to, err)
+		err = fmt.Errorf("could not decode %v from %v: %v", to, from, err)
 	}
-	return value.Interface(), err
+	return value.Elem(), err
 }
