@@ -35,8 +35,8 @@ type Builder struct {
 	Transports []TransportConfig
 }
 
-// Build TODO
-func (b *Builder) Build() (*yarpc.Dispatcher, error) {
+// BuildDispatcher TODO
+func (b *Builder) BuildDispatcher() (*yarpc.Dispatcher, error) {
 	cfg := yarpc.Config{Name: b.Name, Outbounds: make(yarpc.Outbounds)}
 
 	transports := make(map[string]transport.Transport)
