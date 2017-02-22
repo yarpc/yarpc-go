@@ -22,6 +22,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -33,6 +34,28 @@ type Builder struct {
 	Inbounds   []InboundConfig
 	Outbounds  []OutboundConfig
 	Transports []TransportConfig
+}
+
+// String returns a readable representation of the configuration loaded by the
+// builder.
+func (b *Builder) String() string {
+	var inbounds, outbounds, transports []string
+	for _, i := range b.Inbounds {
+		inbounds = append(inbounds, fmt.Sprint(i))
+	}
+	for _, o := range b.Outbounds {
+		outbounds = append(outbounds, fmt.Sprint(o))
+	}
+	for _, t := range b.Transports {
+		transports = append(transports, fmt.Sprint(t))
+	}
+	return fmt.Sprintf(
+		"{Name: %q, Inbounds: [%v], Outbounds: [%v], Transports: [%v]}",
+		b.Name,
+		strings.Join(inbounds, ", "),
+		strings.Join(outbounds, ", "),
+		strings.Join(transports, ", "),
+	)
 }
 
 // BuildDispatcher TODO
