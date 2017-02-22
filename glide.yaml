@@ -32,3 +32,4 @@ import:
 - package: gopkg.in/redis.v5
 # TODO: before cherami transport can leave the x/ package, cherami-client-go must >=1.0
 - package: github.com/uber/cherami-client-go
+- package: github.com/mitchellh/mapstructure
