@@ -18,9 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package decode implements a generic interface{} decoder. The intention is
-// to use it to decode arbitrary map[interface{}]interface{} objects into
-// structs or other complex objects.
+// Package decode implements a generic interface{} decoder. It allows
+// implementing custom YAML/JSON decoding logic only once. Instead of
+// implementing UnmarshalYAML and UnmarshalJSON differently twice, you would
+// implement Decode once, parse the YAML/JSON input into a
+// map[string]interface{} and decode it using this package.
+//
+// 	var data map[string]interface{}
+// 	if err := json.Decode(&data, input); err != nil {
+// 		log.Fatal(err)
+// 	}
+//
+//	var result MyStruct
+// 	if err := decode.Decode(&result, data); err != nil {
+// 		log.Fatal(err)
+// 	}
+//
+// This also makes it possible to implement custom markup parsing and
+// deserialization strategies that get decoded into a user-provided struct.
 package decode
 
 import (
@@ -34,8 +49,9 @@ const _tagName = "config"
 
 var _typeOfDecoder = reflect.TypeOf((*Decoder)(nil)).Elem()
 
-// Decode from src into dest. dest may implement Decoder to customize how src
-// is read into it.
+// Decode from src into dest where dest is a pointer to the value being
+// decoded. The destination type or any sub-type in it may implement the
+// Decoder interface to customize how it gets decoded.
 func Decode(dest, src interface{}) error {
 	return decodeFrom(src)(dest)
 }
@@ -67,13 +83,49 @@ type Decoder interface {
 }
 
 // Into is a function that attempts to decode the source data into the given
-// destination. dest MUST be a pointer to a value.
+// shape.
 //
-// 	var (
-// 		decode decode.Into = ...
-// 		value map[string]MyStruct
-// 	)
-// 	err := decode(&value)
+// Types that implement Decoder are provided a reference to an Into object so
+// that they can decode a different shape, validate the result and populate
+// themselves with the result.
+//
+// 	var values []string
+// 	err := into(&value)
+// 	for _, value := range values {
+// 		if value == "reserved" {
+// 			return errors.New(`a value in the list cannot be "reserved"`)
+// 		}
+// 		self.Values = append(self.Values, value)
+// 	}
+//
+// The function is safe to call multiple times if you need to try to decode
+// different shapes. For example,
+//
+// 	// Allow the user to just use the string "default" for the default
+// 	// configuration.
+// 	var name string
+// 	if err := into(&name); err == nil {
+// 		if name == "default" {
+// 			*self = DefaultConfiguration
+// 			return
+// 		}
+// 		return fmt.Errorf("unknown name %q", name)
+// 	}
+//
+// 	// Otherwise, the user must provide {someAttr: "value"} as the input for
+// 	// explicit configuration.
+// 	var custom struct{ SomeAttr string }
+// 	if err := into(&custom); err != nil {
+// 		return err
+// 	}
+//
+// 	self.SomeAttr = custom
+// 	return nil
+//
+// If the destination type or any sub-type implements Decoder, that function
+// will be called. This means that Into MUST NOT be called on the type whose
+// Decode function is currently running or this will end up in an infinite
+// loop.
 type Into func(dest interface{}) error
 
 // decodeFrom builds a decode Into function that reads the given value into
