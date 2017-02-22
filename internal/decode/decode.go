@@ -50,16 +50,39 @@ const _tagName = "config"
 var _typeOfDecoder = reflect.TypeOf((*Decoder)(nil)).Elem()
 
 // Decode from src into dest where dest is a pointer to the value being
-// decoded. The destination type or any sub-type in it may implement the
-// Decoder interface to customize how it gets decoded.
+// decoded.
+//
+// Primitives are mapped as-is with pointers created or dereferenced as
+// necessary. Maps and slices use Decode recursively for each of their items.
+// For structs, the source must be a map[string]interface{} or
+// map[interface{}]interface{}. Each key in the map calls Decode recursively
+// with the field of the struct that has a name similar to the key (case
+// insensitive match).
+//
+// 	var item struct{ Key, Value string }
+// 	err := Decode(&item, map[string]string{"key": "some key", "Value": "some value"})
+//
+// The name of the field in the map may be customized with the `config` tag.
+//
+// 	var item struct {
+// 		Key   string `config:"name"`
+// 		Value string
+// 	}
+// 	var item struct{ Key, Value string }
+// 	err := Decode(&item, map[string]string{"name": "token", "Value": "some value"})
+//
+// The destination type or any subtype may implement the Decoder interface to
+// customize how it gets decoded.
 func Decode(dest, src interface{}) error {
 	return decodeFrom(src)(dest)
 }
 
 // Decoder is any type which has custom decoding logic. Types may implement
-// Decode and rely on the given Decode function to read values.
+// Decode and rely on the given Into function to read values into a different
+// shape, validate the result, and fill themselves with it.
 //
-// For example,
+// For example the following lets users provide a list of strings to decode a
+// set.
 //
 // 	type StringSet map[string]struct{}
 //
@@ -77,8 +100,8 @@ func Decode(dest, src interface{}) error {
 // 	}
 type Decoder interface {
 	// Decode receives a function that will attempt to decode the source data
-	// into the given target. The argument MUST be a pointer to the target
-	// object.
+	// into the given target. The argument to Into MUST be a pointer to the
+	// target object.
 	Decode(Into) error
 }
 
