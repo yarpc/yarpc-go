@@ -10,9 +10,9 @@ import (
 
 type stringSet map[string]struct{}
 
-func (ss *stringSet) Decode(dec Into) error {
+func (ss *stringSet) Decode(into Into) error {
 	var items []string
-	if err := dec(&items); err != nil {
+	if err := into(&items); err != nil {
 		return err
 	}
 

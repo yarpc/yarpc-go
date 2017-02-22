@@ -85,8 +85,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 		return err
 	}
 
-	dec := json.NewDecoder(tres.Body)
-	if err := dec.Decode(resBodyOut); err != nil {
+	if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil {
 		return encoding.ResponseBodyDecodeError(&treq, err)
 	}
 

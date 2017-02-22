@@ -47,9 +47,9 @@ func Decode(dest, src interface{}) error {
 //
 // 	type StringSet map[string]struct{}
 //
-// 	func (ss *StringSet) Decode(dec decode.Into) error {
+// 	func (ss *StringSet) Decode(into decode.Into) error {
 // 		var items []string
-// 		if err := dec(&items); err != nil {
+// 		if err := into(&items); err != nil {
 // 			return err
 // 		}
 //
@@ -90,12 +90,12 @@ func decodeFrom(src interface{}) Into {
 			TagName: _tagName,
 		}
 
-		dec, err := mapstructure.NewDecoder(&cfg)
+		decoder, err := mapstructure.NewDecoder(&cfg)
 		if err != nil {
 			return fmt.Errorf("failed to set up decoder: %v", err)
 		}
 
-		return dec.Decode(src)
+		return decoder.Decode(src)
 	}
 }
 
