@@ -23,7 +23,6 @@ package thrift
 import (
 	"bytes"
 	"context"
-	"io"
 
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -60,7 +59,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 
 	buf := buffer.Get()
 	defer buffer.Put(buf)
-	if _, err := io.Copy(buf, treq.Body); err != nil {
+	if _, err := buf.ReadFrom(treq.Body); err != nil {
 		return err
 	}
 
@@ -133,7 +132,7 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 
 	buf := buffer.Get()
 	defer buffer.Put(buf)
-	if _, err := io.Copy(buf, treq.Body); err != nil {
+	if _, err := buf.ReadFrom(treq.Body); err != nil {
 		return err
 	}
 

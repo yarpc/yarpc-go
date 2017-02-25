@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 
 	"go.uber.org/yarpc"
 	encodingapi "go.uber.org/yarpc/api/encoding"
@@ -149,7 +148,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 
 	buf := buffer.Get()
 	defer buffer.Put(buf)
-	if _, err = io.Copy(buf, tres.Body); err != nil {
+	if _, err = buf.ReadFrom(tres.Body); err != nil {
 		return wire.Value{}, err
 	}
 
