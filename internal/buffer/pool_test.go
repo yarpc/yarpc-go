@@ -18,7 +18,8 @@ func TestBuffers(t *testing.T) {
 				assert.Zero(t, buf.Len(), "Expected truncated buffer")
 
 				b := getRandBytes()
-				buf.Write(b)
+				_, err := buf.Write(b)
+				assert.NoError(t, err, "Unexpected error from buffer.Write")
 
 				assert.Equal(t, buf.Len(), len(b), "Expected same buffer size")
 

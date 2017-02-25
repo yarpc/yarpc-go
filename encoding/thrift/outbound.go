@@ -24,12 +24,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"go.uber.org/yarpc"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
+	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 
 	"go.uber.org/thriftrw/envelope"
@@ -146,12 +147,13 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 		return wire.Value{}, err
 	}
 
-	payload, err := ioutil.ReadAll(tres.Body)
-	if err != nil {
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+	if _, err = io.Copy(buf, tres.Body); err != nil {
 		return wire.Value{}, err
 	}
 
-	envelope, err := proto.DecodeEnveloped(bytes.NewReader(payload))
+	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		return wire.Value{}, encoding.ResponseBodyDecodeError(treq, err)
 	}

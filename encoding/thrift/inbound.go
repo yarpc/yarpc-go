@@ -59,9 +59,8 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 	}
 
 	buf := buffer.Get()
-	_, err := io.Copy(buf, treq.Body)
 	defer buffer.Put(buf)
-	if err != nil {
+	if _, err := io.Copy(buf, treq.Body); err != nil {
 		return err
 	}
 
@@ -133,9 +132,8 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 	}
 
 	buf := buffer.Get()
-	_, err := io.Copy(buf, treq.Body)
 	defer buffer.Put(buf)
-	if err != nil {
+	if _, err := io.Copy(buf, treq.Body); err != nil {
 		return err
 	}
 
