@@ -64,7 +64,9 @@ func httpEcho(t testing.TB) http.HandlerFunc {
 		}
 
 		_, err := io.Copy(w, r.Body)
-		assert.NoError(t, err, "failed to write HTTP response body")
+		if err != nil {
+			t.Errorf("failed to write HTTP response body: %v", err)
+		}
 	}
 }
 
@@ -108,7 +110,9 @@ func runYARPCClient(b *testing.B, c raw.Client) {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
 		_, err := c.Call(ctx, "echo", _reqBody)
-		require.NoError(b, err, "request %d failed", i+1)
+		if err != nil {
+			b.Errorf("request %d failed: %v", i+1, err)
+		}
 	}
 }
 
@@ -117,7 +121,9 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
 		req, err := http.NewRequest("POST", url, bytes.NewReader(_reqBody))
-		require.NoError(b, err, "failed to build request %d", i+1)
+		if err != nil {
+			b.Errorf("failed to build request %d: %v", i+1, err)
+		}
 		req = req.WithContext(ctx)
 
 		req.Header = http.Header{
@@ -128,11 +134,16 @@ func runHTTPClient(b *testing.B, c *http.Client, url string) {
 			"Rpc-Service":    {"server"},
 		}
 		res, err := c.Do(req)
-		require.NoError(b, err, "request %d failed", i+1)
+		if err != nil {
+			b.Errorf("request %d failed: %v", i+1, err)
+		}
 
-		_, err = ioutil.ReadAll(res.Body)
-		require.NoError(b, err, "failed to read response %d", i+1)
-		require.NoError(b, res.Body.Close(), "failed to close response body %d", i+1)
+		if _, err := ioutil.ReadAll(res.Body); err != nil {
+			b.Errorf("failed to read response %d: %v", i+1, err)
+		}
+		if err := res.Body.Close(); err != nil {
+			b.Errorf("failed to close response body %d: %v", i+1, err)
+		}
 	}
 }
 
@@ -143,10 +154,15 @@ func runTChannelClient(b *testing.B, c *tchannel.Channel, hostPort string) {
 		defer cancel()
 		call, err := c.BeginCall(ctx, hostPort, "server", "echo",
 			&tchannel.CallOptions{Format: tchannel.Raw})
-		require.NoError(b, err, "BeginCall %v failed", i+1)
+
+		if err != nil {
+			b.Errorf("BeginCall %v failed: %v", i+1, err)
+		}
 
 		_, _, _, err = traw.WriteArgs(call, headers, _reqBody)
-		require.NoError(b, err, "request %v failed", i+1)
+		if err != nil {
+			b.Errorf("request %v failed: %v", i+1, err)
+		}
 	}
 }
 
