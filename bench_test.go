@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	yhttp "go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
@@ -77,8 +78,11 @@ func (t tchannelEcho) OnError(ctx ncontext.Context, err error) {
 	t.t.Fatalf("request failed: %v", err)
 }
 
-func withDispatcher(t testing.TB, cfg yarpc.Config, f func(*yarpc.Dispatcher)) {
+func withDispatcher(t testing.TB, cfg yarpc.Config, f func(*yarpc.Dispatcher), ps ...[]transport.Procedure) {
 	d := yarpc.NewDispatcher(cfg)
+	for _, p := range ps {
+		d.Register(p)
+	}
 	require.NoError(t, d.Start(), "failed to start server")
 	defer d.Stop()
 
@@ -162,13 +166,16 @@ func Benchmark_HTTP_YARPCToYARPC(b *testing.B) {
 		},
 	}
 
-	withDispatcher(b, serverCfg, func(server *yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
-		withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
-			b.ResetTimer()
-			runYARPCClient(b, raw.New(client.ClientConfig("server")))
-		})
-	})
+	withDispatcher(
+		b, serverCfg,
+		func(server *yarpc.Dispatcher) {
+			withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
+				b.ResetTimer()
+				runYARPCClient(b, raw.New(client.ClientConfig("server")))
+			})
+		},
+		raw.Procedure("echo", yarpcEcho),
+	)
 }
 
 func Benchmark_HTTP_YARPCToNetHTTP(b *testing.B) {
@@ -197,12 +204,13 @@ func Benchmark_HTTP_NetHTTPToYARPC(b *testing.B) {
 		Inbounds: yarpc.Inbounds{httpTransport.NewInbound(":8996")},
 	}
 
-	withDispatcher(b, serverCfg, func(server *yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
-
-		b.ResetTimer()
-		runHTTPClient(b, http.DefaultClient, "http://localhost:8996")
-	})
+	withDispatcher(
+		b, serverCfg, func(server *yarpc.Dispatcher) {
+			b.ResetTimer()
+			runHTTPClient(b, http.DefaultClient, "http://localhost:8996")
+		},
+		raw.Procedure("echo", yarpcEcho),
+	)
 }
 
 func Benchmark_HTTP_NetHTTPToNetHTTP(b *testing.B) {
@@ -226,23 +234,24 @@ func Benchmark_TChannel_YARPCToYARPC(b *testing.B) {
 
 	// no defer close on channels because YARPC will take care of that
 
-	withDispatcher(b, serverCfg, func(server *yarpc.Dispatcher) {
-		server.Register(raw.Procedure("echo", yarpcEcho))
-
-		// Need server already started to build client config
-		clientCfg := yarpc.Config{
-			Name: "client",
-			Outbounds: yarpc.Outbounds{
-				"server": {
-					Unary: clientTChannel.NewSingleOutbound(serverTChannel.ListenAddr()),
+	withDispatcher(
+		b, serverCfg, func(server *yarpc.Dispatcher) {
+			// Need server already started to build client config
+			clientCfg := yarpc.Config{
+				Name: "client",
+				Outbounds: yarpc.Outbounds{
+					"server": {
+						Unary: clientTChannel.NewSingleOutbound(serverTChannel.ListenAddr()),
+					},
 				},
-			},
-		}
-		withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
-			b.ResetTimer()
-			runYARPCClient(b, raw.New(client.ClientConfig("server")))
-		})
-	})
+			}
+			withDispatcher(b, clientCfg, func(client *yarpc.Dispatcher) {
+				b.ResetTimer()
+				runYARPCClient(b, raw.New(client.ClientConfig("server")))
+			})
+		},
+		raw.Procedure("echo", yarpcEcho),
+	)
 }
 
 func Benchmark_TChannel_YARPCToTChannel(b *testing.B) {
@@ -280,16 +289,19 @@ func Benchmark_TChannel_TChannelToYARPC(b *testing.B) {
 		Inbounds: yarpc.Inbounds{tchannelTransport.NewInbound()},
 	}
 
-	withDispatcher(b, serverCfg, func(dispatcher *yarpc.Dispatcher) {
-		dispatcher.Register(raw.Procedure("echo", yarpcEcho))
+	withDispatcher(
+		b, serverCfg, func(dispatcher *yarpc.Dispatcher) {
+			dispatcher.Register(raw.Procedure("echo", yarpcEcho))
 
-		clientCh, err := tchannel.NewChannel("client", nil)
-		require.NoError(b, err, "failed to build client TChannel")
-		defer clientCh.Close()
+			clientCh, err := tchannel.NewChannel("client", nil)
+			require.NoError(b, err, "failed to build client TChannel")
+			defer clientCh.Close()
 
-		b.ResetTimer()
-		runTChannelClient(b, clientCh, tchannelTransport.ListenAddr())
-	})
+			b.ResetTimer()
+			runTChannelClient(b, clientCh, tchannelTransport.ListenAddr())
+		},
+		raw.Procedure("echo", yarpcEcho),
+	)
 }
 
 func Benchmark_TChannel_TChannelToTChannel(b *testing.B) {
