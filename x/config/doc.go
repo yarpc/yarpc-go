@@ -24,15 +24,15 @@
 //
 // Usage
 //
-// To build a Dispatcher, set up a Loader and inform it about the different
-// transports that it needs to support. Use Load or LoadYAML to load a Builder
-// from the given configuration.
+// To build a Dispatcher, set up a Configurator and inform it about the
+// different transports that it needs to support. Use Load or LoadYAML to load
+// a Builder from the given configuration.
 //
-// 	loader := config.NewLoader()
-// 	http.RegisterTransport(loader)
-// 	redis.RegisterTransport(loader)
+// 	cfg := config.New()
+// 	http.RegisterTransport(cfg)
+// 	redis.RegisterTransport(cfg)
 //
-// 	builder, err := loader.LoadYAML(yamlConfig)
+// 	builder, err := cfg.LoadYAML(yamlConfig)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
@@ -44,7 +44,7 @@
 //
 // Configuration parameters for the different transports, inbounds, and
 // outbounds are defined in the types fed into the TransportSpec that was
-// registered against the Loader.
+// registered against the Configurator.
 //
 // Configuration
 //
@@ -172,9 +172,10 @@
 //
 // Defining a Transport
 //
-// To teach a Loader about a Transport, register a TransportSpec against it.
+// To teach a Configurator about a Transport, register a TransportSpec against
+// it.
 //
-// 	loader.RegisterTransport(TransportSpec{
+// 	cfg.RegisterTransport(TransportSpec{
 // 		Name: "mytransport",
 // 		// ...
 // 	})
