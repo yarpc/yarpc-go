@@ -287,21 +287,21 @@ func TestStartStopFailures(t *testing.T) {
 
 			err := dispatcher.Start()
 			if tt.wantStartErr != "" {
-				if assert.Error(t, err, "%v: expected Start() to fail") {
+				if assert.Error(t, err, "expected Start() to fail") {
 					assert.Contains(t, err.Error(), tt.wantStartErr)
 				}
 				return
 			}
-			if !assert.NoError(t, err, "%v: expected Start() to succeed") {
+			if !assert.NoError(t, err, "expected Start() to succeed") {
 				return
 			}
 
 			err = dispatcher.Stop()
 			if tt.wantStopErr == "" {
-				assert.NoError(t, err, "%v: expected Stop() to succeed")
+				assert.NoError(t, err, "expected Stop() to succeed")
 				return
 			}
-			if assert.Error(t, err, "%v: expected Stop() to fail") {
+			if assert.Error(t, err, "expected Stop() to fail") {
 				assert.Contains(t, err.Error(), tt.wantStopErr)
 			}
 		})
