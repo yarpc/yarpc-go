@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"reflect"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/decode"
 
 	"gopkg.in/yaml.v2"
@@ -34,14 +35,14 @@ import (
 
 // Configurator helps build Dispatchers using runtime configuration.
 type Configurator struct {
-	knownTransports map[string]transportSpec
+	knownTransports map[string]*transportSpec
 }
 
 // New sets up a new empty Configurator. The returned Configurator does not
 // know about any transports. Individual TransportSpecs must be registered
 // against it using the RegisterTransport function.
 func New() *Configurator {
-	return &Configurator{knownTransports: make(map[string]transportSpec)}
+	return &Configurator{knownTransports: make(map[string]*transportSpec)}
 }
 
 // TransportSpec specifies the configuration parameters for a transport. These
@@ -51,105 +52,77 @@ type TransportSpec struct {
 	// Name of the transport
 	Name string
 
-	// References to a TransportBuilder which specifies the configuration for
-	// a Transport. Transport instances are shared across all inbounds and
-	// outbounds of a specific transport type.
-	TransportConfigType TransportBuilder
+	// A function in the shape,
+	//
+	// 	func(C) (transport.Transport, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters accepted by this transport.
+	BuildTransport interface{}
 
 	// TODO(abg): Document how these values are actually used since it may be
 	// non-obvious.
 
+	// TODO(abg): Make error returns optional -- if the function doesn't
+	// return an error value, we can just wrap it to always return nil there.
+
 	// Everything below is optional
 
-	InboundConfigType        InboundBuilder
-	UnaryOutboundConfigType  UnaryOutboundBuilder
-	OnewayOutboundConfigType OnewayOutboundBuilder
+	// A function in the shape,
+	//
+	// 	func(transport.Transport, C) (transport.Inbound, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters for the inbound.
+	//
+	// This may be nil if this transport does not support inbounds.
+	BuildInbound interface{}
 
-	UnaryOutboundPresets  map[string]UnaryOutboundBuilder
-	OnewayOutboundPresets map[string]OnewayOutboundBuilder
+	// The following two are functions in the shapes,
+	//
+	// 	func(transport.Transport, C) (transport.UnaryOutbound, error)
+	// 	func(transport.Transport, C) (transport.OnewayOutbound, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters for outbounds of that RPC type.
+	//
+	// Either value may be nil to indicate that the transport does not support
+	// unary or oneway outbounds.
+	BuildUnaryOutbound  interface{}
+	BuildOnewayOutbound interface{}
+
+	// The following two are maps from preset name to functions in the shapes,
+	//
+	// 	func(transport.Transport, C) (transport.UnaryOutbound, error)
+	// 	func(transport.Transport, C) (transport.OnewayOutbound, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters for that outbound preset.
+	//
+	// Either value may be nil to indicate that the transport does not have
+	// presets for that RPC type.
+	UnaryOutboundPresets  map[string]interface{}
+	OnewayOutboundPresets map[string]interface{}
+
+	// TODO(abg): Allow functions to return and accept specific
+	// implementations. Instead of returning a transport.Transport and
+	// accepting a transport.Transport, we could make it so that
+	//
+	// 	BuildTransport: func(...) (*http.Transport, error)
+	// 	BuildInbound: func(t *http.Transport, ...) (*http.Inbound, error)
+	//
+	// This will get rid of the `t.(*http.Transport)` users will have to do
+	// the first thing inside their BuildInbound.
 }
 
 // RegisterTransport registers a TransportSpec with the given Configurator.
 func (c *Configurator) RegisterTransport(t TransportSpec) error {
-	getStruct := func(t reflect.Type) reflect.Type {
-		switch t.Kind() {
-		case reflect.Struct:
-			return t
-		case reflect.Ptr:
-			if t.Elem().Kind() == reflect.Struct {
-				return t.Elem()
-			}
-		}
-		return nil
+	spec, err := newTransportSpec(&t)
+	if err != nil {
+		return err
 	}
-
-	spec := transportSpec{name: t.Name}
 
 	// TODO include more information in error
-
-	if t.TransportConfigType == nil {
-		return errors.New("a transport configuration type is required")
-	}
-
-	spec.transportConfigType = getStruct(reflect.TypeOf(t.TransportConfigType))
-	if spec.transportConfigType == nil {
-		return errors.New("transport configurations can only be defined on structs")
-	}
-
-	if t.InboundConfigType != nil {
-		spec.inboundConfigType = getStruct(reflect.TypeOf(t.InboundConfigType))
-		if spec.inboundConfigType == nil {
-			return errors.New("inbound configurations can only be defined on structs")
-		}
-
-		if _, ok := spec.inboundConfigType.FieldByName("Type"); ok {
-			return fmt.Errorf("inbound configurations cannot have a Type field")
-		}
-
-		if _, ok := spec.inboundConfigType.FieldByName("Disabled"); ok {
-			return fmt.Errorf("inbound configurations cannot have a Disabled field")
-		}
-	}
-
-	if t.UnaryOutboundConfigType != nil {
-		spec.unaryOutboundConfigType = getStruct(reflect.TypeOf(t.UnaryOutboundConfigType))
-		if spec.unaryOutboundConfigType == nil {
-			return fmt.Errorf("unary outbound configurations can only be defined on structs")
-		}
-
-		// We should be checking the config: tags too
-		if _, ok := spec.unaryOutboundConfigType.FieldByName("With"); ok {
-			return fmt.Errorf("outbound configurations cannot have a With field")
-		}
-	}
-
-	if t.OnewayOutboundConfigType != nil {
-		spec.onewayOutboundConfigType = getStruct(reflect.TypeOf(t.OnewayOutboundConfigType))
-		if spec.onewayOutboundConfigType == nil {
-			return fmt.Errorf("oneway outbound configurations can only be defined on structs")
-		}
-
-		if _, ok := spec.onewayOutboundConfigType.FieldByName("With"); ok {
-			return fmt.Errorf("outbound configurations cannot have a With field")
-		}
-	}
-
-	spec.unaryOutboundPresets = make(map[string]reflect.Type, len(t.UnaryOutboundPresets))
-	for name, preset := range t.UnaryOutboundPresets {
-		spec.unaryOutboundPresets[name] = getStruct(reflect.TypeOf(preset))
-		if spec.unaryOutboundPresets[name] == nil {
-			return fmt.Errorf("outbound presets can only be defined on structs")
-		}
-	}
-
-	spec.onewayOutboundPresets = make(map[string]reflect.Type, len(t.OnewayOutboundPresets))
-	for name, preset := range t.OnewayOutboundPresets {
-		spec.onewayOutboundPresets[name] = getStruct(reflect.TypeOf(preset))
-		if spec.onewayOutboundPresets[name] == nil {
-			return fmt.Errorf("outbound presets can only be defined on structs")
-		}
-	}
-
 	// TODO: Panic if a transport with the given name is already registered?
 	c.knownTransports[t.Name] = spec
 	return nil
@@ -196,10 +169,7 @@ func (c *Configurator) Load(data map[string]interface{}) (*Builder, error) {
 		}
 
 		needTransports[inbound.Type] = struct{}{}
-		result.Inbounds = append(result.Inbounds, InboundConfig{
-			TransportName: inbound.Type,
-			Builder:       builder,
-		})
+		result.Inbounds = append(result.Inbounds, InboundConfig{TransportName: inbound.Type, Builder: builder})
 	}
 
 	for name, clientConfig := range cfg.Outbounds {
@@ -315,92 +285,343 @@ func (c *Configurator) Load(data map[string]interface{}) (*Builder, error) {
 }
 
 // Helper to return the spec for the transport with the given name
-func (c *Configurator) spec(name string) (transportSpec, error) {
+func (c *Configurator) spec(name string) (*transportSpec, error) {
 	spec, ok := c.knownTransports[name]
 	if !ok {
-		return transportSpec{}, fmt.Errorf("unknown transport %q", name)
+		return nil, fmt.Errorf("unknown transport %q", name)
 	}
 	return spec, nil
 }
 
-// Internal representation of TransportSpec. This is the information we
-// actually care about.
+var (
+	_typeOfError          = reflect.TypeOf((*error)(nil)).Elem()
+	_typeOfTransport      = reflect.TypeOf((*transport.Transport)(nil)).Elem()
+	_typeOfInbound        = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
+	_typeOfUnaryOutbound  = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
+	_typeOfOnewayOutbound = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
+)
+
+// Builds transport.Transport objects given a function,
+//
+// 	func(cfg MyConfigType) (transport.Transport, error)
+//
+// Where MyConfigType defines configuration parameters of the transport that
+// are parseable from YAML or other markup formats.
+//
+// This must be used in two stages: Load() and then Build(). Having a separate
+// Load() step ensures that everything has parsed successfully before we
+// start building it, plus it gives us a view of exactly what configuration
+// we're using to build everything.
+type transportBuilder struct {
+	cfgType reflect.Type
+	cfg     reflect.Value
+	build   reflect.Value // == func(cfg) (transport.Transport, error)
+}
+
+// Build a new transportBuilder from the given build function.
+func newTransportBuilder(build interface{}) (*transportBuilder, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 1:
+		err = fmt.Errorf("must accept exactly one argument, found %v", t.NumIn())
+	case !isDecodable(t.In(0)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != _typeOfTransport:
+		err = fmt.Errorf("must return a transport.Transport as its first result, found %v", t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return a error as its second result, found %v", t.Out(1))
+	}
+
+	if err != nil {
+		err = fmt.Errorf("invalid BuildTransport %v: %v", t, err)
+	}
+	return &transportBuilder{cfgType: t.In(0), build: v}, err
+}
+
+func (b transportBuilder) Load(attrs attributeMap) (TransportBuilder, error) {
+	cfg := reflect.New(b.cfgType)
+	if err := attrs.Decode(cfg.Interface()); err != nil {
+		return nil, fmt.Errorf("failed to decode %v: %v", b.cfgType, err)
+	}
+
+	// Note: the receiver is not on the pointer so that these objects are
+	// re-usable.
+	b.cfg = cfg.Elem()
+	return &b, nil
+}
+
+func (b *transportBuilder) BuildTransport() (transport.Transport, error) {
+	result := b.build.Call([]reflect.Value{b.cfg})
+	if err := result[1].Interface().(error); err != nil {
+		return nil, err
+	}
+	return result[0].Interface().(transport.Transport), nil
+}
+
+// Builder for types that depend on a transport.Transport as their first
+// argument.
+//
+// This logic is shared between inbounds and different outbound types. It's
+// very similar to transportBuilder except they all depend on a
+// transport.Transport as their first argument.
+//
+// This implements functions to be a valid InboundBilder,
+// UnaryOutboundBuilder, and OnewayOutboundBuilder but it's up to the logic in
+// this package to ensure that this is not used incorrectly.
+type builder struct {
+	cfg        reflect.Value
+	cfgType    reflect.Type
+	resultType reflect.Type
+	buildFunc  reflect.Value
+}
+
+func newBuilder(build interface{}, outputType reflect.Type) (*builder, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case t.In(0) != _typeOfTransport:
+		err = fmt.Errorf("must accept a transport.Transport as its first argument, found %v", t.In(0))
+	case !isDecodable(t.In(1)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its second argument, found %v", t.In(1))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != outputType:
+		err = fmt.Errorf("must return a %v as its first result, found %v", outputType, t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return a error as its second result, found %v", t.Out(1))
+	}
+
+	return &builder{
+		cfgType:    t.In(1),
+		resultType: outputType,
+		buildFunc:  v,
+	}, err
+}
+
+func (b builder) Load(attrs attributeMap) (*builder, error) {
+	cfg := reflect.New(b.cfgType)
+	if err := attrs.Decode(cfg.Interface()); err != nil {
+		return nil, fmt.Errorf("failed to decode %v: %v", b.cfgType, err)
+	}
+
+	// Note: the receiver is not on the pointer so that these objects are
+	// re-usable.
+	b.cfg = cfg.Elem()
+	return &b, nil
+}
+
+func (b *builder) build(t transport.Transport) (reflect.Value, error) {
+	out := b.buildFunc.Call([]reflect.Value{reflect.ValueOf(t), b.cfg})
+	if err := out[1].Interface().(error); err != nil {
+		return reflect.Zero(b.resultType), err
+	}
+	return out[0], nil
+}
+
+func (b *builder) BuildInbound(t transport.Transport) (transport.Inbound, error) {
+	value, err := b.build(t)
+	if err != nil {
+		return nil, err
+	}
+	return value.Interface().(transport.Inbound), nil
+}
+
+func (b *builder) BuildUnaryOutbound(t transport.Transport) (transport.UnaryOutbound, error) {
+	value, err := b.build(t)
+	if err != nil {
+		return nil, err
+	}
+	return value.Interface().(transport.UnaryOutbound), nil
+}
+
+func (b *builder) BuildOnewayOutbound(t transport.Transport) (transport.OnewayOutbound, error) {
+	value, err := b.build(t)
+	if err != nil {
+		return nil, err
+	}
+	return value.Interface().(transport.OnewayOutbound), nil
+}
+
+func newInboundBuilder(build interface{}) (*builder, error) {
+	b, err := newBuilder(build, _typeOfInbound)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, hasType := b.cfgType.FieldByName("Type"); hasType {
+		return nil, errors.New("inbound configurations must not have a Type field")
+	}
+
+	if _, hasDisabled := b.cfgType.FieldByName("Disabled"); hasDisabled {
+		return nil, errors.New("inbound configurations must not have a Disabled field")
+	}
+
+	return b, nil
+}
+
+func newOutboundBuilder(build interface{}, resultType reflect.Type) (*builder, error) {
+	b, err := newBuilder(build, resultType)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, hasWith := b.cfgType.FieldByName("With"); hasWith {
+		return nil, errors.New("outbound configurations must not have a With field")
+	}
+
+	return b, nil
+}
+
+// Internal representation of TransportSpec.
 type transportSpec struct {
-	name                     string
-	transportConfigType      reflect.Type
-	inboundConfigType        reflect.Type
-	unaryOutboundConfigType  reflect.Type
-	onewayOutboundConfigType reflect.Type
-	unaryOutboundPresets     map[string]reflect.Type
-	onewayOutboundPresets    map[string]reflect.Type
+	Name string
+
+	transportBuilder      *transportBuilder
+	inboundBuilder        *builder
+	unaryOutboundBuilder  *builder
+	onewayOutboundBuilder *builder
+	unaryOutboundPresets  map[string]*builder
+	onewayOutboundPresets map[string]*builder
 }
 
-func (s *transportSpec) SupportsUnaryOutbound() bool {
-	return s.unaryOutboundConfigType != nil
-}
+func newTransportSpec(spec *TransportSpec) (_ *transportSpec, err error) {
+	out := transportSpec{Name: spec.Name}
 
-func (s *transportSpec) SupportsOnewayOutbound() bool {
-	return s.onewayOutboundConfigType != nil
+	if spec.BuildTransport == nil {
+		return nil, errors.New("BuildTransport is required")
+	}
+
+	out.transportBuilder, err = newTransportBuilder(spec.BuildTransport)
+	if err != nil {
+		return nil, err
+	}
+
+	if spec.BuildInbound != nil {
+		out.inboundBuilder, err = newInboundBuilder(spec.BuildInbound)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if spec.BuildUnaryOutbound != nil {
+		out.unaryOutboundBuilder, err = newOutboundBuilder(spec.BuildUnaryOutbound, _typeOfUnaryOutbound)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if spec.BuildOnewayOutbound != nil {
+		out.onewayOutboundBuilder, err = newOutboundBuilder(spec.BuildOnewayOutbound, _typeOfOnewayOutbound)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	out.unaryOutboundPresets, err = buildOutboundPresets(spec.UnaryOutboundPresets, _typeOfUnaryOutbound)
+	if err != nil {
+		return nil, err
+	}
+
+	out.onewayOutboundPresets, err = buildOutboundPresets(spec.OnewayOutboundPresets, _typeOfOnewayOutbound)
+	if err != nil {
+		return nil, err
+	}
+
+	return &out, nil
 }
 
 func (s *transportSpec) TransportBuilder(attrs attributeMap) (TransportBuilder, error) {
-	result := reflect.New(s.transportConfigType).Interface()
-	if err := attrs.Decode(result); err != nil {
-		return nil, fmt.Errorf("failed to decode configuration for transport %q: %v", s.name, err)
-	}
-	return result.(TransportBuilder), nil
+	return s.transportBuilder.Load(attrs)
 }
 
 func (s *transportSpec) InboundBuilder(attrs attributeMap) (InboundBuilder, error) {
-	if s.inboundConfigType == nil {
-		return nil, fmt.Errorf("transport %q does not define an inbound", s.name)
+	if s.inboundBuilder == nil {
+		return nil, fmt.Errorf("transport %q does not define an inbound", s.Name)
 	}
-
-	result := reflect.New(s.inboundConfigType).Interface()
-	if err := attrs.Decode(result); err != nil {
-		return nil, fmt.Errorf("failed to decode configuration for inbound %q: %v", s.name, err)
-	}
-	return result.(InboundBuilder), nil
+	return s.inboundBuilder.Load(attrs)
 }
 
 func (s *transportSpec) UnaryOutboundBuilder(preset string, attrs attributeMap) (UnaryOutboundBuilder, error) {
-	typ := s.unaryOutboundConfigType
-	if typ == nil {
-		return nil, fmt.Errorf("transport %q does not support unary outbounds", s.name)
+	if s.unaryOutboundBuilder == nil {
+		return nil, fmt.Errorf("transport %q does not define a unary outbound", s.Name)
 	}
 
+	b := s.unaryOutboundBuilder
 	if preset != "" {
 		var ok bool
-		typ, ok = s.unaryOutboundPresets[preset]
+		b, ok = s.unaryOutboundPresets[preset]
 		if !ok {
-			return nil, fmt.Errorf("unknown preset %q for unary outbound %q", preset, s.name)
+			return nil, fmt.Errorf("unknown preset %q for unary outbound %q", preset, s.Name)
 		}
 	}
 
-	result := reflect.New(typ).Interface()
-	if err := attrs.Decode(result); err != nil {
-		return nil, fmt.Errorf("failed to decode configuration for unary outbound %q: %v", s.name, err)
-	}
-	return result.(UnaryOutboundBuilder), nil
+	b, err := b.Load(attrs)
+	return b, err
 }
 
 func (s *transportSpec) OnewayOutboundBuilder(preset string, attrs attributeMap) (OnewayOutboundBuilder, error) {
-	typ := s.onewayOutboundConfigType
-	if typ == nil {
-		return nil, fmt.Errorf("transport %q does not support oneway outbounds", s.name)
+	if s.onewayOutboundBuilder == nil {
+		return nil, fmt.Errorf("transport %q does not define a oneway outbound", s.Name)
 	}
 
+	b := s.onewayOutboundBuilder
 	if preset != "" {
 		var ok bool
-		typ, ok = s.onewayOutboundPresets[preset]
+		b, ok = s.onewayOutboundPresets[preset]
 		if !ok {
-			return nil, fmt.Errorf("unknown preset %q for oneway outbound %q", preset, s.name)
+			return nil, fmt.Errorf("unknown preset %q for oneway outbound %q", preset, s.Name)
 		}
 	}
 
-	result := reflect.New(typ).Interface()
-	if err := attrs.Decode(result); err != nil {
-		return nil, fmt.Errorf("failed to decode configuration for oneway outbound %q: %v", s.name, err)
+	b, err := b.Load(attrs)
+	return b, err
+}
+
+func (s *transportSpec) SupportsUnaryOutbound() bool {
+	return s.unaryOutboundBuilder != nil
+}
+
+func (s *transportSpec) SupportsOnewayOutbound() bool {
+	return s.onewayOutboundBuilder != nil
+}
+
+func buildOutboundPresets(m map[string]interface{}, resultType reflect.Type) (map[string]*builder, error) {
+	if len(m) == 0 {
+		return nil, nil
 	}
-	return result.(OnewayOutboundBuilder), nil
+	out := make(map[string]*builder, len(m))
+	for k, v := range m {
+		var err error
+		out[k], err = newOutboundBuilder(v, resultType)
+		if err != nil {
+			return nil, fmt.Errorf("invalid preset %q: %v", k, err)
+		}
+	}
+	return out, nil
+}
+
+// Returns true if the given type is acceptable as a configuration shape.
+func isDecodable(t reflect.Type) bool {
+	// TODO(abg): Do we want to support top-level map types for configuration
+	switch t.Kind() {
+	case reflect.Struct:
+		return true
+	case reflect.Ptr:
+		return isDecodable(t.Elem())
+	default:
+		return false
+	}
 }
