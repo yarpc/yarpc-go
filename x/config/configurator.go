@@ -630,7 +630,11 @@ func fieldNames(t reflect.Type) map[string]struct{} {
 
 	fields := make(map[string]struct{}, t.NumField())
 	for i := 0; i < t.NumField(); i++ {
-		fields[t.Field(i).Name] = struct{}{}
+		field := t.Field(i)
+		if field.PkgPath != "" {
+			continue // unexported field
+		}
+		fields[field.Name] = struct{}{}
 	}
 	return fields
 }
@@ -641,8 +645,5 @@ func isDecodable(t reflect.Type) bool {
 
 	// TODO(abg): Do we want to support top-level map types for configuration
 
-	if t.Kind() == reflect.Struct {
-		return true
-	}
-	return false
+	return t.Kind() == reflect.Struct
 }
