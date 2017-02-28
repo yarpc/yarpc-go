@@ -359,7 +359,7 @@ func (b transportBuilder) Load(attrs attributeMap) (TransportBuilder, error) {
 
 func (b *transportBuilder) BuildTransport() (transport.Transport, error) {
 	result := b.build.Call([]reflect.Value{b.cfg})
-	if err := result[1].Interface().(error); err != nil {
+	if err, _ := result[1].Interface().(error); err != nil {
 		return nil, err
 	}
 	return result[0].Interface().(transport.Transport), nil
@@ -380,6 +380,7 @@ type builder struct {
 	cfgType    reflect.Type
 	resultType reflect.Type
 	buildFunc  reflect.Value
+	fieldNames map[string]struct{}
 }
 
 func newBuilder(build interface{}, outputType reflect.Type) (*builder, error) {
@@ -408,7 +409,8 @@ func newBuilder(build interface{}, outputType reflect.Type) (*builder, error) {
 	}
 
 	return &builder{
-		cfgType:    t.In(1),
+		cfgType:    t.In(0),
+		fieldNames: fieldNames(t.In(0)),
 		resultType: outputType,
 		buildFunc:  v,
 	}, err
@@ -428,7 +430,7 @@ func (b builder) Load(attrs attributeMap) (*builder, error) {
 
 func (b *builder) build(t transport.Transport) (reflect.Value, error) {
 	out := b.buildFunc.Call([]reflect.Value{b.cfg, reflect.ValueOf(t)})
-	if err := out[1].Interface().(error); err != nil {
+	if err, _ := out[1].Interface().(error); err != nil {
 		return reflect.Zero(b.resultType), err
 	}
 	return out[0], nil
@@ -464,11 +466,11 @@ func newInboundBuilder(build interface{}) (*builder, error) {
 		return nil, err
 	}
 
-	if _, hasType := b.cfgType.FieldByName("Type"); hasType {
+	if _, hasType := b.fieldNames["Type"]; hasType {
 		return nil, errors.New("inbound configurations must not have a Type field")
 	}
 
-	if _, hasDisabled := b.cfgType.FieldByName("Disabled"); hasDisabled {
+	if _, hasDisabled := b.fieldNames["Disabled"]; hasDisabled {
 		return nil, errors.New("inbound configurations must not have a Disabled field")
 	}
 
@@ -481,7 +483,7 @@ func newOutboundBuilder(build interface{}, resultType reflect.Type) (*builder, e
 		return nil, err
 	}
 
-	if _, hasWith := b.cfgType.FieldByName("With"); hasWith {
+	if _, hasWith := b.fieldNames["With"]; hasWith {
 		return nil, errors.New("outbound configurations must not have a With field")
 	}
 
@@ -616,15 +618,31 @@ func buildOutboundPresets(m map[string]interface{}, resultType reflect.Type) (ma
 	return out, nil
 }
 
-// Returns true if the given type is acceptable as a configuration shape.
-func isDecodable(t reflect.Type) bool {
-	// TODO(abg): Do we want to support top-level map types for configuration
-	switch t.Kind() {
-	case reflect.Struct:
-		return true
-	case reflect.Ptr:
-		return isDecodable(t.Elem())
-	default:
-		return false
+// Returns a list of struct fields for the given type. The type may be a
+// struct or a pointer to a struct (arbitrarily deep).
+func fieldNames(t reflect.Type) map[string]struct{} {
+	for ; t.Kind() == reflect.Ptr; t = t.Elem() {
 	}
+
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
+
+	fields := make(map[string]struct{}, t.NumField())
+	for i := 0; i < t.NumField(); i++ {
+		fields[t.Field(i).Name] = struct{}{}
+	}
+	return fields
+}
+
+func isDecodable(t reflect.Type) bool {
+	for ; t.Kind() == reflect.Ptr; t = t.Elem() {
+	}
+
+	// TODO(abg): Do we want to support top-level map types for configuration
+
+	if t.Kind() == reflect.Struct {
+		return true
+	}
+	return false
 }
