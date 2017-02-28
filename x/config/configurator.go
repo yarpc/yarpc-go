@@ -392,10 +392,13 @@ func newBuilder(build interface{}, outputType reflect.Type) (*builder, error) {
 		err = errors.New("must be a function")
 	case t.NumIn() != 2:
 		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
-	case t.In(0) != _typeOfTransport:
-		err = fmt.Errorf("must accept a transport.Transport as its first argument, found %v", t.In(0))
-	case !isDecodable(t.In(1)):
-		err = fmt.Errorf("must accept a struct or struct pointer as its second argument, found %v", t.In(1))
+	case !isDecodable(t.In(0)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfTransport:
+		// TODO: We can make this smarter by making transport.Transport
+		// optional and either the first or the second argument instead of
+		// requiring it as the second argument.
+		err = fmt.Errorf("must accept a transport.Transport as its second argument, found %v", t.In(1))
 	case t.NumOut() != 2:
 		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
 	case t.Out(0) != outputType:
@@ -424,7 +427,7 @@ func (b builder) Load(attrs attributeMap) (*builder, error) {
 }
 
 func (b *builder) build(t transport.Transport) (reflect.Value, error) {
-	out := b.buildFunc.Call([]reflect.Value{reflect.ValueOf(t), b.cfg})
+	out := b.buildFunc.Call([]reflect.Value{b.cfg, reflect.ValueOf(t)})
 	if err := out[1].Interface().(error); err != nil {
 		return reflect.Zero(b.resultType), err
 	}
