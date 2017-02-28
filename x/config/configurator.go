@@ -70,7 +70,7 @@ type TransportSpec struct {
 
 	// A function in the shape,
 	//
-	// 	func(transport.Transport, C) (transport.Inbound, error)
+	// 	func(C, transport.Transport) (transport.Inbound, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters for the inbound.
@@ -80,8 +80,8 @@ type TransportSpec struct {
 
 	// The following two are functions in the shapes,
 	//
-	// 	func(transport.Transport, C) (transport.UnaryOutbound, error)
-	// 	func(transport.Transport, C) (transport.OnewayOutbound, error)
+	// 	func(C, transport.Transport) (transport.UnaryOutbound, error)
+	// 	func(C, transport.Transport) (transport.OnewayOutbound, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters for outbounds of that RPC type.
@@ -93,8 +93,8 @@ type TransportSpec struct {
 
 	// The following two are maps from preset name to functions in the shapes,
 	//
-	// 	func(transport.Transport, C) (transport.UnaryOutbound, error)
-	// 	func(transport.Transport, C) (transport.OnewayOutbound, error)
+	// 	func(C, transport.Transport) (transport.UnaryOutbound, error)
+	// 	func(C, transport.Transport) (transport.OnewayOutbound, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters for that outbound preset.
@@ -109,7 +109,7 @@ type TransportSpec struct {
 	// accepting a transport.Transport, we could make it so that
 	//
 	// 	BuildTransport: func(...) (*http.Transport, error)
-	// 	BuildInbound: func(t *http.Transport, ...) (*http.Inbound, error)
+	// 	BuildInbound: func(..., t *http.Transport) (*http.Inbound, error)
 	//
 	// This will get rid of the `t.(*http.Transport)` users will have to do
 	// the first thing inside their BuildInbound.
