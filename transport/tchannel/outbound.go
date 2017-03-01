@@ -67,7 +67,7 @@ func (t *Transport) NewSingleOutbound(addr string) *Outbound {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
+	if err := o.transport.once.WhenRunning(ctx); err != nil {
 		return nil, err
 	}
 	root := o.transport.ch.RootPeers()

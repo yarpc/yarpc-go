@@ -101,7 +101,7 @@ func TestInboundSubServices(t *testing.T) {
 	otransport, err := NewTransport(ServiceName("caller"))
 	require.NoError(t, err)
 	o := otransport.NewSingleOutbound(chservEndpoint)
-
+	require.NoError(t, otransport.Start())
 	require.NoError(t, o.Start())
 	defer o.Stop()
 
