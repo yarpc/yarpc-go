@@ -60,6 +60,14 @@ func (c *Configurator) RegisterTransport(t TransportSpec) error {
 	return nil
 }
 
+// MustRegisterTransport is the same as RegisterTransport except it panics in
+// case of failure.
+func (c *Configurator) MustRegisterTransport(t TransportSpec) {
+	if err := c.RegisterTransport(t); err != nil {
+		panic(err)
+	}
+}
+
 // LoadConfigFromYAML loads a YARPC configuration from YAML.
 func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
 	b, err := ioutil.ReadAll(r)
