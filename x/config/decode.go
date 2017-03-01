@@ -181,7 +181,6 @@ func (o *outbounds) Decode(decode decode.Into) error {
 
 type outbound struct {
 	Type       string
-	Preset     string
 	Attributes attributeMap
 }
 
@@ -202,14 +201,8 @@ func (o *outbound) Decode(decode decode.Into) error {
 	}
 
 	for k, attrs := range cfg {
-		var err error
-
 		o.Type = k
 		o.Attributes = attrs
-		o.Preset, err = attrs.PopString("with")
-		if err != nil {
-			return fmt.Errorf(`failed to decode outbound attribute "with": %v`, err)
-		}
 	}
 
 	return nil

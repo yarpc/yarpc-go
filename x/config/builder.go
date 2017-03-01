@@ -22,139 +22,222 @@ package config
 
 import (
 	"fmt"
-	"strings"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 )
 
-// Builder TODO
-type Builder struct {
-	Name       string
-	Inbounds   []InboundConfig
-	Outbounds  []OutboundConfig
-	Transports []TransportConfig
+// buildTransport builds a Transport from the given value. This will panic if
+// the output type is not a Transport.
+func buildTransport(cv *configuredValue) (transport.Transport, error) {
+	result := cv.spec.Build(cv.Config)
+	if err, _ := result[1].Interface().(error); err != nil {
+		return nil, err
+	}
+	return result[0].Interface().(transport.Transport), nil
 }
 
-// String returns a readable representation of the configuration loaded by the
-// builder.
-func (b *Builder) String() string {
-	var inbounds, outbounds, transports []string
-	for _, i := range b.Inbounds {
-		inbounds = append(inbounds, fmt.Sprint(i))
+// buildInbound builds an Inbound from the given value. This will panic if the
+// output type for this is not transport.Inbound.
+func buildInbound(cv *configuredValue, t transport.Transport) (transport.Inbound, error) {
+	result := cv.spec.Build(cv.Config, t)
+	if err, _ := result[1].Interface().(error); err != nil {
+		return nil, err
 	}
-	for _, o := range b.Outbounds {
-		outbounds = append(outbounds, fmt.Sprint(o))
-	}
-	for _, t := range b.Transports {
-		transports = append(transports, fmt.Sprint(t))
-	}
-	return fmt.Sprintf(
-		"{Name: %q, Inbounds: [%v], Outbounds: [%v], Transports: [%v]}",
-		b.Name,
-		strings.Join(inbounds, ", "),
-		strings.Join(outbounds, ", "),
-		strings.Join(transports, ", "),
-	)
+	return result[0].Interface().(transport.Inbound), nil
 }
 
-// BuildDispatcher TODO
-func (b *Builder) BuildDispatcher() (*yarpc.Dispatcher, error) {
+// buildUnaryOutbound builds an UnaryOutbound from the given value. This will panic
+// if the output type for this is not transport.UnaryOutbound.
+func buildUnaryOutbound(cv *configuredValue, t transport.Transport) (transport.UnaryOutbound, error) {
+	result := cv.spec.Build(cv.Config, t)
+	if err, _ := result[1].Interface().(error); err != nil {
+		return nil, err
+	}
+	return result[0].Interface().(transport.UnaryOutbound), nil
+}
+
+// buildOnewayOutbound builds an OnewayOutbound from the given value. This will
+// panic if the output type for this is not transport.OnewayOutbound.
+func buildOnewayOutbound(cv *configuredValue, t transport.Transport) (transport.OnewayOutbound, error) {
+	result := cv.spec.Build(cv.Config, t)
+	if err, _ := result[1].Interface().(error); err != nil {
+		return nil, err
+	}
+	return result[0].Interface().(transport.OnewayOutbound), nil
+}
+
+type configuredClient struct {
+	Service string
+	Unary   *configuredOutbound
+	Oneway  *configuredOutbound
+}
+
+type configuredInbound struct {
+	Transport string
+	Value     *configuredValue
+}
+
+type configuredOutbound struct {
+	Transport string
+	Value     *configuredValue
+}
+
+type builder struct {
+	Name string
+
+	// Transports that we actually need and their specs. We need a transport
+	// only if we have at least one inbound or outbound using it.
+	needTransports map[string]*compiledTransportSpec
+
+	transports map[string]*configuredValue
+	inbounds   []configuredInbound
+	clients    map[string]*configuredClient
+}
+
+func newBuilder(name string) *builder {
+	return &builder{
+		Name:           name,
+		needTransports: make(map[string]*compiledTransportSpec),
+		transports:     make(map[string]*configuredValue),
+		clients:        make(map[string]*configuredClient),
+	}
+}
+
+func (b *builder) Build() (yarpc.Config, error) {
+	transports := make(map[string]transport.Transport)
+
+	for name, spec := range b.needTransports {
+		cv, ok := b.transports[name]
+
+		var err error
+		if !ok {
+			// No configuration provided for the transport. Use an empty map.
+			cv, err = spec.Transport.Decode(attributeMap{})
+			if err != nil {
+				return yarpc.Config{}, err
+			}
+		}
+
+		transports[name], err = buildTransport(cv)
+		if err != nil {
+			return yarpc.Config{}, err
+		}
+	}
+
 	cfg := yarpc.Config{Name: b.Name, Outbounds: make(yarpc.Outbounds)}
 
-	transports := make(map[string]transport.Transport)
-	for _, tcfg := range b.Transports {
-		t, err := tcfg.Builder.BuildTransport()
+	for _, i := range b.inbounds {
+		ib, err := buildInbound(i.Value, transports[i.Transport])
 		if err != nil {
-			return nil, fmt.Errorf("failed to build transport %q: %v", tcfg.Name, err)
+			return yarpc.Config{}, err
 		}
-		transports[tcfg.Name] = t
+		cfg.Inbounds = append(cfg.Inbounds, ib)
 	}
 
-	for _, icfg := range b.Inbounds {
-		tname := icfg.TransportName
-		// TODO: error if transport not found in map
-		inbound, err := icfg.Builder.BuildInbound(transports[tname])
-		if err != nil {
-			return nil, fmt.Errorf("failed to build inbound %q: %v", tname, err)
-		}
-		cfg.Inbounds = append(cfg.Inbounds, inbound)
-	}
+	for ccname, c := range b.clients {
+		var err error
 
-	for _, ocfg := range b.Outbounds {
-		outbounds := transport.Outbounds{ServiceName: ocfg.Service}
-		if ocfg.Oneway != nil {
-			tname := ocfg.Oneway.TransportName
-			// TODO: error if transport not found in map
-			oneway, err := ocfg.Oneway.Builder.BuildOnewayOutbound(transports[tname])
+		ob := transport.Outbounds{ServiceName: c.Service}
+		if o := c.Unary; o != nil {
+			ob.Unary, err = buildUnaryOutbound(o.Value, transports[o.Transport])
 			if err != nil {
-				return nil, fmt.Errorf("failed to build oneway outbound %q: %v", ocfg.Name, err)
+				return yarpc.Config{}, err
 			}
-			outbounds.Oneway = oneway
 		}
-		if ocfg.Unary != nil {
-			tname := ocfg.Unary.TransportName
-			// TODO: error if transport not found in map
-			unary, err := ocfg.Unary.Builder.BuildUnaryOutbound(transports[tname])
+		if o := c.Oneway; o != nil {
+			ob.Oneway, err = buildOnewayOutbound(o.Value, transports[o.Transport])
 			if err != nil {
-				return nil, fmt.Errorf("failed to build unary outbound %q: %v", ocfg.Name, err)
+				return yarpc.Config{}, err
 			}
-			outbounds.Unary = unary
 		}
-		cfg.Outbounds[ocfg.Name] = outbounds
+
+		cfg.Outbounds[ccname] = ob
 	}
 
-	return yarpc.NewDispatcher(cfg), nil
+	return cfg, nil
 }
 
-// TransportConfig TODO
-type TransportConfig struct {
-	Name    string
-	Builder TransportBuilder
+func (b *builder) needTransport(spec *compiledTransportSpec) {
+	b.needTransports[spec.Name] = spec
 }
 
-// InboundConfig TODO
-type InboundConfig struct {
-	TransportName string
-	Builder       InboundBuilder
+func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeMap) error {
+	b.needTransport(spec)
+	cv, err := spec.Inbound.Decode(attrs)
+	if err != nil {
+		return fmt.Errorf("failed to decode inbound configuration: %v", err)
+	}
+
+	b.inbounds = append(b.inbounds, configuredInbound{
+		Transport: spec.Name,
+		Value:     cv,
+	})
+	return nil
 }
 
-// OutboundConfig TODO
-type OutboundConfig struct {
-	Name    string
-	Service string
-	Unary   *UnaryOutboundConfig
-	Oneway  *OnewayOutboundConfig
+func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs attributeMap) error {
+	cv, err := spec.Transport.Decode(attrs)
+	if err != nil {
+		return fmt.Errorf("failed to decode transport configuration: %v", err)
+	}
+
+	b.transports[spec.Name] = cv
+	return nil
 }
 
-// UnaryOutboundConfig TODO
-type UnaryOutboundConfig struct {
-	TransportName string
-	Builder       UnaryOutboundBuilder
+func (b *builder) AddUnaryOutbound(
+	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
+) error {
+	b.needTransport(spec)
+	cv, err := spec.UnaryOutbound.Decode(attrs)
+	if err != nil {
+		return fmt.Errorf("failed to decode unary outbound configuration: %v", err)
+	}
+
+	cc, ok := b.clients[clientConfig]
+	if !ok {
+		cc = &configuredClient{Service: service}
+		b.clients[clientConfig] = cc
+	}
+
+	cc.Unary = &configuredOutbound{Transport: spec.Name, Value: cv}
+	return nil
 }
 
-// OnewayOutboundConfig TODO
-type OnewayOutboundConfig struct {
-	TransportName string
-	Builder       OnewayOutboundBuilder
+func (b *builder) AddOnewayOutbound(
+	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
+) error {
+	b.needTransport(spec)
+	cv, err := spec.OnewayOutbound.Decode(attrs)
+	if err != nil {
+		return fmt.Errorf("failed to decode oneway outbound configuration: %v", err)
+	}
+
+	cc, ok := b.clients[clientConfig]
+	if !ok {
+		cc = &configuredClient{Service: service}
+		b.clients[clientConfig] = cc
+	}
+
+	cc.Oneway = &configuredOutbound{Transport: spec.Name, Value: cv}
+	return nil
 }
 
-// TransportBuilder TODO
-type TransportBuilder interface {
-	BuildTransport() (transport.Transport, error)
-}
+func (b *builder) AddImplicitOutbound(
+	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
+) error {
+	if spec.SupportsUnaryOutbound() {
+		if err := b.AddUnaryOutbound(spec, clientConfig, service, attrs); err != nil {
+			return err
+		}
+	}
 
-// InboundBuilder TODO
-type InboundBuilder interface {
-	BuildInbound(transport.Transport) (transport.Inbound, error)
-}
+	if spec.SupportsOnewayOutbound() {
+		if err := b.AddOnewayOutbound(spec, clientConfig, service, attrs); err != nil {
+			return err
+		}
+	}
 
-// UnaryOutboundBuilder TODO
-type UnaryOutboundBuilder interface {
-	BuildUnaryOutbound(transport.Transport) (transport.UnaryOutbound, error)
-}
-
-// OnewayOutboundBuilder TODO
-type OnewayOutboundBuilder interface {
-	BuildOnewayOutbound(transport.Transport) (transport.OnewayOutbound, error)
+	return nil
 }

@@ -25,22 +25,25 @@
 // Usage
 //
 // To build a Dispatcher, set up a Configurator and inform it about the
-// different transports that it needs to support. Use Load or LoadYAML to load
-// a Builder from the given configuration.
+// different transports that it needs to support. Use LoadConfig or
+// LoadConfigFromYAML to load a yarpc.Config and pass that to
+// yarpc.NewDispatcher.
 //
 // 	cfg := config.New()
 // 	http.RegisterTransport(cfg)
 // 	redis.RegisterTransport(cfg)
 //
-// 	builder, err := cfg.LoadYAML(yamlConfig)
+// 	c, err := cfg.LoadConfigFromYAML(yamlConfig)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
 //
-// 	dispatcher, err := builder.BuildDispatcher()
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+// 	dispatcher := yarpc.NewDispatcher(c)
+//
+// Alternatively, use NewDispatcher or NewDispatcherFromYAML to build a
+// Dispatcher directly.
+//
+// 	dispatcher, err := cfg.NewDispatcherFromYAML(yamlConfig)
 //
 // Configuration parameters for the different transports, inbounds, and
 // outbounds are defined in the types fed into the TransportSpec that was
@@ -183,5 +186,3 @@
 // Configuration for this transport will be expected under the 'mytransport'
 // type in the configuration. See TransportSpec for details on each field.
 package config
-
-// TODO(abg): Document outbound presets
