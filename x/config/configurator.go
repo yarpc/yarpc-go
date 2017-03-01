@@ -143,7 +143,7 @@ func (c *Configurator) LoadYAML(r io.Reader) (*Builder, error) {
 }
 
 // Load a YARPC configuration from the given data map.
-func (c *Configurator) Load(data map[string]interface{}) (*Builder, error) {
+func (c *Configurator) Load(data interface{}) (*Builder, error) {
 	var cfg yarpcConfig
 	if err := decode.Decode(&cfg, data); err != nil {
 		return nil, err
