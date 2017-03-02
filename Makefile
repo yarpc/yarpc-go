@@ -2,6 +2,10 @@
 # lint results.
 LINT_EXCLUDES_EXTRAS =
 
+# Regex for 'go vet' rules to ignore
+GOVET_IGNORE_RULES = \
+	possible formatting directive in Error call
+
 # List of executables needed for 'make generate'
 GENERATE_DEPENDENCIES = \
 	github.com/golang/mock/mockgen \
@@ -85,7 +89,10 @@ gofmt:
 .PHONY: govet
 govet:
 	$(eval VET_LOG := $(shell mktemp -t govet.XXXXX))
-	@go vet $(PACKAGES) 2>&1 | grep -v '^exit status' | $(FILTER_LINT) > $(VET_LOG) || true
+	@go vet $(PACKAGES) 2>&1 \
+		| grep -v '^exit status' \
+		| grep -v "$(GOVET_IGNORE_RULES)" \
+		| $(FILTER_LINT) > $(VET_LOG) || true
 	@[ ! -s "$(VET_LOG)" ] || (echo "govet failed:" | cat - $(VET_LOG) && false)
 
 .PHONY: golint
