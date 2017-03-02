@@ -42,15 +42,13 @@ type TransportSpec struct {
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters accepted by this transport.
+	//
+	// This function will be called with the parsed configuration to build
+	// Transport defined by this spec.
 	BuildTransport interface{}
-
-	// TODO(abg): Document how these values are actually used since it may be
-	// non-obvious.
 
 	// TODO(abg): Make error returns optional -- if the function doesn't
 	// return an error value, we can just wrap it to always return nil there.
-
-	// Everything below is optional
 
 	// A function in the shape,
 	//
@@ -60,6 +58,10 @@ type TransportSpec struct {
 	// parameters for the inbound.
 	//
 	// This may be nil if this transport does not support inbounds.
+	//
+	// This function will be called with the parsed configuration and the
+	// transport built by BuildTransport to build the inbound for this
+	// transport.
 	BuildInbound interface{}
 
 	// The following two are functions in the shapes,
@@ -72,6 +74,10 @@ type TransportSpec struct {
 	//
 	// Either value may be nil to indicate that the transport does not support
 	// unary or oneway outbounds.
+	//
+	// These functions will be called with the parsed configurations and the
+	// transport built by BuildTransport to build the unary and oneway
+	// outbounds for this transport.
 	BuildUnaryOutbound  interface{}
 	BuildOnewayOutbound interface{}
 
