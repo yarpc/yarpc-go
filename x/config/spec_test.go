@@ -1,12 +1,14 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
 
 	"go.uber.org/yarpc/api/transport"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -199,8 +201,7 @@ func TestConfigSpecDecode(t *testing.T) {
 			got, err := spec.Decode(tt.attrs)
 			if len(tt.wantErr) == 0 {
 				if assert.NoError(t, err) {
-					assert.Equal(t, spec, got.spec)
-					assert.Equal(t, tt.want, got.Config.Interface())
+					assert.Equal(t, tt.want, got.data.Interface())
 				}
 				return
 			}
@@ -210,6 +211,116 @@ func TestConfigSpecDecode(t *testing.T) {
 					assert.Contains(t, err.Error(), msg)
 				}
 			}
+		})
+	}
+}
+
+// mockBuilder is a simple callable that records and verifies its calls using
+// a gomock controller.
+//
+// m.Build is a valid builder function for configuredValue for some
+// mockBuilder m.
+type mockBuilder struct{ ctrl *gomock.Controller }
+
+func newMockBuilder(ctrl *gomock.Controller) *mockBuilder {
+	return &mockBuilder{ctrl: ctrl}
+}
+
+func (m *mockBuilder) ExpectBuild(args ...interface{}) *gomock.Call {
+	return m.ctrl.RecordCall(m, "Build", args...)
+}
+
+func (m *mockBuilder) Build(args ...interface{}) (interface{}, error) {
+	ret := m.ctrl.Call(m, "Build", args...)
+	err, _ := ret[1].(error)
+	return ret[0], err
+}
+
+func TestConfiguredValueDecode(t *testing.T) {
+	type item struct{ Key, Value string }
+
+	tests := []struct {
+		desc string
+
+		// Configuration data and arguments for the build function
+		data interface{}
+		args []interface{}
+
+		// Expect a Build(..) call with the given arguments
+		wantArgs []interface{}
+
+		// Result and error of calling the build function
+		result interface{}
+		err    error
+	}{
+		{
+			desc:     "success, no args",
+			data:     struct{}{},
+			wantArgs: []interface{}{struct{}{}},
+			result:   42,
+		},
+		{
+			desc:     "success with args",
+			data:     1,
+			args:     []interface{}{2, 3},
+			wantArgs: []interface{}{1, 2, 3},
+			result:   4,
+		},
+		{
+			desc: "success with Value args",
+			data: &item{Key: "key", Value: "value"},
+			args: []interface{}{
+				"foo",
+				reflect.ValueOf("bar"),
+				"baz",
+			},
+			wantArgs: []interface{}{
+				&item{Key: "key", Value: "value"},
+				"foo",
+				"bar",
+				"baz",
+			},
+			result: `¯\_(ツ)_/¯`,
+		},
+		{
+			desc:     "nil everything",
+			data:     (*item)(nil),
+			wantArgs: []interface{}{nil},
+		},
+		{
+			desc:     "error no args",
+			data:     42,
+			wantArgs: []interface{}{42},
+			err:      errors.New("great sadness"),
+		},
+		{
+			desc: "error with args",
+			data: item{},
+			args: []interface{}{
+				(*string)(nil),
+				reflect.Zero(_typeOfTransport),
+			},
+			wantArgs: []interface{}{item{}, nil, nil},
+			err:      errors.New("transport is required"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			builder := newMockBuilder(mockCtrl)
+			builder.ExpectBuild(tt.wantArgs...).Return(tt.result, tt.err)
+
+			cv := &configuredValue{
+				data:    reflect.ValueOf(tt.data),
+				builder: reflect.ValueOf(builder.Build),
+			}
+
+			result, err := cv.Build(tt.args...)
+			assert.Equal(t, tt.err, err)
+			assert.Equal(t, tt.result, result)
 		})
 	}
 }

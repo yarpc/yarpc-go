@@ -30,41 +30,41 @@ import (
 // buildTransport builds a Transport from the given value. This will panic if
 // the output type is not a Transport.
 func buildTransport(cv *configuredValue) (transport.Transport, error) {
-	result := cv.spec.Build(cv.Config)
-	if err, _ := result[1].Interface().(error); err != nil {
+	result, err := cv.Build()
+	if err != nil {
 		return nil, err
 	}
-	return result[0].Interface().(transport.Transport), nil
+	return result.(transport.Transport), nil
 }
 
 // buildInbound builds an Inbound from the given value. This will panic if the
 // output type for this is not transport.Inbound.
 func buildInbound(cv *configuredValue, t transport.Transport) (transport.Inbound, error) {
-	result := cv.spec.Build(cv.Config, t)
-	if err, _ := result[1].Interface().(error); err != nil {
+	result, err := cv.Build(t)
+	if err != nil {
 		return nil, err
 	}
-	return result[0].Interface().(transport.Inbound), nil
+	return result.(transport.Inbound), nil
 }
 
 // buildUnaryOutbound builds an UnaryOutbound from the given value. This will panic
 // if the output type for this is not transport.UnaryOutbound.
 func buildUnaryOutbound(cv *configuredValue, t transport.Transport) (transport.UnaryOutbound, error) {
-	result := cv.spec.Build(cv.Config, t)
-	if err, _ := result[1].Interface().(error); err != nil {
+	result, err := cv.Build(t)
+	if err != nil {
 		return nil, err
 	}
-	return result[0].Interface().(transport.UnaryOutbound), nil
+	return result.(transport.UnaryOutbound), nil
 }
 
 // buildOnewayOutbound builds an OnewayOutbound from the given value. This will
 // panic if the output type for this is not transport.OnewayOutbound.
 func buildOnewayOutbound(cv *configuredValue, t transport.Transport) (transport.OnewayOutbound, error) {
-	result := cv.spec.Build(cv.Config, t)
-	if err, _ := result[1].Interface().(error); err != nil {
+	result, err := cv.Build(t)
+	if err != nil {
 		return nil, err
 	}
-	return result[0].Interface().(transport.OnewayOutbound), nil
+	return result.(transport.OnewayOutbound), nil
 }
 
 type configuredClient struct {
