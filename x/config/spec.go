@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package config
 
 import (
@@ -84,6 +104,10 @@ type compiledTransportSpec struct {
 func compileTransportSpec(spec *TransportSpec) (_ *compiledTransportSpec, err error) {
 	out := compiledTransportSpec{Name: spec.Name}
 
+	if spec.Name == "" {
+		return nil, errors.New("Name is required")
+	}
+
 	if spec.BuildTransport == nil {
 		return nil, errors.New("BuildTransport is required")
 	}
@@ -129,9 +153,8 @@ var (
 
 // Validated representation of a configuration function specified by the user.
 type configSpec struct {
-	inputType  reflect.Type  // type of config object expected by the function
-	outputType reflect.Type  // type of result produced by the function
-	builder    reflect.Value // function to call
+	inputType reflect.Type  // type of config object expected by the function
+	builder   reflect.Value // function to call
 }
 
 // Build calls the underlying build function with the given arguments.
@@ -184,18 +207,14 @@ func compileTransportConfig(build interface{}) (*configSpec, error) {
 	case t.Out(0) != _typeOfTransport:
 		err = fmt.Errorf("must return a transport.Transport as its first result, found %v", t.Out(0))
 	case t.Out(1) != _typeOfError:
-		err = fmt.Errorf("must return a error as its second result, found %v", t.Out(1))
+		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
 	}
 
 	if err != nil {
-		err = fmt.Errorf("invalid BuildTransport %v: %v", t, err)
+		return nil, fmt.Errorf("invalid BuildTransport %v: %v", t, err)
 	}
 
-	return &configSpec{
-		inputType:  t.In(0),
-		builder:    v,
-		outputType: _typeOfTransport,
-	}, err
+	return &configSpec{inputType: t.In(0), builder: v}, nil
 }
 
 func compileInboundConfig(build interface{}) (*configSpec, error) {
@@ -217,11 +236,7 @@ func compileInboundConfig(build interface{}) (*configSpec, error) {
 		return nil, errors.New("inbound configurations must not have a Disabled field")
 	}
 
-	return &configSpec{
-		inputType:  inputType,
-		builder:    v,
-		outputType: _typeOfInbound,
-	}, nil
+	return &configSpec{inputType: inputType, builder: v}, nil
 }
 
 func compileUnaryOutboundConfig(build interface{}) (*configSpec, error) {
@@ -232,11 +247,7 @@ func compileUnaryOutboundConfig(build interface{}) (*configSpec, error) {
 		return nil, fmt.Errorf("invalid BuildUnaryOutbound: %v", err)
 	}
 
-	return &configSpec{
-		inputType:  t.In(0),
-		builder:    v,
-		outputType: _typeOfInbound,
-	}, nil
+	return &configSpec{inputType: t.In(0), builder: v}, nil
 }
 
 func compileOnewayOutboundConfig(build interface{}) (*configSpec, error) {
@@ -247,11 +258,7 @@ func compileOnewayOutboundConfig(build interface{}) (*configSpec, error) {
 		return nil, fmt.Errorf("invalid BuildOnewayOutbound: %v", err)
 	}
 
-	return &configSpec{
-		inputType:  t.In(0),
-		builder:    v,
-		outputType: _typeOfInbound,
-	}, nil
+	return &configSpec{inputType: t.In(0), builder: v}, nil
 }
 
 // Common validation for all build functions except Tranport.
@@ -273,7 +280,7 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	case t.Out(0) != outputType:
 		return fmt.Errorf("must return a %v as its first result, found %v", outputType, t.Out(0))
 	case t.Out(1) != _typeOfError:
-		return fmt.Errorf("must return a error as its second result, found %v", t.Out(1))
+		return fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
 	}
 
 	return nil
