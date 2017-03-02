@@ -1,7 +1,6 @@
-FROM golang:1.7.4
+FROM golang:1.8.0
 
 EXPOSE 8080-8087
-RUN mkdir -p /go/src/go.uber.org/yarpc
 WORKDIR /go/src/go.uber.org/yarpc
 ADD glide.yaml glide.lock /go/src/go.uber.org/yarpc/
 RUN go get github.com/Masterminds/glide && glide install
