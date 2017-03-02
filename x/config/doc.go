@@ -30,8 +30,8 @@
 // yarpc.NewDispatcher.
 //
 // 	cfg := config.New()
-// 	http.RegisterTransport(cfg)
-// 	redis.RegisterTransport(cfg)
+// 	cfg.MustRegisterTransport(http.TransportSpec())
+// 	cfg.MustRegisterTransport(redis.TransportSpec())
 //
 // 	c, err := cfg.LoadConfigFromYAML(yamlConfig)
 // 	if err != nil {
