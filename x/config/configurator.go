@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/decode"
+	errs "go.uber.org/yarpc/internal/errors"
 
 	"gopkg.in/yaml.v2"
 )
@@ -193,6 +194,10 @@ func (c *Configurator) load(cfg *yarpcConfig) (yarpc.Config, error) {
 			errors = append(errors, err)
 			continue
 		}
+	}
+
+	if len(errors) > 0 {
+		return yarpc.Config{}, errs.MultiError(errors)
 	}
 
 	return b.Build()
