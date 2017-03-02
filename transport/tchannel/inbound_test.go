@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 
 	"github.com/stretchr/testify/assert"
@@ -142,4 +143,47 @@ func TestInboundSubServices(t *testing.T) {
 
 	require.NoError(t, i.Stop())
 	require.NoError(t, itransport.Stop())
+}
+
+func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
+	x, err := NewTransport(ServiceName("service"))
+	require.NoError(t, err)
+	i := x.NewInbound()
+	i.SetRouter(transporttest.EchoRouter{})
+	require.NoError(t, i.Start(), "failed to start inbound")
+	require.NoError(t, x.Start(), "failed to start transport")
+
+	o := x.NewSingleOutbound(x.ListenAddr())
+	require.NoError(t, o.Start(), "failed to start outbound")
+
+	tests := []struct {
+		msg             string
+		caller, service string
+	}{
+		{"from service to foo", "service", "foo"},
+		{"from bar to service", "bar", "service"},
+		{"from foo to bar", "foo", "bar"},
+		{"from bar to foo", "bar", "foo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.msg, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			defer cancel()
+			res, err := o.Call(
+				ctx,
+				&transport.Request{
+					Caller:    tt.caller,
+					Service:   tt.service,
+					Encoding:  raw.Encoding,
+					Procedure: "procedure",
+					Body:      bytes.NewReader([]byte(tt.msg)),
+				},
+			)
+			require.NoError(t, err, "call success")
+			resb, err := ioutil.ReadAll(res.Body)
+			assert.NoError(t, err, "read response body")
+			assert.Equal(t, string(resb), tt.msg, "response echoed")
+		})
+	}
 }
