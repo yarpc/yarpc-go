@@ -69,19 +69,17 @@ func TestInboundInvalidAddress(t *testing.T) {
 
 type nophandler struct{}
 
-func (nophandler) Handle(ctx context.Context, req *transport.Request,
-	resw transport.ResponseWriter) error {
+func (nophandler) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	resw.Write([]byte(req.Service))
 	return nil
 }
 
 func TestInboundSubServices(t *testing.T) {
-	itransport, err := NewTransport(ServiceName("myservice"), ListenAddr("localhost:0"))
+	it, err := NewTransport(ServiceName("myservice"), ListenAddr("localhost:0"))
 	require.NoError(t, err)
 
 	router := yarpc.NewMapRouter("myservice")
-
-	i := itransport.NewInbound()
+	i := it.NewInbound()
 	i.SetRouter(router)
 
 	nophandlerspec := transport.NewUnaryHandlerSpec(nophandler{})
@@ -95,15 +93,14 @@ func TestInboundSubServices(t *testing.T) {
 	})
 
 	require.NoError(t, i.Start())
-	require.NoError(t, itransport.Start())
+	require.NoError(t, it.Start())
 
-	chservEndpoint := itransport.ch.PeerInfo().HostPort
-
-	otransport, err := NewTransport(ServiceName("caller"))
+	ot, err := NewTransport(ServiceName("caller"))
 	require.NoError(t, err)
-	o := otransport.NewSingleOutbound(chservEndpoint)
-	require.NoError(t, otransport.Start())
+	o := ot.NewSingleOutbound(it.ListenAddr())
 	require.NoError(t, o.Start())
+	require.NoError(t, ot.Start())
+
 	defer o.Stop()
 
 	for _, tt := range []struct {
@@ -142,18 +139,22 @@ func TestInboundSubServices(t *testing.T) {
 	}
 
 	require.NoError(t, i.Stop())
-	require.NoError(t, itransport.Stop())
+	require.NoError(t, it.Stop())
+	require.NoError(t, o.Stop())
 }
 
 func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
-	x, err := NewTransport(ServiceName("service"))
+	it, err := NewTransport(ServiceName("service"))
 	require.NoError(t, err)
-	i := x.NewInbound()
+	i := it.NewInbound()
 	i.SetRouter(transporttest.EchoRouter{})
 	require.NoError(t, i.Start(), "failed to start inbound")
-	require.NoError(t, x.Start(), "failed to start transport")
+	require.NoError(t, it.Start(), "failed to start inbound transport")
 
-	o := x.NewSingleOutbound(x.ListenAddr())
+	ot, err := NewTransport(ServiceName("caller"))
+	require.NoError(t, err)
+	require.NoError(t, ot.Start(), "failed to start outbound transport")
+	o := ot.NewSingleOutbound(it.ListenAddr())
 	require.NoError(t, o.Start(), "failed to start outbound")
 
 	tests := []struct {
@@ -180,10 +181,16 @@ func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
 					Body:      bytes.NewReader([]byte(tt.msg)),
 				},
 			)
-			require.NoError(t, err, "call success")
+			if !assert.NoError(t, err, "call success") {
+				return
+			}
 			resb, err := ioutil.ReadAll(res.Body)
 			assert.NoError(t, err, "read response body")
 			assert.Equal(t, string(resb), tt.msg, "response echoed")
 		})
 	}
+
+	require.NoError(t, it.Stop())
+	require.NoError(t, i.Stop())
+	require.NoError(t, o.Stop())
 }
