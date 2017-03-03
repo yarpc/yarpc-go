@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.5.0 (unreleased)
+v1.5.0 (2017-03-03)
 -----------------------
 
 -   x/yarpcmeta make it easy to expose the list of procedures and other
