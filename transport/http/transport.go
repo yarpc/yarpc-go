@@ -35,11 +35,15 @@ import (
 )
 
 type transportConfig struct {
-	keepAlive time.Duration
-	tracer    opentracing.Tracer
+	keepAlive           time.Duration
+	maxIdleConnsPerHost int
+	tracer              opentracing.Tracer
 }
 
-var defaultTransportConfig = transportConfig{keepAlive: 30 * time.Second}
+var defaultTransportConfig = transportConfig{
+	keepAlive:           30 * time.Second,
+	maxIdleConnsPerHost: 2,
+}
 
 // TransportOption customizes the behavior of an HTTP transport.
 type TransportOption func(*transportConfig)
@@ -51,6 +55,16 @@ type TransportOption func(*transportConfig)
 func KeepAlive(t time.Duration) TransportOption {
 	return func(c *transportConfig) {
 		c.keepAlive = t
+	}
+}
+
+// MaxIdleConnsPerHost specifies the number of idle http connections
+// that will be maintained per host.
+//
+// Defaults to 2 connections.
+func MaxIdleConnsPerHost(i int) TransportOption {
+	return func(c *transportConfig) {
+		c.maxIdleConnsPerHost = i
 	}
 }
 
@@ -89,6 +103,7 @@ func buildClient(cfg *transportConfig) *http.Client {
 			}).Dial,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConnsPerHost:   cfg.maxIdleConnsPerHost,
 		},
 	}
 }

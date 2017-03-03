@@ -269,3 +269,11 @@ func TestTransportClientWithKeepAlive(t *testing.T) {
 
 	assert.NotNil(t, transport.client)
 }
+
+func TestTransportClientWithMaxIdleConnections(t *testing.T) {
+	// Unfortunately the MaxIdleConnsPerHost is obfuscated in the client, so we can't really
+	// assert this worked
+	transport := NewTransport(MaxIdleConnsPerHost(100))
+
+	assert.NotNil(t, transport.client)
+}
