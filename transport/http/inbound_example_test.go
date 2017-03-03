@@ -2,12 +2,12 @@ package http_test
 
 import (
 	"fmt"
-	"io"
 	"log"
 	nethttp "net/http"
 	"os"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -58,7 +58,7 @@ func ExampleMux() {
 	}
 	defer res.Body.Close()
 
-	if _, err := io.Copy(os.Stdout, res.Body); err != nil {
+	if _, err := iopool.Copy(os.Stdout, res.Body); err != nil {
 		log.Fatal(err)
 	}
 	// Output: hello from /health

@@ -28,9 +28,10 @@ import (
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/yarpc/internal/iopool"
+	"go.uber.org/yarpc/internal/sync"
 
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/internal/sync"
 )
 
 var (
@@ -207,7 +208,7 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 		return err
 	}
 
-	if _, err := io.Copy(w, body); err != nil {
+	if _, err := iopool.Copy(w, body); err != nil {
 		return err
 	}
 
