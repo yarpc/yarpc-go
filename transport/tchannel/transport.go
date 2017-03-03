@@ -46,6 +46,7 @@ type Transport struct {
 	ch     Channel
 	router transport.Router
 	tracer opentracing.Tracer
+	name   string
 	addr   string
 
 	peers map[string]*hostport.Peer
@@ -65,27 +66,17 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 		opt(&config)
 	}
 
-	// Attempt to construct a channel on behalf of the caller if none given.
-	// Defer the error until Start since NewChannelTransport does not have
-	// an error return.
-	var err error
-
 	if config.ch != nil {
 		return nil, fmt.Errorf("NewTransport does not accept WithChannel, use NewChannelTransport")
 	}
+	// TODO consider surfacing again, instead of err on start
 	// if config.name == "" {
 	// 	return nil, errChannelOrServiceNameIsRequired
 	// }
 
-	chopts := tchannel.ChannelOptions{Tracer: config.tracer}
-	ch, err := tchannel.NewChannel(config.name, &chopts)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Transport{
 		once:   intsync.Once(),
-		ch:     ch,
+		name:   config.name,
 		addr:   config.addr,
 		tracer: config.tracer,
 		peers:  make(map[string]*hostport.Peer),
@@ -163,30 +154,18 @@ func (t *Transport) Start() error {
 }
 
 func (t *Transport) start() error {
-
-	if t.router != nil {
-		// Set up handlers. This must occur after construction because the
-		// dispatcher, or its equivalent, calls SetRouter before Start.
-		// This also means that SetRouter should be called on every inbound
-		// before calling Start on any transport or inbound.
-		services := make(map[string]struct{})
-		for _, p := range t.router.Procedures() {
-			services[p.Service] = struct{}{}
-		}
-
-		for s := range services {
-			sc := t.ch.GetSubChannel(s)
-			existing := sc.GetHandlers()
-			sc.SetHandler(handler{existing: existing, router: t.router, tracer: t.tracer})
-		}
+	chopts := tchannel.ChannelOptions{
+		Tracer: t.tracer,
+		Handler: handler{
+			router: t.router,
+			tracer: t.tracer,
+		},
 	}
-
-	if t.ch.State() == tchannel.ChannelListening {
-		// Channel.Start() was called before RPC.Start(). We still want to
-		// update the Handler and what t.addr means, but nothing else.
-		t.addr = t.ch.PeerInfo().HostPort
-		return nil
+	ch, err := tchannel.NewChannel(t.name, &chopts)
+	if err != nil {
+		return err
 	}
+	t.ch = ch
 
 	// Default to ListenIP if addr wasn't given.
 	addr := t.addr
@@ -208,6 +187,7 @@ func (t *Transport) start() error {
 	}
 
 	t.addr = t.ch.PeerInfo().HostPort
+
 	return nil
 }
 
