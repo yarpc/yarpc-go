@@ -41,9 +41,9 @@ func TestBufferWithMaxCapacity(t *testing.T) {
 			for i := 0; i < 100; i++ {
 				buf := Get()
 				assert.Zero(t, buf.Len(), "Expected truncated buffer")
-				assert.True(t, buf.Cap() < _max_capacity, "Expected buffer to not exceed the max capacity")
+				assert.True(t, buf.Cap() < _maxCapacity, "Expected buffer to not exceed the max capacity")
 
-				overCapacityByteSlice := make([]byte, _max_capacity+10)
+				overCapacityByteSlice := make([]byte, _maxCapacity+10)
 				_, err := rand.Read(overCapacityByteSlice)
 				assert.NoError(t, err, "Unexpected error from rand.Read")
 				_, err = buf.Write(overCapacityByteSlice)

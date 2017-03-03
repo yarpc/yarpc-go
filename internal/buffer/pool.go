@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-var _max_capacity = 1024 * 100 // The max capacity for a buffer is 100 KiB
+var _maxCapacity = 1024 * 100 // The max capacity for a buffer is 100 KiB
 var _pool = sync.Pool{
 	New: func() interface{} {
 		return &bytes.Buffer{}
@@ -22,7 +22,7 @@ func Get() *bytes.Buffer {
 
 // Put returns byte buffer to the buffer pool
 func Put(buf *bytes.Buffer) {
-	if buf.Cap() < _max_capacity {
+	if buf.Cap() < _maxCapacity {
 		_pool.Put(buf)
 	}
 }
