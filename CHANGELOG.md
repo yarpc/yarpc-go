@@ -12,6 +12,8 @@ v1.6.0 (unreleased)
 v1.5.0 (2017-03-03)
 -----------------------
 
+-   Increased efficiency of inbound/outbound requests by pooling buffers.
+-   Increased efficiency of thrift encoding/decoding by pooling buffers.
 -   x/yarpcmeta make it easy to expose the list of procedures and other
     introspection information of a dispatcher on itself.
 -   Redis: `Client` now has an `IsRunning` function to match the `Lifecycle`
