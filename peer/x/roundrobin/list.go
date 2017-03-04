@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -32,16 +33,53 @@ import (
 	ysync "go.uber.org/yarpc/internal/sync"
 )
 
-const defaultCapacity = 10
+type listConfig struct {
+	startupWait time.Duration
+	capacity    int
+}
+
+var defaultListConfig = listConfig{
+	startupWait: 5 * time.Second,
+	capacity:    10,
+}
+
+// ListOption customizes the behavior of a roundrobin list.
+type ListOption func(*listConfig)
+
+// StartupWait specifies how long updates to the list will wait
+// before the list has been started
+//
+// Defaults to 5 seconds.
+func StartupWait(t time.Duration) ListOption {
+	return func(c *listConfig) {
+		c.startupWait = t
+	}
+}
+
+// Capacity specifies the default capacity of the underlying
+// data structures for this list
+//
+// Defaults to 10.
+func Capacity(capacity int) ListOption {
+	return func(c *listConfig) {
+		c.capacity = capacity
+	}
+}
 
 // New creates a new round robin PeerList
-func New(transport peer.Transport) *List {
+func New(transport peer.Transport, opts ...ListOption) *List {
+	cfg := defaultListConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
+
 	return &List{
 		once:               ysync.Once(),
-		unavailablePeers:   make(map[string]peer.Peer, defaultCapacity),
-		availablePeerRing:  NewPeerRing(defaultCapacity),
+		unavailablePeers:   make(map[string]peer.Peer, cfg.capacity),
+		availablePeerRing:  NewPeerRing(cfg.capacity),
 		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
+		startupWait:        cfg.startupWait,
 	}
 }
 
@@ -53,6 +91,7 @@ type List struct {
 	availablePeerRing  *PeerRing
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
+	startupWait        time.Duration
 
 	once ysync.LifecycleOnce
 }
@@ -61,6 +100,13 @@ type List struct {
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures
 func (pl *List) Update(updates peer.ListUpdates) error {
+	// Wait for the list to be running before we accept updates.
+	ctx, cancel := context.WithTimeout(context.Background(), pl.startupWait)
+	defer cancel()
+	if err := pl.once.WhenRunning(ctx); err != nil {
+		return err
+	}
+
 	additions := updates.Additions
 	removals := updates.Removals
 

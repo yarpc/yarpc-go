@@ -24,6 +24,7 @@ import (
 	"context"
 	"math"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -32,6 +33,27 @@ import (
 )
 
 const unavailablePenalty = math.MaxInt32
+
+type heapConfig struct {
+	startupWait time.Duration
+}
+
+var defaultHeapConfig = heapConfig{
+	startupWait: 5 * time.Second,
+}
+
+// HeapOption customizes the behavior of a peer heap.
+type HeapOption func(*heapConfig)
+
+// StartupWait specifies how long updates to the heap will block
+// before the list heap been started
+//
+// Defaults to 5 seconds.
+func StartupWait(t time.Duration) HeapOption {
+	return func(c *heapConfig) {
+		c.startupWait = t
+	}
+}
 
 // List is a peer list and peer chooser that favors the peer with the least
 // pending requests, and then favors the least recently used or most recently
@@ -46,6 +68,8 @@ type List struct {
 	byIdentifier map[string]*peerScore
 
 	peerAvailableEvent chan struct{}
+
+	startupWait time.Duration
 }
 
 // IsRunning returns whether the peer list is running.
@@ -64,18 +88,30 @@ func (pl *List) Stop() error {
 }
 
 // New returns a new peer heap-chooser-list for the given transport.
-func New(transport peer.Transport) *List {
+func New(transport peer.Transport, opts ...HeapOption) *List {
+	cfg := defaultHeapConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
+
 	return &List{
 		once:               ysync.Once(),
 		transport:          transport,
 		byIdentifier:       make(map[string]*peerScore),
 		peerAvailableEvent: make(chan struct{}, 1),
+		startupWait:        cfg.startupWait,
 	}
 }
 
 // Update satisfies the peer.List interface, so a peer provider can manage the
 // retained peers.
 func (pl *List) Update(updates peer.ListUpdates) error {
+	ctx, cancel := context.WithTimeout(context.Background(), pl.startupWait)
+	defer cancel()
+	if err := pl.once.WhenRunning(ctx); err != nil {
+		return err
+	}
+
 	var errs []error
 
 	pl.mu.Lock()

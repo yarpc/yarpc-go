@@ -18,6 +18,9 @@ func TestPeerHeapList(t *testing.T) {
 	type testStruct struct {
 		msg string
 
+		// StartWaitTimeout is how long the list will block in starting in Update calls
+		startWaitTimeout time.Duration
+
 		// PeerIDs that will be returned from the transport's OnRetain with "Available" status
 		retainedAvailablePeerIDs []string
 
@@ -53,26 +56,30 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
+				StartAction{},
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 			},
+			expectedRunning: true,
 		},
 		{
 			msg: "setup with disconnected",
 			retainedAvailablePeerIDs:   []string{"1"},
 			retainedUnavailablePeerIDs: []string{"2"},
 			peerListActions: []PeerListAction{
+				StartAction{},
 				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 			},
 			expectedAvailablePeers:   []string{"1"},
 			expectedUnavailablePeers: []string{"2"},
+			expectedRunning:          true,
 		},
 		{
 			msg: "start",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					ExpectedPeer: "1",
 				},
@@ -85,8 +92,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedUnavailablePeerIDs: []string{"7", "8", "9"},
 			releasedPeerIDs:            []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}},
 				StopAction{},
 				ChooseAction{
 					ExpectedErr:         context.DeadlineExceeded,
@@ -100,8 +107,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1", "2", "3", "4", "5", "6"},
 			expectedAvailablePeers:   []string{"1", "2", "3", "4", "5", "6"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6"}},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
 				ChooseAction{ExpectedPeer: "3"},
@@ -117,8 +124,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
 				StartAction{},
 				ChooseAction{
@@ -129,11 +136,11 @@ func TestPeerHeapList(t *testing.T) {
 		},
 		{
 			msg: "stop no start",
-			retainedAvailablePeerIDs: []string{"1"},
-			releasedPeerIDs:          []string{"1"},
+			retainedAvailablePeerIDs: []string{},
+			releasedPeerIDs:          []string{},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StopAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: context.DeadlineExceeded},
 			},
 			expectedRunning: false,
 		},
@@ -142,8 +149,10 @@ func TestPeerHeapList(t *testing.T) {
 			errRetainedPeerIDs: []string{"1"},
 			retainErr:          peer.ErrInvalidPeerType{},
 			peerListActions: []PeerListAction{
+				StartAction{},
 				UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: peer.ErrInvalidPeerType{}},
 			},
+			expectedRunning: true,
 		},
 		{
 			msg: "update retain multiple errors",
@@ -151,12 +160,14 @@ func TestPeerHeapList(t *testing.T) {
 			errRetainedPeerIDs:       []string{"1", "3"},
 			retainErr:                peer.ErrInvalidPeerType{},
 			peerListActions: []PeerListAction{
+				StartAction{},
 				UpdateAction{
 					AddedPeerIDs: []string{"1", "2", "3"},
 					ExpectedErr:  yerrors.ErrorGroup{peer.ErrInvalidPeerType{}, peer.ErrInvalidPeerType{}},
 				},
 			},
 			expectedAvailablePeers: []string{"2"},
+			expectedRunning:        true,
 		},
 		{
 			msg: "start stop release error",
@@ -164,8 +175,8 @@ func TestPeerHeapList(t *testing.T) {
 			errReleasedPeerIDs:       []string{"1"},
 			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StopAction{
 					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
 				},
@@ -178,8 +189,8 @@ func TestPeerHeapList(t *testing.T) {
 			errReleasedPeerIDs:       []string{"1"},
 			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ConcurrentAction{
 					Actions: []PeerListAction{
 						StopAction{
@@ -203,8 +214,8 @@ func TestPeerHeapList(t *testing.T) {
 			errReleasedPeerIDs:       []string{"1", "3"},
 			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
 				StopAction{
 					ExpectedErr: yerrors.ErrorGroup{
 						peer.ErrTransportHasNoReferenceToPeer{},
@@ -216,10 +227,7 @@ func TestPeerHeapList(t *testing.T) {
 		},
 		{
 			msg: "choose before start",
-			retainedAvailablePeerIDs: []string{"1"},
-			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					ExpectedErr:         context.DeadlineExceeded,
 					InputContextTimeout: 10 * time.Millisecond,
@@ -230,6 +238,36 @@ func TestPeerHeapList(t *testing.T) {
 				},
 			},
 			expectedRunning: false,
+		},
+		{
+			msg:                      "update before start",
+			startWaitTimeout:         time.Second,
+			retainedAvailablePeerIDs: []string{"1"},
+			expectedAvailablePeers:   []string{"1"},
+			peerListActions: []PeerListAction{
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						UpdateAction{AddedPeerIDs: []string{"1"}},
+						StartAction{},
+					},
+					Wait: 20 * time.Millisecond,
+				},
+			},
+			expectedRunning: true,
+		},
+		{
+			msg:              "update timeout before start",
+			startWaitTimeout: 30 * time.Millisecond,
+			peerListActions: []PeerListAction{
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: context.DeadlineExceeded},
+						StartAction{},
+					},
+					Wait: 50 * time.Millisecond,
+				},
+			},
+			expectedRunning: true,
 		},
 		{
 			msg: "start choose no peers",
@@ -247,8 +285,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				UpdateAction{AddedPeerIDs: []string{"2"}},
 				ChooseAction{ExpectedPeer: "1"},
 				ChooseAction{ExpectedPeer: "2"},
@@ -262,8 +300,8 @@ func TestPeerHeapList(t *testing.T) {
 			expectedAvailablePeers:   []string{"2"},
 			releasedPeerIDs:          []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{ExpectedPeer: "2"},
 			},
@@ -275,8 +313,8 @@ func TestPeerHeapList(t *testing.T) {
 			releasedPeerIDs:          []string{"3-r", "4-r", "5-a-r", "6-a-r"},
 			expectedAvailablePeers:   []string{"1", "2", "7-a", "8-a"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2", "3-r", "4-r"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2", "3-r", "4-r"}},
 				UpdateAction{
 					AddedPeerIDs: []string{"5-a-r", "6-a-r", "7-a", "8-a"},
 				},
@@ -298,8 +336,8 @@ func TestPeerHeapList(t *testing.T) {
 			errRetainedPeerIDs:       []string{"3"},
 			retainErr:                peer.ErrInvalidPeerType{},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				UpdateAction{
 					AddedPeerIDs: []string{"3"},
 					ExpectedErr:  peer.ErrInvalidPeerType{},
@@ -315,8 +353,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				UpdateAction{
 					AddedPeerIDs: []string{"2"},
 					ExpectedErr:  peer.ErrPeerAddAlreadyInList("2"),
@@ -332,8 +370,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				UpdateAction{
 					RemovedPeerIDs: []string{"3"},
 					ExpectedErr:    peer.ErrPeerRemoveNotInList("3"),
@@ -351,8 +389,8 @@ func TestPeerHeapList(t *testing.T) {
 			releaseErr:               peer.ErrTransportHasNoReferenceToPeer{},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
 				UpdateAction{
 					RemovedPeerIDs: []string{"2"},
 					ExpectedErr:    peer.ErrTransportHasNoReferenceToPeer{},
@@ -436,8 +474,8 @@ func TestPeerHeapList(t *testing.T) {
 			releasedPeerIDs:          []string{"1"},
 			expectedAvailablePeers:   []string{"2"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ConcurrentAction{
 					Actions: []PeerListAction{
@@ -471,8 +509,8 @@ func TestPeerHeapList(t *testing.T) {
 			expectedAvailablePeers:     []string{"1"},
 			expectedUnavailablePeers:   []string{"2"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				UpdateAction{AddedPeerIDs: []string{"2"}},
 				ChooseAction{
 					ExpectedPeer:        "1",
@@ -490,8 +528,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedUnavailablePeerIDs: []string{"1"},
 			releasedPeerIDs:            []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
@@ -505,8 +543,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:     []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
 					ExpectedErr:         context.DeadlineExceeded,
@@ -521,8 +559,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{ExpectedPeer: "1"},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
@@ -534,8 +572,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers: []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{ExpectedPeer: "1"},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
@@ -550,8 +588,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedUnavailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
@@ -565,8 +603,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedAvailablePeerIDs: []string{"1"},
 			releasedPeerIDs:          []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 			},
@@ -581,8 +619,8 @@ func TestPeerHeapList(t *testing.T) {
 			expectedAvailablePeers:     []string{"1v", "2va", "8uav"},
 			expectedUnavailablePeers:   []string{"3vau", "6u", "7ua"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1v", "6u"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1v", "6u"}},
 
 				// Added Peers
 				UpdateAction{
@@ -624,8 +662,8 @@ func TestPeerHeapList(t *testing.T) {
 			retainedUnavailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:     []string{"1"},
 			peerListActions: []PeerListAction{
-				UpdateAction{AddedPeerIDs: []string{"1"}},
 				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ConcurrentAction{
 					Actions: []PeerListAction{
 						ChooseAction{
@@ -661,7 +699,11 @@ func TestPeerHeapList(t *testing.T) {
 			ExpectPeerRetainsWithError(transport, tt.errRetainedPeerIDs, tt.retainErr)
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
-			pl := New(transport)
+			var opts []HeapOption
+			if tt.startWaitTimeout != 0 {
+				opts = append(opts, StartupWait(tt.startWaitTimeout))
+			}
+			pl := New(transport, opts...)
 
 			deps := ListActionDeps{
 				Peers: peerMap,
