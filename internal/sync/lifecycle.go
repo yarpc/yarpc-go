@@ -23,6 +23,7 @@ package sync
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"go.uber.org/atomic"
 )
@@ -77,7 +78,8 @@ type lifecycleOnce struct {
 	// subsequent Start() or Stop() calls will return. The right to set
 	// err is conferred to whichever goroutine is starting or stopping, until
 	// it has started or stopped, after which `err` becomes immutable.
-	err error
+	err     error
+	errLock sync.RWMutex
 	// state is an atomic LifecycleState representing the object's current
 	// state (Idle, Starting, Running, Stopping, Stopped, Errored).
 	state atomic.Int32
@@ -102,23 +104,26 @@ func Once() LifecycleOnce {
 // from the first time it was called.
 func (l *lifecycleOnce) Start(f func() error) error {
 	if l.state.CAS(int32(Idle), int32(Starting)) {
+		var err error
 		if f != nil {
-			l.err = f()
+			err = f()
 		}
 
 		// skip forward to error state
-		if l.err != nil {
+		if err != nil {
+			l.setError(err)
 			l.state.Store(int32(Errored))
 			close(l.stopCh)
 		} else {
 			l.state.Store(int32(Running))
 		}
 		close(l.startCh)
-		return l.err
+
+		return l.loadError()
 	}
 
 	<-l.startCh
-	return l.err
+	return l.loadError()
 }
 
 func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
@@ -159,21 +164,36 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 	<-l.startCh
 
 	if l.state.CAS(int32(Running), int32(Stopping)) {
+		var err error
 		if f != nil {
-			l.err = f()
+			err = f()
 		}
 
-		if l.err != nil {
+		if err != nil {
+			l.setError(err)
 			l.state.Store(int32(Errored))
 		} else {
 			l.state.Store(int32(Stopped))
 		}
 		close(l.stopCh)
-		return l.err
+		return l.loadError()
 	}
 
 	<-l.stopCh
-	return l.err
+	return l.loadError()
+}
+
+func (l *lifecycleOnce) setError(err error) {
+	l.errLock.Lock()
+	l.err = err
+	l.errLock.Unlock()
+}
+
+func (l *lifecycleOnce) loadError() error {
+	l.errLock.RLock()
+	err := l.err
+	l.errLock.RUnlock()
+	return err
 }
 
 // LifecycleState returns the state of the object within its life cycle, from
