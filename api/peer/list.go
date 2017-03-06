@@ -26,7 +26,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-// Chooser is a collection of Peers.  Outbounds request peers from the peer.Chooser to determine where to send requests
+// Chooser is a collection of Peers. Outbounds request peers from the
+// peer.Chooser to determine where to send requests.
 type Chooser interface {
 	transport.Lifecycle
 
@@ -40,6 +41,13 @@ type Chooser interface {
 type List interface {
 	// Update performs the additions and removals to the Peer List
 	Update(updates ListUpdates) error
+}
+
+// ChooserList is both a Chooser and a List, useful for expressing both
+// capabilities of a single instance.
+type ChooserList interface {
+	Chooser
+	List
 }
 
 // ListUpdates specifies the updates to be made to a List
