@@ -23,10 +23,10 @@ package thrift
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 
 	"go.uber.org/thriftrw/protocol"
@@ -57,8 +57,9 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 		return err
 	}
 
-	body, err := ioutil.ReadAll(treq.Body)
-	if err != nil {
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+	if _, err := buf.ReadFrom(treq.Body); err != nil {
 		return err
 	}
 
@@ -71,7 +72,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 		}
 	}
 
-	envelope, err := proto.DecodeEnveloped(bytes.NewReader(body))
+	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		return encoding.RequestBodyDecodeError(treq, err)
 	}
@@ -129,8 +130,9 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 		return err
 	}
 
-	body, err := ioutil.ReadAll(treq.Body)
-	if err != nil {
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+	if _, err := buf.ReadFrom(treq.Body); err != nil {
 		return err
 	}
 
@@ -143,7 +145,7 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 		}
 	}
 
-	envelope, err := proto.DecodeEnveloped(bytes.NewReader(body))
+	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		return encoding.RequestBodyDecodeError(treq, err)
 	}

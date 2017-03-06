@@ -150,6 +150,8 @@ func TestCallSuccess(t *testing.T) {
 
 	x, err := NewTransport(ServiceName("caller"))
 	require.NoError(t, err)
+	require.NoError(t, x.Start(), "failed to start transport")
+
 	out := x.NewSingleOutbound(serverHostPort)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
@@ -281,6 +283,8 @@ func TestCallError(t *testing.T) {
 
 	x, err := NewTransport(ServiceName("caller"))
 	require.NoError(t, err)
+	require.NoError(t, x.Start(), "failed to start transport")
+
 	out := x.NewSingleOutbound(serverHostPort)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()

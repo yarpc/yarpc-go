@@ -1,13 +1,25 @@
 Releases
 ========
 
-v1.5.0 (unreleased)
+
+v1.6.0 (unreleased)
+-----------------------
+
+-   No changes yet.
+
+
+
+v1.5.0 (2017-03-03)
 -----------------------
 
 -   x/yarpcmeta make it easy to expose the list of procedures and other
     introspection information of a dispatcher on itself.
 -   Redis: `Client` now has an `IsRunning` function to match the `Lifecycle`
     interface.
+-   TChannel: bug fix that allows a YARPC proxy to relay requests for any
+    inbound service name. Requires upgrade of TChannel to version 1.4 or
+    greater.
+
 
 v1.4.0 (2017-02-14)
 -----------------------
