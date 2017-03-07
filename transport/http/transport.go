@@ -58,8 +58,10 @@ func KeepAlive(t time.Duration) TransportOption {
 	}
 }
 
-// MaxIdleConnsPerHost specifies the number of idle http connections
-// that will be maintained per host.
+// MaxIdleConnsPerHost specifies the number of idle (keep-alive) HTTP
+// connections that will be maintained per host.
+// Existing idle connections will be used instead of creating new HTTP
+// connections.
 //
 // Defaults to 2 connections.
 func MaxIdleConnsPerHost(i int) TransportOption {
