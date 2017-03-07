@@ -32,6 +32,79 @@ import (
 // TransportSpec specifies the configuration parameters for a transport. These
 // specifications are registered against a Configurator to teach it how to
 // parse the configuration for that transport and build instances of it.
+//
+// Every TransportSpec MUST have a BuildTransport function. BuildInbound,
+// BuildUnaryOutbound, and BuildOnewayOutbound functions may be provided if
+// the Transport supports that functoinality. For example, if a transport only
+// supports incoming and outgoing Oneway requests, it will provide a
+// BuildTransport, BuildInbound, and BuildOnewayOutbound function.
+//
+// Besides BuildTransport which accepts just its configuration struct, each
+// function mentioned above has the shape,
+//
+// 	func(C, transport.Transport) (X, error)
+//
+// Where C is a struct defining the configuration parameters of that entity
+// and X is the result type. For example,
+//
+// 	func(HttpOutboundConfig, transport.Transport) (transport.UnaryOutbound, error)
+//
+// Is a function to build an HTTP unary outbound from its outbound
+// configuration and the corresponding transport.
+//
+// The Configurator will decode and fill the requested struct type from the
+// input configuration. For example, given,
+//
+// 	type HttpOutboundConfig struct {
+// 		URL string
+// 	}
+//
+// Configurator expects the outbound configuration for HTTP to have a 'url'
+// field. In YAML, the following,
+//
+// 	outbounds:
+// 	  myservice:
+// 	    http:
+// 	      url: http://localhost:8080
+//
+// Will be decoded into,
+//
+//	HttpOutboundConfig{URL: "http://localhost:8080"}
+//
+// A case-insensitive match is performed to map fields from configuration data
+// to structs.
+//
+// Configuration structs can use standard Go primitive types, time.Duration,
+// maps, slices, and other similar structs. For example,
+//
+// 	type Peer struct {
+// 		Host string
+// 		Port int
+// 	}
+//
+// 	type MyOutboundConfig struct{ Peers []Peer }
+//
+// Will expect the following YAML.
+//
+// 	myoutbound:
+// 	  peers:
+// 		- host: localhost
+// 		  port: 8080
+// 		- host: anotherhost
+// 		  port: 8080
+//
+// If a field name differs from the name of the field inside the
+// configuration data, a `config` tag may be added to the struct to specify a
+// different name.
+//
+// 	type MyInboundConfig struct {
+// 		Address string `config:"addr"`
+// 	}
+//
+// The configuration for this struct will be in the shape,
+//
+// 	myinbound:
+// 	  addr: foo
 type TransportSpec struct {
 	// Name of the transport
 	Name string

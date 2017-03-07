@@ -34,6 +34,10 @@ import (
 )
 
 // Configurator helps build Dispatchers using runtime configuration.
+//
+// An empty Configurator does not know about any transports. Inform it about
+// the different transports and their configuration parameters using the
+// RegisterTransport function.
 type Configurator struct {
 	knownTransports map[string]*compiledTransportSpec
 }
@@ -45,7 +49,14 @@ func New() *Configurator {
 	return &Configurator{knownTransports: make(map[string]*compiledTransportSpec)}
 }
 
-// RegisterTransport registers a TransportSpec with the given Configurator.
+// RegisterTransport registers a TransportSpec with the given Configurator. An
+// error is returned if the TransportSpec was invalid.
+//
+// If a transport with the same name was already registered, it will be
+// overwritten.
+//
+// Use MustRegisterTransport if you want to panic in case of registration
+// failure.
 func (c *Configurator) RegisterTransport(t TransportSpec) error {
 	if t.Name == "" {
 		return errors.New("name is required")
@@ -61,15 +72,17 @@ func (c *Configurator) RegisterTransport(t TransportSpec) error {
 	return nil
 }
 
-// MustRegisterTransport is the same as RegisterTransport except it panics in
-// case of failure.
+// MustRegisterTransport registers the given TransportSpec with the
+// Configurator. This function panics if the TransportSpec was invalid.
 func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 	if err := c.RegisterTransport(t); err != nil {
 		panic(err)
 	}
 }
 
-// LoadConfigFromYAML loads a YARPC configuration from YAML.
+// LoadConfigFromYAML loads a yarpc.Config from YAML. Use LoadConfig if you
+// have your own map[string]interface{} or map[interface{}]interface{} to
+// provide.
 func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -83,7 +96,11 @@ func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
 	return c.LoadConfig(data)
 }
 
-// LoadConfig a YARPC configuration from the given data.
+// LoadConfig loads a yarpc.Config from a map[string]interface{} or
+// map[interface{}]interface{}.
+//
+// See the module documentation for the shape the map[string]interface{} is
+// expected to conform to.
 func (c *Configurator) LoadConfig(data interface{}) (yarpc.Config, error) {
 	var cfg yarpcConfig
 	if err := decode.Decode(&cfg, data); err != nil {
@@ -102,7 +119,7 @@ func (c *Configurator) NewDispatcherFromYAML(r io.Reader) (*yarpc.Dispatcher, er
 	return yarpc.NewDispatcher(cfg), nil
 }
 
-// NewDispatcher builds a new Dispatcher from the given data.
+// NewDispatcher builds a new Dispatcher from the given configuration data.
 func (c *Configurator) NewDispatcher(data interface{}) (*yarpc.Dispatcher, error) {
 	cfg, err := c.LoadConfig(data)
 	if err != nil {

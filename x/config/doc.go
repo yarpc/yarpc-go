@@ -25,35 +25,48 @@
 // Usage
 //
 // To build a Dispatcher, set up a Configurator and inform it about the
-// different transports that it needs to support. Use LoadConfig or
-// LoadConfigFromYAML to load a yarpc.Config and pass that to
-// yarpc.NewDispatcher.
+// different transports that it needs to support. This object is re-usable
+// and may be stored globally in your application.
 //
 // 	cfg := config.New()
 // 	cfg.MustRegisterTransport(http.TransportSpec())
 // 	cfg.MustRegisterTransport(redis.TransportSpec())
 //
+// Use LoadConfigFromYAML to load a yarpc.Config from YAML and pass that to
+// yarpc.NewDispatcher.
+//
 // 	c, err := cfg.LoadConfigFromYAML(yamlConfig)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
-//
 // 	dispatcher := yarpc.NewDispatcher(c)
 //
-// Alternatively, use NewDispatcher or NewDispatcherFromYAML to build a
-// Dispatcher directly.
+// If you have already parsed your configuration from a different format, pass
+// the parsed data to LoadConfig instead.
+//
+// 	var m map[string]interface{} = ...
+// 	c, err := cfg.LoadConfig(m)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	dispatcher := yarpc.NewDispatcher(c)
+//
+// NewDispatcher or NewDispatcherFromYAML may be used to get a
+// yarpc.Dispatcher directly instead of a yarpc.Config.
 //
 // 	dispatcher, err := cfg.NewDispatcherFromYAML(yamlConfig)
 //
 // Configuration parameters for the different transports, inbounds, and
-// outbounds are defined in the types fed into the TransportSpec that was
-// registered against the Configurator.
+// outbounds are defined in the TransportSpecs that were registered against
+// the Configurator. A TransportSpec uses this information to build the
+// corresponding Transport, Inbound and Outbound objects.
 //
 // Configuration
 //
 // The configuration may be specified in YAML or as any Go-level
 // map[string]interface{}. The examples below use YAML for illustration
-// purposes.
+// purposes but other markup formats may be parsed into map[string]interface{}
+// as long as the information provided is the same.
 //
 // The configuration accepts the following top-level attributes: name,
 // transports, inbounds, and outbounds.
@@ -137,25 +150,35 @@
 //
 // For convenience, if there is only one outbound configuration for a service,
 // it may be specified one level higher (without the 'unary' or 'oneway'
-// attributes).
+// attributes). In this case, all RPC types supported by that transport will
+// be set. For example, the HTTP transport supports both, Unary and Oneway RPC
+// types so the following states that requests for both RPC types must be made
+// over HTTP.
 //
 // 	keyvalue:
 // 	  http:
 // 	    # ...
 //
+// Similarly, the following states that we only make Oneway requests to the
+// "email" service and those are always made over Redis.
+//
+// 	email:
+// 	  redis:
+// 	    # ...
+//
 // When the name of the target service differs from the outbound name, it may
 // be overridden with the 'service' key.
 //
+// 	keyvalue:
+// 	  unary:
+// 	    # ...
+// 	  oneway:
+// 	    # ...
 // 	keyvalue-staging:
 // 	  service: keyvalue
 // 	  unary:
 // 	    # ...
 // 	  oneway:
-// 	    # ...
-//
-// 	anotherservice-staging:
-// 	  service: anotherservice
-// 	  http:
 // 	    # ...
 //
 // Transport Configuration
@@ -180,9 +203,13 @@
 //
 // 	cfg.RegisterTransport(TransportSpec{
 // 		Name: "mytransport",
-// 		// ...
+// 		BuildTransport: func(*myTransportConfig) (transport.Transport, error) {
+// 			// ...
+// 		},
+// 		...
 // 	})
 //
-// Configuration for this transport will be expected under the 'mytransport'
-// type in the configuration. See TransportSpec for details on each field.
+// This transport will be configured under the 'mytransport' key in the
+// parsed configuration data. See documentation for TransportSpec for details
+// on what each field of TransportSpec means and how it behaves.
 package config
