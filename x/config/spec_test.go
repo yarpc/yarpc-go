@@ -215,22 +215,22 @@ func TestConfigSpecDecode(t *testing.T) {
 	}
 }
 
-// mockBuilder is a simple callable that records and verifies its calls using
+// mockValueBuilder is a simple callable that records and verifies its calls using
 // a gomock controller.
 //
 // m.Build is a valid builder function for configuredValue for some
-// mockBuilder m.
-type mockBuilder struct{ ctrl *gomock.Controller }
+// mockValueBuilder m.
+type mockValueBuilder struct{ ctrl *gomock.Controller }
 
-func newMockBuilder(ctrl *gomock.Controller) *mockBuilder {
-	return &mockBuilder{ctrl: ctrl}
+func newMockValueBuilder(ctrl *gomock.Controller) *mockValueBuilder {
+	return &mockValueBuilder{ctrl: ctrl}
 }
 
-func (m *mockBuilder) ExpectBuild(args ...interface{}) *gomock.Call {
+func (m *mockValueBuilder) ExpectBuild(args ...interface{}) *gomock.Call {
 	return m.ctrl.RecordCall(m, "Build", args...)
 }
 
-func (m *mockBuilder) Build(args ...interface{}) (interface{}, error) {
+func (m *mockValueBuilder) Build(args ...interface{}) (interface{}, error) {
 	ret := m.ctrl.Call(m, "Build", args...)
 	err, _ := ret[1].(error)
 	return ret[0], err
@@ -310,7 +310,7 @@ func TestConfiguredValueDecode(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			builder := newMockBuilder(mockCtrl)
+			builder := newMockValueBuilder(mockCtrl)
 			builder.ExpectBuild(tt.wantArgs...).Return(tt.result, tt.err)
 
 			cv := &configuredValue{
