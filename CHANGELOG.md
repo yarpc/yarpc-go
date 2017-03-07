@@ -7,6 +7,9 @@ v1.6.0 (unreleased)
 
 -   Remove buffer size limit from Thrift encoding/decoding buffer pool.
 -   Increased efficiency of inbound/outbound requests by pooling buffers.
+-   Added MaxIdleConnsPerHost option to HTTP transports.  This option will
+    configure the number of idle (keep-alive) outbound connections the transport
+    will maintain per host.
 
 
 v1.5.0 (2017-03-03)
