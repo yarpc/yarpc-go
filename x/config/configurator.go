@@ -146,7 +146,7 @@ func (c *Configurator) load(cfg *yarpcConfig) (yarpc.Config, error) {
 			}
 
 			if err := b.AddImplicitOutbound(spec, name, clientConfig.Service, implicit.Attributes); err != nil {
-				errors = append(errors, err)
+				errors = append(errors, fmt.Errorf("failed to add outbound for %q: %v", name, err))
 				continue
 			}
 
