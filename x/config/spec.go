@@ -166,6 +166,14 @@ type TransportSpec struct {
 	// the first thing inside their BuildInbound.
 }
 
+var (
+	_typeOfError          = reflect.TypeOf((*error)(nil)).Elem()
+	_typeOfTransport      = reflect.TypeOf((*transport.Transport)(nil)).Elem()
+	_typeOfInbound        = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
+	_typeOfUnaryOutbound  = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
+	_typeOfOnewayOutbound = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
+)
+
 // Compiled internal representation of a user-specified TransportSpec.
 type compiledTransportSpec struct {
 	Name string // name of the transport
@@ -179,6 +187,14 @@ type compiledTransportSpec struct {
 	Inbound        *configSpec
 	UnaryOutbound  *configSpec
 	OnewayOutbound *configSpec
+}
+
+func (s *compiledTransportSpec) SupportsUnaryOutbound() bool {
+	return s.UnaryOutbound != nil
+}
+
+func (s *compiledTransportSpec) SupportsOnewayOutbound() bool {
+	return s.OnewayOutbound != nil
 }
 
 func compileTransportSpec(spec *TransportSpec) (_ *compiledTransportSpec, err error) {
@@ -218,72 +234,6 @@ func compileTransportSpec(spec *TransportSpec) (_ *compiledTransportSpec, err er
 		out.OnewayOutbound = appendError(compileOnewayOutboundConfig(spec.BuildOnewayOutbound))
 	}
 	return &out, errs.CombineErrors(errors...)
-}
-
-func (s *compiledTransportSpec) SupportsUnaryOutbound() bool {
-	return s.UnaryOutbound != nil
-}
-
-func (s *compiledTransportSpec) SupportsOnewayOutbound() bool {
-	return s.OnewayOutbound != nil
-}
-
-var (
-	_typeOfError          = reflect.TypeOf((*error)(nil)).Elem()
-	_typeOfTransport      = reflect.TypeOf((*transport.Transport)(nil)).Elem()
-	_typeOfInbound        = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
-	_typeOfUnaryOutbound  = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
-	_typeOfOnewayOutbound = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
-)
-
-// Validated representation of a configuration function specified by the user.
-type configSpec struct {
-	inputType reflect.Type  // type of config object expected by the function
-	builder   reflect.Value // function to call
-}
-
-// Decode the configuration for this type from the data map.
-func (cs *configSpec) Decode(attrs attributeMap) (*configuredValue, error) {
-	result := reflect.New(cs.inputType)
-	if err := attrs.Decode(result.Interface()); err != nil {
-		return nil, fmt.Errorf("failed to decode %v: %v", cs.inputType, err)
-	}
-	return &configuredValue{builder: cs.builder, data: result.Elem()}, nil
-}
-
-// A single parsed configuration.
-type configuredValue struct {
-	// Decoded configuration data
-	data reflect.Value
-
-	// A function that accepts Config as its first argument and returns a
-	// result and an error.
-	//
-	// 	func(Config, ...) (Out, error)
-	//
-	// Build(...) will call this function and interpret the result.
-	builder reflect.Value
-}
-
-// Build the object configured by this value. The arguments are passed to the
-// build function with the underlying configuration as the first parameter.
-//
-// Arguments may be reflect.Value objects or any other type.
-func (cv *configuredValue) Build(args ...interface{}) (interface{}, error) {
-	callArgs := make([]reflect.Value, len(args)+1)
-	callArgs[0] = cv.data
-
-	for i, v := range args {
-		if value, ok := v.(reflect.Value); ok {
-			callArgs[i+1] = value
-		} else {
-			callArgs[i+1] = reflect.ValueOf(v)
-		}
-	}
-
-	result := cv.builder.Call(callArgs)
-	err, _ := result[1].Interface().(error)
-	return result[0].Interface(), err
 }
 
 func compileTransportConfig(build interface{}) (*configSpec, error) {
@@ -380,6 +330,56 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	}
 
 	return nil
+}
+
+// Validated representation of a configuration function specified by the user.
+type configSpec struct {
+	inputType reflect.Type  // type of config object expected by the function
+	builder   reflect.Value // function to call
+}
+
+// Decode the configuration for this type from the data map.
+func (cs *configSpec) Decode(attrs attributeMap) (*configuredValue, error) {
+	result := reflect.New(cs.inputType)
+	if err := attrs.Decode(result.Interface()); err != nil {
+		return nil, fmt.Errorf("failed to decode %v: %v", cs.inputType, err)
+	}
+	return &configuredValue{builder: cs.builder, data: result.Elem()}, nil
+}
+
+// A single parsed configuration.
+type configuredValue struct {
+	// Decoded configuration data
+	data reflect.Value
+
+	// A function that accepts Config as its first argument and returns a
+	// result and an error.
+	//
+	// 	func(Config, ...) (Out, error)
+	//
+	// Build(...) will call this function and interpret the result.
+	builder reflect.Value
+}
+
+// Build the object configured by this value. The arguments are passed to the
+// build function with the underlying configuration as the first parameter.
+//
+// Arguments may be reflect.Value objects or any other type.
+func (cv *configuredValue) Build(args ...interface{}) (interface{}, error) {
+	callArgs := make([]reflect.Value, len(args)+1)
+	callArgs[0] = cv.data
+
+	for i, v := range args {
+		if value, ok := v.(reflect.Value); ok {
+			callArgs[i+1] = value
+		} else {
+			callArgs[i+1] = reflect.ValueOf(v)
+		}
+	}
+
+	result := cv.builder.Call(callArgs)
+	err, _ := result[1].Interface().(error)
+	return result[0].Interface(), err
 }
 
 // Returns a list of struct fields for the given type. The type may be a
