@@ -6,12 +6,13 @@ v1.6.0 (unreleased)
 -----------------------
 
 -   Remove buffer size limit from Thrift encoding/decoding buffer pool.
-
+-   Increased efficiency of inbound/outbound requests by pooling buffers.
 
 
 v1.5.0 (2017-03-03)
 -----------------------
 
+-   Increased efficiency of Thrift encoding/decoding by pooling buffers.
 -   x/yarpcmeta make it easy to expose the list of procedures and other
     introspection information of a dispatcher on itself.
 -   Redis: `Client` now has an `IsRunning` function to match the `Lifecycle`

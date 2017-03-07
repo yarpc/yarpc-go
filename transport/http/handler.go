@@ -23,12 +23,12 @@ package http
 import (
 	"bytes"
 	"context"
-	"io"
 	"net/http"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
 
 	"github.com/opentracing/opentracing-go"
@@ -130,7 +130,7 @@ func handleOnewayRequest(
 	// we will lose access to the body unless we read all the bytes before
 	// returning from the request
 	var buff bytes.Buffer
-	if _, err := io.Copy(&buff, treq.Body); err != nil {
+	if _, err := iopool.Copy(&buff, treq.Body); err != nil {
 		return err
 	}
 	treq.Body = &buff
