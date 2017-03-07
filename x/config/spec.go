@@ -259,7 +259,7 @@ type configuredValue struct {
 	// A function that accepts Config as its first argument and returns a
 	// result and an error.
 	//
-	// 	func(Config, ...) (O, error)
+	// 	func(Config, ...) (Out, error)
 	//
 	// Build(...) will call this function and interpret the result.
 	builder reflect.Value
