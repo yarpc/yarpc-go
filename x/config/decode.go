@@ -73,9 +73,9 @@ type yarpcConfig struct {
 
 type inbounds []inbound
 
-func (is *inbounds) Decode(decode decode.Into) error {
+func (is *inbounds) Decode(into decode.Into) error {
 	var items map[string]inbound
-	if err := decode(&items); err != nil {
+	if err := into(&items); err != nil {
 		return fmt.Errorf("failed to decode inbound items: %v", err)
 	}
 
@@ -94,8 +94,8 @@ type inbound struct {
 	Attributes attributeMap
 }
 
-func (i *inbound) Decode(decode decode.Into) error {
-	if err := decode(&i.Attributes); err != nil {
+func (i *inbound) Decode(into decode.Into) error {
+	if err := into(&i.Attributes); err != nil {
 		return fmt.Errorf("failed to decode inbound: %v", err)
 	}
 
@@ -114,9 +114,9 @@ func (i *inbound) Decode(decode decode.Into) error {
 
 type clientConfigs map[string]outbounds
 
-func (cc *clientConfigs) Decode(decode decode.Into) error {
+func (cc *clientConfigs) Decode(into decode.Into) error {
 	var items map[string]outbounds
-	if err := decode(&items); err != nil {
+	if err := into(&items); err != nil {
 		return fmt.Errorf("failed to decode outbound items: %v", err)
 	}
 
@@ -141,9 +141,9 @@ type outbounds struct {
 	Implicit *outbound
 }
 
-func (o *outbounds) Decode(decode decode.Into) error {
+func (o *outbounds) Decode(into decode.Into) error {
 	var attrs attributeMap
-	if err := decode(&attrs); err != nil {
+	if err := into(&attrs); err != nil {
 		return fmt.Errorf("failed to decode outbound configuration: %v", err)
 	}
 
@@ -184,9 +184,9 @@ type outbound struct {
 	Attributes attributeMap
 }
 
-func (o *outbound) Decode(decode decode.Into) error {
+func (o *outbound) Decode(into decode.Into) error {
 	var cfg map[string]attributeMap
-	if err := decode(&cfg); err != nil {
+	if err := into(&cfg); err != nil {
 		return fmt.Errorf("failed to decode outbound: %v", err)
 	}
 
