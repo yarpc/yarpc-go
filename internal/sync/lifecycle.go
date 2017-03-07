@@ -23,7 +23,7 @@ package sync
 import (
 	"context"
 	"errors"
-	"sync"
+	syncatomic "sync/atomic"
 
 	"go.uber.org/atomic"
 )
@@ -78,8 +78,7 @@ type lifecycleOnce struct {
 	// subsequent Start() or Stop() calls will return. The right to set
 	// err is conferred to whichever goroutine is starting or stopping, until
 	// it has started or stopped, after which `err` becomes immutable.
-	err     error
-	errLock sync.RWMutex
+	err syncatomic.Value
 	// state is an atomic LifecycleState representing the object's current
 	// state (Idle, Starting, Running, Stopping, Stopped, Errored).
 	state atomic.Int32
@@ -184,16 +183,14 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 }
 
 func (l *lifecycleOnce) setError(err error) {
-	l.errLock.Lock()
-	l.err = err
-	l.errLock.Unlock()
+	l.err.Store(err)
 }
 
 func (l *lifecycleOnce) loadError() error {
-	l.errLock.RLock()
-	err := l.err
-	l.errLock.RUnlock()
-	return err
+	if err, ok := l.err.Load().(error); ok {
+		return err
+	}
+	return nil
 }
 
 // LifecycleState returns the state of the object within its life cycle, from
