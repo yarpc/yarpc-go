@@ -246,7 +246,7 @@ func (m *mockValueBuilder) Build(args ...interface{}) (interface{}, error) {
 	return ret[0], err
 }
 
-func TestConfiguredValueDecode(t *testing.T) {
+func TestConfiguredValueBuild(t *testing.T) {
 	type item struct{ Key, Value string }
 
 	tests := []struct {
@@ -258,23 +258,18 @@ func TestConfiguredValueDecode(t *testing.T) {
 
 		// Expect a Build(..) call with the given arguments
 		wantArgs []interface{}
-
-		// Result and error of calling the build function
-		result interface{}
-		err    error
+		err      error
 	}{
 		{
 			desc:     "success, no args",
 			data:     struct{}{},
 			wantArgs: []interface{}{struct{}{}},
-			result:   42,
 		},
 		{
 			desc:     "success with args",
 			data:     1,
 			args:     []interface{}{2, 3},
 			wantArgs: []interface{}{1, 2, 3},
-			result:   4,
 		},
 		{
 			desc: "success with Value args",
@@ -290,7 +285,6 @@ func TestConfiguredValueDecode(t *testing.T) {
 				"bar",
 				"baz",
 			},
-			result: `¯\_(ツ)_/¯`,
 		},
 		{
 			desc:     "nil everything",
@@ -321,7 +315,7 @@ func TestConfiguredValueDecode(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			builder := newMockValueBuilder(mockCtrl)
-			builder.ExpectBuild(tt.wantArgs...).Return(tt.result, tt.err)
+			builder.ExpectBuild(tt.wantArgs...).Return("some result", tt.err)
 
 			cv := &configuredValue{
 				data:    reflect.ValueOf(tt.data),
@@ -330,7 +324,7 @@ func TestConfiguredValueDecode(t *testing.T) {
 
 			result, err := cv.Build(tt.args...)
 			assert.Equal(t, tt.err, err)
-			assert.Equal(t, tt.result, result)
+			assert.Equal(t, "some result", result)
 		})
 	}
 }
