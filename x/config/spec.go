@@ -325,11 +325,11 @@ func compileInboundConfig(build interface{}) (*configSpec, error) {
 
 	fields := fieldNames(inputType)
 	if _, hasType := fields["Type"]; hasType {
-		return nil, errors.New("inbound configurations must not have a Type field")
+		return nil, errors.New("inbound configurations must not have a Type field: Type is a reserved field name")
 	}
 
 	if _, hasDisabled := fields["Disabled"]; hasDisabled {
-		return nil, errors.New("inbound configurations must not have a Disabled field")
+		return nil, errors.New("inbound configurations must not have a Disabled field: Disabled is a reserved field name")
 	}
 
 	return &configSpec{inputType: inputType, builder: v}, nil
