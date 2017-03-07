@@ -28,46 +28,6 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 )
 
-// buildTransport builds a Transport from the given value. This will panic if
-// the output type is not a Transport.
-func buildTransport(cv *configuredValue) (transport.Transport, error) {
-	result, err := cv.Build()
-	if err != nil {
-		return nil, err
-	}
-	return result.(transport.Transport), nil
-}
-
-// buildInbound builds an Inbound from the given value. This will panic if the
-// output type for this is not transport.Inbound.
-func buildInbound(cv *configuredValue, t transport.Transport) (transport.Inbound, error) {
-	result, err := cv.Build(t)
-	if err != nil {
-		return nil, err
-	}
-	return result.(transport.Inbound), nil
-}
-
-// buildUnaryOutbound builds an UnaryOutbound from the given value. This will panic
-// if the output type for this is not transport.UnaryOutbound.
-func buildUnaryOutbound(cv *configuredValue, t transport.Transport) (transport.UnaryOutbound, error) {
-	result, err := cv.Build(t)
-	if err != nil {
-		return nil, err
-	}
-	return result.(transport.UnaryOutbound), nil
-}
-
-// buildOnewayOutbound builds an OnewayOutbound from the given value. This will
-// panic if the output type for this is not transport.OnewayOutbound.
-func buildOnewayOutbound(cv *configuredValue, t transport.Transport) (transport.OnewayOutbound, error) {
-	result, err := cv.Build(t)
-	if err != nil {
-		return nil, err
-	}
-	return result.(transport.OnewayOutbound), nil
-}
-
 type configuredClient struct {
 	Service string
 	Unary   *configuredOutbound
@@ -166,8 +126,54 @@ func (b *builder) Build() (yarpc.Config, error) {
 	return cfg, nil
 }
 
-func (b *builder) needTransport(spec *compiledTransportSpec) {
-	b.needTransports[spec.Name] = spec
+// buildTransport builds a Transport from the given value. This will panic if
+// the output type is not a Transport.
+func buildTransport(cv *configuredValue) (transport.Transport, error) {
+	result, err := cv.Build()
+	if err != nil {
+		return nil, err
+	}
+	return result.(transport.Transport), nil
+}
+
+// buildInbound builds an Inbound from the given value. This will panic if the
+// output type for this is not transport.Inbound.
+func buildInbound(cv *configuredValue, t transport.Transport) (transport.Inbound, error) {
+	result, err := cv.Build(t)
+	if err != nil {
+		return nil, err
+	}
+	return result.(transport.Inbound), nil
+}
+
+// buildUnaryOutbound builds an UnaryOutbound from the given value. This will panic
+// if the output type for this is not transport.UnaryOutbound.
+func buildUnaryOutbound(cv *configuredValue, t transport.Transport) (transport.UnaryOutbound, error) {
+	result, err := cv.Build(t)
+	if err != nil {
+		return nil, err
+	}
+	return result.(transport.UnaryOutbound), nil
+}
+
+// buildOnewayOutbound builds an OnewayOutbound from the given value. This will
+// panic if the output type for this is not transport.OnewayOutbound.
+func buildOnewayOutbound(cv *configuredValue, t transport.Transport) (transport.OnewayOutbound, error) {
+	result, err := cv.Build(t)
+	if err != nil {
+		return nil, err
+	}
+	return result.(transport.OnewayOutbound), nil
+}
+
+func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs attributeMap) error {
+	cv, err := spec.Transport.Decode(attrs)
+	if err != nil {
+		return fmt.Errorf("failed to decode transport configuration: %v", err)
+	}
+
+	b.transports[spec.Name] = cv
+	return nil
 }
 
 func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeMap) error {
@@ -188,14 +194,24 @@ func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeM
 	return nil
 }
 
-func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs attributeMap) error {
-	cv, err := spec.Transport.Decode(attrs)
-	if err != nil {
-		return fmt.Errorf("failed to decode transport configuration: %v", err)
+func (b *builder) AddImplicitOutbound(
+	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
+) error {
+	var errs []error
+
+	if spec.SupportsUnaryOutbound() {
+		if err := b.AddUnaryOutbound(spec, clientConfig, service, attrs); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	b.transports[spec.Name] = cv
-	return nil
+	if spec.SupportsOnewayOutbound() {
+		if err := b.AddOnewayOutbound(spec, clientConfig, service, attrs); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.MultiError(errs)
 }
 
 func (b *builder) AddUnaryOutbound(
@@ -244,22 +260,6 @@ func (b *builder) AddOnewayOutbound(
 	return nil
 }
 
-func (b *builder) AddImplicitOutbound(
-	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
-) error {
-	var errs []error
-
-	if spec.SupportsUnaryOutbound() {
-		if err := b.AddUnaryOutbound(spec, clientConfig, service, attrs); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	if spec.SupportsOnewayOutbound() {
-		if err := b.AddOnewayOutbound(spec, clientConfig, service, attrs); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	return errors.MultiError(errs)
+func (b *builder) needTransport(spec *compiledTransportSpec) {
+	b.needTransports[spec.Name] = spec
 }
