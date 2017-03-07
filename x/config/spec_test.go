@@ -38,6 +38,16 @@ func TestCompileTransportSpec(t *testing.T) {
 			wantErr: []string{"Name is required"},
 		},
 		{
+			desc:    "reserved name",
+			spec:    TransportSpec{Name: "Unary"},
+			wantErr: []string{`transport name cannot be "Unary"`},
+		},
+		{
+			desc:    "reserved name 2",
+			spec:    TransportSpec{Name: "Oneway"},
+			wantErr: []string{`transport name cannot be "Oneway"`},
+		},
+		{
 			desc:    "missing BuildTransport",
 			spec:    TransportSpec{Name: "foo"},
 			wantErr: []string{"BuildTransport is required"},

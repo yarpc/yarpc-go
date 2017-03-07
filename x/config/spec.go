@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"go.uber.org/yarpc/api/transport"
 	errs "go.uber.org/yarpc/internal/errors"
@@ -185,6 +186,11 @@ func compileTransportSpec(spec *TransportSpec) (_ *compiledTransportSpec, err er
 
 	if spec.Name == "" {
 		return nil, errors.New("Name is required")
+	}
+
+	switch strings.ToLower(spec.Name) {
+	case "unary", "oneway":
+		return nil, fmt.Errorf("transport name cannot be %q: %q is a reserved name", spec.Name, spec.Name)
 	}
 
 	if spec.BuildTransport == nil {
