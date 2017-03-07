@@ -22,6 +22,7 @@ package peertest
 
 import (
 	"fmt"
+	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 
@@ -52,6 +53,8 @@ func NewLightMockPeer(pid MockPeerIdentifier, conStatus peer.ConnectionStatus) *
 // a peer's attributes
 // MockPeer is NOT thread safe
 type LightMockPeer struct {
+	sync.Mutex
+
 	MockPeerIdentifier
 
 	PeerStatus peer.Status
@@ -64,12 +67,16 @@ func (p *LightMockPeer) Status() peer.Status {
 
 // StartRequest is run when a Request starts
 func (p *LightMockPeer) StartRequest() {
+	p.Lock()
 	p.PeerStatus.PendingRequestCount++
+	p.Unlock()
 }
 
 // EndRequest should be run after a MockPeer request has finished
 func (p *LightMockPeer) EndRequest() {
+	p.Lock()
 	p.PeerStatus.PendingRequestCount--
+	p.Unlock()
 }
 
 // PeerIdentifierMatcher is used to match a Peer/PeerIdentifier by comparing
