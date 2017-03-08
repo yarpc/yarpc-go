@@ -10,6 +10,10 @@ v1.6.0 (unreleased)
 -   Added MaxIdleConnsPerHost option to HTTP transports.  This option will
     configure the number of idle (keep-alive) outbound connections the transport
     will maintain per host.
+-   Fixed bug in Lifecycle Start/Stop where we would run the Stop functionality
+    even if Start hadn't been called yet.
+-   Updated RoundRobin and PeerHeap implementations to block until the list has
+    started or a timeout had been exceeded.
 
 
 v1.5.0 (2017-03-03)
