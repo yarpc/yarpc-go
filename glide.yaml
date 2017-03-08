@@ -33,3 +33,6 @@ import:
 # TODO: before cherami transport can leave the x/ package, cherami-client-go must >=1.0
 - package: github.com/uber/cherami-client-go
 - package: github.com/mitchellh/mapstructure
+- package: go.uber.org/tools
+  subpackages:
+  - update-license
