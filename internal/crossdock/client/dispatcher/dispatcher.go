@@ -106,7 +106,8 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 		fatals.Fail("", "unknown transport %q", trans)
 	}
 
-	callBackInbound := httpTransport.NewInbound(":0")
+	client := t.Param("client_oneway")
+	callBackInbound := httpTransport.NewInbound(fmt.Sprintf("%s:0", client))
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "oneway-client",
 		Outbounds: yarpc.Outbounds{
