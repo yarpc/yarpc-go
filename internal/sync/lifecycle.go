@@ -118,7 +118,7 @@ func (l *lifecycleOnce) Start(f func() error) error {
 		}
 		close(l.startCh)
 
-		return l.loadError()
+		return err
 	}
 
 	<-l.startCh
@@ -175,7 +175,7 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 			l.state.Store(int32(Stopped))
 		}
 		close(l.stopCh)
-		return l.loadError()
+		return err
 	}
 
 	<-l.stopCh
@@ -187,10 +187,17 @@ func (l *lifecycleOnce) setError(err error) {
 }
 
 func (l *lifecycleOnce) loadError() error {
-	if err, ok := l.err.Load().(error); ok {
+	errVal := l.err.Load()
+	if errVal == nil {
+		return nil
+	}
+
+	if err, ok := errVal.(error); ok {
 		return err
 	}
-	return nil
+
+	// TODO replace with DPanic log
+	return errors.New("lifecycle err was not `error` type")
 }
 
 // LifecycleState returns the state of the object within its life cycle, from
