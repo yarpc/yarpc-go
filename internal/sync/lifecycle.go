@@ -153,7 +153,7 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 	if l.state.CAS(int32(Idle), int32(Stopped)) {
 		close(l.startCh)
 		close(l.stopCh)
-		return l.err
+		return nil
 	}
 
 	<-l.startCh
