@@ -2,7 +2,7 @@ Releases
 ========
 
 
-v1.6.0 (unreleased)
+v1.6.0 (2017-03-08)
 -----------------------
 
 -   Remove buffer size limit from Thrift encoding/decoding buffer pool.
