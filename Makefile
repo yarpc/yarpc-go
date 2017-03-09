@@ -11,7 +11,8 @@ GENERATE_DEPENDENCIES = \
 	github.com/golang/mock/mockgen \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
 	golang.org/x/tools/cmd/stringer \
-	go.uber.org/thriftrw
+	go.uber.org/thriftrw \
+	go.uber.org/tools/update-license
 
 ##############################################################################
 export GO15VENDOREXPERIMENT=1

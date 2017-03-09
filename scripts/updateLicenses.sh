@@ -12,7 +12,7 @@ LICENSE_FILTER="/internal/tests/"
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 cd "${DIR}"
 
-python scripts/updateLicense.py $(go list -json $(glide nv) | \
+update-license $(go list -json $(glide nv) | \
 	jq -r '.Dir + "/" + (.GoFiles | .[]) | select(test("'"$LICENSE_FILTER"'") | not)')
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
