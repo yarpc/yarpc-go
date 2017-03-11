@@ -198,17 +198,24 @@ func (b *builder) AddImplicitOutbound(
 	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
 ) error {
 	var errs []error
+	supportsOutbound := false
 
 	if spec.SupportsUnaryOutbound() {
+		supportsOutbound = true
 		if err := b.AddUnaryOutbound(spec, clientConfig, service, attrs); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
 	if spec.SupportsOnewayOutbound() {
+		supportsOutbound = true
 		if err := b.AddOnewayOutbound(spec, clientConfig, service, attrs); err != nil {
 			errs = append(errs, err)
 		}
+	}
+
+	if !supportsOutbound {
+		return fmt.Errorf("transport %q does not support outbound requests", spec.Name)
 	}
 
 	return errors.MultiError(errs)

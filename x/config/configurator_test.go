@@ -327,6 +327,28 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "implicit outbound no support",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.give = untab(`
+					name: foo
+					outbounds:
+					  myservice:
+					    sink:
+					      foo: bar
+				`)
+
+				sink := mockTransportSpecBuilder{
+					Name:            "sink",
+					TransportConfig: _typeOfEmptyStruct,
+					InboundConfig:   _typeOfEmptyStruct,
+				}.Build(mockCtrl)
+
+				tt.specs = []TransportSpec{sink.Spec()}
+				tt.wantErr = []string{`transport "sink" does not support outbound requests`}
+				return
+			},
+		},
+		{
 			desc: "implicit outbound unary",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Address string }
