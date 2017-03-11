@@ -20,8 +20,6 @@ import (
 // Prometheus-flavored text and protocol buffer pages for metrics introspection
 // or scraping.
 type Registry struct {
-	http.Handler
-
 	metricsMu   sync.RWMutex
 	metrics     []metric
 	constLabels Labels
@@ -33,6 +31,7 @@ type Registry struct {
 	// simple map[string]struct{} instead.
 	prom      *prometheus.Registry
 	federated []prometheus.Registerer
+	handler   http.Handler
 
 	pushing atomic.Bool
 	scope   tally.Scope
@@ -76,12 +75,12 @@ func NewRegistry(opts ...RegistryOption) *Registry {
 	})
 
 	r := &Registry{
-		Handler:     handler,
 		metrics:     make([]metric, 0, _defaultVectorSize),
 		constLabels: make(Labels),
 		prom:        prom,
 		// Assume that we'll be federated with the global prometheus Registry.
 		federated: make([]prometheus.Registerer, 0, 1),
+		handler:   handler,
 		stop:      make(chan struct{}),
 		stopped:   make(chan struct{}),
 	}
@@ -196,6 +195,11 @@ func (r *Registry) MustGaugeVector(opts Opts) GaugeVector {
 		panic(fmt.Sprintf("failed to create GaugeVector with options %+v: %v", opts, err))
 	}
 	return v
+}
+
+// ServeHTTP implements http.Handler.
+func (r *Registry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.handler.ServeHTTP(w, req)
 }
 
 func (r *Registry) exportToTally() {
