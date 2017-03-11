@@ -195,21 +195,21 @@ func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeM
 }
 
 func (b *builder) AddImplicitOutbound(
-	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
+	spec *compiledTransportSpec, outboundKey, service string, attrs attributeMap,
 ) error {
 	var errs []error
 	supportsOutbound := false
 
 	if spec.SupportsUnaryOutbound() {
 		supportsOutbound = true
-		if err := b.AddUnaryOutbound(spec, clientConfig, service, attrs); err != nil {
+		if err := b.AddUnaryOutbound(spec, outboundKey, service, attrs); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
 	if spec.SupportsOnewayOutbound() {
 		supportsOutbound = true
-		if err := b.AddOnewayOutbound(spec, clientConfig, service, attrs); err != nil {
+		if err := b.AddOnewayOutbound(spec, outboundKey, service, attrs); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -222,7 +222,7 @@ func (b *builder) AddImplicitOutbound(
 }
 
 func (b *builder) AddUnaryOutbound(
-	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
+	spec *compiledTransportSpec, outboundKey, service string, attrs attributeMap,
 ) error {
 	if spec.UnaryOutbound == nil {
 		return fmt.Errorf("transport %q does not support unary outbound requests", spec.Name)
@@ -234,10 +234,10 @@ func (b *builder) AddUnaryOutbound(
 		return fmt.Errorf("failed to decode unary outbound configuration: %v", err)
 	}
 
-	cc, ok := b.clients[clientConfig]
+	cc, ok := b.clients[outboundKey]
 	if !ok {
 		cc = &configuredClient{Service: service}
-		b.clients[clientConfig] = cc
+		b.clients[outboundKey] = cc
 	}
 
 	cc.Unary = &configuredOutbound{Transport: spec.Name, Value: cv}
@@ -245,7 +245,7 @@ func (b *builder) AddUnaryOutbound(
 }
 
 func (b *builder) AddOnewayOutbound(
-	spec *compiledTransportSpec, clientConfig, service string, attrs attributeMap,
+	spec *compiledTransportSpec, outboundKey, service string, attrs attributeMap,
 ) error {
 	if spec.OnewayOutbound == nil {
 		return fmt.Errorf("transport %q does not support oneway outbound requests", spec.Name)
@@ -257,10 +257,10 @@ func (b *builder) AddOnewayOutbound(
 		return fmt.Errorf("failed to decode oneway outbound configuration: %v", err)
 	}
 
-	cc, ok := b.clients[clientConfig]
+	cc, ok := b.clients[outboundKey]
 	if !ok {
 		cc = &configuredClient{Service: service}
-		b.clients[clientConfig] = cc
+		b.clients[outboundKey] = cc
 	}
 
 	cc.Oneway = &configuredOutbound{Transport: spec.Name, Value: cv}
