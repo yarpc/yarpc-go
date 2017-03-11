@@ -29,7 +29,7 @@ type mockTransportSpecBuilder struct {
 	OnewayOutboundConfig reflect.Type
 }
 
-// kuild the mockTransportSpec.
+// build the mockTransportSpec.
 func (b mockTransportSpecBuilder) Build(ctrl *gomock.Controller) *mockTransportSpec {
 	s := TransportSpec{Name: b.Name}
 	m := mockTransportSpec{ctrl: ctrl, spec: &s}

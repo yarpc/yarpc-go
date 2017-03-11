@@ -26,7 +26,7 @@
 //
 // To build a Dispatcher, set up a Configurator and inform it about the
 // different transports that it needs to support. This object is re-usable
-// and may be stored globally in your application.
+// and may be stored as a singleton in your application.
 //
 // 	cfg := config.New()
 // 	cfg.MustRegisterTransport(http.TransportSpec())
@@ -183,8 +183,8 @@
 //
 // Transport Configuration
 //
-// The 'transports' attribute configures the global Transport objects that are
-// shared between all inbounds and outbounds of that transport type. It is
+// The 'transports' attribute configures the Transport objects that are shared
+// between all inbounds and outbounds of that transport type. It is
 // represented as a mapping between the transport name and its configuration.
 //
 // 	transports:
