@@ -88,7 +88,7 @@ func TestConfigurator(t *testing.T) {
 					        address: localhost:4040
 				`)
 				tt.wantErr = []string{
-					`failed to load configuration for unary outbound "someservice"`,
+					`failed to load configuration for outbound "someservice"`,
 					`unknown transport "tchannel"`,
 				}
 				return
@@ -105,7 +105,7 @@ func TestConfigurator(t *testing.T) {
 					      redis: {queue: requests}
 				`)
 				tt.wantErr = []string{
-					`failed to load configuration for oneway outbound "keyvalue"`,
+					`failed to load configuration for outbound "keyvalue"`,
 					`unknown transport "redis"`,
 				}
 				return
@@ -508,7 +508,7 @@ func TestConfigurator(t *testing.T) {
 
 				tt.specs = []TransportSpec{http.Spec()}
 				tt.wantErr = []string{
-					`failed to add outbound for "qux"`,
+					`failed to add outbound "qux"`,
 					"failed to decode oneway outbound configuration",
 					"failed to decode unary outbound configuration",
 					"invalid keys: uri",

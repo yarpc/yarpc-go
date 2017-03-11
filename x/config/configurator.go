@@ -129,87 +129,26 @@ func (c *Configurator) NewDispatcher(data interface{}) (*yarpc.Dispatcher, error
 }
 
 func (c *Configurator) load(cfg *yarpcConfig) (yarpc.Config, error) {
-	b := newBuilder(cfg.Name)
-
-	var errors []error
+	var (
+		errors []error
+		b      = newBuilder(cfg.Name)
+	)
 
 	for _, inbound := range cfg.Inbounds {
-		if inbound.Disabled {
-			continue
-		}
-
-		spec, err := c.spec(inbound.Type)
-		if err != nil {
-			// TODO: Maybe we should keep track of the inbound name so that if
-			// it differs from the transport name, we can mention that in the
-			// error message.
-			errors = append(errors, fmt.Errorf("failed to load inbound: %v", err))
-			continue
-		}
-
-		if err := b.AddInboundConfig(spec, inbound.Attributes); err != nil {
+		if err := c.loadInboundInto(b, inbound); err != nil {
 			errors = append(errors, err)
-			continue
 		}
 	}
 
-	for name, clientConfig := range cfg.Outbounds {
-		if implicit := clientConfig.Implicit; implicit != nil {
-			spec, err := c.spec(implicit.Type)
-			if err != nil {
-				errors = append(errors, fmt.Errorf(
-					"failed to load configuration for outbound %q: %v", name, err))
-				continue
-			}
-
-			if err := b.AddImplicitOutbound(spec, name, clientConfig.Service, implicit.Attributes); err != nil {
-				errors = append(errors, fmt.Errorf("failed to add outbound for %q: %v", name, err))
-				continue
-			}
-
-			continue
-		}
-
-		if unary := clientConfig.Unary; unary != nil {
-			spec, err := c.spec(unary.Type)
-			if err != nil {
-				errors = append(errors, fmt.Errorf(
-					"failed to load configuration for unary outbound %q: %v", name, err))
-				continue
-			}
-
-			if err := b.AddUnaryOutbound(spec, name, clientConfig.Service, unary.Attributes); err != nil {
-				errors = append(errors, err)
-				continue
-			}
-		}
-
-		if oneway := clientConfig.Oneway; oneway != nil {
-			spec, err := c.spec(oneway.Type)
-			if err != nil {
-				errors = append(errors, fmt.Errorf(
-					"failed to load configuration for oneway outbound %q: %v", name, err))
-				continue
-			}
-
-			if err := b.AddOnewayOutbound(spec, name, clientConfig.Service, oneway.Attributes); err != nil {
-				errors = append(errors, err)
-				continue
-			}
+	for name, outboundConfig := range cfg.Outbounds {
+		if err := c.loadOutboundInto(b, name, outboundConfig); err != nil {
+			errors = append(errors, err)
 		}
 	}
 
 	for name, attrs := range cfg.Transports {
-		spec, err := c.spec(name)
-		if err != nil {
-			errors = append(errors, fmt.Errorf(
-				"failed to load configuration for transport %q: %v", name, err))
-			continue
-		}
-
-		if err := b.AddTransportConfig(spec, attrs); err != nil {
+		if err := c.loadTransportInto(b, name, attrs); err != nil {
 			errors = append(errors, err)
-			continue
 		}
 	}
 
@@ -218,6 +157,68 @@ func (c *Configurator) load(cfg *yarpcConfig) (yarpc.Config, error) {
 	}
 
 	return b.Build()
+}
+
+func (c *Configurator) loadInboundInto(b *builder, i inbound) error {
+	if i.Disabled {
+		return nil
+	}
+
+	spec, err := c.spec(i.Type)
+	if err != nil {
+		// TODO: Maybe we should keep track of the inbound name so that if
+		// it differs from the transport name, we can mention that in the
+		// error message.
+		return fmt.Errorf("failed to load inbound: %v", err)
+	}
+
+	return b.AddInboundConfig(spec, i.Attributes)
+}
+
+func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) error {
+	// This matches the signature of builder.AddImplicitOutbound,
+	// AddUnaryOutbound and AddOnewayOutbound
+	type adder func(*compiledTransportSpec, string, string, attributeMap) error
+
+	loadUsing := func(o *outbound, adder adder) error {
+		spec, err := c.spec(o.Type)
+		if err != nil {
+			return fmt.Errorf("failed to load configuration for outbound %q: %v", name, err)
+		}
+
+		if err := adder(spec, name, cfg.Service, o.Attributes); err != nil {
+			return fmt.Errorf("failed to add outbound %q: %v", name, err)
+		}
+
+		return nil
+	}
+
+	if implicit := cfg.Implicit; implicit != nil {
+		return loadUsing(implicit, b.AddImplicitOutbound)
+	}
+
+	if unary := cfg.Unary; unary != nil {
+		if err := loadUsing(unary, b.AddUnaryOutbound); err != nil {
+			return err
+		}
+	}
+
+	if oneway := cfg.Oneway; oneway != nil {
+		if err := loadUsing(oneway, b.AddOnewayOutbound); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Configurator) loadTransportInto(b *builder, name string, attrs attributeMap) error {
+	spec, err := c.spec(name)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration for transport %q: %v", name, err)
+	}
+
+	return b.AddTransportConfig(spec, attrs)
 }
 
 // Returns the compiled spec for the transport with the given name or an error
