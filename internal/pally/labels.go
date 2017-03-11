@@ -41,7 +41,9 @@ type digester struct {
 }
 
 func newDigester() *digester {
-	return _digesterPool.Get().(*digester)
+	d := _digesterPool.Get().(*digester)
+	d.bs = d.bs[:0]
+	return d
 }
 
 func (d *digester) add(s string) {
@@ -57,7 +59,6 @@ func (d *digester) digest() []byte {
 }
 
 func (d *digester) free() {
-	d.bs = d.bs[:0]
 	_digesterPool.Put(d)
 }
 
