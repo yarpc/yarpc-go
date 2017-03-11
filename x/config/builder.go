@@ -66,7 +66,11 @@ func newBuilder(name string) *builder {
 }
 
 func (b *builder) Build() (yarpc.Config, error) {
-	transports := make(map[string]transport.Transport)
+	var (
+		transports = make(map[string]transport.Transport)
+		cfg        = yarpc.Config{Name: b.Name}
+		errs       []error
+	)
 
 	for name, spec := range b.needTransports {
 		cv, ok := b.transports[name]
@@ -86,11 +90,11 @@ func (b *builder) Build() (yarpc.Config, error) {
 		}
 	}
 
-	cfg := yarpc.Config{Name: b.Name}
 	for _, i := range b.inbounds {
 		ib, err := buildInbound(i.Value, transports[i.Transport])
 		if err != nil {
-			return yarpc.Config{}, err
+			errs = append(errs, err)
+			continue
 		}
 		cfg.Inbounds = append(cfg.Inbounds, ib)
 	}
@@ -107,13 +111,15 @@ func (b *builder) Build() (yarpc.Config, error) {
 		if o := c.Unary; o != nil {
 			ob.Unary, err = buildUnaryOutbound(o.Value, transports[o.Transport])
 			if err != nil {
-				return yarpc.Config{}, err
+				errs = append(errs, err)
+				continue
 			}
 		}
 		if o := c.Oneway; o != nil {
 			ob.Oneway, err = buildOnewayOutbound(o.Value, transports[o.Transport])
 			if err != nil {
-				return yarpc.Config{}, err
+				errs = append(errs, err)
+				continue
 			}
 		}
 
@@ -123,7 +129,7 @@ func (b *builder) Build() (yarpc.Config, error) {
 		cfg.Outbounds = outbounds
 	}
 
-	return cfg, nil
+	return cfg, errors.MultiError(errs)
 }
 
 // buildTransport builds a Transport from the given value. This will panic if
