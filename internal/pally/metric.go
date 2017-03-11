@@ -8,24 +8,18 @@ import (
 // A Counter is a monotonically increasing value, like a car's odometer.
 //
 // Counters are exported to Prometheus as a snapshot of the current total, and
-// to Tally as a diff since the last export. They implement
-// prometheus.Collector, so they can also be registered directly with
-// Prometheus Registries.
+// to Tally as a diff since the last export.
 type Counter interface {
-	prometheus.Collector
-
 	Inc() int64
 	Add(int64) int64
 	Load() int64
 }
 
 // A CounterVector is a collection of Counters that share a name and some
-// constant labels, but also have an enumerated set of variable labels. It
-// implements prometheus.Collector, so it can also be registered directly with
-// Prometheus Registries.
+// constant labels, but also have an enumerated set of variable labels.
 type CounterVector interface {
-	prometheus.Collector
-
+	// For a description of Get, MustGet, and vector types in general, see the
+	// package-level documentation on vectors.
 	Get(...string) (Counter, error)
 	MustGet(...string) Counter
 }
@@ -33,11 +27,8 @@ type CounterVector interface {
 // A Gauge is a point-in-time measurement, like a car's speedometer.
 //
 // Gauges are exported to both Prometheus and Tally by simply reporting the
-// current value. They implement prometheus.Collector, so they can also be
-// registered directly with Prometheus registries.
+// current value.
 type Gauge interface {
-	prometheus.Collector
-
 	Inc() int64
 	Dec() int64
 	Add(int64) int64
@@ -47,12 +38,10 @@ type Gauge interface {
 }
 
 // A GaugeVector is a collection of Gauges that share a name and some constant
-// labels, but also have an enumerated set of variable labels. It implements
-// prometheus.Collector, so it can also be registered directly with Prometheus
-// registries.
+// labels, but also have an enumerated set of variable labels.
 type GaugeVector interface {
-	prometheus.Collector
-
+	// For a description of Get, MustGet, and vector types in general, see the
+	// package-level documentation on vectors.
 	Get(...string) (Gauge, error)
 	MustGet(...string) Gauge
 }
