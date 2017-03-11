@@ -28,20 +28,20 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 )
 
-type configuredClient struct {
+type buildableClient struct {
 	Service string
-	Unary   *configuredOutbound
-	Oneway  *configuredOutbound
+	Unary   *buildableOutbound
+	Oneway  *buildableOutbound
 }
 
-type configuredInbound struct {
+type buildableInbound struct {
 	Transport string
-	Value     *configuredValue
+	Value     *buildable
 }
 
-type configuredOutbound struct {
+type buildableOutbound struct {
 	Transport string
-	Value     *configuredValue
+	Value     *buildable
 }
 
 type builder struct {
@@ -51,17 +51,17 @@ type builder struct {
 	// only if we have at least one inbound or outbound using it.
 	needTransports map[string]*compiledTransportSpec
 
-	transports map[string]*configuredValue
-	inbounds   []configuredInbound
-	clients    map[string]*configuredClient
+	transports map[string]*buildable
+	inbounds   []buildableInbound
+	clients    map[string]*buildableClient
 }
 
 func newBuilder(name string) *builder {
 	return &builder{
 		Name:           name,
 		needTransports: make(map[string]*compiledTransportSpec),
-		transports:     make(map[string]*configuredValue),
-		clients:        make(map[string]*configuredClient),
+		transports:     make(map[string]*buildable),
+		clients:        make(map[string]*buildableClient),
 	}
 }
 
@@ -134,7 +134,7 @@ func (b *builder) Build() (yarpc.Config, error) {
 
 // buildTransport builds a Transport from the given value. This will panic if
 // the output type is not a Transport.
-func buildTransport(cv *configuredValue) (transport.Transport, error) {
+func buildTransport(cv *buildable) (transport.Transport, error) {
 	result, err := cv.Build()
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func buildTransport(cv *configuredValue) (transport.Transport, error) {
 
 // buildInbound builds an Inbound from the given value. This will panic if the
 // output type for this is not transport.Inbound.
-func buildInbound(cv *configuredValue, t transport.Transport) (transport.Inbound, error) {
+func buildInbound(cv *buildable, t transport.Transport) (transport.Inbound, error) {
 	result, err := cv.Build(t)
 	if err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func buildInbound(cv *configuredValue, t transport.Transport) (transport.Inbound
 
 // buildUnaryOutbound builds an UnaryOutbound from the given value. This will panic
 // if the output type for this is not transport.UnaryOutbound.
-func buildUnaryOutbound(cv *configuredValue, t transport.Transport) (transport.UnaryOutbound, error) {
+func buildUnaryOutbound(cv *buildable, t transport.Transport) (transport.UnaryOutbound, error) {
 	result, err := cv.Build(t)
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func buildUnaryOutbound(cv *configuredValue, t transport.Transport) (transport.U
 
 // buildOnewayOutbound builds an OnewayOutbound from the given value. This will
 // panic if the output type for this is not transport.OnewayOutbound.
-func buildOnewayOutbound(cv *configuredValue, t transport.Transport) (transport.OnewayOutbound, error) {
+func buildOnewayOutbound(cv *buildable, t transport.Transport) (transport.OnewayOutbound, error) {
 	result, err := cv.Build(t)
 	if err != nil {
 		return nil, err
@@ -193,7 +193,7 @@ func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeM
 		return fmt.Errorf("failed to decode inbound configuration: %v", err)
 	}
 
-	b.inbounds = append(b.inbounds, configuredInbound{
+	b.inbounds = append(b.inbounds, buildableInbound{
 		Transport: spec.Name,
 		Value:     cv,
 	})
@@ -242,11 +242,11 @@ func (b *builder) AddUnaryOutbound(
 
 	cc, ok := b.clients[outboundKey]
 	if !ok {
-		cc = &configuredClient{Service: service}
+		cc = &buildableClient{Service: service}
 		b.clients[outboundKey] = cc
 	}
 
-	cc.Unary = &configuredOutbound{Transport: spec.Name, Value: cv}
+	cc.Unary = &buildableOutbound{Transport: spec.Name, Value: cv}
 	return nil
 }
 
@@ -265,11 +265,11 @@ func (b *builder) AddOnewayOutbound(
 
 	cc, ok := b.clients[outboundKey]
 	if !ok {
-		cc = &configuredClient{Service: service}
+		cc = &buildableClient{Service: service}
 		b.clients[outboundKey] = cc
 	}
 
-	cc.Oneway = &configuredOutbound{Transport: spec.Name, Value: cv}
+	cc.Oneway = &buildableOutbound{Transport: spec.Name, Value: cv}
 	return nil
 }
 

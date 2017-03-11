@@ -211,7 +211,7 @@ func TestConfigSpecDecode(t *testing.T) {
 			got, err := spec.Decode(tt.attrs)
 			if len(tt.wantErr) == 0 {
 				if assert.NoError(t, err) {
-					assert.Equal(t, tt.want, got.data.Interface())
+					assert.Equal(t, tt.want, got.inputData.Interface())
 				}
 				return
 			}
@@ -228,8 +228,7 @@ func TestConfigSpecDecode(t *testing.T) {
 // mockValueBuilder is a simple callable that records and verifies its calls using
 // a gomock controller.
 //
-// m.Build is a valid builder function for configuredValue for some
-// mockValueBuilder m.
+// mockValueBuilder.Build is a valid factory function for buildable.
 type mockValueBuilder struct{ ctrl *gomock.Controller }
 
 func newMockValueBuilder(ctrl *gomock.Controller) *mockValueBuilder {
@@ -246,7 +245,7 @@ func (m *mockValueBuilder) Build(args ...interface{}) (interface{}, error) {
 	return ret[0], err
 }
 
-func TestConfiguredValueBuild(t *testing.T) {
+func TestBuildableBuild(t *testing.T) {
 	type item struct{ Key, Value string }
 
 	tests := []struct {
@@ -317,9 +316,9 @@ func TestConfiguredValueBuild(t *testing.T) {
 			builder := newMockValueBuilder(mockCtrl)
 			builder.ExpectBuild(tt.wantArgs...).Return("some result", tt.err)
 
-			cv := &configuredValue{
-				data:    reflect.ValueOf(tt.data),
-				builder: reflect.ValueOf(builder.Build),
+			cv := &buildable{
+				inputData: reflect.ValueOf(tt.data),
+				factory:   reflect.ValueOf(builder.Build),
 			}
 
 			result, err := cv.Build(tt.args...)

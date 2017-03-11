@@ -260,7 +260,7 @@ func compileTransportConfig(build interface{}) (*configSpec, error) {
 		return nil, fmt.Errorf("invalid BuildTransport %v: %v", t, err)
 	}
 
-	return &configSpec{inputType: t.In(0), builder: v}, nil
+	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
 func compileInboundConfig(build interface{}) (*configSpec, error) {
@@ -282,7 +282,7 @@ func compileInboundConfig(build interface{}) (*configSpec, error) {
 		return nil, errors.New("inbound configurations must not have a Disabled field: Disabled is a reserved field name")
 	}
 
-	return &configSpec{inputType: inputType, builder: v}, nil
+	return &configSpec{inputType: inputType, factory: v}, nil
 }
 
 func compileUnaryOutboundConfig(build interface{}) (*configSpec, error) {
@@ -293,7 +293,7 @@ func compileUnaryOutboundConfig(build interface{}) (*configSpec, error) {
 		return nil, fmt.Errorf("invalid BuildUnaryOutbound: %v", err)
 	}
 
-	return &configSpec{inputType: t.In(0), builder: v}, nil
+	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
 func compileOnewayOutboundConfig(build interface{}) (*configSpec, error) {
@@ -304,7 +304,7 @@ func compileOnewayOutboundConfig(build interface{}) (*configSpec, error) {
 		return nil, fmt.Errorf("invalid BuildOnewayOutbound: %v", err)
 	}
 
-	return &configSpec{inputType: t.In(0), builder: v}, nil
+	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
 // Common validation for all build functions except Tranport.
@@ -334,40 +334,59 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 
 // Validated representation of a configuration function specified by the user.
 type configSpec struct {
-	inputType reflect.Type  // type of config object expected by the function
-	builder   reflect.Value // function to call
+	// Type of object expected by the factory function
+	inputType reflect.Type
+
+	// Factory function to call
+	factory reflect.Value
+
+	// Example:
+	//
+	// 	factory = func(http.InboundConfig, ..) (transport.Inbound, error) { .. }
+	// 	inputType = http.InboundConfig
 }
 
 // Decode the configuration for this type from the data map.
-func (cs *configSpec) Decode(attrs attributeMap) (*configuredValue, error) {
-	result := reflect.New(cs.inputType)
-	if err := attrs.Decode(result.Interface()); err != nil {
+func (cs *configSpec) Decode(attrs attributeMap) (*buildable, error) {
+	inputConfig := reflect.New(cs.inputType)
+	if err := attrs.Decode(inputConfig.Interface()); err != nil {
 		return nil, fmt.Errorf("failed to decode %v: %v", cs.inputType, err)
 	}
-	return &configuredValue{builder: cs.builder, data: result.Elem()}, nil
+	return &buildable{factory: cs.factory, inputData: inputConfig.Elem()}, nil
 }
 
-// A single parsed configuration.
-type configuredValue struct {
-	// Decoded configuration data
-	data reflect.Value
+// A fully configured object that can be built into an
+// Inbound/Outbound/Transport.
+type buildable struct {
+	// TODO: maybe rename to buildable?
+
+	// Decoded configuration data. This is a value of the same type as the
+	// factory function's input argument.
+	inputData reflect.Value
 
 	// A function that accepts Config as its first argument and returns a
 	// result and an error.
 	//
-	// 	func(Config, ...) (Out, error)
-	//
 	// Build(...) will call this function and interpret the result.
-	builder reflect.Value
+	factory reflect.Value
+
+	// Example:
+	//
+	// 	factory = func(*http.InboundConfig, _) .. { .. }
+	// 	inputData = &http.InboundConfig{Address: ..}
 }
 
 // Build the object configured by this value. The arguments are passed to the
 // build function with the underlying configuration as the first parameter.
 //
 // Arguments may be reflect.Value objects or any other type.
-func (cv *configuredValue) Build(args ...interface{}) (interface{}, error) {
+func (cv *buildable) Build(args ...interface{}) (interface{}, error) {
+	// This function roughly translates to,
+	//
+	// 	return factory(inputData, args...)
+
 	callArgs := make([]reflect.Value, len(args)+1)
-	callArgs[0] = cv.data
+	callArgs[0] = cv.inputData
 
 	for i, v := range args {
 		if value, ok := v.(reflect.Value); ok {
@@ -377,7 +396,7 @@ func (cv *configuredValue) Build(args ...interface{}) (interface{}, error) {
 		}
 	}
 
-	result := cv.builder.Call(callArgs)
+	result := cv.factory.Call(callArgs)
 	err, _ := result[1].Interface().(error)
 	return result[0].Interface(), err
 }
