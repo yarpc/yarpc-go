@@ -33,11 +33,9 @@ type Registry struct {
 	federated []prometheus.Registerer
 	handler   http.Handler
 
+	// Registries can only push to a single Tally scope. Since Tally scopes
+	// support tee'ing to multiple backends, this isn't a problem in practice.
 	pushing atomic.Bool
-	scope   tally.Scope
-	ticker  *time.Ticker
-	stop    chan struct{}
-	stopped chan struct{}
 }
 
 // A RegistryOption configures a Registry.
@@ -81,8 +79,6 @@ func NewRegistry(opts ...RegistryOption) *Registry {
 		// Assume that we'll be federated with the global prometheus Registry.
 		federated: make([]prometheus.Registerer, 0, 1),
 		handler:   handler,
-		stop:      make(chan struct{}),
-		stopped:   make(chan struct{}),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -93,18 +89,16 @@ func NewRegistry(opts ...RegistryOption) *Registry {
 // Push starts a goroutine that periodically exports all registered metrics to
 // a Tally scope. Each Registry can only push to a single Scope; calling Push a
 // second time returns an error.
+//
+// In practice, this isn't a problem because Tally scopes natively support
+// tee'ing to multiple backends.
 func (r *Registry) Push(scope tally.Scope, tick time.Duration) (context.CancelFunc, error) {
 	if r.pushing.Swap(true) {
 		return nil, errors.New("already pushing to Tally")
 	}
-	r.scope = scope
-	r.ticker = time.NewTicker(tick)
-	go r.exportToTally()
-	return func() {
-		r.ticker.Stop()
-		close(r.stop)
-		<-r.stopped
-	}, nil
+	pusher := newPusher(r, scope, tick)
+	go pusher.Start()
+	return pusher.Stop, nil
 }
 
 // NewCounter constructs a new Counter.
@@ -202,29 +196,6 @@ func (r *Registry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.handler.ServeHTTP(w, req)
 }
 
-func (r *Registry) exportToTally() {
-	defer close(r.stopped)
-	// When stopping, do one last export to catch any stragglers.
-	defer r.push()
-
-	for {
-		select {
-		case <-r.stop:
-			return
-		case <-r.ticker.C:
-			r.push()
-		}
-	}
-}
-
-func (r *Registry) push() {
-	r.metricsMu.RLock()
-	for _, m := range r.metrics {
-		m.push(r.scope)
-	}
-	r.metricsMu.RUnlock()
-}
-
 func (r *Registry) register(m metric) error {
 	r.metricsMu.Lock()
 	r.metrics = append(r.metrics, m)
@@ -251,4 +222,51 @@ func (r *Registry) addConstLabels(opts Opts) Opts {
 	}
 	opts.ConstLabels = labels
 	return opts
+}
+
+type pusher struct {
+	reg     *Registry
+	stop    chan struct{}
+	stopped chan struct{}
+	scope   tally.Scope
+	ticker  *time.Ticker
+}
+
+func newPusher(r *Registry, scope tally.Scope, tick time.Duration) *pusher {
+	return &pusher{
+		reg:     r,
+		stop:    make(chan struct{}),
+		stopped: make(chan struct{}),
+		scope:   scope,
+		ticker:  time.NewTicker(tick),
+	}
+}
+
+func (p *pusher) Start() {
+	defer close(p.stopped)
+	// When stopping, do one last export to catch any stragglers.
+	defer p.push()
+
+	for {
+		select {
+		case <-p.stop:
+			return
+		case <-p.ticker.C:
+			p.push()
+		}
+	}
+}
+
+func (p *pusher) Stop() {
+	p.ticker.Stop()
+	close(p.stop)
+	<-p.stopped
+}
+
+func (p *pusher) push() {
+	p.reg.metricsMu.RLock()
+	for _, m := range p.reg.metrics {
+		m.push(p.scope)
+	}
+	p.reg.metricsMu.RUnlock()
 }
