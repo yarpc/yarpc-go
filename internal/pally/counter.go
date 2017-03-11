@@ -84,7 +84,7 @@ func (cv *counterVector) push(scope tally.Scope)              { (*vector)(cv).pu
 
 func newDynamicCounter(opts Opts, desc *prometheus.Desc, variableLabelVals []string) metric {
 	return &counter{value: value{
-		opts:              &opts,
+		opts:              opts,
 		desc:              desc,
 		variableLabelVals: variableLabelVals,
 	}}

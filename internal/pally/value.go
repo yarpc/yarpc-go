@@ -16,13 +16,13 @@ const _defaultVectorSize = 100
 type value struct {
 	atomic.Int64
 
-	opts              *Opts
+	opts              Opts
 	desc              *prometheus.Desc
 	variableLabelVals []string
 }
 
 func newValue(opts Opts) value {
-	return value{opts: &opts, desc: opts.describe()}
+	return value{opts: opts, desc: opts.describe()}
 }
 
 // Describe implements half of prometheus.Collector.

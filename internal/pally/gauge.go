@@ -76,7 +76,7 @@ func (gv *gaugeVector) push(scope tally.Scope)              { (*vector)(gv).push
 
 func newDynamicGauge(opts Opts, desc *prometheus.Desc, variableLabelVals []string) metric {
 	return &gauge{value: value{
-		opts:              &opts,
+		opts:              opts,
 		desc:              desc,
 		variableLabelVals: variableLabelVals,
 	}}
