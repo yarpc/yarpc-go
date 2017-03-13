@@ -101,7 +101,7 @@ script:
       # output the logs then finally exit with the captured exit code.
       set +e
       make crossdock; code=$?
-      docker-compose logs
+      # docker-compose logs
       set -e
       exit $code
       ;;
