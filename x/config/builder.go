@@ -28,7 +28,7 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 )
 
-type buildableClient struct {
+type buildableOutbounds struct {
 	Service string
 	Unary   *buildableOutbound
 	Oneway  *buildableOutbound
@@ -53,7 +53,7 @@ type builder struct {
 
 	transports map[string]*buildable
 	inbounds   []buildableInbound
-	clients    map[string]*buildableClient
+	clients    map[string]*buildableOutbounds
 }
 
 func newBuilder(name string) *builder {
@@ -61,7 +61,7 @@ func newBuilder(name string) *builder {
 		Name:           name,
 		needTransports: make(map[string]*compiledTransportSpec),
 		transports:     make(map[string]*buildable),
-		clients:        make(map[string]*buildableClient),
+		clients:        make(map[string]*buildableOutbounds),
 	}
 }
 
@@ -242,7 +242,7 @@ func (b *builder) AddUnaryOutbound(
 
 	cc, ok := b.clients[outboundKey]
 	if !ok {
-		cc = &buildableClient{Service: service}
+		cc = &buildableOutbounds{Service: service}
 		b.clients[outboundKey] = cc
 	}
 
@@ -265,7 +265,7 @@ func (b *builder) AddOnewayOutbound(
 
 	cc, ok := b.clients[outboundKey]
 	if !ok {
-		cc = &buildableClient{Service: service}
+		cc = &buildableOutbounds{Service: service}
 		b.clients[outboundKey] = cc
 	}
 
