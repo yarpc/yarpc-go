@@ -23,6 +23,9 @@ v1.6.0 (2017-03-08)
     even if Start hadn't been called yet.
 -   Updated RoundRobin and PeerHeap implementations to block until the list has
     started or a timeout had been exceeded.
+-   Adds a peer.ChooserList interface to the API, for convenience when passing
+    instances with both capabilities (suitable for outbounds, suitable for peer
+    providers).
 
 
 v1.5.0 (2017-03-03)

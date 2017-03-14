@@ -11,7 +11,8 @@ GENERATE_DEPENDENCIES = \
 	github.com/golang/mock/mockgen \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
 	golang.org/x/tools/cmd/stringer \
-	go.uber.org/thriftrw
+	go.uber.org/thriftrw \
+	go.uber.org/tools/update-license
 
 ##############################################################################
 export GO15VENDOREXPERIMENT=1
@@ -105,7 +106,7 @@ golint:
 
 .PHONY: staticcheck
 staticcheck:
-	@go get honnef.co/go/staticcheck/cmd/staticcheck
+	@go get honnef.co/go/tools/cmd/staticcheck
 	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
 	@staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
 	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
