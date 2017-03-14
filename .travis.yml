@@ -99,7 +99,7 @@ script:
       ;;
     crossdock)
       # We run this inside a subshell so that we can always emit
-      # `docker-compose logs` regarldess of success or failure.
+      # `docker-compose logs` regardless of success or failure.
       ( trap "docker-compose logs" EXIT; \
         make crossdock )
       ;;
