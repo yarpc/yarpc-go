@@ -42,6 +42,8 @@ func TestDigester(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < iterations; i++ {
 				d := newDigester()
+				defer d.free()
+
 				assert.Equal(t, 0, len(d.digest()), "Expected fresh digester to have no internal state.")
 				assert.True(t, cap(d.digest()) > 0, "Expected fresh digester to have available capacity.")
 

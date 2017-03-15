@@ -35,11 +35,13 @@ var (
 )
 
 // A digester creates a null-delimited byte slice from a series of variable
-// label values.
+// label values. It's an efficient way to create map keys from metric names and
+// labels.
 type digester struct {
 	bs []byte
 }
 
+// For optimal performance, be sure to free each digester.
 func newDigester() *digester {
 	d := _digesterPool.Get().(*digester)
 	d.bs = d.bs[:0]
@@ -49,7 +51,7 @@ func newDigester() *digester {
 func (d *digester) add(s string) {
 	if len(d.bs) > 0 {
 		// separate labels with a null byte
-		d.bs = append(d.bs, 0)
+		d.bs = append(d.bs, '\x00')
 	}
 	d.bs = append(d.bs, s...)
 }

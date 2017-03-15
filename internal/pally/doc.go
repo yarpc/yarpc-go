@@ -20,8 +20,14 @@
 
 // Package pally is a simple, atomic-based metrics library. It interoperates
 // seamlessly with both Prometheus and Tally, providing ready-to-use Prometheus
-// text and protocol buffer endpoints, differential updates to StatsD- or
+// text and Protocol Buffer endpoints, differential updates to StatsD- or
 // M3-based systems, and excellent performance along the hot path.
+//
+// Metric Names
+//
+// Pally requires that all metric names and labels be valid both in Tally and
+// in Prometheus. Concretely, this means that metric names, label keys, and
+// label values should match the regular expression `^[a-zA-Z_][a-zA-Z0-9_]*$`.
 //
 // Counters And Gauges
 //
@@ -59,7 +65,7 @@
 //     VariableLabels: []string{"caller_name"},
 //   })
 //   // In real-world use, we'd do this in a handler function (and we'd
-//   probably use the safer Get variant).
+//   // probably use the safer Get variant).
 //   vec.MustGet("some_calling_service").Inc()
 //
 package pally

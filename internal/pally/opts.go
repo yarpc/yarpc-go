@@ -95,11 +95,11 @@ func isValidTallyString(s string) bool {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		switch {
-		case 48 <= c && c <= 57: // 0-9
+		case '0' <= c && c <= '9':
 			continue
-		case 65 <= c && c <= 90: // A-Z
+		case 'A' <= c && c <= 'Z':
 			continue
-		case 97 <= c && c <= 122: // a-z
+		case 'a' <= c && c <= 'z':
 			continue
 		case c == '_' || c == '-':
 			continue
