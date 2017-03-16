@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package uber.yarpc.encoding.protobuf.internal;
 
-option go_package="go.uber.org/yarpc/encoding/x/protobuf/internal/pb;internalpb";
+option go_package="internalpb";
 
 // ErrorType is the type of an error.
 enum ErrorType {

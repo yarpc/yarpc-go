@@ -9,6 +9,7 @@ GOVET_IGNORE_RULES = \
 # List of executables needed for 'make generate'
 GENERATE_DEPENDENCIES = \
 	github.com/golang/mock/mockgen \
+	github.com/golang/protobuf/protoc-gen-go \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
 	golang.org/x/tools/cmd/stringer \
 	go.uber.org/thriftrw \
@@ -73,6 +74,8 @@ build:
 
 .PHONY: generate
 generate: $(_GENERATE_DEPS_EXECUTABLES)
+	@command -v protoc >/dev/null || (echo "protoc must be installed" && false)
+	@protoc --version | grep 'libprotoc 3\.' >/dev/null || (echo "protoc must be version 3" && false)
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
