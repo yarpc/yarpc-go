@@ -55,6 +55,6 @@ touch internal/crossdock/thrift/gen-go/echo/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
 
-scripts/protoc.sh encoding/x/protobuf/internal/internal.proto internalpb
+protoc --go_out=. encoding/x/protobuf/internal/internal.proto
 
 scripts/updateLicenses.sh
