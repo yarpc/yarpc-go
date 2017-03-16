@@ -56,5 +56,7 @@ touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
 
 protoc --go_out=. encoding/x/protobuf/internal/internal.proto
+protoc --go_out=. internal/examples/protobuf-keyvalue/kv/kv.proto
+#protoc --yarpc-go_out=. internal/examples/protobuf-keyvalue/kv/kv.proto
 
 scripts/updateLicenses.sh

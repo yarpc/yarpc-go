@@ -49,11 +49,14 @@ $(_GENERATE_DEPS_DIR):
 	mkdir $(_GENERATE_DEPS_DIR)
 
 # Full paths to executables needed for 'make generate'
-_GENERATE_DEPS_EXECUTABLES = $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc
+_GENERATE_DEPS_EXECUTABLES = $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go
 
 # Special-case for local executables
 $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go $(_GENERATE_DEPS_DIR)
 	go build -o $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
+
+$(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go $(_GENERATE_DEPS_DIR)
+	go build -o $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
 
 define generatedeprule
 _GENERATE_DEPS_EXECUTABLES += $(_GENERATE_DEPS_DIR)/$(shell basename $1)
