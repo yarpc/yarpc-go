@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pb
+package protobuf
 
 import "go.uber.org/yarpc/api/transport"
 
 // Encoding is the name of this encoding.
-const Encoding transport.Encoding = "pb"
+const Encoding transport.Encoding = "protobuf"

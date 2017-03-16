@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package uber.yarpc.encoding.protobuf.internal;
+
+option go_package="go.uber.org/yarpc/encoding/x/protobuf/internal/pb;internalpb";
+
+// ErrorType is the type of an error.
+enum ErrorType {
+  // ERROR_TYPE_NONE is the default value.
+  ERROR_TYPE_NONE = 0;
+  // ERROR_TYPE_APPLICATION is an error that occurred within an application.
+  // This is similar to a 400-level error.
+  ERROR_TYPE_APPLICATION = 1;
+  // ERROR_TYPE_INTERNAL is an error that occurred within the YARPC framework.
+  // This is similar to a 500-level error.
+  ERROR_TYPE_INTERNAL = 2;
+}
+
+// Error is an error that occured while executing a request.
+message Error {
+  // The type of the error.
+  //
+  // If this is not set, the Error will be assumed to be an ERROR_TYPE_INTERNAL.
+  ErrorType type = 1;
+  // The message type as registered with github.com/golang/protobuf/proto#RegisterType.
+  //
+  // If this is not set, payload is intepreted as a protobuf string (either UTF-8 or 7-bit ASCII)
+  // as a generic error message.
+  //
+  // TODO: There is a generic way to represent message names (including package paths)
+  // that is used in google/protobuf/descriptor.proto, this should be used instead.
+  string message_type = 2;
+  // The payload or the error, either a protobuf message with name specified by message_name,
+  // or a generic error. If a generic error, this will be a protobuf string.
+  bytes payload = 3;
+}
+
+// Response contains the response from executing a request.
+message Response {
+  // The payload of the protobuf response. Type information is not needed
+  // since this is part of the protobuf specification.
+  bytes payload = 1;
+  // An error, if one occurred.
+  Error error = 2;
+}
