@@ -1,8 +1,8 @@
-hash: 2c09074fbfa6d11ed6e93843553256fcbb93e0675b2421ae0a6e3644e0b9d4d4
-updated: 2017-03-08T17:31:02.321013998-05:00
+hash: 26233bdba107fbfee92ff6816a0b3b3f0276063ef5f7d2daca59aa4e21b3d911
+updated: 2017-03-16T14:08:22.728550078+01:00
 imports:
 - name: github.com/apache/thrift
-  version: b79396f799fe88d2dae48573f61257aac5b2c09b
+  version: 6582757752e62efea3f9786dddf0260efaa1f450
   subpackages:
   - lib/go/thrift
 - name: github.com/cactus/go-statsd-client
@@ -24,6 +24,8 @@ imports:
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
   - gomock
+- name: github.com/golang/protobuf
+  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/mitchellh/mapstructure
@@ -68,7 +70,7 @@ imports:
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
-  version: 2505ffc229cbe642a1af9387e8251f7e699c2f6e
+  version: 81280be4110ac49c4c2094eeffd409a0043d51c0
   subpackages:
   - internal/spanlog
   - log
@@ -100,7 +102,7 @@ imports:
   - trand
   - typed
 - name: go.uber.org/atomic
-  version: 0c9e689d64f004564b79d9a663634756df322902
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: go.uber.org/thriftrw
   version: c98a13058faa5dd41584a77221a268d2c72d832d
   subpackages:
@@ -132,7 +134,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 03d3934baf81f2387349b58864cb98b6fe7cf85e
+  version: 2946dd1f77e693e136d9ed202ba093bb4a3ea761
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5
