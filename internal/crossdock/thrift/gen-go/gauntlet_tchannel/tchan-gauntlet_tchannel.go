@@ -54,7 +54,7 @@ type TChanThriftTest interface {
 	TestMulti(ctx thrift.Context, arg0 int8, arg1 int32, arg2 int64, arg3 map[int16]string, arg4 Numberz, arg5 UserId) (*Xtruct, error)
 	TestMultiException(ctx thrift.Context, arg0 string, arg1 string) (*Xtruct, error)
 	TestNest(ctx thrift.Context, thing *Xtruct2) (*Xtruct2, error)
-	TestSet(ctx thrift.Context, thing map[int32]bool) (map[int32]bool, error)
+	TestSet(ctx thrift.Context, thing map[int32]struct{}) (map[int32]struct{}, error)
 	TestString(ctx thrift.Context, thing string) (string, error)
 	TestStringMap(ctx thrift.Context, thing map[string]string) (map[string]string, error)
 	TestStruct(ctx thrift.Context, thing *Xtruct) (*Xtruct, error)
@@ -438,7 +438,7 @@ func (c *tchanThriftTestClient) TestNest(ctx thrift.Context, thing *Xtruct2) (*X
 	return resp.GetSuccess(), err
 }
 
-func (c *tchanThriftTestClient) TestSet(ctx thrift.Context, thing map[int32]bool) (map[int32]bool, error) {
+func (c *tchanThriftTestClient) TestSet(ctx thrift.Context, thing map[int32]struct{}) (map[int32]struct{}, error) {
 	var resp ThriftTestTestSetResult
 	args := ThriftTestTestSetArgs{
 		Thing: thing,

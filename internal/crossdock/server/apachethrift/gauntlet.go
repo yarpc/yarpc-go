@@ -72,7 +72,7 @@ func (thriftTestHandler) TestStringMap(thing map[string]string) (r map[string]st
 	return thing, nil
 }
 
-func (thriftTestHandler) TestSet(thing map[int32]bool) (r map[int32]bool, err error) {
+func (thriftTestHandler) TestSet(thing map[int32]struct{}) (r map[int32]struct{}, err error) {
 	return thing, nil
 }
 

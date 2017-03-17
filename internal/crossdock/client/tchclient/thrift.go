@@ -283,18 +283,18 @@ func runGauntlet(t crossdock.T, clientt thrift.TChanClient) {
 		{
 			Function: "TestSet",
 			Give: []interface{}{
-				map[int32]bool{
-					1:  true,
-					2:  true,
-					-1: true,
-					-2: true,
+				map[int32]struct{}{
+					1:  {},
+					2:  {},
+					-1: {},
+					-2: {},
 				},
 			},
-			Want: map[int32]bool{
-				1:  true,
-				2:  true,
-				-1: true,
-				-2: true,
+			Want: map[int32]struct{}{
+				1:  {},
+				2:  {},
+				-1: {},
+				-2: {},
 			},
 		},
 		{

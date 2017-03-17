@@ -17,6 +17,8 @@ GENERATE_DEPENDENCIES = \
 ##############################################################################
 export GO15VENDOREXPERIMENT=1
 
+THRIFT_VERSION := 0.10.0
+
 PACKAGES := $(shell glide novendor)
 
 GO_FILES := $(shell \
@@ -71,8 +73,15 @@ THRIFTRW = $(_GENERATE_DEPS_DIR)/thriftrw
 build:
 	go build $(PACKAGES)
 
+.PHONY: check_thrift_version
+check_thrift_version:
+	@if [ "$(shell thrift --version | cut -f 3 -d ' ')" != "$(THRIFT_VERSION)" ]; then \
+		echo "error: thrift version must be $(THRIFT_VERSION)"; \
+		exit 1; \
+	fi
+
 .PHONY: generate
-generate: $(_GENERATE_DEPS_EXECUTABLES)
+generate: $(_GENERATE_DEPS_EXECUTABLES) check_thrift_version
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
@@ -80,6 +89,17 @@ nogogenerate:
 	$(eval NOGOGENERATE_LOG := $(shell mktemp -t nogogenerate.XXXXX))
 	@grep -n \/\/go:generate $(GO_FILES) 2>&1 > $(NOGOGENERATE_LOG) || true
 	@[ ! -s "$(NOGOGENERATE_LOG)" ] || (echo "do not use //go:generate, add to scripts/generate.sh instead:" | cat - $(NOGOGENERATE_LOG) && false)
+
+.PHONY: generatenodiff
+generatenodiff:
+	$(eval GENERATENODIFF_PRE := $(shell mktemp -t generatenodiff_pre.XXXXX))
+	$(eval GENERATENODIFF_POST := $(shell mktemp -t generatenodiff_post.XXXXX))
+	$(eval GENERATENODIFF_DIFF := $(shell mktemp -t generatenodiff_diff.XXXXX))
+	@git status --short > $(GENERATENODIFF_PRE)
+	@$(MAKE) generate
+	@git status --short > $(GENERATENODIFF_POST)
+	@diff $(GENERATENODIFF_PRE) $(GENERATENODIFF_POST) > $(GENERATENODIFF_DIFF) || true
+	@[ ! -s "$(GENERATENODIFF_DIFF)" ] || (echo "make generate produced a diff, make sure to check these in:" | cat - $(GENERATENODIFF_DIFF) && false)
 
 .PHONY: gofmt
 gofmt:
