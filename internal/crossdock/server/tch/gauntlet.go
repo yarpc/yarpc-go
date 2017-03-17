@@ -84,7 +84,7 @@ func (thriftTestHandler) TestStringMap(ctx thrift.Context, thing map[string]stri
 	return thing, nil
 }
 
-func (thriftTestHandler) TestSet(ctx thrift.Context, thing map[int32]bool) (map[int32]bool, error) {
+func (thriftTestHandler) TestSet(ctx thrift.Context, thing map[int32]struct{}) (map[int32]struct{}, error) {
 	ctx.SetResponseHeaders(ctx.Headers())
 	return thing, nil
 }
