@@ -119,9 +119,10 @@ func TestConstLabelValidation(t *testing.T) {
 }
 
 func BenchmarkCreateNewMetrics(b *testing.B) {
-	b.Run("create pally counter", func(b *testing.B) {
+	b.Run("create Pally counter", func(b *testing.B) {
 		r := NewRegistry()
 		var count atomic.Int64
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				opts := Opts{
@@ -133,10 +134,26 @@ func BenchmarkCreateNewMetrics(b *testing.B) {
 			}
 		})
 	})
-	b.Run("create tally counter", func(b *testing.B) {
+	b.Run("create Prometheus counter", func(b *testing.B) {
+		r := prometheus.NewRegistry()
+		var count atomic.Int64
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				c := prometheus.NewCounter(prometheus.CounterOpts{
+					Name:        "foo",
+					Help:        "Some help.",
+					ConstLabels: prometheus.Labels{"iteration": strconv.FormatInt(count.Inc(), 10)},
+				})
+				r.MustRegister(c)
+			}
+		})
+	})
+	b.Run("create Tally counter", func(b *testing.B) {
 		scope, close := newTallyScope(b)
 		defer close()
 		var count atomic.Int64
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				tags := map[string]string{"iteration": strconv.FormatInt(count.Inc(), 10)}
@@ -144,13 +161,14 @@ func BenchmarkCreateNewMetrics(b *testing.B) {
 			}
 		})
 	})
-	b.Run("create dynamic pally counter", func(b *testing.B) {
+	b.Run("create dynamic Pally counter", func(b *testing.B) {
 		vec := NewRegistry().MustCounterVector(Opts{
 			Name:           "foo",
 			Help:           "Some help.",
 			VariableLabels: []string{"foo", "bar"},
 		})
 		var count atomic.Int64
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				foo := strconv.FormatInt(count.Inc(), 10)
@@ -159,10 +177,28 @@ func BenchmarkCreateNewMetrics(b *testing.B) {
 			}
 		})
 	})
-	b.Run("create dynamic tally counter", func(b *testing.B) {
+	b.Run("create dynamic Prometheus counter", func(b *testing.B) {
+		r := prometheus.NewRegistry()
+		vec := prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "foo",
+			Help: "Some help.",
+		}, []string{"foo", "bar"})
+		r.MustRegister(vec)
+		var count atomic.Int64
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				foo := strconv.FormatInt(count.Inc(), 10)
+				bar := strconv.FormatInt(count.Inc(), 10)
+				vec.WithLabelValues(foo, bar)
+			}
+		})
+	})
+	b.Run("create dynamic Tally counter", func(b *testing.B) {
 		scope, close := newTallyScope(b)
 		defer close()
 		var count atomic.Int64
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				foo := strconv.FormatInt(count.Inc(), 10)
@@ -171,42 +207,74 @@ func BenchmarkCreateNewMetrics(b *testing.B) {
 			}
 		})
 	})
-	b.Run("increment pally counter", func(b *testing.B) {
+	b.Run("increment Pally counter", func(b *testing.B) {
 		c := NewRegistry().MustCounter(Opts{
 			Name: "foo",
 			Help: "Some help.",
 		})
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				c.Inc()
 			}
 		})
 	})
-	b.Run("increment tally counter", func(b *testing.B) {
+	b.Run("increment Prometheus counter", func(b *testing.B) {
+		r := prometheus.NewRegistry()
+		c := prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "foo",
+			Help: "Some help.",
+		})
+		r.MustRegister(c)
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				c.Inc()
+			}
+		})
+	})
+	b.Run("increment Tally counter", func(b *testing.B) {
 		scope, close := newTallyScope(b)
 		defer close()
 		c := scope.Counter("foo")
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				c.Inc(1)
 			}
 		})
 	})
-	b.Run("increment dynamic pally counter", func(b *testing.B) {
+	b.Run("increment dynamic Pally counter", func(b *testing.B) {
 		vec := NewRegistry().MustCounterVector(Opts{
 			Name:           "foo",
 			Help:           "Some help.",
 			VariableLabels: []string{"foo", "bar"},
 		})
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				vec.MustGet("one", "two").Inc()
 			}
 		})
 	})
-	b.Run("increment dynamic tally counter", func(b *testing.B) {
+	b.Run("increment dynamic Prometheus counter", func(b *testing.B) {
+		r := prometheus.NewRegistry()
+		vec := prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "foo",
+			Help: "Some help.",
+		}, []string{"foo", "bar"})
+		r.MustRegister(vec)
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				vec.WithLabelValues("one", "two").Inc()
+			}
+		})
+	})
+	b.Run("increment dynamic Tally counter", func(b *testing.B) {
 		scope, close := newTallyScope(b)
 		defer close()
+		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				scope.Tagged(map[string]string{"foo": "one", "bar": "two"}).Counter("foo").Inc(1)
