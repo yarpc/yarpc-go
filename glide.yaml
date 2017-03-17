@@ -10,7 +10,7 @@ import:
 - package: github.com/opentracing/opentracing-go
   version: ^1
 - package: github.com/uber/tchannel-go
-  version: ^1.4
+  version: apache-thrift-0.10.0
 - package: go.uber.org/atomic
   version: ^1
 - package: go.uber.org/thriftrw
