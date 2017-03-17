@@ -22,6 +22,7 @@ package pally
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -51,14 +52,14 @@ func (o Opts) validate() error {
 	if !isValidTallyString(o.Name) {
 		// Prometheus handles its own name validation, so we only need to check
 		// Tally.
-		return errors.New("names must also be Tally-compatible")
+		return fmt.Errorf("metric name %q is not Tally-compatible", o.Name)
 	}
 	if o.Help == "" {
 		return errors.New("metric help must not be empty")
 	}
 	for k, v := range o.ConstLabels {
 		if !isValidTallyString(k) || !isValidTallyString(v) {
-			return errors.New("tag names and values must also be Tally-compatible")
+			return fmt.Errorf("label %q=%q contains Tally-incompatible characters", k, v)
 		}
 	}
 	return nil

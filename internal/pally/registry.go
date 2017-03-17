@@ -216,20 +216,31 @@ func (r *Registry) addConstLabels(opts Opts) Opts {
 	if len(r.constLabels) == 0 {
 		return opts
 	}
-	labels := opts.copyLabels()
+	labels := make(Labels, len(r.constLabels)+len(opts.ConstLabels))
 	for k, v := range r.constLabels {
+		labels[k] = v
+	}
+	for k, v := range opts.ConstLabels {
 		labels[k] = v
 	}
 	opts.ConstLabels = labels
 	return opts
 }
 
+func (r *Registry) push(scope tally.Scope) {
+	r.metricsMu.RLock()
+	for _, m := range r.metrics {
+		m.push(scope)
+	}
+	r.metricsMu.RUnlock()
+}
+
 type pusher struct {
 	reg     *Registry
 	stop    chan struct{}
 	stopped chan struct{}
-	scope   tally.Scope
 	ticker  *time.Ticker
+	scope   tally.Scope
 }
 
 func newPusher(r *Registry, scope tally.Scope, tick time.Duration) *pusher {
@@ -237,22 +248,22 @@ func newPusher(r *Registry, scope tally.Scope, tick time.Duration) *pusher {
 		reg:     r,
 		stop:    make(chan struct{}),
 		stopped: make(chan struct{}),
-		scope:   scope,
 		ticker:  time.NewTicker(tick),
+		scope:   scope,
 	}
 }
 
 func (p *pusher) Start() {
 	defer close(p.stopped)
 	// When stopping, do one last export to catch any stragglers.
-	defer p.push()
+	defer p.reg.push(p.scope)
 
 	for {
 		select {
 		case <-p.stop:
 			return
 		case <-p.ticker.C:
-			p.push()
+			p.reg.push(p.scope)
 		}
 	}
 }
@@ -261,12 +272,4 @@ func (p *pusher) Stop() {
 	p.ticker.Stop()
 	close(p.stop)
 	<-p.stopped
-}
-
-func (p *pusher) push() {
-	p.reg.metricsMu.RLock()
-	for _, m := range p.reg.metrics {
-		m.push(p.scope)
-	}
-	p.reg.metricsMu.RUnlock()
 }

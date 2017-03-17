@@ -25,6 +25,8 @@ func (c *counter) diff() int64 {
 }
 
 func (c *counter) Collect(ch chan<- prometheus.Metric) {
+	// TODO: Implement prometheus.Metric directly, which allows us to avoid
+	// this allocation.
 	m, err := prometheus.NewConstMetric(
 		c.desc,
 		prometheus.CounterValue,

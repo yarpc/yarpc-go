@@ -34,7 +34,7 @@ func TestValidateTallyTags(t *testing.T) {
 	tallyRe := regexp.MustCompile(`^[0-9A-z_\-]+$`)
 	assert.NoError(t, quick.CheckEqual(
 		isValidTallyString,
-		func(s string) bool { return tallyRe.MatchString(s) },
+		tallyRe.MatchString,
 		nil, /* config */
 	), "Tally validation doesn't match regexp implementation.")
 }

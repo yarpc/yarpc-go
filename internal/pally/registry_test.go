@@ -26,14 +26,13 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 	"github.com/uber-go/tally/m3"
+	"go.uber.org/atomic"
 )
 
 func TestSimpleMetricDuplicates(t *testing.T) {

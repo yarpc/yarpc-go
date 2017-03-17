@@ -17,6 +17,8 @@ func newGauge(opts Opts) *gauge {
 }
 
 func (g *gauge) Collect(ch chan<- prometheus.Metric) {
+	// TODO: Implement prometheus.Metric directly, which allows us to avoid
+	// this allocation.
 	m, err := prometheus.NewConstMetric(
 		g.desc,
 		prometheus.GaugeValue,
