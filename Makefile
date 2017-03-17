@@ -17,6 +17,8 @@ GENERATE_DEPENDENCIES = \
 ##############################################################################
 export GO15VENDOREXPERIMENT=1
 
+THRIFT_VERSION := 0.10.0
+
 PACKAGES := $(shell glide novendor)
 
 GO_FILES := $(shell \
@@ -71,8 +73,15 @@ THRIFTRW = $(_GENERATE_DEPS_DIR)/thriftrw
 build:
 	go build $(PACKAGES)
 
+.PHONY: check_thrift_version
+check_thrift_version:
+	@if [ "$(shell thrift --version | cut -f 3 -d ' ')" != "$(THRIFT_VERSION)" ]; then \
+		echo "error: thrift version must be $(THRIFT_VERSION)"; \
+		exit 1; \
+	fi
+
 .PHONY: generate
-generate: $(_GENERATE_DEPS_EXECUTABLES)
+generate: $(_GENERATE_DEPS_EXECUTABLES) check_thrift_version
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
