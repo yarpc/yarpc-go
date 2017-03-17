@@ -23,18 +23,20 @@ package tchannel
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
-	"github.com/uber/tchannel-go/json"
+	tjson "github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/testutils"
 )
 
@@ -108,8 +110,8 @@ func TestChannelInboundExistingMethods(t *testing.T) {
 	// Create a channel with an existing "echo" method.
 	ch, err := tchannel.NewChannel("foo", nil)
 	require.NoError(t, err)
-	json.Register(ch, json.Handlers{
-		"echo": func(ctx json.Context, req map[string]string) (map[string]string, error) {
+	tjson.Register(ch, tjson.Handlers{
+		"echo": func(ctx tjson.Context, req map[string]string) (map[string]string, error) {
 			return req, nil
 		},
 	}, nil)
@@ -125,7 +127,7 @@ func TestChannelInboundExistingMethods(t *testing.T) {
 	defer x.Stop()
 
 	// Make a call to the "echo" method which should call our pre-registered method.
-	ctx, cancel := json.NewContext(time.Second)
+	ctx, cancel := tjson.NewContext(time.Second)
 	defer cancel()
 
 	var resp map[string]string
@@ -133,7 +135,48 @@ func TestChannelInboundExistingMethods(t *testing.T) {
 
 	svc := ch.ServiceName()
 	peer := ch.Peers().GetOrAdd(ch.PeerInfo().HostPort)
-	err = json.CallPeer(ctx, peer, svc, "echo", arg, &resp)
+	err = tjson.CallPeer(ctx, peer, svc, "echo", arg, &resp)
+	require.NoError(t, err, "Call failed")
+	assert.Equal(t, arg, resp, "Response mismatch")
+}
+
+func TestChannelInboundMaskedMethods(t *testing.T) {
+	// Create a channel with an existing "echo" method.
+	ch, err := tchannel.NewChannel("foo", nil)
+	require.NoError(t, err)
+	tjson.Register(ch, tjson.Handlers{
+		"echo": func(ctx tjson.Context, req map[string]string) (map[string]string, error) {
+			// i should not be
+			return nil, fmt.Errorf("SVM NON DEBEAM")
+		},
+	}, nil)
+
+	x, err := NewChannelTransport(WithChannel(ch))
+	require.NoError(t, err)
+
+	// Override TChannel version of echo
+	i := x.NewInbound()
+	r := yarpc.NewMapRouter("foo")
+	echo := func(ctx context.Context, req map[string]string) (map[string]string, error) {
+		return req, nil
+	}
+	r.Register(json.Procedure("echo", echo))
+	i.SetRouter(r)
+	require.NoError(t, i.Start())
+	defer i.Stop()
+	require.NoError(t, x.Start())
+	defer x.Stop()
+
+	// Make a call to the "echo" method which should call our pre-registered method.
+	ctx, cancel := tjson.NewContext(time.Second)
+	defer cancel()
+
+	var resp map[string]string
+	arg := map[string]string{"k": "v"}
+
+	svc := ch.ServiceName()
+	peer := ch.Peers().GetOrAdd(ch.PeerInfo().HostPort)
+	err = tjson.CallPeer(ctx, peer, svc, "echo", arg, &resp)
 	require.NoError(t, err, "Call failed")
 	assert.Equal(t, arg, resp, "Response mismatch")
 }
