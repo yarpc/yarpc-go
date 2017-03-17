@@ -90,6 +90,17 @@ nogogenerate:
 	@grep -n \/\/go:generate $(GO_FILES) 2>&1 > $(NOGOGENERATE_LOG) || true
 	@[ ! -s "$(NOGOGENERATE_LOG)" ] || (echo "do not use //go:generate, add to scripts/generate.sh instead:" | cat - $(NOGOGENERATE_LOG) && false)
 
+.PHONY: generatenodiff
+generatenodiff:
+	$(eval GENERATENODIFF_PRE := $(shell mktemp -t generatenodiff_pre.XXXXX))
+	$(eval GENERATENODIFF_POST := $(shell mktemp -t generatenodiff_post.XXXXX))
+	$(eval GENERATENODIFF_DIFF := $(shell mktemp -t generatenodiff_diff.XXXXX))
+	@git status --short > $(GENERATENODIFF_PRE)
+	@$(MAKE) generate
+	@git status --short > $(GENERATENODIFF_POST)
+	@diff $(GENERATENODIFF_PRE) $(GENERATENODIFF_POST) > $(GENERATENODIFF_DIFF) || true
+	@[ ! -s "$(GENERATENODIFF_DIFF)" ] || (echo "make generate produced a diff, make sure to check these in:" | cat - $(GENERATENODIFF_DIFF) && false)
+
 .PHONY: gofmt
 gofmt:
 	$(eval FMT_LOG := $(shell mktemp -t gofmt.XXXXX))
