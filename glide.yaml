@@ -43,4 +43,4 @@ import:
   - prometheus
   - prometheus/promhttp
 - package: github.com/uber-go/tally
-  version: ^2.1.0
+  version: ^3

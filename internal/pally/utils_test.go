@@ -84,8 +84,9 @@ func (exp TallyExpectation) assertOnlyCounter(t testing.TB, snap tally.Snapshot)
 
 	counters := snap.Counters()
 	require.Equal(t, 1, len(counters), "Expected exactly one counter in Tally snapshot.")
-	c, ok := counters[exp.Name]
-	require.True(t, ok, "Didn't find Tally counter with name %q.", exp.Name)
+	key := tally.KeyForPrefixedStringMap(exp.Name, exp.Labels)
+	c, ok := counters[key]
+	require.True(t, ok, "Didn't find Tally counter with key %q.", key)
 	assert.Equal(t, exp.Name, c.Name(), "Tally counter has an unexpected name.")
 	assert.Equal(t, map[string]string(exp.Labels), c.Tags(), "Tally counter has unexpected tags.")
 	assert.Equal(t, exp.Value, c.Value(), "Tally counter has unexpected value.")
@@ -97,8 +98,9 @@ func (exp TallyExpectation) assertOnlyGauge(t testing.TB, snap tally.Snapshot) {
 
 	gauges := snap.Gauges()
 	require.Equal(t, 1, len(gauges), "Expected exactly one gauge in Tally snapshot.")
-	g, ok := gauges[exp.Name]
-	require.True(t, ok, "Didn't find Tally gauge with name %q.", exp.Name)
+	key := tally.KeyForPrefixedStringMap(exp.Name, exp.Labels)
+	g, ok := gauges[key]
+	require.True(t, ok, "Didn't find Tally gauge with key %q.", key)
 	assert.Equal(t, exp.Name, g.Name(), "Tally counter has an unexpected name.")
 	assert.Equal(t, map[string]string(exp.Labels), g.Tags(), "Tally counter has unexpected tags.")
 	assert.Equal(t, exp.Value, int64(g.Value()), "Tally counter has unexpected value.")
