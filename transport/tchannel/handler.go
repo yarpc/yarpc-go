@@ -82,11 +82,6 @@ type handler struct {
 }
 
 func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
-	if m, ok := h.existing[call.MethodString()]; ok {
-		m.Handle(ctx, call)
-		return
-	}
-
 	h.handle(ctx, tchannelCall{call})
 }
 
@@ -155,6 +150,15 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
+		if _, ok := err.(errors.UnrecognizedProcedureError); !ok {
+			return err
+		}
+		if tcall, ok := call.(tchannelCall); !ok {
+			if m, ok := h.existing[call.MethodString()]; ok {
+				m.Handle(ctx, tcall.InboundCall)
+				return nil
+			}
+		}
 		return err
 	}
 
