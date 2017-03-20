@@ -207,7 +207,7 @@ func (d *Dispatcher) Inbounds() Inbounds {
 }
 
 // Outbounds returns a copy of the map of outbounds for this RPC object.
-//
+// The outbounds are already wrapped with middleware
 func (d *Dispatcher) Outbounds() Outbounds {
 	outbounds := make(Outbounds, len(d.outbounds))
 	for k, v := range d.outbounds {
