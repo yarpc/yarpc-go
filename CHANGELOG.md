@@ -2,13 +2,14 @@ Releases
 ========
 
 
-v1.7.0-dev (unreleased)
+v1.7.0 (2017-03-20)
 -----------------------
 
 -   x/config adds support for a pluggable configuration system that allows
     building `yarpc.Config` and `yarpc.Dispatcher` objects from YAML and
     arbitrary `map[string]interface{}` objects. Check the package documentation
     for more information.
+-   tchannel: mask existing procedures with provided procedures.
 
 
 v1.6.0 (2017-03-08)
