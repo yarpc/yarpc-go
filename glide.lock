@@ -95,7 +95,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: 5b008bbffe389a329274ff5ceaaa68e0b17348f9
+  version: 1ef6560c59eeb170f2381c02287ca44a5c50a523
   subpackages:
   - client/cherami
   - common

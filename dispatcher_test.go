@@ -47,6 +47,12 @@ func basicDispatcher(t *testing.T) *Dispatcher {
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":0"),
 		},
+		Outbounds: Outbounds{
+			"service": transport.Outbounds{
+				ServiceName: "service",
+				Unary: tchannelTransport.NewOutbound(),
+			},
+		},
 	})
 }
 
@@ -78,6 +84,26 @@ func TestInboundsOrderIsMaintained(t *testing.T) {
 
 	_, ok = dispatcher.Inbounds()[1].(*http.Inbound)
 	assert.True(t, ok, "second inbound must be HTTP")
+}
+
+func TestOutboundsReturnsACopy(t *testing.T) {
+	dispatcher := basicDispatcher(t)
+
+	outbounds := dispatcher.Outbounds()
+	require.Len(t, outbounds, 1, "expected one outbound")
+	for k,v := range outbounds {
+		assert.NotNil(t, v, "must not be nil")
+
+		// Mutate the outbound so that we can verify that the next call still returns non-nil
+		// results.
+		delete(outbounds, k)
+	}
+
+	outbounds = dispatcher.Outbounds()
+	require.Len(t, outbounds, 1, "expected one outbound")
+	for _,v := range outbounds {
+		assert.NotNil(t, v, "must not be nil")
+	}
 }
 
 func TestInboundsOrderAfterStart(t *testing.T) {
