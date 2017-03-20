@@ -30,38 +30,6 @@ import (
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
 )
 
-//// Registry is a registry of information extracted from plugin_go.CodeGeneratorRequest.
-//type Registry interface {
-//// Load loads definitions of services, methods, messages, enumerations and fields from the request.
-//Load(*plugin_go.CodeGeneratorRequest) error
-//// LookupMessage looks up a message type by "name".
-//// It tries to resolve "name" from "location" if "name" is a relative message name.
-//LookupMessage(location string, name string) (*Message, error)
-//// LookupEnum looks up a enum type by "name".
-//// It tries to resolve "name" from "location" if "name" is a relative enum name.
-//LookupEnum(location string, name string) (*Enum, error)
-//// LookupFile looks up a file by name.
-//LookupFile(name string) (*File, error)
-//// AddPackageMap adds a mapping from a .proto file to proto package name.
-//AddPackageMap(file string, protoPackage string)
-//// SetPrefix registeres the perfix to be added to go package paths generated from proto package names.
-//SetPrefix(prefix string)
-//// ReserveGoPackageAlias reserves the unique alias of go package.
-//// If succeeded, the alias will be never used for other packages in generated go files.
-//// If failed, the alias is already taken by another package, so you need to use another
-//// alias for the package in your go files.
-//ReserveGoPackageAlias(alias, pkgpath string) error
-//// GetAllFQMNs returns a list of all FQMNs.
-//GetAllFQMNs() []string
-//// GetAllFQENs returns a list of all FQENs.
-//GetAllFQENs() []string
-//}
-
-//// NewRegistry returns a new Registry.
-//func NewRegistry() Registry {
-//return newRegistry()
-//}
-
 type registry struct {
 	// msgs is a mapping from fully-qualified message name to descriptor
 	msgs map[string]*Message

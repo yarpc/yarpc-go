@@ -33,7 +33,6 @@ package protoplugin
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"text/template"
 
@@ -41,19 +40,14 @@ import (
 	protogenerator "github.com/golang/protobuf/protoc-gen-go/generator"
 )
 
-// Main is the main function for a protobuf plugin to call.
-func Main(
-	template *template.Template,
+// Run is the main function for a protobuf plugin to call.
+func Run(
+	tmpl *template.Template,
+	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
 	fileSuffix string,
-) {
-	if err := run(template, baseImports, fileSuffix); err != nil {
-		if errString := err.Error(); errString != "" {
-			fmt.Fprintln(os.Stderr, errString)
-		}
-		os.Exit(1)
-	}
-	os.Exit(0)
+) error {
+	return run(tmpl, templateInfoChecker, baseImports, fileSuffix)
 }
 
 // TemplateInfo is the info passed to a template.
@@ -171,6 +165,11 @@ type Method struct {
 	Service      *Service
 	RequestType  *Message
 	ResponseType *Message
+}
+
+// IsStreaming returns true if this Method is client or server streaming.
+func (m *Method) IsStreaming() bool {
+	return m.GetClientStreaming() || m.GetServerStreaming()
 }
 
 // Field wraps descriptor.FieldDescriptorProto for richer features.

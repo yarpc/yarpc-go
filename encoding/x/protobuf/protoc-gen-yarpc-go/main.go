@@ -30,6 +30,7 @@ To use:
 package main
 
 import (
+	"log"
 	"text/template"
 
 	"go.uber.org/yarpc/internal/protoplugin"
@@ -51,8 +52,8 @@ import (
 {{range $service := .Services }}
 // {{$service.GetName}}Client is the client-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Client interface {
-	{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}{{$method.GetName}}(context.Context, yarpc.CallReqMeta, *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.CallResMeta, error)
-	{{end}}{{end}}{{end}}
+	{{range $method := $service.Methods}}{{if not $method.IsStreaming}}{{$method.GetName}}(context.Context, yarpc.CallReqMeta, *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.CallResMeta, error)
+	{{end}}{{end}}
 }
 
 // New{{$service.GetName}}Client builds a new client for the {{$service.GetName}} service.
@@ -68,8 +69,8 @@ func New{{$service.GetName}}Client(clientConfig transport.ClientConfig, opts ...
 
 // {{$service.GetName}}Server is the server-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Server interface {
-	{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}{{$method.GetName}}(context.Context, yarpc.ReqMeta, *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.ResMeta, error)
-	{{end}}{{end}}{{end}}
+	{{range $method := $service.Methods}}{{if not $method.IsStreaming}}{{$method.GetName}}(context.Context, yarpc.ReqMeta, *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.ResMeta, error)
+	{{end}}{{end}}
 }
 
 // Build{{$service.GetName}}Procedures prepares an implementation of the {{$service.GetName}} service for registration.
@@ -78,8 +79,8 @@ func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server, opts
 	return protobuf.BuildProcedures(
 		"{{$service.GetName}}",
 		map[string]protobuf.UnaryHandler{
-		{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
-		{{end}}{{end}}{{end}}
+		{{range $method := $service.Methods}}{{if not $method.IsStreaming}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
+		{{end}}{{end}}
 		},
 		opts...,
 	)
@@ -91,7 +92,7 @@ type _{{$service.GetName}}Caller struct {
 	client protobuf.Client
 }
 
-{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}
+{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
 func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, reqMeta yarpc.CallReqMeta, request *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.CallResMeta, error) {
 	resMessage, resMeta, err := c.client.Call(ctx, reqMeta, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response)
 	if resMessage == nil {
@@ -103,13 +104,13 @@ func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, r
 	}
 	return response, resMeta, err
 }
-{{end}}{{end}}{{end}}
+{{end}}{{end}}
 
 type _{{$service.GetName}}Handler struct {
 	server {{$service.GetName}}Server
 }
 
-{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}
+{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
 func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, reqMeta yarpc.ReqMeta, reqMessage proto.Message) (proto.Message, error, yarpc.ResMeta, error) {
 	var request *{{$method.RequestType.GoType $service.File.GoPackage.Path}}
 	var ok bool
@@ -122,9 +123,9 @@ func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, 
 	response, resMeta, err := h.server.{{$method.GetName}}(ctx, reqMeta, request)
 	return response, err, resMeta, nil
 }
-{{end}}{{end}}{{end}}
+{{end}}{{end}}
 
-{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}
+{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
 func new{{$service.GetName}}_{{$method.GetName}}Request() proto.Message {
 	return &{{$method.RequestType.GoType $service.File.GoPackage.Path}}{}
 }
@@ -132,18 +133,19 @@ func new{{$service.GetName}}_{{$method.GetName}}Request() proto.Message {
 func new{{$service.GetName}}_{{$method.GetName}}Response() proto.Message {
 	return &{{$method.ResponseType.GoType $service.File.GoPackage.Path}}{}
 }
-{{end}}{{end}}{{end}}
+{{end}}{{end}}
 var (
-{{range $method := $service.Methods}}{{if not $method.GetClientStreaming}}{{if not $method.GetServerStreaming}}
+{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
 	empty{{$service.GetName}}_{{$method.GetName}}Request = &{{$method.RequestType.GoType $service.File.GoPackage.Path}}{}
-	empty{{$service.GetName}}_{{$method.GetName}}Response = &{{$method.ResponseType.GoType $service.File.GoPackage.Path}}{}{{end}}{{end}}{{end}}
+	empty{{$service.GetName}}_{{$method.GetName}}Response = &{{$method.ResponseType.GoType $service.File.GoPackage.Path}}{}{{end}}{{end}}
 )
 {{end}}
 `
 
 func main() {
-	protoplugin.Main(
+	if err := protoplugin.Run(
 		template.Must(template.New("tmpl").Parse(tmpl)),
+		checkTemplateInfo,
 		[]string{
 			"context",
 			"github.com/golang/protobuf/proto",
@@ -152,5 +154,11 @@ func main() {
 			"go.uber.org/yarpc/encoding/protobuf",
 		},
 		"pb.yarpc.go",
-	)
+	); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
+	return nil
 }

@@ -37,7 +37,8 @@ var (
 )
 
 func run(
-	template *template.Template,
+	tmpl *template.Template,
+	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
 	fileSuffix string,
 ) error {
@@ -70,7 +71,8 @@ func run(
 
 	generator := newGenerator(
 		registry,
-		newTemplater(template),
+		tmpl,
+		templateInfoChecker,
 		baseImports,
 		fileSuffix,
 	)

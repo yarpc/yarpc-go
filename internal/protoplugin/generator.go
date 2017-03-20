@@ -21,13 +21,14 @@
 package protoplugin
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"go/format"
-	"log"
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/plugin"
@@ -37,34 +38,18 @@ var (
 	errNoTargetService = errors.New("no target service defined in the file")
 )
 
-//type Generator interface {
-//Generate(targets []*File) ([]*plugin_go.CodeGeneratorResponse_File, error)
-//}
-
-//func NewGenerator(
-//registry Registry,
-//templater Templater,
-//baseImports []string,
-//fileSuffix string,
-//) Generator {
-//return newGenerator(
-//registry,
-//templater,
-//baseImports,
-//fileSuffix,
-//)
-//}
-
 type generator struct {
-	registry    *registry
-	templater   *templater
-	baseImports []*GoPackage
-	fileSuffix  string
+	registry            *registry
+	tmpl                *template.Template
+	templateInfoChecker func(*TemplateInfo) error
+	baseImports         []*GoPackage
+	fileSuffix          string
 }
 
 func newGenerator(
 	registry *registry,
-	templater *templater,
+	tmpl *template.Template,
+	templateInfoChecker func(*TemplateInfo) error,
 	baseImportStrings []string,
 	fileSuffix string,
 ) *generator {
@@ -88,7 +73,8 @@ func newGenerator(
 	}
 	return &generator{
 		registry,
-		templater,
+		tmpl,
+		templateInfoChecker,
 		baseImports,
 		fileSuffix,
 	}
@@ -106,8 +92,7 @@ func (g *generator) Generate(targets []*File) ([]*plugin_go.CodeGeneratorRespons
 		}
 		formatted, err := format.Source([]byte(code))
 		if err != nil {
-			log.Printf("could not format go code:\n%s\n", code)
-			return nil, err
+			return nil, fmt.Errorf("could not format go code: %v\n%s\n", err, code)
 		}
 		name := file.GetName()
 		ext := filepath.Ext(name)
@@ -141,5 +126,13 @@ func (g *generator) generate(file *File) (string, error) {
 			imports = append(imports, pkg)
 		}
 	}
-	return g.templater.Apply(&TemplateInfo{file, imports})
+	templateInfo := &TemplateInfo{file, imports}
+	if err := g.templateInfoChecker(templateInfo); err != nil {
+		return "", err
+	}
+	buffer := bytes.NewBuffer(nil)
+	if err := g.tmpl.Execute(buffer, templateInfo); err != nil {
+		return "", err
+	}
+	return buffer.String(), nil
 }
