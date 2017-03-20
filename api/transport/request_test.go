@@ -22,6 +22,7 @@ package transport_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/request"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestValidator(t *testing.T) {
@@ -121,4 +123,29 @@ func TestValidator(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
+}
+
+func TestRequestLogMarshaling(t *testing.T) {
+	r := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Encoding:        "raw",
+		Procedure:       "procedure",
+		Headers:         transport.NewHeaders().With("password", "super-secret"),
+		ShardKey:        "shard01",
+		RoutingKey:      "routing-key",
+		RoutingDelegate: "routing-delegate",
+		Body:            strings.NewReader("body"),
+	}
+	enc := zapcore.NewMapObjectEncoder()
+	assert.NoError(t, r.MarshalLogObject(enc), "Unexpected error marshaling request.")
+	assert.Equal(t, map[string]interface{}{
+		"caller":          "caller",
+		"service":         "service",
+		"encoding":        "raw",
+		"procedure":       "procedure",
+		"shardKey":        "shard01",
+		"routingKey":      "routing-key",
+		"routingDelegate": "routing-delegate",
+	}, enc.Fields, "Unexpected output after marshaling request.")
 }

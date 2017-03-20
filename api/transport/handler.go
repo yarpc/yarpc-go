@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/internal/errors"
+
+	"go.uber.org/zap/zapcore"
 )
 
 // Type is an enum of RPC types
@@ -47,6 +49,12 @@ type HandlerSpec struct {
 
 	unaryHandler  UnaryHandler
 	onewayHandler OnewayHandler
+}
+
+// MarshalLogObject implements zap.ObjectMarshaler.
+func (h HandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("type", h.t.String())
+	return nil
 }
 
 // Type returns the associated handler's type

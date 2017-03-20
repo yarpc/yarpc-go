@@ -20,7 +20,11 @@
 
 package transport
 
-import "context"
+import (
+	"context"
+
+	"go.uber.org/zap/zapcore"
+)
 
 // TODO: Until golang/mock#4 is fixed, imports in the generated code have to
 // be fixed by hand. They use vendor/* import paths rather than direct.
@@ -44,12 +48,23 @@ type Procedure struct {
 	Signature string
 }
 
-// Less returns true if a.(Service, Name) < b.(Service, Name).
-func (a Procedure) Less(b Procedure) bool {
-	if a.Service == b.Service {
-		return a.Name < b.Name
+// MarshalLogObject implements zap.ObjectMarshaler.
+func (p Procedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	// Passing a Procedure as a zap.ObjectMarshaler allocates, so we shouldn't
+	// do it on the request path.
+	enc.AddString("name", p.Name)
+	enc.AddString("service", p.Service)
+	enc.AddString("encoding", string(p.Encoding))
+	enc.AddString("signature", p.Signature)
+	return enc.AddObject("handler", p.HandlerSpec)
+}
+
+// Less orders procedures lexicographically on (Service, Name).
+func (p Procedure) Less(other Procedure) bool {
+	if p.Service == other.Service {
+		return p.Name < other.Name
 	}
-	return a.Service < b.Service
+	return p.Service < other.Service
 }
 
 // Router maintains and provides access to a collection of procedures
