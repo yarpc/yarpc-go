@@ -50,7 +50,7 @@ func basicDispatcher(t *testing.T) *Dispatcher {
 		Outbounds: Outbounds{
 			"service": transport.Outbounds{
 				ServiceName: "service",
-				Unary: tchannelTransport.NewOutbound(),
+				Unary:       tchannelTransport.NewOutbound(),
 			},
 		},
 	})
@@ -91,7 +91,7 @@ func TestOutboundsReturnsACopy(t *testing.T) {
 
 	outbounds := dispatcher.Outbounds()
 	require.Len(t, outbounds, 1, "expected one outbound")
-	for k,v := range outbounds {
+	for k, v := range outbounds {
 		assert.NotNil(t, v, "must not be nil")
 
 		// Mutate the outbound so that we can verify that the next call still returns non-nil
@@ -101,7 +101,7 @@ func TestOutboundsReturnsACopy(t *testing.T) {
 
 	outbounds = dispatcher.Outbounds()
 	require.Len(t, outbounds, 1, "expected one outbound")
-	for _,v := range outbounds {
+	for _, v := range outbounds {
 		assert.NotNil(t, v, "must not be nil")
 	}
 }
