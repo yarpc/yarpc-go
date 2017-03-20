@@ -30,6 +30,7 @@ To use:
 package main
 
 import (
+	"fmt"
 	"log"
 	"text/template"
 
@@ -52,8 +53,8 @@ import (
 {{range $service := .Services }}
 // {{$service.GetName}}Client is the client-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Client interface {
-	{{range $method := $service.Methods}}{{if not $method.IsStreaming}}{{$method.GetName}}(context.Context, yarpc.CallReqMeta, *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.CallResMeta, error)
-	{{end}}{{end}}
+	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, yarpc.CallReqMeta, *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, yarpc.CallResMeta, error)
+	{{end}}
 }
 
 // New{{$service.GetName}}Client builds a new client for the {{$service.GetName}} service.
@@ -69,8 +70,8 @@ func New{{$service.GetName}}Client(clientConfig transport.ClientConfig, opts ...
 
 // {{$service.GetName}}Server is the server-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Server interface {
-	{{range $method := $service.Methods}}{{if not $method.IsStreaming}}{{$method.GetName}}(context.Context, yarpc.ReqMeta, *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.ResMeta, error)
-	{{end}}{{end}}
+	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, yarpc.ReqMeta, *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, yarpc.ResMeta, error)
+	{{end}}
 }
 
 // Build{{$service.GetName}}Procedures prepares an implementation of the {{$service.GetName}} service for registration.
@@ -79,8 +80,8 @@ func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server, opts
 	return protobuf.BuildProcedures(
 		"{{$service.GetName}}",
 		map[string]protobuf.UnaryHandler{
-		{{range $method := $service.Methods}}{{if not $method.IsStreaming}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
-		{{end}}{{end}}
+		{{range $method := $service.UnaryMethods}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
+		{{end}}
 		},
 		opts...,
 	)
@@ -92,30 +93,30 @@ type _{{$service.GetName}}Caller struct {
 	client protobuf.Client
 }
 
-{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
-func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, reqMeta yarpc.CallReqMeta, request *{{$method.RequestType.GoType $service.File.GoPackage.Path}}) (*{{$method.ResponseType.GoType $service.File.GoPackage.Path}}, yarpc.CallResMeta, error) {
+{{range $method := $service.UnaryMethods}}
+func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, reqMeta yarpc.CallReqMeta, request *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, yarpc.CallResMeta, error) {
 	resMessage, resMeta, err := c.client.Call(ctx, reqMeta, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response)
 	if resMessage == nil {
 		return nil, resMeta, err
 	}
-	response, ok := resMessage.(*{{$method.ResponseType.GoType $service.File.GoPackage.Path}})
+	response, ok := resMessage.(*{{$method.ResponseType.DefaultGoType}})
 	if !ok {
 		return nil, resMeta, protobuf.ClientResponseCastError("{{$service.GetName}}", "{{$method.GetName}}", empty{{$service.GetName}}_{{$method.GetName}}Response, resMessage)
 	}
 	return response, resMeta, err
 }
-{{end}}{{end}}
+{{end}}
 
 type _{{$service.GetName}}Handler struct {
 	server {{$service.GetName}}Server
 }
 
-{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
+{{range $method := $service.UnaryMethods}}
 func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, reqMeta yarpc.ReqMeta, reqMessage proto.Message) (proto.Message, error, yarpc.ResMeta, error) {
-	var request *{{$method.RequestType.GoType $service.File.GoPackage.Path}}
+	var request *{{$method.RequestType.DefaultGoType}}
 	var ok bool
 	if reqMessage != nil {
-		request, ok = reqMessage.(*{{$method.RequestType.GoType $service.File.GoPackage.Path}})
+		request, ok = reqMessage.(*{{$method.RequestType.DefaultGoType}})
 		if !ok {
 			return nil, nil, nil, protobuf.ServerRequestCastError("{{$service.GetName}}", "{{$method.GetName}}", empty{{$service.GetName}}_{{$method.GetName}}Request, reqMessage)
 		}
@@ -123,21 +124,21 @@ func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, 
 	response, resMeta, err := h.server.{{$method.GetName}}(ctx, reqMeta, request)
 	return response, err, resMeta, nil
 }
-{{end}}{{end}}
+{{end}}
 
-{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
+{{range $method := $service.UnaryMethods}}
 func new{{$service.GetName}}_{{$method.GetName}}Request() proto.Message {
-	return &{{$method.RequestType.GoType $service.File.GoPackage.Path}}{}
+	return &{{$method.RequestType.DefaultGoType}}{}
 }
 
 func new{{$service.GetName}}_{{$method.GetName}}Response() proto.Message {
-	return &{{$method.ResponseType.GoType $service.File.GoPackage.Path}}{}
+	return &{{$method.ResponseType.DefaultGoType}}{}
 }
-{{end}}{{end}}
+{{end}}
 var (
-{{range $method := $service.Methods}}{{if not $method.IsStreaming}}
-	empty{{$service.GetName}}_{{$method.GetName}}Request = &{{$method.RequestType.GoType $service.File.GoPackage.Path}}{}
-	empty{{$service.GetName}}_{{$method.GetName}}Response = &{{$method.ResponseType.GoType $service.File.GoPackage.Path}}{}{{end}}{{end}}
+{{range $method := $service.UnaryMethods}}
+	empty{{$service.GetName}}_{{$method.GetName}}Request = &{{$method.RequestType.DefaultGoType}}{}
+	empty{{$service.GetName}}_{{$method.GetName}}Response = &{{$method.ResponseType.DefaultGoType}}{}{{end}}
 )
 {{end}}
 `
@@ -160,5 +161,10 @@ func main() {
 }
 
 func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
+	for _, service := range templateInfo.Services {
+		if len(service.StreamingMethods()) > 0 {
+			return fmt.Errorf("service %s contains streaming methods", service.GetName())
+		}
+	}
 	return nil
 }

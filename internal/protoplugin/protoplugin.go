@@ -113,6 +113,11 @@ func (m *Message) FQMN() string {
 	return strings.Join(components, ".")
 }
 
+// DefaultGoType calls GoType with m.File.GoPackage.Path.
+func (m *Message) DefaultGoType() string {
+	return m.GoType(m.File.GoPackage.Path)
+}
+
 // GoType returns a go type name for the message type.
 // It prefixes the type name with the package alias if
 // its belonging package is not "currentPackage".
@@ -157,6 +162,28 @@ type Service struct {
 	*descriptor.ServiceDescriptorProto
 	File    *File
 	Methods []*Method
+}
+
+// UnaryMethods returns the Methods that are not streaming.
+func (s *Service) UnaryMethods() []*Method {
+	methods := make([]*Method, 0, len(s.Methods))
+	for _, method := range s.Methods {
+		if !method.IsStreaming() {
+			methods = append(methods, method)
+		}
+	}
+	return methods
+}
+
+// StreamingMethods returns the Methods that are streaming.
+func (s *Service) StreamingMethods() []*Method {
+	methods := make([]*Method, 0, len(s.Methods))
+	for _, method := range s.Methods {
+		if method.IsStreaming() {
+			methods = append(methods, method)
+		}
+	}
+	return methods
 }
 
 // Method wraps descriptor.MethodDescriptorProto for richer features.
