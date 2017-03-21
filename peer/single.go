@@ -27,27 +27,37 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
+	intsync "go.uber.org/yarpc/internal/sync"
 )
 
 // Single implements the Chooser interface for a single peer
 type Single struct {
-	p   peer.Peer
-	err error
+	once          intsync.LifecycleOnce
+	t             peer.Transport
+	pid           peer.Identifier
+	p             peer.Peer
+	err           error
+	boundOnFinish func(error)
 }
 
 // NewSingle creates a static Chooser with a single Peer
 func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
-	s := &Single{}
-	p, err := transport.RetainPeer(pid, s)
-	s.p = p
-	s.err = err
+	s := &Single{
+		once: intsync.Once(),
+		pid:  pid,
+		t:    transport,
+	}
+	s.boundOnFinish = s.onFinish
 	return s
 }
 
 // Choose returns the single peer
-func (s *Single) Choose(context.Context, *transport.Request) (peer.Peer, func(error), error) {
+func (s *Single) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
+	if err := s.once.WhenRunning(ctx); err != nil {
+		return nil, nil, err
+	}
 	s.p.StartRequest()
-	return s.p, s.onFinish, s.err
+	return s.p, s.boundOnFinish, s.err
 }
 
 func (s *Single) onFinish(_ error) {
@@ -61,12 +71,23 @@ func (s *Single) NotifyStatusChanged(_ peer.Identifier) {
 
 // Start is a noop
 func (s *Single) Start() error {
-	return nil
+	return s.once.Start(s.start)
+}
+
+func (s *Single) start() error {
+	p, err := s.t.RetainPeer(s.pid, s)
+	s.p = p
+	s.err = err
+	return err
 }
 
 // Stop is a noop
 func (s *Single) Stop() error {
-	return nil
+	return s.once.Stop(s.stop)
+}
+
+func (s *Single) stop() error {
+	return s.t.ReleasePeer(s.pid, s)
 }
 
 // IsRunning is a noop
