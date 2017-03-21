@@ -28,8 +28,8 @@ func buildProcedures(serviceName string, methodNameToUnaryHandler map[string]Una
 		procedures = append(
 			procedures,
 			transport.Procedure{
-				Name:    toProcedureName(serviceName, methodName),
-				Service: serviceName,
+				Name: toProcedureName(serviceName, methodName),
+				//Service: serviceName,
 				HandlerSpec: transport.NewUnaryHandlerSpec(
 					newTransportUnaryHandler(
 						unaryHandler,
