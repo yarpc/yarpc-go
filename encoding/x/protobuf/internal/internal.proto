@@ -22,17 +22,8 @@ message Error {
   //
   // If this is not set, the Error will be assumed to be an ERROR_TYPE_INTERNAL.
   ErrorType type = 1;
-  // The message type as registered with github.com/golang/protobuf/proto#RegisterType.
-  //
-  // If this is not set, payload is intepreted as a protobuf string (either UTF-8 or 7-bit ASCII)
-  // as a generic error message.
-  //
-  // TODO: There is a generic way to represent message names (including package paths)
-  // that is used in google/protobuf/descriptor.proto, this should be used instead.
-  string message_type = 2;
-  // The payload or the error, either a protobuf message with name specified by message_name,
-  // or a generic error. If a generic error, this will be a protobuf string.
-  bytes payload = 3;
+  // The message of the error.
+  string message = 2;
 }
 
 // Response contains the response from executing a request.
