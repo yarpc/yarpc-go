@@ -5,9 +5,8 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/peer/peertest"
-	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
 	. "go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -18,37 +17,36 @@ func TestBind(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	list := peertest.NewMockChooserList(mockCtrl)
-	life := &lowlife{once: intsync.Once()}
+
+	chooser := Bind(list, BindPeers([]peer.Identifier{
+		hostport.PeerIdentifier("x"),
+		hostport.PeerIdentifier("y"),
+	}))
+
+	list.EXPECT().IsRunning().Return(false)
+	assert.Equal(t, false, chooser.IsRunning(), "chooser should not be running")
 
 	list.EXPECT().Start().Return(nil)
-	list.EXPECT().Update(peer.ListUpdates{})
+	list.EXPECT().Update(peer.ListUpdates{
+		Additions: []peer.Identifier{
+			hostport.PeerIdentifier("x"),
+			hostport.PeerIdentifier("y"),
+		},
+	})
+	assert.NoError(t, chooser.Start(), "start without error")
+
+	list.EXPECT().IsRunning().Return(true)
+	assert.Equal(t, true, chooser.IsRunning(), "chooser should be running")
+
 	list.EXPECT().Stop().Return(nil)
+	list.EXPECT().Update(peer.ListUpdates{
+		Removals: []peer.Identifier{
+			hostport.PeerIdentifier("x"),
+			hostport.PeerIdentifier("y"),
+		},
+	})
+	assert.NoError(t, chooser.Stop(), "stop without error")
 
-	binder := func(cl peer.List) transport.Lifecycle {
-		cl.Update(peer.ListUpdates{})
-		return life
-	}
-
-	chooser := Bind(list, binder)
-	assert.Equal(t, false, life.IsRunning(), "binder should not be running")
-	chooser.Start()
-	assert.Equal(t, true, life.IsRunning(), "binder should be running")
-	chooser.Stop()
-	assert.Equal(t, false, life.IsRunning(), "binder should not be running")
-}
-
-type lowlife struct {
-	once intsync.LifecycleOnce
-}
-
-func (ll *lowlife) Start() error {
-	return ll.once.Start(nil)
-}
-
-func (ll *lowlife) Stop() error {
-	return ll.once.Stop(nil)
-}
-
-func (ll *lowlife) IsRunning() bool {
-	return ll.once.IsRunning()
+	list.EXPECT().IsRunning().Return(false)
+	assert.Equal(t, false, chooser.IsRunning(), "chooser should not be running")
 }

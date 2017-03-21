@@ -119,3 +119,46 @@ func (c *BoundChooser) Introspect() introspection.ChooserStatus {
 	}
 	return introspection.ChooserStatus{}
 }
+
+// BindPeers returns a binder (suitable as an argument to peer.Bind) that
+// binds a peer list to a static list of peers for the duration of its
+// lifecycle.
+func BindPeers(ids []peer.Identifier) Binder {
+	return func(pl peer.List) transport.Lifecycle {
+		return &peersBinder{
+			once: intsync.Once(),
+			pl:   pl,
+			ids:  ids,
+		}
+	}
+}
+
+type peersBinder struct {
+	once intsync.LifecycleOnce
+	pl   peer.List
+	ids  []peer.Identifier
+}
+
+func (s *peersBinder) Start() error {
+	return s.once.Start(s.start)
+}
+
+func (s *peersBinder) start() error {
+	return s.pl.Update(peer.ListUpdates{
+		Additions: s.ids,
+	})
+}
+
+func (s *peersBinder) Stop() error {
+	return s.once.Stop(s.stop)
+}
+
+func (s *peersBinder) stop() error {
+	return s.pl.Update(peer.ListUpdates{
+		Removals: s.ids,
+	})
+}
+
+func (s *peersBinder) IsRunning() bool {
+	return s.once.IsRunning()
+}
