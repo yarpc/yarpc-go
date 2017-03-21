@@ -29,18 +29,14 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
-	"go.uber.org/yarpc/transport/http"
-	"go.uber.org/yarpc/transport/tchannel"
 )
 
 var (
-	outboundName = flag.String("outbound", "tchannel", "name of the outbound to use (http/tchannel)")
+	clientTransportName = flag.String("outbound", "tchannel", "name of the outbound to use (http/tchannel)")
 
 	errRequestNil    = errors.New("request nil")
 	errRequestKeyNil = errors.New("request key nil")
@@ -54,54 +50,14 @@ func main() {
 
 func do() error {
 	flag.Parse()
-	if err := startServer(); err != nil {
-		return err
-	}
-	return doClient()
-}
-
-func startServer() error {
-	tchannelTransport, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName("example"),
-		tchannel.ListenAddr(":28941"),
-	)
+	clientTransport, err := example.ParseClientTransport(*clientTransportName)
 	if err != nil {
 		return err
 	}
-	dispatcher := yarpc.NewDispatcher(
-		yarpc.Config{
-			Name: "example",
-			Inbounds: yarpc.Inbounds{
-				tchannelTransport.NewInbound(),
-				http.NewTransport().NewInbound(":24034"),
-			},
-		},
-	)
-	dispatcher.Register(examplepb.BuildKeyValueProcedures(newKeyValueServer()))
-	return dispatcher.Start()
+	return example.WithKeyValueClient(clientTransport, doClient)
 }
 
-func doClient() error {
-	outbound, err := getOutbound()
-	if err != nil {
-		return err
-	}
-	dispatcher := yarpc.NewDispatcher(
-		yarpc.Config{
-			Name: "example-client",
-			Outbounds: yarpc.Outbounds{
-				"example": {
-					Unary: outbound,
-				},
-			},
-		},
-	)
-	if err := dispatcher.Start(); err != nil {
-		return err
-	}
-	defer dispatcher.Stop()
-
-	apiClient := examplepb.NewKeyValueClient(dispatcher.ClientConfig("example"))
+func doClient(keyValueClient examplepb.KeyValueClient) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -110,7 +66,6 @@ func doClient() error {
 		if len(args) < 1 || len(args[0]) < 3 {
 			continue
 		}
-
 		cmd := args[0]
 		args = args[1:]
 		switch cmd {
@@ -120,9 +75,9 @@ func doClient() error {
 				continue
 			}
 			key := args[0]
-			ctx, cancel := newContextWithTimeout()
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if response, err := apiClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
+			if response, err := keyValueClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
 				fmt.Printf("get %s failed: %s\n", key, err.Error())
 			} else {
 				fmt.Println(key, "=", response.Value)
@@ -138,10 +93,9 @@ func doClient() error {
 			if len(args) == 2 {
 				value = args[1]
 			}
-
-			ctx, cancel := newContextWithTimeout()
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := apiClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
+			if _, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
 				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
@@ -153,65 +107,4 @@ func doClient() error {
 		}
 	}
 	return scanner.Err()
-}
-
-func getOutbound() (transport.UnaryOutbound, error) {
-	switch strings.ToLower(*outboundName) {
-	case "http":
-		return http.NewTransport().NewSingleOutbound("http://127.0.0.1:24034"), nil
-	case "tchannel":
-		tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("kv-client"))
-		if err != nil {
-			return nil, err
-		}
-		return tchannelTransport.NewSingleOutbound("localhost:28941"), nil
-	default:
-		return nil, fmt.Errorf("invalid outbound: %s", *outboundName)
-	}
-}
-
-func newContextWithTimeout() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 1*time.Second)
-}
-
-type apiServer struct {
-	sync.RWMutex
-	items map[string]string
-}
-
-func newKeyValueServer() *apiServer {
-	return &apiServer{sync.RWMutex{}, make(map[string]string)}
-}
-
-func (a *apiServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
-	if request == nil {
-		return nil, errRequestNil
-	}
-	if request.Key == "" {
-		return nil, errRequestKeyNil
-	}
-	a.RLock()
-	if value, ok := a.items[request.Key]; ok {
-		a.RUnlock()
-		return &examplepb.GetValueResponse{value}, nil
-	}
-	a.RUnlock()
-	return nil, fmt.Errorf("key not set: %s", request.Key)
-}
-
-func (a *apiServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
-	if request == nil {
-		return nil, errRequestNil
-	}
-	if request.Key == "" {
-		return nil, errRequestKeyNil
-	}
-	a.Lock()
-	if request.Value == "" {
-		delete(a.items, request.Key)
-	} else {
-		a.items[request.Key] = request.Value
-	}
-	a.Unlock()
-	return nil, nil
 }
