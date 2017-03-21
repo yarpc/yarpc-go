@@ -1,9 +1,14 @@
 OUTBOUND ?= tchannel
 
 .PHONY: all
-all: run
+all: test
 
 .PHONY: run
 run:
-	cat test.txt | go run main.go -outbound $(OUTBOUND)
+	cat test-input.txt | go run main.go -outbound $(OUTBOUND)
 
+.PHONY:
+test:
+	$(eval TEST_ACTUAL_OUTPUT_TXT := $(shell mktemp -t protobuf-keyvalue-output.XXXXX))
+	@cat test-input.txt | go run main.go -outbound $(OUTBOUND) > $(TEST_ACTUAL_OUTPUT_TXT)
+	@diff test-expected-output.txt $(TEST_ACTUAL_OUTPUT_TXT) || echo "error: diff from expected output"

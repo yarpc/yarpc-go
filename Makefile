@@ -140,8 +140,12 @@ install:
 	glide install
 
 
+.PHONY: prototest
+prototest:
+	$(MAKE) -C internal/examples/protobuf-keyvalue test
+
 .PHONY: test
-test: verify_version $(THRIFTRW)
+test: verify_version $(THRIFTRW) prototest
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH go test -race $(PACKAGES)
 
 
