@@ -44,12 +44,10 @@ func putBuffer(buf *proto.Buffer) {
 	_pool.Put(buf)
 }
 
-// toProcedureName gets the procedure name we should use for a protobuf method with the given service and name.
 func toProcedureName(service string, method string) string {
 	return fmt.Sprintf("%s::%s", service, method)
 }
 
-// fromProcedureName splits the given procedure name into the protobuf service name and method.
 func fromProcedureName(procedureName string) (service, method string) {
 	parts := strings.SplitN(procedureName, "::", 2)
 	if len(parts) == 1 {

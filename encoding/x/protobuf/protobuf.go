@@ -50,7 +50,18 @@ func GetApplicationError(err error) error {
 
 // BuildProcedures builds the transport.Procedures.
 func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]transport.UnaryHandler) []transport.Procedure {
-	return buildProcedures(serviceName, methodNameToUnaryHandler)
+	procedures := make([]transport.Procedure, 0, len(methodNameToUnaryHandler))
+	for methodName, unaryHandler := range methodNameToUnaryHandler {
+		procedures = append(
+			procedures,
+			transport.Procedure{
+				Name:        toProcedureName(serviceName, methodName),
+				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
+				Encoding:    Encoding,
+			},
+		)
+	}
+	return procedures
 }
 
 // Client is a protobuf client.
