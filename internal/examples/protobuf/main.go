@@ -34,10 +34,9 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
-
-	"go.uber.org/yarpc/internal/examples/protobuf-keyvalue/kv"
 )
 
 var (
@@ -63,7 +62,7 @@ func do() error {
 
 func startServer() error {
 	tchannelTransport, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName("kv"),
+		tchannel.ServiceName("example"),
 		tchannel.ListenAddr(":28941"),
 	)
 	if err != nil {
@@ -71,14 +70,14 @@ func startServer() error {
 	}
 	dispatcher := yarpc.NewDispatcher(
 		yarpc.Config{
-			Name: "kv",
+			Name: "example",
 			Inbounds: yarpc.Inbounds{
 				tchannelTransport.NewInbound(),
 				http.NewTransport().NewInbound(":24034"),
 			},
 		},
 	)
-	dispatcher.Register(kv.BuildAPIProcedures(newAPIServer()))
+	dispatcher.Register(examplepb.BuildKeyValueProcedures(newKeyValueServer()))
 	return dispatcher.Start()
 }
 
@@ -89,9 +88,9 @@ func doClient() error {
 	}
 	dispatcher := yarpc.NewDispatcher(
 		yarpc.Config{
-			Name: "kv-client",
+			Name: "example-client",
 			Outbounds: yarpc.Outbounds{
-				"kv": {
+				"example": {
 					Unary: outbound,
 				},
 			},
@@ -102,7 +101,7 @@ func doClient() error {
 	}
 	defer dispatcher.Stop()
 
-	apiClient := kv.NewAPIClient(dispatcher.ClientConfig("kv"))
+	apiClient := examplepb.NewKeyValueClient(dispatcher.ClientConfig("example"))
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -123,7 +122,7 @@ func doClient() error {
 			key := args[0]
 			ctx, cancel := newContextWithTimeout()
 			defer cancel()
-			if response, err := apiClient.GetValue(ctx, &kv.GetValueRequest{key}); err != nil {
+			if response, err := apiClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
 				fmt.Printf("get %s failed: %s\n", key, err.Error())
 			} else {
 				fmt.Println(key, "=", response.Value)
@@ -142,7 +141,7 @@ func doClient() error {
 
 			ctx, cancel := newContextWithTimeout()
 			defer cancel()
-			if _, err := apiClient.SetValue(ctx, &kv.SetValueRequest{key, value}); err != nil {
+			if _, err := apiClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
 				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
@@ -180,11 +179,11 @@ type apiServer struct {
 	items map[string]string
 }
 
-func newAPIServer() *apiServer {
+func newKeyValueServer() *apiServer {
 	return &apiServer{sync.RWMutex{}, make(map[string]string)}
 }
 
-func (a *apiServer) GetValue(ctx context.Context, request *kv.GetValueRequest) (*kv.GetValueResponse, error) {
+func (a *apiServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
 	if request == nil {
 		return nil, errRequestNil
 	}
@@ -194,13 +193,13 @@ func (a *apiServer) GetValue(ctx context.Context, request *kv.GetValueRequest) (
 	a.RLock()
 	if value, ok := a.items[request.Key]; ok {
 		a.RUnlock()
-		return &kv.GetValueResponse{value}, nil
+		return &examplepb.GetValueResponse{value}, nil
 	}
 	a.RUnlock()
 	return nil, fmt.Errorf("key not set: %s", request.Key)
 }
 
-func (a *apiServer) SetValue(ctx context.Context, request *kv.SetValueRequest) (*kv.SetValueResponse, error) {
+func (a *apiServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
 	if request == nil {
 		return nil, errRequestNil
 	}

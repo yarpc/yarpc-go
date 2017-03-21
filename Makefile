@@ -142,7 +142,7 @@ install:
 
 .PHONY: prototest
 prototest:
-	$(MAKE) -C internal/examples/protobuf-keyvalue test
+	$(MAKE) -C internal/examples/protobuf test
 
 .PHONY: test
 test: verify_version $(THRIFTRW) prototest

@@ -15,9 +15,9 @@ protoc_with_imports() {
 }
 
 protoc_with_imports gogoslick encoding/x/protobuf/internal/internal.proto
-protoc_with_imports gogoslick internal/examples/protobuf-keyvalue/kv/kv.proto
-protoc_with_imports yarpc-go internal/examples/protobuf-keyvalue/kv/kv.proto
+protoc_with_imports gogoslick internal/examples/protobuf/examplepb/example.proto
+protoc_with_imports yarpc-go internal/examples/protobuf/examplepb/example.proto
 
 update-license encoding/x/protobuf/internal/internal.pb.go
-update-license internal/examples/protobuf-keyvalue/kv/kv.pb.go
-update-license internal/examples/protobuf-keyvalue/kv/kv.pb.yarpc.go
+update-license internal/examples/protobuf/examplepb/example.pb.go
+update-license internal/examples/protobuf/examplepb/example.pb.yarpc.go

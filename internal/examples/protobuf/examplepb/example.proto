@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package uber.yarpc.internal.examples.kv;
+package uber.yarpc.internal.examples.protobuf.example;
 
-option go_package = "kv";
+option go_package = "examplepb";
 
 message GetValueRequest {
   string key = 1;
@@ -19,7 +19,7 @@ message SetValueRequest {
 
 message SetValueResponse {}
 
-service API {
+service KeyValue {
   rpc GetValue(GetValueRequest) returns (GetValueResponse);
   rpc SetValue(SetValueRequest) returns (SetValueResponse);
 }
