@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/observerware"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
@@ -114,6 +115,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 			zap.Namespace("yarpc"), // isolate yarpc's keys
 			zap.String("dispatcher", cfg.Name),
 		)
+		cfg = addObservingMiddleware(cfg, logger)
 	}
 
 	return &Dispatcher{
@@ -125,6 +127,15 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		inboundMiddleware: cfg.InboundMiddleware,
 		log:               logger,
 	}
+}
+
+func addObservingMiddleware(cfg Config, logger *zap.Logger) Config {
+	cfg.InboundMiddleware.Unary = observerware.NewUnaryInbound(
+		cfg.InboundMiddleware.Unary,
+		logger,
+		nil, // observerware.ContextExtractor
+	)
+	return cfg
 }
 
 // convertOutbounds applys outbound middleware and creates validator outbounds
