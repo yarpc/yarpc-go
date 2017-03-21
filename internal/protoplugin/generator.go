@@ -92,7 +92,7 @@ func (g *generator) Generate(targets []*File) ([]*plugin_go.CodeGeneratorRespons
 		}
 		formatted, err := format.Source([]byte(code))
 		if err != nil {
-			return nil, fmt.Errorf("could not format go code: %v\n%s\n", err, code)
+			return nil, fmt.Errorf("could not format go code: %v\n%s", err, code)
 		}
 		name := file.GetName()
 		ext := filepath.Ext(name)

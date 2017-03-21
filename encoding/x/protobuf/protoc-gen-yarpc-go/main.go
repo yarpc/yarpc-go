@@ -53,29 +53,23 @@ import (
 {{range $service := .Services }}
 // {{$service.GetName}}Client is the client-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Client interface {
-	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, yarpc.CallReqMeta, *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, yarpc.CallResMeta, error)
+	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, error)
 	{{end}}
 }
 
 // New{{$service.GetName}}Client builds a new client for the {{$service.GetName}} service.
-func New{{$service.GetName}}Client(clientConfig transport.ClientConfig, opts ...protobuf.ClientOption) {{$service.GetName}}Client {
-	return &_{{$service.GetName}}Caller{
-		protobuf.NewClient(
-			"{{$service.GetName}}",
-			clientConfig,
-			opts...,
-		),
-	}
+func New{{$service.GetName}}Client(clientConfig transport.ClientConfig) {{$service.GetName}}Client {
+	return &_{{$service.GetName}}Caller{protobuf.NewClient("{{$service.GetName}}", clientConfig)}
 }
 
 // {{$service.GetName}}Server is the server-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Server interface {
-	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, yarpc.ReqMeta, *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, yarpc.ResMeta, error)
+	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, error)
 	{{end}}
 }
 
 // Build{{$service.GetName}}Procedures prepares an implementation of the {{$service.GetName}} service for registration.
-func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server, opts ...protobuf.RegisterOption) []transport.Procedure {
+func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server) []transport.Procedure {
 	handler := &_{{$service.GetName}}Handler{server}
 	return protobuf.BuildProcedures(
 		"{{$service.GetName}}",
@@ -83,7 +77,6 @@ func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server, opts
 		{{range $method := $service.UnaryMethods}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
 		{{end}}
 		},
-		opts...,
 	)
 }
 
@@ -94,16 +87,16 @@ type _{{$service.GetName}}Caller struct {
 }
 
 {{range $method := $service.UnaryMethods}}
-func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, reqMeta yarpc.CallReqMeta, request *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, yarpc.CallResMeta, error) {
-	resMessage, resMeta, err := c.client.Call(ctx, reqMeta, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response)
-	if resMessage == nil {
-		return nil, resMeta, err
+func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, error) {
+	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response)
+	if responseMessage == nil {
+		return nil, err
 	}
-	response, ok := resMessage.(*{{$method.ResponseType.DefaultGoType}})
+	response, ok := responseMessage.(*{{$method.ResponseType.DefaultGoType}})
 	if !ok {
-		return nil, resMeta, protobuf.ClientResponseCastError("{{$service.GetName}}", "{{$method.GetName}}", empty{{$service.GetName}}_{{$method.GetName}}Response, resMessage)
+		return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}Response, responseMessage)
 	}
-	return response, resMeta, err
+	return response, err
 }
 {{end}}
 
@@ -112,17 +105,16 @@ type _{{$service.GetName}}Handler struct {
 }
 
 {{range $method := $service.UnaryMethods}}
-func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, reqMeta yarpc.ReqMeta, reqMessage proto.Message) (proto.Message, error, yarpc.ResMeta, error) {
+func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
 	var request *{{$method.RequestType.DefaultGoType}}
 	var ok bool
-	if reqMessage != nil {
-		request, ok = reqMessage.(*{{$method.RequestType.DefaultGoType}})
+	if requestMessage != nil {
+		request, ok = requestMessage.(*{{$method.RequestType.DefaultGoType}})
 		if !ok {
-			return nil, nil, nil, protobuf.ServerRequestCastError("{{$service.GetName}}", "{{$method.GetName}}", empty{{$service.GetName}}_{{$method.GetName}}Request, reqMessage)
+			return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}Request, requestMessage)
 		}
 	}
-	response, resMeta, err := h.server.{{$method.GetName}}(ctx, reqMeta, request)
-	return response, err, resMeta, nil
+	return h.server.{{$method.GetName}}(ctx, request)
 }
 {{end}}
 
@@ -150,9 +142,8 @@ func main() {
 		[]string{
 			"context",
 			"github.com/golang/protobuf/proto",
-			"go.uber.org/yarpc",
 			"go.uber.org/yarpc/api/transport",
-			"go.uber.org/yarpc/encoding/protobuf",
+			"go.uber.org/yarpc/encoding/x/protobuf",
 		},
 		"pb.yarpc.go",
 	); err != nil {
