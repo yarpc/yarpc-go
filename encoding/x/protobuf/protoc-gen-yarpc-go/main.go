@@ -73,7 +73,7 @@ func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server) []tr
 	handler := &_{{$service.GetName}}Handler{server}
 	return protobuf.BuildProcedures(
 		"{{$service.GetName}}",
-		map[string]protobuf.UnaryHandler{
+		map[string]transport.UnaryHandler{
 		{{range $method := $service.UnaryMethods}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
 		{{end}}
 		},

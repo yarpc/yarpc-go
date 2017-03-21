@@ -22,20 +22,15 @@ package protobuf
 
 import "go.uber.org/yarpc/api/transport"
 
-func buildProcedures(serviceName string, methodNameToUnaryHandler map[string]UnaryHandler) []transport.Procedure {
+func buildProcedures(serviceName string, methodNameToUnaryHandler map[string]transport.UnaryHandler) []transport.Procedure {
 	procedures := make([]transport.Procedure, 0, len(methodNameToUnaryHandler))
 	for methodName, unaryHandler := range methodNameToUnaryHandler {
 		procedures = append(
 			procedures,
 			transport.Procedure{
-				Name: toProcedureName(serviceName, methodName),
-				//Service: serviceName,
-				HandlerSpec: transport.NewUnaryHandlerSpec(
-					newTransportUnaryHandler(
-						unaryHandler,
-					),
-				),
-				Encoding: Encoding,
+				Name:        toProcedureName(serviceName, methodName),
+				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
+				Encoding:    Encoding,
 			},
 		)
 	}

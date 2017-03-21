@@ -54,7 +54,7 @@ func BuildAPIProcedures(server APIServer) []transport.Procedure {
 	handler := &_APIHandler{server}
 	return protobuf.BuildProcedures(
 		"API",
-		map[string]protobuf.UnaryHandler{
+		map[string]transport.UnaryHandler{
 			"GetValue": protobuf.NewUnaryHandler(handler.GetValue, newAPI_GetValueRequest),
 			"SetValue": protobuf.NewUnaryHandler(handler.SetValue, newAPI_SetValueRequest),
 		},

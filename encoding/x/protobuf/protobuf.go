@@ -43,7 +43,7 @@ func IsAppError(err error) bool {
 // ***all below functions should only be called by generated code***
 
 // BuildProcedures builds the transport.Procedures.
-func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]UnaryHandler) []transport.Procedure {
+func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]transport.UnaryHandler) []transport.Procedure {
 	return buildProcedures(serviceName, methodNameToUnaryHandler)
 }
 
@@ -57,18 +57,11 @@ func NewClient(serviceName string, clientConfig transport.ClientConfig) Client {
 	return newClient(serviceName, clientConfig)
 }
 
-// UnaryHandler represents a protobuf unary request handler.
-type UnaryHandler interface {
-	// response message, application error, metadata, yarpc error
-	Handle(ctx context.Context, requestMessage proto.Message) (proto.Message, error)
-	NewRequest() proto.Message
-}
-
 // NewUnaryHandler returns a new UnaryHandler.
 func NewUnaryHandler(
 	handle func(context.Context, proto.Message) (proto.Message, error),
 	newRequest func() proto.Message,
-) UnaryHandler {
+) transport.UnaryHandler {
 	return newUnaryHandler(handle, newRequest)
 }
 
