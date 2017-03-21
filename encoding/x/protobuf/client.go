@@ -23,7 +23,6 @@ package protobuf
 import (
 	"bytes"
 	"context"
-	"errors"
 
 	"github.com/golang/protobuf/proto"
 
@@ -95,8 +94,7 @@ func (c *client) Call(ctx context.Context, requestMethodName string, request pro
 		}
 	}
 	if internalResponse.Error != nil {
-		// TODO
-		return response, errors.New(internalResponse.Error.Message)
+		return response, newApplicationError(internalResponse.Error.Message)
 	}
 	return response, nil
 }

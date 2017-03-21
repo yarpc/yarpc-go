@@ -35,9 +35,14 @@ import (
 // Encoding is the name of this encoding.
 const Encoding transport.Encoding = "protobuf"
 
-// IsAppError returns true if an error returned from a client-side call is an application error.
-func IsAppError(err error) bool {
-	return false
+// GetApplicationError returns the application error from the server, if present.
+//
+// TODO: this has overlap with IsApplicationError
+func GetApplicationError(err error) error {
+	if applicationError, ok := err.(*applicationError); ok {
+		return applicationError
+	}
+	return nil
 }
 
 // ***all below functions should only be called by generated code***

@@ -4,26 +4,10 @@ package uber.yarpc.encoding.protobuf.internal;
 
 option go_package = "internal";
 
-// ErrorType is the type of an error.
-enum ErrorType {
-  // ERROR_TYPE_NONE is the default value.
-  ERROR_TYPE_NONE = 0;
-  // ERROR_TYPE_APPLICATION is an error that occurred within an application.
-  // This is similar to a 400-level error.
-  ERROR_TYPE_APPLICATION = 1;
-  // ERROR_TYPE_INTERNAL is an error that occurred within the YARPC framework.
-  // This is similar to a 500-level error.
-  ERROR_TYPE_INTERNAL = 2;
-}
-
-// Error is an error that occured while executing a request.
+// Error is an error that occured while executing a request in the application.
 message Error {
-  // The type of the error.
-  //
-  // If this is not set, the Error will be assumed to be an ERROR_TYPE_INTERNAL.
-  ErrorType type = 1;
   // The message of the error.
-  string message = 2;
+  string message = 1;
 }
 
 // Response contains the response from executing a request.

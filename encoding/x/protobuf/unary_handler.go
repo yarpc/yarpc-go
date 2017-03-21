@@ -81,7 +81,6 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	if appErr != nil {
 		responseWriter.SetApplicationError()
 		internalError = &internal.Error{
-			internal.ErrorType_ERROR_TYPE_APPLICATION,
 			appErr.Error(),
 		}
 	}
