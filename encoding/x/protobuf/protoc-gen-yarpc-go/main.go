@@ -53,7 +53,7 @@ import (
 {{range $service := .Services }}
 // {{$service.GetName}}Client is the client-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Client interface {
-	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, error)
+	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, *{{$method.RequestType.DefaultGoType}}, ...yarpc.CallOption) (*{{$method.ResponseType.DefaultGoType}}, error)
 	{{end}}
 }
 
@@ -87,8 +87,8 @@ type _{{$service.GetName}}Caller struct {
 }
 
 {{range $method := $service.UnaryMethods}}
-func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.DefaultGoType}}) (*{{$method.ResponseType.DefaultGoType}}, error) {
-	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response)
+func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.DefaultGoType}}, options ...yarpc.CallOption) (*{{$method.ResponseType.DefaultGoType}}, error) {
+	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -142,6 +142,7 @@ func main() {
 		[]string{
 			"context",
 			"github.com/golang/protobuf/proto",
+			"go.uber.org/yarpc",
 			"go.uber.org/yarpc/api/transport",
 			"go.uber.org/yarpc/encoding/x/protobuf",
 		},

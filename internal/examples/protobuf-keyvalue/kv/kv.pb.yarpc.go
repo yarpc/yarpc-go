@@ -28,14 +28,15 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/proto"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
 )
 
 // APIClient is the client-side interface for the API service.
 type APIClient interface {
-	GetValue(context.Context, *GetValueRequest) (*GetValueResponse, error)
-	SetValue(context.Context, *SetValueRequest) (*SetValueResponse, error)
+	GetValue(context.Context, *GetValueRequest, ...yarpc.CallOption) (*GetValueResponse, error)
+	SetValue(context.Context, *SetValueRequest, ...yarpc.CallOption) (*SetValueResponse, error)
 }
 
 // NewAPIClient builds a new client for the API service.
@@ -67,8 +68,8 @@ type _APICaller struct {
 	client protobuf.Client
 }
 
-func (c *_APICaller) GetValue(ctx context.Context, request *GetValueRequest) (*GetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "GetValue", request, newAPI_GetValueResponse)
+func (c *_APICaller) GetValue(ctx context.Context, request *GetValueRequest, options ...yarpc.CallOption) (*GetValueResponse, error) {
+	responseMessage, err := c.client.Call(ctx, "GetValue", request, newAPI_GetValueResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -79,8 +80,8 @@ func (c *_APICaller) GetValue(ctx context.Context, request *GetValueRequest) (*G
 	return response, err
 }
 
-func (c *_APICaller) SetValue(ctx context.Context, request *SetValueRequest) (*SetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "SetValue", request, newAPI_SetValueResponse)
+func (c *_APICaller) SetValue(ctx context.Context, request *SetValueRequest, options ...yarpc.CallOption) (*SetValueResponse, error) {
+	responseMessage, err := c.client.Call(ctx, "SetValue", request, newAPI_SetValueResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}

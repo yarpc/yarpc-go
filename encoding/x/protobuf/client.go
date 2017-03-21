@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf/internal"
@@ -42,7 +43,13 @@ func newClient(serviceName string, clientConfig transport.ClientConfig) *client 
 	return &client{serviceName, clientConfig}
 }
 
-func (c *client) Call(ctx context.Context, requestMethodName string, request proto.Message, newResponse func() proto.Message) (proto.Message, error) {
+func (c *client) Call(
+	ctx context.Context,
+	requestMethodName string,
+	request proto.Message,
+	newResponse func() proto.Message,
+	options ...yarpc.CallOption,
+) (proto.Message, error) {
 	transportRequest := &transport.Request{
 		Caller:    c.clientConfig.Caller(),
 		Service:   c.clientConfig.Service(),
@@ -58,8 +65,7 @@ func (c *client) Call(ctx context.Context, requestMethodName string, request pro
 			transportRequest.Body = bytes.NewReader(requestData)
 		}
 	}
-	// TODO: call options
-	call := apiencoding.NewOutboundCall()
+	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
 	ctx, err := call.WriteToRequest(ctx, transportRequest)
 	if err != nil {
 		return nil, err

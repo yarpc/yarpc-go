@@ -27,6 +27,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/golang/protobuf/proto"
@@ -54,7 +55,13 @@ func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]tra
 
 // Client is a protobuf client.
 type Client interface {
-	Call(ctx context.Context, requestMethodName string, request proto.Message, newResponse func() proto.Message) (proto.Message, error)
+	Call(
+		ctx context.Context,
+		requestMethodName string,
+		request proto.Message,
+		newResponse func() proto.Message,
+		options ...yarpc.CallOption,
+	) (proto.Message, error)
 }
 
 // NewClient creates a new client.
