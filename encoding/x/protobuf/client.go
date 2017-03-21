@@ -21,11 +21,17 @@
 package protobuf
 
 import (
+	"bytes"
 	"context"
-
-	"go.uber.org/yarpc/api/transport"
+	"errors"
 
 	"github.com/golang/protobuf/proto"
+
+	apiencoding "go.uber.org/yarpc/api/encoding"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/x/protobuf/internal"
+	"go.uber.org/yarpc/internal/buffer"
+	"go.uber.org/yarpc/internal/encoding"
 )
 
 type client struct {
@@ -38,5 +44,59 @@ func newClient(serviceName string, clientConfig transport.ClientConfig) *client 
 }
 
 func (c *client) Call(ctx context.Context, requestMethodName string, request proto.Message, newResponse func() proto.Message) (proto.Message, error) {
-	return nil, nil
+	transportRequest := &transport.Request{
+		Caller:    c.clientConfig.Caller(),
+		Service:   c.clientConfig.Service(),
+		Encoding:  Encoding,
+		Procedure: toProcedureName(c.serviceName, requestMethodName),
+	}
+	if request != nil {
+		requestData, err := protoMarshal(request)
+		if err != nil {
+			return nil, encoding.RequestBodyEncodeError(transportRequest, err)
+		}
+		if requestData != nil {
+			transportRequest.Body = bytes.NewReader(requestData)
+		}
+	}
+	// TODO: call options
+	call := apiencoding.NewOutboundCall()
+	ctx, err := call.WriteToRequest(ctx, transportRequest)
+	if err != nil {
+		return nil, err
+	}
+	transportResponse, err := c.clientConfig.GetUnaryOutbound().Call(ctx, transportRequest)
+	if err != nil {
+		return nil, err
+	}
+	// thrift is not checking the error, should be consistent
+	defer transportResponse.Body.Close()
+	if _, err := call.ReadFromResponse(ctx, transportResponse); err != nil {
+		return nil, err
+	}
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+	if _, err := buf.ReadFrom(transportRequest.Body); err != nil {
+		return nil, err
+	}
+	responseData := buf.Bytes()
+	if responseData == nil {
+		return nil, nil
+	}
+	internalResponse := &internal.Response{}
+	if err := proto.Unmarshal(responseData, internalResponse); err != nil {
+		return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
+	}
+	var response proto.Message
+	if internalResponse.Payload != nil {
+		response = newResponse()
+		if err := proto.Unmarshal(internalResponse.Payload, response); err != nil {
+			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
+		}
+	}
+	if internalResponse.Error != nil {
+		// TODO
+		return response, errors.New(internalResponse.Error.Message)
+	}
+	return response, nil
 }
