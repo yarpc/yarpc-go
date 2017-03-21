@@ -44,7 +44,7 @@ func IsAppError(err error) bool {
 
 // BuildProcedures builds the transport.Procedures.
 func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]UnaryHandler) []transport.Procedure {
-	return nil
+	return buildProcedures(serviceName, methodNameToUnaryHandler)
 }
 
 // Client is a protobuf client.
@@ -54,7 +54,7 @@ type Client interface {
 
 // NewClient creates a new client.
 func NewClient(serviceName string, clientConfig transport.ClientConfig) Client {
-	return newClient(serviceName, clientConfig)()
+	return newClient(serviceName, clientConfig)
 }
 
 // UnaryHandler represents a protobuf unary request handler.

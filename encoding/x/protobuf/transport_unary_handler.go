@@ -23,7 +23,13 @@ package protobuf
 import (
 	"context"
 
+	"github.com/golang/protobuf/proto"
+
+	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/x/protobuf/internal"
+	"go.uber.org/yarpc/internal/buffer"
+	"go.uber.org/yarpc/internal/encoding"
 )
 
 type transportUnaryHandler struct {
@@ -35,5 +41,54 @@ func newTransportUnaryHandler(unaryHandler UnaryHandler) *transportUnaryHandler 
 }
 
 func (t *transportUnaryHandler) Handle(ctx context.Context, transportRequest *transport.Request, responseWriter transport.ResponseWriter) error {
-	return nil
+	if err := encoding.Expect(transportRequest, Encoding); err != nil {
+		return err
+	}
+	ctx, call := apiencoding.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(transportRequest); err != nil {
+		return err
+	}
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+	if _, err := buf.ReadFrom(transportRequest.Body); err != nil {
+		return err
+	}
+	body := buf.Bytes()
+	request := t.unaryHandler.NewRequest()
+	// is this possible?
+	if body != nil {
+		if err := proto.Unmarshal(body, request); err != nil {
+			return encoding.RequestBodyDecodeError(transportRequest, err)
+		}
+	}
+	response, appErr := t.unaryHandler.Handle(ctx, request)
+	if err := call.WriteToResponse(responseWriter); err != nil {
+		return err
+	}
+	var responseData []byte
+	var err error
+	if response != nil {
+		responseData, err = protoMarshal(response)
+		if err != nil {
+			return encoding.ResponseBodyEncodeError(transportRequest, err)
+		}
+	}
+	var internalError *internal.Error
+	if appErr != nil {
+		responseWriter.SetApplicationError()
+		internalError = &internal.Error{
+			internal.ErrorType_ERROR_TYPE_APPLICATION,
+			appErr.Error(),
+		}
+	}
+	internalResponse := &internal.Response{
+		responseData,
+		internalError,
+	}
+	internalResponseData, err := protoMarshal(internalResponse)
+	if err != nil {
+		return encoding.ResponseBodyEncodeError(transportRequest, err)
+	}
+	_, err = responseWriter.Write(internalResponseData)
+	return err
 }
