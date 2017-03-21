@@ -76,7 +76,7 @@ func (c *client) Call(ctx context.Context, requestMethodName string, request pro
 	}
 	buf := buffer.Get()
 	defer buffer.Put(buf)
-	if _, err := buf.ReadFrom(transportRequest.Body); err != nil {
+	if _, err := buf.ReadFrom(transportResponse.Body); err != nil {
 		return nil, err
 	}
 	responseData := buf.Bytes()
