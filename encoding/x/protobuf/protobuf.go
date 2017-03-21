@@ -18,17 +18,56 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package protobuf implements Protocol Buffers encoding support for YARPC.
+//
+// https://developers.google.com/protocol-buffers/docs/proto3
 package protobuf
 
 import (
+	"context"
 	"fmt"
+
+	"go.uber.org/yarpc/api/transport"
 
 	"github.com/golang/protobuf/proto"
 )
 
+// Encoding is the name of this encoding.
+const Encoding transport.Encoding = "protobuf"
+
+// ***all below functions should only be called by generated code***
+
+// BuildProcedures builds the transport.Procedures.
+func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]UnaryHandler) []transport.Procedure {
+	return nil
+}
+
+// Client is a protobuf client.
+type Client interface {
+	Call(ctx context.Context, requestMethodName string, request proto.Message, newResponse func() proto.Message) (proto.Message, error)
+}
+
+// NewClient creates a new client.
+func NewClient(serviceName string, clientConfig transport.ClientConfig) Client {
+	return newClient(serviceName, clientConfig)()
+}
+
+// UnaryHandler represents a protobuf unary request handler.
+type UnaryHandler interface {
+	// response message, application error, metadata, yarpc error
+	Handle(ctx context.Context, requestMessage proto.Message) (proto.Message, error)
+	NewRequest() proto.Message
+}
+
+// NewUnaryHandler returns a new UnaryHandler.
+func NewUnaryHandler(
+	handle func(context.Context, proto.Message) (proto.Message, error),
+	newRequest func() proto.Message,
+) UnaryHandler {
+	return newUnaryHandler(handle, newRequest)
+}
+
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
-//
-// This should only be used in generated code.
 func CastError(expectedType proto.Message, actualType proto.Message) error {
 	return fmt.Errorf("expected proto.Message to have type %T but had type %T", expectedType, actualType)
 }

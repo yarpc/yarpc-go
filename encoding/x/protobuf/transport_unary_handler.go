@@ -20,7 +20,20 @@
 
 package protobuf
 
-import "go.uber.org/yarpc/api/transport"
+import (
+	"context"
 
-// Encoding is the name of this encoding.
-const Encoding transport.Encoding = "protobuf"
+	"go.uber.org/yarpc/api/transport"
+)
+
+type transportUnaryHandler struct {
+	unaryHandler UnaryHandler
+}
+
+func newTransportUnaryHandler(unaryHandler UnaryHandler) *transportUnaryHandler {
+	return &transportUnaryHandler{unaryHandler}
+}
+
+func (t *transportUnaryHandler) Handle(ctx context.Context, transportRequest *transport.Request, responseWriter transport.ResponseWriter) error {
+	return nil
+}

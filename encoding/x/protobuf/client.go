@@ -18,7 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package protobuf implements Protocol Buffers encoding support for YARPC.
-//
-// https://developers.google.com/protocol-buffers/docs/proto3
 package protobuf
+
+import (
+	"context"
+
+	"go.uber.org/yarpc/api/transport"
+
+	"github.com/golang/protobuf/proto"
+)
+
+type client struct {
+	serviceName  string
+	clientConfig transport.ClientConfig
+}
+
+func newClient(serviceName string, clientConfig transport.ClientConfig) *client {
+	return &client{serviceName, clientConfig}
+}
+
+func (c *client) Call(ctx context.Context, requestMethodName string, request proto.Message, newResponse func() proto.Message) (proto.Message, error) {
+	return nil, nil
+}

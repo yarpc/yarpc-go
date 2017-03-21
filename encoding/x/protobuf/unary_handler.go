@@ -23,28 +23,25 @@ package protobuf
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/golang/protobuf/proto"
 )
 
-// Client is a protobuf client.
-//
-// Users should use the generated protobuf Client instead of calling this directly.
-type Client interface {
-	Call(ctx context.Context, requestMethodName string, request proto.Message, newResponse func() proto.Message) (proto.Message, error)
+type unaryHandler struct {
+	handle     func(context.Context, proto.Message) (proto.Message, error)
+	newRequest func() proto.Message
 }
 
-// NewClient creates a new client.
-func NewClient(serviceName string, clientConfig transport.ClientConfig) Client {
-	return &client{serviceName, clientConfig}
+func newUnaryHandler(
+	handle func(context.Context, proto.Message) (proto.Message, error),
+	newRequest func() proto.Message,
+) UnaryHandler {
+	return &unaryHandler{handle, newRequest}
 }
 
-type client struct {
-	serviceName  string
-	clientConfig transport.ClientConfig
+func (u *unaryHandler) Handle(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+	return u.handle(ctx, requestMessage)
 }
 
-func (c *client) Call(ctx context.Context, requestMethodName string, request proto.Message, newResponse func() proto.Message) (proto.Message, error) {
-	return nil, nil
+func (u *unaryHandler) NewRequest() proto.Message {
+	return u.newRequest()
 }
