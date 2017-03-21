@@ -23,7 +23,7 @@ package protobuf
 import (
 	"context"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -72,10 +72,12 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	var responseData []byte
 	var err error
 	if response != nil {
-		responseData, err = protoMarshal(response)
-		if err != nil {
+		protoBuffer := getBuffer()
+		defer putBuffer(protoBuffer)
+		if err := protoBuffer.Marshal(response); err != nil {
 			return encoding.ResponseBodyEncodeError(transportRequest, err)
 		}
+		responseData = protoBuffer.Bytes()
 	}
 	var internalError *internal.Error
 	if appErr != nil {
@@ -88,10 +90,11 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		responseData,
 		internalError,
 	}
-	internalResponseData, err := protoMarshal(internalResponse)
-	if err != nil {
+	protoBuffer := getBuffer()
+	defer putBuffer(protoBuffer)
+	if err := protoBuffer.Marshal(internalResponse); err != nil {
 		return encoding.ResponseBodyEncodeError(transportRequest, err)
 	}
-	_, err = responseWriter.Write(internalResponseData)
+	_, err = responseWriter.Write(protoBuffer.Bytes())
 	return err
 }

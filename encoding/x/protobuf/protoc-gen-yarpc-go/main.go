@@ -24,10 +24,28 @@ Package main provides a protoc plugin that generates code for the protobuf encod
 To use:
 	go get github.com/protobuf/golang/protoc-gen-go
 	go get go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go
-	protoc --go_out=. foo.proto
+	protoc --gogoslick_out=. foo.proto
 	protoc --yarpc-go_out=. foo.proto
 */
 package main
+
+// TODO: there is some crazy bug with protobuf that if you declare:
+//
+//   func bar() (kv.GetValueResponse, error) {
+//     return nil, errors.New("nil response and non-nil error")
+//   }
+//
+//   func foo() (proto.Message, error) {
+//     return bar()
+//   }
+//
+//   response, err := foo()
+//   fmt.Printf("%v %v\n", response, response == nil)
+//
+// This will print "<nil>, false". If you try to do something with response (ie call a function on it),
+// if will panic because response is nil. Something similar happens in golang/protobuf
+// too, so this is insane. If in bar(), you do response == nil, it will be true.
+// The generated code handles this.
 
 import (
 	"fmt"
@@ -114,7 +132,11 @@ func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, 
 			return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}Request, requestMessage)
 		}
 	}
-	return h.server.{{$method.GetName}}(ctx, request)
+	response, err := h.server.{{$method.GetName}}(ctx, request)
+	if response == nil {
+		return nil, err
+	}
+	return response, err
 }
 {{end}}
 
@@ -141,7 +163,7 @@ func main() {
 		checkTemplateInfo,
 		[]string{
 			"context",
-			"github.com/golang/protobuf/proto",
+			"github.com/gogo/protobuf/proto",
 			"go.uber.org/yarpc",
 			"go.uber.org/yarpc/api/transport",
 			"go.uber.org/yarpc/encoding/x/protobuf",

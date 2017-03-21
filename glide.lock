@@ -1,5 +1,5 @@
-hash: 7bf315f0a0d3773ebe21bc7a45395c73024a510cbdb244b11dae1ce65d43a356
-updated: 2017-03-21T11:38:32.31933178+01:00
+hash: 014eac4f734a7d27e952f2b456360e8278b792730993e77fbc13789b5c5ed225
+updated: 2017-03-21T14:38:27.696060268+01:00
 imports:
 - name: github.com/apache/thrift
   version: 6582757752e62efea3f9786dddf0260efaa1f450
@@ -26,6 +26,14 @@ imports:
   - spew
 - name: github.com/facebookgo/clock
   version: 600d898af40aa09a7a93ecb9265d87b0504b6f03
+- name: github.com/gogo/protobuf
+  version: 100ba4e885062801d56799d78530b73b178a78f3
+  subpackages:
+  - gogoproto
+  - proto
+  - protoc-gen-gogo/descriptor
+  - protoc-gen-gogo/generator
+  - protoc-gen-gogo/plugin
 - name: github.com/golang/mock
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
@@ -34,9 +42,6 @@ imports:
   version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
   subpackages:
   - proto
-  - protoc-gen-go/descriptor
-  - protoc-gen-go/generator
-  - protoc-gen-go/plugin
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -175,7 +180,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 2946dd1f77e693e136d9ed202ba093bb4a3ea761
+  version: 23ca8a2633c38bca2a2fd4d0c0f8523a2f266d65
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5

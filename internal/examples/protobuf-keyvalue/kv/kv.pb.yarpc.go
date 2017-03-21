@@ -27,7 +27,7 @@ package kv
 import (
 	"context"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
@@ -105,7 +105,11 @@ func (h *_APIHandler) GetValue(ctx context.Context, requestMessage proto.Message
 			return nil, protobuf.CastError(emptyAPI_GetValueRequest, requestMessage)
 		}
 	}
-	return h.server.GetValue(ctx, request)
+	response, err := h.server.GetValue(ctx, request)
+	if response == nil {
+		return nil, err
+	}
+	return response, err
 }
 
 func (h *_APIHandler) SetValue(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
@@ -117,7 +121,11 @@ func (h *_APIHandler) SetValue(ctx context.Context, requestMessage proto.Message
 			return nil, protobuf.CastError(emptyAPI_SetValueRequest, requestMessage)
 		}
 	}
-	return h.server.SetValue(ctx, request)
+	response, err := h.server.SetValue(ctx, request)
+	if response == nil {
+		return nil, err
+	}
+	return response, err
 }
 
 func newAPI_GetValueRequest() proto.Message {

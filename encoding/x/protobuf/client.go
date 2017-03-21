@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
@@ -57,10 +57,12 @@ func (c *client) Call(
 		Procedure: toProcedureName(c.serviceName, requestMethodName),
 	}
 	if request != nil {
-		requestData, err := protoMarshal(request)
-		if err != nil {
+		protoBuffer := getBuffer()
+		defer putBuffer(protoBuffer)
+		if err := protoBuffer.Marshal(request); err != nil {
 			return nil, encoding.RequestBodyEncodeError(transportRequest, err)
 		}
+		requestData := protoBuffer.Bytes()
 		if requestData != nil {
 			transportRequest.Body = bytes.NewReader(requestData)
 		}

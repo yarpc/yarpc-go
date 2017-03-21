@@ -36,8 +36,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-	protogenerator "github.com/golang/protobuf/protoc-gen-go/generator"
+	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
+	protogenerator "github.com/gogo/protobuf/protoc-gen-gogo/generator"
 )
 
 // Run is the main function for a protobuf plugin to call.

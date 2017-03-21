@@ -30,8 +30,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/protoc-gen-go/plugin"
+	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
 var (

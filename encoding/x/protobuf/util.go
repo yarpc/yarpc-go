@@ -23,22 +23,25 @@ package protobuf
 import (
 	"fmt"
 	"strings"
+	"sync"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 )
 
-// protoMarshal calls proto.Marshal but wraps checking for proto.ErrNil.
-//
-// there is a bug in golang/protobuf where message != nil && err == proto.ErrNil
-func protoMarshal(message proto.Message) ([]byte, error) {
-	data, err := proto.Marshal(message)
-	if err != nil {
-		if err == proto.ErrNil {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return data, nil
+var _pool = sync.Pool{
+	New: func() interface{} {
+		return proto.NewBuffer(make([]byte, 1024))
+	},
+}
+
+func getBuffer() *proto.Buffer {
+	buf := _pool.Get().(*proto.Buffer)
+	buf.Reset()
+	return buf
+}
+
+func putBuffer(buf *proto.Buffer) {
+	_pool.Put(buf)
 }
 
 // toProcedureName gets the procedure name we should use for a protobuf method with the given service and name.

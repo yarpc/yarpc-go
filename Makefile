@@ -9,7 +9,7 @@ GOVET_IGNORE_RULES = \
 # List of executables needed for 'make generate'
 GENERATE_DEPENDENCIES = \
 	github.com/golang/mock/mockgen \
-	github.com/golang/protobuf/protoc-gen-go \
+	github.com/gogo/protobuf/protoc-gen-gogoslick \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
 	golang.org/x/tools/cmd/stringer \
 	go.uber.org/thriftrw \
