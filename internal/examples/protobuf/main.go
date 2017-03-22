@@ -23,7 +23,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -35,10 +34,6 @@ import (
 	"go.uber.org/yarpc/internal/testutils"
 )
 
-var (
-	transportTypeName = flag.String("outbound", "tchannel", "name of the outbound to use (http/tchannel)")
-)
-
 func main() {
 	if err := do(); err != nil {
 		log.Fatal(err)
@@ -46,15 +41,26 @@ func main() {
 }
 
 func do() error {
-	flag.Parse()
-	transportType, err := testutils.ParseTransportType(*transportTypeName)
-	if err != nil {
-		return err
-	}
-	return example.WithKeyValueClient(transportType, doClient)
+	keyValueServer := example.NewKeyValueServer()
+	sinkServer := example.NewSinkServer()
+	// TChannel will be used for unary
+	// HTTP wil be used for oneway
+	return example.WithClients(
+		testutils.TransportTypeTChannel,
+		keyValueServer,
+		sinkServer,
+		func(keyValueClient examplepb.KeyValueClient, sinkClient examplepb.SinkClient) error {
+			return doClient(keyValueClient, sinkClient, keyValueServer, sinkServer)
+		},
+	)
 }
 
-func doClient(keyValueClient examplepb.KeyValueClient) error {
+func doClient(
+	keyValueClient examplepb.KeyValueClient,
+	sinkClient examplepb.SinkClient,
+	keyValueServer *example.KeyValueServer,
+	sinkServer *example.SinkServer,
+) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -96,10 +102,29 @@ func doClient(keyValueClient examplepb.KeyValueClient) error {
 				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
+		case "fire":
+			if len(args) != 1 {
+				fmt.Println("usage: fire value")
+				continue
+			}
+			value := args[0]
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer cancel()
+			if _, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+				fmt.Printf("fire %s failed: %s\n", value, err.Error())
+			}
+			continue
+		case "fired-values":
+			if len(args) != 0 {
+				fmt.Println("usage: fired-values")
+				continue
+			}
+			fmt.Println(strings.Join(sinkServer.Values(), " "))
+			continue
 		case "exit":
 			return nil
 		default:
-			fmt.Printf("invalid command: %s\nvalid commands are: get, set, exit\n", cmd)
+			fmt.Printf("invalid command: %s\nvalid commands are: get, set, fire, fired-values, exit\n", cmd)
 		}
 	}
 	return scanner.Err()

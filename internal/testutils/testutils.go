@@ -78,7 +78,8 @@ func ParseTransportType(s string) (TransportType, error) {
 // the function the client configuration to use in tests for the given TransportType.
 //
 // The server dispatcher will be brought up using all TransportTypes and with the serviceName.
-// The client dispatcher will be brought up using the given TransportType and the serviceName with a "-client" suffix.
+// The client dispatcher will be brought up using the given TransportType for Unary, HTTP for
+// Oneway, and the serviceName with a "-client" suffix.
 func WithClientConfig(serviceName string, procedures []transport.Procedure, transportType TransportType, f func(transport.ClientConfig) error) (err error) {
 	dispatcherConfig, err := NewDispatcherConfig(serviceName)
 	if err != nil {
@@ -104,21 +105,31 @@ func WithClientConfig(serviceName string, procedures []transport.Procedure, tran
 }
 
 // NewClientDispatcher returns a new client Dispatcher.
+//
+// HTTP always will be configured as an outbound for Oneway
 func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) (*yarpc.Dispatcher, error) {
 	port, err := config.GetPort(transportType)
 	if err != nil {
 		return nil, err
 	}
-	var outbound transport.UnaryOutbound
+	httpPort, err := config.GetPort(TransportTypeHTTP)
+	if err != nil {
+		return nil, err
+	}
+	var onewayOutbound transport.OnewayOutbound
+	var unaryOutbound transport.UnaryOutbound
 	switch transportType {
 	case TransportTypeTChannel:
 		tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName(config.GetServiceName()))
 		if err != nil {
 			return nil, err
 		}
-		outbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("localhost:%d", port))
+		onewayOutbound = http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
+		unaryOutbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("localhost:%d", port))
 	case TransportTypeHTTP:
-		outbound = http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", port))
+		httpOutbound := http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", port))
+		onewayOutbound = httpOutbound
+		unaryOutbound = httpOutbound
 	default:
 		return nil, fmt.Errorf("invalid TransportType: %v", transportType)
 	}
@@ -127,7 +138,8 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) 
 			Name: fmt.Sprintf("%s-client", config.GetServiceName()),
 			Outbounds: yarpc.Outbounds{
 				config.GetServiceName(): {
-					Unary: outbound,
+					Oneway: onewayOutbound,
+					Unary:  unaryOutbound,
 				},
 			},
 		},

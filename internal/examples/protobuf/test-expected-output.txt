@@ -14,4 +14,8 @@ get foo
 foo = bar
 get baz
 baz = qux
+fire foo
+fire bar
+fired-values
+foo bar
 exit

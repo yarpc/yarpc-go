@@ -32,60 +32,114 @@ import (
 )
 
 var (
-	errRequestNil    = errors.New("request nil")
-	errRequestKeyNil = errors.New("request key nil")
+	errRequestNil      = errors.New("request nil")
+	errRequestKeyNil   = errors.New("request key nil")
+	errRequestValueNil = errors.New("request value nil")
 )
 
-// WithKeyValueClient calls f on a KeyValueClient.
-func WithKeyValueClient(transportType testutils.TransportType, f func(examplepb.KeyValueClient) error) error {
+// WithClients calls f on the Clients.
+func WithClients(
+	transportType testutils.TransportType,
+	keyValueServer examplepb.KeyValueServer,
+	sinkServer examplepb.SinkServer,
+	f func(examplepb.KeyValueClient, examplepb.SinkClient) error,
+) error {
+	var procedures []transport.Procedure
+	if keyValueServer != nil {
+		procedures = append(procedures, examplepb.BuildKeyValueProcedures(keyValueServer)...)
+	}
+	if sinkServer != nil {
+		procedures = append(procedures, examplepb.BuildSinkProcedures(sinkServer)...)
+	}
 	return testutils.WithClientConfig(
 		"example",
-		examplepb.BuildKeyValueProcedures(newKeyValueServer()),
+		procedures,
 		transportType,
 		func(clientConfig transport.ClientConfig) error {
-			return f(examplepb.NewKeyValueClient(clientConfig))
+			return f(
+				examplepb.NewKeyValueClient(clientConfig),
+				examplepb.NewSinkClient(clientConfig),
+			)
 		},
 	)
 }
 
-type keyValueServer struct {
+// KeyValueServer implements examplepb.KeyValueServer.
+type KeyValueServer struct {
 	sync.RWMutex
 	items map[string]string
 }
 
-func newKeyValueServer() *keyValueServer {
-	return &keyValueServer{sync.RWMutex{}, make(map[string]string)}
+// NewKeyValueServer returns a new KeyValueServer.
+func NewKeyValueServer() *KeyValueServer {
+	return &KeyValueServer{sync.RWMutex{}, make(map[string]string)}
 }
 
-func (a *keyValueServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
+// GetValue implements GetValue.
+func (k *KeyValueServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
 	if request == nil {
 		return nil, errRequestNil
 	}
 	if request.Key == "" {
 		return nil, errRequestKeyNil
 	}
-	a.RLock()
-	if value, ok := a.items[request.Key]; ok {
-		a.RUnlock()
+	k.RLock()
+	if value, ok := k.items[request.Key]; ok {
+		k.RUnlock()
 		return &examplepb.GetValueResponse{value}, nil
 	}
-	a.RUnlock()
+	k.RUnlock()
 	return nil, fmt.Errorf("key not set: %s", request.Key)
 }
 
-func (a *keyValueServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
+// SetValue implements SetValue.
+func (k *KeyValueServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
 	if request == nil {
 		return nil, errRequestNil
 	}
 	if request.Key == "" {
 		return nil, errRequestKeyNil
 	}
-	a.Lock()
+	k.Lock()
 	if request.Value == "" {
-		delete(a.items, request.Key)
+		delete(k.items, request.Key)
 	} else {
-		a.items[request.Key] = request.Value
+		k.items[request.Key] = request.Value
 	}
-	a.Unlock()
+	k.Unlock()
 	return nil, nil
+}
+
+// SinkServer implements examplepb.SinkServer.
+type SinkServer struct {
+	sync.RWMutex
+	values []string
+}
+
+// NewSinkServer returns a new SinkServer.
+func NewSinkServer() *SinkServer {
+	return &SinkServer{sync.RWMutex{}, make([]string, 0)}
+}
+
+// Fire implements Fire.
+func (s *SinkServer) Fire(ctx context.Context, request *examplepb.FireRequest) error {
+	if request == nil {
+		return errRequestNil
+	}
+	if request.Value == "" {
+		return errRequestValueNil
+	}
+	s.Lock()
+	s.values = append(s.values, request.Value)
+	s.Unlock()
+	return nil
+}
+
+// Values returns a copy of the values that have been fired.
+func (s *SinkServer) Values() []string {
+	s.RLock()
+	values := make([]string, len(s.values))
+	copy(values, s.values)
+	s.RUnlock()
+	return values
 }

@@ -39,12 +39,16 @@ func TestIntegrationKeyValueClient(t *testing.T) {
 		t.Run(
 			transportType.String(),
 			func(t *testing.T) {
+				keyValueServer := example.NewKeyValueServer()
+				sinkServer := example.NewSinkServer()
 				assert.NoError(
 					t,
-					example.WithKeyValueClient(
+					example.WithClients(
 						transportType,
-						func(keyValueClient examplepb.KeyValueClient) error {
-							testIntegrationKeyValueClient(t, keyValueClient)
+						keyValueServer,
+						sinkServer,
+						func(keyValueClient examplepb.KeyValueClient, sinkClient examplepb.SinkClient) error {
+							testIntegrationKeyValueClient(t, keyValueClient, sinkClient, keyValueServer, sinkServer)
 							return nil
 						},
 					),
@@ -54,7 +58,13 @@ func TestIntegrationKeyValueClient(t *testing.T) {
 	}
 }
 
-func testIntegrationKeyValueClient(t *testing.T, keyValueClient examplepb.KeyValueClient) {
+func testIntegrationKeyValueClient(
+	t *testing.T,
+	keyValueClient examplepb.KeyValueClient,
+	sinkClient examplepb.SinkClient,
+	keyValueServer *example.KeyValueServer,
+	sinkServer *example.SinkServer,
+) {
 	_, err := getValue(keyValueClient, "foo")
 	assert.Error(t, err)
 	assert.NotNil(t, protobuf.GetApplicationError(err))
@@ -74,6 +84,10 @@ func testIntegrationKeyValueClient(t *testing.T, keyValueClient examplepb.KeyVal
 	value, err = getValue(keyValueClient, "baz")
 	assert.NoError(t, err)
 	assert.Equal(t, "bat", value)
+
+	assert.NoError(t, fire(sinkClient, "foo"))
+	assert.NoError(t, fire(sinkClient, "bar"))
+	assert.Equal(t, []string{"foo", "bar"}, sinkServer.Values())
 }
 
 func getValue(keyValueClient examplepb.KeyValueClient, key string) (string, error) {
@@ -90,5 +104,12 @@ func setValue(keyValueClient examplepb.KeyValueClient, key string, value string)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	_, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	return err
+}
+
+func fire(sinkClient examplepb.SinkClient, value string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	_, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value})
 	return err
 }

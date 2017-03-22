@@ -18,9 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package protobuf implements Protocol Buffers encoding support for YARPC.
-//
-// https://developers.google.com/protocol-buffers/docs/proto3
 package protobuf
 
 import (
