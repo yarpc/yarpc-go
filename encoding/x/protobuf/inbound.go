@@ -111,6 +111,26 @@ func newOnewayHandler(
 	return &onewayHandler{handleOneway, newRequest}
 }
 
-func (u *onewayHandler) HandleOneway(ctx context.Context, transportRequest *transport.Request) error {
-	return nil
+func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *transport.Request) error {
+	if err := encoding.Expect(transportRequest, Encoding); err != nil {
+		return err
+	}
+	ctx, call := apiencoding.NewInboundCall(ctx)
+	if err := call.ReadFromRequest(transportRequest); err != nil {
+		return err
+	}
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+	if _, err := buf.ReadFrom(transportRequest.Body); err != nil {
+		return err
+	}
+	body := buf.Bytes()
+	request := o.newRequest()
+	// is this possible?
+	if body != nil {
+		if err := proto.Unmarshal(body, request); err != nil {
+			return encoding.RequestBodyDecodeError(transportRequest, err)
+		}
+	}
+	return o.handleOneway(ctx, request)
 }
