@@ -244,10 +244,12 @@ func compileTransportConfig(build interface{}) (*configSpec, error) {
 	switch {
 	case t.Kind() != reflect.Func:
 		err = errors.New("must be a function")
-	case t.NumIn() != 1:
-		err = fmt.Errorf("must accept exactly one argument, found %v", t.NumIn())
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
 	case !isDecodable(t.In(0)):
 		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
 	case t.NumOut() != 2:
 		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
 	case t.Out(0) != _typeOfTransport:
@@ -312,8 +314,8 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	switch {
 	case t.Kind() != reflect.Func:
 		return errors.New("must be a function")
-	case t.NumIn() != 2:
-		return fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case t.NumIn() != 3:
+		return fmt.Errorf("must accept exactly three arguments, found %v", t.NumIn())
 	case !isDecodable(t.In(0)):
 		return fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
 	case t.In(1) != _typeOfTransport:
@@ -321,6 +323,8 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 		// optional and either the first or the second argument instead of
 		// requiring it as the second argument.
 		return fmt.Errorf("must accept a transport.Transport as its second argument, found %v", t.In(1))
+	case t.In(2) != _typeOfKit:
+		return fmt.Errorf("must accept a %v as its third argument, found %v", _typeOfKit, t.In(2))
 	case t.NumOut() != 2:
 		return fmt.Errorf("must return exactly two results, found %v", t.NumOut())
 	case t.Out(0) != outputType:
