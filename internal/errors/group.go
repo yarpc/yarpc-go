@@ -34,18 +34,6 @@ func (e ErrorGroup) Error() string {
 	return strings.Join(messages, "\n\t")
 }
 
-// IfAny returns nil if the error group is empty, the only error if there is
-// only one, or the error group itself if there are more.
-func (e ErrorGroup) IfAny() error {
-	if len(e) == 0 {
-		return nil
-	} else if len(e) == 1 {
-		return e[0]
-	} else {
-		return e
-	}
-}
-
 // MultiError combines a list of errors into one. The list MUST NOT contain nil.
 //
 // Returns nil if the error list is empty.

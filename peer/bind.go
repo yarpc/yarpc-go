@@ -83,7 +83,7 @@ func (c *BoundChooser) start() error {
 		}
 	}
 
-	return errs.IfAny()
+	return errors.CombineErrors(errs...)
 }
 
 // Stop stops the peer list and the peer provider binding.
@@ -102,7 +102,7 @@ func (c *BoundChooser) stop() error {
 		errs = append(errs, err)
 	}
 
-	return errs.IfAny()
+	return errors.CombineErrors(errs...)
 }
 
 // IsRunning returns whether the peer list and its peer provider binding are
