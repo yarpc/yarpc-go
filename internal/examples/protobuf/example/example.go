@@ -26,25 +26,9 @@ import (
 	"fmt"
 	"sync"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
-	"go.uber.org/yarpc/transport/http"
-	"go.uber.org/yarpc/transport/tchannel"
-)
-
-const (
-	// DefaultTChannelPort is the default TChannel port.
-	DefaultTChannelPort = 28941
-	// DefaultHTTPPort is the default HTTP port.
-	DefaultHTTPPort = 24034
-	// DefaultServiceName is the default service name.
-	DefaultServiceName = "example"
-
-	// ClientTransportTChannel represents using TChannel on the client.
-	ClientTransportTChannel ClientTransport = iota
-	// ClientTransportHTTP represents using HTTP on the client.
-	ClientTransportHTTP
+	"go.uber.org/yarpc/internal/testutils"
 )
 
 var (
@@ -53,126 +37,15 @@ var (
 )
 
 // WithKeyValueClient calls f on a KeyValueClient.
-func WithKeyValueClient(clientTransport ClientTransport, f func(examplepb.KeyValueClient) error, options ...DispatcherOption) error {
-	serverDispatcher, err := NewServerDispatcher(options...)
-	if err != nil {
-		return err
-	}
-	clientDispatcher, err := NewClientDispatcher(clientTransport, options...)
-	if err != nil {
-		return err
-	}
-	if err := serverDispatcher.Start(); err != nil {
-		return err
-	}
-	defer serverDispatcher.Stop()
-	if err := clientDispatcher.Start(); err != nil {
-		return err
-	}
-	defer clientDispatcher.Stop()
-	return f(examplepb.NewKeyValueClient(clientDispatcher.ClientConfig("example")))
-}
-
-// NewClientDispatcher returns a new client Dispatcher.
-func NewClientDispatcher(clientTransport ClientTransport, options ...DispatcherOption) (*yarpc.Dispatcher, error) {
-	dispatcherOptions := newDispatcherOptions(options)
-	var outbound transport.UnaryOutbound
-	switch clientTransport {
-	case ClientTransportTChannel:
-		tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("example"))
-		if err != nil {
-			return nil, err
-		}
-		outbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("localhost:%d", dispatcherOptions.TChannelPort))
-	case ClientTransportHTTP:
-		outbound = http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", dispatcherOptions.HTTPPort))
-	default:
-		return nil, fmt.Errorf("invalid client transport: %v", clientTransport)
-	}
-	return yarpc.NewDispatcher(
-		yarpc.Config{
-			Name: "example-client",
-			Outbounds: yarpc.Outbounds{
-				"example": {
-					Unary: outbound,
-				},
-			},
-		},
-	), nil
-}
-
-// NewServerDispatcher returns a new server Dispatcher.
-func NewServerDispatcher(options ...DispatcherOption) (*yarpc.Dispatcher, error) {
-	dispatcherOptions := newDispatcherOptions(options)
-	tchannelTransport, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName("example"),
-		tchannel.ListenAddr(fmt.Sprintf(":%d", dispatcherOptions.TChannelPort)),
-	)
-	if err != nil {
-		return nil, err
-	}
-	dispatcher := yarpc.NewDispatcher(
-		yarpc.Config{
-			Name: "example",
-			Inbounds: yarpc.Inbounds{
-				tchannelTransport.NewInbound(),
-				http.NewTransport().NewInbound(fmt.Sprintf(":%d", dispatcherOptions.HTTPPort)),
-			},
+func WithKeyValueClient(transportType testutils.TransportType, f func(examplepb.KeyValueClient) error) error {
+	return testutils.WithClientConfig(
+		"example",
+		examplepb.BuildKeyValueProcedures(newKeyValueServer()),
+		transportType,
+		func(clientConfig transport.ClientConfig) error {
+			return f(examplepb.NewKeyValueClient(clientConfig))
 		},
 	)
-	dispatcher.Register(examplepb.BuildKeyValueProcedures(newKeyValueServer()))
-	return dispatcher, nil
-}
-
-// ClientTransport is a client transport.
-type ClientTransport int
-
-// ParseClientTransport parses a client transport from a string.
-func ParseClientTransport(s string) (ClientTransport, error) {
-	switch s {
-	case "tchannel":
-		return ClientTransportTChannel, nil
-	case "http":
-		return ClientTransportHTTP, nil
-	default:
-		return 0, fmt.Errorf("invalid client transport: %s", s)
-	}
-}
-
-// DispatcherOption is an option for a Dispatcher.
-type DispatcherOption func(*dispatcherOptions)
-
-// WithTChannelPort changes the TChannel port.
-func WithTChannelPort(port uint16) DispatcherOption {
-	return func(dispatcherOptions *dispatcherOptions) {
-		dispatcherOptions.TChannelPort = port
-	}
-}
-
-// WithHTTPPort changes the HTTP port.
-func WithHTTPPort(port uint16) DispatcherOption {
-	return func(dispatcherOptions *dispatcherOptions) {
-		dispatcherOptions.HTTPPort = port
-	}
-}
-
-type dispatcherOptions struct {
-	TChannelPort uint16
-	HTTPPort     uint16
-}
-
-func newDispatcherOptions(options []DispatcherOption) *dispatcherOptions {
-	dispatcherOptions := &dispatcherOptions{}
-	for _, option := range options {
-		option(dispatcherOptions)
-	}
-	if dispatcherOptions.TChannelPort == 0 {
-		dispatcherOptions.TChannelPort = DefaultTChannelPort
-	}
-	if dispatcherOptions.HTTPPort == 0 {
-		dispatcherOptions.HTTPPort = DefaultHTTPPort
-	}
-	return dispatcherOptions
 }
 
 type keyValueServer struct {

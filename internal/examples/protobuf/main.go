@@ -23,7 +23,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -33,13 +32,11 @@ import (
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/testutils"
 )
 
 var (
-	clientTransportName = flag.String("outbound", "tchannel", "name of the outbound to use (http/tchannel)")
-
-	errRequestNil    = errors.New("request nil")
-	errRequestKeyNil = errors.New("request key nil")
+	transportTypeName = flag.String("outbound", "tchannel", "name of the outbound to use (http/tchannel)")
 )
 
 func main() {
@@ -50,11 +47,11 @@ func main() {
 
 func do() error {
 	flag.Parse()
-	clientTransport, err := example.ParseClientTransport(*clientTransportName)
+	transportType, err := testutils.ParseTransportType(*transportTypeName)
 	if err != nil {
 		return err
 	}
-	return example.WithKeyValueClient(clientTransport, doClient)
+	return example.WithKeyValueClient(transportType, doClient)
 }
 
 func doClient(keyValueClient examplepb.KeyValueClient) error {
@@ -102,8 +99,7 @@ func doClient(keyValueClient examplepb.KeyValueClient) error {
 		case "exit":
 			return nil
 		default:
-			fmt.Println("invalid command", cmd)
-			fmt.Println("valid commands are: get, set, exit")
+			fmt.Printf("invalid command: %s\nvalid commands are: get, set, exit\n", cmd)
 		}
 	}
 	return scanner.Err()

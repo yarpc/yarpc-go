@@ -39,7 +39,8 @@ const (
 )
 
 var (
-	allTransportTypes = []TransportType{
+	// AllTransportTypes are all TransportTypes,
+	AllTransportTypes = []TransportType{
 		TransportTypeHTTP,
 		TransportTypeTChannel,
 	}
@@ -58,16 +59,6 @@ func ParseTransportType(s string) (TransportType, error) {
 	default:
 		return 0, fmt.Errorf("invalid TransportType: %s", s)
 	}
-}
-
-// WithAllClientConfigs will call WithClientConfig with all TransportTypes.
-func WithAllClientConfigs(serviceName string, procedures []transport.Procedure, f func(transport.ClientConfig) error) error {
-	for _, transportType := range allTransportTypes {
-		if err := WithClientConfig(serviceName, procedures, transportType, f); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // WithClientConfig wraps a function by setting up a client and server dispatcher and giving
@@ -191,8 +182,8 @@ func (d *DispatcherConfig) GetPort(transportType TransportType) (uint16, error) 
 }
 
 func getTransportTypeToPort() (map[TransportType]uint16, error) {
-	m := make(map[TransportType]uint16, len(allTransportTypes))
-	for _, transportType := range allTransportTypes {
+	m := make(map[TransportType]uint16, len(AllTransportTypes))
+	for _, transportType := range AllTransportTypes {
 		port, err := getFreePort()
 		if err != nil {
 			return nil, err
