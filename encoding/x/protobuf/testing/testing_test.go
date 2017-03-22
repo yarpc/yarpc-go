@@ -68,14 +68,17 @@ func testIntegrationKeyValueClient(
 	_, err := getValue(keyValueClient, "foo")
 	assert.Error(t, err)
 	assert.NotNil(t, protobuf.GetApplicationError(err))
+
 	assert.NoError(t, setValue(keyValueClient, "foo", "bar"))
 	value, err := getValue(keyValueClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", value)
+
 	assert.NoError(t, setValue(keyValueClient, "foo", ""))
 	_, err = getValue(keyValueClient, "foo")
 	assert.Error(t, err)
 	assert.NotNil(t, protobuf.GetApplicationError(err))
+
 	assert.NoError(t, setValue(keyValueClient, "foo", "baz"))
 	assert.NoError(t, setValue(keyValueClient, "baz", "bat"))
 	value, err = getValue(keyValueClient, "foo")

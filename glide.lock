@@ -1,5 +1,5 @@
-hash: 014eac4f734a7d27e952f2b456360e8278b792730993e77fbc13789b5c5ed225
-updated: 2017-03-21T14:38:27.696060268+01:00
+hash: 8621c36c9401d50d593ea5b325d3b0ed38191e4f2016f05638a1bbc01bd8e7ea
+updated: 2017-03-22T19:50:24.370416921+01:00
 imports:
 - name: github.com/apache/thrift
   version: 6582757752e62efea3f9786dddf0260efaa1f450
@@ -116,7 +116,7 @@ imports:
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
-  version: bcc801808ce11db4f05a09e2af61698ffe3f5f38
+  version: cbd3b6fe50f6d077951da8aabb06374f0ccf3181
   subpackages:
   - internal/spanlog
   - log
@@ -126,11 +126,11 @@ imports:
   - transport
   - utils
 - name: github.com/uber/jaeger-lib
-  version: 9dd8526f119f8cd8379427bfefdc406e81bc3b2f
+  version: ffca3143c929e9b97325e6bebcc380e8c6e5fa0d
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
-  version: 2feb388c9d0c0303f98481d1621308d634093ffb
+  version: 0b7f160817553b0bacb5b108dd84a5022dbdd1c4
   subpackages:
   - hyperbahn
   - hyperbahn/gen-go/hyperbahn
