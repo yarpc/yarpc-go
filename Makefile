@@ -142,10 +142,10 @@ install:
 
 .PHONY: prototest
 prototest:
-	$(MAKE) -C internal/examples/protobuf test
+	go test -race ./encoding/x/protobuf/...
 
 .PHONY: test
-test: verify_version $(THRIFTRW) prototest
+test: verify_version $(THRIFTRW)
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH go test -race $(PACKAGES)
 
 

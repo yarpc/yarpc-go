@@ -23,6 +23,7 @@ package testutils
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -48,6 +49,18 @@ var (
 
 // TransportType is a transport type.
 type TransportType int
+
+// String returns a string representation of t.
+func (t TransportType) String() string {
+	switch t {
+	case TransportTypeHTTP:
+		return "http"
+	case TransportTypeTChannel:
+		return "tchannel"
+	default:
+		return strconv.Itoa(int(t))
+	}
+}
 
 // ParseTransportType parses a transport type from a string.
 func ParseTransportType(s string) (TransportType, error) {
