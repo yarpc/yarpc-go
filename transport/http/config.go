@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
 )
 
@@ -133,13 +134,37 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 // 	      http:
 // 	        url: "http://127.0.0.1:80/"
 type OutboundConfig struct {
-	// URL to which requests will be sent for this outbound. This field is
-	// required.
+	// URL to which requests will be sent for this outbound.
 	URL string `config:"url"`
+	// URL template for outbound requests on this outbound.
+	// The peer chooser must be configured to populate the URL template with
+	// peer identifiers (host:port).
+	Template string `config:"template"`
+	config.ChooserConfig
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (*Outbound, error) {
-	return t.(*Transport).NewSingleOutbound(oc.URL, ts.OutboundOptions...), nil
+	x := t.(*Transport)
+
+	opts := make([]OutboundOption, len(ts.OutboundOptions), len(ts.OutboundOptions))
+	copy(opts, ts.OutboundOptions)
+
+	if oc.URL != "" {
+		// TODO Ensure no further config
+		return x.NewSingleOutbound(oc.URL, opts...), nil
+	}
+
+	// Support URL Template
+	if oc.Template != "" {
+		opts = append(opts, URLTemplate(oc.Template))
+	}
+
+	chooser, err := oc.ChooserConfig.BuildChooser(x, hostport.Identify, k)
+	if err != nil {
+		return nil, err
+	}
+
+	return x.NewOutbound(chooser, opts...), nil
 }
 
 func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
