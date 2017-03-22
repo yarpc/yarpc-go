@@ -52,7 +52,7 @@ func TransportSpec() config.TransportSpec {
 	}
 }
 
-func buildTransport(tc *TransportConfig) (transport.Transport, error) {
+func buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
 	var opts []TransportOption
 	if tc.Address != "" {
 		opts = append(opts, ListenAddr(tc.Address))
@@ -63,11 +63,11 @@ func buildTransport(tc *TransportConfig) (transport.Transport, error) {
 	return NewTransport(opts...)
 }
 
-func buildInbound(_ *InboundConfig, t transport.Transport) (transport.Inbound, error) {
+func buildInbound(_ *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
 	return t.(*Transport).NewInbound(), nil
 }
 
-func buildUnaryOutbound(oc *OutboundConfig, t transport.Transport) (transport.UnaryOutbound, error) {
+func buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
 	return t.(*Transport).NewSingleOutbound(oc.Address), nil
 }
 
