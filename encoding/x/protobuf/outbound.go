@@ -51,25 +51,12 @@ func (c *client) Call(
 	newResponse func() proto.Message,
 	options ...yarpc.CallOption,
 ) (proto.Message, error) {
-	transportRequest := &transport.Request{
-		Caller:    c.clientConfig.Caller(),
-		Service:   c.clientConfig.Service(),
-		Encoding:  Encoding,
-		Procedure: procedure.ToName(c.serviceName, requestMethodName),
-	}
-	if request != nil {
-		protoBuffer := getBuffer()
-		defer putBuffer(protoBuffer)
-		if err := protoBuffer.Marshal(request); err != nil {
-			return nil, encoding.RequestBodyEncodeError(transportRequest, err)
-		}
-		requestData := protoBuffer.Bytes()
-		if requestData != nil {
-			transportRequest.Body = bytes.NewReader(requestData)
-		}
+	transportRequest, err := c.buildTransportRequest(requestMethodName, request)
+	if err != nil {
+		return nil, err
 	}
 	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
-	ctx, err := call.WriteToRequest(ctx, transportRequest)
+	ctx, err = call.WriteToRequest(ctx, transportRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -114,5 +101,35 @@ func (c *client) CallOneway(
 	request proto.Message,
 	options ...yarpc.CallOption,
 ) (transport.Ack, error) {
-	return nil, nil
+	transportRequest, err := c.buildTransportRequest(requestMethodName, request)
+	if err != nil {
+		return nil, err
+	}
+	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
+	ctx, err = call.WriteToRequest(ctx, transportRequest)
+	if err != nil {
+		return nil, err
+	}
+	return c.clientConfig.GetOnewayOutbound().CallOneway(ctx, transportRequest)
+}
+
+func (c *client) buildTransportRequest(requestMethodName string, request proto.Message) (*transport.Request, error) {
+	transportRequest := &transport.Request{
+		Caller:    c.clientConfig.Caller(),
+		Service:   c.clientConfig.Service(),
+		Encoding:  Encoding,
+		Procedure: procedure.ToName(c.serviceName, requestMethodName),
+	}
+	if request != nil {
+		protoBuffer := getBuffer()
+		defer putBuffer(protoBuffer)
+		if err := protoBuffer.Marshal(request); err != nil {
+			return nil, encoding.RequestBodyEncodeError(transportRequest, err)
+		}
+		requestData := protoBuffer.Bytes()
+		if requestData != nil {
+			transportRequest.Body = bytes.NewReader(requestData)
+		}
+	}
+	return transportRequest, nil
 }
