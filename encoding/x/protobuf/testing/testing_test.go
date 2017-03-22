@@ -32,33 +32,32 @@ import (
 	"go.uber.org/yarpc/internal/testutils"
 )
 
-func TestIntegrationKeyValueClient(t *testing.T) {
+func TestIntegration(t *testing.T) {
 	t.Parallel()
 	for _, transportType := range testutils.AllTransportTypes {
 		transportType := transportType
-		t.Run(
-			transportType.String(),
-			func(t *testing.T) {
-				keyValueServer := example.NewKeyValueServer()
-				sinkServer := example.NewSinkServer()
-				assert.NoError(
-					t,
-					example.WithClients(
-						transportType,
-						keyValueServer,
-						sinkServer,
-						func(keyValueClient examplepb.KeyValueClient, sinkClient examplepb.SinkClient) error {
-							testIntegrationKeyValueClient(t, keyValueClient, sinkClient, keyValueServer, sinkServer)
-							return nil
-						},
-					),
-				)
-			},
-		)
+		t.Run(transportType.String(), func(t *testing.T) { testIntegrationForTransportType(t, transportType) })
 	}
 }
 
-func testIntegrationKeyValueClient(
+func testIntegrationForTransportType(t *testing.T, transportType testutils.TransportType) {
+	keyValueServer := example.NewKeyValueServer()
+	sinkServer := example.NewSinkServer()
+	assert.NoError(
+		t,
+		example.WithClients(
+			transportType,
+			keyValueServer,
+			sinkServer,
+			func(keyValueClient examplepb.KeyValueClient, sinkClient examplepb.SinkClient) error {
+				testIntegration(t, keyValueClient, sinkClient, keyValueServer, sinkServer)
+				return nil
+			},
+		),
+	)
+}
+
+func testIntegration(
 	t *testing.T,
 	keyValueClient examplepb.KeyValueClient,
 	sinkClient examplepb.SinkClient,
