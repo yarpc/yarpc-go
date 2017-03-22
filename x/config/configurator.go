@@ -131,7 +131,7 @@ func (c *Configurator) NewDispatcher(data interface{}) (*yarpc.Dispatcher, error
 func (c *Configurator) load(cfg *yarpcConfig) (yarpc.Config, error) {
 	var (
 		errors []error
-		b      = newBuilder(cfg.Name)
+		b      = newBuilder(cfg.Name, &Kit{c: c})
 	)
 
 	for _, inbound := range cfg.Inbounds {

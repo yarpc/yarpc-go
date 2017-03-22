@@ -46,6 +46,7 @@ type buildableOutbound struct {
 
 type builder struct {
 	Name string
+	kit  *Kit
 
 	// Transports that we actually need and their specs. We need a transport
 	// only if we have at least one inbound or outbound using it.
@@ -56,9 +57,10 @@ type builder struct {
 	clients    map[string]*buildableOutbounds
 }
 
-func newBuilder(name string) *builder {
+func newBuilder(name string, kit *Kit) *builder {
 	return &builder{
 		Name:           name,
+		kit:            kit,
 		needTransports: make(map[string]*compiledTransportSpec),
 		transports:     make(map[string]*buildable),
 		clients:        make(map[string]*buildableOutbounds),
@@ -84,14 +86,14 @@ func (b *builder) Build() (yarpc.Config, error) {
 			}
 		}
 
-		transports[name], err = buildTransport(cv)
+		transports[name], err = buildTransport(cv, b.kit)
 		if err != nil {
 			return yarpc.Config{}, err
 		}
 	}
 
 	for _, i := range b.inbounds {
-		ib, err := buildInbound(i.Value, transports[i.Transport])
+		ib, err := buildInbound(i.Value, transports[i.Transport], b.kit)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -109,14 +111,14 @@ func (b *builder) Build() (yarpc.Config, error) {
 		}
 
 		if o := c.Unary; o != nil {
-			ob.Unary, err = buildUnaryOutbound(o.Value, transports[o.Transport])
+			ob.Unary, err = buildUnaryOutbound(o.Value, transports[o.Transport], b.kit)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
 		}
 		if o := c.Oneway; o != nil {
-			ob.Oneway, err = buildOnewayOutbound(o.Value, transports[o.Transport])
+			ob.Oneway, err = buildOnewayOutbound(o.Value, transports[o.Transport], b.kit)
 			if err != nil {
 				errs = append(errs, err)
 				continue
@@ -134,8 +136,8 @@ func (b *builder) Build() (yarpc.Config, error) {
 
 // buildTransport builds a Transport from the given value. This will panic if
 // the output type is not a Transport.
-func buildTransport(cv *buildable) (transport.Transport, error) {
-	result, err := cv.Build()
+func buildTransport(cv *buildable, k *Kit) (transport.Transport, error) {
+	result, err := cv.Build(k)
 	if err != nil {
 		return nil, err
 	}
@@ -144,8 +146,8 @@ func buildTransport(cv *buildable) (transport.Transport, error) {
 
 // buildInbound builds an Inbound from the given value. This will panic if the
 // output type for this is not transport.Inbound.
-func buildInbound(cv *buildable, t transport.Transport) (transport.Inbound, error) {
-	result, err := cv.Build(t)
+func buildInbound(cv *buildable, t transport.Transport, k *Kit) (transport.Inbound, error) {
+	result, err := cv.Build(t, k)
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +156,8 @@ func buildInbound(cv *buildable, t transport.Transport) (transport.Inbound, erro
 
 // buildUnaryOutbound builds an UnaryOutbound from the given value. This will panic
 // if the output type for this is not transport.UnaryOutbound.
-func buildUnaryOutbound(cv *buildable, t transport.Transport) (transport.UnaryOutbound, error) {
-	result, err := cv.Build(t)
+func buildUnaryOutbound(cv *buildable, t transport.Transport, k *Kit) (transport.UnaryOutbound, error) {
+	result, err := cv.Build(t, k)
 	if err != nil {
 		return nil, err
 	}
@@ -164,8 +166,8 @@ func buildUnaryOutbound(cv *buildable, t transport.Transport) (transport.UnaryOu
 
 // buildOnewayOutbound builds an OnewayOutbound from the given value. This will
 // panic if the output type for this is not transport.OnewayOutbound.
-func buildOnewayOutbound(cv *buildable, t transport.Transport) (transport.OnewayOutbound, error) {
-	result, err := cv.Build(t)
+func buildOnewayOutbound(cv *buildable, t transport.Transport, k *Kit) (transport.OnewayOutbound, error) {
+	result, err := cv.Build(t, k)
 	if err != nil {
 		return nil, err
 	}

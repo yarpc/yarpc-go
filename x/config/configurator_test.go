@@ -205,10 +205,10 @@ func TestConfigurator(t *testing.T) {
 				inbound := transporttest.NewMockInbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(struct{}{}).
+					BuildTransport(struct{}{}, anyKit).
 					Return(transport, nil)
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":80"}, transport).
+					BuildInbound(&inboundConfig{Address: ":80"}, transport, anyKit).
 					Return(inbound, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -261,16 +261,16 @@ func TestConfigurator(t *testing.T) {
 					InboundConfig:   reflect.TypeOf(&inboundConfig{}),
 				}.Build(mockCtrl)
 				transport := transporttest.NewMockTransport(mockCtrl)
-				http.EXPECT().BuildTransport(struct{}{}).Return(transport, nil)
+				http.EXPECT().BuildTransport(struct{}{}, anyKit).Return(transport, nil)
 
 				inbound := transporttest.NewMockInbound(mockCtrl)
 				inbound2 := transporttest.NewMockInbound(mockCtrl)
 
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":8080"}, transport).
+					BuildInbound(&inboundConfig{Address: ":8080"}, transport, anyKit).
 					Return(inbound, nil)
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":8081"}, transport).
+					BuildInbound(&inboundConfig{Address: ":8081"}, transport, anyKit).
 					Return(inbound2, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -307,10 +307,10 @@ func TestConfigurator(t *testing.T) {
 				inbound := transporttest.NewMockInbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(struct{}{}).
+					BuildTransport(struct{}{}, anyKit).
 					Return(transport, nil)
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":8081"}, transport).
+					BuildInbound(&inboundConfig{Address: ":8081"}, transport, anyKit).
 					Return(inbound, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -390,10 +390,10 @@ func TestConfigurator(t *testing.T) {
 				outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
 
 				tchan.EXPECT().
-					BuildTransport(struct{}{}).
+					BuildTransport(struct{}{}, anyKit).
 					Return(transport, nil)
 				tchan.EXPECT().
-					BuildUnaryOutbound(&outboundConfig{Address: "localhost:4040"}, transport).
+					BuildUnaryOutbound(&outboundConfig{Address: "localhost:4040"}, transport, anyKit).
 					Return(outbound, nil)
 
 				tt.specs = []TransportSpec{tchan.Spec()}
@@ -435,10 +435,10 @@ func TestConfigurator(t *testing.T) {
 				outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
 
 				redis.EXPECT().
-					BuildTransport(transportConfig{Address: "localhost:6379"}).
+					BuildTransport(transportConfig{Address: "localhost:6379"}, anyKit).
 					Return(transport, nil)
 				redis.EXPECT().
-					BuildOnewayOutbound(&outboundConfig{Queue: "requests"}, transport).
+					BuildOnewayOutbound(&outboundConfig{Queue: "requests"}, transport, anyKit).
 					Return(outbound, nil)
 
 				tt.specs = []TransportSpec{redis.Spec()}
@@ -482,15 +482,15 @@ func TestConfigurator(t *testing.T) {
 				oneway := transporttest.NewMockOnewayOutbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(&transportConfig{KeepAlive: time.Minute}).
+					BuildTransport(&transportConfig{KeepAlive: time.Minute}, anyKit).
 					Return(transport, nil)
 
 				outcfg := outboundConfig{URL: "http://localhost:8080/yarpc"}
 				http.EXPECT().
-					BuildUnaryOutbound(&outcfg, transport).
+					BuildUnaryOutbound(&outcfg, transport, anyKit).
 					Return(unary, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(&outcfg, transport).
+					BuildOnewayOutbound(&outcfg, transport, anyKit).
 					Return(oneway, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -584,24 +584,24 @@ func TestConfigurator(t *testing.T) {
 				httpUnary := transporttest.NewMockUnaryOutbound(mockCtrl)
 				httpOneway := transporttest.NewMockOnewayOutbound(mockCtrl)
 				http.EXPECT().
-					BuildTransport(httpTransportConfig{KeepAlive: 5 * time.Minute}).
+					BuildTransport(httpTransportConfig{KeepAlive: 5 * time.Minute}, anyKit).
 					Return(httpTransport, nil)
 
 				redisTransport := transporttest.NewMockTransport(mockCtrl)
 				redisOneway := transporttest.NewMockOnewayOutbound(mockCtrl)
 				redis.EXPECT().
-					BuildTransport(redisTransportConfig{Address: "127.0.0.1:6379"}).
+					BuildTransport(redisTransportConfig{Address: "127.0.0.1:6379"}, anyKit).
 					Return(redisTransport, nil)
 
 				http.EXPECT().
-					BuildUnaryOutbound(httpOutboundConfig{URL: "http://localhost:8080/yarpc/v1"}, httpTransport).
+					BuildUnaryOutbound(httpOutboundConfig{URL: "http://localhost:8080/yarpc/v1"}, httpTransport, anyKit).
 					Return(httpUnary, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(httpOutboundConfig{URL: "http://localhost:8081/yarpc/v2"}, httpTransport).
+					BuildOnewayOutbound(httpOutboundConfig{URL: "http://localhost:8081/yarpc/v2"}, httpTransport, anyKit).
 					Return(httpOneway, nil)
 
 				redis.EXPECT().
-					BuildOnewayOutbound(redisOutboundConfig{Queue: "requests"}, redisTransport).
+					BuildOnewayOutbound(redisOutboundConfig{Queue: "requests"}, redisTransport, anyKit).
 					Return(redisOneway, nil)
 
 				tt.specs = []TransportSpec{http.Spec(), redis.Spec()}
@@ -761,21 +761,21 @@ func TestConfigurator(t *testing.T) {
 				onewayStaging := transporttest.NewMockOnewayOutbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(struct{}{}).
+					BuildTransport(struct{}{}, anyKit).
 					Return(transport, nil)
 
 				http.EXPECT().
-					BuildUnaryOutbound(outboundConfig{URL: "http://localhost:8080/bar"}, transport).
+					BuildUnaryOutbound(outboundConfig{URL: "http://localhost:8080/bar"}, transport, anyKit).
 					Return(unary, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(outboundConfig{URL: "http://localhost:8080/bar"}, transport).
+					BuildOnewayOutbound(outboundConfig{URL: "http://localhost:8080/bar"}, transport, anyKit).
 					Return(oneway, nil)
 
 				http.EXPECT().
-					BuildUnaryOutbound(outboundConfig{URL: "http://localhost:8081/bar"}, transport).
+					BuildUnaryOutbound(outboundConfig{URL: "http://localhost:8081/bar"}, transport, anyKit).
 					Return(unaryStaging, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(outboundConfig{URL: "http://localhost:8081/bar"}, transport).
+					BuildOnewayOutbound(outboundConfig{URL: "http://localhost:8081/bar"}, transport, anyKit).
 					Return(onewayStaging, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
