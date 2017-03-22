@@ -21,3 +21,5 @@ protoc_with_imports yarpc-go internal/examples/protobuf/examplepb/example.proto
 update-license encoding/x/protobuf/internal/internal.pb.go
 update-license internal/examples/protobuf/examplepb/example.pb.go
 update-license internal/examples/protobuf/examplepb/example.pb.yarpc.go
+
+touch encoding/x/protobuf/internal/.nocover

@@ -142,7 +142,7 @@ install:
 
 .PHONY: prototest
 prototest:
-	go test -race ./encoding/x/protobuf/...
+	go test -race -cover -coverpkg ./encoding/x/protobuf ./encoding/x/protobuf/...
 
 .PHONY: test
 test: verify_version $(THRIFTRW)
