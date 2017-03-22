@@ -71,7 +71,9 @@ import (
 {{range $service := .Services }}
 // {{$service.GetName}}Client is the client-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Client interface {
-	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
+	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
+	{{end}}
+	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (yarpc.Ack, error)
 	{{end}}
 }
 
@@ -82,7 +84,9 @@ func New{{$service.GetName}}Client(clientConfig transport.ClientConfig) {{$servi
 
 // {{$service.GetName}}Server is the server-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}Server interface {
-	{{range $method := $service.UnaryMethods}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) (*{{$method.ResponseType.GoType $packagePath}}, error)
+	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) (*{{$method.ResponseType.GoType $packagePath}}, error)
+	{{end}}
+	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) error
 	{{end}}
 }
 
@@ -92,19 +96,21 @@ func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server) []tr
 	return protobuf.BuildProcedures(
 		"{{$service.GetName}}",
 		map[string]transport.UnaryHandler{
-		{{range $method := $service.UnaryMethods}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
+		{{range $method := unaryMethods $service}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
+		{{end}}
+		},
+		map[string]transport.OnewayHandler{
+		{{range $method := onewayMethods $service}}"{{$method.GetName}}": protobuf.NewOnewayHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
 		{{end}}
 		},
 	)
 }
 
-// ***** all code below is private *****
-
 type _{{$service.GetName}}Caller struct {
 	client protobuf.Client
 }
 
-{{range $method := $service.UnaryMethods}}
+{{range $method := unaryMethods $service}}
 func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error) {
 	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response, options...)
 	if responseMessage == nil {
@@ -117,12 +123,17 @@ func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, r
 	return response, err
 }
 {{end}}
+{{range $method := onewayMethods $service}}
+func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (yarpc.Ack, error) {
+	return c.client.CallOneway(ctx, "{{$method.GetName}}", request, options...)
+}
+{{end}}
 
 type _{{$service.GetName}}Handler struct {
 	server {{$service.GetName}}Server
 }
 
-{{range $method := $service.UnaryMethods}}
+{{range $method := unaryMethods $service}}
 func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
 	var request *{{$method.RequestType.GoType $packagePath}}
 	var ok bool
@@ -139,8 +150,21 @@ func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, 
 	return response, err
 }
 {{end}}
+{{range $method := onewayMethods $service}}
+func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, requestMessage proto.Message) error {
+	var request *{{$method.RequestType.GoType $packagePath}}
+	var ok bool
+	if requestMessage != nil {
+		request, ok = requestMessage.(*{{$method.RequestType.GoType $packagePath}})
+		if !ok {
+			return protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}Request, requestMessage)
+		}
+	}
+	return h.server.{{$method.GetName}}(ctx, request)
+}
+{{end}}
 
-{{range $method := $service.UnaryMethods}}
+{{range $method := $service.Methods}}
 func new{{$service.GetName}}_{{$method.GetName}}Request() proto.Message {
 	return &{{$method.RequestType.GoType $packagePath}}{}
 }
@@ -150,16 +174,18 @@ func new{{$service.GetName}}_{{$method.GetName}}Response() proto.Message {
 }
 {{end}}
 var (
-{{range $method := $service.UnaryMethods}}
+{{range $method := $service.Methods}}
 	empty{{$service.GetName}}_{{$method.GetName}}Request = &{{$method.RequestType.GoType $packagePath}}{}
 	empty{{$service.GetName}}_{{$method.GetName}}Response = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
 )
 {{end}}
 `
 
+var funcMap = template.FuncMap{"unaryMethods": unaryMethods, "onewayMethods": onewayMethods}
+
 func main() {
 	if err := protoplugin.Run(
-		template.Must(template.New("tmpl").Parse(tmpl)),
+		template.Must(template.New("tmpl").Funcs(funcMap).Parse(tmpl)),
 		checkTemplateInfo,
 		[]string{
 			"context",
@@ -183,4 +209,24 @@ func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
 		}
 	}
 	return nil
+}
+
+func unaryMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if !method.GetClientStreaming() && !method.GetServerStreaming() && method.ResponseType.FQMN() != ".uber.yarpc.Oneway" {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
+}
+
+func onewayMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if !method.GetClientStreaming() && !method.GetServerStreaming() && method.ResponseType.FQMN() == ".uber.yarpc.Oneway" {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
 }

@@ -60,10 +60,9 @@ func BuildKeyValueProcedures(server KeyValueServer) []transport.Procedure {
 			"GetValue": protobuf.NewUnaryHandler(handler.GetValue, newKeyValue_GetValueRequest),
 			"SetValue": protobuf.NewUnaryHandler(handler.SetValue, newKeyValue_SetValueRequest),
 		},
+		map[string]transport.OnewayHandler{},
 	)
 }
-
-// ***** all code below is private *****
 
 type _KeyValueCaller struct {
 	client protobuf.Client
@@ -154,7 +153,7 @@ var (
 
 // SinkClient is the client-side interface for the Sink service.
 type SinkClient interface {
-	Fire(context.Context, *FireRequest, ...yarpc.CallOption) (*yarpcproto.Oneway, error)
+	Fire(context.Context, *FireRequest, ...yarpc.CallOption) (yarpc.Ack, error)
 }
 
 // NewSinkClient builds a new client for the Sink service.
@@ -164,7 +163,7 @@ func NewSinkClient(clientConfig transport.ClientConfig) SinkClient {
 
 // SinkServer is the server-side interface for the Sink service.
 type SinkServer interface {
-	Fire(context.Context, *FireRequest) (*yarpcproto.Oneway, error)
+	Fire(context.Context, *FireRequest) error
 }
 
 // BuildSinkProcedures prepares an implementation of the Sink service for registration.
@@ -172,48 +171,35 @@ func BuildSinkProcedures(server SinkServer) []transport.Procedure {
 	handler := &_SinkHandler{server}
 	return protobuf.BuildProcedures(
 		"Sink",
-		map[string]transport.UnaryHandler{
-			"Fire": protobuf.NewUnaryHandler(handler.Fire, newSink_FireRequest),
+		map[string]transport.UnaryHandler{},
+		map[string]transport.OnewayHandler{
+			"Fire": protobuf.NewOnewayHandler(handler.Fire, newSink_FireRequest),
 		},
 	)
 }
-
-// ***** all code below is private *****
 
 type _SinkCaller struct {
 	client protobuf.Client
 }
 
-func (c *_SinkCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (*yarpcproto.Oneway, error) {
-	responseMessage, err := c.client.Call(ctx, "Fire", request, newSink_FireResponse, options...)
-	if responseMessage == nil {
-		return nil, err
-	}
-	response, ok := responseMessage.(*yarpcproto.Oneway)
-	if !ok {
-		return nil, protobuf.CastError(emptySink_FireResponse, responseMessage)
-	}
-	return response, err
+func (c *_SinkCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (yarpc.Ack, error) {
+	return c.client.CallOneway(ctx, "Fire", request, options...)
 }
 
 type _SinkHandler struct {
 	server SinkServer
 }
 
-func (h *_SinkHandler) Fire(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+func (h *_SinkHandler) Fire(ctx context.Context, requestMessage proto.Message) error {
 	var request *FireRequest
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*FireRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptySink_FireRequest, requestMessage)
+			return protobuf.CastError(emptySink_FireRequest, requestMessage)
 		}
 	}
-	response, err := h.server.Fire(ctx, request)
-	if response == nil {
-		return nil, err
-	}
-	return response, err
+	return h.server.Fire(ctx, request)
 }
 
 func newSink_FireRequest() proto.Message {

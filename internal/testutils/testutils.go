@@ -182,10 +182,12 @@ func NewDispatcherConfig(serviceName string) (*DispatcherConfig, error) {
 	}, nil
 }
 
+// GetServiceName gets the service name.
 func (d *DispatcherConfig) GetServiceName() string {
 	return d.serviceName
 }
 
+// GetPort gets the port for the TransportType.
 func (d *DispatcherConfig) GetPort(transportType TransportType) (uint16, error) {
 	port, ok := d.transportTypeToPort[transportType]
 	if !ok {

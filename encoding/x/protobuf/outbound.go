@@ -107,3 +107,12 @@ func (c *client) Call(
 	}
 	return response, nil
 }
+
+func (c *client) CallOneway(
+	ctx context.Context,
+	requestMethodName string,
+	request proto.Message,
+	options ...yarpc.CallOption,
+) (transport.Ack, error) {
+	return nil, nil
+}

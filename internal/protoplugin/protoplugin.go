@@ -159,39 +159,12 @@ type Service struct {
 	Methods []*Method
 }
 
-// UnaryMethods returns the Methods that are not streaming.
-func (s *Service) UnaryMethods() []*Method {
-	methods := make([]*Method, 0, len(s.Methods))
-	for _, method := range s.Methods {
-		if !method.IsStreaming() {
-			methods = append(methods, method)
-		}
-	}
-	return methods
-}
-
-// StreamingMethods returns the Methods that are streaming.
-func (s *Service) StreamingMethods() []*Method {
-	methods := make([]*Method, 0, len(s.Methods))
-	for _, method := range s.Methods {
-		if method.IsStreaming() {
-			methods = append(methods, method)
-		}
-	}
-	return methods
-}
-
 // Method wraps descriptor.MethodDescriptorProto for richer features.
 type Method struct {
 	*descriptor.MethodDescriptorProto
 	Service      *Service
 	RequestType  *Message
 	ResponseType *Message
-}
-
-// IsStreaming returns true if this Method is client or server streaming.
-func (m *Method) IsStreaming() bool {
-	return m.GetClientStreaming() || m.GetServerStreaming()
 }
 
 // Field wraps descriptor.FieldDescriptorProto for richer features.

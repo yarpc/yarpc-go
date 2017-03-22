@@ -50,7 +50,11 @@ func GetApplicationError(err error) error {
 // ***all below functions should only be called by generated code***
 
 // BuildProcedures builds the transport.Procedures.
-func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]transport.UnaryHandler) []transport.Procedure {
+func BuildProcedures(
+	serviceName string,
+	methodNameToUnaryHandler map[string]transport.UnaryHandler,
+	methodNameToOnewayHandler map[string]transport.OnewayHandler,
+) []transport.Procedure {
 	procedures := make([]transport.Procedure, 0, len(methodNameToUnaryHandler))
 	for methodName, unaryHandler := range methodNameToUnaryHandler {
 		procedures = append(
@@ -58,6 +62,16 @@ func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]tra
 			transport.Procedure{
 				Name:        procedure.ToName(serviceName, methodName),
 				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
+				Encoding:    Encoding,
+			},
+		)
+	}
+	for methodName, onewayHandler := range methodNameToOnewayHandler {
+		procedures = append(
+			procedures,
+			transport.Procedure{
+				Name:        procedure.ToName(serviceName, methodName),
+				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandler),
 				Encoding:    Encoding,
 			},
 		)
@@ -74,6 +88,12 @@ type Client interface {
 		newResponse func() proto.Message,
 		options ...yarpc.CallOption,
 	) (proto.Message, error)
+	CallOneway(
+		ctx context.Context,
+		requestMethodName string,
+		request proto.Message,
+		options ...yarpc.CallOption,
+	) (transport.Ack, error)
 }
 
 // NewClient creates a new client.
@@ -87,6 +107,14 @@ func NewUnaryHandler(
 	newRequest func() proto.Message,
 ) transport.UnaryHandler {
 	return newUnaryHandler(handle, newRequest)
+}
+
+// NewOnewayHandler returns a new OnewayHandler.
+func NewOnewayHandler(
+	handleOneway func(context.Context, proto.Message) error,
+	newRequest func() proto.Message,
+) transport.OnewayHandler {
+	return newOnewayHandler(handleOneway, newRequest)
 }
 
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.

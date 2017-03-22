@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/clientconfig"
+	"go.uber.org/yarpc/internal/procedure"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -209,7 +210,7 @@ func (a successAck) String() string {
 }
 
 func TestClientOneway(t *testing.T) {
-	caller, service, procedure := "caller", "MyService", "someMethod"
+	caller, service, procedureName := "caller", "MyService", "someMethod"
 
 	tests := []struct {
 		desc            string
@@ -228,7 +229,7 @@ func TestClientOneway(t *testing.T) {
 
 			expectCall: true,
 			wantRequestEnvelope: &wire.Envelope{
-				Name:  procedure,
+				Name:  procedureName,
 				SeqID: 1,
 				Type:  wire.Call,
 				Value: wire.NewValueStruct(wire.Struct{}),
@@ -282,7 +283,7 @@ func TestClientOneway(t *testing.T) {
 			Caller:    caller,
 			Service:   service,
 			Encoding:  Encoding,
-			Procedure: procedure.ToName(service, procedure),
+			Procedure: procedure.ToName(service, procedureName),
 			Body:      bytes.NewReader(bodyBytes),
 		})
 

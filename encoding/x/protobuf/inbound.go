@@ -98,3 +98,19 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	_, err = responseWriter.Write(protoBuffer.Bytes())
 	return err
 }
+
+type onewayHandler struct {
+	handleOneway func(context.Context, proto.Message) error
+	newRequest   func() proto.Message
+}
+
+func newOnewayHandler(
+	handleOneway func(context.Context, proto.Message) error,
+	newRequest func() proto.Message,
+) *onewayHandler {
+	return &onewayHandler{handleOneway, newRequest}
+}
+
+func (u *onewayHandler) HandleOneway(ctx context.Context, transportRequest *transport.Request) error {
+	return nil
+}
