@@ -4,6 +4,9 @@ Releases
 v1.8.0 (unreleased)
 -----------------------
 
+-   No changes yet.
+
+
 v1.7.0 (2017-03-20)
 -----------------------
 
@@ -12,6 +15,15 @@ v1.7.0 (2017-03-20)
     arbitrary `map[string]interface{}` objects. Check the package documentation
     for more information.
 -	tchannel: mask existing procedures with provided procedures.
+-   Adds a peer.Bind function that takes a peer.ChooserList and a binder
+    (anything that binds a peer list to a peer provider and returns the
+    Lifecycle of the binding), and returns a peer.Chooser that combines
+    the lifecycle of the peer list and its bound peer provider.
+    The peer chooser is suitable for passing to an outbound constructor,
+    capturing the lifecycle of its dependencies.
+-   Adds a peer.ChooserList interface to the API, for convenience when passing
+    instances with both capabilities (suitable for outbounds, suitable for peer
+    providers).
 
 
 v1.6.0 (2017-03-08)
@@ -26,9 +38,6 @@ v1.6.0 (2017-03-08)
     even if Start hadn't been called yet.
 -   Updated RoundRobin and PeerHeap implementations to block until the list has
     started or a timeout had been exceeded.
--   Adds a peer.ChooserList interface to the API, for convenience when passing
-    instances with both capabilities (suitable for outbounds, suitable for peer
-    providers).
 
 
 v1.5.0 (2017-03-03)
