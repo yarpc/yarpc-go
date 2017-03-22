@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
@@ -56,6 +57,7 @@ func TestIntegrationKeyValueClient(t *testing.T) {
 func testIntegrationKeyValueClient(t *testing.T, keyValueClient examplepb.KeyValueClient) {
 	_, err := getValue(keyValueClient, "foo")
 	assert.Error(t, err)
+	assert.NotNil(t, protobuf.GetApplicationError(err))
 	assert.NoError(t, setValue(keyValueClient, "foo", "bar"))
 	value, err := getValue(keyValueClient, "foo")
 	assert.NoError(t, err)
@@ -63,6 +65,7 @@ func testIntegrationKeyValueClient(t *testing.T, keyValueClient examplepb.KeyVal
 	assert.NoError(t, setValue(keyValueClient, "foo", ""))
 	_, err = getValue(keyValueClient, "foo")
 	assert.Error(t, err)
+	assert.NotNil(t, protobuf.GetApplicationError(err))
 	assert.NoError(t, setValue(keyValueClient, "foo", "baz"))
 	assert.NoError(t, setValue(keyValueClient, "baz", "bat"))
 	value, err = getValue(keyValueClient, "foo")
