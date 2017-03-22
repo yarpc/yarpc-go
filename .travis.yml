@@ -48,9 +48,9 @@ matrix:
     - go: 1.8
       env: type=test
       addons: {apt: {packages: [python-virtualenv]}}
-    - go: tip
-      env: TYPE=test
-      addons: {apt: {packages: [python-virtualenv]}}
+    #- go: tip
+      #env: TYPE=test
+      #addons: {apt: {packages: [python-virtualenv]}}
 
 before_install:
 - go version
