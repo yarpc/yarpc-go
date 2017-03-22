@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"strings"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	errs "go.uber.org/yarpc/internal/errors"
 )
@@ -178,12 +179,83 @@ type TransportSpec struct {
 	// the first thing inside their BuildInbound.
 }
 
+// ChooserSpec specifies the configuration parameters for an outbound peer
+// chooser (load balancer or sharding). These specifications are registered
+// against a Configurator to teach it how to parse the configuration for that
+// peer chooser and build instances of it.
+//
+// For example, if we register a "dns-srv" peer list binder and a "random" peer
+// chooser, we can use "with: dns-srv" and "choose: random" to select a random
+// task (by host and port) from DNS A and SRV records for each outbound
+// request.
+//
+//  myoutbound:
+//   peers:
+//    with: dns-srv
+//    choose: random
+//    service: fortune.yarpc.io
+type ChooserSpec struct {
+	Name string
+
+	// A function in the shape,
+	//
+	//  func(C, *config.Kit) (peer.List, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters accepted by this peer chooser.
+	//
+	// BuildChooser is required.
+	BuildChooser interface{}
+}
+
+// BinderSpec specifies the configuration parameters for an outbound peer
+// binding (like DNS). These specifications are registered against a
+// Configurator to teach it how to parse the configuration for that peer binder
+// and build instances of it.
+//
+// Every BinderSpec MUST have a BuildBinder function.
+//
+// For example, if we register a "dns-srv" peer list binder and a "random" peer
+// chooser, we can use "with: dns-srv" and "choose: random" to select a random
+// task (by host and port) from DNS A and SRV records for each outbound
+// request.
+//
+//  myoutbound:
+//   peers:
+//    with: dns-srv
+//    choose: random
+//    service: fortune.yarpc.io
+type BinderSpec struct {
+	// Name of the peer selection strategy
+	Name string
+
+	// A function in the shape,
+	//
+	//  func(C, *config.Kit) (peer.Binder, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters accepted by this peer chooser.
+	//
+	// This function will be called with the parsed configuration to build a
+	// peer chooser for an outbound that uses a peer chooser.
+	//
+	// For example, the HTTP and TChannel outbound configurations embed a peer
+	// chooser configuration. Peer choosers support a single peer or arrays of
+	// peers.  Using the "with" property, an outbound can use an alternate peer
+	// chooser registered by name on a YARPC Configurator using a ChooserSpec.
+	//
+	// BuildBinder is required.
+	BuildBinder interface{}
+}
+
 var (
 	_typeOfError          = reflect.TypeOf((*error)(nil)).Elem()
 	_typeOfTransport      = reflect.TypeOf((*transport.Transport)(nil)).Elem()
 	_typeOfInbound        = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
 	_typeOfUnaryOutbound  = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
 	_typeOfOnewayOutbound = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
+	_typeOfChooser        = reflect.TypeOf((*peer.ChooserList)(nil)).Elem()
+	_typeOfBinder         = reflect.TypeOf((*peer.Binder)(nil)).Elem()
 )
 
 // Compiled internal representation of a user-specified TransportSpec.
@@ -346,6 +418,115 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	}
 
 	return nil
+}
+
+// Compiled internal representation of a user-specified ChooserSpec.
+type compiledChooserSpec struct {
+	Name    string
+	Chooser *configSpec
+}
+
+func compileChooserSpec(spec *ChooserSpec) (*compiledChooserSpec, error) {
+	out := compiledChooserSpec{Name: spec.Name}
+
+	if spec.Name == "" {
+		return nil, errors.New("Name is required")
+	}
+
+	if spec.BuildChooser == nil {
+		return nil, errors.New("BuildChooser is required")
+	}
+
+	buildChooser, err := compileChooserConfig(spec.BuildChooser)
+	if err != nil {
+		return nil, err
+	}
+	out.Chooser = buildChooser
+
+	return &out, nil
+}
+
+func compileChooserConfig(build interface{}) (*configSpec, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case !isDecodable(t.In(0)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != _typeOfChooser:
+		err = fmt.Errorf("must return a peer.ChooserList as its first result, found %v", t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid BuildChooser %v: %v", t, err)
+	}
+
+	return &configSpec{inputType: t.In(0), factory: v}, nil
+}
+
+type compiledBinderSpec struct {
+	Name   string
+	Binder *configSpec
+}
+
+func compileBinderSpec(spec *BinderSpec) (*compiledBinderSpec, error) {
+	out := compiledBinderSpec{Name: spec.Name}
+
+	if spec.Name == "" {
+		return nil, errors.New("Name is required")
+	}
+
+	if spec.BuildBinder == nil {
+		return nil, errors.New("BuildBinder is required")
+	}
+
+	buildBinder, err := compileBinderConfig(spec.BuildBinder)
+	if err != nil {
+		return nil, err
+	}
+	out.Binder = buildBinder
+
+	return &out, nil
+}
+
+func compileBinderConfig(build interface{}) (*configSpec, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case !isDecodable(t.In(0)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != _typeOfBinder:
+		err = fmt.Errorf("must return a peer.Binder as its first result, found %v", t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid BuildBinder %v: %v", t, err)
+	}
+
+	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
 // Validated representation of a configuration function specified by the user.
