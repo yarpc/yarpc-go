@@ -12,6 +12,7 @@ test: $(CRAM)
 	@$(foreach transport, $(TRANSPORTS), \
 		echo "---- Running tests over $(transport) ----" && \
 		TRANSPORT=$(transport) $(CRAM) . &&) echo "---- Done ----"
+	@make -C protobuf test
 
 .PHONY: build
 build:
