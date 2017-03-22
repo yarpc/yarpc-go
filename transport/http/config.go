@@ -91,7 +91,7 @@ type TransportConfig struct {
 	KeepAlive time.Duration `config:"keepAlive"`
 }
 
-func (ts *transportSpec) buildTransport(tc *TransportConfig) (transport.Transport, error) {
+func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
 	opts := ts.TransportOptions
 	if tc.KeepAlive > 0 {
 		opts = append(opts, KeepAlive(tc.KeepAlive))
@@ -109,7 +109,7 @@ type InboundConfig struct {
 	Address string `config:"address"`
 }
 
-func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport) (transport.Inbound, error) {
+func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
 	if ic.Address == "" {
 		return nil, fmt.Errorf("inbound address is required")
 	}
@@ -138,14 +138,14 @@ type OutboundConfig struct {
 	URL string `config:"url"`
 }
 
-func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport) (*Outbound, error) {
+func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (*Outbound, error) {
 	return t.(*Transport).NewSingleOutbound(oc.URL, ts.OutboundOptions...), nil
 }
 
-func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport) (transport.UnaryOutbound, error) {
-	return ts.buildOutbound(oc, t)
+func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
+	return ts.buildOutbound(oc, t, k)
 }
 
-func (ts *transportSpec) buildOnewayOutbound(oc *OutboundConfig, t transport.Transport) (transport.OnewayOutbound, error) {
-	return ts.buildOutbound(oc, t)
+func (ts *transportSpec) buildOnewayOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.OnewayOutbound, error) {
+	return ts.buildOutbound(oc, t, k)
 }
