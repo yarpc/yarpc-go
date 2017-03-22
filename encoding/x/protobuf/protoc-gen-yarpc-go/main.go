@@ -176,8 +176,10 @@ func main() {
 
 func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
 	for _, service := range templateInfo.Services {
-		if len(service.StreamingMethods()) > 0 {
-			return fmt.Errorf("service %s contains streaming methods", service.GetName())
+		for _, method := range service.Methods {
+			if method.GetClientStreaming() || method.GetServerStreaming() {
+				return fmt.Errorf("yarpc does not support streaming methods and %s:%s is a streaming method", service.GetName(), method.GetName())
+			}
 		}
 	}
 	return nil
