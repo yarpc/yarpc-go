@@ -282,7 +282,7 @@ func TestClientOneway(t *testing.T) {
 			Caller:    caller,
 			Service:   service,
 			Encoding:  Encoding,
-			Procedure: procedureName(service, procedure),
+			Procedure: procedure.ToName(service, procedure),
 			Body:      bytes.NewReader(bodyBytes),
 		})
 

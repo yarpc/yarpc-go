@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/encoding/x/protobuf/internal"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/procedure"
 )
 
 type client struct {
@@ -54,7 +55,7 @@ func (c *client) Call(
 		Caller:    c.clientConfig.Caller(),
 		Service:   c.clientConfig.Service(),
 		Encoding:  Encoding,
-		Procedure: toProcedureName(c.serviceName, requestMethodName),
+		Procedure: procedure.ToName(c.serviceName, requestMethodName),
 	}
 	if request != nil {
 		protoBuffer := getBuffer()

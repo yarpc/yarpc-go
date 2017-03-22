@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/procedure"
 
 	"github.com/gogo/protobuf/proto"
 )
@@ -55,7 +56,7 @@ func BuildProcedures(serviceName string, methodNameToUnaryHandler map[string]tra
 		procedures = append(
 			procedures,
 			transport.Procedure{
-				Name:        toProcedureName(serviceName, methodName),
+				Name:        procedure.ToName(serviceName, methodName),
 				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
 				Encoding:    Encoding,
 			},

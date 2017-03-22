@@ -18,38 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package protobuf
+package procedure
 
 import (
 	"fmt"
 	"strings"
-	"sync"
-
-	"github.com/gogo/protobuf/proto"
 )
 
-var _pool = sync.Pool{
-	New: func() interface{} {
-		return proto.NewBuffer(make([]byte, 1024))
-	},
+// ToName gets the procedure name we should use for a method
+// with the given service name and method name.
+func ToName(serviceName string, methodName string) string {
+	return fmt.Sprintf("%s::%s", serviceName, methodName)
 }
 
-func getBuffer() *proto.Buffer {
-	buf := _pool.Get().(*proto.Buffer)
-	buf.Reset()
-	return buf
-}
-
-func putBuffer(buf *proto.Buffer) {
-	_pool.Put(buf)
-}
-
-func toProcedureName(service string, method string) string {
-	return fmt.Sprintf("%s::%s", service, method)
-}
-
-func fromProcedureName(procedureName string) (service, method string) {
-	parts := strings.SplitN(procedureName, "::", 2)
+// FromName gets the service name and method name from a procdure name.
+func FromName(name string) (serviceName string, methodName string) {
+	parts := strings.SplitN(name, "::", 2)
 	if len(parts) == 1 {
 		return parts[0], ""
 	}

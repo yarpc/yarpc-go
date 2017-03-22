@@ -18,25 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package protobuf
 
 import (
-	"fmt"
-	"strings"
+	"sync"
+
+	"github.com/gogo/protobuf/proto"
 )
 
-// procedureName gets the procedure name we should use for a Thrift method with
-// the given service and name.
-func procedureName(service, method string) string {
-	return fmt.Sprintf("%s::%s", service, method)
+var _bufferPool = sync.Pool{
+	New: func() interface{} {
+		return proto.NewBuffer(make([]byte, 1024))
+	},
 }
 
-// splitProcedure splits the given procedure name into the Thrift service name
-// and method.
-func splitProcedure(proc string) (service, method string) {
-	parts := strings.SplitN(proc, "::", 2)
-	if len(parts) == 1 {
-		return parts[0], ""
-	}
-	return parts[0], parts[1]
+func getBuffer() *proto.Buffer {
+	buf := _bufferPool.Get().(*proto.Buffer)
+	buf.Reset()
+	return buf
+}
+
+func putBuffer(buf *proto.Buffer) {
+	_bufferPool.Put(buf)
 }

@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/procedure"
 
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
@@ -109,7 +110,7 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 		}
 
 		rs = append(rs, transport.Procedure{
-			Name:        procedureName(s.Name, method.Name),
+			Name:        procedure.ToName(s.Name, method.Name),
 			HandlerSpec: spec,
 			Encoding:    Encoding,
 			Signature:   method.Signature,
