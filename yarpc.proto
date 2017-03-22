@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package uber.yarpc;
+
+// Oneway is the return type to use for an rpc method if
+// the method should be generated as oneway.
+message Oneway {
+  bool ack = 1;
+}
