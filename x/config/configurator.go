@@ -40,13 +40,19 @@ import (
 // RegisterTransport function.
 type Configurator struct {
 	knownTransports map[string]*compiledTransportSpec
+	knownChoosers   map[string]*compiledChooserSpec
+	knownBinders    map[string]*compiledBinderSpec
 }
 
 // New sets up a new empty Configurator. The returned Configurator does not
 // know about any transports. Individual TransportSpecs must be registered
 // against it using the RegisterTransport function.
 func New() *Configurator {
-	return &Configurator{knownTransports: make(map[string]*compiledTransportSpec)}
+	return &Configurator{
+		knownTransports: make(map[string]*compiledTransportSpec),
+		knownChoosers:   make(map[string]*compiledChooserSpec),
+		knownBinders:    make(map[string]*compiledBinderSpec),
+	}
 }
 
 // RegisterTransport registers a TransportSpec with the given Configurator. An
@@ -76,6 +82,65 @@ func (c *Configurator) RegisterTransport(t TransportSpec) error {
 // Configurator. This function panics if the TransportSpec was invalid.
 func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 	if err := c.RegisterTransport(t); err != nil {
+		panic(err)
+	}
+}
+
+// RegisterChooser registers a ChooserSpec with the given Configurator. Returns
+// an error if the ChooserSpec is invalid.
+//
+// If a chooser with the same name already exists, it will be replaced.
+//
+// Use MustRegisterChooser to panic in the case of registration failure.
+func (c *Configurator) RegisterChooser(s ChooserSpec) error {
+	if s.Name == "" {
+		return errors.New("name is required")
+	}
+
+	spec, err := compileChooserSpec(&s)
+	if err != nil {
+		return fmt.Errorf("invalid ChooserSpec for %q: %v", s.Name, err)
+	}
+
+	c.knownChoosers[s.Name] = spec
+	return nil
+}
+
+// MustRegisterChooser registers the given ChooserSpec with the Configurator.
+// This function panics if the ChooserSpec is invalid.
+func (c *Configurator) MustRegisterChooser(s ChooserSpec) {
+	if err := c.RegisterChooser(s); err != nil {
+		panic(err)
+	}
+}
+
+// RegisterBinder registers a BinderSpec with the given Configurator. Returns
+// an error if the BinderSpec is invalid.
+//
+// A binder enables custom peer list bindings, like DNS with SRV + A records or
+// a task list file watcher.
+//
+// If a binder with the same name already exists, it will be replaced.
+//
+// Use MustRegisterBinder to panic if the registration fails.
+func (c *Configurator) RegisterBinder(s BinderSpec) error {
+	if s.Name == "" {
+		return errors.New("name is required")
+	}
+
+	spec, err := compileBinderSpec(&s)
+	if err != nil {
+		return fmt.Errorf("invalid BinderSpec for %q: %v", s.Name, err)
+	}
+
+	c.knownBinders[s.Name] = spec
+	return nil
+}
+
+// MustRegisterBinder registers the given BinderSpec with the Configurator.
+// This function panics if the BinderSpec is invalid.
+func (c *Configurator) MustRegisterBinder(s BinderSpec) {
+	if err := c.RegisterBinder(s); err != nil {
 		panic(err)
 	}
 }
