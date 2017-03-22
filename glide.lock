@@ -1,5 +1,5 @@
 hash: 1ffd122bc9f21d143214077e190653c21d50d694b6dd5cbc47e3448c62127a9b
-updated: 2017-03-17T17:15:14.908793306-07:00
+updated: 2017-03-22T10:46:45.68535633-07:00
 imports:
 - name: github.com/apache/thrift
   version: 6582757752e62efea3f9786dddf0260efaa1f450
@@ -14,7 +14,7 @@ imports:
   subpackages:
   - statsd
 - name: github.com/codahale/hdrhistogram
-  version: f8ad88b59a584afeee9d334eff879b104439117b
+  version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/crossdock/crossdock-go
   version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
   subpackages:
@@ -31,17 +31,17 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 69b215d01a5606c843240eab4937eab3acee6530
+  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
   subpackages:
   - proto
 - name: github.com/gorilla/websocket
-  version: c36f2fe5c330f0ac404b616b96c438b8616b1aaf
+  version: a91eba7f97777409bc2c443f5534d41dd20c5720
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/mitchellh/mapstructure
-  version: db1efb556f84b25a0a13a04aad883943538ad2e0
+  version: 53818660ed4955e899c0bcafa97299a388bd7c8e
 - name: github.com/opentracing/opentracing-go
   version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
@@ -64,7 +64,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: dd2f054febf4a6c00f2343686efb775948a8bff4
+  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -74,7 +74,7 @@ imports:
   subpackages:
   - xfs
 - name: github.com/Sirupsen/logrus
-  version: 08a8a7c27e3d058a8989316a850daad1c10bf4ab
+  version: 10f801ebc38b33738c9d17d50860f484a0988ff5
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -84,9 +84,9 @@ imports:
   - mock
   - require
 - name: github.com/uber-common/bark
-  version: d52ffa061726911f47fcd3d9e8b9b55f22794772
+  version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
 - name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: github.com/uber-go/tally
   version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
   subpackages:
@@ -95,7 +95,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: 5b008bbffe389a329274ff5ceaaa68e0b17348f9
+  version: 1ef6560c59eeb170f2381c02287ca44a5c50a523
   subpackages:
   - client/cherami
   - common
@@ -104,11 +104,11 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: 0f0585c53937209f08a57c6ae51d8a7fd281e100
+  version: 09ed2ceaeab9e52820a81caece0dee9914c31f5d
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
-  version: 81280be4110ac49c4c2094eeffd409a0043d51c0
+  version: cbd3b6fe50f6d077951da8aabb06374f0ccf3181
   subpackages:
   - internal/spanlog
   - log
@@ -118,11 +118,11 @@ imports:
   - transport
   - utils
 - name: github.com/uber/jaeger-lib
-  version: b9556711760c45a30bd79c31c8f041d0d9aba997
+  version: ffca3143c929e9b97325e6bebcc380e8c6e5fa0d
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
-  version: 2feb388c9d0c0303f98481d1621308d634093ffb
+  version: 0b7f160817553b0bacb5b108dd84a5022dbdd1c4
   subpackages:
   - hyperbahn
   - hyperbahn/gen-go/hyperbahn
@@ -159,7 +159,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/tools
-  version: fb05033aaa266ee0674167682d3da91bef95d02a
+  version: 5908733c544153a245dddd039959386356fbc082
   subpackages:
   - update-license
 - name: golang.org/x/net
@@ -168,17 +168,15 @@ imports:
   - context
   - context/ctxhttp
 - name: golang.org/x/sys
-  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
+  version: 99f16d856c9836c42d24e7ab64ea72916925fa97
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 2946dd1f77e693e136d9ed202ba093bb4a3ea761
+  version: 322b9d710a4429c1ea838c836bdb923ece84de2a
   subpackages:
   - go/ast/astutil
-- name: gopkg.in/bsm/ratelimit.v1
-  version: db14e161995a5177acef654cb0dd785e8ee8bc22
 - name: gopkg.in/redis.v5
-  version: b6bfe529a846fbb9a58c832ce71c61b6fde12c15
+  version: a16aeec10ff407b1e7be6dd35797ccf5426ef0f0
   subpackages:
   - internal
   - internal/consistenthash
@@ -186,5 +184,5 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 testImports: []
