@@ -58,14 +58,14 @@ func TransportSpec() config.TransportSpec {
 	}
 }
 
-func buildTransport(tc *TransportConfig) (transport.Transport, error) {
+func buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
 	if tc.Address == "" {
 		return nil, errors.New("address is required")
 	}
 	return NewRedis5Client(tc.Address), nil
 }
 
-func buildOnewayOutbound(oc *OutboundConfig, t transport.Transport) (transport.OnewayOutbound, error) {
+func buildOnewayOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.OnewayOutbound, error) {
 	if oc.QueueKey == "" {
 		return nil, errors.New("queue key is required")
 	}
@@ -73,7 +73,7 @@ func buildOnewayOutbound(oc *OutboundConfig, t transport.Transport) (transport.O
 	return NewOnewayOutbound(t.(Client), oc.QueueKey), nil
 }
 
-func buildInbound(ic *InboundConfig, t transport.Transport) (transport.Inbound, error) {
+func buildInbound(ic *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
 	if ic.QueueKey == "" {
 		return nil, errors.New("queue key is required")
 	}
