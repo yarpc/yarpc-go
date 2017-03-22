@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/x/protobuf/internal"
+	"go.uber.org/yarpc/encoding/x/protobuf/internal/wirepb"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/procedure"
@@ -91,19 +91,19 @@ func (c *client) Call(
 	if responseData == nil {
 		return nil, nil
 	}
-	internalResponse := &internal.Response{}
-	if err := proto.Unmarshal(responseData, internalResponse); err != nil {
+	wireResponse := &wirepb.Response{}
+	if err := proto.Unmarshal(responseData, wireResponse); err != nil {
 		return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
 	}
 	var response proto.Message
-	if internalResponse.Payload != nil {
+	if wireResponse.Payload != nil {
 		response = newResponse()
-		if err := proto.Unmarshal(internalResponse.Payload, response); err != nil {
+		if err := proto.Unmarshal(wireResponse.Payload, response); err != nil {
 			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
 		}
 	}
-	if internalResponse.Error != nil {
-		return response, newApplicationError(internalResponse.Error.Message)
+	if wireResponse.Error != nil {
+		return response, newApplicationError(wireResponse.Error.Message)
 	}
 	return response, nil
 }

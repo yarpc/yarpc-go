@@ -27,7 +27,7 @@ import (
 
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/x/protobuf/internal"
+	"go.uber.org/yarpc/encoding/x/protobuf/internal/wirepb"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 )
@@ -79,20 +79,20 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		}
 		responseData = protoBuffer.Bytes()
 	}
-	var internalError *internal.Error
+	var wireError *wirepb.Error
 	if appErr != nil {
 		responseWriter.SetApplicationError()
-		internalError = &internal.Error{
+		wireError = &wirepb.Error{
 			appErr.Error(),
 		}
 	}
-	internalResponse := &internal.Response{
+	wireResponse := &wirepb.Response{
 		responseData,
-		internalError,
+		wireError,
 	}
 	protoBuffer := getBuffer()
 	defer putBuffer(protoBuffer)
-	if err := protoBuffer.Marshal(internalResponse); err != nil {
+	if err := protoBuffer.Marshal(wireResponse); err != nil {
 		return encoding.ResponseBodyEncodeError(transportRequest, err)
 	}
 	_, err = responseWriter.Write(protoBuffer.Bytes())

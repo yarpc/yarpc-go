@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package uber.yarpc.encoding.protobuf.internal;
+package uber.yarpc.encoding.protobuf.internal.wire;
 
-option go_package = "internal";
+option go_package = "wirepb";
 
 // Error is an error that occured while executing a request in the application.
 message Error {
