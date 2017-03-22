@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
+	"go.uber.org/yarpc/yarpcproto"
 )
 
 // KeyValueClient is the client-side interface for the KeyValue service.
@@ -149,4 +150,81 @@ var (
 	emptyKeyValue_GetValueResponse = &GetValueResponse{}
 	emptyKeyValue_SetValueRequest  = &SetValueRequest{}
 	emptyKeyValue_SetValueResponse = &SetValueResponse{}
+)
+
+// SinkClient is the client-side interface for the Sink service.
+type SinkClient interface {
+	Fire(context.Context, *FireRequest, ...yarpc.CallOption) (*yarpcproto.Oneway, error)
+}
+
+// NewSinkClient builds a new client for the Sink service.
+func NewSinkClient(clientConfig transport.ClientConfig) SinkClient {
+	return &_SinkCaller{protobuf.NewClient("Sink", clientConfig)}
+}
+
+// SinkServer is the server-side interface for the Sink service.
+type SinkServer interface {
+	Fire(context.Context, *FireRequest) (*yarpcproto.Oneway, error)
+}
+
+// BuildSinkProcedures prepares an implementation of the Sink service for registration.
+func BuildSinkProcedures(server SinkServer) []transport.Procedure {
+	handler := &_SinkHandler{server}
+	return protobuf.BuildProcedures(
+		"Sink",
+		map[string]transport.UnaryHandler{
+			"Fire": protobuf.NewUnaryHandler(handler.Fire, newSink_FireRequest),
+		},
+	)
+}
+
+// ***** all code below is private *****
+
+type _SinkCaller struct {
+	client protobuf.Client
+}
+
+func (c *_SinkCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (*yarpcproto.Oneway, error) {
+	responseMessage, err := c.client.Call(ctx, "Fire", request, newSink_FireResponse, options...)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*yarpcproto.Oneway)
+	if !ok {
+		return nil, protobuf.CastError(emptySink_FireResponse, responseMessage)
+	}
+	return response, err
+}
+
+type _SinkHandler struct {
+	server SinkServer
+}
+
+func (h *_SinkHandler) Fire(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+	var request *FireRequest
+	var ok bool
+	if requestMessage != nil {
+		request, ok = requestMessage.(*FireRequest)
+		if !ok {
+			return nil, protobuf.CastError(emptySink_FireRequest, requestMessage)
+		}
+	}
+	response, err := h.server.Fire(ctx, request)
+	if response == nil {
+		return nil, err
+	}
+	return response, err
+}
+
+func newSink_FireRequest() proto.Message {
+	return &FireRequest{}
+}
+
+func newSink_FireResponse() proto.Message {
+	return &yarpcproto.Oneway{}
+}
+
+var (
+	emptySink_FireRequest  = &FireRequest{}
+	emptySink_FireResponse = &yarpcproto.Oneway{}
 )

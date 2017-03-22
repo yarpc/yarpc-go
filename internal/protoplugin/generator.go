@@ -115,15 +115,16 @@ func (g *generator) generate(file *File) (string, error) {
 	}
 	for _, svc := range file.Services {
 		for _, m := range svc.Methods {
-			pkg := m.RequestType.File.GoPackage
-			if pkg == file.GoPackage {
-				continue
+			for _, pkg := range []*GoPackage{m.RequestType.File.GoPackage, m.ResponseType.File.GoPackage} {
+				if pkg == file.GoPackage {
+					continue
+				}
+				if pkgSeen[pkg.Path] {
+					continue
+				}
+				pkgSeen[pkg.Path] = true
+				imports = append(imports, pkg)
 			}
-			if pkgSeen[pkg.Path] {
-				continue
-			}
-			pkgSeen[pkg.Path] = true
-			imports = append(imports, pkg)
 		}
 	}
 	templateInfo := &TemplateInfo{file, imports}

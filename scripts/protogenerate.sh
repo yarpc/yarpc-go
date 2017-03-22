@@ -20,12 +20,15 @@ protoc_with_imports() {
   ${@:2}
 }
 
+protoc_with_imports gogoslick yarpcproto/yarpc.proto
 protoc_with_imports gogoslick encoding/x/protobuf/internal/wirepb/wire.proto
 protoc_with_imports gogoslick internal/examples/protobuf/examplepb/example.proto
 protoc_with_imports yarpc-go internal/examples/protobuf/examplepb/example.proto
 
+update-license yarpcproto/yarpc.pb.go
 update-license encoding/x/protobuf/internal/wirepb/wire.pb.go
 update-license internal/examples/protobuf/examplepb/example.pb.go
 update-license internal/examples/protobuf/examplepb/example.pb.yarpc.go
 
+touch yarpcproto/.nocover
 touch encoding/x/protobuf/internal/wirepb/.nocover

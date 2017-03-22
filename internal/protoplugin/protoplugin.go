@@ -113,11 +113,6 @@ func (m *Message) FQMN() string {
 	return strings.Join(components, ".")
 }
 
-// DefaultGoType calls GoType with m.File.GoPackage.Path.
-func (m *Message) DefaultGoType() string {
-	return m.GoType(m.File.GoPackage.Path)
-}
-
 // GoType returns a go type name for the message type.
 // It prefixes the type name with the package alias if
 // its belonging package is not "currentPackage".
