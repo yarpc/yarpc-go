@@ -31,5 +31,5 @@ service KeyValue {
 }
 
 service Sink {
-  rpc Fire(FireRequest) returns(uber.yarpc.Oneway);
+  rpc Fire(FireRequest) returns (uber.yarpc.Oneway);
 }
