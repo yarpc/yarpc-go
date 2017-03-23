@@ -10,4 +10,4 @@ node_modules
 /cover.out
 /TAGS
 /.tmp
-/.bin
+/.cache

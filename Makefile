@@ -1,8 +1,12 @@
 GO_VERSION := $(shell go version | awk '{ print $$3 }')
 GO_MINOR_VERSION := $(word 2,$(subst ., ,$(GO_VERSION)))
 LINTABLE_MINOR_VERSIONS := 8
+GOVERALLS_MINOR_VERSIONS := 8
 ifneq ($(filter $(LINTABLE_MINOR_VERSIONS),$(GO_MINOR_VERSION)),)
 SHOULD_LINT := true
+endif
+ifneq ($(filter $(GOVERALLS_MINOR_VERSIONS),$(GO_MINOR_VERSION)),)
+SHOULD_GOVERALLS := true
 endif
 
 # Paths besides auto-detected generated files that should be excluded from
@@ -22,6 +26,7 @@ GENERATE_DEPENDENCIES = \
 	go.uber.org/tools/update-license
 
 ##############################################################################
+
 export GO15VENDOREXPERIMENT=1
 
 PACKAGES := $(shell glide novendor)
@@ -48,16 +53,24 @@ FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
 
-##############################################################################
+CI_TYPE ?= test
+CI_CACHE_DIR := $(shell pwd)/.cache
+CI_DOCKER_CACHE_DIR := $(CI_CACHE_DIR)/docker
+CI_DOCKER_IMAGE := yarpc_go
+CI_DOCKER_CACHE_FILE := $(CI_DOCKER_CACHE_DIR)/$(CI_DOCKER_IMAGE)
 
-DOCKER_COMPOSE_VERSION=1.10.0
+DOCKER_IMAGE := yarpc/yarpc-go:latest
 
-_BIN_DIR = $(shell pwd)/.bin
+DOCKER_COMPOSE_VERSION := 1.10.0
+
+_BIN_DIR = $(CI_CACHE_DIR)/bin
 
 $(_BIN_DIR)/docker-compose:
 	mkdir -p $(_BIN_DIR)
 	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(shell uname -s)-$(shell uname -m) > $(_BIN_DIR)/docker-compose
 	chmod +x $(_BIN_DIR)/docker-compose
+
+##############################################################################
 
 _GENERATE_DEPS_DIR = $(shell pwd)/.tmp
 $(_GENERATE_DEPS_DIR):
@@ -80,13 +93,6 @@ endef
 $(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
 
 THRIFTRW = $(_GENERATE_DEPS_DIR)/thriftrw
-
-CI_TYPE ?= test
-CI_CACHE_DIR ?= .cache
-CI_DOCKER_IMAGE = yarpc_go
-CI_DOCKER_CACHE_FILE := $(CI_CACHE_DIR)/$(CI_DOCKER_IMAGE)
-
-DOCKER_IMAGE := yarpc/yarpc-go:latest
 
 ##############################################################################
 
@@ -237,7 +243,7 @@ endif
 .PHONY: ci-docker-save
 ci-docker-save:
 ifeq ($(CI_TYPE),crossdock)
-	mkdir -p $(CI_CACHE_DIR)
+	mkdir -p $(CI_DOCKER_CACHE_DIR)
 	docker save $(shell docker history -q $(CI_DOCKER_IMAGE) | grep -v '<missing>') | gzip > $(CI_DOCKER_CACHE_FILE)
 	docker tag "$(CI_DOCKER_IMAGE)" "$(DOCKER_IMAGE)"
 	docker login -e "$(DOCKER_EMAIL)" -u "$(DOCKER_USER)" -p "$(DOCKER_PASS)"
@@ -261,7 +267,7 @@ ci-test:
 	PATH=$(_BIN_DIR):$$PATH docker-compose logs
 else
 ci-test: lint cover test-examples $(THRIFTRW)
-ifdef CI_GOVERALLS
+ifdef SHOULD_GOVERALLS
 	-goveralls -coverprofile=cover.out -service=travis-ci
 endif
 endif

@@ -26,7 +26,6 @@ matrix:
     - go: 1.8
       env:
         - CI_TYPE=test
-        - CI_GOVERALLS=1
       addons:
         apt:
           packages:
