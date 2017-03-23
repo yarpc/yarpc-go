@@ -65,6 +65,9 @@ endif
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
 endif
+ifneq ($(filter goveralls,$(CI_TYPES)),)
+CI_GOVERALLS := true
+endif
 
 CI_CACHE_DIR := $(shell pwd)/.cache
 CI_DOCKER_CACHE_DIR := $(CI_CACHE_DIR)/docker
@@ -280,7 +283,10 @@ ifdef CI_TEST
 	@$(MAKE) test
 endif
 ifdef CI_COVER
-	@$(MAKE) cover goveralls
+	@$(MAKE) cover
+endif
+ifdef CI_GOVERALLS
+	@$(MAKE) goveralls
 endif
 ifdef CI_EXAMPLES
 	@$(MAKE) examples

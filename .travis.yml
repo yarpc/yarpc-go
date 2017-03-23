@@ -18,7 +18,7 @@ matrix:
           - .cache
     - go: 1.7
       env:
-        - CI_TYPES=cover
+        - CI_TYPES='cover goveralls'
     - go: 1.8
       env:
         - CI_TYPES='lint test'
