@@ -56,9 +56,9 @@ func Start() {
 	multiplexed.RegisterProcessor("SecondService", secondService)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/thrift/ThriftTest", thrift.NewThriftHandlerFunc(thriftTest, pfactory, pfactory))
-	mux.HandleFunc("/thrift/SecondService", thrift.NewThriftHandlerFunc(secondService, pfactory, pfactory))
-	mux.HandleFunc("/thrift/multiplexed", thrift.NewThriftHandlerFunc(multiplexed, pfactory, pfactory))
+	mux.HandleFunc("/thrift/ThriftTest", newThriftHandlerFunc(thriftTest, pfactory, pfactory))
+	mux.HandleFunc("/thrift/SecondService", newThriftHandlerFunc(secondService, pfactory, pfactory))
+	mux.HandleFunc("/thrift/multiplexed", newThriftHandlerFunc(multiplexed, pfactory, pfactory))
 
 	server = net.NewHTTPServer(&http.Server{
 		Addr:         addr,
@@ -76,5 +76,13 @@ func Start() {
 func Stop() {
 	if err := server.Stop(); err != nil {
 		log.Printf("failed to stop Apache Thrift server: %v", err)
+	}
+}
+
+func newThriftHandlerFunc(processor thrift.TProcessor, inPfactory, outPfactory thrift.TProtocolFactory) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/x-thrift")
+		transport := thrift.NewStreamTransport(r.Body, w)
+		_, _ = processor.Process(inPfactory.GetProtocol(transport), outPfactory.GetProtocol(transport))
 	}
 }

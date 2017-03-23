@@ -1,8 +1,8 @@
-hash: 1ffd122bc9f21d143214077e190653c21d50d694b6dd5cbc47e3448c62127a9b
-updated: 2017-03-22T10:46:45.68535633-07:00
+hash: 7e758e4ded46d067cd4758493a227f3afe3c88d3b5e85f4dd77381b533caf40e
+updated: 2017-03-23T17:29:34.876790472+01:00
 imports:
 - name: github.com/apache/thrift
-  version: 6582757752e62efea3f9786dddf0260efaa1f450
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -35,7 +35,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/gorilla/websocket
-  version: a91eba7f97777409bc2c443f5534d41dd20c5720
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -172,7 +172,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 322b9d710a4429c1ea838c836bdb923ece84de2a
+  version: c21bc47f893ee73c18dd2119bb8ff9a2b492c4c6
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5
