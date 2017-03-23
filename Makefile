@@ -134,7 +134,7 @@ errcheck:
 	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
 
 .PHONY: lint
-lint: nogogenerate generatenodiff gofmt govet golint staticcheck errcheck
+lint: nogogenerate gofmt govet golint staticcheck errcheck
 
 .PHONY: install
 install:
