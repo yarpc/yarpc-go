@@ -48,6 +48,8 @@ var defaultTransportConfig = transportConfig{
 // TransportOption customizes the behavior of an HTTP transport.
 type TransportOption func(*transportConfig)
 
+func (TransportOption) httpOption() {}
+
 // KeepAlive specifies the keep-alive period for the network connection. If
 // zero, keep-alives are disabled.
 //
