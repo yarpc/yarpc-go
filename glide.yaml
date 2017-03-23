@@ -12,7 +12,7 @@ import:
 - package: github.com/uber/tchannel-go
   version: ^1.4
 - package: github.com/apache/thrift
-  version: ~0.9
+  version: ^0.9.3
 - package: go.uber.org/atomic
   version: ^1
 - package: go.uber.org/thriftrw
