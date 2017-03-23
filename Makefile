@@ -82,6 +82,11 @@ $(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
 THRIFTRW = $(_GENERATE_DEPS_DIR)/thriftrw
 
 CI_TYPE ?= test
+CI_CACHE_DIR ?= .cache
+CI_DOCKER_IMAGE = yarpc_go
+CI_DOCKER_CACHE_FILE := $(CI_CACHE_DIR)/$(CI_DOCKER_IMAGE)
+
+DOCKER_IMAGE := yarpc/yarpc-go:latest
 
 ##############################################################################
 
@@ -219,6 +224,28 @@ docker-build:
 .PHONY: docker-test
 docker-test: docker-build
 	docker run yarpc_go make test
+
+.PHONY: ci-docker-load
+ifeq ($(CI_TYPE),crossdock)
+ci-docker-load:
+	if [ -f $(CI_DOCKER_CACHE_FILE) ]; then gunzip -c $(CI_DOCKER_CACHE_FILE) | docker load; fi
+else
+ci-docker-load:
+	@echo "Not loading docker image because not running crossdock"
+endif
+
+.PHONY: ci-docker-save
+ci-docker-save:
+ifeq ($(CI_TYPE),crossdock)
+	mkdir -p $(CI_CACHE_DIR)
+	docker save $(shell docker history -q $(CI_DOCKER_IMAGE) | grep -v '<missing>') | gzip > $(CI_DOCKER_CACHE_FILE)
+	docker tag "$(CI_DOCKER_IMAGE)" "$(DOCKER_IMAGE)"
+	docker login -e "$(DOCKER_EMAIL)" -u "$(DOCKER_USER)" -p "$(DOCKER_PASS)"
+	docker push "$(DOCKER_IMAGE)"
+else
+ci-docker-save:
+	@echo "Not saving docker image because not running crossdock"
+endif
 
 .PHONY: ci-install
 ifeq ($(CI_TYPE),crossdock)
