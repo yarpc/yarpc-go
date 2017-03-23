@@ -273,8 +273,8 @@ ifdef CI_COVER
 	@$(MAKE) coverbins
 endif
 
-.PHONY: ci-run
-ci-run:
+.PHONY: ci
+ci:
 	@echo Running $(CI_TYPES)
 ifdef CI_LINT
 	@$(MAKE) lint
