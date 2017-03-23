@@ -1,12 +1,8 @@
 GO_VERSION := $(shell go version | awk '{ print $$3 }')
 GO_MINOR_VERSION := $(word 2,$(subst ., ,$(GO_VERSION)))
 LINTABLE_MINOR_VERSIONS := 8
-GOVERALLS_MINOR_VERSIONS := 8
 ifneq ($(filter $(LINTABLE_MINOR_VERSIONS),$(GO_MINOR_VERSION)),)
 SHOULD_LINT := true
-endif
-ifneq ($(filter $(GOVERALLS_MINOR_VERSIONS),$(GO_MINOR_VERSION)),)
-SHOULD_GOVERALLS := true
 endif
 
 # Paths besides auto-detected generated files that should be excluded from
@@ -53,7 +49,20 @@ FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
 
-CI_TYPE ?= test
+CI_TYPES ?= test examples crossdock
+ifneq ($(filter test,$(CI_TYPES)),)
+CI_TEST := true
+endif
+ifneq ($(filter examples,$(CI_TYPES)),)
+CI_EXAMPLES := true
+endif
+ifneq ($(filter crossdock,$(CI_TYPES)),)
+CI_CROSSDOCK := true
+endif
+ifneq ($(filter goveralls,$(CI_TYPES)),)
+CI_GOVERALLS := true
+endif
+
 CI_CACHE_DIR := $(shell pwd)/.cache
 CI_DOCKER_CACHE_DIR := $(CI_CACHE_DIR)/docker
 CI_DOCKER_IMAGE := yarpc_go
@@ -158,11 +167,10 @@ verify_version:
 	fi
 
 .PHONY: lint
+lint:
 ifdef SHOULD_LINT
-lint:
-	bash -c "time $(MAKE) nogogenerate gofmt govet golint staticcheck errcheck verify_version"
+	@$(MAKE) nogogenerate gofmt govet golint staticcheck errcheck verify_version
 else
-lint:
 	@echo "Linting not enabled on go $(GO_VERSION)"
 endif
 
@@ -197,10 +205,11 @@ test: verify_version $(THRIFTRW)
 
 .PHONY: cover
 cover: $(THRIFTRW)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH bash -c "time ./scripts/cover.sh $(shell go list $(PACKAGES))"
-	bash -c "time go tool cover -html=cover.out -o cover.html"
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
+	go tool cover -html=cover.out -o cover.html
 
-
+.PHONY: goveralls
+goveralls:
 # This is not part of the regular test target because we don't want to slow it down.
 .PHONY: test-examples
 test-examples:
@@ -232,46 +241,43 @@ docker-test: docker-build
 	docker run yarpc_go make test
 
 .PHONY: ci-docker-load
-ifeq ($(CI_TYPE),crossdock)
 ci-docker-load:
+ifdef CI_CROSSDOCK
 	if [ -f $(CI_DOCKER_CACHE_FILE) ]; then gunzip -c $(CI_DOCKER_CACHE_FILE) | docker load; fi
-else
-ci-docker-load:
-	@echo "Not loading docker image because not running crossdock"
 endif
 
 .PHONY: ci-docker-save
 ci-docker-save:
-ifeq ($(CI_TYPE),crossdock)
+ifdef CI_CROSSDOCK
 	mkdir -p $(CI_DOCKER_CACHE_DIR)
 	docker save $(shell docker history -q $(CI_DOCKER_IMAGE) | grep -v '<missing>') | gzip > $(CI_DOCKER_CACHE_FILE)
 	docker tag "$(CI_DOCKER_IMAGE)" "$(DOCKER_IMAGE)"
 	docker login -e "$(DOCKER_EMAIL)" -u "$(DOCKER_USER)" -p "$(DOCKER_PASS)"
 	docker push "$(DOCKER_IMAGE)"
-else
-ci-docker-save:
-	@echo "Not saving docker image because not running crossdock"
 endif
 
 .PHONY: ci-install
-ifeq ($(CI_TYPE),crossdock)
-ci-install: $(_BIN_DIR)/docker-compose install
-else ifeq ($(CI_TYPE),examples)
 ci-install: install
-else
-ci-install: lintbins testbins install
+ifdef CI_TEST
+	@$(MAKE) lintbins testbins
+endif
+ifdef CI_CROSSDOCK
+	@$(MAKE) $(_BIN_DIR)/docker-compose
 endif
 
-.PHONY: ci-test
-ifeq ($(CI_TYPE),crossdock)
-ci-test:
-	-$(MAKE) crossdock
-	PATH=$(_BIN_DIR):$$PATH docker-compose logs
-else ifeq ($(CI_TYPE),examples)
-ci-test: test-examples
-else
-ci-test: lint cover $(THRIFTRW)
-ifdef SHOULD_GOVERALLS
-	-bash -c "time goveralls -coverprofile=cover.out -service=travis-ci"
+.PHONY: ci-run
+ci-run:
+	@echo Running $(CI_TPYES)
+ifdef CI_TEST
+	@$(MAKE) lint cover $(THRIFTRW)
 endif
+ifdef CI_EXAMPLES
+	@$(MAKE) test-examples
+endif
+ifdef CI_CROSSDOCK
+	-@$(MAKE) crossdock
+	@PATH=$(_BIN_DIR):$$PATH docker-compose logs
+endif
+ifdef CI_GOVERALLS
+	-@goveralls -coverprofile=cover.out -service=travis-ci
 endif
