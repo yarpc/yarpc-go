@@ -167,9 +167,10 @@ verify_version:
 
 .PHONY: lintbins
 lintbins:
-	@go get github.com/golang/lint/golint
-	@go get honnef.co/go/tools/cmd/staticcheck
-	@go get github.com/kisielk/errcheck
+	@go get \
+		github.com/golang/lint/golint \
+		honnef.co/go/tools/cmd/staticcheck \
+		github.com/kisielk/errcheck
 
 .PHONY: lint
 lint: lintbins nogogenerate gofmt govet golint staticcheck errcheck verify_version
@@ -189,9 +190,10 @@ test: $(THRIFTRW)
 
 .PHONY: coverbins
 coverbins:
-	@go get github.com/wadey/gocovmerge
-	@go get github.com/mattn/goveralls
-	@go get golang.org/x/tools/cmd/cover
+	@go get \
+		github.com/wadey/gocovmerge \
+		github.com/mattn/goveralls \
+		golang.org/x/tools/cmd/cover
 
 .PHONY: cover
 cover: coverbins $(THRIFTRW)
