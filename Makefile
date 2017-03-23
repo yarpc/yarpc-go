@@ -234,6 +234,7 @@ crossdock-fresh: $(_BIN_DIR)/docker-compose
 	PATH=$(_BIN_DIR):$$PATH docker-compose run crossdock
 
 .PHONY: crossdock-logs
+crossdock-logs:
 	PATH=$(_BIN_DIR):$$PATH docker-compose logs
 
 .PHONY: docker-build
