@@ -160,7 +160,7 @@ verify_version:
 .PHONY: lint
 ifdef SHOULD_LINT
 lint:
-	time $(MAKE) nogogenerate gofmt govet golint staticcheck errcheck verify_version
+	bash -c "time $(MAKE) nogogenerate gofmt govet golint staticcheck errcheck verify_version"
 else
 lint:
 	@echo "Linting not enabled on go $(GO_VERSION)"
@@ -197,8 +197,8 @@ test: verify_version $(THRIFTRW)
 
 .PHONY: cover
 cover: $(THRIFTRW)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH time ./scripts/cover.sh $(shell go list $(PACKAGES))
-	time go tool cover -html=cover.out -o cover.html
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH bash -c "time ./scripts/cover.sh $(shell go list $(PACKAGES))"
+	bash -c "time go tool cover -html=cover.out -o cover.html"
 
 
 # This is not part of the regular test target because we don't want to slow it down.
@@ -272,6 +272,6 @@ ci-test: test-examples
 else
 ci-test: lint cover $(THRIFTRW)
 ifdef SHOULD_GOVERALLS
-	-time goveralls -coverprofile=cover.out -service=travis-ci
+	-bash -c "time goveralls -coverprofile=cover.out -service=travis-ci"
 endif
 endif
