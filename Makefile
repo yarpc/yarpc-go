@@ -184,7 +184,7 @@ test: verify_version $(THRIFTRW)
 
 
 .PHONY: cover
-cover:
+cover: $(THRIFTRW)
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
 	go tool cover -html=cover.out -o cover.html
 

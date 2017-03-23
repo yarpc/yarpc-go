@@ -11,18 +11,11 @@ env:
 matrix:
   fast_finish: true
   include:
-    - go: 1.7
-      services:
+    - services:
         - docker
       sudo: required
       env:
         - CI_TYPE=crossdock
-    - go: 1.8
-      services: [docker]
-      sudo: required
-      env:
-        - CI_TYPE=crossdock
-        - CI_DOCKER_PUSH=1
     - go: 1.7
       env:
         - CI_TYPE=test
@@ -44,4 +37,4 @@ install:
 script:
   - make ci-test
 after_success:
-  - if [[ "${CI_DOCKER_PUSH}" == "1" ]]; then bash scripts/travis-docker-push.sh; fi
+  - if [[ "${CI_TYPE}" == "crossdock" ]]; then bash scripts/travis-docker-push.sh; fi
