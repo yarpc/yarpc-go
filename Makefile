@@ -268,3 +268,9 @@ endif
 ifdef CI_CROSSDOCK
 	@$(MAKE) crossdock || $(MAKE) crossdock-logs
 endif
+
+.PHONY: travis-docker-push
+travis-docker-push:
+ifdef CI_TRAVIS_DOCKER_PUSH
+	./scripts/travis-docker-push.sh
+endif
