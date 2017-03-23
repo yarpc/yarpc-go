@@ -1,5 +1,5 @@
-hash: 8621c36c9401d50d593ea5b325d3b0ed38191e4f2016f05638a1bbc01bd8e7ea
-updated: 2017-03-22T19:54:01.551321705+01:00
+hash: 3756b8708cb1e31ddb382de6bdd3985edc6d68585e7916b086e4232c1d675093
+updated: 2017-03-23T19:02:48.246534801+01:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -94,7 +94,7 @@ imports:
 - name: github.com/uber-common/bark
   version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
 - name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: github.com/uber-go/tally
   version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
   subpackages:
@@ -116,7 +116,7 @@ imports:
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
-  version: cbd3b6fe50f6d077951da8aabb06374f0ccf3181
+  version: 8f2da2ca8fc971c825e6e6ad83710095fd8748c5
   subpackages:
   - internal/spanlog
   - log
@@ -171,7 +171,7 @@ imports:
   subpackages:
   - update-license
 - name: golang.org/x/net
-  version: a6577fac2d73be281a500b310739095313165611
+  version: 3e967e1d28d2c9c06e749dc2bdc14b04df89e689
   subpackages:
   - context
   - context/ctxhttp
@@ -192,5 +192,5 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 testImports: []
