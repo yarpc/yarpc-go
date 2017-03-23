@@ -80,14 +80,9 @@ build:
 
 .PHONY: generate
 generate: $(_GENERATE_DEPS_EXECUTABLES)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
-
-.PHONY: protogenerate
-protogenerate: $(_GENERATE_DEPS_EXECUTABLES)
-	@echo "TODO: merge with make generate once apache thrift issues fixed"
 	@command -v protoc >/dev/null || (echo "protoc must be installed" && false)
 	@protoc --version | grep 'libprotoc 3\.' >/dev/null || (echo "protoc must be version 3" && false)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/protogenerate.sh
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
 nogogenerate:

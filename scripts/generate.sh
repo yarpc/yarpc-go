@@ -5,6 +5,11 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 cd "${DIR}"
 
+if echo "${GOPATH}" | grep : >/dev/null; then
+  echo "error: GOPATH can only contain one directory but is ${GOPATH}" >&2
+  exit 1
+fi
+
 # Run stringer
 #
 # https://github.com/golang/go/issues/10249
@@ -14,6 +19,20 @@ cd "${DIR}"
 generate_stringer() {
   go install "${2}"
   stringer "-type=${1}" "${2}"
+}
+
+# Run protoc
+#
+# $1: plugin
+# $2: file
+protoc_with_imports() {
+  protoc \
+    -I "${GOPATH}/src" \
+    -I vendor \
+    -I vendor/github.com/gogo/protobuf/protobuf \
+    -I . \
+    "--${1}_out=Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto:." \
+  "${2}"
 }
 
 mockgen -destination=api/middleware/middlewaretest/router.go -package=middlewaretest go.uber.org/yarpc/api/middleware Router
@@ -51,8 +70,15 @@ thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --input
 
 thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift
 
+protoc_with_imports gogoslick yarpcproto/yarpc.proto
+protoc_with_imports gogoslick encoding/x/protobuf/internal/wirepb/wire.proto
+protoc_with_imports gogoslick internal/examples/protobuf/examplepb/example.proto
+protoc_with_imports yarpc-go internal/examples/protobuf/examplepb/example.proto
+
+touch encoding/x/protobuf/internal/wirepb/.nocover
 touch internal/crossdock/thrift/gen-go/echo/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
+touch yarpcproto/.nocover
 
 scripts/updateLicenses.sh
