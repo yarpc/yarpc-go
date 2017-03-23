@@ -28,6 +28,54 @@ import (
 	"go.uber.org/yarpc/x/config"
 )
 
+// TransportSpec returns a TransportSpec for the HTTP transport.
+//
+// See TransportConfig, InboundConfig, and OutboundConfig for details on the
+// different configuration parameters supported by this Transport.
+//
+// Any Transport, Inbound or Outbound option may be passed to this function.
+// These options will be applied BEFORE configuration parameters are
+// interpreted. This allows configuration parameters to override Option
+// provided to TransportSpec.
+func TransportSpec(opts ...Option) config.TransportSpec {
+	// TODO: Presets. Support "with:" and allow passing those in using
+	// varargs on TransportSpec().
+	var ts transportSpec
+	for _, o := range opts {
+		switch opt := o.(type) {
+		case TransportOption:
+			ts.TransportOptions = append(ts.TransportOptions, opt)
+		case InboundOption:
+			ts.InboundOptions = append(ts.InboundOptions, opt)
+		case OutboundOption:
+			ts.OutboundOptions = append(ts.OutboundOptions, opt)
+		default:
+			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
+		}
+	}
+	return ts.Spec()
+}
+
+// transportSpec holds the configurable parts of the HTTP TransportSpec.
+//
+// These are usually runtime dependencies that cannot be parsed from
+// configuration.
+type transportSpec struct {
+	TransportOptions []TransportOption
+	InboundOptions   []InboundOption
+	OutboundOptions  []OutboundOption
+}
+
+func (ts *transportSpec) Spec() config.TransportSpec {
+	return config.TransportSpec{
+		Name:                "http",
+		BuildTransport:      ts.buildTransport,
+		BuildInbound:        ts.buildInbound,
+		BuildUnaryOutbound:  ts.buildUnaryOutbound,
+		BuildOnewayOutbound: ts.buildOnewayOutbound,
+	}
+}
+
 // TransportConfig configures the shared HTTP Transport. This is shared
 // between all HTTP outbounds and inbounds of a Dispatcher.
 //
@@ -43,8 +91,8 @@ type TransportConfig struct {
 	KeepAlive time.Duration `config:"keepAlive"`
 }
 
-func buildTransport(tc *TransportConfig) (transport.Transport, error) {
-	var opts []TransportOption
+func (ts *transportSpec) buildTransport(tc *TransportConfig) (transport.Transport, error) {
+	opts := ts.TransportOptions
 	if tc.KeepAlive > 0 {
 		opts = append(opts, KeepAlive(tc.KeepAlive))
 	}
@@ -61,11 +109,11 @@ type InboundConfig struct {
 	Address string `config:"address"`
 }
 
-func buildInbound(ic *InboundConfig, t transport.Transport) (transport.Inbound, error) {
+func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport) (transport.Inbound, error) {
 	if ic.Address == "" {
 		return nil, fmt.Errorf("inbound address is required")
 	}
-	return t.(*Transport).NewInbound(ic.Address), nil
+	return t.(*Transport).NewInbound(ic.Address, ts.InboundOptions...), nil
 }
 
 // OutboundConfig configures an HTTP outbound.
@@ -90,30 +138,14 @@ type OutboundConfig struct {
 	URL string `config:"url"`
 }
 
-func buildOutbound(oc *OutboundConfig, t transport.Transport) (*Outbound, error) {
-	return t.(*Transport).NewSingleOutbound(oc.URL), nil
+func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport) (*Outbound, error) {
+	return t.(*Transport).NewSingleOutbound(oc.URL, ts.OutboundOptions...), nil
 }
 
-func buildUnaryOutbound(oc *OutboundConfig, t transport.Transport) (transport.UnaryOutbound, error) {
-	return buildOutbound(oc, t)
+func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport) (transport.UnaryOutbound, error) {
+	return ts.buildOutbound(oc, t)
 }
 
-func buildOnewayOutbound(oc *OutboundConfig, t transport.Transport) (transport.OnewayOutbound, error) {
-	return buildOutbound(oc, t)
-}
-
-// TransportSpec returns a TransportSpec for the HTTP transport.
-//
-// See TransportConfig, InboundConfig, and OutboundConfig for details on the
-// different configuration parameters supported by this Transport.
-func TransportSpec() config.TransportSpec {
-	// TODO: Presets. Support "with:" and allow passing those in using
-	// varargs on TransportSpec().
-	return config.TransportSpec{
-		Name:                "http",
-		BuildTransport:      buildTransport,
-		BuildInbound:        buildInbound,
-		BuildUnaryOutbound:  buildUnaryOutbound,
-		BuildOnewayOutbound: buildOnewayOutbound,
-	}
+func (ts *transportSpec) buildOnewayOutbound(oc *OutboundConfig, t transport.Transport) (transport.OnewayOutbound, error) {
+	return ts.buildOutbound(oc, t)
 }
