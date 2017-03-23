@@ -245,9 +245,6 @@ ci-docker-save:
 ifdef CI_CROSSDOCK
 	mkdir -p $(CI_DOCKER_CACHE_DIR)
 	docker save $(shell docker history -q $(CI_DOCKER_IMAGE) | grep -v '<missing>') | gzip > $(CI_DOCKER_CACHE_FILE)
-	docker tag "$(CI_DOCKER_IMAGE)" "$(DOCKER_IMAGE)"
-	docker login -e "$(DOCKER_EMAIL)" -u "$(DOCKER_USER)" -p "$(DOCKER_PASS)"
-	docker push "$(DOCKER_IMAGE)"
 endif
 
 .PHONY: ci

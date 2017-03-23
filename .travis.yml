@@ -43,4 +43,5 @@ install:
   - make install
 script:
   - make ci
+  - scripts/travis-docker-push.sh
   - if [[ "${TRAVIS_BRANCH}" == "master" ]] && [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make ci-docker-save; fi
