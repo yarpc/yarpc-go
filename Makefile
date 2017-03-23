@@ -271,6 +271,6 @@ ci-test: test-examples
 else
 ci-test: lint cover $(THRIFTRW)
 ifdef SHOULD_GOVERALLS
-	-goveralls -coverprofile=cover.out -service=travis-ci
+	-time goveralls -coverprofile=cover.out -service=travis-ci
 endif
 endif
