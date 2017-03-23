@@ -200,10 +200,9 @@ cover: $(THRIFTRW)
 	go tool cover -html=cover.out -o cover.html
 
 
-# This is not part of the regular test target because we don't want to slow it
-# down.
+# This is not part of the regular test target because we don't want to slow it down.
 .PHONY: test-examples
-test-examples: build
+test-examples:
 	$(MAKE) -C internal/examples
 
 
@@ -256,6 +255,8 @@ endif
 .PHONY: ci-install
 ifeq ($(CI_TYPE),crossdock)
 ci-install: $(_BIN_DIR)/docker-compose install
+else ifeq ($(CI_TYPE),examples)
+ci-install: install
 else
 ci-install: lintbins testbins install
 endif
@@ -265,8 +266,10 @@ ifeq ($(CI_TYPE),crossdock)
 ci-test:
 	-$(MAKE) crossdock
 	PATH=$(_BIN_DIR):$$PATH docker-compose logs
+else ifeq ($(CI_TYPE),examples)
+ci-test: test-examples
 else
-ci-test: lint cover test-examples $(THRIFTRW)
+ci-test: lint cover $(THRIFTRW)
 ifdef SHOULD_GOVERALLS
 	-goveralls -coverprofile=cover.out -service=travis-ci
 endif
