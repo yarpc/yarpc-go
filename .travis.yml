@@ -39,6 +39,8 @@ matrix:
 
 before_install:
   - make ci-docker-load
+install:
+  - make install
 script:
   - make ci
   - if [[ "${TRAVIS_BRANCH}" == "master" ]] && [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make ci-docker-save; fi
