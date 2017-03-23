@@ -1,10 +1,3 @@
-GO_VERSION := $(shell go version | awk '{ print $$3 }')
-GO_MINOR_VERSION := $(word 2,$(subst ., ,$(GO_VERSION)))
-LINTABLE_MINOR_VERSIONS := 8
-ifneq ($(filter $(LINTABLE_MINOR_VERSIONS),$(GO_MINOR_VERSION)),)
-SHOULD_LINT := true
-endif
-
 # Paths besides auto-detected generated files that should be excluded from
 # lint results.
 LINT_EXCLUDES_EXTRAS =
@@ -179,13 +172,7 @@ lintbins:
 	@go get github.com/kisielk/errcheck
 
 .PHONY: lint
-ifdef SHOULD_LINT
-lint: lintbins
-	@$(MAKE) nogogenerate gofmt govet golint staticcheck errcheck verify_version
-else
-lint:
-	@echo "Linting not enabled on go $(GO_VERSION)"
-endif
+lint: lintbins nogogenerate gofmt govet golint staticcheck errcheck verify_version
 
 .PHONY: install
 install:
