@@ -49,7 +49,7 @@ $(_GENERATE_DEPS_DIR):
 	mkdir $(_GENERATE_DEPS_DIR)
 
 # Full paths to executables needed for 'make generate'
-_GENERATE_DEPS_EXECUTABLES = $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go
+_GENERATE_DEPS_EXECUTABLES = $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go $(_GENERATE_DEPS_DIR)/thrift
 
 # Special-case for local executables
 $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go $(_GENERATE_DEPS_DIR)
@@ -57,6 +57,9 @@ $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-y
 
 $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go $(_GENERATE_DEPS_DIR)
 	go build -o $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
+
+$(_GENERATE_DEPS_DIR)/thrift:
+	./scripts/install-thrift.sh $(_GENERATE_DEPS_DIR)
 
 define generatedeprule
 _GENERATE_DEPS_EXECUTABLES += $(_GENERATE_DEPS_DIR)/$(shell basename $1)
@@ -91,6 +94,18 @@ nogogenerate:
 	$(eval NOGOGENERATE_LOG := $(shell mktemp -t nogogenerate.XXXXX))
 	@grep -n \/\/go:generate $(GO_FILES) 2>&1 > $(NOGOGENERATE_LOG) || true
 	@[ ! -s "$(NOGOGENERATE_LOG)" ] || (echo "do not use //go:generate, add to scripts/generate.sh instead:" | cat - $(NOGOGENERATE_LOG) && false)
+
+.PHONY: generatenodiff
+generatenodiff:
+	$(eval GENERATENODIFF_PRE := $(shell mktemp -t generatenodiff_pre.XXXXX))
+	$(eval GENERATENODIFF_POST := $(shell mktemp -t generatenodiff_post.XXXXX))
+	$(eval GENERATENODIFF_DIFF := $(shell mktemp -t generatenodiff_diff.XXXXX))
+	@git status --short > $(GENERATENODIFF_PRE)
+	@$(MAKE) generate
+	@git status --short > $(GENERATENODIFF_POST)
+	@diff $(GENERATENODIFF_PRE) $(GENERATENODIFF_POST) > $(GENERATENODIFF_DIFF) || true
+	@[ ! -s "$(GENERATENODIFF_DIFF)" ] || (echo "make generate produced a diff, make sure to check these in:" | cat - $(GENERATENODIFF_DIFF) && false)
+
 
 .PHONY: gofmt
 gofmt:

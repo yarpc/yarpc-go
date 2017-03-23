@@ -2,7 +2,7 @@ hash: 8621c36c9401d50d593ea5b325d3b0ed38191e4f2016f05638a1bbc01bd8e7ea
 updated: 2017-03-22T19:54:01.551321705+01:00
 imports:
 - name: github.com/apache/thrift
-  version: 6582757752e62efea3f9786dddf0260efaa1f450
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -180,7 +180,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 322b9d710a4429c1ea838c836bdb923ece84de2a
+  version: c21bc47f893ee73c18dd2119bb8ff9a2b492c4c6
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5
