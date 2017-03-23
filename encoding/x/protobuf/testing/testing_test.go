@@ -25,11 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIntegration(t *testing.T) {

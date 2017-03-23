@@ -24,8 +24,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/gogo/protobuf/proto"
-
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -33,6 +31,8 @@ import (
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/procedure"
+
+	"github.com/gogo/protobuf/proto"
 )
 
 type client struct {

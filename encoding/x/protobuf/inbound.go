@@ -23,13 +23,13 @@ package protobuf
 import (
 	"context"
 
-	"github.com/gogo/protobuf/proto"
-
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf/internal/wirepb"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
+
+	"github.com/gogo/protobuf/proto"
 )
 
 type unaryHandler struct {
@@ -70,7 +70,6 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		return err
 	}
 	var responseData []byte
-	var err error
 	if response != nil {
 		protoBuffer := getBuffer()
 		defer putBuffer(protoBuffer)
@@ -95,7 +94,7 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	if err := protoBuffer.Marshal(wireResponse); err != nil {
 		return encoding.ResponseBodyEncodeError(transportRequest, err)
 	}
-	_, err = responseWriter.Write(protoBuffer.Bytes())
+	_, err := responseWriter.Write(protoBuffer.Bytes())
 	return err
 }
 
