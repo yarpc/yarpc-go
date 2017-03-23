@@ -1,3 +1,10 @@
+GO_VERSION := $(shell go version | awk '{ print $$3 }')
+GO_MINOR_VERSION := $(word 2,$(subst ., ,$(GO_VERSION)))
+LINTABLE_MINOR_VERSIONS := 8
+ifneq ($(filter $(LINTABLE_MINOR_VERSIONS),$(GO_MINOR_VERSION)),)
+SHOULD_LINT := true
+endif
+
 # Paths besides auto-detected generated files that should be excluded from
 # lint results.
 LINT_EXCLUDES_EXTRAS =
@@ -43,6 +50,15 @@ INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "
 
 ##############################################################################
 
+DOCKER_COMPOSE_VERSION=1.10.0
+
+_BIN_DIR = $(shell pwd)/.bin
+
+$(_BIN_DIR)/docker-compose:
+	mkdir -p $(_BIN_DIR)
+	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(shell uname -s)-$(shell uname -m) > $(_BIN_DIR)/docker-compose
+	chmod +x $(_BIN_DIR)/docker-compose
+
 _GENERATE_DEPS_DIR = $(shell pwd)/.tmp
 $(_GENERATE_DEPS_DIR):
 	mkdir $(_GENERATE_DEPS_DIR)
@@ -64,6 +80,8 @@ endef
 $(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
 
 THRIFTRW = $(_GENERATE_DEPS_DIR)/thriftrw
+
+CI_TYPE ?= test
 
 ##############################################################################
 
@@ -98,7 +116,6 @@ govet:
 
 .PHONY: golint
 golint:
-	@go get github.com/golang/lint/golint
 	$(eval LINT_LOG := $(shell mktemp -t golint.XXXXX))
 	@cat /dev/null > $(LINT_LOG)
 	@$(foreach pkg, $(PACKAGES), golint $(pkg) | $(FILTER_LINT) >> $(LINT_LOG) || true;)
@@ -106,20 +123,52 @@ golint:
 
 .PHONY: staticcheck
 staticcheck:
-	@go get honnef.co/go/tools/cmd/staticcheck
 	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
 	@staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
 	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
 
 .PHONY: errcheck
 errcheck:
-	@go get github.com/kisielk/errcheck
 	$(eval ERRCHECK_LOG := $(shell mktemp -t errcheck.XXXXX))
 	@errcheck $(ERRCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) | $(FILTER_ERRCHECK) > $(ERRCHECK_LOG) || true
 	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
 
+.PHONY: verify_version
+verify_version:
+	@if [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)" ]; then \
+		echo "yarpc-go: $(CHANGELOG_VERSION)"; \
+	elif [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)-dev" ]; then \
+		echo "yarpc-go (development): $(INTHECODE_VERSION)"; \
+	else \
+		echo "Version number in version.go does not match CHANGELOG.md"; \
+		echo "version.go: $(INTHECODE_VERSION)"; \
+		echo "CHANGELOG : $(CHANGELOG_VERSION)"; \
+		exit 1; \
+	fi
+
 .PHONY: lint
-lint: nogogenerate gofmt govet golint staticcheck errcheck
+ifdef SHOULD_LINT
+lint: nogogenerate gofmt govet golint staticcheck errcheck verify_version
+else
+lint:
+	@echo "Linting not enabled on go $(GO_VERSION)"
+endif
+
+.PHONY: lintbins
+lintbins:
+ifdef SHOULD_LINT
+	@go get github.com/golang/lint/golint
+	@go get honnef.co/go/tools/cmd/staticcheck
+	@go get github.com/kisielk/errcheck
+else
+	@echo "Linting not enabled on go $(GO_VERSION)"
+endif
+
+.PHONY: testbins
+testbins:
+	@go get github.com/wadey/gocovmerge
+	@go get github.com/mattn/goveralls
+	@go get golang.org/x/tools/cmd/cover
 
 .PHONY: install
 install:
@@ -136,7 +185,7 @@ test: verify_version $(THRIFTRW)
 
 .PHONY: cover
 cover:
-	./scripts/cover.sh $(shell go list $(PACKAGES))
+	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
 	go tool cover -html=cover.out -o cover.html
 
 
@@ -144,24 +193,24 @@ cover:
 # down.
 .PHONY: test-examples
 test-examples: build
-	make -C internal/examples
+	$(MAKE) -C internal/examples
 
 
 .PHONY: crossdock
-crossdock:
-	docker-compose kill go
-	docker-compose rm -f go
-	docker-compose build go
-	docker-compose run crossdock
+crossdock: $(_BIN_DIR)/docker-compose
+	PATH=$(_BIN_DIR):$$PATH docker-compose kill go
+	PATH=$(_BIN_DIR):$$PATH docker-compose rm -f go
+	PATH=$(_BIN_DIR):$$PATH docker-compose build go
+	PATH=$(_BIN_DIR):$$PATH docker-compose run crossdock
 
 
 .PHONY: crossdock-fresh
-crossdock-fresh: install
-	docker-compose kill
-	docker-compose rm --force
-	docker-compose pull
-	docker-compose build
-	docker-compose run crossdock
+crossdock-fresh: $(_BIN_DIR)/docker-compose install
+	PATH=$(_BIN_DIR):$$PATH docker-compose kill
+	PATH=$(_BIN_DIR):$$PATH docker-compose rm --force
+	PATH=$(_BIN_DIR):$$PATH docker-compose pull
+	PATH=$(_BIN_DIR):$$PATH docker-compose build
+	PATH=$(_BIN_DIR):$$PATH docker-compose run crossdock
 
 .PHONY: docker-build
 docker-build:
@@ -171,19 +220,21 @@ docker-build:
 docker-test: docker-build
 	docker run yarpc_go make test
 
-.PHONY: test_ci
-test_ci: install verify_version $(THRIFTRW)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
+.PHONY: ci-install
+ifeq ($(CI_TYPE),crossdock)
+ci-install: $(_BIN_DIR)/docker-compose install
+else
+ci-install: lintbins testbins install
+endif
 
-.PHONY: verify_version
-verify_version:
-	@if [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)" ]; then \
-		echo "yarpc-go: $(CHANGELOG_VERSION)"; \
-	elif [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)-dev" ]; then \
-		echo "yarpc-go (development): $(INTHECODE_VERSION)"; \
-	else \
-		echo "Version number in version.go does not match CHANGELOG.md"; \
-		echo "version.go: $(INTHECODE_VERSION)"; \
-		echo "CHANGELOG : $(CHANGELOG_VERSION)"; \
-		exit 1; \
-	fi
+.PHONY: ci-test
+ifeq ($(CI_TYPE),crossdock)
+ci-test:
+	-$(MAKE) crossdock
+	PATH=$(_BIN_DIR):$$PATH docker-compose logs
+else
+ci-test: lint cover test-examples $(THRIFTRW)
+ifdef CI_GOVERALLS
+	-goveralls -coverprofile=cover.out -service=travis-ci
+endif
+endif
