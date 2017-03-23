@@ -3,10 +3,10 @@
 all: kvserver kvclient
 
 gen:
-	cd keyvalue && go generate
+	cd ./keyvalue && go generate
 
 kvclient:
-	cd keyvalue/client && go build -i
+	cd ./keyvalue/client && go build -i
 
 kvserver:
-	cd keyvalue/server && go build -i
+	cd ./keyvalue/server && go build -i
