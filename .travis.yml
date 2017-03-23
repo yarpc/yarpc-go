@@ -18,10 +18,10 @@ matrix:
           - .cache
     - go: 1.7
       env:
-        - CI_TYPES=test
+        - CI_TYPES=cover
     - go: 1.8
       env:
-        - CI_TYPES='test goveralls'
+        - CI_TYPES='lint test'
     - go: 1.7
       env:
         - CI_TYPES=examples

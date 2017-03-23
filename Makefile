@@ -49,18 +49,21 @@ FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
 
-CI_TYPES ?= test examples crossdock
+CI_TYPES ?= lint test examples crossdock
+ifneq ($(filter lint,$(CI_TYPES)),)
+CI_LINT := true
+endif
 ifneq ($(filter test,$(CI_TYPES)),)
 CI_TEST := true
+endif
+ifneq ($(filter cover,$(CI_TYPES)),)
+CI_COVER := true
 endif
 ifneq ($(filter examples,$(CI_TYPES)),)
 CI_EXAMPLES := true
 endif
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
-endif
-ifneq ($(filter goveralls,$(CI_TYPES)),)
-CI_GOVERALLS := true
 endif
 
 CI_CACHE_DIR := $(shell pwd)/.cache
@@ -180,12 +183,10 @@ ifdef SHOULD_LINT
 	@go get github.com/golang/lint/golint
 	@go get honnef.co/go/tools/cmd/staticcheck
 	@go get github.com/kisielk/errcheck
-else
-	@echo "Linting not enabled on go $(GO_VERSION)"
 endif
 
-.PHONY: testbins
-testbins:
+.PHONY: coverbins
+coverbins:
 	@go get github.com/wadey/gocovmerge
 	@go get github.com/mattn/goveralls
 	@go get golang.org/x/tools/cmd/cover
@@ -199,7 +200,7 @@ install:
 
 
 .PHONY: test
-test: verify_version $(THRIFTRW)
+test: $(THRIFTRW)
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH go test -race $(PACKAGES)
 
 
@@ -210,11 +211,11 @@ cover: $(THRIFTRW)
 
 .PHONY: goveralls
 goveralls:
-# This is not part of the regular test target because we don't want to slow it down.
-.PHONY: test-examples
-test-examples:
-	$(MAKE) -C internal/examples
+	goveralls -coverprofile=cover.out -service=travis-ci
 
+.PHONY: examples
+examples:
+	$(MAKE) -C internal/examples
 
 .PHONY: crossdock
 crossdock: $(_BIN_DIR)/docker-compose
@@ -225,12 +226,15 @@ crossdock: $(_BIN_DIR)/docker-compose
 
 
 .PHONY: crossdock-fresh
-crossdock-fresh: $(_BIN_DIR)/docker-compose install
+crossdock-fresh: $(_BIN_DIR)/docker-compose
 	PATH=$(_BIN_DIR):$$PATH docker-compose kill
 	PATH=$(_BIN_DIR):$$PATH docker-compose rm --force
 	PATH=$(_BIN_DIR):$$PATH docker-compose pull
 	PATH=$(_BIN_DIR):$$PATH docker-compose build
 	PATH=$(_BIN_DIR):$$PATH docker-compose run crossdock
+
+.PHONY: crossdock-logs
+	PATH=$(_BIN_DIR):$$PATH docker-compose logs
 
 .PHONY: docker-build
 docker-build:
@@ -258,26 +262,28 @@ endif
 
 .PHONY: ci-install
 ci-install: install
-ifdef CI_TEST
-	@$(MAKE) lintbins testbins
+ifdef CI_LINT
+	@$(MAKE) lintbins
 endif
-ifdef CI_CROSSDOCK
-	@$(MAKE) $(_BIN_DIR)/docker-compose
+ifdef CI_COVER
+	@$(MAKE) coverbins
 endif
 
 .PHONY: ci-run
 ci-run:
-	@echo Running $(CI_TPYES)
+	@echo Running $(CI_TYPES)
+ifdef CI_LINT
+	@$(MAKE) lint
+endif
 ifdef CI_TEST
-	@$(MAKE) lint cover $(THRIFTRW)
+	@$(MAKE) test
+endif
+ifdef CI_COVER
+	@$(MAKE) cover goveralls
 endif
 ifdef CI_EXAMPLES
-	@$(MAKE) test-examples
+	@$(MAKE) examples
 endif
 ifdef CI_CROSSDOCK
-	-@$(MAKE) crossdock
-	@PATH=$(_BIN_DIR):$$PATH docker-compose logs
-endif
-ifdef CI_GOVERALLS
-	-@goveralls -coverprofile=cover.out -service=travis-ci
+	@$(MAKE) crossdock || $(MAKE) crossdock-logs
 endif
