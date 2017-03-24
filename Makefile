@@ -131,9 +131,6 @@ coverbins:
 		github.com/mattn/goveralls \
 		golang.org/x/tools/cmd/cover
 
-#.PHONY: bins
-#bins: lintbins coverbins $(BINS)
-
 .PHONY: install
 install: $(GLIDE)
 	PATH=$(BIN):$$PATH glide install
