@@ -24,7 +24,6 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 
 	"go.uber.org/zap"
@@ -35,17 +34,15 @@ var _timeNow = time.Now
 
 // UnaryInbound is middleware for unary inbound handlers.
 type UnaryInbound struct {
-	logger     *zap.Logger
-	extract    ContextExtractor
-	downstream middleware.UnaryInbound
+	logger  *zap.Logger
+	extract ContextExtractor
 }
 
 // NewUnaryInbound constructs a UnaryInbound.
-func NewUnaryInbound(downstream middleware.UnaryInbound, logger *zap.Logger, extract ContextExtractor) *UnaryInbound {
+func NewUnaryInbound(logger *zap.Logger, extract ContextExtractor) *UnaryInbound {
 	return &UnaryInbound{
-		logger:     logger.With(zap.String("type", "unary inbound")),
-		extract:    extract,
-		downstream: downstream,
+		logger:  logger.With(zap.String("type", "unary inbound")),
+		extract: extract,
 	}
 }
 
@@ -54,12 +51,7 @@ func (m *UnaryInbound) Handle(ctx context.Context, req *transport.Request, w tra
 	// TODO (shah): Add timing info to the request struct so that we don't lose
 	// time spent in the transport.
 	start := _timeNow()
-	var err error
-	if m.downstream != nil {
-		err = m.downstream.Handle(ctx, req, w, h)
-	} else {
-		err = h.Handle(ctx, req, w)
-	}
+	err := h.Handle(ctx, req, w)
 	elapsed := _timeNow().Sub(start)
 
 	if ce := m.logger.Check(zap.DebugLevel, "Handled request."); ce != nil {

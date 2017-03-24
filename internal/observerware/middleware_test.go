@@ -26,11 +26,10 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/yarpc/api/transport"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"go.uber.org/yarpc/api/middleware"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -52,43 +51,15 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 	failed := errors.New("fail")
 
 	tests := []struct {
-		desc       string
-		downstream middleware.UnaryInbound
-		handler    transport.UnaryHandler
-		extract    ContextExtractor
+		desc    string
+		handler transport.UnaryHandler
+		extract ContextExtractor
 
 		wantErr    bool
 		wantFields []zapcore.Field
 	}{
 		{
-			desc:       "downstream without errors",
-			downstream: fakeInboundMiddleware{},
-			extract:    NewNopContextExtractor(),
-			wantFields: []zapcore.Field{
-				zap.String("type", "unary inbound"),
-				zap.Skip(),
-				zap.Object("request", req),
-				zap.Duration("latency", 0),
-				zap.Bool("successful", true),
-				zap.Skip(),
-			},
-		},
-		{
-			desc:       "downstream with errors",
-			downstream: fakeInboundMiddleware{err: failed},
-			extract:    NewNopContextExtractor(),
-			wantErr:    true,
-			wantFields: []zapcore.Field{
-				zap.String("type", "unary inbound"),
-				zap.Skip(),
-				zap.Object("request", req),
-				zap.Duration("latency", 0),
-				zap.Bool("successful", false),
-				zap.Error(failed),
-			},
-		},
-		{
-			desc:    "handler without errors",
+			desc:    "downstream errors",
 			handler: fakeHandler{},
 			extract: NewNopContextExtractor(),
 			wantFields: []zapcore.Field{
@@ -101,10 +72,10 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 			},
 		},
 		{
-			desc:       "handler with errors",
-			downstream: fakeInboundMiddleware{err: failed},
-			extract:    NewNopContextExtractor(),
-			wantErr:    true,
+			desc:    "no downstream errors",
+			extract: NewNopContextExtractor(),
+			handler: fakeHandler{failed},
+			wantErr: true,
 			wantFields: []zapcore.Field{
 				zap.String("type", "unary inbound"),
 				zap.Skip(),
@@ -119,7 +90,7 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			core, logs := observer.New(zapcore.DebugLevel)
-			mw := NewUnaryInbound(tt.downstream, zap.New(core), tt.extract)
+			mw := NewUnaryInbound(zap.New(core), tt.extract)
 			err := mw.Handle(context.Background(), req, nil /* response writer */, tt.handler)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected an error from middleware.")
