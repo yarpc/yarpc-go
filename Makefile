@@ -73,35 +73,35 @@ THRIFT_VERSION := 1.0.0-dev
 
 BIN = $(CI_CACHE_DIR)/bin
 
-$(BIN)/docker-compose:
-	mkdir -p $(BIN)
-	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(shell uname -s)-$(shell uname -m) > $(BIN)/docker-compose
-	chmod +x $(BIN)/docker-compose
+DOCKER_COMPOSE = $(BIN)/docker-compose
+GLIDE = $(BIN)/glide
+THRIFT = $(BIN)/thrift
+BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(BIN)/thriftrw-plugin-yarpc
 
-$(BIN)/glide:
+$(DOCKER_COMPOSE):
+	mkdir -p $(BIN)
+	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(shell uname -s)-$(shell uname -m) > $(DOCKER_COMPOSE)
+	chmod +x $(DOCKER_COMPOSE)
+
+$(GLIDE):
 	mkdir -p $(BIN)
 	mkdir -p $(TMP)/glide
 	curl -L https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(shell uname -s)-amd64.tar.gz > $(TMP)/glide/glide.tar.gz
-	tar -C $(TMP)/glide -xzf $(TMP)/glide/glide.tar.gz
-	mv $(TMP)/glide/$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64/glide $(BIN)/glide
+	cd $(TMP)/glide; tar xzf glide.tar.gz
+	mv $(TMP)/glide/$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64/glide $(GLIDE)
 	rm -rf $(TMP)/glide
 
-$(BIN)/thrift:
+$(THRIFT):
 	mkdir -p $(BIN)
 	mkdir -p $(TMP)/thrift
 	curl -L "https://github.com/uber/tchannel-go/releases/download/thrift-v$(THRIFT_VERSION)/thrift-1-$(shell uname -s)-$(shell uname -m).tar.gz" > $(TMP)/thrift/thrift.tar.gz
 	tar -C $(TMP)/thrift -xzf $(TMP)/thrift/thrift.tar.gz
-	mv $(TMP)/thrift/thrift-1 $(BIN)/thrift
+	mv $(TMP)/thrift/thrift-1 $(THRIFT)
 	rm -rf $(TMP)/thrift
 
 $(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
 	mkdir -p $(BIN)
 	go build -o $(BIN)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
-
-DOCKER_COMPOSE = $(BIN)/docker-compose
-GLIDE = $(BIN)/glide
-THRIFT = $(BIN)/thrift
-BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(BIN)/thriftrw-plugin-yarpc
 
 define generatedeprule
 BINS += $(BIN)/$(shell basename $1)
@@ -133,7 +133,7 @@ coverbins:
 
 .PHONY: install
 install: $(GLIDE)
-	PATH=$(BIN):$$PATH glide install
+	$(GLIDE) install
 
 .PHONY: clean
 clean:
@@ -237,23 +237,23 @@ examples:
 
 .PHONY: crossdock
 crossdock: $(DOCKER_COMPOSE)
-	PATH=$(BIN):$$PATH docker-compose kill go
-	PATH=$(BIN):$$PATH docker-compose rm -f go
-	PATH=$(BIN):$$PATH docker-compose build go
-	PATH=$(BIN):$$PATH docker-compose run crossdock
+	$(DOCKER_COMPOSE) kill go
+	$(DOCKER_COMPOSE) rm -f go
+	$(DOCKER_COMPOSE) build go
+	$(DOCKER_COMPOSE) run crossdock
 
 
 .PHONY: crossdock-fresh
 crossdock-fresh: $(DOCKER_COMPOSE)
-	PATH=$(BIN):$$PATH docker-compose kill
-	PATH=$(BIN):$$PATH docker-compose rm --force
-	PATH=$(BIN):$$PATH docker-compose pull
-	PATH=$(BIN):$$PATH docker-compose build
-	PATH=$(BIN):$$PATH docker-compose run crossdock
+	$(DOCKER_COMPOSE) kill
+	$(DOCKER_COMPOSE) rm --force
+	$(DOCKER_COMPOSE) pull
+	$(DOCKER_COMPOSE) build
+	$(DOCKER_COMPOSE) run crossdock
 
 .PHONY: crossdock-logs
 crossdock-logs: $(DOCKER_COMPOSE)
-	PATH=$(BIN):$$PATH docker-compose logs
+	$(DOCKER_COMPOSE) logs
 
 .PHONY: ci-docker-load
 ci-docker-load:
