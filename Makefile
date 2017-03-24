@@ -186,7 +186,7 @@ lintbins:
 		github.com/kisielk/errcheck
 
 .PHONY: lint
-lint: lintbins nogogenerate gofmt govet golint staticcheck errcheck verify_version
+lint: lintbins generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verify_version
 
 .PHONY: install
 install:
