@@ -223,7 +223,7 @@ test: $(THRIFTRW)
 
 .PHONY: cover
 cover: coverbins $(THRIFTRW)
-	PATH=$(BIN):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
+	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: goveralls
