@@ -254,14 +254,6 @@ crossdock-fresh: $(DOCKER_COMPOSE)
 crossdock-logs: $(DOCKER_COMPOSE)
 	PATH=$(BIN):$$PATH docker-compose logs
 
-.PHONY: docker-build
-docker-build:
-	docker build -t yarpc_go .
-
-.PHONY: docker-test
-docker-test: docker-build
-	docker run yarpc_go make test
-
 .PHONY: ci-docker-load
 ci-docker-load:
 ifdef CI_CROSSDOCK
