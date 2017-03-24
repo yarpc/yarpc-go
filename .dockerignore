@@ -11,3 +11,13 @@ cover.out
 TAGS
 .tmp
 .cache
+*.t.err
+encoding/thrift/thriftrw-plugin-yarpc/thriftrw-plugin-yarpc
+internal/crossdock/crossdock
+internal/examples/env
+internal/examples/json-keyvalue/client/client
+internal/examples/json-keyvalue/server/server
+internal/examples/hello/hello
+internal/examples/thrift-keyvalue/keyvalue/client/client
+internal/examples/thrift-keyvalue/keyvalue/server/server
+internal/examples/thrift-oneway/thrift-oneway
