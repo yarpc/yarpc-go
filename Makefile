@@ -184,8 +184,9 @@ govet:
 .PHONY: golint
 golint:
 	$(eval LINT_LOG := $(shell mktemp -t golint.XXXXX))
-	@cat /dev/null > $(LINT_LOG)
-	@$(foreach pkg, $(PACKAGES), golint $(pkg) | $(FILTER_LINT) >> $(LINT_LOG) || true;)
+	@for pkg in $(PACKAGES); do \
+		golint $$pkg | $(FILTER_LINT) >> $(LINT_LOG) || true; \
+	done
 	@[ ! -s "$(LINT_LOG)" ] || (echo "golint failed:" | cat - $(LINT_LOG) && false)
 
 .PHONY: staticcheck
