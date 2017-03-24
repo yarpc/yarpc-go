@@ -15,7 +15,7 @@ This document outlines how to create a release of yarpc-go
 
 5.  Alter `version.go` to have the same version as `version_to_release`
 
-6.  Run `make verify_version`
+6.  Run `make verifyversion`
 
 7.  Create a commit with the title `Preparing for release <version_to_release>`
 
@@ -42,5 +42,3 @@ This document outlines how to create a release of yarpc-go
 15. Run `make verify_version`
 
 16. `git push origin dev`
-
-
