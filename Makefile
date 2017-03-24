@@ -14,7 +14,7 @@ GENERATE_DEPENDENCIES = \
 	go.uber.org/thriftrw \
 	go.uber.org/tools/update-license
 
-PACKAGES := $(shell glide novendor)
+PACKAGES := $(go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
 
 GO_FILES := $(shell \
 	find . '(' -path '*/.*' -o -path './vendor' ')' -prune \
@@ -146,7 +146,7 @@ build:
 .PHONY: generate
 generate: $(BINS)
 	@go get github.com/golang/mock/mockgen
-	PATH=$(BIN):$$PATH ./scripts/generate.sh
+	@PATH=$(BIN):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
 nogogenerate:
