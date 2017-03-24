@@ -2,6 +2,22 @@
 
 set -e
 
+start_waitpids() {
+  WAITPIDS=
+}
+
+do_waitpid() {
+  $@ &
+  WAITPIDS="${WAITPIDS} $!"
+}
+
+reset_waitpids() {
+  for waitpid in ${WAITPIDS}; do
+    wait "${waitpid}" || exit 1
+  done
+  WAITPIDS=
+}
+
 COVER=cover
 ROOT_PKG=go.uber.org/yarpc
 
@@ -23,6 +39,7 @@ for pkg in "$@"; do
 done
 
 i=0
+start_waitpids
 for pkg in "$@"; do
 	i=$((i + 1))
 
@@ -52,7 +69,8 @@ for pkg in "$@"; do
 		args="-coverprofile $COVER/cover.${i}.out -coverpkg $coverpkg"
 	fi
 
-	go test -race $args "$pkg"
+  do_waitpid go test -race $args "$pkg"
 done
+reset_waitpids
 
 gocovmerge "$COVER"/*.out > cover.out
