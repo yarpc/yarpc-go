@@ -1,5 +1,5 @@
 hash: 3756b8708cb1e31ddb382de6bdd3985edc6d68585e7916b086e4232c1d675093
-updated: 2017-03-23T19:02:48.246534801+01:00
+updated: 2017-03-24T11:10:10.976475301+01:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -103,7 +103,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: 1ef6560c59eeb170f2381c02287ca44a5c50a523
+  version: 5b9071f590e7c32b88b950ffc2a4e20ef74d2804
   subpackages:
   - client/cherami
   - common
@@ -116,7 +116,7 @@ imports:
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
-  version: 8f2da2ca8fc971c825e6e6ad83710095fd8748c5
+  version: 153cc21d199f5a4b65d0d7219c1f423ea58cfab5
   subpackages:
   - internal/spanlog
   - log
@@ -150,9 +150,10 @@ imports:
 - name: go.uber.org/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: go.uber.org/thriftrw
-  version: c98a13058faa5dd41584a77221a268d2c72d832d
+  version: 05f870b3c56597d180af568a6392209cc33269e2
   subpackages:
   - envelope
+  - internal
   - internal/envelope
   - internal/envelope/exception
   - internal/frame
@@ -176,7 +177,7 @@ imports:
   - context
   - context/ctxhttp
 - name: golang.org/x/sys
-  version: 99f16d856c9836c42d24e7ab64ea72916925fa97
+  version: 8fd966b47dbdd4faa03de0d06e3d733baeb9a1a9
   subpackages:
   - unix
 - name: golang.org/x/tools
