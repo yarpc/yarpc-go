@@ -5,9 +5,9 @@ node_modules
 *.so
 *.exe
 *.prof
-/cover
-/cover.html
-/cover.out
-/TAGS
-/.tmp
-/.cache
+cover
+cover.html
+cover.out
+TAGS
+.tmp
+.cache

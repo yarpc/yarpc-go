@@ -111,6 +111,7 @@ build:
 
 .PHONY: generate
 generate: $(_GENERATE_DEPS_EXECUTABLES)
+	@go get github.com/golang/mock/mockgen
 	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
