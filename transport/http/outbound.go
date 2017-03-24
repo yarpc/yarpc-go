@@ -54,6 +54,8 @@ var defaultURLTemplate, _ = url.Parse("http://localhost")
 // OutboundOption customizes an HTTP Outbound.
 type OutboundOption func(*Outbound)
 
+func (OutboundOption) httpOption() {}
+
 // URLTemplate specifies the URL this outbound makes requests to. For
 // peer.Chooser-based outbounds, the peer (host:port) spection of the URL may
 // vary from call to call but the rest will remain unchanged. For single-peer
