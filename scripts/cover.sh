@@ -52,7 +52,7 @@ for pkg in "$@"; do
 		args="-coverprofile $COVER/cover.${i}.out -coverpkg $coverpkg"
 	fi
 
-	go test -race $args -v "$pkg"
+	go test -race $args "$pkg"
 done
 
 gocovmerge "$COVER"/*.out > cover.out
