@@ -81,4 +81,7 @@ touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
 touch yarpcproto/.nocover
 
-scripts/updateLicenses.sh
+rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
+rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
+
+scripts/update-licenses.sh

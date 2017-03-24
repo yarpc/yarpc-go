@@ -63,7 +63,9 @@ services:
         depends_on:
           cherami:
             condition: service_healthy
-        build: .
+        build:
+          context: .
+          dockerfile: Dockerfile.crossdock
         ports:
             - "8080-8088"
         environment:

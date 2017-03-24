@@ -15,11 +15,7 @@ GENERATE_DEPENDENCIES = \
 	go.uber.org/thriftrw \
 	go.uber.org/tools/update-license
 
-##############################################################################
-
-export GO15VENDOREXPERIMENT=1
-
-PACKAGES := $(shell glide novendor)
+PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
 
 GO_FILES := $(shell \
 	find . '(' -path '*/.*' -o -path './vendor' ')' -prune \
@@ -68,56 +64,96 @@ CI_DOCKER_CACHE_DIR := $(CI_CACHE_DIR)/docker
 CI_DOCKER_IMAGE := yarpc_go
 CI_DOCKER_CACHE_FILE := $(CI_DOCKER_CACHE_DIR)/$(CI_DOCKER_IMAGE)
 
+TMP := $(shell pwd)/.tmp
+
+# all we want is go get -u github.com/Masterminds/glide
+# but have to pin to 0.12.3 due to https://github.com/Masterminds/glide/issues/745
+GLIDE_VERSION := 0.12.3
 DOCKER_COMPOSE_VERSION := 1.10.0
+THRIFT_VERSION := 1.0.0-dev
 
-_BIN_DIR = $(CI_CACHE_DIR)/bin
+BIN = $(CI_CACHE_DIR)/bin
 
-$(_BIN_DIR)/docker-compose:
-	mkdir -p $(_BIN_DIR)
-	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(shell uname -s)-$(shell uname -m) > $(_BIN_DIR)/docker-compose
-	chmod +x $(_BIN_DIR)/docker-compose
+$(BIN)/docker-compose:
+	mkdir -p $(BIN)
+	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(shell uname -s)-$(shell uname -m) > $(BIN)/docker-compose
+	chmod +x $(BIN)/docker-compose
 
-##############################################################################
+$(BIN)/glide:
+	mkdir -p $(BIN)
+	mkdir -p $(TMP)/glide
+	curl -L https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(shell uname -s)-amd64.tar.gz > $(TMP)/glide/glide.tar.gz
+	tar -C $(TMP)/glide -xzf $(TMP)/glide/glide.tar.gz
+	mv $(TMP)/glide/$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64/glide $(BIN)/glide
+	rm -rf $(TMP)/glide
 
-_GENERATE_DEPS_DIR = $(shell pwd)/.tmp
-$(_GENERATE_DEPS_DIR):
-	mkdir $(_GENERATE_DEPS_DIR)
+$(BIN)/thrift:
+	mkdir -p $(BIN)
+	mkdir -p $(TMP)/thrift
+	curl -L "https://github.com/uber/tchannel-go/releases/download/thrift-v$(THRIFT_VERSION)/thrift-1-$(shell uname -s)-$(shell uname -m).tar.gz" > $(TMP)/thrift/thrift.tar.gz
+	tar -C $(TMP)/thrift -xzf $(TMP)/thrift/thrift.tar.gz
+	mv $(TMP)/thrift/thrift-1 $(BIN)/thrift
+	rm -rf $(TMP)/thrift
 
-# Full paths to executables needed for 'make generate'
-_GENERATE_DEPS_EXECUTABLES = $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go $(_GENERATE_DEPS_DIR)/thrift
+$(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
+	mkdir -p $(BIN)
+	go build -o $(BIN)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
 
-# Special-case for local executables
-$(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go $(_GENERATE_DEPS_DIR)
-	go build -o $(_GENERATE_DEPS_DIR)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
+$(BIN)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go
+	mkdir -p $(BIN)
+	go build -o $(BIN)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
 
-$(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go $(_GENERATE_DEPS_DIR)
-	go build -o $(_GENERATE_DEPS_DIR)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
-
-$(_GENERATE_DEPS_DIR)/thrift:
-	./scripts/install-thrift.sh $(_GENERATE_DEPS_DIR)
+DOCKER_COMPOSE = $(BIN)/docker-compose
+GLIDE = $(BIN)/glide
+THRIFT = $(BIN)/thrift
+BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
 
 define generatedeprule
-_GENERATE_DEPS_EXECUTABLES += $(_GENERATE_DEPS_DIR)/$(shell basename $1)
+BINS += $(BIN)/$(shell basename $1)
 
-$(_GENERATE_DEPS_DIR)/$(shell basename $1): vendor/$1/*.go glide.lock $(_GENERATE_DEPS_DIR)
-	./scripts/vendor-build.sh $(_GENERATE_DEPS_DIR) $1
+$(BIN)/$(shell basename $1): vendor/$1/*.go glide.lock $(GLIDE)
+	mkdir -p $(BIN)
+	PATH=$(BIN):$(PATH) ./scripts/vendor-build.sh $(BIN) $1
 endef
 
 $(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
 
-THRIFTRW = $(_GENERATE_DEPS_DIR)/thriftrw
+THRIFTRW = $(BIN)/thriftrw
 
 ##############################################################################
+
+.PHONY: lintbins
+lintbins:
+	@go get \
+		github.com/golang/lint/golint \
+		honnef.co/go/tools/cmd/staticcheck \
+		github.com/kisielk/errcheck
+
+.PHONY: coverbins
+coverbins:
+	@go get \
+		github.com/wadey/gocovmerge \
+		github.com/mattn/goveralls \
+		golang.org/x/tools/cmd/cover
+
+.PHONY: install
+install: $(GLIDE)
+	PATH=$(BIN):$$PATH glide install
+
+.PHONY: clean
+clean:
+	rm -rf $(TMP) $(CI_CACHE_DIR)
 
 .PHONY: build
 build:
 	go build $(PACKAGES)
 
 .PHONY: generate
-generate: $(_GENERATE_DEPS_EXECUTABLES)
+generate: $(BINS)
+	@go get github.com/golang/mock/mockgen
 	@command -v protoc >/dev/null || (echo "protoc must be installed" && false)
 	@protoc --version | grep 'libprotoc 3\.' >/dev/null || (echo "protoc must be version 3" && false)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/generate.sh
+	@PATH=$(BIN):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
 nogogenerate:
@@ -155,8 +191,9 @@ govet:
 .PHONY: golint
 golint:
 	$(eval LINT_LOG := $(shell mktemp -t golint.XXXXX))
-	@cat /dev/null > $(LINT_LOG)
-	@$(foreach pkg, $(PACKAGES), golint $(pkg) | $(FILTER_LINT) >> $(LINT_LOG) || true;)
+	@for pkg in $(PACKAGES); do \
+		golint $$pkg | $(FILTER_LINT) >> $(LINT_LOG) || true; \
+	done
 	@[ ! -s "$(LINT_LOG)" ] || (echo "golint failed:" | cat - $(LINT_LOG) && false)
 
 .PHONY: staticcheck
@@ -171,8 +208,8 @@ errcheck:
 	@errcheck $(ERRCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) | $(FILTER_ERRCHECK) > $(ERRCHECK_LOG) || true
 	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
 
-.PHONY: verify_version
-verify_version:
+.PHONY: verifyversion
+verifyversion:
 	@if [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)" ]; then \
 		echo "yarpc-go: $(CHANGELOG_VERSION)"; \
 	elif [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)-dev" ]; then \
@@ -184,38 +221,17 @@ verify_version:
 		exit 1; \
 	fi
 
-.PHONY: lintbins
-lintbins:
-	@go get \
-		github.com/golang/lint/golint \
-		honnef.co/go/tools/cmd/staticcheck \
-		github.com/kisielk/errcheck
-
 .PHONY: lint
-lint: lintbins nogogenerate gofmt govet golint staticcheck errcheck verify_version
-
-.PHONY: install
-install:
-	# all we want is go get -u github.com/Masterminds/glide
-	# but have to pin to 0.12.3 due to https://github.com/Masterminds/glide/issues/745
-	./scripts/glide-install.sh
-	glide install
+lint: lintbins generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion
 
 .PHONY: test
 test: $(THRIFTRW)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH go test -race $(PACKAGES)
+	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
 
-
-.PHONY: coverbins
-coverbins:
-	@go get \
-		github.com/wadey/gocovmerge \
-		github.com/mattn/goveralls \
-		golang.org/x/tools/cmd/cover
 
 .PHONY: cover
 cover: coverbins $(THRIFTRW)
-	PATH=$(_GENERATE_DEPS_DIR):$$PATH ./scripts/cover.sh $(shell go list $(PACKAGES))
+	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: goveralls
@@ -227,32 +243,24 @@ examples:
 	$(MAKE) -C internal/examples
 
 .PHONY: crossdock
-crossdock: $(_BIN_DIR)/docker-compose
-	PATH=$(_BIN_DIR):$$PATH docker-compose kill go
-	PATH=$(_BIN_DIR):$$PATH docker-compose rm -f go
-	PATH=$(_BIN_DIR):$$PATH docker-compose build go
-	PATH=$(_BIN_DIR):$$PATH docker-compose run crossdock
+crossdock: $(DOCKER_COMPOSE)
+	PATH=$(BIN):$$PATH docker-compose kill go
+	PATH=$(BIN):$$PATH docker-compose rm -f go
+	PATH=$(BIN):$$PATH docker-compose build go
+	PATH=$(BIN):$$PATH docker-compose run crossdock
 
 
 .PHONY: crossdock-fresh
-crossdock-fresh: $(_BIN_DIR)/docker-compose
-	PATH=$(_BIN_DIR):$$PATH docker-compose kill
-	PATH=$(_BIN_DIR):$$PATH docker-compose rm --force
-	PATH=$(_BIN_DIR):$$PATH docker-compose pull
-	PATH=$(_BIN_DIR):$$PATH docker-compose build
-	PATH=$(_BIN_DIR):$$PATH docker-compose run crossdock
+crossdock-fresh: $(DOCKER_COMPOSE)
+	PATH=$(BIN):$$PATH docker-compose kill
+	PATH=$(BIN):$$PATH docker-compose rm --force
+	PATH=$(BIN):$$PATH docker-compose pull
+	PATH=$(BIN):$$PATH docker-compose build
+	PATH=$(BIN):$$PATH docker-compose run crossdock
 
 .PHONY: crossdock-logs
-crossdock-logs:
-	PATH=$(_BIN_DIR):$$PATH docker-compose logs
-
-.PHONY: docker-build
-docker-build:
-	docker build -t yarpc_go .
-
-.PHONY: docker-test
-docker-test: docker-build
-	docker run yarpc_go make test
+crossdock-logs: $(DOCKER_COMPOSE)
+	PATH=$(BIN):$$PATH docker-compose logs
 
 .PHONY: ci-docker-load
 ci-docker-load:
