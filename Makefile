@@ -106,9 +106,9 @@ BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(BIN)/thriftrw-plugin-yarpc
 define generatedeprule
 BINS += $(BIN)/$(shell basename $1)
 
-$(BIN)/$(shell basename $1): vendor/$1/*.go glide.lock
+$(BIN)/$(shell basename $1): vendor/$1/*.go glide.lock $(GLIDE)
 	mkdir -p $(BIN)
-	./scripts/vendor-build.sh $(BIN) $1
+	PATH=$(BIN):$$PATH ./scripts/vendor-build.sh $(BIN) $1
 endef
 
 $(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
