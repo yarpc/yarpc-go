@@ -51,10 +51,6 @@ thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --input
 
 thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift
 
-touch internal/crossdock/thrift/gen-go/echo/.nocover
-touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
-touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
-
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
 

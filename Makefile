@@ -38,6 +38,36 @@ FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
 INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
 
+OVERALLS_REPORT := overalls.coverprofile
+OVERALLS_IGNORES := \
+	.git \
+	internal/crossdock/client/dispatcher \
+	internal/crossdock/thrift \
+	internal/crossdock/thrift/echo \
+	internal/crossdock/thrift/echo/echoclient \
+	internal/crossdock/thrift/echo/echoserver \
+	internal/crossdock/thrift/echo/yarpc \
+	internal/crossdock/thrift/gauntlet \
+	internal/crossdock/thrift/gauntlet/secondserviceclient \
+	internal/crossdock/thrift/gauntlet/secondserviceserver \
+	internal/crossdock/thrift/gauntlet/thrifttestclient \
+	internal/crossdock/thrift/gauntlet/thrifttestserver \
+	internal/crossdock/thrift/gauntlet/yarpc \
+	internal/crossdock/thrift/gen-go \
+	internal/crossdock/thrift/gen-go/echo \
+	internal/crossdock/thrift/gen-go/gauntlet_apache \
+	internal/crossdock/thrift/gen-go/gauntlet_tchannel \
+	internal/crossdock/thrift/oneway \
+	internal/crossdock/thrift/oneway/onewayclient \
+	internal/crossdock/thrift/oneway/onewayserver \
+	internal/crossdock/thrift/oneway/yarpc \
+	vendor
+
+comma := ,
+null :=
+space := $(null) #
+OVERALLS_IGNORE = $(subst $(space),$(comma),$(strip $(OVERALLS_IGNORES)))
+
 CI_TYPES ?= lint test examples crossdock
 ifneq ($(filter lint,$(CI_TYPES)),)
 CI_LINT := true
@@ -54,8 +84,13 @@ endif
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
 endif
-ifneq ($(filter goveralls,$(CI_TYPES)),)
-CI_GOVERALLS := true
+ifneq ($(filter coveralls,$(CI_TYPES)),)
+CI_COVERALLS := true
+endif
+
+COVERMODE ?= set
+ifdef CI_COVERALLS
+COVERMODE := atomic
 endif
 
 CI_CACHE_DIR := $(shell pwd)/.cache
@@ -127,9 +162,8 @@ lintbins:
 .PHONY: coverbins
 coverbins:
 	@go get \
-		github.com/wadey/gocovmerge \
-		github.com/mattn/goveralls \
-		golang.org/x/tools/cmd/cover
+		github.com/go-playground/overalls \
+		github.com/mattn/goveralls
 
 .PHONY: install
 install: $(GLIDE)
@@ -223,12 +257,16 @@ test: $(THRIFTRW)
 
 .PHONY: cover
 cover: coverbins $(THRIFTRW)
-	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
-	go tool cover -html=cover.out -o cover.html
+	@rm -f $(OVERALLS_REPORT)
+	PATH=$(BIN):$$PATH overalls \
+		-project=go.uber.org/yarpc \
+		-ignore "$(OVERALLS_IGNORE)" \
+		-covermode=$(COVERMODE) | \
+		grep -v '^Test args'
 
-.PHONY: goveralls
-goveralls:
-	goveralls -coverprofile=cover.out -service=travis-ci
+.PHONY: coveralls
+coveralls: cover
+	goveralls -service=travis-ci -coverprofile=$(OVERALLS_REPORT)
 
 .PHONY: examples
 examples:
@@ -279,8 +317,8 @@ endif
 ifdef CI_COVER
 	@$(MAKE) cover
 endif
-ifdef CI_GOVERALLS
-	@$(MAKE) goveralls
+ifdef CI_COVERALLS
+	@$(MAKE) coveralls
 endif
 ifdef CI_EXAMPLES
 	@$(MAKE) examples
