@@ -14,7 +14,7 @@ GENERATE_DEPENDENCIES = \
 	go.uber.org/thriftrw \
 	go.uber.org/tools/update-license
 
-PACKAGES := $(go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
+PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
 
 GO_FILES := $(shell \
 	find . '(' -path '*/.*' -o -path './vendor' ')' -prune \
