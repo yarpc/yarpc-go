@@ -151,9 +151,9 @@ build:
 .PHONY: generate
 generate: $(BINS)
 	@go get github.com/golang/mock/mockgen
-	@command -v protoc >/dev/null || (echo "protoc must be installed" && false)
-	@protoc --version | grep 'libprotoc 3\.' >/dev/null || (echo "protoc must be version 3" && false)
-	@PATH=$(BIN):$$PATH ./scripts/generate.sh
+	@PATH=/home/travis/bin:$$PATH command -v protoc >/dev/null || (echo "protoc must be installed" && false)
+	@PATH=/home/travis/bin:$$PATH protoc --version | grep 'libprotoc 3\.' >/dev/null || (echo "protoc must be version 3" && false)
+	@PATH=/home/travis/bin:$(BIN):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
 nogogenerate:
@@ -295,6 +295,12 @@ ifdef CI_EXAMPLES
 endif
 ifdef CI_CROSSDOCK
 	@$(MAKE) crossdock || $(MAKE) crossdock-logs
+endif
+
+.PHONY: travis-install-protobuf
+travis-install-protobuf:
+ifdef CI_TRAVIS_INSTALL_PROTOBUF
+	./scripts/travis-install-protobuf.sh
 endif
 
 .PHONY: travis-docker-push
