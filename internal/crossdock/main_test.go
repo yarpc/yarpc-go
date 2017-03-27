@@ -116,8 +116,20 @@ func TestCrossdock(t *testing.T) {
 				"transport": []string{"http", "tchannel"},
 			},
 			params: params{
-				"ctxserver": "127.0.0.1",
-				"ctxclient": "127.0.0.1",
+				"ctxserver":              "127.0.0.1",
+				"ctxclient":              "127.0.0.1",
+				"ctxavailabletransports": "http;tchannel",
+			},
+		},
+		{
+			// Try ctxpropagation with only HTTP. We never do this in YARPC Go
+			// but other languages that don't support TChannel need this.
+			name: "ctxpropagation",
+			params: params{
+				"transport":              "http",
+				"ctxserver":              "127.0.0.1",
+				"ctxclient":              "127.0.0.1",
+				"ctxavailabletransports": "http",
 			},
 		},
 		{
