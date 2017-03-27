@@ -166,7 +166,7 @@ func getServiceNameAndMethodDesc(router transport.Router, procedure transport.Pr
 	methodName = url.QueryEscape(methodName)
 	return serviceName, grpc.MethodDesc{
 		MethodName: methodName,
-		Handler:    newMethodHandler(serviceName, methodName, router).Handle,
+		Handler:    newMethodHandler(serviceName, methodName, router).handle,
 	}, nil
 }
 

@@ -39,7 +39,7 @@ func newMethodHandler(serviceName string, methodName string, router transport.Ro
 	return &methodHandler{serviceName, methodName, router}
 }
 
-func (m *methodHandler) Handle(
+func (m *methodHandler) handle(
 	server interface{},
 	ctx context.Context,
 	decodeFunc func(interface{}) error,
