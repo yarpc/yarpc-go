@@ -21,9 +21,12 @@
 package pally
 
 import (
+	"regexp"
 	"sync"
 	"testing"
+	"testing/quick"
 
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,4 +63,53 @@ func TestDigester(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestIsValidName(t *testing.T) {
+	// Regexp is a slower, but more easily verifiable, description of the Tally
+	// name specification.
+	tallyRe := regexp.MustCompile(`^[0-9A-z_\-]+$`)
+	isValid := func(s string) bool {
+		prom := model.IsValidMetricName(model.LabelValue(s)) && model.LabelName(s).IsValid()
+		tally := tallyRe.MatchString(s)
+		return prom && tally
+	}
+
+	assert.NoError(t, quick.CheckEqual(
+		isValid,
+		IsValidName,
+		nil, /* config */
+	), "Hand-rolled validation doesn't match Tally regexp && stock Prometheus validators.")
+}
+
+func TestIsValidLabelValue(t *testing.T) {
+	tallyRe := regexp.MustCompile(`^[0-9A-z_.\-]+$`)
+	isValid := func(s string) bool {
+		prom := model.LabelValue(s).IsValid()
+		tally := tallyRe.MatchString(s)
+		return prom && tally
+	}
+
+	assert.NoError(t, quick.CheckEqual(
+		isValid,
+		IsValidName,
+		nil, /* config */
+	), "Hand-rolled validation doesn't match Tally regexp && stock Prometheus validators.")
+}
+
+func TestScrubLabelValue(t *testing.T) {
+	tests := []struct {
+		in  string
+		out string
+	}{
+		{"foo", "foo"},
+		{"", DefaultLabelValue},
+		{"foo!", "foo-"},
+		{"!foo", "-foo"},
+		{"fOo1.!FoO", "fOo1.-FoO"},
+	}
+
+	for _, tt := range tests {
+		assert.Equal(t, tt.out, ScrubLabelValue(tt.in), "Unexpected result from ScrubLabelValue.")
+	}
 }

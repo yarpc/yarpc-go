@@ -21,7 +21,6 @@
 package pally
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -64,15 +63,9 @@ type vector struct {
 }
 
 func (vec *vector) getOrCreate(labels ...string) (metric, error) {
-	for _, l := range labels {
-		if !isValidTallyString(l) {
-			return nil, errors.New("variable label values must also be Tally-compatible")
-		}
-	}
-
 	digester := newDigester()
 	for _, s := range labels {
-		digester.add(s)
+		digester.add(ScrubLabelValue(s))
 	}
 
 	vec.metricsMu.RLock()
