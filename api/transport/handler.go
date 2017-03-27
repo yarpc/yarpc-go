@@ -88,7 +88,9 @@ type OnewayHandler interface {
 }
 
 // DispatchUnaryHandler calls the handler h, recovering panics and timeout errors,
-// converting them to yarpc errors. All other errors are passed trough.
+// converting them to YARPC errors. All other errors are passed through.
+//
+// IsTimeoutError returns true if the request timed out.
 func DispatchUnaryHandler(
 	ctx context.Context,
 	h UnaryHandler,
@@ -115,7 +117,7 @@ func DispatchUnaryHandler(
 }
 
 // DispatchOnewayHandler calls the oneway handler, recovering from panics as
-// errors
+// errors.
 func DispatchOnewayHandler(
 	ctx context.Context,
 	h OnewayHandler,
