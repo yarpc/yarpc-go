@@ -22,17 +22,21 @@ package grpc
 
 import (
 	"errors"
+	"fmt"
 	"net"
+	"net/url"
 	"sync"
 
 	"google.golang.org/grpc"
 
 	"go.uber.org/yarpc/api/transport"
+	internalprocedure "go.uber.org/yarpc/internal/procedure"
 	internalsync "go.uber.org/yarpc/internal/sync"
 )
 
 var (
-	errRouterNotSet = errors.New("router not set")
+	errRouterNotSet          = errors.New("router not set")
+	errRouterHasNoProcedures = errors.New("router has no procedures")
 
 	_ transport.Inbound = (*Inbound)(nil)
 )
@@ -84,9 +88,13 @@ func (i *Inbound) start() error {
 	if i.router == nil {
 		return errRouterNotSet
 	}
-	server := grpc.NewServer(grpc.CustomCodec(noopCodec{}))
-	if err := registerProcedures(server, i.router.Procedures()); err != nil {
+	serviceDescs, err := getServiceDescs(i.router)
+	if err != nil {
 		return err
+	}
+	server := grpc.NewServer(grpc.CustomCodec(noopCodec{}))
+	for _, serviceDesc := range serviceDescs {
+		server.RegisterService(serviceDesc, noopGrpcStruct{})
 	}
 	listener, err := net.Listen("tcp", i.address)
 	if err != nil {
@@ -118,7 +126,49 @@ func (i *Inbound) stop() error {
 	return nil
 }
 
-// TODO
-func registerProcedures(server *grpc.Server, procedures []transport.Procedure) error {
-	return nil
+func getServiceDescs(router transport.Router) ([]*grpc.ServiceDesc, error) {
+	// TODO: router.Procedures() is not guaranteed to be immutable
+	procedures := router.Procedures()
+	if len(procedures) == 0 {
+		return nil, errRouterHasNoProcedures
+	}
+	serviceNameToServiceDesc := make(map[string]*grpc.ServiceDesc)
+	for _, procedure := range procedures {
+		serviceName, methodDesc, err := getServiceNameAndMethodDesc(router, procedure)
+		if err != nil {
+			return nil, err
+		}
+		serviceDesc, ok := serviceNameToServiceDesc[serviceName]
+		if !ok {
+			serviceDesc = &grpc.ServiceDesc{
+				ServiceName: serviceName,
+				HandlerType: (*noopGrpcInterface)(nil),
+			}
+			serviceNameToServiceDesc[serviceName] = serviceDesc
+		}
+		serviceDesc.Methods = append(serviceDesc.Methods, methodDesc)
+	}
+	serviceDescs := make([]*grpc.ServiceDesc, 0, len(serviceNameToServiceDesc))
+	for _, serviceDesc := range serviceNameToServiceDesc {
+		serviceDescs = append(serviceDescs, serviceDesc)
+	}
+	return serviceDescs, nil
 }
+
+func getServiceNameAndMethodDesc(router transport.Router, procedure transport.Procedure) (string, grpc.MethodDesc, error) {
+	serviceName, methodName := internalprocedure.FromName(procedure.Name)
+	if serviceName == "" || methodName == "" {
+		return "", grpc.MethodDesc{}, fmt.Errorf("invalid procedure name: %s", procedure.Name)
+	}
+	// TODO: do we really need to do url.QueryEscape?
+	// Are there consequences if there is a diff from the string and the url.QueryEscape string?
+	serviceName = url.QueryEscape(serviceName)
+	methodName = url.QueryEscape(methodName)
+	return serviceName, grpc.MethodDesc{
+		MethodName: methodName,
+		Handler:    newMethodHandler(serviceName, methodName, router).Handle,
+	}, nil
+}
+
+type noopGrpcInterface interface{}
+type noopGrpcStruct struct{}
