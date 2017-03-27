@@ -21,26 +21,25 @@
 package grpc
 
 import (
+	"sync"
+
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/sync"
+	internalsync "go.uber.org/yarpc/internal/sync"
 )
 
 var _ transport.Inbound = (*Inbound)(nil)
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once    sync.LifecycleOnce
+	once    internalsync.LifecycleOnce
 	address string
 	router  transport.Router
+	lock    sync.RWMutex
 }
 
 // NewInbound returns a new Inbound for the given address.
-func NewInbound(address string) (*Inbound, error) {
-	return &Inbound{
-		sync.Once(),
-		address,
-		nil,
-	}, nil
+func NewInbound(address string) *Inbound {
+	return &Inbound{internalsync.Once(), address, nil, sync.RWMutex{}}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -59,7 +58,11 @@ func (i *Inbound) IsRunning() bool {
 }
 
 // SetRouter implements transport.Inbound#SetRouter.
-func (i *Inbound) SetRouter(router transport.Router) {}
+func (i *Inbound) SetRouter(router transport.Router) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	i.router = router
+}
 
 // Transports implements transport.Inbound#Transports.
 func (i *Inbound) Transports() []transport.Transport {

@@ -25,38 +25,40 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	internalsync "go.uber.org/yarpc/internal/sync"
 )
 
 var _ transport.UnaryOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
+	once    internalsync.LifecycleOnce
 	chooser peer.Chooser
 }
 
 // NewOutbound returns a new Outbound for the given chooser.
-func NewOutbound(chooser peer.Chooser) (*Outbound, error) {
-	return nil, nil
+func NewOutbound(chooser peer.Chooser) *Outbound {
+	return &Outbound{internalsync.Once(), chooser}
 }
 
 // Start implements transport.Lifecycle#Start.
 func (o *Outbound) Start() error {
-	return nil
+	return o.once.Start(o.chooser.Start)
 }
 
 // Stop implements transport.Lifecycle#Stop.
 func (o *Outbound) Stop() error {
-	return nil
+	return o.once.Stop(o.chooser.Stop)
 }
 
 // IsRunning implements transport.Lifecycle#IsRunning.
 func (o *Outbound) IsRunning() bool {
-	return false
+	return o.once.IsRunning()
 }
 
 // Transports implements transport.Inbound#Transports.
 func (o *Outbound) Transports() []transport.Transport {
-	return nil
+	return []transport.Transport{}
 }
 
 // Call implements transport.UnaryOutbound#Call.
