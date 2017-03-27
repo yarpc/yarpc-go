@@ -32,14 +32,14 @@ var _ transport.Inbound = (*Inbound)(nil)
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
 	once    internalsync.LifecycleOnce
+	lock    sync.RWMutex
 	address string
 	router  transport.Router
-	lock    sync.RWMutex
 }
 
 // NewInbound returns a new Inbound for the given address.
 func NewInbound(address string) *Inbound {
-	return &Inbound{internalsync.Once(), address, nil, sync.RWMutex{}}
+	return &Inbound{internalsync.Once(), sync.RWMutex{}, address, nil}
 }
 
 // Start implements transport.Lifecycle#Start.
