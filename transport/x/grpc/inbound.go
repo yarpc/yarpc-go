@@ -85,7 +85,7 @@ func (i *Inbound) start() error {
 		return errRouterNotSet
 	}
 	server := grpc.NewServer(grpc.CustomCodec(noopCodec{}))
-	if err := registerRouter(server, i.router); err != nil {
+	if err := registerProcedures(server, i.router.Procedures()); err != nil {
 		return err
 	}
 	listener, err := net.Listen("tcp", i.address)
@@ -119,6 +119,6 @@ func (i *Inbound) stop() error {
 }
 
 // TODO
-func registerRouter(server *grpc.Server, router transport.Router) error {
+func registerProcedures(server *grpc.Server, procedures []transport.Procedure) error {
 	return nil
 }
