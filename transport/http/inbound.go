@@ -37,6 +37,8 @@ import (
 // NewInbound.
 type InboundOption func(*Inbound)
 
+func (InboundOption) httpOption() {}
+
 // Mux specifies that the HTTP server should make the YARPC endpoint available
 // under the given pattern on the given ServeMux. By default, the YARPC
 // service is made available on all paths of the HTTP server. By specifying a
