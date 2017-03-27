@@ -19,8 +19,8 @@ internal/crossdock/crossdock
 internal/examples/env
 internal/examples/json-keyvalue/client/client
 internal/examples/json-keyvalue/server/server
-internal/examples/hello/hello
 internal/examples/protobuf/protobuf
+internal/examples/thrift-hello/hello/hello
 internal/examples/thrift-keyvalue/keyvalue/client/client
 internal/examples/thrift-keyvalue/keyvalue/server/server
 internal/examples/thrift-oneway/thrift-oneway
