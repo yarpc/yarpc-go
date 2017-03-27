@@ -17,6 +17,8 @@ import:
   version: ^1
 - package: go.uber.org/thriftrw
   version: ^1
+- package: github.com/gogo/protobuf
+  version: ~0.4
 - package: github.com/crossdock/crossdock-go
   version: master
 - package: github.com/golang/mock

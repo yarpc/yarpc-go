@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/internal"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/procedure"
 
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/protocol"
@@ -206,7 +207,7 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 		Caller:    c.cc.Caller(),
 		Service:   c.cc.Service(),
 		Encoding:  Encoding,
-		Procedure: procedureName(c.thriftService, reqBody.MethodName()),
+		Procedure: procedure.ToName(c.thriftService, reqBody.MethodName()),
 	}
 
 	value, err := reqBody.ToWire()

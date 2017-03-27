@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package procedure
 
 import (
 	"testing"
@@ -27,7 +27,7 @@ import (
 )
 
 func TestProcedureSplitEmpty(t *testing.T) {
-	s, m := splitProcedure("")
+	s, m := FromName("")
 	assert.Equal(t, "", s)
 	assert.Equal(t, "", m)
 }
@@ -45,9 +45,8 @@ func TestProcedureNameAndSplit(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.Procedure, procedureName(tt.Service, tt.Method))
-
-		s, m := splitProcedure(tt.Procedure)
+		assert.Equal(t, tt.Procedure, ToName(tt.Service, tt.Method))
+		s, m := FromName(tt.Procedure)
 		assert.Equal(t, tt.Service, s)
 		assert.Equal(t, tt.Method, m)
 	}

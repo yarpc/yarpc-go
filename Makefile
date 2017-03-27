@@ -9,6 +9,7 @@ GOVET_IGNORE_RULES = \
 # List of executables needed for 'make generate'
 GENERATE_DEPENDENCIES = \
 	github.com/golang/mock/mockgen \
+	github.com/gogo/protobuf/protoc-gen-gogoslick \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
 	golang.org/x/tools/cmd/stringer \
 	go.uber.org/thriftrw \
@@ -76,7 +77,7 @@ BIN = $(CI_CACHE_DIR)/bin
 DOCKER_COMPOSE = $(BIN)/docker-compose
 GLIDE = $(BIN)/glide
 THRIFT = $(BIN)/thrift
-BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(BIN)/thriftrw-plugin-yarpc
+BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
 
 $(DOCKER_COMPOSE):
 	mkdir -p $(BIN)
@@ -102,6 +103,10 @@ $(THRIFT):
 $(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
 	mkdir -p $(BIN)
 	go build -o $(BIN)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
+
+$(BIN)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go
+	mkdir -p $(BIN)
+	go build -o $(BIN)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
 
 define generatedeprule
 BINS += $(BIN)/$(shell basename $1)
@@ -146,7 +151,9 @@ build:
 .PHONY: generate
 generate: $(BINS)
 	@go get github.com/golang/mock/mockgen
-	@PATH=$(BIN):$$PATH ./scripts/generate.sh
+	@PATH=/home/travis/bin:$$PATH command -v protoc >/dev/null || (echo "protoc must be installed" && false)
+	@PATH=/home/travis/bin:$$PATH protoc --version | grep 'libprotoc 3\.' >/dev/null || (echo "protoc must be version 3" && false)
+	@PATH=/home/travis/bin:$(BIN):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
 nogogenerate:
@@ -288,6 +295,12 @@ ifdef CI_EXAMPLES
 endif
 ifdef CI_CROSSDOCK
 	@$(MAKE) crossdock || $(MAKE) crossdock-logs
+endif
+
+.PHONY: travis-install-protobuf
+travis-install-protobuf:
+ifdef CI_TRAVIS_INSTALL_PROTOBUF
+	./scripts/travis-install-protobuf.sh
 endif
 
 .PHONY: travis-docker-push

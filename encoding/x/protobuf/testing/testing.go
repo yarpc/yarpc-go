@@ -18,25 +18,4 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
-
-import (
-	"fmt"
-	"strings"
-)
-
-// procedureName gets the procedure name we should use for a Thrift method with
-// the given service and name.
-func procedureName(service, method string) string {
-	return fmt.Sprintf("%s::%s", service, method)
-}
-
-// splitProcedure splits the given procedure name into the Thrift service name
-// and method.
-func splitProcedure(proc string) (service, method string) {
-	parts := strings.SplitN(proc, "::", 2)
-	if len(parts) == 1 {
-		return parts[0], ""
-	}
-	return parts[0], parts[1]
-}
+package testing

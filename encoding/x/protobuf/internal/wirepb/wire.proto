@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package uber.yarpc.encoding.protobuf.internal.wire;
+
+option go_package = "wirepb";
+
+// Error is an error that occured while executing a request in the application.
+message Error {
+  string message = 1;
+}
+
+// Response contains the response from executing a request.
+message Response {
+  bytes payload = 1;
+  Error error = 2;
+}

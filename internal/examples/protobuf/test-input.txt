@@ -1,0 +1,13 @@
+get foo
+get foo
+set foo bar
+get foo
+get foo
+set baz qux
+get baz
+get foo
+get baz
+fire foo
+fire bar
+fired-values
+exit
