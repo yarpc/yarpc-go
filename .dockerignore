@@ -3,6 +3,7 @@
 *.so
 *.exe
 *.prof
+*.t.err
 .tmp
 .cache
 cover
@@ -11,16 +12,14 @@ cover.out
 vendor
 TAGS
 
-*.t.err
-
 encoding/thrift/thriftrw-plugin-yarpc/thriftrw-plugin-yarpc
 encoding/x/protobuf/protoc-gen-yarpc-go/protoc-gen-yarpc-go
 internal/crossdock/crossdock
 internal/examples/env
 internal/examples/json-keyvalue/client/client
 internal/examples/json-keyvalue/server/server
-internal/examples/hello/hello
 internal/examples/protobuf/protobuf
+internal/examples/thrift-hello/hello/hello
 internal/examples/thrift-keyvalue/keyvalue/client/client
 internal/examples/thrift-keyvalue/keyvalue/server/server
 internal/examples/thrift-oneway/thrift-oneway
