@@ -3,6 +3,7 @@
 *.so
 *.exe
 *.prof
+*.t.err
 .tmp
 .cache
 cover
@@ -10,8 +11,6 @@ cover.html
 cover.out
 vendor
 TAGS
-
-*.t.err
 
 encoding/thrift/thriftrw-plugin-yarpc/thriftrw-plugin-yarpc
 encoding/x/protobuf/protoc-gen-yarpc-go/protoc-gen-yarpc-go
