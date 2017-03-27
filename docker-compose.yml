@@ -36,6 +36,10 @@ services:
             - AXIS_SERVER_ONEWAY=go
             - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
 
+            # Transports available to the ctxpropagation behavior for multihop
+            # requests.
+            - AXIS_CTXAVAILABLETRANSPORTS=http;tchannel
+
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
             - BEHAVIOR_THRIFT=client,server,transport
@@ -51,7 +55,7 @@ services:
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
             - BEHAVIOR_TIMEOUT=client,server,transport
             # BEHAVIOR_INBOUNDTTL TODO
-            - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport
+            - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport,ctxavailabletransports
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
             - BEHAVIOR_ONEWAY=client_oneway,server_oneway,transport_oneway,encoding
             - BEHAVIOR_ONEWAY_CTXPROPAGATION=client_oneway,server_oneway,transport_oneway
