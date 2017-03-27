@@ -41,7 +41,7 @@ type UnaryInbound struct {
 // NewUnaryInbound constructs a UnaryInbound.
 func NewUnaryInbound(logger *zap.Logger, extract ContextExtractor) *UnaryInbound {
 	return &UnaryInbound{
-		logger:  logger.With(zap.String("type", "unary inbound")),
+		logger:  logger.With(zap.String("rpcType", "unary inbound")),
 		extract: extract,
 	}
 }

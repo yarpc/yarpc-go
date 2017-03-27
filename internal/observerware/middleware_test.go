@@ -63,7 +63,7 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 			handler: fakeHandler{},
 			extract: NewNopContextExtractor(),
 			wantFields: []zapcore.Field{
-				zap.String("type", "unary inbound"),
+				zap.String("rpcType", "unary inbound"),
 				zap.Skip(),
 				zap.Object("request", req),
 				zap.Duration("latency", 0),
@@ -77,7 +77,7 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 			handler: fakeHandler{failed},
 			wantErr: true,
 			wantFields: []zapcore.Field{
-				zap.String("type", "unary inbound"),
+				zap.String("rpcType", "unary inbound"),
 				zap.Skip(),
 				zap.Object("request", req),
 				zap.Duration("latency", 0),

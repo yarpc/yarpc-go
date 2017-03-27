@@ -51,14 +51,14 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 			spec: NewUnaryHandlerSpec(unaryHandlerFunc(func(_ context.Context, _ *Request, _ ResponseWriter) error {
 				return nil
 			})),
-			want: map[string]interface{}{"type": "Unary"},
+			want: map[string]interface{}{"rpcType": "Unary"},
 		},
 		{
 			desc: "oneway",
 			spec: NewOnewayHandlerSpec(onewayHandlerFunc(func(_ context.Context, _ *Request) error {
 				return nil
 			})),
-			want: map[string]interface{}{"type": "Oneway"},
+			want: map[string]interface{}{"rpcType": "Oneway"},
 		},
 	}
 

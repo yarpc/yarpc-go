@@ -43,7 +43,7 @@ func TestProcedureLogMarshaling(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"name":      "name",
 		"service":   "service",
-		"handler":   map[string]interface{}{"type": "Unary"},
+		"handler":   map[string]interface{}{"rpcType": "Unary"},
 		"encoding":  "raw",
 		"signature": "signature",
 	}, enc.Fields, "Unexpected output from marshaling procedure.")

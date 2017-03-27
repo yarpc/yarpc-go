@@ -53,7 +53,7 @@ type HandlerSpec struct {
 
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (h HandlerSpec) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddString("type", h.t.String())
+	enc.AddString("rpcType", h.t.String())
 	return nil
 }
 
