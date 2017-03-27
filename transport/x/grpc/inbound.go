@@ -21,25 +21,34 @@
 package grpc
 
 import (
+	"errors"
+	"net"
 	"sync"
+
+	"google.golang.org/grpc"
 
 	"go.uber.org/yarpc/api/transport"
 	internalsync "go.uber.org/yarpc/internal/sync"
 )
 
-var _ transport.Inbound = (*Inbound)(nil)
+var (
+	errRouterNotSet = errors.New("router not set")
+
+	_ transport.Inbound = (*Inbound)(nil)
+)
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
 	once    internalsync.LifecycleOnce
-	lock    sync.RWMutex
+	lock    sync.Mutex
 	address string
 	router  transport.Router
+	server  *grpc.Server
 }
 
 // NewInbound returns a new Inbound for the given address.
 func NewInbound(address string) *Inbound {
-	return &Inbound{internalsync.Once(), sync.RWMutex{}, address, nil}
+	return &Inbound{internalsync.Once(), sync.Mutex{}, address, nil, nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -70,9 +79,46 @@ func (i *Inbound) Transports() []transport.Transport {
 }
 
 func (i *Inbound) start() error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	if i.router == nil {
+		return errRouterNotSet
+	}
+	server := grpc.NewServer(grpc.CustomCodec(noopCodec{}))
+	if err := registerRouter(server, i.router); err != nil {
+		return err
+	}
+	listener, err := net.Listen("tcp", i.address)
+	if err != nil {
+		return err
+	}
+	go func() {
+		// TODO there should be some mechanism to block here
+		// there is a race because the listener gets set in the grpc
+		// Server implementation and we should be able to block
+		// until Serve initialization is done
+		//
+		// It would be even better if we could do this outside the
+		// lock in i
+		//
+		// TODO Server always returns a non-nil error but should
+		// we do something with some or all errors?
+		_ = server.Serve(listener)
+	}()
+	i.server = server
 	return nil
 }
 
 func (i *Inbound) stop() error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	if i.server != nil {
+		i.server.GracefulStop()
+	}
+	return nil
+}
+
+// TODO
+func registerRouter(server *grpc.Server, router transport.Router) error {
 	return nil
 }
