@@ -199,13 +199,10 @@ type ChooserSpec struct {
 
 	// A function in the shape,
 	//
-	//  func(C, *config.Kit) (peer.List, error)
+	//  func() peer.ChooserList
 	//
-	// Where C is a struct or pointer to a struct defining the configuration
-	// parameters accepted by this peer chooser.
-	//
-	// BuildChooser is required.
-	BuildChooser interface{}
+	// NewChooser is required.
+	NewChooser func() peer.ChooserList
 }
 
 // BinderSpec specifies the configuration parameters for an outbound peer
@@ -422,8 +419,8 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 
 // Compiled internal representation of a user-specified ChooserSpec.
 type compiledChooserSpec struct {
-	Name    string
-	Chooser *configSpec
+	Name       string
+	NewChooser func() peer.ChooserList
 }
 
 func compileChooserSpec(spec *ChooserSpec) (*compiledChooserSpec, error) {
@@ -433,46 +430,13 @@ func compileChooserSpec(spec *ChooserSpec) (*compiledChooserSpec, error) {
 		return nil, errors.New("Name is required")
 	}
 
-	if spec.BuildChooser == nil {
-		return nil, errors.New("BuildChooser is required")
+	if spec.NewChooser == nil {
+		return nil, errors.New("NewChooser is required")
 	}
 
-	buildChooser, err := compileChooserConfig(spec.BuildChooser)
-	if err != nil {
-		return nil, err
-	}
-	out.Chooser = buildChooser
+	out.NewChooser = spec.NewChooser
 
 	return &out, nil
-}
-
-func compileChooserConfig(build interface{}) (*configSpec, error) {
-	v := reflect.ValueOf(build)
-	t := v.Type()
-
-	var err error
-	switch {
-	case t.Kind() != reflect.Func:
-		err = errors.New("must be a function")
-	case t.NumIn() != 2:
-		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
-	case !isDecodable(t.In(0)):
-		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
-	case t.In(1) != _typeOfKit:
-		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
-	case t.NumOut() != 2:
-		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
-	case t.Out(0) != _typeOfChooser:
-		err = fmt.Errorf("must return a peer.ChooserList as its first result, found %v", t.Out(0))
-	case t.Out(1) != _typeOfError:
-		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("invalid BuildChooser %v: %v", t, err)
-	}
-
-	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
 type compiledBinderSpec struct {
