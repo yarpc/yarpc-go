@@ -39,9 +39,6 @@ ERRCHECK_FLAGS ?= -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
-CHANGELOG_VERSION = $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1)
-INTHECODE_VERSION = $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go)
-
 CI_TYPES ?= lint test examples crossdock
 ifneq ($(filter lint,$(CI_TYPES)),)
 CI_LINT := true
@@ -246,6 +243,8 @@ errcheck:
 
 .PHONY: verifyversion
 verifyversion:
+	$(eval CHANGELOG_VERSION := $(shell grep '^v[0-9]' CHANGELOG.md | head -n1 | cut -d' ' -f1))
+	$(eval INTHECODE_VERSION := $(shell perl -ne '/^const Version.*"([^"]+)".*$$/ && print "v$$1\n"' version.go))
 	@if [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)" ]; then \
 		echo "yarpc-go: $(CHANGELOG_VERSION)"; \
 	elif [ "$(INTHECODE_VERSION)" = "$(CHANGELOG_VERSION)-dev" ]; then \
