@@ -35,14 +35,14 @@ func BenchmarkIntegration(b *testing.B) {
 }
 
 func benchmarkIntegrationForTransportType(b *testing.B, transportType testutils.TransportType) {
-	keyValueServer := example.NewKeyValueServer()
-	sinkServer := example.NewSinkServer()
+	keyValueYarpcServer := example.NewKeyValueYarpcServer()
+	sinkYarpcServer := example.NewSinkYarpcServer()
 	example.WithClients(
 		transportType,
-		keyValueServer,
-		sinkServer,
-		func(keyValueClient examplepb.KeyValueClient, sinkClient examplepb.SinkClient) error {
-			benchmarkIntegration(b, keyValueClient, sinkClient, keyValueServer, sinkServer)
+		keyValueYarpcServer,
+		sinkYarpcServer,
+		func(keyValueYarpcClient examplepb.KeyValueYarpcClient, sinkYarpcClient examplepb.SinkYarpcClient) error {
+			benchmarkIntegration(b, keyValueYarpcClient, sinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
 			return nil
 		},
 	)
@@ -50,16 +50,16 @@ func benchmarkIntegrationForTransportType(b *testing.B, transportType testutils.
 
 func benchmarkIntegration(
 	b *testing.B,
-	keyValueClient examplepb.KeyValueClient,
-	sinkClient examplepb.SinkClient,
-	keyValueServer *example.KeyValueServer,
-	sinkServer *example.SinkServer,
+	keyValueYarpcClient examplepb.KeyValueYarpcClient,
+	sinkYarpcClient examplepb.SinkYarpcClient,
+	keyValueYarpcServer *example.KeyValueYarpcServer,
+	sinkYarpcServer *example.SinkYarpcServer,
 ) {
 	b.Run("Get", func(b *testing.B) {
-		setValue(keyValueClient, "foo", "bar")
+		setValue(keyValueYarpcClient, "foo", "bar")
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			getValue(keyValueClient, "foo")
+			getValue(keyValueYarpcClient, "foo")
 		}
 	})
 }
