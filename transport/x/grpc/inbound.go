@@ -92,6 +92,7 @@ func (i *Inbound) start() error {
 	if err != nil {
 		return err
 	}
+	// TODO: want to support default codec
 	server := grpc.NewServer(grpc.CustomCodec(noopCodec{}))
 	for _, serviceDesc := range serviceDescs {
 		server.RegisterService(serviceDesc, noopGrpcStruct{})

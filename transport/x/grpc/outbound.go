@@ -22,8 +22,10 @@ package grpc
 
 import (
 	"context"
+	"sync"
 
-	"go.uber.org/yarpc/api/peer"
+	"google.golang.org/grpc"
+
 	"go.uber.org/yarpc/api/transport"
 	internalsync "go.uber.org/yarpc/internal/sync"
 )
@@ -32,23 +34,25 @@ var _ transport.UnaryOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
-	once    internalsync.LifecycleOnce
-	chooser peer.Chooser
+	once       internalsync.LifecycleOnce
+	lock       sync.Mutex
+	address    string
+	clientConn *grpc.ClientConn
 }
 
-// NewOutbound returns a new Outbound for the given chooser.
-func NewOutbound(chooser peer.Chooser) *Outbound {
-	return &Outbound{internalsync.Once(), chooser}
+// NewSingleOutbound returns a new Outbound for the given adrress.
+func NewSingleOutbound(address string) *Outbound {
+	return &Outbound{internalsync.Once(), sync.Mutex{}, address, nil}
 }
 
 // Start implements transport.Lifecycle#Start.
 func (o *Outbound) Start() error {
-	return o.once.Start(o.chooser.Start)
+	return o.once.Start(o.start)
 }
 
 // Stop implements transport.Lifecycle#Stop.
 func (o *Outbound) Stop() error {
-	return o.once.Stop(o.chooser.Stop)
+	return o.once.Stop(o.stop)
 }
 
 // IsRunning implements transport.Lifecycle#IsRunning.
@@ -64,4 +68,30 @@ func (o *Outbound) Transports() []transport.Transport {
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	return nil, nil
+}
+
+func (o *Outbound) start() error {
+	// TODO: redial
+	clientConn, err := grpc.Dial(
+		o.address,
+		grpc.WithInsecure(),
+		// TODO: want to support default codec
+		grpc.WithCodec(noopCodec{}),
+	)
+	if err != nil {
+		return err
+	}
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	o.clientConn = clientConn
+	return nil
+}
+
+func (o *Outbound) stop() error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	if o.clientConn != nil {
+		return o.clientConn.Close()
+	}
+	return nil
 }

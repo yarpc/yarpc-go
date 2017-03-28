@@ -23,3 +23,6 @@
 /internal/examples/thrift-keyvalue/keyvalue/client/client
 /internal/examples/thrift-keyvalue/keyvalue/server/server
 /internal/examples/thrift-oneway/thrift-oneway
+
+# temporary
+.grpc
