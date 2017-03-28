@@ -71,34 +71,63 @@ TMP := $(shell pwd)/.tmp
 GLIDE_VERSION := 0.12.3
 DOCKER_COMPOSE_VERSION := 1.10.0
 THRIFT_VERSION := 1.0.0-dev
+PROTOC_VERSION := 3.2.0
+
+ifeq ($(shell uname -s),Darwin)
+GLIDE_OS = darwin
+DOCKER_COMPOSE_OS = Darwin
+THRIFT_OS = Darwin
+PROTOC_OS = osx
+else
+GLIDE_OS = linux
+DOCKER_COMPOSE_OS = Linux
+THRIFT_OS = Linux
+PROTOC_OS = linux
+endif
+
+ifeq ($(shell uname -m),x86_64)
+GLIDE_ARCH = amd64
+DOCKER_COMPOSE_ARCH = x86_64
+THRIFT_ARCH = x86_64
+PROTOC_ARCH = x86_64
+endif
 
 BIN = $(CI_CACHE_DIR)/bin
 
 DOCKER_COMPOSE = $(BIN)/docker-compose
 GLIDE = $(BIN)/glide
 THRIFT = $(BIN)/thrift
-BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
+PROTOC = $(BIN)/protoc
+BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(PROTOC) $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
 
 $(DOCKER_COMPOSE):
 	mkdir -p $(BIN)
-	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(shell uname -s)-$(shell uname -m) > $(DOCKER_COMPOSE)
+	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(DOCKER_COMPOSE_OS)-$(DOCKER_COMPOSE_ARCH) > $(DOCKER_COMPOSE)
 	chmod +x $(DOCKER_COMPOSE)
 
 $(GLIDE):
 	mkdir -p $(BIN)
 	mkdir -p $(TMP)/glide
-	curl -L https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(shell uname -s)-amd64.tar.gz > $(TMP)/glide/glide.tar.gz
+	curl -L https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(GLIDE_OS)-$(GLIDE_ARCH).tar.gz > $(TMP)/glide/glide.tar.gz
 	cd $(TMP)/glide; tar xzf glide.tar.gz
-	mv $(TMP)/glide/$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64/glide $(GLIDE)
+	mv $(TMP)/glide/$(GLIDE_OS)-$(GLIDE_ARCH)/glide $(GLIDE)
 	rm -rf $(TMP)/glide
 
 $(THRIFT):
 	mkdir -p $(BIN)
 	mkdir -p $(TMP)/thrift
-	curl -L "https://github.com/uber/tchannel-go/releases/download/thrift-v$(THRIFT_VERSION)/thrift-1-$(shell uname -s)-$(shell uname -m).tar.gz" > $(TMP)/thrift/thrift.tar.gz
+	curl -L "https://github.com/uber/tchannel-go/releases/download/thrift-v$(THRIFT_VERSION)/thrift-1-$(THRIFT_OS)-$(THRIFT_ARCH).tar.gz" > $(TMP)/thrift/thrift.tar.gz
 	tar -C $(TMP)/thrift -xzf $(TMP)/thrift/thrift.tar.gz
 	mv $(TMP)/thrift/thrift-1 $(THRIFT)
 	rm -rf $(TMP)/thrift
+
+$(PROTOC):
+	mkdir -p $(BIN)
+	mkdir -p $(TMP)/protoc
+	curl -L "https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(TMP)/protoc/protoc.tar.gz
+	tar -C $(TMP)/protoc -xzf $(TMP)/protoc/protoc.tar.gz
+	mv $(TMP)/protoc/bin/protoc $(PROTOC)
+	rm -rf $(TMP)/protoc
 
 $(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
 	mkdir -p $(BIN)
@@ -148,12 +177,13 @@ clean:
 build:
 	go build $(PACKAGES)
 
+.PHONY: protoc
+protoc: $(PROTOC)
+
 .PHONY: generate
 generate: $(BINS)
 	@go get github.com/golang/mock/mockgen
-	@PATH=/home/travis/bin:$$PATH command -v protoc >/dev/null || (echo "protoc must be installed" && false)
-	@PATH=/home/travis/bin:$$PATH protoc --version | grep 'libprotoc 3\.' >/dev/null || (echo "protoc must be version 3" && false)
-	@PATH=/home/travis/bin:$(BIN):$$PATH ./scripts/generate.sh
+	@PATH=$(BIN):$$PATH ./scripts/generate.sh
 
 .PHONY: nogogenerate
 nogogenerate:
@@ -295,12 +325,6 @@ ifdef CI_EXAMPLES
 endif
 ifdef CI_CROSSDOCK
 	@$(MAKE) crossdock || $(MAKE) crossdock-logs
-endif
-
-.PHONY: travis-install-protobuf
-travis-install-protobuf:
-ifdef CI_TRAVIS_INSTALL_PROTOBUF
-	./scripts/travis-install-protobuf.sh
 endif
 
 .PHONY: travis-docker-push

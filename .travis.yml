@@ -41,7 +41,6 @@ matrix:
 
 before_install:
   - make ci-docker-load
-  - make travis-install-protobuf
 install:
   - make install
 script:
