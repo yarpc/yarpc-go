@@ -23,37 +23,59 @@ package grpc
 import (
 	"testing"
 
+	"go.uber.org/yarpc/yarpcproto"
+
+	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPassThroughCodecMarshal(t *testing.T) {
+func TestCustomCodecMarshalBytes(t *testing.T) {
 	value := []byte("test")
-	data, err := noopCodec{}.Marshal(&value)
+	data, err := customCodec{}.Marshal(&value)
 	assert.Equal(t, value, data)
 	assert.NoError(t, err)
 }
 
-func TestPassThroughCodecMarshalError(t *testing.T) {
-	value := "test"
-	data, err := noopCodec{}.Marshal(&value)
-	assert.Equal(t, []byte(nil), data)
-	assert.Equal(t, newBytesPointerCastError(&value), err)
+func TestCustomCodecMarshalProtoMessage(t *testing.T) {
+	value := &yarpcproto.Oneway{true}
+	expectedData, err := proto.Marshal(value)
+	assert.NoError(t, err)
+	data, err := customCodec{}.Marshal(value)
+	assert.Equal(t, expectedData, data)
+	assert.NoError(t, err)
 }
 
-func TestPassThroughCodecUnmarshal(t *testing.T) {
+func TestCustomCodecMarshalCastError(t *testing.T) {
+	value := "test"
+	data, err := customCodec{}.Marshal(&value)
+	assert.Equal(t, []byte(nil), data)
+	assert.Equal(t, newCustomCodecCastError(&value), err)
+}
+
+func TestCustomCodecUnmarshalBytes(t *testing.T) {
 	data := []byte("test")
 	var value []byte
-	assert.NoError(t, noopCodec{}.Unmarshal(data, &value))
+	assert.NoError(t, customCodec{}.Unmarshal(data, &value))
 	assert.Equal(t, data, value)
 }
 
-func TestPassThroughCodecUnmarshalError(t *testing.T) {
-	var value string
-	err := noopCodec{}.Unmarshal([]byte("test"), &value)
-	assert.Equal(t, "", value)
-	assert.Equal(t, newBytesPointerCastError(&value), err)
+func TestCustomCodecUnmarshalProtoMessage(t *testing.T) {
+	data := []byte("test")
+	expectedValue := &yarpcproto.Oneway{true}
+	data, err := proto.Marshal(expectedValue)
+	assert.NoError(t, err)
+	value := &yarpcproto.Oneway{}
+	assert.NoError(t, customCodec{}.Unmarshal(data, value))
+	assert.Equal(t, expectedValue, value)
 }
 
-func TestPassThroughCodecString(t *testing.T) {
-	assert.Equal(t, "noop", noopCodec{}.String())
+func TestCustomCodecUnmarshalCastError(t *testing.T) {
+	var value string
+	err := customCodec{}.Unmarshal([]byte("test"), &value)
+	assert.Equal(t, "", value)
+	assert.Equal(t, newCustomCodecCastError(&value), err)
+}
+
+func TestCustomCodecString(t *testing.T) {
+	assert.Equal(t, "custom", customCodec{}.String())
 }

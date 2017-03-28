@@ -20,40 +20,49 @@
 
 package grpc
 
-import "fmt"
+import (
+	"fmt"
 
-var _bytesPointerInstance = &[]byte{}
+	"github.com/gogo/protobuf/proto"
+)
 
-// noopCodec passes bytes to/from the wire without modification.
-type noopCodec struct{}
+// customCodec will either handle proto.Message objects, or
+// pass bytes to/from the wire without modification.
+type customCodec struct{}
 
-// Marshal takes a []byte pointer and passes it through as a []byte.
-func (noopCodec) Marshal(value interface{}) ([]byte, error) {
-	bytesPointer, ok := value.(*[]byte)
-	if !ok {
-		return nil, newBytesPointerCastError(value)
+// Marshal takes a proto.Message and marshals it, or
+// takes a []byte pointer and passes it through as a []byte.
+func (customCodec) Marshal(obj interface{}) ([]byte, error) {
+	switch value := obj.(type) {
+	case proto.Message:
+		return proto.Marshal(value)
+	case *[]byte:
+		return *value, nil
+	default:
+		return nil, newCustomCodecCastError(obj)
 	}
-	return *bytesPointer, nil
 }
 
-// Unmarshal takes a byte slice and writes it to v.
-func (noopCodec) Unmarshal(data []byte, value interface{}) error {
-	bytesPointer, ok := value.(*[]byte)
-	if !ok {
-		return newBytesPointerCastError(value)
+// Unmarshal takes a proto.Message and unmarshals it, or
+// takes a []byte pointer and writes it to v.
+func (customCodec) Unmarshal(data []byte, obj interface{}) error {
+	switch value := obj.(type) {
+	case proto.Message:
+		return proto.Unmarshal(data, value)
+	case *[]byte:
+		*value = data
+		return nil
+	default:
+		return newCustomCodecCastError(obj)
 	}
-	*bytesPointer = data
-	return nil
 }
 
-func (noopCodec) String() string {
-	return "noop"
+func (customCodec) String() string {
+	// TODO: we might have to fake this as proto
+	// this is hacky
+	return "custom"
 }
 
-func newBytesPointerCastError(actualObject interface{}) error {
-	return newCastError(_bytesPointerInstance, actualObject)
-}
-
-func newCastError(expectedObjectOfType interface{}, actualObject interface{}) error {
-	return fmt.Errorf("expected object of type %T but got %T", expectedObjectOfType, actualObject)
+func newCustomCodecCastError(actualObject interface{}) error {
+	return fmt.Errorf("expected object of either type proto.Message or *[]byte but got %T", actualObject)
 }

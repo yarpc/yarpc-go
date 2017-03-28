@@ -76,7 +76,7 @@ func (o *Outbound) start() error {
 		o.address,
 		grpc.WithInsecure(),
 		// TODO: want to support default codec
-		grpc.WithCodec(noopCodec{}),
+		grpc.WithCodec(customCodec{}),
 	)
 	if err != nil {
 		return err
