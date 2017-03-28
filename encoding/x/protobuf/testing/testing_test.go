@@ -98,7 +98,7 @@ func testIntegration(
 func getValue(keyValueClient examplepb.KeyValueClient, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	response, err := keyValueClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	response, err := keyValueClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key})
 	if err != nil {
 		return "", err
 	}
@@ -108,13 +108,13 @@ func getValue(keyValueClient examplepb.KeyValueClient, key string) (string, erro
 func setValue(keyValueClient examplepb.KeyValueClient, key string, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	_, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value})
 	return err
 }
 
 func fire(sinkClient examplepb.SinkClient, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value})
+	_, err := sinkClient.Fire(ctx, &examplepb.FireRequest{Value: value})
 	return err
 }

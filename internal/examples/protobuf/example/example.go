@@ -92,7 +92,7 @@ func (k *KeyValueServer) GetValue(ctx context.Context, request *examplepb.GetVal
 	k.RLock()
 	if value, ok := k.items[request.Key]; ok {
 		k.RUnlock()
-		return &examplepb.GetValueResponse{value}, nil
+		return &examplepb.GetValueResponse{Value: value}, nil
 	}
 	k.RUnlock()
 	return nil, fmt.Errorf("key not set: %s", request.Key)
