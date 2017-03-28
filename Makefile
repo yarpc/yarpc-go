@@ -73,26 +73,32 @@ DOCKER_COMPOSE_VERSION := 1.10.0
 THRIFT_VERSION := 1.0.0-dev
 PROTOC_VERSION := 3.2.0
 
-ifeq ($(shell uname -s),Darwin)
-GLIDE_OS = darwin
-DOCKER_COMPOSE_OS = Darwin
-THRIFT_OS = Darwin
-PROTOC_OS = osx
+UNAME_OS := $(shell uname -s)
+UNAME_ARCH := $(shell uname -m)
+
+GLIDE_OS := $(UNAME_OS)
+DOCKER_COMPOSE_OS := $(UNAME_OS)
+THRIFT_OS := $(UNAME_OS)
+PROTOC_OS := $(UNAME_OS)
+
+GLIDE_ARCH := $(UNAME_ARCH)
+DOCKER_COMPOSE_ARCH := $(UNAME_ARCH)
+THRIFT_ARCH := $(UNAME_ARCH)
+PROTOC_ARCH := $(UNAME_ARCH)
+
+ifeq ($(UNAME_OS),Darwin)
+GLIDE_OS := darwin
+PROTOC_OS := osx
 else
 GLIDE_OS = linux
-DOCKER_COMPOSE_OS = Linux
-THRIFT_OS = Linux
 PROTOC_OS = linux
 endif
 
-ifeq ($(shell uname -m),x86_64)
+ifeq ($(UNAME_ARCH),x86_64)
 GLIDE_ARCH = amd64
-DOCKER_COMPOSE_ARCH = x86_64
-THRIFT_ARCH = x86_64
-PROTOC_ARCH = x86_64
 endif
 
-BIN = $(CI_CACHE_DIR)/bin
+BIN = $(CI_CACHE_DIR)/$(UNAME_OS)/$(UNAME_ARCH)/bin
 
 DOCKER_COMPOSE = $(BIN)/docker-compose
 GLIDE = $(BIN)/glide
@@ -124,8 +130,8 @@ $(THRIFT):
 $(PROTOC):
 	mkdir -p $(BIN)
 	mkdir -p $(TMP)/protoc
-	curl -L "https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(TMP)/protoc/protoc.tar.gz
-	tar -C $(TMP)/protoc -xzf $(TMP)/protoc/protoc.tar.gz
+	curl -L "https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(TMP)/protoc/protoc.zip
+	cd $(TMP)/protoc; unzip $(TMP)/protoc/protoc.zip
 	mv $(TMP)/protoc/bin/protoc $(PROTOC)
 	rm -rf $(TMP)/protoc
 
@@ -176,9 +182,6 @@ clean:
 .PHONY: build
 build:
 	go build $(PACKAGES)
-
-.PHONY: protoc
-protoc: $(PROTOC)
 
 .PHONY: generate
 generate: $(BINS)
