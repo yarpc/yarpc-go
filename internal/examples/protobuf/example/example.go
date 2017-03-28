@@ -25,10 +25,16 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
+)
+
+const (
+	// FireDoneTimeout is how long fireDone will wait for both sending and receiving.
+	FireDoneTimeout = 3 * time.Second
 )
 
 var (
@@ -113,12 +119,17 @@ func (k *KeyValueYarpcServer) SetValue(ctx context.Context, request *examplepb.S
 // SinkYarpcServer implements examplepb.SinkYarpcServer.
 type SinkYarpcServer struct {
 	sync.RWMutex
-	values []string
+	values   []string
+	fireDone chan struct{}
 }
 
 // NewSinkYarpcServer returns a new SinkYarpcServer.
-func NewSinkYarpcServer() *SinkYarpcServer {
-	return &SinkYarpcServer{sync.RWMutex{}, make([]string, 0)}
+func NewSinkYarpcServer(withFireDone bool) *SinkYarpcServer {
+	var fireDone chan struct{}
+	if withFireDone {
+		fireDone = make(chan struct{})
+	}
+	return &SinkServer{sync.RWMutex{}, make([]string, 0), fireDone}
 }
 
 // Fire implements Fire.
@@ -132,6 +143,14 @@ func (s *SinkYarpcServer) Fire(ctx context.Context, request *examplepb.FireReque
 	s.Lock()
 	s.values = append(s.values, request.Value)
 	s.Unlock()
+	if s.fireDone == nil {
+		return nil
+	}
+	select {
+	case s.fireDone <- struct{}{}:
+	case <-time.After(FireDoneTimeout):
+		return fmt.Errorf("fire done not handled after %v", FireDoneTimeout)
+	}
 	return nil
 }
 
@@ -142,4 +161,19 @@ func (s *SinkYarpcServer) Values() []string {
 	copy(values, s.values)
 	s.RUnlock()
 	return values
+}
+
+// WaitFireDone blocks until a fire is done, if withFireDone is set.
+//
+// If will timeout after FireDoneTimeout and return error.
+func (s *SinkYarpcServer) WaitFireDone() error {
+	if s.fireDone == nil {
+		return nil
+	}
+	select {
+	case <-s.fireDone:
+	case <-time.After(FireDoneTimeout):
+		return fmt.Errorf("fire not done after %v", FireDoneTimeout)
+	}
+	return nil
 }
