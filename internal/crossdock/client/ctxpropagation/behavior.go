@@ -24,6 +24,7 @@ import (
 	"context"
 	js "encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -338,23 +339,39 @@ func buildDispatcher(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig serve
 
 	self := t.Param("ctxclient")
 	subject := t.Param("ctxserver")
+
 	fatals.NotEmpty(self, "ctxclient is required")
 	fatals.NotEmpty(subject, "ctxserver is required")
+	nextHop := nextHopTransport(t)
 
 	httpTransport := http.NewTransport()
 	tchannelTransport, err := tch.NewChannelTransport(tch.ListenAddr(":8087"), tch.ServiceName("ctxclient"))
 	fatals.NoError(err, "Failed to build ChannelTransport")
 
+	// Outbound to use for this hop.
 	var outbound transport.UnaryOutbound
-	switch trans := t.Param(params.Transport); trans {
+
+	trans := t.Param(params.Transport)
+	switch trans {
 	case "http":
 		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8081", subject))
-		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
 	case "tchannel":
 		outbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("%s:8082", subject))
-		tconfig.HTTP = &server.HTTPTransport{Host: self, Port: 8086}
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
+	}
+
+	nextTrans, ok := nextHop[trans]
+	fatals.True(ok, "no transport specified after %q", trans)
+
+	t.Tag("nextTransport", nextTrans)
+	switch nextTrans {
+	case "http":
+		tconfig.HTTP = &server.HTTPTransport{Host: self, Port: 8086}
+	case "tchannel":
+		tconfig.TChannel = &server.TChannelTransport{Host: self, Port: 8087}
+	default:
+		fatals.Fail("", "unknown transport %q after transport %q", nextTrans, trans)
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
@@ -371,4 +388,20 @@ func buildDispatcher(t crossdock.T) (dispatcher *yarpc.Dispatcher, tconfig serve
 	})
 
 	return dispatcher, tconfig
+}
+
+// nextHopTransport returns a map from current transport to next transport
+// based on transports defined in ctxavailabletransports.
+//
+// If ctxavailabletransports was [x, y, z], this returns {x: y, y: z, z: y}.
+// So if transport is y, the next hop should use z.
+func nextHopTransport(t crossdock.T) map[string]string {
+	ts := strings.Split(t.Param("ctxavailabletransports"), ";")
+	crossdock.Fatals(t).NotEmpty(ts, "ctxavailabletransports is required")
+
+	m := make(map[string]string, len(ts))
+	for i, transport := range ts {
+		m[transport] = ts[i%len(ts)]
+	}
+	return m
 }
