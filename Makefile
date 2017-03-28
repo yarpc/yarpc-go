@@ -15,7 +15,6 @@ GENERATE_DEPENDENCIES = \
 	go.uber.org/thriftrw \
 	go.uber.org/tools/update-license
 
-
 PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
 
 # ag is way faster
