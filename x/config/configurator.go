@@ -83,7 +83,7 @@ func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 // LoadConfigFromYAML loads a yarpc.Config from YAML. Use LoadConfig if you
 // have your own map[string]interface{} or map[interface{}]interface{} to
 // provide.
-func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
+func (c *Configurator) LoadConfigFromYAML(serviceName string, r io.Reader) (yarpc.Config, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return yarpc.Config{}, err
@@ -93,7 +93,7 @@ func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
 	if err := yaml.Unmarshal(b, &data); err != nil {
 		return yarpc.Config{}, err
 	}
-	return c.LoadConfig(data)
+	return c.LoadConfig(serviceName, data)
 }
 
 // LoadConfig loads a yarpc.Config from a map[string]interface{} or
@@ -101,18 +101,18 @@ func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
 //
 // See the module documentation for the shape the map[string]interface{} is
 // expected to conform to.
-func (c *Configurator) LoadConfig(data interface{}) (yarpc.Config, error) {
+func (c *Configurator) LoadConfig(serviceName string, data interface{}) (yarpc.Config, error) {
 	var cfg yarpcConfig
 	if err := decode.Decode(&cfg, data); err != nil {
 		return yarpc.Config{}, err
 	}
-	return c.load(&cfg)
+	return c.load(serviceName, &cfg)
 }
 
 // NewDispatcherFromYAML builds a Dispatcher from the given YAML
 // configuration.
-func (c *Configurator) NewDispatcherFromYAML(r io.Reader) (*yarpc.Dispatcher, error) {
-	cfg, err := c.LoadConfigFromYAML(r)
+func (c *Configurator) NewDispatcherFromYAML(serviceName string, r io.Reader) (*yarpc.Dispatcher, error) {
+	cfg, err := c.LoadConfigFromYAML(serviceName, r)
 	if err != nil {
 		return nil, err
 	}
@@ -120,18 +120,18 @@ func (c *Configurator) NewDispatcherFromYAML(r io.Reader) (*yarpc.Dispatcher, er
 }
 
 // NewDispatcher builds a new Dispatcher from the given configuration data.
-func (c *Configurator) NewDispatcher(data interface{}) (*yarpc.Dispatcher, error) {
-	cfg, err := c.LoadConfig(data)
+func (c *Configurator) NewDispatcher(serviceName string, data interface{}) (*yarpc.Dispatcher, error) {
+	cfg, err := c.LoadConfig(serviceName, data)
 	if err != nil {
 		return nil, err
 	}
 	return yarpc.NewDispatcher(cfg), nil
 }
 
-func (c *Configurator) load(cfg *yarpcConfig) (yarpc.Config, error) {
+func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (yarpc.Config, error) {
 	var (
 		errors []error
-		b      = newBuilder(cfg.Name, &Kit{c: c})
+		b      = newBuilder(serviceName, &Kit{name: serviceName, c: c})
 	)
 
 	for _, inbound := range cfg.Inbounds {

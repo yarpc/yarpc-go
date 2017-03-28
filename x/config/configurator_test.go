@@ -50,6 +50,9 @@ func TestConfigurator(t *testing.T) {
 		// List of TransportSpecs to register with the Configurator
 		specs []TransportSpec
 
+		// Name of the service or empty string to use the default
+		serviceName string
+
 		// YAML to parse using the configurator
 		give string
 
@@ -69,7 +72,6 @@ func TestConfigurator(t *testing.T) {
 			desc: "unknown inbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = untab(`
-					name: foo
 					inbounds:
 					  bar: {}
 				`)
@@ -84,7 +86,6 @@ func TestConfigurator(t *testing.T) {
 			desc: "unknown implicit outbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  myservice:
 					    http: {url: "http://localhost:8080/yarpc"}
@@ -100,7 +101,6 @@ func TestConfigurator(t *testing.T) {
 			desc: "unknown unary outbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  someservice:
 					    unary:
@@ -118,7 +118,6 @@ func TestConfigurator(t *testing.T) {
 			desc: "unknown oneway outbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  keyvalue:
 					    oneway:
@@ -136,8 +135,8 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type fooTransportConfig struct{ Items []int }
 
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					transports:
 					  bar:
 					    items: [1, 2, 3]
@@ -161,7 +160,6 @@ func TestConfigurator(t *testing.T) {
 				type inboundConfig struct{ Address string }
 
 				tt.give = untab(`
-					name: foo
 					inbounds:
 					  http: {address: ":80"}
 					transports:
@@ -189,8 +187,8 @@ func TestConfigurator(t *testing.T) {
 			desc: "inbound",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type inboundConfig struct{ Address string }
+				tt.serviceName = "myservice"
 				tt.give = untab(`
-					name: foo
 					inbounds:
 					  http: {address: ":80"}
 				`)
@@ -205,15 +203,17 @@ func TestConfigurator(t *testing.T) {
 				inbound := transporttest.NewMockInbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(struct{}{}, anyKit).
+					BuildTransport(struct{}{}, kitMatcher{ServiceName: "myservice"}).
 					Return(transport, nil)
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":80"}, transport, anyKit).
+					BuildInbound(
+						&inboundConfig{Address: ":80"}, transport,
+						kitMatcher{ServiceName: "myservice"}).
 					Return(inbound, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
 				tt.wantConfig = yarpc.Config{
-					Name:     "foo",
+					Name:     "myservice",
 					Inbounds: yarpc.Inbounds{inbound},
 				}
 				return
@@ -223,7 +223,6 @@ func TestConfigurator(t *testing.T) {
 			desc: "inbounds unsupported",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				tt.give = untab(`
-					name: foo
 					inbounds:
 					  outgoing-only:
 					    foo: bar
@@ -245,8 +244,8 @@ func TestConfigurator(t *testing.T) {
 			desc: "duplicate inbounds",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type inboundConfig struct{ Address string }
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					inbounds:
 					  http:
 					    address: ":8080"
@@ -261,16 +260,24 @@ func TestConfigurator(t *testing.T) {
 					InboundConfig:   reflect.TypeOf(&inboundConfig{}),
 				}.Build(mockCtrl)
 				transport := transporttest.NewMockTransport(mockCtrl)
-				http.EXPECT().BuildTransport(struct{}{}, anyKit).Return(transport, nil)
+				http.EXPECT().
+					BuildTransport(struct{}{}, kitMatcher{ServiceName: "foo"}).
+					Return(transport, nil)
 
 				inbound := transporttest.NewMockInbound(mockCtrl)
 				inbound2 := transporttest.NewMockInbound(mockCtrl)
 
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":8080"}, transport, anyKit).
+					BuildInbound(
+						&inboundConfig{Address: ":8080"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(inbound, nil)
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":8081"}, transport, anyKit).
+					BuildInbound(
+						&inboundConfig{Address: ":8081"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(inbound2, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -286,8 +293,8 @@ func TestConfigurator(t *testing.T) {
 			desc: "disabled inbound",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type inboundConfig struct{ Address string }
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					inbounds:
 					  http:
 					    disabled: true
@@ -307,10 +314,13 @@ func TestConfigurator(t *testing.T) {
 				inbound := transporttest.NewMockInbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(struct{}{}, anyKit).
+					BuildTransport(struct{}{}, kitMatcher{ServiceName: "foo"}).
 					Return(transport, nil)
 				http.EXPECT().
-					BuildInbound(&inboundConfig{Address: ":8081"}, transport, anyKit).
+					BuildInbound(
+						&inboundConfig{Address: ":8081"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(inbound, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -325,8 +335,8 @@ func TestConfigurator(t *testing.T) {
 		{
 			desc: "inbound error",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					inbounds:
 					  foo:
 					    unexpected: bar
@@ -350,7 +360,6 @@ func TestConfigurator(t *testing.T) {
 			desc: "implicit outbound no support",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  myservice:
 					    sink:
@@ -372,8 +381,8 @@ func TestConfigurator(t *testing.T) {
 			desc: "implicit outbound unary",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Address string }
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  bar:
 					    tchannel:
@@ -390,10 +399,13 @@ func TestConfigurator(t *testing.T) {
 				outbound := transporttest.NewMockUnaryOutbound(mockCtrl)
 
 				tchan.EXPECT().
-					BuildTransport(struct{}{}, anyKit).
+					BuildTransport(struct{}{}, kitMatcher{ServiceName: "foo"}).
 					Return(transport, nil)
 				tchan.EXPECT().
-					BuildUnaryOutbound(&outboundConfig{Address: "localhost:4040"}, transport, anyKit).
+					BuildUnaryOutbound(
+						&outboundConfig{Address: "localhost:4040"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(outbound, nil)
 
 				tt.specs = []TransportSpec{tchan.Spec()}
@@ -414,8 +426,8 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type transportConfig struct{ Address string }
 				type outboundConfig struct{ Queue string }
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  bar:
 					    redis:
@@ -435,10 +447,15 @@ func TestConfigurator(t *testing.T) {
 				outbound := transporttest.NewMockOnewayOutbound(mockCtrl)
 
 				redis.EXPECT().
-					BuildTransport(transportConfig{Address: "localhost:6379"}, anyKit).
+					BuildTransport(
+						transportConfig{Address: "localhost:6379"},
+						kitMatcher{ServiceName: "foo"}).
 					Return(transport, nil)
 				redis.EXPECT().
-					BuildOnewayOutbound(&outboundConfig{Queue: "requests"}, transport, anyKit).
+					BuildOnewayOutbound(
+						&outboundConfig{Queue: "requests"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(outbound, nil)
 
 				tt.specs = []TransportSpec{redis.Spec()}
@@ -459,8 +476,8 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type transportConfig struct{ KeepAlive time.Duration }
 				type outboundConfig struct{ URL string }
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  baz:
 					    http:
@@ -482,15 +499,17 @@ func TestConfigurator(t *testing.T) {
 				oneway := transporttest.NewMockOnewayOutbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(&transportConfig{KeepAlive: time.Minute}, anyKit).
+					BuildTransport(
+						&transportConfig{KeepAlive: time.Minute},
+						kitMatcher{ServiceName: "foo"}).
 					Return(transport, nil)
 
 				outcfg := outboundConfig{URL: "http://localhost:8080/yarpc"}
 				http.EXPECT().
-					BuildUnaryOutbound(&outcfg, transport, anyKit).
+					BuildUnaryOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo"}).
 					Return(unary, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(&outcfg, transport, anyKit).
+					BuildOnewayOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo"}).
 					Return(oneway, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -512,7 +531,6 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ URL string }
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  qux:
 					    http:
@@ -546,8 +564,9 @@ func TestConfigurator(t *testing.T) {
 					redisOutboundConfig  struct{ Queue string }
 					redisTransportConfig struct{ Address string }
 				)
+
+				tt.serviceName = "myservice"
 				tt.give = untab(`
-					name: myservice
 					transports:
 					  http:
 					    keepAlive: 5m
@@ -584,24 +603,37 @@ func TestConfigurator(t *testing.T) {
 				httpUnary := transporttest.NewMockUnaryOutbound(mockCtrl)
 				httpOneway := transporttest.NewMockOnewayOutbound(mockCtrl)
 				http.EXPECT().
-					BuildTransport(httpTransportConfig{KeepAlive: 5 * time.Minute}, anyKit).
+					BuildTransport(
+						httpTransportConfig{KeepAlive: 5 * time.Minute},
+						kitMatcher{ServiceName: "myservice"}).
 					Return(httpTransport, nil)
 
 				redisTransport := transporttest.NewMockTransport(mockCtrl)
 				redisOneway := transporttest.NewMockOnewayOutbound(mockCtrl)
 				redis.EXPECT().
-					BuildTransport(redisTransportConfig{Address: "127.0.0.1:6379"}, anyKit).
+					BuildTransport(
+						redisTransportConfig{Address: "127.0.0.1:6379"},
+						kitMatcher{ServiceName: "myservice"}).
 					Return(redisTransport, nil)
 
 				http.EXPECT().
-					BuildUnaryOutbound(httpOutboundConfig{URL: "http://localhost:8080/yarpc/v1"}, httpTransport, anyKit).
+					BuildUnaryOutbound(
+						httpOutboundConfig{URL: "http://localhost:8080/yarpc/v1"},
+						httpTransport,
+						kitMatcher{ServiceName: "myservice"}).
 					Return(httpUnary, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(httpOutboundConfig{URL: "http://localhost:8081/yarpc/v2"}, httpTransport, anyKit).
+					BuildOnewayOutbound(
+						httpOutboundConfig{URL: "http://localhost:8081/yarpc/v2"},
+						httpTransport,
+						kitMatcher{ServiceName: "myservice"}).
 					Return(httpOneway, nil)
 
 				redis.EXPECT().
-					BuildOnewayOutbound(redisOutboundConfig{Queue: "requests"}, redisTransport, anyKit).
+					BuildOnewayOutbound(
+						redisOutboundConfig{Queue: "requests"},
+						redisTransport,
+						kitMatcher{ServiceName: "myservice"}).
 					Return(redisOneway, nil)
 
 				tt.specs = []TransportSpec{http.Spec(), redis.Spec()}
@@ -621,7 +653,6 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ URL string }
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  hello:
 					    unary:
@@ -653,7 +684,6 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Address string }
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  hello:
 					    oneway:
@@ -682,7 +712,6 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Queue string }
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  bar:
 					    unary:
@@ -709,7 +738,6 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Address string }
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  bar:
 					    oneway:
@@ -735,8 +763,8 @@ func TestConfigurator(t *testing.T) {
 			desc: "implicit outbound service name override",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ URL string }
+				tt.serviceName = "foo"
 				tt.give = untab(`
-					name: foo
 					outbounds:
 					  bar:
 					    http:
@@ -761,21 +789,33 @@ func TestConfigurator(t *testing.T) {
 				onewayStaging := transporttest.NewMockOnewayOutbound(mockCtrl)
 
 				http.EXPECT().
-					BuildTransport(struct{}{}, anyKit).
+					BuildTransport(struct{}{}, kitMatcher{ServiceName: "foo"}).
 					Return(transport, nil)
 
 				http.EXPECT().
-					BuildUnaryOutbound(outboundConfig{URL: "http://localhost:8080/bar"}, transport, anyKit).
+					BuildUnaryOutbound(
+						outboundConfig{URL: "http://localhost:8080/bar"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(unary, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(outboundConfig{URL: "http://localhost:8080/bar"}, transport, anyKit).
+					BuildOnewayOutbound(
+						outboundConfig{URL: "http://localhost:8080/bar"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(oneway, nil)
 
 				http.EXPECT().
-					BuildUnaryOutbound(outboundConfig{URL: "http://localhost:8081/bar"}, transport, anyKit).
+					BuildUnaryOutbound(
+						outboundConfig{URL: "http://localhost:8081/bar"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(unaryStaging, nil)
 				http.EXPECT().
-					BuildOnewayOutbound(outboundConfig{URL: "http://localhost:8081/bar"}, transport, anyKit).
+					BuildOnewayOutbound(
+						outboundConfig{URL: "http://localhost:8081/bar"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
 					Return(onewayStaging, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -826,12 +866,12 @@ func TestConfigurator(t *testing.T) {
 				err       error
 			)
 			if useYAML {
-				gotConfig, err = cfg.LoadConfigFromYAML(strings.NewReader(tt.give))
+				gotConfig, err = cfg.LoadConfigFromYAML(tt.serviceName, strings.NewReader(tt.give))
 			} else {
 				var data map[string]interface{}
 				require.NoError(t, yaml.Unmarshal([]byte(tt.give), &data), "failed to parse YAML")
 
-				gotConfig, err = cfg.LoadConfig(data)
+				gotConfig, err = cfg.LoadConfig(tt.serviceName, data)
 			}
 
 			if len(tt.wantErr) > 0 {

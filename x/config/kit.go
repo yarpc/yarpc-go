@@ -26,6 +26,12 @@ import "reflect"
 // plugins.
 type Kit struct {
 	c *Configurator
+
+	name string
 }
+
+// ServiceName returns the name of the service for which components are being
+// built.
+func (k *Kit) ServiceName() string { return k.name }
 
 var _typeOfKit = reflect.TypeOf((*Kit)(nil))

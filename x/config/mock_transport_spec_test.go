@@ -21,6 +21,7 @@
 package config
 
 import (
+	"fmt"
 	"reflect"
 
 	"go.uber.org/yarpc/api/transport"
@@ -185,3 +186,21 @@ func (anyKitMatcher) String() string {
 }
 
 var anyKit = anyKitMatcher{}
+
+// kitMatcher matches attributes of a kit
+type kitMatcher struct {
+	ServiceName string
+}
+
+func (m kitMatcher) Matches(x interface{}) bool {
+	k, ok := x.(*Kit)
+	if !ok {
+		return false
+	}
+
+	return k.ServiceName() == m.ServiceName
+}
+
+func (m kitMatcher) String() string {
+	return fmt.Sprintf("kit{name: %q}", m.ServiceName)
+}
