@@ -20,8 +20,8 @@ build:
 		echo "---- Building $(example) ----"; \
 		make -C $(example);)
 
-$(CRAM): $(ENV)
+$(CRAM): $(ENV)/bin/activate
 	. $(ENV)/bin/activate && pip install cram
 
-$(ENV):
+$(ENV)/bin/activate:
 	virtualenv $(ENV)
