@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
 )
 
@@ -37,7 +38,7 @@ type InboundConfig struct{}
 
 // OutboundConfig configures a TChannel outbound.
 type OutboundConfig struct {
-	Address string `config:"address"`
+	config.ChooserConfig
 }
 
 // TransportSpec returns a TransportSpec for the TChannel unary transport. See
@@ -68,7 +69,15 @@ func buildInbound(_ *InboundConfig, t transport.Transport, k *config.Kit) (trans
 }
 
 func buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
-	return t.(*Transport).NewSingleOutbound(oc.Address), nil
+	x := t.(*Transport)
+
+	chooser, err := oc.ChooserConfig.BuildChooser(x, hostport.Identify, k)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO opts...
+	return x.NewOutbound(chooser), nil
 }
 
 // TODO: Document configuration parameters
