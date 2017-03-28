@@ -129,7 +129,7 @@ func NewSinkYarpcServer(withFireDone bool) *SinkYarpcServer {
 	if withFireDone {
 		fireDone = make(chan struct{})
 	}
-	return &SinkServer{sync.RWMutex{}, make([]string, 0), fireDone}
+	return &SinkYarpcServer{sync.RWMutex{}, make([]string, 0), fireDone}
 }
 
 // Fire implements Fire.

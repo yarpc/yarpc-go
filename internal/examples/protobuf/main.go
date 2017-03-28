@@ -113,7 +113,7 @@ func doClient(
 			if _, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
 			}
-			if err := sinkServer.WaitFireDone(); err != nil {
+			if err := sinkYarpcServer.WaitFireDone(); err != nil {
 				fmt.Println(err)
 			}
 			continue
