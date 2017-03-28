@@ -94,7 +94,7 @@ type GetStateAction struct {
 
 // Apply Checks the state on the LifecycleOnce
 func (a GetStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
-	assert.Equal(t, a.ExpectedState, l.LifecycleState())
+	assert.True(t, a.ExpectedState <= l.LifecycleState())
 }
 
 // ConcurrentAction executes a plan of actions, with a given interval between
