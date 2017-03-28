@@ -46,16 +46,16 @@ var (
 // WithClients calls f on the Clients.
 func WithClients(
 	transportType testutils.TransportType,
-	keyValueServer examplepb.KeyValueServer,
-	sinkServer examplepb.SinkServer,
-	f func(examplepb.KeyValueClient, examplepb.SinkClient) error,
+	keyValueYarpcServer examplepb.KeyValueYarpcServer,
+	sinkYarpcServer examplepb.SinkYarpcServer,
+	f func(examplepb.KeyValueYarpcClient, examplepb.SinkYarpcClient) error,
 ) error {
 	var procedures []transport.Procedure
-	if keyValueServer != nil {
-		procedures = append(procedures, examplepb.BuildKeyValueProcedures(keyValueServer)...)
+	if keyValueYarpcServer != nil {
+		procedures = append(procedures, examplepb.BuildKeyValueYarpcProcedures(keyValueYarpcServer)...)
 	}
-	if sinkServer != nil {
-		procedures = append(procedures, examplepb.BuildSinkProcedures(sinkServer)...)
+	if sinkYarpcServer != nil {
+		procedures = append(procedures, examplepb.BuildSinkYarpcProcedures(sinkYarpcServer)...)
 	}
 	return testutils.WithClientConfig(
 		"example",
@@ -63,26 +63,26 @@ func WithClients(
 		transportType,
 		func(clientConfig transport.ClientConfig) error {
 			return f(
-				examplepb.NewKeyValueClient(clientConfig),
-				examplepb.NewSinkClient(clientConfig),
+				examplepb.NewKeyValueYarpcClient(clientConfig),
+				examplepb.NewSinkYarpcClient(clientConfig),
 			)
 		},
 	)
 }
 
-// KeyValueServer implements examplepb.KeyValueServer.
-type KeyValueServer struct {
+// KeyValueYarpcServer implements examplepb.KeyValueYarpcServer.
+type KeyValueYarpcServer struct {
 	sync.RWMutex
 	items map[string]string
 }
 
-// NewKeyValueServer returns a new KeyValueServer.
-func NewKeyValueServer() *KeyValueServer {
-	return &KeyValueServer{sync.RWMutex{}, make(map[string]string)}
+// NewKeyValueYarpcServer returns a new KeyValueYarpcServer.
+func NewKeyValueYarpcServer() *KeyValueYarpcServer {
+	return &KeyValueYarpcServer{sync.RWMutex{}, make(map[string]string)}
 }
 
 // GetValue implements GetValue.
-func (k *KeyValueServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
+func (k *KeyValueYarpcServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
 	if request == nil {
 		return nil, errRequestNil
 	}
@@ -99,7 +99,7 @@ func (k *KeyValueServer) GetValue(ctx context.Context, request *examplepb.GetVal
 }
 
 // SetValue implements SetValue.
-func (k *KeyValueServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
+func (k *KeyValueYarpcServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
 	if request == nil {
 		return nil, errRequestNil
 	}
@@ -116,24 +116,24 @@ func (k *KeyValueServer) SetValue(ctx context.Context, request *examplepb.SetVal
 	return nil, nil
 }
 
-// SinkServer implements examplepb.SinkServer.
-type SinkServer struct {
+// SinkYarpcServer implements examplepb.SinkYarpcServer.
+type SinkYarpcServer struct {
 	sync.RWMutex
 	values   []string
 	fireDone chan struct{}
 }
 
-// NewSinkServer returns a new SinkServer.
-func NewSinkServer(withFireDone bool) *SinkServer {
+// NewSinkYarpcServer returns a new SinkYarpcServer.
+func NewSinkYarpcServer(withFireDone bool) *SinkYarpcServer {
 	var fireDone chan struct{}
 	if withFireDone {
 		fireDone = make(chan struct{})
 	}
-	return &SinkServer{sync.RWMutex{}, make([]string, 0), fireDone}
+	return &SinkYarpcServer{sync.RWMutex{}, make([]string, 0), fireDone}
 }
 
 // Fire implements Fire.
-func (s *SinkServer) Fire(ctx context.Context, request *examplepb.FireRequest) error {
+func (s *SinkYarpcServer) Fire(ctx context.Context, request *examplepb.FireRequest) error {
 	if request == nil {
 		return errRequestNil
 	}
@@ -155,7 +155,7 @@ func (s *SinkServer) Fire(ctx context.Context, request *examplepb.FireRequest) e
 }
 
 // Values returns a copy of the values that have been fired.
-func (s *SinkServer) Values() []string {
+func (s *SinkYarpcServer) Values() []string {
 	s.RLock()
 	values := make([]string, len(s.values))
 	copy(values, s.values)
@@ -166,7 +166,7 @@ func (s *SinkServer) Values() []string {
 // WaitFireDone blocks until a fire is done, if withFireDone is set.
 //
 // If will timeout after FireDoneTimeout and return error.
-func (s *SinkServer) WaitFireDone() error {
+func (s *SinkYarpcServer) WaitFireDone() error {
 	if s.fireDone == nil {
 		return nil
 	}
