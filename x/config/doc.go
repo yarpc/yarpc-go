@@ -35,7 +35,7 @@
 // Use LoadConfigFromYAML to load a yarpc.Config from YAML and pass that to
 // yarpc.NewDispatcher.
 //
-// 	c, err := cfg.LoadConfigFromYAML(yamlConfig)
+// 	c, err := cfg.LoadConfigFromYAML("myservice", yamlConfig)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
@@ -45,7 +45,7 @@
 // the parsed data to LoadConfig instead.
 //
 // 	var m map[string]interface{} = ...
-// 	c, err := cfg.LoadConfig(m)
+// 	c, err := cfg.LoadConfig("myservice", m)
 // 	if err != nil {
 // 		log.Fatal(err)
 // 	}
@@ -54,7 +54,7 @@
 // NewDispatcher or NewDispatcherFromYAML may be used to get a
 // yarpc.Dispatcher directly instead of a yarpc.Config.
 //
-// 	dispatcher, err := cfg.NewDispatcherFromYAML(yamlConfig)
+// 	dispatcher, err := cfg.NewDispatcherFromYAML("myservice", yamlConfig)
 //
 // Configuration parameters for the different transports, inbounds, and
 // outbounds are defined in the TransportSpecs that were registered against
@@ -68,10 +68,9 @@
 // purposes but other markup formats may be parsed into map[string]interface{}
 // as long as the information provided is the same.
 //
-// The configuration accepts the following top-level attributes: name,
-// transports, inbounds, and outbounds.
+// The configuration accepts the following top-level attributes: transports,
+// inbounds, and outbounds.
 //
-// 	name: myservice
 // 	inbounds:
 // 	  # ...
 // 	outbounds:
@@ -79,9 +78,8 @@
 // 	transports:
 // 	  # ...
 //
-// Where name specifies the name of the current service. See the following
-// sections for details on the transports, inbounds, and outbounds keys in the
-// configuration.
+// See the following sections for details on the transports, inbounds, and
+// outbounds keys in the configuration.
 //
 // Inbound Configuration
 //

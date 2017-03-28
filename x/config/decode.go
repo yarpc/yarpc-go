@@ -65,7 +65,6 @@ func (m attributeMap) Decode(dst interface{}) error {
 }
 
 type yarpcConfig struct {
-	Name       string                  `config:"name"`
 	Inbounds   inbounds                `config:"inbounds"`
 	Outbounds  clientConfigs           `config:"outbounds"`
 	Transports map[string]attributeMap `config:"transports"`
