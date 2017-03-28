@@ -18,6 +18,11 @@ GENERATE_DEPENDENCIES = \
 
 PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
 
+# ag is way faster
+# mac: brew install the_silver_searcher
+# linux: sudo apt-get install -yq silversearcher-ag
+# https://github.com/ggreer/the_silver_searcher
+
 AG_INSTALLED := $(shell command -v ag)
 ifdef AG_INSTALLED
 GO_FILES := $(shell command ag --no-group -g \.go$$)
