@@ -89,9 +89,9 @@ func testIntegration(
 	assert.Equal(t, "bat", value)
 
 	assert.NoError(t, fire(sinkClient, "foo"))
-	<-sinkServer.FireDone()
+	assert.NoError(t, sinkServer.WaitFireDone())
 	assert.NoError(t, fire(sinkClient, "bar"))
-	<-sinkServer.FireDone()
+	assert.NoError(t, sinkServer.WaitFireDone())
 	assert.Equal(t, []string{"foo", "bar"}, sinkServer.Values())
 }
 

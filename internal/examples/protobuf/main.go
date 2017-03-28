@@ -113,7 +113,9 @@ func doClient(
 			if _, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
 			}
-			<-sinkServer.FireDone()
+			if err := sinkServer.WaitFireDone(); err != nil {
+				fmt.Println(err)
+			}
 			continue
 		case "fired-values":
 			if len(args) != 0 {

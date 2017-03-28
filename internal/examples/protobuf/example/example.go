@@ -25,10 +25,16 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
+)
+
+const (
+	// FireDoneTimeout is how long fireDone will wait for both sending and receiving.
+	FireDoneTimeout = 3 * time.Second
 )
 
 var (
@@ -137,8 +143,13 @@ func (s *SinkServer) Fire(ctx context.Context, request *examplepb.FireRequest) e
 	s.Lock()
 	s.values = append(s.values, request.Value)
 	s.Unlock()
-	if s.fireDone != nil {
-		s.fireDone <- struct{}{}
+	if s.fireDone == nil {
+		return nil
+	}
+	select {
+	case s.fireDone <- struct{}{}:
+	case <-time.After(FireDoneTimeout):
+		return fmt.Errorf("fire done not handled after %v", FireDoneTimeout)
 	}
 	return nil
 }
@@ -152,9 +163,17 @@ func (s *SinkServer) Values() []string {
 	return values
 }
 
-// FireDone returns a channel that can be waited on for fire commands to complete.
+// WaitFireDone blocks until a fire is done, if withFireDone is set.
 //
-// If withFireDone() was not set, this returns nil.
-func (s *SinkServer) FireDone() <-chan struct{} {
-	return s.fireDone
+// If will timeout after FireDoneTimeout and return error.
+func (s *SinkServer) WaitFireDone() error {
+	if s.fireDone == nil {
+		return nil
+	}
+	select {
+	case <-s.fireDone:
+	case <-time.After(FireDoneTimeout):
+		return fmt.Errorf("fire not done after %v", FireDoneTimeout)
+	}
+	return nil
 }
