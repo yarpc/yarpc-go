@@ -80,7 +80,7 @@ func doClient(
 			key := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if response, err := keyValueClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
+			if response, err := keyValueClient.GetValue(ctx, &examplepb.GetValueRequest{Key: key}); err != nil {
 				fmt.Printf("get %s failed: %s\n", key, err.Error())
 			} else {
 				fmt.Println(key, "=", response.Value)
@@ -98,7 +98,7 @@ func doClient(
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
+			if _, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{Key: key, Value: value}); err != nil {
 				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
@@ -110,7 +110,7 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+			if _, err := sinkClient.Fire(ctx, &examplepb.FireRequest{Value: value}); err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
 			}
 			continue
