@@ -42,7 +42,7 @@ func main() {
 
 func do() error {
 	keyValueServer := example.NewKeyValueServer()
-	sinkServer := example.NewSinkServer()
+	sinkServer := example.NewSinkServer(true)
 	// TChannel will be used for unary
 	// HTTP wil be used for oneway
 	return example.WithClients(
@@ -113,6 +113,7 @@ func doClient(
 			if _, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
 			}
+			<-sinkServer.FireDone()
 			continue
 		case "fired-values":
 			if len(args) != 0 {

@@ -36,7 +36,7 @@ func BenchmarkIntegration(b *testing.B) {
 
 func benchmarkIntegrationForTransportType(b *testing.B, transportType testutils.TransportType) {
 	keyValueServer := example.NewKeyValueServer()
-	sinkServer := example.NewSinkServer()
+	sinkServer := example.NewSinkServer(false)
 	example.WithClients(
 		transportType,
 		keyValueServer,

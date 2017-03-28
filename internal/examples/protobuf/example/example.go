@@ -113,12 +113,17 @@ func (k *KeyValueServer) SetValue(ctx context.Context, request *examplepb.SetVal
 // SinkServer implements examplepb.SinkServer.
 type SinkServer struct {
 	sync.RWMutex
-	values []string
+	values   []string
+	fireDone chan struct{}
 }
 
 // NewSinkServer returns a new SinkServer.
-func NewSinkServer() *SinkServer {
-	return &SinkServer{sync.RWMutex{}, make([]string, 0)}
+func NewSinkServer(withFireDone bool) *SinkServer {
+	var fireDone chan struct{}
+	if withFireDone {
+		fireDone = make(chan struct{})
+	}
+	return &SinkServer{sync.RWMutex{}, make([]string, 0), fireDone}
 }
 
 // Fire implements Fire.
@@ -132,6 +137,9 @@ func (s *SinkServer) Fire(ctx context.Context, request *examplepb.FireRequest) e
 	s.Lock()
 	s.values = append(s.values, request.Value)
 	s.Unlock()
+	if s.fireDone != nil {
+		s.fireDone <- struct{}{}
+	}
 	return nil
 }
 
@@ -142,4 +150,11 @@ func (s *SinkServer) Values() []string {
 	copy(values, s.values)
 	s.RUnlock()
 	return values
+}
+
+// FireDone returns a channel that can be waited on for fire commands to complete.
+//
+// If withFireDone() was not set, this returns nil.
+func (s *SinkServer) FireDone() <-chan struct{} {
+	return s.fireDone
 }

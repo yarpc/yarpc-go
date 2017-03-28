@@ -43,7 +43,7 @@ func TestIntegration(t *testing.T) {
 
 func testIntegrationForTransportType(t *testing.T, transportType testutils.TransportType) {
 	keyValueServer := example.NewKeyValueServer()
-	sinkServer := example.NewSinkServer()
+	sinkServer := example.NewSinkServer(true)
 	assert.NoError(
 		t,
 		example.WithClients(
@@ -89,7 +89,9 @@ func testIntegration(
 	assert.Equal(t, "bat", value)
 
 	assert.NoError(t, fire(sinkClient, "foo"))
+	<-sinkServer.FireDone()
 	assert.NoError(t, fire(sinkClient, "bar"))
+	<-sinkServer.FireDone()
 	assert.Equal(t, []string{"foo", "bar"}, sinkServer.Values())
 }
 
