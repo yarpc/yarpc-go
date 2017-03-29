@@ -24,6 +24,8 @@ import (
 	"io"
 
 	"go.uber.org/yarpc/internal/errors"
+
+	"go.uber.org/zap/zapcore"
 )
 
 // Request is the low level request representation.
@@ -60,6 +62,19 @@ type Request struct {
 
 	// Request payload.
 	Body io.Reader
+}
+
+// MarshalLogObject implements zap.ObjectMarshaler.
+func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	// TODO (#788): Include headers once we can omit PII.
+	enc.AddString("caller", r.Caller)
+	enc.AddString("service", r.Service)
+	enc.AddString("encoding", string(r.Encoding))
+	enc.AddString("procedure", r.Procedure)
+	enc.AddString("shardKey", r.ShardKey)
+	enc.AddString("routingKey", r.RoutingKey)
+	enc.AddString("routingDelegate", r.RoutingDelegate)
+	return nil
 }
 
 // Encoding represents an encoding format for requests.
