@@ -25,14 +25,27 @@ generate_stringer() {
 #
 # $1: plugin
 # $2: file
+# $3: other options
 protoc_with_imports() {
   protoc \
     -I "${GOPATH}/src" \
     -I vendor \
     -I vendor/github.com/gogo/protobuf/protobuf \
     -I . \
-    "--${1}_out=Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto:." \
+    "--${1}_out=${3}Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto:." \
   "${2}"
+}
+
+protoc_go() {
+  protoc_with_imports "gogoslick" "${1}" ""
+}
+
+protoc_go_grpc() {
+  protoc_with_imports "gogoslick" "${1}" "plugins=grpc,"
+}
+
+protoc_yarpc_go() {
+  protoc_with_imports "yarpc-go" "${1}" ""
 }
 
 mockgen -destination=api/middleware/middlewaretest/router.go -package=middlewaretest go.uber.org/yarpc/api/middleware Router
@@ -70,10 +83,10 @@ thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --input
 
 thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift
 
-protoc_with_imports gogoslick yarpcproto/yarpc.proto
-protoc_with_imports gogoslick encoding/x/protobuf/internal/wirepb/wire.proto
-protoc_with_imports gogoslick internal/examples/protobuf/examplepb/example.proto
-protoc_with_imports yarpc-go internal/examples/protobuf/examplepb/example.proto
+protoc_go yarpcproto/yarpc.proto
+protoc_go encoding/x/protobuf/internal/wirepb/wire.proto
+protoc_go_grpc internal/examples/protobuf/examplepb/example.proto
+protoc_yarpc_go internal/examples/protobuf/examplepb/example.proto
 
 touch encoding/x/protobuf/internal/wirepb/.nocover
 touch internal/crossdock/thrift/gen-go/echo/.nocover
