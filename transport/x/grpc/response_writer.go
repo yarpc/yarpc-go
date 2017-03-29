@@ -30,16 +30,23 @@ import (
 
 type responseWriter struct {
 	*bytes.Buffer
-	md metadata.MD
+	md                 metadata.MD
+	isApplicationError bool
 }
 
 func newResponseWriter() *responseWriter {
 	return &responseWriter{
 		bytes.NewBuffer(nil),
 		metadata.New(nil),
+		false,
 	}
 }
 
-func (r *responseWriter) AddHeaders(headers transport.Headers) {}
+func (r *responseWriter) AddHeaders(headers transport.Headers) {
+	// TODO: handle error
+	_ = addApplicationHeaders(r.md, headers)
+}
 
-func (r *responseWriter) SetApplicationError() {}
+func (r *responseWriter) SetApplicationError() {
+	r.isApplicationError = true
+}
