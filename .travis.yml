@@ -19,20 +19,14 @@ matrix:
           - .cache
     - go: 1.7
       env:
-        - CI_TYPES='cover goveralls'
-    - go: 1.8
-      env:
-        - CI_TYPES='lint test'
-    - go: 1.7
-      env:
-        - CI_TYPES=examples
+        - CI_TYPES='examples cover goveralls'
       addons:
         apt:
           packages:
             - python-virtualenv
     - go: 1.8
       env:
-        - CI_TYPES=examples
+        - CI_TYPES='examples lint test'
       addons:
         apt:
           packages:
