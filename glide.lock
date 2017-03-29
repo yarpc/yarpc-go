@@ -1,5 +1,5 @@
-hash: 3756b8708cb1e31ddb382de6bdd3985edc6d68585e7916b086e4232c1d675093
-updated: 2017-03-24T17:57:40.071228437+01:00
+hash: a20d870d4ec92870b40e039273bc630f16172331e11b0ba1237c53fc6e3975be
+updated: 2017-03-29T14:08:15.515192528+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -103,7 +103,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: 1ef6560c59eeb170f2381c02287ca44a5c50a523
+  version: 5b9071f590e7c32b88b950ffc2a4e20ef74d2804
   subpackages:
   - client/cherami
   - common
@@ -112,11 +112,11 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: 09ed2ceaeab9e52820a81caece0dee9914c31f5d
+  version: c12c343b8a1428f8968e596b1a3ef263897ce751
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
-  version: 153cc21d199f5a4b65d0d7219c1f423ea58cfab5
+  version: 465529424ed6b04a7fd2fcab6a9d6e96ea807fda
   subpackages:
   - internal/spanlog
   - log
@@ -167,21 +167,17 @@ imports:
   - ptr
   - version
   - wire
-- name: go.uber.org/tools
-  version: 5908733c544153a245dddd039959386356fbc082
-  subpackages:
-  - update-license
 - name: golang.org/x/net
-  version: 3e967e1d28d2c9c06e749dc2bdc14b04df89e689
+  version: 05d3205156cb1bdc096578d6457fa161cd950aa2
   subpackages:
   - context
   - context/ctxhttp
 - name: golang.org/x/sys
-  version: 99f16d856c9836c42d24e7ab64ea72916925fa97
+  version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: c21bc47f893ee73c18dd2119bb8ff9a2b492c4c6
+  version: 1529f889eb4b594d1f047f2fb8d5b3cc85c8f006
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5
@@ -194,4 +190,24 @@ imports:
   - internal/proto
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
-testImports: []
+testImports:
+- name: github.com/golang/lint
+  version: cb00e5669539f047b2f4c53a421a01b0c8e172c6
+  subpackages:
+  - golint
+- name: github.com/kisielk/errcheck
+  version: 23699b7e2cbfdb89481023524954ba2aeff6be90
+- name: github.com/kisielk/gotool
+  version: 0de1eaf82fa3f583ce21fde859f1e7e0c5e9b220
+- name: github.com/mattn/goveralls
+  version: a99c5ee06aeeca2a2befc7e90b99061b1180850c
+- name: github.com/wadey/gocovmerge
+  version: b5bfa59ec0adc420475f97f89b58045c721d761c
+- name: go.uber.org/tools
+  version: 5908733c544153a245dddd039959386356fbc082
+  subpackages:
+  - update-license
+- name: honnef.co/go/tools
+  version: 6c3814a19596cc3f3de23f0442023a5adbb28eb6
+  subpackages:
+  - cmd/staticcheck
