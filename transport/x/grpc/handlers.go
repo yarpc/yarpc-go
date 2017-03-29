@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"bytes"
 	"fmt"
 
 	"go.uber.org/yarpc/api/transport"
@@ -51,4 +52,20 @@ func (m *methodHandler) handle(
 	}
 	fmt.Printf("%s\n%s\n%+v\n%TX%sX\n", m.serviceName, m.methodName, ctx, data, string(data))
 	return nil, nil
+}
+
+func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error) (*transport.Request, error) {
+	//md, ok := metadata.FromContext(ctx)
+	//if md == nil || !ok {
+	//return nil, fmt.Errorf("cannot get metadata from ctx: %v", ctx)
+	//}
+	var body []byte
+	if err := decodeFunc(&body); err != nil {
+		return nil, err
+	}
+	return &transport.Request{
+		Service:   m.serviceName,
+		Procedure: m.methodName,
+		Body:      bytes.NewBuffer(body),
+	}, nil
 }
