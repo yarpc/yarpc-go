@@ -79,7 +79,14 @@ func doClient(
 			key := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if response, err := clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
+			var response *examplepb.GetValueResponse
+			var err error
+			if os.Getenv("EXAMPLE_GRPC") != "" {
+				response, err = clients.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+			} else {
+				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+			}
+			if err != nil {
 				fmt.Printf("get %s failed: %s\n", key, err.Error())
 			} else {
 				fmt.Println(key, "=", response.Value)
@@ -97,7 +104,13 @@ func doClient(
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
+			var err error
+			if os.Getenv("EXAMPLE_GRPC") != "" {
+				_, err = clients.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+			} else {
+				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+			}
+			if err != nil {
 				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
