@@ -167,7 +167,8 @@ func getServiceNameAndMethodDesc(router transport.Router, procedure transport.Pr
 	methodName = url.QueryEscape(methodName)
 	return serviceName, grpc.MethodDesc{
 		MethodName: methodName,
-		Handler:    newMethodHandler(serviceName, methodName, router).handle,
+		// TODO: what if two procedures have the same serviceName and methodName, but a different service?
+		Handler: newMethodHandler(procedure.Service, serviceName, methodName, router).handle,
 	}, nil
 }
 

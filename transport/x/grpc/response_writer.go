@@ -22,7 +22,6 @@ package grpc
 
 import (
 	"bytes"
-	"io"
 
 	"go.uber.org/yarpc/api/transport"
 
@@ -30,17 +29,17 @@ import (
 )
 
 type responseWriter struct {
-	io.Writer
+	*bytes.Buffer
 	md metadata.MD
 }
 
 func newResponseWriter() *responseWriter {
 	return &responseWriter{
 		bytes.NewBuffer(nil),
-		make(metadata.MD, 0),
+		metadata.New(nil),
 	}
 }
 
 func (r *responseWriter) AddHeaders(headers transport.Headers) {}
 
-func (r *responseWriter) SetAppllicationError() {}
+func (r *responseWriter) SetApplicationError() {}
