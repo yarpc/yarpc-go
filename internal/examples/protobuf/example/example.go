@@ -47,7 +47,7 @@ var (
 type Clients struct {
 	KeyValueYarpcClient examplepb.KeyValueYarpcClient
 	SinkYarpcClient     examplepb.SinkYarpcClient
-	KeyGRPCClient       examplepb.KeyValueClient
+	KeyValueGRPCClient  examplepb.KeyValueClient
 	SinkGRPCClient      examplepb.SinkClient
 }
 
