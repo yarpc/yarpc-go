@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap/zapcore"
 )
 
 type unaryHandlerFunc func(context.Context, *Request, ResponseWriter) error
@@ -37,6 +38,37 @@ func (f unaryHandlerFunc) Handle(ctx context.Context, r *Request, w ResponseWrit
 }
 func (f onewayHandlerFunc) HandleOneway(ctx context.Context, r *Request) error {
 	return f(ctx, r)
+}
+
+func TestHandlerSpecLogMarshaling(t *testing.T) {
+	tests := []struct {
+		desc string
+		spec HandlerSpec
+		want map[string]interface{}
+	}{
+		{
+			desc: "unary",
+			spec: NewUnaryHandlerSpec(unaryHandlerFunc(func(_ context.Context, _ *Request, _ ResponseWriter) error {
+				return nil
+			})),
+			want: map[string]interface{}{"rpcType": "Unary"},
+		},
+		{
+			desc: "oneway",
+			spec: NewOnewayHandlerSpec(onewayHandlerFunc(func(_ context.Context, _ *Request) error {
+				return nil
+			})),
+			want: map[string]interface{}{"rpcType": "Oneway"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			enc := zapcore.NewMapObjectEncoder()
+			assert.NoError(t, tt.spec.MarshalLogObject(enc), "Unexpected error marshaling spec.")
+			assert.Equal(t, tt.want, enc.Fields, "Unexpected output from marshaling spec.")
+		})
+	}
 }
 
 func TestDispatchUnaryHandlerWithPanic(t *testing.T) {

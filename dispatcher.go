@@ -29,10 +29,13 @@ import (
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/internal/inboundmiddleware"
+	"go.uber.org/yarpc/internal/observerware"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/zap"
 )
 
 // Config specifies the parameters of a new Dispatcher constructed via
@@ -65,6 +68,12 @@ type Config struct {
 
 	// RouterMiddleware is middleware to control how requests are routed.
 	RouterMiddleware middleware.Router
+
+	// Logger provides a logger for the dispatcher. The default logger is a
+	// no-op.
+	// TODO(shah): Export this when we're ready to deploy a branch in
+	// demo-yarpc-go.
+	logger *zap.Logger
 }
 
 // Inbounds contains a list of inbound transports. Each inbound transport
@@ -103,6 +112,15 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		panic("yarpc.NewDispatcher expects a valid service name: %s" + err.Error())
 	}
 
+	logger := zap.NewNop()
+	if cfg.logger != nil {
+		logger = cfg.logger.Named("yarpc").With(
+			zap.Namespace("yarpc"), // isolate yarpc's keys
+			zap.String("dispatcher", cfg.Name),
+		)
+		cfg = addObservingMiddleware(cfg, logger)
+	}
+
 	return &Dispatcher{
 		name:              cfg.Name,
 		table:             middleware.ApplyRouteTable(NewMapRouter(cfg.Name), cfg.RouterMiddleware),
@@ -110,7 +128,16 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		outbounds:         convertOutbounds(cfg.Outbounds, cfg.OutboundMiddleware),
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		inboundMiddleware: cfg.InboundMiddleware,
+		log:               logger,
 	}
+}
+
+func addObservingMiddleware(cfg Config, logger *zap.Logger) Config {
+	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observerware.NewUnaryInbound(
+		logger,
+		observerware.NewNopContextExtractor(),
+	), cfg.InboundMiddleware.Unary)
+	return cfg
 }
 
 // convertOutbounds applys outbound middleware and creates validator outbounds
@@ -194,6 +221,9 @@ type Dispatcher struct {
 	transports []transport.Transport
 
 	inboundMiddleware InboundMiddleware
+
+	// TODO (shah): add a *pally.Registry too.
+	log *zap.Logger
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -242,6 +272,7 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 		}
 
 		procedures = append(procedures, r)
+		d.log.Info("Registration succeeded.", zap.Object("procedure", r))
 	}
 
 	d.table.Register(procedures)
@@ -276,6 +307,7 @@ func (d *Dispatcher) Start() error {
 		allStarted []transport.Lifecycle
 	)
 
+	d.log.Info("Starting up.")
 	start := func(s transport.Lifecycle) func() error {
 		return func() error {
 			if s == nil {
@@ -310,18 +342,22 @@ func (d *Dispatcher) Start() error {
 	for _, i := range d.inbounds {
 		i.SetRouter(d.table)
 	}
+	d.log.Debug("Set router for inbounds.")
 
 	// Start Transports
 	wait := intsync.ErrorWaiter{}
+	d.log.Debug("Starting transports.")
 	for _, t := range d.transports {
 		wait.Submit(start(t))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {
 		return abort(errs)
 	}
+	d.log.Debug("Started transports.")
 
 	// Start Outbounds
 	wait = intsync.ErrorWaiter{}
+	d.log.Debug("Starting outbounds.")
 	for _, o := range d.outbounds {
 		wait.Submit(start(o.Unary))
 		wait.Submit(start(o.Oneway))
@@ -329,17 +365,24 @@ func (d *Dispatcher) Start() error {
 	if errs := wait.Wait(); len(errs) != 0 {
 		return abort(errs)
 	}
+	d.log.Debug("Started outbounds.")
 
 	// Start Inbounds
 	wait = intsync.ErrorWaiter{}
+	d.log.Debug("Starting inbounds.")
 	for _, i := range d.inbounds {
 		wait.Submit(start(i))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {
 		return abort(errs)
 	}
+	d.log.Debug("Started inbounds.")
 
+	d.log.Debug("Registering debug pages.")
 	addDispatcherToDebugPages(d)
+	d.log.Debug("Registered debug pages.")
+
+	d.log.Info("Started up.")
 	return nil
 }
 
@@ -360,8 +403,10 @@ func (d *Dispatcher) Stop() error {
 	// in the outbound might be deleted from the transport's perspective and
 	// cause issues.
 	var allErrs []error
+	d.log.Info("Starting shutdown.")
 
 	// Stop Inbounds
+	d.log.Debug("Stopping inbounds.")
 	wait := intsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
 		wait.Submit(i.Stop)
@@ -369,8 +414,10 @@ func (d *Dispatcher) Stop() error {
 	if errs := wait.Wait(); len(errs) > 0 {
 		allErrs = append(allErrs, errs...)
 	}
+	d.log.Debug("Stopped inbounds.")
 
 	// Stop Outbounds
+	d.log.Debug("Stopping outbounds.")
 	wait = intsync.ErrorWaiter{}
 	for _, o := range d.outbounds {
 		if o.Unary != nil {
@@ -383,8 +430,10 @@ func (d *Dispatcher) Stop() error {
 	if errs := wait.Wait(); len(errs) > 0 {
 		allErrs = append(allErrs, errs...)
 	}
+	d.log.Debug("Stopped outbounds.")
 
 	// Stop Transports
+	d.log.Debug("Stopping transports.")
 	wait = intsync.ErrorWaiter{}
 	for _, t := range d.transports {
 		wait.Submit(t.Stop)
@@ -392,12 +441,17 @@ func (d *Dispatcher) Stop() error {
 	if errs := wait.Wait(); len(errs) > 0 {
 		allErrs = append(allErrs, errs...)
 	}
+	d.log.Debug("Stopped transports.")
 
 	if len(allErrs) > 0 {
 		return errors.ErrorGroup(allErrs)
 	}
 
+	d.log.Debug("Unregistering debug pages.")
 	removeDispatcherFromDebugPages(d)
+	d.log.Debug("Unregistered debug pages.")
+
+	d.log.Info("Completed shutdown.")
 	return nil
 }
 

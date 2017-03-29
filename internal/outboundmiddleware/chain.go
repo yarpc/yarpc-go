@@ -30,13 +30,22 @@ import (
 
 // UnaryChain combines a series of `UnaryOutbound`s into a single `UnaryOutbound`.
 func UnaryChain(mw ...middleware.UnaryOutbound) middleware.UnaryOutbound {
-	switch len(mw) {
+	unchained := make([]middleware.UnaryOutbound, 0, len(mw))
+	for _, m := range mw {
+		if c, ok := m.(unaryChain); ok {
+			unchained = append(unchained, c...)
+			continue
+		}
+		unchained = append(unchained, m)
+	}
+
+	switch len(unchained) {
 	case 0:
 		return middleware.NopUnaryOutbound
 	case 1:
-		return mw[0]
+		return unchained[0]
 	default:
-		return unaryChain(mw)
+		return unaryChain(unchained)
 	}
 }
 
@@ -90,13 +99,22 @@ func (x unaryChainExec) Introspect() introspection.OutboundStatus {
 
 // OnewayChain combines a series of `OnewayOutbound`s into a single `OnewayOutbound`.
 func OnewayChain(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
-	switch len(mw) {
+	unchained := make([]middleware.OnewayOutbound, 0, len(mw))
+	for _, m := range mw {
+		if c, ok := m.(onewayChain); ok {
+			unchained = append(unchained, c...)
+			continue
+		}
+		unchained = append(unchained, m)
+	}
+
+	switch len(unchained) {
 	case 0:
 		return middleware.NopOnewayOutbound
 	case 1:
-		return mw[0]
+		return unchained[0]
 	default:
-		return onewayChain(mw)
+		return onewayChain(unchained)
 	}
 }
 
