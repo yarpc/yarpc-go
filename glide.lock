@@ -1,0 +1,223 @@
+hash: 7b4a853fba266dd0e48df4c4fde8709ca2f279f5838de838c0c50f8ec03a4fbc
+updated: 2017-03-29T08:35:29.463444274-07:00
+imports:
+- name: github.com/apache/thrift
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
+  subpackages:
+  - lib/go/thrift
+- name: github.com/beorn7/perks
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  subpackages:
+  - quantile
+- name: github.com/cactus/go-statsd-client
+  version: d8eabe07bc70ff9ba6a56836cde99d1ea3d005f7
+  subpackages:
+  - statsd
+- name: github.com/codahale/hdrhistogram
+  version: 3a0bb77429bd3a61596f5e8a3172445844342120
+- name: github.com/crossdock/crossdock-go
+  version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
+  subpackages:
+  - assert
+  - require
+- name: github.com/davecgh/go-spew
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  subpackages:
+  - spew
+- name: github.com/facebookgo/clock
+  version: 600d898af40aa09a7a93ecb9265d87b0504b6f03
+- name: github.com/gogo/protobuf
+  version: 100ba4e885062801d56799d78530b73b178a78f3
+  subpackages:
+  - gogoproto
+  - proto
+  - protoc-gen-gogo/descriptor
+  - protoc-gen-gogo/generator
+  - protoc-gen-gogo/plugin
+- name: github.com/golang/mock
+  version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
+  subpackages:
+  - gomock
+- name: github.com/golang/protobuf
+  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
+  subpackages:
+  - proto
+- name: github.com/gorilla/websocket
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  subpackages:
+  - pbutil
+- name: github.com/mitchellh/mapstructure
+  version: 53818660ed4955e899c0bcafa97299a388bd7c8e
+- name: github.com/opentracing/opentracing-go
+  version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
+  subpackages:
+  - ext
+  - log
+  - mocktracer
+- name: github.com/pborman/uuid
+  version: 1b00554d822231195d1babd97ff4a781231955c9
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/prometheus/client_golang
+  version: c5b7fccd204277076155f10851dad72b76a49317
+  subpackages:
+  - prometheus
+  - prometheus/promhttp
+- name: github.com/prometheus/client_model
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: a1dba9ce8baed984a2495b658c82687f8157b98f
+  subpackages:
+  - xfs
+- name: github.com/Sirupsen/logrus
+  version: 10f801ebc38b33738c9d17d50860f484a0988ff5
+- name: github.com/stretchr/objx
+  version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
+- name: github.com/stretchr/testify
+  version: 4d4bfba8f1d1027c4fdbe371823030df51419987
+  subpackages:
+  - assert
+  - mock
+  - require
+- name: github.com/uber-common/bark
+  version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
+- name: github.com/uber-go/atomic
+  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+- name: github.com/uber-go/tally
+  version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
+  subpackages:
+  - m3
+  - m3/customtransports
+  - m3/thrift
+  - m3/thriftudp
+- name: github.com/uber/cherami-client-go
+  version: 5b9071f590e7c32b88b950ffc2a4e20ef74d2804
+  subpackages:
+  - client/cherami
+  - common
+  - common/backoff
+  - common/metrics
+  - common/websocket
+  - stream
+- name: github.com/uber/cherami-thrift
+  version: c12c343b8a1428f8968e596b1a3ef263897ce751
+  subpackages:
+  - .generated/go/cherami
+- name: github.com/uber/jaeger-client-go
+  version: 465529424ed6b04a7fd2fcab6a9d6e96ea807fda
+  subpackages:
+  - internal/spanlog
+  - log
+  - thrift-gen/agent
+  - thrift-gen/sampling
+  - thrift-gen/zipkincore
+  - transport
+  - utils
+- name: github.com/uber/jaeger-lib
+  version: ffca3143c929e9b97325e6bebcc380e8c6e5fa0d
+  subpackages:
+  - metrics
+- name: github.com/uber/tchannel-go
+  version: 0b7f160817553b0bacb5b108dd84a5022dbdd1c4
+  subpackages:
+  - hyperbahn
+  - hyperbahn/gen-go/hyperbahn
+  - internal/argreader
+  - json
+  - raw
+  - relay
+  - relay/relaytest
+  - testutils
+  - testutils/goroutines
+  - testutils/testreader
+  - thrift
+  - thrift/gen-go/meta
+  - tnet
+  - trand
+  - typed
+- name: go.uber.org/atomic
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+- name: go.uber.org/thriftrw
+  version: 05f870b3c56597d180af568a6392209cc33269e2
+  subpackages:
+  - envelope
+  - internal
+  - internal/envelope
+  - internal/envelope/exception
+  - internal/frame
+  - internal/goast
+  - internal/multiplex
+  - internal/semver
+  - plugin
+  - plugin/api
+  - protocol
+  - protocol/binary
+  - ptr
+  - version
+  - wire
+- name: go.uber.org/zap
+  version: 4257c7cf05477d92ec25c31cfd3d60e89575f18a
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - internal/multierror
+  - zapcore
+  - zaptest/observer
+- name: golang.org/x/net
+  version: 3e967e1d28d2c9c06e749dc2bdc14b04df89e689
+  subpackages:
+  - context
+  - context/ctxhttp
+- name: golang.org/x/sys
+  version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
+  subpackages:
+  - unix
+- name: golang.org/x/tools
+  version: 1529f889eb4b594d1f047f2fb8d5b3cc85c8f006
+  subpackages:
+  - go/ast/astutil
+- name: gopkg.in/redis.v5
+  version: a16aeec10ff407b1e7be6dd35797ccf5426ef0f0
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
+- name: gopkg.in/yaml.v2
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
+testImports:
+- name: github.com/golang/lint
+  version: cb00e5669539f047b2f4c53a421a01b0c8e172c6
+  subpackages:
+  - golint
+- name: github.com/kisielk/errcheck
+  version: 23699b7e2cbfdb89481023524954ba2aeff6be90
+- name: github.com/kisielk/gotool
+  version: 0de1eaf82fa3f583ce21fde859f1e7e0c5e9b220
+- name: github.com/mattn/goveralls
+  version: a99c5ee06aeeca2a2befc7e90b99061b1180850c
+- name: github.com/wadey/gocovmerge
+  version: b5bfa59ec0adc420475f97f89b58045c721d761c
+- name: go.uber.org/tools
+  version: 5908733c544153a245dddd039959386356fbc082
+  subpackages:
+  - update-license
+- name: honnef.co/go/tools
+  version: 6c3814a19596cc3f3de23f0442023a5adbb28eb6
+  subpackages:
+  - cmd/staticcheck
