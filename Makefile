@@ -169,7 +169,7 @@ THRIFTRW = $(BIN)/thriftrw
 
 .PHONY: install
 install: $(GLIDE)
-	$(GLIDE) install
+	PATH=$$PATH:$(BIN) glide install
 
 .PHONY: clean
 clean:
