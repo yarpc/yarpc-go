@@ -83,7 +83,10 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	}
 	if rawResponse, ok := ctx.Value(rawResponseKey).(bool); ok && rawResponse {
 		_, err := responseWriter.Write(responseData)
-		return err
+		if err != nil {
+			return err
+		}
+		return appErr
 	}
 	var wireError *wirepb.Error
 	if appErr != nil {
