@@ -6,14 +6,20 @@ LINT_EXCLUDES_EXTRAS =
 GOVET_IGNORE_RULES = \
 	possible formatting directive in Error call
 
-# List of executables needed for 'make generate'
-GENERATE_DEPENDENCIES = \
+# List of vendored go executables needed for make
+GO_BIN_DEPS = \
+	github.com/kisielk/errcheck \
+	github.com/golang/lint/golint \
 	github.com/golang/mock/mockgen \
 	github.com/gogo/protobuf/protoc-gen-gogoslick \
+	github.com/mattn/goveralls \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
+	github.com/wadey/gocovmerge \
+	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/stringer \
 	go.uber.org/thriftrw \
-	go.uber.org/tools/update-license
+	go.uber.org/tools/update-license \
+	honnef.co/go/tools/cmd/staticcheck
 
 PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
 
@@ -111,69 +117,55 @@ PROTOC = $(BIN)/protoc
 BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(PROTOC) $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
 
 $(DOCKER_COMPOSE):
-	mkdir -p $(BIN)
+	@mkdir -p $(BIN)
 	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(DOCKER_COMPOSE_OS)-$(DOCKER_COMPOSE_ARCH) > $(DOCKER_COMPOSE)
-	chmod +x $(DOCKER_COMPOSE)
+	@chmod +x $(DOCKER_COMPOSE)
 
 $(GLIDE):
-	mkdir -p $(BIN)
-	mkdir -p $(TMP)/glide
+	@mkdir -p $(BIN)
+	@mkdir -p $(TMP)/glide
 	curl -L https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(GLIDE_OS)-$(GLIDE_ARCH).tar.gz > $(TMP)/glide/glide.tar.gz
 	cd $(TMP)/glide; tar xzf glide.tar.gz
 	mv $(TMP)/glide/$(GLIDE_OS)-$(GLIDE_ARCH)/glide $(GLIDE)
-	rm -rf $(TMP)/glide
+	@rm -rf $(TMP)/glide
 
 $(THRIFT):
-	mkdir -p $(BIN)
-	mkdir -p $(TMP)/thrift
+	@mkdir -p $(BIN)
+	@mkdir -p $(TMP)/thrift
 	curl -L "https://github.com/uber/tchannel-go/releases/download/thrift-v$(THRIFT_VERSION)/thrift-1-$(THRIFT_OS)-$(THRIFT_ARCH).tar.gz" > $(TMP)/thrift/thrift.tar.gz
 	tar -C $(TMP)/thrift -xzf $(TMP)/thrift/thrift.tar.gz
 	mv $(TMP)/thrift/thrift-1 $(THRIFT)
-	rm -rf $(TMP)/thrift
+	@rm -rf $(TMP)/thrift
 
 $(PROTOC):
-	mkdir -p $(BIN)
-	mkdir -p $(TMP)/protoc
+	@mkdir -p $(BIN)
+	@mkdir -p $(TMP)/protoc
 	curl -L "https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(TMP)/protoc/protoc.zip
 	cd $(TMP)/protoc; unzip $(TMP)/protoc/protoc.zip
 	mv $(TMP)/protoc/bin/protoc $(PROTOC)
-	rm -rf $(TMP)/protoc
+	@rm -rf $(TMP)/protoc
 
 $(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
-	mkdir -p $(BIN)
+	@mkdir -p $(BIN)
 	go build -o $(BIN)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
 
 $(BIN)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go
-	mkdir -p $(BIN)
+	@mkdir -p $(BIN)
 	go build -o $(BIN)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
 
 define generatedeprule
 BINS += $(BIN)/$(shell basename $1)
 
 $(BIN)/$(shell basename $1): vendor/$1/*.go glide.lock $(GLIDE)
-	mkdir -p $(BIN)
+	@mkdir -p $(BIN)
 	PATH=$(BIN):$(PATH) ./scripts/vendor-build.sh $(BIN) $1
 endef
 
-$(foreach i,$(GENERATE_DEPENDENCIES),$(eval $(call generatedeprule,$(i))))
+$(foreach i,$(GO_BIN_DEPS),$(eval $(call generatedeprule,$(i))))
 
 THRIFTRW = $(BIN)/thriftrw
 
 ##############################################################################
-
-.PHONY: lintbins
-lintbins:
-	@go get \
-		github.com/golang/lint/golint \
-		honnef.co/go/tools/cmd/staticcheck \
-		github.com/kisielk/errcheck
-
-.PHONY: coverbins
-coverbins:
-	@go get \
-		github.com/wadey/gocovmerge \
-		github.com/mattn/goveralls \
-		golang.org/x/tools/cmd/cover
 
 .PHONY: install
 install: $(GLIDE)
@@ -261,7 +253,7 @@ verifyversion:
 	fi
 
 .PHONY: lint
-lint: lintbins generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion
+lint: $(BINS) generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion
 
 .PHONY: test
 test: $(THRIFTRW)
@@ -269,7 +261,7 @@ test: $(THRIFTRW)
 
 
 .PHONY: cover
-cover: coverbins $(THRIFTRW)
+cover: $(BINS)
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 

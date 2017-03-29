@@ -48,3 +48,19 @@ import:
   - prometheus/promhttp
 - package: github.com/uber-go/tally
   version: ^3
+- package: github.com/golang/lint
+  version: master
+  subpackages:
+  - golint
+- package: honnef.co/go/tools
+  version: master
+  subpackages:
+  - cmd/staticcheck
+- package: github.com/kisielk/gotool
+  version: master
+- package: github.com/kisielk/errcheck
+  version: master
+- package: github.com/wadey/gocovmerge
+  version: master
+- package: github.com/mattn/goveralls
+  version: master
