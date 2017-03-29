@@ -90,7 +90,7 @@ type ClientInfo struct {
 	GRPCClientConn *ggrpc.ClientConn
 }
 
-// WithClientConfig wraps a function by setting up a client and server dispatcher and giving
+// WithClientInfo wraps a function by setting up a client and server dispatcher and giving
 // the function the client configuration to use in tests for the given TransportType.
 //
 // The server dispatcher will be brought up using all TransportTypes and with the serviceName.
