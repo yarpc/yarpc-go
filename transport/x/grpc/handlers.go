@@ -49,6 +49,6 @@ func (m *methodHandler) handle(
 	if err := decodeFunc(&data); err != nil {
 		return nil, err
 	}
-	fmt.Printf("%s\n%s\n%+v\n%s\n", m.serviceName, m.methodName, ctx, string(data))
+	fmt.Printf("%s\n%s\n%+v\n%TX%sX\n", m.serviceName, m.methodName, ctx, data, string(data))
 	return nil, nil
 }
