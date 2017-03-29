@@ -69,78 +69,78 @@ import (
 )
 
 {{range $service := .Services }}
-// {{$service.GetName}}Client is the client-side interface for the {{$service.GetName}} service.
-type {{$service.GetName}}Client interface {
+// {{$service.GetName}}YarpcClient is the yarpc client-side interface for the {{$service.GetName}} service.
+type {{$service.GetName}}YarpcClient interface {
 	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
 	{{end}}
 	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (yarpc.Ack, error)
 	{{end}}
 }
 
-// New{{$service.GetName}}Client builds a new client for the {{$service.GetName}} service.
-func New{{$service.GetName}}Client(clientConfig transport.ClientConfig) {{$service.GetName}}Client {
-	return &_{{$service.GetName}}Caller{protobuf.NewClient("{{$service.GetName}}", clientConfig)}
+// New{{$service.GetName}}YarpcClient builds a new yarpc client for the {{$service.GetName}} service.
+func New{{$service.GetName}}YarpcClient(clientConfig transport.ClientConfig) {{$service.GetName}}YarpcClient {
+	return &_{{$service.GetName}}YarpcCaller{protobuf.NewClient("{{$service.GetName}}", clientConfig)}
 }
 
-// {{$service.GetName}}Server is the server-side interface for the {{$service.GetName}} service.
-type {{$service.GetName}}Server interface {
+// {{$service.GetName}}YarpcServer is the yarpc server-side interface for the {{$service.GetName}} service.
+type {{$service.GetName}}YarpcServer interface {
 	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) (*{{$method.ResponseType.GoType $packagePath}}, error)
 	{{end}}
 	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) error
 	{{end}}
 }
 
-// Build{{$service.GetName}}Procedures prepares an implementation of the {{$service.GetName}} service for registration.
-func Build{{$service.GetName}}Procedures(server {{$service.GetName}}Server) []transport.Procedure {
-	handler := &_{{$service.GetName}}Handler{server}
+// Build{{$service.GetName}}YarpcProcedures prepares an implementation of the {{$service.GetName}} service for yarpc registration.
+func Build{{$service.GetName}}YarpcProcedures(server {{$service.GetName}}YarpcServer) []transport.Procedure {
+	handler := &_{{$service.GetName}}YarpcHandler{server}
 	return protobuf.BuildProcedures(
 		"{{$service.GetName}}",
 		map[string]transport.UnaryHandler{
-		{{range $method := unaryMethods $service}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
+		{{range $method := unaryMethods $service}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}YarpcRequest),
 		{{end}}
 		},
 		map[string]transport.OnewayHandler{
-		{{range $method := onewayMethods $service}}"{{$method.GetName}}": protobuf.NewOnewayHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}Request),
+		{{range $method := onewayMethods $service}}"{{$method.GetName}}": protobuf.NewOnewayHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}YarpcRequest),
 		{{end}}
 		},
 	)
 }
 
-type _{{$service.GetName}}Caller struct {
+type _{{$service.GetName}}YarpcCaller struct {
 	client protobuf.Client
 }
 
 {{range $method := unaryMethods $service}}
-func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error) {
-	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}Response, options...)
+func (c *_{{$service.GetName}}YarpcCaller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error) {
+	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}YarpcResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
 	if !ok {
-		return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}Response, responseMessage)
+		return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}YarpcResponse, responseMessage)
 	}
 	return response, err
 }
 {{end}}
 {{range $method := onewayMethods $service}}
-func (c *_{{$service.GetName}}Caller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (yarpc.Ack, error) {
+func (c *_{{$service.GetName}}YarpcCaller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (yarpc.Ack, error) {
 	return c.client.CallOneway(ctx, "{{$method.GetName}}", request, options...)
 }
 {{end}}
 
-type _{{$service.GetName}}Handler struct {
-	server {{$service.GetName}}Server
+type _{{$service.GetName}}YarpcHandler struct {
+	server {{$service.GetName}}YarpcServer
 }
 
 {{range $method := unaryMethods $service}}
-func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+func (h *_{{$service.GetName}}YarpcHandler) {{$method.GetName}}(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
 	var request *{{$method.RequestType.GoType $packagePath}}
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*{{$method.RequestType.GoType $packagePath}})
 		if !ok {
-			return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}Request, requestMessage)
+			return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}YarpcRequest, requestMessage)
 		}
 	}
 	response, err := h.server.{{$method.GetName}}(ctx, request)
@@ -151,13 +151,13 @@ func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, 
 }
 {{end}}
 {{range $method := onewayMethods $service}}
-func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, requestMessage proto.Message) error {
+func (h *_{{$service.GetName}}YarpcHandler) {{$method.GetName}}(ctx context.Context, requestMessage proto.Message) error {
 	var request *{{$method.RequestType.GoType $packagePath}}
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*{{$method.RequestType.GoType $packagePath}})
 		if !ok {
-			return protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}Request, requestMessage)
+			return protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}YarpcRequest, requestMessage)
 		}
 	}
 	return h.server.{{$method.GetName}}(ctx, request)
@@ -165,18 +165,18 @@ func (h *_{{$service.GetName}}Handler) {{$method.GetName}}(ctx context.Context, 
 {{end}}
 
 {{range $method := $service.Methods}}
-func new{{$service.GetName}}_{{$method.GetName}}Request() proto.Message {
+func new{{$service.GetName}}_{{$method.GetName}}YarpcRequest() proto.Message {
 	return &{{$method.RequestType.GoType $packagePath}}{}
 }
 
-func new{{$service.GetName}}_{{$method.GetName}}Response() proto.Message {
+func new{{$service.GetName}}_{{$method.GetName}}YarpcResponse() proto.Message {
 	return &{{$method.ResponseType.GoType $packagePath}}{}
 }
 {{end}}
 var (
 {{range $method := $service.Methods}}
-	empty{{$service.GetName}}_{{$method.GetName}}Request = &{{$method.RequestType.GoType $packagePath}}{}
-	empty{{$service.GetName}}_{{$method.GetName}}Response = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
+	empty{{$service.GetName}}_{{$method.GetName}}YarpcRequest = &{{$method.RequestType.GoType $packagePath}}{}
+	empty{{$service.GetName}}_{{$method.GetName}}YarpcResponse = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
 )
 {{end}}
 `

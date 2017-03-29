@@ -41,25 +41,25 @@ func main() {
 }
 
 func do() error {
-	keyValueServer := example.NewKeyValueServer()
-	sinkServer := example.NewSinkServer()
+	keyValueYarpcServer := example.NewKeyValueYarpcServer()
+	sinkYarpcServer := example.NewSinkYarpcServer(true)
 	// TChannel will be used for unary
 	// HTTP wil be used for oneway
 	return example.WithClients(
 		testutils.TransportTypeTChannel,
-		keyValueServer,
-		sinkServer,
-		func(keyValueClient examplepb.KeyValueClient, sinkClient examplepb.SinkClient) error {
-			return doClient(keyValueClient, sinkClient, keyValueServer, sinkServer)
+		keyValueYarpcServer,
+		sinkYarpcServer,
+		func(keyValueYarpcClient examplepb.KeyValueYarpcClient, sinkYarpcClient examplepb.SinkYarpcClient) error {
+			return doClient(keyValueYarpcClient, sinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
 		},
 	)
 }
 
 func doClient(
-	keyValueClient examplepb.KeyValueClient,
-	sinkClient examplepb.SinkClient,
-	keyValueServer *example.KeyValueServer,
-	sinkServer *example.SinkServer,
+	keyValueYarpcClient examplepb.KeyValueYarpcClient,
+	sinkYarpcClient examplepb.SinkYarpcClient,
+	keyValueYarpcServer *example.KeyValueYarpcServer,
+	sinkYarpcServer *example.SinkYarpcServer,
 ) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -80,7 +80,7 @@ func doClient(
 			key := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if response, err := keyValueClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
+			if response, err := keyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
 				fmt.Printf("get %s failed: %s\n", key, err.Error())
 			} else {
 				fmt.Println(key, "=", response.Value)
@@ -98,7 +98,7 @@ func doClient(
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
+			if _, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
 				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
@@ -110,8 +110,11 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+			if _, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
+			}
+			if err := sinkYarpcServer.WaitFireDone(); err != nil {
+				fmt.Println(err)
 			}
 			continue
 		case "fired-values":
@@ -119,7 +122,7 @@ func doClient(
 				fmt.Println("usage: fired-values")
 				continue
 			}
-			fmt.Println(strings.Join(sinkServer.Values(), " "))
+			fmt.Println(strings.Join(sinkYarpcServer.Values(), " "))
 			continue
 		case "exit":
 			return nil

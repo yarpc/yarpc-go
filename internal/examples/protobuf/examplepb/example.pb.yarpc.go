@@ -34,75 +34,75 @@ import (
 	"go.uber.org/yarpc/yarpcproto"
 )
 
-// KeyValueClient is the client-side interface for the KeyValue service.
-type KeyValueClient interface {
+// KeyValueYarpcClient is the yarpc client-side interface for the KeyValue service.
+type KeyValueYarpcClient interface {
 	GetValue(context.Context, *GetValueRequest, ...yarpc.CallOption) (*GetValueResponse, error)
 	SetValue(context.Context, *SetValueRequest, ...yarpc.CallOption) (*SetValueResponse, error)
 }
 
-// NewKeyValueClient builds a new client for the KeyValue service.
-func NewKeyValueClient(clientConfig transport.ClientConfig) KeyValueClient {
-	return &_KeyValueCaller{protobuf.NewClient("KeyValue", clientConfig)}
+// NewKeyValueYarpcClient builds a new yarpc client for the KeyValue service.
+func NewKeyValueYarpcClient(clientConfig transport.ClientConfig) KeyValueYarpcClient {
+	return &_KeyValueYarpcCaller{protobuf.NewClient("KeyValue", clientConfig)}
 }
 
-// KeyValueServer is the server-side interface for the KeyValue service.
-type KeyValueServer interface {
+// KeyValueYarpcServer is the yarpc server-side interface for the KeyValue service.
+type KeyValueYarpcServer interface {
 	GetValue(context.Context, *GetValueRequest) (*GetValueResponse, error)
 	SetValue(context.Context, *SetValueRequest) (*SetValueResponse, error)
 }
 
-// BuildKeyValueProcedures prepares an implementation of the KeyValue service for registration.
-func BuildKeyValueProcedures(server KeyValueServer) []transport.Procedure {
-	handler := &_KeyValueHandler{server}
+// BuildKeyValueYarpcProcedures prepares an implementation of the KeyValue service for yarpc registration.
+func BuildKeyValueYarpcProcedures(server KeyValueYarpcServer) []transport.Procedure {
+	handler := &_KeyValueYarpcHandler{server}
 	return protobuf.BuildProcedures(
 		"KeyValue",
 		map[string]transport.UnaryHandler{
-			"GetValue": protobuf.NewUnaryHandler(handler.GetValue, newKeyValue_GetValueRequest),
-			"SetValue": protobuf.NewUnaryHandler(handler.SetValue, newKeyValue_SetValueRequest),
+			"GetValue": protobuf.NewUnaryHandler(handler.GetValue, newKeyValue_GetValueYarpcRequest),
+			"SetValue": protobuf.NewUnaryHandler(handler.SetValue, newKeyValue_SetValueYarpcRequest),
 		},
 		map[string]transport.OnewayHandler{},
 	)
 }
 
-type _KeyValueCaller struct {
+type _KeyValueYarpcCaller struct {
 	client protobuf.Client
 }
 
-func (c *_KeyValueCaller) GetValue(ctx context.Context, request *GetValueRequest, options ...yarpc.CallOption) (*GetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "GetValue", request, newKeyValue_GetValueResponse, options...)
+func (c *_KeyValueYarpcCaller) GetValue(ctx context.Context, request *GetValueRequest, options ...yarpc.CallOption) (*GetValueResponse, error) {
+	responseMessage, err := c.client.Call(ctx, "GetValue", request, newKeyValue_GetValueYarpcResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*GetValueResponse)
 	if !ok {
-		return nil, protobuf.CastError(emptyKeyValue_GetValueResponse, responseMessage)
+		return nil, protobuf.CastError(emptyKeyValue_GetValueYarpcResponse, responseMessage)
 	}
 	return response, err
 }
 
-func (c *_KeyValueCaller) SetValue(ctx context.Context, request *SetValueRequest, options ...yarpc.CallOption) (*SetValueResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "SetValue", request, newKeyValue_SetValueResponse, options...)
+func (c *_KeyValueYarpcCaller) SetValue(ctx context.Context, request *SetValueRequest, options ...yarpc.CallOption) (*SetValueResponse, error) {
+	responseMessage, err := c.client.Call(ctx, "SetValue", request, newKeyValue_SetValueYarpcResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*SetValueResponse)
 	if !ok {
-		return nil, protobuf.CastError(emptyKeyValue_SetValueResponse, responseMessage)
+		return nil, protobuf.CastError(emptyKeyValue_SetValueYarpcResponse, responseMessage)
 	}
 	return response, err
 }
 
-type _KeyValueHandler struct {
-	server KeyValueServer
+type _KeyValueYarpcHandler struct {
+	server KeyValueYarpcServer
 }
 
-func (h *_KeyValueHandler) GetValue(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+func (h *_KeyValueYarpcHandler) GetValue(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
 	var request *GetValueRequest
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*GetValueRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptyKeyValue_GetValueRequest, requestMessage)
+			return nil, protobuf.CastError(emptyKeyValue_GetValueYarpcRequest, requestMessage)
 		}
 	}
 	response, err := h.server.GetValue(ctx, request)
@@ -112,13 +112,13 @@ func (h *_KeyValueHandler) GetValue(ctx context.Context, requestMessage proto.Me
 	return response, err
 }
 
-func (h *_KeyValueHandler) SetValue(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+func (h *_KeyValueYarpcHandler) SetValue(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
 	var request *SetValueRequest
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*SetValueRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptyKeyValue_SetValueRequest, requestMessage)
+			return nil, protobuf.CastError(emptyKeyValue_SetValueYarpcRequest, requestMessage)
 		}
 	}
 	response, err := h.server.SetValue(ctx, request)
@@ -128,89 +128,89 @@ func (h *_KeyValueHandler) SetValue(ctx context.Context, requestMessage proto.Me
 	return response, err
 }
 
-func newKeyValue_GetValueRequest() proto.Message {
+func newKeyValue_GetValueYarpcRequest() proto.Message {
 	return &GetValueRequest{}
 }
 
-func newKeyValue_GetValueResponse() proto.Message {
+func newKeyValue_GetValueYarpcResponse() proto.Message {
 	return &GetValueResponse{}
 }
 
-func newKeyValue_SetValueRequest() proto.Message {
+func newKeyValue_SetValueYarpcRequest() proto.Message {
 	return &SetValueRequest{}
 }
 
-func newKeyValue_SetValueResponse() proto.Message {
+func newKeyValue_SetValueYarpcResponse() proto.Message {
 	return &SetValueResponse{}
 }
 
 var (
-	emptyKeyValue_GetValueRequest  = &GetValueRequest{}
-	emptyKeyValue_GetValueResponse = &GetValueResponse{}
-	emptyKeyValue_SetValueRequest  = &SetValueRequest{}
-	emptyKeyValue_SetValueResponse = &SetValueResponse{}
+	emptyKeyValue_GetValueYarpcRequest  = &GetValueRequest{}
+	emptyKeyValue_GetValueYarpcResponse = &GetValueResponse{}
+	emptyKeyValue_SetValueYarpcRequest  = &SetValueRequest{}
+	emptyKeyValue_SetValueYarpcResponse = &SetValueResponse{}
 )
 
-// SinkClient is the client-side interface for the Sink service.
-type SinkClient interface {
+// SinkYarpcClient is the yarpc client-side interface for the Sink service.
+type SinkYarpcClient interface {
 	Fire(context.Context, *FireRequest, ...yarpc.CallOption) (yarpc.Ack, error)
 }
 
-// NewSinkClient builds a new client for the Sink service.
-func NewSinkClient(clientConfig transport.ClientConfig) SinkClient {
-	return &_SinkCaller{protobuf.NewClient("Sink", clientConfig)}
+// NewSinkYarpcClient builds a new yarpc client for the Sink service.
+func NewSinkYarpcClient(clientConfig transport.ClientConfig) SinkYarpcClient {
+	return &_SinkYarpcCaller{protobuf.NewClient("Sink", clientConfig)}
 }
 
-// SinkServer is the server-side interface for the Sink service.
-type SinkServer interface {
+// SinkYarpcServer is the yarpc server-side interface for the Sink service.
+type SinkYarpcServer interface {
 	Fire(context.Context, *FireRequest) error
 }
 
-// BuildSinkProcedures prepares an implementation of the Sink service for registration.
-func BuildSinkProcedures(server SinkServer) []transport.Procedure {
-	handler := &_SinkHandler{server}
+// BuildSinkYarpcProcedures prepares an implementation of the Sink service for yarpc registration.
+func BuildSinkYarpcProcedures(server SinkYarpcServer) []transport.Procedure {
+	handler := &_SinkYarpcHandler{server}
 	return protobuf.BuildProcedures(
 		"Sink",
 		map[string]transport.UnaryHandler{},
 		map[string]transport.OnewayHandler{
-			"Fire": protobuf.NewOnewayHandler(handler.Fire, newSink_FireRequest),
+			"Fire": protobuf.NewOnewayHandler(handler.Fire, newSink_FireYarpcRequest),
 		},
 	)
 }
 
-type _SinkCaller struct {
+type _SinkYarpcCaller struct {
 	client protobuf.Client
 }
 
-func (c *_SinkCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (yarpc.Ack, error) {
+func (c *_SinkYarpcCaller) Fire(ctx context.Context, request *FireRequest, options ...yarpc.CallOption) (yarpc.Ack, error) {
 	return c.client.CallOneway(ctx, "Fire", request, options...)
 }
 
-type _SinkHandler struct {
-	server SinkServer
+type _SinkYarpcHandler struct {
+	server SinkYarpcServer
 }
 
-func (h *_SinkHandler) Fire(ctx context.Context, requestMessage proto.Message) error {
+func (h *_SinkYarpcHandler) Fire(ctx context.Context, requestMessage proto.Message) error {
 	var request *FireRequest
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*FireRequest)
 		if !ok {
-			return protobuf.CastError(emptySink_FireRequest, requestMessage)
+			return protobuf.CastError(emptySink_FireYarpcRequest, requestMessage)
 		}
 	}
 	return h.server.Fire(ctx, request)
 }
 
-func newSink_FireRequest() proto.Message {
+func newSink_FireYarpcRequest() proto.Message {
 	return &FireRequest{}
 }
 
-func newSink_FireResponse() proto.Message {
+func newSink_FireYarpcResponse() proto.Message {
 	return &yarpcproto.Oneway{}
 }
 
 var (
-	emptySink_FireRequest  = &FireRequest{}
-	emptySink_FireResponse = &yarpcproto.Oneway{}
+	emptySink_FireYarpcRequest  = &FireRequest{}
+	emptySink_FireYarpcResponse = &yarpcproto.Oneway{}
 )

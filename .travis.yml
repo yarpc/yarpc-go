@@ -23,7 +23,6 @@ matrix:
     - go: 1.8
       env:
         - CI_TYPES='lint test'
-        - CI_TRAVIS_INSTALL_PROTOBUF=1
     - go: 1.7
       env:
         - CI_TYPES=examples
@@ -41,7 +40,6 @@ matrix:
 
 before_install:
   - make ci-docker-load
-  - make travis-install-protobuf
 install:
   - make install
 script:

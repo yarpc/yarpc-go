@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"strings"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	errs "go.uber.org/yarpc/internal/errors"
 )
@@ -34,19 +35,29 @@ import (
 // specifications are registered against a Configurator to teach it how to
 // parse the configuration for that transport and build instances of it.
 //
-// Every TransportSpec MUST have a BuildTransport function. BuildInbound,
-// BuildUnaryOutbound, and BuildOnewayOutbound functions may be provided if
-// the Transport supports that functoinality. For example, if a transport only
-// supports incoming and outgoing Oneway requests, it will provide a
+// Every TransportSpec MUST have a BuildTransport function. The spec may
+// provide BuildInbound, BuildUnaryOutbound, and BuildOnewayOutbound functions
+// if the Transport supports that functoinality. For example, if a transport
+// only supports incoming and outgoing Oneway requests, its spec will provide a
 // BuildTransport, BuildInbound, and BuildOnewayOutbound function.
 //
-// Besides BuildTransport which accepts just its configuration struct, each
-// function mentioned above has the shape,
+// The signature of BuildTransport must have the shape:
 //
-// 	func(C, transport.Transport) (X, error)
+//  func(C, *config.Kit) (T, error)
 //
-// Where C is a struct defining the configuration parameters of that entity
-// and X is the result type. For example,
+// Where C is a struct defining the configuration parameters for the transport,
+// the kit carries information and tools from the configurator to this and
+// other builders, and T is the transport type.
+//
+// The remaining Build* functions must have a similar interface, but also carry
+// the transport instance.
+//
+// Each Build* function has the shape:
+//
+// 	func(C, transport.Transport, *config.Kit) (X, error)
+//
+// Where X is the entity type, albeit an inbound or a unary or oneway outbound.
+// For example,
 //
 // 	func(HttpOutboundConfig, transport.Transport) (transport.UnaryOutbound, error)
 //
@@ -76,7 +87,9 @@ import (
 // to structs.
 //
 // Configuration structs can use standard Go primitive types, time.Duration,
-// maps, slices, and other similar structs. For example,
+// maps, slices, and other similar structs. For example only, an outbound might
+// accept a config containing an array of host:port structs (In practice, an
+// outbound would use a ChooserConfig to build a peer.Chooser).
 //
 // 	type Peer struct {
 // 		Host string
@@ -99,20 +112,20 @@ import (
 // different name.
 //
 // 	type MyInboundConfig struct {
-// 		Address string `config:"addr"`
+// 		Peer string `config:"peer"`
 // 	}
 //
 // The configuration for this struct will be in the shape,
 //
 // 	myinbound:
-// 	  addr: foo
+// 	  peer: foo
 type TransportSpec struct {
 	// Name of the transport
 	Name string
 
 	// A function in the shape,
 	//
-	// 	func(C) (transport.Transport, error)
+	// 	func(C, *config.Kit) (transport.Transport, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters accepted by this transport.
@@ -126,7 +139,7 @@ type TransportSpec struct {
 
 	// A function in the shape,
 	//
-	// 	func(C, transport.Transport) (transport.Inbound, error)
+	// 	func(C, transport.Transport, *config.Kit) (transport.Inbound, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters for the inbound.
@@ -140,8 +153,8 @@ type TransportSpec struct {
 
 	// The following two are functions in the shapes,
 	//
-	// 	func(C, transport.Transport) (transport.UnaryOutbound, error)
-	// 	func(C, transport.Transport) (transport.OnewayOutbound, error)
+	// 	func(C, transport.Transport, *config.Kit) (transport.UnaryOutbound, error)
+	// 	func(C, transport.Transport, *config.Kit) (transport.OnewayOutbound, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters for outbounds of that RPC type.
@@ -166,12 +179,83 @@ type TransportSpec struct {
 	// the first thing inside their BuildInbound.
 }
 
+// ChooserSpec specifies the configuration parameters for an outbound peer
+// chooser (load balancer or sharding). These specifications are registered
+// against a Configurator to teach it how to parse the configuration for that
+// peer chooser and build instances of it.
+//
+// For example, if we register a "dns-srv" peer list binder and a "random" peer
+// chooser, we can use "with: dns-srv" and "choose: random" to select a random
+// task (by host and port) from DNS A and SRV records for each outbound
+// request.
+//
+//  myoutbound:
+//   peers:
+//    with: dns-srv
+//    choose: random
+//    service: fortune.yarpc.io
+type ChooserSpec struct {
+	Name string
+
+	// A function in the shape,
+	//
+	//  func(C, *config.Kit) (peer.List, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters accepted by this peer chooser.
+	//
+	// BuildChooser is required.
+	BuildChooser interface{}
+}
+
+// BinderSpec specifies the configuration parameters for an outbound peer
+// binding (like DNS). These specifications are registered against a
+// Configurator to teach it how to parse the configuration for that peer binder
+// and build instances of it.
+//
+// Every BinderSpec MUST have a BuildBinder function.
+//
+// For example, if we register a "dns-srv" peer list binder and a "random" peer
+// chooser, we can use "with: dns-srv" and "choose: random" to select a random
+// task (by host and port) from DNS A and SRV records for each outbound
+// request.
+//
+//  myoutbound:
+//   peers:
+//    with: dns-srv
+//    choose: random
+//    service: fortune.yarpc.io
+type BinderSpec struct {
+	// Name of the peer selection strategy
+	Name string
+
+	// A function in the shape,
+	//
+	//  func(C, *config.Kit) (peer.Binder, error)
+	//
+	// Where C is a struct or pointer to a struct defining the configuration
+	// parameters accepted by this peer chooser.
+	//
+	// This function will be called with the parsed configuration to build a
+	// peer chooser for an outbound that uses a peer chooser.
+	//
+	// For example, the HTTP and TChannel outbound configurations embed a peer
+	// chooser configuration. Peer choosers support a single peer or arrays of
+	// peers.  Using the "with" property, an outbound can use an alternate peer
+	// chooser registered by name on a YARPC Configurator using a ChooserSpec.
+	//
+	// BuildBinder is required.
+	BuildBinder interface{}
+}
+
 var (
 	_typeOfError          = reflect.TypeOf((*error)(nil)).Elem()
 	_typeOfTransport      = reflect.TypeOf((*transport.Transport)(nil)).Elem()
 	_typeOfInbound        = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
 	_typeOfUnaryOutbound  = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
 	_typeOfOnewayOutbound = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
+	_typeOfChooser        = reflect.TypeOf((*peer.ChooserList)(nil)).Elem()
+	_typeOfBinder         = reflect.TypeOf((*peer.Binder)(nil)).Elem()
 )
 
 // Compiled internal representation of a user-specified TransportSpec.
@@ -244,10 +328,12 @@ func compileTransportConfig(build interface{}) (*configSpec, error) {
 	switch {
 	case t.Kind() != reflect.Func:
 		err = errors.New("must be a function")
-	case t.NumIn() != 1:
-		err = fmt.Errorf("must accept exactly one argument, found %v", t.NumIn())
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
 	case !isDecodable(t.In(0)):
 		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
 	case t.NumOut() != 2:
 		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
 	case t.Out(0) != _typeOfTransport:
@@ -312,8 +398,8 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	switch {
 	case t.Kind() != reflect.Func:
 		return errors.New("must be a function")
-	case t.NumIn() != 2:
-		return fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case t.NumIn() != 3:
+		return fmt.Errorf("must accept exactly three arguments, found %v", t.NumIn())
 	case !isDecodable(t.In(0)):
 		return fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
 	case t.In(1) != _typeOfTransport:
@@ -321,6 +407,8 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 		// optional and either the first or the second argument instead of
 		// requiring it as the second argument.
 		return fmt.Errorf("must accept a transport.Transport as its second argument, found %v", t.In(1))
+	case t.In(2) != _typeOfKit:
+		return fmt.Errorf("must accept a %v as its third argument, found %v", _typeOfKit, t.In(2))
 	case t.NumOut() != 2:
 		return fmt.Errorf("must return exactly two results, found %v", t.NumOut())
 	case t.Out(0) != outputType:
@@ -330,6 +418,115 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	}
 
 	return nil
+}
+
+// Compiled internal representation of a user-specified ChooserSpec.
+type compiledChooserSpec struct {
+	Name    string
+	Chooser *configSpec
+}
+
+func compileChooserSpec(spec *ChooserSpec) (*compiledChooserSpec, error) {
+	out := compiledChooserSpec{Name: spec.Name}
+
+	if spec.Name == "" {
+		return nil, errors.New("Name is required")
+	}
+
+	if spec.BuildChooser == nil {
+		return nil, errors.New("BuildChooser is required")
+	}
+
+	buildChooser, err := compileChooserConfig(spec.BuildChooser)
+	if err != nil {
+		return nil, err
+	}
+	out.Chooser = buildChooser
+
+	return &out, nil
+}
+
+func compileChooserConfig(build interface{}) (*configSpec, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case !isDecodable(t.In(0)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != _typeOfChooser:
+		err = fmt.Errorf("must return a peer.ChooserList as its first result, found %v", t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid BuildChooser %v: %v", t, err)
+	}
+
+	return &configSpec{inputType: t.In(0), factory: v}, nil
+}
+
+type compiledBinderSpec struct {
+	Name   string
+	Binder *configSpec
+}
+
+func compileBinderSpec(spec *BinderSpec) (*compiledBinderSpec, error) {
+	out := compiledBinderSpec{Name: spec.Name}
+
+	if spec.Name == "" {
+		return nil, errors.New("Name is required")
+	}
+
+	if spec.BuildBinder == nil {
+		return nil, errors.New("BuildBinder is required")
+	}
+
+	buildBinder, err := compileBinderConfig(spec.BuildBinder)
+	if err != nil {
+		return nil, err
+	}
+	out.Binder = buildBinder
+
+	return &out, nil
+}
+
+func compileBinderConfig(build interface{}) (*configSpec, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case !isDecodable(t.In(0)):
+		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != _typeOfBinder:
+		err = fmt.Errorf("must return a peer.Binder as its first result, found %v", t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid BuildBinder %v: %v", t, err)
+	}
+
+	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
 // Validated representation of a configuration function specified by the user.

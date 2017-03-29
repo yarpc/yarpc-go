@@ -34,6 +34,11 @@ func (p PeerIdentifier) Identifier() string {
 	return string(p)
 }
 
+// Identify coerces a string to a PeerIdentifier
+func Identify(peer string) peer.Identifier {
+	return PeerIdentifier(peer)
+}
+
 // NewPeer creates a new hostport.Peer from a hostport.PeerIdentifier, peer.Transport, and peer.Subscriber
 func NewPeer(pid PeerIdentifier, transport peer.Transport) *Peer {
 	return &Peer{

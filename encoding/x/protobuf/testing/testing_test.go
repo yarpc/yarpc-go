@@ -42,16 +42,16 @@ func TestIntegration(t *testing.T) {
 }
 
 func testIntegrationForTransportType(t *testing.T, transportType testutils.TransportType) {
-	keyValueServer := example.NewKeyValueServer()
-	sinkServer := example.NewSinkServer()
+	keyValueYarpcServer := example.NewKeyValueYarpcServer()
+	sinkYarpcServer := example.NewSinkYarpcServer(true)
 	assert.NoError(
 		t,
 		example.WithClients(
 			transportType,
-			keyValueServer,
-			sinkServer,
-			func(keyValueClient examplepb.KeyValueClient, sinkClient examplepb.SinkClient) error {
-				testIntegration(t, keyValueClient, sinkClient, keyValueServer, sinkServer)
+			keyValueYarpcServer,
+			sinkYarpcServer,
+			func(keyValueYarpcClient examplepb.KeyValueYarpcClient, sinkYarpcClient examplepb.SinkYarpcClient) error {
+				testIntegration(t, keyValueYarpcClient, sinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
 				return nil
 			},
 		),
@@ -60,59 +60,61 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 
 func testIntegration(
 	t *testing.T,
-	keyValueClient examplepb.KeyValueClient,
-	sinkClient examplepb.SinkClient,
-	keyValueServer *example.KeyValueServer,
-	sinkServer *example.SinkServer,
+	keyValueYarpcClient examplepb.KeyValueYarpcClient,
+	sinkYarpcClient examplepb.SinkYarpcClient,
+	keyValueYarpcServer *example.KeyValueYarpcServer,
+	sinkYarpcServer *example.SinkYarpcServer,
 ) {
-	_, err := getValue(keyValueClient, "foo")
+	_, err := getValue(keyValueYarpcClient, "foo")
 	assert.Error(t, err)
 	assert.NotNil(t, protobuf.GetApplicationError(err))
 
-	assert.NoError(t, setValue(keyValueClient, "foo", "bar"))
-	value, err := getValue(keyValueClient, "foo")
+	assert.NoError(t, setValue(keyValueYarpcClient, "foo", "bar"))
+	value, err := getValue(keyValueYarpcClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", value)
 
-	assert.NoError(t, setValue(keyValueClient, "foo", ""))
-	_, err = getValue(keyValueClient, "foo")
+	assert.NoError(t, setValue(keyValueYarpcClient, "foo", ""))
+	_, err = getValue(keyValueYarpcClient, "foo")
 	assert.Error(t, err)
 	assert.NotNil(t, protobuf.GetApplicationError(err))
 
-	assert.NoError(t, setValue(keyValueClient, "foo", "baz"))
-	assert.NoError(t, setValue(keyValueClient, "baz", "bat"))
-	value, err = getValue(keyValueClient, "foo")
+	assert.NoError(t, setValue(keyValueYarpcClient, "foo", "baz"))
+	assert.NoError(t, setValue(keyValueYarpcClient, "baz", "bat"))
+	value, err = getValue(keyValueYarpcClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "baz", value)
-	value, err = getValue(keyValueClient, "baz")
+	value, err = getValue(keyValueYarpcClient, "baz")
 	assert.NoError(t, err)
 	assert.Equal(t, "bat", value)
 
-	assert.NoError(t, fire(sinkClient, "foo"))
-	assert.NoError(t, fire(sinkClient, "bar"))
-	assert.Equal(t, []string{"foo", "bar"}, sinkServer.Values())
+	assert.NoError(t, fire(sinkYarpcClient, "foo"))
+	assert.NoError(t, sinkYarpcServer.WaitFireDone())
+	assert.NoError(t, fire(sinkYarpcClient, "bar"))
+	assert.NoError(t, sinkYarpcServer.WaitFireDone())
+	assert.Equal(t, []string{"foo", "bar"}, sinkYarpcServer.Values())
 }
 
-func getValue(keyValueClient examplepb.KeyValueClient, key string) (string, error) {
+func getValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	response, err := keyValueClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	response, err := keyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 	if err != nil {
 		return "", err
 	}
 	return response.Value, nil
 }
 
-func setValue(keyValueClient examplepb.KeyValueClient, key string, value string) error {
+func setValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := keyValueClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	_, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 	return err
 }
 
-func fire(sinkClient examplepb.SinkClient, value string) error {
+func fire(sinkYarpcClient examplepb.SinkYarpcClient, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := sinkClient.Fire(ctx, &examplepb.FireRequest{value})
+	_, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value})
 	return err
 }

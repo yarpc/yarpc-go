@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"testing"
 
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/golang/mock/gomock"
@@ -76,26 +77,26 @@ func TestCompileTransportSpec(t *testing.T) {
 			desc: "great sadness",
 			spec: TransportSpec{
 				Name:                "foo",
-				BuildTransport:      func(struct{}) (transport.Inbound, error) { panic("kthxbye") },
+				BuildTransport:      func(struct{}, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 				BuildInbound:        func(transport.Transport) (transport.UnaryOutbound, error) { panic("kthxbye") },
-				BuildUnaryOutbound:  func(struct{}, transport.Inbound) (transport.UnaryOutbound, error) { panic("kthxbye") },
+				BuildUnaryOutbound:  func(struct{}, transport.Inbound, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 				BuildOnewayOutbound: func(struct{}) (transport.OnewayOutbound, error) { panic("kthxbye") },
 			},
 			wantErr: []string{
 				"the following errors occurred:",
-				"invalid BuildTransport func(struct {}) (transport.Inbound, error): " +
+				"invalid BuildTransport func(struct {}, *config.Kit) (transport.Inbound, error): " +
 					"must return a transport.Transport as its first result, found transport.Inbound",
-				"invalid BuildInbound: must accept exactly two arguments, found 1",
+				"invalid BuildInbound: must accept exactly three arguments, found 1",
 				"invalid BuildUnaryOutbound: must accept a transport.Transport as its second argument, found transport.Inbound",
-				"invalid BuildOnewayOutbound: must accept exactly two arguments, found 1",
+				"invalid BuildOnewayOutbound: must accept exactly three arguments, found 1",
 			},
 		},
 		{
 			desc: "inbound only",
 			spec: TransportSpec{
 				Name:           "what-good-is-a-phone-call-when-you-are-unable-to-speak",
-				BuildTransport: func(struct{}) (transport.Transport, error) { panic("kthxbye") },
-				BuildInbound:   func(*phoneCall, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+				BuildTransport: func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
+				BuildInbound:   func(*phoneCall, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			},
 			transportInput: _typeOfEmptyStruct,
 			inboundInput:   reflect.TypeOf(&phoneCall{}),
@@ -104,8 +105,8 @@ func TestCompileTransportSpec(t *testing.T) {
 			desc: "unary outbound only",
 			spec: TransportSpec{
 				Name:               "tyrion",
-				BuildTransport:     func(**struct{}) (transport.Transport, error) { panic("kthxbye") },
-				BuildUnaryOutbound: func(debt, transport.Transport) (transport.UnaryOutbound, error) { panic("kthxbye") },
+				BuildTransport:     func(**struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
+				BuildUnaryOutbound: func(debt, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			},
 			transportInput:     reflect.PtrTo(reflect.TypeOf(&struct{}{})),
 			supportsUnary:      true,
@@ -115,8 +116,8 @@ func TestCompileTransportSpec(t *testing.T) {
 			desc: "oneway outbound only",
 			spec: TransportSpec{
 				Name:                "arise-riders-of-theoden",
-				BuildTransport:      func(*cavalry) (transport.Transport, error) { panic("kthxbye") },
-				BuildOnewayOutbound: func(struct{}, transport.Transport) (transport.OnewayOutbound, error) { panic("kthxbye") },
+				BuildTransport:      func(*cavalry, *Kit) (transport.Transport, error) { panic("kthxbye") },
+				BuildOnewayOutbound: func(struct{}, transport.Transport, *Kit) (transport.OnewayOutbound, error) { panic("kthxbye") },
 			},
 			transportInput:      reflect.TypeOf(&cavalry{}),
 			supportsOneway:      true,
@@ -183,7 +184,7 @@ func TestConfigSpecDecode(t *testing.T) {
 	}{
 		{
 			desc:     "decode failure",
-			build:    func(struct{}) (transport.Transport, error) { panic("kthxbye") },
+			build:    func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
 			compiler: compileTransportConfig,
 			attrs:    attributeMap{"unexpected": 42},
 			wantErr: []string{
@@ -193,28 +194,28 @@ func TestConfigSpecDecode(t *testing.T) {
 		},
 		{
 			desc:     "decode struct{}",
-			build:    func(struct{}, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			build:    func(struct{}, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			compiler: compileInboundConfig,
 			attrs:    attributeMap{},
 			want:     struct{}{},
 		},
 		{
 			desc:     "decode item",
-			build:    func(item, transport.Transport) (transport.UnaryOutbound, error) { panic("kthxbye") },
+			build:    func(item, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			compiler: compileUnaryOutboundConfig,
 			attrs:    attributeMap{"key": "key", "value": "value"},
 			want:     someItem,
 		},
 		{
 			desc:     "decode *item",
-			build:    func(*item, transport.Transport) (transport.UnaryOutbound, error) { panic("kthxbye") },
+			build:    func(*item, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			compiler: compileUnaryOutboundConfig,
 			attrs:    attributeMap{"key": "key", "value": "value"},
 			want:     ptrToSomeItem,
 		},
 		{
 			desc:     "decode **item",
-			build:    func(**item, transport.Transport) (transport.UnaryOutbound, error) { panic("kthxbye") },
+			build:    func(**item, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			compiler: compileUnaryOutboundConfig,
 			attrs:    attributeMap{"key": "key", "value": "value"},
 			want:     &ptrToSomeItem,
@@ -363,37 +364,37 @@ func TestCompileTransportConfig(t *testing.T) {
 		},
 		{
 			desc:    "wrong number of arguments",
-			build:   func(struct{}, struct{}) (transport.Transport, error) { panic("kthxbye") },
-			wantErr: "must accept exactly one argument, found 2",
+			build:   func(struct{}, struct{}, struct{}) (transport.Transport, error) { panic("kthxbye") },
+			wantErr: "must accept exactly two arguments, found 3",
 		},
 		{
 			desc:    "incorrect input type",
-			build:   func(int) (transport.Transport, error) { panic("kthxbye") },
+			build:   func(int, *Kit) (transport.Transport, error) { panic("kthxbye") },
 			wantErr: "must accept a struct or struct pointer as its first argument, found int",
 		},
 		{
 			desc:    "wrong number of results",
-			build:   func(struct{}) transport.Transport { panic("kthxbye") },
+			build:   func(struct{}, *Kit) transport.Transport { panic("kthxbye") },
 			wantErr: "must return exactly two results, found 1",
 		},
 		{
 			desc:    "wrong output type",
-			build:   func(struct{}) (transport.Inbound, error) { panic("kthxbye") },
+			build:   func(struct{}, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			wantErr: "must return a transport.Transport as its first result, found transport.Inbound",
 		},
 		{
 			desc:    "incorrect second result",
-			build:   func(struct{}) (transport.Transport, string) { panic("kthxbye") },
+			build:   func(struct{}, *Kit) (transport.Transport, string) { panic("kthxbye") },
 			wantErr: "must return an error as its second result, found string",
 		},
 		{
 			desc:          "valid: struct{}",
-			build:         func(struct{}) (transport.Transport, error) { panic("kthxbye") },
+			build:         func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
 			wantInputType: _typeOfEmptyStruct,
 		},
 		{
 			desc:          "valid: *struct{}",
-			build:         func(*struct{}) (transport.Transport, error) { panic("kthxbye") },
+			build:         func(*struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
 			wantInputType: reflect.PtrTo(_typeOfEmptyStruct),
 		},
 	}
@@ -424,22 +425,24 @@ func TestCompileInboundConfig(t *testing.T) {
 	}{
 		{
 			desc:    "reserved field: Type",
-			build:   func(struct{ Type string }, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			build:   func(struct{ Type string }, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			wantErr: "inbound configurations must not have a Type field",
 		},
 		{
-			desc:    "reserved field: Disabled",
-			build:   func(struct{ Disabled string }, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			desc: "reserved field: Disabled",
+			build: func(struct{ Disabled string }, transport.Transport, *Kit) (transport.Inbound, error) {
+				panic("kthxbye")
+			},
 			wantErr: "inbound configurations must not have a Disabled field",
 		},
 		{
 			desc:    "incorrect return type",
-			build:   func(struct{}, transport.Transport) (transport.Outbound, error) { panic("kthxbye") },
+			build:   func(struct{}, transport.Transport, *Kit) (transport.Outbound, error) { panic("kthxbye") },
 			wantErr: "invalid BuildInbound: must return a transport.Inbound as its first result, found transport.Outbound",
 		},
 		{
 			desc:          "valid: struct{}",
-			build:         func(struct{}, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			build:         func(struct{}, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			wantInputType: _typeOfEmptyStruct,
 		},
 	}
@@ -470,12 +473,12 @@ func TestCompileUnaryOutboundConfig(t *testing.T) {
 	}{
 		{
 			desc:    "incorrect return type",
-			build:   func(struct{}, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			build:   func(struct{}, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			wantErr: "invalid BuildUnaryOutbound: must return a transport.UnaryOutbound as its first result, found transport.Inbound",
 		},
 		{
 			desc:          "valid: struct{}",
-			build:         func(struct{}, transport.Transport) (transport.UnaryOutbound, error) { panic("kthxbye") },
+			build:         func(struct{}, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			wantInputType: _typeOfEmptyStruct,
 		},
 	}
@@ -506,12 +509,12 @@ func TestCompileOnewayOutboundConfig(t *testing.T) {
 	}{
 		{
 			desc:    "incorrect return type",
-			build:   func(struct{}, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			build:   func(struct{}, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			wantErr: "invalid BuildOnewayOutbound: must return a transport.OnewayOutbound as its first result, found transport.Inbound",
 		},
 		{
 			desc:          "valid: struct{}",
-			build:         func(struct{}, transport.Transport) (transport.OnewayOutbound, error) { panic("kthxbye") },
+			build:         func(struct{}, transport.Transport, *Kit) (transport.OnewayOutbound, error) { panic("kthxbye") },
 			wantInputType: _typeOfEmptyStruct,
 		},
 	}
@@ -533,6 +536,209 @@ func TestCompileOnewayOutboundConfig(t *testing.T) {
 	}
 }
 
+func TestCompileChooserSpec(t *testing.T) {
+	tests := []struct {
+		desc     string
+		spec     ChooserSpec
+		wantName string
+		wantErr  string
+	}{
+		{
+			desc:    "missing name",
+			wantErr: "Name is required",
+		},
+		{
+			desc: "missing BuildChooser",
+			spec: ChooserSpec{
+				Name: "random",
+			},
+			wantErr: "BuildChooser is required",
+		},
+		{
+			desc: "not a function",
+			spec: ChooserSpec{
+				Name:         "much sadness",
+				BuildChooser: 10,
+			},
+			wantErr: "invalid BuildChooser int: must be a function",
+		},
+		{
+			desc: "too many arguments",
+			spec: ChooserSpec{
+				Name:         "much sadness",
+				BuildChooser: func(a, b, c int) {},
+			},
+			wantErr: "invalid BuildChooser func(int, int, int): must accept exactly two arguments, found 3",
+		},
+		{
+			desc: "wrong kind of first argument",
+			spec: ChooserSpec{
+				Name:         "much sadness",
+				BuildChooser: func(a, b int) {},
+			},
+			wantErr: "invalid BuildChooser func(int, int): must accept a struct or struct pointer as its first argument, found int",
+		},
+		{
+			desc: "wrong kind of second argument",
+			spec: ChooserSpec{
+				Name:         "much sadness",
+				BuildChooser: func(a struct{}, b int) {},
+			},
+			wantErr: "invalid BuildChooser func(struct {}, int): must accept a *config.Kit as its second argument, found int",
+		},
+		{
+			desc: "wrong number of returns",
+			spec: ChooserSpec{
+				Name:         "much sadness",
+				BuildChooser: func(a struct{}, b *Kit) {},
+			},
+			wantErr: "invalid BuildChooser func(struct {}, *config.Kit): must return exactly two results, found 0",
+		},
+		{
+			desc: "wrong type of first return",
+			spec: ChooserSpec{
+				Name: "much sadness",
+				BuildChooser: func(a struct{}, b *Kit) (int, error) {
+					return 0, nil
+				},
+			},
+			wantErr: "invalid BuildChooser func(struct {}, *config.Kit) (int, error): must return a peer.ChooserList as its first result, found int",
+		},
+		{
+			desc: "wrong type of second return",
+			spec: ChooserSpec{
+				Name: "much sadness",
+				BuildChooser: func(a struct{}, b *Kit) (peer.ChooserList, int) {
+					return nil, 0
+				},
+			},
+			wantErr: "invalid BuildChooser func(struct {}, *config.Kit) (peer.ChooserList, int): must return an error as its second result, found int",
+		},
+		{
+			desc: "such gladness",
+			spec: ChooserSpec{
+				Name: "such gladness",
+				BuildChooser: func(a struct{}, b *Kit) (peer.ChooserList, error) {
+					return nil, nil
+				},
+			},
+			wantName: "such gladness",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			s, err := compileChooserSpec(&tt.spec)
+			if err != nil {
+				assert.Equal(t, tt.wantErr, err.Error(), "expected error")
+			} else {
+				assert.Equal(t, tt.wantName, s.Name, "expected name")
+			}
+		})
+	}
+}
+
+func TestCompileBinderSpec(t *testing.T) {
+	tests := []struct {
+		desc     string
+		spec     BinderSpec
+		wantName string
+		wantErr  string
+	}{
+		{
+			desc:    "missing name",
+			wantErr: "Name is required",
+		},
+		{
+			desc: "missing BuildBinder",
+			spec: BinderSpec{
+				Name: "random",
+			},
+			wantErr: "BuildBinder is required",
+		},
+		{
+			desc: "not a function",
+			spec: BinderSpec{
+				Name:        "much sadness",
+				BuildBinder: 10,
+			},
+			wantErr: "invalid BuildBinder int: must be a function",
+		},
+		{
+			desc: "too many arguments",
+			spec: BinderSpec{
+				Name:        "much sadness",
+				BuildBinder: func(a, b, c int) {},
+			},
+			wantErr: "invalid BuildBinder func(int, int, int): must accept exactly two arguments, found 3",
+		},
+		{
+			desc: "wrong kind of first argument",
+			spec: BinderSpec{
+				Name:        "much sadness",
+				BuildBinder: func(a, b int) {},
+			},
+			wantErr: "invalid BuildBinder func(int, int): must accept a struct or struct pointer as its first argument, found int",
+		},
+		{
+			desc: "wrong kind of second argument",
+			spec: BinderSpec{
+				Name:        "much sadness",
+				BuildBinder: func(a struct{}, b int) {},
+			},
+			wantErr: "invalid BuildBinder func(struct {}, int): must accept a *config.Kit as its second argument, found int",
+		},
+		{
+			desc: "wrong number of returns",
+			spec: BinderSpec{
+				Name:        "much sadness",
+				BuildBinder: func(a struct{}, b *Kit) {},
+			},
+			wantErr: "invalid BuildBinder func(struct {}, *config.Kit): must return exactly two results, found 0",
+		},
+		{
+			desc: "wrong type of first return",
+			spec: BinderSpec{
+				Name: "much sadness",
+				BuildBinder: func(a struct{}, b *Kit) (int, error) {
+					return 0, nil
+				},
+			},
+			wantErr: "invalid BuildBinder func(struct {}, *config.Kit) (int, error): must return a peer.Binder as its first result, found int",
+		},
+		{
+			desc: "wrong type of second return",
+			spec: BinderSpec{
+				Name: "much sadness",
+				BuildBinder: func(a struct{}, b *Kit) (peer.Binder, int) {
+					return nil, 0
+				},
+			},
+			wantErr: "invalid BuildBinder func(struct {}, *config.Kit) (peer.Binder, int): must return an error as its second result, found int",
+		},
+		{
+			desc: "such gladness",
+			spec: BinderSpec{
+				Name: "such gladness",
+				BuildBinder: func(a struct{}, b *Kit) (peer.Binder, error) {
+					return nil, nil
+				},
+			},
+			wantName: "such gladness",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			s, err := compileBinderSpec(&tt.spec)
+			if err != nil {
+				assert.Equal(t, tt.wantErr, err.Error(), "expected error")
+			} else {
+				assert.Equal(t, tt.wantName, s.Name, "expected name")
+			}
+		})
+	}
+}
 func TestValidateConfigFunc(t *testing.T) {
 	tests := []struct {
 		desc string
@@ -556,41 +762,41 @@ func TestValidateConfigFunc(t *testing.T) {
 			desc:       "wrong number of arguments",
 			build:      func(struct{}) (transport.Inbound, error) { panic("kthxbye") },
 			outputType: _typeOfInbound,
-			wantErr:    "must accept exactly two arguments, found 1",
+			wantErr:    "must accept exactly three arguments, found 1",
 		},
 		{
 			desc:       "incorrect input type",
-			build:      func(int, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			build:      func(int, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			outputType: _typeOfInbound,
 			wantErr:    "must accept a struct or struct pointer as its first argument, found int",
 		},
 		{
 			desc:       "incorrect second argument",
-			build:      func(struct{}, int) (transport.Inbound, error) { panic("kthxbye") },
+			build:      func(struct{}, int, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			outputType: _typeOfInbound,
 			wantErr:    "must accept a transport.Transport as its second argument, found int",
 		},
 		{
 			desc:       "wrong number of results",
-			build:      func(struct{}, transport.Transport) transport.Inbound { panic("kthxbye") },
+			build:      func(struct{}, transport.Transport, *Kit) transport.Inbound { panic("kthxbye") },
 			outputType: _typeOfInbound,
 			wantErr:    "must return exactly two results, found 1",
 		},
 		{
 			desc:       "wrong output type",
-			build:      func(struct{}, transport.Transport) (transport.Inbound, error) { panic("kthxbye") },
+			build:      func(struct{}, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			outputType: _typeOfUnaryOutbound,
 			wantErr:    "must return a transport.UnaryOutbound as its first result, found transport.Inbound",
 		},
 		{
 			desc:       "incorrect second result",
-			build:      func(struct{}, transport.Transport) (transport.Inbound, string) { panic("kthxbye") },
+			build:      func(struct{}, transport.Transport, *Kit) (transport.Inbound, string) { panic("kthxbye") },
 			outputType: _typeOfInbound,
 			wantErr:    "must return an error as its second result, found string",
 		},
 		{
 			desc:       "valid",
-			build:      func(struct{}, transport.Transport) (struct{}, error) { panic("kthxbye") },
+			build:      func(struct{}, transport.Transport, *Kit) (struct{}, error) { panic("kthxbye") },
 			outputType: _typeOfEmptyStruct,
 		},
 	}

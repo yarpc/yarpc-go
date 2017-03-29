@@ -40,13 +40,21 @@ import (
 // RegisterTransport function.
 type Configurator struct {
 	knownTransports map[string]*compiledTransportSpec
+	knownChoosers   map[string]*compiledChooserSpec
+	knownBinders    map[string]*compiledBinderSpec
 }
 
 // New sets up a new empty Configurator. The returned Configurator does not
-// know about any transports. Individual TransportSpecs must be registered
-// against it using the RegisterTransport function.
+// know about any Transports, peer Chooser lists, or peer list Binders.
+// Individual TransportSpecs, ChooserSpecs, and BinderSpecs must be registered
+// against it using the RegisterTransport, RegisterChooser, and RegisterBinder
+// functions.
 func New() *Configurator {
-	return &Configurator{knownTransports: make(map[string]*compiledTransportSpec)}
+	return &Configurator{
+		knownTransports: make(map[string]*compiledTransportSpec),
+		knownChoosers:   make(map[string]*compiledChooserSpec),
+		knownBinders:    make(map[string]*compiledBinderSpec),
+	}
 }
 
 // RegisterTransport registers a TransportSpec with the given Configurator. An
@@ -80,10 +88,69 @@ func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 	}
 }
 
+// RegisterChooser registers a ChooserSpec with the given Configurator. Returns
+// an error if the ChooserSpec is invalid.
+//
+// If a chooser with the same name already exists, it will be replaced.
+//
+// Use MustRegisterChooser to panic in the case of registration failure.
+func (c *Configurator) RegisterChooser(s ChooserSpec) error {
+	if s.Name == "" {
+		return errors.New("name is required")
+	}
+
+	spec, err := compileChooserSpec(&s)
+	if err != nil {
+		return fmt.Errorf("invalid ChooserSpec for %q: %v", s.Name, err)
+	}
+
+	c.knownChoosers[s.Name] = spec
+	return nil
+}
+
+// MustRegisterChooser registers the given ChooserSpec with the Configurator.
+// This function panics if the ChooserSpec is invalid.
+func (c *Configurator) MustRegisterChooser(s ChooserSpec) {
+	if err := c.RegisterChooser(s); err != nil {
+		panic(err)
+	}
+}
+
+// RegisterBinder registers a BinderSpec with the given Configurator. Returns
+// an error if the BinderSpec is invalid.
+//
+// A binder enables custom peer list bindings, like DNS with SRV + A records or
+// a task list file watcher.
+//
+// If a binder with the same name already exists, it will be replaced.
+//
+// Use MustRegisterBinder to panic if the registration fails.
+func (c *Configurator) RegisterBinder(s BinderSpec) error {
+	if s.Name == "" {
+		return errors.New("name is required")
+	}
+
+	spec, err := compileBinderSpec(&s)
+	if err != nil {
+		return fmt.Errorf("invalid BinderSpec for %q: %v", s.Name, err)
+	}
+
+	c.knownBinders[s.Name] = spec
+	return nil
+}
+
+// MustRegisterBinder registers the given BinderSpec with the Configurator.
+// This function panics if the BinderSpec is invalid.
+func (c *Configurator) MustRegisterBinder(s BinderSpec) {
+	if err := c.RegisterBinder(s); err != nil {
+		panic(err)
+	}
+}
+
 // LoadConfigFromYAML loads a yarpc.Config from YAML. Use LoadConfig if you
 // have your own map[string]interface{} or map[interface{}]interface{} to
 // provide.
-func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
+func (c *Configurator) LoadConfigFromYAML(serviceName string, r io.Reader) (yarpc.Config, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return yarpc.Config{}, err
@@ -93,7 +160,7 @@ func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
 	if err := yaml.Unmarshal(b, &data); err != nil {
 		return yarpc.Config{}, err
 	}
-	return c.LoadConfig(data)
+	return c.LoadConfig(serviceName, data)
 }
 
 // LoadConfig loads a yarpc.Config from a map[string]interface{} or
@@ -101,18 +168,18 @@ func (c *Configurator) LoadConfigFromYAML(r io.Reader) (yarpc.Config, error) {
 //
 // See the module documentation for the shape the map[string]interface{} is
 // expected to conform to.
-func (c *Configurator) LoadConfig(data interface{}) (yarpc.Config, error) {
+func (c *Configurator) LoadConfig(serviceName string, data interface{}) (yarpc.Config, error) {
 	var cfg yarpcConfig
 	if err := decode.Decode(&cfg, data); err != nil {
 		return yarpc.Config{}, err
 	}
-	return c.load(&cfg)
+	return c.load(serviceName, &cfg)
 }
 
 // NewDispatcherFromYAML builds a Dispatcher from the given YAML
 // configuration.
-func (c *Configurator) NewDispatcherFromYAML(r io.Reader) (*yarpc.Dispatcher, error) {
-	cfg, err := c.LoadConfigFromYAML(r)
+func (c *Configurator) NewDispatcherFromYAML(serviceName string, r io.Reader) (*yarpc.Dispatcher, error) {
+	cfg, err := c.LoadConfigFromYAML(serviceName, r)
 	if err != nil {
 		return nil, err
 	}
@@ -120,18 +187,18 @@ func (c *Configurator) NewDispatcherFromYAML(r io.Reader) (*yarpc.Dispatcher, er
 }
 
 // NewDispatcher builds a new Dispatcher from the given configuration data.
-func (c *Configurator) NewDispatcher(data interface{}) (*yarpc.Dispatcher, error) {
-	cfg, err := c.LoadConfig(data)
+func (c *Configurator) NewDispatcher(serviceName string, data interface{}) (*yarpc.Dispatcher, error) {
+	cfg, err := c.LoadConfig(serviceName, data)
 	if err != nil {
 		return nil, err
 	}
 	return yarpc.NewDispatcher(cfg), nil
 }
 
-func (c *Configurator) load(cfg *yarpcConfig) (yarpc.Config, error) {
+func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (yarpc.Config, error) {
 	var (
 		errors []error
-		b      = newBuilder(cfg.Name)
+		b      = newBuilder(serviceName, &Kit{name: serviceName, c: c})
 	)
 
 	for _, inbound := range cfg.Inbounds {
