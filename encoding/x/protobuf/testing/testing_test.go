@@ -53,8 +53,8 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 			transportType,
 			keyValueYarpcServer,
 			sinkYarpcServer,
-			func(keyValueYarpcClient examplepb.KeyValueYarpcClient, sinkYarpcClient examplepb.SinkYarpcClient) error {
-				testIntegration(t, keyValueYarpcClient, sinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
+			func(clients *example.Clients) error {
+				testIntegration(t, clients.KeyValueYarpcClient, clients.SinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
 				return nil
 			},
 		),

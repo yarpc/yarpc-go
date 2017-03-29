@@ -31,6 +31,8 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
+
+	ggrpc "google.golang.org/grpc"
 )
 
 const (
@@ -82,13 +84,19 @@ func ParseTransportType(s string) (TransportType, error) {
 	}
 }
 
+// ClientInfo holds the client info for testing.
+type ClientInfo struct {
+	ClientConfig   transport.ClientConfig
+	GRPCClientConn *ggrpc.ClientConn
+}
+
 // WithClientConfig wraps a function by setting up a client and server dispatcher and giving
 // the function the client configuration to use in tests for the given TransportType.
 //
 // The server dispatcher will be brought up using all TransportTypes and with the serviceName.
 // The client dispatcher will be brought up using the given TransportType for Unary, HTTP for
 // Oneway, and the serviceName with a "-client" suffix.
-func WithClientConfig(serviceName string, procedures []transport.Procedure, transportType TransportType, f func(transport.ClientConfig) error) (err error) {
+func WithClientInfo(serviceName string, procedures []transport.Procedure, transportType TransportType, f func(*ClientInfo) error) (err error) {
 	dispatcherConfig, err := NewDispatcherConfig(serviceName)
 	if err != nil {
 		return err
@@ -109,7 +117,20 @@ func WithClientConfig(serviceName string, procedures []transport.Procedure, tran
 		return err
 	}
 	defer func() { err = errors.CombineErrors(err, clientDispatcher.Stop()) }()
-	return f(clientDispatcher.ClientConfig(serviceName))
+	grpcPort, err := dispatcherConfig.GetPort(TransportTypeGRPC)
+	if err != nil {
+		return err
+	}
+	grpcClientConn, err := ggrpc.Dial(fmt.Sprintf("127.0.0.1:%d", grpcPort), ggrpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	return f(
+		&ClientInfo{
+			clientDispatcher.ClientConfig(serviceName),
+			grpcClientConn,
+		},
+	)
 }
 
 // NewClientDispatcher returns a new client Dispatcher.

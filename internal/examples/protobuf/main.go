@@ -49,17 +49,16 @@ func do() error {
 		testutils.TransportTypeTChannel,
 		keyValueYarpcServer,
 		sinkYarpcServer,
-		func(keyValueYarpcClient examplepb.KeyValueYarpcClient, sinkYarpcClient examplepb.SinkYarpcClient) error {
-			return doClient(keyValueYarpcClient, sinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
+		func(clients *example.Clients) error {
+			return doClient(keyValueYarpcServer, sinkYarpcServer, clients)
 		},
 	)
 }
 
 func doClient(
-	keyValueYarpcClient examplepb.KeyValueYarpcClient,
-	sinkYarpcClient examplepb.SinkYarpcClient,
 	keyValueYarpcServer *example.KeyValueYarpcServer,
 	sinkYarpcServer *example.SinkYarpcServer,
+	clients *example.Clients,
 ) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -80,7 +79,7 @@ func doClient(
 			key := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if response, err := keyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
+			if response, err := clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key}); err != nil {
 				fmt.Printf("get %s failed: %s\n", key, err.Error())
 			} else {
 				fmt.Println(key, "=", response.Value)
@@ -98,7 +97,7 @@ func doClient(
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
+			if _, err := clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}); err != nil {
 				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
@@ -110,7 +109,7 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+			if _, err := clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
 			}
 			if err := sinkYarpcServer.WaitFireDone(); err != nil {

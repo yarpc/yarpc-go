@@ -44,8 +44,8 @@ func benchmarkIntegrationForTransportType(b *testing.B, transportType testutils.
 		transportType,
 		keyValueYarpcServer,
 		sinkYarpcServer,
-		func(keyValueYarpcClient examplepb.KeyValueYarpcClient, sinkYarpcClient examplepb.SinkYarpcClient) error {
-			benchmarkIntegration(b, keyValueYarpcClient, sinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
+		func(clients *example.Clients) error {
+			benchmarkIntegration(b, clients.KeyValueYarpcClient, clients.SinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
 			return nil
 		},
 	)
