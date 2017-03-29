@@ -18,48 +18,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pally
+package observerware
 
 import (
-	"testing"
+	"context"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
+
+	"go.uber.org/zap"
 )
 
-func TestCounter(t *testing.T) {
-	r := NewRegistry(Labeled(Labels{"service": "users"}))
-	counter, err := r.NewCounter(Opts{
-		Name:        "test_counter",
-		Help:        "Some help.",
-		ConstLabels: Labels{"foo": "bar"},
-	})
-	require.NoError(t, err, "Unexpected error constructing counter.")
+// For tests.
+var _timeNow = time.Now
 
-	scope := newTestScope()
-	stop, err := r.Push(scope, _tick)
-	require.NoError(t, err, "Unexpected error starting Tally push.")
+// UnaryInbound is middleware for unary inbound handlers.
+type UnaryInbound struct {
+	logger  *zap.Logger
+	extract ContextExtractor
+}
 
-	counter.Inc()
-	counter.Add(2)
-	assert.Equal(t, int64(3), counter.Load(), "Unexpected in-memory counter value.")
-
-	time.Sleep(5 * _tick)
-	counter.Inc()
-	assert.Equal(t, int64(4), counter.Load(), "Unexpected in-memory counter value after sleep.")
-
-	stop()
-
-	export := TallyExpectation{
-		Type:   "counter",
-		Name:   "test_counter",
-		Labels: Labels{"foo": "bar", "service": "users"},
-		Value:  4,
+// NewUnaryInbound constructs a UnaryInbound.
+func NewUnaryInbound(logger *zap.Logger, extract ContextExtractor) *UnaryInbound {
+	return &UnaryInbound{
+		logger:  logger.With(zap.String("rpcType", "unary inbound")),
+		extract: extract,
 	}
-	export.Test(t, scope)
+}
 
-	assertPrometheusText(t, r, "# HELP test_counter Some help.\n"+
-		"# TYPE test_counter counter\n"+
-		`test_counter{foo="bar",service="users"} 4`)
+// Handle implements middleware.UnaryInbound.
+func (m *UnaryInbound) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
+	// TODO (shah): Add timing info to the request struct so that we don't lose
+	// time spent in the transport.
+	start := _timeNow()
+	err := h.Handle(ctx, req, w)
+	elapsed := _timeNow().Sub(start)
+
+	if ce := m.logger.Check(zap.DebugLevel, "Handled request."); ce != nil {
+		ce.Write(
+			m.extract(ctx),
+			zap.Object("request", req),
+			zap.Duration("latency", elapsed),
+			zap.Bool("successful", err == nil),
+			zap.Error(err),
+		)
+	}
+	return err
 }

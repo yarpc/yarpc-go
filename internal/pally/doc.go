@@ -25,9 +25,12 @@
 //
 // Metric Names
 //
-// Pally requires that all metric names and labels be valid both in Tally and
-// in Prometheus. Concretely, this means that metric names, label keys, and
-// label values should match the regular expression `^[a-zA-Z_][a-zA-Z0-9_]*$`.
+// Pally requires that all metric names, label names, and label values be valid
+// both in Tally and in Prometheus. Metric and label names must pass
+// IsValidName. Statically-defined label values must pass IsValidLabelValue,
+// but dynamic label values are automatically scrubbed using ScrubLabelValue.
+// This minimizes magic while still permitting use of label values generated at
+// runtime (e.g., service names).
 //
 // Counters And Gauges
 //

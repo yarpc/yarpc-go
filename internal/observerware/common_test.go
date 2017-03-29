@@ -18,48 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pally
+package observerware
 
 import (
-	"testing"
+	"context"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 )
 
-func TestCounter(t *testing.T) {
-	r := NewRegistry(Labeled(Labels{"service": "users"}))
-	counter, err := r.NewCounter(Opts{
-		Name:        "test_counter",
-		Help:        "Some help.",
-		ConstLabels: Labels{"foo": "bar"},
-	})
-	require.NoError(t, err, "Unexpected error constructing counter.")
+type fakeInboundMiddleware struct {
+	err error
+}
 
-	scope := newTestScope()
-	stop, err := r.Push(scope, _tick)
-	require.NoError(t, err, "Unexpected error starting Tally push.")
+func (m fakeInboundMiddleware) Handle(_ context.Context, _ *transport.Request, _ transport.ResponseWriter, _ transport.UnaryHandler) error {
+	return m.err
+}
 
-	counter.Inc()
-	counter.Add(2)
-	assert.Equal(t, int64(3), counter.Load(), "Unexpected in-memory counter value.")
+func (m fakeInboundMiddleware) HandleOneway(_ context.Context, _ *transport.Request, _ transport.OnewayHandler) error {
+	return m.err
+}
 
-	time.Sleep(5 * _tick)
-	counter.Inc()
-	assert.Equal(t, int64(4), counter.Load(), "Unexpected in-memory counter value after sleep.")
+type fakeHandler struct {
+	err error
+}
 
-	stop()
+func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, _ transport.ResponseWriter) error {
+	return h.err
+}
 
-	export := TallyExpectation{
-		Type:   "counter",
-		Name:   "test_counter",
-		Labels: Labels{"foo": "bar", "service": "users"},
-		Value:  4,
-	}
-	export.Test(t, scope)
+func (h fakeHandler) HandleOneway(_ context.Context, _ *transport.Request, _ transport.ResponseWriter) error {
+	return h.err
+}
 
-	assertPrometheusText(t, r, "# HELP test_counter Some help.\n"+
-		"# TYPE test_counter counter\n"+
-		`test_counter{foo="bar",service="users"} 4`)
+func stubTime() func() {
+	prev := _timeNow
+	_timeNow = func() time.Time { return time.Time{} }
+	return func() { _timeNow = prev }
 }

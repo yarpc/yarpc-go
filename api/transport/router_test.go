@@ -18,48 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pally
+package transport
 
 import (
+	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 )
 
-func TestCounter(t *testing.T) {
-	r := NewRegistry(Labeled(Labels{"service": "users"}))
-	counter, err := r.NewCounter(Opts{
-		Name:        "test_counter",
-		Help:        "Some help.",
-		ConstLabels: Labels{"foo": "bar"},
-	})
-	require.NoError(t, err, "Unexpected error constructing counter.")
-
-	scope := newTestScope()
-	stop, err := r.Push(scope, _tick)
-	require.NoError(t, err, "Unexpected error starting Tally push.")
-
-	counter.Inc()
-	counter.Add(2)
-	assert.Equal(t, int64(3), counter.Load(), "Unexpected in-memory counter value.")
-
-	time.Sleep(5 * _tick)
-	counter.Inc()
-	assert.Equal(t, int64(4), counter.Load(), "Unexpected in-memory counter value after sleep.")
-
-	stop()
-
-	export := TallyExpectation{
-		Type:   "counter",
-		Name:   "test_counter",
-		Labels: Labels{"foo": "bar", "service": "users"},
-		Value:  4,
+func TestProcedureLogMarshaling(t *testing.T) {
+	p := Procedure{
+		Name:    "name",
+		Service: "service",
+		HandlerSpec: NewUnaryHandlerSpec(unaryHandlerFunc(func(_ context.Context, _ *Request, _ ResponseWriter) error {
+			return nil
+		})),
+		Encoding:  "raw",
+		Signature: "signature",
 	}
-	export.Test(t, scope)
-
-	assertPrometheusText(t, r, "# HELP test_counter Some help.\n"+
-		"# TYPE test_counter counter\n"+
-		`test_counter{foo="bar",service="users"} 4`)
+	enc := zapcore.NewMapObjectEncoder()
+	assert.NoError(t, p.MarshalLogObject(enc), "Unexpected error marshaling procedure.")
+	assert.Equal(t, map[string]interface{}{
+		"name":      "name",
+		"service":   "service",
+		"handler":   map[string]interface{}{"rpcType": "Unary"},
+		"encoding":  "raw",
+		"signature": "signature",
+	}, enc.Fields, "Unexpected output from marshaling procedure.")
 }

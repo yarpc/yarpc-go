@@ -100,6 +100,6 @@ func newDynamicGauge(opts Opts, desc *prometheus.Desc, variableLabelVals []strin
 	return &gauge{value: value{
 		opts:              opts,
 		desc:              desc,
-		variableLabelVals: variableLabelVals,
+		variableLabelVals: scrubLabelValues(variableLabelVals),
 	}}
 }

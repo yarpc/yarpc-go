@@ -30,7 +30,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/model"
 	"github.com/uber-go/tally"
 	"go.uber.org/atomic"
 )
@@ -70,14 +69,14 @@ func Federated(prom prometheus.Registerer) RegistryOption {
 }
 
 // Labeled adds constant labels to a Registry. All metrics created by a
-// Registry inherit its constant labels.
+// Registry inherit its constant labels. Labels with invalid names or values
+// are dropped.
 func Labeled(ls Labels) RegistryOption {
+	// TODO: Consider whether we should automatically scrub
+	// statically-specified label values.
 	return func(r *Registry) {
 		for k, v := range ls {
-			if !model.LabelName(k).IsValid() || !model.LabelValue(v).IsValid() {
-				continue
-			}
-			if !isValidTallyString(k) || !isValidTallyString(v) {
+			if !IsValidName(k) || !IsValidLabelValue(v) {
 				continue
 			}
 			r.constLabels[k] = v

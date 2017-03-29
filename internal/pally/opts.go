@@ -46,20 +46,15 @@ func (o Opts) describe() *prometheus.Desc {
 }
 
 func (o Opts) validate() error {
-	if o.Name == "" {
-		return errors.New("metric name must not be empty")
-	}
-	if !isValidTallyString(o.Name) {
-		// Prometheus handles its own name validation, so we only need to check
-		// Tally.
-		return fmt.Errorf("metric name %q is not Tally-compatible", o.Name)
+	if !IsValidName(o.Name) {
+		return fmt.Errorf("metric name %q is not Pally-compatible", o.Name)
 	}
 	if o.Help == "" {
 		return errors.New("metric help must not be empty")
 	}
 	for k, v := range o.ConstLabels {
-		if !isValidTallyString(k) || !isValidTallyString(v) {
-			return fmt.Errorf("label %q=%q contains Tally-incompatible characters", k, v)
+		if !IsValidName(k) || !IsValidLabelValue(v) {
+			return fmt.Errorf("label %q=%q contains Pally-incompatible characters", k, v)
 		}
 	}
 	return nil
@@ -72,8 +67,9 @@ func (o Opts) validateVector() error {
 	if len(o.VariableLabels) == 0 {
 		return errors.New("vectors must have variable labels")
 	}
+
 	for _, l := range o.VariableLabels {
-		if !isValidTallyString(l) {
+		if !IsValidName(l) {
 			return errors.New("variable tag names must be Tally-compatible")
 		}
 	}
@@ -86,27 +82,4 @@ func (o Opts) copyLabels() map[string]string {
 		l[k] = v
 	}
 	return l
-}
-
-func isValidTallyString(s string) bool {
-	// Tally allows only a subset of the characters that Prometheus does.
-	if len(s) == 0 {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		switch {
-		case '0' <= c && c <= '9':
-			continue
-		case 'A' <= c && c <= 'Z':
-			continue
-		case 'a' <= c && c <= 'z':
-			continue
-		case c == '_' || c == '-':
-			continue
-		default:
-			return false
-		}
-	}
-	return true
 }

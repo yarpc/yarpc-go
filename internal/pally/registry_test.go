@@ -105,7 +105,7 @@ func TestFederatedMetrics(t *testing.T) {
 func TestConstLabelValidation(t *testing.T) {
 	r := NewRegistry(Labeled(Labels{
 		"invalid-prometheus-name": "foo",
-		"tally":                   "invalid.value",
+		"tally":                   "invalid!value",
 		"ok":                      "yes",
 	}))
 	_, err := r.NewCounter(Opts{

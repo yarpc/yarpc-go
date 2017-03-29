@@ -18,48 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pally
+package observerware
 
 import (
-	"testing"
-	"time"
+	"context"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-func TestCounter(t *testing.T) {
-	r := NewRegistry(Labeled(Labels{"service": "users"}))
-	counter, err := r.NewCounter(Opts{
-		Name:        "test_counter",
-		Help:        "Some help.",
-		ConstLabels: Labels{"foo": "bar"},
-	})
-	require.NoError(t, err, "Unexpected error constructing counter.")
+// A ContextExtractor pulls any relevant request-scoped data (e.g., tracing
+// spans) from the request's Context.
+type ContextExtractor func(context.Context) zapcore.Field
 
-	scope := newTestScope()
-	stop, err := r.Push(scope, _tick)
-	require.NoError(t, err, "Unexpected error starting Tally push.")
-
-	counter.Inc()
-	counter.Add(2)
-	assert.Equal(t, int64(3), counter.Load(), "Unexpected in-memory counter value.")
-
-	time.Sleep(5 * _tick)
-	counter.Inc()
-	assert.Equal(t, int64(4), counter.Load(), "Unexpected in-memory counter value after sleep.")
-
-	stop()
-
-	export := TallyExpectation{
-		Type:   "counter",
-		Name:   "test_counter",
-		Labels: Labels{"foo": "bar", "service": "users"},
-		Value:  4,
-	}
-	export.Test(t, scope)
-
-	assertPrometheusText(t, r, "# HELP test_counter Some help.\n"+
-		"# TYPE test_counter counter\n"+
-		`test_counter{foo="bar",service="users"} 4`)
+// NewNopContextExtractor returns a no-op ContextExtractor.
+func NewNopContextExtractor() ContextExtractor {
+	return ContextExtractor(func(_ context.Context) zapcore.Field { return zap.Skip() })
 }

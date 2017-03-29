@@ -1,5 +1,5 @@
-hash: 62609611a539a3dc72b209f1a17145dfcce6fc9a33871029f0327115bfbbff75
-updated: 2017-03-29T14:55:58.777623535+02:00
+hash: b7e66eaece8f1b654ec6fe309277d324cfc4fea3cf151000bf964c94b35d3ad7
+updated: 2017-03-29T18:53:41.426622335+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -167,6 +167,16 @@ imports:
   - ptr
   - version
   - wire
+- name: go.uber.org/zap
+  version: 4257c7cf05477d92ec25c31cfd3d60e89575f18a
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - internal/multierror
+  - zapcore
+  - zaptest/observer
 - name: golang.org/x/net
   version: 05d3205156cb1bdc096578d6457fa161cd950aa2
   subpackages:

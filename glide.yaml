@@ -18,6 +18,9 @@ import:
   version: ~0.8.0
   subpackages:
   - prometheus
+  - prometheus/promhttp
+- package: go.uber.org/zap
+  version: ^1
 - package: github.com/stretchr/testify
   version: master
   # TODO: before cherami transport can leave the x/ package, cherami-client-go must >=1.0
