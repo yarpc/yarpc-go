@@ -42,7 +42,7 @@ type KeyValueYarpcClient interface {
 
 // NewKeyValueYarpcClient builds a new yarpc client for the KeyValue service.
 func NewKeyValueYarpcClient(clientConfig transport.ClientConfig) KeyValueYarpcClient {
-	return &_KeyValueYarpcCaller{protobuf.NewClient("KeyValue", clientConfig)}
+	return &_KeyValueYarpcCaller{protobuf.NewClient(".uber.yarpc.internal.examples.protobuf.example.KeyValue", clientConfig)}
 }
 
 // KeyValueYarpcServer is the yarpc server-side interface for the KeyValue service.
@@ -55,7 +55,7 @@ type KeyValueYarpcServer interface {
 func BuildKeyValueYarpcProcedures(server KeyValueYarpcServer) []transport.Procedure {
 	handler := &_KeyValueYarpcHandler{server}
 	return protobuf.BuildProcedures(
-		"KeyValue",
+		".uber.yarpc.internal.examples.protobuf.example.KeyValue",
 		map[string]transport.UnaryHandler{
 			"GetValue": protobuf.NewUnaryHandler(handler.GetValue, newKeyValue_GetValueYarpcRequest),
 			"SetValue": protobuf.NewUnaryHandler(handler.SetValue, newKeyValue_SetValueYarpcRequest),
@@ -158,7 +158,7 @@ type SinkYarpcClient interface {
 
 // NewSinkYarpcClient builds a new yarpc client for the Sink service.
 func NewSinkYarpcClient(clientConfig transport.ClientConfig) SinkYarpcClient {
-	return &_SinkYarpcCaller{protobuf.NewClient("Sink", clientConfig)}
+	return &_SinkYarpcCaller{protobuf.NewClient(".uber.yarpc.internal.examples.protobuf.example.Sink", clientConfig)}
 }
 
 // SinkYarpcServer is the yarpc server-side interface for the Sink service.
@@ -170,7 +170,7 @@ type SinkYarpcServer interface {
 func BuildSinkYarpcProcedures(server SinkYarpcServer) []transport.Procedure {
 	handler := &_SinkYarpcHandler{server}
 	return protobuf.BuildProcedures(
-		"Sink",
+		".uber.yarpc.internal.examples.protobuf.example.Sink",
 		map[string]transport.UnaryHandler{},
 		map[string]transport.OnewayHandler{
 			"Fire": protobuf.NewOnewayHandler(handler.Fire, newSink_FireYarpcRequest),

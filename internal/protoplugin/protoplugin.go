@@ -159,6 +159,16 @@ type Service struct {
 	Methods []*Method
 }
 
+// FQSN returns a fully qualified service name of this service.
+func (s *Service) FQSN() string {
+	components := []string{""}
+	if s.File.Package != nil {
+		components = append(components, s.File.GetPackage())
+	}
+	components = append(components, s.GetName())
+	return strings.Join(components, ".")
+}
+
 // Method wraps descriptor.MethodDescriptorProto for richer features.
 type Method struct {
 	*descriptor.MethodDescriptorProto

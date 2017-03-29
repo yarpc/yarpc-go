@@ -79,7 +79,7 @@ type {{$service.GetName}}YarpcClient interface {
 
 // New{{$service.GetName}}YarpcClient builds a new yarpc client for the {{$service.GetName}} service.
 func New{{$service.GetName}}YarpcClient(clientConfig transport.ClientConfig) {{$service.GetName}}YarpcClient {
-	return &_{{$service.GetName}}YarpcCaller{protobuf.NewClient("{{$service.GetName}}", clientConfig)}
+	return &_{{$service.GetName}}YarpcCaller{protobuf.NewClient("{{$service.FQSN}}", clientConfig)}
 }
 
 // {{$service.GetName}}YarpcServer is the yarpc server-side interface for the {{$service.GetName}} service.
@@ -94,7 +94,7 @@ type {{$service.GetName}}YarpcServer interface {
 func Build{{$service.GetName}}YarpcProcedures(server {{$service.GetName}}YarpcServer) []transport.Procedure {
 	handler := &_{{$service.GetName}}YarpcHandler{server}
 	return protobuf.BuildProcedures(
-		"{{$service.GetName}}",
+		"{{$service.FQSN}}",
 		map[string]transport.UnaryHandler{
 		{{range $method := unaryMethods $service}}"{{$method.GetName}}": protobuf.NewUnaryHandler(handler.{{$method.GetName}}, new{{$service.GetName}}_{{$method.GetName}}YarpcRequest),
 		{{end}}
