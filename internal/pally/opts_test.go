@@ -21,23 +21,10 @@
 package pally
 
 import (
-	"regexp"
 	"testing"
-	"testing/quick"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestValidateTallyTags(t *testing.T) {
-	// Regexp is a slower, but more easily verifiable, description of the Tally
-	// name specification.
-	tallyRe := regexp.MustCompile(`^[0-9A-z_\-]+$`)
-	assert.NoError(t, quick.CheckEqual(
-		isValidTallyString,
-		tallyRe.MatchString,
-		nil, /* config */
-	), "Tally validation doesn't match regexp implementation.")
-}
 
 func TestOptsValidation(t *testing.T) {
 	tests := []struct {

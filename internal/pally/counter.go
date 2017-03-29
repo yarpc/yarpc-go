@@ -108,6 +108,6 @@ func newDynamicCounter(opts Opts, desc *prometheus.Desc, variableLabelVals []str
 	return &counter{value: value{
 		opts:              opts,
 		desc:              desc,
-		variableLabelVals: variableLabelVals,
+		variableLabelVals: scrubLabelValues(variableLabelVals),
 	}}
 }
