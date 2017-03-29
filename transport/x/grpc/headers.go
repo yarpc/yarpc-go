@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	globalHeaderPrefix      = "yarpc-"
+	globalHeaderPrefix      = "yarpc-grpc-"
 	reservedHeaderPrefix    = globalHeaderPrefix + "reserved-"
 	applicationHeaderPrefix = globalHeaderPrefix + "app-"
 	callerHeader            = reservedHeaderPrefix + "caller"

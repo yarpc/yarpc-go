@@ -31,8 +31,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// Encoding is the name of this encoding.
-const Encoding transport.Encoding = "protobuf"
+const (
+	// Encoding is the name of this encoding.
+	Encoding transport.Encoding = "protobuf"
+
+	rawResponseKey = "yarpc-protobuf-raw-response"
+)
 
 // GetApplicationError returns the application error from the server, if present.
 //
@@ -42,6 +46,14 @@ func GetApplicationError(err error) error {
 		return applicationError
 	}
 	return nil
+}
+
+// WithRawResponse will return a new Context that signals a UnaryHandler
+// to not encode an application error inside a wirepb.Response object, instead
+// marshalling the actual response, and returning the application error as an
+// error from Handle.
+func WithRawResponse(ctx context.Context) context.Context {
+	return context.WithValue(ctx, rawResponseKey, true)
 }
 
 // ***all below functions should only be called by generated code***

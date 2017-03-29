@@ -78,6 +78,15 @@ func (c *client) Call(
 	if responseData == nil {
 		return nil, nil
 	}
+	// TODO: the error from Call will be the application error, we might
+	// also have a response returned however
+	if rawResponse, ok := ctx.Value(rawResponseKey).(bool); ok && rawResponse {
+		response := newResponse()
+		if err := proto.Unmarshal(responseData, response); err != nil {
+			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
+		}
+		return response, nil
+	}
 	wireResponse := &wirepb.Response{}
 	if err := proto.Unmarshal(responseData, wireResponse); err != nil {
 		return nil, encoding.ResponseBodyDecodeError(transportRequest, err)

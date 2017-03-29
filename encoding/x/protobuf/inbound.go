@@ -66,6 +66,9 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		}
 	}
 	response, appErr := u.handle(ctx, request)
+	if appErr != nil {
+		responseWriter.SetApplicationError()
+	}
 	if err := call.WriteToResponse(responseWriter); err != nil {
 		return err
 	}
@@ -78,9 +81,12 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		}
 		responseData = protoBuffer.Bytes()
 	}
+	if rawResponse, ok := ctx.Value(rawResponseKey).(bool); ok && rawResponse {
+		_, err := responseWriter.Write(responseData)
+		return err
+	}
 	var wireError *wirepb.Error
 	if appErr != nil {
-		responseWriter.SetApplicationError()
 		wireError = &wirepb.Error{
 			appErr.Error(),
 		}
