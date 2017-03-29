@@ -205,7 +205,7 @@ generatenodiff:
 .PHONY: gofmt
 gofmt:
 	$(eval FMT_LOG := $(shell mktemp -t gofmt.XXXXX))
-	@gofmt -e -s -l $(GO_FILES) | $(FILTER_LINT) > $(FMT_LOG) || true
+	@PATH=$(BIN):$$PATH gofmt -e -s -l $(GO_FILES) | $(FILTER_LINT) > $(FMT_LOG) || true
 	@[ ! -s "$(FMT_LOG)" ] || (echo "gofmt failed:" | cat - $(FMT_LOG) && false)
 
 .PHONY: govet
@@ -221,20 +221,20 @@ govet:
 golint:
 	$(eval LINT_LOG := $(shell mktemp -t golint.XXXXX))
 	@for pkg in $(PACKAGES); do \
-		golint $$pkg | $(FILTER_LINT) >> $(LINT_LOG) || true; \
+		PATH=$(BIN):$$PATH golint $$pkg | $(FILTER_LINT) >> $(LINT_LOG) || true; \
 	done
 	@[ ! -s "$(LINT_LOG)" ] || (echo "golint failed:" | cat - $(LINT_LOG) && false)
 
 .PHONY: staticcheck
 staticcheck:
 	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
-	@staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
+	@PATH=$(BIN):$$PATH staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
 	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
 
 .PHONY: errcheck
 errcheck:
 	$(eval ERRCHECK_LOG := $(shell mktemp -t errcheck.XXXXX))
-	@errcheck $(ERRCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) | $(FILTER_ERRCHECK) > $(ERRCHECK_LOG) || true
+	@PATH=$(BIN):$$PATH errcheck $(ERRCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) | $(FILTER_ERRCHECK) > $(ERRCHECK_LOG) || true
 	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
 
 .PHONY: verifyversion
@@ -267,7 +267,7 @@ cover: $(BINS)
 
 .PHONY: goveralls
 goveralls:
-	goveralls -coverprofile=cover.out -service=travis-ci
+	PATH=$(BIN):$$PATH goveralls -coverprofile=cover.out -service=travis-ci
 
 .PHONY: examples
 examples:
