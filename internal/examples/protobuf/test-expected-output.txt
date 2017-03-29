@@ -1,19 +1,11 @@
-get foo
-get foo failed: key not set: foo
-get foo
-get foo failed: key not set: foo
 set foo bar
-get foo
-foo = bar
 get foo
 foo = bar
 set baz qux
 get baz
 baz = qux
-get foo
-foo = bar
-get baz
-baz = qux
+get bat
+get bat failed: key not set: bat
 fire foo
 fire bar
 fired-values

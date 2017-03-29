@@ -1,12 +1,8 @@
-get foo
-get foo
 set foo bar
-get foo
 get foo
 set baz qux
 get baz
-get foo
-get baz
+get bat
 fire foo
 fire bar
 fired-values
