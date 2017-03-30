@@ -142,10 +142,10 @@ func (m *methodHandler) call(ctx context.Context, transportRequest *transport.Re
 }
 
 func (m *methodHandler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler) (interface{}, error) {
-	ctx = protobuf.WithRawResponse(ctx)
 	if err := request.ValidateUnaryContext(ctx); err != nil {
 		return nil, err
 	}
+	protobuf.SetRawResponse(transportRequest.Headers)
 	responseWriter := newResponseWriter()
 	// TODO: always return data?
 	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)

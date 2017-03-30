@@ -80,7 +80,7 @@ func (c *client) Call(
 	}
 	// TODO: the error from Call will be the application error, we might
 	// also have a response returned however
-	if rawResponse, ok := ctx.Value(rawResponseKey).(bool); ok && rawResponse {
+	if isRawResponse(transportResponse.Headers) {
 		response := newResponse()
 		if err := proto.Unmarshal(responseData, response); err != nil {
 			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)

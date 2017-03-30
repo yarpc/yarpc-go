@@ -5,8 +5,8 @@ all: test
 run:
 	cat test-input.txt | go run main.go $(FLAGS)
 
-.PHONY:
+.PHONY: test
 test:
 	$(eval TEST_ACTUAL_OUTPUT_TXT := $(shell mktemp -t protobuf-output.XXXXX))
-	@cat test-input.txt | go run main.go > $(TEST_ACTUAL_OUTPUT_TXT)
+	@cat test-input.txt | go run main.go $(FLAGS) > $(TEST_ACTUAL_OUTPUT_TXT)
 	@diff test-expected-output.txt $(TEST_ACTUAL_OUTPUT_TXT) || echo "error: diff from expected output"

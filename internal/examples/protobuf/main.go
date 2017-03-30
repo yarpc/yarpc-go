@@ -23,12 +23,15 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
@@ -90,6 +93,9 @@ func doClient(
 			var err error
 			if *flagGoogleGRPC {
 				response, err = clients.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+				if err != nil {
+					err = errors.New(grpc.ErrorDesc(err))
+				}
 			} else {
 				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 			}
@@ -114,6 +120,9 @@ func doClient(
 			var err error
 			if *flagGoogleGRPC {
 				_, err = clients.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+				if err != nil {
+					err = errors.New(grpc.ErrorDesc(err))
+				}
 			} else {
 				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 			}

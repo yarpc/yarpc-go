@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
@@ -36,9 +35,6 @@ import (
 func TestIntegration(t *testing.T) {
 	t.Parallel()
 	for _, transportType := range testutils.AllTransportTypes {
-		if transportType == testutils.TransportTypeGRPC {
-			continue
-		}
 		transportType := transportType
 		t.Run(transportType.String(), func(t *testing.T) { testIntegrationForTransportType(t, transportType) })
 	}
@@ -70,7 +66,6 @@ func testIntegration(
 ) {
 	_, err := getValue(keyValueYarpcClient, "foo")
 	assert.Error(t, err)
-	assert.NotNil(t, protobuf.GetApplicationError(err))
 
 	assert.NoError(t, setValue(keyValueYarpcClient, "foo", "bar"))
 	value, err := getValue(keyValueYarpcClient, "foo")
@@ -80,7 +75,6 @@ func testIntegration(
 	assert.NoError(t, setValue(keyValueYarpcClient, "foo", ""))
 	_, err = getValue(keyValueYarpcClient, "foo")
 	assert.Error(t, err)
-	assert.NotNil(t, protobuf.GetApplicationError(err))
 
 	assert.NoError(t, setValue(keyValueYarpcClient, "foo", "baz"))
 	assert.NoError(t, setValue(keyValueYarpcClient, "baz", "bat"))

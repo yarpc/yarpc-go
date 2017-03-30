@@ -81,7 +81,8 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		}
 		responseData = protoBuffer.Bytes()
 	}
-	if rawResponse, ok := ctx.Value(rawResponseKey).(bool); ok && rawResponse {
+	if isRawResponse(transportRequest.Headers) {
+		responseWriter.AddHeaders(getRawResponseHeaders())
 		_, err := responseWriter.Write(responseData)
 		if err != nil {
 			return err
