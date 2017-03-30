@@ -30,9 +30,6 @@ import (
 
 func BenchmarkIntegration(b *testing.B) {
 	for _, transportType := range testutils.AllTransportTypes {
-		if transportType == testutils.TransportTypeGRPC {
-			continue
-		}
 		b.Run(transportType.String(), func(b *testing.B) { benchmarkIntegrationForTransportType(b, transportType) })
 	}
 }
