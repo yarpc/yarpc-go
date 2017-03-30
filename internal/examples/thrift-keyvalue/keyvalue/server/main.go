@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 type handler struct {
@@ -68,7 +69,7 @@ func main() {
 	}()
 	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName("keyvalue"),
-		tchannel.ListenAddr(":28941"),
+		tchannel.ListenAddr(":28945"),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -79,7 +80,8 @@ func main() {
 		Name: "keyvalue",
 		Inbounds: yarpc.Inbounds{
 			tchannelTransport.NewInbound(),
-			httpTransport.NewInbound(":24034"),
+			httpTransport.NewInbound(":24042"),
+			grpc.NewInbound(":24046"),
 		},
 	})
 

@@ -115,7 +115,7 @@ func (o *Outbound) invoke(
 	if err != nil {
 		return err
 	}
-	fullMethod, err := prodecureNameToFullMethod(request.Procedure)
+	fullMethod, err := procedureNameToFullMethod(request.Procedure)
 	if err != nil {
 		return err
 	}

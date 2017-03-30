@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 type getRequest struct {
@@ -84,6 +85,7 @@ func main() {
 		Inbounds: yarpc.Inbounds{
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":24034"),
+			grpc.NewInbound(":24038"),
 		},
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: requestLogInboundMiddleware{},

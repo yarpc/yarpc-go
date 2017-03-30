@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/procedure"
 	"go.uber.org/yarpc/internal/request"
 
 	"golang.org/x/net/context"
@@ -113,7 +112,7 @@ func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func
 		Caller:    caller,
 		Encoding:  encoding,
 		Service:   m.procedureServiceName,
-		Procedure: procedure.ToName(m.serviceName, m.methodName),
+		Procedure: procedureToName(m.serviceName, m.methodName),
 		Headers:   headers,
 		Body:      bytes.NewBuffer(data),
 	}

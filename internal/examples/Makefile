@@ -1,5 +1,5 @@
 EXAMPLES = thrift-hello thrift-keyvalue json-keyvalue thrift-oneway
-TRANSPORTS = http tchannel
+TRANSPORTS = http tchannel grpc
 
 ENV = env
 CRAM = $(ENV)/bin/cram

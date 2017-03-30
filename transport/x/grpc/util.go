@@ -27,17 +27,22 @@ import (
 	"go.uber.org/yarpc/internal/procedure"
 )
 
+const defaultMethodName = "__default__"
+
 func procedureNameToServiceNameMethodName(procedureName string) (string, string, error) {
 	serviceName, methodName := procedure.FromName(procedureName)
-	if serviceName == "" || methodName == "" {
+	if serviceName == "" {
 		return "", "", fmt.Errorf("invalid procedure name: %s", procedureName)
+	}
+	if methodName == "" {
+		methodName = defaultMethodName
 	}
 	// TODO: do we really need to do url.QueryEscape?
 	// Are there consequences if there is a diff from the string and the url.QueryEscape string?
 	return url.QueryEscape(serviceName), url.QueryEscape(methodName), nil
 }
 
-func prodecureNameToFullMethod(procedureName string) (string, error) {
+func procedureNameToFullMethod(procedureName string) (string, error) {
 	serviceName, methodName, err := procedureNameToServiceNameMethodName(procedureName)
 	if err != nil {
 		return "", err
@@ -46,5 +51,15 @@ func prodecureNameToFullMethod(procedureName string) (string, error) {
 }
 
 func toFullMethod(serviceName string, methodName string) string {
+	if methodName == "" {
+		methodName = defaultMethodName
+	}
 	return fmt.Sprintf("/%s/%s", serviceName, methodName)
+}
+
+func procedureToName(serviceName string, methodName string) string {
+	if methodName == defaultMethodName {
+		return serviceName
+	}
+	return procedure.ToName(serviceName, methodName)
 }
