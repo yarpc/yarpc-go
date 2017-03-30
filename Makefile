@@ -271,7 +271,7 @@ goveralls:
 
 .PHONY: examples
 examples:
-	$(MAKE) -C internal/examples
+	RUN=$(RUN) $(MAKE) -C internal/examples
 
 .PHONY: crossdock
 crossdock: $(DOCKER_COMPOSE)

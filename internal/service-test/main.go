@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -40,7 +41,8 @@ import (
 )
 
 var (
-	flagConfigFilePath = flag.String("file", "service-test.yaml", "The configuration file to use")
+	flagContextDir     = flag.String("dir", "", "The relative directory to operate from, defaults to current directory")
+	flagConfigFilePath = flag.String("file", "service-test.yaml", "The configuration file to use relative to the context directory")
 	flagTimeout        = flag.Duration("timeout", 5*time.Second, "The time to wait until timing out")
 	flagNoVerifyOutput = flag.Bool("no-verify-output", false, "Do not verify output and just run the commands")
 
@@ -59,12 +61,13 @@ type config struct {
 
 func main() {
 	flag.Parse()
-	if err := do(*flagConfigFilePath, *flagTimeout, !(*flagNoVerifyOutput)); err != nil {
+	if err := do(*flagContextDir, *flagConfigFilePath, *flagTimeout, !(*flagNoVerifyOutput)); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func do(configFilePath string, timeout time.Duration, verifyOutput bool) (err error) {
+func do(contextDir string, configFilePath string, timeout time.Duration, verifyOutput bool) (err error) {
+	configFilePath = filepath.Join(contextDir, configFilePath)
 	config, err := readConfig(configFilePath)
 	if err != nil {
 		return err
@@ -77,12 +80,14 @@ func do(configFilePath string, timeout time.Duration, verifyOutput bool) (err er
 	if err != nil {
 		return err
 	}
+	clientCmd.Dir = contextDir
 	var serverCmd *exec.Cmd
 	if config.ServerCommand != "" {
 		serverCmd, err = getCmd(config.ServerCommand)
 		if err != nil {
 			return err
 		}
+		serverCmd.Dir = contextDir
 	}
 	defer cleanupCmds(clientCmd, serverCmd)
 	signalC := make(chan os.Signal, 1)
