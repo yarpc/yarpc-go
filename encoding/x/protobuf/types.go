@@ -39,7 +39,7 @@ const (
 )
 
 // SetRawResponse will set rawResponseHeaderKey to "true".
-
+//
 // rawResponseHeaderKey is a header key attached to either a request or
 // response that signals a UnaryHandler to not encode an application error
 // inside a wirepb.Response object, instead marshalling the actual response.
