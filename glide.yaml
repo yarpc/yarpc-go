@@ -10,6 +10,7 @@ import:
   version: ~0.4
 - package: github.com/golang/mock
   version: master
+- package: github.com/nightlyone/lockfile
 - package: github.com/mitchellh/mapstructure
 - package: github.com/opentracing/opentracing-go
   version: ^1

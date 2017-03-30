@@ -1,5 +1,5 @@
-hash: 7b4a853fba266dd0e48df4c4fde8709ca2f279f5838de838c0c50f8ec03a4fbc
-updated: 2017-03-29T08:35:29.463444274-07:00
+hash: 2212cb1bb5251802738ffe5fa5144e040f3661485c9091610433aa91f51e00dc
+updated: 2017-03-30T20:08:19.083907138+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -50,6 +50,8 @@ imports:
   - pbutil
 - name: github.com/mitchellh/mapstructure
   version: 53818660ed4955e899c0bcafa97299a388bd7c8e
+- name: github.com/nightlyone/lockfile
+  version: 1d49c987357a327b5b03aa84cbddd582c328615d
 - name: github.com/opentracing/opentracing-go
   version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
@@ -94,7 +96,7 @@ imports:
 - name: github.com/uber-common/bark
   version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
 - name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: github.com/uber-go/tally
   version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
   subpackages:
@@ -178,7 +180,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 3e967e1d28d2c9c06e749dc2bdc14b04df89e689
+  version: ffcf1bedda3b04ebb15a168a59800a73d6dc0f4d
   subpackages:
   - context
   - context/ctxhttp
