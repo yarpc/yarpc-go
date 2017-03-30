@@ -147,7 +147,7 @@ func (c ChooserConfig) BuildList(transport peer.Transport, kit *Kit) (peer.Choos
 // BuildBinder translates a chooser configuration to a peer list binder. The
 // binder is suitable for getting updates for the contents of a peer list, but
 // not for selecting peers.
-func (c ChooserConfig) BuildBinder(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peerbind.Binder, error) {
+func (c ChooserConfig) BuildBinder(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
 	// Establish peers to bind.
 
 	if len(c.Peers) > 0 {
@@ -183,7 +183,7 @@ func (c ChooserConfig) BuildBinder(transport peer.Transport, identify func(strin
 		return nil, err
 	}
 
-	return result.(peerbind.Binder), nil
+	return result.(peer.Binder), nil
 }
 
 func identifyAll(identify func(string) peer.Identifier, peers []string) []peer.Identifier {

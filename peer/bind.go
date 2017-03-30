@@ -30,18 +30,10 @@ import (
 	intsync "go.uber.org/yarpc/internal/sync"
 )
 
-// Binder is a callback, provided to peer.Bind, that accepts a peer list and
-// binds it to a peer provider for the duration of the returned lifecycle.
-// The lifecycle that the binder returns should start and stop binding peers to
-// the list.
-// The binder must not call block on updating the list, because that will
-// typically block until the peer list has started.
-type Binder func(peer.List) transport.Lifecycle
-
 // Bind couples a peer list with a peer provider.
 // The peer provider must produce a binder that takes the peer list and returns
 // a lifecycle for the duration of the binding.
-func Bind(chooserList peer.ChooserList, bind Binder) *BoundChooser {
+func Bind(chooserList peer.ChooserList, bind peer.Binder) *BoundChooser {
 	return &BoundChooser{
 		once:    intsync.Once(),
 		binding: bind(chooserList),
@@ -123,7 +115,7 @@ func (c *BoundChooser) Introspect() introspection.ChooserStatus {
 // BindPeers returns a binder (suitable as an argument to peer.Bind) that
 // binds a peer list to a static list of peers for the duration of its
 // lifecycle.
-func BindPeers(ids []peer.Identifier) Binder {
+func BindPeers(ids []peer.Identifier) peer.Binder {
 	return func(pl peer.List) transport.Lifecycle {
 		return &peersBinder{
 			once: intsync.Once(),
