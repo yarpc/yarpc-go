@@ -1,5 +1,5 @@
-hash: 222e0f175ac991cd67026725d033e8c01c0165f6a70c79f246f4e850d07e8ffb
-updated: 2017-03-30T23:50:22.434826607+02:00
+hash: b1fa2a6338a87cca1cd2bc4349f4fbcfd4c637a4d997c2faa941d65c93f83109
+updated: 2017-03-31T01:14:07.213377996+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -44,6 +44,8 @@ imports:
   - proto
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/mattn/go-shellwords
+  version: 005a0944d84452842197c2108bd9168ced206f78
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
