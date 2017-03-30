@@ -19,8 +19,6 @@ import:
   subpackages:
   - prometheus
   - prometheus/promhttp
-- package: go.uber.org/zap
-  version: ^1
 - package: github.com/stretchr/testify
   version: master
   # TODO: before cherami transport can leave the x/ package, cherami-client-go must >=1.0
@@ -33,10 +31,16 @@ import:
   version: ^3
 - package: go.uber.org/atomic
   version: ^1
+  repo: https://github.com/uber-go/atomic
 - package: go.uber.org/thriftrw
   version: ^1
+  repo: https://github.com/thriftrw/thriftrw-go
+- package: go.uber.org/zap
+  version: ^1
+  repo: https://github.com/uber-go/zap
 - package: golang.org/x/net
   version: master
+  repo: https://github.com/golang/net
   subpackages:
   - context
 - package: gopkg.in/redis.v5
@@ -51,8 +55,10 @@ testImport:
 - package: github.com/wadey/gocovmerge
 - package: golang.org/x/tools
 - package: go.uber.org/tools
+  repo: https://github.com/uber-go/tools
   subpackages:
   - update-license
 - package: honnef.co/go/tools
+  repo: https://github.com/dominikh/go-tools
   subpackages:
   - cmd/staticcheck
