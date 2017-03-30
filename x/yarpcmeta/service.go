@@ -66,9 +66,9 @@ func (m *service) Procedures() []transport.Procedure {
 		Handler   interface{}
 		Signature string
 	}{
-		{"yarpc/procedures", m.procs,
+		{"yarpc::procedures", m.procs,
 			`procedures() {"service": "...", "procedures": [{"name": "..."}]}`},
-		{"yarpc/introspect", m.introspect,
+		{"yarpc::introspect", m.introspect,
 			`introspect() {...}`},
 	}
 	var r []transport.Procedure
