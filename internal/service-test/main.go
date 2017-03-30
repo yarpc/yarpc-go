@@ -96,6 +96,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 		for range signalC {
 			cleanupCmds(clientCmd, serverCmd)
 		}
+		os.Exit(1)
 	}()
 
 	inputBuffer := bytes.NewBuffer(nil)
