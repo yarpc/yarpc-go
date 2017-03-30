@@ -60,7 +60,6 @@ func TestCustomCodecUnmarshalBytes(t *testing.T) {
 }
 
 func TestCustomCodecUnmarshalProtoMessage(t *testing.T) {
-	data := []byte("test")
 	expectedValue := &yarpcproto.Oneway{true}
 	data, err := proto.Marshal(expectedValue)
 	assert.NoError(t, err)

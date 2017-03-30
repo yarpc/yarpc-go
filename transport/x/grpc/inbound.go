@@ -64,7 +64,7 @@ func (i *Inbound) Stop() error {
 
 // IsRunning implements transport.Lifecycle#IsRunning.
 func (i *Inbound) IsRunning() bool {
-	return i.IsRunning()
+	return i.once.IsRunning()
 }
 
 // SetRouter implements transport.Inbound#SetRouter.
