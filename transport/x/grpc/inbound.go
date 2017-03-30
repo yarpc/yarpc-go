@@ -22,15 +22,12 @@ package grpc
 
 import (
 	"errors"
-	"fmt"
 	"net"
-	"net/url"
 	"sync"
 
 	"google.golang.org/grpc"
 
 	"go.uber.org/yarpc/api/transport"
-	internalprocedure "go.uber.org/yarpc/internal/procedure"
 	internalsync "go.uber.org/yarpc/internal/sync"
 )
 
@@ -157,14 +154,10 @@ func getServiceDescs(router transport.Router) ([]*grpc.ServiceDesc, error) {
 }
 
 func getServiceNameAndMethodDesc(router transport.Router, procedure transport.Procedure) (string, grpc.MethodDesc, error) {
-	serviceName, methodName := internalprocedure.FromName(procedure.Name)
-	if serviceName == "" || methodName == "" {
-		return "", grpc.MethodDesc{}, fmt.Errorf("invalid procedure name: %s", procedure.Name)
+	serviceName, methodName, err := procedureNameToServiceNameMethodName(procedure.Name)
+	if err != nil {
+		return "", grpc.MethodDesc{}, err
 	}
-	// TODO: do we really need to do url.QueryEscape?
-	// Are there consequences if there is a diff from the string and the url.QueryEscape string?
-	serviceName = url.QueryEscape(serviceName)
-	methodName = url.QueryEscape(methodName)
 	return serviceName, grpc.MethodDesc{
 		MethodName: methodName,
 		// TODO: what if two procedures have the same serviceName and methodName, but a different service?

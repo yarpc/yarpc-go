@@ -21,12 +21,18 @@
 package grpc
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/errors"
 	internalsync "go.uber.org/yarpc/internal/sync"
 )
 
@@ -67,7 +73,35 @@ func (o *Outbound) Transports() []transport.Transport {
 
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	return nil, nil
+	start := time.Now()
+	md, err := requestToMetadata(request)
+	if err != nil {
+		return nil, err
+	}
+	requestBody, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		return nil, err
+	}
+	var responseBody []byte
+	responseMD := metadata.New(nil)
+	if err := grpc.Invoke(
+		metadata.NewContext(ctx, md),
+		prodecureNameToFullMethod(request.Procedure),
+		&requestBody,
+		&responseBody,
+		o.clientConn,
+		grpc.Header(&responseMD),
+	); err != nil {
+		return nil, errorToGRPCError(ctx, request, err)
+	}
+	responseHeaders, err := getApplicationHeaders(responseMD)
+	if err != nil {
+		return nil, err
+	}
+	return &transport.Response{
+		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		Headers: responseHeaders,
+	}, nil
 }
 
 func (o *Outbound) start() error {
@@ -94,4 +128,36 @@ func (o *Outbound) stop() error {
 		return o.clientConn.Close()
 	}
 	return nil
+}
+
+func requestToMetadata(request *transport.Request) (metadata.MD, error) {
+	md = metadata.New(nil)
+	if err := addCaller(md, request.Caller); err != nil {
+		return nil, err
+	}
+	if err := addEncoding(md, request.Encoding); err != nil {
+		return nil, err
+	}
+	if err := addApplicationHeaders(md, request.Headers); err != nil {
+		return nil, err
+	}
+	return md, nil
+}
+
+func errorToGRPCError(ctx context.Context, request *transport.Request, start time.Time, err error) error {
+	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
+	switch grpc.Code(err) {
+	case codes.DeadlineExceeded:
+		return errors.ClientTimeoutError(request.Service, request.Procedure, ttl)
+	case codes.Unimplemented, codes.InvalidArgument, codes.NotFound:
+		return errors.RemoteBadRequestError(grpc.ErrorDesc(err))
+	case codes.Canceled, codes.AlreadyExists, codes.PermissionDenied,
+		codes.Unauthenticated, codes.ResourceExhausted, codes.FailedPrecondition,
+		codes.Aborted, codes.OutOfRange, codes.Internal,
+		codes.Unavailable, codes.DataLoss, codes.Unknown:
+		fallthrough
+	default:
+		return errors.RemoteUnexpectedError(grpc.ErrorDesc(err))
+	}
 }
