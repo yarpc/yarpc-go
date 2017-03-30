@@ -45,6 +45,7 @@ var (
 	flagConfigFilePath = flag.String("file", "service-test.yaml", "The configuration file to use relative to the context directory")
 	flagTimeout        = flag.Duration("timeout", 5*time.Second, "The time to wait until timing out")
 	flagNoVerifyOutput = flag.Bool("no-verify-output", false, "Do not verify output and just run the commands")
+	flagVerbose        = flag.Bool("verbose", false, "Enable verbose logging")
 
 	errConfigNil           = errors.New("config nil")
 	errClientCommandNotSet = errors.New("config client_command not set")
@@ -117,6 +118,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	errC := make(chan error)
 	go func() {
 		if serverCmd != nil {
+			logCmd(serverCmd)
 			if err := serverCmd.Start(); err != nil {
 				errC <- fmt.Errorf("error starting server: %v", err)
 				return
@@ -127,6 +129,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 				<-time.After(time.Duration(config.SleepBeforeClientMs) * time.Millisecond)
 			}
 		}
+		logCmd(clientCmd)
 		if err := clientCmd.Start(); err != nil {
 			errC <- fmt.Errorf("error starting client: %v", err)
 			return
@@ -188,6 +191,10 @@ func killCmd(cmd *exec.Cmd) {
 		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
+}
+
+func logCmd(cmd *exec.Cmd) {
+	verboseLogPrintf("%s %s", cmd.Path, strings.Join(cmd.Args, " "))
 }
 
 func validateRequiredEnvVars(requiredEnvVars []string) error {
@@ -255,4 +262,10 @@ func (l *lockedBuffer) Bytes() []byte {
 	l.lock.RLock()
 	defer l.lock.RUnlock()
 	return l.buffer.Bytes()
+}
+
+func verboseLogPrintf(format string, args ...interface{}) {
+	if *flagVerbose {
+		log.Printf(format, args...)
+	}
 }

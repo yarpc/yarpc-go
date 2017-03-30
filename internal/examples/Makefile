@@ -1,15 +1,21 @@
+SERVICE_TEST_FLAGS :=
 ifdef RUN
-SERVICE_TEST := service-test --no-verify-output
-else
-SERVICE_TEST := service-test
+SERVICE_TEST_FLAGS += --no-verify-output
 endif
+ifdef V
+SERVICE_TEST_FLAGS += --verbose
+endif
+SERVICE_TEST := service-test $(SERVICE_TEST_FLAGS)
 
 .PHONY: all
 all: \
 	json-keyvalue-http \
 	json-keyvalue-tchannel \
 	json-keyvalue-grpc \
-	protobuf \
+	protobuf-http \
+	protobuf-tchannel \
+	protobuf-grpc \
+	protobuf-google-grpc \
 	thrift-hello \
 	thrift-keyvalue-http \
 	thrift-keyvalue-tchannel \
@@ -33,8 +39,20 @@ json-keyvalue-grpc: install
 	TRANSPORT=grpc $(SERVICE_TEST) --dir json-keyvalue
 
 .PHONY: protobuf
-protobuf: install
-	$(SERVICE_TEST) --dir protobuf
+protobuf-http: install
+	TRANSPORT=http $(SERVICE_TEST) --dir protobuf
+
+.PHONY: protobuf
+protobuf-tchannel: install
+	TRANSPORT=tchannel $(SERVICE_TEST) --dir protobuf
+
+.PHONY: protobuf
+protobuf-grpc: install
+	TRANSPORT=grpc $(SERVICE_TEST) --dir protobuf
+
+.PHONY: protobuf
+protobuf-google-grpc: install
+	TRANSPORT=grpc GOOGLE_GRPC=--google-grpc $(SERVICE_TEST) --dir protobuf
 
 .PHONY: thrift-hello
 thrift-hello: install

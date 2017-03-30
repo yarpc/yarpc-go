@@ -1,4 +1,6 @@
-client_command: go run main.go
+required_env_vars:
+  - TRANSPORT
+client_command: go run main.go -outbound $TRANSPORT $GOOGLE_GRPC
 input: |
   get foo
   get foo
