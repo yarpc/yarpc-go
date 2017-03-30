@@ -23,6 +23,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -34,19 +35,25 @@ import (
 	"go.uber.org/yarpc/internal/testutils"
 )
 
+var flagOutbound = flag.String("outbound", "tchannel", "The outbound to use for unary calls")
+var flagGoogleGRPC = flag.Bool("google-grpc", false, "Use google grpc for outbound KeyValue calls")
+
 func main() {
+	flag.Parse()
 	if err := do(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func do() error {
+	transportType, err := testutils.ParseTransportType(*flagOutbound)
+	if err != nil {
+		return err
+	}
 	keyValueYarpcServer := example.NewKeyValueYarpcServer()
 	sinkYarpcServer := example.NewSinkYarpcServer(true)
-	// TChannel will be used for unary
-	// HTTP wil be used for oneway
 	return example.WithClients(
-		testutils.TransportTypeTChannel,
+		transportType,
 		keyValueYarpcServer,
 		sinkYarpcServer,
 		func(clients *example.Clients) error {
@@ -81,7 +88,7 @@ func doClient(
 			defer cancel()
 			var response *examplepb.GetValueResponse
 			var err error
-			if os.Getenv("EXAMPLE_GRPC") != "" {
+			if *flagGoogleGRPC {
 				response, err = clients.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 			} else {
 				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
@@ -105,7 +112,7 @@ func doClient(
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			var err error
-			if os.Getenv("EXAMPLE_GRPC") != "" {
+			if *flagGoogleGRPC {
 				_, err = clients.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 			} else {
 				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})

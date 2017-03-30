@@ -3,7 +3,7 @@ all: test
 
 .PHONY: run
 run:
-	cat test-input.txt | go run main.go
+	cat test-input.txt | go run main.go $(FLAGS)
 
 .PHONY:
 test:
