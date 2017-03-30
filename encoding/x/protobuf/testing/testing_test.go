@@ -50,7 +50,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 			keyValueYarpcServer,
 			sinkYarpcServer,
 			func(clients *example.Clients) error {
-				testIntegration(t, clients.KeyValueYarpcClient, clients.SinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
+				testIntegration(t, clients, keyValueYarpcServer, sinkYarpcServer)
 				return nil
 			},
 		),
@@ -59,35 +59,41 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 
 func testIntegration(
 	t *testing.T,
-	keyValueYarpcClient examplepb.KeyValueYarpcClient,
-	sinkYarpcClient examplepb.SinkYarpcClient,
+	clients *example.Clients,
 	keyValueYarpcServer *example.KeyValueYarpcServer,
 	sinkYarpcServer *example.SinkYarpcServer,
 ) {
-	_, err := getValue(keyValueYarpcClient, "foo")
+	_, err := getValue(clients.KeyValueYarpcClient, "foo")
+	assert.Error(t, err)
+	_, err = getValueGRPC(clients.KeyValueGRPCClient, "foo")
 	assert.Error(t, err)
 
-	assert.NoError(t, setValue(keyValueYarpcClient, "foo", "bar"))
-	value, err := getValue(keyValueYarpcClient, "foo")
+	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", "bar"))
+	value, err := getValue(clients.KeyValueYarpcClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", value)
 
-	assert.NoError(t, setValue(keyValueYarpcClient, "foo", ""))
-	_, err = getValue(keyValueYarpcClient, "foo")
+	assert.NoError(t, setValueGRPC(clients.KeyValueGRPCClient, "foo", "barGRPC"))
+	value, err = getValueGRPC(clients.KeyValueGRPCClient, "foo")
+	assert.NoError(t, err)
+	assert.Equal(t, "barGRPC", value)
+
+	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", ""))
+	_, err = getValue(clients.KeyValueYarpcClient, "foo")
 	assert.Error(t, err)
 
-	assert.NoError(t, setValue(keyValueYarpcClient, "foo", "baz"))
-	assert.NoError(t, setValue(keyValueYarpcClient, "baz", "bat"))
-	value, err = getValue(keyValueYarpcClient, "foo")
+	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", "baz"))
+	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "baz", "bat"))
+	value, err = getValue(clients.KeyValueYarpcClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "baz", value)
-	value, err = getValue(keyValueYarpcClient, "baz")
+	value, err = getValue(clients.KeyValueYarpcClient, "baz")
 	assert.NoError(t, err)
 	assert.Equal(t, "bat", value)
 
-	assert.NoError(t, fire(sinkYarpcClient, "foo"))
+	assert.NoError(t, fire(clients.SinkYarpcClient, "foo"))
 	assert.NoError(t, sinkYarpcServer.WaitFireDone())
-	assert.NoError(t, fire(sinkYarpcClient, "bar"))
+	assert.NoError(t, fire(clients.SinkYarpcClient, "bar"))
 	assert.NoError(t, sinkYarpcServer.WaitFireDone())
 	assert.Equal(t, []string{"foo", "bar"}, sinkYarpcServer.Values())
 }
@@ -106,6 +112,23 @@ func setValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, val
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	_, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	return err
+}
+
+func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, key string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	response, err := keyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	if err != nil {
+		return "", err
+	}
+	return response.Value, nil
+}
+
+func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, key string, value string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	_, err := keyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 	return err
 }
 
