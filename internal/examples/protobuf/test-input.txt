@@ -1,9 +1,0 @@
-set foo bar
-get foo
-set baz qux
-get baz
-get bat
-fire foo
-fire bar
-fired-values
-exit

@@ -7,20 +7,24 @@ LINT_EXCLUDES_EXTRAS = \
 GOVET_IGNORE_RULES = \
 	possible formatting directive in Error call
 
-# List of vendored go executables needed for make
-GO_BIN_DEPS = \
-	github.com/kisielk/errcheck \
-	github.com/golang/lint/golint \
+# List of vendored go executables needed for make generate
+GEN_GO_BIN_DEPS = \
 	github.com/golang/mock/mockgen \
 	github.com/gogo/protobuf/protoc-gen-gogoslick \
-	github.com/mattn/goveralls \
 	github.com/uber/tchannel-go/thrift/thrift-gen \
-	github.com/wadey/gocovmerge \
-	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/stringer \
 	go.uber.org/thriftrw \
-	go.uber.org/tools/update-license \
+	go.uber.org/tools/update-license
+
+# List of vendored go executables needed for other operations
+EXTRA_GO_BIN_DEPS = \
+	github.com/kisielk/errcheck \
+	github.com/golang/lint/golint \
+	github.com/mattn/goveralls \
+	github.com/wadey/gocovmerge \
+	golang.org/x/tools/cmd/cover \
 	honnef.co/go/tools/cmd/staticcheck
+
 
 PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor)
 
@@ -41,10 +45,8 @@ GENERATED_GO_FILES := $(shell \
 	-print)
 endif
 
-LINT_EXCLUDES := $(GENERATED_GO_FILES) $(LINT_EXCLUDES_EXTRAS)
-
 # Pipe lint output into this to filter out ignored files.
-FILTER_LINT := grep -v $(patsubst %,-e %, $(LINT_EXCLUDES))
+FILTER_LINT := grep -v $(patsubst %,-e %, $(GENERATED_GO_FILES) $(LINT_EXCLUDES_EXTRAS))
 
 ERRCHECK_FLAGS ?= -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
@@ -70,10 +72,11 @@ ifneq ($(filter goveralls,$(CI_TYPES)),)
 CI_GOVERALLS := true
 endif
 
-CI_CACHE_DIR := $(shell pwd)/.cache
-CI_DOCKER_CACHE_DIR := $(CI_CACHE_DIR)/docker
-CI_DOCKER_IMAGE := yarpc_go
-CI_DOCKER_CACHE_FILE := $(CI_DOCKER_CACHE_DIR)/$(CI_DOCKER_IMAGE)
+CACHE_DIR := $(shell pwd)/.cache
+DOCKER_CACHE_DIR := $(CACHE_DIR)/docker
+
+CROSSDOCK_DOCKER_IMAGE := yarpc_go
+CROSSDOCK_DOCKER_CACHE_FILE := $(DOCKER_CACHE_DIR)/$(CROSSDOCK_DOCKER_IMAGE)
 
 TMP := $(shell pwd)/.tmp
 
@@ -109,18 +112,14 @@ ifeq ($(UNAME_ARCH),x86_64)
 GLIDE_ARCH = amd64
 endif
 
-BIN = $(CI_CACHE_DIR)/$(UNAME_OS)/$(UNAME_ARCH)/bin
+BIN = $(CACHE_DIR)/$(UNAME_OS)/$(UNAME_ARCH)/bin
+
+GLIDE = $(BIN)/glide
 
 DOCKER_COMPOSE = $(BIN)/docker-compose
-GLIDE = $(BIN)/glide
 THRIFT = $(BIN)/thrift
 PROTOC = $(BIN)/protoc
-BINS = $(DOCKER_COMPOSE) $(GLIDE) $(THRIFT) $(PROTOC) $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
-
-$(DOCKER_COMPOSE):
-	@mkdir -p $(BIN)
-	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(DOCKER_COMPOSE_OS)-$(DOCKER_COMPOSE_ARCH) > $(DOCKER_COMPOSE)
-	@chmod +x $(DOCKER_COMPOSE)
+GEN_BINS = $(DOCKER_COMPOSE) $(THRIFT) $(PROTOC) $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
 
 $(GLIDE):
 	@mkdir -p $(BIN)
@@ -129,6 +128,11 @@ $(GLIDE):
 	cd $(TMP)/glide; tar xzf glide.tar.gz
 	mv $(TMP)/glide/$(GLIDE_OS)-$(GLIDE_ARCH)/glide $(GLIDE)
 	@rm -rf $(TMP)/glide
+
+$(DOCKER_COMPOSE):
+	@mkdir -p $(BIN)
+	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(DOCKER_COMPOSE_OS)-$(DOCKER_COMPOSE_ARCH) > $(DOCKER_COMPOSE)
+	@chmod +x $(DOCKER_COMPOSE)
 
 $(THRIFT):
 	@mkdir -p $(BIN)
@@ -155,14 +159,18 @@ $(BIN)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go
 	go build -o $(BIN)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
 
 define generatedeprule
-BINS += $(BIN)/$(shell basename $1)
+GEN_BINS += $(BIN)/$(shell basename $1)
+endef
 
+define deprule
 $(BIN)/$(shell basename $1): vendor/$1/*.go glide.lock $(GLIDE)
 	@mkdir -p $(BIN)
 	PATH=$(BIN):$(PATH) ./scripts/vendor-build.sh $(BIN) $1
 endef
 
-$(foreach i,$(GO_BIN_DEPS),$(eval $(call generatedeprule,$(i))))
+$(foreach i,$(GEN_GO_BIN_DEPS),$(eval $(call generatedeprule,$(i))))
+$(foreach i,$(GEN_GO_BIN_DEPS),$(eval $(call deprule,$(i))))
+$(foreach i,$(EXTRA_GO_BIN_DEPS),$(eval $(call deprule,$(i))))
 
 THRIFTRW = $(BIN)/thriftrw
 
@@ -174,14 +182,14 @@ install: $(GLIDE)
 
 .PHONY: clean
 clean:
-	rm -rf $(TMP) $(CI_CACHE_DIR)
+	rm -rf $(TMP) $(CACHE_DIR)
 
 .PHONY: build
 build:
 	go build $(PACKAGES)
 
 .PHONY: generate
-generate: $(BINS)
+generate: $(GEN_BINS)
 	@go get github.com/golang/mock/mockgen
 	@PATH=$(BIN):$$PATH ./scripts/generate.sh
 
@@ -219,7 +227,7 @@ govet:
 	@[ ! -s "$(VET_LOG)" ] || (echo "govet failed:" | cat - $(VET_LOG) && false)
 
 .PHONY: golint
-golint:
+golint: $(BIN)/golint
 	$(eval LINT_LOG := $(shell mktemp -t golint.XXXXX))
 	@for pkg in $(PACKAGES); do \
 		PATH=$(BIN):$$PATH golint $$pkg | $(FILTER_LINT) >> $(LINT_LOG) || true; \
@@ -227,13 +235,13 @@ golint:
 	@[ ! -s "$(LINT_LOG)" ] || (echo "golint failed:" | cat - $(LINT_LOG) && false)
 
 .PHONY: staticcheck
-staticcheck:
+staticcheck: $(BIN)/staticcheck
 	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
 	@PATH=$(BIN):$$PATH staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
 	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
 
 .PHONY: errcheck
-errcheck:
+errcheck: $(BIN)/errcheck
 	$(eval ERRCHECK_LOG := $(shell mktemp -t errcheck.XXXXX))
 	@PATH=$(BIN):$$PATH errcheck $(ERRCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) | $(FILTER_ERRCHECK) > $(ERRCHECK_LOG) || true
 	@[ ! -s "$(ERRCHECK_LOG)" ] || (echo "errcheck failed:" | cat - $(ERRCHECK_LOG) && false)
@@ -254,7 +262,7 @@ verifyversion:
 	fi
 
 .PHONY: lint
-lint: $(BINS) generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion
+lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion
 
 .PHONY: test
 test: $(THRIFTRW)
@@ -262,17 +270,17 @@ test: $(THRIFTRW)
 
 
 .PHONY: cover
-cover: $(BINS)
+cover: $(THRIFTRW) $(BIN)/gocovmerge $(BIN)/cover
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: goveralls
-goveralls:
+goveralls: $(BIN)/goveralls
 	PATH=$(BIN):$$PATH goveralls -coverprofile=cover.out -service=travis-ci
 
 .PHONY: examples
 examples:
-	$(MAKE) -C internal/examples
+	RUN=$(RUN) $(MAKE) -C internal/examples
 
 .PHONY: crossdock
 crossdock: $(DOCKER_COMPOSE)
@@ -297,14 +305,14 @@ crossdock-logs: $(DOCKER_COMPOSE)
 .PHONY: ci-docker-load
 ci-docker-load:
 ifdef CI_CROSSDOCK
-	if [ -f $(CI_DOCKER_CACHE_FILE) ]; then gunzip -c $(CI_DOCKER_CACHE_FILE) | docker load; fi
+	if [ -f $(CROSSDOCK_DOCKER_CACHE_FILE) ]; then gunzip -c $(CROSSDOCK_DOCKER_CACHE_FILE) | docker load; fi
 endif
 
 .PHONY: ci-docker-save
 ci-docker-save:
 ifdef CI_CROSSDOCK
-	mkdir -p $(CI_DOCKER_CACHE_DIR)
-	docker save $(shell docker history -q $(CI_DOCKER_IMAGE) | grep -v '<missing>') | gzip > $(CI_DOCKER_CACHE_FILE)
+	mkdir -p $(DOCKER_CACHE_DIR)
+	docker save $(shell docker history -q $(CROSSDOCK_DOCKER_IMAGE) | grep -v '<missing>') | gzip > $(CROSSDOCK_DOCKER_CACHE_FILE)
 endif
 
 .PHONY: ci

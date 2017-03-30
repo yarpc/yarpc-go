@@ -1,0 +1,3 @@
+client_command: go run hello/main.go
+output: |
+  EchoResponse{Message: Hello world, Count: 2}

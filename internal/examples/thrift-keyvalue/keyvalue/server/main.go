@@ -22,11 +22,14 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	gohttp "net/http"
+	"strings"
 	"sync"
 
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv"
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueserver"
 	"go.uber.org/yarpc/x/yarpcmeta"
@@ -36,6 +39,8 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
 )
+
+var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
 
 type handler struct {
 	sync.RWMutex
@@ -62,27 +67,34 @@ func (h *handler) SetValue(ctx context.Context, key *string, value *string) erro
 }
 
 func main() {
+	flag.Parse()
 	go func() {
 		if err := gohttp.ListenAndServe(":3242", nil); err != nil {
 			log.Fatal(err)
 		}
 	}()
-	tchannelTransport, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName("keyvalue"),
-		tchannel.ListenAddr(":28945"),
-	)
-	if err != nil {
-		log.Fatal(err)
+	var inbound transport.Inbound
+	switch strings.ToLower(*flagInbound) {
+	case "http":
+		inbound = http.NewTransport().NewInbound(":24042")
+	case "tchannel":
+		tchannelTransport, err := tchannel.NewChannelTransport(
+			tchannel.ServiceName("keyvalue"),
+			tchannel.ListenAddr(":28945"),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		inbound = tchannelTransport.NewInbound()
+	case "grpc":
+		inbound = grpc.NewInbound(":24046")
+	default:
+		log.Fatalf("invalid inbound: %q\n", *flagInbound)
 	}
 
-	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "keyvalue",
-		Inbounds: yarpc.Inbounds{
-			tchannelTransport.NewInbound(),
-			httpTransport.NewInbound(":24042"),
-			grpc.NewInbound(":24046"),
-		},
+		Name:     "keyvalue",
+		Inbounds: yarpc.Inbounds{inbound},
 	})
 
 	handler := handler{items: make(map[string]string)}
