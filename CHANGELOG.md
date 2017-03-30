@@ -7,6 +7,13 @@ v1.8.0 (unreleased)
 -   No changes yet.
 
 
+v1.7.1 (2017-03-29)
+-------------------
+
+-   Thrift: Fixed a bug where deserialization of large lists would return
+    corrupted data at high throughputs.
+
+
 v1.7.0 (2017-03-20)
 -----------------------
 
