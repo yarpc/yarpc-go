@@ -1,0 +1,8 @@
+{
+  "requiredOrgs": [
+    "yarpc"
+  ],
+  "assignToReviewer": true,
+  "createReviewRequest": true,
+  "createComment": false
+}
