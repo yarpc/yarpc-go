@@ -1,5 +1,5 @@
-hash: b1fa2a6338a87cca1cd2bc4349f4fbcfd4c637a4d997c2faa941d65c93f83109
-updated: 2017-03-31T01:14:07.213377996+02:00
+hash: 81fbf96fe156b7e83dab036865cb0d312b83bbeac4ff74829b7eb283f1e7e80c
+updated: 2017-03-31T10:54:22.992321375-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -151,6 +151,8 @@ imports:
   - typed
 - name: go.uber.org/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+- name: go.uber.org/multierr
+  version: de6740a55f8d778e53755317dc50aae950c760de
 - name: go.uber.org/thriftrw
   version: 05f870b3c56597d180af568a6392209cc33269e2
   subpackages:
@@ -191,7 +193,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: d63e2b22b05a9682de336cd4802bba367ed429e7
+  version: d83db204cec938a53072124e16d79022316b3dc5
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil

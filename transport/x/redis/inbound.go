@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/serialize"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/multierr"
 )
 
 const transportName = "redis"
@@ -162,7 +163,7 @@ func (i *Inbound) handle() (err error) {
 		return err
 	}
 	defer func() {
-		err = errors.CombineErrors(err, i.client.LRem(i.queueKey, item))
+		err = multierr.Append(err, i.client.LRem(i.queueKey, item))
 	}()
 
 	start := time.Now()

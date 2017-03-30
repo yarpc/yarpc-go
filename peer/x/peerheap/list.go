@@ -28,8 +28,9 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	yerrors "go.uber.org/yarpc/internal/errors"
 	ysync "go.uber.org/yarpc/internal/sync"
+
+	"go.uber.org/multierr"
 )
 
 const unavailablePenalty = math.MaxInt32
@@ -112,23 +113,20 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 		return err
 	}
 
-	var errs []error
+	var errs error
 
 	pl.mu.Lock()
 	defer pl.mu.Unlock()
 
 	for _, pid := range updates.Removals {
-		if err := pl.releasePeer(pid); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	for _, pid := range updates.Additions {
-		if err := pl.retainPeer(pid); err != nil {
-			errs = append(errs, err)
-		}
+		errs = multierr.Append(errs, pl.releasePeer(pid))
 	}
 
-	return yerrors.MultiError(errs)
+	for _, pid := range updates.Additions {
+		errs = multierr.Append(errs, pl.retainPeer(pid))
+	}
+
+	return errs
 }
 
 // retainPeer must be called with the mutex locked.
@@ -174,19 +172,18 @@ func (pl *List) clearPeers() error {
 	pl.mu.Lock()
 	defer pl.mu.Unlock()
 
-	var errs []error
+	var errs error
 
 	for {
 		ps, ok := pl.byScore.peekPeer()
 		if !ok {
 			break
 		}
-		if err := pl.releasePeer(ps.id); err != nil {
-			errs = append(errs, err)
-		}
+
+		errs = multierr.Append(errs, pl.releasePeer(ps.id))
 	}
 
-	return yerrors.MultiError(errs)
+	return errs
 }
 
 // Choose satisfies peer.Chooser, providing a single peer for a request, a
