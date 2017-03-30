@@ -62,7 +62,6 @@ func (m *methodHandler) handle(
 	if err != nil {
 		return nil, err
 	}
-	//log.Printf("%+v\n", transportRequest)
 	if interceptor != nil {
 		return interceptor(
 			ctx,
@@ -136,6 +135,8 @@ func (m *methodHandler) call(ctx context.Context, transportRequest *transport.Re
 	switch handlerSpec.Type() {
 	case transport.Unary:
 		return m.callUnary(ctx, transportRequest, handlerSpec.Unary())
+	case transport.Oneway:
+		return nil, m.callOneway(ctx, transportRequest, handlerSpec.Oneway())
 	default:
 		return nil, errors.UnsupportedTypeError{"grpc", handlerSpec.Type().String()}
 	}
@@ -151,6 +152,16 @@ func (m *methodHandler) callUnary(ctx context.Context, transportRequest *transpo
 	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
 	err = errors.CombineErrors(err, grpc.SendHeader(ctx, responseWriter.md))
 	data := responseWriter.Bytes()
-	//log.Printf("%s %v\n", string(data), err)
 	return &data, err
+}
+
+func (m *methodHandler) callOneway(ctx context.Context, transportRequest *transport.Request, onewayHandler transport.OnewayHandler) error {
+	go func() {
+		// TODO: http propagates this on a span
+		// we need to handle this error
+		// TODO: spinning up a new goroutine for every request
+		// is potentially a memory leak
+		_ = transport.DispatchOnewayHandler(ctx, onewayHandler, transportRequest)
+	}()
+	return nil
 }

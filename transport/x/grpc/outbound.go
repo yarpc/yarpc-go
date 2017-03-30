@@ -37,6 +37,7 @@ import (
 )
 
 var _ transport.UnaryOutbound = (*Outbound)(nil)
+var _ transport.OnewayOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
@@ -73,30 +74,10 @@ func (o *Outbound) Transports() []transport.Transport {
 
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	start := time.Now()
-	md, err := requestToMetadata(request)
-	if err != nil {
-		return nil, err
-	}
-	requestBody, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		return nil, err
-	}
-	fullMethod, err := prodecureNameToFullMethod(request.Procedure)
-	if err != nil {
-		return nil, err
-	}
 	var responseBody []byte
 	responseMD := metadata.New(nil)
-	if err := grpc.Invoke(
-		metadata.NewContext(ctx, md),
-		fullMethod,
-		&requestBody,
-		&responseBody,
-		o.clientConn,
-		grpc.Header(&responseMD),
-	); err != nil {
-		return nil, errorToGRPCError(ctx, request, start, err)
+	if err := o.invoke(ctx, request, &responseBody, &responseMD); err != nil {
+		return nil, err
 	}
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
@@ -106,6 +87,46 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
 		Headers: responseHeaders,
 	}, nil
+}
+
+// Call implements transport.OnewayOutbound#Call.
+func (o *Outbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+	if err := o.invoke(ctx, request, nil, nil); err != nil {
+		return nil, err
+	}
+	return time.Now(), nil
+}
+
+func (o *Outbound) invoke(
+	ctx context.Context,
+	request *transport.Request,
+	responseBody *[]byte,
+	responseMD *metadata.MD,
+) error {
+	start := time.Now()
+	md, err := requestToMetadata(request)
+	if err != nil {
+		return err
+	}
+	requestBody, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		return err
+	}
+	fullMethod, err := prodecureNameToFullMethod(request.Procedure)
+	if err != nil {
+		return err
+	}
+	if err := grpc.Invoke(
+		metadata.NewContext(ctx, md),
+		fullMethod,
+		&requestBody,
+		responseBody,
+		o.clientConn,
+		grpc.Header(responseMD),
+	); err != nil {
+		return errorToGRPCError(ctx, request, start, err)
+	}
+	return nil
 }
 
 func (o *Outbound) start() error {
