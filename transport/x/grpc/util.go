@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"fmt"
+	"net/url"
 
 	"go.uber.org/yarpc/internal/procedure"
 )
@@ -13,7 +14,7 @@ func procedureNameToServiceNameMethodName(procedureName string) (string, string,
 	}
 	// TODO: do we really need to do url.QueryEscape?
 	// Are there consequences if there is a diff from the string and the url.QueryEscape string?
-	return uri.QueryEscape(serviceName), uri.QueryEscape(methodName), nil
+	return url.QueryEscape(serviceName), url.QueryEscape(methodName), nil
 }
 
 func prodecureNameToFullMethod(procedureName string) (string, error) {

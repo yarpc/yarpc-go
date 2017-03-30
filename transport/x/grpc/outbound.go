@@ -82,17 +82,21 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	if err != nil {
 		return nil, err
 	}
+	fullMethod, err := prodecureNameToFullMethod(request.Procedure)
+	if err != nil {
+		return nil, err
+	}
 	var responseBody []byte
 	responseMD := metadata.New(nil)
 	if err := grpc.Invoke(
 		metadata.NewContext(ctx, md),
-		prodecureNameToFullMethod(request.Procedure),
+		fullMethod,
 		&requestBody,
 		&responseBody,
 		o.clientConn,
 		grpc.Header(&responseMD),
 	); err != nil {
-		return nil, errorToGRPCError(ctx, request, err)
+		return nil, errorToGRPCError(ctx, request, start, err)
 	}
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
@@ -131,7 +135,7 @@ func (o *Outbound) stop() error {
 }
 
 func requestToMetadata(request *transport.Request) (metadata.MD, error) {
-	md = metadata.New(nil)
+	md := metadata.New(nil)
 	if err := addCaller(md, request.Caller); err != nil {
 		return nil, err
 	}
