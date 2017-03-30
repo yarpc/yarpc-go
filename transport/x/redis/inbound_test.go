@@ -38,14 +38,10 @@ func TestOperationOrder(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	client := redistest.NewMockClient(mockCtrl)
 
-	startCall := client.EXPECT().Start()
-	getCall := client.EXPECT().
-		BRPopLPush(queueKey, processingKey, timeout).
-		After(startCall)
-	client.EXPECT().
-		LRem(queueKey, gomock.Any()).
-		After(getCall)
-	client.EXPECT().Stop()
+	gomock.InOrder(
+		client.EXPECT().BRPopLPush(queueKey, processingKey, timeout),
+		client.EXPECT().LRem(queueKey, gomock.Any()),
+	)
 
 	inbound := NewInbound(client, queueKey, processingKey, timeout)
 	inbound.SetRouter(&transporttest.MockRouter{})
@@ -53,9 +49,8 @@ func TestOperationOrder(t *testing.T) {
 	assert.Equal(t, queueKey, inbound.queueKey)
 	assert.Equal(t, processingKey, inbound.processingKey)
 
-	err := inbound.Start()
-	assert.NoError(t, err, "error starting redis inbound")
-
-	err = inbound.Stop()
-	assert.NoError(t, err, "error stopping redis inbound")
+	// We're specifically testing the ingestion loop; with the current client
+	// code, it's extremely difficult to make substantive assertions about the
+	// number of messages handled.
+	inbound.handle()
 }
