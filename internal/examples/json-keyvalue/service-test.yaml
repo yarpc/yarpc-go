@@ -1,25 +1,19 @@
-Transport is required.
-
-  $ [[ -n "$TRANSPORT" ]] || (echo 'Please provide a $TRANSPORT' && exit 1)
-
-The trap ensures background processes are killed on exit.
-
-  $ trap 'kill $(jobs -p)' EXIT
-
-Test code:
-
-  $ $TESTDIR/server/server &
-  $ sleep 0.250
-  $ $TESTDIR/client/client -outbound=$TRANSPORT << INPUT
-  > get foo
-  > set foo bar
-  > get foo
-  > set baz qux
-  > get baz
-  > INPUT
+required_env_vars:
+  - TRANSPORT
+client_command: go run client/main.go -outbound $TRANSPORT
+server_command: go run server/main.go
+sleep_before_client_ms: 500
+input: |
+  get foo
+  set foo bar
+  get foo
+  set baz qux
+  get baz
+  exit
+output: |
   sending request "get" to service "keyvalue" (encoding "json")
   received a request to "get" from client "keyvalue-client" (encoding "json")
-  foo = 
+  foo =
   sending request "set" to service "keyvalue" (encoding "json")
   received a request to "set" from client "keyvalue-client" (encoding "json")
   sending request "get" to service "keyvalue" (encoding "json")

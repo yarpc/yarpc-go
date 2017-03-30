@@ -20,17 +20,9 @@ matrix:
     - go: 1.7
       env:
         - CI_TYPES='examples cover goveralls'
-      addons:
-        apt:
-          packages:
-            - python-virtualenv
     - go: 1.8
       env:
         - CI_TYPES='examples lint test'
-      addons:
-        apt:
-          packages:
-            - python-virtualenv
 
 before_install:
   - make ci-docker-load

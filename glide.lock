@@ -1,5 +1,5 @@
-hash: 7b4a853fba266dd0e48df4c4fde8709ca2f279f5838de838c0c50f8ec03a4fbc
-updated: 2017-03-29T08:35:29.463444274-07:00
+hash: 61698ae6c7979c72d89c2042f75fdbe4fd4a3c211276e91e84976a2209591c92
+updated: 2017-03-30T12:33:43.480548647+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -44,6 +44,8 @@ imports:
   - proto
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/mattn/go-shellwords
+  version: 005a0944d84452842197c2108bd9168ced206f78
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -178,7 +180,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 3e967e1d28d2c9c06e749dc2bdc14b04df89e689
+  version: ffcf1bedda3b04ebb15a168a59800a73d6dc0f4d
   subpackages:
   - context
   - context/ctxhttp

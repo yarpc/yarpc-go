@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -67,6 +68,14 @@ func (h *handler) Set(ctx context.Context, body *setRequest) (*setResponse, erro
 	h.items[body.Key] = body.Value
 	h.Unlock()
 	return &setResponse{}, nil
+}
+
+type requestLogInboundMiddleware struct{}
+
+func (requestLogInboundMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.UnaryHandler) error {
+	fmt.Printf("received a request to %q from client %q (encoding %q)\n",
+		req.Procedure, req.Caller, req.Encoding)
+	return handler.Handle(ctx, req, resw)
 }
 
 func main() {

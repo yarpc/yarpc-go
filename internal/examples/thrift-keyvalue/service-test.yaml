@@ -1,0 +1,35 @@
+required_env_vars:
+  - TRANSPORT
+client_command: go run keyvalue/client/main.go keyvalue/client/cache.go -outbound $TRANSPORT
+server_command: go run keyvalue/server/main.go
+sleep_before_client_ms: 500
+input: |
+  get foo
+  get foo
+  set foo bar
+  get foo
+  get foo
+  set baz qux
+  get baz
+  get foo
+  get baz
+  exit
+output: |
+  cache miss
+  get "foo" failed: ResourceDoesNotExist{Key: foo}
+  cache hit
+  get "foo" failed: ResourceDoesNotExist{Key: foo}
+  invalidating
+  cache miss
+  cache miss
+  foo = bar
+  cache hit
+  foo = bar
+  invalidating
+  cache miss
+  cache miss
+  baz = qux
+  cache miss
+  foo = bar
+  cache hit
+  baz = qux

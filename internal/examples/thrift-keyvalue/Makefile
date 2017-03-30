@@ -1,12 +1,12 @@
-.PHONY: all hello kvserver kvclient
+TRANSPORT ?= http
 
-all: kvserver kvclient
+.PHONY: all
+all: test
 
-gen:
-	cd ./keyvalue && go generate
+.PHONY: run
+run:
+	TRANSPORT=$(TRANSPORT) service-test --no-verify-output
 
-kvclient:
-	cd ./keyvalue/client && go build -i
-
-kvserver:
-	cd ./keyvalue/server && go build -i
+.PHONY:
+test:
+	TRANSPORT=$(TRANSPORT) service-test
