@@ -1,7 +1,7 @@
 required_env_vars:
   - TRANSPORT
 client_command: go run keyvalue/client/main.go keyvalue/client/cache.go -outbound $TRANSPORT
-server_command: go run keyvalue/server/main.go
+server_command: go run keyvalue/server/main.go -inbound $TRANSPORT
 sleep_before_client_ms: 500
 input: |
   get foo

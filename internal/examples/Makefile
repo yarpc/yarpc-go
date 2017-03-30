@@ -37,4 +37,4 @@ thrift-keyvalue-tchannel: install
 
 .PHONY: thrift-oneway
 thrift-oneway:
-	go install thrift-oneway/main.go
+	GOBIN=/tmp go install thrift-oneway/main.go

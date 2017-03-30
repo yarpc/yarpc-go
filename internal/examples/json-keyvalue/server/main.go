@@ -22,9 +22,11 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	"go.uber.org/yarpc"
@@ -33,6 +35,8 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 )
+
+var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel)")
 
 type getRequest struct {
 	Key string `json:"key"`
@@ -79,21 +83,27 @@ func (requestLogInboundMiddleware) Handle(ctx context.Context, req *transport.Re
 }
 
 func main() {
-	tchannelTransport, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName("keyvalue"),
-		tchannel.ListenAddr(":28941"),
-	)
-	if err != nil {
-		log.Fatal(err)
+	flag.Parse()
+	var inbound transport.Inbound
+	switch strings.ToLower(*flagInbound) {
+	case "http":
+		inbound = http.NewTransport().NewInbound(":24034")
+	case "tchannel":
+		tchannelTransport, err := tchannel.NewChannelTransport(
+			tchannel.ServiceName("keyvalue"),
+			tchannel.ListenAddr(":28941"),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		inbound = tchannelTransport.NewInbound()
+	default:
+		log.Fatalf("invalid inbound: %q\n", *flagInbound)
 	}
 
-	httpTransport := http.NewTransport()
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "keyvalue",
-		Inbounds: yarpc.Inbounds{
-			tchannelTransport.NewInbound(),
-			httpTransport.NewInbound(":24034"),
-		},
+		Name:     "keyvalue",
+		Inbounds: yarpc.Inbounds{inbound},
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: requestLogInboundMiddleware{},
 		},
