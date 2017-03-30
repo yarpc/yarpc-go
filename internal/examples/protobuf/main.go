@@ -93,9 +93,7 @@ func doClient(
 			var err error
 			if *flagGoogleGRPC {
 				response, err = clients.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
-				if err != nil {
-					err = errors.New(grpc.ErrorDesc(err))
-				}
+				err = fromGRPCError(err)
 			} else {
 				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 			}
@@ -120,9 +118,7 @@ func doClient(
 			var err error
 			if *flagGoogleGRPC {
 				_, err = clients.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
-				if err != nil {
-					err = errors.New(grpc.ErrorDesc(err))
-				}
+				err = fromGRPCError(err)
 			} else {
 				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 			}
@@ -138,7 +134,13 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+			var err error
+			if *flagGoogleGRPC {
+				_, err = clients.SinkGRPCClient.Fire(ctx, &examplepb.FireRequest{value})
+			} else {
+				_, err = clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value})
+			}
+			if err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
 			}
 			if err := sinkYarpcServer.WaitFireDone(); err != nil {
@@ -159,4 +161,11 @@ func doClient(
 		}
 	}
 	return scanner.Err()
+}
+
+func fromGRPCError(err error) error {
+	if err != nil {
+		return errors.New(grpc.ErrorDesc(err))
+	}
+	return nil
 }

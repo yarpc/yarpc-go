@@ -135,7 +135,7 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 
 // NewClientDispatcher returns a new client Dispatcher.
 //
-// HTTP always will be configured as an outbound for Oneway
+// HTTP always will be configured as an outbound for Oneway unless using TransportTypeGRPC.
 func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) (*yarpc.Dispatcher, error) {
 	port, err := config.GetPort(transportType)
 	if err != nil {
@@ -160,8 +160,9 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) 
 		onewayOutbound = httpOutbound
 		unaryOutbound = httpOutbound
 	case TransportTypeGRPC:
-		onewayOutbound = http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
-		unaryOutbound = grpc.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
+		grpcOutbound := grpc.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
+		onewayOutbound = grpcOutbound
+		unaryOutbound = grpcOutbound
 	default:
 		return nil, fmt.Errorf("invalid TransportType: %v", transportType)
 	}

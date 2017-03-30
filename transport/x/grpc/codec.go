@@ -33,12 +33,6 @@ type customCodec struct{}
 // Marshal takes a proto.Message and marshals it, or
 // takes a []byte pointer and passes it through as a []byte.
 func (customCodec) Marshal(obj interface{}) ([]byte, error) {
-	// TODO: this is for oneway, are there side effects?
-	// should we just pass in a bytes array anyways?
-	// will this mess up with proto.Message?
-	if obj == nil {
-		return nil, nil
-	}
 	switch value := obj.(type) {
 	case proto.Message:
 		return proto.Marshal(value)
@@ -52,12 +46,6 @@ func (customCodec) Marshal(obj interface{}) ([]byte, error) {
 // Unmarshal takes a proto.Message and unmarshals it, or
 // takes a []byte pointer and writes it to v.
 func (customCodec) Unmarshal(data []byte, obj interface{}) error {
-	// TODO: this is for oneway, are there side effects?
-	// should we just pass in a bytes array anyways?
-	// will this mess up with proto.Message?
-	if obj == nil {
-		return nil
-	}
 	switch value := obj.(type) {
 	case proto.Message:
 		return proto.Unmarshal(data, value)

@@ -91,7 +91,10 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 
 // Call implements transport.OnewayOutbound#Call.
 func (o *Outbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
-	if err := o.invoke(ctx, request, nil, nil); err != nil {
+	// pass in dummy responseBody so code doesn't complain
+	// probably safer than doing nil check in codec
+	var responseBody []byte
+	if err := o.invoke(ctx, request, &responseBody, nil); err != nil {
 		return nil, err
 	}
 	return time.Now(), nil
@@ -116,13 +119,17 @@ func (o *Outbound) invoke(
 	if err != nil {
 		return err
 	}
+	var callOptions []grpc.CallOption
+	if responseMD != nil {
+		callOptions = []grpc.CallOption{grpc.Header(responseMD)}
+	}
 	if err := grpc.Invoke(
 		metadata.NewContext(ctx, md),
 		fullMethod,
 		&requestBody,
 		responseBody,
 		o.clientConn,
-		grpc.Header(responseMD),
+		callOptions...,
 	); err != nil {
 		return errorToGRPCError(ctx, request, start, err)
 	}
