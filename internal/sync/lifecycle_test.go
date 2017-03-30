@@ -262,22 +262,25 @@ func TestLifecycleOnce(t *testing.T) {
 		{
 			msg: "Overlapping start after stop",
 			// ms: timeline
-			// 00: 0: start.............starting
-			// 20: |  1: stop
-			// 40: X..|.................running
-			//        | (wait 20)       stopping
-			// 60:    X.................stopped
-			// 80:       2: start
-			//           X
+			// 00:  0: start.............starting
+			// 10:  |
+			// 20:  |  1: stop
+			// 30:  X  -.................running
+			// 30+Δ:   |.................stopping
+			// 40:     |  2: start
+			// 40+Δ:   |  X
+			// 50:     |
+			// 60:     |
+			// 70:     X.................stopped
 			actions: []LifecycleAction{
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          30 * time.Millisecond,
 							ExpectedState: Running,
 						},
 						StopAction{
-							Wait:          20 * time.Millisecond,
+							Wait:          30 * time.Millisecond,
 							ExpectedState: Stopped,
 						},
 						StartAction{
@@ -293,19 +296,20 @@ func TestLifecycleOnce(t *testing.T) {
 		{
 			msg: "Start completes before overlapping stop completes",
 			// ms: timeline
-			// 00: 0: start............starting
-			// 10: |  1: start
-			// 20: |  |  2: stop
-			// 30: |  |  |  3: start
-			// 40: |  |  |  |  4: stop
-			//     X  X  |  X  |.......running
-			//           |     |.......stopping
-			// 60:       X     X.......stopped
+			// 00:   0: start............starting
+			// 10:   |  1: start
+			// 20:   |  -  2: stop
+			// 30:   X  -  -  3: start...running
+			// 30+Δ:    X  |  X..........stopping
+			// 40:         |     4: stop
+			//             |     -
+			//             |     -
+			// 60:         X     X.......stopped
 			actions: []LifecycleAction{
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          30 * time.Millisecond,
 							ExpectedState: Running,
 						},
 						StartAction{

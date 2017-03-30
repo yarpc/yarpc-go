@@ -2,9 +2,10 @@ Releases
 ========
 
 v1.8.0 (unreleased)
------------------------
+-------------------
 
--   No changes yet.
+-   x/config: The service name is no longer part of the configuration and must
+    be passed as an argument to the `LoadConfig*` or `NewDispatcher*` methods.
 
 
 v1.7.1 (2017-03-29)

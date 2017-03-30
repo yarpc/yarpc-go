@@ -1,5 +1,5 @@
-hash: b7e66eaece8f1b654ec6fe309277d324cfc4fea3cf151000bf964c94b35d3ad7
-updated: 2017-03-30T16:19:54.163856022+02:00
+hash: e6cbbf51938c34289c9de7a0890e7981994cc04859c8e7a5a825143a1221d307
+updated: 2017-03-31T00:27:46.707893878+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -179,6 +179,7 @@ imports:
   - zaptest/observer
 - name: golang.org/x/net
   version: ffcf1bedda3b04ebb15a168a59800a73d6dc0f4d
+  repo: https://github.com/golang/net
   subpackages:
   - context
   - context/ctxhttp
@@ -190,6 +191,7 @@ imports:
   - trace
 - name: golang.org/x/sys
   version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
+  repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -200,11 +202,13 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 1529f889eb4b594d1f047f2fb8d5b3cc85c8f006
+  version: d63e2b22b05a9682de336cd4802bba367ed429e7
+  repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/grpc
   version: cdee119ee21e61eef7093a41ba148fa83585e143
+  repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
   - credentials
