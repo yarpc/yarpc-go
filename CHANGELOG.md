@@ -12,6 +12,10 @@ v1.8.0 (unreleased)
 -   http: Added support for configuring the HTTP transport using x/config.
 -   tchannel: Added support for configuring the TChannel transport using
     x/config.
+-   x/cherami: Renamed the `InboundConfig` and `OutboundConfig` structures to
+    `InboundOptions` and `OutboundOptions`.
+-   x/cherami: Added support for configuring the Cherami transport using
+    x/config.
 -   Options `thrift.Multiplexed` and `thrift.Enveloped` may now be provided for
     Thrift clients constructed by `yarpc.InjectClients` by adding a `thrift`
     tag to the corresponding struct field with the name of the option. See the

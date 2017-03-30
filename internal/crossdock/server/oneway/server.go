@@ -142,7 +142,7 @@ func initCheramiInbound() (*cherami.Inbound, error) {
 		return nil, err
 	}
 
-	return cheramiTransport.NewInbound(cherami.InboundConfig{
+	return cheramiTransport.NewInbound(cherami.InboundOptions{
 		Destination:   destination,
 		ConsumerGroup: consumerGroup,
 	}), nil
