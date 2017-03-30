@@ -37,8 +37,21 @@ import:
   version: ^1
 - package: golang.org/x/net
   version: master
+  # explicitly specifying this because glide is having issues with golang.org repos
+  repo: https://github.com/golang/net
   subpackages:
   - context
+- package: golang.org/x/sys
+  # explicitly specifying this because glide is having issues with golang.org repos
+  # this is just a dependency of golang.org/x/net and if this problem is fixed
+  # then we no longer need to have this dependency in glide.yaml
+  repo: https://github.com/golang/sys
+- package: golang.org/x/tools
+  # explicitly specifying this because glide is having issues with golang.org repos
+  # this is just a dependency of golang.org/x/net and if this problem is fixed
+  # then we no longer need to have this dependency in glide.yaml imports
+  # we should then move it to testImports
+  repo: https://github.com/golang/tools
 - package: gopkg.in/redis.v5
 - package: gopkg.in/yaml.v2
 testImport:
@@ -49,7 +62,6 @@ testImport:
 - package: github.com/kisielk/gotool
 - package: github.com/mattn/goveralls
 - package: github.com/wadey/gocovmerge
-- package: golang.org/x/tools
 - package: go.uber.org/tools
   subpackages:
   - update-license

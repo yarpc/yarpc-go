@@ -1,5 +1,5 @@
-hash: 7b4a853fba266dd0e48df4c4fde8709ca2f279f5838de838c0c50f8ec03a4fbc
-updated: 2017-03-29T08:35:29.463444274-07:00
+hash: 222e0f175ac991cd67026725d033e8c01c0165f6a70c79f246f4e850d07e8ffb
+updated: 2017-03-30T23:50:22.434826607+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -178,16 +178,19 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 3e967e1d28d2c9c06e749dc2bdc14b04df89e689
+  version: ffcf1bedda3b04ebb15a168a59800a73d6dc0f4d
+  repo: https://github.com/golang/net
   subpackages:
   - context
   - context/ctxhttp
 - name: golang.org/x/sys
   version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
+  repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 1529f889eb4b594d1f047f2fb8d5b3cc85c8f006
+  version: d63e2b22b05a9682de336cd4802bba367ed429e7
+  repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5
