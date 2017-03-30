@@ -88,7 +88,7 @@ func do(configFilePath string, timeout time.Duration, verifyOutput bool) (err er
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt)
 	go func() {
-		for _ = range signalC {
+		for range signalC {
 			cleanupCmds(clientCmd, serverCmd)
 		}
 	}()
@@ -180,7 +180,7 @@ func cleanupCmds(cmds ...*exec.Cmd) {
 func killCmd(cmd *exec.Cmd) {
 	if cmd != nil && cmd.Process != nil {
 		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
 }
 
