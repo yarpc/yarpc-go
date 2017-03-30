@@ -1,6 +1,12 @@
 Releases
 ========
 
+v1.7.1 (unreleased)
+-------------------
+
+-   Thrift: Fixed a bug where deserialization of large lists would return
+    corrupted data at high throughputs.
+
 
 v1.7.0 (2017-03-20)
 -----------------------
