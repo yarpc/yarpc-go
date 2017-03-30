@@ -1,5 +1,5 @@
-hash: 7b4a853fba266dd0e48df4c4fde8709ca2f279f5838de838c0c50f8ec03a4fbc
-updated: 2017-03-29T08:35:29.463444274-07:00
+hash: 88fde5306fca50482e04701e86366a3d7b90d50c29922709f0c80d1869e83f85
+updated: 2017-03-30T19:23:33.301218105+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -94,7 +94,7 @@ imports:
 - name: github.com/uber-common/bark
   version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
 - name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: github.com/uber-go/tally
   version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
   subpackages:
@@ -149,8 +149,10 @@ imports:
   - typed
 - name: go.uber.org/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+  repo: https://github.com/uber-go/atomic
 - name: go.uber.org/thriftrw
   version: 05f870b3c56597d180af568a6392209cc33269e2
+  repo: https://github.com/thriftrw/thriftrw-go
   subpackages:
   - envelope
   - internal
@@ -169,6 +171,7 @@ imports:
   - wire
 - name: go.uber.org/zap
   version: 4257c7cf05477d92ec25c31cfd3d60e89575f18a
+  repo: https://github.com/uber-go/zap
   subpackages:
   - buffer
   - internal/bufferpool
@@ -178,7 +181,8 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 3e967e1d28d2c9c06e749dc2bdc14b04df89e689
+  version: ffcf1bedda3b04ebb15a168a59800a73d6dc0f4d
+  repo: https://github.com/golang/net
   subpackages:
   - context
   - context/ctxhttp
@@ -215,9 +219,11 @@ testImports:
   version: b5bfa59ec0adc420475f97f89b58045c721d761c
 - name: go.uber.org/tools
   version: 5908733c544153a245dddd039959386356fbc082
+  repo: https://github.com/uber-go/tools
   subpackages:
   - update-license
 - name: honnef.co/go/tools
   version: 6c3814a19596cc3f3de23f0442023a5adbb28eb6
+  repo: https://github.com/dominikh/go-tools
   subpackages:
   - cmd/staticcheck
