@@ -89,7 +89,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	}, nil
 }
 
-// Call implements transport.OnewayOutbound#Call.
+// CallOneway implements transport.OnewayOutbound#Call.
 func (o *Outbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	// pass in dummy responseBody so code doesn't complain
 	// probably safer than doing nil check in codec
