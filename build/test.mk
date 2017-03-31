@@ -107,7 +107,7 @@ test: $(THRIFTRW) __eval_packages ## run all tests
 
 .PHONY: cover
 cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and output code coverage
-	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
+	SUPPRESS_COVER_PARALLEL=$(SUPPRESS_COVER_PARALLEL) PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: goveralls
