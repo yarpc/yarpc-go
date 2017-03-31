@@ -10,6 +10,10 @@ import:
   version: ~0.4
 - package: github.com/golang/mock
   version: master
+- package: github.com/grpc-ecosystem/grpc-opentracing
+  version: master
+  subpackages:
+  - go/otgrpc
 - package: github.com/mattn/go-shellwords
   version: ^1
 - package: github.com/mitchellh/mapstructure

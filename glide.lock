@@ -1,5 +1,5 @@
-hash: 2a6589dcf1dcd9411fc326e4fd9873c3930b840f7fea22f8af5146cb614a335d
-updated: 2017-03-31T01:37:05.042854609+02:00
+hash: 2a32ebf8bef0c4d7146fea9186605b7eca36f3922485269929f777e8c8a050fc
+updated: 2017-03-31T02:15:40.450735176+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -44,6 +44,10 @@ imports:
   - proto
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/grpc-ecosystem/grpc-opentracing
+  version: ef7d6c8df7564c20c0a19ed9737f6d67990c61fa
+  subpackages:
+  - go/otgrpc
 - name: github.com/mattn/go-shellwords
   version: 005a0944d84452842197c2108bd9168ced206f78
 - name: github.com/matttproud/golang_protobuf_extensions
