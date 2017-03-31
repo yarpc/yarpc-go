@@ -116,7 +116,7 @@ goveralls: cover $(GOVERALLS)
 
 .PHONY: examples
 examples:
-	RUN=$(RUN) $(MAKE) -C internal/examples
+	RUN=$(RUN) $(MAKE) -C internal/examples protobuf
 
 .PHONY: __eval_packages
 __eval_packages:
