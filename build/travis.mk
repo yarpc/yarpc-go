@@ -5,7 +5,7 @@ DOCKER_CACHE_FILE := $(DOCKER_CACHE_DIR)/$(DOCKER_IMAGE)
 DOCKER_RUN_FLAGS += -e TRAVIS_JOB_ID -e TRAVIS_PULL_REQUEST
 SUPPRESS_COVER_PARALLEL := true
 
-CROSSDOCK_DOCKER_IMAGE := yarpcgo_go
+CROSSDOCK_DOCKER_IMAGE := yarpc_go
 
 .PHONY: travis-docker-load
 travis-docker-load: ## load docker images from travis cache
