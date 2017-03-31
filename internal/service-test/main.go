@@ -45,7 +45,6 @@ var (
 	flagConfigFilePath = flag.String("file", "service-test.yaml", "The configuration file to use relative to the context directory")
 	flagTimeout        = flag.Duration("timeout", 5*time.Second, "The time to wait until timing out")
 	flagNoVerifyOutput = flag.Bool("no-verify-output", false, "Do not verify output and just run the commands")
-	flagNoKill         = flag.Bool("no-kill", false, "Do not kill commands on completion")
 
 	errConfigNil           = errors.New("config nil")
 	errClientCommandNotSet = errors.New("config client_command not set")
@@ -62,12 +61,12 @@ type config struct {
 
 func main() {
 	flag.Parse()
-	if err := do(*flagContextDir, *flagConfigFilePath, *flagTimeout, !(*flagNoVerifyOutput), *flagNoKill); err != nil {
+	if err := do(*flagContextDir, *flagConfigFilePath, *flagTimeout, !(*flagNoVerifyOutput)); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func do(contextDir string, configFilePath string, timeout time.Duration, verifyOutput bool, noKill bool) (err error) {
+func do(contextDir string, configFilePath string, timeout time.Duration, verifyOutput bool) (err error) {
 	configFilePath = filepath.Join(contextDir, configFilePath)
 	config, err := readConfig(configFilePath)
 	if err != nil {
@@ -77,25 +76,25 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 		return err
 	}
 
-	clientCmd, err := getCmd(config.ClientCommand, noKill)
+	clientCmd, err := getCmd(config.ClientCommand)
 	if err != nil {
 		return err
 	}
 	clientCmd.Dir = contextDir
 	var serverCmd *exec.Cmd
 	if config.ServerCommand != "" {
-		serverCmd, err = getCmd(config.ServerCommand, noKill)
+		serverCmd, err = getCmd(config.ServerCommand)
 		if err != nil {
 			return err
 		}
 		serverCmd.Dir = contextDir
 	}
-	defer cleanupCmds(noKill, clientCmd, serverCmd)
+	defer cleanupCmds(clientCmd, serverCmd)
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt)
 	go func() {
 		for range signalC {
-			cleanupCmds(noKill, clientCmd, serverCmd)
+			cleanupCmds(clientCmd, serverCmd)
 		}
 		os.Exit(1)
 	}()
@@ -136,7 +135,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 			errC <- fmt.Errorf("error on client wait: %v", err)
 			return
 		}
-		if serverCmd != nil && !noKill {
+		if serverCmd != nil {
 			killCmd(serverCmd)
 			_ = serverCmd.Wait()
 		}
@@ -162,7 +161,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	return nil
 }
 
-func getCmd(cmdString string, noKill bool) (*exec.Cmd, error) {
+func getCmd(cmdString string) (*exec.Cmd, error) {
 	parser := shellwords.NewParser()
 	parser.ParseEnv = true
 	args, err := parser.Parse(cmdString)
@@ -175,17 +174,12 @@ func getCmd(cmdString string, noKill bool) (*exec.Cmd, error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if !noKill {
-		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	}
+	// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	return cmd, nil
 }
 
-func cleanupCmds(noKill bool, cmds ...*exec.Cmd) {
-	if noKill {
-		return
-	}
+func cleanupCmds(cmds ...*exec.Cmd) {
 	for _, cmd := range cmds {
 		killCmd(cmd)
 	}
