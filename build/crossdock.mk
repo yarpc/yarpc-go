@@ -9,8 +9,6 @@ $(DOCKER_COMPOSE):
 	curl -L https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(DOCKER_COMPOSE_OS)-$(DOCKER_COMPOSE_ARCH) > $(DOCKER_COMPOSE)
 	@chmod +x $(DOCKER_COMPOSE)
 
-CROSSDOCK_DOCKER_IMAGE := yarpc_go
-
 .PHONY: crossdock
 crossdock: $(DOCKER_COMPOSE)
 	$(DOCKER_COMPOSE) kill go

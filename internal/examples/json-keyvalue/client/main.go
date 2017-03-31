@@ -95,9 +95,9 @@ func main() {
 	var outbound transport.UnaryOutbound
 	switch strings.ToLower(outboundName) {
 	case "http":
-		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:24034")
+		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:54034")
 	case "tchannel":
-		outbound = tchannelTransport.NewSingleOutbound("localhost:28941")
+		outbound = tchannelTransport.NewSingleOutbound("localhost:58941")
 	default:
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}

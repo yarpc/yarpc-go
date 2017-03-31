@@ -4,6 +4,8 @@ DOCKER_CACHE_FILE := $(DOCKER_CACHE_DIR)/$(DOCKER_IMAGE)
 
 DOCKER_RUN_FLAGS += -e TRAVIS_JOB_ID -e TRAVIS_PULL_REQUEST
 
+CROSSDOCK_DOCKER_IMAGE := yarpcgo_go
+
 .PHONY: travis-docker-load
 travis-docker-load:
 ifndef SUPPRESS_CROSSDOCK
@@ -26,5 +28,5 @@ endif
 .PHONY: travis-docker-push
 travis-docker-push:
 ifndef SUPPRESS_CROSSDOCK
-	./scripts/travis-docker-push.sh
+	./scripts/travis-docker-push.sh "$(CROSSDOCK_DOCKER_IMAGE)"
 endif
