@@ -143,7 +143,9 @@ func WithClientConfig(serviceName string, procedures []transport.Procedure, tran
 	if err != nil {
 		return err
 	}
-	defer close()
+	defer func() {
+		err = errors.CombineErrors(err, close())
+	)()
 	serverDispatcher, err := NewServerDispatcher(procedures, dispatcherConfig)
 	if err != nil {
 		return err
