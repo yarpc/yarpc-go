@@ -12,14 +12,13 @@ ifdef TRAVIS
 include build/travis.mk
 endif
 
+CI_TYPES ?= lint test examples
 ifndef SUPRESS_CROSSDOCK
-CI_TYPES ?= lint test examples crossdock
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
 CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
 endif
 else
-CI_TYPES ?= lint test examples
 CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
 endif
 
