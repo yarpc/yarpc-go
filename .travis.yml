@@ -1,4 +1,5 @@
 sudo: required
+dist: trusty
 services:
   - docker
 cache:
@@ -14,6 +15,8 @@ env:
     - CI_TYPES='examples goveralls' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.7
     - CI_TYPES='examples lint test' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.8
 before_install:
+  - sudo apt-get update -yq
+  - sudo apt-get -yq -o Dpkg::Options::="--force-confnew" install docker-engine
   - make travis-docker-load
 script:
   - make ci
