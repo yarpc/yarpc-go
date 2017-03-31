@@ -144,9 +144,11 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	select {
 	case err := <-errC:
 		if err != nil {
+			fmt.Print(string(outputBuffer.Bytes()))
 			return err
 		}
 	case <-time.After(timeout):
+		fmt.Print(string(outputBuffer.Bytes()))
 		return fmt.Errorf("client timed out after %v", timeout)
 	}
 	if verifyOutput {

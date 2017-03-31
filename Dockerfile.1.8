@@ -1,11 +1,10 @@
 FROM golang:1.8.0
 
-EXPOSE 8080-8088
 ENV SUPPRESS_DOCKER 1
 WORKDIR /go/src/go.uber.org/yarpc
+RUN apt-get update -yq && apt-get install -yq jq unzip
 ADD glide.yaml glide.lock dockerdeps.mk /go/src/go.uber.org/yarpc/
 ADD build/base.mk build/deps.mk /go/src/go.uber.org/yarpc/build/
-RUN make -f dockerdeps.mk glide
+ADD scripts/vendor-build.sh /go/src/go.uber.org/yarpc/scripts/
+RUN make -f dockerdeps.mk deps
 ADD . /go/src/go.uber.org/yarpc/
-RUN go install ./internal/crossdock
-CMD ["/go/bin/crossdock"]

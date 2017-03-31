@@ -69,7 +69,11 @@ for pkg in "$@"; do
 		args="-coverprofile $COVER/cover.${i}.out -coverpkg $coverpkg"
 	fi
 
-  do_waitpid go test -race $args "$pkg"
+  if [ -n "${SUPPRESS_COVER_PARALLEL}" ]; then
+    go test -race $args "$pkg"
+  else
+    do_waitpid go test -race $args "$pkg"
+  fi
 done
 reset_waitpids
 

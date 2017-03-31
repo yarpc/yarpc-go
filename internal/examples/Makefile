@@ -1,7 +1,7 @@
 ifdef RUN
-SERVICE_TEST := service-test --no-verify-output
+SERVICE_TEST := service-test --no-verify-output $(SERVICE_TEST_FLAGS)
 else
-SERVICE_TEST := service-test
+SERVICE_TEST := service-test $(SERVICE_TEST_FLAGS)
 endif
 
 .PHONY: all
