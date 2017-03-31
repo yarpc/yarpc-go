@@ -87,11 +87,11 @@ func main() {
 	var inbound transport.Inbound
 	switch strings.ToLower(*flagInbound) {
 	case "http":
-		inbound = http.NewTransport().NewInbound(":54034")
+		inbound = http.NewTransport().NewInbound(":24034")
 	case "tchannel":
 		tchannelTransport, err := tchannel.NewChannelTransport(
 			tchannel.ServiceName("keyvalue"),
-			tchannel.ListenAddr(":58941"),
+			tchannel.ListenAddr(":28941"),
 		)
 		if err != nil {
 			log.Fatal(err)

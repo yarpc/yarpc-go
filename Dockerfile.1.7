@@ -1,6 +1,5 @@
 FROM golang:1.7.5
 
-EXPOSE 49152-65535
 ENV SUPPRESS_DOCKER 1
 WORKDIR /go/src/go.uber.org/yarpc
 RUN apt-get update -yq && apt-get install -yq jq unzip
