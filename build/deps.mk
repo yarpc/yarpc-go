@@ -102,8 +102,8 @@ GOVERALLS = $(BIN)/goveralls
 ##############################################################################
 
 .PHONY: deps
-deps: __predeps $(GEN_BINS) $(EXTRA_BINS)
+deps: glide $(GEN_BINS) $(EXTRA_BINS)
 
-.PHONY: __predeps
-__predeps: $(GLIDE)
+.PHONY: glide
+glide: $(GLIDE)
 	PATH=$$PATH:$(BIN) glide install
