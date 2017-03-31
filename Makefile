@@ -23,9 +23,10 @@ else
 CI_TYPES ?= deps lint test examples
 endif
 
+.DEFAULT_GOAL := ci
+
 .PHONY: ci
-ci:
-	$(MAKE) $(CI_TYPES)
+ci: $(CI_TYPES)
 ifdef CI_CROSSDOCK
 	$(MAKE) crossdock || ($(MAKE) crossdock-logs && false)
 endif

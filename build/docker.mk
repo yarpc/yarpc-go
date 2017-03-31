@@ -1,12 +1,8 @@
-DOCKER_GO_VERSION := 1.8
+DOCKER_GO_VERSION ?= 1.8
 DOCKERFILE := Dockerfile.$(DOCKER_GO_VERSION)
 DOCKER_IMAGE := uber/yarpc-go-$(DOCKER_GO_VERSION)
 
-DOCKER_RUN_FLAGS = \
-	-e V \
-	-e RUN \
-	-e TRAVIS_JOB_ID \
-	-e TRAVIS_PULL_REQUEST
+DOCKER_RUN_FLAGS = -e V -e RUN
 DOCKER_RUN_VOLUME_MOUNT := -v $(PWD):/go/src/go.uber.org/yarpc
 
 .PHONY: deps

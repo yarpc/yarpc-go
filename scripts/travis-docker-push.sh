@@ -11,6 +11,7 @@ REPO="yarpc/yarpc-go"
 BRANCH="$(if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then echo ${TRAVIS_BRANCH}; else echo ${TRAVIS_PULL_REQUEST_BRANCH}; fi)"
 TAG="$(if [ "${BRANCH}" == "master" ]; then echo "latest"; else echo ${BRANCH}; fi)"
 
+docker images
 docker tag "${DOCKER_COMPOSE_REPO}" "${REPO}:${TAG}"
 docker tag "${DOCKER_COMPOSE_REPO}" "${REPO}:${COMMIT}"
 docker tag "${DOCKER_COMPOSE_REPO}" "${REPO}:travis-${TRAVIS_BUILD_NUMBER}"
