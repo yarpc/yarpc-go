@@ -39,9 +39,9 @@ endif
 .PHONY: help
 help: ## show this help message
 ifdef SUPPRESS_DOCKER
-	@echo **Docker is not being used**
+	@echo **Docker is not being used - SUPPRESS_DOCKER=$(SUPPRESS_DOCKER)**
 else
-	@echo **Docker is being used**
+	@echo **Docker is being used - SUPPRESS_DOCKER not set**
 endif
 	@echo
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -f 2,3 -d : | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
