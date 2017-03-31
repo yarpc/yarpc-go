@@ -116,7 +116,7 @@ goveralls: cover $(GOVERALLS)
 
 .PHONY: examples
 examples:
-	RUN=$(RUN) $(MAKE) -C internal/examples json-keyvalue-http json-keyvalue-tchannel
+	RUN=$(RUN) $(MAKE) -C internal/examples
 
 .PHONY: __eval_packages
 __eval_packages:
