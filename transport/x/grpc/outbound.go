@@ -27,6 +27,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	opentracing "github.com/opentracing/opentracing-go"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -141,8 +144,11 @@ func (o *Outbound) start() error {
 	clientConn, err := grpc.Dial(
 		o.address,
 		grpc.WithInsecure(),
-		// TODO: want to support default codec
 		grpc.WithCodec(customCodec{}),
+		// TODO: does this actually work for yarpc
+		// this needs a lot of review
+		// TODO: always global tracer?
+		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(opentracing.GlobalTracer())),
 	)
 	if err != nil {
 		return err

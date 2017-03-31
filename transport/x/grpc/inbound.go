@@ -25,6 +25,9 @@ import (
 	"net"
 	"sync"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"github.com/opentracing/opentracing-go"
+
 	"google.golang.org/grpc"
 
 	"go.uber.org/yarpc/api/transport"
@@ -89,8 +92,13 @@ func (i *Inbound) start() error {
 	if err != nil {
 		return err
 	}
-	// TODO: want to support default codec
-	server := grpc.NewServer(grpc.CustomCodec(customCodec{}))
+	server := grpc.NewServer(
+		grpc.CustomCodec(customCodec{}),
+		// TODO: does this actually work for yarpc
+		// this needs a lot of review
+		// TODO: always global tracer?
+		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(opentracing.GlobalTracer())),
+	)
 	for _, serviceDesc := range serviceDescs {
 		server.RegisterService(serviceDesc, noopGrpcStruct{})
 	}
