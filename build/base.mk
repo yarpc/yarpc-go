@@ -8,5 +8,5 @@ TMP_DIR := $(PWD)/.tmp
 BIN = $(CACHE_DIR)/$(UNAME_OS)/$(UNAME_ARCH)/bin
 
 .PHONY: clean
-clean:
+clean: ## remove installed binaries and artifacts
 	rm -rf $(TMP_DIR) $(CACHE_DIR)

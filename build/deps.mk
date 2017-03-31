@@ -99,11 +99,9 @@ COVER = $(BIN)/cover
 GOCOVMERGE = $(BIN)/gocovmerge
 GOVERALLS = $(BIN)/goveralls
 
-##############################################################################
-
 .PHONY: deps
-deps: glide $(GEN_BINS) $(EXTRA_BINS)
+deps: glide $(GEN_BINS) $(EXTRA_BINS) ## install all dependencies
 
 .PHONY: glide
-glide: $(GLIDE)
+glide: $(GLIDE) ## install glide dependencies
 	PATH=$$PATH:$(BIN) glide install

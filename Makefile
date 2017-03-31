@@ -31,7 +31,17 @@ endif
 .DEFAULT_GOAL := ci
 
 .PHONY: ci
-ci: $(CI_TYPES)
+ci: $(CI_TYPES) ## run continuous integration tasks
 ifdef CI_CROSSDOCK
 	$(MAKE) crossdock || ($(MAKE) crossdock-logs && false)
 endif
+
+.PHONY: help
+help: ## show this help message
+ifdef SUPPRESS_DOCKER
+	@echo **Docker is not being used**
+else
+	@echo **Docker is being used**
+endif
+	@echo
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -f 2,3 -d : | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
