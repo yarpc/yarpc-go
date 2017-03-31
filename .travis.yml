@@ -15,10 +15,8 @@ env:
     - CI_TYPES='examples lint test' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.8
 before_install:
   - make travis-docker-load
-install:
-  - make deps
 script:
   - make ci
-  - if [[ "${TRAVIS_BRANCH}" == "dev" ]] && [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then make travis-docker-save; fi
+  - make travis-docker-save
 after_success:
   - make travis-docker-push
