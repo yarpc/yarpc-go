@@ -1,0 +1,9 @@
+{
+  "requiredOrgs": [
+    "yarpc"
+  ],
+  "assignToReviewer": true,
+  "createReviewRequest": true,
+  "skipTitle": "WIP:",
+  "createComment": false
+}

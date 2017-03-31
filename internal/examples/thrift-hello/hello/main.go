@@ -22,6 +22,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -37,7 +38,10 @@ import (
 	"go.uber.org/yarpc/transport/http"
 )
 
+var flagWait = flag.Bool("wait", false, "Wait for a signal to exit")
+
 func main() {
+	flag.Parse()
 	// configure a YARPC dispatcher for the service "hello",
 	// expose the service over an HTTP inbound on port 8086,
 	// and configure outbound calls to service "hello" over HTTP port 8086 as well
@@ -80,12 +84,14 @@ func main() {
 	}
 	fmt.Println(res)
 
-	// Gracefully shut down if we receive an interrupt (^C) or a kill signal.
-	// Upon returning, this will unravel cancel() to abort the outbound request
-	// and dispatcher.Stop() which will block until graceful shutdown.
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-	<-signals
+	if *flagWait {
+		// Gracefully shut down if we receive an interrupt (^C) or a kill signal.
+		// Upon returning, this will unravel cancel() to abort the outbound request
+		// and dispatcher.Stop() which will block until graceful shutdown.
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+		<-signals
+	}
 }
 
 type helloHandler struct{}

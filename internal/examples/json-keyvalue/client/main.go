@@ -68,6 +68,15 @@ func set(ctx context.Context, c json.Client, k string, v string) error {
 	return c.Call(ctx, "set", &setRequest{Key: k, Value: v}, &response)
 }
 
+type requestLogOutboundMiddleware struct{}
+
+func (requestLogOutboundMiddleware) Call(
+	ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	fmt.Printf("sending request %q to service %q (encoding %q)\n", request.Procedure,
+		request.Service, request.Encoding)
+	return out.Call(ctx, request)
+}
+
 func main() {
 	outboundName := ""
 	flag.StringVar(

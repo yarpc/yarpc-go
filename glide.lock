@@ -1,5 +1,5 @@
-hash: 2212cb1bb5251802738ffe5fa5144e040f3661485c9091610433aa91f51e00dc
-updated: 2017-03-30T20:08:19.083907138+02:00
+hash: b39d1700a41467bf89854cbd7b1eed3a43af31f295b45029040d10639ce6c46b
+updated: 2017-03-31T11:46:05.884911797+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -44,6 +44,8 @@ imports:
   - proto
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/mattn/go-shellwords
+  version: 005a0944d84452842197c2108bd9168ced206f78
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -96,7 +98,7 @@ imports:
 - name: github.com/uber-common/bark
   version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
 - name: github.com/uber-go/atomic
-  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/tally
   version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
   subpackages:
@@ -181,15 +183,18 @@ imports:
   - zaptest/observer
 - name: golang.org/x/net
   version: ffcf1bedda3b04ebb15a168a59800a73d6dc0f4d
+  repo: https://github.com/golang/net
   subpackages:
   - context
   - context/ctxhttp
 - name: golang.org/x/sys
   version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
+  repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: 1529f889eb4b594d1f047f2fb8d5b3cc85c8f006
+  version: d83db204cec938a53072124e16d79022316b3dc5
+  repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: gopkg.in/redis.v5
