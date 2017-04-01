@@ -91,7 +91,7 @@ func (e ErrInvalidTransportConversion) Error() string {
 	return fmt.Sprintf("cannot convert transport (%v) to type %s", e.Transport, e.ExpectedType)
 }
 
-// ErrPeerAddAlreadyInList is returned to peer providers if the
+// ErrPeerAddAlreadyInList is returned to peer list updater if the
 // peerlist is already tracking a peer for the added identifier
 type ErrPeerAddAlreadyInList string
 
@@ -99,7 +99,7 @@ func (e ErrPeerAddAlreadyInList) Error() string {
 	return fmt.Sprintf("can't add peer %q because is already in peerlist", string(e))
 }
 
-// ErrPeerRemoveNotInList is returned to peer providers if the peerlist
+// ErrPeerRemoveNotInList is returned to peer list updater if the peerlist
 // is not tracking the peer to remove for a given identifier
 type ErrPeerRemoveNotInList string
 

@@ -37,7 +37,7 @@
 // YARPC for Go plans to provide a Protobuf 3 encoding, a gRPC transport, and a
 // load balancer that uses a least-pending-requests strategy.
 // Peer choosers can implement any strategy, including load balancing or sharding,
-// in turn backed by a pluggable peer provider.
+// in turn bound to any peer list updater.
 //
 // Regardless of transport, every RPC has some common properties: caller name,
 // service name, procedure name, encoding name, deadline or TTL, headers,

@@ -103,8 +103,8 @@ func New(transport peer.Transport, opts ...HeapOption) *List {
 	}
 }
 
-// Update satisfies the peer.List interface, so a peer provider can manage the
-// retained peers.
+// Update satisfies the peer.List interface, so a peer list updater can manage
+// the retained peers.
 func (pl *List) Update(updates peer.ListUpdates) error {
 	ctx, cancel := context.WithTimeout(context.Background(), pl.startupWait)
 	defer cancel()

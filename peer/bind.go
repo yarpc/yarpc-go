@@ -30,9 +30,11 @@ import (
 	intsync "go.uber.org/yarpc/internal/sync"
 )
 
-// Bind couples a peer list with a peer provider.
-// The peer provider must produce a binder that takes the peer list and returns
-// a lifecycle for the duration of the peer list updater.
+// Bind couples a peer list with a peer list updater.
+// Bind accepts a peer list and passes that peer list to a binder.
+// The binder must return a peer list updater bound to the peer list.
+// The peer list updater must implement Lifecycle so the bound peer list
+// can start and stop updates.
 func Bind(chooserList peer.ChooserList, bind peer.Binder) *BoundChooser {
 	return &BoundChooser{
 		once:        intsync.Once(),
@@ -41,20 +43,20 @@ func Bind(chooserList peer.ChooserList, bind peer.Binder) *BoundChooser {
 	}
 }
 
-// BoundChooser is a peer chooser that couples a peer list and a peer provider
-// for the duration of its lifecycle.
+// BoundChooser is a peer chooser that couples a peer list and a peer list
+// updater for the duration of its lifecycle.
 type BoundChooser struct {
-	once        intsync.LifecycleOnce // the lifecycle of the bound peer chooser+provider
-	updater     transport.Lifecycle   // the lifecycle of the peer provider
-	chooserList peer.ChooserList      // the peer chooser and the lifecycle of the peer chooser
+	once        intsync.LifecycleOnce
+	updater     transport.Lifecycle // the peer list updater, which to us is just a lifecycle
+	chooserList peer.ChooserList    // the peer list/chooser, also a lifecycle
 }
 
-// Updater reveals the object maintaining the updater.
+// Updater returns the bound peer list updater.
 func (c *BoundChooser) Updater() transport.Lifecycle {
 	return c.updater
 }
 
-// ChooserList reveals the object maintaining the peer list and making peer choices.
+// ChooserList returns the bound peer list.
 func (c *BoundChooser) ChooserList() peer.ChooserList {
 	return c.chooserList
 }
@@ -88,7 +90,7 @@ func (c *BoundChooser) start() error {
 	return errors.CombineErrors(errs...)
 }
 
-// Stop stops the peer list and the peer provider updater.
+// Stop stops the peer list and the peer list updater.
 func (c *BoundChooser) Stop() error {
 	return c.once.Stop(c.stop)
 }
@@ -107,9 +109,9 @@ func (c *BoundChooser) stop() error {
 	return errors.CombineErrors(errs...)
 }
 
-// IsRunning returns whether the peer list and its peer provider updater are
-// both running, regardless of whether they should be running according to the
-// bound chooser's lifecycle.
+// IsRunning returns whether the peer list and its peer list updater are both
+// running, regardless of whether they should be running according to the bound
+// chooser's lifecycle.
 func (c *BoundChooser) IsRunning() bool {
 	return c.chooserList.IsRunning() && c.updater.IsRunning()
 }
