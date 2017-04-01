@@ -9,4 +9,5 @@ jobs:
           - CI_TYPES: lint test examples
     working_directory: /go/src/go.uber.org/yarpc
     steps:
+      - checkout
       - run: make ci
