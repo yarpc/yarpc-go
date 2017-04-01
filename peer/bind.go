@@ -95,11 +95,11 @@ func (c *BoundChooser) Stop() error {
 func (c *BoundChooser) stop() error {
 	var errs error
 
-	if err := c.chooser.Stop(); err != nil {
+	if err := c.binding.Stop(); err != nil {
 		errs = multierr.Append(errs, err)
 	}
 
-	if err := c.binding.Stop(); err != nil {
+	if err := c.chooser.Stop(); err != nil {
 		errs = multierr.Append(errs, err)
 	}
 
