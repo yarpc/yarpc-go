@@ -1,0 +1,12 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: golang:1.8.0
+        environment:
+          - SUPPRESS_DOCKER: 1
+          - SUPPRESS_CROSSDOCK: 1
+          - CI_TYPES: lint test examples
+    working_directory: /go/src/go.uber.org/yarpc
+    steps:
+      - run: make ci
