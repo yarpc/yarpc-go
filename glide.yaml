@@ -57,6 +57,7 @@ import:
 - package: gopkg.in/redis.v5
 - package: gopkg.in/yaml.v2
 - package: go.uber.org/multierr
+  version: ~0.1
 testImport:
 - package: github.com/golang/lint
   subpackages:

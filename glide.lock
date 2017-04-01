@@ -1,5 +1,5 @@
-hash: 81fbf96fe156b7e83dab036865cb0d312b83bbeac4ff74829b7eb283f1e7e80c
-updated: 2017-03-31T10:54:22.992321375-07:00
+hash: 93363688a2891b48e84373a81dba6e11b7211187ba809c7293162ce7484a8a01
+updated: 2017-03-31T17:39:52.568740104-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -152,7 +152,7 @@ imports:
 - name: go.uber.org/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: go.uber.org/multierr
-  version: de6740a55f8d778e53755317dc50aae950c760de
+  version: 737b41aa3bf31c25d11dc84d5275af6bfe2ef4d2
 - name: go.uber.org/thriftrw
   version: 05f870b3c56597d180af568a6392209cc33269e2
   subpackages:
@@ -172,7 +172,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 4257c7cf05477d92ec25c31cfd3d60e89575f18a
+  version: a2773be06b9ac7c318a3a105b5c310af5730c6b4
   subpackages:
   - buffer
   - internal/bufferpool
