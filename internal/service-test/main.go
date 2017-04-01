@@ -118,36 +118,38 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	errC := make(chan error)
 	go func() {
 		if serverCmd != nil {
-			debugPrintf("Starting %+v", serverCmd)
+			debugPrintf("Starting %s", cmdString(serverCmd))
 			if err := serverCmd.Start(); err != nil {
 				errC <- fmt.Errorf("error starting server: %v", err)
 				return
 			}
-			debugPrintf("Started %+v", serverCmd)
+			debugPrintf("Started %s", cmdString(serverCmd))
+			defer func() {
+				if serverCmd != nil {
+					killCmd(serverCmd)
+					_ = serverCmd.Wait()
+					debugPrintf("Finished %s", cmdString(serverCmd))
+				}
+			}()
 			// kind of weird that we can timeout too
 			// maybe add this to the timeout
 			if config.SleepBeforeClientMs != 0 {
 				sleepDuration := time.Duration(config.SleepBeforeClientMs) * time.Millisecond
-				debugPrintf("Sleeping %v before client start", sleepDuration)
+				debugPrintf("Sleeping %v before starting %s", sleepDuration, cmdString(clientCmd))
 				<-time.After(sleepDuration)
 			}
 		}
-		debugPrintf("Starting %+v", clientCmd)
+		debugPrintf("Starting %s", clientCmd)
 		if err := clientCmd.Start(); err != nil {
 			errC <- fmt.Errorf("error starting client: %v", err)
 			return
 		}
-		debugPrintf("Started %+v, now waiting", clientCmd)
+		debugPrintf("Started %s, now waiting", cmdString(clientCmd))
 		if err := clientCmd.Wait(); err != nil {
 			errC <- fmt.Errorf("error on client wait: %v", err)
 			return
 		}
-		debugPrintf("Finished %+v", clientCmd)
-		if serverCmd != nil {
-			killCmd(serverCmd)
-			_ = serverCmd.Wait()
-			debugPrintf("Finished %+v", serverCmd)
-		}
+		debugPrintf("Finished %s", cmdString(clientCmd))
 		errC <- nil
 	}()
 	select {
@@ -273,4 +275,11 @@ func debugPrintf(format string, args ...interface{}) {
 	if *flagDebug {
 		log.Printf(format, args...)
 	}
+}
+
+func cmdString(cmd *exec.Cmd) string {
+	if len(cmd.Args) == 0 {
+		return cmd.Path
+	}
+	return strings.Join(cmd.Args, " ")
 }
