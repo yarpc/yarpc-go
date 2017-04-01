@@ -90,9 +90,15 @@ EXTRA_BINS += $(BIN)/$(shell basename $1)
 endef
 
 define deprule
+ifdef SUPPRESS_DOCKER
 $(BIN)/$(shell basename $1): glide.lock $(GLIDE)
 	@mkdir -p $(BIN)
 	PATH=$(BIN):$(PATH) ./scripts/vendor-build.sh $(BIN) $1
+else
+$(BIN)/$(shell basename $1): $(GLIDE)
+	@mkdir -p $(BIN)
+	PATH=$(BIN):$(PATH) ./scripts/vendor-build.sh $(BIN) $1
+endif
 endef
 
 $(foreach i,$(GEN_GO_BIN_DEPS),$(eval $(call generatedeprule,$(i))))
