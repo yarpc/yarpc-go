@@ -6,7 +6,7 @@ LINT_EXCLUDES_EXTRAS =
 GOVET_IGNORE_RULES = \
 	possible formatting directive in Error call
 
-ERRCHECK_FLAGS ?= -ignoretests
+ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
