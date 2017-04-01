@@ -2,11 +2,14 @@ DOCKER_GO_VERSION ?= 1.8
 DOCKERFILE := Dockerfile.$(DOCKER_GO_VERSION)
 DOCKER_IMAGE := uber/yarpc-go-$(DOCKER_GO_VERSION)
 
+ifdef DOCKER_HOST
+DOCKER_BUILD_FLAGS ?= --compress
+endif
 DOCKER_RUN_FLAGS = -e V -e RUN -e SERVICE_TEST_FLAGS
 
 .PHONY: deps
 deps: ## install all dependencies
-	docker build -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
+	docker build $(DOCKER_BUILD_FLAGS) -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
 
 .PHONY: build
 build: deps ## go build all packages
