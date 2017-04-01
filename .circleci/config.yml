@@ -13,18 +13,19 @@ jobs:
       - restore_cache:
           key: yarpc-go
       - run:
-          command: make ci
-          environment:
-            - CI_TYPES: test
-            - DOCKER_GO_VERSION: 1.7
-            - SUPPRESS_CROSSDOCK: 1
-      - run:
+          name: DOCKER_GO_VERSION=1.8 CI_TYPES=examples lint test
           command: make ci
           environment:
             - CI_TYPES: lint test
             - DOCKER_GO_VERSION: 1.8
-            - SUPPRESS_CROSSDOCK: 1
       - run:
+          name: DOCKER_GO_VERSION=1.7 CI_TYPES=test
+          command: make ci
+          environment:
+            - CI_TYPES: test
+            - DOCKER_GO_VERSION: 1.7
+      - run:
+          name: CI_TYPES=crossdock
           command: make ci
           environment:
             - CI_TYPES: crossdock
