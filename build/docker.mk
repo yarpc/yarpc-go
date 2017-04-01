@@ -2,8 +2,7 @@ DOCKER_GO_VERSION ?= 1.8
 DOCKERFILE := Dockerfile.$(DOCKER_GO_VERSION)
 DOCKER_IMAGE := uber/yarpc-go-$(DOCKER_GO_VERSION)
 
-DOCKER_RUN_FLAGS = -e V -e RUN -e SERVICE_TEST_FLAGS -e SUPPRESS_COVER_PARALLEL
-DOCKER_RUN_VOLUME_MOUNT := -v $(PWD):/go/src/go.uber.org/yarpc
+DOCKER_RUN_FLAGS = -e V -e RUN -e SERVICE_TEST_FLAGS
 
 .PHONY: deps
 deps: ## install all dependencies
@@ -15,7 +14,7 @@ build: deps ## go build all packages
 
 .PHONY: generate
 generate: deps ## call generation script
-	docker run $(DOCKER_RUN_FLAGS) $(DOCKER_RUN_VOLUME_MOUNT) $(DOCKER_IMAGE) make generate
+	docker run -v $(shell pwd):/go/src/go.uber.org/yarpc $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make generate
 
 .PHONY: nogogenerate
 nogogenerate: deps ## check to make sure go:generate is not used

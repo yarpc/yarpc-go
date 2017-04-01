@@ -104,10 +104,9 @@ lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verify
 test: $(THRIFTRW) __eval_packages ## run all tests
 	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
 
-
 .PHONY: cover
 cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and output code coverage
-	SUPPRESS_COVER_PARALLEL=$(SUPPRESS_COVER_PARALLEL) PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
+	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: goveralls

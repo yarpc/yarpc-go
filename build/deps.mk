@@ -42,35 +42,44 @@ ifeq ($(UNAME_ARCH),x86_64)
 GLIDE_ARCH = amd64
 endif
 
+GLIDE_LIB = $(LIB)/glide-$(GLIDE_VERSION)
+GLIDE_TAR = $(GLIDE_LIB)/glide.tar.gz
 GLIDE = $(BIN)/glide
+THRIFT_LIB = $(LIB)/thrift-$(THRIFT_VERSION)
+THRIFT_TAR = $(THRIFT_LIB)/thrift.tar.gz
 THRIFT = $(BIN)/thrift
+PROTOC_LIB = $(LIB)/protoc-$(PROTOC_VERSION)
+PROTOC_ZIP = $(PROTOC_LIB)/protoc.zip
 PROTOC = $(BIN)/protoc
 GEN_BINS = $(THRIFT) $(PROTOC)
 EXTRA_BINS = $(GLIDE)
 
-$(GLIDE):
-	@mkdir -p $(BIN)
-	@mkdir -p $(TMP_DIR)/glide
-	curl -L https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(GLIDE_OS)-$(GLIDE_ARCH).tar.gz > $(TMP_DIR)/glide/glide.tar.gz
-	cd $(TMP_DIR)/glide; tar xzf glide.tar.gz
-	mv $(TMP_DIR)/glide/$(GLIDE_OS)-$(GLIDE_ARCH)/glide $(GLIDE)
-	@rm -rf $(TMP_DIR)/glide
+$(GLIDE_TAR):
+	@mkdir -p $(GLIDE_LIB)
+	curl -L "https://github.com/Masterminds/glide/releases/download/v$(GLIDE_VERSION)/glide-v$(GLIDE_VERSION)-$(GLIDE_OS)-$(GLIDE_ARCH).tar.gz" > $(GLIDE_TAR)
 
-$(THRIFT):
+$(GLIDE): $(GLIDE_TAR)
 	@mkdir -p $(BIN)
-	@mkdir -p $(TMP_DIR)/thrift
-	curl -L "https://github.com/uber/tchannel-go/releases/download/thrift-v$(THRIFT_VERSION)/thrift-1-$(THRIFT_OS)-$(THRIFT_ARCH).tar.gz" > $(TMP_DIR)/thrift/thrift.tar.gz
-	tar -C $(TMP_DIR)/thrift -xzf $(TMP_DIR)/thrift/thrift.tar.gz
-	mv $(TMP_DIR)/thrift/thrift-1 $(THRIFT)
-	@rm -rf $(TMP_DIR)/thrift
+	cd $(GLIDE_LIB); tar xzf $(GLIDE_TAR)
+	cp $(GLIDE_LIB)/$(GLIDE_OS)-$(GLIDE_ARCH)/glide $(GLIDE)
 
-$(PROTOC):
+$(THRIFT_TAR):
+	@mkdir -p $(THRIFT_LIB)
+	curl -L "https://github.com/uber/tchannel-go/releases/download/thrift-v$(THRIFT_VERSION)/thrift-1-$(THRIFT_OS)-$(THRIFT_ARCH).tar.gz" > $(THRIFT_TAR)
+
+$(THRIFT): $(THRIFT_TAR)
 	@mkdir -p $(BIN)
-	@mkdir -p $(TMP_DIR)/protoc
-	curl -L "https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(TMP_DIR)/protoc/protoc.zip
-	cd $(TMP_DIR)/protoc; unzip $(TMP_DIR)/protoc/protoc.zip
-	mv $(TMP_DIR)/protoc/bin/protoc $(PROTOC)
-	@rm -rf $(TMP_DIR)/protoc
+	cd $(THRIFT_LIB); tar xzf $(THRIFT_TAR)
+	cp $(THRIFT_LIB)/thrift-1 $(THRIFT)
+
+$(PROTOC_ZIP):
+	@mkdir -p $(PROTOC_LIB)
+	curl -L "https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip" > $(PROTOC_ZIP)
+
+$(PROTOC): $(PROTOC_ZIP)
+	@mkdir -p $(BIN)
+	cd $(PROTOC_LIB); unzip $(PROTOC_ZIP)
+	cp $(PROTOC_LIB)/bin/protoc $(PROTOC)
 
 define generatedeprule
 GEN_BINS += $(BIN)/$(shell basename $1)
@@ -99,8 +108,11 @@ COVER = $(BIN)/cover
 GOCOVMERGE = $(BIN)/gocovmerge
 GOVERALLS = $(BIN)/goveralls
 
+.PHONY: predeps
+predeps: $(GLIDE) $(THRIFT) $(PROTOC)
+
 .PHONY: deps
-deps: glide $(GEN_BINS) $(EXTRA_BINS) ## install all dependencies
+deps: predeps glide $(GEN_BINS) $(EXTRA_BINS) ## install all dependencies
 
 .PHONY: glide
 glide: $(GLIDE) ## install glide dependencies

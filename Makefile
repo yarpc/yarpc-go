@@ -3,9 +3,10 @@ ifndef SUPPRESS_DOCKER
 include build/docker.mk
 else
 include build/deps.mk
-include build/test.mk
+include build/local.mk
 endif
 ifndef SUPPRESS_CROSSDOCK
+include build/crossdockdeps.mk
 include build/crossdock.mk
 endif
 ifdef TRAVIS
