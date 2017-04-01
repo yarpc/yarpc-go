@@ -115,7 +115,7 @@ goveralls: cover $(GOVERALLS) ## run code coverage and upload to coveralls
 
 .PHONY: examples
 examples: ## run all examples tests
-	RUN=$(RUN) SERVICE_TEST_FLAGS=$(SERVICE_TEST_FLAGS) $(MAKE) -C internal/examples
+	RUN=$(RUN) V=$(V) $(MAKE) -C internal/examples
 
 .PHONY: __eval_packages
 __eval_packages:

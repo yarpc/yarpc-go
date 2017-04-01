@@ -1,8 +1,10 @@
 ifdef RUN
-SERVICE_TEST := service-test --no-verify-output $(SERVICE_TEST_FLAGS)
-else
-SERVICE_TEST := service-test $(SERVICE_TEST_FLAGS)
+SERVICE_TEST_FLAGS += --no-verify-output
 endif
+ifdef V
+SERVICE_TEST_FLAGS += --debug
+endif
+SERVICE_TEST := service-test $(SERVICE_TEST_FLAGS)
 
 .PHONY: all
 all: json-keyvalue-http json-keyvalue-tchannel protobuf thrift-hello thrift-keyvalue-http thrift-keyvalue-tchannel thrift-oneway

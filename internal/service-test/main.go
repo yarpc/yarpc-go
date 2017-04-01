@@ -45,6 +45,7 @@ var (
 	flagConfigFilePath = flag.String("file", "service-test.yaml", "The configuration file to use relative to the context directory")
 	flagTimeout        = flag.Duration("timeout", 5*time.Second, "The time to wait until timing out")
 	flagNoVerifyOutput = flag.Bool("no-verify-output", false, "Do not verify output and just run the commands")
+	flagDebug          = flag.Bool("debug", false, "Log debug information")
 
 	errConfigNil           = errors.New("config nil")
 	errClientCommandNotSet = errors.New("config client_command not set")
@@ -117,27 +118,35 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	errC := make(chan error)
 	go func() {
 		if serverCmd != nil {
+			debugPrintf("Starting %+v", serverCmd)
 			if err := serverCmd.Start(); err != nil {
 				errC <- fmt.Errorf("error starting server: %v", err)
 				return
 			}
+			debugPrintf("Started %+v", serverCmd)
 			// kind of weird that we can timeout too
 			// maybe add this to the timeout
 			if config.SleepBeforeClientMs != 0 {
-				<-time.After(time.Duration(config.SleepBeforeClientMs) * time.Millisecond)
+				sleepDuration := time.Duration(config.SleepBeforeClientMs) * time.Millisecond
+				debugPrintf("Sleeping %v before client start", sleepDuration)
+				<-time.After(sleepDuration)
 			}
 		}
+		debugPrintf("Starting %+v", clientCmd)
 		if err := clientCmd.Start(); err != nil {
 			errC <- fmt.Errorf("error starting client: %v", err)
 			return
 		}
+		debugPrintf("Started %+v, now waiting", clientCmd)
 		if err := clientCmd.Wait(); err != nil {
 			errC <- fmt.Errorf("error on client wait: %v", err)
 			return
 		}
+		debugPrintf("Finished %+v", clientCmd)
 		if serverCmd != nil {
 			killCmd(serverCmd)
 			_ = serverCmd.Wait()
+			debugPrintf("Finished %+v", serverCmd)
 		}
 		errC <- nil
 	}()
@@ -187,6 +196,7 @@ func cleanupCmds(cmds ...*exec.Cmd) {
 
 func killCmd(cmd *exec.Cmd) {
 	if cmd != nil && cmd.Process != nil {
+		debugPrintf("Killing %+v", cmd)
 		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -257,4 +267,10 @@ func (l *lockedBuffer) Bytes() []byte {
 	l.lock.RLock()
 	defer l.lock.RUnlock()
 	return l.buffer.Bytes()
+}
+
+func debugPrintf(format string, args ...interface{}) {
+	if *flagDebug {
+		log.Printf(format, args...)
+	}
 }

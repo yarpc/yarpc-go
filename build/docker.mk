@@ -5,7 +5,7 @@ DOCKER_IMAGE := uber/yarpc-go-$(DOCKER_GO_VERSION)
 ifdef DOCKER_HOST
 DOCKER_BUILD_FLAGS ?= --compress
 endif
-DOCKER_RUN_FLAGS ?= -e V -e RUN -e SERVICE_TEST_FLAGS
+DOCKER_RUN_FLAGS ?= -e V -e RUN
 
 .PHONY: deps
 deps: $(DOCKER) ## install all dependencies
