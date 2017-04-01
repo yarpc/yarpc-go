@@ -5,6 +5,7 @@ jobs:
       - image: golang:1.8.0
         environment:
           - SUPPRESS_CROSSDOCK: 1
+          - DOCKER_GO_VERSION: 1.8
           - CI_TYPES: lint test
     working_directory: /go/src/go.uber.org/yarpc
     steps:
