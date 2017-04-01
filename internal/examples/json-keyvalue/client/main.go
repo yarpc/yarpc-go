@@ -78,13 +78,13 @@ func (requestLogOutboundMiddleware) Call(
 }
 
 func main() {
+	log.Printf("Inside %v", os.Args)
 	if err := do(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func do() error {
-	log.Println("XXXXXX TEST")
 	outboundName := ""
 	flag.StringVar(
 		&outboundName,
@@ -120,11 +120,9 @@ func do() error {
 			Unary: yarpc.UnaryOutboundMiddleware(requestLogOutboundMiddleware{}),
 		},
 	})
-	log.Println("XXXXXXX STARTING")
 	if err := dispatcher.Start(); err != nil {
 		return fmt.Errorf("failed to start Dispatcher: %v", err)
 	}
-	log.Println("XXXXXXX STARTED")
 	defer dispatcher.Stop()
 
 	client := json.New(dispatcher.ClientConfig("keyvalue"))
