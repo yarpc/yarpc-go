@@ -154,12 +154,12 @@ func (o *outbounds) Decode(into decode.Into) error {
 
 	hasUnary, err := attrs.Pop("unary", &o.Unary)
 	if err != nil {
-		return fmt.Errorf("failed to unary outbound configuration: %v", err)
+		return fmt.Errorf("failed to read unary outbound configuration: %v", err)
 	}
 
 	hasOneway, err := attrs.Pop("oneway", &o.Oneway)
 	if err != nil {
-		return fmt.Errorf("failed to oneway outbound configuration: %v", err)
+		return fmt.Errorf("failed to read oneway outbound configuration: %v", err)
 	}
 
 	if hasUnary || hasOneway {

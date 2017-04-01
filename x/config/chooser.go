@@ -48,12 +48,12 @@ func (c *ChooserConfig) Decode(into decode.Into) error {
 
 	err = into(&c.Etc)
 	if err != nil {
-		return fmt.Errorf(`could not decode misc attributes of outbound peer list bind and choose config: %v`, err)
+		return fmt.Errorf(`could not decode attributes of outbound peer list chooser and updater config: %v`, err)
 	}
 
 	c.With, err = c.Etc.PopString("with")
 	if err != nil {
-		return fmt.Errorf(`could not decode outbound peer list binder config, "with": %v`, err)
+		return fmt.Errorf(`could not decode outbound peer list updater config, "with": %v`, err)
 	}
 
 	c.Choose, err = c.Etc.PopString("choose")
@@ -75,7 +75,7 @@ func (c *ChooserConfig) Decode(into decode.Into) error {
 }
 
 // BuildChooser translates a chooser configuration into a peer chooser, backed
-// by a peer list bound to a peer list binder.
+// by a peer list bound to a peer list updater.
 func (c ChooserConfig) BuildChooser(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
 	// Establish a peer selection strategy.
 
@@ -101,7 +101,7 @@ func (c ChooserConfig) BuildChooser(transport peer.Transport, identify func(stri
 	}
 
 	// All multi-peer lists may combine a peer chooser/list (for sharding or
-	// load-balancing) and binder (a static or dynamic source of peer
+	// load-balancing) and updater (a static or dynamic source of peer
 	// addresses).
 
 	// Build a peer list for a peer selection strategy, like round-robin or
@@ -112,8 +112,8 @@ func (c ChooserConfig) BuildChooser(transport peer.Transport, identify func(stri
 		return nil, err
 	}
 
-	// Build a peer list binder, using "peer", "peers", or "with" a custom peer
-	// binder.
+	// Build a peer list updater, using "peer", "peers", or "with" a custom
+	// peer updater.
 	binder, err := c.BuildBinder(transport, identify, kit)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (c ChooserConfig) BuildChooser(transport peer.Transport, identify func(stri
 
 // BuildList translates a peer chooser configuration to a peer list / peer
 // chooser, suitable for a peer selection strategy.  The list will be empty
-// until updated with a peer list binder.
+// until updated with a peer list updater.
 func (c ChooserConfig) BuildList(transport peer.Transport, kit *Kit) (peer.ChooserList, error) {
 	switch c.Choose {
 	case "":
@@ -144,9 +144,8 @@ func (c ChooserConfig) BuildList(transport peer.Transport, kit *Kit) (peer.Choos
 	return chooserSpec.NewChooser(), nil
 }
 
-// BuildBinder translates a chooser configuration to a peer list binder. The
-// binder is suitable for getting updates for the contents of a peer list, but
-// not for selecting peers.
+// BuildBinder translates a chooser configuration to a peer list binder.
+// The binder is responsible for binding a peer list with a peer list updater.
 func (c ChooserConfig) BuildBinder(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
 	// Establish peers to bind.
 
@@ -175,7 +174,7 @@ func (c ChooserConfig) BuildBinder(transport peer.Transport, identify func(strin
 
 	binderBuilder, err := binderSpec.Binder.Decode(c.Etc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(`unrecognized attributes for outbound peer list/chooser config: %v`, err)
 	}
 
 	result, err := binderBuilder.Build(kit)

@@ -113,14 +113,14 @@ func (b *builder) Build() (yarpc.Config, error) {
 		if o := c.Unary; o != nil {
 			ob.Unary, err = buildUnaryOutbound(o.Value, transports[o.Transport], b.kit)
 			if err != nil {
-				errs = append(errs, err)
+				errs = append(errs, fmt.Errorf("failed to configure unary outbound for service %q over transport %q: %v", ccname, o.Transport, err))
 				continue
 			}
 		}
 		if o := c.Oneway; o != nil {
 			ob.Oneway, err = buildOnewayOutbound(o.Value, transports[o.Transport], b.kit)
 			if err != nil {
-				errs = append(errs, err)
+				errs = append(errs, fmt.Errorf("failed to configure oneway outbound for service %q over transport %q: %v", ccname, o.Transport, err))
 				continue
 			}
 		}

@@ -24,11 +24,10 @@ v1.7.0 (2017-03-20)
     for more information.
 -	tchannel: mask existing procedures with provided procedures.
 -   Adds a peer.Bind function that takes a peer.ChooserList and a binder
-    (anything that binds a peer list to a peer provider and returns the
-    Lifecycle of the binding), and returns a peer.Chooser that combines
-    the lifecycle of the peer list and its bound peer provider.
-    The peer chooser is suitable for passing to an outbound constructor,
-    capturing the lifecycle of its dependencies.
+    (anything that binds a peer list to a peer list updater), and returns a
+    peer.Chooser that combines the lifecycle of the peer list and its bound
+    peer list updater.  The peer chooser is suitable for passing to an outbound
+    constructor, capturing the lifecycle of its dependencies.
 -   Adds a peer.ChooserList interface to the API, for convenience when passing
     instances with both capabilities (suitable for outbounds, suitable for peer
     providers).

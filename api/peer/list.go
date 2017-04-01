@@ -60,9 +60,9 @@ type ListUpdates struct {
 }
 
 // Binder is a callback for peer.Bind that accepts a peer list and binds it to
-// a peer provider for the duration of the returned lifecycle.
-// The lifecycle that the binder returns should start and stop binding peers to
-// the list.
+// a peer provider for the duration of the returned peer list updater.
+// The peer list updater must impelemtn the lifecycle interface, and start and
+// stop updates over that lifecycle.
 // The binder must not block on updating the list, because that will typically
 // block until the peer list has started. The binder must arrange for
 // the first list update to occur when the returned lifecycle starts.
