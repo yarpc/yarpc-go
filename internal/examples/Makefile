@@ -1,4 +1,3 @@
-SERVICE_TEST_FLAGS :=
 ifdef RUN
 SERVICE_TEST_FLAGS += --no-verify-output
 endif

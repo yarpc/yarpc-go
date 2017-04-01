@@ -68,15 +68,15 @@ func (h *handler) SetValue(ctx context.Context, key *string, value *string) erro
 
 func main() {
 	flag.Parse()
-	go func() {
-		if err := gohttp.ListenAndServe(":3242", nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
 	var inbound transport.Inbound
 	switch strings.ToLower(*flagInbound) {
 	case "http":
 		inbound = http.NewTransport().NewInbound(":24042")
+		go func() {
+			if err := gohttp.ListenAndServe(":3242", nil); err != nil {
+				log.Fatal(err)
+			}
+		}()
 	case "tchannel":
 		tchannelTransport, err := tchannel.NewChannelTransport(
 			tchannel.ServiceName("keyvalue"),
@@ -86,8 +86,18 @@ func main() {
 			log.Fatal(err)
 		}
 		inbound = tchannelTransport.NewInbound()
+		go func() {
+			if err := gohttp.ListenAndServe(":3243", nil); err != nil {
+				log.Fatal(err)
+			}
+		}()
 	case "grpc":
 		inbound = grpc.NewInbound(":24046")
+		go func() {
+			if err := gohttp.ListenAndServe(":3244", nil); err != nil {
+				log.Fatal(err)
+			}
+		}()
 	default:
 		log.Fatalf("invalid inbound: %q\n", *flagInbound)
 	}

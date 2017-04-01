@@ -6,6 +6,7 @@
 *.t.err
 /.tmp
 /.cache
+/.glide
 /cover
 /cover.html
 /cover.out
