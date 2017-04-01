@@ -78,6 +78,13 @@ func (requestLogOutboundMiddleware) Call(
 }
 
 func main() {
+	if err := do(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do() error {
+	log.Println("XXXXXX TEST")
 	outboundName := ""
 	flag.StringVar(
 		&outboundName,
@@ -89,7 +96,7 @@ func main() {
 	httpTransport := http.NewTransport()
 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("keyvalue-client"))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var outbound transport.UnaryOutbound
@@ -97,9 +104,9 @@ func main() {
 	case "http":
 		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:24034")
 	case "tchannel":
-		outbound = tchannelTransport.NewSingleOutbound("localhost:28941")
+		outbound = tchannelTransport.NewSingleOutbound("127.0.0.1:28941")
 	default:
-		log.Fatalf("invalid outbound: %q\n", outboundName)
+		return fmt.Errorf("invalid outbound: %q\n", outboundName)
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -113,9 +120,11 @@ func main() {
 			Unary: yarpc.UnaryOutboundMiddleware(requestLogOutboundMiddleware{}),
 		},
 	})
+	log.Println("XXXXXXX STARTING")
 	if err := dispatcher.Start(); err != nil {
-		log.Fatalf("failed to start Dispatcher: %v", err)
+		return fmt.Errorf("failed to start Dispatcher: %v", err)
 	}
+	log.Println("XXXXXXX STARTED")
 	defer dispatcher.Stop()
 
 	client := json.New(dispatcher.ClientConfig("keyvalue"))
@@ -165,15 +174,11 @@ func main() {
 			continue
 
 		case "exit":
-			return
+			return nil
 
 		default:
-			fmt.Println("invalid command", cmd)
-			fmt.Println("valid commansd are: get, set, exit")
+			return fmt.Errorf("invalid command, valid commands are: get, set, exit: %s", cmd)
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Println("error:", err.Error())
-	}
+	return scanner.Err()
 }

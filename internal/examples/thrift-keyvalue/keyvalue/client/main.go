@@ -39,6 +39,12 @@ import (
 )
 
 func main() {
+	if err := do(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do() error {
 	outboundName := ""
 	flag.StringVar(
 		&outboundName,
@@ -50,7 +56,7 @@ func main() {
 	httpTransport := http.NewTransport()
 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("keyvalue-client"))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var outbound transport.UnaryOutbound
@@ -58,9 +64,9 @@ func main() {
 	case "http":
 		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:24035")
 	case "tchannel":
-		outbound = tchannelTransport.NewSingleOutbound("localhost:28942")
+		outbound = tchannelTransport.NewSingleOutbound("127.0.0.1:28942")
 	default:
-		log.Fatalf("invalid outbound: %q\n", outboundName)
+		return fmt.Errorf("invalid outbound: %q\n", outboundName)
 	}
 
 	cache := NewCacheOutboundMiddleware()
@@ -76,7 +82,7 @@ func main() {
 		},
 	})
 	if err := dispatcher.Start(); err != nil {
-		log.Fatalf("failed to start Dispatcher: %v", err)
+		return fmt.Errorf("failed to start Dispatcher: %v", err)
 	}
 	defer dispatcher.Stop()
 
@@ -130,15 +136,11 @@ func main() {
 			continue
 
 		case "exit":
-			return
+			return nil
 
 		default:
-			fmt.Println("invalid command", cmd)
-			fmt.Println("valid commansd are: get, set, exit")
+			fmt.Println("invalid command, valid commansd are: get, set, exit: %s", cmd)
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Println("error:", err.Error())
-	}
+	return scanner.Err()
 }

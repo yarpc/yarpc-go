@@ -6,7 +6,7 @@ LINT_EXCLUDES_EXTRAS =
 GOVET_IGNORE_RULES = \
 	possible formatting directive in Error call
 
-ERRCHECK_FLAGS ?= -ignoretests
+ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
@@ -104,10 +104,9 @@ lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verify
 test: $(THRIFTRW) __eval_packages ## run all tests
 	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
 
-
 .PHONY: cover
 cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and output code coverage
-	SUPPRESS_COVER_PARALLEL=$(SUPPRESS_COVER_PARALLEL) PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
+	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: goveralls
@@ -116,7 +115,7 @@ goveralls: cover $(GOVERALLS) ## run code coverage and upload to coveralls
 
 .PHONY: examples
 examples: ## run all examples tests
-	RUN=$(RUN) SERVICE_TEST_FLAGS=$(SERVICE_TEST_FLAGS) $(MAKE) -C internal/examples
+	RUN=$(RUN) V=$(V) $(MAKE) -C internal/examples
 
 .PHONY: __eval_packages
 __eval_packages:

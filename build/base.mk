@@ -1,12 +1,12 @@
-PWD := $(shell pwd)
 UNAME_OS := $(shell uname -s)
 UNAME_ARCH := $(shell uname -m)
 
-CACHE_DIR := $(PWD)/.cache
-TMP_DIR := $(PWD)/.tmp
+CACHE_BASE := $(HOME)/.yarpc-go
+CACHE := $(CACHE_BASE)/$(UNAME_OS)/$(UNAME_ARCH)
 
-BIN = $(CACHE_DIR)/$(UNAME_OS)/$(UNAME_ARCH)/bin
+LIB := $(CACHE)/lib
+BIN = $(CACHE)/bin
 
 .PHONY: clean
 clean: ## remove installed binaries and artifacts
-	rm -rf $(TMP_DIR) $(CACHE_DIR)
+	rm -rf $(CACHE_BASE)

@@ -1,0 +1,20 @@
+DOCKER_COMPOSE_VERSION := 1.10.0
+DOCKER_COMPOSE_OS := $(UNAME_OS)
+DOCKER_COMPOSE_ARCH := $(UNAME_ARCH)
+
+DOCKER_COMPOSE_LIB = $(LIB)/docker-compose-$(DOCKER_COMPOSE_VERSION)
+DOCKER_COMPOSE_BIN = $(DOCKER_COMPOSE_LIB)/docker-compose
+DOCKER_COMPOSE = $(BIN)/docker-compose
+
+$(DOCKER_COMPOSE_BIN):
+	@mkdir -p $(DOCKER_COMPOSE_LIB)
+	curl -L "https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-$(DOCKER_COMPOSE_OS)-$(DOCKER_COMPOSE_ARCH)" > $(DOCKER_COMPOSE_BIN)
+
+
+$(DOCKER_COMPOSE): $(DOCKER_COMPOSE_BIN)
+	@mkdir -p $(BIN)
+	cp $(DOCKER_COMPOSE_BIN) $(DOCKER_COMPOSE)
+	@chmod +x $(DOCKER_COMPOSE)
+
+.PHONY: crossdock-predeps
+crossdock-predeps: $(GLIDE) $(DOCKER_COMPOSE)

@@ -127,7 +127,7 @@ func doClient(
 		case "exit":
 			return nil
 		default:
-			fmt.Printf("invalid command: %s\nvalid commands are: get, set, fire, fired-values, exit\n", cmd)
+			return fmt.Errorf("invalid command, valid commands are: get, set, fire, fired-values, exit: %s", cmd)
 		}
 	}
 	return scanner.Err()
