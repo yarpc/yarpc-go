@@ -77,8 +77,14 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 		return err
 	}
 
+	stdout := newLockedBuffer()
 	stderr := newLockedBuffer()
 	defer func() {
+		if !verifyOutput || err != nil {
+			if data := stdout.Bytes(); len(data) > 0 {
+				fmt.Print(string(data))
+			}
+		}
 		if data := stderr.Bytes(); len(data) > 0 {
 			fmt.Print(string(data))
 		}
@@ -88,6 +94,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 		return err
 	}
 	clientCmd.Dir = contextDir
+	clientCmd.Stdout = stdout
 	clientCmd.Stderr = stderr
 	var serverCmd *exec.Cmd
 	if config.ServerCommand != "" {
@@ -96,6 +103,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 			return err
 		}
 		serverCmd.Dir = contextDir
+		serverCmd.Stdout = stdout
 		serverCmd.Stderr = stderr
 	}
 	defer cleanupCmds(clientCmd, serverCmd)
@@ -109,19 +117,12 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	}()
 
 	inputBuffer := bytes.NewBuffer(nil)
-	clientCmd.Stdin = inputBuffer
-	outputBuffer := newLockedBuffer()
-	if verifyOutput {
-		if serverCmd != nil {
-			serverCmd.Stdout = outputBuffer
-		}
-		clientCmd.Stdout = outputBuffer
-	}
 	if config.Input != "" {
 		if _, err := inputBuffer.Write([]byte(config.Input)); err != nil {
 			return err
 		}
 	}
+	clientCmd.Stdin = inputBuffer
 
 	errC := make(chan error)
 	go func() {
@@ -163,15 +164,13 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	select {
 	case err := <-errC:
 		if err != nil {
-			fmt.Print(string(outputBuffer.Bytes()))
 			return err
 		}
 	case <-time.After(timeout):
-		fmt.Print(string(outputBuffer.Bytes()))
 		return fmt.Errorf("client timed out after %v", timeout)
 	}
 	if verifyOutput {
-		output := cleanOutput(string(outputBuffer.Bytes()))
+		output := cleanOutput(string(stdout.Bytes()))
 		expectedOutput := cleanOutput(config.Output)
 		if output != expectedOutput {
 			return fmt.Errorf("expected\n%s\ngot\n%s", expectedOutput, output)
