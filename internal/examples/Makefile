@@ -27,7 +27,7 @@ json-keyvalue-tchannel: install build-json-keyvalue
 	TRANSPORT=tchannel $(SERVICE_TEST) --dir json-keyvalue
 
 .PHONY: protobuf
-protobuf: install build-protobuf
+protobuf: install
 	go build -o protobuf/protobuf protobuf/main.go
 	$(SERVICE_TEST) --dir protobuf
 

@@ -78,7 +78,6 @@ func (requestLogOutboundMiddleware) Call(
 }
 
 func main() {
-	log.Printf("Inside %v", os.Args)
 	if err := do(); err != nil {
 		log.Fatal(err)
 	}
