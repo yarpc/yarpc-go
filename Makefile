@@ -1,5 +1,6 @@
 include build/base.mk
 ifndef SUPPRESS_DOCKER
+include build/dockerdeps.mk
 include build/docker.mk
 else
 include build/deps.mk
@@ -11,9 +12,6 @@ include build/crossdock.mk
 endif
 ifdef TRAVIS
 include build/travis.mk
-endif
-ifdef CIRCLECI
-include build/circleci.mk
 endif
 
 CI_TYPES ?= lint test examples
