@@ -139,7 +139,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 				<-time.After(sleepDuration)
 			}
 		}
-		debugPrintf("Starting %s", clientCmd)
+		debugPrintf("Starting %s", cmdString(clientCmd))
 		if err := clientCmd.Start(); err != nil {
 			errC <- fmt.Errorf("error starting client: %v", err)
 			return
@@ -172,15 +172,15 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 	return nil
 }
 
-func getCmd(cmdString string) (*exec.Cmd, error) {
+func getCmd(argsString string) (*exec.Cmd, error) {
 	parser := shellwords.NewParser()
 	parser.ParseEnv = true
-	args, err := parser.Parse(cmdString)
+	args, err := parser.Parse(argsString)
 	if err != nil {
 		return nil, err
 	}
 	if len(args) == 0 {
-		return nil, fmt.Errorf("Command %s evaulated to empty", cmdString)
+		return nil, fmt.Errorf("Command %s evaulated to empty", argsString)
 	}
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
@@ -198,7 +198,7 @@ func cleanupCmds(cmds ...*exec.Cmd) {
 
 func killCmd(cmd *exec.Cmd) {
 	if cmd != nil && cmd.Process != nil {
-		debugPrintf("Killing %+v", cmd)
+		debugPrintf("Killing %s", cmdString(cmd))
 		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
@@ -278,8 +278,9 @@ func debugPrintf(format string, args ...interface{}) {
 }
 
 func cmdString(cmd *exec.Cmd) string {
-	if len(cmd.Args) == 0 {
-		return cmd.Path
-	}
-	return strings.Join(cmd.Args, " ")
+	//if len(cmd.Args) == 0 {
+	//return cmd.Path
+	//}
+	//return strings.Join(cmd.Args, " ")
+	return fmt.Sprintf("%+v", cmd)
 }
