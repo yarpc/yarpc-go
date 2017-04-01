@@ -84,6 +84,7 @@ func main() {
 }
 
 func do() error {
+	log.Println("XXXXXX TEST")
 	outboundName := ""
 	flag.StringVar(
 		&outboundName,
