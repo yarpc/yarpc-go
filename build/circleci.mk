@@ -13,7 +13,7 @@ $(DOCKER_TAR):
 $(DOCKER): $(DOCKER_TAR)
 	@mkdir -p $(BIN)
 	cd $(DOCKER_LIB); tar xzf $(DOCKER_TAR)
-	cp $(DOCKER_LIB)/docker $(DOCKER)
+	cp $(DOCKER_LIB)/docker/docker $(DOCKER)
 
 .PHONY: circleci-deps
 circleci-deps: $(DOCKER)
