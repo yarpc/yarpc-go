@@ -58,7 +58,7 @@ func main() {
 	case "http":
 		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:24035")
 	case "tchannel":
-		outbound = tchannelTransport.NewSingleOutbound("localhost:28942")
+		outbound = tchannelTransport.NewSingleOutbound("127.0.0.1:28942")
 	default:
 		log.Fatalf("invalid outbound: %q\n", outboundName)
 	}

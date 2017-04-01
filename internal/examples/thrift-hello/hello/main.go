@@ -49,7 +49,7 @@ func main() {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
-			http.NewInbound(":8086"),
+			http.NewInbound("127.0.0.1:8086"),
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
