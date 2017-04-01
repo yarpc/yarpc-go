@@ -77,11 +77,18 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 		return err
 	}
 
+	stderr := newLockedBuffer()
+	defer func() {
+		if data := stderr.Bytes(); len(data) > 0 {
+			fmt.Print(string(data))
+		}
+	}()
 	clientCmd, err := getCmd(config.ClientCommand)
 	if err != nil {
 		return err
 	}
 	clientCmd.Dir = contextDir
+	clientCmd.Stderr = stderr
 	var serverCmd *exec.Cmd
 	if config.ServerCommand != "" {
 		serverCmd, err = getCmd(config.ServerCommand)
@@ -89,6 +96,7 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 			return err
 		}
 		serverCmd.Dir = contextDir
+		serverCmd.Stderr = stderr
 	}
 	defer cleanupCmds(clientCmd, serverCmd)
 	signalC := make(chan os.Signal, 1)
