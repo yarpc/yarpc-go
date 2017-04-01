@@ -32,29 +32,39 @@ import (
 
 // Bind couples a peer list with a peer provider.
 // The peer provider must produce a binder that takes the peer list and returns
-// a lifecycle for the duration of the binding.
+// a lifecycle for the duration of the peer list updater.
 func Bind(chooserList peer.ChooserList, bind peer.Binder) *BoundChooser {
 	return &BoundChooser{
-		once:    intsync.Once(),
-		binding: bind(chooserList),
-		chooser: chooserList,
+		once:        intsync.Once(),
+		chooserList: chooserList,
+		updater:     bind(chooserList),
 	}
 }
 
 // BoundChooser is a peer chooser that couples a peer list and a peer provider
 // for the duration of its lifecycle.
 type BoundChooser struct {
-	once    intsync.LifecycleOnce // the lifecycle of the bound peer chooser+provider
-	binding transport.Lifecycle   // the lifecycle of the peer provider
-	chooser peer.Chooser          // the peer chooser and the lifecycle of the peer chooser
+	once        intsync.LifecycleOnce // the lifecycle of the bound peer chooser+provider
+	updater     transport.Lifecycle   // the lifecycle of the peer provider
+	chooserList peer.ChooserList      // the peer chooser and the lifecycle of the peer chooser
+}
+
+// Updater reveals the object maintaining the updater.
+func (c *BoundChooser) Updater() transport.Lifecycle {
+	return c.updater
+}
+
+// ChooserList reveals the object maintaining the peer list and making peer choices.
+func (c *BoundChooser) ChooserList() peer.ChooserList {
+	return c.chooserList
 }
 
 // Choose returns a peer from the bound peer list.
 func (c *BoundChooser) Choose(ctx context.Context, treq *transport.Request) (peer peer.Peer, onFinish func(error), err error) {
-	return c.chooser.Choose(ctx, treq)
+	return c.chooserList.Choose(ctx, treq)
 }
 
-// Start starts the peer list and the peer provider binding.
+// Start starts the peer list and the peer list updater.
 func (c *BoundChooser) Start() error {
 	return c.once.Start(c.start)
 }
@@ -62,15 +72,15 @@ func (c *BoundChooser) Start() error {
 func (c *BoundChooser) start() error {
 	var errs errors.ErrorGroup
 
-	if err := c.chooser.Start(); err != nil {
+	if err := c.chooserList.Start(); err != nil {
 		return err
 	}
 
-	if err := c.binding.Start(); err != nil {
+	if err := c.updater.Start(); err != nil {
 		errs = append(errs, err)
 
-		// Abort the peer chooser if the binding failed to start.
-		if err := c.chooser.Stop(); err != nil {
+		// Abort the peer chooser if the updater failed to start.
+		if err := c.chooserList.Stop(); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -78,7 +88,7 @@ func (c *BoundChooser) start() error {
 	return errors.CombineErrors(errs...)
 }
 
-// Stop stops the peer list and the peer provider binding.
+// Stop stops the peer list and the peer provider updater.
 func (c *BoundChooser) Stop() error {
 	return c.once.Stop(c.stop)
 }
@@ -86,27 +96,27 @@ func (c *BoundChooser) Stop() error {
 func (c *BoundChooser) stop() error {
 	var errs errors.ErrorGroup
 
-	if err := c.binding.Stop(); err != nil {
+	if err := c.updater.Stop(); err != nil {
 		errs = append(errs, err)
 	}
 
-	if err := c.chooser.Stop(); err != nil {
+	if err := c.chooserList.Stop(); err != nil {
 		errs = append(errs, err)
 	}
 
 	return errors.CombineErrors(errs...)
 }
 
-// IsRunning returns whether the peer list and its peer provider binding are
+// IsRunning returns whether the peer list and its peer provider updater are
 // both running, regardless of whether they should be running according to the
 // bound chooser's lifecycle.
 func (c *BoundChooser) IsRunning() bool {
-	return c.chooser.IsRunning() && c.binding.IsRunning()
+	return c.chooserList.IsRunning() && c.updater.IsRunning()
 }
 
 // Introspect introspects the bound chooser.
 func (c *BoundChooser) Introspect() introspection.ChooserStatus {
-	if ic, ok := c.chooser.(introspection.IntrospectableChooser); ok {
+	if ic, ok := c.chooserList.(introspection.IntrospectableChooser); ok {
 		return ic.Introspect()
 	}
 	return introspection.ChooserStatus{}
@@ -117,7 +127,7 @@ func (c *BoundChooser) Introspect() introspection.ChooserStatus {
 // lifecycle.
 func BindPeers(ids []peer.Identifier) peer.Binder {
 	return func(pl peer.List) transport.Lifecycle {
-		return &peersBinder{
+		return &PeersUpdater{
 			once: intsync.Once(),
 			pl:   pl,
 			ids:  ids,
@@ -125,32 +135,36 @@ func BindPeers(ids []peer.Identifier) peer.Binder {
 	}
 }
 
-type peersBinder struct {
+// PeersUpdater binds a fixed list of peers to a peer list.
+type PeersUpdater struct {
 	once intsync.LifecycleOnce
 	pl   peer.List
 	ids  []peer.Identifier
 }
 
-func (s *peersBinder) Start() error {
+// Start adds a list of fixed peers to a peer list.
+func (s *PeersUpdater) Start() error {
 	return s.once.Start(s.start)
 }
 
-func (s *peersBinder) start() error {
+func (s *PeersUpdater) start() error {
 	return s.pl.Update(peer.ListUpdates{
 		Additions: s.ids,
 	})
 }
 
-func (s *peersBinder) Stop() error {
+// Stop removes a list of fixed peers from a peer list.
+func (s *PeersUpdater) Stop() error {
 	return s.once.Stop(s.stop)
 }
 
-func (s *peersBinder) stop() error {
+func (s *PeersUpdater) stop() error {
 	return s.pl.Update(peer.ListUpdates{
 		Removals: s.ids,
 	})
 }
 
-func (s *peersBinder) IsRunning() bool {
+// IsRunning returns whether the peers have been added and not removed.
+func (s *PeersUpdater) IsRunning() bool {
 	return s.once.IsRunning()
 }
