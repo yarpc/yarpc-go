@@ -66,6 +66,12 @@ func (h *handler) SetValue(ctx context.Context, key *string, value *string) erro
 }
 
 func main() {
+	if err := do(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do() error {
 	flag.Parse()
 	var inbound transport.Inbound
 	switch strings.ToLower(*flagInbound) {
@@ -82,7 +88,7 @@ func main() {
 			tchannel.ListenAddr("127.0.0.1:28942"),
 		)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		inbound = tchannelTransport.NewInbound()
 		go func() {
@@ -91,7 +97,7 @@ func main() {
 			}
 		}()
 	default:
-		log.Fatalf("invalid inbound: %q\n", *flagInbound)
+		return fmt.Errorf("invalid inbound: %q\n", *flagInbound)
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -105,8 +111,9 @@ func main() {
 	yarpcmeta.Register(dispatcher)
 
 	if err := dispatcher.Start(); err != nil {
-		fmt.Println("error:", err.Error())
+		return err
 	}
 
 	select {} // block forever
+	return nil
 }

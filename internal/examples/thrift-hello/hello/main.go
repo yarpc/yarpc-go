@@ -41,6 +41,12 @@ import (
 var flagWait = flag.Bool("wait", false, "Wait for a signal to exit")
 
 func main() {
+	if err := do(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do() error {
 	flag.Parse()
 	// configure a YARPC dispatcher for the service "hello",
 	// expose the service over an HTTP inbound on port 8086,
@@ -65,7 +71,7 @@ func main() {
 
 	// start the dispatcher, which enables requests to be sent and received
 	if err := dispatcher.Start(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer dispatcher.Stop()
 
@@ -80,7 +86,7 @@ func main() {
 	// use the Thrift client to call the Echo procedure using YARPC
 	res, err := client.Echo(ctx, &echo.EchoRequest{Message: "Hello world", Count: 1})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(res)
 
@@ -92,6 +98,7 @@ func main() {
 		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 		<-signals
 	}
+	return nil
 }
 
 type helloHandler struct{}
