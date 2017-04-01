@@ -5,12 +5,26 @@ jobs:
       - image: golang:1.8.0
         environment:
           - SUPPRESS_CROSSDOCK: 1
-          - DOCKER_GO_VERSION: 1.8
-          - CI_TYPES: lint test
+    parallelism: 2
     working_directory: /go/src/go.uber.org/yarpc
     steps:
       - checkout
       - setup_remote_docker:
           reusable: true
           exclusive: false
-      - run: make ci
+      - restore_cache:
+          key: yarpc-go
+      - run:
+          command: make ci
+          environment:
+            - DOCKER_GO_VERSION: 1.7
+            - CI_TYPES: test
+      - run:
+          command: make ci
+          environment:
+            - DOCKER_GO_VERSION: 1.8
+            - CI_TYPES: lint test
+      - save_cache:
+          key: yarpc-go
+          paths:
+            - $HOME/.yarpc-go
