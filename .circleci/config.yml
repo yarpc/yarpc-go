@@ -2,12 +2,22 @@ version: 2
 jobs:
   build:
     docker:
-      - image: docker:17.03.1-ce
+      - image: golang:1.8.0
         environment:
           - SUPPRESS_CROSSDOCK: 1
           - CI_TYPES: lint test examples
-    working_directory: /app
+    working_directory: /go/src/go.uber.org/yarpc
     steps:
       - checkout
       - setup_remote_docker
-      - run: make ci
+      - run:
+          name: Install Docker client
+          command: |
+            set -ex
+            VER="17.03.1-ce"
+            curl -L -o /tmp/docker-$VER.tgz https://get.docker.com/builds/Linux/x86_64/docker-$VER.tgz
+            tar -xz -C /tmp -f /tmp/docker-$VER.tgz
+            mv /tmp/docker/* /usr/bin
+      - run:
+          name: Run continuous integration steps
+          command: make ci
