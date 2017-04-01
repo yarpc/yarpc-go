@@ -12,6 +12,9 @@ endif
 ifdef TRAVIS
 include build/travis.mk
 endif
+ifdef CIRCLECI
+include build/circleci.mk
+endif
 
 CI_TYPES ?= lint test examples
 ifndef SUPRESS_CROSSDOCK
