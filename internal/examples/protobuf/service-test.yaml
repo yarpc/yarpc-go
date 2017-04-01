@@ -1,4 +1,4 @@
-client_command: go run main.go
+client_command: ./protobuf
 input: |
   get foo
   get foo
