@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: golang:1.8.0
     parallelism: 3
-    working_directory: /app
+    working_directory: /yarpc-go
     steps:
       - checkout
       - setup_remote_docker:
@@ -12,6 +12,11 @@ jobs:
           exclusive: false
       - restore_cache:
           key: yarpc-go
+      - run:
+          name: crossdock
+          command: make ci
+          environment:
+            - CI_TYPES: crossdock
       - run:
           name: 1.8 examples lint test
           command: make ci
@@ -24,11 +29,6 @@ jobs:
           environment:
             - CI_TYPES: examples cover
             - DOCKER_GO_VERSION: 1.7
-      - run:
-          name: crossdock
-          command: make ci
-          environment:
-            - CI_TYPES: crossdock
       - save_cache:
           key: yarpc-go
           paths:

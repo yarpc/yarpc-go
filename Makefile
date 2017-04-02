@@ -34,7 +34,7 @@ endif
 .PHONY: ci
 ci: __print_ci $(CI_TYPES) ## run continuous integration tasks
 ifdef CI_CROSSDOCK
-	$(MAKE) crossdock || ($(MAKE) crossdock-logs && false)
+	$(MAKE) crossdock-fresh || ($(MAKE) crossdock-logs && false)
 endif
 
 .PHONY: help
