@@ -35,13 +35,8 @@ var (
 	flagDir            = flag.String("dir", "", "The relative directory to operate from, defaults to current directory")
 	flagConfigFilePath = flag.String("file", "service-test.yaml", "The configuration file to use relative to the context directory")
 	flagTimeout        = flag.Duration("timeout", 5*time.Second, "The time to wait until timing out")
-<<<<<<< HEAD
-	flagNoVerifyOutput = flag.Bool("no-verify-output", false, "Do not verify output and just run the commands")
-	flagVerbose        = flag.Bool("verbose", false, "Enable verbose logging")
-=======
 	flagNoVerifyOutput = flag.Bool("no-validate-output", false, "Do not validate output and just run the commands")
 	flagDebug          = flag.Bool("debug", false, "Log debug information")
->>>>>>> dev
 
 	errSignal = errors.New("signal")
 )
@@ -81,38 +76,7 @@ func do(
 	}()
 
 	errC := make(chan error)
-<<<<<<< HEAD
-	go func() {
-		if serverCmd != nil {
-			logCmd(serverCmd)
-			if err := serverCmd.Start(); err != nil {
-				errC <- fmt.Errorf("error starting server: %v", err)
-				return
-			}
-			// kind of weird that we can timeout too
-			// maybe add this to the timeout
-			if config.SleepBeforeClientMs != 0 {
-				<-time.After(time.Duration(config.SleepBeforeClientMs) * time.Millisecond)
-			}
-		}
-		logCmd(clientCmd)
-		if err := clientCmd.Start(); err != nil {
-			errC <- fmt.Errorf("error starting client: %v", err)
-			return
-		}
-		if err := clientCmd.Wait(); err != nil {
-			errC <- fmt.Errorf("error on client wait: %v", err)
-			return
-		}
-		if serverCmd != nil {
-			killCmd(serverCmd)
-			_ = serverCmd.Wait()
-		}
-		errC <- nil
-	}()
-=======
 	go func() { errC <- runCmds(cmds) }()
->>>>>>> dev
 	select {
 	case err := <-errC:
 		if err != nil {
@@ -135,35 +99,11 @@ func newCmds(configFilePath string, dir string, debug bool) ([]*cmd, error) {
 	return config.Cmds(dir, debug)
 }
 
-<<<<<<< HEAD
-func cleanupCmds(cmds ...*exec.Cmd) {
-	for _, cmd := range cmds {
-		killCmd(cmd)
-	}
-}
-
-func killCmd(cmd *exec.Cmd) {
-	if cmd != nil && cmd.Process != nil {
-		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	}
-}
-
-func logCmd(cmd *exec.Cmd) {
-	verboseLogPrintf("%s %s", cmd.Path, strings.Join(cmd.Args, " "))
-}
-
-func validateRequiredEnvVars(requiredEnvVars []string) error {
-	for _, requiredEnvVar := range requiredEnvVars {
-		if os.Getenv(requiredEnvVar) == "" {
-			return fmt.Errorf("environment variable %s must be set", requiredEnvVar)
-=======
 func runCmds(cmds []*cmd) error {
 	for i := 0; i < len(cmds)-1; i++ {
 		cmd := cmds[i]
 		if err := cmd.Start(); err != nil {
 			return err
->>>>>>> dev
 		}
 		defer func() {
 			cmd.Kill()

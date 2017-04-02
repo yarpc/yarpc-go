@@ -1,15 +1,8 @@
 ifdef RUN
-<<<<<<< HEAD
-SERVICE_TEST_FLAGS += --no-verify-output
-endif
-ifdef V
-SERVICE_TEST_FLAGS += --verbose
-=======
 SERVICE_TEST_FLAGS += --no-validate-output
 endif
 ifdef V
 SERVICE_TEST_FLAGS += --debug
->>>>>>> dev
 endif
 SERVICE_TEST := service-test $(SERVICE_TEST_FLAGS)
 
