@@ -125,7 +125,7 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) 
 			return nil, err
 		}
 		onewayOutbound = http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
-		unaryOutbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("localhost:%d", port))
+		unaryOutbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
 	case TransportTypeHTTP:
 		httpOutbound := http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", port))
 		onewayOutbound = httpOutbound
@@ -158,7 +158,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 	}
 	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName(config.GetServiceName()),
-		tchannel.ListenAddr(fmt.Sprintf(":%d", tchannelPort)),
+		tchannel.ListenAddr(fmt.Sprintf("127.0.0.1:%d", tchannelPort)),
 	)
 	if err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 			Name: config.GetServiceName(),
 			Inbounds: yarpc.Inbounds{
 				tchannelTransport.NewInbound(),
-				http.NewTransport().NewInbound(fmt.Sprintf(":%d", httpPort)),
+				http.NewTransport().NewInbound(fmt.Sprintf("127.0.0.1:%d", httpPort)),
 			},
 		},
 	)
@@ -221,7 +221,7 @@ func getTransportTypeToPort() (map[TransportType]uint16, error) {
 }
 
 func getFreePort() (uint16, error) {
-	address, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	address, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}

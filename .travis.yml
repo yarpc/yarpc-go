@@ -3,7 +3,8 @@ language: go
 go_import_path: go.uber.org/yarpc
 cache:
   directories:
-    - .cache
+    - $HOME/.yarpc-go
+    - $HOME/.glide
 matrix:
   include:
     - env:
@@ -14,18 +15,12 @@ matrix:
       sudo: required
       services:
         - docker
-    - env: CI_TYPES='goveralls' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.7
-      sudo: required
-      services:
-        - docker
-    - env: CI_TYPES='lint test' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.8
-      sudo: required
-      services:
-        - docker
-    - env: CI_TYPES='examples' SUPPRESS_DOCKER=1 SUPPRESS_CROSSDOCK=1
+    - env: CI_TYPES='deps examples goveralls' SUPPRESS_DOCKER=1 SUPPRESS_CROSSDOCK=1
       go: 1.7
-    - env: CI_TYPES='examples' SUPPRESS_DOCKER=1 SUPPRESS_CROSSDOCK=1
-      go: 1.8
+    - env: CI_TYPES='deps examples lint test' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.8
+      sudo: required
+      services:
+        - docker
 before_install:
   - make travis-docker-load
 script:
