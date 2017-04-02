@@ -2,6 +2,11 @@
 
 set -e
 
+if echo "${GOPATH}" | grep : >/dev/null; then
+  echo "error: GOPATH must be one directory, but has multiple directories separated by colons: ${GOPATH}" >&2
+  exit 1
+fi
+
 start_waitpids() {
   WAITPIDS=
 }
@@ -41,6 +46,9 @@ done
 i=0
 start_waitpids
 for pkg in "$@"; do
+  if ! ls "${GOPATH}/src/${pkg}" | grep _test\.go$ >/dev/null; then
+    continue
+  fi
 	i=$((i + 1))
 
 	extracoverpkg=""
