@@ -1,5 +1,5 @@
 ifdef RUN
-SERVICE_TEST_FLAGS += --no-verify-output
+SERVICE_TEST_FLAGS += --no-validate-output
 endif
 ifdef V
 SERVICE_TEST_FLAGS += --debug

@@ -1,27 +1,28 @@
 required_env_vars:
   - TRANSPORT
-client_command: ./client/client -outbound $TRANSPORT
-server_command: ./server/server -inbound $TRANSPORT
-sleep_before_client_ms: 500
-input: |
-  get foo
-  set foo bar
-  get foo
-  set baz qux
-  get baz
-  exit
-client_output: |
-  sending request "get" to service "keyvalue" (encoding "json")
-  foo =
-  sending request "set" to service "keyvalue" (encoding "json")
-  sending request "get" to service "keyvalue" (encoding "json")
-  foo = bar
-  sending request "set" to service "keyvalue" (encoding "json")
-  sending request "get" to service "keyvalue" (encoding "json")
-  baz = qux
-server_output: |
-  received a request to "get" from client "keyvalue-client" (encoding "json")
-  received a request to "set" from client "keyvalue-client" (encoding "json")
-  received a request to "get" from client "keyvalue-client" (encoding "json")
-  received a request to "set" from client "keyvalue-client" (encoding "json")
-  received a request to "get" from client "keyvalue-client" (encoding "json")
+run:
+  - command: ./server/server -inbound $TRANSPORT
+    sleep_ms: 500
+    output: |
+      received a request to "get" from client "keyvalue-client" (encoding "json")
+      received a request to "set" from client "keyvalue-client" (encoding "json")
+      received a request to "get" from client "keyvalue-client" (encoding "json")
+      received a request to "set" from client "keyvalue-client" (encoding "json")
+      received a request to "get" from client "keyvalue-client" (encoding "json")
+  - command: ./client/client -outbound $TRANSPORT
+    input: |
+      get foo
+      set foo bar
+      get foo
+      set baz qux
+      get baz
+      exit
+    output: |
+      sending request "get" to service "keyvalue" (encoding "json")
+      foo =
+      sending request "set" to service "keyvalue" (encoding "json")
+      sending request "get" to service "keyvalue" (encoding "json")
+      foo = bar
+      sending request "set" to service "keyvalue" (encoding "json")
+      sending request "get" to service "keyvalue" (encoding "json")
+      baz = qux

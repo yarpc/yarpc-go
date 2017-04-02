@@ -1,35 +1,36 @@
 required_env_vars:
   - TRANSPORT
-client_command: ./keyvalue/client/client -outbound $TRANSPORT
-server_command: ./keyvalue/server/server -inbound $TRANSPORT
-sleep_before_client_ms: 500
-input: |
-  get foo
-  get foo
-  set foo bar
-  get foo
-  get foo
-  set baz qux
-  get baz
-  get foo
-  get baz
-  exit
-client_output: |
-  cache miss
-  get "foo" failed: ResourceDoesNotExist{Key: foo}
-  cache hit
-  get "foo" failed: ResourceDoesNotExist{Key: foo}
-  invalidating
-  cache miss
-  cache miss
-  foo = bar
-  cache hit
-  foo = bar
-  invalidating
-  cache miss
-  cache miss
-  baz = qux
-  cache miss
-  foo = bar
-  cache hit
-  baz = qux
+run:
+  - command: ./keyvalue/server/server -inbound $TRANSPORT
+    sleep_ms: 500
+  - command: ./keyvalue/client/client -outbound $TRANSPORT
+    input: |
+      get foo
+      get foo
+      set foo bar
+      get foo
+      get foo
+      set baz qux
+      get baz
+      get foo
+      get baz
+      exit
+    output: |
+      cache miss
+      get "foo" failed: ResourceDoesNotExist{Key: foo}
+      cache hit
+      get "foo" failed: ResourceDoesNotExist{Key: foo}
+      invalidating
+      cache miss
+      cache miss
+      foo = bar
+      cache hit
+      foo = bar
+      invalidating
+      cache miss
+      cache miss
+      baz = qux
+      cache miss
+      foo = bar
+      cache hit
+      baz = qux
