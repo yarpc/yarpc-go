@@ -39,6 +39,12 @@ import (
 //
 // Note: Enabling redis requires a local instance running on 'localhost:6379'
 func main() {
+	if err := do(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do() error {
 	httpTransport := http.NewTransport()
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -72,7 +78,7 @@ func main() {
 
 	// start the dispatcher
 	if err := dispatcher.Start(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer dispatcher.Stop()
 

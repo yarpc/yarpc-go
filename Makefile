@@ -1,18 +1,20 @@
 include build/base.mk
 ifndef SUPPRESS_DOCKER
+include build/dockerdeps.mk
 include build/docker.mk
 else
 include build/deps.mk
-include build/test.mk
+include build/local.mk
 endif
 ifndef SUPPRESS_CROSSDOCK
+include build/crossdockdeps.mk
 include build/crossdock.mk
 endif
 ifdef TRAVIS
 include build/travis.mk
 endif
 
-CI_TYPES ?= lint test examples
+CI_TYPES ?= deps lint test examples
 ifndef SUPRESS_CROSSDOCK
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
@@ -22,17 +24,12 @@ else
 CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
 endif
 
-CI_TYPES := $(filter-out deps,$(CI_TYPES))
-ifneq ($(CI_TYPES),crossdock)
-CI_TYPES := deps $(CI_TYPES)
-endif
-
 .DEFAULT_GOAL := ci
 
 .PHONY: ci
 ci: __print_ci $(CI_TYPES) ## run continuous integration tasks
 ifdef CI_CROSSDOCK
-	$(MAKE) crossdock || ($(MAKE) crossdock-logs && false)
+	$(MAKE) crossdock-fresh || ($(MAKE) crossdock-logs && false)
 endif
 
 .PHONY: help
@@ -42,20 +39,23 @@ help: __print_info ## show this help message
 .PHONY: __print_info
 __print_info:
 ifdef SUPPRESS_DOCKER
-	@echo "**Docker is not being used - SUPPRESS_DOCKER=$(SUPPRESS_DOCKER)**"
+	$(info Docker is not being used)
 else
-	@echo "**Docker is being used - SUPPRESS_DOCKER not set**"
+	$(info Docker is being used)
 ifdef DOCKER_HOST
-	@echo "**DOCKER_HOST=$(DOCKER_HOST)**"
+	$(info DOCKER_HOST=$(DOCKER_HOST))
 endif
+	$(info DOCKER_GO_VERSION=$(DOCKER_GO_VERSION))
+	$(info DOCKER_BUILD_FLAGS=$(DOCKER_BUILD_FLAGS))
+	$(info DOCKER_RUN_FLAGS=$(DOCKER_RUN_FLAGS))
 endif
 	@echo
 
 .PHONY: __print_ci
 __print_ci: __print_info
 ifdef CI_CROSSDOCK
-	@echo **CI_TYPES=$(CI_TYPES) crossdock**
+	$(info CI_TYPES=$(CI_TYPES) crossdock)
 else
-	@echo **CI_TYPES=$(CI_TYPES)**
+	$(info CI_TYPES=$(CI_TYPES))
 endif
 	@echo

@@ -67,11 +67,17 @@ func (h *handler) SetValue(ctx context.Context, key *string, value *string) erro
 }
 
 func main() {
+	if err := do(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do() error {
 	flag.Parse()
 	var inbound transport.Inbound
 	switch strings.ToLower(*flagInbound) {
 	case "http":
-		inbound = http.NewTransport().NewInbound(":24042")
+		inbound = http.NewTransport().NewInbound("127.0.0.1:24042")
 		go func() {
 			if err := gohttp.ListenAndServe(":3242", nil); err != nil {
 				log.Fatal(err)
@@ -80,10 +86,10 @@ func main() {
 	case "tchannel":
 		tchannelTransport, err := tchannel.NewChannelTransport(
 			tchannel.ServiceName("keyvalue"),
-			tchannel.ListenAddr(":28945"),
+			tchannel.ListenAddr("127.0.0.1:28945"),
 		)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		inbound = tchannelTransport.NewInbound()
 		go func() {
@@ -92,14 +98,14 @@ func main() {
 			}
 		}()
 	case "grpc":
-		inbound = grpc.NewInbound(":24046")
+		inbound = grpc.NewInbound("127.0.0.1:24046")
 		go func() {
 			if err := gohttp.ListenAndServe(":3244", nil); err != nil {
 				log.Fatal(err)
 			}
 		}()
 	default:
-		log.Fatalf("invalid inbound: %q\n", *flagInbound)
+		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -113,7 +119,7 @@ func main() {
 	yarpcmeta.Register(dispatcher)
 
 	if err := dispatcher.Start(); err != nil {
-		fmt.Println("error:", err.Error())
+		return err
 	}
 
 	select {} // block forever

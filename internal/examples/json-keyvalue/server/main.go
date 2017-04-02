@@ -25,7 +25,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"sync"
 
@@ -84,24 +83,30 @@ func (requestLogInboundMiddleware) Handle(ctx context.Context, req *transport.Re
 }
 
 func main() {
+	if err := do(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do() error {
 	flag.Parse()
 	var inbound transport.Inbound
 	switch strings.ToLower(*flagInbound) {
 	case "http":
-		inbound = http.NewTransport().NewInbound(":24034")
+		inbound = http.NewTransport().NewInbound("127.0.0.1:24034")
 	case "tchannel":
 		tchannelTransport, err := tchannel.NewChannelTransport(
 			tchannel.ServiceName("keyvalue"),
-			tchannel.ListenAddr(":28941"),
+			tchannel.ListenAddr("127.0.0.1:28941"),
 		)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		inbound = tchannelTransport.NewInbound()
 	case "grpc":
 		inbound = grpc.NewInbound(":24038")
 	default:
-		log.Fatalf("invalid inbound: %q\n", *flagInbound)
+		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -118,8 +123,7 @@ func main() {
 	dispatcher.Register(json.Procedure("set", handler.Set))
 
 	if err := dispatcher.Start(); err != nil {
-		fmt.Println("error:", err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	select {}
