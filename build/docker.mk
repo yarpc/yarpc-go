@@ -70,3 +70,7 @@ goveralls: deps ## run code coverage and upload to coveralls
 .PHONY: examples
 examples: deps ## run all examples tests
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make examples
+
+.PHONY: shell
+shell: deps ## go into a bash shell in docker with the repository linked as a volume
+	PATH=$$PATH:$(BIN) docker run -it $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) /bin/bash
