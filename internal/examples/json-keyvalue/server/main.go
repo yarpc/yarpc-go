@@ -103,7 +103,7 @@ func do() error {
 		}
 		inbound = tchannelTransport.NewInbound()
 	default:
-		return fmt.Errorf("invalid inbound: %q\n", *flagInbound)
+		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{

@@ -97,7 +97,7 @@ func do() error {
 			}
 		}()
 	default:
-		return fmt.Errorf("invalid inbound: %q\n", *flagInbound)
+		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}
 
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
