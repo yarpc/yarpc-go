@@ -124,5 +124,4 @@ func do() error {
 	}
 
 	select {}
-	return nil
 }

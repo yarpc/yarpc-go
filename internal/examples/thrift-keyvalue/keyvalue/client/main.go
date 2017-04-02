@@ -139,7 +139,7 @@ func do() error {
 			return nil
 
 		default:
-			fmt.Println("invalid command, valid commansd are: get, set, exit: %s", cmd)
+			return fmt.Errorf("invalid command, valid commansd are: get, set, exit: %s", cmd)
 		}
 	}
 	return scanner.Err()

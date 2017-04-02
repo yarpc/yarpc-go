@@ -89,7 +89,6 @@ func do() error {
 			log.Print(err)
 		}
 	}
-	return nil
 }
 
 type helloHandler struct{}

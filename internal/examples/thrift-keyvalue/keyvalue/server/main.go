@@ -115,5 +115,4 @@ func do() error {
 	}
 
 	select {} // block forever
-	return nil
 }
