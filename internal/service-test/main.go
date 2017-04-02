@@ -131,9 +131,3 @@ func cleanupCmds(cmds []*cmd, validateOutput bool, err error) {
 		cmd.Clean(validateOutput && err == nil)
 	}
 }
-
-func verboseLogPrintf(format string, args ...interface{}) {
-	if *flagVerbose {
-		log.Printf(format, args...)
-	}
-}
