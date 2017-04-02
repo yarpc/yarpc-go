@@ -206,7 +206,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 			Inbounds: yarpc.Inbounds{
 				tchannelTransport.NewInbound(),
 				http.NewTransport().NewInbound(fmt.Sprintf("127.0.0.1:%d", httpPort)),
-				grpc.NewInbound(fmt.Sprintf(":%d", grpcPort)),
+				grpc.NewInbound(fmt.Sprintf("127.0.0.1:%d", grpcPort)),
 			},
 		},
 	)

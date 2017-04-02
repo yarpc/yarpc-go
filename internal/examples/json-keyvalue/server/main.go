@@ -104,7 +104,7 @@ func do() error {
 		}
 		inbound = tchannelTransport.NewInbound()
 	case "grpc":
-		inbound = grpc.NewInbound(":24038")
+		inbound = grpc.NewInbound("127.0.0.1:24038")
 	default:
 		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}
