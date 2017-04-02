@@ -10,6 +10,9 @@ ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
+# The number of jobs allocated to run examples tests in parallel
+# The goal is to have all examples tests run in parallel, and
+# this is currently greater than the number of examples tests
 EXAMPLES_JOBS ?= 16
 
 GEN_BINS_INTERNAL = $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go

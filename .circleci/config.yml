@@ -18,7 +18,7 @@ jobs:
           environment:
             - CI_TYPES: crossdock
       - run:
-          name: 1.8 lint test exzmples
+          name: 1.8 lint test examples
           command: make ci
           environment:
             - CI_TYPES: deps lint test examples
