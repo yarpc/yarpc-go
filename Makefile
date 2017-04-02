@@ -14,7 +14,7 @@ ifdef TRAVIS
 include build/travis.mk
 endif
 
-CI_TYPES ?= lint test examples
+CI_TYPES ?= deps lint test examples
 ifndef SUPRESS_CROSSDOCK
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
@@ -22,11 +22,6 @@ CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
 endif
 else
 CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
-endif
-
-CI_TYPES := $(filter-out deps,$(CI_TYPES))
-ifneq ($(CI_TYPES),crossdock)
-CI_TYPES := deps $(CI_TYPES)
 endif
 
 .DEFAULT_GOAL := ci

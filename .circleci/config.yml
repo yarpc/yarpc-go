@@ -18,16 +18,16 @@ jobs:
           environment:
             - CI_TYPES: crossdock
       - run:
-          name: 1.8 examples lint test
+          name: 1.8 lint test exzmples
           command: make ci
           environment:
-            - CI_TYPES: examples lint test
+            - CI_TYPES: deps lint test examples
             - DOCKER_GO_VERSION: 1.8
       - run:
-          name: 1.7 examples cover
+          name: 1.7 cover
           command: make ci
           environment:
-            - CI_TYPES: examples cover
+            - CI_TYPES: deps cover
             - DOCKER_GO_VERSION: 1.7
       - save_cache:
           key: yarpc-go

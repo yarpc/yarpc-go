@@ -15,9 +15,9 @@ matrix:
       sudo: required
       services:
         - docker
-    - env: CI_TYPES='examples goveralls' SUPPRESS_DOCKER=1 SUPPRESS_CROSSDOCK=1
+    - env: CI_TYPES='deps examples goveralls' SUPPRESS_DOCKER=1 SUPPRESS_CROSSDOCK=1
       go: 1.7
-    - env: CI_TYPES='examples lint test' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.8
+    - env: CI_TYPES='deps examples lint test' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.8
       sudo: required
       services:
         - docker
