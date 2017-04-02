@@ -1,10 +1,10 @@
+CROSSDOCK_DOCKER_IMAGE := yarpc_go
+
 DOCKER_CACHE_DIR := $(CACHE)/docker
 CROSSDOCK_DOCKER_CACHE_FILE := $(DOCKER_CACHE_DIR)/$(CROSSDOCK_DOCKER_IMAGE)
 DOCKER_CACHE_FILE := $(DOCKER_CACHE_DIR)/$(DOCKER_IMAGE)
 
 DOCKER_RUN_FLAGS += -e TRAVIS_JOB_ID -e TRAVIS_PULL_REQUEST
-
-CROSSDOCK_DOCKER_IMAGE := yarpc_go
 
 .PHONY: travis-docker-load
 travis-docker-load: ## load docker images from travis cache
