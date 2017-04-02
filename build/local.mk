@@ -10,6 +10,8 @@ ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
+EXAMPLES_JOBS ?= 16
+
 GEN_BINS_INTERNAL = $(BIN)/thriftrw-plugin-yarpc $(BIN)/protoc-gen-yarpc-go
 
 $(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
@@ -115,7 +117,7 @@ goveralls: cover $(GOVERALLS) ## run code coverage and upload to coveralls
 
 .PHONY: examples
 examples: ## run all examples tests
-	RUN=$(RUN) V=$(V) $(MAKE) -C internal/examples
+	RUN=$(RUN) V=$(V) $(MAKE) -j $(EXAMPLES_JOBS) -C internal/examples
 
 .PHONY: __eval_packages
 __eval_packages:
