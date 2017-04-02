@@ -18,14 +18,12 @@ jobs:
           environment:
             - CI_TYPES: examples lint test
             - DOCKER_GO_VERSION: 1.8
-            - V: 1
       - run:
-          name: DOCKER_GO_VERSION=1.7 CI_TYPES=examples test
+          name: DOCKER_GO_VERSION=1.7 CI_TYPES=examples cover
           command: make ci
           environment:
             - CI_TYPES: examples test
             - DOCKER_GO_VERSION: 1.7
-            - V: 1
       - run:
           name: CI_TYPES=crossdock
           command: make ci

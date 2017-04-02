@@ -43,7 +43,7 @@ type cmd struct {
 	stderr        *bytes.Buffer
 	flushedStdout bool
 	flushedStderr bool
-	killed        bool
+	finished      bool
 	lock          sync.Mutex
 }
 
@@ -101,6 +101,9 @@ func (c *cmd) Wait() error {
 		return c.wrapError("failed", err)
 	}
 	c.debugPrintf("finished")
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.finished = true
 	return nil
 }
 
@@ -127,14 +130,14 @@ func (c *cmd) Clean(suppressStdout bool) {
 func (c *cmd) Kill() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if c.killed {
+	if c.finished {
 		return
 	}
 	if c.cmd.Process != nil {
 		c.debugPrintf("killing")
 		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
 		_ = syscall.Kill(-c.cmd.Process.Pid, syscall.SIGKILL)
-		c.killed = true
+		c.finished = true
 	}
 }
 
