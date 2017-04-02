@@ -14,7 +14,7 @@ input: |
   get foo
   get baz
   exit
-output: |
+client_output: |
   cache miss
   get "foo" failed: ResourceDoesNotExist{Key: foo}
   cache hit

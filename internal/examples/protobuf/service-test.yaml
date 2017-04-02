@@ -13,7 +13,7 @@ input: |
   fire bar
   fired-values
   exit
-output: |
+client_output: |
   get foo
   get foo failed: key not set: foo
   get foo

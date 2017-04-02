@@ -57,7 +57,8 @@ type config struct {
 	ServerCommand       string   `json:"server_command,omitempty" yaml:"server_command,omitempty"`
 	SleepBeforeClientMs int      `json:"sleep_before_client_ms,omitempty" yaml:"sleep_before_client_ms,omitempty"`
 	Input               string   `json:"input,omitempty" yaml:"input,omitempty"`
-	Output              string   `json:"output,omitempty" yaml:"output,omitempty"`
+	ClientOutput        string   `json:"client_output,omitempty" yaml:"client_output,omitempty"`
+	ServerOutput        string   `json:"server_output,omitempty" yaml:"server_output,omitempty"`
 }
 
 func main() {
@@ -77,24 +78,15 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 		return err
 	}
 
-	stdout := newLockedBuffer()
+	clientStdout := newLockedBuffer()
+	serverStdout := newLockedBuffer()
 	stderr := newLockedBuffer()
-	defer func() {
-		if !verifyOutput || err != nil {
-			if data := stdout.Bytes(); len(data) > 0 {
-				fmt.Print(string(data))
-			}
-		}
-		if data := stderr.Bytes(); len(data) > 0 {
-			fmt.Print(string(data))
-		}
-	}()
 	clientCmd, err := getCmd(config.ClientCommand)
 	if err != nil {
 		return err
 	}
 	clientCmd.Dir = contextDir
-	clientCmd.Stdout = stdout
+	clientCmd.Stdout = clientStdout
 	clientCmd.Stderr = stderr
 	var serverCmd *exec.Cmd
 	if config.ServerCommand != "" {
@@ -103,15 +95,15 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 			return err
 		}
 		serverCmd.Dir = contextDir
-		serverCmd.Stdout = stdout
+		serverCmd.Stdout = serverStdout
 		serverCmd.Stderr = stderr
 	}
-	defer cleanupCmds(clientCmd, serverCmd)
+	defer cleanup(clientCmd, serverCmd, clientStdout, serverStdout, stderr, verifyOutput, err)
 	signalC := make(chan os.Signal, 1)
 	signal.Notify(signalC, os.Interrupt)
 	go func() {
 		for range signalC {
-			cleanupCmds(clientCmd, serverCmd)
+			cleanup(clientCmd, serverCmd, clientStdout, serverStdout, stderr, verifyOutput, errors.New(""))
 		}
 		os.Exit(1)
 	}()
@@ -170,10 +162,11 @@ func do(contextDir string, configFilePath string, timeout time.Duration, verifyO
 		return fmt.Errorf("client timed out after %v", timeout)
 	}
 	if verifyOutput {
-		output := cleanOutput(string(stdout.Bytes()))
-		expectedOutput := cleanOutput(config.Output)
-		if output != expectedOutput {
-			return fmt.Errorf("expected\n%s\ngot\n%s", expectedOutput, output)
+		if err := validateOutput(clientStdout, config.ClientOutput); err != nil {
+			return err
+		}
+		if err := validateOutput(serverStdout, config.ServerOutput); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -197,6 +190,19 @@ func getCmd(argsString string) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
+func cleanup(
+	clientCmd *exec.Cmd,
+	serverCmd *exec.Cmd,
+	clientStdout *lockedBuffer,
+	serverStdout *lockedBuffer,
+	stderr *lockedBuffer,
+	verifyOutput bool,
+	err error,
+) {
+	cleanupCmds(clientCmd, serverCmd)
+	writeOutput(clientStdout, serverStdout, stderr, verifyOutput, err)
+}
+
 func cleanupCmds(cmds ...*exec.Cmd) {
 	for _, cmd := range cmds {
 		killCmd(cmd)
@@ -208,6 +214,26 @@ func killCmd(cmd *exec.Cmd) {
 		debugPrintf("Killing %s", cmdString(cmd))
 		// https://medium.com/@felixge/killing-a-child-process-and-all-of-its-children-in-go-54079af94773
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
+}
+
+func writeOutput(
+	clientStdout *lockedBuffer,
+	serverStdout *lockedBuffer,
+	stderr *lockedBuffer,
+	verifyOutput bool,
+	err error,
+) {
+	if !verifyOutput || err != nil {
+		if data := clientStdout.Bytes(); len(data) > 0 {
+			fmt.Print(string(data))
+		}
+		if data := serverStdout.Bytes(); len(data) > 0 {
+			fmt.Print(string(data))
+		}
+	}
+	if data := stderr.Bytes(); len(data) > 0 {
+		fmt.Print(string(data))
 	}
 }
 
@@ -241,6 +267,18 @@ func validateConfig(config *config) error {
 	}
 	if config.ClientCommand == "" {
 		return errClientCommandNotSet
+	}
+	return nil
+}
+
+func validateOutput(stdout *lockedBuffer, expected string) error {
+	if expected == "" {
+		return nil
+	}
+	output := cleanOutput(string(stdout.Bytes()))
+	expectedOutput := cleanOutput(expected)
+	if output != expectedOutput {
+		return fmt.Errorf("expected\n%s\ngot\n%s", expectedOutput, output)
 	}
 	return nil
 }
@@ -285,9 +323,8 @@ func debugPrintf(format string, args ...interface{}) {
 }
 
 func cmdString(cmd *exec.Cmd) string {
-	//if len(cmd.Args) == 0 {
-	//return cmd.Path
-	//}
-	//return strings.Join(cmd.Args, " ")
-	return fmt.Sprintf("%+v", cmd)
+	if len(cmd.Args) == 0 {
+		return cmd.Path
+	}
+	return strings.Join(cmd.Args, " ")
 }

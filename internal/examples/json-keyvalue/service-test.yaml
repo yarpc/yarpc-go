@@ -10,17 +10,18 @@ input: |
   set baz qux
   get baz
   exit
-output: |
+client_output: |
   sending request "get" to service "keyvalue" (encoding "json")
-  received a request to "get" from client "keyvalue-client" (encoding "json")
   foo =
   sending request "set" to service "keyvalue" (encoding "json")
-  received a request to "set" from client "keyvalue-client" (encoding "json")
   sending request "get" to service "keyvalue" (encoding "json")
-  received a request to "get" from client "keyvalue-client" (encoding "json")
   foo = bar
   sending request "set" to service "keyvalue" (encoding "json")
-  received a request to "set" from client "keyvalue-client" (encoding "json")
   sending request "get" to service "keyvalue" (encoding "json")
-  received a request to "get" from client "keyvalue-client" (encoding "json")
   baz = qux
+server_output: |
+  received a request to "get" from client "keyvalue-client" (encoding "json")
+  received a request to "set" from client "keyvalue-client" (encoding "json")
+  received a request to "get" from client "keyvalue-client" (encoding "json")
+  received a request to "set" from client "keyvalue-client" (encoding "json")
+  received a request to "get" from client "keyvalue-client" (encoding "json")
