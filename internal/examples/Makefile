@@ -81,7 +81,7 @@ thrift-keyvalue-tchannel: install build-thrift-keyvalue
 	TRANSPORT=tchannel $(SERVICE_TEST) --dir thrift-keyvalue
 
 .PHONY: thrift-keyvalue-grpc
-thrift-keyvalue-grpc: install
+thrift-keyvalue-grpc: install build-thrift-keyvalue
 	TRANSPORT=grpc $(SERVICE_TEST) --dir thrift-keyvalue
 
 .PHONY: thrift-oneway
