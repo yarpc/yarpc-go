@@ -24,14 +24,13 @@ v1.7.0 (2017-03-20)
     for more information.
 -	tchannel: mask existing procedures with provided procedures.
 -   Adds a peer.Bind function that takes a peer.ChooserList and a binder
-    (anything that binds a peer list to a peer provider and returns the
-    Lifecycle of the binding), and returns a peer.Chooser that combines
-    the lifecycle of the peer list and its bound peer provider.
-    The peer chooser is suitable for passing to an outbound constructor,
-    capturing the lifecycle of its dependencies.
+    (anything that binds a peer list to a peer list updater), and returns a
+    peer.Chooser that combines the lifecycle of the peer list and its bound
+    peer list updater.  The peer chooser is suitable for passing to an outbound
+    constructor, capturing the lifecycle of its dependencies.
 -   Adds a peer.ChooserList interface to the API, for convenience when passing
     instances with both capabilities (suitable for outbounds, suitable for peer
-    providers).
+    list updaters).
 
 
 v1.6.0 (2017-03-08)
@@ -330,7 +329,7 @@ v1.0.0-rc3 (2016-12-09)
     strings are not `peer.Chooser` instances.
 
     This version introduces support for peer choosers, peer lists, and peer
-    providers for HTTP outbounds. This is made possible by the above
+    list updaters for HTTP outbounds. This is made possible by the above
     change that introduces a concrete instance of a Transport for each
     protocol, which deduplicates peer instances across all inbounds and
     outbounds, making connection sharing and load balancing possible,
