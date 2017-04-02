@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: golang:1.8.0
     parallelism: 3
-    working_directory: /yarpc-go
+    working_directory: /checkout
     steps:
       - checkout
       - setup_remote_docker:
