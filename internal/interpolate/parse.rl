@@ -19,13 +19,24 @@ func Parse(data string) (out String, _ error) {
         pe  = len(data)
         eof = pe
 
+        // The following variables are used by us to build String up.
+
+        // Index in data where the currently captured string started.
         idx   int
+
+        // Variable currently being built.
         v     variable
+
+        // Literal currently being read.
         l     literal
+
+        // Last read term (variable or literal) which we will append to the
+        // output.
         t     term
     )
 
     %%{
+        # Record the current position as the start of a string.
         action start { idx = fpc }
 
         var_name
@@ -34,14 +45,9 @@ func Parse(data string) (out String, _ error) {
             @{ v.Name = data[idx:fpc+1] };
 
         var_default
-            = (any - '}')*
-            >start
-            @{
-                v.Default = data[idx:fpc+1]
-                v.HasDefault = true
-             };
+            = (any - '}')* >start @{ v.Default = data[idx:fpc+1] };
 
-        var = '${' var_name (':' var_default)? '}';
+        var = '${' var_name (':' @{ v.HasDefault = true } var_default)? '}';
 
         lit = ('\\' any @{ l = literal(data[fpc:fpc+1]) })
             | ((any - [\$\\])+ >start @{ l = literal(data[idx:fpc + 1]) })

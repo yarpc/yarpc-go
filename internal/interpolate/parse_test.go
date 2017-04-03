@@ -44,6 +44,23 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			give: "foo ${bar:}",
+			want: String{
+				literal("foo "),
+				variable{Name: "bar", HasDefault: true},
+			},
+		},
+		{
+			give: "${foo:bar}",
+			want: String{
+				variable{
+					Name:       "foo",
+					Default:    "bar",
+					HasDefault: true,
+				},
+			},
+		},
+		{
 			give: `foo \${bar:42} baz`,
 			want: String{
 				literal("foo "),

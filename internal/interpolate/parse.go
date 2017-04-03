@@ -46,18 +46,28 @@ func Parse(data string) (out String, _ error) {
 		pe  = len(data)
 		eof = pe
 
+		// The following variables are used by us to build String up.
+
+		// Index in data where the currently captured string started.
 		idx int
-		v   variable
-		l   literal
-		t   term
+
+		// Variable currently being built.
+		v variable
+
+		// Literal currently being read.
+		l literal
+
+		// Last read term (variable or literal) which we will append to the
+		// output.
+		t term
 	)
 
-//line parse.go:39
+//line parse.go:49
 	{
 		cs = interpolate_start
 	}
 
-//line parse.go:44
+//line parse.go:54
 	{
 		if p == pe {
 			goto _test_eof
@@ -96,27 +106,27 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr11
 	tr11:
-//line parse.rl:29
+//line parse.rl:40
 		idx = p
-//line parse.rl:47
+//line parse.rl:53
 		l = literal(data[idx : p+1])
-//line parse.rl:50
+//line parse.rl:56
 		t = l
 		goto st9
 	tr14:
-//line parse.rl:47
+//line parse.rl:53
 		l = literal(data[idx : p+1])
-//line parse.rl:50
+//line parse.rl:56
 		t = l
 		goto st9
 	tr17:
-//line parse.rl:52
+//line parse.rl:58
 		out = append(out, t)
-//line parse.rl:29
+//line parse.rl:40
 		idx = p
-//line parse.rl:47
+//line parse.rl:53
 		l = literal(data[idx : p+1])
-//line parse.rl:50
+//line parse.rl:56
 		t = l
 		goto st9
 	st9:
@@ -124,7 +134,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof9
 		}
 	st_case_9:
-//line parse.go:111
+//line parse.go:121
 		switch data[p] {
 		case 36:
 			goto tr15
@@ -133,7 +143,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr14
 	tr15:
-//line parse.rl:52
+//line parse.rl:58
 		out = append(out, t)
 		goto st1
 	st1:
@@ -141,7 +151,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof1
 		}
 	st_case_1:
-//line parse.go:128
+//line parse.go:138
 		if data[p] == 123 {
 			goto st2
 		}
@@ -168,13 +178,13 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto st0
 	tr2:
-//line parse.rl:29
+//line parse.rl:40
 		idx = p
-//line parse.rl:34
+//line parse.rl:45
 		v.Name = data[idx : p+1]
 		goto st3
 	tr4:
-//line parse.rl:34
+//line parse.rl:45
 		v.Name = data[idx : p+1]
 		goto st3
 	st3:
@@ -182,12 +192,12 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof3
 		}
 	st_case_3:
-//line parse.go:169
+//line parse.go:179
 		switch data[p] {
 		case 46:
 			goto st4
 		case 58:
-			goto st5
+			goto tr5
 		case 95:
 			goto tr4
 		case 125:
@@ -227,53 +237,54 @@ func Parse(data string) (out String, _ error) {
 			goto tr4
 		}
 		goto st0
+	tr5:
+//line parse.rl:50
+		v.HasDefault = true
+		goto st5
 	st5:
 		if p++; p == pe {
 			goto _test_eof5
 		}
 	st_case_5:
+//line parse.go:233
 		if data[p] == 125 {
 			goto tr8
 		}
 		goto tr7
 	tr7:
-//line parse.rl:38
+//line parse.rl:40
 		idx = p
-//line parse.rl:39
+//line parse.rl:48
 		v.Default = data[idx : p+1]
-		v.HasDefault = true
-
 		goto st6
 	tr9:
-//line parse.rl:39
+//line parse.rl:48
 		v.Default = data[idx : p+1]
-		v.HasDefault = true
-
 		goto st6
 	st6:
 		if p++; p == pe {
 			goto _test_eof6
 		}
 	st_case_6:
-//line parse.go:244
+//line parse.go:253
 		if data[p] == 125 {
 			goto tr6
 		}
 		goto tr9
 	tr6:
-//line parse.rl:50
+//line parse.rl:56
 		t = v
 		goto st10
 	tr8:
-//line parse.rl:38
+//line parse.rl:40
 		idx = p
-//line parse.rl:50
+//line parse.rl:56
 		t = v
 		goto st10
 	tr10:
-//line parse.rl:46
+//line parse.rl:52
 		l = literal(data[p : p+1])
-//line parse.rl:50
+//line parse.rl:56
 		t = l
 		goto st10
 	st10:
@@ -281,7 +292,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof10
 		}
 	st_case_10:
-//line parse.go:270
+//line parse.go:279
 		switch data[p] {
 		case 36:
 			goto tr15
@@ -290,7 +301,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr17
 	tr16:
-//line parse.rl:52
+//line parse.rl:58
 		out = append(out, t)
 		goto st7
 	st7:
@@ -298,7 +309,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof7
 		}
 	st_case_7:
-//line parse.go:287
+//line parse.go:296
 		goto tr10
 	st_out:
 	_test_eof9:
@@ -335,9 +346,9 @@ func Parse(data string) (out String, _ error) {
 		if p == eof {
 			switch cs {
 			case 9, 10:
-//line parse.rl:52
+//line parse.rl:58
 				out = append(out, t)
-//line parse.go:306
+//line parse.go:315
 			}
 		}
 
@@ -346,7 +357,7 @@ func Parse(data string) (out String, _ error) {
 		}
 	}
 
-//line parse.rl:56
+//line parse.rl:62
 
 	if cs < 8 {
 		return out, fmt.Errorf("cannot parse string %q", data)
