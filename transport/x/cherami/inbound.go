@@ -33,6 +33,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
+	"go.uber.org/multierr"
 )
 
 const (
@@ -136,14 +137,14 @@ func (i *Inbound) loop(ch chan cherami.Delivery) {
 		}
 
 		msg := delivery.GetMessage()
-
-		if err := i.handleMsg(msg.Payload.Data); err == nil {
-			if err = delivery.Ack(); err != nil {
-				log.Printf("ack failed for ack_token: %s\n", delivery.GetDeliveryToken())
-			}
-		} else {
-			err = errors.CombineErrors(err, delivery.Nack())
+		if err := i.handleMsg(msg.Payload.Data); err != nil {
+			err = multierr.Append(err, delivery.Nack())
 			log.Printf("handle message failure: %v\n", err)
+			continue
+		}
+
+		if err := delivery.Ack(); err != nil {
+			log.Printf("ack failed for ack_token: %s\n", delivery.GetDeliveryToken())
 		}
 	}
 }

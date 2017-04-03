@@ -28,10 +28,10 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
-	yerrors "go.uber.org/yarpc/internal/errors"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/multierr"
 )
 
 func TestPeerHeapList(t *testing.T) {
@@ -183,7 +183,7 @@ func TestPeerHeapList(t *testing.T) {
 				StartAction{},
 				UpdateAction{
 					AddedPeerIDs: []string{"1", "2", "3"},
-					ExpectedErr:  yerrors.ErrorGroup{peer.ErrInvalidPeerType{}, peer.ErrInvalidPeerType{}},
+					ExpectedErr:  multierr.Combine(peer.ErrInvalidPeerType{}, peer.ErrInvalidPeerType{}),
 				},
 			},
 			expectedAvailablePeers: []string{"2"},
@@ -237,10 +237,10 @@ func TestPeerHeapList(t *testing.T) {
 				StartAction{},
 				UpdateAction{AddedPeerIDs: []string{"1", "2", "3"}},
 				StopAction{
-					ExpectedErr: yerrors.ErrorGroup{
+					ExpectedErr: multierr.Combine(
 						peer.ErrTransportHasNoReferenceToPeer{},
 						peer.ErrTransportHasNoReferenceToPeer{},
-					},
+					),
 				},
 			},
 			expectedRunning: false,

@@ -43,6 +43,7 @@ import (
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
+	"go.uber.org/multierr"
 )
 
 const _tagName = "config"
@@ -170,7 +171,16 @@ func decodeFrom(src interface{}) Into {
 			return fmt.Errorf("failed to set up decoder: %v", err)
 		}
 
-		return decoder.Decode(src)
+		if err := decoder.Decode(src); err != nil {
+			// If we get a mapstructure error, pull the individual errors from
+			// it and use our standard multierr package.
+			if merr, ok := err.(*mapstructure.Error); ok {
+				return multierr.Combine(merr.WrappedErrors()...)
+			}
+			return err
+		}
+
+		return nil
 	}
 }
 

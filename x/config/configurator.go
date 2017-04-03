@@ -28,8 +28,8 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/decode"
-	errs "go.uber.org/yarpc/internal/errors"
 
+	"go.uber.org/multierr"
 	"gopkg.in/yaml.v2"
 )
 
@@ -195,32 +195,29 @@ func (c *Configurator) NewDispatcher(serviceName string, data interface{}) (*yar
 	return yarpc.NewDispatcher(cfg), nil
 }
 
-func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (yarpc.Config, error) {
-	var (
-		errors []error
-		b      = newBuilder(serviceName, &Kit{name: serviceName, c: c})
-	)
+func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Config, err error) {
+	b := newBuilder(serviceName, &Kit{name: serviceName, c: c})
 
 	for _, inbound := range cfg.Inbounds {
-		if err := c.loadInboundInto(b, inbound); err != nil {
-			errors = append(errors, err)
+		if e := c.loadInboundInto(b, inbound); e != nil {
+			err = multierr.Append(err, e)
 		}
 	}
 
 	for name, outboundConfig := range cfg.Outbounds {
-		if err := c.loadOutboundInto(b, name, outboundConfig); err != nil {
-			errors = append(errors, err)
+		if e := c.loadOutboundInto(b, name, outboundConfig); e != nil {
+			err = multierr.Append(err, e)
 		}
 	}
 
 	for name, attrs := range cfg.Transports {
-		if err := c.loadTransportInto(b, name, attrs); err != nil {
-			errors = append(errors, err)
+		if e := c.loadTransportInto(b, name, attrs); e != nil {
+			err = multierr.Append(err, e)
 		}
 	}
 
-	if len(errors) > 0 {
-		return yarpc.Config{}, errs.MultiError(errors)
+	if err != nil {
+		return yarpc.Config{}, err
 	}
 
 	return b.Build()

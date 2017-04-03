@@ -28,13 +28,13 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observerware"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
@@ -335,7 +335,7 @@ func (d *Dispatcher) Start() error {
 			errs = append(errs, newErrors...)
 		}
 
-		return errors.ErrorGroup(errs)
+		return multierr.Combine(errs...)
 	}
 
 	// Set router for all inbounds
@@ -443,8 +443,8 @@ func (d *Dispatcher) Stop() error {
 	}
 	d.log.Debug("Stopped transports.")
 
-	if len(allErrs) > 0 {
-		return errors.ErrorGroup(allErrs)
+	if err := multierr.Combine(allErrs...); err != nil {
+		return err
 	}
 
 	d.log.Debug("Unregistering debug pages.")
