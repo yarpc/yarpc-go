@@ -88,25 +88,25 @@ func Parse(data string) (out String, _ error) {
 	tr12:
 //line parse.rl:40
 		idx = p
-//line parse.rl:54
+//line parse.rl:64
 		l = literal(data[idx : p+1])
-//line parse.rl:57
+//line parse.rl:69
 		t = l
 		goto st9
 	tr15:
-//line parse.rl:54
+//line parse.rl:64
 		l = literal(data[idx : p+1])
-//line parse.rl:57
+//line parse.rl:69
 		t = l
 		goto st9
 	tr18:
-//line parse.rl:59
+//line parse.rl:71
 		out = append(out, t)
 //line parse.rl:40
 		idx = p
-//line parse.rl:54
+//line parse.rl:64
 		l = literal(data[idx : p+1])
-//line parse.rl:57
+//line parse.rl:69
 		t = l
 		goto st9
 	st9:
@@ -123,7 +123,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr15
 	tr16:
-//line parse.rl:59
+//line parse.rl:71
 		out = append(out, t)
 		goto st1
 	st1:
@@ -137,25 +137,25 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr0
 	tr0:
-//line parse.rl:53
+//line parse.rl:58
 		l = literal(data[p-1 : p+1])
-//line parse.rl:57
+//line parse.rl:69
 		t = l
 		goto st10
 	tr2:
-//line parse.rl:52
+//line parse.rl:55
 		l = literal(data[p : p+1])
-//line parse.rl:57
+//line parse.rl:69
 		t = l
 		goto st10
 	tr8:
-//line parse.rl:57
+//line parse.rl:69
 		t = v
 		goto st10
 	tr10:
 //line parse.rl:40
 		idx = p
-//line parse.rl:57
+//line parse.rl:69
 		t = v
 		goto st10
 	st10:
@@ -172,7 +172,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr18
 	tr17:
-//line parse.rl:59
+//line parse.rl:71
 		out = append(out, t)
 		goto st2
 	st2:
@@ -264,7 +264,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto st0
 	tr7:
-//line parse.rl:50
+//line parse.rl:51
 		v.HasDefault = true
 		goto st6
 	st6:
@@ -332,7 +332,7 @@ func Parse(data string) (out String, _ error) {
 		if p == eof {
 			switch cs {
 			case 9, 10:
-//line parse.rl:59
+//line parse.rl:71
 				out = append(out, t)
 //line parse.go:321
 			}
@@ -343,7 +343,7 @@ func Parse(data string) (out String, _ error) {
 		}
 	}
 
-//line parse.rl:63
+//line parse.rl:75
 
 	if cs < 8 {
 		return out, fmt.Errorf("cannot parse string %q", data)

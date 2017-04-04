@@ -47,12 +47,24 @@ func Parse(data string) (out String, _ error) {
         var_default
             = (any - '}')* >start @{ v.Default = data[idx:fpc+1] };
 
-        var = '${' var_name (':' @{ v.HasDefault = true } var_default)? '}';
-
-        lit = ('\\' any @{ l = literal(data[fpc:fpc+1]) })
-            | ('$' (any - '{') @{ l = literal(data[fpc-1:fpc+1]) })
-            | ((any - [\$\\])+ >start @{ l = literal(data[idx:fpc + 1]) })
+        # Reference to a variable with an optional default value.
+        var = '${' var_name (':' @{ v.HasDefault = true } var_default)?  '}'
             ;
+
+        # Anything followed by a '\' is used as-is.
+        escaped_lit = '\\' any @{ l = literal(data[fpc:fpc+1]) };
+
+        # Anything followed by a '$' that is not a '{'.
+        dollar_lit = '$' (any - '{') @{ l = literal(data[fpc-1:fpc+1]) };
+
+        # Literal strings that don't contain '$' or '\'.
+        simple_lit
+            = (any - '$' - '\\')+
+            >start
+            @{ l = literal(data[idx:fpc + 1]) }
+            ;
+
+        lit = escaped_lit | dollar_lit | simple_lit;
 
         term = (var @{ t = v }) | (lit @{ t = l });
 
