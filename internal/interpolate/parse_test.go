@@ -68,6 +68,14 @@ func TestParse(t *testing.T) {
 				literal("{bar:42} baz"),
 			},
 		},
+		{
+			give: "$foo${bar}",
+			want: String{
+				literal("$f"),
+				literal("oo"),
+				variable{Name: "bar"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

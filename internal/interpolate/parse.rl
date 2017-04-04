@@ -50,6 +50,7 @@ func Parse(data string) (out String, _ error) {
         var = '${' var_name (':' @{ v.HasDefault = true } var_default)? '}';
 
         lit = ('\\' any @{ l = literal(data[fpc:fpc+1]) })
+            | ('$' (any - '{') @{ l = literal(data[fpc-1:fpc+1]) })
             | ((any - [\$\\])+ >start @{ l = literal(data[idx:fpc + 1]) })
             ;
 
