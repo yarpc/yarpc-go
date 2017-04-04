@@ -72,4 +72,4 @@ __yarpc_build_release: __yarpc_build_build
 
 .PHONY: __yarpc_build_shell
 __yarpc_build_shell: __yarpc_build_build
-	docker run -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app yarpc/yarpc-go-build /bin/sh
+	docker run -it -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app yarpc/yarpc-go-build /bin/sh
