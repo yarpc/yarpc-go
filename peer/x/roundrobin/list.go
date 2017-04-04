@@ -28,9 +28,10 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	yerrors "go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	ysync "go.uber.org/yarpc/internal/sync"
+
+	"go.uber.org/multierr"
 )
 
 type listConfig struct {
@@ -117,21 +118,17 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	var errs []error
+	var errs error
 
 	for _, peerID := range removals {
-		if err := pl.removePeerIdentifier(peerID); err != nil {
-			errs = append(errs, err)
-		}
+		errs = multierr.Append(errs, pl.removePeerIdentifier(peerID))
 	}
 
 	for _, peerID := range additions {
-		if err := pl.addPeerIdentifier(peerID); err != nil {
-			errs = append(errs, err)
-		}
+		errs = multierr.Append(errs, pl.addPeerIdentifier(peerID))
 	}
 
-	return yerrors.MultiError(errs)
+	return errs
 }
 
 // Must be run inside a mutex.Lock()
@@ -192,7 +189,7 @@ func (pl *List) clearPeers() error {
 	unvavailablePeers := pl.removeAllUnavailable()
 	errs = append(errs, pl.releaseAll(unvavailablePeers)...)
 
-	return yerrors.MultiError(errs)
+	return multierr.Combine(errs...)
 }
 
 // removeAllUnavailable will clear the unavailablePeers list and
