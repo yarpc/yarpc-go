@@ -40,7 +40,7 @@ func Parse(data string) (out String, _ error) {
         action start { idx = fpc }
 
         var_name
-            = ([a-zA-Z_] ([a-zA-Z0-9_] | '.' [a-zA-Z0-9_])*)
+            = ([a-zA-Z_] ([a-zA-Z0-9_] | ('.' | '-') [a-zA-Z0-9_])*)
             >start
             @{ v.Name = data[idx:fpc+1] };
 

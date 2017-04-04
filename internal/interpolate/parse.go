@@ -220,8 +220,6 @@ func Parse(data string) (out String, _ error) {
 	st_case_4:
 //line parse.go:225
 		switch data[p] {
-		case 46:
-			goto st5
 		case 58:
 			goto tr7
 		case 95:
@@ -230,12 +228,17 @@ func Parse(data string) (out String, _ error) {
 			goto tr8
 		}
 		switch {
-		case data[p] < 65:
-			if 48 <= data[p] && data[p] <= 57 {
-				goto tr6
+		case data[p] < 48:
+			if 45 <= data[p] && data[p] <= 46 {
+				goto st5
 			}
-		case data[p] > 90:
-			if 97 <= data[p] && data[p] <= 122 {
+		case data[p] > 57:
+			switch {
+			case data[p] > 90:
+				if 97 <= data[p] && data[p] <= 122 {
+					goto tr6
+				}
+			case data[p] >= 65:
 				goto tr6
 			}
 		default:
@@ -272,7 +275,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof6
 		}
 	st_case_6:
-//line parse.go:279
+//line parse.go:282
 		if data[p] == 125 {
 			goto tr10
 		}
@@ -292,7 +295,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof7
 		}
 	st_case_7:
-//line parse.go:299
+//line parse.go:302
 		if data[p] == 125 {
 			goto tr8
 		}
@@ -334,7 +337,7 @@ func Parse(data string) (out String, _ error) {
 			case 9, 10:
 //line parse.rl:71
 				out = append(out, t)
-//line parse.go:321
+//line parse.go:324
 			}
 		}
 

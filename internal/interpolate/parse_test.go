@@ -24,9 +24,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestParse(t *testing.T) {
+func TestParseSuccess(t *testing.T) {
 	tests := []struct {
 		give string
 		want String
@@ -76,11 +77,31 @@ func TestParse(t *testing.T) {
 				variable{Name: "bar"},
 			},
 		},
+		{
+			give: "foo${b-a-r}",
+			want: String{
+				literal("foo"),
+				variable{Name: "b-a-r"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		out, err := Parse(tt.give)
 		assert.NoError(t, err)
 		assert.Equal(t, tt.want, out)
+	}
+}
+
+func TestParseFailures(t *testing.T) {
+	tests := []string{
+		"${foo",
+		"${foo.}",
+		"${foo-}",
+	}
+
+	for _, tt := range tests {
+		_, err := Parse(tt)
+		require.Error(t, err, tt)
 	}
 }
