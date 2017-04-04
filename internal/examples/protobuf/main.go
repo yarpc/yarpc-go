@@ -31,11 +31,11 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
+
+	"google.golang.org/grpc"
 )
 
 var flagOutbound = flag.String("outbound", "tchannel", "The outbound to use for unary calls")

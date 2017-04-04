@@ -114,6 +114,7 @@ func (o *Outbound) invoke(
 	if err != nil {
 		return err
 	}
+	// TODO: use pooled buffers
 	requestBody, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		return err

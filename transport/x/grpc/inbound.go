@@ -25,13 +25,12 @@ import (
 	"net"
 	"sync"
 
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-	"github.com/opentracing/opentracing-go"
-
-	"google.golang.org/grpc"
-
 	"go.uber.org/yarpc/api/transport"
 	internalsync "go.uber.org/yarpc/internal/sync"
+
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"github.com/opentracing/opentracing-go"
+	"google.golang.org/grpc"
 )
 
 var (

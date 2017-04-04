@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/errors"
@@ -149,7 +150,7 @@ func (m *methodHandler) callUnary(ctx context.Context, transportRequest *transpo
 	responseWriter := newResponseWriter()
 	// TODO: always return data?
 	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
-	err = errors.CombineErrors(err, grpc.SendHeader(ctx, responseWriter.md))
+	err = multierr.Append(err, grpc.SendHeader(ctx, responseWriter.md))
 	data := responseWriter.Bytes()
 	return &data, err
 }
