@@ -25,7 +25,8 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
+
+	"go.uber.org/multierr"
 )
 
 type buildableOutbounds struct {
@@ -71,7 +72,7 @@ func (b *builder) Build() (yarpc.Config, error) {
 	var (
 		transports = make(map[string]transport.Transport)
 		cfg        = yarpc.Config{Name: b.Name}
-		errs       []error
+		errs       error
 	)
 
 	for name, spec := range b.needTransports {
@@ -95,7 +96,7 @@ func (b *builder) Build() (yarpc.Config, error) {
 	for _, i := range b.inbounds {
 		ib, err := buildInbound(i.Value, transports[i.Transport], b.kit)
 		if err != nil {
-			errs = append(errs, err)
+			errs = multierr.Append(errs, err)
 			continue
 		}
 		cfg.Inbounds = append(cfg.Inbounds, ib)
@@ -113,14 +114,14 @@ func (b *builder) Build() (yarpc.Config, error) {
 		if o := c.Unary; o != nil {
 			ob.Unary, err = buildUnaryOutbound(o.Value, transports[o.Transport], b.kit)
 			if err != nil {
-				errs = append(errs, err)
+				errs = multierr.Append(errs, err)
 				continue
 			}
 		}
 		if o := c.Oneway; o != nil {
 			ob.Oneway, err = buildOnewayOutbound(o.Value, transports[o.Transport], b.kit)
 			if err != nil {
-				errs = append(errs, err)
+				errs = multierr.Append(errs, err)
 				continue
 			}
 		}
@@ -131,7 +132,7 @@ func (b *builder) Build() (yarpc.Config, error) {
 		cfg.Outbounds = outbounds
 	}
 
-	return cfg, errors.MultiError(errs)
+	return cfg, errs
 }
 
 // buildTransport builds a Transport from the given value. This will panic if
@@ -205,20 +206,20 @@ func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeM
 func (b *builder) AddImplicitOutbound(
 	spec *compiledTransportSpec, outboundKey, service string, attrs attributeMap,
 ) error {
-	var errs []error
+	var errs error
 	supportsOutbound := false
 
 	if spec.SupportsUnaryOutbound() {
 		supportsOutbound = true
 		if err := b.AddUnaryOutbound(spec, outboundKey, service, attrs); err != nil {
-			errs = append(errs, err)
+			errs = multierr.Append(errs, err)
 		}
 	}
 
 	if spec.SupportsOnewayOutbound() {
 		supportsOutbound = true
 		if err := b.AddOnewayOutbound(spec, outboundKey, service, attrs); err != nil {
-			errs = append(errs, err)
+			errs = multierr.Append(errs, err)
 		}
 	}
 
@@ -226,7 +227,7 @@ func (b *builder) AddImplicitOutbound(
 		return fmt.Errorf("transport %q does not support outbound requests", spec.Name)
 	}
 
-	return errors.MultiError(errs)
+	return errs
 }
 
 func (b *builder) AddUnaryOutbound(

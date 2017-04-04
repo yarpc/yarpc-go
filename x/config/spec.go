@@ -26,9 +26,9 @@ import (
 	"reflect"
 	"strings"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	errs "go.uber.org/yarpc/internal/errors"
 )
 
 // TransportSpec specifies the configuration parameters for a transport. These
@@ -281,7 +281,7 @@ func (s *compiledTransportSpec) SupportsOnewayOutbound() bool {
 	return s.OnewayOutbound != nil
 }
 
-func compileTransportSpec(spec *TransportSpec) (_ *compiledTransportSpec, err error) {
+func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	out := compiledTransportSpec{Name: spec.Name}
 
 	if spec.Name == "" {
@@ -297,13 +297,11 @@ func compileTransportSpec(spec *TransportSpec) (_ *compiledTransportSpec, err er
 		return nil, errors.New("BuildTransport is required")
 	}
 
-	var errors []error
+	var err error
 
 	// Helper to chain together the compile calls
-	appendError := func(cs *configSpec, err error) *configSpec {
-		if err != nil {
-			errors = append(errors, err)
-		}
+	appendError := func(cs *configSpec, e error) *configSpec {
+		err = multierr.Append(err, e)
 		return cs
 	}
 
@@ -317,7 +315,7 @@ func compileTransportSpec(spec *TransportSpec) (_ *compiledTransportSpec, err er
 	if spec.BuildOnewayOutbound != nil {
 		out.OnewayOutbound = appendError(compileOnewayOutboundConfig(spec.BuildOnewayOutbound))
 	}
-	return &out, errs.CombineErrors(errors...)
+	return &out, err
 }
 
 func compileTransportConfig(build interface{}) (*configSpec, error) {

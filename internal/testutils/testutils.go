@@ -27,11 +27,11 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
 
+	"go.uber.org/multierr"
 	ggrpc "google.golang.org/grpc"
 )
 
@@ -101,22 +101,26 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 	if err != nil {
 		return err
 	}
+
 	serverDispatcher, err := NewServerDispatcher(procedures, dispatcherConfig)
 	if err != nil {
 		return err
 	}
+
 	clientDispatcher, err := NewClientDispatcher(transportType, dispatcherConfig)
 	if err != nil {
 		return err
 	}
+
 	if err := serverDispatcher.Start(); err != nil {
 		return err
 	}
-	defer func() { err = errors.CombineErrors(err, serverDispatcher.Stop()) }()
+	defer func() { err = multierr.Append(err, serverDispatcher.Stop()) }()
+
 	if err := clientDispatcher.Start(); err != nil {
 		return err
 	}
-	defer func() { err = errors.CombineErrors(err, clientDispatcher.Stop()) }()
+	defer func() { err = multierr.Append(err, clientDispatcher.Stop()) }()
 	grpcPort, err := dispatcherConfig.GetPort(TransportTypeGRPC)
 	if err != nil {
 		return err

@@ -83,7 +83,6 @@ func TestCompileTransportSpec(t *testing.T) {
 				BuildOnewayOutbound: func(struct{}) (transport.OnewayOutbound, error) { panic("kthxbye") },
 			},
 			wantErr: []string{
-				"the following errors occurred:",
 				"invalid BuildTransport func(struct {}, *config.Kit) (transport.Inbound, error): " +
 					"must return a transport.Transport as its first result, found transport.Inbound",
 				"invalid BuildInbound: must accept exactly three arguments, found 1",
@@ -133,6 +132,9 @@ func TestCompileTransportSpec(t *testing.T) {
 				if assert.Error(t, err, "expected failure") {
 					for _, msg := range tt.wantErr {
 						assert.Contains(t, err.Error(), msg)
+					}
+					for _, msg := range tt.wantErr {
+						assert.Contains(t, fmt.Sprintf("%+v", err), msg)
 					}
 				}
 				return
