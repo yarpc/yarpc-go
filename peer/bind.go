@@ -25,9 +25,10 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	intsync "go.uber.org/yarpc/internal/sync"
+
+	"go.uber.org/multierr"
 )
 
 // Binder is a callback, provided to peer.Bind, that accepts a peer list and
@@ -68,22 +69,22 @@ func (c *BoundChooser) Start() error {
 }
 
 func (c *BoundChooser) start() error {
-	var errs errors.ErrorGroup
 
 	if err := c.chooser.Start(); err != nil {
 		return err
 	}
 
+	var errs error
 	if err := c.binding.Start(); err != nil {
-		errs = append(errs, err)
+		errs = multierr.Append(errs, err)
 
 		// Abort the peer chooser if the binding failed to start.
 		if err := c.chooser.Stop(); err != nil {
-			errs = append(errs, err)
+			errs = multierr.Append(errs, err)
 		}
 	}
 
-	return errors.CombineErrors(errs...)
+	return errs
 }
 
 // Stop stops the peer list and the peer provider binding.
@@ -92,17 +93,17 @@ func (c *BoundChooser) Stop() error {
 }
 
 func (c *BoundChooser) stop() error {
-	var errs errors.ErrorGroup
+	var errs error
 
 	if err := c.chooser.Stop(); err != nil {
-		errs = append(errs, err)
+		errs = multierr.Append(errs, err)
 	}
 
 	if err := c.binding.Stop(); err != nil {
-		errs = append(errs, err)
+		errs = multierr.Append(errs, err)
 	}
 
-	return errors.CombineErrors(errs...)
+	return errs
 }
 
 // IsRunning returns whether the peer list and its peer provider binding are

@@ -31,9 +31,10 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	"go.uber.org/multierr"
 )
 
 const (
@@ -144,24 +145,29 @@ func WithClientConfig(serviceName string, procedures []transport.Procedure, tran
 		return err
 	}
 	defer func() {
-		err = errors.CombineErrors(err, close())
+		err = multierr.Append(err, close())
 	)()
+
 	serverDispatcher, err := NewServerDispatcher(procedures, dispatcherConfig)
 	if err != nil {
 		return err
 	}
+
 	clientDispatcher, err := NewClientDispatcher(transportType, dispatcherConfig)
 	if err != nil {
 		return err
 	}
+
 	if err := serverDispatcher.Start(); err != nil {
 		return err
 	}
-	defer func() { err = errors.CombineErrors(err, serverDispatcher.Stop()) }()
+	defer func() { err = multierr.Append(err, serverDispatcher.Stop()) }()
+
 	if err := clientDispatcher.Start(); err != nil {
 		return err
 	}
-	defer func() { err = errors.CombineErrors(err, clientDispatcher.Stop()) }()
+	defer func() { err = multierr.Append(err, clientDispatcher.Stop()) }()
+
 	return f(clientDispatcher.ClientConfig(serviceName))
 }
 
@@ -186,7 +192,7 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) 
 			return nil, err
 		}
 		onewayOutbound = http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
-		unaryOutbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("localhost:%d", port))
+		unaryOutbound = tchannelTransport.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
 	case TransportTypeHTTP:
 		httpOutbound := http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", port))
 		onewayOutbound = httpOutbound
@@ -219,7 +225,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 	}
 	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName(config.GetServiceName()),
-		tchannel.ListenAddr(fmt.Sprintf(":%d", tchannelPort)),
+		tchannel.ListenAddr(fmt.Sprintf("127.0.0.1:%d", tchannelPort)),
 	)
 	if err != nil {
 		return nil, err
@@ -229,7 +235,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 			Name: config.GetServiceName(),
 			Inbounds: yarpc.Inbounds{
 				tchannelTransport.NewInbound(),
-				http.NewTransport().NewInbound(fmt.Sprintf(":%d", httpPort)),
+				http.NewTransport().NewInbound(fmt.Sprintf("127.0.0.1:%d", httpPort)),
 			},
 		},
 	)

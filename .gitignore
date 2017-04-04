@@ -3,9 +3,7 @@
 *.so
 *.exe
 *.prof
-*.t.err
-/.tmp
-/.cache
+/.glide
 /cover
 /cover.html
 /cover.out
@@ -15,7 +13,6 @@
 /encoding/thrift/thriftrw-plugin-yarpc/thriftrw-plugin-yarpc
 /encoding/x/protobuf/protoc-gen-yarpc-go/protoc-gen-yarpc-go
 /internal/crossdock/crossdock
-/internal/examples/env
 /internal/examples/json-keyvalue/client/client
 /internal/examples/json-keyvalue/server/server
 /internal/examples/protobuf/protobuf

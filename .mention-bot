@@ -1,4 +1,5 @@
 {
+  "maxReviewers": 1,
   "requiredOrgs": [
     "yarpc"
   ],
