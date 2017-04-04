@@ -59,3 +59,17 @@ else
 	$(info CI_TYPES=$(CI_TYPES))
 endif
 	@echo
+
+# DO NOT RUN THE BELOW UNLESS YOU KNOW WHAT YOU ARE DOING
+
+.PHONY: __yarpc_build_build
+__yarpc_build_build:
+	docker build -t yarpc/yarpc-go-build -f Dockerfile.build .
+
+.PHONY: __yarpc_build_release
+__yarpc_build_release: __yarpc_build_build
+	docker push yarpc/yarpc-go-build
+
+.PHONY: __yarpc_build_shell
+__yarpc_build_shell: __yarpc_build_build
+	docker run -v /var/run/docker.sock:/var/run/docker.sock -v $(shell pwd):/app yarpc/yarpc-go-build /bin/sh
