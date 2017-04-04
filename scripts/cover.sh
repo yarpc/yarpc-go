@@ -2,20 +2,25 @@
 
 set -e
 
+if echo "${GOPATH}" | grep : >/dev/null; then
+	echo "error: GOPATH must be one directory, but has multiple directories separated by colons: ${GOPATH}" >&2
+	exit 1
+fi
+
 start_waitpids() {
-  WAITPIDS=
+	WAITPIDS=
 }
 
 do_waitpid() {
-  $@ &
-  WAITPIDS="${WAITPIDS} $!"
+	$@ &
+	WAITPIDS="${WAITPIDS} $!"
 }
 
 reset_waitpids() {
-  for waitpid in ${WAITPIDS}; do
-    wait "${waitpid}" || exit 1
-  done
-  WAITPIDS=
+	for waitpid in ${WAITPIDS}; do
+		wait "${waitpid}" || exit 1
+	done
+	WAITPIDS=
 }
 
 COVER=cover
@@ -41,6 +46,9 @@ done
 i=0
 start_waitpids
 for pkg in "$@"; do
+	if ! ls "${GOPATH}/src/${pkg}" | grep _test\.go$ >/dev/null; then
+		continue
+	fi
 	i=$((i + 1))
 
 	extracoverpkg=""
@@ -69,7 +77,7 @@ for pkg in "$@"; do
 		args="-coverprofile $COVER/cover.${i}.out -coverpkg $coverpkg"
 	fi
 
-  do_waitpid go test -race $args "$pkg"
+	do_waitpid go test -race $args "$pkg"
 done
 reset_waitpids
 
