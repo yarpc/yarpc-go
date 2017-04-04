@@ -96,7 +96,7 @@ func GetFreePorts(count int) ([]uint16, func() error, error) {
 	return ports, func() error {
 		var err error
 		for _, close := range funcs {
-			err = errors.CombineErrors(err, close())
+			err = multierr.Append(err, close())
 		}
 		return err
 	}, nil
@@ -146,7 +146,7 @@ func WithClientConfig(serviceName string, procedures []transport.Procedure, tran
 	}
 	defer func() {
 		err = multierr.Append(err, close())
-	)()
+	}()
 
 	serverDispatcher, err := NewServerDispatcher(procedures, dispatcherConfig)
 	if err != nil {
