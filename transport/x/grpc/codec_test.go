@@ -23,9 +23,6 @@ package grpc
 import (
 	"testing"
 
-	"go.uber.org/yarpc/yarpcproto"
-
-	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,15 +30,6 @@ func TestCustomCodecMarshalBytes(t *testing.T) {
 	value := []byte("test")
 	data, err := customCodec{}.Marshal(&value)
 	assert.Equal(t, value, data)
-	assert.NoError(t, err)
-}
-
-func TestCustomCodecMarshalProtoMessage(t *testing.T) {
-	value := &yarpcproto.Oneway{true}
-	expectedData, err := proto.Marshal(value)
-	assert.NoError(t, err)
-	data, err := customCodec{}.Marshal(value)
-	assert.Equal(t, expectedData, data)
 	assert.NoError(t, err)
 }
 
@@ -59,15 +47,6 @@ func TestCustomCodecUnmarshalBytes(t *testing.T) {
 	assert.Equal(t, data, value)
 }
 
-func TestCustomCodecUnmarshalProtoMessage(t *testing.T) {
-	expectedValue := &yarpcproto.Oneway{true}
-	data, err := proto.Marshal(expectedValue)
-	assert.NoError(t, err)
-	value := &yarpcproto.Oneway{}
-	assert.NoError(t, customCodec{}.Unmarshal(data, value))
-	assert.Equal(t, expectedValue, value)
-}
-
 func TestCustomCodecUnmarshalCastError(t *testing.T) {
 	var value string
 	err := customCodec{}.Unmarshal([]byte("test"), &value)
@@ -76,5 +55,5 @@ func TestCustomCodecUnmarshalCastError(t *testing.T) {
 }
 
 func TestCustomCodecString(t *testing.T) {
-	assert.Equal(t, "custom", customCodec{}.String())
+	assert.Equal(t, "proto", customCodec{}.String())
 }

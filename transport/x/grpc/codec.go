@@ -20,22 +20,14 @@
 
 package grpc
 
-import (
-	"fmt"
+import "fmt"
 
-	"github.com/gogo/protobuf/proto"
-)
-
-// customCodec will either handle proto.Message objects, or
-// pass bytes to/from the wire without modification.
+// customCodec pass bytes to/from the wire without modification.
 type customCodec struct{}
 
-// Marshal takes a proto.Message and marshals it, or
-// takes a []byte pointer and passes it through as a []byte.
+// Marshal takes a []byte pointer and passes it through as a []byte.
 func (customCodec) Marshal(obj interface{}) ([]byte, error) {
 	switch value := obj.(type) {
-	case proto.Message:
-		return proto.Marshal(value)
 	case *[]byte:
 		return *value, nil
 	default:
@@ -43,12 +35,9 @@ func (customCodec) Marshal(obj interface{}) ([]byte, error) {
 	}
 }
 
-// Unmarshal takes a proto.Message and unmarshals it, or
-// takes a []byte pointer and writes it to v.
+// Unmarshal takes a []byte pointer and writes it to v.
 func (customCodec) Unmarshal(data []byte, obj interface{}) error {
 	switch value := obj.(type) {
-	case proto.Message:
-		return proto.Unmarshal(data, value)
 	case *[]byte:
 		*value = data
 		return nil
@@ -58,11 +47,10 @@ func (customCodec) Unmarshal(data []byte, obj interface{}) error {
 }
 
 func (customCodec) String() string {
-	// TODO: we might have to fake this as proto
-	// this is hacky
-	return "custom"
+	// TODO: faking this as proto to be compatible with existing grpc clients
+	return "proto"
 }
 
 func newCustomCodecCastError(actualObject interface{}) error {
-	return fmt.Errorf("expected object of either type proto.Message or *[]byte but got %T", actualObject)
+	return fmt.Errorf("expected object to be of type *[]byte but got %T", actualObject)
 }
