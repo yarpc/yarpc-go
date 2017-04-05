@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-	opentracing "github.com/opentracing/opentracing-go"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -44,15 +43,16 @@ var _ transport.OnewayOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
-	once       internalsync.LifecycleOnce
-	lock       sync.Mutex
-	address    string
-	clientConn *grpc.ClientConn
+	once             internalsync.LifecycleOnce
+	lock             sync.Mutex
+	address          string
+	transportOptions *transportOptions
+	clientConn       *grpc.ClientConn
 }
 
 // NewSingleOutbound returns a new Outbound for the given adrress.
-func NewSingleOutbound(address string) *Outbound {
-	return &Outbound{internalsync.Once(), sync.Mutex{}, address, nil}
+func NewSingleOutbound(address string, options ...TransportOption) *Outbound {
+	return &Outbound{internalsync.Once(), sync.Mutex{}, address, newTransportOptions(options), nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -148,8 +148,7 @@ func (o *Outbound) start() error {
 		grpc.WithCodec(customCodec{}),
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
-		// TODO: always global tracer?
-		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(opentracing.GlobalTracer())),
+		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.transportOptions.getTracer())),
 	)
 	if err != nil {
 		return err

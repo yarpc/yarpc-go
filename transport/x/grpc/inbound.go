@@ -29,7 +29,6 @@ import (
 	internalsync "go.uber.org/yarpc/internal/sync"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-	"github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 )
 
@@ -42,16 +41,17 @@ var (
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once    internalsync.LifecycleOnce
-	lock    sync.Mutex
-	address string
-	router  transport.Router
-	server  *grpc.Server
+	once             internalsync.LifecycleOnce
+	lock             sync.Mutex
+	address          string
+	transportOptions *transportOptions
+	router           transport.Router
+	server           *grpc.Server
 }
 
 // NewInbound returns a new Inbound for the given address.
-func NewInbound(address string) *Inbound {
-	return &Inbound{internalsync.Once(), sync.Mutex{}, address, nil, nil}
+func NewInbound(address string, options ...TransportOption) *Inbound {
+	return &Inbound{internalsync.Once(), sync.Mutex{}, address, newTransportOptions(options), nil, nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -95,8 +95,7 @@ func (i *Inbound) start() error {
 		grpc.CustomCodec(customCodec{}),
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
-		// TODO: always global tracer?
-		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(opentracing.GlobalTracer())),
+		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.transportOptions.getTracer())),
 	)
 	for _, serviceDesc := range serviceDescs {
 		server.RegisterService(serviceDesc, noopGrpcStruct{})
