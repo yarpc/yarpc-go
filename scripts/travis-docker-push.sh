@@ -5,6 +5,11 @@ set -e
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 cd "${DIR}"
 
+if [ -z "$DOCKER_EMAIL" ] || [ -z "$DOCKER_USER" ] || [ -z "$DOCKER_PASS" ]; then
+	echo "Skipping docker push because credentials aren't available."
+	exit 0
+fi
+
 DOCKER_COMPOSE_REPO="${1}:latest"
 COMMIT="${TRAVIS_COMMIT::8}"
 REPO="yarpc/yarpc-go"
