@@ -9,7 +9,7 @@ message Ping {
 }
 
 message Pong {
-  string beep = 1;
+  string boop = 1;
 }
 
 service Echo {
