@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/x/cherami"
+	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/transport/x/redis"
 
 	cherami_client "github.com/uber/cherami-client-go/client/cherami"
@@ -62,6 +63,10 @@ func Start() {
 			log.Printf(`error init cherami inbound %v\n`, err)
 		}
 		inbounds = append(inbounds, cheramiInboud)
+	}
+
+	if useGrpc() {
+		inbounds = append(inbounds, grpc.NewInbound(":8090"))
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
@@ -101,6 +106,12 @@ func useRedis() bool {
 // available
 func useCherami() bool {
 	return os.Getenv("CHERAMI") == "enabled"
+}
+
+// useGrpc checks to see if a grpc server is expected to be
+// available
+func useGrpc() bool {
+	return os.Getenv("GRPC") == "enabled"
 }
 
 func initCheramiInbound() (*cherami.Inbound, error) {
