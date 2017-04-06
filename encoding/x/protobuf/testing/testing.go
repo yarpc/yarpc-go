@@ -19,3 +19,6 @@
 // THE SOFTWARE.
 
 package testing
+
+// blank import to make sure scripts.cover.sh picks this up with .Deps
+import _ "go.uber.org/yarpc/internal/examples/protobuf/example"
