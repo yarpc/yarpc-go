@@ -167,6 +167,7 @@ func getServiceNameAndMethodDesc(router transport.Router, procedure transport.Pr
 	return serviceName, grpc.MethodDesc{
 		MethodName: methodName,
 		// TODO: what if two procedures have the same serviceName and methodName, but a different service?
+		// TODO: should we handle procedure.Encoding somehow?
 		Handler: newMethodHandler(procedure.Service, serviceName, methodName, router).handle,
 	}, nil
 }
