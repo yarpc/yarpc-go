@@ -42,16 +42,16 @@ func TestGetServiceDescs(t *testing.T) {
 		{
 			Name: "Basic",
 			Procedures: []transport.Procedure{
-				transport.Procedure{
+				{
 					Name:    "KeyValue::GetValue",
 					Service: "Example",
 				},
 			},
 			ServiceDescs: []*grpc.ServiceDesc{
-				&grpc.ServiceDesc{
+				{
 					ServiceName: "KeyValue",
 					Methods: []grpc.MethodDesc{
-						grpc.MethodDesc{
+						{
 							MethodName: "GetValue",
 						},
 					},
@@ -61,23 +61,23 @@ func TestGetServiceDescs(t *testing.T) {
 		{
 			Name: "Two Methods",
 			Procedures: []transport.Procedure{
-				transport.Procedure{
+				{
 					Name:    "KeyValue::GetValue",
 					Service: "Example",
 				},
-				transport.Procedure{
+				{
 					Name:    "KeyValue::SetValue",
 					Service: "Example",
 				},
 			},
 			ServiceDescs: []*grpc.ServiceDesc{
-				&grpc.ServiceDesc{
+				{
 					ServiceName: "KeyValue",
 					Methods: []grpc.MethodDesc{
-						grpc.MethodDesc{
+						{
 							MethodName: "GetValue",
 						},
-						grpc.MethodDesc{
+						{
 							MethodName: "SetValue",
 						},
 					},
@@ -87,28 +87,28 @@ func TestGetServiceDescs(t *testing.T) {
 		{
 			Name: "Two Services",
 			Procedures: []transport.Procedure{
-				transport.Procedure{
+				{
 					Name:    "KeyValue::GetValue",
 					Service: "Example",
 				},
-				transport.Procedure{
+				{
 					Name:    "Sink::GetValue",
 					Service: "Example",
 				},
 			},
 			ServiceDescs: []*grpc.ServiceDesc{
-				&grpc.ServiceDesc{
+				{
 					ServiceName: "KeyValue",
 					Methods: []grpc.MethodDesc{
-						grpc.MethodDesc{
+						{
 							MethodName: "GetValue",
 						},
 					},
 				},
-				&grpc.ServiceDesc{
+				{
 					ServiceName: "Sink",
 					Methods: []grpc.MethodDesc{
-						grpc.MethodDesc{
+						{
 							MethodName: "GetValue",
 						},
 					},
@@ -118,16 +118,16 @@ func TestGetServiceDescs(t *testing.T) {
 		{
 			Name: "Default Method Name",
 			Procedures: []transport.Procedure{
-				transport.Procedure{
+				{
 					Name:    "Foo",
 					Service: "Example",
 				},
 			},
 			ServiceDescs: []*grpc.ServiceDesc{
-				&grpc.ServiceDesc{
+				{
 					ServiceName: "Foo",
 					Methods: []grpc.MethodDesc{
-						grpc.MethodDesc{
+						{
 							MethodName: defaultMethodName,
 						},
 					},
