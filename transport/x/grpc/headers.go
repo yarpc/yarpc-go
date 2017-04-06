@@ -35,6 +35,8 @@ const (
 	applicationHeaderPrefix = globalHeaderPrefix + "app-"
 	callerHeader            = reservedHeaderPrefix + "caller"
 	encodingHeader          = reservedHeaderPrefix + "encoding"
+	serviceHeader           = reservedHeaderPrefix + "service"
+	procedureHeader         = reservedHeaderPrefix + "procedure"
 )
 
 func addCaller(md metadata.MD, caller string) error {
@@ -43,6 +45,14 @@ func addCaller(md metadata.MD, caller string) error {
 
 func addEncoding(md metadata.MD, encoding transport.Encoding) error {
 	return addToMetadata(md, encodingHeader, string(encoding))
+}
+
+func addService(md metadata.MD, service string) error {
+	return addToMetadata(md, serviceHeader, service)
+}
+
+func addProcedure(md metadata.MD, procedure string) error {
+	return addToMetadata(md, procedureHeader, procedure)
 }
 
 // add headers into md as application headers
@@ -66,6 +76,14 @@ func getEncoding(md metadata.MD) (transport.Encoding, error) {
 		return "", err
 	}
 	return transport.Encoding(encoding), nil
+}
+
+func getService(md metadata.MD) (string, error) {
+	return getFromMetadata(md, serviceHeader)
+}
+
+func getProcedure(md metadata.MD) (string, error) {
+	return getFromMetadata(md, procedureHeader)
 }
 
 // get application headers from md

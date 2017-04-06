@@ -47,6 +47,12 @@ func TestProcedureNameFunctions(t *testing.T) {
 			MethodName:    "__default__",
 			FullMethod:    "/foo/__default__",
 		},
+		{
+			ProcedureName: "foo/bar",
+			ServiceName:   "foo___bar",
+			MethodName:    "__default__",
+			FullMethod:    "/foo___bar/__default__",
+		},
 	} {
 		t.Run(tt.ProcedureName, func(t *testing.T) {
 			serviceName, methodName, err := procedureNameToServiceNameMethodName(tt.ProcedureName)

@@ -101,6 +101,13 @@ func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func
 	if encoding == "" {
 		encoding = protobuf.Encoding
 	}
+	service, err := getService(md)
+	if err != nil {
+		return nil, err
+	}
+	if service == "" {
+		service = m.procedureServiceName
+	}
 	headers, err := getApplicationHeaders(md)
 	if err != nil {
 		return nil, err
@@ -112,7 +119,7 @@ func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func
 	transportRequest := &transport.Request{
 		Caller:    caller,
 		Encoding:  encoding,
-		Service:   m.procedureServiceName,
+		Service:   service,
 		Procedure: procedureToName(m.serviceName, m.methodName),
 		Headers:   headers,
 		Body:      bytes.NewBuffer(data),

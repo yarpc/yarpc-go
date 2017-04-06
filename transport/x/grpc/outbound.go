@@ -176,6 +176,12 @@ func requestToMetadata(request *transport.Request) (metadata.MD, error) {
 	if err := addEncoding(md, request.Encoding); err != nil {
 		return nil, err
 	}
+	if err := addService(md, request.Service); err != nil {
+		return nil, err
+	}
+	if err := addProcedure(md, request.Procedure); err != nil {
+		return nil, err
+	}
 	if err := addApplicationHeaders(md, request.Headers); err != nil {
 		return nil, err
 	}
