@@ -87,6 +87,8 @@ protoc_go yarpcproto/yarpc.proto
 protoc_go encoding/x/protobuf/internal/wirepb/wire.proto
 protoc_go_grpc internal/examples/protobuf/examplepb/example.proto
 protoc_yarpc_go internal/examples/protobuf/examplepb/example.proto
+protoc_go_grpc internal/crossdock/crossdockpb/crossdock.proto
+protoc_yarpc_go internal/crossdock/crossdockpb/crossdock.proto
 
 touch encoding/x/protobuf/internal/wirepb/.nocover
 touch internal/crossdock/thrift/gen-go/echo/.nocover

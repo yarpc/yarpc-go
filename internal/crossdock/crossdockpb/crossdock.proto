@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package uber.yarpc.internal.crossdock;
+
+option go_package = "crossdockpb";
+
+message Ping {
+  string beep = 1;
+}
+
+message Pong {
+  string beep = 1;
+}
+
+service Echo {
+  rpc Echo(Ping) returns (Pong);
+}
