@@ -35,8 +35,9 @@ services:
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
             - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
-            - AXIS_PROTOBUF_CLIENT=go
-            - AXIS_PROTOBUF_SERVER=go
+            - AXIS_GO_ENCODING=raw,json,thrift,protobuf
+            - AXIS_GO_CLIENT=go
+            - AXIS_GO_SERVER=go
 
             # Transports available to the ctxpropagation behavior for multihop
             # requests.
@@ -45,7 +46,8 @@ services:
             - BEHAVIOR_RAW=client,server,transport
             - BEHAVIOR_JSON=client,server,transport
             - BEHAVIOR_THRIFT=client,server,transport
-            - BEHAVIOR_PROTOBUF=protobuf_client,protobuf_server,transport
+            - BEHAVIOR_PROTOBUF=go_client,go_server,transport
+            - BEHAVIOR_GRPC=go_client,go_server,go_encoding
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
             # BEHAVIOR_ERRORSHTTPIN TODO
@@ -74,7 +76,7 @@ services:
           context: .
           dockerfile: Dockerfile.crossdock
         ports:
-            - "8080-8088"
+            - "8080-8089"
         environment:
             - REDIS=enabled
             - CHERAMI=enabled

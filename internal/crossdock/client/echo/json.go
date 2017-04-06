@@ -38,10 +38,15 @@ type jsonEcho struct {
 
 // JSON implements the 'json' behavior.
 func JSON(t crossdock.T) {
-	t = createEchoT("json", t)
+	JSONTransport(t, "")
+}
+
+// JSONTransport implements the 'json' behavior for the given transport or behavior transport.
+func JSONTransport(t crossdock.T, transport string) {
+	t = createEchoT("json", transport, t)
 	fatals := crossdock.Fatals(t)
 
-	dispatcher := disp.Create(t)
+	dispatcher := disp.CreateTransport(t, transport)
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 

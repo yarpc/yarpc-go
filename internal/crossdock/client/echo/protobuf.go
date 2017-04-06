@@ -33,10 +33,15 @@ import (
 
 // Protobuf implements the 'protobuf' behavior.
 func Protobuf(t crossdock.T) {
-	t = createEchoT("protobuf", t)
+	ProtobufTransport(t, "")
+}
+
+// ProtobufTransport implements the 'protobuf' behavior for the given transport or behavior transport.
+func ProtobufTransport(t crossdock.T, transport string) {
+	t = createEchoT("protobuf", transport, t)
 	fatals := crossdock.Fatals(t)
 
-	dispatcher := disp.Create(t)
+	dispatcher := disp.CreateTransport(t, transport)
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 

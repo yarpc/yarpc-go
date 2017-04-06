@@ -67,6 +67,7 @@ func (EchoThrift) Echo(ctx context.Context, ping *echo.Ping) (*echo.Pong, error)
 // EchoProtobuf implements the Protobuf Echo service.
 type EchoProtobuf struct{}
 
+// Echo implements the Echo function for the Protobuf Echo service.
 func (EchoProtobuf) Echo(_ context.Context, request *crossdockpb.Ping) (*crossdockpb.Pong, error) {
 	if request == nil {
 		return nil, nil

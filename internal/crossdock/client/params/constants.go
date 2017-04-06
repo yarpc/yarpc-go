@@ -22,9 +22,10 @@ package params
 
 // Params used by behaviors
 const (
-	Encoding       = "encoding"
-	Server         = "server"
-	HTTPServer     = "httpserver"
-	Transport      = "transport"
-	ProtobufServer = "protobuf_server"
+	Encoding   = "encoding"
+	Server     = "server"
+	HTTPServer = "httpserver"
+	Transport  = "transport"
+	GoEncoding = "go_encoding"
+	GoServer   = "go_server"
 )

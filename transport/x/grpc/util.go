@@ -23,6 +23,7 @@ package grpc
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"go.uber.org/yarpc/internal/procedure"
 )
@@ -30,7 +31,8 @@ import (
 const defaultMethodName = "__default__"
 
 func procedureNameToServiceNameMethodName(procedureName string) (string, string, error) {
-	serviceName, methodName := procedure.FromName(procedureName)
+	// TODO: this is hacky
+	serviceName, methodName := procedure.FromName(strings.Replace(procedureName, "/", "___", -1))
 	if serviceName == "" {
 		return "", "", fmt.Errorf("invalid procedure name: %s", procedureName)
 	}
@@ -59,7 +61,9 @@ func toFullMethod(serviceName string, methodName string) string {
 
 func procedureToName(serviceName string, methodName string) string {
 	if methodName == defaultMethodName {
-		return serviceName
+		// TODO: this is hacky
+		return strings.Replace(serviceName, "___", "/", -1)
 	}
-	return procedure.ToName(serviceName, methodName)
+	// TODO: this is hacky
+	return strings.Replace(procedure.ToName(serviceName, methodName), "___", "/", -1)
 }

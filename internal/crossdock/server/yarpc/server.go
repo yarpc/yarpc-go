@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 var dispatcher *yarpc.Dispatcher
@@ -53,6 +54,7 @@ func Start() {
 		Inbounds: yarpc.Inbounds{
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":8081"),
+			grpc.NewInbound(":8089"),
 		},
 	})
 

@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/cherami"
+	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/transport/x/redis"
 
 	"github.com/crossdock/crossdock-go"
@@ -39,16 +40,25 @@ import (
 
 // Create creates an RPC from the given parameters or fails the whole behavior.
 func Create(t crossdock.T) *yarpc.Dispatcher {
+	return CreateTransport(t, "")
+}
+
+// CreateTransport creates an RPC from the given parameters or fails the whole behavior.
+//
+// If trans is non-empty, this will be used instead of the behavior transport.
+func CreateTransport(t crossdock.T, trans string) *yarpc.Dispatcher {
 	fatals := crossdock.Fatals(t)
 
-	server := t.Param(params.ProtobufServer)
+	server := t.Param(params.GoServer)
 	if server == "" {
 		server = t.Param(params.Server)
 	}
 	fatals.NotEmpty(server, "server is required")
 
 	var unaryOutbound transport.UnaryOutbound
-	trans := t.Param(params.Transport)
+	if trans == "" {
+		trans = t.Param(params.Transport)
+	}
 	switch trans {
 	case "http":
 		httpTransport := http.NewTransport()
@@ -58,6 +68,8 @@ func Create(t crossdock.T) *yarpc.Dispatcher {
 		fatals.NoError(err, "Failed to build ChannelTransport")
 
 		unaryOutbound = tchannelTransport.NewSingleOutbound(server + ":8082")
+	case "grpc":
+		unaryOutbound = grpc.NewSingleOutbound(server + ":8089")
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
