@@ -27,6 +27,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestProcedureNameFunctions(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		ProcedureName string
+		ServiceName   string
+		MethodName    string
+		FullMethod    string
+	}{
+		{
+			ProcedureName: "KeyValue::GetValue",
+			ServiceName:   "KeyValue",
+			MethodName:    "GetValue",
+			FullMethod:    "/KeyValue/GetValue",
+		},
+		{
+			ProcedureName: "foo",
+			ServiceName:   "foo",
+			MethodName:    "__default__",
+			FullMethod:    "/foo/__default__",
+		},
+	} {
+		t.Run(tt.ProcedureName, func(t *testing.T) {
+			serviceName, methodName, err := procedureNameToServiceNameMethodName(tt.ProcedureName)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.ServiceName, serviceName)
+			assert.Equal(t, tt.MethodName, methodName)
+			assert.Equal(t, tt.ProcedureName, procedureToName(serviceName, methodName))
+			assert.Equal(t, tt.FullMethod, toFullMethod(serviceName, methodName))
+		})
+	}
+}
+
 func TestDefaultMethodNameIsSameQueryEscaped(t *testing.T) {
 	assert.Equal(t, defaultMethodName, url.QueryEscape(defaultMethodName))
 }
