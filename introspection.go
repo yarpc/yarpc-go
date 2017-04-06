@@ -48,26 +48,30 @@ func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 	}
 	var outbounds []introspection.OutboundStatus
 	for outboundKey, o := range d.outbounds {
-		var status introspection.OutboundStatus
 		if o.Unary != nil {
+			var status introspection.OutboundStatus
 			if o, ok := o.Unary.(introspection.IntrospectableOutbound); ok {
 				status = o.Introspect()
 			} else {
 				status.Transport = "Introspection not supported"
 			}
 			status.RPCType = "unary"
+			status.Service = o.ServiceName
+			status.OutboundKey = outboundKey
+			outbounds = append(outbounds, status)
 		}
 		if o.Oneway != nil {
+			var status introspection.OutboundStatus
 			if o, ok := o.Oneway.(introspection.IntrospectableOutbound); ok {
 				status = o.Introspect()
 			} else {
 				status.Transport = "Introspection not supported"
 			}
 			status.RPCType = "oneway"
+			status.Service = o.ServiceName
+			status.OutboundKey = outboundKey
+			outbounds = append(outbounds, status)
 		}
-		status.Service = o.ServiceName
-		status.OutboundKey = outboundKey
-		outbounds = append(outbounds, status)
 	}
 	procedures := introspection.IntrospectProcedures(d.table.Procedures())
 	return introspection.DispatcherStatus{
