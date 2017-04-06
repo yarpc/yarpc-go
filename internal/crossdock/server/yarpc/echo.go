@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
 )
 
@@ -61,4 +62,14 @@ func (EchoThrift) Echo(ctx context.Context, ping *echo.Ping) (*echo.Pong, error)
 		}
 	}
 	return &echo.Pong{Boop: ping.Beep}, nil
+}
+
+// EchoProtobuf implements the Protobuf Echo service.
+type EchoProtobuf struct{}
+
+func (EchoProtobuf) Echo(_ context.Context, request *crossdockpb.Ping) (*crossdockpb.Pong, error) {
+	if request == nil {
+		return nil, nil
+	}
+	return &crossdockpb.Pong{Boop: request.Beep}, nil
 }

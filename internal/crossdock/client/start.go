@@ -42,6 +42,7 @@ var behaviors = crossdock.Behaviors{
 	"raw":                   echo.Raw,
 	"json":                  echo.JSON,
 	"thrift":                echo.Thrift,
+	"protobuf":              echo.Protobuf,
 	"headers":               headers.Run,
 	"errors_httpclient":     errorshttpclient.Run,
 	"errors_tchclient":      errorstchclient.Run,

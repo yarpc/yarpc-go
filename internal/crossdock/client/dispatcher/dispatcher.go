@@ -41,7 +41,10 @@ import (
 func Create(t crossdock.T) *yarpc.Dispatcher {
 	fatals := crossdock.Fatals(t)
 
-	server := t.Param(params.Server)
+	server := t.Param(params.ProtobufServer)
+	if server == "" {
+		server = t.Param(params.Server)
+	}
 	fatals.NotEmpty(server, "server is required")
 
 	var unaryOutbound transport.UnaryOutbound

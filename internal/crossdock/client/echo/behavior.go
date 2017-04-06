@@ -30,6 +30,10 @@ import (
 func createEchoT(encoding string, t crossdock.T) crossdock.T {
 	t.Tag("transport", t.Param(params.Transport))
 	t.Tag("encoding", encoding)
-	t.Tag("server", t.Param(params.Server))
+	if t.Param(params.ProtobufServer) != "" {
+		t.Tag("server", t.Param(params.ProtobufServer))
+	} else {
+		t.Tag("server", t.Param(params.Server))
+	}
 	return t
 }

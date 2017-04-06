@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestserver"
@@ -87,4 +88,6 @@ func register(reg *yarpc.Dispatcher) {
 
 	reg.Register(raw.Procedure("sleep/raw", SleepRaw))
 	reg.Register(raw.Procedure("waitfortimeout/raw", WaitForTimeoutRaw))
+
+	reg.Register(crossdockpb.BuildEchoYarpcProcedures(EchoProtobuf{}))
 }

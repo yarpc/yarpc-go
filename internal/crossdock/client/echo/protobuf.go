@@ -18,13 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package params
+package echo
 
-// Params used by behaviors
-const (
-	Encoding       = "encoding"
-	Server         = "server"
-	HTTPServer     = "httpserver"
-	Transport      = "transport"
-	ProtobufServer = "protobuf_server"
+import (
+	"context"
+	"time"
+
+	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
+	"go.uber.org/yarpc/internal/crossdock/client/random"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
+
+	"github.com/crossdock/crossdock-go"
 )
+
+// Protobuf implements the 'protobuf' behavior.
+func Protobuf(t crossdock.T) {
+	t = createEchoT("protobuf", t)
+	fatals := crossdock.Fatals(t)
+
+	dispatcher := disp.Create(t)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
+
+	client := crossdockpb.NewEchoYarpcClient(dispatcher.ClientConfig("yarpc-test"))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	token := random.String(5)
+
+	pong, err := client.Echo(ctx, &crossdockpb.Ping{Beep: token})
+
+	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
+	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)
+}
