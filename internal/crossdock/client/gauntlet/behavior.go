@@ -47,7 +47,7 @@ type TT struct {
 	Service       string   // thrift service name; defaults to ThriftTest
 	Function      string   // name of the Go function on the client
 	Oneway        bool     // if the function is a oneway function
-	SkipOnServers []string // if the test needs to be skipped on particular server
+	SkipOnServers []string // the test is skipped on given servers because it will fail.
 
 	Details string        // optional extra details about what this test does
 	Give    []interface{} // arguments besides context
@@ -425,7 +425,7 @@ func RunGauntlet(t crossdock.T, c Config) {
 		}
 
 		if len(tt.SkipOnServers) > 0 && serverInSkipList(t.Param(params.Server), tt.SkipOnServers) {
-			t.Skipf("%s isn't supported in %s", tt.Function, c.ServerName)
+			t.Skipf("test %q would fail for server %q", tt.Function, c.ServerName)
 			continue
 		}
 
