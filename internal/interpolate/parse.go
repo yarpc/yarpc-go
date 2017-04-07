@@ -21,19 +21,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//line parse.rl:1
+//line internal/interpolate/parse.rl:1
 package interpolate
 
 import "fmt"
 
-//line parse.go:9
+//line internal/interpolate/parse.go:9
 const interpolate_start int = 8
 const interpolate_first_final int = 8
 const interpolate_error int = 0
 
 const interpolate_en_main int = 8
 
-//line parse.rl:8
+//line internal/interpolate/parse.rl:8
 
 // Parse parses a string for interpolation.
 //
@@ -63,12 +63,12 @@ func Parse(data string) (out String, _ error) {
 		t term
 	)
 
-//line parse.go:49
+//line internal/interpolate/parse.go:49
 	{
 		cs = interpolate_start
 	}
 
-//line parse.go:54
+//line internal/interpolate/parse.go:54
 	{
 		if p == pe {
 			goto _test_eof
@@ -107,27 +107,27 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr12
 	tr12:
-//line parse.rl:40
+//line internal/interpolate/parse.rl:40
 		idx = p
-//line parse.rl:64
+//line internal/interpolate/parse.rl:64
 		l = literal(data[idx : p+1])
-//line parse.rl:69
+//line internal/interpolate/parse.rl:69
 		t = l
 		goto st9
 	tr15:
-//line parse.rl:64
+//line internal/interpolate/parse.rl:64
 		l = literal(data[idx : p+1])
-//line parse.rl:69
+//line internal/interpolate/parse.rl:69
 		t = l
 		goto st9
 	tr18:
-//line parse.rl:71
+//line internal/interpolate/parse.rl:71
 		out = append(out, t)
-//line parse.rl:40
+//line internal/interpolate/parse.rl:40
 		idx = p
-//line parse.rl:64
+//line internal/interpolate/parse.rl:64
 		l = literal(data[idx : p+1])
-//line parse.rl:69
+//line internal/interpolate/parse.rl:69
 		t = l
 		goto st9
 	st9:
@@ -135,7 +135,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof9
 		}
 	st_case_9:
-//line parse.go:121
+//line internal/interpolate/parse.go:121
 		switch data[p] {
 		case 36:
 			goto tr16
@@ -144,7 +144,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr15
 	tr16:
-//line parse.rl:71
+//line internal/interpolate/parse.rl:71
 		out = append(out, t)
 		goto st1
 	st1:
@@ -152,31 +152,31 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof1
 		}
 	st_case_1:
-//line parse.go:138
+//line internal/interpolate/parse.go:138
 		if data[p] == 123 {
 			goto st3
 		}
 		goto tr0
 	tr0:
-//line parse.rl:58
+//line internal/interpolate/parse.rl:58
 		l = literal(data[p-1 : p+1])
-//line parse.rl:69
+//line internal/interpolate/parse.rl:69
 		t = l
 		goto st10
 	tr2:
-//line parse.rl:55
+//line internal/interpolate/parse.rl:55
 		l = literal(data[p : p+1])
-//line parse.rl:69
+//line internal/interpolate/parse.rl:69
 		t = l
 		goto st10
 	tr8:
-//line parse.rl:69
+//line internal/interpolate/parse.rl:69
 		t = v
 		goto st10
 	tr10:
-//line parse.rl:40
+//line internal/interpolate/parse.rl:40
 		idx = p
-//line parse.rl:69
+//line internal/interpolate/parse.rl:69
 		t = v
 		goto st10
 	st10:
@@ -184,7 +184,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof10
 		}
 	st_case_10:
-//line parse.go:170
+//line internal/interpolate/parse.go:170
 		switch data[p] {
 		case 36:
 			goto tr16
@@ -193,7 +193,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto tr18
 	tr17:
-//line parse.rl:71
+//line internal/interpolate/parse.rl:71
 		out = append(out, t)
 		goto st2
 	st2:
@@ -201,7 +201,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof2
 		}
 	st_case_2:
-//line parse.go:187
+//line internal/interpolate/parse.go:187
 		goto tr2
 	st3:
 		if p++; p == pe {
@@ -225,13 +225,13 @@ func Parse(data string) (out String, _ error) {
 		cs = 0
 		goto _out
 	tr3:
-//line parse.rl:40
+//line internal/interpolate/parse.rl:40
 		idx = p
-//line parse.rl:45
+//line internal/interpolate/parse.rl:45
 		v.Name = data[idx : p+1]
 		goto st4
 	tr6:
-//line parse.rl:45
+//line internal/interpolate/parse.rl:45
 		v.Name = data[idx : p+1]
 		goto st4
 	st4:
@@ -239,7 +239,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof4
 		}
 	st_case_4:
-//line parse.go:225
+//line internal/interpolate/parse.go:225
 		switch data[p] {
 		case 58:
 			goto tr7
@@ -288,7 +288,7 @@ func Parse(data string) (out String, _ error) {
 		}
 		goto st0
 	tr7:
-//line parse.rl:51
+//line internal/interpolate/parse.rl:51
 		v.HasDefault = true
 		goto st6
 	st6:
@@ -296,19 +296,19 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof6
 		}
 	st_case_6:
-//line parse.go:282
+//line internal/interpolate/parse.go:282
 		if data[p] == 125 {
 			goto tr10
 		}
 		goto tr9
 	tr9:
-//line parse.rl:40
+//line internal/interpolate/parse.rl:40
 		idx = p
-//line parse.rl:48
+//line internal/interpolate/parse.rl:48
 		v.Default = data[idx : p+1]
 		goto st7
 	tr11:
-//line parse.rl:48
+//line internal/interpolate/parse.rl:48
 		v.Default = data[idx : p+1]
 		goto st7
 	st7:
@@ -316,7 +316,7 @@ func Parse(data string) (out String, _ error) {
 			goto _test_eof7
 		}
 	st_case_7:
-//line parse.go:302
+//line internal/interpolate/parse.go:302
 		if data[p] == 125 {
 			goto tr8
 		}
@@ -356,9 +356,9 @@ func Parse(data string) (out String, _ error) {
 		if p == eof {
 			switch cs {
 			case 9, 10:
-//line parse.rl:71
+//line internal/interpolate/parse.rl:71
 				out = append(out, t)
-//line parse.go:324
+//line internal/interpolate/parse.go:324
 			}
 		}
 
@@ -367,7 +367,7 @@ func Parse(data string) (out String, _ error) {
 		}
 	}
 
-//line parse.rl:75
+//line internal/interpolate/parse.rl:75
 
 	if cs < 8 {
 		return out, fmt.Errorf("cannot parse string %q", data)
