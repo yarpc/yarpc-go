@@ -44,9 +44,10 @@ const serverName = "yarpc-test"
 
 // TT is the gauntlets table test struct
 type TT struct {
-	Service  string // thrift service name; defaults to ThriftTest
-	Function string // name of the Go function on the client
-	Oneway   bool   // if the function is a oneway function
+	Service       string   // thrift service name; defaults to ThriftTest
+	Function      string   // name of the Go function on the client
+	Oneway        bool     // if the function is a oneway function
+	SkipOnServers []string // if the test needs to be skipped on particular server
 
 	Details string        // optional extra details about what this test does
 	Give    []interface{} // arguments besides context
@@ -140,10 +141,11 @@ func RunGauntlet(t crossdock.T, c Config) {
 			Want:     gauntlet.NumberzThree,
 		},
 		{
-			Function: "TestEnum",
-			Details:  "unrecognized Numberz",
-			Give:     []interface{}{numberzp(gauntlet.Numberz(42))},
-			Want:     gauntlet.Numberz(42),
+			Function:      "TestEnum",
+			Details:       "unrecognized Numberz",
+			Give:          []interface{}{numberzp(gauntlet.Numberz(42))},
+			Want:          gauntlet.Numberz(42),
+			SkipOnServers: []string{"java"},
 		},
 		{
 			Function: "TestException",
@@ -191,6 +193,7 @@ func RunGauntlet(t crossdock.T, c Config) {
 					},
 				},
 			},
+			SkipOnServers: []string{"java"},
 			Want: map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity{
 				1: {
 					gauntlet.NumberzTwo: &gauntlet.Insanity{
@@ -421,6 +424,11 @@ func RunGauntlet(t crossdock.T, c Config) {
 			continue
 		}
 
+		if len(tt.SkipOnServers) > 0 && serverInSkipList(t.Param(params.Server), tt.SkipOnServers) {
+			t.Skipf("%s isn't supported in %s", tt.Function, c.ServerName)
+			continue
+		}
+
 		desc := BuildDesc(tt)
 
 		client := buildClient(t, desc, tt.Service, c)
@@ -465,6 +473,15 @@ func BuildDesc(tt TT) string {
 		desc = tt.Service + ": " + desc
 	}
 	return desc
+}
+
+func serverInSkipList(target string, servers []string) bool {
+	for _, server := range servers {
+		if server == target {
+			return true
+		}
+	}
+	return false
 }
 
 func buildClient(t crossdock.T, desc string, service string, c Config) reflect.Value {
