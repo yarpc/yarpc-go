@@ -171,7 +171,7 @@ func (t *Transport) start() error {
 	t.ch = ch
 
 	if t.listener != nil {
-		if err := t.ch.Serve(listener); err != nil {
+		if err := t.ch.Serve(t.listener); err != nil {
 			return err
 		}
 	} else {

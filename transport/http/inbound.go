@@ -136,7 +136,7 @@ func (i *Inbound) start() error {
 	}
 
 	i.server = intnet.NewHTTPServer(&http.Server{
-		Handler: http.Handler,
+		Handler: httpHandler,
 	})
 	if i.listener != nil {
 		if err := i.server.Serve(i.listener); err != nil {

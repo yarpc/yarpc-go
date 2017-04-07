@@ -85,7 +85,7 @@ func ListenAddr(addr string) TransportOption {
 // Listener specifies the listener that TChannel should listen on.
 func Listener(listener net.Listener) TransportOption {
 	return func(t *transportConfig) {
-		t.listener - listener
+		t.listener = listener
 	}
 }
 
