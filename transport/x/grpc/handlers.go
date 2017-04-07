@@ -41,6 +41,7 @@ type methodHandler struct {
 	serviceName          string
 	methodName           string
 	router               transport.Router
+	onewayErrorHandler   func(error)
 }
 
 func newMethodHandler(
@@ -48,8 +49,15 @@ func newMethodHandler(
 	serviceName string,
 	methodName string,
 	router transport.Router,
+	onewayErrorHandler func(error),
 ) *methodHandler {
-	return &methodHandler{procedureServiceName, serviceName, methodName, router}
+	return &methodHandler{
+		procedureServiceName,
+		serviceName,
+		methodName,
+		router,
+		onewayErrorHandler,
+	}
 }
 
 func (m *methodHandler) handle(
@@ -165,10 +173,9 @@ func (m *methodHandler) callUnary(ctx context.Context, transportRequest *transpo
 func (m *methodHandler) callOneway(ctx context.Context, transportRequest *transport.Request, onewayHandler transport.OnewayHandler) error {
 	go func() {
 		// TODO: http propagates this on a span
-		// we need to handle this error
 		// TODO: spinning up a new goroutine for every request
 		// is potentially a memory leak
-		_ = transport.DispatchOnewayHandler(ctx, onewayHandler, transportRequest)
+		m.onewayErrorHandler(transport.DispatchOnewayHandler(ctx, onewayHandler, transportRequest))
 	}()
 	return nil
 }

@@ -20,33 +20,88 @@
 
 package grpc
 
-import opentracing "github.com/opentracing/opentracing-go"
+import (
+	"github.com/opentracing/opentracing-go"
+	"google.golang.org/grpc/grpclog"
+)
 
-// TransportOption is an option for a transport.
-type TransportOption func(*transportOptions)
+// InboundOption is an option for an inbound.
+type InboundOption func(*inboundOptions)
 
-// WithTracer specifies the tracer to use.
-func WithTracer(tracer opentracing.Tracer) TransportOption {
-	return func(transportOptions *transportOptions) {
-		transportOptions.tracer = tracer
+// OutboundOption is an option for an outbound.
+type OutboundOption func(*outboundOptions)
+
+// WithInboundTracer specifies the tracer to use for an inbound.
+func WithInboundTracer(tracer opentracing.Tracer) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.tracer = tracer
 	}
 }
 
-type transportOptions struct {
+// WithInboundOnewayErrorHandler specifiec the error handler to use for an inbound.
+//
+// The default is to call grpclog.Print(err).
+func WithInboundOnewayErrorHandler(onewayErrorHandler func(error)) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.onewayErrorHandler = onewayErrorHandler
+	}
+}
+
+// WithOutboundTracer specifies the tracer to use for an outbound.
+func WithOutboundTracer(tracer opentracing.Tracer) OutboundOption {
+	return func(outboundOptions *outboundOptions) {
+		outboundOptions.tracer = tracer
+	}
+}
+
+type inboundOptions struct {
+	tracer             opentracing.Tracer
+	onewayErrorHandler func(error)
+}
+
+func newInboundOptions(options []InboundOption) *inboundOptions {
+	inboundOptions := &inboundOptions{}
+	for _, option := range options {
+		option(inboundOptions)
+	}
+	return inboundOptions
+}
+
+func (i *inboundOptions) getTracer() opentracing.Tracer {
+	if i.tracer == nil {
+		return opentracing.GlobalTracer()
+	}
+	return i.tracer
+}
+
+func (i *inboundOptions) getOnewayErrorHandler() func(error) {
+	if i.onewayErrorHandler == nil {
+		return defaultOnewayErrorHandler
+	}
+	return i.onewayErrorHandler
+}
+
+type outboundOptions struct {
 	tracer opentracing.Tracer
 }
 
-func newTransportOptions(options []TransportOption) *transportOptions {
-	transportOptions := &transportOptions{}
+func newOutboundOptions(options []OutboundOption) *outboundOptions {
+	outboundOptions := &outboundOptions{}
 	for _, option := range options {
-		option(transportOptions)
+		option(outboundOptions)
 	}
-	return transportOptions
+	return outboundOptions
 }
 
-func (t *transportOptions) getTracer() opentracing.Tracer {
-	if t.tracer == nil {
+func (o *outboundOptions) getTracer() opentracing.Tracer {
+	if o.tracer == nil {
 		return opentracing.GlobalTracer()
 	}
-	return t.tracer
+	return o.tracer
+}
+
+func defaultOnewayErrorHandler(err error) {
+	if err != nil {
+		grpclog.Print(err)
+	}
 }

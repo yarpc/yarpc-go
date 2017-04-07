@@ -43,16 +43,16 @@ var _ transport.OnewayOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
-	once             internalsync.LifecycleOnce
-	lock             sync.Mutex
-	address          string
-	transportOptions *transportOptions
-	clientConn       *grpc.ClientConn
+	once            internalsync.LifecycleOnce
+	lock            sync.Mutex
+	address         string
+	outboundOptions *outboundOptions
+	clientConn      *grpc.ClientConn
 }
 
 // NewSingleOutbound returns a new Outbound for the given adrress.
-func NewSingleOutbound(address string, options ...TransportOption) *Outbound {
-	return &Outbound{internalsync.Once(), sync.Mutex{}, address, newTransportOptions(options), nil}
+func NewSingleOutbound(address string, options ...OutboundOption) *Outbound {
+	return &Outbound{internalsync.Once(), sync.Mutex{}, address, newOutboundOptions(options), nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -148,7 +148,7 @@ func (o *Outbound) start() error {
 		grpc.WithCodec(customCodec{}),
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
-		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.transportOptions.getTracer())),
+		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.outboundOptions.getTracer())),
 	)
 	if err != nil {
 		return err

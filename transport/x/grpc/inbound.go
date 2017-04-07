@@ -41,17 +41,17 @@ var (
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once             internalsync.LifecycleOnce
-	lock             sync.Mutex
-	address          string
-	transportOptions *transportOptions
-	router           transport.Router
-	server           *grpc.Server
+	once           internalsync.LifecycleOnce
+	lock           sync.Mutex
+	address        string
+	inboundOptions *inboundOptions
+	router         transport.Router
+	server         *grpc.Server
 }
 
 // NewInbound returns a new Inbound for the given address.
-func NewInbound(address string, options ...TransportOption) *Inbound {
-	return &Inbound{internalsync.Once(), sync.Mutex{}, address, newTransportOptions(options), nil, nil}
+func NewInbound(address string, options ...InboundOption) *Inbound {
+	return &Inbound{internalsync.Once(), sync.Mutex{}, address, newInboundOptions(options), nil, nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -87,7 +87,7 @@ func (i *Inbound) start() error {
 	if i.router == nil {
 		return errRouterNotSet
 	}
-	serviceDescs, err := getServiceDescs(i.router)
+	serviceDescs, err := i.getServiceDescs()
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (i *Inbound) start() error {
 		grpc.CustomCodec(customCodec{}),
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
-		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.transportOptions.getTracer())),
+		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.inboundOptions.getTracer())),
 	)
 	for _, serviceDesc := range serviceDescs {
 		server.RegisterService(serviceDesc, noopGrpcStruct{})
@@ -130,15 +130,15 @@ func (i *Inbound) stop() error {
 	return nil
 }
 
-func getServiceDescs(router transport.Router) ([]*grpc.ServiceDesc, error) {
+func (i *Inbound) getServiceDescs() ([]*grpc.ServiceDesc, error) {
 	// TODO: router.Procedures() is not guaranteed to be immutable
-	procedures := router.Procedures()
+	procedures := i.router.Procedures()
 	if len(procedures) == 0 {
 		return nil, errRouterHasNoProcedures
 	}
 	serviceNameToServiceDesc := make(map[string]*grpc.ServiceDesc)
 	for _, procedure := range procedures {
-		serviceName, methodDesc, err := getServiceNameAndMethodDesc(router, procedure)
+		serviceName, methodDesc, err := i.getServiceNameAndMethodDesc(procedure)
 		if err != nil {
 			return nil, err
 		}
@@ -159,7 +159,7 @@ func getServiceDescs(router transport.Router) ([]*grpc.ServiceDesc, error) {
 	return serviceDescs, nil
 }
 
-func getServiceNameAndMethodDesc(router transport.Router, procedure transport.Procedure) (string, grpc.MethodDesc, error) {
+func (i *Inbound) getServiceNameAndMethodDesc(procedure transport.Procedure) (string, grpc.MethodDesc, error) {
 	serviceName, methodName, err := procedureNameToServiceNameMethodName(procedure.Name)
 	if err != nil {
 		return "", grpc.MethodDesc{}, err
@@ -168,7 +168,13 @@ func getServiceNameAndMethodDesc(router transport.Router, procedure transport.Pr
 		MethodName: methodName,
 		// TODO: what if two procedures have the same serviceName and methodName, but a different service?
 		// TODO: should we handle procedure.Encoding somehow?
-		Handler: newMethodHandler(procedure.Service, serviceName, methodName, router).handle,
+		Handler: newMethodHandler(
+			procedure.Service,
+			serviceName,
+			methodName,
+			i.router,
+			i.inboundOptions.getOnewayErrorHandler(),
+		).handle,
 	}, nil
 }
 

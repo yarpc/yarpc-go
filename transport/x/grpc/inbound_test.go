@@ -136,7 +136,9 @@ func TestGetServiceDescs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
-			serviceDescs, err := getServiceDescs(newTestTransportRouter(tt.Procedures))
+			inbound := NewInbound("")
+			inbound.SetRouter(newTestTransportRouter(tt.Procedures))
+			serviceDescs, err := inbound.getServiceDescs()
 			require.NoError(t, err)
 			testServiceDescServiceNamesCovered(t, serviceDescs, tt.ServiceDescs)
 			for _, expectedServiceDesc := range tt.ServiceDescs {
