@@ -21,6 +21,8 @@ matrix:
       sudo: required
       services:
         - docker
+    - env: CI_TYPES='deps generatenodiff' SUPPRESS_DOCKER=1 SUPPRESS_CROSSDOCK=1
+      go: 1.8
 before_install:
   - make travis-docker-load
 script:
