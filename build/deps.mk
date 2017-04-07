@@ -21,6 +21,7 @@ EXTRA_GO_BIN_DEPS = \
 GLIDE_VERSION := 0.12.3
 THRIFT_VERSION := 1.0.0-dev
 PROTOC_VERSION := 3.2.0
+RAGEL_VERSION := 6.9
 
 GLIDE_OS := $(UNAME_OS)
 THRIFT_OS := $(UNAME_OS)
@@ -51,8 +52,26 @@ THRIFT = $(BIN)/thrift
 PROTOC_LIB = $(LIB)/protoc-$(PROTOC_VERSION)
 PROTOC_ZIP = $(PROTOC_LIB)/protoc.zip
 PROTOC = $(BIN)/protoc
-GEN_BINS = $(THRIFT) $(PROTOC)
+GEN_BINS = $(THRIFT) $(PROTOC) $(RAGEL)
 EXTRA_BINS = $(GLIDE)
+
+RAGEL_TAR = $(LIB)/ragel-$(RAGEL_VERSION)/ragel-$(RAGEL_VERSION).tar.gz
+RAGEL = $(BIN)/ragel
+
+$(RAGEL_TAR):
+	@mkdir -p $(dir $(RAGEL_TAR))
+	curl -L "https://www.colm.net/files/ragel/ragel-$(RAGEL_VERSION).tar.gz" > $(RAGEL_TAR)
+
+$(RAGEL): $(RAGEL_TAR)
+	@mkdir -p $(BIN)
+	@cd $(dir $(RAGEL_TAR)) && \
+		echo "Extracting $(RAGEL_TAR)" && \
+		tar xzf $(RAGEL_TAR) --strip-components=1 && \
+		echo "Building Ragel $(RAGEL_VERSION)" && \
+		./configure --prefix=$(abspath $(dir $(BIN))) --disable-manual && \
+		make install
+	@echo "Installed Ragel $(RAGEL_VERSION):"
+	@$(RAGEL) --version
 
 $(GLIDE_TAR):
 	@mkdir -p $(GLIDE_LIB)
