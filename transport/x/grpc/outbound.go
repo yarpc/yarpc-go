@@ -77,6 +77,9 @@ func (o *Outbound) Transports() []transport.Transport {
 
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	if err := o.once.WhenRunning(ctx); err != nil {
+		return nil, err
+	}
 	var responseBody []byte
 	responseMD := metadata.New(nil)
 	if err := o.invoke(ctx, request, &responseBody, &responseMD); err != nil {
@@ -94,6 +97,9 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 
 // CallOneway implements transport.OnewayOutbound#Call.
 func (o *Outbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
+	if err := o.once.WhenRunning(ctx); err != nil {
+		return nil, err
+	}
 	// pass in dummy responseBody so code doesn't complain
 	// probably safer than doing nil check in codec
 	var responseBody []byte
