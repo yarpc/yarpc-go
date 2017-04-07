@@ -175,7 +175,11 @@ func (m *methodHandler) callOneway(ctx context.Context, transportRequest *transp
 		// TODO: http propagates this on a span
 		// TODO: spinning up a new goroutine for every request
 		// is potentially a memory leak
-		m.onewayErrorHandler(transport.DispatchOnewayHandler(ctx, onewayHandler, transportRequest))
+		// TODO: have to use context.Background() because context is cancelled in crossdock
+		// other transport implementation seem to create their own context for calls, need to understand better
+		// This will not propagate opentracing, for example
+		// Right now just letting context propagation test fail
+		m.onewayErrorHandler(transport.DispatchOnewayHandler(context.Background(), onewayHandler, transportRequest))
 	}()
 	return nil
 }

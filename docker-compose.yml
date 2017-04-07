@@ -34,7 +34,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
+            - AXIS_TRANSPORT_ONEWAY=grpc,http,redis,cherami
             - AXIS_GO_ENCODING=raw,json,thrift,protobuf
             - AXIS_GO_CLIENT=go
             - AXIS_GO_SERVER=go
