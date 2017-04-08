@@ -43,15 +43,15 @@ var (
 type Inbound struct {
 	once           internalsync.LifecycleOnce
 	lock           sync.Mutex
-	address        string
+	listener       net.Listener
 	inboundOptions *inboundOptions
 	router         transport.Router
 	server         *grpc.Server
 }
 
-// NewInbound returns a new Inbound for the given address.
-func NewInbound(address string, options ...InboundOption) *Inbound {
-	return &Inbound{internalsync.Once(), sync.Mutex{}, address, newInboundOptions(options), nil, nil}
+// NewInbound returns a new Inbound for the given listener.
+func NewInbound(listener net.Listener, options ...InboundOption) *Inbound {
+	return &Inbound{internalsync.Once(), sync.Mutex{}, listener, newInboundOptions(options), nil, nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -100,10 +100,6 @@ func (i *Inbound) start() error {
 	for _, serviceDesc := range serviceDescs {
 		server.RegisterService(serviceDesc, noopGrpcStruct{})
 	}
-	listener, err := net.Listen("tcp", i.address)
-	if err != nil {
-		return err
-	}
 	go func() {
 		// TODO there should be some mechanism to block here
 		// there is a race because the listener gets set in the grpc
@@ -115,7 +111,7 @@ func (i *Inbound) start() error {
 		//
 		// TODO Server always returns a non-nil error but should
 		// we do something with some or all errors?
-		_ = server.Serve(listener)
+		_ = server.Serve(i.listener)
 	}()
 	i.server = server
 	return nil

@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	gohttp "net/http"
 	"strings"
 	"sync"
@@ -98,7 +99,11 @@ func do() error {
 			}
 		}()
 	case "grpc":
-		inbound = grpc.NewInbound("127.0.0.1:24046")
+		listener, err := net.Listen("tcp", "127.0.0.1:24046")
+		if err != nil {
+			return err
+		}
+		inbound = grpc.NewInbound(listener)
 		go func() {
 			if err := gohttp.ListenAndServe(":3244", nil); err != nil {
 				log.Fatal(err)

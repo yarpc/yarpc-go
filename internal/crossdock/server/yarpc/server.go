@@ -23,6 +23,7 @@ package yarpc
 import (
 	"fmt"
 	"log"
+	"net"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
@@ -47,6 +48,10 @@ func Start() {
 	if err != nil {
 		log.Panicf("failed to build ChannelTransport: %v", err)
 	}
+	grpcListener, err := net.Listen("tcp", ":8089")
+	if err != nil {
+		log.Panic(err)
+	}
 
 	httpTransport := http.NewTransport()
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
@@ -54,7 +59,7 @@ func Start() {
 		Inbounds: yarpc.Inbounds{
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":8081"),
-			grpc.NewInbound(":8089"),
+			grpc.NewInbound(grpcListener),
 		},
 	})
 

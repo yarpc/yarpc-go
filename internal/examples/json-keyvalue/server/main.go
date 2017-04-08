@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"sync"
 
@@ -104,7 +105,11 @@ func do() error {
 		}
 		inbound = tchannelTransport.NewInbound()
 	case "grpc":
-		inbound = grpc.NewInbound("127.0.0.1:24038")
+		listener, err := net.Listen("tcp", "127.0.0.1:24038")
+		if err != nil {
+			return err
+		}
+		inbound = grpc.NewInbound(listener)
 	default:
 		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}

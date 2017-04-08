@@ -22,6 +22,7 @@ package oneway
 
 import (
 	"log"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -66,7 +67,12 @@ func Start() {
 	}
 
 	if useGrpc() {
-		inbounds = append(inbounds, grpc.NewInbound(":8090"))
+		listener, err := net.Listen("tcp", ":8090")
+		if err != nil {
+			log.Printf("err init grpc inbound %v\n", err)
+		} else {
+			inbounds = append(inbounds, grpc.NewInbound(listener))
+		}
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{

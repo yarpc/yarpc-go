@@ -204,13 +204,17 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 	if err != nil {
 		return nil, err
 	}
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", grpcPort))
+	if err != nil {
+		return nil, err
+	}
 	dispatcher := yarpc.NewDispatcher(
 		yarpc.Config{
 			Name: config.GetServiceName(),
 			Inbounds: yarpc.Inbounds{
 				tchannelTransport.NewInbound(),
 				http.NewTransport().NewInbound(fmt.Sprintf("127.0.0.1:%d", httpPort)),
-				grpc.NewInbound(fmt.Sprintf("127.0.0.1:%d", grpcPort)),
+				grpc.NewInbound(grpcListener),
 			},
 		},
 	)

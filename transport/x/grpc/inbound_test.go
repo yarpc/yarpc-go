@@ -136,7 +136,7 @@ func TestGetServiceDescs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
-			inbound := NewInbound("")
+			inbound := NewInbound(nil)
 			inbound.SetRouter(newTestTransportRouter(tt.Procedures))
 			serviceDescs, err := inbound.getServiceDescs()
 			require.NoError(t, err)
