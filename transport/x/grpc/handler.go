@@ -36,7 +36,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-type methodHandler struct {
+type handler struct {
 	procedureServiceName string
 	serviceName          string
 	methodName           string
@@ -44,14 +44,14 @@ type methodHandler struct {
 	onewayErrorHandler   func(error)
 }
 
-func newMethodHandler(
+func newHandler(
 	procedureServiceName string,
 	serviceName string,
 	methodName string,
 	router transport.Router,
 	onewayErrorHandler func(error),
-) *methodHandler {
-	return &methodHandler{
+) *handler {
+	return &handler{
 		procedureServiceName,
 		serviceName,
 		methodName,
@@ -60,13 +60,13 @@ func newMethodHandler(
 	}
 }
 
-func (m *methodHandler) handle(
+func (h *handler) handle(
 	server interface{},
 	ctx context.Context,
 	decodeFunc func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
 ) (interface{}, error) {
-	transportRequest, err := m.getTransportRequest(ctx, decodeFunc)
+	transportRequest, err := h.getTransportRequest(ctx, decodeFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -76,21 +76,21 @@ func (m *methodHandler) handle(
 			transportRequest,
 			&grpc.UnaryServerInfo{
 				noopGrpcStruct{},
-				m.getFullMethod(),
+				h.getFullMethod(),
 			},
 			func(ctx context.Context, request interface{}) (interface{}, error) {
 				transportRequest, ok := request.(*transport.Request)
 				if !ok {
 					return nil, fmt.Errorf("expected *transport.Request, got %T", request)
 				}
-				return m.call(ctx, transportRequest)
+				return h.call(ctx, transportRequest)
 			},
 		)
 	}
-	return m.call(ctx, transportRequest)
+	return h.call(ctx, transportRequest)
 }
 
-func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error) (*transport.Request, error) {
+func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error) (*transport.Request, error) {
 	md, ok := metadata.FromContext(ctx)
 	if md == nil || !ok {
 		return nil, fmt.Errorf("cannot get metadata from ctx: %v", ctx)
@@ -100,7 +100,7 @@ func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func
 		return nil, err
 	}
 	if caller == "" {
-		caller = m.serviceName
+		caller = h.serviceName
 	}
 	encoding, err := getEncoding(md)
 	if err != nil {
@@ -114,7 +114,7 @@ func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func
 		return nil, err
 	}
 	if service == "" {
-		service = m.procedureServiceName
+		service = h.procedureServiceName
 	}
 	headers, err := getApplicationHeaders(md)
 	if err != nil {
@@ -128,7 +128,7 @@ func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func
 		Caller:    caller,
 		Encoding:  encoding,
 		Service:   service,
-		Procedure: procedureToName(m.serviceName, m.methodName),
+		Procedure: procedureToName(h.serviceName, h.methodName),
 		Headers:   headers,
 		Body:      bytes.NewBuffer(data),
 	}
@@ -138,26 +138,26 @@ func (m *methodHandler) getTransportRequest(ctx context.Context, decodeFunc func
 	return transportRequest, nil
 }
 
-func (m *methodHandler) getFullMethod() string {
-	return fmt.Sprintf("/%s/%s", m.serviceName, m.methodName)
+func (h *handler) getFullMethod() string {
+	return fmt.Sprintf("/%s/%s", h.serviceName, h.methodName)
 }
 
-func (m *methodHandler) call(ctx context.Context, transportRequest *transport.Request) (interface{}, error) {
-	handlerSpec, err := m.router.Choose(ctx, transportRequest)
+func (h *handler) call(ctx context.Context, transportRequest *transport.Request) (interface{}, error) {
+	handlerSpec, err := h.router.Choose(ctx, transportRequest)
 	if err != nil {
 		return nil, err
 	}
 	switch handlerSpec.Type() {
 	case transport.Unary:
-		return m.callUnary(ctx, transportRequest, handlerSpec.Unary())
+		return h.callUnary(ctx, transportRequest, handlerSpec.Unary())
 	case transport.Oneway:
-		return nil, m.callOneway(ctx, transportRequest, handlerSpec.Oneway())
+		return nil, h.callOneway(ctx, transportRequest, handlerSpec.Oneway())
 	default:
 		return nil, errors.UnsupportedTypeError{"grpc", handlerSpec.Type().String()}
 	}
 }
 
-func (m *methodHandler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler) (interface{}, error) {
+func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler) (interface{}, error) {
 	if err := request.ValidateUnaryContext(ctx); err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (m *methodHandler) callUnary(ctx context.Context, transportRequest *transpo
 	return &data, err
 }
 
-func (m *methodHandler) callOneway(ctx context.Context, transportRequest *transport.Request, onewayHandler transport.OnewayHandler) error {
+func (h *handler) callOneway(ctx context.Context, transportRequest *transport.Request, onewayHandler transport.OnewayHandler) error {
 	go func() {
 		// TODO: http propagates this on a span
 		// TODO: spinning up a new goroutine for every request
@@ -179,7 +179,7 @@ func (m *methodHandler) callOneway(ctx context.Context, transportRequest *transp
 		// other transport implementation seem to create their own context for calls, need to understand better
 		// This will not propagate opentracing, for example
 		// Right now just letting context propagation test fail
-		m.onewayErrorHandler(transport.DispatchOnewayHandler(context.Background(), onewayHandler, transportRequest))
+		h.onewayErrorHandler(transport.DispatchOnewayHandler(context.Background(), onewayHandler, transportRequest))
 	}()
 	return nil
 }

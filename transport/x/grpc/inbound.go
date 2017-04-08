@@ -168,7 +168,7 @@ func (i *Inbound) getServiceNameAndMethodDesc(procedure transport.Procedure) (st
 		MethodName: methodName,
 		// TODO: what if two procedures have the same serviceName and methodName, but a different service?
 		// TODO: should we handle procedure.Encoding somehow?
-		Handler: newMethodHandler(
+		Handler: newHandler(
 			procedure.Service,
 			serviceName,
 			methodName,
