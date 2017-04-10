@@ -18,49 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package interpolate provides a generic mechanism to interpolate variables
+// into strings.
+//
+// Variables are specified in the form "${foo}". Values for the different
+// variables are supplied by a VariableResolver function provided at
+// render-time. Variable names can also be in the form "${foo:bar}" where
+// everything after the ":" is the default value for that variable if the
+// VariableResolver did not have a value for that variable.
 package interpolate
-
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-func TestRender(t *testing.T) {
-	tests := []struct {
-		give String
-		vars map[string]string
-
-		want    string
-		wantErr string
-	}{
-		{
-			give: String{literal("foo "), literal("bar")},
-			want: "foo bar",
-		},
-		{
-			give: String{literal("foo"), variable{Name: "bar"}},
-			vars: map[string]string{"bar": "baz"},
-			want: "foobaz",
-		},
-		{
-			give:    String{literal("foo"), variable{Name: "baz"}},
-			vars:    map[string]string{"foo": "bar"},
-			wantErr: `variable "baz" does not have a value or a default`,
-		},
-	}
-
-	for _, tt := range tests {
-		got, err := tt.give.Render(mapResolver(tt.vars))
-		if tt.wantErr != "" {
-			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), tt.wantErr)
-			}
-			continue
-		}
-
-		if assert.NoError(t, err) {
-			assert.Equal(t, tt.want, got)
-		}
-	}
-}

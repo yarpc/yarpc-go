@@ -55,6 +55,8 @@ type VariableResolver func(name string) (value string, ok bool)
 
 // String is a string that supports interpolation given some source of
 // variable values.
+//
+// A String can be obtained by calling Parse on a string.
 type String []term
 
 // Render renders and returns the string. The provided VariableResolver will
@@ -96,5 +98,5 @@ func (s String) RenderTo(w io.Writer, resolve VariableResolver) error {
 type errUnknownVariable struct{ Name string }
 
 func (e errUnknownVariable) Error() string {
-	return fmt.Sprintf("unknown variable %q does not have a value or a default", e.Name)
+	return fmt.Sprintf("variable %q does not have a value or a default", e.Name)
 }

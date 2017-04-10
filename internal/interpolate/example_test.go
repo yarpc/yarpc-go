@@ -20,47 +20,39 @@
 
 package interpolate
 
-import (
-	"testing"
+import "fmt"
 
-	"github.com/stretchr/testify/assert"
+var (
+	resolver      = mapResolver(map[string]string{"name": "Inigo Montoya"})
+	emptyResolver = mapResolver(map[string]string{})
 )
 
-func TestRender(t *testing.T) {
-	tests := []struct {
-		give String
-		vars map[string]string
-
-		want    string
-		wantErr string
-	}{
-		{
-			give: String{literal("foo "), literal("bar")},
-			want: "foo bar",
-		},
-		{
-			give: String{literal("foo"), variable{Name: "bar"}},
-			vars: map[string]string{"bar": "baz"},
-			want: "foobaz",
-		},
-		{
-			give:    String{literal("foo"), variable{Name: "baz"}},
-			vars:    map[string]string{"foo": "bar"},
-			wantErr: `variable "baz" does not have a value or a default`,
-		},
+func Example() {
+	s, err := Parse("My name is ${name}")
+	if err != nil {
+		panic(err)
 	}
 
-	for _, tt := range tests {
-		got, err := tt.give.Render(mapResolver(tt.vars))
-		if tt.wantErr != "" {
-			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), tt.wantErr)
-			}
-			continue
-		}
-
-		if assert.NoError(t, err) {
-			assert.Equal(t, tt.want, got)
-		}
+	out, err := s.Render(resolver)
+	if err != nil {
+		panic(err)
 	}
+
+	fmt.Println(out)
+	// Output: My name is Inigo Montoya
+}
+
+func Example_default() {
+	s, err := Parse("My name is ${name:what}")
+	if err != nil {
+		panic(err)
+	}
+
+	out, err := s.Render(emptyResolver)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(out)
+	// Output: My name is what
 }
