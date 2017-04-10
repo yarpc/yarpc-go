@@ -84,6 +84,14 @@ func TestParseSuccess(t *testing.T) {
 				variable{Name: "b-a-r"},
 			},
 		},
+		{
+			give: "foo ${bar::baz} qux",
+			want: String{
+				literal("foo "),
+				variable{Name: "bar", HasDefault: true, Default: ":baz"},
+				literal(" qux"),
+			},
+		},
 	}
 
 	for _, tt := range tests {
