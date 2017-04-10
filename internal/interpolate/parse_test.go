@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParseSuccess(t *testing.T) {
@@ -123,6 +122,6 @@ func TestParseFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		_, err := Parse(tt)
-		require.Error(t, err, tt)
+		assert.Error(t, err, tt)
 	}
 }
