@@ -1,7 +1,7 @@
 # Paths besides auto-detected generated files that should be excluded from
 # lint results.
 LINT_EXCLUDES_EXTRAS = \
-	transport/x/grpc/handlers.go
+	transport/x/grpc/handler.go
 
 # Regex for 'go vet' rules to ignore
 GOVET_IGNORE_RULES = \
