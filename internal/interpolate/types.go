@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 )
 
 // We represent the user-defined string as a series of terms. Each term is
@@ -53,10 +52,6 @@ func (variable) term() {}
 // variable does not have a value and no default is specified, rendering will
 // fail.
 type VariableResolver func(name string) (value string, ok bool)
-
-// EnvResolver is a VariableResolver that maps every variable to an
-// environment variable.
-var EnvResolver = VariableResolver(os.LookupEnv)
 
 // String is a string that supports interpolation given some source of
 // variable values.
