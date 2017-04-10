@@ -45,6 +45,10 @@ func TestParseSuccess(t *testing.T) {
 			},
 		},
 		{
+			give: "foo $ {bar} baz",
+			want: String{literal("foo "), literal("$ "), literal("{bar} baz")},
+		},
+		{
 			give: "foo ${bar:}",
 			want: String{
 				literal("foo "),
@@ -106,6 +110,7 @@ func TestParseFailures(t *testing.T) {
 		"${foo",
 		"${foo.}",
 		"${foo-}",
+		"${foo--bar}",
 	}
 
 	for _, tt := range tests {
