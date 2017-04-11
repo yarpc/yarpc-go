@@ -48,6 +48,7 @@ func (customCodec) Unmarshal(data []byte, obj interface{}) error {
 
 func (customCodec) String() string {
 	// TODO: faking this as proto to be compatible with existing grpc clients
+	// https://github.com/yarpc/yarpc-go/issues/911
 	return "proto"
 }
 
