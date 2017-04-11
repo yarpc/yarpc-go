@@ -75,9 +75,11 @@ func New(c <$transport>.ClientConfig, opts ...<$thrift>.ClientOption) Interface 
 }
 
 func init() {
-	<$yarpc>.RegisterClientBuilder(func(c <$transport>.ClientConfig) Interface {
-		return New(c)
-	})
+	<$yarpc>.RegisterClientBuilder(
+		func(c <$transport>.ClientConfig, f <import "reflect">.StructField) Interface {
+			return New(c, <$thrift>.ClientBuilderOptions(c, f)...)
+		},
+	)
 }
 
 type client struct {

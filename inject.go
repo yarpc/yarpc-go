@@ -28,39 +28,61 @@ import (
 )
 
 var (
-	_clientBuilders     = make(map[reflect.Type]reflect.Value)
+	// _clientBuilders is a map from type to a (reflected) function with one
+	// of the following signatures,
+	//
+	// 	func(transport.ClientConfig) T
+	// 	func(transport.ClientConfig, reflect.StructField) T
+	//
+	// Where T is the same as the key type for that entry.
+	_clientBuilders = make(map[reflect.Type]reflect.Value)
+
 	_typeOfClientConfig = reflect.TypeOf((*transport.ClientConfig)(nil)).Elem()
+	_typeOfStructField  = reflect.TypeOf(reflect.StructField{})
 )
 
-func getBuilderType(f interface{}) reflect.Type {
+func validateClientBuilder(f interface{}) reflect.Value {
 	if f == nil {
-		panic("f must not be nil")
+		panic("must not be nil")
 	}
 
-	fT := reflect.TypeOf(f)
-	if fT.Kind() != reflect.Func {
-		panic(fmt.Sprintf("f must be a function, not %T", f))
+	fv := reflect.ValueOf(f)
+	ft := fv.Type()
+	switch {
+	case ft.Kind() != reflect.Func:
+		panic(fmt.Sprintf("must be a function, not %v", ft))
+
+	// Validate number of arguments and results
+	case ft.NumIn() == 0:
+		panic("must accept at least one argument")
+	case ft.NumIn() > 2:
+		panic(fmt.Sprintf("must accept at most two arguments, got %v", ft.NumIn()))
+	case ft.NumOut() != 1:
+		panic(fmt.Sprintf("must return exactly one result, got %v", ft.NumOut()))
+
+	// Validate input and output types
+	case ft.In(0) != _typeOfClientConfig:
+		panic(fmt.Sprintf("must accept a transport.ClientConfig as its first argument, got %v", ft.In(0)))
+	case ft.NumIn() == 2 && ft.In(1) != _typeOfStructField:
+		panic(fmt.Sprintf("if a second argument is accepted, it must be a reflect.StructField, got %v", ft.In(1)))
+	case ft.Out(0).Kind() != reflect.Interface:
+		panic(fmt.Sprintf("must return a single interface type as a result, got %v", ft.Out(0).Kind()))
 	}
 
-	if fT.NumIn() != 1 || fT.In(0) != _typeOfClientConfig {
-		panic(fmt.Sprintf("%v must accept only a transport.ClientConfig", fT))
-	}
-
-	if fT.NumOut() != 1 || fT.Out(0).Kind() != reflect.Interface {
-		panic(fmt.Sprintf("%v must return a single interface result", fT))
-	}
-
-	return fT.Out(0)
+	return fv
 }
 
 // RegisterClientBuilder registers a builder function for a specific client
 // type.
 //
-// Functions must have the signature,
+// Functions must have one of the following signatures:
 //
 // 	func(transport.ClientConfig) T
+// 	func(transport.ClientConfig, reflect.StructField) T
 //
-// Where T is the type of the client. T MUST be an interface.
+// Where T is the type of the client. T MUST be an interface. In the second
+// form, the function receives type information about the field being filled.
+// It may inspect the struct tags to customize its behavior.
 //
 // This function panics if a client for the given type has already been
 // registered.
@@ -73,11 +95,14 @@ func getBuilderType(f interface{}) reflect.Type {
 // at the time it is called, regardless of whether the value matches what was
 // passed to this function or not.
 func RegisterClientBuilder(f interface{}) (forget func()) {
-	t := getBuilderType(f)
+	fv := validateClientBuilder(f)
+	t := fv.Type().Out(0)
+
 	if _, conflict := _clientBuilders[t]; conflict {
 		panic(fmt.Sprintf("a builder for %v has already been registered", t))
 	}
-	_clientBuilders[t] = reflect.ValueOf(f)
+
+	_clientBuilders[t] = fv
 	return func() { delete(_clientBuilders, t) }
 }
 
@@ -142,13 +167,19 @@ func InjectClients(src transport.ClientConfigProvider, dest interface{}) {
 			continue
 		}
 
-		constructor, ok := _clientBuilders[fieldT]
+		builder, ok := _clientBuilders[fieldT]
 		if !ok {
 			panic(fmt.Sprintf("a constructor for %v has not been registered", fieldT))
 		}
+		builderT := builder.Type()
 
-		clientConfigV := reflect.ValueOf(src.ClientConfig(service))
-		client := constructor.Call([]reflect.Value{clientConfigV})[0]
+		args := make([]reflect.Value, 1, builderT.NumIn())
+		args[0] = reflect.ValueOf(src.ClientConfig(service))
+		if builderT.NumIn() > 1 {
+			args = append(args, reflect.ValueOf(fieldInfo))
+		}
+
+		client := builder.Call(args)[0]
 		fieldV.Set(client)
 	}
 }

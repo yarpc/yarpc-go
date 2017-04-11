@@ -5,6 +5,7 @@ package extendonlyclient
 
 import (
 	"go.uber.org/yarpc"
+	"reflect"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
@@ -29,9 +30,11 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 }
 
 func init() {
-	yarpc.RegisterClientBuilder(func(c transport.ClientConfig) Interface {
-		return New(c)
-	})
+	yarpc.RegisterClientBuilder(
+		func(c transport.ClientConfig, f reflect.StructField) Interface {
+			return New(c, thrift.ClientBuilderOptions(c, f)...)
+		},
+	)
 }
 
 type client struct {
