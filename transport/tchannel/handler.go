@@ -213,18 +213,28 @@ func (rw *responseWriter) SetApplicationError() {
 	}
 }
 
+func (rw *responseWriter) ensureWroteHeaders() error {
+	if rw.wroteHeaders {
+		return nil
+	}
+
+	rw.wroteHeaders = true
+	if err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer); err != nil {
+		err = encoding.ResponseHeadersEncodeError(rw.treq, err)
+		rw.failedWith = err
+		return err
+	}
+
+	return nil
+}
+
 func (rw *responseWriter) Write(s []byte) (int, error) {
 	if rw.failedWith != nil {
 		return 0, rw.failedWith
 	}
 
-	if !rw.wroteHeaders {
-		rw.wroteHeaders = true
-		if err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer); err != nil {
-			err = encoding.ResponseHeadersEncodeError(rw.treq, err)
-			rw.failedWith = err
-			return 0, err
-		}
+	if err := rw.ensureWroteHeaders(); err != nil {
+		return 0, err
 	}
 
 	if rw.bodyWriter == nil {
@@ -244,12 +254,17 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 }
 
 func (rw *responseWriter) Close() error {
-	var err error
+	err := rw.ensureWroteHeaders()
+
 	if rw.bodyWriter != nil {
-		err = rw.bodyWriter.Close()
+		if closeErr := rw.bodyWriter.Close(); err == nil {
+			err = closeErr
+		}
 	}
-	if rw.failedWith != nil {
-		return rw.failedWith
+
+	if rw.failedWith != nil && err == nil {
+		err = rw.failedWith
 	}
+
 	return err
 }
