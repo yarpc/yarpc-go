@@ -45,6 +45,12 @@ import (
 func TestStartAddrInUse(t *testing.T) {
 	t1 := NewTransport()
 	i1 := t1.NewInbound(":0")
+
+	assert.Len(t, i1.Transports(), 1, "transports must contain the transport")
+	// we use == instead of assert.Equal because we want to do a pointer
+	// comparison
+	assert.True(t, t1 == i1.Transports()[0], "transports must match")
+
 	i1.SetRouter(new(transporttest.MockRouter))
 	require.NoError(t, i1.Start(), "inbound 1 must start without an error")
 	t2 := NewTransport()

@@ -132,6 +132,10 @@ func TestOutboundHeaders(t *testing.T) {
 		}
 
 		out := httpTransport.NewSingleOutbound(server.URL)
+		assert.Len(t, out.Transports(), 1, "transports must contain the transport")
+		// we use == instead of assert.Equal because we want to do a pointer
+		// comparison
+		assert.True(t, httpTransport == out.Transports()[0], "transports must match")
 
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
