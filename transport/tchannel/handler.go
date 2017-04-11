@@ -32,6 +32,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/multierr"
 	ncontext "golang.org/x/net/context"
 )
 
@@ -257,14 +258,11 @@ func (rw *responseWriter) Close() error {
 	err := rw.ensureWroteHeaders()
 
 	if rw.bodyWriter != nil {
-		if closeErr := rw.bodyWriter.Close(); err == nil {
-			err = closeErr
-		}
+		err = multierr.Append(err, rw.bodyWriter.Close())
 	}
 
-	if rw.failedWith != nil && err == nil {
-		err = rw.failedWith
+	if err != nil {
+		return err
 	}
-
-	return err
+	return rw.failedWith
 }
