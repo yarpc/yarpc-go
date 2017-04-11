@@ -79,6 +79,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
+		transport:   t,
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -133,6 +134,7 @@ type Outbound struct {
 	chooser     peer.Chooser
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
+	transport   *Transport
 
 	once sync.LifecycleOnce
 }
@@ -150,8 +152,7 @@ func (o *Outbound) setURLTemplate(URL string) {
 
 // Transports returns the outbound's HTTP transport.
 func (o *Outbound) Transports() []transport.Transport {
-	// TODO factor out transport and return it here.
-	return []transport.Transport{}
+	return []transport.Transport{o.transport}
 }
 
 // Start the HTTP outbound
