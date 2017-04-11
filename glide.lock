@@ -1,5 +1,5 @@
-hash: 93363688a2891b48e84373a81dba6e11b7211187ba809c7293162ce7484a8a01
-updated: 2017-03-31T17:39:52.568740104-07:00
+hash: c96b32dd0e9d2519a42f9fa1311a67c39a7f3660ba3ccaf24d88d98e0a01f178
+updated: 2017-04-11T15:52:56.960079358-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -45,7 +45,7 @@ imports:
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/mattn/go-shellwords
-  version: 005a0944d84452842197c2108bd9168ced206f78
+  version: 02e3cf038dcea8290e44424da473dd12be796a8a
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -152,7 +152,7 @@ imports:
 - name: go.uber.org/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: go.uber.org/multierr
-  version: 737b41aa3bf31c25d11dc84d5275af6bfe2ef4d2
+  version: a3d1fc1f1316d4132fc61f4ea1159ae0613fb474
 - name: go.uber.org/thriftrw
   version: 05f870b3c56597d180af568a6392209cc33269e2
   subpackages:
