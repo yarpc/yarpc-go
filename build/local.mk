@@ -106,7 +106,7 @@ verifyversion: ## verify the version in the changelog is the same as in version.
 lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion ## run all linters
 
 .PHONY: test
-test: $(THRIFTRW) __eval_packages ## run all tests
+test: deps $(THRIFTRW) __eval_packages ## run all tests
 	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
 
 .PHONY: cover
