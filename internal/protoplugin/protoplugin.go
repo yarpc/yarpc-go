@@ -28,6 +28,9 @@ This was HEAVILY adapted from github.com/grpc-ecosystem/grpc-gateway/protoc-gen-
 
 Eventually, a rewrite of this to be simplier for what we need would be nice, but this was
 available to get us here, especially with handling go imports.
+
+Note that "FQMN", "FQSN", etc stand for "Fully Qualified Message Name",
+"Fully Qualified Service Name", etc, which denotes the package and object name together.
 */
 package protoplugin
 
