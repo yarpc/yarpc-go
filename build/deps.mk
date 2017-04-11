@@ -52,26 +52,22 @@ THRIFT = $(BIN)/thrift
 PROTOC_LIB = $(LIB)/protoc-$(PROTOC_VERSION)
 PROTOC_ZIP = $(PROTOC_LIB)/protoc.zip
 PROTOC = $(BIN)/protoc
+RAGEL_LIB = $(LIB)/ragel-$(RAGEL_VERSION)
+RAGEL_TAR = $(RAGEL_LIB)/ragel.tar.gz
+RAGEL = $(BIN)/ragel
+
 GEN_BINS = $(THRIFT) $(PROTOC) $(RAGEL)
 EXTRA_BINS = $(GLIDE)
 
-RAGEL_TAR = $(LIB)/ragel-$(RAGEL_VERSION)/ragel-$(RAGEL_VERSION).tar.gz
-RAGEL = $(BIN)/ragel
-
 $(RAGEL_TAR):
-	@mkdir -p $(dir $(RAGEL_TAR))
+	@mkdir -p $(RAGEL_LIB)
 	curl -L "https://www.colm.net/files/ragel/ragel-$(RAGEL_VERSION).tar.gz" > $(RAGEL_TAR)
 
 $(RAGEL): $(RAGEL_TAR)
 	@mkdir -p $(BIN)
-	@cd $(dir $(RAGEL_TAR)) && \
-		echo "Extracting $(RAGEL_TAR)" && \
-		tar xzf $(RAGEL_TAR) --strip-components=1 && \
-		echo "Building Ragel $(RAGEL_VERSION)" && \
-		./configure --prefix=$(abspath $(dir $(BIN))) --disable-manual && \
-		make install
-	@echo "Installed Ragel $(RAGEL_VERSION):"
-	@$(RAGEL) --version
+	@cd $(RAGEL_LIB); tar xzf $(RAGEL_TAR) --strip-components=1
+	@cd $(RAGEL_LIB); ./configure --prefix=$(abspath $(CACHE)) --disable-manual
+	@cd $(RAGEL_LIB); make install
 
 $(GLIDE_TAR):
 	@mkdir -p $(GLIDE_LIB)
