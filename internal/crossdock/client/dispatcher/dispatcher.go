@@ -40,13 +40,13 @@ import (
 
 // Create creates an RPC from the given parameters or fails the whole behavior.
 func Create(t crossdock.T) *yarpc.Dispatcher {
-	return CreateTransport(t, "")
+	return CreateDispatcherForTransport(t, "")
 }
 
-// CreateTransport creates an RPC from the given parameters or fails the whole behavior.
+// CreateDispatcherForTransport creates an RPC from the given parameters or fails the whole behavior.
 //
 // If trans is non-empty, this will be used instead of the behavior transport.
-func CreateTransport(t crossdock.T, trans string) *yarpc.Dispatcher {
+func CreateDispatcherForTransport(t crossdock.T, trans string) *yarpc.Dispatcher {
 	fatals := crossdock.Fatals(t)
 
 	server := t.Param(params.GoServer)

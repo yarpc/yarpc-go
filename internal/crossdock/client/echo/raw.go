@@ -42,7 +42,7 @@ func RawTransport(t crossdock.T, transport string) {
 	t = createEchoT("raw", transport, t)
 	fatals := crossdock.Fatals(t)
 
-	dispatcher := disp.CreateTransport(t, transport)
+	dispatcher := disp.CreateDispatcherForTransport(t, transport)
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
