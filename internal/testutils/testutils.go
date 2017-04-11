@@ -23,7 +23,11 @@ package testutils
 import (
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
+
+	"github.com/nightlyone/lockfile"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -38,6 +42,8 @@ const (
 	TransportTypeHTTP TransportType = iota
 	// TransportTypeTChannel represents using TChannel.
 	TransportTypeTChannel
+
+	_numFreePortRetries = 10
 )
 
 var (
@@ -75,6 +81,58 @@ func ParseTransportType(s string) (TransportType, error) {
 	}
 }
 
+// GetFreePorts gets count free ports.
+func GetFreePorts(count int) ([]uint16, func() error, error) {
+	ports := make([]uint16, count)
+	funcs := make([]func() error, count)
+	for i := 0; i < count; i++ {
+		port, close, err := GetFreePort()
+		if err != nil {
+			return nil, nil, err
+		}
+		ports[i] = port
+		funcs[i] = close
+	}
+	return ports, func() error {
+		var err error
+		for _, close := range funcs {
+			err = multierr.Append(err, close())
+		}
+		return err
+	}, nil
+}
+
+// GetFreePort gets a free port on the system.
+//
+// The returned function should be called when the user of the port
+// has bound themselves to it, the function controls a lock file
+// that will not let this function allocate on this port again
+// until the caller calls the function.
+func GetFreePort() (uint16, func() error, error) {
+	for i := 0; i < _numFreePortRetries; i++ {
+		address, err := net.ResolveTCPAddr("tcp", "localhost:0")
+		if err != nil {
+			return 0, nil, err
+		}
+		listener, err := net.ListenTCP("tcp", address)
+		if err != nil {
+			return 0, nil, err
+		}
+		port := uint16(listener.Addr().(*net.TCPAddr).Port)
+		if err := listener.Close(); err != nil {
+			return 0, nil, err
+		}
+		lock, err := lockfile.New(filepath.Join(os.TempDir(), fmt.Sprintf("get-free-port.lock.%d", port)))
+		if err != nil {
+			return 0, nil, err
+		}
+		if err := lock.TryLock(); err == nil {
+			return port, lock.Unlock, nil
+		}
+	}
+	return 0, nil, fmt.Errorf("could not get a port after %d retries", _numFreePortRetries)
+}
+
 // WithClientConfig wraps a function by setting up a client and server dispatcher and giving
 // the function the client configuration to use in tests for the given TransportType.
 //
@@ -82,10 +140,13 @@ func ParseTransportType(s string) (TransportType, error) {
 // The client dispatcher will be brought up using the given TransportType for Unary, HTTP for
 // Oneway, and the serviceName with a "-client" suffix.
 func WithClientConfig(serviceName string, procedures []transport.Procedure, transportType TransportType, f func(transport.ClientConfig) error) (err error) {
-	dispatcherConfig, err := NewDispatcherConfig(serviceName)
+	dispatcherConfig, close, err := NewDispatcherConfig(serviceName)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = multierr.Append(err, close())
+	}()
 
 	serverDispatcher, err := NewServerDispatcher(procedures, dispatcherConfig)
 	if err != nil {
@@ -189,15 +250,15 @@ type DispatcherConfig struct {
 }
 
 // NewDispatcherConfig returns a new DispatcherConfig with assigned ports.
-func NewDispatcherConfig(serviceName string) (*DispatcherConfig, error) {
-	transportTypeToPort, err := getTransportTypeToPort()
+func NewDispatcherConfig(serviceName string) (*DispatcherConfig, func() error, error) {
+	transportTypeToPort, close, err := getTransportTypeToPort()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return &DispatcherConfig{
 		serviceName,
 		transportTypeToPort,
-	}, nil
+	}, close, nil
 }
 
 // GetServiceName gets the service name.
@@ -214,31 +275,14 @@ func (d *DispatcherConfig) GetPort(transportType TransportType) (uint16, error) 
 	return port, nil
 }
 
-func getTransportTypeToPort() (map[TransportType]uint16, error) {
+func getTransportTypeToPort() (map[TransportType]uint16, func() error, error) {
+	ports, close, err := GetFreePorts(len(AllTransportTypes))
+	if err != nil {
+		return nil, nil, err
+	}
 	m := make(map[TransportType]uint16, len(AllTransportTypes))
-	for _, transportType := range AllTransportTypes {
-		port, err := getFreePort()
-		if err != nil {
-			return nil, err
-		}
-		m[transportType] = port
+	for i, transportType := range AllTransportTypes {
+		m[transportType] = ports[i]
 	}
-	return m, nil
-}
-
-func getFreePort() (uint16, error) {
-	address, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-
-	listener, err := net.ListenTCP("tcp", address)
-	if err != nil {
-		return 0, err
-	}
-	port := uint16(listener.Addr().(*net.TCPAddr).Port)
-	if err := listener.Close(); err != nil {
-		return 0, err
-	}
-	return port, nil
+	return m, close, nil
 }

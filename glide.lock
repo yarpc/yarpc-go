@@ -1,5 +1,5 @@
-hash: 93363688a2891b48e84373a81dba6e11b7211187ba809c7293162ce7484a8a01
-updated: 2017-03-31T17:39:52.568740104-07:00
+hash: 60ae439f636a15428331222c167bc95ae44fb539f662e0f616bfc6ad7852bb65
+updated: 2017-04-04T14:38:00.965397438+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -52,6 +52,8 @@ imports:
   - pbutil
 - name: github.com/mitchellh/mapstructure
   version: 53818660ed4955e899c0bcafa97299a388bd7c8e
+- name: github.com/nightlyone/lockfile
+  version: 1d49c987357a327b5b03aa84cbddd582c328615d
 - name: github.com/opentracing/opentracing-go
   version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
   subpackages:
@@ -193,7 +195,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/tools
-  version: d83db204cec938a53072124e16d79022316b3dc5
+  version: d63e2b22b05a9682de336cd4802bba367ed429e7
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
