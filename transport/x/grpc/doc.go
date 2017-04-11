@@ -19,4 +19,6 @@
 // THE SOFTWARE.
 
 // Package grpc implements the grpc transport.
+//
+// This package is experimental and should not be used in production.
 package grpc
