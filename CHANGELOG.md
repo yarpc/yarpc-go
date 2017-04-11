@@ -6,6 +6,10 @@ v1.8.0 (unreleased)
 
 -   x/config: The service name is no longer part of the configuration and must
     be passed as an argument to the `LoadConfig*` or `NewDispatcher*` methods.
+-   Options `thrift.Multiplexed` and `thrift.Enveloped` may now be provided for
+    Thrift clients constructed by `yarpc.InjectClients` by adding a `thrift`
+    tag to the corresponding struct field with the name of the option. See the
+    Thrift package documentation for more details.
 -   Fixed a bug where the TChannel inbound would not write the response headers
     if the response body was empty.
 
