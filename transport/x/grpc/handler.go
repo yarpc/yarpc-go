@@ -37,28 +37,31 @@ import (
 )
 
 type handler struct {
-	procedureServiceName string
-	serviceName          string
-	methodName           string
-	router               transport.Router
-	onewayErrorHandler   func(error)
+	yarpcServiceName   string
+	grpcServiceName    string
+	grpcMethodName     string
+	router             transport.Router
+	onewayErrorHandler func(error)
 }
 
 func newHandler(
-	procedureServiceName string,
-	serviceName string,
-	methodName string,
+	yarpcServiceName string,
+	grpcServiceName string,
+	grpcMethodName string,
 	router transport.Router,
 	onewayErrorHandler func(error),
 ) *handler {
 	return &handler{
-		procedureServiceName,
-		serviceName,
-		methodName,
+		yarpcServiceName,
+		grpcServiceName,
+		grpcMethodName,
 		router,
 		onewayErrorHandler,
 	}
 }
+
+// the grpc-go handler does not put the context.Context as the first argument
+// so we must ignore this file for linting
 
 func (h *handler) handle(
 	server interface{},
@@ -76,7 +79,7 @@ func (h *handler) handle(
 			transportRequest,
 			&grpc.UnaryServerInfo{
 				noopGrpcStruct{},
-				h.getFullMethod(),
+				toFullMethod(h.grpcServiceName, h.grpcMethodName),
 			},
 			func(ctx context.Context, request interface{}) (interface{}, error) {
 				transportRequest, ok := request.(*transport.Request)
@@ -100,7 +103,7 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 		return nil, err
 	}
 	if caller == "" {
-		caller = h.serviceName
+		caller = h.grpcServiceName
 	}
 	encoding, err := getEncoding(md)
 	if err != nil {
@@ -114,12 +117,17 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 		return nil, err
 	}
 	if service == "" {
-		service = h.procedureServiceName
+		service = h.yarpcServiceName
 	}
 	headers, err := getApplicationHeaders(md)
 	if err != nil {
 		return nil, err
 	}
+	// We must do this to indicate to the protobuf encoding that we
+	// need to return the raw response object over this transport.
+	//
+	// See the commentary within encoding/x/protobuf/inbound.go.
+	headers = protobuf.SetRawResponse(headers)
 	var data []byte
 	if err := decodeFunc(&data); err != nil {
 		return nil, err
@@ -128,7 +136,7 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 		Caller:    caller,
 		Encoding:  encoding,
 		Service:   service,
-		Procedure: procedureToName(h.serviceName, h.methodName),
+		Procedure: procedureToName(h.grpcServiceName, h.grpcMethodName),
 		Headers:   headers,
 		Body:      bytes.NewBuffer(data),
 	}
@@ -139,7 +147,7 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 }
 
 func (h *handler) getFullMethod() string {
-	return fmt.Sprintf("/%s/%s", h.serviceName, h.methodName)
+	return toFullMethod(h.grpcServiceName, h.grpcMethodName)
 }
 
 func (h *handler) call(ctx context.Context, transportRequest *transport.Request) (interface{}, error) {
@@ -161,9 +169,9 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	if err := request.ValidateUnaryContext(ctx); err != nil {
 		return nil, err
 	}
-	protobuf.SetRawResponse(transportRequest.Headers)
 	responseWriter := newResponseWriter()
-	// TODO: always return data?
+	// TODO: do we always want to return the data from responseWriter.Bytes, or return nil for the data if there is an error?
+	// For now, we are always returning the data
 	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
 	err = multierr.Append(err, grpc.SendHeader(ctx, responseWriter.md))
 	data := responseWriter.Bytes()
@@ -179,6 +187,7 @@ func (h *handler) callOneway(ctx context.Context, transportRequest *transport.Re
 		// other transport implementation seem to create their own context for calls, need to understand better
 		// This will not propagate opentracing, for example
 		// Right now just letting context propagation test fail
+		// https://github.com/yarpc/yarpc-go/issues/904
 		h.onewayErrorHandler(transport.DispatchOnewayHandler(context.Background(), onewayHandler, transportRequest))
 	}()
 	return nil

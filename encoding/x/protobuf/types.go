@@ -43,6 +43,12 @@ const (
 // rawResponseHeaderKey is a header key attached to either a request or
 // response that signals a UnaryHandler to not encode an application error
 // inside a wirepb.Response object, instead marshalling the actual response.
+//
+// Note per the documentation on transport.Headers#With, the returned Header
+// may not be the same as the input header, so the caller should always
+// update the header with:
+//
+//   header = protobuf.SetRawResponse(header)
 func SetRawResponse(headers transport.Headers) transport.Headers {
 	return headers.With(rawResponseHeaderKey, "1")
 }

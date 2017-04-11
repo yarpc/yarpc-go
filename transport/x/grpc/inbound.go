@@ -128,6 +128,7 @@ func (i *Inbound) stop() error {
 
 func (i *Inbound) getServiceDescs() ([]*grpc.ServiceDesc, error) {
 	// TODO: router.Procedures() is not guaranteed to be immutable
+	// https://github.com/yarpc/yarpc-go/issues/825
 	procedures := i.router.Procedures()
 	if len(procedures) == 0 {
 		return nil, errRouterHasNoProcedures
