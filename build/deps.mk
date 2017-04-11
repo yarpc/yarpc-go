@@ -131,7 +131,7 @@ GOCOVMERGE = $(BIN)/gocovmerge
 GOVERALLS = $(BIN)/goveralls
 
 .PHONY: predeps
-predeps: $(GLIDE) $(THRIFT) $(PROTOC)
+predeps: $(GLIDE) $(THRIFT) $(PROTOC) $(RAGEL)
 
 .PHONY: deps
 deps: predeps glide $(GEN_BINS) $(EXTRA_BINS) ## install all dependencies
