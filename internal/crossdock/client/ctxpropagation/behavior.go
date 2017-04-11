@@ -44,7 +44,9 @@ import (
 // Behavior parameters:
 //
 // - ctxclient: Address of this client.
+//
 // - ctxserver: Address of the crossdock test subject server.
+//
 // - transport: The transport to make requests to the test subject with.
 //
 // This behavior sets up a server in-process which the Phone procedure on the

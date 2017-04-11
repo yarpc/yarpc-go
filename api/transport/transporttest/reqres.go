@@ -34,12 +34,9 @@ import (
 // RequestMatcher may be used in gomock argument lists to assert that two
 // requests match.
 //
-// Requests are considered to be matching if:
-//
-// - All their primitive parameters match.
-// - The headers of the received request include all the headers from the
-//   source request. It may include extra headers.
-// - The contents of the request bodies are the same.
+// Requests are considered to be matching if: all their primitive parameters
+// match, the headers of the received request include all the headers from the
+// source request, and the contents of the request bodies are the same.
 type RequestMatcher struct {
 	t    *testing.T
 	req  *transport.Request

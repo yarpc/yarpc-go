@@ -66,14 +66,17 @@ type OnewayOutbound interface {
 
 // Outbounds encapsulates the outbound specification for a service.
 //
-// This includes the service name that will be used for outbound requests
-// as well as the Outbound that will be used to transport the request.  The
-// outbound will be one of:
-//
-// - Unary (send request and wait for response)
-// - Oneway (send request and continue once downstream acknowledges request)
+// This includes the service name that will be used for outbound requests as
+// well as the Outbound that will be used to transport the request.  The
+// outbound will be one of Unary and Oneway.
 type Outbounds struct {
 	ServiceName string
-	Unary       UnaryOutbound
-	Oneway      OnewayOutbound
+
+	// If set, this is the unary outbound which sends a request and waits for
+	// the response.
+	Unary UnaryOutbound
+
+	// If set, this is the oneway outbound which sends the request and
+	// continues once the message has been delivered.
+	Oneway OnewayOutbound
 }
