@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 
+	"go.uber.org/multierr"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -36,23 +37,31 @@ const (
 	callerHeader            = reservedHeaderPrefix + "caller"
 	encodingHeader          = reservedHeaderPrefix + "encoding"
 	serviceHeader           = reservedHeaderPrefix + "service"
-	procedureHeader         = reservedHeaderPrefix + "procedure"
 )
 
-func addCaller(md metadata.MD, caller string) error {
-	return addToMetadata(md, callerHeader, caller)
+// transportRequestToMetadata will populate all reserved and application headers
+// from the Request into a new MD.
+func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
+	md := metadata.New(nil)
+	err := addToMetadata(md, callerHeader, request.Caller)
+	err = multierr.Append(err, addToMetadata(md, encodingHeader, string(request.Encoding)))
+	err = multierr.Append(err, addToMetadata(md, serviceHeader, request.Service))
+	err = multierr.Append(err, addApplicationHeaders(md, request.Headers))
+	return md, err
 }
 
-func addEncoding(md metadata.MD, encoding transport.Encoding) error {
-	return addToMetadata(md, encodingHeader, string(encoding))
-}
-
-func addService(md metadata.MD, service string) error {
-	return addToMetadata(md, serviceHeader, service)
-}
-
-func addProcedure(md metadata.MD, procedure string) error {
-	return addToMetadata(md, procedureHeader, procedure)
+// populateTransportRequest will populate the Request with all reserved and application
+// headers from the MD.
+func populateTransportRequest(md metadata.MD, request *transport.Request) error {
+	caller, callerErr := getFromMetadata(md, callerHeader)
+	request.Caller = caller
+	encoding, encodingErr := getFromMetadata(md, encodingHeader)
+	request.Encoding = transport.Encoding(encoding)
+	service, serviceErr := getFromMetadata(md, serviceHeader)
+	request.Service = service
+	headers, headersErr := getApplicationHeaders(md)
+	request.Headers = headers
+	return multierr.Combine(callerErr, encodingErr, serviceErr, headersErr)
 }
 
 // add headers into md as application headers
@@ -64,26 +73,6 @@ func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 		}
 	}
 	return nil
-}
-
-func getCaller(md metadata.MD) (string, error) {
-	return getFromMetadata(md, callerHeader)
-}
-
-func getEncoding(md metadata.MD) (transport.Encoding, error) {
-	encoding, err := getFromMetadata(md, encodingHeader)
-	if err != nil {
-		return "", err
-	}
-	return transport.Encoding(encoding), nil
-}
-
-func getService(md metadata.MD) (string, error) {
-	return getFromMetadata(md, serviceHeader)
-}
-
-func getProcedure(md metadata.MD) (string, error) {
-	return getFromMetadata(md, procedureHeader)
 }
 
 // get application headers from md

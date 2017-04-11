@@ -116,7 +116,7 @@ func (o *Outbound) invoke(
 	responseMD *metadata.MD,
 ) error {
 	start := time.Now()
-	md, err := requestToMetadata(request)
+	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
 	}
@@ -172,26 +172,6 @@ func (o *Outbound) stop() error {
 		return o.clientConn.Close()
 	}
 	return nil
-}
-
-func requestToMetadata(request *transport.Request) (metadata.MD, error) {
-	md := metadata.New(nil)
-	if err := addCaller(md, request.Caller); err != nil {
-		return nil, err
-	}
-	if err := addEncoding(md, request.Encoding); err != nil {
-		return nil, err
-	}
-	if err := addService(md, request.Service); err != nil {
-		return nil, err
-	}
-	if err := addProcedure(md, request.Procedure); err != nil {
-		return nil, err
-	}
-	if err := addApplicationHeaders(md, request.Headers); err != nil {
-		return nil, err
-	}
-	return md, nil
 }
 
 func errorToGRPCError(ctx context.Context, request *transport.Request, start time.Time, err error) error {

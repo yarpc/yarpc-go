@@ -98,56 +98,34 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 	if md == nil || !ok {
 		return nil, fmt.Errorf("cannot get metadata from ctx: %v", ctx)
 	}
-	caller, err := getCaller(md)
-	if err != nil {
+	transportRequest := &transport.Request{}
+	if err := populateTransportRequest(md, transportRequest); err != nil {
 		return nil, err
 	}
-	if caller == "" {
-		caller = h.grpcServiceName
+	if transportRequest.Caller == "" {
+		transportRequest.Caller = h.grpcServiceName
 	}
-	encoding, err := getEncoding(md)
-	if err != nil {
-		return nil, err
+	if transportRequest.Encoding == "" {
+		transportRequest.Encoding = protobuf.Encoding
 	}
-	if encoding == "" {
-		encoding = protobuf.Encoding
-	}
-	service, err := getService(md)
-	if err != nil {
-		return nil, err
-	}
-	if service == "" {
-		service = h.yarpcServiceName
-	}
-	headers, err := getApplicationHeaders(md)
-	if err != nil {
-		return nil, err
+	if transportRequest.Service == "" {
+		transportRequest.Service = h.yarpcServiceName
 	}
 	// We must do this to indicate to the protobuf encoding that we
 	// need to return the raw response object over this transport.
 	//
 	// See the commentary within encoding/x/protobuf/inbound.go.
-	headers = protobuf.SetRawResponse(headers)
+	transportRequest.Headers = protobuf.SetRawResponse(transportRequest.Headers)
 	var data []byte
 	if err := decodeFunc(&data); err != nil {
 		return nil, err
 	}
-	transportRequest := &transport.Request{
-		Caller:    caller,
-		Encoding:  encoding,
-		Service:   service,
-		Procedure: procedureToName(h.grpcServiceName, h.grpcMethodName),
-		Headers:   headers,
-		Body:      bytes.NewBuffer(data),
-	}
+	transportRequest.Body = bytes.NewBuffer(data)
+	transportRequest.Procedure = procedureToName(h.grpcServiceName, h.grpcMethodName)
 	if err := transport.ValidateRequest(transportRequest); err != nil {
 		return nil, err
 	}
 	return transportRequest, nil
-}
-
-func (h *handler) getFullMethod() string {
-	return toFullMethod(h.grpcServiceName, h.grpcMethodName)
 }
 
 func (h *handler) call(ctx context.Context, transportRequest *transport.Request) (interface{}, error) {
