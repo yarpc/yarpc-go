@@ -30,18 +30,12 @@ import (
 // UnaryOutbound defines transport-level middleware for
 // `UnaryOutbound`s.
 //
-// UnaryOutbound middleware MAY
+// UnaryOutbound middleware MAY do zero or more of the following: change the
+// context, change the request, change the returned response, handle the
+// returned error, call the given outbound zero or more times.
 //
-// - change the context
-// - change the request
-// - change the returned response
-// - handle the returned error
-// - call the given outbound zero or more times
-//
-// UnaryOutbound middleware MUST
-//
-// - always return a non-nil Response or error.
-// - be thread-safe
+// UnaryOutbound middleware MUST always return a non-nil Response or error,
+// and they MUST be thread-safe
 //
 // UnaryOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.
@@ -110,18 +104,12 @@ func (nopUnaryOutbound) Call(ctx context.Context, request *transport.Request, ou
 
 // OnewayOutbound defines transport-level middleware for `OnewayOutbound`s.
 //
-// OnewayOutbound middleware MAY
+// OnewayOutbound middleware MAY do zero or more of the following: change the
+// context, change the request, change the returned ack, handle the returned
+// error, call the given outbound zero or more times.
 //
-// - change the context
-// - change the request
-// - change the returned ack
-// - handle the returned error
-// - call the given outbound zero or more times
-//
-// OnewayOutbound middleware MUST
-//
-// - always return an Ack (nil or not) or an error.
-// - be thread-safe
+// OnewayOutbound middleware MUST always return an Ack (nil or not) or an
+// error, and they MUST be thread-safe.
 //
 // OnewayOutbound middleware is re-used across requests and MAY be called
 // multiple times on the same request.

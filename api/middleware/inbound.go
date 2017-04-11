@@ -29,14 +29,10 @@ import (
 // UnaryInbound defines a transport-level middleware for
 // `UnaryHandler`s.
 //
-// UnaryInbound middleware MAY
-//
-// - change the context
-// - change the request
-// - call the ResponseWriter
-// - modify the response body by wrapping the ResponseWriter
-// - handle the returned error
-// - call the given handler zero or more times
+// UnaryInbound middleware MAY do zero or more of the following: change the
+// context, change the request, call the ResponseWriter, modify the response
+// body by wrapping the ResponseWriter, handle the returned error, call the
+// given handler zero or more times.
 //
 // UnaryInbound middleware MUST be thread-safe.
 //
@@ -84,12 +80,9 @@ func (nopUnaryInbound) Handle(ctx context.Context, req *transport.Request, resw 
 // OnewayInbound defines a transport-level middleware for
 // `OnewayHandler`s.
 //
-// OnewayInbound middleware MAY
-//
-// - change the context
-// - change the request
-// - handle the returned error
-// - call the given handler zero or more times
+// OnewayInbound middleware MAY do zero or more of the following: change the
+// context, change the request, handle the returned error, call the given
+// handler zero or more times.
 //
 // OnewayInbound middleware MUST be thread-safe.
 //
