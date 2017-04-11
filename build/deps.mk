@@ -65,9 +65,10 @@ $(RAGEL_TAR):
 
 $(RAGEL): $(RAGEL_TAR)
 	@mkdir -p $(BIN)
-	@cd $(RAGEL_LIB); tar xzf $(RAGEL_TAR) --strip-components=1
-	@cd $(RAGEL_LIB); ./configure --prefix=$(abspath $(CACHE)) --disable-manual
-	@cd $(RAGEL_LIB); make install
+	@cd $(RAGEL_LIB); tar xzf $(RAGEL_TAR)
+	@cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); ./configure --prefix=$(RAGEL_LIB) --disable-manual
+	@cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); make install
+	@cp $(RAGEL_LIB)/bin/ragel $(RAGEL)
 
 $(GLIDE_TAR):
 	@mkdir -p $(GLIDE_LIB)
