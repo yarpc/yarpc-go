@@ -27,15 +27,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	internalsync "go.uber.org/yarpc/internal/sync"
+
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 var _ transport.UnaryOutbound = (*Outbound)(nil)

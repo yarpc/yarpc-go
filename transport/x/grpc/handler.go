@@ -121,7 +121,11 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 		return nil, err
 	}
 	transportRequest.Body = bytes.NewBuffer(data)
-	transportRequest.Procedure = procedureToName(h.grpcServiceName, h.grpcMethodName)
+	procedure, err := procedureToName(h.grpcServiceName, h.grpcMethodName)
+	if err != nil {
+		return nil, err
+	}
+	transportRequest.Procedure = procedure
 	if err := transport.ValidateRequest(transportRequest); err != nil {
 		return nil, err
 	}

@@ -23,24 +23,21 @@ package grpc
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"go.uber.org/yarpc/internal/procedure"
 )
 
-const defaultMethodName = "__default__"
+const defaultServiceName = "__default__"
 
 func procedureNameToServiceNameMethodName(procedureName string) (string, string, error) {
-	// TODO: this is hacky
-	serviceName, methodName := procedure.FromName(strings.Replace(procedureName, "/", "___", -1))
+	serviceName, methodName := procedure.FromName(procedureName)
 	if serviceName == "" {
 		return "", "", fmt.Errorf("invalid procedure name: %s", procedureName)
 	}
 	if methodName == "" {
-		methodName = defaultMethodName
+		methodName = serviceName
+		serviceName = defaultServiceName
 	}
-	// TODO: do we really need to do url.QueryEscape?
-	// Are there consequences if there is a diff from the string and the url.QueryEscape string?
 	return url.QueryEscape(serviceName), url.QueryEscape(methodName), nil
 }
 
@@ -53,17 +50,23 @@ func procedureNameToFullMethod(procedureName string) (string, error) {
 }
 
 func toFullMethod(serviceName string, methodName string) string {
-	if methodName == "" {
-		methodName = defaultMethodName
+	if serviceName == "" {
+		serviceName = defaultServiceName
 	}
 	return fmt.Sprintf("/%s/%s", serviceName, methodName)
 }
 
-func procedureToName(serviceName string, methodName string) string {
-	if methodName == defaultMethodName {
-		// TODO: this is hacky
-		return strings.Replace(serviceName, "___", "/", -1)
+func procedureToName(serviceName string, methodName string) (string, error) {
+	serviceName, err := url.QueryUnescape(serviceName)
+	if err != nil {
+		return "", err
 	}
-	// TODO: this is hacky
-	return strings.Replace(procedure.ToName(serviceName, methodName), "___", "/", -1)
+	methodName, err = url.QueryUnescape(methodName)
+	if err != nil {
+		return "", err
+	}
+	if serviceName == defaultServiceName {
+		return methodName, nil
+	}
+	return procedure.ToName(serviceName, methodName), nil
 }

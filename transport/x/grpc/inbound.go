@@ -133,24 +133,24 @@ func (i *Inbound) getServiceDescs() ([]*grpc.ServiceDesc, error) {
 	if len(procedures) == 0 {
 		return nil, errRouterHasNoProcedures
 	}
-	serviceNameToServiceDesc := make(map[string]*grpc.ServiceDesc)
+	grpcServiceNameToServiceDesc := make(map[string]*grpc.ServiceDesc)
 	for _, procedure := range procedures {
 		serviceName, methodDesc, err := i.getServiceNameAndMethodDesc(procedure)
 		if err != nil {
 			return nil, err
 		}
-		serviceDesc, ok := serviceNameToServiceDesc[serviceName]
+		serviceDesc, ok := grpcServiceNameToServiceDesc[serviceName]
 		if !ok {
 			serviceDesc = &grpc.ServiceDesc{
 				ServiceName: serviceName,
 				HandlerType: (*noopGrpcInterface)(nil),
 			}
-			serviceNameToServiceDesc[serviceName] = serviceDesc
+			grpcServiceNameToServiceDesc[serviceName] = serviceDesc
 		}
 		serviceDesc.Methods = append(serviceDesc.Methods, methodDesc)
 	}
-	serviceDescs := make([]*grpc.ServiceDesc, 0, len(serviceNameToServiceDesc))
-	for _, serviceDesc := range serviceNameToServiceDesc {
+	serviceDescs := make([]*grpc.ServiceDesc, 0, len(grpcServiceNameToServiceDesc))
+	for _, serviceDesc := range grpcServiceNameToServiceDesc {
 		serviceDescs = append(serviceDescs, serviceDesc)
 	}
 	return serviceDescs, nil

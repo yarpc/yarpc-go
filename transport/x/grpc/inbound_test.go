@@ -35,9 +35,9 @@ import (
 func TestGetServiceDescs(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
-		Name         string
-		Procedures   []transport.Procedure
-		ServiceDescs []*grpc.ServiceDesc
+		Name                 string
+		Procedures           []transport.Procedure
+		ExpectedServiceDescs []*grpc.ServiceDesc
 	}{
 		{
 			Name: "Basic",
@@ -47,7 +47,7 @@ func TestGetServiceDescs(t *testing.T) {
 					Service: "Example",
 				},
 			},
-			ServiceDescs: []*grpc.ServiceDesc{
+			ExpectedServiceDescs: []*grpc.ServiceDesc{
 				{
 					ServiceName: "KeyValue",
 					Methods: []grpc.MethodDesc{
@@ -70,7 +70,7 @@ func TestGetServiceDescs(t *testing.T) {
 					Service: "Example",
 				},
 			},
-			ServiceDescs: []*grpc.ServiceDesc{
+			ExpectedServiceDescs: []*grpc.ServiceDesc{
 				{
 					ServiceName: "KeyValue",
 					Methods: []grpc.MethodDesc{
@@ -96,7 +96,7 @@ func TestGetServiceDescs(t *testing.T) {
 					Service: "Example",
 				},
 			},
-			ServiceDescs: []*grpc.ServiceDesc{
+			ExpectedServiceDescs: []*grpc.ServiceDesc{
 				{
 					ServiceName: "KeyValue",
 					Methods: []grpc.MethodDesc{
@@ -116,19 +116,19 @@ func TestGetServiceDescs(t *testing.T) {
 			},
 		},
 		{
-			Name: "Default Method Name",
+			Name: "Default Service Name",
 			Procedures: []transport.Procedure{
 				{
 					Name:    "Foo",
 					Service: "Example",
 				},
 			},
-			ServiceDescs: []*grpc.ServiceDesc{
+			ExpectedServiceDescs: []*grpc.ServiceDesc{
 				{
-					ServiceName: "Foo",
+					ServiceName: defaultServiceName,
 					Methods: []grpc.MethodDesc{
 						{
-							MethodName: defaultMethodName,
+							MethodName: "Foo",
 						},
 					},
 				},
@@ -140,8 +140,8 @@ func TestGetServiceDescs(t *testing.T) {
 			inbound.SetRouter(newTestTransportRouter(tt.Procedures))
 			serviceDescs, err := inbound.getServiceDescs()
 			require.NoError(t, err)
-			testServiceDescServiceNamesCovered(t, serviceDescs, tt.ServiceDescs)
-			for _, expectedServiceDesc := range tt.ServiceDescs {
+			testServiceDescServiceNamesCovered(t, serviceDescs, tt.ExpectedServiceDescs)
+			for _, expectedServiceDesc := range tt.ExpectedServiceDescs {
 				serviceDesc := testFindServiceDesc(t, serviceDescs, expectedServiceDesc.ServiceName)
 				testServiceDescMethodNamesCovered(t, serviceDesc, expectedServiceDesc)
 			}

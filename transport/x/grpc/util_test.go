@@ -43,15 +43,15 @@ func TestProcedureNameFunctions(t *testing.T) {
 		},
 		{
 			ProcedureName: "foo",
-			ServiceName:   "foo",
-			MethodName:    "__default__",
-			FullMethod:    "/foo/__default__",
+			ServiceName:   "__default__",
+			MethodName:    "foo",
+			FullMethod:    "/__default__/foo",
 		},
 		{
 			ProcedureName: "foo/bar",
-			ServiceName:   "foo___bar",
-			MethodName:    "__default__",
-			FullMethod:    "/foo___bar/__default__",
+			ServiceName:   "__default__",
+			MethodName:    url.QueryEscape("foo/bar"),
+			FullMethod:    "/__default__/" + url.QueryEscape("foo/bar"),
 		},
 	} {
 		t.Run(tt.ProcedureName, func(t *testing.T) {
@@ -59,12 +59,10 @@ func TestProcedureNameFunctions(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.ServiceName, serviceName)
 			assert.Equal(t, tt.MethodName, methodName)
-			assert.Equal(t, tt.ProcedureName, procedureToName(serviceName, methodName))
+			procedureName, err := procedureToName(serviceName, methodName)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.ProcedureName, procedureName)
 			assert.Equal(t, tt.FullMethod, toFullMethod(serviceName, methodName))
 		})
 	}
-}
-
-func TestDefaultMethodNameIsSameQueryEscaped(t *testing.T) {
-	assert.Equal(t, defaultMethodName, url.QueryEscape(defaultMethodName))
 }
