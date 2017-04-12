@@ -6,6 +6,8 @@ v1.8.0 (unreleased)
 
 -   x/config: The service name is no longer part of the configuration and must
     be passed as an argument to the `LoadConfig*` or `NewDispatcher*` methods.
+-   Fixed a bug where the TChannel inbound would not write the response headers
+    if the response body was empty.
 
 
 v1.7.1 (2017-03-29)
