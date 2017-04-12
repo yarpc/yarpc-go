@@ -62,7 +62,8 @@ services:
             - BEHAVIOR_HTTPSERVER=client,httpserver
             - BEHAVIOR_SKIP_HTTPSERVER=client=java
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
-            - BEHAVIOR_SKIP_THRIFTGAUNTLET=server=java+transport=tchannel
+            # Skip gauntlet behavior only for tchannel once java is released
+            - BEHAVIOR_SKIP_THRIFTGAUNTLET=server=java
             - BEHAVIOR_TIMEOUT=client,server,transport
             - BEHAVIOR_SKIP_TIMEOUT=client=java,server=java
             # BEHAVIOR_INBOUNDTTL TODO
