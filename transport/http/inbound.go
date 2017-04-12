@@ -55,9 +55,10 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:   sync.Once(),
-		addr:   addr,
-		tracer: t.tracer,
+		once:      sync.Once(),
+		addr:      addr,
+		tracer:    t.tracer,
+		transport: t,
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -74,6 +75,7 @@ type Inbound struct {
 	server     *intnet.HTTPServer
 	router     transport.Router
 	tracer     opentracing.Tracer
+	transport  *Transport
 
 	once sync.LifecycleOnce
 }
@@ -93,8 +95,7 @@ func (i *Inbound) SetRouter(router transport.Router) {
 
 // Transports returns the inbound's HTTP transport.
 func (i *Inbound) Transports() []transport.Transport {
-	// TODO factor out transport and return it here.
-	return []transport.Transport{}
+	return []transport.Transport{i.transport}
 }
 
 // Start starts the inbound with a given service detail, opening a listening

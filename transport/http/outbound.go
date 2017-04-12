@@ -79,6 +79,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
+		transport:   t,
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -94,15 +95,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 // objects. Also note that the Chooser MUST have started before Outbound.Start
 // is called.
 func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
-	o := &Outbound{
-		chooser:     chooser,
-		urlTemplate: defaultURLTemplate,
-		tracer:      opentracing.GlobalTracer(),
-	}
-	for _, opt := range opts {
-		opt(o)
-	}
-	return o
+	return NewTransport().NewOutbound(chooser, opts...)
 }
 
 // NewSingleOutbound builds an outbound which sends YARPC requests over HTTP
@@ -133,6 +126,7 @@ type Outbound struct {
 	chooser     peer.Chooser
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
+	transport   *Transport
 
 	once sync.LifecycleOnce
 }
@@ -150,8 +144,7 @@ func (o *Outbound) setURLTemplate(URL string) {
 
 // Transports returns the outbound's HTTP transport.
 func (o *Outbound) Transports() []transport.Transport {
-	// TODO factor out transport and return it here.
-	return []transport.Transport{}
+	return []transport.Transport{o.transport}
 }
 
 // Start the HTTP outbound

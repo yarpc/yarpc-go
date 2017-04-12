@@ -23,4 +23,4 @@ package transporttest
 import "time"
 
 // DefaultTTLDelta is the default TTLDelta used by RequestMatchers.
-const DefaultTTLDelta = 20 * time.Millisecond
+const DefaultTTLDelta = 100 * time.Millisecond

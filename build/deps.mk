@@ -65,10 +65,10 @@ $(RAGEL_TAR):
 
 $(RAGEL): $(RAGEL_TAR)
 	@mkdir -p $(BIN)
-	@cd $(RAGEL_LIB); tar xzf $(RAGEL_TAR)
-	@cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); ./configure --prefix=$(RAGEL_LIB) --disable-manual
-	@cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); make install
-	@cp $(RAGEL_LIB)/bin/ragel $(RAGEL)
+	cd $(RAGEL_LIB); tar xzf $(RAGEL_TAR)
+	cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); ./configure --prefix=$(RAGEL_LIB) --disable-manual
+	cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); make install
+	cp $(RAGEL_LIB)/bin/ragel $(RAGEL)
 
 $(GLIDE_TAR):
 	@mkdir -p $(GLIDE_LIB)
@@ -131,7 +131,7 @@ GOCOVMERGE = $(BIN)/gocovmerge
 GOVERALLS = $(BIN)/goveralls
 
 .PHONY: predeps
-predeps: $(GLIDE) $(THRIFT) $(PROTOC)
+predeps: $(GLIDE) $(THRIFT) $(PROTOC) $(RAGEL)
 
 .PHONY: deps
 deps: predeps glide $(GEN_BINS) $(EXTRA_BINS) ## install all dependencies

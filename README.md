@@ -181,6 +181,19 @@ if err != nil {
 fmt.Println(res)
 ```
 
+#### Call via Curl on HTTP
+
+Here is an example of calling the `yarpc/procedures` (introspection JSON handler) via curl against an HTTP inbound:
+
+```sh
+curl -v http://${host}:${port} \
+  -H 'Rpc-Caller: test-client' \
+  -H 'Rpc-Encoding: json' \
+  -H 'Context-TTL-MS: 2000' \
+  -H 'Rpc-Service: ${service}' \
+  -H 'Rpc-Procedure: yarpc/procedures' -d '{}'
+```
+
 ### Other Examples
 
 YARPC also provides examples for the [oneway][] RPC type and a key value

@@ -508,3 +508,18 @@ func TestResponseWriterFailure(t *testing.T) {
 		assert.Error(t, w.Close())
 	}
 }
+
+func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
+	res := newResponseRecorder()
+	w := newResponseWriter(
+		new(transport.Request),
+		&fakeInboundCall{format: tchannel.Raw, resp: res},
+	)
+
+	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
+	require.NoError(t, w.Close())
+
+	assert.NotEmpty(t, res.arg2.Bytes(), "headers must not be empty")
+	assert.Empty(t, res.arg3.Bytes(), "body must be empty but was %#v", res.arg3.Bytes())
+	assert.False(t, res.applicationError, "application error must be false")
+}
