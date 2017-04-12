@@ -74,7 +74,8 @@
 // 	             Equivalent to passing thrift.Enveloped.
 // 	multiplexed: Requests are being sent to an Apache Thrift server which has
 // 	             multiplexing enabled. Equivalent to passing
-// 	             thrift.Multiplexed.
+// 	             thrift.Multiplexed. This option has no effect if enveloped
+// 	             was not set.
 //
 // For example,
 //
