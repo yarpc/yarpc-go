@@ -81,7 +81,6 @@ services:
         environment:
             - REDIS=enabled
             - CHERAMI=enabled
-            - GRPC=enabled
 
     node:
         dns_search: .

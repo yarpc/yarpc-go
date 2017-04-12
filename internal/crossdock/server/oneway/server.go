@@ -66,13 +66,11 @@ func Start() {
 		inbounds = append(inbounds, cheramiInboud)
 	}
 
-	if useGrpc() {
-		listener, err := net.Listen("tcp", ":8090")
-		if err != nil {
-			log.Printf("err init grpc inbound %v\n", err)
-		} else {
-			inbounds = append(inbounds, grpc.NewInbound(listener))
-		}
+	listener, err := net.Listen("tcp", ":8090")
+	if err != nil {
+		log.Printf("err init grpc inbound %v\n", err)
+	} else {
+		inbounds = append(inbounds, grpc.NewInbound(listener))
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
@@ -112,12 +110,6 @@ func useRedis() bool {
 // available
 func useCherami() bool {
 	return os.Getenv("CHERAMI") == "enabled"
-}
-
-// useGrpc checks to see if a grpc server is expected to be
-// available
-func useGrpc() bool {
-	return os.Getenv("GRPC") == "enabled"
 }
 
 func initCheramiInbound() (*cherami.Inbound, error) {
