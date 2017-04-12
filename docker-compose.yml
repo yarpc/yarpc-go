@@ -2,7 +2,7 @@ version: '2.1'
 
 services:
     crossdock:
-        image: crossdock/crossdock
+        image: crossdock/crossdock:filter-crossdock
         dns_search: .
         depends_on:
           cherami:
@@ -16,7 +16,7 @@ services:
             - redis
             - cherami
         environment:
-            - WAIT_FOR=java,go,node,python,python-sync
+            - WAIT_FOR=go,java,node,python,python-sync
 
             - AXIS_CLIENT=go,java,node,python,python-sync
             - AXIS_SERVER=go,java,node,python
@@ -41,19 +41,30 @@ services:
             - AXIS_CTXAVAILABLETRANSPORTS=http;tchannel
 
             - BEHAVIOR_RAW=client,server,transport
+            - BEHAVIOR_SKIP_RAW=client=java+transport=tchannel,server=java+transport=tchannel
             - BEHAVIOR_JSON=client,server,transport
+            - BEHAVIOR_SKIP_JSON=client=java+transport=tchannel,server=java+transport=tchannel
             - BEHAVIOR_THRIFT=client,server,transport
+            - BEHAVIOR_SKIP_THRIFT=client=java+transport=tchannel,server=java+transport=tchannel
             - BEHAVIOR_HEADERS=client,server,transport,encoding
+            - BEHAVIOR_SKIP_HEADERS=client=java+transport=tchannel,server=java+transport=tchannel
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
+            - BEHAVIOR_SKIP_ERRORS_HTTPCLIENT=server=java
             # BEHAVIOR_ERRORSHTTPIN TODO
             - BEHAVIOR_ERRORS_TCHCLIENT=errors_tchclient,server
+            - BEHAVIOR_SKIP_ERRORS_TCHCLIENT=server=java
             # BEHAVIOR_ERRORSTCHIN TODO
             - BEHAVIOR_TCHCLIENT=client,server,encoding
+            - BEHAVIOR_SKIP_TCHCLIENT=client=java,server=java
             - BEHAVIOR_TCHSERVER=client,server,encoding
+            - BEHAVIOR_SKIP_TCHSERVER=client=java,server=java
             # BEHAVIOR_HTTPCLIENT TODO
             - BEHAVIOR_HTTPSERVER=client,httpserver
+            - BEHAVIOR_SKIP_HTTPSERVER=client=java
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
+            - BEHAVIOR_SKIP_THRIFTGAUNTLET=server=java+transport=tchannel
             - BEHAVIOR_TIMEOUT=client,server,transport
+            - BEHAVIOR_SKIP_TIMEOUT=client=java,server=java
             # BEHAVIOR_INBOUNDTTL TODO
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport,ctxavailabletransports
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
