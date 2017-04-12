@@ -25,7 +25,7 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "ExtendOnly",
 			ClientConfig: c,
 		}, opts...),
-		Interface: baseserviceclient.New(c),
+		Interface: baseserviceclient.New(c, opts...),
 	}
 }
 

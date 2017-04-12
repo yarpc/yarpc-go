@@ -47,7 +47,7 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "Store",
 			ClientConfig: c,
 		}, opts...),
-		Interface: readonlystoreclient.New(c),
+		Interface: readonlystoreclient.New(c, opts...),
 	}
 }
 
