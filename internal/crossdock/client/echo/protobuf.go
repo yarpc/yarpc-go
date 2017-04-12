@@ -33,11 +33,11 @@ import (
 
 // Protobuf implements the 'protobuf' behavior.
 func Protobuf(t crossdock.T) {
-	ProtobufTransport(t, "")
+	ProtobufForTransport(t, "")
 }
 
-// ProtobufTransport implements the 'protobuf' behavior for the given transport or behavior transport.
-func ProtobufTransport(t crossdock.T, transport string) {
+// ProtobufForTransport implements the 'protobuf' behavior for the given transport or behavior transport.
+func ProtobufForTransport(t crossdock.T, transport string) {
 	t = createEchoT("protobuf", transport, t)
 	fatals := crossdock.Fatals(t)
 

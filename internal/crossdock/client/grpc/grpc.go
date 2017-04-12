@@ -28,10 +28,10 @@ import (
 )
 
 var encodingToRunFunc = map[string]func(crossdock.T, string){
-	"raw":      echo.RawTransport,
-	"json":     echo.JSONTransport,
-	"thrift":   echo.ThriftTransport,
-	"protobuf": echo.ProtobufTransport,
+	"raw":      echo.RawForTransport,
+	"json":     echo.JSONForTransport,
+	"thrift":   echo.ThriftForTransport,
+	"protobuf": echo.ProtobufForTransport,
 }
 
 // Run starts the grpc behavior, testing grpc over encodings.

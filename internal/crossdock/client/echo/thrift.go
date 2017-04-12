@@ -34,11 +34,11 @@ import (
 
 // Thrift implements the 'thrift' behavior.
 func Thrift(t crossdock.T) {
-	ThriftTransport(t, "")
+	ThriftForTransport(t, "")
 }
 
-// ThriftTransport implements the 'thrift' behavior for the given transport or behavior transport.
-func ThriftTransport(t crossdock.T, transport string) {
+// ThriftForTransport implements the 'thrift' behavior for the given transport or behavior transport.
+func ThriftForTransport(t crossdock.T, transport string) {
 	t = createEchoT("thrift", transport, t)
 	fatals := crossdock.Fatals(t)
 

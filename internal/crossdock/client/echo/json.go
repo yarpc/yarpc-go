@@ -38,11 +38,11 @@ type jsonEcho struct {
 
 // JSON implements the 'json' behavior.
 func JSON(t crossdock.T) {
-	JSONTransport(t, "")
+	JSONForTransport(t, "")
 }
 
-// JSONTransport implements the 'json' behavior for the given transport or behavior transport.
-func JSONTransport(t crossdock.T, transport string) {
+// JSONForTransport implements the 'json' behavior for the given transport or behavior transport.
+func JSONForTransport(t crossdock.T, transport string) {
 	t = createEchoT("json", transport, t)
 	fatals := crossdock.Fatals(t)
 
