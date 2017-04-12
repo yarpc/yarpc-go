@@ -155,7 +155,11 @@ func TestInjectClientSuccess(t *testing.T) {
 	type testCase struct {
 		target interface{}
 
-		clientConfigs []interface{}
+		// list of client builders to register using RegisterClientBuilder.
+		//
+		// Test instances of these can be built with
+		// clientBuilderConfig.Get(t).
+		clientBuilders []interface{}
 
 		// list of services for which ClientConfig() should return successfully
 		knownServices []string
@@ -217,7 +221,7 @@ func TestInjectClientSuccess(t *testing.T) {
 			name: "known type",
 			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				tt.knownServices = []string{"foo"}
-				tt.clientConfigs = []interface{}{
+				tt.clientBuilders = []interface{}{
 					clientBuilderConfig{ClientConfig: gomock.Any()}.Get(t),
 				}
 				tt.target = &struct {
@@ -231,7 +235,7 @@ func TestInjectClientSuccess(t *testing.T) {
 			name: "known type with struct field",
 			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				tt.knownServices = []string{"foo"}
-				tt.clientConfigs = []interface{}{
+				tt.clientBuilders = []interface{}{
 					clientBuilderConfig{
 						ClientConfig: gomock.Any(),
 						StructField: gomock.Eq(reflect.StructField{
@@ -279,7 +283,7 @@ func TestInjectClientSuccess(t *testing.T) {
 			defer mockCtrl.Finish()
 			tt := testCase.build(t, mockCtrl)
 
-			for _, builder := range tt.clientConfigs {
+			for _, builder := range tt.clientBuilders {
 				forget := yarpc.RegisterClientBuilder(builder)
 				defer forget()
 			}

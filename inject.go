@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	// _clientBuilders is a map from type to a (reflected) function with one
-	// of the following signatures,
+	// _clientBuilders is a map from type of our desired client 'T' to a
+	// (reflected) function with one of the following signatures,
 	//
 	// 	func(transport.ClientConfig) T
 	// 	func(transport.ClientConfig, reflect.StructField) T
