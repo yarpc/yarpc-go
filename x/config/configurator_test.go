@@ -21,6 +21,7 @@
 package config
 
 import (
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -41,6 +42,18 @@ func TestConfiguratorRegisterTransportMissingName(t *testing.T) {
 	assert.Contains(t, err.Error(), "name is required")
 }
 
+func setenv(t *testing.T, key, value string) (restore func()) {
+	oldValue, ok := os.LookupEnv(key)
+	require.NoError(t, os.Setenv(key, value))
+	return func() {
+		if ok {
+			os.Setenv(key, oldValue)
+		} else {
+			os.Unsetenv(key)
+		}
+	}
+}
+
 func TestConfigurator(t *testing.T) {
 	// For better test output, we have split the test case into a testCase
 	// struct that defines the test parameters and a different anonymous
@@ -55,6 +68,9 @@ func TestConfigurator(t *testing.T) {
 
 		// YAML to parse using the configurator
 		give string
+
+		// Environment variables
+		env map[string]string
 
 		// If non-empty, an error is expected where the message matches all
 		// strings in this slice
@@ -834,6 +850,237 @@ func TestConfigurator(t *testing.T) {
 				return
 			},
 		},
+		{
+			desc: "interpolated string",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type transportConfig struct {
+					ServerAddress string `config:",interpolate"`
+				}
+
+				type outboundConfig struct {
+					QueueName string `config:"queue,interpolate"`
+				}
+
+				tt.serviceName = "foo"
+				tt.give = expand(`
+					transports:
+						redis:
+							serverAddress: ${REDIS_ADDRESS}:${REDIS_PORT}
+					outbounds:
+						myservice:
+							redis:
+								queue: /${MYSERVICE_QUEUE}/inbound
+				`)
+				tt.env = map[string]string{
+					"REDIS_ADDRESS":   "127.0.0.1",
+					"REDIS_PORT":      "6379",
+					"MYSERVICE_QUEUE": "myservice",
+				}
+
+				redis := mockTransportSpecBuilder{
+					Name:                 "redis",
+					TransportConfig:      reflect.TypeOf(transportConfig{}),
+					OnewayOutboundConfig: reflect.TypeOf(outboundConfig{}),
+				}.Build(mockCtrl)
+
+				kit := kitMatcher{ServiceName: "foo"}
+				transport := transporttest.NewMockTransport(mockCtrl)
+				oneway := transporttest.NewMockOnewayOutbound(mockCtrl)
+
+				redis.EXPECT().
+					BuildTransport(transportConfig{ServerAddress: "127.0.0.1:6379"}, kit).
+					Return(transport, nil)
+				redis.EXPECT().
+					BuildOnewayOutbound(outboundConfig{QueueName: "/myservice/inbound"}, transport, kit).
+					Return(oneway, nil)
+
+				tt.specs = []TransportSpec{redis.Spec()}
+				tt.wantConfig = yarpc.Config{
+					Name:      "foo",
+					Outbounds: yarpc.Outbounds{"myservice": {Oneway: oneway}},
+				}
+
+				return
+			},
+		},
+		{
+			desc: "interpolated integer",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type inboundConfig struct {
+					Port int `config:",interpolate"`
+				}
+
+				tt.serviceName = "hi"
+				tt.give = expand(`
+					inbounds:
+						http:
+							port: 1${HTTP_PORT}
+				`)
+				tt.env = map[string]string{"HTTP_PORT": "8080"}
+
+				http := mockTransportSpecBuilder{
+					Name:            "http",
+					TransportConfig: _typeOfEmptyStruct,
+					InboundConfig:   reflect.TypeOf(inboundConfig{}),
+				}.Build(mockCtrl)
+
+				kit := kitMatcher{ServiceName: "hi"}
+				transport := transporttest.NewMockTransport(mockCtrl)
+				inbound := transporttest.NewMockInbound(mockCtrl)
+
+				http.EXPECT().BuildTransport(struct{}{}, kit).Return(transport, nil)
+				http.EXPECT().
+					BuildInbound(inboundConfig{Port: 18080}, transport, kit).
+					Return(inbound, nil)
+
+				tt.specs = []TransportSpec{http.Spec()}
+				tt.wantConfig = yarpc.Config{
+					Name:     "hi",
+					Inbounds: yarpc.Inbounds{inbound},
+				}
+
+				return
+			},
+		},
+		{
+			desc: "intepolate non-string",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type inboundConfig struct {
+					Port int `config:",interpolate"`
+				}
+
+				tt.serviceName = "foo"
+				tt.give = expand(`
+					inbounds:
+						http:
+							port: 80
+				`)
+
+				http := mockTransportSpecBuilder{
+					Name:            "http",
+					TransportConfig: _typeOfEmptyStruct,
+					InboundConfig:   reflect.TypeOf(inboundConfig{}),
+				}.Build(mockCtrl)
+
+				kit := kitMatcher{ServiceName: "foo"}
+				transport := transporttest.NewMockTransport(mockCtrl)
+				inbound := transporttest.NewMockInbound(mockCtrl)
+
+				http.EXPECT().BuildTransport(struct{}{}, kit).Return(transport, nil)
+				http.EXPECT().
+					BuildInbound(inboundConfig{Port: 80}, transport, kit).
+					Return(inbound, nil)
+
+				tt.specs = []TransportSpec{http.Spec()}
+				tt.wantConfig = yarpc.Config{
+					Name:     "foo",
+					Inbounds: yarpc.Inbounds{inbound},
+				}
+
+				return
+			},
+		},
+		{
+			desc: "bad interpolation string",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type inboundConfig struct {
+					Address string `config:",interpolate"`
+				}
+
+				tt.serviceName = "hi"
+				tt.give = expand(`
+					inbounds:
+						http:
+							address: :${HTTP_PORT
+				`)
+				tt.env = map[string]string{"HTTP_PORT": "8080"}
+
+				http := mockTransportSpecBuilder{
+					Name:            "http",
+					TransportConfig: _typeOfEmptyStruct,
+					InboundConfig:   reflect.TypeOf(inboundConfig{}),
+				}.Build(mockCtrl)
+
+				tt.specs = []TransportSpec{http.Spec()}
+				tt.wantErr = []string{
+					"failed to decode inbound configuration:",
+					`error reading into field "Address":`,
+					`failed to parse ":${HTTP_PORT" for interpolation`,
+				}
+
+				return
+			},
+		},
+		{
+			desc: "missing envvar",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type inboundConfig struct {
+					Address string `config:",interpolate"`
+				}
+
+				tt.serviceName = "hi"
+				tt.give = expand(`
+					inbounds:
+						http:
+							address: :${HTTP_PORT}
+				`)
+
+				http := mockTransportSpecBuilder{
+					Name:            "http",
+					TransportConfig: _typeOfEmptyStruct,
+					InboundConfig:   reflect.TypeOf(inboundConfig{}),
+				}.Build(mockCtrl)
+
+				tt.specs = []TransportSpec{http.Spec()}
+				tt.wantErr = []string{
+					"failed to decode inbound configuration:",
+					`error reading into field "Address":`,
+					`failed to render ":${HTTP_PORT}" with environment variables:`,
+					`variable "HTTP_PORT" does not have a value or a default`,
+				}
+
+				return
+			},
+		},
+		{
+			desc: "time.Duration from env",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type inboundConfig struct {
+					Timeout time.Duration `config:",interpolate"`
+				}
+
+				tt.serviceName = "foo"
+				tt.give = expand(`
+					inbounds:
+						http:
+							timeout: ${TIMEOUT}
+				`)
+				tt.env = map[string]string{"TIMEOUT": "5s"}
+
+				http := mockTransportSpecBuilder{
+					Name:            "http",
+					TransportConfig: _typeOfEmptyStruct,
+					InboundConfig:   reflect.TypeOf(inboundConfig{}),
+				}.Build(mockCtrl)
+
+				kit := kitMatcher{ServiceName: "foo"}
+				transport := transporttest.NewMockTransport(mockCtrl)
+				inbound := transporttest.NewMockInbound(mockCtrl)
+
+				http.EXPECT().BuildTransport(struct{}{}, kit).Return(transport, nil)
+				http.EXPECT().
+					BuildInbound(inboundConfig{Timeout: 5 * time.Second}, transport, kit).
+					Return(inbound, nil)
+
+				tt.specs = []TransportSpec{http.Spec()}
+				tt.wantConfig = yarpc.Config{
+					Name:     "foo",
+					Inbounds: yarpc.Inbounds{inbound},
+				}
+
+				return
+			},
+		},
 	}
 
 	// We want to parameterize all tests over YAML and non-YAML modes. To
@@ -853,6 +1100,11 @@ func TestConfigurator(t *testing.T) {
 
 			tt := tc.test(t, mockCtrl)
 			cfg := New()
+
+			for key, value := range tt.env {
+				restore := setenv(t, key, value)
+				defer restore()
+			}
 
 			if tt.specs != nil {
 				for _, spec := range tt.specs {
