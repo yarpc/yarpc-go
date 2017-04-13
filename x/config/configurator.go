@@ -27,7 +27,7 @@ import (
 	"io/ioutil"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/decode"
+	"go.uber.org/yarpc/internal/mapdecode"
 
 	"go.uber.org/multierr"
 	"gopkg.in/yaml.v2"
@@ -170,7 +170,7 @@ func (c *Configurator) LoadConfigFromYAML(serviceName string, r io.Reader) (yarp
 // expected to conform to.
 func (c *Configurator) LoadConfig(serviceName string, data interface{}) (yarpc.Config, error) {
 	var cfg yarpcConfig
-	if err := decode.Decode(&cfg, data); err != nil {
+	if err := mapdecode.Decode(&cfg, data, _mapdecodeOpts...); err != nil {
 		return yarpc.Config{}, err
 	}
 	return c.load(serviceName, &cfg)

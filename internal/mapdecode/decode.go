@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package decode implements a generic interface{} decoder. It allows
+// Package mapdecode implements a generic interface{} decoder. It allows
 // implementing custom YAML/JSON decoding logic only once. Instead of
-// implementing UnmarshalYAML and UnmarshalJSON differently twice, you would
+// implementing the same UnmarshalYAML and UnmarshalJSON twice, you can
 // implement Decode once, parse the YAML/JSON input into a
 // map[string]interface{} and decode it using this package.
 //
@@ -30,13 +30,13 @@
 // 	}
 //
 //	var result MyStruct
-// 	if err := decode.Decode(&result, data); err != nil {
+// 	if err := mapdecode.Decode(&result, data); err != nil {
 // 		log.Fatal(err)
 // 	}
 //
 // This also makes it possible to implement custom markup parsing and
 // deserialization strategies that get decoded into a user-provided struct.
-package decode
+package mapdecode
 
 import (
 	"fmt"
@@ -46,9 +46,45 @@ import (
 	"go.uber.org/multierr"
 )
 
-const _tagName = "config"
+const _defaultTagName = "mapdecode"
 
-var _typeOfDecoder = reflect.TypeOf((*Decoder)(nil)).Elem()
+type options struct {
+	TagName      string
+	IgnoreUnused bool
+	Unmarshaler  unmarshaler
+}
+
+// Option customizes the behavior of Decode.
+type Option func(*options)
+
+// TagName changes the name of the struct tag under which field names are
+// expected.
+func TagName(name string) Option {
+	return func(o *options) {
+		o.TagName = name
+	}
+}
+
+// IgnoreUnused specifies whether we should ignore unused attributes in YAML.
+// By default, decoding will fail if an unused attribute is encountered.
+func IgnoreUnused(ignore bool) Option {
+	return func(o *options) {
+		o.IgnoreUnused = ignore
+	}
+}
+
+// unmarshaler defines a scheme that allows users to do custom unmarshalling.
+// The default scheme is _decoderUnmarshaler where we expect users to
+// implement the Decoder interface.
+type unmarshaler struct {
+	// Interface that the type must implement for Unmarshal to be called.
+	Interface reflect.Type
+
+	// Unmarshal will be called with a Value that implements the interface
+	// specified above and a function to decode the underlying data into
+	// another shape. This is analogous to the Into type.
+	Unmarshal func(reflect.Value, func(interface{}) error) error
+}
 
 // Decode from src into dest where dest is a pointer to the value being
 // decoded.
@@ -63,10 +99,11 @@ var _typeOfDecoder = reflect.TypeOf((*Decoder)(nil)).Elem()
 // 	var item struct{ Key, Value string }
 // 	err := Decode(&item, map[string]string{"key": "some key", "Value": "some value"})
 //
-// The name of the field in the map may be customized with the `config` tag.
+// The name of the field in the map may be customized with the `mapdecode`
+// tag. (Use the TagName option to change the name of the tag.)
 //
 // 	var item struct {
-// 		Key   string `config:"name"`
+// 		Key   string `mapdecode:"name"`
 // 		Value string
 // 	}
 // 	var item struct{ Key, Value string }
@@ -74,96 +111,29 @@ var _typeOfDecoder = reflect.TypeOf((*Decoder)(nil)).Elem()
 //
 // The destination type or any subtype may implement the Decoder interface to
 // customize how it gets decoded.
-func Decode(dest, src interface{}) error {
-	return decodeFrom(src)(dest)
+func Decode(dest, src interface{}, os ...Option) error {
+	opts := options{
+		TagName:     _defaultTagName,
+		Unmarshaler: _decoderUnmarshaler,
+	}
+	for _, o := range os {
+		o(&opts)
+	}
+	return decodeFrom(&opts, src)(dest)
 }
-
-// Decoder is any type which has custom decoding logic. Types may implement
-// Decode and rely on the given Into function to read values into a different
-// shape, validate the result, and fill themselves with it.
-//
-// For example the following lets users provide a list of strings to decode a
-// set.
-//
-// 	type StringSet map[string]struct{}
-//
-// 	func (ss *StringSet) Decode(into decode.Into) error {
-// 		var items []string
-// 		if err := into(&items); err != nil {
-// 			return err
-// 		}
-//
-// 		*ss = make(map[string]struct{})
-// 		for _, item := range items {
-// 			(*ss)[item] = struct{}{}
-// 		}
-// 		return nil
-// 	}
-type Decoder interface {
-	// Decode receives a function that will attempt to decode the source data
-	// into the given target. The argument to Into MUST be a pointer to the
-	// target object.
-	Decode(Into) error
-}
-
-// Into is a function that attempts to decode the source data into the given
-// shape.
-//
-// Types that implement Decoder are provided a reference to an Into object so
-// that they can decode a different shape, validate the result and populate
-// themselves with the result.
-//
-// 	var values []string
-// 	err := into(&value)
-// 	for _, value := range values {
-// 		if value == "reserved" {
-// 			return errors.New(`a value in the list cannot be "reserved"`)
-// 		}
-// 		self.Values = append(self.Values, value)
-// 	}
-//
-// The function is safe to call multiple times if you need to try to decode
-// different shapes. For example,
-//
-// 	// Allow the user to just use the string "default" for the default
-// 	// configuration.
-// 	var name string
-// 	if err := into(&name); err == nil {
-// 		if name == "default" {
-// 			*self = DefaultConfiguration
-// 			return
-// 		}
-// 		return fmt.Errorf("unknown name %q", name)
-// 	}
-//
-// 	// Otherwise, the user must provide {someAttr: "value"} as the input for
-// 	// explicit configuration.
-// 	var custom struct{ SomeAttr string }
-// 	if err := into(&custom); err != nil {
-// 		return err
-// 	}
-//
-// 	self.SomeAttr = custom
-// 	return nil
-//
-// If the destination type or any sub-type implements Decoder, that function
-// will be called. This means that Into MUST NOT be called on the type whose
-// Decode function is currently running or this will end up in an infinite
-// loop.
-type Into func(dest interface{}) error
 
 // decodeFrom builds a decode Into function that reads the given value into
 // the destination.
-func decodeFrom(src interface{}) Into {
+func decodeFrom(opts *options, src interface{}) Into {
 	return func(dest interface{}) error {
 		cfg := mapstructure.DecoderConfig{
-			ErrorUnused: true,
+			ErrorUnused: !opts.IgnoreUnused,
 			Result:      dest,
 			DecodeHook: mapstructure.ComposeDecodeHookFunc(
 				mapstructure.StringToTimeDurationHookFunc(),
-				decoderDecodeHook,
+				decoderDecodeHook(opts),
 			),
-			TagName: _tagName,
+			TagName: opts.TagName,
 		}
 
 		decoder, err := mapstructure.NewDecoder(&cfg)
@@ -172,8 +142,6 @@ func decodeFrom(src interface{}) Into {
 		}
 
 		if err := decoder.Decode(src); err != nil {
-			// If we get a mapstructure error, pull the individual errors from
-			// it and use our standard multierr package.
 			if merr, ok := err.(*mapstructure.Error); ok {
 				return multierr.Combine(merr.WrappedErrors()...)
 			}
@@ -184,26 +152,29 @@ func decodeFrom(src interface{}) Into {
 	}
 }
 
-// decoderDecodeHook is a DecodeHook for mapstructure which recognizes types
-// that implement the Decoder interface.
-func decoderDecodeHook(from, to reflect.Type, data interface{}) (interface{}, error) {
-	if data == nil {
-		return data, nil
+// decoderDecodeHook builds a DecodeHook for mapstructure which recognizes
+// types that implement the Decoder interface.
+func decoderDecodeHook(opts *options) mapstructure.DecodeHookFuncType {
+	return func(from, to reflect.Type, data interface{}) (interface{}, error) {
+		if data == nil {
+			return data, nil
+		}
+		out, err := _decoderDecodeHook(opts, from, to, reflect.ValueOf(data))
+		return out.Interface(), err
 	}
-	out, err := _decoderDecodeHook(from, to, reflect.ValueOf(data))
-	return out.Interface(), err
 }
 
-func _decoderDecodeHook(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
+func _decoderDecodeHook(
+	opts *options, from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
 	// Get rid of pointers in either direction. This lets us parse **foo into
 	// a foo where *foo implements Decoder, for example.
 	switch {
 	case from == to:
 		return data, nil
 	case from.Kind() == reflect.Ptr: // *foo => foo
-		return _decoderDecodeHook(from.Elem(), to, data.Elem())
+		return _decoderDecodeHook(opts, from.Elem(), to, data.Elem())
 	case to.Kind() == reflect.Ptr: // foo => *foo
-		out, err := _decoderDecodeHook(from, to.Elem(), data)
+		out, err := _decoderDecodeHook(opts, from, to.Elem(), data)
 		if err != nil {
 			return out, err
 		}
@@ -222,7 +193,7 @@ func _decoderDecodeHook(from, to reflect.Type, data reflect.Value) (reflect.Valu
 	// After eliminating pointers, only destinations whose pointers implement
 	// Decoder are supported. Everything else gets the value unchanged.
 
-	if !reflect.PtrTo(to).Implements(_typeOfDecoder) {
+	if !reflect.PtrTo(to).Implements(opts.Unmarshaler.Interface) {
 		return data, nil
 	}
 
@@ -231,7 +202,7 @@ func _decoderDecodeHook(from, to reflect.Type, data reflect.Value) (reflect.Valu
 	// 	err := value.Decode(...)
 	// 	return *value, err
 	value := reflect.New(to)
-	err := value.Interface().(Decoder).Decode(decodeFrom(data.Interface()))
+	err := opts.Unmarshaler.Unmarshal(value, decodeFrom(opts, data.Interface()))
 	if err != nil {
 		err = fmt.Errorf("could not decode %v from %v: %v", to, from, err)
 	}

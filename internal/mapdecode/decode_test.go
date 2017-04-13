@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package decode
+package mapdecode
 
 import (
 	"errors"
@@ -67,7 +67,7 @@ func TestDecode(t *testing.T) {
 		Int              int
 		PtrToString      *string
 		PtrToPtrToString **string
-		SomeValue        float64 `config:"some_value"`
+		SomeValue        float64 `mapdecode:"some_value"`
 		Timeout          time.Duration
 		PtrToTimeout     *time.Duration
 
@@ -81,6 +81,7 @@ func TestDecode(t *testing.T) {
 	tests := []struct {
 		desc string
 		give interface{}
+		opts []Option
 
 		want       someStruct
 		wantErrors []string
@@ -153,7 +154,7 @@ func TestDecode(t *testing.T) {
 			desc: "decode failure",
 			give: map[interface{}]interface{}{"alwaysFails": struct{}{}},
 			wantErrors: []string{
-				"error decoding 'AlwaysFails': could not decode decode.sadDecoder from struct {}: great sadness",
+				"error decoding 'AlwaysFails': could not decode mapdecode.sadDecoder from struct {}: great sadness",
 			},
 		},
 		{
@@ -166,12 +167,22 @@ func TestDecode(t *testing.T) {
 			give: map[interface{}]interface{}{"ptrToTimeout": "4s2ms"},
 			want: someStruct{PtrToTimeout: &someTimeout},
 		},
+		{
+			desc:       "unused",
+			give:       map[string]interface{}{"foo": "bar"},
+			wantErrors: []string{"invalid keys: foo"},
+		},
+		{
+			desc: "ignore unused",
+			give: map[string]interface{}{"foo": "bar"},
+			opts: []Option{IgnoreUnused(true)},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			var dest someStruct
-			err := Decode(&dest, tt.give)
+			err := Decode(&dest, tt.give, tt.opts...)
 
 			if len(tt.wantErrors) == 0 {
 				assert.NoError(t, err, "expected success")
