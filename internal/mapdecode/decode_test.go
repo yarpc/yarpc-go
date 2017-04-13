@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type stringSet map[string]struct{}
@@ -53,6 +54,7 @@ func (*sadDecoder) Decode(Into) error {
 
 func TestDecode(t *testing.T) {
 	someInt := 42
+	someBool := true
 	ptrToInt := &someInt
 
 	someString := "hello world"
@@ -74,6 +76,11 @@ func TestDecode(t *testing.T) {
 		StringSet           stringSet
 		PtrToStringSet      *stringSet
 		PtrToPtrToStringSet **stringSet
+
+		SomeBool    bool
+		PtrToBool   *bool
+		SomeFloat32 float32
+		Unsigned    uint8
 
 		AlwaysFails *sadDecoder
 	}
@@ -107,6 +114,13 @@ func TestDecode(t *testing.T) {
 			want: someStruct{Int: someInt},
 		},
 		{
+			desc: "nil *int to int",
+			give: map[interface{}]interface{}{
+				"int": (*int)(nil),
+			},
+			want: someStruct{Int: 0},
+		},
+		{
 			desc: "string to *string",
 			give: map[interface{}]interface{}{
 				"ptrToString": someString,
@@ -116,9 +130,7 @@ func TestDecode(t *testing.T) {
 		{
 			desc: "int to string",
 			give: map[string]string{"int": "42"},
-			wantErrors: []string{
-				"'Int' expected type 'int', got unconvertible type 'string'",
-			},
+			want: someStruct{Int: 42},
 		},
 		{
 			desc: "**int to int",
@@ -131,7 +143,7 @@ func TestDecode(t *testing.T) {
 			want: someStruct{PtrToPtrToString: &ptrToString},
 		},
 		{
-			desc: "config tag",
+			desc: "tag",
 			give: map[string]interface{}{"some_value": 42.0},
 			want: someStruct{SomeValue: 42.0},
 		},
@@ -177,6 +189,31 @@ func TestDecode(t *testing.T) {
 			give: map[string]interface{}{"foo": "bar"},
 			opts: []Option{IgnoreUnused(true)},
 		},
+		{
+			desc: "bool",
+			give: map[string]interface{}{"someBool": "true"},
+			want: someStruct{SomeBool: someBool},
+		},
+		{
+			desc: "*bool",
+			give: map[string]interface{}{"ptrToBool": "true"},
+			want: someStruct{PtrToBool: &someBool},
+		},
+		{
+			desc: "float32",
+			give: map[string]interface{}{"someFloat32": "42.123"},
+			want: someStruct{SomeFloat32: 42.123},
+		},
+		{
+			desc: "uint8",
+			give: map[string]interface{}{"unsigned": "42"},
+			want: someStruct{Unsigned: 42},
+		},
+		{
+			desc:       "uint8 overflow",
+			give:       map[string]interface{}{"unsigned": "12893721983721987321"},
+			wantErrors: []string{"error decoding 'Unsigned':", "value out of range"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -185,12 +222,12 @@ func TestDecode(t *testing.T) {
 			err := Decode(&dest, tt.give, tt.opts...)
 
 			if len(tt.wantErrors) == 0 {
-				assert.NoError(t, err, "expected success")
+				require.NoError(t, err, "expected success")
 				assert.Equal(t, tt.want, dest, "result mismatch")
 				return
 			}
 
-			assert.Error(t, err, "expected error")
+			require.Error(t, err, "expected error")
 			for _, msg := range tt.wantErrors {
 				assert.Contains(t, err.Error(), msg)
 			}
