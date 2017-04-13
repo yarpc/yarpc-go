@@ -83,6 +83,8 @@ func (e envelopedOption) applyRegisterOption(c *registerConfig) {
 // Specify this option when constructing the Thrift client.
 //
 // 	client := myserviceclient.New(clientConfig, thrift.Multiplexed)
+//
+// This option has no effect if enveloping is disabled.
 var Multiplexed ClientOption = multiplexedOption{}
 
 type multiplexedOption struct{}

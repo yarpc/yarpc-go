@@ -5,6 +5,7 @@ package readonlystoreclient
 
 import (
 	"context"
+	"reflect"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
@@ -33,14 +34,16 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "ReadOnlyStore",
 			ClientConfig: c,
 		}, opts...),
-		Interface: baseserviceclient.New(c),
+		Interface: baseserviceclient.New(c, opts...),
 	}
 }
 
 func init() {
-	yarpc.RegisterClientBuilder(func(c transport.ClientConfig) Interface {
-		return New(c)
-	})
+	yarpc.RegisterClientBuilder(
+		func(c transport.ClientConfig, f reflect.StructField) Interface {
+			return New(c, thrift.ClientBuilderOptions(c, f)...)
+		},
+	)
 }
 
 type client struct {

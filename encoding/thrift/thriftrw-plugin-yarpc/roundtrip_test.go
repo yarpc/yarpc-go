@@ -25,11 +25,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
@@ -51,6 +53,38 @@ import (
 )
 
 func TestRoundTrip(t *testing.T) {
+	tests := []struct{ enveloped, multiplexed bool }{
+		{true, true},
+		{true, false},
+		{false, true},
+		{false, false},
+	}
+
+	for _, tt := range tests {
+		name := fmt.Sprintf("enveloped(%v)/multiplexed(%v)", tt.enveloped, tt.multiplexed)
+		t.Run(name, func(t *testing.T) { testRoundTrip(t, tt.enveloped, tt.multiplexed) })
+	}
+}
+
+func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
+	var serverOpts []thrift.RegisterOption
+	if enveloped {
+		serverOpts = append(serverOpts, thrift.Enveloped)
+	}
+
+	var clientOpts []string
+	if enveloped {
+		clientOpts = append(clientOpts, "enveloped")
+	}
+	if multiplexed {
+		clientOpts = append(clientOpts, "multiplexed")
+	}
+
+	var thriftTag string
+	if len(clientOpts) > 0 {
+		thriftTag = fmt.Sprintf(` thrift:"%v"`, strings.Join(clientOpts, ","))
+	}
+
 	tests := []struct {
 		desc          string
 		procedures    []transport.Procedure
@@ -66,60 +100,60 @@ func TestRoundTrip(t *testing.T) {
 	}{
 		{
 			desc:          "empty service",
-			procedures:    emptyserviceserver.New(struct{}{}),
+			procedures:    emptyserviceserver.New(struct{}{}, serverOpts...),
 			newClientFunc: emptyserviceclient.New,
 		},
 		{
 			desc:          "extend empty: hello",
-			procedures:    extendemptyserver.New(extendEmptyHandler{}),
+			procedures:    extendemptyserver.New(extendEmptyHandler{}, serverOpts...),
 			newClientFunc: extendemptyclient.New,
 			method:        "Hello",
 		},
 		{
 			desc:          "base: healthy",
-			procedures:    baseserviceserver.New(extendEmptyHandler{}),
+			procedures:    baseserviceserver.New(extendEmptyHandler{}, serverOpts...),
 			newClientFunc: baseserviceclient.New,
 			method:        "Healthy",
 			wantResult:    true,
 		},
 		{
 			desc:          "extend only: healthy",
-			procedures:    extendonlyserver.New(&storeHandler{healthy: true}),
+			procedures:    extendonlyserver.New(&storeHandler{healthy: true}, serverOpts...),
 			newClientFunc: extendonlyclient.New,
 			method:        "Healthy",
 			wantResult:    true,
 		},
 		{
 			desc:          "store: healthy",
-			procedures:    storeserver.New(&storeHandler{healthy: true}),
+			procedures:    storeserver.New(&storeHandler{healthy: true}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Healthy",
 			wantResult:    true,
 		},
 		{
 			desc:          "store: healthy with base client",
-			procedures:    storeserver.New(&storeHandler{healthy: true}),
+			procedures:    storeserver.New(&storeHandler{healthy: true}, serverOpts...),
 			newClientFunc: baseserviceclient.New,
 			method:        "Healthy",
 			wantResult:    true,
 		},
 		{
 			desc:          "store: unhealthy",
-			procedures:    storeserver.New(&storeHandler{}),
+			procedures:    storeserver.New(&storeHandler{}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Healthy",
 			wantResult:    false,
 		},
 		{
 			desc:          "store: increment",
-			procedures:    storeserver.New(&storeHandler{}),
+			procedures:    storeserver.New(&storeHandler{}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Increment",
 			methodArgs:    []interface{}{ptr.String("foo"), ptr.Int64(42)},
 		},
 		{
 			desc:          "store: compare and swap",
-			procedures:    storeserver.New(&storeHandler{}),
+			procedures:    storeserver.New(&storeHandler{}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "CompareAndSwap",
 			methodArgs: []interface{}{
@@ -137,7 +171,7 @@ func TestRoundTrip(t *testing.T) {
 					ExpectedValue: 42,
 					GotValue:      43,
 				},
-			}),
+			}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "CompareAndSwap",
 			methodArgs: []interface{}{
@@ -154,7 +188,7 @@ func TestRoundTrip(t *testing.T) {
 		},
 		{
 			desc:          "store: integer with readonly client",
-			procedures:    storeserver.New(&storeHandler{integer: 42}),
+			procedures:    storeserver.New(&storeHandler{integer: 42}, serverOpts...),
 			newClientFunc: readonlystoreclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -164,7 +198,7 @@ func TestRoundTrip(t *testing.T) {
 			desc: "readonly store: integer error with rw client",
 			procedures: readonlystoreserver.New(&storeHandler{
 				failWith: &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-			}),
+			}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -172,7 +206,7 @@ func TestRoundTrip(t *testing.T) {
 		},
 		{
 			desc:          "readonly store: integer with readonly client",
-			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}),
+			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}, serverOpts...),
 			newClientFunc: readonlystoreclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -180,7 +214,7 @@ func TestRoundTrip(t *testing.T) {
 		},
 		{
 			desc:          "readonly store: integer with rw client",
-			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}),
+			procedures:    readonlystoreserver.New(&storeHandler{integer: 42}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -190,7 +224,7 @@ func TestRoundTrip(t *testing.T) {
 			desc: "readonly store: integer failure with rw client",
 			procedures: readonlystoreserver.New(&storeHandler{
 				failWith: &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-			}),
+			}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -200,7 +234,7 @@ func TestRoundTrip(t *testing.T) {
 			desc: "store: integer failure",
 			procedures: storeserver.New(&storeHandler{
 				failWith: &atomic.KeyDoesNotExist{Key: ptr.String("foo")},
-			}),
+			}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Integer",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -208,7 +242,7 @@ func TestRoundTrip(t *testing.T) {
 		},
 		{
 			desc:          "store: forget",
-			procedures:    storeserver.New(&storeHandler{}),
+			procedures:    storeserver.New(&storeHandler{}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Forget",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -216,7 +250,7 @@ func TestRoundTrip(t *testing.T) {
 		},
 		{
 			desc:          "store: forget error",
-			procedures:    storeserver.New(&storeHandler{failWith: errors.New("great sadness")}),
+			procedures:    storeserver.New(&storeHandler{failWith: errors.New("great sadness")}, serverOpts...),
 			newClientFunc: storeclient.New,
 			method:        "Forget",
 			methodArgs:    []interface{}{ptr.String("foo")},
@@ -270,11 +304,14 @@ func TestRoundTrip(t *testing.T) {
 			// 	}
 			// 	yarpc.InjectClients(dispatcher, &clientHolder)
 			// 	client := clientHolder.Client
+			//
+			// Optionally with the `thrift:"..."` tag if thriftTag was
+			// non-empty.
 			structType := reflect.StructOf([]reflect.StructField{
 				{
 					Name: "Client",
 					Type: clientType,
-					Tag:  `service:"roundtrip-server"`,
+					Tag:  reflect.StructTag(`service:"roundtrip-server"` + thriftTag),
 				},
 			})
 			clientHolder := reflect.New(structType).Elem()

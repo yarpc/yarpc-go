@@ -34,6 +34,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRegisterClientBuilderPanics(t *testing.T) {
@@ -54,6 +55,14 @@ func TestRegisterClientBuilderPanics(t *testing.T) {
 		{
 			name: "wrong return type",
 			give: func(transport.ClientConfig) string { return "" },
+		},
+		{
+			name: "no arguments",
+			give: func() json.Client { return nil },
+		},
+		{
+			name: "too many arguments",
+			give: func(transport.ClientConfig, reflect.StructField, string) json.Client { return nil },
 		},
 		{
 			name: "wrong number of arguments",
@@ -114,20 +123,43 @@ func TestInjectClientsPanics(t *testing.T) {
 	}
 }
 
+type someClient interface{}
+
+// Helps build client builders (of type someClient) which verify the
+// ClientConfig and optionally, the StructField.
+type clientBuilderConfig struct {
+	ClientConfig gomock.Matcher
+	StructField  gomock.Matcher
+}
+
+func (c clientBuilderConfig) clientConfigBuilder(t *testing.T) func(cc transport.ClientConfig) someClient {
+	return func(cc transport.ClientConfig) someClient {
+		require.True(t, c.ClientConfig.Matches(cc), "client config %v did not match %v", cc, c.ClientConfig)
+		return someClient(struct{}{})
+	}
+}
+
+func (c clientBuilderConfig) Get(t *testing.T) interface{} {
+	ccBuilder := c.clientConfigBuilder(t)
+	if c.StructField == nil {
+		return ccBuilder
+	}
+
+	return func(cc transport.ClientConfig, f reflect.StructField) someClient {
+		require.True(t, c.StructField.Matches(f), "struct field %#v did not match %v", f, c.StructField)
+		return ccBuilder(cc)
+	}
+}
+
 func TestInjectClientSuccess(t *testing.T) {
-	type unknownClient interface{}
-
-	type knownClient interface{}
-	clear := yarpc.RegisterClientBuilder(
-		func(transport.ClientConfig) knownClient { return knownClient(struct{}{}) })
-	defer clear()
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	tests := []struct {
-		name   string
+	type testCase struct {
 		target interface{}
+
+		// list of client builders to register using RegisterClientBuilder.
+		//
+		// Test instances of these can be built with
+		// clientBuilderConfig.Get(t).
+		clientBuilders []interface{}
 
 		// list of services for which ClientConfig() should return successfully
 		knownServices []string
@@ -135,80 +167,142 @@ func TestInjectClientSuccess(t *testing.T) {
 		// list of field names in target we expect to be nil or non-nil
 		wantNil    []string
 		wantNonNil []string
+	}
+
+	tests := []struct {
+		name  string
+		build func(*testing.T, *gomock.Controller) testCase
 	}{
 		{
-			name:   "empty",
-			target: &struct{}{},
+			name: "empty",
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.target = &struct{}{}
+				return
+			},
 		},
 		{
 			name: "unknown service non-nil",
-			target: &struct {
-				Client json.Client `service:"foo"`
-			}{
-				Client: json.New(clientconfig.MultiOutbound(
-					"foo",
-					"bar",
-					transport.Outbounds{
-						Unary: transporttest.NewMockUnaryOutbound(mockCtrl),
-					})),
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.target = &struct {
+					Client json.Client `service:"foo"`
+				}{
+					Client: json.New(clientconfig.MultiOutbound(
+						"foo",
+						"bar",
+						transport.Outbounds{
+							Unary: transporttest.NewMockUnaryOutbound(mockCtrl),
+						})),
+				}
+				tt.wantNonNil = []string{"Client"}
+				return
 			},
-			wantNonNil: []string{"Client"},
 		},
 		{
 			name: "unknown type untagged",
-			target: &struct {
-				Client unknownClient `notservice:"foo"`
-			}{},
-			wantNil: []string{"Client"},
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.target = &struct {
+					Client someClient `notservice:"foo"`
+				}{}
+				tt.wantNil = []string{"Client"}
+				return
+			},
 		},
 		{
 			name: "unknown type non-nil",
-			target: &struct {
-				Client unknownClient `service:"foo"`
-			}{Client: unknownClient(struct{}{})},
-			wantNonNil: []string{"Client"},
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.target = &struct {
+					Client someClient `service:"foo"`
+				}{Client: someClient(struct{}{})}
+				tt.wantNonNil = []string{"Client"}
+				return
+			},
 		},
 		{
-			name:          "known type",
-			knownServices: []string{"foo"},
-			target: &struct {
-				Client knownClient `service:"foo"`
-			}{},
-			wantNonNil: []string{"Client"},
+			name: "known type",
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.knownServices = []string{"foo"}
+				tt.clientBuilders = []interface{}{
+					clientBuilderConfig{ClientConfig: gomock.Any()}.Get(t),
+				}
+				tt.target = &struct {
+					Client someClient `service:"foo"`
+				}{}
+				tt.wantNonNil = []string{"Client"}
+				return
+			},
 		},
 		{
-			name:          "default encodings",
-			knownServices: []string{"jsontest", "rawtest"},
-			target: &struct {
-				JSON json.Client `service:"jsontest"`
-				Raw  raw.Client  `service:"rawtest"`
-			}{},
-			wantNonNil: []string{"JSON", "Raw"},
+			name: "known type with struct field",
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.knownServices = []string{"foo"}
+				tt.clientBuilders = []interface{}{
+					clientBuilderConfig{
+						ClientConfig: gomock.Any(),
+						StructField: gomock.Eq(reflect.StructField{
+							Name:  "Client",
+							Type:  reflect.TypeOf((*someClient)(nil)).Elem(),
+							Index: []int{0},
+							Tag:   `service:"foo" thrift:"bar"`,
+						}),
+					}.Get(t),
+				}
+				tt.target = &struct {
+					Client someClient `service:"foo" thrift:"bar"`
+				}{}
+				tt.wantNonNil = []string{"Client"}
+				return
+			},
+		},
+		{
+			name: "default encodings",
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.knownServices = []string{"jsontest", "rawtest"}
+				tt.target = &struct {
+					JSON json.Client `service:"jsontest"`
+					Raw  raw.Client  `service:"rawtest"`
+				}{}
+				tt.wantNonNil = []string{"JSON", "Raw"}
+				return
+			},
 		},
 		{
 			name: "unexported field",
-			target: &struct {
-				rawClient raw.Client `service:"rawtest"`
-			}{},
-			wantNil: []string{"rawClient"},
+			build: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				tt.target = &struct {
+					rawClient raw.Client `service:"rawtest"`
+				}{}
+				tt.wantNil = []string{"rawClient"}
+				return
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		cp := newMockClientConfigProvider(mockCtrl, tt.knownServices...)
-		assert.NotPanics(t, func() {
-			yarpc.InjectClients(cp, tt.target)
-		}, tt.name)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			tt := testCase.build(t, mockCtrl)
 
-		for _, fieldName := range tt.wantNil {
-			field := reflect.ValueOf(tt.target).Elem().FieldByName(fieldName)
-			assert.True(t, field.IsNil(), "expected %q to be nil", fieldName)
-		}
+			for _, builder := range tt.clientBuilders {
+				forget := yarpc.RegisterClientBuilder(builder)
+				defer forget()
+			}
 
-		for _, fieldName := range tt.wantNonNil {
-			field := reflect.ValueOf(tt.target).Elem().FieldByName(fieldName)
-			assert.False(t, field.IsNil(), "expected %q to be non-nil", fieldName)
-		}
+			cp := newMockClientConfigProvider(mockCtrl, tt.knownServices...)
+			assert.NotPanics(t, func() {
+				yarpc.InjectClients(cp, tt.target)
+			})
+
+			for _, fieldName := range tt.wantNil {
+				field := reflect.ValueOf(tt.target).Elem().FieldByName(fieldName)
+				assert.True(t, field.IsNil(), "expected %q to be nil", fieldName)
+			}
+
+			for _, fieldName := range tt.wantNonNil {
+				field := reflect.ValueOf(tt.target).Elem().FieldByName(fieldName)
+				assert.False(t, field.IsNil(), "expected %q to be non-nil", fieldName)
+			}
+		})
 	}
 }
 
