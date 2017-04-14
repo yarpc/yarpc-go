@@ -18,17 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package decode
+package mapdecode
 
 import (
 	"fmt"
-	"log"
 	"sort"
 )
 
 func ExampleDecode() {
 	type Item struct {
-		Key   string `config:"name"`
+		Key   string `mapdecode:"name"`
 		Value string
 	}
 
@@ -39,11 +38,28 @@ func ExampleDecode() {
 	})
 
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	fmt.Println(item.Key, item.Value)
 	// Output: foo bar
+}
+
+func ExampleTagName() {
+	var item struct {
+		Value string `foo:"item"`
+	}
+
+	err := Decode(&item, map[string]interface{}{
+		"item": "hello",
+	}, TagName("foo"))
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(item.Value)
+	// Output: hello
 }
 
 type StringSet map[string]struct{}
@@ -66,7 +82,7 @@ func ExampleDecode_decoder() {
 
 	err := Decode(&ss, []interface{}{"foo", "bar", "foo", "baz"})
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	var items []string
