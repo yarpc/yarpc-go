@@ -32,22 +32,22 @@ import (
 // For tests.
 var _timeNow = time.Now
 
-// Unary is middleware for unary RPCs.
-type Unary struct {
+// Middleware is logging and metrics-collection middleware for all RPC types.
+type Middleware struct {
 	logger  *zap.Logger
 	extract ContextExtractor
 }
 
-// NewUnary constructs a Unary.
-func NewUnary(logger *zap.Logger, extract ContextExtractor) *Unary {
-	return &Unary{
+// NewMiddleware constructs a Middleware.
+func NewMiddleware(logger *zap.Logger, extract ContextExtractor) *Middleware {
+	return &Middleware{
 		logger:  logger.With(zap.String("rpcType", "unary")),
 		extract: extract,
 	}
 }
 
 // Handle implements middleware.UnaryInbound.
-func (m *Unary) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
+func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
 	start := _timeNow()
 	err := h.Handle(ctx, req, w)
 	elapsed := _timeNow().Sub(start)
@@ -65,7 +65,7 @@ func (m *Unary) Handle(ctx context.Context, req *transport.Request, w transport.
 }
 
 // Call implements middleware.UnaryOutbound.
-func (m *Unary) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	start := _timeNow()
 	res, err := out.Call(ctx, req)
 	elapsed := _timeNow().Sub(start)

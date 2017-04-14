@@ -134,10 +134,10 @@ func NewDispatcher(cfg Config) *Dispatcher {
 }
 
 func addObservingMiddleware(cfg Config, logger *zap.Logger) Config {
-	unary := observerware.NewUnary(logger, observerware.NewNopContextExtractor())
+	observer := observerware.NewMiddleware(logger, observerware.NewNopContextExtractor())
 
-	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(unary, cfg.InboundMiddleware.Unary)
-	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(unary, cfg.OutboundMiddleware.Unary)
+	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(observer, cfg.OutboundMiddleware.Unary)
 
 	return cfg
 }

@@ -92,7 +92,7 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			core, logs := observer.New(zapcore.DebugLevel)
-			mw := NewUnary(zap.New(core), tt.extract)
+			mw := NewMiddleware(zap.New(core), tt.extract)
 			err := mw.Handle(context.Background(), _req, nil /* response writer */, tt.handler)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected an error from middleware.")
@@ -154,7 +154,7 @@ func TestUnaryOutboundMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			core, logs := observer.New(zapcore.DebugLevel)
-			mw := NewUnary(zap.New(core), tt.extract)
+			mw := NewMiddleware(zap.New(core), tt.extract)
 			res, err := mw.Call(context.Background(), _req, tt.out)
 			if tt.wantErr {
 				assert.Nil(t, res, "Expected nil response in error cases.")
