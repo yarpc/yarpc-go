@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observerware"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
@@ -133,10 +134,11 @@ func NewDispatcher(cfg Config) *Dispatcher {
 }
 
 func addObservingMiddleware(cfg Config, logger *zap.Logger) Config {
-	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observerware.NewUnaryInbound(
-		logger,
-		observerware.NewNopContextExtractor(),
-	), cfg.InboundMiddleware.Unary)
+	unary := observerware.NewUnary(logger, observerware.NewNopContextExtractor())
+
+	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(unary, cfg.InboundMiddleware.Unary)
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(unary, cfg.OutboundMiddleware.Unary)
+
 	return cfg
 }
 

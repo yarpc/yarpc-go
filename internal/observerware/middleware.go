@@ -32,29 +32,27 @@ import (
 // For tests.
 var _timeNow = time.Now
 
-// UnaryInbound is middleware for unary inbound handlers.
-type UnaryInbound struct {
+// Unary is middleware for unary RPCs.
+type Unary struct {
 	logger  *zap.Logger
 	extract ContextExtractor
 }
 
-// NewUnaryInbound constructs a UnaryInbound.
-func NewUnaryInbound(logger *zap.Logger, extract ContextExtractor) *UnaryInbound {
-	return &UnaryInbound{
-		logger:  logger.With(zap.String("rpcType", "unary inbound")),
+// NewUnary constructs a Unary.
+func NewUnary(logger *zap.Logger, extract ContextExtractor) *Unary {
+	return &Unary{
+		logger:  logger.With(zap.String("rpcType", "unary")),
 		extract: extract,
 	}
 }
 
 // Handle implements middleware.UnaryInbound.
-func (m *UnaryInbound) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
-	// TODO (shah): Add timing info to the request struct so that we don't lose
-	// time spent in the transport.
+func (m *Unary) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
 	start := _timeNow()
 	err := h.Handle(ctx, req, w)
 	elapsed := _timeNow().Sub(start)
 
-	if ce := m.logger.Check(zap.DebugLevel, "Handled request."); ce != nil {
+	if ce := m.logger.Check(zap.DebugLevel, "Handled inbound request."); ce != nil {
 		ce.Write(
 			m.extract(ctx),
 			zap.Object("request", req),
@@ -64,4 +62,22 @@ func (m *UnaryInbound) Handle(ctx context.Context, req *transport.Request, w tra
 		)
 	}
 	return err
+}
+
+// Call implements middleware.UnaryOutbound.
+func (m *Unary) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	start := _timeNow()
+	res, err := out.Call(ctx, req)
+	elapsed := _timeNow().Sub(start)
+
+	if ce := m.logger.Check(zap.DebugLevel, "Made outbound call."); ce != nil {
+		ce.Write(
+			m.extract(ctx),
+			zap.Object("request", req),
+			zap.Duration("latency", elapsed),
+			zap.Bool("successful", err == nil),
+			zap.Error(err),
+		)
+	}
+	return res, err
 }

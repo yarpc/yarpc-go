@@ -35,9 +35,8 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
-func TestUnaryInboundMiddleware(t *testing.T) {
-	defer stubTime()()
-	req := &transport.Request{
+var (
+	_req = &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
 		Encoding:        "raw",
@@ -48,8 +47,11 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 		RoutingDelegate: "routing-delegate",
 		Body:            strings.NewReader("body"),
 	}
-	failed := errors.New("fail")
+	errFailed = errors.New("fail")
+)
 
+func TestUnaryInboundMiddleware(t *testing.T) {
+	defer stubTime()()
 	tests := []struct {
 		desc    string
 		handler transport.UnaryHandler
@@ -59,30 +61,30 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 		wantFields []zapcore.Field
 	}{
 		{
-			desc:    "downstream errors",
+			desc:    "no downstream errors",
 			handler: fakeHandler{},
 			extract: NewNopContextExtractor(),
 			wantFields: []zapcore.Field{
-				zap.String("rpcType", "unary inbound"),
+				zap.String("rpcType", "unary"),
 				zap.Skip(),
-				zap.Object("request", req),
+				zap.Object("request", _req),
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
 				zap.Skip(),
 			},
 		},
 		{
-			desc:    "no downstream errors",
+			desc:    "downstream errors",
 			extract: NewNopContextExtractor(),
-			handler: fakeHandler{failed},
+			handler: fakeHandler{errFailed},
 			wantErr: true,
 			wantFields: []zapcore.Field{
-				zap.String("rpcType", "unary inbound"),
+				zap.String("rpcType", "unary"),
 				zap.Skip(),
-				zap.Object("request", req),
+				zap.Object("request", _req),
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
-				zap.Error(failed),
+				zap.Error(errFailed),
 			},
 		},
 	}
@@ -90,8 +92,8 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			core, logs := observer.New(zapcore.DebugLevel)
-			mw := NewUnaryInbound(zap.New(core), tt.extract)
-			err := mw.Handle(context.Background(), req, nil /* response writer */, tt.handler)
+			mw := NewUnary(zap.New(core), tt.extract)
+			err := mw.Handle(context.Background(), _req, nil /* response writer */, tt.handler)
 			if tt.wantErr {
 				assert.Error(t, err, "Expected an error from middleware.")
 			} else {
@@ -101,7 +103,71 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
 					Level:   zapcore.DebugLevel,
-					Message: "Handled request.",
+					Message: "Handled inbound request.",
+				},
+				Context: tt.wantFields,
+			}
+			assert.Equal(t, expected, logs.AllUntimed()[0], "Unexpected log entry written.")
+		})
+	}
+}
+
+func TestUnaryOutboundMiddleware(t *testing.T) {
+	defer stubTime()()
+	tests := []struct {
+		desc    string
+		out     transport.UnaryOutbound
+		extract ContextExtractor
+
+		wantErr    bool
+		wantFields []zapcore.Field
+	}{
+		{
+			desc:    "no downstream errors",
+			out:     fakeOutbound{},
+			extract: NewNopContextExtractor(),
+			wantFields: []zapcore.Field{
+				zap.String("rpcType", "unary"),
+				zap.Skip(),
+				zap.Object("request", _req),
+				zap.Duration("latency", 0),
+				zap.Bool("successful", true),
+				zap.Skip(),
+			},
+		},
+		{
+			desc:    "downstream errors",
+			extract: NewNopContextExtractor(),
+			out:     fakeOutbound{err: errFailed},
+			wantErr: true,
+			wantFields: []zapcore.Field{
+				zap.String("rpcType", "unary"),
+				zap.Skip(),
+				zap.Object("request", _req),
+				zap.Duration("latency", 0),
+				zap.Bool("successful", false),
+				zap.Error(errFailed),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			core, logs := observer.New(zapcore.DebugLevel)
+			mw := NewUnary(zap.New(core), tt.extract)
+			res, err := mw.Call(context.Background(), _req, tt.out)
+			if tt.wantErr {
+				assert.Nil(t, res, "Expected nil response in error cases.")
+				assert.Error(t, err, "Expected an error from middleware.")
+			} else {
+				assert.NotNil(t, res, "Expected non-nil response in success cases.")
+				assert.NoError(t, err, "Unexpected error from middleware.")
+			}
+			require.Equal(t, 1, logs.Len(), "Unexpected number of logs written.")
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.DebugLevel,
+					Message: "Made outbound call.",
 				},
 				Context: tt.wantFields,
 			}
