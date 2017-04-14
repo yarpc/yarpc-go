@@ -72,9 +72,7 @@ type Config struct {
 
 	// Logger provides a logger for the dispatcher. The default logger is a
 	// no-op.
-	// TODO(shah): Export this when we're ready to deploy a branch in
-	// demo-yarpc-go.
-	logger *zap.Logger
+	Logger *zap.Logger
 }
 
 // Inbounds contains a list of inbound transports. Each inbound transport
@@ -114,8 +112,8 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	}
 
 	logger := zap.NewNop()
-	if cfg.logger != nil {
-		logger = cfg.logger.Named("yarpc").With(
+	if cfg.Logger != nil {
+		logger = cfg.Logger.Named("yarpc").With(
 			zap.Namespace("yarpc"), // isolate yarpc's keys
 			zap.String("dispatcher", cfg.Name),
 		)
