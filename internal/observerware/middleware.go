@@ -32,16 +32,16 @@ import (
 // For tests.
 var _timeNow = time.Now
 
-// Middleware is logging and metrics-collection middleware for all RPC types.
+// Middleware is logging middleware for all RPC types.
 type Middleware struct {
 	logger  *zap.Logger
 	extract ContextExtractor
 }
 
-// NewMiddleware constructs a Middleware.
-func NewMiddleware(logger *zap.Logger, extract ContextExtractor) *Middleware {
+// New constructs a Middleware.
+func New(logger *zap.Logger, extract ContextExtractor) *Middleware {
 	return &Middleware{
-		logger:  logger.With(zap.String("rpcType", "unary")),
+		logger:  logger,
 		extract: extract,
 	}
 }
@@ -50,17 +50,7 @@ func NewMiddleware(logger *zap.Logger, extract ContextExtractor) *Middleware {
 func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
 	start := _timeNow()
 	err := h.Handle(ctx, req, w)
-	elapsed := _timeNow().Sub(start)
-
-	if ce := m.logger.Check(zap.DebugLevel, "Handled inbound request."); ce != nil {
-		ce.Write(
-			m.extract(ctx),
-			zap.Object("request", req),
-			zap.Duration("latency", elapsed),
-			zap.Bool("successful", err == nil),
-			zap.Error(err),
-		)
-	}
+	m.log(ctx, "Handled inbound request.", "unary", req, _timeNow().Sub(start), err)
 	return err
 }
 
@@ -68,16 +58,35 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	start := _timeNow()
 	res, err := out.Call(ctx, req)
-	elapsed := _timeNow().Sub(start)
+	m.log(ctx, "Made outbound call.", "unary", req, _timeNow().Sub(start), err)
+	return res, err
+}
 
-	if ce := m.logger.Check(zap.DebugLevel, "Made outbound call."); ce != nil {
+// HandleOneway implements middleware.OnewayInbound.
+func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
+	start := _timeNow()
+	err := h.HandleOneway(ctx, req)
+	m.log(ctx, "Handled inbound request.", "oneway", req, _timeNow().Sub(start), err)
+	return err
+}
+
+// CallOneway implements middleware.OnewayOutbound.
+func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
+	start := _timeNow()
+	ack, err := out.CallOneway(ctx, req)
+	m.log(ctx, "Made outbound call.", "oneway", req, _timeNow().Sub(start), err)
+	return ack, err
+}
+
+func (m *Middleware) log(ctx context.Context, msg, rpcType string, req *transport.Request, elapsed time.Duration, err error) {
+	if ce := m.logger.Check(zap.DebugLevel, msg); ce != nil {
 		ce.Write(
-			m.extract(ctx),
+			zap.String("rpcType", rpcType),
 			zap.Object("request", req),
 			zap.Duration("latency", elapsed),
 			zap.Bool("successful", err == nil),
 			zap.Error(err),
+			m.extract(ctx),
 		)
 	}
-	return res, err
 }
