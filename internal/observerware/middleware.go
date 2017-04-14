@@ -32,7 +32,7 @@ import (
 // For tests.
 var _timeNow = time.Now
 
-// Unary is middleware for unary handlers.
+// Unary is middleware for unary RPCs.
 type Unary struct {
 	logger  *zap.Logger
 	extract ContextExtractor
