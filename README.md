@@ -19,7 +19,7 @@ gRPC transport, a Protobuf encoding, and a round robin peer chooser.
 YARPC for Go plans to provide a load balancer that uses
 a least-pending-requests strategy.
 Peer choosers can implement any strategy, including load balancing or sharding,
-in turn backed by a pluggable peer provider.
+in turn bound to any peer list updater, like an address file watcher.
 
 Regardless of transport, every RPC has some common properties: caller name,
 service name, procedure name, encoding name, deadline or TTL, headers, baggage
@@ -218,9 +218,9 @@ TODO
 - routing delegate (route by tenancy baggage)
 - handle-or-forward (route by shard key)
 - transport bridge (http to tchannel)
-- custom peer chooser (sharding)
-- custom peer list (round robin for example)
-- custom peer provider (dns srv records)
+- custom peer chooser-list (sharding)
+- custom peer chooser-list (round robin for example)
+- custom peer list updater (dns srv records)
 -->
 
 ## Development Status: Stable
