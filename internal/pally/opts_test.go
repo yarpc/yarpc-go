@@ -22,6 +22,7 @@ package pally
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -147,6 +148,225 @@ func TestOptsValidation(t *testing.T) {
 	}
 }
 
+func TestLatencyOptsValidation(t *testing.T) {
+	tests := []struct {
+		desc  string
+		opts  LatencyOpts
+		ok    bool
+		vecOK bool
+	}{
+		{
+			desc: "valid names",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name: "fOo123",
+					Help: "Some help.",
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    true,
+			vecOK: false,
+		},
+		{
+			desc: "valid names & constant labels",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:        "foo",
+					Help:        "Some help.",
+					ConstLabels: Labels{"foo": "bar"},
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    true,
+			vecOK: false,
+		},
+		{
+			desc: "name with Tally-forbidden characters",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name: "foo:bar",
+					Help: "Some help.",
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "no name",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Help: "Some help.",
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "no help",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name: "foo",
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "valid names but invalid label key",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:        "foo",
+					Help:        "Some help.",
+					ConstLabels: Labels{"foo:foo": "bar"},
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "valid names but invalid label value",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:        "foo",
+					Help:        "Some help.",
+					ConstLabels: Labels{"foo": "bar:bar"},
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "valid names & variable labels",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:           "foo",
+					Help:           "Some help.",
+					VariableLabels: []string{"baz"},
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    true,
+			vecOK: true,
+		},
+		{
+			desc: "valid names, constant labels, & variable labels",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:           "foo",
+					Help:           "Some help.",
+					ConstLabels:    Labels{"foo": "bar"},
+					VariableLabels: []string{"baz"},
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    true,
+			vecOK: true,
+		},
+		{
+			desc: "valid names & constant labels, but invalid variable labels",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:           "foo",
+					Help:           "Some help.",
+					ConstLabels:    Labels{"foo": "bar"},
+					VariableLabels: []string{"baz:baz"},
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false, // Prometheus always validates the VariableLabels.
+			vecOK: false,
+		},
+		{
+			desc: "valid labels, no unit",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:           "foo",
+					Help:           "Some help.",
+					ConstLabels:    Labels{"foo": "bar"},
+					VariableLabels: []string{"baz"},
+				},
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "valid labels, negative unit",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:           "foo",
+					Help:           "Some help.",
+					ConstLabels:    Labels{"foo": "bar"},
+					VariableLabels: []string{"baz"},
+				},
+				Unit:    -1 * time.Millisecond,
+				Buckets: []time.Duration{time.Second, time.Minute},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "valid labels, no buckets",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:           "foo",
+					Help:           "Some help.",
+					ConstLabels:    Labels{"foo": "bar"},
+					VariableLabels: []string{"baz"},
+				},
+				Unit: time.Millisecond,
+			},
+			ok:    false,
+			vecOK: false,
+		},
+		{
+			desc: "valid labels, buckets out of order",
+			opts: LatencyOpts{
+				Opts: Opts{
+					Name:           "foo",
+					Help:           "Some help.",
+					ConstLabels:    Labels{"foo": "bar"},
+					VariableLabels: []string{"baz"},
+				},
+				Unit:    time.Millisecond,
+				Buckets: []time.Duration{time.Minute, time.Second},
+			},
+			ok:    false,
+			vecOK: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			if tt.ok {
+				assertSimpleLatencyOptsOK(t, tt.opts)
+			} else {
+				assertSimpleLatencyOptsFail(t, tt.opts)
+			}
+			if tt.vecOK {
+				assertVectorLatencyOptsOK(t, tt.opts)
+			} else {
+				assertVectorLatencyOptsFail(t, tt.opts)
+			}
+		})
+	}
+}
+
 func assertSimpleOptsOK(t testing.TB, opts Opts) {
 	_, err := NewRegistry().NewCounter(opts)
 	assert.NoError(t, err, "Expected success from NewCounter.")
@@ -185,4 +405,28 @@ func assertVectorOptsFail(t testing.TB, opts Opts) {
 	_, err = NewRegistry().NewGaugeVector(opts)
 	assert.Error(t, err, "Expected an error from NewGaugeVector.")
 	assert.Panics(t, func() { NewRegistry().MustGaugeVector(opts) }, "Expected a panic from MustGaugeVector.")
+}
+
+func assertSimpleLatencyOptsOK(t testing.TB, opts LatencyOpts) {
+	_, err := NewRegistry().NewLatencies(opts)
+	assert.NoError(t, err, "Expected success from NewLatencies.")
+	assert.NotPanics(t, func() { NewRegistry().MustLatencies(opts) }, "Expected MustLatencies to succeed.")
+}
+
+func assertSimpleLatencyOptsFail(t testing.TB, opts LatencyOpts) {
+	_, err := NewRegistry().NewLatencies(opts)
+	assert.Error(t, err, "Expected an error from NewLatencies.")
+	assert.Panics(t, func() { NewRegistry().MustLatencies(opts) }, "Expected a panic from MustLatencies.")
+}
+
+func assertVectorLatencyOptsOK(t testing.TB, opts LatencyOpts) {
+	_, err := NewRegistry().NewLatenciesVector(opts)
+	assert.NoError(t, err, "Expected success from NewLatenciesVector.")
+	assert.NotPanics(t, func() { NewRegistry().MustLatenciesVector(opts) }, "Expected MustLatenciesVector to succeed.")
+}
+
+func assertVectorLatencyOptsFail(t testing.TB, opts LatencyOpts) {
+	_, err := NewRegistry().NewLatenciesVector(opts)
+	assert.Error(t, err, "Expected an error from NewLatenciesVector.")
+	assert.Panics(t, func() { NewRegistry().MustLatenciesVector(opts) }, "Expected a panic from MustLatenciesVector.")
 }

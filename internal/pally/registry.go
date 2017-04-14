@@ -164,6 +164,28 @@ func (r *Registry) MustGauge(opts Opts) Gauge {
 	return g
 }
 
+// NewLatencies constructs a new Latencies.
+func (r *Registry) NewLatencies(opts LatencyOpts) (Latencies, error) {
+	opts.Opts = r.addConstLabels(opts.Opts)
+	if err := opts.validate(); err != nil {
+		return nil, err
+	}
+	h := newHistogram(opts)
+	if err := r.register(h); err != nil {
+		return nil, err
+	}
+	return h, nil
+}
+
+// MustLatencies constructs a new Latencies. It panics if it encounters an error.
+func (r *Registry) MustLatencies(opts LatencyOpts) Latencies {
+	l, err := r.NewLatencies(opts)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create Latencies with options %+v: %v", opts, err))
+	}
+	return l
+}
+
 // NewCounterVector constructs a new CounterVector.
 func (r *Registry) NewCounterVector(opts Opts) (CounterVector, error) {
 	opts = r.addConstLabels(opts)
@@ -208,6 +230,29 @@ func (r *Registry) MustGaugeVector(opts Opts) GaugeVector {
 		panic(fmt.Sprintf("failed to create GaugeVector with options %+v: %v", opts, err))
 	}
 	return v
+}
+
+// NewLatenciesVector constructs a new LatenciesVector.
+func (r *Registry) NewLatenciesVector(opts LatencyOpts) (LatenciesVector, error) {
+	opts.Opts = r.addConstLabels(opts.Opts)
+	if err := opts.validateVector(); err != nil {
+		return nil, err
+	}
+	vec := newHistogramVector(opts)
+	if err := r.register(vec); err != nil {
+		return nil, err
+	}
+	return vec, nil
+}
+
+// MustLatenciesVector constructs a new LatenciesVector. It panics if it
+// encounters an error.
+func (r *Registry) MustLatenciesVector(opts LatencyOpts) LatenciesVector {
+	vec, err := r.NewLatenciesVector(opts)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create LatenciesVector with options %+v: %v", opts, err))
+	}
+	return vec
 }
 
 // ServeHTTP implements http.Handler.
