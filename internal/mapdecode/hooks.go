@@ -153,9 +153,6 @@ func durationHook(from, to reflect.Type, data reflect.Value) (reflect.Value, err
 //
 // Integers are parsed in base 10.
 func strconvHook(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
-	// TODO(abg): If necessary, we can add parsing of hexadecimal and octal
-	// integers too.
-
 	if from.Kind() != reflect.String {
 		return data, nil
 	}
