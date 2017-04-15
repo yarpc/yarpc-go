@@ -52,6 +52,7 @@ type options struct {
 	TagName      string
 	IgnoreUnused bool
 	Unmarshaler  unmarshaler
+	FieldHook    FieldHookFunc
 }
 
 // Option customizes the behavior of Decode.
@@ -70,6 +71,21 @@ func TagName(name string) Option {
 func IgnoreUnused(ignore bool) Option {
 	return func(o *options) {
 		o.IgnoreUnused = ignore
+	}
+}
+
+// FieldHook registers a hook to be called when a struct field is being
+// decoded by the system.
+//
+// This hook will be called with information about the target field of a
+// struct and the source data that will fill it.
+//
+// Field hooks may return a value of the same type as the source data or the
+// same type as the target. Other value decoding hooks will still be executed
+// on this field.
+func FieldHook(f FieldHookFunc) Option {
+	return func(o *options) {
+		o.FieldHook = f
 	}
 }
 
@@ -126,20 +142,27 @@ func Decode(dest, src interface{}, os ...Option) error {
 // the destination.
 func decodeFrom(opts *options, src interface{}) Into {
 	return func(dest interface{}) error {
+		hooks := make([]reflectHook, 0, 5)
+
+		// fieldHook goes first because it may replace the source data map.
+		if opts.FieldHook != nil {
+			hooks = append(hooks, fieldHook(opts))
+		}
+
+		hooks = append(
+			hooks,
+			unmarshalerHook(opts),
+			// durationHook must come before the strconvHook
+			// because the Kind of time.Duration is Int64.
+			durationHook,
+			strconvHook,
+		)
+
 		cfg := mapstructure.DecoderConfig{
 			ErrorUnused: !opts.IgnoreUnused,
 			Result:      dest,
 			DecodeHook: fromReflectHook(
-				supportPointers(
-					composeReflectHooks(
-						unmarshalerHook(opts),
-
-						// durationHook must come before the strconvHook
-						// because the Kind of time.Duration is Int64.
-						durationHook,
-						strconvHook,
-					),
-				),
+				supportPointers(composeReflectHooks(hooks...)),
 			),
 			TagName: opts.TagName,
 		}
