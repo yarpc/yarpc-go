@@ -48,7 +48,7 @@ func basicDispatcher(t *testing.T) *Dispatcher {
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":0"),
 		},
-		Logger: zap.NewNop(),
+		ZapLogger: zap.NewNop(),
 	})
 }
 

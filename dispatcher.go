@@ -70,9 +70,9 @@ type Config struct {
 	// RouterMiddleware is middleware to control how requests are routed.
 	RouterMiddleware middleware.Router
 
-	// Logger provides a logger for the dispatcher. The default logger is a
+	// ZapLogger provides a logger for the dispatcher. The default logger is a
 	// no-op.
-	Logger *zap.Logger
+	ZapLogger *zap.Logger
 }
 
 // Inbounds contains a list of inbound transports. Each inbound transport
@@ -112,8 +112,8 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	}
 
 	logger := zap.NewNop()
-	if cfg.Logger != nil {
-		logger = cfg.Logger.Named("yarpc").With(
+	if cfg.ZapLogger != nil {
+		logger = cfg.ZapLogger.Named("yarpc").With(
 			zap.Namespace("yarpc"), // isolate yarpc's keys
 			zap.String("dispatcher", cfg.Name),
 		)
