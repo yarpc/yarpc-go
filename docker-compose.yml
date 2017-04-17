@@ -2,7 +2,7 @@ version: '2.1'
 
 services:
     crossdock:
-        image: crossdock/crossdock:filter-crossdock
+        image: crossdock/crossdock
         dns_search: .
         depends_on:
           cherami:
