@@ -129,9 +129,17 @@ func decodeFrom(opts *options, src interface{}) Into {
 		cfg := mapstructure.DecoderConfig{
 			ErrorUnused: !opts.IgnoreUnused,
 			Result:      dest,
-			DecodeHook: mapstructure.ComposeDecodeHookFunc(
-				mapstructure.StringToTimeDurationHookFunc(),
-				decoderDecodeHook(opts),
+			DecodeHook: fromReflectHook(
+				supportPointers(
+					composeReflectHooks(
+						unmarshalerHook(opts),
+
+						// durationHook must come before the strconvHook
+						// because the Kind of time.Duration is Int64.
+						durationHook,
+						strconvHook,
+					),
+				),
 			),
 			TagName: opts.TagName,
 		}
@@ -150,61 +158,4 @@ func decodeFrom(opts *options, src interface{}) Into {
 
 		return nil
 	}
-}
-
-// decoderDecodeHook builds a DecodeHook for mapstructure which recognizes
-// types that implement the Decoder interface.
-func decoderDecodeHook(opts *options) mapstructure.DecodeHookFuncType {
-	return func(from, to reflect.Type, data interface{}) (interface{}, error) {
-		if data == nil {
-			return data, nil
-		}
-		out, err := _decoderDecodeHook(opts, from, to, reflect.ValueOf(data))
-		return out.Interface(), err
-	}
-}
-
-func _decoderDecodeHook(
-	opts *options, from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
-	// Get rid of pointers in either direction. This lets us parse **foo into
-	// a foo where *foo implements Decoder, for example.
-	switch {
-	case from == to:
-		return data, nil
-	case from.Kind() == reflect.Ptr: // *foo => foo
-		return _decoderDecodeHook(opts, from.Elem(), to, data.Elem())
-	case to.Kind() == reflect.Ptr: // foo => *foo
-		out, err := _decoderDecodeHook(opts, from, to.Elem(), data)
-		if err != nil {
-			return out, err
-		}
-
-		// If we didn't know what to do with the input, the returned value
-		// will just be the data as-is and it won't have the correct type.
-		if !out.Type().AssignableTo(to.Elem()) {
-			return data, nil
-		}
-
-		result := reflect.New(to.Elem())
-		result.Elem().Set(out)
-		return result, nil
-	}
-
-	// After eliminating pointers, only destinations whose pointers implement
-	// Decoder are supported. Everything else gets the value unchanged.
-
-	if !reflect.PtrTo(to).Implements(opts.Unmarshaler.Interface) {
-		return data, nil
-	}
-
-	// The following lines are roughly equivalent to,
-	// 	value := new(foo)
-	// 	err := value.Decode(...)
-	// 	return *value, err
-	value := reflect.New(to)
-	err := opts.Unmarshaler.Unmarshal(value, decodeFrom(opts, data.Interface()))
-	if err != nil {
-		err = fmt.Errorf("could not decode %v from %v: %v", to, from, err)
-	}
-	return value.Elem(), err
 }
