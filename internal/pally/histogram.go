@@ -34,8 +34,8 @@ import (
 type bucket struct {
 	atomic.Int64
 
-	last  int64
-	upper int64 // inclusive
+	last  int64 // last value pushed to Tally
+	upper int64 // bucket upper bound, inclusive
 }
 
 func (b *bucket) diff() int64 {
@@ -63,7 +63,8 @@ func (bs buckets) get(val int64) *bucket {
 
 type histogram struct {
 	buckets buckets
-	sum     atomic.Int64
+	// Prometheus requires us to track the sum of all observed values.
+	sum atomic.Int64
 
 	opts              LatencyOpts
 	desc              *prometheus.Desc
@@ -114,20 +115,20 @@ func (h *histogram) Collect(ch chan<- prometheus.Metric) {
 	// TODO: Implement prometheus.Metric directly, which avoids all these
 	// allocations.
 	n := uint64(0)
-	prom := make(map[float64]uint64, len(h.buckets)-1)
+	promBuckets := make(map[float64]uint64, len(h.buckets)-1)
 	for _, b := range h.buckets {
 		n += uint64(b.Load())
 		if b.upper == math.MaxInt64 {
 			// Prometheus doesn't want us to export the final catch-all bucket.
 			continue
 		}
-		prom[float64(b.upper)] += n
+		promBuckets[float64(b.upper)] += n
 	}
 	m, err := prometheus.NewConstHistogram(
 		h.desc,
-		n,
-		float64(h.sum.Load()),
-		prom,
+		n, // count of observations
+		float64(h.sum.Load()), // sum of observations
+		promBuckets,
 		h.variableLabelVals...,
 	)
 	if err == nil {
@@ -144,7 +145,8 @@ type histogramVector struct {
 	desc *prometheus.Desc
 
 	histogramsMu sync.RWMutex
-	histograms   map[string]*histogram
+	// map key is the variable label values, joined by a null byte
+	histograms map[string]*histogram
 }
 
 func newHistogramVector(opts LatencyOpts) *histogramVector {

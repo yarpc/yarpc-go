@@ -90,8 +90,15 @@ func (o Opts) copyLabels() map[string]string {
 type LatencyOpts struct {
 	Opts
 
-	Unit    time.Duration
-	Buckets []time.Duration // upper bounds
+	// Latencies are exported to Prometheus as a simple number, not a duration.
+	// Unit specifies the desired granularity for latency observations. For
+	// example, an observation of time.Second with a unit of time.Millisecond is
+	// exported to Prometheus as 1000. Typically, the unit should also be part
+	// of the metric name; in this example, latency_ms is a good name.
+	Unit time.Duration
+	// Upper bounds for the histogram buckets. A catch-all bucket for large
+	// observations is automatically created, if necessary.
+	Buckets []time.Duration
 }
 
 func (l LatencyOpts) buckets() buckets {
