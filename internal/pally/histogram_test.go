@@ -207,3 +207,41 @@ func TestLatenciesVector(t *testing.T) {
 	}
 
 }
+
+func TestLatenciesVectorIndependence(t *testing.T) {
+	// Ensure that we're not erroneously sharing state across histograms in a
+	// vector.
+	r := NewRegistry()
+
+	opts := LatencyOpts{
+		Opts: Opts{
+			Name:           "test_latency_ms",
+			Help:           "Some help.",
+			VariableLabels: []string{"var"},
+		},
+		Unit:    time.Millisecond,
+		Buckets: []time.Duration{time.Second},
+	}
+	vec, err := r.NewLatenciesVector(opts)
+	require.NoError(t, err, "Unexpected error constructing vector.")
+
+	x, err := vec.Get("x")
+	require.NoError(t, err, "Unexpected error calling Get.")
+
+	y, err := vec.Get("y")
+	require.NoError(t, err, "Unexpected error calling Get.")
+
+	x.Observe(time.Millisecond)
+	y.Observe(time.Millisecond)
+
+	assertPrometheusText(t, r, "# HELP test_latency_ms Some help.\n"+
+		"# TYPE test_latency_ms histogram\n"+
+		`test_latency_ms_bucket{var="x",le="1000"} 1`+"\n"+
+		`test_latency_ms_bucket{var="x",le="+Inf"} 1`+"\n"+
+		`test_latency_ms_sum{var="x"} 1`+"\n"+
+		`test_latency_ms_count{var="x"} 1`+"\n"+
+		`test_latency_ms_bucket{var="y",le="1000"} 1`+"\n"+
+		`test_latency_ms_bucket{var="y",le="+Inf"} 1`+"\n"+
+		`test_latency_ms_sum{var="y"} 1`+"\n"+
+		`test_latency_ms_count{var="y"} 1`)
+}

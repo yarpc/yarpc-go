@@ -142,7 +142,6 @@ func (h *histogram) Describe(ch chan<- *prometheus.Desc) {
 type histogramVector struct {
 	opts LatencyOpts
 	desc *prometheus.Desc
-	bs   buckets
 
 	histogramsMu sync.RWMutex
 	histograms   map[string]*histogram
@@ -152,7 +151,6 @@ func newHistogramVector(opts LatencyOpts) *histogramVector {
 	return &histogramVector{
 		opts:       opts,
 		desc:       opts.describe(),
-		bs:         opts.buckets(),
 		histograms: make(map[string]*histogram, _defaultVectorSize),
 	}
 }
@@ -196,7 +194,7 @@ func (vec *histogramVector) newHistogram(key []byte, variableLabelVals []string)
 		return nil, errInconsistentCardinality
 	}
 	m = &histogram{
-		buckets:           vec.bs,
+		buckets:           vec.opts.buckets(),
 		opts:              vec.opts,
 		desc:              vec.desc,
 		variableLabelVals: scrubLabelValues(variableLabelVals),
