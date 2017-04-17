@@ -25,6 +25,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/api/transport"
 
@@ -35,8 +36,9 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
-var (
-	_req = &transport.Request{
+func TestUnaryInboundMiddleware(t *testing.T) {
+	defer stubTime()()
+	req := &transport.Request{
 		Caller:          "caller",
 		Service:         "service",
 		Encoding:        "raw",
@@ -47,131 +49,109 @@ var (
 		RoutingDelegate: "routing-delegate",
 		Body:            strings.NewReader("body"),
 	}
-	errFailed = errors.New("fail")
-)
+	failed := errors.New("fail")
 
-func TestUnaryInboundMiddleware(t *testing.T) {
-	defer stubTime()()
 	tests := []struct {
-		desc    string
-		handler transport.UnaryHandler
-		extract ContextExtractor
-
-		wantErr    bool
+		desc       string
+		err        error // downstream error
 		wantFields []zapcore.Field
 	}{
 		{
-			desc:    "no downstream errors",
-			handler: fakeHandler{},
-			extract: NewNopContextExtractor(),
+			desc: "no downstream errors",
 			wantFields: []zapcore.Field{
-				zap.String("rpcType", "unary"),
-				zap.Skip(),
-				zap.Object("request", _req),
+				zap.Object("request", req),
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
+				zap.Skip(),
 				zap.Skip(),
 			},
 		},
 		{
-			desc:    "downstream errors",
-			extract: NewNopContextExtractor(),
-			handler: fakeHandler{errFailed},
-			wantErr: true,
+			desc: "downstream errors",
+			err:  failed,
 			wantFields: []zapcore.Field{
-				zap.String("rpcType", "unary"),
-				zap.Skip(),
-				zap.Object("request", _req),
+				zap.Object("request", req),
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
-				zap.Error(errFailed),
+				zap.Error(failed),
+				zap.Skip(),
 			},
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			core, logs := observer.New(zapcore.DebugLevel)
-			mw := NewUnary(zap.New(core), tt.extract)
-			err := mw.Handle(context.Background(), _req, nil /* response writer */, tt.handler)
-			if tt.wantErr {
+		core, logs := observer.New(zapcore.DebugLevel)
+		mw := New(zap.New(core), NewNopContextExtractor())
+
+		getLog := func() observer.LoggedEntry {
+			entries := logs.TakeAll()
+			require.Equal(t, 1, len(entries), "Unexpected number of logs written.")
+			e := entries[0]
+			e.Entry.Time = time.Time{}
+			return e
+		}
+
+		checkErr := func(err error) {
+			if tt.err != nil {
 				assert.Error(t, err, "Expected an error from middleware.")
 			} else {
 				assert.NoError(t, err, "Unexpected error from middleware.")
 			}
-			require.Equal(t, 1, logs.Len(), "Unexpected number of logs written.")
+		}
+
+		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
+			err := mw.Handle(context.Background(), req, nil /* response writer */, fakeHandler{tt.err})
+			checkErr(err)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
 					Level:   zapcore.DebugLevel,
 					Message: "Handled inbound request.",
 				},
-				Context: tt.wantFields,
+				Context: append([]zapcore.Field{zap.String("rpcType", "unary")}, tt.wantFields...),
 			}
-			assert.Equal(t, expected, logs.AllUntimed()[0], "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
-	}
-}
-
-func TestUnaryOutboundMiddleware(t *testing.T) {
-	defer stubTime()()
-	tests := []struct {
-		desc    string
-		out     transport.UnaryOutbound
-		extract ContextExtractor
-
-		wantErr    bool
-		wantFields []zapcore.Field
-	}{
-		{
-			desc:    "no downstream errors",
-			out:     fakeOutbound{},
-			extract: NewNopContextExtractor(),
-			wantFields: []zapcore.Field{
-				zap.String("rpcType", "unary"),
-				zap.Skip(),
-				zap.Object("request", _req),
-				zap.Duration("latency", 0),
-				zap.Bool("successful", true),
-				zap.Skip(),
-			},
-		},
-		{
-			desc:    "downstream errors",
-			extract: NewNopContextExtractor(),
-			out:     fakeOutbound{err: errFailed},
-			wantErr: true,
-			wantFields: []zapcore.Field{
-				zap.String("rpcType", "unary"),
-				zap.Skip(),
-				zap.Object("request", _req),
-				zap.Duration("latency", 0),
-				zap.Bool("successful", false),
-				zap.Error(errFailed),
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			core, logs := observer.New(zapcore.DebugLevel)
-			mw := NewUnary(zap.New(core), tt.extract)
-			res, err := mw.Call(context.Background(), _req, tt.out)
-			if tt.wantErr {
-				assert.Nil(t, res, "Expected nil response in error cases.")
-				assert.Error(t, err, "Expected an error from middleware.")
-			} else {
-				assert.NotNil(t, res, "Expected non-nil response in success cases.")
-				assert.NoError(t, err, "Unexpected error from middleware.")
+		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
+			res, err := mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
+			checkErr(err)
+			if tt.err == nil {
+				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
 			}
-			require.Equal(t, 1, logs.Len(), "Unexpected number of logs written.")
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
 					Level:   zapcore.DebugLevel,
 					Message: "Made outbound call.",
 				},
-				Context: tt.wantFields,
+				Context: append([]zapcore.Field{zap.String("rpcType", "unary")}, tt.wantFields...),
 			}
-			assert.Equal(t, expected, logs.AllUntimed()[0], "Unexpected log entry written.")
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
+			err := mw.HandleOneway(context.Background(), req, fakeHandler{tt.err})
+			checkErr(err)
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.DebugLevel,
+					Message: "Handled inbound request.",
+				},
+				Context: append([]zapcore.Field{zap.String("rpcType", "oneway")}, tt.wantFields...),
+			}
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
+		})
+		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
+			ack, err := mw.CallOneway(context.Background(), req, fakeOutbound{err: tt.err})
+			checkErr(err)
+			if tt.err == nil {
+				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
+			}
+			expected := observer.LoggedEntry{
+				Entry: zapcore.Entry{
+					Level:   zapcore.DebugLevel,
+					Message: "Made outbound call.",
+				},
+				Context: append([]zapcore.Field{zap.String("rpcType", "oneway")}, tt.wantFields...),
+			}
+			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 	}
 }

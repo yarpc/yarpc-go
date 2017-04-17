@@ -27,6 +27,10 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
+type fakeAck struct{}
+
+func (a fakeAck) String() string { return "" }
+
 type fakeHandler struct {
 	err error
 }
@@ -35,7 +39,7 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, _ transport
 	return h.err
 }
 
-func (h fakeHandler) HandleOneway(_ context.Context, _ *transport.Request, _ transport.ResponseWriter) error {
+func (h fakeHandler) HandleOneway(_ context.Context, _ *transport.Request) error {
 	return h.err
 }
 
@@ -45,11 +49,18 @@ type fakeOutbound struct {
 	err error
 }
 
-func (o fakeOutbound) Call(_ context.Context, req *transport.Request) (*transport.Response, error) {
+func (o fakeOutbound) Call(_ context.Context, _ *transport.Request) (*transport.Response, error) {
 	if o.err != nil {
 		return nil, o.err
 	}
 	return &transport.Response{}, nil
+}
+
+func (o fakeOutbound) CallOneway(_ context.Context, _ *transport.Request) (transport.Ack, error) {
+	if o.err != nil {
+		return nil, o.err
+	}
+	return fakeAck{}, nil
 }
 
 func stubTime() func() {
