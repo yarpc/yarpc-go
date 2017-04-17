@@ -34,6 +34,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func basicDispatcher(t *testing.T) *Dispatcher {
@@ -47,6 +48,7 @@ func basicDispatcher(t *testing.T) *Dispatcher {
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":0"),
 		},
+		ZapLogger: zap.NewNop(),
 	})
 }
 
