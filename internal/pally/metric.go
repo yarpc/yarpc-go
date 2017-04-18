@@ -21,6 +21,8 @@
 package pally
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/uber-go/tally"
 )
@@ -64,6 +66,23 @@ type GaugeVector interface {
 	// package-level documentation on vectors.
 	Get(...string) (Gauge, error)
 	MustGet(...string) Gauge
+}
+
+// Latencies approximates a latency distribution with a histogram.
+//
+// Latencies are exported to both Prometheus and Tally using their native
+// histogram types.
+type Latencies interface {
+	Observe(time.Duration)
+}
+
+// A LatenciesVector is a collection of Latencies that share a name and some
+// constant labels, but also have an enumerated set of variable labels.
+type LatenciesVector interface {
+	// For a description of Get, MustGet, and vector types in general, see the
+	// package-level documentation on vectors.
+	Get(...string) (Latencies, error)
+	MustGet(...string) Latencies
 }
 
 type metric interface {

@@ -23,11 +23,13 @@ package pally
 import (
 	"errors"
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// Opts configure an individual metric or vector.
+// Opts configure Counters, Gauges, CounterVectors, and GaugeVectors.
 type Opts struct {
 	Name           string
 	Help           string
@@ -82,4 +84,61 @@ func (o Opts) copyLabels() map[string]string {
 		l[k] = v
 	}
 	return l
+}
+
+// LatencyOpts configure Latencies and LatenciesVectors.
+type LatencyOpts struct {
+	Opts
+
+	// Latencies are exported to Prometheus as a simple number, not a duration.
+	// Unit specifies the desired granularity for latency observations. For
+	// example, an observation of time.Second with a unit of time.Millisecond is
+	// exported to Prometheus as 1000. Typically, the unit should also be part
+	// of the metric name; in this example, latency_ms is a good name.
+	Unit time.Duration
+	// Upper bounds for the histogram buckets. A catch-all bucket for large
+	// observations is automatically created, if necessary.
+	Buckets []time.Duration
+}
+
+func (l LatencyOpts) buckets() buckets {
+	bs := make(buckets, 0, len(l.Buckets)+1)
+	for _, upper := range l.Buckets {
+		bs = append(bs, &bucket{upper: int64(upper / l.Unit)})
+	}
+	if l.Buckets[len(l.Buckets)-1] != time.Duration(math.MaxInt64) {
+		bs = append(bs, &bucket{upper: math.MaxInt64})
+	}
+	return bs
+}
+
+func (l LatencyOpts) validate() error {
+	if err := l.validateLatencies(); err != nil {
+		return err
+	}
+	return l.Opts.validate()
+}
+
+func (l LatencyOpts) validateVector() error {
+	if err := l.validateLatencies(); err != nil {
+		return err
+	}
+	return l.Opts.validateVector()
+}
+
+func (l LatencyOpts) validateLatencies() error {
+	if l.Unit < 1 {
+		return fmt.Errorf("duration unit must be positive, got %v", l.Unit)
+	}
+	if len(l.Buckets) == 0 {
+		return fmt.Errorf("must specify some buckets")
+	}
+	prev := time.Duration(math.MinInt64)
+	for _, upper := range l.Buckets {
+		if upper <= prev {
+			return fmt.Errorf("bucket upper bounds must be sorted in increasing order")
+		}
+		prev = upper
+	}
+	return nil
 }
