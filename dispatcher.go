@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observerware"
+	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
@@ -69,11 +70,9 @@ type Config struct {
 	// RouterMiddleware is middleware to control how requests are routed.
 	RouterMiddleware middleware.Router
 
-	// Logger provides a logger for the dispatcher. The default logger is a
+	// ZapLogger provides a logger for the dispatcher. The default logger is a
 	// no-op.
-	// TODO(shah): Export this when we're ready to deploy a branch in
-	// demo-yarpc-go.
-	logger *zap.Logger
+	ZapLogger *zap.Logger
 }
 
 // Inbounds contains a list of inbound transports. Each inbound transport
@@ -113,8 +112,8 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	}
 
 	logger := zap.NewNop()
-	if cfg.logger != nil {
-		logger = cfg.logger.Named("yarpc").With(
+	if cfg.ZapLogger != nil {
+		logger = cfg.ZapLogger.Named("yarpc").With(
 			zap.Namespace("yarpc"), // isolate yarpc's keys
 			zap.String("dispatcher", cfg.Name),
 		)
@@ -133,10 +132,14 @@ func NewDispatcher(cfg Config) *Dispatcher {
 }
 
 func addObservingMiddleware(cfg Config, logger *zap.Logger) Config {
-	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observerware.NewUnaryInbound(
-		logger,
-		observerware.NewNopContextExtractor(),
-	), cfg.InboundMiddleware.Unary)
+	observer := observerware.New(logger, observerware.NewNopContextExtractor())
+
+	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
+	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
+
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(observer, cfg.OutboundMiddleware.Unary)
+	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(observer, cfg.OutboundMiddleware.Oneway)
+
 	return cfg
 }
 

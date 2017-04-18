@@ -24,8 +24,12 @@ import (
 	"errors"
 	"fmt"
 
-	"go.uber.org/yarpc/internal/decode"
+	"go.uber.org/yarpc/internal/mapdecode"
 )
+
+var _mapdecodeOpts = []mapdecode.Option{
+	mapdecode.TagName("config"),
+}
 
 type attributeMap map[string]interface{}
 
@@ -53,7 +57,7 @@ func (m attributeMap) Get(name string, dst interface{}) (ok bool, err error) {
 		return ok, nil
 	}
 
-	err = decode.Decode(dst, v)
+	err = mapdecode.Decode(dst, v, _mapdecodeOpts...)
 	if err != nil {
 		err = fmt.Errorf("failed to read attribute %q: %v", name, v)
 	}
@@ -61,7 +65,7 @@ func (m attributeMap) Get(name string, dst interface{}) (ok bool, err error) {
 }
 
 func (m attributeMap) Decode(dst interface{}) error {
-	return decode.Decode(dst, m)
+	return mapdecode.Decode(dst, m, _mapdecodeOpts...)
 }
 
 type yarpcConfig struct {
@@ -72,7 +76,7 @@ type yarpcConfig struct {
 
 type inbounds []inbound
 
-func (is *inbounds) Decode(into decode.Into) error {
+func (is *inbounds) Decode(into mapdecode.Into) error {
 	var items map[string]inbound
 	if err := into(&items); err != nil {
 		return fmt.Errorf("failed to decode inbound items: %v", err)
@@ -93,7 +97,7 @@ type inbound struct {
 	Attributes attributeMap
 }
 
-func (i *inbound) Decode(into decode.Into) error {
+func (i *inbound) Decode(into mapdecode.Into) error {
 	if err := into(&i.Attributes); err != nil {
 		return fmt.Errorf("failed to decode inbound: %v", err)
 	}
@@ -113,7 +117,7 @@ func (i *inbound) Decode(into decode.Into) error {
 
 type clientConfigs map[string]outbounds
 
-func (cc *clientConfigs) Decode(into decode.Into) error {
+func (cc *clientConfigs) Decode(into mapdecode.Into) error {
 	var items map[string]outbounds
 	if err := into(&items); err != nil {
 		return fmt.Errorf("failed to decode outbound items: %v", err)
@@ -140,7 +144,7 @@ type outbounds struct {
 	Implicit *outbound
 }
 
-func (o *outbounds) Decode(into decode.Into) error {
+func (o *outbounds) Decode(into mapdecode.Into) error {
 	var attrs attributeMap
 	if err := into(&attrs); err != nil {
 		return fmt.Errorf("failed to decode outbound configuration: %v", err)
@@ -183,7 +187,7 @@ type outbound struct {
 	Attributes attributeMap
 }
 
-func (o *outbound) Decode(into decode.Into) error {
+func (o *outbound) Decode(into mapdecode.Into) error {
 	var cfg map[string]attributeMap
 	if err := into(&cfg); err != nil {
 		return fmt.Errorf("failed to decode outbound: %v", err)

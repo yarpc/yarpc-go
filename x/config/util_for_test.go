@@ -20,7 +20,52 @@
 
 package config
 
-import "strings"
+import (
+	"reflect"
+	"strings"
+
+	"github.com/golang/mock/gomock"
+)
+
+// builderFunc builds a `build` function that calls into the controller.
+//
+// The generated function has the signature,
+//
+// 	func $name($args[0], $args[1], ..., $args[N]) ($output, error)
+//
+// This function may be fed as an argument to BuildTransport, BuildInbound,
+// etc. and it will be interpreted correctly.
+func builderFunc(c *gomock.Controller, o interface{}, name string, argTypes []reflect.Type, output reflect.Type) interface{} {
+	// We dynamically generate a function with the correct arg type rather
+	// than interface{} because we want to verify we're getting the correct
+	// type decoded.
+
+	resultTypes := []reflect.Type{output, _typeOfError}
+	return reflect.MakeFunc(
+		reflect.FuncOf(argTypes, resultTypes, false),
+		func(callArgs []reflect.Value) []reflect.Value {
+			args := make([]interface{}, len(callArgs))
+			for i, a := range callArgs {
+				args[i] = a.Interface()
+			}
+
+			results := c.Call(o, name, args...)
+			callResults := make([]reflect.Value, len(results))
+			for i, r := range results {
+				// Use zero-value where the result is nil because
+				// reflect.ValueOf(nil) is an error.
+				if r == nil {
+					callResults[i] = reflect.Zero(resultTypes[i])
+					continue
+				}
+
+				callResults[i] = reflect.ValueOf(r).Convert(resultTypes[i])
+			}
+
+			return callResults
+		},
+	).Interface()
+}
 
 // converts leading tabs to two spaces, such that YAML accepts the whole block.
 func expand(s string) string {

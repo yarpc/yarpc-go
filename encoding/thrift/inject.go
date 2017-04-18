@@ -18,53 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package observerware
+package thrift
 
 import (
-	"context"
-	"time"
+	"reflect"
+	"strings"
 
 	"go.uber.org/yarpc/api/transport"
 )
 
-type fakeAck struct{}
+// ClientBuilderOptions returns ClientOptions that InjectClients should use
+// for a specific Thrift client given information about the field into which
+// the client is being injected. This API will usually not be used directly by
+// users but by the generated code.
+func ClientBuilderOptions(_ transport.ClientConfig, f reflect.StructField) []ClientOption {
+	// Note that we don't use ClientConfig right now but since this code is
+	// called by generated code, we still accept it so that we can add logic
+	// based on it in the future without breaking the API (and thus, all
+	// generated code).
 
-func (a fakeAck) String() string { return "" }
-
-type fakeHandler struct {
-	err error
-}
-
-func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, _ transport.ResponseWriter) error {
-	return h.err
-}
-
-func (h fakeHandler) HandleOneway(_ context.Context, _ *transport.Request) error {
-	return h.err
-}
-
-type fakeOutbound struct {
-	transport.Outbound
-
-	err error
-}
-
-func (o fakeOutbound) Call(_ context.Context, _ *transport.Request) (*transport.Response, error) {
-	if o.err != nil {
-		return nil, o.err
+	optionList := strings.Split(f.Tag.Get("thrift"), ",")
+	var opts []ClientOption
+	for _, opt := range optionList {
+		switch strings.ToLower(opt) {
+		case "multiplexed":
+			opts = append(opts, Multiplexed)
+		case "enveloped":
+			opts = append(opts, Enveloped)
+		default:
+			// Ignore unknown options
+		}
 	}
-	return &transport.Response{}, nil
-}
-
-func (o fakeOutbound) CallOneway(_ context.Context, _ *transport.Request) (transport.Ack, error) {
-	if o.err != nil {
-		return nil, o.err
-	}
-	return fakeAck{}, nil
-}
-
-func stubTime() func() {
-	prev := _timeNow
-	_timeNow = func() time.Time { return time.Time{} }
-	return func() { _timeNow = prev }
+	return opts
 }
