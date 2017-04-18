@@ -20,6 +20,8 @@ v1.9.0-dev (unreleased)
 -   x/config: Fix bug where embedded struct fields could not be interpolated.
 -   x/config: Fix bug where Chooser and Updater fields could not be interpolated.
 -   Pool inbound thrift request buffers to reduce allocations.
+-   Adds support for unary relay router middleware, so unrecognized requests
+    can be forwarded to a unary outbound.
 
 
 v1.8.0 (2017-05-01)
