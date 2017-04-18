@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 type getRequest struct {
@@ -87,7 +88,7 @@ func do() error {
 	outboundName := ""
 	flag.StringVar(
 		&outboundName,
-		"outbound", "", "name of the outbound to use (http/tchannel)",
+		"outbound", "", "name of the outbound to use (http/tchannel/grpc)",
 	)
 
 	flag.Parse()
@@ -104,6 +105,8 @@ func do() error {
 		outbound = httpTransport.NewSingleOutbound("http://127.0.0.1:24034")
 	case "tchannel":
 		outbound = tchannelTransport.NewSingleOutbound("127.0.0.1:28941")
+	case "grpc":
+		outbound = grpc.NewSingleOutbound("127.0.0.1:24038")
 	default:
 		return fmt.Errorf("invalid outbound: %q", outboundName)
 	}

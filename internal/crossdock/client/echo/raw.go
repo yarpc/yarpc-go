@@ -34,10 +34,15 @@ import (
 
 // Raw implements the 'raw' behavior.
 func Raw(t crossdock.T) {
-	t = createEchoT("raw", t)
+	RawForTransport(t, "")
+}
+
+// RawForTransport implements the 'raw' behavior for the given transport or behavior transport.
+func RawForTransport(t crossdock.T, transport string) {
+	t = createEchoT("raw", transport, t)
 	fatals := crossdock.Fatals(t)
 
-	dispatcher := disp.Create(t)
+	dispatcher := disp.CreateDispatcherForTransport(t, transport)
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 

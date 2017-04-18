@@ -18,25 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package grpc
 
-import (
-	"go.uber.org/yarpc/internal/crossdock/client/params"
+import "fmt"
 
-	"github.com/crossdock/crossdock-go"
-)
+// customCodec pass bytes to/from the wire without modification.
+type customCodec struct{}
 
-// createEchoT tags the given T with the transport, encoding and server.
-func createEchoT(encoding string, transport string, t crossdock.T) crossdock.T {
-	if transport == "" {
-		transport = t.Param(params.Transport)
+// Marshal takes a []byte pointer and passes it through as a []byte.
+func (customCodec) Marshal(obj interface{}) ([]byte, error) {
+	switch value := obj.(type) {
+	case *[]byte:
+		return *value, nil
+	default:
+		return nil, newCustomCodecCastError(obj)
 	}
-	t.Tag("transport", transport)
-	t.Tag("encoding", encoding)
-	if t.Param(params.GoServer) != "" {
-		t.Tag("server", t.Param(params.GoServer))
-	} else {
-		t.Tag("server", t.Param(params.Server))
+}
+
+// Unmarshal takes a []byte pointer and writes it to v.
+func (customCodec) Unmarshal(data []byte, obj interface{}) error {
+	switch value := obj.(type) {
+	case *[]byte:
+		*value = data
+		return nil
+	default:
+		return newCustomCodecCastError(obj)
 	}
-	return t
+}
+
+func (customCodec) String() string {
+	// TODO: faking this as proto to be compatible with existing grpc clients
+	// https://github.com/yarpc/yarpc-go/issues/911
+	return "proto"
+}
+
+func newCustomCodecCastError(actualObject interface{}) error {
+	return fmt.Errorf("expected object to be of type *[]byte but got %T", actualObject)
 }

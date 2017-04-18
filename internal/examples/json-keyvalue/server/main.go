@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"sync"
 
@@ -33,9 +34,10 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
-var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel)")
+var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
 
 type getRequest struct {
 	Key string `json:"key"`
@@ -102,6 +104,12 @@ func do() error {
 			return err
 		}
 		inbound = tchannelTransport.NewInbound()
+	case "grpc":
+		listener, err := net.Listen("tcp", "127.0.0.1:24038")
+		if err != nil {
+			return err
+		}
+		inbound = grpc.NewInbound(listener)
 	default:
 		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}

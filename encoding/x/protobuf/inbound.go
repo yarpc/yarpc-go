@@ -66,6 +66,9 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		}
 	}
 	response, appErr := u.handle(ctx, request)
+	if appErr != nil {
+		responseWriter.SetApplicationError()
+	}
 	if err := call.WriteToResponse(responseWriter); err != nil {
 		return err
 	}
@@ -78,9 +81,23 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		}
 		responseData = protoBuffer.Bytes()
 	}
+	// We have to detect if our transport requires a raw response
+	// It is not possible to propagate this information on ctx with the current API
+	// we we attach this in the relevant transport (currently only gRPC) on the headers
+	// If we are sending a raw response back to a YARPC client, it needs to understand
+	// this is happening, so we attach the headers on the response as well
+	// Other clients (namely the existing gRPC clients outside of YARPC) understand
+	// that the response is the raw response.
+	if isRawResponse(transportRequest.Headers) {
+		responseWriter.AddHeaders(getRawResponseHeaders())
+		_, err := responseWriter.Write(responseData)
+		if err != nil {
+			return err
+		}
+		return appErr
+	}
 	var wireError *wirepb.Error
 	if appErr != nil {
-		responseWriter.SetApplicationError()
 		wireError = &wirepb.Error{
 			appErr.Error(),
 		}

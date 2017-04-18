@@ -7,7 +7,19 @@ endif
 SERVICE_TEST := service-test $(SERVICE_TEST_FLAGS)
 
 .PHONY: all
-all: json-keyvalue-http json-keyvalue-tchannel protobuf thrift-hello thrift-keyvalue-http thrift-keyvalue-tchannel thrift-oneway
+all: \
+	json-keyvalue-http \
+	json-keyvalue-tchannel \
+	json-keyvalue-grpc \
+	protobuf-http \
+	protobuf-tchannel \
+	protobuf-grpc \
+	protobuf-google-grpc \
+	thrift-hello \
+	thrift-keyvalue-http \
+	thrift-keyvalue-tchannel \
+	thrift-keyvalue-grpc \
+	thrift-oneway
 
 .PHONY: install
 install:
@@ -26,10 +38,29 @@ json-keyvalue-http: install build-json-keyvalue
 json-keyvalue-tchannel: install build-json-keyvalue
 	TRANSPORT=tchannel $(SERVICE_TEST) --dir json-keyvalue
 
-.PHONY: protobuf
-protobuf: install
+.PHONY: json-keyvalue-grpc
+json-keyvalue-grpc: install build-json-keyvalue
+	TRANSPORT=grpc $(SERVICE_TEST) --dir json-keyvalue
+
+.PHONY: protobuf-build
+build-protobuf:
 	go build -o protobuf/protobuf protobuf/main.go
-	$(SERVICE_TEST) --dir protobuf
+
+.PHONY: protobuf
+protobuf-http: install build-protobuf
+	TRANSPORT=http $(SERVICE_TEST) --dir protobuf
+
+.PHONY: protobuf
+protobuf-tchannel: install build-protobuf
+	TRANSPORT=tchannel $(SERVICE_TEST) --dir protobuf
+
+.PHONY: protobuf
+protobuf-grpc: install build-protobuf
+	TRANSPORT=grpc $(SERVICE_TEST) --dir protobuf
+
+.PHONY: protobuf
+protobuf-google-grpc: install build-protobuf
+	TRANSPORT=grpc GOOGLE_GRPC=--google-grpc $(SERVICE_TEST) --dir protobuf
 
 .PHONY: thrift-hello
 thrift-hello: install
@@ -48,6 +79,10 @@ thrift-keyvalue-http: install build-thrift-keyvalue
 .PHONY: thrift-keyvalue-tchannel
 thrift-keyvalue-tchannel: install build-thrift-keyvalue
 	TRANSPORT=tchannel $(SERVICE_TEST) --dir thrift-keyvalue
+
+.PHONY: thrift-keyvalue-grpc
+thrift-keyvalue-grpc: install build-thrift-keyvalue
+	TRANSPORT=grpc $(SERVICE_TEST) --dir thrift-keyvalue
 
 .PHONY: thrift-oneway
 thrift-oneway:

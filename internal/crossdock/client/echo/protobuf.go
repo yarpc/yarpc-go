@@ -21,22 +21,38 @@
 package echo
 
 import (
-	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"context"
+	"time"
+
+	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
+	"go.uber.org/yarpc/internal/crossdock/client/random"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 
 	"github.com/crossdock/crossdock-go"
 )
 
-// createEchoT tags the given T with the transport, encoding and server.
-func createEchoT(encoding string, transport string, t crossdock.T) crossdock.T {
-	if transport == "" {
-		transport = t.Param(params.Transport)
-	}
-	t.Tag("transport", transport)
-	t.Tag("encoding", encoding)
-	if t.Param(params.GoServer) != "" {
-		t.Tag("server", t.Param(params.GoServer))
-	} else {
-		t.Tag("server", t.Param(params.Server))
-	}
-	return t
+// Protobuf implements the 'protobuf' behavior.
+func Protobuf(t crossdock.T) {
+	ProtobufForTransport(t, "")
+}
+
+// ProtobufForTransport implements the 'protobuf' behavior for the given transport or behavior transport.
+func ProtobufForTransport(t crossdock.T, transport string) {
+	t = createEchoT("protobuf", transport, t)
+	fatals := crossdock.Fatals(t)
+
+	dispatcher := disp.CreateDispatcherForTransport(t, transport)
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
+
+	client := crossdockpb.NewEchoYarpcClient(dispatcher.ClientConfig("yarpc-test"))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	token := random.String(5)
+
+	pong, err := client.Echo(ctx, &crossdockpb.Ping{Beep: token})
+
+	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
+	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)
 }

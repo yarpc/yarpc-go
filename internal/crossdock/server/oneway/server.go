@@ -22,6 +22,7 @@ package oneway
 
 import (
 	"log"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/x/cherami"
+	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/transport/x/redis"
 
 	cherami_client "github.com/uber/cherami-client-go/client/cherami"
@@ -62,6 +64,13 @@ func Start() {
 			log.Printf(`error init cherami inbound %v\n`, err)
 		}
 		inbounds = append(inbounds, cheramiInboud)
+	}
+
+	listener, err := net.Listen("tcp", ":8090")
+	if err != nil {
+		log.Printf("err init grpc inbound %v\n", err)
+	} else {
+		inbounds = append(inbounds, grpc.NewInbound(listener))
 	}
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{

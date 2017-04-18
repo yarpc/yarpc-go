@@ -1,6 +1,6 @@
 FROM golang:1.8.1
 
-EXPOSE 8080-8088
+EXPOSE 8080-8090
 ENV SUPPRESS_DOCKER 1
 WORKDIR /go/src/go.uber.org/yarpc
 ADD dockercrossdockdeps.mk /go/src/go.uber.org/yarpc/

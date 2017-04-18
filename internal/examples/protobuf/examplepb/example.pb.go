@@ -40,10 +40,15 @@ package examplepb
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "go.uber.org/yarpc/yarpcproto"
+import uber_yarpc "go.uber.org/yarpc/yarpcproto"
 
 import strings "strings"
 import reflect "reflect"
+
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
 
 import io "io"
 
@@ -348,6 +353,176 @@ func valueToGoStringExample(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// Client API for KeyValue service
+
+type KeyValueClient interface {
+	GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error)
+	SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error)
+}
+
+type keyValueClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewKeyValueClient(cc *grpc.ClientConn) KeyValueClient {
+	return &keyValueClient{cc}
+}
+
+func (c *keyValueClient) GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error) {
+	out := new(GetValueResponse)
+	err := grpc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.KeyValue/GetValue", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *keyValueClient) SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error) {
+	out := new(SetValueResponse)
+	err := grpc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.KeyValue/SetValue", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for KeyValue service
+
+type KeyValueServer interface {
+	GetValue(context.Context, *GetValueRequest) (*GetValueResponse, error)
+	SetValue(context.Context, *SetValueRequest) (*SetValueResponse, error)
+}
+
+func RegisterKeyValueServer(s *grpc.Server, srv KeyValueServer) {
+	s.RegisterService(&_KeyValue_serviceDesc, srv)
+}
+
+func _KeyValue_GetValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetValueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KeyValueServer).GetValue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.internal.examples.protobuf.example.KeyValue/GetValue",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KeyValueServer).GetValue(ctx, req.(*GetValueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KeyValue_SetValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetValueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KeyValueServer).SetValue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.internal.examples.protobuf.example.KeyValue/SetValue",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KeyValueServer).SetValue(ctx, req.(*SetValueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _KeyValue_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "uber.yarpc.internal.examples.protobuf.example.KeyValue",
+	HandlerType: (*KeyValueServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetValue",
+			Handler:    _KeyValue_GetValue_Handler,
+		},
+		{
+			MethodName: "SetValue",
+			Handler:    _KeyValue_SetValue_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "internal/examples/protobuf/examplepb/example.proto",
+}
+
+// Client API for Sink service
+
+type SinkClient interface {
+	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error)
+}
+
+type sinkClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewSinkClient(cc *grpc.ClientConn) SinkClient {
+	return &sinkClient{cc}
+}
+
+func (c *sinkClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error) {
+	out := new(uber_yarpc.Oneway)
+	err := grpc.Invoke(ctx, "/uber.yarpc.internal.examples.protobuf.example.Sink/Fire", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Sink service
+
+type SinkServer interface {
+	Fire(context.Context, *FireRequest) (*uber_yarpc.Oneway, error)
+}
+
+func RegisterSinkServer(s *grpc.Server, srv SinkServer) {
+	s.RegisterService(&_Sink_serviceDesc, srv)
+}
+
+func _Sink_Fire_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FireRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SinkServer).Fire(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.internal.examples.protobuf.example.Sink/Fire",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SinkServer).Fire(ctx, req.(*FireRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Sink_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "uber.yarpc.internal.examples.protobuf.example.Sink",
+	HandlerType: (*SinkServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Fire",
+			Handler:    _Sink_Fire_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "internal/examples/protobuf/examplepb/example.proto",
+}
+
 func (m *GetValueRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)

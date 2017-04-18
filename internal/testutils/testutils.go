@@ -29,8 +29,10 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 
 	"go.uber.org/multierr"
+	ggrpc "google.golang.org/grpc"
 )
 
 const (
@@ -38,6 +40,8 @@ const (
 	TransportTypeHTTP TransportType = iota
 	// TransportTypeTChannel represents using TChannel.
 	TransportTypeTChannel
+	// TransportTypeGRPC represents using GRPC.
+	TransportTypeGRPC
 )
 
 var (
@@ -45,6 +49,7 @@ var (
 	AllTransportTypes = []TransportType{
 		TransportTypeHTTP,
 		TransportTypeTChannel,
+		TransportTypeGRPC,
 	}
 )
 
@@ -58,6 +63,8 @@ func (t TransportType) String() string {
 		return "http"
 	case TransportTypeTChannel:
 		return "tchannel"
+	case TransportTypeGRPC:
+		return "grpc"
 	default:
 		return strconv.Itoa(int(t))
 	}
@@ -70,18 +77,26 @@ func ParseTransportType(s string) (TransportType, error) {
 		return TransportTypeHTTP, nil
 	case "tchannel":
 		return TransportTypeTChannel, nil
+	case "grpc":
+		return TransportTypeGRPC, nil
 	default:
 		return 0, fmt.Errorf("invalid TransportType: %s", s)
 	}
 }
 
-// WithClientConfig wraps a function by setting up a client and server dispatcher and giving
+// ClientInfo holds the client info for testing.
+type ClientInfo struct {
+	ClientConfig   transport.ClientConfig
+	GRPCClientConn *ggrpc.ClientConn
+}
+
+// WithClientInfo wraps a function by setting up a client and server dispatcher and giving
 // the function the client configuration to use in tests for the given TransportType.
 //
 // The server dispatcher will be brought up using all TransportTypes and with the serviceName.
 // The client dispatcher will be brought up using the given TransportType for Unary, HTTP for
 // Oneway, and the serviceName with a "-client" suffix.
-func WithClientConfig(serviceName string, procedures []transport.Procedure, transportType TransportType, f func(transport.ClientConfig) error) (err error) {
+func WithClientInfo(serviceName string, procedures []transport.Procedure, transportType TransportType, f func(*ClientInfo) error) (err error) {
 	dispatcherConfig, err := NewDispatcherConfig(serviceName)
 	if err != nil {
 		return err
@@ -106,13 +121,25 @@ func WithClientConfig(serviceName string, procedures []transport.Procedure, tran
 		return err
 	}
 	defer func() { err = multierr.Append(err, clientDispatcher.Stop()) }()
-
-	return f(clientDispatcher.ClientConfig(serviceName))
+	grpcPort, err := dispatcherConfig.GetPort(TransportTypeGRPC)
+	if err != nil {
+		return err
+	}
+	grpcClientConn, err := ggrpc.Dial(fmt.Sprintf("127.0.0.1:%d", grpcPort), ggrpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	return f(
+		&ClientInfo{
+			clientDispatcher.ClientConfig(serviceName),
+			grpcClientConn,
+		},
+	)
 }
 
 // NewClientDispatcher returns a new client Dispatcher.
 //
-// HTTP always will be configured as an outbound for Oneway
+// HTTP always will be configured as an outbound for Oneway unless using TransportTypeGRPC.
 func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) (*yarpc.Dispatcher, error) {
 	port, err := config.GetPort(transportType)
 	if err != nil {
@@ -136,6 +163,10 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) 
 		httpOutbound := http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", port))
 		onewayOutbound = httpOutbound
 		unaryOutbound = httpOutbound
+	case TransportTypeGRPC:
+		grpcOutbound := grpc.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
+		onewayOutbound = grpcOutbound
+		unaryOutbound = grpcOutbound
 	default:
 		return nil, fmt.Errorf("invalid TransportType: %v", transportType)
 	}
@@ -162,10 +193,18 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 	if err != nil {
 		return nil, err
 	}
+	grpcPort, err := config.GetPort(TransportTypeGRPC)
+	if err != nil {
+		return nil, err
+	}
 	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName(config.GetServiceName()),
 		tchannel.ListenAddr(fmt.Sprintf("127.0.0.1:%d", tchannelPort)),
 	)
+	if err != nil {
+		return nil, err
+	}
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", grpcPort))
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +214,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 			Inbounds: yarpc.Inbounds{
 				tchannelTransport.NewInbound(),
 				http.NewTransport().NewInbound(fmt.Sprintf("127.0.0.1:%d", httpPort)),
+				grpc.NewInbound(grpcListener),
 			},
 		},
 	)

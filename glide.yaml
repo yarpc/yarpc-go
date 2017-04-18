@@ -10,6 +10,10 @@ import:
   version: ~0.4
 - package: github.com/golang/mock
   version: master
+- package: github.com/grpc-ecosystem/grpc-opentracing
+  version: master
+  subpackages:
+  - go/otgrpc
 - package: github.com/mattn/go-shellwords
   version: ^1
 - package: github.com/mitchellh/mapstructure
@@ -43,6 +47,9 @@ import:
   repo: https://github.com/golang/net
   subpackages:
   - context
+- package: google.golang.org/grpc
+  version: ^1.2
+  repo: https://github.com/grpc/grpc-go
 - package: golang.org/x/sys
   # explicitly specifying this because glide is having issues with golang.org repos
   # this is just a dependency of golang.org/x/net and if this problem is fixed

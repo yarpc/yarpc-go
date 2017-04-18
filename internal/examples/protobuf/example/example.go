@@ -43,12 +43,20 @@ var (
 	errRequestValueNil = errors.New("request value nil")
 )
 
+// Clients holds all clients.
+type Clients struct {
+	KeyValueYarpcClient examplepb.KeyValueYarpcClient
+	SinkYarpcClient     examplepb.SinkYarpcClient
+	KeyValueGRPCClient  examplepb.KeyValueClient
+	SinkGRPCClient      examplepb.SinkClient
+}
+
 // WithClients calls f on the Clients.
 func WithClients(
 	transportType testutils.TransportType,
 	keyValueYarpcServer examplepb.KeyValueYarpcServer,
 	sinkYarpcServer examplepb.SinkYarpcServer,
-	f func(examplepb.KeyValueYarpcClient, examplepb.SinkYarpcClient) error,
+	f func(*Clients) error,
 ) error {
 	var procedures []transport.Procedure
 	if keyValueYarpcServer != nil {
@@ -57,14 +65,18 @@ func WithClients(
 	if sinkYarpcServer != nil {
 		procedures = append(procedures, examplepb.BuildSinkYarpcProcedures(sinkYarpcServer)...)
 	}
-	return testutils.WithClientConfig(
+	return testutils.WithClientInfo(
 		"example",
 		procedures,
 		transportType,
-		func(clientConfig transport.ClientConfig) error {
+		func(clientInfo *testutils.ClientInfo) error {
 			return f(
-				examplepb.NewKeyValueYarpcClient(clientConfig),
-				examplepb.NewSinkYarpcClient(clientConfig),
+				&Clients{
+					examplepb.NewKeyValueYarpcClient(clientInfo.ClientConfig),
+					examplepb.NewSinkYarpcClient(clientInfo.ClientConfig),
+					examplepb.NewKeyValueClient(clientInfo.GRPCClientConn),
+					examplepb.NewSinkClient(clientInfo.GRPCClientConn),
+				},
 			)
 		},
 	)

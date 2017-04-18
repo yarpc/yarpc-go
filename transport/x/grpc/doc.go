@@ -18,25 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
-
-import (
-	"go.uber.org/yarpc/internal/crossdock/client/params"
-
-	"github.com/crossdock/crossdock-go"
-)
-
-// createEchoT tags the given T with the transport, encoding and server.
-func createEchoT(encoding string, transport string, t crossdock.T) crossdock.T {
-	if transport == "" {
-		transport = t.Param(params.Transport)
-	}
-	t.Tag("transport", transport)
-	t.Tag("encoding", encoding)
-	if t.Param(params.GoServer) != "" {
-		t.Tag("server", t.Param(params.GoServer))
-	} else {
-		t.Tag("server", t.Param(params.Server))
-	}
-	return t
-}
+// Package grpc implements the grpc transport.
+//
+// This package is experimental and should not be used in production.
+package grpc

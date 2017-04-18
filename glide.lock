@@ -1,5 +1,5 @@
-hash: c96b32dd0e9d2519a42f9fa1311a67c39a7f3660ba3ccaf24d88d98e0a01f178
-updated: 2017-04-11T15:52:56.960079358-07:00
+hash: 733dbe39a05cf3d6d9bb4250d170d4e0f2e7627924f45cbfc9ebeca9eaadc228
+updated: 2017-04-12T20:54:47.468023401+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -44,6 +44,10 @@ imports:
   - proto
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/grpc-ecosystem/grpc-opentracing
+  version: ef7d6c8df7564c20c0a19ed9737f6d67990c61fa
+  subpackages:
+  - go/otgrpc
 - name: github.com/mattn/go-shellwords
   version: 02e3cf038dcea8290e44424da473dd12be796a8a
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -187,16 +191,44 @@ imports:
   subpackages:
   - context
   - context/ctxhttp
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/sys
   version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
   repo: https://github.com/golang/sys
   subpackages:
   - unix
+- name: golang.org/x/text
+  version: fc7fa097411d30e6708badff276c4c164425590c
+  subpackages:
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/norm
 - name: golang.org/x/tools
-  version: d83db204cec938a53072124e16d79022316b3dc5
+  version: d63e2b22b05a9682de336cd4802bba367ed429e7
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
+- name: google.golang.org/grpc
+  version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
+  repo: https://github.com/grpc/grpc-go
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - stats
+  - tap
+  - transport
 - name: gopkg.in/redis.v5
   version: a16aeec10ff407b1e7be6dd35797ccf5426ef0f0
   subpackages:

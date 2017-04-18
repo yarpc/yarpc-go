@@ -18,25 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package grpc
 
 import (
-	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"testing"
 
-	"github.com/crossdock/crossdock-go"
+	"github.com/stretchr/testify/assert"
 )
 
-// createEchoT tags the given T with the transport, encoding and server.
-func createEchoT(encoding string, transport string, t crossdock.T) crossdock.T {
-	if transport == "" {
-		transport = t.Param(params.Transport)
-	}
-	t.Tag("transport", transport)
-	t.Tag("encoding", encoding)
-	if t.Param(params.GoServer) != "" {
-		t.Tag("server", t.Param(params.GoServer))
-	} else {
-		t.Tag("server", t.Param(params.Server))
-	}
-	return t
+func TestCustomCodecMarshalBytes(t *testing.T) {
+	value := []byte("test")
+	data, err := customCodec{}.Marshal(&value)
+	assert.Equal(t, value, data)
+	assert.NoError(t, err)
+}
+
+func TestCustomCodecMarshalCastError(t *testing.T) {
+	value := "test"
+	data, err := customCodec{}.Marshal(&value)
+	assert.Equal(t, []byte(nil), data)
+	assert.Equal(t, newCustomCodecCastError(&value), err)
+}
+
+func TestCustomCodecUnmarshalBytes(t *testing.T) {
+	data := []byte("test")
+	var value []byte
+	assert.NoError(t, customCodec{}.Unmarshal(data, &value))
+	assert.Equal(t, data, value)
+}
+
+func TestCustomCodecUnmarshalCastError(t *testing.T) {
+	var value string
+	err := customCodec{}.Unmarshal([]byte("test"), &value)
+	assert.Equal(t, "", value)
+	assert.Equal(t, newCustomCodecCastError(&value), err)
+}
+
+func TestCustomCodecString(t *testing.T) {
+	assert.Equal(t, "proto", customCodec{}.String())
 }

@@ -34,10 +34,15 @@ import (
 
 // Thrift implements the 'thrift' behavior.
 func Thrift(t crossdock.T) {
-	t = createEchoT("thrift", t)
+	ThriftForTransport(t, "")
+}
+
+// ThriftForTransport implements the 'thrift' behavior for the given transport or behavior transport.
+func ThriftForTransport(t crossdock.T, transport string) {
+	t = createEchoT("thrift", transport, t)
 	fatals := crossdock.Fatals(t)
 
-	dispatcher := disp.Create(t)
+	dispatcher := disp.CreateDispatcherForTransport(t, transport)
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 

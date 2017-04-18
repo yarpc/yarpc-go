@@ -18,25 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package grpc
 
 import (
-	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"bytes"
 
-	"github.com/crossdock/crossdock-go"
+	"go.uber.org/yarpc/api/transport"
+
+	"google.golang.org/grpc/metadata"
 )
 
-// createEchoT tags the given T with the transport, encoding and server.
-func createEchoT(encoding string, transport string, t crossdock.T) crossdock.T {
-	if transport == "" {
-		transport = t.Param(params.Transport)
+type responseWriter struct {
+	*bytes.Buffer
+	md                 metadata.MD
+	isApplicationError bool
+}
+
+func newResponseWriter() *responseWriter {
+	return &responseWriter{
+		bytes.NewBuffer(nil),
+		metadata.New(nil),
+		false,
 	}
-	t.Tag("transport", transport)
-	t.Tag("encoding", encoding)
-	if t.Param(params.GoServer) != "" {
-		t.Tag("server", t.Param(params.GoServer))
-	} else {
-		t.Tag("server", t.Param(params.Server))
-	}
-	return t
+}
+
+func (r *responseWriter) AddHeaders(headers transport.Headers) {
+	// TODO: handle error
+	_ = addApplicationHeaders(r.md, headers)
+}
+
+func (r *responseWriter) SetApplicationError() {
+	r.isApplicationError = true
 }

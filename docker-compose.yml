@@ -34,7 +34,11 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
+            - AXIS_TRANSPORT_ONEWAY=grpc,http,redis,cherami
+            - AXIS_TRANSPORT_ONEWAY_CTXPROPAGATION=http,redis,cherami
+            - AXIS_GO_ENCODING=raw,json,thrift,protobuf
+            - AXIS_GO_CLIENT=go
+            - AXIS_GO_SERVER=go
 
             # Transports available to the ctxpropagation behavior for multihop
             # requests.
@@ -45,6 +49,8 @@ services:
             - BEHAVIOR_JSON=client,server,transport
             - SKIP_JSON=client:java+transport:tchannel,server:java+transport:tchannel
             - BEHAVIOR_THRIFT=client,server,transport
+            - BEHAVIOR_PROTOBUF=go_client,go_server,transport
+            - BEHAVIOR_GRPC=go_client,go_server,go_encoding
             - SKIP_THRIFT=client:java+transport:tchannel,server:java+transport:tchannel
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel
@@ -70,7 +76,7 @@ services:
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport,ctxavailabletransports
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
             - BEHAVIOR_ONEWAY=client_oneway,server_oneway,transport_oneway,encoding
-            - BEHAVIOR_ONEWAY_CTXPROPAGATION=client_oneway,server_oneway,transport_oneway
+            - BEHAVIOR_ONEWAY_CTXPROPAGATION=client_oneway,server_oneway,transport_oneway_ctxpropagation
 
             - REPORT=compact
 
@@ -83,7 +89,7 @@ services:
           context: .
           dockerfile: Dockerfile.crossdock
         ports:
-            - "8080-8088"
+            - "8080-8090"
         environment:
             - REDIS=enabled
             - CHERAMI=enabled

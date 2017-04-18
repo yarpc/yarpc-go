@@ -23,15 +23,18 @@ package yarpc
 import (
 	"fmt"
 	"log"
+	"net"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestserver"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 var dispatcher *yarpc.Dispatcher
@@ -45,6 +48,10 @@ func Start() {
 	if err != nil {
 		log.Panicf("failed to build ChannelTransport: %v", err)
 	}
+	grpcListener, err := net.Listen("tcp", ":8089")
+	if err != nil {
+		log.Panic(err)
+	}
 
 	httpTransport := http.NewTransport()
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
@@ -52,6 +59,7 @@ func Start() {
 		Inbounds: yarpc.Inbounds{
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":8081"),
+			grpc.NewInbound(grpcListener),
 		},
 	})
 
@@ -87,4 +95,6 @@ func register(reg *yarpc.Dispatcher) {
 
 	reg.Register(raw.Procedure("sleep/raw", SleepRaw))
 	reg.Register(raw.Procedure("waitfortimeout/raw", WaitForTimeoutRaw))
+
+	reg.Register(crossdockpb.BuildEchoYarpcProcedures(EchoProtobuf{}))
 }

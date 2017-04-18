@@ -18,25 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package echo
+package grpc
 
 import (
+	"go.uber.org/yarpc/internal/crossdock/client/echo"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 
 	"github.com/crossdock/crossdock-go"
 )
 
-// createEchoT tags the given T with the transport, encoding and server.
-func createEchoT(encoding string, transport string, t crossdock.T) crossdock.T {
-	if transport == "" {
-		transport = t.Param(params.Transport)
+var encodingToRunFunc = map[string]func(crossdock.T, string){
+	"raw":      echo.RawForTransport,
+	"json":     echo.JSONForTransport,
+	"thrift":   echo.ThriftForTransport,
+	"protobuf": echo.ProtobufForTransport,
+}
+
+// Run starts the grpc behavior, testing grpc over encodings.
+func Run(t crossdock.T) {
+	encoding := t.Param(params.GoEncoding)
+	f, ok := encodingToRunFunc[encoding]
+	if !ok {
+		crossdock.Fatals(t).Fail("unknown encoding", "%v", encoding)
 	}
-	t.Tag("transport", transport)
-	t.Tag("encoding", encoding)
-	if t.Param(params.GoServer) != "" {
-		t.Tag("server", t.Param(params.GoServer))
-	} else {
-		t.Tag("server", t.Param(params.Server))
-	}
-	return t
+	f(t, "grpc")
 }

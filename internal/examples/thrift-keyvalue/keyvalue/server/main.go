@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	gohttp "net/http"
 	"strings"
 	"sync"
@@ -37,9 +38,10 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
-var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel)")
+var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
 
 type handler struct {
 	sync.RWMutex
@@ -76,7 +78,7 @@ func do() error {
 	var inbound transport.Inbound
 	switch strings.ToLower(*flagInbound) {
 	case "http":
-		inbound = http.NewTransport().NewInbound("127.0.0.1:24035")
+		inbound = http.NewTransport().NewInbound("127.0.0.1:24042")
 		go func() {
 			if err := gohttp.ListenAndServe(":3242", nil); err != nil {
 				log.Fatal(err)
@@ -85,7 +87,7 @@ func do() error {
 	case "tchannel":
 		tchannelTransport, err := tchannel.NewChannelTransport(
 			tchannel.ServiceName("keyvalue"),
-			tchannel.ListenAddr("127.0.0.1:28942"),
+			tchannel.ListenAddr("127.0.0.1:28945"),
 		)
 		if err != nil {
 			return err
@@ -93,6 +95,17 @@ func do() error {
 		inbound = tchannelTransport.NewInbound()
 		go func() {
 			if err := gohttp.ListenAndServe(":3243", nil); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	case "grpc":
+		listener, err := net.Listen("tcp", "127.0.0.1:24046")
+		if err != nil {
+			return err
+		}
+		inbound = grpc.NewInbound(listener)
+		go func() {
+			if err := gohttp.ListenAndServe(":3244", nil); err != nil {
 				log.Fatal(err)
 			}
 		}()

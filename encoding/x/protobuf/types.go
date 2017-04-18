@@ -31,17 +31,26 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// Encoding is the name of this encoding.
-const Encoding transport.Encoding = "protobuf"
+const (
+	// Encoding is the name of this encoding.
+	Encoding transport.Encoding = "protobuf"
 
-// GetApplicationError returns the application error from the server, if present.
+	rawResponseHeaderKey = "yarpc-protobuf-raw-response"
+)
+
+// SetRawResponse will set rawResponseHeaderKey to "true".
 //
-// TODO: this has overlap with IsApplicationError
-func GetApplicationError(err error) error {
-	if applicationError, ok := err.(*applicationError); ok {
-		return applicationError
-	}
-	return nil
+// rawResponseHeaderKey is a header key attached to either a request or
+// response that signals a UnaryHandler to not encode an application error
+// inside a wirepb.Response object, instead marshalling the actual response.
+//
+// Note per the documentation on transport.Headers#With, the returned Header
+// may not be the same as the input header, so the caller should always
+// update the header with:
+//
+//   header = protobuf.SetRawResponse(header)
+func SetRawResponse(headers transport.Headers) transport.Headers {
+	return headers.With(rawResponseHeaderKey, "1")
 }
 
 // ***all below functions should only be called by generated code***
@@ -117,4 +126,13 @@ func NewOnewayHandler(
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
 func CastError(expectedType proto.Message, actualType proto.Message) error {
 	return fmt.Errorf("expected proto.Message to have type %T but had type %T", expectedType, actualType)
+}
+
+func isRawResponse(headers transport.Headers) bool {
+	rawResponse, ok := headers.Get(rawResponseHeaderKey)
+	return ok && rawResponse == "1"
+}
+
+func getRawResponseHeaders() transport.Headers {
+	return SetRawResponse(transport.Headers{})
 }
