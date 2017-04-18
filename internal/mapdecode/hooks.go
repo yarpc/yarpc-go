@@ -217,6 +217,11 @@ func fieldHook(opts *options) reflectHook {
 				continue
 			}
 
+			// This field resolution logic is adapted from mapstructure's own
+			// logic.
+			//
+			// See https://github.com/mitchellh/mapstructure/blob/53818660ed4955e899c0bcafa97299a388bd7c8e/mapstructure.go#L741
+
 			fieldName := structField.Name
 
 			// Field name override was specified.
