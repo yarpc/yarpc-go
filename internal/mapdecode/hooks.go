@@ -221,7 +221,7 @@ func fieldHook(opts *options) reflectHook {
 
 			// Field name override was specified.
 			tagParts := strings.Split(structField.Tag.Get(opts.TagName), ",")
-			if len(tagParts) > 0 && tagParts[0] != "" {
+			if tagParts[0] != "" {
 				fieldName = tagParts[0]
 			}
 
