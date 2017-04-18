@@ -211,7 +211,7 @@ func fieldHook(opts *options) reflectHook {
 		var errors []error
 		for i := 0; i < to.NumField(); i++ {
 			structField := to.Field(i)
-			if structField.PkgPath != "" {
+			if structField.PkgPath != "" && !structField.Anonymous {
 				// This field is not exported so we won't be able to decode
 				// into it.
 				continue
