@@ -323,6 +323,19 @@ func TestFieldHook(t *testing.T) {
 			want: myStruct{YAMLField: "bar"},
 		},
 		{
+			desc:     "field name override all caps",
+			give:     map[string]interface{}{"YAMLKEY": "foo"},
+			giveOpts: []Option{YAML()},
+			setupHook: func(h *mockFieldHook) {
+				h.Expect(_typeOfEmptyInterface, structField{
+					Name: "YAMLField",
+					Type: typeOfString,
+					Tag:  `yaml:"yamlKey"`,
+				}, reflectEq{"foo"}).Return(valueOf("bar"), nil)
+			},
+			want: myStruct{YAMLField: "bar"},
+		},
+		{
 			desc: "hook errors",
 			give: map[string]interface{}{
 				"someInt":          1,
