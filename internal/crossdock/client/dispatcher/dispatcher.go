@@ -96,9 +96,6 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 	var outbound transport.OnewayOutbound
 
 	trans := t.Param("transport_oneway")
-	if trans == "" {
-		trans = t.Param("transport_oneway_ctxpropagation")
-	}
 	switch trans {
 	case "http":
 		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8084", server))
@@ -120,8 +117,6 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 
 		outbound = transport.NewOutbound(cherami.OutboundConfig{
 			Destination: `/test/dest`})
-	case "grpc":
-		outbound = grpc.NewSingleOutbound(server + ":8090")
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
