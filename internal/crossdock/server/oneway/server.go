@@ -53,11 +53,11 @@ func Start() {
 	)
 	inbounds = append(inbounds, rds)
 
-	cheramiInboud, err := initCheramiInbound()
+	cheramiInbound, err := initCheramiInbound()
 	if err != nil {
 		log.Printf(`error init cherami inbound %v\n`, err)
 	}
-	inbounds = append(inbounds, cheramiInboud)
+	inbounds = append(inbounds, cheramiInbound)
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name:     "oneway-server",
