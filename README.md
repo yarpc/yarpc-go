@@ -15,8 +15,8 @@ choosers.
 YARPC for Go provides reference implementations for HTTP/1.1 and TChannel
 transports, and also raw, JSON, and Thrift encodings.
 YARPC for Go provides experimental implementations for a Redis transport, a
-Protobuf encoding, and a round robin peer chooser.
-YARPC for Go plans to provide a gRPC transport, and a load balancer that uses
+gRPC transport, a Protobuf encoding, and a round robin peer chooser.
+YARPC for Go plans to provide a load balancer that uses
 a least-pending-requests strategy.
 Peer choosers can implement any strategy, including load balancing or sharding,
 in turn backed by a pluggable peer provider.
@@ -245,7 +245,7 @@ Stable:
 
 Unstable:
 - Any package in an `x` directory, including the experimental Redis transport,
-  the Protobuf encoding, and the round-robin peer chooser.
+  the gRPC transport, the Protobuf encoding, and the round-robin peer chooser.
 - debug and introspection APIs (these are internal to prevent external
   implementations of transports, inbounds, and outbounds from making use of
   them, but we further do not guarantee the content of debug pages)
