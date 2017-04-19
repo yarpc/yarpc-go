@@ -107,6 +107,8 @@ import (
 // 		- host: anotherhost
 // 		  port: 8080
 //
+// Customizing Field Names
+//
 // If a field name differs from the name of the field inside the
 // configuration data, a `config` tag may be added to the struct to specify a
 // different name.
@@ -119,6 +121,38 @@ import (
 //
 // 	myinbound:
 // 	  peer: foo
+//
+// Environment Variables
+//
+// In addition to specifying the field name, the `config` tag may also include
+// an `interpolate` option to request interpolation from environment variables
+// present in the provided value at decode time. This option may be applied to
+// primitive types (strings, integers, booleans, floats, and time.Duration)
+// only.
+//
+// For example in,
+//
+// 	type MyInboundConfig struct {
+// 		QueueName string `config:"queue,interpolate"`
+// 		Timeout time.Duration `config:",interpolate"`
+// 		// If the name is left empty, the default name is used.
+// 	}
+//
+// The values for both QueueName and Timeout may contain strings in the form
+// ${NAME} to be replaced with the value of that environment variable. The
+// form ${NAME:default} may be used to provide a default value if the
+// environment variable is not set.
+//
+// 	myinbound:
+// 	  queue: inbound-requests-${STAGE:dev}
+// 	  timeout: ${REQUEST_TIMEOUT:5s}
+//
+// The above states that the queue inbound-requests-dev should be used by
+// default, but if the STAGE environment variable is set, the queue
+// inbound-requests-${STAGE} should be used. Similarly, it also states that a
+// timeout of 5 seconds should be used by default, unless the REQUEST_TIMEOUT
+// environment variable is set in which case the timeout specified in the
+// environment variable should be used.
 type TransportSpec struct {
 	// Name of the transport
 	Name string

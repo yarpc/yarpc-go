@@ -27,10 +27,6 @@ import (
 	"go.uber.org/yarpc/internal/mapdecode"
 )
 
-var _mapdecodeOpts = []mapdecode.Option{
-	mapdecode.TagName("config"),
-}
-
 type attributeMap map[string]interface{}
 
 func (m attributeMap) PopString(name string) (s string, err error) {
@@ -57,7 +53,7 @@ func (m attributeMap) Get(name string, dst interface{}) (ok bool, err error) {
 		return ok, nil
 	}
 
-	err = mapdecode.Decode(dst, v, _mapdecodeOpts...)
+	err = decodeInto(dst, v)
 	if err != nil {
 		err = fmt.Errorf("failed to read attribute %q: %v", name, v)
 	}
@@ -65,7 +61,7 @@ func (m attributeMap) Get(name string, dst interface{}) (ok bool, err error) {
 }
 
 func (m attributeMap) Decode(dst interface{}) error {
-	return mapdecode.Decode(dst, m, _mapdecodeOpts...)
+	return decodeInto(dst, m)
 }
 
 type yarpcConfig struct {
