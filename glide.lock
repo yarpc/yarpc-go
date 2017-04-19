@@ -1,5 +1,5 @@
 hash: 733dbe39a05cf3d6d9bb4250d170d4e0f2e7627924f45cbfc9ebeca9eaadc228
-updated: 2017-04-12T20:54:47.468023401+02:00
+updated: 2017-04-19T13:18:30.397697314-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -154,11 +154,11 @@ imports:
   - trand
   - typed
 - name: go.uber.org/atomic
-  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+  version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/multierr
   version: a3d1fc1f1316d4132fc61f4ea1159ae0613fb474
 - name: go.uber.org/thriftrw
-  version: 05f870b3c56597d180af568a6392209cc33269e2
+  version: dde90c2a40f45fb2b6361d13c1b4bf09465401c0
   subpackages:
   - envelope
   - internal
@@ -173,10 +173,11 @@ imports:
   - protocol
   - protocol/binary
   - ptr
+  - thriftreflect
   - version
   - wire
 - name: go.uber.org/zap
-  version: a2773be06b9ac7c318a3a105b5c310af5730c6b4
+  version: 1550bc05539134bbf8612a35f34a79ab8bf34ee3
   subpackages:
   - buffer
   - internal/bufferpool
@@ -184,9 +185,10 @@ imports:
   - internal/exit
   - internal/multierror
   - zapcore
+  - zapgrpc
   - zaptest/observer
 - name: golang.org/x/net
-  version: ffcf1bedda3b04ebb15a168a59800a73d6dc0f4d
+  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
   repo: https://github.com/golang/net
   subpackages:
   - context
