@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package internal
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "internal", Package: "go.uber.org/yarpc/encoding/thrift/internal", FilePath: "internal.thrift", SHA1: "43d339d0566531c13482a795ecce0eb36785cbff", Raw: rawIDL}
+
+const rawIDL = "enum ExceptionType {\n  UNKNOWN = 0\n  UNKNOWN_METHOD = 1\n  INVALID_MESSAGE_TYPE = 2\n  WRONG_METHOD_NAME = 3\n  BAD_SEQUENCE_ID = 4\n  MISSING_RESULT = 5\n  INTERNAL_ERROR = 6\n  PROTOCOL_ERROR = 7\n  INVALID_TRANSFORM = 8\n  INVALID_PROTOCOL = 9\n  UNSUPPORTED_CLIENT_TYPE = 10\n}\n\n/**\n * TApplicationException is a Thrift-level exception.\n *\n * Thrift envelopes with the type Exception contain an exception of this\n * shape.\n */\nexception TApplicationException {\n  1: optional string message\n  2: optional ExceptionType type\n}\n"

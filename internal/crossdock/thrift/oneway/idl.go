@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package oneway
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "oneway", Package: "go.uber.org/yarpc/internal/crossdock/thrift/oneway", FilePath: "oneway.thrift", SHA1: "2eb401ce231c98a633b0731ea9c0cdd24d40d3ca", Raw: rawIDL}
+
+const rawIDL = "service Oneway {\n    oneway void echo (1: string token)\n}\n"

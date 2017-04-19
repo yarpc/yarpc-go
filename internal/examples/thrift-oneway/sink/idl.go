@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package sink
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "sink", Package: "go.uber.org/yarpc/internal/examples/thrift-oneway/sink", FilePath: "sink.thrift", SHA1: "f723dc578c8ae4251c75f873a5a24b6c1a9df61f", Raw: rawIDL}
+
+const rawIDL = "service Hello {\n    oneway void sink(1:SinkRequest snk)\n}\n\nstruct SinkRequest {\n    1: required string message;\n}\n"

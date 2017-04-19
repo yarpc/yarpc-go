@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package example
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "example", Package: "go.uber.org/yarpc/transport/x/cherami/example/thrift/example", FilePath: "example.thrift", SHA1: "ba38fc91b56598964cc5bf48c1be05a6a478a695", Raw: rawIDL}
+
+const rawIDL = "namespace java com.uber.cherami_yarpc\n\nservice ExampleService {\n    oneway void award (1: string token)\n}\n"

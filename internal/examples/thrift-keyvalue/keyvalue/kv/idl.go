@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package kv
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "kv", Package: "go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv", FilePath: "kv.thrift", SHA1: "9e8c1c30d0b6bd7d83426a92962269aaef706295", Raw: rawIDL}
+
+const rawIDL = "exception ResourceDoesNotExist {\n    1: required string key\n    2: optional string message\n}\n\nservice KeyValue {\n    string getValue(1: string key)\n        throws (1: ResourceDoesNotExist doesNotExist)\n    void setValue(1: string key, 2: string value)\n}\n"
