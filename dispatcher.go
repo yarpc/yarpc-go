@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"sync"
 
+	"google.golang.org/grpc/grpclog"
+
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
@@ -33,6 +35,7 @@ import (
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/zap/zapgrpc"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/multierr"
@@ -118,6 +121,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 			zap.String("dispatcher", cfg.Name),
 		)
 		cfg = addObservingMiddleware(cfg, logger)
+		grpclog.SetLogger(zapgrpc.NewLogger(logger))
 	}
 
 	return &Dispatcher{
