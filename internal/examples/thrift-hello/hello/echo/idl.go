@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package echo
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "echo", Package: "go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo", FilePath: "echo.thrift", SHA1: "619e87984e33d89e2f63c235bf6b0c1003898504", Raw: rawIDL}
+
+const rawIDL = "service Hello {\n    EchoResponse echo(1:EchoRequest echo)\n}\n\nstruct EchoRequest {\n    1: required string message;\n    2: required i16 count;\n}\n\nstruct EchoResponse {\n    1: required string message;\n    2: required i16 count;\n}\n"

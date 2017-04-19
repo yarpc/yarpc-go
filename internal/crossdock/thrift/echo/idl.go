@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package echo
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "echo", Package: "go.uber.org/yarpc/internal/crossdock/thrift/echo", FilePath: "echo.thrift", SHA1: "c3e4e93d3bee132394d26e5ec61011e3f76b7f33", Raw: rawIDL}
+
+const rawIDL = "// Note that type definitions are being declared before the service\n// because Apache Thrift doesn't support forward references. ThriftRW\n// works just fine with the service defined up top, but we're generating\n// shapes for both libraries from this file.\n\nstruct Ping {\n    1: required string beep\n}\n\nstruct Pong {\n    1: required string boop\n}\n\nservice Echo {\n    Pong echo(1: Ping ping) (\n        ttlms = '100'\n    )\n}\n"

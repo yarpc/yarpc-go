@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gauntlet
+package internal
 
-import "go.uber.org/thriftrw/version"
+import "go.uber.org/thriftrw/thriftreflect"
 
-func init() {
-	version.CheckCompatWithGeneratedCodeAt("1.2.0", "go.uber.org/yarpc/internal/crossdock/thrift/gauntlet")
-}
+var ThriftModule = &thriftreflect.ThriftModule{Name: "internal", Package: "go.uber.org/yarpc/serialize/internal", FilePath: "internal.thrift", SHA1: "c60c5759efeaa1545aebd396d371509bc561b153", Raw: rawIDL}
+
+const rawIDL = "struct RPC {\n\t1: required binary spanContext\n\n\t2: required string callerName\n\t3: required string serviceName\n\t4: required string encoding\n\t5: required string procedure\n\n\t6: optional map<string,string> headers\n\t7: optional string shardKey\n\t8: optional string routingKey\n\t9: optional string routingDelegate\n\t10: optional binary body\n}\n"
