@@ -27,6 +27,8 @@ import (
 	"go.uber.org/yarpc/api/peer/peertest"
 	. "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/x/peerheap"
+	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -69,4 +71,23 @@ func TestBind(t *testing.T) {
 
 	list.EXPECT().IsRunning().Return(false)
 	assert.Equal(t, false, chooser.IsRunning(), "chooser should not be running")
+}
+
+func TestBindRealList(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	transport := yarpctest.NewFakeTransport()
+	list := peerheap.New(transport)
+
+	chooser := Bind(list, BindPeers([]peer.Identifier{
+		hostport.PeerIdentifier("x"),
+		hostport.PeerIdentifier("y"),
+	}))
+
+	assert.False(t, chooser.IsRunning(), "chooser should not be running")
+	assert.NoError(t, chooser.Start(), "start without error")
+	assert.True(t, chooser.IsRunning(), "chooser should be running")
+	assert.NoError(t, chooser.Stop(), "start without error")
+	assert.False(t, chooser.IsRunning(), "chooser should not be running")
 }
