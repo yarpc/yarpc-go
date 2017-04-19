@@ -89,9 +89,6 @@ services:
           dockerfile: Dockerfile.crossdock
         ports:
             - "8080-8090"
-        environment:
-            - REDIS=enabled
-            - CHERAMI=enabled
 
     node:
         dns_search: .
