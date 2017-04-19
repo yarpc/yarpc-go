@@ -22,9 +22,12 @@ package mapdecode
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -233,4 +236,248 @@ func TestDecode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFieldHook(t *testing.T) {
+	type myStruct struct {
+		SomeInt          int
+		SomeString       string
+		PtrToPtrToString **string
+
+		YAMLField string `yaml:"yamlKey"`
+
+		unexportedField string
+	}
+
+	typeOfInt := reflect.TypeOf(0)
+	typeOfString := reflect.TypeOf("hi")
+	typeOfPtrPtrString := reflect.PtrTo(reflect.PtrTo(typeOfString))
+
+	tests := []struct {
+		desc      string
+		setupHook func(*mockFieldHook)
+		give      interface{}
+		giveOpts  []Option // options besides FieldHook
+
+		want       myStruct
+		wantErrors []string
+	}{
+		{
+			desc: "not a map",
+			give: []interface{}{
+				map[string]interface{}{"a": 1},
+				map[string]interface{}{"b": 2},
+			},
+			wantErrors: []string{"expected a map, got 'slice'"},
+		},
+		{
+			desc:       "wrong map key",
+			give:       map[int]interface{}{1: "a"},
+			wantErrors: []string{"needs a map with string keys, has 'int' keys"},
+		},
+		{
+			desc: "string key",
+			give: map[string]interface{}{},
+		},
+		{
+			desc: "interface{} key",
+			give: map[interface{}]interface{}{},
+		},
+		{
+			desc: "unexported field",
+			give: map[string]string{"unexportedField": "hi"},
+		},
+		{
+			desc: "in-place updates",
+			give: map[string]interface{}{
+				"someInt":          1,
+				"PtrToPtrToString": "hello",
+			},
+			setupHook: func(h *mockFieldHook) {
+				h.Expect(_typeOfEmptyInterface, structField{
+					Name: "SomeInt",
+					Type: typeOfInt,
+				}, reflectEq{1}).Return(valueOf(42), nil)
+
+				h.Expect(_typeOfEmptyInterface, structField{
+					Name: "PtrToPtrToString",
+					Type: typeOfPtrPtrString,
+				}, reflectEq{"hello"}).Return(valueOf("world"), nil)
+			},
+			want: myStruct{
+				SomeInt:          42,
+				PtrToPtrToString: ptrToPtrToString("world"),
+			},
+		},
+		{
+			desc:     "field name override",
+			give:     map[string]interface{}{"yamlKey": "foo"},
+			giveOpts: []Option{YAML()},
+			setupHook: func(h *mockFieldHook) {
+				h.Expect(_typeOfEmptyInterface, structField{
+					Name: "YAMLField",
+					Type: typeOfString,
+					Tag:  `yaml:"yamlKey"`,
+				}, reflectEq{"foo"}).Return(valueOf("bar"), nil)
+			},
+			want: myStruct{YAMLField: "bar"},
+		},
+		{
+			desc:     "field name override all caps",
+			give:     map[string]interface{}{"YAMLKEY": "foo"},
+			giveOpts: []Option{YAML()},
+			setupHook: func(h *mockFieldHook) {
+				h.Expect(_typeOfEmptyInterface, structField{
+					Name: "YAMLField",
+					Type: typeOfString,
+					Tag:  `yaml:"yamlKey"`,
+				}, reflectEq{"foo"}).Return(valueOf("bar"), nil)
+			},
+			want: myStruct{YAMLField: "bar"},
+		},
+		{
+			desc: "hook errors",
+			give: map[string]interface{}{
+				"someInt":          1,
+				"PtrToPtrToString": "hello",
+			},
+			setupHook: func(h *mockFieldHook) {
+				h.Expect(_typeOfEmptyInterface, structField{
+					Name: "SomeInt",
+					Type: typeOfInt,
+				}, reflectEq{1}).Return(reflect.Value{}, errors.New("great sadness"))
+
+				h.Expect(_typeOfEmptyInterface, structField{
+					Name: "PtrToPtrToString",
+					Type: typeOfPtrPtrString,
+				}, reflectEq{"hello"}).Return(reflect.Value{}, errors.New("more sadness"))
+			},
+			wantErrors: []string{
+				`error reading into field "SomeInt": great sadness`,
+				`error reading into field "PtrToPtrToString": more sadness`,
+			},
+		},
+		{
+			desc: "type changing updates",
+			give: map[string]int{
+				"SomeInt":    42,
+				"someString": 3,
+			},
+			setupHook: func(h *mockFieldHook) {
+				h.Expect(typeOfInt, structField{
+					Name: "SomeInt",
+					Type: typeOfInt,
+				}, reflectEq{42}).Return(reflect.ValueOf(100), nil)
+
+				h.Expect(typeOfInt, structField{
+					Name: "SomeString",
+					Type: typeOfString,
+				}, reflectEq{3}).Return(reflect.ValueOf("hello"), nil)
+			},
+			want: myStruct{SomeInt: 100, SomeString: "hello"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockHook := newMockFieldHook(mockCtrl)
+			if tt.setupHook != nil {
+				tt.setupHook(mockHook)
+			}
+
+			var dest myStruct
+			err := Decode(
+				&dest, tt.give,
+				append(tt.giveOpts, FieldHook(mockHook.Hook()))...)
+
+			if len(tt.wantErrors) == 0 {
+				require.NoError(t, err, "expected success")
+				assert.Equal(t, tt.want, dest, "result mismatch")
+				return
+			}
+
+			require.Error(t, err, "expected error")
+			for _, msg := range tt.wantErrors {
+				assert.Contains(t, err.Error(), msg)
+			}
+		})
+	}
+}
+
+// mockFieldHook is a mock to control a function with the signature,
+//
+// 	func(reflect.Type, reflect.StructField, reflect.Value) (reflect.Value, error)
+//
+// Expectations may be set on this function with the Expect function.
+type mockFieldHook struct{ c *gomock.Controller }
+
+func newMockFieldHook(ctrl *gomock.Controller) *mockFieldHook {
+	return &mockFieldHook{c: ctrl}
+}
+
+// Hook returns the FieldHookFunc backed by this mock.
+func (m *mockFieldHook) Hook() FieldHookFunc {
+	return FieldHookFunc(m.Call)
+}
+
+// Expect sets up a call expectation on the hook.
+func (m *mockFieldHook) Expect(from, to, data interface{}) *gomock.Call {
+	return m.c.RecordCall(m, "Call", from, to, data)
+}
+
+func (m *mockFieldHook) Call(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error) {
+	results := m.c.Call(m, "Call", from, to, data)
+	out := results[0].(reflect.Value)
+	err, _ := results[1].(error)
+	return out, err
+}
+
+func ptrToPtrToString(s string) **string {
+	p := &s
+	return &p
+}
+
+func valueOf(x interface{}) reflect.Value {
+	return reflect.ValueOf(x)
+}
+
+// structField is a gomock.Matcher that matches a StructField with the given
+// parameters.
+type structField struct {
+	Name string
+	Type reflect.Type
+	Tag  string
+}
+
+func (m structField) String() string {
+	return fmt.Sprintf("StructField{Name: %q, Type: %v}", m.Name, m.Type)
+}
+
+func (m structField) Matches(x interface{}) bool {
+	s, ok := x.(reflect.StructField)
+	if !ok {
+		return false
+	}
+
+	return s.Name == m.Name && s.Type == m.Type && string(s.Tag) == m.Tag
+}
+
+// reflectEq is a gomock.Matcher that matches a reflect.Value whose underlying
+// value matches the given value.
+type reflectEq struct{ Value interface{} }
+
+func (m reflectEq) String() string {
+	return fmt.Sprintf("equal to %#v", m.Value)
+}
+
+func (m reflectEq) Matches(x interface{}) bool {
+	v, ok := x.(reflect.Value)
+	if !ok {
+		return false
+	}
+
+	return reflect.DeepEqual(m.Value, v.Interface())
 }

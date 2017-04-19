@@ -24,12 +24,22 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+	"go.uber.org/multierr"
 )
 
-var _typeOfDuration = reflect.TypeOf(time.Duration(0))
+var (
+	_typeOfDuration       = reflect.TypeOf(time.Duration(0))
+	_typeOfEmptyInterface = reflect.TypeOf((*interface{})(nil)).Elem()
+)
+
+// FieldHookFunc is a hook called while decoding a specific struct field. It
+// receives the source type, information about the target field, and the
+// source data.
+type FieldHookFunc func(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error)
 
 // reflectHook is similar to mapstructure's decode hooks except it operates on
 // the reflected values rather than interface{}.
@@ -174,4 +184,130 @@ func strconvHook(from, to reflect.Type, data reflect.Value) (reflect.Value, erro
 	}
 
 	return data, nil
+}
+
+// fieldHook applies the user-specified FieldHookFunc to all struct fields.
+func fieldHook(opts *options) reflectHook {
+	hook := opts.FieldHook
+	return func(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
+		if to.Kind() != reflect.Struct || from.Kind() != reflect.Map {
+			return data, nil
+		}
+
+		// We can only decode map[string]* and map[interface{}]* into structs.
+		if k := from.Key().Kind(); k != reflect.String && k != reflect.Interface {
+			return data, nil
+		}
+
+		// This map tracks type-changing updates to items in the map.
+		//
+		// If the source map has a rigid type for values (map[string]string
+		// rather than map[string]interface{}), we can't make replacements to
+		// values in-place if a hook changed the type of a value. So we will
+		// make a copy of the source map with a more liberal type and inject
+		// these updates into the copy.
+		updates := make(map[interface{}]interface{})
+
+		var errors []error
+		for i := 0; i < to.NumField(); i++ {
+			structField := to.Field(i)
+			if structField.PkgPath != "" && !structField.Anonymous {
+				// This field is not exported so we won't be able to decode
+				// into it.
+				continue
+			}
+
+			// This field resolution logic is adapted from mapstructure's own
+			// logic.
+			//
+			// See https://github.com/mitchellh/mapstructure/blob/53818660ed4955e899c0bcafa97299a388bd7c8e/mapstructure.go#L741
+
+			fieldName := structField.Name
+
+			// Field name override was specified.
+			tagParts := strings.Split(structField.Tag.Get(opts.TagName), ",")
+			if tagParts[0] != "" {
+				fieldName = tagParts[0]
+			}
+
+			// Get the value for this field from the source map, if any.
+			key := reflect.ValueOf(fieldName)
+			value := data.MapIndex(key)
+			if !value.IsValid() {
+				// Case-insensitive linear search if the name doesn't match
+				// as-is.
+				for _, kV := range data.MapKeys() {
+					// Kind() == Interface if map[interface{}]* so we use
+					// Interface().(string) to handle interface{} and string
+					// keys.
+					k, ok := kV.Interface().(string)
+					if !ok {
+						continue
+					}
+
+					if strings.EqualFold(k, fieldName) {
+						key = kV
+						value = data.MapIndex(kV)
+						break
+					}
+				}
+			}
+
+			if !value.IsValid() {
+				// No value specified for this field in source map.
+				continue
+			}
+
+			newValue, err := hook(value.Type(), structField, value)
+			if err != nil {
+				errors = append(errors, fmt.Errorf(
+					"error reading into field %q: %v", fieldName, err))
+				continue
+			}
+
+			if newValue == value {
+				continue
+			}
+
+			// If we can, assign in-place.
+			if newValue.Type().AssignableTo(value.Type()) {
+				// XXX(abg): Is it okay to make updates to the source map?
+				data.SetMapIndex(key, newValue)
+			} else {
+				updates[key.Interface()] = newValue.Interface()
+			}
+		}
+
+		if len(errors) > 0 {
+			return data, multierr.Combine(errors...)
+		}
+
+		// No more changes to make.
+		if len(updates) == 0 {
+			return data, nil
+		}
+
+		// Equivalent to,
+		//
+		// 	newData := make(map[$key]interface{})
+		// 	for k, v := range data {
+		// 		if newV, ok := updates[k]; ok {
+		// 			newData[k] = newV
+		// 		} else {
+		// 			newData[k] = v
+		// 		}
+		// 	}
+		newData := reflect.MakeMap(reflect.MapOf(from.Key(), _typeOfEmptyInterface))
+		for _, key := range data.MapKeys() {
+			var value reflect.Value
+			if v, ok := updates[key.Interface()]; ok {
+				value = reflect.ValueOf(v)
+			} else {
+				value = data.MapIndex(key)
+			}
+			newData.SetMapIndex(key, value)
+		}
+
+		return newData, nil
+	}
 }
