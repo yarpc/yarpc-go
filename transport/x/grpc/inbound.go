@@ -170,7 +170,6 @@ func (i *Inbound) getServiceNameAndMethodDesc(procedure transport.Procedure) (st
 			serviceName,
 			methodName,
 			i.router,
-			i.inboundOptions.getOnewayErrorHandler(),
 		).handle,
 	}, nil
 }

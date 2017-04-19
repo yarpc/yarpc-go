@@ -38,7 +38,6 @@ import (
 )
 
 var _ transport.UnaryOutbound = (*Outbound)(nil)
-var _ transport.OnewayOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
@@ -92,20 +91,6 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
 		Headers: responseHeaders,
 	}, nil
-}
-
-// CallOneway implements transport.OnewayOutbound#Call.
-func (o *Outbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
-		return nil, err
-	}
-	// pass in dummy responseBody so code doesn't complain
-	// probably safer than doing nil check in codec
-	var responseBody []byte
-	if err := o.invoke(ctx, request, &responseBody, nil); err != nil {
-		return nil, err
-	}
-	return time.Now(), nil
 }
 
 func (o *Outbound) invoke(

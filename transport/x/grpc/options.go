@@ -20,10 +20,7 @@
 
 package grpc
 
-import (
-	"github.com/opentracing/opentracing-go"
-	"google.golang.org/grpc/grpclog"
-)
+import "github.com/opentracing/opentracing-go"
 
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
@@ -38,15 +35,6 @@ func WithInboundTracer(tracer opentracing.Tracer) InboundOption {
 	}
 }
 
-// WithInboundOnewayErrorHandler specifiec the error handler to use for an inbound.
-//
-// The default is to call grpclog.Print(err).
-func WithInboundOnewayErrorHandler(onewayErrorHandler func(error)) InboundOption {
-	return func(inboundOptions *inboundOptions) {
-		inboundOptions.onewayErrorHandler = onewayErrorHandler
-	}
-}
-
 // WithOutboundTracer specifies the tracer to use for an outbound.
 func WithOutboundTracer(tracer opentracing.Tracer) OutboundOption {
 	return func(outboundOptions *outboundOptions) {
@@ -55,8 +43,7 @@ func WithOutboundTracer(tracer opentracing.Tracer) OutboundOption {
 }
 
 type inboundOptions struct {
-	tracer             opentracing.Tracer
-	onewayErrorHandler func(error)
+	tracer opentracing.Tracer
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
@@ -72,13 +59,6 @@ func (i *inboundOptions) getTracer() opentracing.Tracer {
 		return opentracing.GlobalTracer()
 	}
 	return i.tracer
-}
-
-func (i *inboundOptions) getOnewayErrorHandler() func(error) {
-	if i.onewayErrorHandler == nil {
-		return defaultOnewayErrorHandler
-	}
-	return i.onewayErrorHandler
 }
 
 type outboundOptions struct {
@@ -98,10 +78,4 @@ func (o *outboundOptions) getTracer() opentracing.Tracer {
 		return opentracing.GlobalTracer()
 	}
 	return o.tracer
-}
-
-func defaultOnewayErrorHandler(err error) {
-	if err != nil {
-		grpclog.Print(err)
-	}
 }

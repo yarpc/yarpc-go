@@ -37,11 +37,10 @@ import (
 )
 
 type handler struct {
-	yarpcServiceName   string
-	grpcServiceName    string
-	grpcMethodName     string
-	router             transport.Router
-	onewayErrorHandler func(error)
+	yarpcServiceName string
+	grpcServiceName  string
+	grpcMethodName   string
+	router           transport.Router
 }
 
 func newHandler(
@@ -49,14 +48,12 @@ func newHandler(
 	grpcServiceName string,
 	grpcMethodName string,
 	router transport.Router,
-	onewayErrorHandler func(error),
 ) *handler {
 	return &handler{
 		yarpcServiceName,
 		grpcServiceName,
 		grpcMethodName,
 		router,
-		onewayErrorHandler,
 	}
 }
 
@@ -140,8 +137,6 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request)
 	switch handlerSpec.Type() {
 	case transport.Unary:
 		return h.callUnary(ctx, transportRequest, handlerSpec.Unary())
-	case transport.Oneway:
-		return nil, h.callOneway(ctx, transportRequest, handlerSpec.Oneway())
 	default:
 		return nil, errors.UnsupportedTypeError{"grpc", handlerSpec.Type().String()}
 	}
@@ -158,19 +153,4 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	err = multierr.Append(err, grpc.SendHeader(ctx, responseWriter.md))
 	data := responseWriter.Bytes()
 	return &data, err
-}
-
-func (h *handler) callOneway(ctx context.Context, transportRequest *transport.Request, onewayHandler transport.OnewayHandler) error {
-	go func() {
-		// TODO: http propagates this on a span
-		// TODO: spinning up a new goroutine for every request
-		// is potentially a memory leak
-		// TODO: have to use context.Background() because context is cancelled in crossdock
-		// other transport implementation seem to create their own context for calls, need to understand better
-		// This will not propagate opentracing, for example
-		// Right now just letting context propagation test fail
-		// https://github.com/yarpc/yarpc-go/issues/904
-		h.onewayErrorHandler(transport.DispatchOnewayHandler(context.Background(), onewayHandler, transportRequest))
-	}()
-	return nil
 }
