@@ -113,7 +113,7 @@ type TransportConfig struct {
 	// the Cherami Frontend will be discovered automatically.
 	//
 	// 	address: 127.0.0.1:4922
-	Address string `config:"address"`
+	Address string `config:"address,interpolate"`
 
 	// Path to a JSON file containing the TChannel peer list used to
 	// auto-discover Cherami Frontend machines. This may be skipped if a
@@ -121,7 +121,7 @@ type TransportConfig struct {
 	// Address was provided.
 	//
 	// 	peerList: /etc/hosts.json
-	PeerList string `config:"peerList"`
+	PeerList string `config:"peerList,interpolate"`
 
 	// Timeout for requests to the Cherami service. The default timeout should
 	// suffice for most use cases.
@@ -135,7 +135,7 @@ type TransportConfig struct {
 	// 	deploymentStr: dev
 	//
 	// Defaults to "prod".
-	DeploymentStr string `config:"deploymentStr"`
+	DeploymentStr string `config:"deploymentStr,interpolate"`
 }
 
 // Parses the IP address and port from the given address.
@@ -207,13 +207,13 @@ type InboundConfig struct {
 	//
 	// If unspecified, the destination "/${service}/yarpc_dest" will be used
 	// where ${service} is the name of your YARPC service.
-	Destination string `config:"destination"`
+	Destination string `config:"destination,interpolate"`
 
 	// Name of the consumer group used to read RPCs from Cherami.
 	//
 	// If unspecified, the consumer group "/${service}/yarpc_cg" will be used
 	// where ${service} is the name of your YARPC service.
-	ConsumerGroup string `config:"consumerGroup"`
+	ConsumerGroup string `config:"consumerGroup,interpolate"`
 
 	// Number of requests to buffer locally. If requests are short-lived,
 	// setting this to a higher value may improve throughput at the cost of
@@ -251,7 +251,7 @@ type OutboundConfig struct {
 	//
 	// If unspecified, the destination "/${service}/yarpc_dest" will be used
 	// where ${service} is the name of the destination service.
-	Destination string `config:"destination"`
+	Destination string `config:"destination,interpolate"`
 }
 
 func (ts *transportSpec) buildOnewayOutbound(
