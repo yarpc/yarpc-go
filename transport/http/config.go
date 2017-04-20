@@ -106,7 +106,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (tra
 // 	    address: ":80"
 type InboundConfig struct {
 	// Address to listen on. This field is required.
-	Address string `config:"address"`
+	Address string `config:"address,interpolate"`
 }
 
 func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
@@ -135,7 +135,7 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 type OutboundConfig struct {
 	// URL to which requests will be sent for this outbound. This field is
 	// required.
-	URL string `config:"url"`
+	URL string `config:"url,interpolate"`
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (*Outbound, error) {
