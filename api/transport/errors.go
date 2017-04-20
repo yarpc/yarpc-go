@@ -49,3 +49,17 @@ func IsTimeoutError(err error) bool {
 	_, ok := err.(errors.TimeoutError)
 	return ok
 }
+
+// UnrecognizedProcedureError returns an error for the given request,
+// such that IsUnrecognizedProcedureError can distinguish it from other errors
+// coming out of router.Choose.
+func UnrecognizedProcedureError(req *Request) error {
+	return errors.RouterUnrecognizedProcedureError(req.Service, req.Procedure)
+}
+
+// IsUnrecognizedProcedureError returns true for errors returned by
+// Router.Choose if the router cannot find a handler for the request.
+func IsUnrecognizedProcedureError(err error) bool {
+	_, ok := err.(errors.UnrecognizedProcedureError)
+	return ok
+}

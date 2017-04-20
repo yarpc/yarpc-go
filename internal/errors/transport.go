@@ -92,22 +92,6 @@ func AsHandlerError(service, procedure string, err error) error {
 	}
 }
 
-// UnrecognizedProcedureError is a failure to process a request because the
-// procedure and/or service name was unrecognized.
-type UnrecognizedProcedureError struct {
-	Service   string
-	Procedure string
-}
-
-func (e UnrecognizedProcedureError) Error() string {
-	return fmt.Sprintf(`unrecognized procedure %q for service %q`, e.Procedure, e.Service)
-}
-
-// AsHandlerError for UnrecognizedProcedureError.
-func (e UnrecognizedProcedureError) AsHandlerError() HandlerError {
-	return HandlerBadRequestError(e)
-}
-
 // ProcedureFailedError is a failure to execute a procedure due to an
 // unexpected error.
 type ProcedureFailedError struct {

@@ -25,7 +25,6 @@ import (
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 )
 
 var (
@@ -84,7 +83,8 @@ func (m MapRouter) Procedures() []transport.Procedure {
 }
 
 // Choose retrives the HandlerSpec for the service and procedure noted on the
-// transport request, or returns an error.
+// transport request, or returns an unrecognized procedure error (testable with
+// transport.IsUnrecognizedProcedureError(err)).
 func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transport.HandlerSpec, error) {
 	service, procedure := req.Service, req.Procedure
 	if service == "" {
@@ -99,10 +99,7 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 		return procedure.HandlerSpec, nil
 	}
 
-	return transport.HandlerSpec{}, errors.UnrecognizedProcedureError{
-		Service:   service,
-		Procedure: procedure,
-	}
+	return transport.HandlerSpec{}, transport.UnrecognizedProcedureError(req)
 }
 
 type proceduresByServiceProcedure []transport.Procedure

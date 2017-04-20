@@ -15,6 +15,8 @@ v1.8.0 (unreleased)
     Thrift package documentation for more details.
 -   Fixed a bug where the TChannel inbound would not write the response headers
     if the response body was empty.
+-   Adds support for the `UnrecognizedProcedureError` error and error checker,
+    indicating that the router was unable to find a handler for the request.
 
 
 v1.7.1 (2017-03-29)
