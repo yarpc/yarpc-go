@@ -28,8 +28,8 @@ import (
 // TransportConfig configures a shared TChannel transport. This is shared
 // between all TChannel outbounds and inbounds of a Dispatcher.
 type TransportConfig struct {
-	Address string `config:"address"`
-	Service string `config:"service"`
+	Address string `config:"address,interpolate"`
+	Service string `config:"service,interpolate"`
 }
 
 // InboundConfig configures a TChannel inbound.
@@ -37,7 +37,7 @@ type InboundConfig struct{}
 
 // OutboundConfig configures a TChannel outbound.
 type OutboundConfig struct {
-	Address string `config:"address"`
+	Address string `config:"address,interpolate"`
 }
 
 // TransportSpec returns a TransportSpec for the TChannel unary transport. See
