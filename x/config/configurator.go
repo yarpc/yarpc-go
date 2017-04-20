@@ -52,7 +52,7 @@ type Configurator struct {
 // against it using the RegisterTransport, RegisterChooser, and RegisterBinder
 // functions.
 func New(opts ...Option) *Configurator {
-	c := Configurator{
+	c := &Configurator{
 		knownTransports: make(map[string]*compiledTransportSpec),
 		knownChoosers:   make(map[string]*compiledChooserSpec),
 		knownBinders:    make(map[string]*compiledBinderSpec),
@@ -60,10 +60,10 @@ func New(opts ...Option) *Configurator {
 	}
 
 	for _, opt := range opts {
-		opt(&c)
+		opt(c)
 	}
 
-	return &c
+	return c
 }
 
 // RegisterTransport registers a TransportSpec with the given Configurator. An
