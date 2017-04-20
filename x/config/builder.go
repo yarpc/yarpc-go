@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/interpolate"
 
 	"go.uber.org/multierr"
 )
@@ -56,15 +57,19 @@ type builder struct {
 	transports map[string]*buildable
 	inbounds   []buildableInbound
 	clients    map[string]*buildableOutbounds
+
+	// Used to resolve interpolated variables.
+	resolver interpolate.VariableResolver
 }
 
-func newBuilder(name string, kit *Kit) *builder {
+func newBuilder(name string, kit *Kit, resolver interpolate.VariableResolver) *builder {
 	return &builder{
 		Name:           name,
 		kit:            kit,
 		needTransports: make(map[string]*compiledTransportSpec),
 		transports:     make(map[string]*buildable),
 		clients:        make(map[string]*buildableOutbounds),
+		resolver:       resolver,
 	}
 }
 
@@ -81,7 +86,7 @@ func (b *builder) Build() (yarpc.Config, error) {
 		var err error
 		if !ok {
 			// No configuration provided for the transport. Use an empty map.
-			cv, err = spec.Transport.Decode(attributeMap{})
+			cv, err = spec.Transport.Decode(attributeMap{}, interpolateWith(b.resolver))
 			if err != nil {
 				return yarpc.Config{}, err
 			}
@@ -176,7 +181,7 @@ func buildOnewayOutbound(cv *buildable, t transport.Transport, k *Kit) (transpor
 }
 
 func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs attributeMap) error {
-	cv, err := spec.Transport.Decode(attrs)
+	cv, err := spec.Transport.Decode(attrs, interpolateWith(b.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode transport configuration: %v", err)
 	}
@@ -191,7 +196,7 @@ func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeM
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.Inbound.Decode(attrs)
+	cv, err := spec.Inbound.Decode(attrs, interpolateWith(b.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode inbound configuration: %v", err)
 	}
@@ -238,7 +243,7 @@ func (b *builder) AddUnaryOutbound(
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.UnaryOutbound.Decode(attrs)
+	cv, err := spec.UnaryOutbound.Decode(attrs, interpolateWith(b.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode unary outbound configuration: %v", err)
 	}
@@ -261,7 +266,7 @@ func (b *builder) AddOnewayOutbound(
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.OnewayOutbound.Decode(attrs)
+	cv, err := spec.OnewayOutbound.Decode(attrs, interpolateWith(b.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode oneway outbound configuration: %v", err)
 	}

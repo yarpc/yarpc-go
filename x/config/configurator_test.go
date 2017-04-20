@@ -21,7 +21,6 @@
 package config
 
 import (
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -40,18 +39,6 @@ func TestConfiguratorRegisterTransportMissingName(t *testing.T) {
 	err := New().RegisterTransport(TransportSpec{})
 	require.Error(t, err, "expected failure")
 	assert.Contains(t, err.Error(), "name is required")
-}
-
-func setenv(t *testing.T, key, value string) (restore func()) {
-	oldValue, ok := os.LookupEnv(key)
-	require.NoError(t, os.Setenv(key, value))
-	return func() {
-		if ok {
-			os.Setenv(key, oldValue)
-		} else {
-			os.Unsetenv(key)
-		}
-	}
 }
 
 func TestConfigurator(t *testing.T) {
@@ -1099,12 +1086,7 @@ func TestConfigurator(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			tt := tc.test(t, mockCtrl)
-			cfg := New()
-
-			for key, value := range tt.env {
-				restore := setenv(t, key, value)
-				defer restore()
-			}
+			cfg := New(InterpolationResolver(mapVariableResolver(tt.env)))
 
 			if tt.specs != nil {
 				for _, spec := range tt.specs {

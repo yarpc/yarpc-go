@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/interpolate"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -185,13 +187,8 @@ func TestInterpolateHook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			for key, value := range tt.env {
-				restore := setenv(t, key, value)
-				defer restore()
-			}
-
 			var dest someStruct
-			err := decodeInto(&dest, tt.give)
+			err := decodeInto(&dest, tt.give, interpolateWith(mapVariableResolver(tt.env)))
 
 			if len(tt.wantErrors) > 0 {
 				require.Error(t, err)
@@ -204,5 +201,12 @@ func TestInterpolateHook(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, dest)
 		})
+	}
+}
+
+func mapVariableResolver(m map[string]string) interpolate.VariableResolver {
+	return func(name string) (value string, ok bool) {
+		value, ok = m[name]
+		return
 	}
 }
