@@ -31,19 +31,19 @@ import (
 // TransportConfig configures the shared Redis transport. This is shared
 // between all Redis outbounds and inbounds of a Dispatcher.
 type TransportConfig struct {
-	Address string `config:"address"`
+	Address string `config:"address,interpolate"`
 }
 
 // InboundConfig configures a Redis oneway inbound.
 type InboundConfig struct {
-	QueueKey      string        `config:"queueKey"`
-	ProcessingKey string        `config:"processingKey"`
+	QueueKey      string        `config:"queueKey,interpolate"`
+	ProcessingKey string        `config:"processingKey,interpolate"`
 	Timeout       time.Duration `config:"timeout"`
 }
 
 // OutboundConfig configures a Redis oneway outbound.
 type OutboundConfig struct {
-	QueueKey string `config:"queueKey"`
+	QueueKey string `config:"queueKey,interpolate"`
 }
 
 // TransportSpec returns a TransportSpec for the Redis oneway transport. See
