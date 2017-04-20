@@ -26,9 +26,11 @@ import (
 	"reflect"
 	"strings"
 
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/mapdecode"
+
+	"go.uber.org/multierr"
 )
 
 // TransportSpec specifies the configuration parameters for a transport. These
@@ -122,13 +124,15 @@ import (
 // 	myinbound:
 // 	  peer: foo
 //
-// Environment Variables
+// Runtime Variables
 //
 // In addition to specifying the field name, the `config` tag may also include
-// an `interpolate` option to request interpolation from environment variables
-// present in the provided value at decode time. This option may be applied to
-// primitive types (strings, integers, booleans, floats, and time.Duration)
-// only.
+// an `interpolate` option to request interpolation of variables in the form
+// ${NAME} or ${NAME:default} at the time the value is decoded. By default,
+// environment variables are used to fill the variables; this may be changed
+// with the InterpolationResolver option. The `interpolate` option may be
+// applied to primitive types (strings, integers, booleans, floats, and
+// time.Duration) only.
 //
 // For example in,
 //
@@ -576,9 +580,9 @@ type configSpec struct {
 }
 
 // Decode the configuration for this type from the data map.
-func (cs *configSpec) Decode(attrs attributeMap) (*buildable, error) {
+func (cs *configSpec) Decode(attrs attributeMap, opts ...mapdecode.Option) (*buildable, error) {
 	inputConfig := reflect.New(cs.inputType)
-	if err := attrs.Decode(inputConfig.Interface()); err != nil {
+	if err := attrs.Decode(inputConfig.Interface(), opts...); err != nil {
 		return nil, fmt.Errorf("failed to decode %v: %v", cs.inputType, err)
 	}
 	return &buildable{factory: cs.factory, inputData: inputConfig.Elem()}, nil
@@ -587,8 +591,6 @@ func (cs *configSpec) Decode(attrs attributeMap) (*buildable, error) {
 // A fully configured object that can be built into an
 // Inbound/Outbound/Transport.
 type buildable struct {
-	// TODO: maybe rename to buildable?
-
 	// Decoded configuration data. This is a value of the same type as the
 	// factory function's input argument.
 	inputData reflect.Value

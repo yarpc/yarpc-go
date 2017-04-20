@@ -60,8 +60,8 @@ func (m attributeMap) Get(name string, dst interface{}) (ok bool, err error) {
 	return true, err
 }
 
-func (m attributeMap) Decode(dst interface{}) error {
-	return decodeInto(dst, m)
+func (m attributeMap) Decode(dst interface{}, opts ...mapdecode.Option) error {
+	return decodeInto(dst, m, opts...)
 }
 
 type yarpcConfig struct {

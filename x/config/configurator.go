@@ -25,8 +25,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/interpolate"
 
 	"go.uber.org/multierr"
 	"gopkg.in/yaml.v2"
@@ -41,6 +43,7 @@ type Configurator struct {
 	knownTransports map[string]*compiledTransportSpec
 	knownChoosers   map[string]*compiledChooserSpec
 	knownBinders    map[string]*compiledBinderSpec
+	resolver        interpolate.VariableResolver
 }
 
 // New sets up a new empty Configurator. The returned Configurator does not
@@ -48,12 +51,19 @@ type Configurator struct {
 // Individual TransportSpecs, ChooserSpecs, and BinderSpecs must be registered
 // against it using the RegisterTransport, RegisterChooser, and RegisterBinder
 // functions.
-func New() *Configurator {
-	return &Configurator{
+func New(opts ...Option) *Configurator {
+	c := &Configurator{
 		knownTransports: make(map[string]*compiledTransportSpec),
 		knownChoosers:   make(map[string]*compiledChooserSpec),
 		knownBinders:    make(map[string]*compiledBinderSpec),
+		resolver:        os.LookupEnv,
 	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
 }
 
 // RegisterTransport registers a TransportSpec with the given Configurator. An
@@ -195,7 +205,7 @@ func (c *Configurator) NewDispatcher(serviceName string, data interface{}) (*yar
 }
 
 func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Config, err error) {
-	b := newBuilder(serviceName, &Kit{name: serviceName, c: c})
+	b := newBuilder(serviceName, &Kit{name: serviceName, c: c}, c.resolver)
 
 	for _, inbound := range cfg.Inbounds {
 		if e := c.loadInboundInto(b, inbound); e != nil {

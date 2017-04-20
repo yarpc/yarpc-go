@@ -22,7 +22,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 
@@ -35,46 +34,47 @@ const (
 	_interpolateOption = "interpolate"
 )
 
-func decodeInto(dst, src interface{}) error {
-	return mapdecode.Decode(dst, src,
-		mapdecode.TagName(_tagName),
-		mapdecode.FieldHook(interpolateHook))
+func decodeInto(dst interface{}, src interface{}, opts ...mapdecode.Option) error {
+	opts = append(opts, mapdecode.TagName(_tagName))
+	return mapdecode.Decode(dst, src, opts...)
 }
 
-func interpolateHook(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error) {
-	shouldInterpolate := false
+func interpolateWith(resolver interpolate.VariableResolver) mapdecode.Option {
+	return mapdecode.FieldHook(func(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error) {
+		shouldInterpolate := false
 
-	options := strings.Split(to.Tag.Get(_tagName), ",")[1:]
-	for _, option := range options {
-		if option == _interpolateOption {
-			shouldInterpolate = true
-			break
+		options := strings.Split(to.Tag.Get(_tagName), ",")[1:]
+		for _, option := range options {
+			if option == _interpolateOption {
+				shouldInterpolate = true
+				break
+			}
 		}
-	}
 
-	if !shouldInterpolate {
-		return data, nil
-	}
+		if !shouldInterpolate {
+			return data, nil
+		}
 
-	// Use Interface().(string) so that we handle the case where data is an
-	// interface{} holding a string.
-	v, ok := data.Interface().(string)
-	if !ok {
-		// Cannot interpolate non-string type. This shouldn't be an error
-		// because an integer field may be marked as interpolatable and may
-		// have received an integer as expected.
-		return data, nil
-	}
+		// Use Interface().(string) so that we handle the case where data is an
+		// interface{} holding a string.
+		v, ok := data.Interface().(string)
+		if !ok {
+			// Cannot interpolate non-string type. This shouldn't be an error
+			// because an integer field may be marked as interpolatable and may
+			// have received an integer as expected.
+			return data, nil
+		}
 
-	s, err := interpolate.Parse(v)
-	if err != nil {
-		return data, fmt.Errorf("failed to parse %q for interpolation: %v", v, err)
-	}
+		s, err := interpolate.Parse(v)
+		if err != nil {
+			return data, fmt.Errorf("failed to parse %q for interpolation: %v", v, err)
+		}
 
-	newV, err := s.Render(os.LookupEnv)
-	if err != nil {
-		return data, fmt.Errorf("failed to render %q with environment variables: %v", v, err)
-	}
+		newV, err := s.Render(resolver)
+		if err != nil {
+			return data, fmt.Errorf("failed to render %q with environment variables: %v", v, err)
+		}
 
-	return reflect.ValueOf(newV), nil
+		return reflect.ValueOf(newV), nil
+	})
 }
