@@ -31,16 +31,29 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 )
 
+type FakeTransportOption func(*FakeTransport)
+
+func FakeTransportAddress(addr string) FakeTransportOption {
+	return func(t *FakeTransport) {
+		t.Address = addr
+	}
+}
+
 // NewFakeTransport returns a fake transport.
-func NewFakeTransport() *FakeTransport {
-	return &FakeTransport{
+func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
+	t := &FakeTransport{
 		Lifecycle: intsync.NewNopLifecycle(),
 	}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 // FakeTransport is a fake transport.
 type FakeTransport struct {
 	transport.Lifecycle
+	address string
 }
 
 // RetainPeer returns a fake peer.
