@@ -20,10 +20,6 @@
 
 package yarpctest
 
-// This file provides fake implementations of most YARPC building blocks for
-// the purpose of testing configuration using custom transports, choosers, and
-// binders..
-
 import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -64,30 +60,4 @@ func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer
 // ReleasePeer does nothing.
 func (t *FakeTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
 	return nil
-}
-
-// FakePeer is a fake peer with an identifier.
-type FakePeer struct {
-	id hostport.PeerIdentifier
-}
-
-// Identifier returns the fake peer identifier.
-func (p *FakePeer) Identifier() string {
-	return string(p.id)
-}
-
-// Status returns the fake peer status.
-func (p *FakePeer) Status() peer.Status {
-	return peer.Status{
-		ConnectionStatus:    peer.Available,
-		PendingRequestCount: 0,
-	}
-}
-
-// StartRequest does nothing.
-func (p *FakePeer) StartRequest() {
-}
-
-// EndRequest does nothing.
-func (p *FakePeer) EndRequest() {
 }
