@@ -1,0 +1,7 @@
+#!/usr/bin/env yaml
+service: service
+procedure: Service::procedure
+peer: 127.0.0.1:4040
+thrift: service/service.thrift
+request:
+    argument: Hello, World!
