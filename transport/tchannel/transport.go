@@ -74,13 +74,17 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 	// 	return nil, errChannelOrServiceNameIsRequired
 	// }
 
+	return config.newTransport(), nil
+}
+
+func (config transportConfig) newTransport() *Transport {
 	return &Transport{
 		once:   intsync.Once(),
 		name:   config.name,
 		addr:   config.addr,
 		tracer: config.tracer,
 		peers:  make(map[string]*hostport.Peer),
-	}, nil
+	}
 }
 
 // ListenAddr exposes the listen address of the transport.
