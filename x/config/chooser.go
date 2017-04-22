@@ -60,7 +60,6 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 
 	// Special case for single-peer outbounds.
 	if c.Peer != "" {
-
 		if len(c.Etc) > 0 {
 			return nil, fmt.Errorf("unrecognized attributes in peer list config: %+v", c.Etc)
 		}
@@ -126,11 +125,9 @@ func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier,
 	}
 
 	if len(peers) > 0 {
-
 		if len(c) > 0 {
 			return nil, fmt.Errorf("unrecognized attributes in peer list config: %+v", c)
 		}
-
 		return peerbind.BindPeers(identifyAll(identify, peers)), nil
 	}
 
