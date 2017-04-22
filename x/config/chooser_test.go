@@ -32,8 +32,10 @@ import (
 	"go.uber.org/yarpc/peer/x/peerheap"
 	"go.uber.org/yarpc/peer/x/roundrobin"
 	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/yarpctest"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -337,6 +339,41 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "tchannel transport",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							tchannel:
+								peer: 127.0.0.1:4040
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*tchannel.Outbound)
+				require.True(t, ok, "unary outbound must be TChannel outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, 1, len(transports), "must have one transport")
+
+				transport, ok := transports[0].(*tchannel.Transport)
+				require.True(t, ok, "must be an TChannel transport")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.Single)
+				require.True(t, ok, "unary chooser must be a single peer chooser")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = transport
+				_ = chooser
+			},
+		},
+		{
 			desc: "invalid peer list",
 			given: whitespace.Expand(`
 				outbounds:
@@ -438,6 +475,11 @@ func TestChooserConfigurator(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			configer := yarpctest.NewFakeConfigurator()
+			configer.MustRegisterTransport(http.TransportSpec())
+			configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
+			configer.MustRegisterPeerList(peerheap.Spec())
+			configer.MustRegisterPeerList(roundrobin.Spec())
+
 			config, err := configer.LoadConfigFromYAML("fake-service", strings.NewReader(tt.given))
 			if err != nil {
 				if len(tt.wantErr) > 0 {

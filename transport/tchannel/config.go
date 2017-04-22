@@ -21,8 +21,13 @@
 package tchannel
 
 import (
+	"fmt"
+
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 const transportName = "tchannel"
@@ -49,37 +54,73 @@ type InboundConfig struct{}
 // 	outbounds:
 // 	  myservice:
 // 	    tchannel:
-// 	      address: 127.0.0.1:4040
+// 	      peer: 127.0.0.1:4040
 type OutboundConfig struct {
-	Address string `config:"address,interpolate"`
+	config.PeerList
 }
 
-// TransportSpec returns a TransportSpec for the TChannel unary transport. See
-// TransportConfig, InboundConfig, and OutboundConfig for details on the
-// various supported configuration parameters.
-func TransportSpec() config.TransportSpec {
+// TransportSpec returns a TransportSpec for the TChannel unary transport.
+func TransportSpec(opts ...Option) config.TransportSpec {
+	return (&transportSpec{}).Spec(opts...)
+}
+
+// transportSpec holds the configurable parts of the TChannel TransportSpec.
+//
+// These are usually runtime dependencies that cannot be parsed from
+// configuration.
+type transportSpec struct {
+	transportOptions []TransportOption
+}
+
+func (ts *transportSpec) Spec(opts ...Option) config.TransportSpec {
+	// Collect transport options
+	for _, o := range opts {
+		switch opt := o.(type) {
+		case TransportOption:
+			ts.transportOptions = append(ts.transportOptions, opt)
+		default:
+			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
+		}
+	}
+
 	return config.TransportSpec{
 		Name:               transportName,
-		BuildTransport:     buildTransport,
-		BuildInbound:       buildInbound,
-		BuildUnaryOutbound: buildUnaryOutbound,
+		BuildTransport:     ts.buildTransport,
+		BuildInbound:       ts.buildInbound,
+		BuildUnaryOutbound: ts.buildUnaryOutbound,
 	}
 }
 
-func buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
-	opts := []TransportOption{ServiceName(k.ServiceName())}
+func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
+	var config transportConfig
+	// Default configuration.
+	config.tracer = opentracing.GlobalTracer()
+	config.name = k.ServiceName()
+
+	// Apply the spec's transport options.
+	for _, opt := range ts.transportOptions {
+		opt(&config)
+	}
+
+	// Override options with configuration.
 	if tc.Address != "" {
-		opts = append(opts, ListenAddr(tc.Address))
+		config.addr = tc.Address
 	}
-	return NewTransport(opts...)
+
+	return config.newTransport(), nil
 }
 
-func buildInbound(_ *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
+func (ts *transportSpec) buildInbound(_ *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
 	return t.(*Transport).NewInbound(), nil
 }
 
-func buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
-	return t.(*Transport).NewSingleOutbound(oc.Address), nil
+func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
+	x := t.(*Transport)
+	chooser, err := oc.PeerList.BuildPeerList(x, hostport.Identify, k)
+	if err != nil {
+		return nil, err
+	}
+	return x.NewOutbound(chooser), nil
 }
 
 // TODO: Document configuration parameters

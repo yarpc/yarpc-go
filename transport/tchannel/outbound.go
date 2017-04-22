@@ -65,6 +65,11 @@ func (t *Transport) NewSingleOutbound(addr string) *Outbound {
 	return t.NewOutbound(chooser)
 }
 
+// Chooser returns the outbound's peer chooser.
+func (o *Outbound) Chooser() peer.Chooser {
+	return o.chooser
+}
+
 // Call sends an RPC over this TChannel outbound.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if err := o.transport.once.WhenRunning(ctx); err != nil {
