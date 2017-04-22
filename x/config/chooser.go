@@ -34,20 +34,28 @@ import (
 // least-pending or round-robin) with a peer list binder (like static peers or
 // dynamic peers from DNS or watching a file in a particular format).
 type PeerList struct {
-	peerListConfig
+	peerList
 }
 
-// peerListConfig is the private representation of PeerList that captures
+// peerList is the private representation of PeerList that captures
 // decoded configuration without revealing it on the public type.
-type peerListConfig struct {
+type peerList struct {
 	Peer string       `config:"peer,interpolate"`
 	Etc  attributeMap `config:",squash"`
+}
+
+// Empty returns whether the peer list configuration is empty.
+// This is a facility for the HTTP transport specifically since it can infer
+// the configuration for the single-peer case from its "url" attribute.
+func (pc PeerList) Empty() bool {
+	c := pc.peerList
+	return c.Peer == "" && len(c.Etc) == 0
 }
 
 // BuildPeerList translates a chooser configuration into a peer chooser, backed
 // by a peer list bound to a peer list binder.
 func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
-	c := pc.peerListConfig
+	c := pc.peerList
 	// Establish a peer selection strategy.
 
 	// Special case for single-peer outbounds.
@@ -102,7 +110,7 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 	)
 }
 
-func (c peerListConfig) names() (names []string) {
+func (c peerList) names() (names []string) {
 	for name := range c.Etc {
 		names = append(names, name)
 	}
