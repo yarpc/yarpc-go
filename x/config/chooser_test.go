@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/x/peerheap"
 	"go.uber.org/yarpc/peer/x/roundrobin"
+	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/stretchr/testify/assert"
@@ -262,6 +263,77 @@ func TestChooserConfigurator(t *testing.T) {
 				list, ok := chooser.ChooserList().(*peerheap.List)
 				require.True(t, ok, "use peer heap")
 				_ = list
+			},
+		},
+		{
+			desc: "HTTP single peer implied by URL",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							http:
+								url: "https://127.0.0.1/rpc"
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*http.Outbound)
+				require.True(t, ok, "unary outbound must be HTTP outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, 1, len(transports), "must have one transport")
+
+				transport, ok := transports[0].(*http.Transport)
+				require.True(t, ok, "must be an HTTP transport")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.Single)
+				require.True(t, ok, "unary chooser must be a single peer chooser")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = transport
+				_ = chooser
+			},
+		},
+		{
+			desc: "HTTP",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							http:
+								url: "https://service.example.com/rpc"
+								peer: "127.0.0.1"
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*http.Outbound)
+				require.True(t, ok, "unary outbound must be HTTP outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, 1, len(transports), "must have one transport")
+
+				transport, ok := transports[0].(*http.Transport)
+				require.True(t, ok, "must be an HTTP transport")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.Single)
+				require.True(t, ok, "unary chooser must be a single peer chooser")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = transport
+				_ = chooser
 			},
 		},
 		{

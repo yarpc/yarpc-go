@@ -147,6 +147,11 @@ func (o *Outbound) Transports() []transport.Transport {
 	return []transport.Transport{o.transport}
 }
 
+// Chooser returns the outbound's peer chooser.
+func (o *Outbound) Chooser() peer.Chooser {
+	return o.chooser
+}
+
 // Start the HTTP outbound
 func (o *Outbound) Start() error {
 	return o.once.Start(o.chooser.Start)
