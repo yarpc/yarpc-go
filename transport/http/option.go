@@ -20,7 +20,7 @@
 
 package http
 
-// Option allows customizing YARPC HTTP transport. Any InboundOption,
+// Option allows customizing the YARPC HTTP transport. Any InboundOption,
 // OutboundOption, or TransportOption is a valid Option.
 type Option interface {
 	httpOption()
