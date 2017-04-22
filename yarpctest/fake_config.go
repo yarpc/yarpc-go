@@ -24,9 +24,6 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/peer/x/peerheap"
-	"go.uber.org/yarpc/peer/x/roundrobin"
-	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/x/config"
 )
 
@@ -111,15 +108,12 @@ func FakePeerListUpdaterSpec() config.PeerListUpdaterSpec {
 }
 
 // NewFakeConfigurator returns a configurator with fake-transport,
-// fake-peer-list, fake-peer-list-updater, round-robin, and least-pending specs
-// already registered, suitable for testing the configurator.
+// fake-peer-list, and fake-peer-list-updater specs already registered,
+// suitable for testing the configurator.
 func NewFakeConfigurator() *config.Configurator {
 	configurator := config.New()
 	configurator.MustRegisterTransport(FakeTransportSpec())
-	configurator.MustRegisterTransport(http.TransportSpec())
 	configurator.MustRegisterPeerList(FakePeerListSpec())
-	configurator.MustRegisterPeerList(peerheap.Spec())
-	configurator.MustRegisterPeerList(roundrobin.Spec())
 	configurator.MustRegisterPeerListUpdater(FakePeerListUpdaterSpec())
 	return configurator
 }

@@ -65,15 +65,24 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 		} else {
 			opts := tchannel.ChannelOptions{Tracer: config.tracer}
 			ch, err = tchannel.NewChannel(config.name, &opts)
+			config.ch = ch
 		}
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
+	return config.newChannelTransport(), nil
+}
+
+func (config transportConfig) newChannelTransport() *ChannelTransport {
 	return &ChannelTransport{
 		once:   sync.Once(),
-		ch:     ch,
+		ch:     config.ch,
 		addr:   config.addr,
 		tracer: config.tracer,
-	}, err
+	}
 }
 
 // ChannelTransport maintains TChannel peers and creates inbounds and outbounds for
