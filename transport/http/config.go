@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
 )
 
@@ -118,28 +119,61 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 
 // OutboundConfig configures an HTTP outbound.
 //
-// 	outbounds:
-// 	  keyvalueservice:
-// 	    http:
-// 	      url: "http://127.0.0.1:80/"
+//  outbounds:
+//    keyvalueservice:
+//      http:
+//        url: "http://127.0.0.1:80/"
 //
 // The HTTP outbound supports both, Unary and Oneway transport types. To use
 // it for only one of these, nest the section inside a "unary" or "onewy"
 // section.
 //
-// 	outbounds:
-// 	  keyvalueservice:
-// 	    unary:
-// 	      http:
-// 	        url: "http://127.0.0.1:80/"
+//  outbounds:
+//    keyvalueservice:
+//      unary:
+//        http:
+//          url: "http://127.0.0.1:80/"
+//
+// An HTTP outbound can also configure a peer list.
+// In this case, there can still be a "url" and it serves as a template for the
+// HTTP client, expressing whether to use "http:" or "https:" and what path to
+// use. The address gets replaced with peers from the peer list.
+//
+//  outbounds:
+//    keyvalueservice:
+//      unary:
+//        http:
+//          url: "https://address/rpc"
+//          round-robin:
+//            peers:
+//              - 127.0.0.1:8080
+//              - 127.0.0.1:8081
 type OutboundConfig struct {
+	config.PeerList
+
 	// URL to which requests will be sent for this outbound. This field is
 	// required.
 	URL string `config:"url,interpolate"`
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (*Outbound, error) {
-	return t.(*Transport).NewSingleOutbound(oc.URL, ts.OutboundOptions...), nil
+	x := t.(*Transport)
+
+	// Special case where the URL implies the single peer.
+	if oc.Empty() {
+		return x.NewSingleOutbound(oc.URL), nil
+	}
+
+	chooser, err := oc.PeerList.BuildPeerList(x, hostport.Identify, k)
+	if err != nil {
+		return nil, fmt.Errorf("cannot configure peer chooser for HTTP outbound: %v", err)
+	}
+
+	opts := ts.OutboundOptions
+	if oc.URL != "" {
+		opts = append(opts, URLTemplate(oc.URL))
+	}
+	return x.NewOutbound(chooser, opts...), nil
 }
 
 func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
