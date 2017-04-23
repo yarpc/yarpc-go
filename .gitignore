@@ -3,6 +3,7 @@
 *.so
 *.exe
 *.prof
+/.git
 /.glide
 /cover
 /cover.html
