@@ -530,7 +530,7 @@ func compilePeerListUpdaterSpec(spec *PeerListUpdaterSpec) (*compiledPeerListUpd
 		return nil, errors.New("BuildPeerListUpdater is required")
 	}
 
-	buildPeerListUpdater, err := compilePeerListUpdaterConfig(spec.BuildPeerListUpdater)
+	buildPeerListUpdater, err := compilePeerListUpdaterConfig(spec.Name, spec.BuildPeerListUpdater)
 	if err != nil {
 		return nil, err
 	}
@@ -539,7 +539,7 @@ func compilePeerListUpdaterSpec(spec *PeerListUpdaterSpec) (*compiledPeerListUpd
 	return &out, nil
 }
 
-func compilePeerListUpdaterConfig(build interface{}) (*configSpec, error) {
+func compilePeerListUpdaterConfig(name string, build interface{}) (*configSpec, error) {
 	v := reflect.ValueOf(build)
 	t := v.Type()
 
@@ -551,8 +551,6 @@ func compilePeerListUpdaterConfig(build interface{}) (*configSpec, error) {
 		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
 	case !isDecodable(t.In(0)):
 		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
-	// TODO additionally, the peer list updater config struct must have a field
-	// with the name of the peer list updater.
 	case t.In(1) != _typeOfKit:
 		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
 	case t.NumOut() != 2:

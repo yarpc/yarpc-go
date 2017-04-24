@@ -1,0 +1,387 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+package config_test
+
+import (
+	"context"
+	"strings"
+	"testing"
+	"time"
+
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/whitespace"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/x/peerheap"
+	"go.uber.org/yarpc/peer/x/roundrobin"
+	"go.uber.org/yarpc/yarpctest"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestChooserConfigurator(t *testing.T) {
+	tests := []struct {
+		desc    string
+		given   string
+		wantErr []string
+		test    func(*testing.T, yarpc.Config)
+	}{
+		{
+			desc: "single static peer",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								peer: 127.0.0.1:8080
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+				assert.Equal(t, "*.*", unary.NopOption(), "must have configured pattern")
+
+				transports := unary.Transports()
+				require.Equal(t, 1, len(transports), "must have one transport")
+
+				transport, ok := transports[0].(*yarpctest.FakeTransport)
+				require.True(t, ok, "must be a fake transport")
+				assert.Equal(t, ":1234", transport.NopOption(), "transport configured")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.Single)
+				require.True(t, ok, "unary chooser must be a single peer chooser")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = chooser
+			},
+		},
+		{
+			desc: "multiple static peers",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								fake-list:
+									peers:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, len(transports), 1, "must have one transport")
+
+				transport, ok := transports[0].(*yarpctest.FakeTransport)
+				require.True(t, ok, "must be a fake transport")
+				assert.Equal(t, transport.NopOption(), ":1234", "transport configured")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.BoundChooser)
+				require.True(t, ok, "unary chooser must be a bound chooser")
+
+				updater, ok := chooser.Updater().(*peer.PeersUpdater)
+				require.True(t, ok, "updater is a static peer list updater")
+
+				list, ok := chooser.ChooserList().(*yarpctest.FakePeerList)
+				require.True(t, ok, "list is a fake peer list")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = updater
+				_ = list
+			},
+		},
+		{
+			desc: "using a peer list updater plugin",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								fake-list:
+									fake-updater: fake-news
+									watch: true
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, len(transports), 1, "must have one transport")
+
+				transport, ok := transports[0].(*yarpctest.FakeTransport)
+				require.True(t, ok, "must be a fake transport")
+				assert.Equal(t, transport.NopOption(), ":1234", "transport configured")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.BoundChooser)
+				require.True(t, ok, "unary chooser must be a bound chooser")
+
+				updater, ok := chooser.Updater().(*yarpctest.FakePeerListUpdater)
+				require.True(t, ok, "updater is a peer list updater")
+				assert.True(t, updater.Watch(), "peer list updater configured to watch")
+
+				list, ok := chooser.ChooserList().(*yarpctest.FakePeerList)
+				require.True(t, ok, "list is a fake peer list")
+				_ = list
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+			},
+		},
+		{
+			desc: "use static peers with round robin and exercise choose",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								round-robin:
+									peers:
+									- 127.0.0.1:8080
+									- 127.0.0.1:8081
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound := c.Outbounds["their-service"]
+				unary := outbound.Unary.(*yarpctest.FakeOutbound)
+				transport := unary.Transports()[0].(*yarpctest.FakeTransport)
+				chooser := unary.Chooser().(*peer.BoundChooser)
+				binder := chooser.Updater()
+				list, ok := chooser.ChooserList().(*roundrobin.List)
+				require.True(t, ok, "chooser least pending")
+				_ = list
+
+				// Attempt to choose a peer
+				dispatcher := yarpc.NewDispatcher(c)
+				require.NoError(t, dispatcher.Start(), "error starting dispatcher")
+				defer func() {
+					require.NoError(t, dispatcher.Stop(), "error stopping dispatcher")
+				}()
+
+				// TODO https://github.com/yarpc/yarpc-go/issues/968
+				//require.True(t, dispatcher.IsRunning(), "dispatcher is running")
+				require.True(t, transport.IsRunning(), "transport is running")
+				require.True(t, unary.IsRunning(), "outbound is running")
+				require.True(t, list.IsRunning(), "chooser is running")
+				require.True(t, binder.IsRunning(), "binder is running")
+
+				ctx := context.Background()
+				ctx, cancel := context.WithTimeout(ctx, time.Second)
+				defer cancel()
+				peer, onFinish, err := chooser.Choose(ctx, nil)
+				require.NoError(t, err, "error choosing peer")
+				defer onFinish(nil)
+
+				assert.Equal(t, peer.Identifier(), "127.0.0.1:8080", "chooses first peer")
+			},
+		},
+		{
+			desc: "use round-robin chooser",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								round-robin:
+									fake-updater: fake-news
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound := c.Outbounds["their-service"]
+				unary := outbound.Unary.(*yarpctest.FakeOutbound)
+				chooser := unary.Chooser().(*peer.BoundChooser)
+				list, ok := chooser.ChooserList().(*roundrobin.List)
+				require.True(t, ok, "use round robin")
+				_ = list
+			},
+		},
+		{
+			desc: "use least-pending chooser",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								least-pending:
+									fake-updater: fake-news
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound := c.Outbounds["their-service"]
+				unary := outbound.Unary.(*yarpctest.FakeOutbound)
+				chooser := unary.Chooser().(*peer.BoundChooser)
+				list, ok := chooser.ChooserList().(*peerheap.List)
+				require.True(t, ok, "use peer heap")
+				_ = list
+			},
+		},
+		{
+			desc: "invalid peer list",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								bogus-list:
+									fake-updater: fake-news
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`no recognized peer list in config: got bogus-list; need one of fake-list, least-pending, round-robin`,
+			},
+		},
+		{
+			desc: "invalid peer list updater",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-list:
+									bogus-updater: 10
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`no recognized peer list updater in config`,
+			},
+		},
+		{
+			desc: "extraneous config in combination with single peer",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								peer: a
+								conspicuously: present
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`unrecognized attributes in peer list config: `,
+				`conspicuously`,
+				`present`,
+			},
+		},
+		{
+			desc: "extraneous config in combination with multiple peers",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-list:
+									peers:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
+									conspicuously: present
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`unrecognized attributes in peer list config: `,
+				`conspicuously`,
+				`present`,
+			},
+		},
+		{
+			desc: "extraneous config in combination with custom updater",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-list:
+									fake-updater: fake-news
+									watch: true
+									conspicuously: present
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`conspicuously`,
+			},
+		},
+		{
+			desc: "missing peer list config",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport: {}
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`no recognized peer list in config: `,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			configer := yarpctest.NewFakeConfigurator()
+			config, err := configer.LoadConfigFromYAML("fake-service", strings.NewReader(tt.given))
+			if err != nil {
+				if len(tt.wantErr) > 0 {
+					// Check for every required error substring
+					for _, wantErr := range tt.wantErr {
+						require.Contains(t, err.Error(), wantErr, "expected error")
+					}
+				} else {
+					require.NoError(t, err, "error loading config")
+				}
+			} else if len(tt.wantErr) > 0 {
+				require.Error(t, err, "expected error")
+			}
+			if tt.test != nil {
+				tt.test(t, config)
+			}
+		})
+	}
+}

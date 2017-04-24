@@ -18,49 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package peerheap
 
 import (
-	"reflect"
-	"sort"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/x/config"
 )
 
-// Kit carries internal dependencies for building peer lists.
-// The kit gets threaded through transport, outbound, and inbound builders
-// so they can thread the kit through functions like BuildPeerList on a
-// PeerListConfig.
-type Kit struct {
-	c *Configurator
-
-	name string
-}
-
-// ServiceName returns the name of the service for which components are being
-// built.
-func (k *Kit) ServiceName() string { return k.name }
-
-var _typeOfKit = reflect.TypeOf((*Kit)(nil))
-
-func (k *Kit) peerListSpec(name string) *compiledPeerListSpec {
-	return k.c.knownPeerLists[name]
-}
-
-func (k *Kit) peerListSpecNames() (names []string) {
-	for name := range k.c.knownPeerLists {
-		names = append(names, name)
+// Spec returns a configuration specification for the least-pending peer heap
+// peer chooser implementation, making it possible to select the least pending
+// peer with transports that use outbound peer list configuration (like HTTP).
+//
+//  cfg := config.New()
+//  cfg.MustRegisterPeerList(peerheap.Spec())
+//
+// This enables the least-pending peer list:
+//
+//  outbounds:
+//    otherservice:
+//      unary:
+//        http:
+//          url: https://host:port/rpc
+//          least-pending:
+//            peers:
+//              - 127.0.0.1:8080
+//              - 127.0.0.1:8081
+func Spec() config.PeerListSpec {
+	return config.PeerListSpec{
+		Name: "least-pending",
+		BuildPeerList: func(c struct{}, t peer.Transport, k *config.Kit) (peer.ChooserList, error) {
+			return New(t), nil
+		},
 	}
-	sort.Strings(names)
-	return
-}
-
-func (k *Kit) peerListUpdaterSpec(name string) *compiledPeerListUpdaterSpec {
-	return k.c.knownPeerListUpdaters[name]
-}
-
-func (k *Kit) peerListUpdaterSpecNames() (names []string) {
-	for name := range k.c.knownPeerListUpdaters {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return
 }
