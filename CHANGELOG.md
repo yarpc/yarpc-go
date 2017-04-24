@@ -17,6 +17,10 @@ v1.8.0 (unreleased)
     if the response body was empty.
 -   Adds support for the `UnrecognizedProcedureError` error and error checker,
     indicating that the router was unable to find a handler for the request.
+-   `peer.Bind` returns a `*peer.BoundChooser`.  The `BoundChooser` type is now
+    public.
+-   `peer.BindPeers` returns a `*peer.PeersUpdater`.  The `PeersUpdater` type
+    is now public.
 
 
 v1.7.1 (2017-03-29)
@@ -42,7 +46,7 @@ v1.7.0 (2017-03-20)
     capturing the lifecycle of its dependencies.
 -   Adds a peer.ChooserList interface to the API, for convenience when passing
     instances with both capabilities (suitable for outbounds, suitable for peer
-    providers).
+    list updaters).
 
 
 v1.6.0 (2017-03-08)
@@ -341,7 +345,7 @@ v1.0.0-rc3 (2016-12-09)
     strings are not `peer.Chooser` instances.
 
     This version introduces support for peer choosers, peer lists, and peer
-    providers for HTTP outbounds. This is made possible by the above
+    list updaters for HTTP outbounds. This is made possible by the above
     change that introduces a concrete instance of a Transport for each
     protocol, which deduplicates peer instances across all inbounds and
     outbounds, making connection sharing and load balancing possible,
