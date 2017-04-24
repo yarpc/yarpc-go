@@ -40,23 +40,23 @@ import (
 // the different transports and their configuration parameters using the
 // RegisterTransport function.
 type Configurator struct {
-	knownTransports map[string]*compiledTransportSpec
-	knownChoosers   map[string]*compiledChooserSpec
-	knownBinders    map[string]*compiledBinderSpec
-	resolver        interpolate.VariableResolver
+	knownTransports       map[string]*compiledTransportSpec
+	knownPeerLists        map[string]*compiledPeerListSpec
+	knownPeerListUpdaters map[string]*compiledPeerListUpdaterSpec
+	resolver              interpolate.VariableResolver
 }
 
 // New sets up a new empty Configurator. The returned Configurator does not
-// know about any Transports, peer Chooser lists, or peer list Binders.
-// Individual TransportSpecs, ChooserSpecs, and BinderSpecs must be registered
-// against it using the RegisterTransport, RegisterChooser, and RegisterBinder
+// know about any Transports, peer lists, or peer list updaters.
+// Individual TransportSpecs, PeerListSpecs, and PeerListUpdaterSpecs must be registered
+// against it using the RegisterTransport, RegisterPeerList, and RegisterPeerListUpdater
 // functions.
 func New(opts ...Option) *Configurator {
 	c := &Configurator{
-		knownTransports: make(map[string]*compiledTransportSpec),
-		knownChoosers:   make(map[string]*compiledChooserSpec),
-		knownBinders:    make(map[string]*compiledBinderSpec),
-		resolver:        os.LookupEnv,
+		knownTransports:       make(map[string]*compiledTransportSpec),
+		knownPeerLists:        make(map[string]*compiledPeerListSpec),
+		knownPeerListUpdaters: make(map[string]*compiledPeerListUpdaterSpec),
+		resolver:              os.LookupEnv,
 	}
 
 	for _, opt := range opts {
@@ -97,61 +97,63 @@ func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 	}
 }
 
-// RegisterChooser registers a ChooserSpec with the given Configurator. Returns
-// an error if the ChooserSpec is invalid.
+// RegisterPeerList registers a PeerListSpec with the given Configurator. Returns
+// an error if the PeerListSpec is invalid.
 //
 // If a chooser with the same name already exists, it will be replaced.
 //
-// Use MustRegisterChooser to panic in the case of registration failure.
-func (c *Configurator) RegisterChooser(s ChooserSpec) error {
+// Use MustRegisterPeerList to panic in the case of registration failure.
+func (c *Configurator) RegisterPeerList(s PeerListSpec) error {
 	if s.Name == "" {
 		return errors.New("name is required")
 	}
 
-	spec, err := compileChooserSpec(&s)
+	spec, err := compilePeerListSpec(&s)
 	if err != nil {
-		return fmt.Errorf("invalid ChooserSpec for %q: %v", s.Name, err)
+		return fmt.Errorf("invalid PeerListSpec for %q: %v", s.Name, err)
 	}
 
-	c.knownChoosers[s.Name] = spec
+	c.knownPeerLists[s.Name] = spec
 	return nil
 }
 
-// MustRegisterChooser registers the given ChooserSpec with the Configurator.
-// This function panics if the ChooserSpec is invalid.
-func (c *Configurator) MustRegisterChooser(s ChooserSpec) {
-	if err := c.RegisterChooser(s); err != nil {
+// MustRegisterPeerList registers the given PeerListSpec with the Configurator.
+// This function panics if the PeerListSpec is invalid.
+func (c *Configurator) MustRegisterPeerList(s PeerListSpec) {
+	if err := c.RegisterPeerList(s); err != nil {
 		panic(err)
 	}
 }
 
-// RegisterBinder registers a BinderSpec with the given Configurator. Returns
-// an error if the BinderSpec is invalid.
+// RegisterPeerListUpdater registers a PeerListUpdaterSpec with the given
+// Configurator.
+// Returns an error if the PeerListUpdaterSpec is invalid.
 //
 // A binder enables custom peer list bindings, like DNS with SRV + A records or
 // a task list file watcher.
 //
 // If a binder with the same name already exists, it will be replaced.
 //
-// Use MustRegisterBinder to panic if the registration fails.
-func (c *Configurator) RegisterBinder(s BinderSpec) error {
+// Use MustRegisterPeerListUpdater to panic if the registration fails.
+func (c *Configurator) RegisterPeerListUpdater(s PeerListUpdaterSpec) error {
 	if s.Name == "" {
 		return errors.New("name is required")
 	}
 
-	spec, err := compileBinderSpec(&s)
+	spec, err := compilePeerListUpdaterSpec(&s)
 	if err != nil {
-		return fmt.Errorf("invalid BinderSpec for %q: %v", s.Name, err)
+		return fmt.Errorf("invalid PeerListUpdaterSpec for %q: %v", s.Name, err)
 	}
 
-	c.knownBinders[s.Name] = spec
+	c.knownPeerListUpdaters[s.Name] = spec
 	return nil
 }
 
-// MustRegisterBinder registers the given BinderSpec with the Configurator.
-// This function panics if the BinderSpec is invalid.
-func (c *Configurator) MustRegisterBinder(s BinderSpec) {
-	if err := c.RegisterBinder(s); err != nil {
+// MustRegisterPeerListUpdater registers the given PeerListUpdaterSpec with the
+// Configurator.
+// This function panics if the PeerListUpdaterSpec is invalid.
+func (c *Configurator) MustRegisterPeerListUpdater(s PeerListUpdaterSpec) {
+	if err := c.RegisterPeerListUpdater(s); err != nil {
 		panic(err)
 	}
 }

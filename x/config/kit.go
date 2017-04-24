@@ -22,10 +22,10 @@ package config
 
 import "reflect"
 
-// Kit carries internal dependencies for building peer choosers.
+// Kit carries internal dependencies for building peer lists.
 // The kit gets threaded through transport, outbound, and inbound builders
-// so they can thread the kit through functions like BuildChooser on a
-// ChooserConfig.
+// so they can thread the kit through functions like BuildPeerList on a
+// PeerListConfig.
 type Kit struct {
 	c *Configurator
 
@@ -38,10 +38,10 @@ func (k *Kit) ServiceName() string { return k.name }
 
 var _typeOfKit = reflect.TypeOf((*Kit)(nil))
 
-func (k *Kit) binder(name string) *compiledBinderSpec {
-	return k.c.knownBinders[name]
+func (k *Kit) peerListSpec(name string) *compiledPeerListSpec {
+	return k.c.knownPeerLists[name]
 }
 
-func (k *Kit) chooser(name string) *compiledChooserSpec {
-	return k.c.knownChoosers[name]
+func (k *Kit) peerListUpdaterSpec(name string) *compiledPeerListUpdaterSpec {
+	return k.c.knownPeerListUpdaters[name]
 }
