@@ -91,7 +91,7 @@ import (
 // Configuration structs can use standard Go primitive types, time.Duration,
 // maps, slices, and other similar structs. For example only, an outbound might
 // accept a config containing an array of host:port structs (In practice, an
-// outbound would use a ChooserConfig to build a peer.Chooser).
+// outbound would use a PeerListConfig to build a peer.ChooserList).
 //
 // 	type Peer struct {
 // 		Host string
@@ -217,7 +217,7 @@ type TransportSpec struct {
 	// the first thing inside their BuildInbound.
 }
 
-// ChooserSpec specifies the configuration parameters for an outbound peer
+// PeerListSpec specifies the configuration parameters for an outbound peer
 // chooser (load balancer or sharding). These specifications are registered
 // against a Configurator to teach it how to parse the configuration for that
 // peer chooser and build instances of it.
@@ -232,7 +232,7 @@ type TransportSpec struct {
 //    with: dns-srv
 //    choose: random
 //    service: fortune.yarpc.io
-type ChooserSpec struct {
+type PeerListSpec struct {
 	Name string
 
 	// A function in the shape,
@@ -242,16 +242,16 @@ type ChooserSpec struct {
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters accepted by this peer chooser.
 	//
-	// BuildChooser is required.
-	BuildChooser interface{}
+	// BuildPeerList is required.
+	BuildPeerList interface{}
 }
 
-// BinderSpec specifies the configuration parameters for an outbound peer
+// PeerListUpdaterSpec specifies the configuration parameters for an outbound peer
 // binding (like DNS). These specifications are registered against a
 // Configurator to teach it how to parse the configuration for that peer binder
 // and build instances of it.
 //
-// Every BinderSpec MUST have a BuildBinder function.
+// Every PeerListUpdaterSpec MUST have a BuildPeerListUpdater function.
 //
 // For example, if we register a "dns-srv" peer list binder and a "random" peer
 // chooser, we can use "with: dns-srv" and "choose: random" to select a random
@@ -263,7 +263,7 @@ type ChooserSpec struct {
 //    with: dns-srv
 //    choose: random
 //    service: fortune.yarpc.io
-type BinderSpec struct {
+type PeerListUpdaterSpec struct {
 	// Name of the peer selection strategy
 	Name string
 
@@ -280,10 +280,10 @@ type BinderSpec struct {
 	// For example, the HTTP and TChannel outbound configurations embed a peer
 	// chooser configuration. Peer choosers support a single peer or arrays of
 	// peers.  Using the "with" property, an outbound can use an alternate peer
-	// chooser registered by name on a YARPC Configurator using a ChooserSpec.
+	// chooser registered by name on a YARPC Configurator using a PeerListSpec.
 	//
-	// BuildBinder is required.
-	BuildBinder interface{}
+	// BuildPeerListUpdater is required.
+	BuildPeerListUpdater interface{}
 }
 
 var (
@@ -292,7 +292,8 @@ var (
 	_typeOfInbound        = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
 	_typeOfUnaryOutbound  = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
 	_typeOfOnewayOutbound = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
-	_typeOfChooser        = reflect.TypeOf((*peer.ChooserList)(nil)).Elem()
+	_typeOfPeerTransport  = reflect.TypeOf((*peer.Transport)(nil)).Elem()
+	_typeOfPeerList       = reflect.TypeOf((*peer.ChooserList)(nil)).Elem()
 	_typeOfBinder         = reflect.TypeOf((*peer.Binder)(nil)).Elem()
 )
 
@@ -456,33 +457,33 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	return nil
 }
 
-// Compiled internal representation of a user-specified ChooserSpec.
-type compiledChooserSpec struct {
-	Name    string
-	Chooser *configSpec
+// Compiled internal representation of a user-specified PeerListSpec.
+type compiledPeerListSpec struct {
+	Name     string
+	PeerList *configSpec
 }
 
-func compileChooserSpec(spec *ChooserSpec) (*compiledChooserSpec, error) {
-	out := compiledChooserSpec{Name: spec.Name}
+func compilePeerListSpec(spec *PeerListSpec) (*compiledPeerListSpec, error) {
+	out := compiledPeerListSpec{Name: spec.Name}
 
 	if spec.Name == "" {
 		return nil, errors.New("Name is required")
 	}
 
-	if spec.BuildChooser == nil {
-		return nil, errors.New("BuildChooser is required")
+	if spec.BuildPeerList == nil {
+		return nil, errors.New("BuildPeerList is required")
 	}
 
-	buildChooser, err := compileChooserConfig(spec.BuildChooser)
+	buildPeerList, err := compilePeerListConfig(spec.BuildPeerList)
 	if err != nil {
 		return nil, err
 	}
-	out.Chooser = buildChooser
+	out.PeerList = buildPeerList
 
 	return &out, nil
 }
 
-func compileChooserConfig(build interface{}) (*configSpec, error) {
+func compilePeerListConfig(build interface{}) (*configSpec, error) {
 	v := reflect.ValueOf(build)
 	t := v.Type()
 
@@ -490,53 +491,55 @@ func compileChooserConfig(build interface{}) (*configSpec, error) {
 	switch {
 	case t.Kind() != reflect.Func:
 		err = errors.New("must be a function")
-	case t.NumIn() != 2:
-		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case t.NumIn() != 3:
+		err = fmt.Errorf("must accept exactly three arguments, found %v", t.NumIn())
 	case !isDecodable(t.In(0)):
 		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
-	case t.In(1) != _typeOfKit:
-		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
+	case t.In(1) != _typeOfPeerTransport:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfPeerTransport, t.In(1))
+	case t.In(2) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its third argument, found %v", _typeOfKit, t.In(2))
 	case t.NumOut() != 2:
 		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
-	case t.Out(0) != _typeOfChooser:
+	case t.Out(0) != _typeOfPeerList:
 		err = fmt.Errorf("must return a peer.ChooserList as its first result, found %v", t.Out(0))
 	case t.Out(1) != _typeOfError:
 		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("invalid BuildChooser %v: %v", t, err)
+		return nil, fmt.Errorf("invalid BuildPeerList %v: %v", t, err)
 	}
 
 	return &configSpec{inputType: t.In(0), factory: v}, nil
 }
 
-type compiledBinderSpec struct {
-	Name   string
-	Binder *configSpec
+type compiledPeerListUpdaterSpec struct {
+	Name            string
+	PeerListUpdater *configSpec
 }
 
-func compileBinderSpec(spec *BinderSpec) (*compiledBinderSpec, error) {
-	out := compiledBinderSpec{Name: spec.Name}
+func compilePeerListUpdaterSpec(spec *PeerListUpdaterSpec) (*compiledPeerListUpdaterSpec, error) {
+	out := compiledPeerListUpdaterSpec{Name: spec.Name}
 
 	if spec.Name == "" {
 		return nil, errors.New("Name is required")
 	}
 
-	if spec.BuildBinder == nil {
-		return nil, errors.New("BuildBinder is required")
+	if spec.BuildPeerListUpdater == nil {
+		return nil, errors.New("BuildPeerListUpdater is required")
 	}
 
-	buildBinder, err := compileBinderConfig(spec.BuildBinder)
+	buildPeerListUpdater, err := compilePeerListUpdaterConfig(spec.BuildPeerListUpdater)
 	if err != nil {
 		return nil, err
 	}
-	out.Binder = buildBinder
+	out.PeerListUpdater = buildPeerListUpdater
 
 	return &out, nil
 }
 
-func compileBinderConfig(build interface{}) (*configSpec, error) {
+func compilePeerListUpdaterConfig(build interface{}) (*configSpec, error) {
 	v := reflect.ValueOf(build)
 	t := v.Type()
 
@@ -548,6 +551,8 @@ func compileBinderConfig(build interface{}) (*configSpec, error) {
 		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
 	case !isDecodable(t.In(0)):
 		err = fmt.Errorf("must accept a struct or struct pointer as its first argument, found %v", t.In(0))
+	// TODO additionally, the peer list updater config struct must have a field
+	// with the name of the peer list updater.
 	case t.In(1) != _typeOfKit:
 		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
 	case t.NumOut() != 2:
@@ -559,7 +564,7 @@ func compileBinderConfig(build interface{}) (*configSpec, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("invalid BuildBinder %v: %v", t, err)
+		return nil, fmt.Errorf("invalid BuildPeerListUpdater %v: %v", t, err)
 	}
 
 	return &configSpec{inputType: t.In(0), factory: v}, nil
