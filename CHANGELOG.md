@@ -17,12 +17,10 @@ v1.8.0 (unreleased)
     if the response body was empty.
 -   Adds support for the `UnrecognizedProcedureError` error and error checker,
     indicating that the router was unable to find a handler for the request.
--   `peer.Bind` returns a `peer.BoundChooser`. This type is now public for
-    verifying the type of a peer chooser in tests. It also has public
-    `ChooserList` and `Updater` methods for verifying the underlying bound peer
-    list and peer list updater.
--   `peer.BindPeers` returns a `peer.PeersUpdater`. The `PeersUpdater` type
-    is now public for verifying the type of a peer chooser in tests.
+-   `peer.Bind` returns a `*peer.BoundChooser`.  The `BoundChooser` type is now
+    public.
+-   `peer.BindPeers` returns a `*peer.PeersUpdater`.  The `PeersUpdater` type
+    is now public.
 
 
 v1.7.1 (2017-03-29)

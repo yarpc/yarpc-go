@@ -24,21 +24,23 @@
 // The `go.uber.org/yarpc/peer` package tree provides the corresponding
 // implementations.
 //
-// Some transports support the notion of peers.
+// Outbounds for some transports support selecting a different peer from a peer
+// list for each individual request, for example load balancers and for pinning
+// requests to a consistent peer.
 // A peer instance models the host and port of a remote listening socket for a
 // particular transport protocol, like HTTP and TChannel.
 // For example, YARPC might have a TChannel peer instance to track connections
 // to 127.0.0.1:4040.
 //
-// Some transports, like HTTP and TChannel support peer selection on their outbounds.
-// A `peer.Chooser` allows an outbound to obtain a peer for a given context and
-// request, and also manages the lifecycle of all components it needs to do so.
+// Some transports, like HTTP and TChannel support peer selection on their
+// outbounds.  A `peer.Chooser` allows an outbound to obtain a peer for a given
+// request and also manages the lifecycle of all components it uses.
 // A peer chooser is typically also a `peer.List`, thus a `peer.ChooserList`.
 //
 // Peer list updaters send `Update` message to a `peer.List` to add and remove
-// tracked peer identifiers.
+// peers.
 // Peer list updaters have no specific interface, but must in practice
-// implement `transport.Lifecycle` to bound when they start and stop sending
+// implement `transport.Lifecycle` to bookend when they start and stop sending
 // updates.
 // A `peer.Binder` is a function that binds a `peer.List` to a peer list
 // updater and returns the `transport.Lifecycle` of the peer list updater.
