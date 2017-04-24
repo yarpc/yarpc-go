@@ -22,7 +22,6 @@ package mapdecode
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -407,34 +406,6 @@ func TestFieldHook(t *testing.T) {
 	}
 }
 
-// mockFieldHook is a mock to control a function with the signature,
-//
-// 	func(reflect.Type, reflect.StructField, reflect.Value) (reflect.Value, error)
-//
-// Expectations may be set on this function with the Expect function.
-type mockFieldHook struct{ c *gomock.Controller }
-
-func newMockFieldHook(ctrl *gomock.Controller) *mockFieldHook {
-	return &mockFieldHook{c: ctrl}
-}
-
-// Hook returns the FieldHookFunc backed by this mock.
-func (m *mockFieldHook) Hook() FieldHookFunc {
-	return FieldHookFunc(m.Call)
-}
-
-// Expect sets up a call expectation on the hook.
-func (m *mockFieldHook) Expect(from, to, data interface{}) *gomock.Call {
-	return m.c.RecordCall(m, "Call", from, to, data)
-}
-
-func (m *mockFieldHook) Call(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error) {
-	results := m.c.Call(m, "Call", from, to, data)
-	out := results[0].(reflect.Value)
-	err, _ := results[1].(error)
-	return out, err
-}
-
 func ptrToPtrToString(s string) **string {
 	p := &s
 	return &p
@@ -442,42 +413,4 @@ func ptrToPtrToString(s string) **string {
 
 func valueOf(x interface{}) reflect.Value {
 	return reflect.ValueOf(x)
-}
-
-// structField is a gomock.Matcher that matches a StructField with the given
-// parameters.
-type structField struct {
-	Name string
-	Type reflect.Type
-	Tag  string
-}
-
-func (m structField) String() string {
-	return fmt.Sprintf("StructField{Name: %q, Type: %v}", m.Name, m.Type)
-}
-
-func (m structField) Matches(x interface{}) bool {
-	s, ok := x.(reflect.StructField)
-	if !ok {
-		return false
-	}
-
-	return s.Name == m.Name && s.Type == m.Type && string(s.Tag) == m.Tag
-}
-
-// reflectEq is a gomock.Matcher that matches a reflect.Value whose underlying
-// value matches the given value.
-type reflectEq struct{ Value interface{} }
-
-func (m reflectEq) String() string {
-	return fmt.Sprintf("equal to %#v", m.Value)
-}
-
-func (m reflectEq) Matches(x interface{}) bool {
-	v, ok := x.(reflect.Value)
-	if !ok {
-		return false
-	}
-
-	return reflect.DeepEqual(m.Value, v.Interface())
 }
