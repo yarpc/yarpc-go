@@ -538,10 +538,10 @@ func TestCompileOnewayOutboundConfig(t *testing.T) {
 	}
 }
 
-func TestCompileChooserSpec(t *testing.T) {
+func TestCompilePeerListSpec(t *testing.T) {
 	tests := []struct {
 		desc     string
-		spec     ChooserSpec
+		spec     PeerListSpec
 		wantName string
 		wantErr  string
 	}{
@@ -550,77 +550,77 @@ func TestCompileChooserSpec(t *testing.T) {
 			wantErr: "Name is required",
 		},
 		{
-			desc: "missing BuildChooser",
-			spec: ChooserSpec{
+			desc: "missing BuildPeerList",
+			spec: PeerListSpec{
 				Name: "random",
 			},
-			wantErr: "BuildChooser is required",
+			wantErr: "BuildPeerList is required",
 		},
 		{
 			desc: "not a function",
-			spec: ChooserSpec{
-				Name:         "much sadness",
-				BuildChooser: 10,
+			spec: PeerListSpec{
+				Name:          "much sadness",
+				BuildPeerList: 10,
 			},
-			wantErr: "invalid BuildChooser int: must be a function",
+			wantErr: "invalid BuildPeerList int: must be a function",
 		},
 		{
 			desc: "too many arguments",
-			spec: ChooserSpec{
-				Name:         "much sadness",
-				BuildChooser: func(a, b, c int) {},
+			spec: PeerListSpec{
+				Name:          "much sadness",
+				BuildPeerList: func(a, b, c, d int) {},
 			},
-			wantErr: "invalid BuildChooser func(int, int, int): must accept exactly two arguments, found 3",
+			wantErr: "invalid BuildPeerList func(int, int, int, int): must accept exactly three arguments, found 4",
 		},
 		{
 			desc: "wrong kind of first argument",
-			spec: ChooserSpec{
-				Name:         "much sadness",
-				BuildChooser: func(a, b int) {},
+			spec: PeerListSpec{
+				Name:          "much sadness",
+				BuildPeerList: func(a, b, c int) {},
 			},
-			wantErr: "invalid BuildChooser func(int, int): must accept a struct or struct pointer as its first argument, found int",
+			wantErr: "invalid BuildPeerList func(int, int, int): must accept a struct or struct pointer as its first argument, found int",
 		},
 		{
-			desc: "wrong kind of second argument",
-			spec: ChooserSpec{
-				Name:         "much sadness",
-				BuildChooser: func(a struct{}, b int) {},
+			desc: "wrong kind of third argument",
+			spec: PeerListSpec{
+				Name:          "much sadness",
+				BuildPeerList: func(c struct{}, t peer.Transport, k int) {},
 			},
-			wantErr: "invalid BuildChooser func(struct {}, int): must accept a *config.Kit as its second argument, found int",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, int): must accept a *config.Kit as its third argument, found int",
 		},
 		{
 			desc: "wrong number of returns",
-			spec: ChooserSpec{
-				Name:         "much sadness",
-				BuildChooser: func(a struct{}, b *Kit) {},
+			spec: PeerListSpec{
+				Name:          "much sadness",
+				BuildPeerList: func(c struct{}, t peer.Transport, k *Kit) {},
 			},
-			wantErr: "invalid BuildChooser func(struct {}, *config.Kit): must return exactly two results, found 0",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *config.Kit): must return exactly two results, found 0",
 		},
 		{
 			desc: "wrong type of first return",
-			spec: ChooserSpec{
+			spec: PeerListSpec{
 				Name: "much sadness",
-				BuildChooser: func(a struct{}, b *Kit) (int, error) {
+				BuildPeerList: func(c struct{}, t peer.Transport, b *Kit) (int, error) {
 					return 0, nil
 				},
 			},
-			wantErr: "invalid BuildChooser func(struct {}, *config.Kit) (int, error): must return a peer.ChooserList as its first result, found int",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *config.Kit) (int, error): must return a peer.ChooserList as its first result, found int",
 		},
 		{
 			desc: "wrong type of second return",
-			spec: ChooserSpec{
+			spec: PeerListSpec{
 				Name: "much sadness",
-				BuildChooser: func(a struct{}, b *Kit) (peer.ChooserList, int) {
+				BuildPeerList: func(c struct{}, t peer.Transport, k *Kit) (peer.ChooserList, int) {
 					return nil, 0
 				},
 			},
-			wantErr: "invalid BuildChooser func(struct {}, *config.Kit) (peer.ChooserList, int): must return an error as its second result, found int",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *config.Kit) (peer.ChooserList, int): must return an error as its second result, found int",
 		},
 		{
 			desc: "such gladness",
-			spec: ChooserSpec{
+			spec: PeerListSpec{
 				Name: "such gladness",
-				BuildChooser: func(a struct{}, b *Kit) (peer.ChooserList, error) {
+				BuildPeerList: func(c struct{}, t peer.Transport, k *Kit) (peer.ChooserList, error) {
 					return nil, nil
 				},
 			},
@@ -630,7 +630,7 @@ func TestCompileChooserSpec(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			s, err := compileChooserSpec(&tt.spec)
+			s, err := compilePeerListSpec(&tt.spec)
 			if err != nil {
 				assert.Equal(t, tt.wantErr, err.Error(), "expected error")
 			} else {
@@ -640,10 +640,10 @@ func TestCompileChooserSpec(t *testing.T) {
 	}
 }
 
-func TestCompileBinderSpec(t *testing.T) {
+func TestCompilePeerListUpdaterSpec(t *testing.T) {
 	tests := []struct {
 		desc     string
-		spec     BinderSpec
+		spec     PeerListUpdaterSpec
 		wantName string
 		wantErr  string
 	}{
@@ -652,77 +652,77 @@ func TestCompileBinderSpec(t *testing.T) {
 			wantErr: "Name is required",
 		},
 		{
-			desc: "missing BuildBinder",
-			spec: BinderSpec{
+			desc: "missing BuildPeerListUpdater",
+			spec: PeerListUpdaterSpec{
 				Name: "random",
 			},
-			wantErr: "BuildBinder is required",
+			wantErr: "BuildPeerListUpdater is required",
 		},
 		{
 			desc: "not a function",
-			spec: BinderSpec{
-				Name:        "much sadness",
-				BuildBinder: 10,
+			spec: PeerListUpdaterSpec{
+				Name:                 "much sadness",
+				BuildPeerListUpdater: 10,
 			},
-			wantErr: "invalid BuildBinder int: must be a function",
+			wantErr: "invalid BuildPeerListUpdater int: must be a function",
 		},
 		{
 			desc: "too many arguments",
-			spec: BinderSpec{
-				Name:        "much sadness",
-				BuildBinder: func(a, b, c int) {},
+			spec: PeerListUpdaterSpec{
+				Name:                 "much sadness",
+				BuildPeerListUpdater: func(a, b, c int) {},
 			},
-			wantErr: "invalid BuildBinder func(int, int, int): must accept exactly two arguments, found 3",
+			wantErr: "invalid BuildPeerListUpdater func(int, int, int): must accept exactly two arguments, found 3",
 		},
 		{
 			desc: "wrong kind of first argument",
-			spec: BinderSpec{
-				Name:        "much sadness",
-				BuildBinder: func(a, b int) {},
+			spec: PeerListUpdaterSpec{
+				Name:                 "much sadness",
+				BuildPeerListUpdater: func(a, b int) {},
 			},
-			wantErr: "invalid BuildBinder func(int, int): must accept a struct or struct pointer as its first argument, found int",
+			wantErr: "invalid BuildPeerListUpdater func(int, int): must accept a struct or struct pointer as its first argument, found int",
 		},
 		{
 			desc: "wrong kind of second argument",
-			spec: BinderSpec{
-				Name:        "much sadness",
-				BuildBinder: func(a struct{}, b int) {},
+			spec: PeerListUpdaterSpec{
+				Name:                 "much sadness",
+				BuildPeerListUpdater: func(a struct{}, b int) {},
 			},
-			wantErr: "invalid BuildBinder func(struct {}, int): must accept a *config.Kit as its second argument, found int",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, int): must accept a *config.Kit as its second argument, found int",
 		},
 		{
 			desc: "wrong number of returns",
-			spec: BinderSpec{
-				Name:        "much sadness",
-				BuildBinder: func(a struct{}, b *Kit) {},
+			spec: PeerListUpdaterSpec{
+				Name:                 "much sadness",
+				BuildPeerListUpdater: func(a struct{}, b *Kit) {},
 			},
-			wantErr: "invalid BuildBinder func(struct {}, *config.Kit): must return exactly two results, found 0",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, *config.Kit): must return exactly two results, found 0",
 		},
 		{
 			desc: "wrong type of first return",
-			spec: BinderSpec{
+			spec: PeerListUpdaterSpec{
 				Name: "much sadness",
-				BuildBinder: func(a struct{}, b *Kit) (int, error) {
+				BuildPeerListUpdater: func(a struct{}, b *Kit) (int, error) {
 					return 0, nil
 				},
 			},
-			wantErr: "invalid BuildBinder func(struct {}, *config.Kit) (int, error): must return a peer.Binder as its first result, found int",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, *config.Kit) (int, error): must return a peer.Binder as its first result, found int",
 		},
 		{
 			desc: "wrong type of second return",
-			spec: BinderSpec{
+			spec: PeerListUpdaterSpec{
 				Name: "much sadness",
-				BuildBinder: func(a struct{}, b *Kit) (peer.Binder, int) {
+				BuildPeerListUpdater: func(a struct{}, b *Kit) (peer.Binder, int) {
 					return nil, 0
 				},
 			},
-			wantErr: "invalid BuildBinder func(struct {}, *config.Kit) (peer.Binder, int): must return an error as its second result, found int",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, *config.Kit) (peer.Binder, int): must return an error as its second result, found int",
 		},
 		{
 			desc: "such gladness",
-			spec: BinderSpec{
+			spec: PeerListUpdaterSpec{
 				Name: "such gladness",
-				BuildBinder: func(a struct{}, b *Kit) (peer.Binder, error) {
+				BuildPeerListUpdater: func(a struct{}, b *Kit) (peer.Binder, error) {
 					return nil, nil
 				},
 			},
@@ -732,7 +732,7 @@ func TestCompileBinderSpec(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			s, err := compileBinderSpec(&tt.spec)
+			s, err := compilePeerListUpdaterSpec(&tt.spec)
 			if err != nil {
 				assert.Equal(t, tt.wantErr, err.Error(), "expected error")
 			} else {
