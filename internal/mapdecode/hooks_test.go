@@ -64,3 +64,41 @@ func TestMultipleFieldHooks(t *testing.T) {
 
 	assert.Equal(t, 42, dest.Int)
 }
+
+func TestMultipleDecodeHooks(t *testing.T) {
+	type myStruct struct{ String string }
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	hook1 := newMockDecodeHook(mockCtrl)
+	hook2 := newMockDecodeHook(mockCtrl)
+
+	data := map[string]interface{}{"string": "hello world"}
+
+	typeOfMapInterface := reflect.TypeOf(map[string]interface{}{})
+	typeOfMyStruct := reflect.TypeOf(myStruct{})
+	typeOfString := reflect.TypeOf("")
+
+	gomock.InOrder(
+		hook1.
+			Expect(typeOfMapInterface, typeOfMyStruct, reflectEq{data}).
+			Return(valueOf(data), nil),
+		hook2.
+			Expect(typeOfMapInterface, typeOfMyStruct, reflectEq{data}).
+			Return(valueOf(data), nil),
+
+		hook1.
+			Expect(typeOfString, typeOfString, reflectEq{"hello world"}).
+			Return(valueOf("foo bar"), nil),
+		hook2.
+			Expect(typeOfString, typeOfString, reflectEq{"foo bar"}).
+			Return(valueOf("baz qux"), nil),
+	)
+
+	var dest myStruct
+	err := Decode(&dest, data,
+		DecodeHook(hook1.Hook()), DecodeHook(hook2.Hook()))
+	require.NoError(t, err)
+	assert.Equal(t, "baz qux", dest.String)
+}

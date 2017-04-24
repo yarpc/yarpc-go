@@ -41,10 +41,6 @@ var (
 // source data.
 type FieldHookFunc func(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error)
 
-// reflectHook is similar to mapstructure's decode hooks except it operates on
-// the reflected values rather than interface{}.
-type reflectHook func(from, to reflect.Type, data reflect.Value) (reflect.Value, error)
-
 func composeFieldHooks(hooks []FieldHookFunc) FieldHookFunc {
 	return func(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error) {
 		var err error
@@ -61,8 +57,14 @@ func composeFieldHooks(hooks []FieldHookFunc) FieldHookFunc {
 	}
 }
 
-// Builds a mapstructure-compatible hook from a reflectHook.
-func fromReflectHook(hook reflectHook) mapstructure.DecodeHookFuncType {
+// DecodeHookFunc is a hook called before decoding a value into a specific
+// type.
+type DecodeHookFunc func(from, to reflect.Type, data reflect.Value) (reflect.Value, error)
+
+// Note: DecodeHookFunc is a reflect.Value version of DecodeHookFuncType.
+
+// Builds a mapstructure-compatible hook from a DecodeHookFunc.
+func fromDecodeHookFunc(hook DecodeHookFunc) mapstructure.DecodeHookFuncType {
 	return func(from, to reflect.Type, data interface{}) (interface{}, error) {
 		var value reflect.Value
 		if data != nil {
@@ -82,9 +84,9 @@ func fromReflectHook(hook reflectHook) mapstructure.DecodeHookFuncType {
 	}
 }
 
-// Compposes multiple reflectHooks into one. The hooks are applied in-order
+// Composes multiple DecodeHookFuncs into one. The hooks are applied in-order
 // and values produced by a hook are fed into the next hook.
-func composeReflectHooks(hooks ...reflectHook) reflectHook {
+func composeDecodeHooks(hooks []DecodeHookFunc) DecodeHookFunc {
 	return func(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
 		var err error
 		for _, hook := range hooks {
@@ -100,15 +102,13 @@ func composeReflectHooks(hooks ...reflectHook) reflectHook {
 	}
 }
 
-// Wraps a reflectHook to support pointers in either direction (source and
+// Wraps a DecodeHookFunc to support pointers in either direction (source and
 // destination).
-func supportPointers(hook reflectHook) (outputHook reflectHook) {
+func supportPointers(hook DecodeHookFunc) (outputHook DecodeHookFunc) {
 	outputHook = func(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
 		// Get rid of pointers in either direction. This lets us parse **foo if we
 		// know how to parse foo.
 		switch {
-		case from == to:
-			return data, nil
 		case from.Kind() == reflect.Ptr: // *foo => bar
 			// Decoding a pointer type to a non-pointer type. Dereference if
 			// non-nil, use zero-value otherwise.
@@ -143,10 +143,14 @@ func supportPointers(hook reflectHook) (outputHook reflectHook) {
 	return
 }
 
-// Builds a reflectHook which unmarshals types using the given unmarshaling
+// Builds a DecodeHookFunc which unmarshals types using the given unmarshaling
 // scheme. See the unmarshaler type for more information.
-func unmarshalerHook(opts *options) reflectHook {
+func unmarshalerHook(opts *options) DecodeHookFunc {
 	return func(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
+		if from == to {
+			return data, nil
+		}
+
 		if !reflect.PtrTo(to).Implements(opts.Unmarshaler.Interface) {
 			return data, nil
 		}
@@ -164,7 +168,7 @@ func unmarshalerHook(opts *options) reflectHook {
 	}
 }
 
-// A reflectHook which decodes strings into time.Durations.
+// A DecodeHookFunc which decodes strings into time.Durations.
 func durationHook(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
 	if from.Kind() != reflect.String || to != _typeOfDuration {
 		return data, nil
@@ -174,7 +178,7 @@ func durationHook(from, to reflect.Type, data reflect.Value) (reflect.Value, err
 	return reflect.ValueOf(d), err
 }
 
-// stringToPrimitivesHook is a reflectHook which decodes strings into
+// stringToPrimitivesHook is a DecodeHookFunc which decodes strings into
 // primitives.
 //
 // Integers are parsed in base 10.
@@ -203,7 +207,7 @@ func strconvHook(from, to reflect.Type, data reflect.Value) (reflect.Value, erro
 }
 
 // fieldHook applies the user-specified FieldHookFunc to all struct fields.
-func fieldHook(opts *options) reflectHook {
+func fieldHook(opts *options) DecodeHookFunc {
 	hook := composeFieldHooks(opts.FieldHooks)
 	return func(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
 		if to.Kind() != reflect.Struct || from.Kind() != reflect.Map {

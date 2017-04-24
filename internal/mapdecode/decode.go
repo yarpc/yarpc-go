@@ -53,6 +53,7 @@ type options struct {
 	IgnoreUnused bool
 	Unmarshaler  unmarshaler
 	FieldHooks   []FieldHookFunc
+	DecodeHooks  []DecodeHookFunc
 }
 
 // Option customizes the behavior of Decode.
@@ -90,6 +91,21 @@ func IgnoreUnused(ignore bool) Option {
 func FieldHook(f FieldHookFunc) Option {
 	return func(o *options) {
 		o.FieldHooks = append(o.FieldHooks, f)
+	}
+}
+
+// DecodeHook registers a hook to be called before a value is decoded by the
+// system.
+//
+// This hook will be called with information about the target type and the
+// source data that will fill it.
+//
+// Multiple decode hooks may be specified by providing this option multiple
+// times. Hooks are exected in-order, feeding values from one hook to the
+// next.
+func DecodeHook(f DecodeHookFunc) Option {
+	return func(o *options) {
+		o.DecodeHooks = append(o.DecodeHooks, f)
 	}
 }
 
@@ -146,7 +162,7 @@ func Decode(dest, src interface{}, os ...Option) error {
 // the destination.
 func decodeFrom(opts *options, src interface{}) Into {
 	return func(dest interface{}) error {
-		hooks := make([]reflectHook, 0, 5)
+		hooks := opts.DecodeHooks
 
 		// fieldHook goes first because it may replace the source data map.
 		if len(opts.FieldHooks) > 0 {
@@ -165,8 +181,8 @@ func decodeFrom(opts *options, src interface{}) Into {
 		cfg := mapstructure.DecoderConfig{
 			ErrorUnused: !opts.IgnoreUnused,
 			Result:      dest,
-			DecodeHook: fromReflectHook(
-				supportPointers(composeReflectHooks(hooks...)),
+			DecodeHook: fromDecodeHookFunc(
+				supportPointers(composeDecodeHooks(hooks)),
 			),
 			TagName: opts.TagName,
 		}
