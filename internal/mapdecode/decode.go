@@ -52,7 +52,7 @@ type options struct {
 	TagName      string
 	IgnoreUnused bool
 	Unmarshaler  unmarshaler
-	FieldHook    FieldHookFunc
+	FieldHooks   []FieldHookFunc
 }
 
 // Option customizes the behavior of Decode.
@@ -83,9 +83,13 @@ func IgnoreUnused(ignore bool) Option {
 // Field hooks may return a value of the same type as the source data or the
 // same type as the target. Other value decoding hooks will still be executed
 // on this field.
+//
+// Multiple field hooks may be specified by providing this option multiple
+// times. Hooks are exected in-order, feeding values from one hook to the
+// next.
 func FieldHook(f FieldHookFunc) Option {
 	return func(o *options) {
-		o.FieldHook = f
+		o.FieldHooks = append(o.FieldHooks, f)
 	}
 }
 
@@ -145,7 +149,7 @@ func decodeFrom(opts *options, src interface{}) Into {
 		hooks := make([]reflectHook, 0, 5)
 
 		// fieldHook goes first because it may replace the source data map.
-		if opts.FieldHook != nil {
+		if len(opts.FieldHooks) > 0 {
 			hooks = append(hooks, fieldHook(opts))
 		}
 
