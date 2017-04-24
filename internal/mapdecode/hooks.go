@@ -45,6 +45,22 @@ type FieldHookFunc func(from reflect.Type, to reflect.StructField, data reflect.
 // the reflected values rather than interface{}.
 type reflectHook func(from, to reflect.Type, data reflect.Value) (reflect.Value, error)
 
+func composeFieldHooks(hooks []FieldHookFunc) FieldHookFunc {
+	return func(from reflect.Type, to reflect.StructField, data reflect.Value) (reflect.Value, error) {
+		var err error
+		for _, hook := range hooks {
+			data, err = hook(from, to, data)
+			if err != nil {
+				return data, err
+			}
+
+			// Update the `from` type to reflect changes made by the hook.
+			from = data.Type()
+		}
+		return data, err
+	}
+}
+
 // Builds a mapstructure-compatible hook from a reflectHook.
 func fromReflectHook(hook reflectHook) mapstructure.DecodeHookFuncType {
 	return func(from, to reflect.Type, data interface{}) (interface{}, error) {
@@ -188,7 +204,7 @@ func strconvHook(from, to reflect.Type, data reflect.Value) (reflect.Value, erro
 
 // fieldHook applies the user-specified FieldHookFunc to all struct fields.
 func fieldHook(opts *options) reflectHook {
-	hook := opts.FieldHook
+	hook := composeFieldHooks(opts.FieldHooks)
 	return func(from, to reflect.Type, data reflect.Value) (reflect.Value, error) {
 		if to.Kind() != reflect.Struct || from.Kind() != reflect.Map {
 			return data, nil
