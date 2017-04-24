@@ -24,31 +24,34 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/peer/x/peerheap"
+	"go.uber.org/yarpc/peer/x/roundrobin"
 	"go.uber.org/yarpc/x/config"
 )
 
 // FakeTransportConfig configures the FakeTransport.
 type FakeTransportConfig struct {
-	Address string `config:"address"`
+	Nop string `config:"nop"`
 }
 
 func buildFakeTransport(c *FakeTransportConfig, kit *config.Kit) (transport.Transport, error) {
-	return NewFakeTransport(FakeTransportAddress(c.Address)), nil
+	return NewFakeTransport(NopTransportOption(c.Nop)), nil
 }
 
 // FakeOutboundConfig configures the FakeOutbound.
 type FakeOutboundConfig struct {
-	Pattern string                `config:"pattern"`
-	Choose  config.PeerListConfig `config:"choose"`
+	config.PeerList
+
+	Nop string `config:"nop"`
 }
 
 func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config.Kit) (transport.UnaryOutbound, error) {
 	x := t.(*FakeTransport)
-	chooser, err := c.Choose.BuildChooser(x, hostport.Identify, kit)
+	chooser, err := c.PeerList.BuildPeerList(x, hostport.Identify, kit)
 	if err != nil {
 		return nil, err
 	}
-	return x.NewOutbound(chooser, Pattern(c.Pattern)), nil
+	return x.NewOutbound(chooser, NopOutboundOption(c.Nop)), nil
 }
 
 // FakeTransportSpec returns a configurator spec for the fake-transport
@@ -113,6 +116,8 @@ func NewFakeConfigurator() *config.Configurator {
 	configurator := config.New()
 	configurator.MustRegisterTransport(FakeTransportSpec())
 	configurator.MustRegisterPeerList(FakePeerListSpec())
+	configurator.MustRegisterPeerList(peerheap.Spec())
+	configurator.MustRegisterPeerList(roundrobin.Spec())
 	configurator.MustRegisterPeerListUpdater(FakePeerListUpdaterSpec())
 	return configurator
 }
