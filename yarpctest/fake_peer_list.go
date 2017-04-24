@@ -21,51 +21,32 @@
 package yarpctest
 
 import (
+	"context"
+	"fmt"
+
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	intsync "go.uber.org/yarpc/internal/sync"
-	"go.uber.org/yarpc/peer/hostport"
 )
 
-// FakeTransportOption is an option for NewFakeTransport.
-type FakeTransportOption func(*FakeTransport)
-
-// NopTransportOption returns a no-op option for NewFakeTransport.
-// The option exists to verify that options work.
-func NopTransportOption(nopOption string) FakeTransportOption {
-	return func(t *FakeTransport) {
-		t.nopOption = nopOption
-	}
+// FakePeerList is a fake peer list.
+type FakePeerList struct {
+	transport.Lifecycle
 }
 
-// NewFakeTransport returns a fake transport.
-func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
-	t := &FakeTransport{
+// NewFakePeerList returns a fake peer list.
+func NewFakePeerList() *FakePeerList {
+	return &FakePeerList{
 		Lifecycle: intsync.NewNopLifecycle(),
 	}
-	for _, opt := range opts {
-		opt(t)
-	}
-	return t
 }
 
-// FakeTransport is a fake transport.
-type FakeTransport struct {
-	transport.Lifecycle
-	nopOption string
+// Choose pretends to choose a peer, but actually always returns an error. It's fake.
+func (c *FakePeerList) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
+	return nil, nil, fmt.Errorf(`fake peer list can't actually choose peers`)
 }
 
-// NopOption returns the configured nopOption. It's fake.
-func (t *FakeTransport) NopOption() string {
-	return t.nopOption
-}
-
-// RetainPeer returns a fake peer.
-func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return &FakePeer{id: id.(hostport.PeerIdentifier)}, nil
-}
-
-// ReleasePeer does nothing.
-func (t *FakeTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
+// Update pretends to add or remove peers.
+func (c *FakePeerList) Update(up peer.ListUpdates) error {
 	return nil
 }
