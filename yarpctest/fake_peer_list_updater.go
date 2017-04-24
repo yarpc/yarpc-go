@@ -21,51 +21,39 @@
 package yarpctest
 
 import (
-	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	intsync "go.uber.org/yarpc/internal/sync"
-	"go.uber.org/yarpc/peer/hostport"
 )
 
-// FakeTransportOption is an option for NewFakeTransport.
-type FakeTransportOption func(*FakeTransport)
+// FakePeerListUpdaterOption is an option for NewFakePeerListUpdater.
+type FakePeerListUpdaterOption func(*FakePeerListUpdater)
 
-// NopTransportOption returns a no-op option for NewFakeTransport.
-// The option exists to verify that options work.
-func NopTransportOption(nopOption string) FakeTransportOption {
-	return func(t *FakeTransport) {
-		t.nopOption = nopOption
-	}
+// Watch is a fake option for NewFakePeerListUpdater that enables "watch". It's fake.
+func Watch(u *FakePeerListUpdater) {
+	u.watch = true
 }
 
-// NewFakeTransport returns a fake transport.
-func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
-	t := &FakeTransport{
+// FakePeerListUpdater is a fake peer list updater.  It doesn't actually update
+// a peer list.
+type FakePeerListUpdater struct {
+	transport.Lifecycle
+	watch bool
+}
+
+// NewFakePeerListUpdater returns a new FakePeerListUpdater, applying any
+// passed options.
+func NewFakePeerListUpdater(opts ...FakePeerListUpdaterOption) *FakePeerListUpdater {
+	u := &FakePeerListUpdater{
 		Lifecycle: intsync.NewNopLifecycle(),
 	}
 	for _, opt := range opts {
-		opt(t)
+		opt(u)
 	}
-	return t
+	return u
 }
 
-// FakeTransport is a fake transport.
-type FakeTransport struct {
-	transport.Lifecycle
-	nopOption string
-}
-
-// NopOption returns the configured nopOption. It's fake.
-func (t *FakeTransport) NopOption() string {
-	return t.nopOption
-}
-
-// RetainPeer returns a fake peer.
-func (t *FakeTransport) RetainPeer(id peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
-	return &FakePeer{id: id.(hostport.PeerIdentifier)}, nil
-}
-
-// ReleasePeer does nothing.
-func (t *FakeTransport) ReleasePeer(id peer.Identifier, ps peer.Subscriber) error {
-	return nil
+// Watch returns whether the peer list updater was configured to "watch". It is
+// fake.
+func (u *FakePeerListUpdater) Watch() bool {
+	return u.watch
 }
