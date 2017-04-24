@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	internalsync "go.uber.org/yarpc/internal/sync"
@@ -36,6 +37,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
+
+// UserAgent is the User-Agent that will be set for requests.
+// http://www.grpc.io/docs/guides/wire.html#user-agents
+const UserAgent = "yarpc-go/" + yarpc.Version
 
 var _ transport.UnaryOutbound = (*Outbound)(nil)
 
@@ -139,6 +144,7 @@ func (o *Outbound) start() error {
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
 		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.outboundOptions.getTracer())),
+		grpc.WithUserAgent(UserAgent),
 	)
 	if err != nil {
 		return err
