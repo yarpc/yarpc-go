@@ -21,6 +21,8 @@ v1.8.0 (unreleased)
     public.
 -   `peer.BindPeers` returns a `*peer.PeersUpdater`.  The `PeersUpdater` type
     is now public.
+-   Adds an accessor to Dispatcher which provides access to the inbound
+    middleware used by that Dispatcher.
 
 
 v1.7.1 (2017-03-29)
