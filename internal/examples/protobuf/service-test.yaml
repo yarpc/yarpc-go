@@ -1,5 +1,7 @@
+required_env_vars:
+  - TRANSPORT
 run:
-  - command: ./protobuf
+  - command: ./protobuf -outbound $TRANSPORT $GOOGLE_GRPC
     input: |
       get foo
       get foo

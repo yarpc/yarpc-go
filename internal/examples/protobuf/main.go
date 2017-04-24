@@ -134,13 +134,7 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			var err error
-			if *flagGoogleGRPC {
-				_, err = clients.SinkGRPCClient.Fire(ctx, &examplepb.FireRequest{value})
-			} else {
-				_, err = clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value})
-			}
-			if err != nil {
+			if _, err := clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
 				fmt.Printf("fire %s failed: %s\n", value, err.Error())
 			}
 			if err := sinkYarpcServer.WaitFireDone(); err != nil {
