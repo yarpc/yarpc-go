@@ -8,3 +8,4 @@ The vendored mapstructure library is commit
 cc8532a8e9a55ea36402aa21efdf403a60d34096 with the following PRs on top:
 
 -   https://github.com/mitchellh/mapstructure/pull/78
+-   https://github.com/mitchellh/mapstructure/pull/80
