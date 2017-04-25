@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/whitespace"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -74,7 +75,7 @@ func TestConfigurator(t *testing.T) {
 		{
 			desc: "unknown inbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						bar: {}
 				`)
@@ -88,7 +89,7 @@ func TestConfigurator(t *testing.T) {
 		{
 			desc: "unknown implicit outbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						myservice:
 							http: {url: "http://localhost:8080/yarpc"}
@@ -103,7 +104,7 @@ func TestConfigurator(t *testing.T) {
 		{
 			desc: "unknown unary outbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						someservice:
 							unary:
@@ -120,7 +121,7 @@ func TestConfigurator(t *testing.T) {
 		{
 			desc: "unknown oneway outbound",
 			test: func(*testing.T, *gomock.Controller) (tt testCase) {
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						keyvalue:
 							oneway:
@@ -139,7 +140,7 @@ func TestConfigurator(t *testing.T) {
 				type fooTransportConfig struct{ Items []int }
 
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					transports:
 						bar:
 							items: [1, 2, 3]
@@ -162,7 +163,7 @@ func TestConfigurator(t *testing.T) {
 				type transportConfig struct{ KeepAlive time.Duration }
 				type inboundConfig struct{ Address string }
 
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http: {address: ":80"}
 					transports:
@@ -191,7 +192,7 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type inboundConfig struct{ Address string }
 				tt.serviceName = "myservice"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http: {address: ":80"}
 				`)
@@ -225,7 +226,7 @@ func TestConfigurator(t *testing.T) {
 		{
 			desc: "inbounds unsupported",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						outgoing-only:
 							foo: bar
@@ -248,7 +249,7 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type inboundConfig struct{ Address string }
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http:
 							address: ":8080"
@@ -297,7 +298,7 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type inboundConfig struct{ Address string }
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http:
 							disabled: true
@@ -339,7 +340,7 @@ func TestConfigurator(t *testing.T) {
 			desc: "inbound error",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						foo:
 							unexpected: bar
@@ -362,7 +363,7 @@ func TestConfigurator(t *testing.T) {
 		{
 			desc: "implicit outbound no support",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						myservice:
 							sink:
@@ -385,7 +386,7 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Address string }
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						bar:
 							tchannel:
@@ -430,7 +431,7 @@ func TestConfigurator(t *testing.T) {
 				type transportConfig struct{ Address string }
 				type outboundConfig struct{ Queue string }
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						bar:
 							redis:
@@ -480,7 +481,7 @@ func TestConfigurator(t *testing.T) {
 				type transportConfig struct{ KeepAlive time.Duration }
 				type outboundConfig struct{ URL string }
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						baz:
 							http:
@@ -533,7 +534,7 @@ func TestConfigurator(t *testing.T) {
 			desc: "implicit outbound error",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ URL string }
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						qux:
 							http:
@@ -569,7 +570,7 @@ func TestConfigurator(t *testing.T) {
 				)
 
 				tt.serviceName = "myservice"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					transports:
 						http:
 							keepAlive: 5m
@@ -655,7 +656,7 @@ func TestConfigurator(t *testing.T) {
 			desc: "explicit unary error",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ URL string }
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						hello:
 							unary:
@@ -686,7 +687,7 @@ func TestConfigurator(t *testing.T) {
 			desc: "explicit oneway error",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Address string }
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						hello:
 							oneway:
@@ -714,7 +715,7 @@ func TestConfigurator(t *testing.T) {
 			desc: "explicit unary not supported",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Queue string }
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						bar:
 							unary:
@@ -740,7 +741,7 @@ func TestConfigurator(t *testing.T) {
 			desc: "explicit oneway not supported",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Address string }
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						bar:
 							oneway:
@@ -767,7 +768,7 @@ func TestConfigurator(t *testing.T) {
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ URL string }
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					outbounds:
 						bar:
 							http:
@@ -849,7 +850,7 @@ func TestConfigurator(t *testing.T) {
 				}
 
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					transports:
 						redis:
 							serverAddress: ${REDIS_ADDRESS}:${REDIS_PORT}
@@ -898,7 +899,7 @@ func TestConfigurator(t *testing.T) {
 				}
 
 				tt.serviceName = "hi"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http:
 							port: 1${HTTP_PORT}
@@ -937,7 +938,7 @@ func TestConfigurator(t *testing.T) {
 				}
 
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http:
 							port: 80
@@ -975,7 +976,7 @@ func TestConfigurator(t *testing.T) {
 				}
 
 				tt.serviceName = "hi"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http:
 							address: :${HTTP_PORT
@@ -1006,7 +1007,7 @@ func TestConfigurator(t *testing.T) {
 				}
 
 				tt.serviceName = "hi"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http:
 							address: :${HTTP_PORT}
@@ -1037,7 +1038,7 @@ func TestConfigurator(t *testing.T) {
 				}
 
 				tt.serviceName = "foo"
-				tt.give = expand(`
+				tt.give = whitespace.Expand(`
 					inbounds:
 						http:
 							timeout: ${TIMEOUT}
