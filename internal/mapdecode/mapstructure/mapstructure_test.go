@@ -86,6 +86,12 @@ type MapAndStructSquash struct {
 	Bar      string
 }
 
+type MapAndStructSquashInsideStruct struct {
+	MapAndStructSquash `mapstructure:",squash"`
+
+	Baz string
+}
+
 type SquashOnNonStructType struct {
 	InvalidSquashType int `mapstructure:",squash"`
 }
@@ -519,6 +525,41 @@ func TestDecode_EmbeddedMapSquashInsideSquashedStruct(t *testing.T) {
 
 	if result.Bar != "baz" {
 		t.Errorf("Bar should be 'baz': %#v", result.Bar)
+	}
+}
+
+func TestDecode_MapAndStructSquashInsideStruct(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"foo":     "a",
+		"bar":     "b",
+		"baz":     "c",
+		"qux":     "d",
+		"vunique": "e",
+		"vextra":  "f",
+	}
+
+	var result MapAndStructSquashInsideStruct
+	if err := Decode(input, &result); err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	want := MapAndStructSquashInsideStruct{
+		MapAndStructSquash: MapAndStructSquash{
+			EmbeddedSquash: EmbeddedSquash{
+				Basic:   Basic{Vextra: "f"},
+				Vunique: "e",
+			},
+			Foo:      "a",
+			Bar:      "b",
+			MapAlias: map[string]interface{}{"qux": "d"},
+		},
+		Baz: "c",
+	}
+
+	if !reflect.DeepEqual(result, want) {
+		t.Errorf("result did not match: %#v", result)
 	}
 }
 
