@@ -22,7 +22,6 @@ package config
 
 import (
 	"reflect"
-	"strings"
 
 	"github.com/golang/mock/gomock"
 )
@@ -65,22 +64,4 @@ func builderFunc(c *gomock.Controller, o interface{}, name string, argTypes []re
 			return callResults
 		},
 	).Interface()
-}
-
-// converts leading tabs to two spaces, such that YAML accepts the whole block.
-func expand(s string) string {
-	lines := strings.Split(s, "\n")
-	for i, l := range lines {
-		lines[i] = expandLine(l)
-	}
-	return strings.Join(lines, "\n")
-}
-
-func expandLine(l string) string {
-	for i, c := range l {
-		if c != '\t' {
-			return strings.Repeat("  ", i) + l[i:]
-		}
-	}
-	return ""
 }
