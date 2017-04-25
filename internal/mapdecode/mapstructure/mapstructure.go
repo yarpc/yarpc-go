@@ -738,7 +738,7 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 					}
 
 					squashedMapField = &fieldType
-					squashedMapValue = val.Field(i)
+					squashedMapValue = structVal.Field(i)
 				default:
 					errors = appendErrors(errors,
 						fmt.Errorf("%s: unsupported type for squash: %s", fieldType.Name, fieldKind))
