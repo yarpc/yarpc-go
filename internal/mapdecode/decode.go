@@ -180,8 +180,9 @@ func decodeFrom(opts *options, src interface{}) Into {
 		)
 
 		cfg := mapstructure.DecoderConfig{
-			ErrorUnused: !opts.IgnoreUnused,
-			Result:      dest,
+			ErrorUnused:    !opts.IgnoreUnused,
+			Result:         dest,
+			SquashEmbedded: true,
 			DecodeHook: fromDecodeHookFunc(
 				supportPointers(composeDecodeHooks(hooks)),
 			),
