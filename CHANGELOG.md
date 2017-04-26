@@ -4,7 +4,7 @@ Releases
 v1.9.0-dev (unreleased)
 -------------------
 
--   No changes yet.
+-   http: Added support for configuring the HTTP transport using x/config.
 
 
 v1.8.0 (2017-05-01)
