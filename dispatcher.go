@@ -253,6 +253,13 @@ func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
 	panic(noOutboundForOutboundKey{OutboundKey: outboundKey})
 }
 
+// InboundMiddleware returns the middleware applied to all inbound handlers.
+// Router middleware and fallback handlers can use the InboundMiddleware to
+// wrap custom handlers.
+func (d *Dispatcher) InboundMiddleware() InboundMiddleware {
+	return d.inboundMiddleware
+}
+
 // Register registers zero or more procedures with this dispatcher. Incoming
 // requests to these procedures will be routed to the handlers specified in
 // the given Procedures.

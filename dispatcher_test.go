@@ -341,6 +341,16 @@ func TestClientConfig(t *testing.T) {
 	assert.Equal(t, "my-test-service", cc.Service())
 }
 
+func TestInboundMiddleware(t *testing.T) {
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+	})
+
+	mw := dispatcher.InboundMiddleware()
+
+	assert.NotNil(t, mw)
+}
+
 func TestClientConfigWithOutboundServiceNameOverride(t *testing.T) {
 	dispatcher := NewDispatcher(Config{
 		Name: "test",
