@@ -25,6 +25,8 @@ import (
 	"go.uber.org/yarpc/x/config"
 )
 
+const transportName = "tchannel"
+
 // TransportConfig configures a shared TChannel transport. This is shared
 // between all TChannel outbounds and inbounds of a Dispatcher.
 //
@@ -61,7 +63,7 @@ type OutboundConfig struct {
 // various supported configuration parameters.
 func TransportSpec() config.TransportSpec {
 	return config.TransportSpec{
-		Name:               "tchannel",
+		Name:               transportName,
 		BuildTransport:     buildTransport,
 		BuildInbound:       buildInbound,
 		BuildUnaryOutbound: buildUnaryOutbound,
