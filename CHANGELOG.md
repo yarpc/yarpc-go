@@ -5,6 +5,8 @@ v1.9.0-dev (unreleased)
 -------------------
 
 -   http: Added support for configuring the HTTP transport using x/config.
+-   tchannel: Added support for configuring the TChannel transport using
+    x/config.
 
 
 v1.8.0 (2017-05-01)
