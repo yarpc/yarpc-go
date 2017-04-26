@@ -20,6 +20,8 @@
 
 package http
 
+const transportName = "http"
+
 // HTTP headers used in requests and responses to send YARPC metadata.
 const (
 	// Name of the service sending the request. This corresponds to the
