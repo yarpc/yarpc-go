@@ -21,8 +21,10 @@
 package yarpc
 
 import (
+	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
@@ -31,13 +33,20 @@ import (
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observerware"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
+	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/uber-go/tally"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
+
+// Default sleep between pushes to Tally metrics. At some point, we may want
+// this to be configurable.
+const _tallyPushInterval = 500 * time.Millisecond
 
 // Config specifies the parameters of a new Dispatcher constructed via
 // NewDispatcher.
@@ -73,6 +82,10 @@ type Config struct {
 	// ZapLogger provides a logger for the dispatcher. The default logger is a
 	// no-op.
 	ZapLogger *zap.Logger
+
+	// TallyScope provides a push-based metrics implementation for the
+	// dispatcher. By default, metrics are collected in memory but not pushed.
+	TallyScope tally.Scope
 }
 
 // Inbounds contains a list of inbound transports. Each inbound transport
@@ -117,8 +130,25 @@ func NewDispatcher(cfg Config) *Dispatcher {
 			zap.Namespace("yarpc"), // isolate yarpc's keys
 			zap.String("dispatcher", cfg.Name),
 		)
-		cfg = addObservingMiddleware(cfg, logger)
 	}
+
+	registry := pally.NewRegistry(
+		pally.Labeled(pally.Labels{
+			"component":  "yarpc",
+			"dispatcher": pally.ScrubLabelValue(cfg.Name),
+		}),
+		// Also expose all YARPC metrics via the default Prometheus registry.
+		pally.Federated(prometheus.DefaultRegisterer),
+	)
+	var stopPush context.CancelFunc
+	if cfg.TallyScope != nil {
+		if stop, err := registry.Push(cfg.TallyScope, _tallyPushInterval); err != nil {
+			logger.Error("Failed to start pushing metrics to Tally.", zap.Error(err))
+		} else {
+			stopPush = stop
+		}
+	}
+	cfg = addObservingMiddleware(cfg, logger, registry)
 
 	return &Dispatcher{
 		name:              cfg.Name,
@@ -128,11 +158,13 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		inboundMiddleware: cfg.InboundMiddleware,
 		log:               logger,
+		registry:          registry,
+		stopRegistryPush:  stopPush,
 	}
 }
 
-func addObservingMiddleware(cfg Config, logger *zap.Logger) Config {
-	observer := observerware.New(logger, observerware.NewNopContextExtractor())
+func addObservingMiddleware(cfg Config, logger *zap.Logger, registry *pally.Registry) Config {
+	observer := observerware.New(logger, registry, observerware.NewNopContextExtractor())
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
@@ -225,8 +257,9 @@ type Dispatcher struct {
 
 	inboundMiddleware InboundMiddleware
 
-	// TODO (shah): add a *pally.Registry too.
-	log *zap.Logger
+	log              *zap.Logger
+	registry         *pally.Registry
+	stopRegistryPush context.CancelFunc
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -455,6 +488,13 @@ func (d *Dispatcher) Stop() error {
 
 	if err := multierr.Combine(allErrs...); err != nil {
 		return err
+	}
+
+	// Stop pushing metrics to Tally.
+	if d.stopRegistryPush != nil {
+		d.log.Debug("Stopping metrics push loop.")
+		d.stopRegistryPush()
+		d.log.Debug("Stopped metrics push loop.")
 	}
 
 	d.log.Debug("Unregistering debug pages.")
