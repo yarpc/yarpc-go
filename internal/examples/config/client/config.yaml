@@ -1,0 +1,15 @@
+outbounds:
+  myservice:
+    unary:
+      # tchannel:
+      #   address: localhost:${TCHANNEL_PORT:4040}
+      http:
+        url: http://localhost:${HTTP_PORT:8080}/
+    oneway:
+      redis:
+        queueKey: requests
+transports:
+  tchannel:
+    service: myservice-client
+  redis:
+    address: localhost:${REDIS_PORT:6379}
