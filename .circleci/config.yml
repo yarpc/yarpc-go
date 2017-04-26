@@ -13,22 +13,13 @@ jobs:
       - restore_cache:
           key: yarpc-go
       - run:
-          name: crossdock
-          command: make ci
-          environment:
-            - CI_TYPES: crossdock
-      - run:
-          name: 1.8 lint test examples
-          command: make ci
-          environment:
-            - CI_TYPES: deps lint test examples
-            - DOCKER_GO_VERSION: 1.8
-      - run:
-          name: 1.7 cover
-          command: make ci
-          environment:
-            - CI_TYPES: deps cover
-            - DOCKER_GO_VERSION: 1.7
+         name: run make ci
+         command:
+           case $CIRCLE_NODE_INDEX in
+           0) CI_TYPES=crossdock make ci ;;
+           1) DOCKER_GO_VERSION=1.8 CI_TYPES="deps lint test examples" make ci ;;
+           2) DOCKER_GO_VERSION=1.7 CI_TYPES="deps lint test examples" make ci ;;
+           esac
       - save_cache:
           key: yarpc-go
           paths:
