@@ -37,10 +37,6 @@ type TransportConfig struct {
 	// Address to listen on. Defaults to ":0" (all network interfaces and a
 	// random OS-assigned port).
 	Address string `config:"address,interpolate"`
-
-	// Name of the service for TChannel. This may be omitted to use the
-	// Dispatcher's service name.
-	Service string `config:"service,interpolate"`
 }
 
 // InboundConfig configures a TChannel inbound.
@@ -71,12 +67,9 @@ func TransportSpec() config.TransportSpec {
 }
 
 func buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
-	var opts []TransportOption
+	opts := []TransportOption{ServiceName(k.ServiceName())}
 	if tc.Address != "" {
 		opts = append(opts, ListenAddr(tc.Address))
-	}
-	if tc.Service != "" {
-		opts = append(opts, ServiceName(tc.Service))
 	}
 	return NewTransport(opts...)
 }
