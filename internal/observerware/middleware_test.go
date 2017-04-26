@@ -23,11 +23,16 @@ package observerware
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/pally"
+	"go.uber.org/yarpc/internal/pally/pallytest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +41,42 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
-func TestUnaryInboundMiddleware(t *testing.T) {
+func TestDigester(t *testing.T) {
+	const (
+		goroutines = 10
+		iterations = 100
+	)
+
+	expected := []byte{'f', 'o', 'o', 0, 'b', 'a', 'r'}
+
+	var wg sync.WaitGroup
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < iterations; i++ {
+				d := newDigester()
+				defer d.free()
+
+				assert.Equal(t, 0, len(d.digest()), "Expected fresh digester to have no internal state.")
+				assert.True(t, cap(d.digest()) > 0, "Expected fresh digester to have available capacity.")
+
+				d.add("foo")
+				d.add("bar")
+				assert.Equal(
+					t,
+					string(expected),
+					string(d.digest()),
+					"Expected digest to be null-separated concatenation of inputs.",
+				)
+			}
+		}()
+	}
+
+	wg.Wait()
+}
+
+func TestMiddlewareLogging(t *testing.T) {
 	defer stubTime()()
 	req := &transport.Request{
 		Caller:          "caller",
@@ -51,15 +91,27 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 	}
 	failed := errors.New("fail")
 
+	baseFields := func() []zapcore.Field {
+		return []zapcore.Field{
+			zap.String("source", req.Caller),
+			zap.String("dest", req.Service),
+			zap.String("procedure", req.Procedure),
+			zap.String("encoding", string(req.Encoding)),
+			zap.String("shardKey", req.ShardKey),
+			zap.String("routingKey", req.RoutingKey),
+			zap.String("routingDelegate", req.RoutingDelegate),
+		}
+	}
+
 	tests := []struct {
-		desc       string
-		err        error // downstream error
-		wantFields []zapcore.Field
+		desc           string
+		err            error // downstream error
+		applicationErr bool  // downstream application error
+		wantFields     []zapcore.Field
 	}{
 		{
 			desc: "no downstream errors",
 			wantFields: []zapcore.Field{
-				zap.Object("request", req),
 				zap.Duration("latency", 0),
 				zap.Bool("successful", true),
 				zap.Skip(),
@@ -67,21 +119,20 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 			},
 		},
 		{
-			desc: "downstream errors",
+			desc: "downstream transport error",
 			err:  failed,
 			wantFields: []zapcore.Field{
-				zap.Object("request", req),
 				zap.Duration("latency", 0),
 				zap.Bool("successful", false),
-				zap.Error(failed),
 				zap.Skip(),
+				zap.Error(failed),
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
-		mw := New(zap.New(core), NewNopContextExtractor())
+		mw := New(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
 
 		getLog := func() observer.LoggedEntry {
 			entries := logs.TakeAll()
@@ -100,14 +151,21 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 		}
 
 		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
-			err := mw.Handle(context.Background(), req, nil /* response writer */, fakeHandler{tt.err})
+			err := mw.Handle(
+				context.Background(),
+				req,
+				&transporttest.FakeResponseWriter{},
+				fakeHandler{tt.err, tt.applicationErr},
+			)
 			checkErr(err)
+			logContext := append(baseFields(), zap.String("rpcType", "Unary"))
+			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
 					Level:   zapcore.DebugLevel,
 					Message: "Handled inbound request.",
 				},
-				Context: append([]zapcore.Field{zap.String("rpcType", "unary")}, tt.wantFields...),
+				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
@@ -117,30 +175,36 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
 			}
+			logContext := append(baseFields(), zap.String("rpcType", "Unary"))
+			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
 					Level:   zapcore.DebugLevel,
 					Message: "Made outbound call.",
 				},
-				Context: append([]zapcore.Field{zap.String("rpcType", "unary")}, tt.wantFields...),
+				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
-			err := mw.HandleOneway(context.Background(), req, fakeHandler{tt.err})
+			err := mw.HandleOneway(context.Background(), req, fakeHandler{tt.err, false})
 			checkErr(err)
+			logContext := append(baseFields(), zap.String("rpcType", "Oneway"))
+			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
 					Level:   zapcore.DebugLevel,
 					Message: "Handled inbound request.",
 				},
-				Context: append([]zapcore.Field{zap.String("rpcType", "oneway")}, tt.wantFields...),
+				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
 			ack, err := mw.CallOneway(context.Background(), req, fakeOutbound{err: tt.err})
 			checkErr(err)
+			logContext := append(baseFields(), zap.String("rpcType", "Oneway"))
+			logContext = append(logContext, tt.wantFields...)
 			if tt.err == nil {
 				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
 			}
@@ -149,9 +213,89 @@ func TestUnaryInboundMiddleware(t *testing.T) {
 					Level:   zapcore.DebugLevel,
 					Message: "Made outbound call.",
 				},
-				Context: append([]zapcore.Field{zap.String("rpcType", "oneway")}, tt.wantFields...),
+				Context: logContext,
 			}
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 	}
+}
+
+func TestUnaryInboundApplicationErrors(t *testing.T) {
+	defer stubTime()()
+	req := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Encoding:        "raw",
+		Procedure:       "procedure",
+		ShardKey:        "shard01",
+		RoutingKey:      "routing-key",
+		RoutingDelegate: "routing-delegate",
+		Body:            strings.NewReader("body"),
+	}
+
+	expectedFields := []zapcore.Field{
+		zap.String("source", req.Caller),
+		zap.String("dest", req.Service),
+		zap.String("procedure", req.Procedure),
+		zap.String("encoding", string(req.Encoding)),
+		zap.String("shardKey", req.ShardKey),
+		zap.String("routingKey", req.RoutingKey),
+		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("rpcType", "Unary"),
+		zap.Duration("latency", 0),
+		zap.Bool("successful", false),
+		zap.Skip(),
+		zap.String("error", "application_error"),
+	}
+
+	core, logs := observer.New(zap.DebugLevel)
+	mw := New(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
+
+	assert.NoError(t, mw.Handle(
+		context.Background(),
+		req,
+		&transporttest.FakeResponseWriter{},
+		fakeHandler{err: nil, applicationErr: true},
+	), "Unexpected transport error.")
+
+	expected := observer.LoggedEntry{
+		Entry: zapcore.Entry{
+			Level:   zapcore.DebugLevel,
+			Message: "Handled inbound request.",
+		},
+		Context: expectedFields,
+	}
+	entries := logs.TakeAll()
+	require.Equal(t, 1, len(entries), "Unexpected number of log entries written.")
+	entry := entries[0]
+	entry.Time = time.Time{}
+	assert.Equal(t, expected, entry, "Unexpected log entry written.")
+}
+
+func TestMiddlewareStats(t *testing.T) {
+	defer stubTime()()
+	reg := pally.NewRegistry()
+	mw := New(zap.NewNop(), reg, NewNopContextExtractor())
+
+	err := mw.Handle(
+		context.Background(),
+		&transport.Request{
+			Caller:          "caller",
+			Service:         "service",
+			Encoding:        "raw",
+			Procedure:       "procedure",
+			ShardKey:        "sk",
+			RoutingKey:      "rk",
+			RoutingDelegate: "rd",
+			Body:            strings.NewReader("body"),
+		},
+		&transporttest.FakeResponseWriter{},
+		fakeHandler{nil, false},
+	)
+	assert.NoError(t, err, "Unexpected transport error.")
+
+	expected, err := ioutil.ReadFile("testdata/prom.txt")
+	assert.NoError(t, err, "Unexpected error reading testdata.")
+
+	pallytest.AssertPrometheus(t, reg, strings.TrimSpace(string(expected)))
 }
