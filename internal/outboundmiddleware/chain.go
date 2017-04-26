@@ -32,6 +32,9 @@ import (
 func UnaryChain(mw ...middleware.UnaryOutbound) middleware.UnaryOutbound {
 	unchained := make([]middleware.UnaryOutbound, 0, len(mw))
 	for _, m := range mw {
+		if m == nil {
+			continue
+		}
 		if c, ok := m.(unaryChain); ok {
 			unchained = append(unchained, c...)
 			continue
@@ -101,6 +104,9 @@ func (x unaryChainExec) Introspect() introspection.OutboundStatus {
 func OnewayChain(mw ...middleware.OnewayOutbound) middleware.OnewayOutbound {
 	unchained := make([]middleware.OnewayOutbound, 0, len(mw))
 	for _, m := range mw {
+		if m == nil {
+			continue
+		}
 		if c, ok := m.(onewayChain); ok {
 			unchained = append(unchained, c...)
 			continue

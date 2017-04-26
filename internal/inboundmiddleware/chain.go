@@ -31,6 +31,9 @@ import (
 func UnaryChain(mw ...middleware.UnaryInbound) middleware.UnaryInbound {
 	unchained := make([]middleware.UnaryInbound, 0, len(mw))
 	for _, m := range mw {
+		if m == nil {
+			continue
+		}
 		if c, ok := m.(unaryChain); ok {
 			unchained = append(unchained, c...)
 			continue
@@ -77,6 +80,9 @@ func (x unaryChainExec) Handle(ctx context.Context, req *transport.Request, resw
 func OnewayChain(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
 	unchained := make([]middleware.OnewayInbound, 0, len(mw))
 	for _, m := range mw {
+		if m == nil {
+			continue
+		}
 		if c, ok := m.(onewayChain); ok {
 			unchained = append(unchained, c...)
 			continue
@@ -90,7 +96,7 @@ func OnewayChain(mw ...middleware.OnewayInbound) middleware.OnewayInbound {
 	case 1:
 		return unchained[0]
 	default:
-		return onewayChain(mw)
+		return onewayChain(unchained)
 	}
 }
 
