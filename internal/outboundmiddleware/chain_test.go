@@ -66,8 +66,8 @@ func TestUnaryChain(t *testing.T) {
 		desc string
 		mw   middleware.UnaryOutbound
 	}{
-		{"flat chain", UnaryChain(before, retryUnaryOutbound, after)},
-		{"nested chain", UnaryChain(before, UnaryChain(retryUnaryOutbound, after))},
+		{"flat chain", UnaryChain(before, retryUnaryOutbound, nil, after)},
+		{"nested chain", UnaryChain(before, UnaryChain(retryUnaryOutbound, after, nil))},
 	}
 
 	for _, tt := range tests {
@@ -120,8 +120,8 @@ func TestOnewayChain(t *testing.T) {
 		desc string
 		mw   middleware.OnewayOutbound
 	}{
-		{"flat chain", OnewayChain(before, retryOnewayOutbound, after)},
-		{"flat chain", OnewayChain(before, OnewayChain(retryOnewayOutbound, after))},
+		{"flat chain", OnewayChain(before, retryOnewayOutbound, nil, after)},
+		{"flat chain", OnewayChain(before, OnewayChain(retryOnewayOutbound, after, nil))},
 	}
 
 	for _, tt := range tests {
