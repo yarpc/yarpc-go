@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/pally/pallytest"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,7 +61,7 @@ func TestCounter(t *testing.T) {
 	}
 	export.Test(t, scope)
 
-	assertPrometheusText(t, r, "# HELP test_counter Some help.\n"+
+	pallytest.AssertPrometheus(t, r, "# HELP test_counter Some help.\n"+
 		"# TYPE test_counter counter\n"+
 		`test_counter{foo="bar",service="users"} 4`)
 }

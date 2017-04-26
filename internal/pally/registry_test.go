@@ -33,6 +33,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber-go/tally/m3"
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/internal/pally/pallytest"
 )
 
 func TestSimpleMetricDuplicates(t *testing.T) {
@@ -99,7 +100,7 @@ func TestFederatedMetrics(t *testing.T) {
 		"# TYPE foo counter\n" +
 		"foo 1"
 
-	assertPrometheusText(t, promhttp.HandlerFor(prom, promhttp.HandlerOpts{}), expected)
+	pallytest.AssertPrometheus(t, promhttp.HandlerFor(prom, promhttp.HandlerOpts{}), expected)
 }
 
 func TestConstLabelValidation(t *testing.T) {
@@ -113,7 +114,7 @@ func TestConstLabelValidation(t *testing.T) {
 		Help: "help",
 	})
 	require.NoError(t, err, "Unexpected error creating a counter.")
-	assertPrometheusText(t, r, "# HELP test help\n"+
+	pallytest.AssertPrometheus(t, r, "# HELP test help\n"+
 		"# TYPE test counter\n"+
 		`test{ok="yes"} 0`)
 }

@@ -18,50 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pally
+package pallytest
 
 import (
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
-	"time"
-
-	"go.uber.org/yarpc/internal/pally/pallytest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGauge(t *testing.T) {
-	r := NewRegistry(Labeled(Labels{"service": "users"}))
-	gauge, err := r.NewGauge(Opts{
-		Name:        "test_gauge",
-		Help:        "Some help.",
-		ConstLabels: Labels{"foo": "bar"},
-	})
-	require.NoError(t, err, "Unexpected error constructing gauge.")
+// Scrape collects and returns the plain-text content of the registry's scrape
+// endpoint, along with the response code.
+func Scrape(t testing.TB, registry http.Handler) (int, string) {
+	server := httptest.NewServer(registry)
+	defer server.Close()
 
-	scope := newTestScope()
-	stop, err := r.Push(scope, _tick)
-	require.NoError(t, err, "Unexpected error starting Tally push.")
+	resp, err := http.Get(server.URL)
+	require.NoError(t, err, "Unexpected error scraping Prometheus endpoint.")
+	body, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err, "Unexpected error reading response body.")
+	return resp.StatusCode, strings.TrimSpace(string(body))
+}
 
-	gauge.Inc()
-	gauge.Store(42)
-	assert.Equal(t, int64(42), gauge.Load(), "Unexpected in-memory gauge value.")
-
-	time.Sleep(5 * _tick)
-	gauge.Store(4)
-	assert.Equal(t, int64(4), gauge.Load(), "Unexpected in-memory gauge value after sleep.")
-
-	stop()
-
-	export := TallyExpectation{
-		Type:   "gauge",
-		Name:   "test_gauge",
-		Labels: Labels{"foo": "bar", "service": "users"},
-		Value:  4,
-	}
-	export.Test(t, scope)
-
-	pallytest.AssertPrometheus(t, r, "# HELP test_gauge Some help.\n"+
-		"# TYPE test_gauge gauge\n"+
-		`test_gauge{foo="bar",service="users"} 4`)
+// AssertPrometheus asserts that the registry's scrape endpoint successfully
+// serves the supplied plain-text Prometheus metrics.
+func AssertPrometheus(t testing.TB, registry http.Handler, expected string) {
+	code, actual := Scrape(t, registry)
+	assert.Equal(t, http.StatusOK, code, "Unexpected HTTP response code from Prometheus scrape.")
+	assert.Equal(
+		t,
+		strings.Split(expected, "\n"),
+		strings.Split(actual, "\n"),
+		"Unexpected Prometheus text.",
+	)
 }
