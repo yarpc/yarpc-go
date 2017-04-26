@@ -92,6 +92,18 @@ func TestCallSuccess(t *testing.T) {
 	}
 }
 
+func TestAddReservedHeader(t *testing.T) {
+	tests := []string{
+		"Rpc-Foo",
+		"rpc-header-foo",
+		"RPC-Bar",
+	}
+
+	for _, tt := range tests {
+		assert.Panics(t, func() { AddHeader(tt, "bar") })
+	}
+}
+
 func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {
 		desc    string

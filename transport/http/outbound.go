@@ -70,7 +70,16 @@ func URLTemplate(template string) OutboundOption {
 // header in outgoung requests.
 //
 // 	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
+//
+// Note that headers starting with "Rpc-" are reserved by YARPC. This function
+// will panic if the header starts with "Rpc-".
 func AddHeader(key, value string) OutboundOption {
+	if strings.HasPrefix(strings.ToLower(key), "rpc-") {
+		panic(fmt.Errorf(
+			"invalid header name %q: "+
+				`headers starting with "Rpc-" are reserved by YARPC`, key))
+	}
+
 	return func(o *Outbound) {
 		if o.headers == nil {
 			o.headers = make(http.Header)
