@@ -68,7 +68,7 @@ type transportSpec struct {
 
 func (ts *transportSpec) Spec() config.TransportSpec {
 	return config.TransportSpec{
-		Name:                "http",
+		Name:                transportName,
 		BuildTransport:      ts.buildTransport,
 		BuildInbound:        ts.buildInbound,
 		BuildUnaryOutbound:  ts.buildUnaryOutbound,
