@@ -54,4 +54,10 @@
 // 			{Unary: myserviceOutbound},
 // 		},
 // 	})
+//
+// Configuration
+//
+// A TChannel transport may be configured using YARPC's configuration system.
+// See TransportConfig, InboundConfig, and OutboundConfig for details on the
+// different configuration parameters supported by this transport.
 package tchannel
