@@ -27,15 +27,31 @@ import (
 
 // TransportConfig configures a shared TChannel transport. This is shared
 // between all TChannel outbounds and inbounds of a Dispatcher.
+//
+// 	transports:
+// 	  tchannel:
+// 	    address: :4040
 type TransportConfig struct {
+	// Address to listen on. Defaults to ":0" (all network interfaces and a
+	// random OS-assigned port).
 	Address string `config:"address,interpolate"`
+
+	// Name of the service for TChannel. This may be omitted to use the
+	// Dispatcher's service name.
 	Service string `config:"service,interpolate"`
 }
 
 // InboundConfig configures a TChannel inbound.
+//
+// TChannel inbounds do not support any configuration parameters at this time.
 type InboundConfig struct{}
 
 // OutboundConfig configures a TChannel outbound.
+//
+// 	outbounds:
+// 	  myservice:
+// 	    tchannel:
+// 	      address: 127.0.0.1:4040
 type OutboundConfig struct {
 	Address string `config:"address,interpolate"`
 }
