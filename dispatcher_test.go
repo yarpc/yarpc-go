@@ -376,12 +376,12 @@ func TestObservabilityConfig(t *testing.T) {
 	// Validate that we can start a dispatcher with various logging and metrics
 	// configs.
 	logCfgs := []LoggingConfig{
-		LoggingConfig{},
-		LoggingConfig{Zap: zap.NewNop()},
+		{},
+		{Zap: zap.NewNop()},
 	}
 	metricsCfgs := []MetricsConfig{
-		MetricsConfig{},
-		MetricsConfig{Tally: tally.NewTestScope("" /* prefix */, nil /* tags */)},
+		{},
+		{Tally: tally.NewTestScope("" /* prefix */, nil /* tags */)},
 	}
 
 	for _, l := range logCfgs {
