@@ -84,6 +84,8 @@ type UnaryHandler interface {
 	// An error may be returned in case of failures. BadRequestError must be
 	// returned for invalid requests. All other failures are treated as
 	// UnexpectedErrors.
+	//
+	// Handlers MUST NOT retain references to the ResponseWriter.
 	Handle(ctx context.Context, req *Request, resw ResponseWriter) error
 }
 
