@@ -58,6 +58,27 @@ func DefaultPeerList(path string) TransportSpecOption {
 	}
 }
 
+// These types match the signature of cherami.NewClient and
+// cherami.NewHyperbahnClient respectively. We use them to override the
+// constructors for testing.
+type (
+	cheramiNewClientFunc func(serviceName string, host string, port int, options *cherami.ClientOptions) (cherami.Client, error)
+
+	cheramiNewHyperbahnClientFunc func(serviceName string, bootstrapFile string, options *cherami.ClientOptions) (cherami.Client, error)
+)
+
+func cheramiNewClient(f cheramiNewClientFunc) TransportSpecOption {
+	return func(ts *transportSpec) {
+		ts.cheramiNewClient = f
+	}
+}
+
+func cheramiNewHyperbahnClient(f cheramiNewHyperbahnClientFunc) TransportSpecOption {
+	return func(ts *transportSpec) {
+		ts.cheramiNewHyperbahnClient = f
+	}
+}
+
 // TransportSpec builds a TransportSpec for the Cherami transport.
 // TransportSpecOptions may be passed to this function to configure the
 // behavior of the TransportSpec.
@@ -69,28 +90,24 @@ func DefaultPeerList(path string) TransportSpecOption {
 // See TransportConfig, InboundConfig, and OutboundConfig for details on the
 // different configuration parameters supported by this Transport.
 func TransportSpec(opts ...TransportSpecOption) config.TransportSpec {
-	var ts transportSpec
+	ts := transportSpec{
+		cheramiNewClient:          cherami.NewClient,
+		cheramiNewHyperbahnClient: cherami.NewHyperbahnClient,
+	}
 	for _, opt := range opts {
 		opt(&ts)
 	}
+
 	return ts.Spec()
 }
-
-// When building inbounds and outbounds, instead of casting
-// transport.Transport to *Transport, we'll cast to the interface
-// cheramiTransport so that we can test against a mock cheramiTransport.
-type cheramiTransport interface {
-	transport.Transport
-
-	NewInbound(InboundOptions) *Inbound
-	NewOutbound(OutboundOptions) *Outbound
-}
-
-var _ cheramiTransport = (*Transport)(nil)
 
 // TransportSpec holds the configurable parts of the Cherami TransportSpec.
 type transportSpec struct {
 	defaultPeerList string
+
+	// These are used to override the Cherami client constructors for testing.
+	cheramiNewClient          cheramiNewClientFunc
+	cheramiNewHyperbahnClient cheramiNewHyperbahnClientFunc
 }
 
 func (ts *transportSpec) Spec() config.TransportSpec {
@@ -172,7 +189,7 @@ func (ts *transportSpec) buildTransport(
 			return nil, err
 		}
 
-		client, err = cherami.NewClient(kit.ServiceName(), ip, int(port), &opts)
+		client, err = ts.cheramiNewClient(kit.ServiceName(), ip, int(port), &opts)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to create Cherami client with address %q: %v", tc.Address, err)
@@ -184,13 +201,13 @@ func (ts *transportSpec) buildTransport(
 		}
 
 		var err error
-		client, err = cherami.NewHyperbahnClient(kit.ServiceName(), peerList, &opts)
+		client, err = ts.cheramiNewHyperbahnClient(kit.ServiceName(), peerList, &opts)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to create Cherami client with peer list %q: %v", peerList, err)
 		}
 	default:
-		return nil, errors.New("either an `address` or a `peerList` must be specified")
+		return nil, errors.New(`either an "address" or a "peerList" must be specified`)
 	}
 
 	return NewTransport(client), nil
@@ -242,7 +259,7 @@ func (ts *transportSpec) buildInbound(
 		opts.ConsumerGroup = fmt.Sprintf("/%v/%v", kit.ServiceName(), _consumerGroupSuffix)
 	}
 
-	return t.(cheramiTransport).NewInbound(opts), nil
+	return t.(*Transport).NewInbound(opts), nil
 }
 
 // OutboundConfig configures a Cherami Outbound.
@@ -265,5 +282,5 @@ func (ts *transportSpec) buildOnewayOutbound(
 		opts.Destination = fmt.Sprintf("/%v/%v", kit.ServiceName(), _destinationSuffix)
 	}
 
-	return t.(cheramiTransport).NewOutbound(opts), nil
+	return t.(*Transport).NewOutbound(opts), nil
 }
