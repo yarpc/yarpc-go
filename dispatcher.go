@@ -42,11 +42,69 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // Default sleep between pushes to Tally metrics. At some point, we may want
 // this to be configurable.
 const _tallyPushInterval = 500 * time.Millisecond
+
+// LoggingConfig describes how logging should be configured.
+type LoggingConfig struct {
+	// Supplies a logger for the dispatcher. By default, no logs are
+	// emitted.
+	Zap *zap.Logger
+	// If supplied, the ContextExtractor is used to log request-scoped
+	// information carried on the context (e.g., trace and span IDs).
+	ContextExtractor func(context.Context) zapcore.Field
+}
+
+func (c LoggingConfig) logger(name string) *zap.Logger {
+	if c.Zap == nil {
+		return zap.NewNop()
+	}
+	return c.Zap.Named("yarpc").With(
+		// Use a namespace to prevent key collisions with other libraries.
+		zap.Namespace("yarpc"),
+		zap.String("dispatcher", name),
+	)
+}
+
+func (c LoggingConfig) extractor() observerware.ContextExtractor {
+	if c.ContextExtractor == nil {
+		return observerware.NewNopContextExtractor()
+	}
+	return observerware.ContextExtractor(c.ContextExtractor)
+}
+
+// MetricsConfig describes how telemetry should be configured.
+type MetricsConfig struct {
+	// Tally scope used for pushing to M3 or StatsD-based systems. By
+	// default, metrics are collected in memory but not pushed.
+	Tally tally.Scope
+}
+
+func (c MetricsConfig) registry(name string, logger *zap.Logger) (*pally.Registry, context.CancelFunc) {
+	r := pally.NewRegistry(
+		pally.Labeled(pally.Labels{
+			"component":  "yarpc",
+			"dispatcher": pally.ScrubLabelValue(name),
+		}),
+		// Also expose all YARPC metrics via the default Prometheus registry.
+		pally.Federated(prometheus.DefaultRegisterer),
+	)
+
+	if c.Tally == nil {
+		return r, nil
+	}
+
+	stop, err := r.Push(c.Tally, _tallyPushInterval)
+	if err != nil {
+		logger.Error("Failed to start pushing metrics to Tally.", zap.Error(err))
+		return r, nil
+	}
+	return r, stop
+}
 
 // Config specifies the parameters of a new Dispatcher constructed via
 // NewDispatcher.
@@ -79,13 +137,11 @@ type Config struct {
 	// RouterMiddleware is middleware to control how requests are routed.
 	RouterMiddleware middleware.Router
 
-	// ZapLogger provides a logger for the dispatcher. The default logger is a
-	// no-op.
-	ZapLogger *zap.Logger
+	// Logging configures logging.
+	Logging LoggingConfig
 
-	// TallyScope provides a push-based metrics implementation for the
-	// dispatcher. By default, metrics are collected in memory but not pushed.
-	TallyScope tally.Scope
+	// Metrics configures telemetry.
+	Metrics MetricsConfig
 }
 
 // Inbounds contains a list of inbound transports. Each inbound transport
@@ -124,31 +180,11 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		panic("yarpc.NewDispatcher expects a valid service name: " + err.Error())
 	}
 
-	logger := zap.NewNop()
-	if cfg.ZapLogger != nil {
-		logger = cfg.ZapLogger.Named("yarpc").With(
-			zap.Namespace("yarpc"), // isolate yarpc's keys
-			zap.String("dispatcher", cfg.Name),
-		)
-	}
+	logger := cfg.Logging.logger(cfg.Name)
+	extractor := cfg.Logging.extractor()
 
-	registry := pally.NewRegistry(
-		pally.Labeled(pally.Labels{
-			"component":  "yarpc",
-			"dispatcher": pally.ScrubLabelValue(cfg.Name),
-		}),
-		// Also expose all YARPC metrics via the default Prometheus registry.
-		pally.Federated(prometheus.DefaultRegisterer),
-	)
-	var stopPush context.CancelFunc
-	if cfg.TallyScope != nil {
-		if stop, err := registry.Push(cfg.TallyScope, _tallyPushInterval); err != nil {
-			logger.Error("Failed to start pushing metrics to Tally.", zap.Error(err))
-		} else {
-			stopPush = stop
-		}
-	}
-	cfg = addObservingMiddleware(cfg, logger, registry)
+	registry, stopPush := cfg.Metrics.registry(cfg.Name, logger)
+	cfg = addObservingMiddleware(cfg, registry, logger, extractor)
 
 	return &Dispatcher{
 		name:              cfg.Name,
@@ -163,8 +199,8 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	}
 }
 
-func addObservingMiddleware(cfg Config, logger *zap.Logger, registry *pally.Registry) Config {
-	observer := observerware.New(logger, registry, observerware.NewNopContextExtractor())
+func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Logger, extractor observerware.ContextExtractor) Config {
+	observer := observerware.New(logger, registry, extractor)
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)

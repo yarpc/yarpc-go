@@ -34,22 +34,26 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 )
 
-func basicDispatcher(t *testing.T) *Dispatcher {
+func basicConfig(t testing.TB) Config {
 	httpTransport := http.NewTransport()
 	tchannelTransport, err := tchannel.NewChannelTransport(tchannel.ServiceName("test"))
 	require.NoError(t, err)
 
-	return NewDispatcher(Config{
+	return Config{
 		Name: "test",
 		Inbounds: Inbounds{
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":0"),
 		},
-		ZapLogger: zap.NewNop(),
-	})
+	}
+}
+
+func basicDispatcher(t testing.TB) *Dispatcher {
+	return NewDispatcher(basicConfig(t))
 }
 
 func TestInboundsReturnsACopy(t *testing.T) {
@@ -366,4 +370,30 @@ func TestClientConfigWithOutboundServiceNameOverride(t *testing.T) {
 
 	assert.Equal(t, "test", cc.Caller())
 	assert.Equal(t, "my-real-service", cc.Service())
+}
+
+func TestObservabilityConfig(t *testing.T) {
+	// Validate that we can start a dispatcher with various logging and metrics
+	// configs.
+	logCfgs := []LoggingConfig{
+		LoggingConfig{},
+		LoggingConfig{Zap: zap.NewNop()},
+	}
+	metricsCfgs := []MetricsConfig{
+		MetricsConfig{},
+		MetricsConfig{Tally: tally.NewTestScope("" /* prefix */, nil /* tags */)},
+	}
+
+	for _, l := range logCfgs {
+		for _, m := range metricsCfgs {
+			cfg := basicConfig(t)
+			cfg.Logging = l
+			cfg.Metrics = m
+			assert.NotPanics(
+				t,
+				func() { NewDispatcher(cfg) },
+				"Failed to create dispatcher with config %+v.", cfg,
+			)
+		}
+	}
 }
