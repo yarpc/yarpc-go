@@ -130,7 +130,7 @@ type TransportConfig struct {
 	Timeout time.Duration `config:"timeout"`
 
 	// Name of the Cherami deployment to which requests should be sent. Some
-	// valid values are, "prod", "staging", "staging2", and "dev".
+	// examples are, "prod", "staging", "staging2", and "dev".
 	//
 	// 	deploymentStr: dev
 	//
