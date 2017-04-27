@@ -32,9 +32,10 @@ import (
 )
 
 var (
-	// For tests.
-	_timeNow = time.Now
-
+	_timeNow      = time.Now // for tests
+	_digesterPool = sync.Pool{New: func() interface{} {
+		return &digester{make([]byte, 0, 128)}
+	}}
 	_writerPool = sync.Pool{New: func() interface{} {
 		return &writer{}
 	}}

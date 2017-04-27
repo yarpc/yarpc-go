@@ -21,7 +21,6 @@
 package observerware
 
 import (
-	"sync"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -31,10 +30,7 @@ import (
 
 var (
 	_defaultGraphSize = 128
-	_digesterPool     = sync.Pool{New: func() interface{} {
-		return &digester{make([]byte, 0, 128)}
-	}}
-	_ms = time.Millisecond
+	_ms               = time.Millisecond
 	// Latency buckets for histograms. At some point, we may want to make these
 	// configurable.
 	_buckets = []time.Duration{
