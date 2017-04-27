@@ -56,7 +56,7 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 		msg = "Made outbound call."
 	}
 	if ce := c.edge.logger.Check(zap.DebugLevel, msg); ce != nil {
-		fields := make([]zapcore.Field, 0, 6)
+		fields := make([]zapcore.Field, 0, 5)
 		fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 		fields = append(fields, zap.Duration("latency", elapsed))
 		fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
