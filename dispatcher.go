@@ -108,7 +108,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		panic("yarpc.NewDispatcher expects a service name")
 	}
 	if err := internal.ValidateServiceName(cfg.Name); err != nil {
-		panic("yarpc.NewDispatcher expects a valid service name: %s" + err.Error())
+		panic("yarpc.NewDispatcher expects a valid service name: " + err.Error())
 	}
 
 	logger := zap.NewNop()
