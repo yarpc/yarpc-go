@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/pally/pallytest"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -68,7 +70,7 @@ func TestLatencies(t *testing.T) {
 	}
 	export.Test(t, scope)
 
-	assertPrometheusText(t, r, "# HELP test_latency_ns Some help.\n"+
+	pallytest.AssertPrometheus(t, r, "# HELP test_latency_ns Some help.\n"+
 		"# TYPE test_latency_ns histogram\n"+
 		`test_latency_ns_bucket{foo="bar",service="users",le="10"} 3`+"\n"+
 		`test_latency_ns_bucket{foo="bar",service="users",le="50"} 3`+"\n"+
@@ -201,7 +203,7 @@ func TestLatenciesVector(t *testing.T) {
 			time.Sleep(5 * _tick)
 			tt.wantTally.Test(t, scope)
 
-			assertPrometheusText(t, r, tt.wantProm)
+			pallytest.AssertPrometheus(t, r, tt.wantProm)
 		})
 
 	}
@@ -234,7 +236,7 @@ func TestLatenciesVectorIndependence(t *testing.T) {
 	x.Observe(time.Millisecond)
 	y.Observe(time.Millisecond)
 
-	assertPrometheusText(t, r, "# HELP test_latency_ms Some help.\n"+
+	pallytest.AssertPrometheus(t, r, "# HELP test_latency_ms Some help.\n"+
 		"# TYPE test_latency_ms histogram\n"+
 		`test_latency_ms_bucket{var="x",le="1000"} 1`+"\n"+
 		`test_latency_ms_bucket{var="x",le="+Inf"} 1`+"\n"+

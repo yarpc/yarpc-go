@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/pally/pallytest"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -186,7 +188,7 @@ func TestSimpleVectors(t *testing.T) {
 			time.Sleep(5 * _tick)
 			tt.wantTally.Test(t, scope)
 
-			assertPrometheusText(t, r, tt.wantProm)
+			pallytest.AssertPrometheus(t, r, tt.wantProm)
 		})
 	}
 }

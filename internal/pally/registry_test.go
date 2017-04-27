@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/pally/pallytest"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
@@ -99,7 +101,7 @@ func TestFederatedMetrics(t *testing.T) {
 		"# TYPE foo counter\n" +
 		"foo 1"
 
-	assertPrometheusText(t, promhttp.HandlerFor(prom, promhttp.HandlerOpts{}), expected)
+	pallytest.AssertPrometheus(t, promhttp.HandlerFor(prom, promhttp.HandlerOpts{}), expected)
 }
 
 func TestConstLabelValidation(t *testing.T) {
@@ -113,7 +115,7 @@ func TestConstLabelValidation(t *testing.T) {
 		Help: "help",
 	})
 	require.NoError(t, err, "Unexpected error creating a counter.")
-	assertPrometheusText(t, r, "# HELP test help\n"+
+	pallytest.AssertPrometheus(t, r, "# HELP test help\n"+
 		"# TYPE test counter\n"+
 		`test{ok="yes"} 0`)
 }

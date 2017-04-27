@@ -21,10 +21,6 @@
 package pally
 
 import (
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -37,23 +33,6 @@ const _tick = 10 * time.Millisecond
 
 func newTestScope() tally.TestScope {
 	return tally.NewTestScope("" /* prefix */, nil /* tags */)
-}
-
-func scrape(t testing.TB, registry http.Handler) (int, string) {
-	server := httptest.NewServer(registry)
-	defer server.Close()
-
-	resp, err := http.Get(server.URL)
-	require.NoError(t, err, "Unexpected error scraping Prometheus endpoint.")
-	body, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err, "Unexpected error reading response body.")
-	return resp.StatusCode, string(body)
-}
-
-func assertPrometheusText(t testing.TB, registry http.Handler, expected string) {
-	code, body := scrape(t, registry)
-	assert.Equal(t, http.StatusOK, code, "Unexpected HTTP response code from Prometheus scrape.")
-	assert.Equal(t, expected, strings.TrimSpace(body), "Unexpected plain-text Prometheus scrape.")
 }
 
 type TallyExpectation struct {
