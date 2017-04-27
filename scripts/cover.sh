@@ -59,8 +59,9 @@ for pkg in "$@"; do
 	fi
 
 	coverpkg=$(go list -json "$pkg" | jq -r '
-		.Deps
+		.Deps + .TestImports + .XTestImports
 		| . + ["'"$pkg"'"]
+		| unique
 		| map
 			( select(startswith("'"$ROOT_PKG"'"))
 			| select(contains("/vendor/") | not)
@@ -77,7 +78,8 @@ for pkg in "$@"; do
 		args="-coverprofile $COVER/cover.${i}.out -covermode=atomic -coverpkg $coverpkg"
 	fi
 
-	do_waitpid go test -race $args "$pkg"
+	do_waitpid go test -race $args "$pkg" 2>&1 \
+		| grep -v 'warning: no packages being tested depend on'
 done
 reset_waitpids
 
