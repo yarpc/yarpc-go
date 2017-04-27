@@ -20,7 +20,7 @@ jobs:
            case $CIRCLE_NODE_INDEX in
            0) CI_TYPES=crossdock make ci ;;
            1) DOCKER_GO_VERSION=1.8 CI_TYPES="deps lint test examples" make ci ;;
-           2) DOCKER_GO_VERSION=1.7 CI_TYPES="deps lint test examples" make ci ;;
+           2) DOCKER_GO_VERSION=1.7 CI_TYPES="deps cover" make ci ;;
            esac
       - save_cache:
           key: yarpc-go
