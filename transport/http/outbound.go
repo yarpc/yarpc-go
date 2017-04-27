@@ -66,6 +66,28 @@ func URLTemplate(template string) OutboundOption {
 	}
 }
 
+// AddHeader specifies that an HTTP outbound should always include the given
+// header in outgoung requests.
+//
+// 	httpTransport.NewOutbound(chooser, http.AddHeader("X-Token", "TOKEN"))
+//
+// Note that headers starting with "Rpc-" are reserved by YARPC. This function
+// will panic if the header starts with "Rpc-".
+func AddHeader(key, value string) OutboundOption {
+	if strings.HasPrefix(strings.ToLower(key), "rpc-") {
+		panic(fmt.Errorf(
+			"invalid header name %q: "+
+				`headers starting with "Rpc-" are reserved by YARPC`, key))
+	}
+
+	return func(o *Outbound) {
+		if o.headers == nil {
+			o.headers = make(http.Header)
+		}
+		o.headers.Add(key, value)
+	}
+}
+
 // NewOutbound builds an HTTP outbound which sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
@@ -127,6 +149,9 @@ type Outbound struct {
 	urlTemplate *url.URL
 	tracer      opentracing.Tracer
 	transport   *Transport
+
+	// Headers to add to all outgoing requests.
+	headers http.Header
 
 	once sync.LifecycleOnce
 }
@@ -323,6 +348,13 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 }
 
 func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, ttl time.Duration) *http.Request {
+	// Add default headers to all requests.
+	for k, vs := range o.headers {
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
+	}
+
 	req.Header.Set(CallerHeader, treq.Caller)
 	req.Header.Set(ServiceHeader, treq.Service)
 	req.Header.Set(ProcedureHeader, treq.Procedure)

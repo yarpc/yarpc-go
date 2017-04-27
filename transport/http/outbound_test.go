@@ -92,11 +92,24 @@ func TestCallSuccess(t *testing.T) {
 	}
 }
 
+func TestAddReservedHeader(t *testing.T) {
+	tests := []string{
+		"Rpc-Foo",
+		"rpc-header-foo",
+		"RPC-Bar",
+	}
+
+	for _, tt := range tests {
+		assert.Panics(t, func() { AddHeader(tt, "bar") })
+	}
+}
+
 func TestOutboundHeaders(t *testing.T) {
 	tests := []struct {
 		desc    string
 		context context.Context
 		headers transport.Headers
+		opts    []OutboundOption
 
 		wantHeaders map[string]string
 	}{
@@ -106,6 +119,19 @@ func TestOutboundHeaders(t *testing.T) {
 			wantHeaders: map[string]string{
 				"Rpc-Header-Foo": "bar",
 				"Rpc-Header-Baz": "Qux",
+			},
+		},
+		{
+			desc:    "extra headers",
+			headers: transport.NewHeaders().With("x", "y"),
+			opts: []OutboundOption{
+				AddHeader("X-Foo", "bar"),
+				AddHeader("X-BAR", "BAZ"),
+			},
+			wantHeaders: map[string]string{
+				"Rpc-Header-X": "y",
+				"X-Foo":        "bar",
+				"X-Bar":        "BAZ",
 			},
 		},
 	}
@@ -131,7 +157,7 @@ func TestOutboundHeaders(t *testing.T) {
 			defer cancel()
 		}
 
-		out := httpTransport.NewSingleOutbound(server.URL)
+		out := httpTransport.NewSingleOutbound(server.URL, tt.opts...)
 		assert.Len(t, out.Transports(), 1, "transports must contain the transport")
 		// we use == instead of assert.Equal because we want to do a pointer
 		// comparison

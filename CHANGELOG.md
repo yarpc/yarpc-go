@@ -23,6 +23,8 @@ v1.8.0 (unreleased)
     is now public.
 -   Adds an accessor to Dispatcher which provides access to the inbound
     middleware used by that Dispatcher.
+-   http: Added an `AddHeader` option to HTTP outbounds to send certain headers
+    for all requests.
 
 
 v1.7.1 (2017-03-29)
