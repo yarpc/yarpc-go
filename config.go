@@ -23,12 +23,13 @@ package yarpc
 import (
 	"context"
 
-	opentracing "github.com/opentracing/opentracing-go"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/internal/observerware"
 	"go.uber.org/yarpc/internal/pally"
+
+	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -38,9 +39,9 @@ type LoggingConfig struct {
 	// Supplies a logger for the dispatcher. By default, no logs are
 	// emitted.
 	Zap *zap.Logger
-	// If supplied, the ContextExtractor is used to log request-scoped
+	// If supplied, ExtractContext is used to log request-scoped
 	// information carried on the context (e.g., trace and span IDs).
-	ContextExtractor func(context.Context) zapcore.Field
+	ExtractContext func(context.Context) zapcore.Field
 }
 
 func (c LoggingConfig) logger(name string) *zap.Logger {
@@ -55,10 +56,10 @@ func (c LoggingConfig) logger(name string) *zap.Logger {
 }
 
 func (c LoggingConfig) extractor() observerware.ContextExtractor {
-	if c.ContextExtractor == nil {
+	if c.ExtractContext == nil {
 		return observerware.NewNopContextExtractor()
 	}
-	return observerware.ContextExtractor(c.ContextExtractor)
+	return observerware.ContextExtractor(c.ExtractContext)
 }
 
 // MetricsConfig describes how telemetry should be configured.
