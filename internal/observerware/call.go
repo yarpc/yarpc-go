@@ -101,5 +101,10 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		if counter, err := c.edge.serverFailures.Get("unexpected"); err != nil {
 			counter.Inc()
 		}
+		return
+	}
+	// We've encountered an error that isn't otherwise categorized.
+	if counter, err := c.edge.serverFailures.Get("unknown"); err != nil {
+		counter.Inc()
 	}
 }
