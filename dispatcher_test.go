@@ -379,8 +379,8 @@ func TestObservabilityConfig(t *testing.T) {
 	logCfgs := []LoggingConfig{
 		{},
 		{Zap: zap.NewNop()},
-		{ContextExtractor: observerware.NewNopContextExtractor()},
-		{Zap: zap.NewNop(), ContextExtractor: observerware.NewNopContextExtractor()},
+		{ExtractContext: observerware.NewNopContextExtractor()},
+		{Zap: zap.NewNop(), ExtractContext: observerware.NewNopContextExtractor()},
 	}
 	metricsCfgs := []MetricsConfig{
 		{},
