@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/pally"
+
 	"go.uber.org/zap"
 )
 
