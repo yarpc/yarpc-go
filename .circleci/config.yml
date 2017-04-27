@@ -9,7 +9,9 @@ jobs:
       - checkout
       - setup_remote_docker:
           reusable: true
-          exclusive: false
+          # run tests run on separate docker engines to avoid interference and
+          # and resource contention
+          exclusive: true
       - restore_cache:
           key: yarpc-go
       - run:
