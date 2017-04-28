@@ -84,5 +84,6 @@ reset_waitpids
 # Merge cross-package coverage and then split the result into main and
 # experimental coverages.
 gocovmerge "$COVER"/*.out \
+	| grep -v 'internal/examples' \
 	| tee >(grep -v /x/ > coverage.main.txt) \
 	| (echo 'mode: atomic'; grep /x/) > coverage.x.txt
