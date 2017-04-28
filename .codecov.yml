@@ -11,13 +11,3 @@ coverage:
       experimental:
         target: 70%
         flags: experimental
-
-flags:
-  main: {}
-
-  experimental:
-    paths:
-      - encoding/x
-      - peer/x
-      - transport/x
-      - x
