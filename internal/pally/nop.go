@@ -22,23 +22,33 @@ package pally
 
 import "time"
 
+var (
+	// Use global no-ops to avoid allocating on each call to NewNop*.
+	_nopCounter         Counter         = nop{}
+	_nopCounterVector   CounterVector   = nopCounterVec{}
+	_nopGauge           Gauge           = nop{}
+	_nopGaugeVector     GaugeVector     = nopGaugeVec{}
+	_nopLatencies       Latencies       = nop{}
+	_nopLatenciesVector LatenciesVector = nopLatenciesVec{}
+)
+
 // NewNopCounter returns a no-op Counter.
-func NewNopCounter() Counter { return nop{} }
+func NewNopCounter() Counter { return _nopCounter }
 
 // NewNopCounterVector returns a no-op CounterVector.
-func NewNopCounterVector() CounterVector { return nopCounterVec{} }
+func NewNopCounterVector() CounterVector { return _nopCounterVector }
 
 // NewNopGauge returns a no-op Gauge.
-func NewNopGauge() Gauge { return nop{} }
+func NewNopGauge() Gauge { return _nopGauge }
 
 // NewNopGaugeVector returns a no-op GaugeVector.
-func NewNopGaugeVector() GaugeVector { return nopGaugeVec{} }
+func NewNopGaugeVector() GaugeVector { return _nopGaugeVector }
 
 // NewNopLatencies returns a no-op Latencies.
-func NewNopLatencies() Latencies { return nop{} }
+func NewNopLatencies() Latencies { return _nopLatencies }
 
 // NewNopLatenciesVector returns a no-op LatenciesVector.
-func NewNopLatenciesVector() LatenciesVector { return nopLatenciesVec{} }
+func NewNopLatenciesVector() LatenciesVector { return _nopLatenciesVector }
 
 type nop struct{}
 
@@ -52,15 +62,15 @@ func (nop) Observe(_ time.Duration) {}
 
 type nopCounterVec struct{}
 
-func (nopCounterVec) Get(...string) (Counter, error) { return nop{}, nil }
-func (nopCounterVec) MustGet(...string) Counter      { return nop{} }
+func (nopCounterVec) Get(...string) (Counter, error) { return NewNopCounter(), nil }
+func (nopCounterVec) MustGet(...string) Counter      { return NewNopCounter() }
 
 type nopGaugeVec struct{}
 
-func (nopGaugeVec) Get(...string) (Gauge, error) { return nop{}, nil }
-func (nopGaugeVec) MustGet(...string) Gauge      { return nop{} }
+func (nopGaugeVec) Get(...string) (Gauge, error) { return NewNopGauge(), nil }
+func (nopGaugeVec) MustGet(...string) Gauge      { return NewNopGauge() }
 
 type nopLatenciesVec struct{}
 
-func (nopLatenciesVec) Get(...string) (Latencies, error) { return nop{}, nil }
-func (nopLatenciesVec) MustGet(...string) Latencies      { return nop{} }
+func (nopLatenciesVec) Get(...string) (Latencies, error) { return NewNopLatencies(), nil }
+func (nopLatenciesVec) MustGet(...string) Latencies      { return NewNopLatencies() }
