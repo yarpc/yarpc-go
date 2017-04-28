@@ -63,9 +63,9 @@ test: deps ## run all tests
 cover: deps ## run all tests and output code coverage
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make cover
 
-.PHONY: goveralls
-goveralls: deps ## run code coverage and upload to coveralls
-	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make goveralls
+.PHONY: codecov
+codecov: deps ## run code coverage and upload to coveralls
+	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make codecov
 
 .PHONY: examples
 examples: deps ## run all examples tests

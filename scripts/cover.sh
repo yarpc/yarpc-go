@@ -74,11 +74,11 @@ for pkg in "$@"; do
 
 	args=""
 	if [[ -n "$coverpkg" ]]; then
-		args="-coverprofile $COVER/cover.${i}.out -coverpkg $coverpkg"
+		args="-coverprofile $COVER/cover.${i}.out -covermode=atomic -coverpkg $coverpkg"
 	fi
 
 	do_waitpid go test -race $args "$pkg"
 done
 reset_waitpids
 
-gocovmerge "$COVER"/*.out > cover.out
+gocovmerge "$COVER"/*.out > coverage.txt

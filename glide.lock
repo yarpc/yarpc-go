@@ -251,8 +251,6 @@ testImports:
   version: 23699b7e2cbfdb89481023524954ba2aeff6be90
 - name: github.com/kisielk/gotool
   version: 0de1eaf82fa3f583ce21fde859f1e7e0c5e9b220
-- name: github.com/mattn/goveralls
-  version: a99c5ee06aeeca2a2befc7e90b99061b1180850c
 - name: github.com/wadey/gocovmerge
   version: b5bfa59ec0adc420475f97f89b58045c721d761c
 - name: go.uber.org/tools

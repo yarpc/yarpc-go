@@ -115,9 +115,9 @@ cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and o
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=cover.out -o cover.html
 
-.PHONY: goveralls
-goveralls: cover $(GOVERALLS) ## run code coverage and upload to coveralls
-	PATH=$(BIN):$$PATH goveralls -coverprofile=cover.out -service=travis-ci
+.PHONY: codecov
+codecov: cover ## run code coverage and upload to coveralls
+	include_cov=coverage.txt bash <(curl -s https://codecov.io/bash)
 
 .PHONY: examples
 examples: ## run all examples tests
