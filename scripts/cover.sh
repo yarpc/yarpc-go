@@ -81,4 +81,8 @@ for pkg in "$@"; do
 done
 reset_waitpids
 
-gocovmerge "$COVER"/*.out > coverage.txt
+# Merge cross-package coverage and then split the result into main and
+# experimental coverages.
+gocovmerge "$COVER"/*.out \
+	| tee >(grep -v /x/ > coverage.main.txt) \
+	| (echo 'mode: atomic'; grep /x/) > coverage.x.txt
