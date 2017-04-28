@@ -3,6 +3,7 @@ updated: 2017-04-19T15:13:50.386855787-07:00
 imports:
 - name: github.com/apache/thrift
   repo: git://git.apache.org/thrift.git
+  vcs: git
   version: b2a4d4ae21c789b689dd162deb819665567f481c
   subpackages:
   - lib/go/thrift
