@@ -31,14 +31,18 @@ if [[ -d "$COVER" ]]; then
 fi
 mkdir -p "$COVER"
 
+ignorePkgs=""
+
 # If a package directory has a .nocover file, don't count it when calculating
 # coverage.
 filter=""
 for pkg in "$@"; do
 	if [[ -f "$GOPATH/src/$pkg/.nocover" ]]; then
 		if [[ -n "$filter" ]]; then
+			ignorePkgs="$ignorePkgs\|"
 			filter="$filter, "
 		fi
+		ignorePkgs="$ignorePkgs$pkg/"
 		filter="$filter\"$pkg\": true"
 	fi
 done
@@ -90,5 +94,6 @@ reset_waitpids
 gocovmerge "$COVER"/*.out \
 	| grep -v '/internal/examples/\|/internal/tests/\|/mocks/' \
 	| grep -v '/[a-z]\+test/' \
+	| grep -v "$ignorePkgs" \
 	| tee >(grep -v /x/ > coverage.main.txt) \
 	| (echo 'mode: atomic'; grep /x/) > coverage.x.txt
