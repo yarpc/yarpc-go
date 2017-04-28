@@ -37,6 +37,7 @@ import (
 type call struct {
 	edge    *edge
 	extract ContextExtractor
+	fields  [5]zapcore.Field
 
 	started time.Time
 	ctx     context.Context
@@ -57,7 +58,7 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 		msg = "Made outbound call."
 	}
 	if ce := c.edge.logger.Check(zap.DebugLevel, msg); ce != nil {
-		fields := make([]zapcore.Field, 0, 5)
+		fields := c.fields[:0]
 		fields = append(fields, zap.String("rpcType", c.rpcType.String()))
 		fields = append(fields, zap.Duration("latency", elapsed))
 		fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
@@ -83,7 +84,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	// For now, assume that all application errors are the caller's fault.
 	if isApplicationError {
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get("application_error"); err != nil {
+		if counter, err := c.edge.callerFailures.Get("application_error"); err == nil {
 			counter.Inc()
 		}
 		return
@@ -91,7 +92,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	// Bad request errors are the caller's fault.
 	if transport.IsBadRequestError(err) {
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get("bad_request"); err != nil {
+		if counter, err := c.edge.callerFailures.Get("bad_request"); err == nil {
 			counter.Inc()
 		}
 		return
@@ -99,13 +100,13 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	// For now, assume that all other errors are the server's fault.
 	c.edge.serverErrLatencies.Observe(elapsed)
 	if transport.IsUnexpectedError(err) {
-		if counter, err := c.edge.serverFailures.Get("unexpected"); err != nil {
+		if counter, err := c.edge.serverFailures.Get("unexpected"); err == nil {
 			counter.Inc()
 		}
 		return
 	}
 	// We've encountered an error that isn't otherwise categorized.
-	if counter, err := c.edge.serverFailures.Get("unknown"); err != nil {
+	if counter, err := c.edge.serverFailures.Get("unknown"); err == nil {
 		counter.Inc()
 	}
 }
