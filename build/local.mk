@@ -127,7 +127,7 @@ cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) cover-main cover-experimental __eval_p
 codecov: SHELL := /bin/bash
 codecov: ## run code coverage and upload to codecov.io
 	make cover-main
-	include_cov=coverage.main.txt bash <(curl -s https://codecov.io/bash) -c
+	include_cov=coverage.main.txt bash <(curl -s https://codecov.io/bash) -c -F main
 	make cover-experimental
 	include_cov=coverage.x.txt bash <(curl -s https://codecov.io/bash) -c -F experimental
 

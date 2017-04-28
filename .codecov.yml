@@ -4,13 +4,16 @@ codecov:
 coverage:
   status:
     project:
-      default: on
-
+      default: off
+      main:
+        target: 80%
+        flags: main
       experimental:
         target: 70%
         flags: experimental
 
 flags:
+  main: {}
 
   experimental:
     paths:
