@@ -103,8 +103,18 @@ verifyversion: ## verify the version in the changelog is the same as in version.
 		exit 1; \
 	fi
 
+.PHONY: verifycodecovignores
+verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
+	@find . -name vendor -prune -o -name .nocover -exec dirname '{}' ';' \
+		| cut -b2- \
+		| while read f; do \
+			if ! grep "$$f" .codecov.yml &>/dev/null; then \
+				echo ".codecov.yml is out of date: add $$f to it"; \
+			fi \
+		done
+
 .PHONY: lint
-lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion ## run all linters
+lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion verifycodecovignores ## run all linters
 
 .PHONY: test
 test: $(THRIFTRW) __eval_packages ## run all tests
