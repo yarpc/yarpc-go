@@ -111,15 +111,15 @@ test: $(THRIFTRW) __eval_packages ## run all tests
 	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
 
 .PHONY: cover-main
-cover-main:
+cover-main: __eval_packages
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(MAIN_PACKAGES); mv coverage.txt coverage.main.txt
 
 .PHONY: cover-experimental
-cover-experimental:
+cover-experimental: __eval_packages
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(X_PACKAGES); mv coverage.txt coverage.x.txt
 
 .PHONY: cover
-cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) cover-main cover-experimental __eval_packages ## run all tests and output code coverage
+cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) cover-main cover-experimental ## run all tests and output code coverage
 	go tool cover -html=coverage.main.txt -o cover.main.html
 	go tool cover -html=coverage.x.txt -o cover.x.html
 
