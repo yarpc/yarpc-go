@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package observerware
+package observability
 
 import (
 	"context"
@@ -57,19 +57,21 @@ func (c call) endLogs(elapsed time.Duration, err error, isApplicationError bool)
 	if !c.inbound {
 		msg = "Made outbound call."
 	}
-	if ce := c.edge.logger.Check(zap.DebugLevel, msg); ce != nil {
-		fields := c.fields[:0]
-		fields = append(fields, zap.String("rpcType", c.rpcType.String()))
-		fields = append(fields, zap.Duration("latency", elapsed))
-		fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
-		fields = append(fields, c.extract(c.ctx))
-		if isApplicationError {
-			fields = append(fields, zap.String("error", "application_error"))
-		} else {
-			fields = append(fields, zap.Error(err))
-		}
-		ce.Write(fields...)
+	ce := c.edge.logger.Check(zap.DebugLevel, msg)
+	if ce == nil {
+		return
 	}
+	fields := c.fields[:0]
+	fields = append(fields, zap.String("rpcType", c.rpcType.String()))
+	fields = append(fields, zap.Duration("latency", elapsed))
+	fields = append(fields, zap.Bool("successful", err == nil && !isApplicationError))
+	fields = append(fields, c.extract(c.ctx))
+	if isApplicationError {
+		fields = append(fields, zap.String("error", "application_error"))
+	} else {
+		fields = append(fields, zap.Error(err))
+	}
+	ce.Write(fields...)
 }
 
 func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool) {

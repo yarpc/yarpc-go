@@ -18,9 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package observerware
+package observability
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -30,10 +32,14 @@ import (
 )
 
 var (
+	_timeNow          = time.Now // for tests
 	_defaultGraphSize = 128
-	_ms               = time.Millisecond
+	_digesterPool     = sync.Pool{New: func() interface{} {
+		return &digester{make([]byte, 0, 128)}
+	}}
 	// Latency buckets for histograms. At some point, we may want to make these
 	// configurable.
+	_ms      = time.Millisecond
 	_buckets = []time.Duration{
 		1 * _ms,
 		2 * _ms,
@@ -88,8 +94,107 @@ var (
 	}
 )
 
-// An edge is a collection of RPC stats for a particular caller-callee pair in
-// the graph.
+// A digester creates a null-delimited byte slice from a series of strings. It's
+// an efficient way to create map keys.
+//
+// This helps because (1) appending to a string allocates, (2) converting a
+// byte slice to a string allocates, but (3) the Go compiler optimizes away
+// byte-to-string conversions in map lookups.
+type digester struct {
+	bs []byte
+}
+
+// For optimal performance, be sure to free each digester.
+func newDigester() *digester {
+	d := _digesterPool.Get().(*digester)
+	d.bs = d.bs[:0]
+	return d
+}
+
+func (d *digester) add(s string) {
+	if len(d.bs) > 0 {
+		// separate labels with a null byte
+		d.bs = append(d.bs, '\x00')
+	}
+	d.bs = append(d.bs, s...)
+}
+
+func (d *digester) digest() []byte {
+	return d.bs
+}
+
+func (d *digester) free() {
+	_digesterPool.Put(d)
+}
+
+// A graph represents a collection of services: each service is a node, and we
+// collect stats for each caller-callee-encoding-procedure-rk-sk-rd edge.
+type graph struct {
+	reg     *pally.Registry
+	logger  *zap.Logger
+	extract ContextExtractor
+
+	edgesMu sync.RWMutex
+	edges   map[string]*edge
+}
+
+// begin starts a call along an edge.
+func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound bool, req *transport.Request) call {
+	now := _timeNow()
+
+	d := newDigester()
+	d.add(req.Caller)
+	d.add(req.Service)
+	d.add(string(req.Encoding))
+	d.add(req.Procedure)
+	d.add(req.ShardKey)
+	d.add(req.RoutingKey)
+	d.add(req.RoutingDelegate)
+	e := g.getOrCreateEdge(d.digest(), req)
+	d.free()
+
+	return call{
+		edge:    e,
+		extract: g.extract,
+		started: now,
+		ctx:     ctx,
+		req:     req,
+		rpcType: rpcType,
+		inbound: isInbound,
+	}
+}
+
+func (g *graph) getOrCreateEdge(key []byte, req *transport.Request) *edge {
+	if e := g.getEdge(key); e != nil {
+		return e
+	}
+	return g.createEdge(key, req)
+}
+
+func (g *graph) getEdge(key []byte) *edge {
+	g.edgesMu.RLock()
+	e := g.edges[string(key)]
+	g.edgesMu.RUnlock()
+	return e
+}
+
+func (g *graph) createEdge(key []byte, req *transport.Request) *edge {
+	g.edgesMu.Lock()
+	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
+	defer g.edgesMu.Unlock()
+
+	if e, ok := g.edges[string(key)]; ok {
+		// Someone beat us to the punch.
+		return e
+	}
+
+	e := newEdge(g.logger, g.reg, req)
+	g.edges[string(key)] = e
+	return e
+}
+
+// An edge is a collection of RPC stats for a particular
+// caller-callee-encoding-procedure-sk-rd-rk edge in the service graph.
 type edge struct {
 	logger *zap.Logger
 

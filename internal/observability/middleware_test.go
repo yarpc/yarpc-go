@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package observerware
+package observability
 
 import (
 	"context"
@@ -132,7 +132,7 @@ func TestMiddlewareLogging(t *testing.T) {
 
 	for _, tt := range tests {
 		core, logs := observer.New(zapcore.DebugLevel)
-		mw := New(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
+		mw := NewMiddleware(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
 
 		getLog := func() observer.LoggedEntry {
 			entries := logs.TakeAll()
@@ -249,7 +249,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	}
 
 	core, logs := observer.New(zap.DebugLevel)
-	mw := New(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
+	mw := NewMiddleware(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
 
 	assert.NoError(t, mw.Handle(
 		context.Background(),
@@ -275,7 +275,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 func TestMiddlewareStats(t *testing.T) {
 	defer stubTime()()
 	reg := pally.NewRegistry()
-	mw := New(zap.NewNop(), reg, NewNopContextExtractor())
+	mw := NewMiddleware(zap.NewNop(), reg, NewNopContextExtractor())
 
 	err := mw.Handle(
 		context.Background(),

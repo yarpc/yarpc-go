@@ -24,14 +24,13 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
-	"go.uber.org/yarpc/internal/observerware"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
@@ -40,10 +39,6 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
-
-// Default sleep between pushes to Tally metrics. At some point, we may want
-// this to be configurable.
-const _tallyPushInterval = 500 * time.Millisecond
 
 // Inbounds contains a list of inbound transports. Each inbound transport
 // specifies a source through which incoming requests are received.
@@ -100,8 +95,8 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	}
 }
 
-func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Logger, extractor observerware.ContextExtractor) Config {
-	observer := observerware.New(logger, registry, extractor)
+func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Logger, extractor observability.ContextExtractor) Config {
+	observer := observability.NewMiddleware(logger, registry, extractor)
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
@@ -428,11 +423,9 @@ func (d *Dispatcher) Stop() error {
 	}
 
 	// Stop pushing metrics to Tally.
-	if d.stopRegistryPush != nil {
-		d.log.Debug("Stopping metrics push loop.")
-		d.stopRegistryPush()
-		d.log.Debug("Stopped metrics push loop.")
-	}
+	d.log.Debug("Stopping metrics push loop, if any.")
+	d.stopRegistryPush()
+	d.log.Debug("Stopped metrics push loop, if any.")
 
 	d.log.Debug("Unregistering debug pages.")
 	removeDispatcherFromDebugPages(d)

@@ -22,9 +22,10 @@ package yarpc
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/yarpc/api/middleware"
-	"go.uber.org/yarpc/internal/observerware"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/pally"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -34,6 +35,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	// Sleep between pushes to Tally metrics. At some point, we may want this
+	// to be configurable.
+	_tallyPushInterval = 500 * time.Millisecond
+	_packageName       = "yarpc"
+)
+
 // LoggingConfig describes how logging should be configured.
 type LoggingConfig struct {
 	// Supplies a logger for the dispatcher. By default, no logs are
@@ -41,25 +49,25 @@ type LoggingConfig struct {
 	Zap *zap.Logger
 	// If supplied, ExtractContext is used to log request-scoped
 	// information carried on the context (e.g., trace and span IDs).
-	ExtractContext func(context.Context) zapcore.Field
+	ContextExtractor func(context.Context) zapcore.Field
 }
 
 func (c LoggingConfig) logger(name string) *zap.Logger {
 	if c.Zap == nil {
 		return zap.NewNop()
 	}
-	return c.Zap.Named("yarpc").With(
+	return c.Zap.Named(_packageName).With(
 		// Use a namespace to prevent key collisions with other libraries.
-		zap.Namespace("yarpc"),
+		zap.Namespace(_packageName),
 		zap.String("dispatcher", name),
 	)
 }
 
-func (c LoggingConfig) extractor() observerware.ContextExtractor {
-	if c.ExtractContext == nil {
-		return observerware.NewNopContextExtractor()
+func (c LoggingConfig) extractor() observability.ContextExtractor {
+	if c.ContextExtractor == nil {
+		return observability.NewNopContextExtractor()
 	}
-	return observerware.ContextExtractor(c.ExtractContext)
+	return observability.ContextExtractor(c.ContextExtractor)
 }
 
 // MetricsConfig describes how telemetry should be configured.
@@ -72,7 +80,7 @@ type MetricsConfig struct {
 func (c MetricsConfig) registry(name string, logger *zap.Logger) (*pally.Registry, context.CancelFunc) {
 	r := pally.NewRegistry(
 		pally.Labeled(pally.Labels{
-			"component":  "yarpc",
+			"component":  _packageName,
 			"dispatcher": pally.ScrubLabelValue(name),
 		}),
 		// Also expose all YARPC metrics via the default Prometheus registry.
@@ -80,13 +88,13 @@ func (c MetricsConfig) registry(name string, logger *zap.Logger) (*pally.Registr
 	)
 
 	if c.Tally == nil {
-		return r, nil
+		return r, func() {}
 	}
 
 	stop, err := r.Push(c.Tally, _tallyPushInterval)
 	if err != nil {
 		logger.Error("Failed to start pushing metrics to Tally.", zap.Error(err))
-		return r, nil
+		return r, func() {}
 	}
 	return r, stop
 }
@@ -116,15 +124,15 @@ type Config struct {
 	InboundMiddleware  InboundMiddleware
 	OutboundMiddleware OutboundMiddleware
 
-	// Tracer is deprecated. The dispatcher does nothing with this propery.
+	// Tracer is deprecated. The dispatcher does nothing with this property.
 	Tracer opentracing.Tracer
 
 	// RouterMiddleware is middleware to control how requests are routed.
 	RouterMiddleware middleware.Router
 
-	// Logging configures logging.
+	// Configures logging.
 	Logging LoggingConfig
 
-	// Metrics configures telemetry.
+	// Configures telemetry.
 	Metrics MetricsConfig
 }

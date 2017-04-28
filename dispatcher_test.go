@@ -28,7 +28,7 @@ import (
 	. "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/observerware"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 
@@ -379,8 +379,8 @@ func TestObservabilityConfig(t *testing.T) {
 	logCfgs := []LoggingConfig{
 		{},
 		{Zap: zap.NewNop()},
-		{ExtractContext: observerware.NewNopContextExtractor()},
-		{Zap: zap.NewNop(), ExtractContext: observerware.NewNopContextExtractor()},
+		{ContextExtractor: observability.NewNopContextExtractor()},
+		{Zap: zap.NewNop(), ContextExtractor: observability.NewNopContextExtractor()},
 	}
 	metricsCfgs := []MetricsConfig{
 		{},

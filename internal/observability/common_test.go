@@ -18,6 +18,58 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package observerware provides logging and metrics collection middleware for
-// YARPC.
-package observerware
+package observability
+
+import (
+	"context"
+	"time"
+
+	"go.uber.org/yarpc/api/transport"
+)
+
+type fakeAck struct{}
+
+func (a fakeAck) String() string { return "" }
+
+type fakeHandler struct {
+	err            error
+	applicationErr bool
+}
+
+func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transport.ResponseWriter) error {
+	if h.applicationErr {
+		rw.SetApplicationError()
+		return nil
+	}
+	return h.err
+}
+
+func (h fakeHandler) HandleOneway(_ context.Context, _ *transport.Request) error {
+	return h.err
+}
+
+type fakeOutbound struct {
+	transport.Outbound
+
+	err error
+}
+
+func (o fakeOutbound) Call(_ context.Context, _ *transport.Request) (*transport.Response, error) {
+	if o.err != nil {
+		return nil, o.err
+	}
+	return &transport.Response{}, nil
+}
+
+func (o fakeOutbound) CallOneway(_ context.Context, _ *transport.Request) (transport.Ack, error) {
+	if o.err != nil {
+		return nil, o.err
+	}
+	return fakeAck{}, nil
+}
+
+func stubTime() func() {
+	prev := _timeNow
+	_timeNow = func() time.Time { return time.Time{} }
+	return func() { _timeNow = prev }
+}

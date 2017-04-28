@@ -18,12 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package observerware
+package observability
 
 import (
 	"context"
 	"sync"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/pally"
@@ -31,15 +30,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	_timeNow      = time.Now // for tests
-	_digesterPool = sync.Pool{New: func() interface{} {
-		return &digester{make([]byte, 0, 128)}
-	}}
-	_writerPool = sync.Pool{New: func() interface{} {
-		return &writer{}
-	}}
-)
+var _writerPool = sync.Pool{New: func() interface{} {
+	return &writer{}
+}}
 
 // writer wraps a transport.ResponseWriter so the observing middleware can
 // detect application errors.
@@ -65,60 +58,24 @@ func (w *writer) free() {
 	_writerPool.Put(w)
 }
 
-// A digester creates a null-delimited byte slice from a series of strings. It's
-// an efficient way to create map keys.
-type digester struct {
-	bs []byte
-}
-
-// For optimal performance, be sure to free each digester.
-func newDigester() *digester {
-	d := _digesterPool.Get().(*digester)
-	d.bs = d.bs[:0]
-	return d
-}
-
-func (d *digester) add(s string) {
-	if len(d.bs) > 0 {
-		// separate labels with a null byte
-		d.bs = append(d.bs, '\x00')
-	}
-	d.bs = append(d.bs, s...)
-}
-
-func (d *digester) digest() []byte {
-	return d.bs
-}
-
-func (d *digester) free() {
-	_digesterPool.Put(d)
-}
-
 // Middleware is logging and metrics middleware for all RPC types.
 type Middleware struct {
-	reg     *pally.Registry
-	logger  *zap.Logger
-	extract ContextExtractor
-
-	// Cache metrics and loggers for each caller-callee-encoding-proc-sk-rk-rd
-	// edge in the service graph.
-	edgesMu sync.RWMutex
-	edges   map[string]*edge
+	graph graph
 }
 
-// New constructs a Middleware.
-func New(logger *zap.Logger, reg *pally.Registry, extract ContextExtractor) *Middleware {
-	return &Middleware{
+// NewMiddleware constructs a Middleware.
+func NewMiddleware(logger *zap.Logger, reg *pally.Registry, extract ContextExtractor) *Middleware {
+	return &Middleware{graph{
 		edges:   make(map[string]*edge, _defaultGraphSize),
 		reg:     reg,
 		logger:  logger,
 		extract: extract,
-	}
+	}}
 }
 
 // Handle implements middleware.UnaryInbound.
 func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
-	call := m.begin(ctx, transport.Unary, true /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Unary, true /* isInbound */, req)
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	call.End(err, wrappedWriter.isApplicationError)
@@ -128,7 +85,7 @@ func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w trans
 
 // Call implements middleware.UnaryOutbound.
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	call := m.begin(ctx, transport.Unary, false /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Unary, false /* isInbound */, req)
 	res, err := out.Call(ctx, req)
 
 	isApplicationError := false
@@ -141,7 +98,7 @@ func (m *Middleware) Call(ctx context.Context, req *transport.Request, out trans
 
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	call := m.begin(ctx, transport.Oneway, true /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Oneway, true /* isInbound */, req)
 	err := h.HandleOneway(ctx, req)
 	call.End(err, false /* isApplicationError */)
 	return err
@@ -149,62 +106,8 @@ func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h
 
 // CallOneway implements middleware.OnewayOutbound.
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	call := m.begin(ctx, transport.Oneway, false /* isInbound */, req)
+	call := m.graph.begin(ctx, transport.Oneway, false /* isInbound */, req)
 	ack, err := out.CallOneway(ctx, req)
 	call.End(err, false /* isApplicationError */)
 	return ack, err
-}
-
-func (m *Middleware) begin(ctx context.Context, rpcType transport.Type, isInbound bool, req *transport.Request) call {
-	now := _timeNow()
-
-	d := newDigester()
-	d.add(req.Caller)
-	d.add(req.Service)
-	d.add(string(req.Encoding))
-	d.add(req.Procedure)
-	d.add(req.ShardKey)
-	d.add(req.RoutingKey)
-	d.add(req.RoutingDelegate)
-	e := m.getOrCreateEdge(d.digest(), req)
-	d.free()
-
-	return call{
-		edge:    e,
-		extract: m.extract,
-		started: now,
-		ctx:     ctx,
-		req:     req,
-		rpcType: rpcType,
-		inbound: isInbound,
-	}
-}
-
-func (m *Middleware) getOrCreateEdge(key []byte, req *transport.Request) *edge {
-	if e := m.getEdge(key); e != nil {
-		return e
-	}
-	return m.createEdge(key, req)
-}
-
-func (m *Middleware) getEdge(key []byte) *edge {
-	m.edgesMu.RLock()
-	e := m.edges[string(key)]
-	m.edgesMu.RUnlock()
-	return e
-}
-
-func (m *Middleware) createEdge(key []byte, req *transport.Request) *edge {
-	m.edgesMu.Lock()
-	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
-	defer m.edgesMu.Unlock()
-
-	if e, ok := m.edges[string(key)]; ok {
-		// Someone beat us to the punch.
-		return e
-	}
-
-	e := newEdge(m.logger, m.reg, req)
-	m.edges[string(key)] = e
-	return e
 }
