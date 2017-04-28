@@ -5,8 +5,10 @@
 *.prof
 /.glide
 /cover
-/cover.html
-/coverage.txt
+/cover.main.html
+/cover.x.html
+/coverage.main.txt
+/coverage.x.txt
 /vendor
 /TAGS
 
