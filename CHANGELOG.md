@@ -25,6 +25,7 @@ v1.8.0 (unreleased)
     middleware used by that Dispatcher.
 -   http: Added an `AddHeader` option to HTTP outbounds to send certain headers
     for all requests.
+-   Adds consistent structured logging and metrics to all RPCs.
 
 
 v1.7.1 (2017-03-29)

@@ -18,6 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package observerware provides logging and metrics collection middleware for
+// Package observability provides logging and metrics collection middleware for
 // YARPC.
-package observerware
+package observability

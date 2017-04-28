@@ -21,6 +21,7 @@
 package yarpc
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -29,51 +30,15 @@ import (
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
-	"go.uber.org/yarpc/internal/observerware"
+	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
+	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
 
-	"github.com/opentracing/opentracing-go"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
-
-// Config specifies the parameters of a new Dispatcher constructed via
-// NewDispatcher.
-type Config struct {
-	// Name of the service. This is the name used by other services when
-	// making requests to this service.
-	Name string
-
-	// Inbounds define how this service receives incoming requests from other
-	// services.
-	//
-	// This may be nil if this service does not receive any requests.
-	Inbounds Inbounds
-
-	// Outbounds defines how this service makes requests to other services.
-	//
-	// This may be nil if this service does not send any requests.
-	Outbounds Outbounds
-
-	// Inbound and Outbound Middleware that will be applied to all incoming
-	// and outgoing requests respectively.
-	//
-	// These may be nil if there is no middleware to apply.
-	InboundMiddleware  InboundMiddleware
-	OutboundMiddleware OutboundMiddleware
-
-	// Tracer is deprecated. The dispatcher does nothing with this propery.
-	Tracer opentracing.Tracer
-
-	// RouterMiddleware is middleware to control how requests are routed.
-	RouterMiddleware middleware.Router
-
-	// ZapLogger provides a logger for the dispatcher. The default logger is a
-	// no-op.
-	ZapLogger *zap.Logger
-}
 
 // Inbounds contains a list of inbound transports. Each inbound transport
 // specifies a source through which incoming requests are received.
@@ -111,14 +76,11 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		panic("yarpc.NewDispatcher expects a valid service name: " + err.Error())
 	}
 
-	logger := zap.NewNop()
-	if cfg.ZapLogger != nil {
-		logger = cfg.ZapLogger.Named("yarpc").With(
-			zap.Namespace("yarpc"), // isolate yarpc's keys
-			zap.String("dispatcher", cfg.Name),
-		)
-		cfg = addObservingMiddleware(cfg, logger)
-	}
+	logger := cfg.Logging.logger(cfg.Name)
+	extractor := cfg.Logging.extractor()
+
+	registry, stopPush := cfg.Metrics.registry(cfg.Name, logger)
+	cfg = addObservingMiddleware(cfg, registry, logger, extractor)
 
 	return &Dispatcher{
 		name:              cfg.Name,
@@ -128,11 +90,13 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		transports:        collectTransports(cfg.Inbounds, cfg.Outbounds),
 		inboundMiddleware: cfg.InboundMiddleware,
 		log:               logger,
+		registry:          registry,
+		stopRegistryPush:  stopPush,
 	}
 }
 
-func addObservingMiddleware(cfg Config, logger *zap.Logger) Config {
-	observer := observerware.New(logger, observerware.NewNopContextExtractor())
+func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Logger, extractor observability.ContextExtractor) Config {
+	observer := observability.NewMiddleware(logger, registry, extractor)
 
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
@@ -225,8 +189,9 @@ type Dispatcher struct {
 
 	inboundMiddleware InboundMiddleware
 
-	// TODO (shah): add a *pally.Registry too.
-	log *zap.Logger
+	log              *zap.Logger
+	registry         *pally.Registry
+	stopRegistryPush context.CancelFunc
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -456,6 +421,11 @@ func (d *Dispatcher) Stop() error {
 	if err := multierr.Combine(allErrs...); err != nil {
 		return err
 	}
+
+	// Stop pushing metrics to Tally.
+	d.log.Debug("Stopping metrics push loop, if any.")
+	d.stopRegistryPush()
+	d.log.Debug("Stopped metrics push loop, if any.")
 
 	d.log.Debug("Unregistering debug pages.")
 	removeDispatcherFromDebugPages(d)

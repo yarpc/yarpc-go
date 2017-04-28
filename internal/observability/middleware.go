@@ -18,75 +18,91 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package observerware
+package observability
 
 import (
 	"context"
-	"time"
+	"sync"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/pally"
 
 	"go.uber.org/zap"
 )
 
-// For tests.
-var _timeNow = time.Now
+var _writerPool = sync.Pool{New: func() interface{} {
+	return &writer{}
+}}
 
-// Middleware is logging middleware for all RPC types.
-type Middleware struct {
-	logger  *zap.Logger
-	extract ContextExtractor
+// writer wraps a transport.ResponseWriter so the observing middleware can
+// detect application errors.
+type writer struct {
+	transport.ResponseWriter
+
+	isApplicationError bool
 }
 
-// New constructs a Middleware.
-func New(logger *zap.Logger, extract ContextExtractor) *Middleware {
-	return &Middleware{
-		logger:  logger,
-		extract: extract,
-	}
+func newWriter(rw transport.ResponseWriter) *writer {
+	w := _writerPool.Get().(*writer)
+	w.isApplicationError = false
+	w.ResponseWriter = rw
+	return w
+}
+
+func (w *writer) SetApplicationError() {
+	w.isApplicationError = true
+	w.ResponseWriter.SetApplicationError()
+}
+
+func (w *writer) free() {
+	_writerPool.Put(w)
+}
+
+// Middleware is logging and metrics middleware for all RPC types.
+type Middleware struct {
+	graph graph
+}
+
+// NewMiddleware constructs a Middleware.
+func NewMiddleware(logger *zap.Logger, reg *pally.Registry, extract ContextExtractor) *Middleware {
+	return &Middleware{newGraph(reg, logger, extract)}
 }
 
 // Handle implements middleware.UnaryInbound.
 func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
-	start := _timeNow()
-	err := h.Handle(ctx, req, w)
-	m.log(ctx, "Handled inbound request.", "unary", req, _timeNow().Sub(start), err)
+	call := m.graph.begin(ctx, transport.Unary, true /* isInbound */, req)
+	wrappedWriter := newWriter(w)
+	err := h.Handle(ctx, req, wrappedWriter)
+	call.End(err, wrappedWriter.isApplicationError)
+	wrappedWriter.free()
 	return err
 }
 
 // Call implements middleware.UnaryOutbound.
 func (m *Middleware) Call(ctx context.Context, req *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	start := _timeNow()
+	call := m.graph.begin(ctx, transport.Unary, false /* isInbound */, req)
 	res, err := out.Call(ctx, req)
-	m.log(ctx, "Made outbound call.", "unary", req, _timeNow().Sub(start), err)
+
+	isApplicationError := false
+	if res != nil {
+		isApplicationError = res.ApplicationError
+	}
+	call.End(err, isApplicationError)
 	return res, err
 }
 
 // HandleOneway implements middleware.OnewayInbound.
 func (m *Middleware) HandleOneway(ctx context.Context, req *transport.Request, h transport.OnewayHandler) error {
-	start := _timeNow()
+	call := m.graph.begin(ctx, transport.Oneway, true /* isInbound */, req)
 	err := h.HandleOneway(ctx, req)
-	m.log(ctx, "Handled inbound request.", "oneway", req, _timeNow().Sub(start), err)
+	call.End(err, false /* isApplicationError */)
 	return err
 }
 
 // CallOneway implements middleware.OnewayOutbound.
 func (m *Middleware) CallOneway(ctx context.Context, req *transport.Request, out transport.OnewayOutbound) (transport.Ack, error) {
-	start := _timeNow()
+	call := m.graph.begin(ctx, transport.Oneway, false /* isInbound */, req)
 	ack, err := out.CallOneway(ctx, req)
-	m.log(ctx, "Made outbound call.", "oneway", req, _timeNow().Sub(start), err)
+	call.End(err, false /* isApplicationError */)
 	return ack, err
-}
-
-func (m *Middleware) log(ctx context.Context, msg, rpcType string, req *transport.Request, elapsed time.Duration, err error) {
-	if ce := m.logger.Check(zap.DebugLevel, msg); ce != nil {
-		ce.Write(
-			zap.String("rpcType", rpcType),
-			zap.Object("request", req),
-			zap.Duration("latency", elapsed),
-			zap.Bool("successful", err == nil),
-			zap.Error(err),
-			m.extract(ctx),
-		)
-	}
 }
