@@ -1,0 +1,20 @@
+codecov:
+  branch: dev
+
+coverage:
+  status:
+    project:
+      default: on
+
+      experimental:
+        target: 70%
+        flags: experimental
+
+flags:
+
+  experimental:
+    paths:
+      - encoding/x
+      - peer/x
+      - transport/x
+      - x
