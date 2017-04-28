@@ -85,9 +85,10 @@ reset_waitpids
 
 # Merge cross-package coverage and then split the result into main and
 # experimental coverages.
+#
+# We ignore packages in the form "footest" and any mock files.
 gocovmerge "$COVER"/*.out \
-	| grep -v '/internal/examples/\|/internal/tests/' \
-	| grep -v '/[a-z]\+test/' \  # packages in the form "footest"
-	| grep -v 'mock_.*\.go' \  # mock files
+	| grep -v '/internal/examples/\|/internal/tests/\|/mocks/' \
+	| grep -v '/[a-z]\+test/' \
 	| tee >(grep -v /x/ > coverage.main.txt) \
 	| (echo 'mode: atomic'; grep /x/) > coverage.x.txt
