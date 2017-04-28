@@ -65,12 +65,7 @@ type Middleware struct {
 
 // NewMiddleware constructs a Middleware.
 func NewMiddleware(logger *zap.Logger, reg *pally.Registry, extract ContextExtractor) *Middleware {
-	return &Middleware{graph{
-		edges:   make(map[string]*edge, _defaultGraphSize),
-		reg:     reg,
-		logger:  logger,
-		extract: extract,
-	}}
+	return &Middleware{newGraph(reg, logger, extract)}
 }
 
 // Handle implements middleware.UnaryInbound.

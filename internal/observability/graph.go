@@ -97,9 +97,11 @@ var (
 // A digester creates a null-delimited byte slice from a series of strings. It's
 // an efficient way to create map keys.
 //
-// This helps because (1) appending to a string allocates, (2) converting a
+// This helps because (1) appending to a string allocates and (2) converting a
 // byte slice to a string allocates, but (3) the Go compiler optimizes away
-// byte-to-string conversions in map lookups.
+// byte-to-string conversions in map lookups. Using this type to build up a key
+// and doing map lookups with myMap[string(d.digest())] is fast and
+// zero-allocation.
 type digester struct {
 	bs []byte
 }
@@ -136,6 +138,15 @@ type graph struct {
 
 	edgesMu sync.RWMutex
 	edges   map[string]*edge
+}
+
+func newGraph(reg *pally.Registry, logger *zap.Logger, extract ContextExtractor) graph {
+	return graph{
+		edges:   make(map[string]*edge, _defaultGraphSize),
+		reg:     reg,
+		logger:  logger,
+		extract: extract,
+	}
 }
 
 // begin starts a call along an edge.
