@@ -113,7 +113,7 @@ test: $(THRIFTRW) __eval_packages ## run all tests
 .PHONY: cover
 cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and output code coverage
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
-	go tool cover -html=cover.out -o cover.html
+	go tool cover -html=coverage.txt -o cover.html
 
 .PHONY: codecov
 codecov: cover ## run code coverage and upload to coveralls
