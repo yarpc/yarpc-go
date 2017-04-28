@@ -116,7 +116,8 @@ cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and o
 	go tool cover -html=coverage.txt -o cover.html
 
 .PHONY: codecov
-codecov: cover ## run code coverage and upload to coveralls
+codecov: SHELL := /bin/bash
+codecov: cover ## run code coverage and upload to codecov.io
 	include_cov=coverage.txt bash <(curl -s https://codecov.io/bash)
 
 .PHONY: examples
