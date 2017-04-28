@@ -1,0 +1,13 @@
+codecov:
+  branch: dev
+
+coverage:
+  status:
+    project:
+      default: off
+      main:
+        target: 80%
+        flags: main
+      experimental:
+        target: 70%
+        flags: experimental

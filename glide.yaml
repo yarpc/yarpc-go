@@ -73,7 +73,6 @@ testImport:
   - golint
 - package: github.com/kisielk/errcheck
 - package: github.com/kisielk/gotool
-- package: github.com/mattn/goveralls
 - package: github.com/wadey/gocovmerge
 - package: go.uber.org/tools
   subpackages:

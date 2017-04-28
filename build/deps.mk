@@ -11,7 +11,6 @@ GEN_GO_BIN_DEPS = \
 EXTRA_GO_BIN_DEPS = \
 	github.com/kisielk/errcheck \
 	github.com/golang/lint/golint \
-	github.com/mattn/goveralls \
 	github.com/wadey/gocovmerge \
 	golang.org/x/tools/cmd/cover \
 	honnef.co/go/tools/cmd/staticcheck
@@ -128,7 +127,6 @@ ERRCHECK = $(BIN)/errcheck
 STATICCHECK = $(BIN)/staticcheck
 COVER = $(BIN)/cover
 GOCOVMERGE = $(BIN)/gocovmerge
-GOVERALLS = $(BIN)/goveralls
 
 .PHONY: predeps
 predeps: $(GLIDE) $(THRIFT) $(PROTOC) $(RAGEL)

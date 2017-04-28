@@ -74,11 +74,16 @@ for pkg in "$@"; do
 
 	args=""
 	if [[ -n "$coverpkg" ]]; then
-		args="-coverprofile $COVER/cover.${i}.out -coverpkg $coverpkg"
+		args="-coverprofile $COVER/cover.${i}.out -covermode=atomic -coverpkg $coverpkg"
 	fi
 
 	do_waitpid go test -race $args "$pkg"
 done
 reset_waitpids
 
-gocovmerge "$COVER"/*.out > cover.out
+# Merge cross-package coverage and then split the result into main and
+# experimental coverages.
+gocovmerge "$COVER"/*.out \
+	| grep -v 'internal/examples' \
+	| tee >(grep -v /x/ > coverage.main.txt) \
+	| (echo 'mode: atomic'; grep /x/) > coverage.x.txt

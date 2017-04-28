@@ -259,6 +259,6 @@ Upcoming:
 [doc-img]: https://godoc.org/go.uber.org/yarpc?status.svg
 [doc]: https://godoc.org/go.uber.org/yarpc
 [ci-img]: https://travis-ci.org/yarpc/yarpc-go.svg?branch=master
-[cov-img]: https://coveralls.io/repos/github/yarpc/yarpc-go/badge.svg?branch=master
+[cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev/graph/badge.svg?flag=main
 [ci]: https://travis-ci.org/yarpc/yarpc-go
-[cov]: https://coveralls.io/github/yarpc/yarpc-go?branch=master
+[cov]: https://codecov.io/gh/yarpc/yarpc-go
