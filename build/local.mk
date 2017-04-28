@@ -112,13 +112,16 @@ test: $(THRIFTRW) __eval_packages ## run all tests
 
 .PHONY: cover
 cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and output code coverage
-	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
-	go tool cover -html=coverage.txt -o cover.html
+	PATH=$(BIN):$$PATH ./scripts/cover.sh $(MAIN_PACKAGES); mv coverage.txt coverage.main.txt
+	go tool cover -html=coverage.main.txt -o cover.main.html
+	PATH=$(BIN):$$PATH ./scripts/cover.sh $(X_PACKAGES); mv coverage.txt coverage.x.txt
+	go tool cover -html=coverage.x.txt -o cover.x.html
 
 .PHONY: codecov
 codecov: SHELL := /bin/bash
 codecov: cover ## run code coverage and upload to codecov.io
-	include_cov=coverage.txt bash <(curl -s https://codecov.io/bash)
+	include_cov=coverage.main.txt bash <(curl -s https://codecov.io/bash) -c
+	include_cov=coverage.x.txt bash <(curl -s https://codecov.io/bash) -c -F experimental
 
 .PHONY: examples
 examples: ## run all examples tests
@@ -127,6 +130,8 @@ examples: ## run all examples tests
 .PHONY: __eval_packages
 __eval_packages:
 	$(eval PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor))
+	$(eval MAIN_PACKAGES := $(shell go list $(PACKAGES) | grep -v '/x/\|x$$\|/internal/examples/'))
+	$(eval X_PACKAGES := $(shell go list $(PACKAGES) | grep '/x/\|x$$'))
 
 .PHONY: __eval_go_files
 __eval_go_files:
