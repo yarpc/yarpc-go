@@ -110,17 +110,25 @@ lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verify
 test: $(THRIFTRW) __eval_packages ## run all tests
 	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
 
-.PHONY: cover
-cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and output code coverage
+.PHONY: cover-main
+cover-main:
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(MAIN_PACKAGES); mv coverage.txt coverage.main.txt
-	go tool cover -html=coverage.main.txt -o cover.main.html
+
+.PHONY: cover-experimental
+cover-experimental:
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(X_PACKAGES); mv coverage.txt coverage.x.txt
+
+.PHONY: cover
+cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) cover-main cover-experimental __eval_packages ## run all tests and output code coverage
+	go tool cover -html=coverage.main.txt -o cover.main.html
 	go tool cover -html=coverage.x.txt -o cover.x.html
 
 .PHONY: codecov
 codecov: SHELL := /bin/bash
-codecov: cover ## run code coverage and upload to codecov.io
+codecov: ## run code coverage and upload to codecov.io
+	make cover-main
 	include_cov=coverage.main.txt bash <(curl -s https://codecov.io/bash) -c
+	make cover-experimental
 	include_cov=coverage.x.txt bash <(curl -s https://codecov.io/bash) -c -F experimental
 
 .PHONY: examples
