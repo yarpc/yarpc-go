@@ -69,7 +69,7 @@ func (s *Service) Start() error {
 	// Server side needs to start the server dispatcher and register itself which implements the procedures
 	s.dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name: "server",
-		Inbounds: yarpc.Inbounds{transport.NewInbound(cherami.InboundConfig{
+		Inbounds: yarpc.Inbounds{transport.NewInbound(cherami.InboundOptions{
 			Destination:   s.config.destination,
 			ConsumerGroup: s.config.consumerGroup,
 		})},
