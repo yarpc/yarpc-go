@@ -115,7 +115,7 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 		err = transport.Start()
 		fatals.NoError(err, "couldn't start cherami transport")
 
-		outbound = transport.NewOutbound(cherami.OutboundConfig{
+		outbound = transport.NewOutbound(cherami.OutboundOptions{
 			Destination: `/test/dest`})
 	default:
 		fatals.Fail("", "unknown transport %q", trans)

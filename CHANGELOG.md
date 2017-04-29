@@ -7,6 +7,10 @@ v1.9.0-dev (unreleased)
 -   http: Added support for configuring the HTTP transport using x/config.
 -   tchannel: Added support for configuring the TChannel transport using
     x/config.
+-   x/cherami: Renamed the `InboundConfig` and `OutboundConfig` structures to
+    `InboundOptions` and `OutboundOptions`.
+-   x/cherami: Added support for configuring the Cherami transport using
+    x/config.
 
 
 v1.8.0 (2017-05-01)

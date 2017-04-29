@@ -33,15 +33,15 @@ import (
 	"github.com/uber/cherami-client-go/client/cherami"
 )
 
-// OutboundConfig defines the config in order to create a Outbound.
-type OutboundConfig struct {
+// OutboundOptions specifies a Cherami outbound.
+type OutboundOptions struct {
 	Destination string
 }
 
 // Outbound is a outbound that uses Cherami as the transport.
 type Outbound struct {
 	transport     *Transport
-	config        OutboundConfig
+	opts          OutboundOptions
 	publisher     cherami.Publisher
 	tracer        opentracing.Tracer
 	client        cherami.Client
@@ -57,11 +57,11 @@ func (r receipt) String() string {
 }
 
 // NewOutbound builds a new cherami outbound.
-func (t *Transport) NewOutbound(config OutboundConfig) *Outbound {
+func (t *Transport) NewOutbound(opts OutboundOptions) *Outbound {
 	return &Outbound{
 		once:          sync.Once(),
 		transport:     t,
-		config:        config,
+		opts:          opts,
 		tracer:        t.tracer,
 		client:        t.client,
 		clientFactory: t.clientFactory,
@@ -85,7 +85,7 @@ func (o *Outbound) Start() error {
 
 func (o *Outbound) start() error {
 	var err error
-	o.publisher, err = o.clientFactory.GetPublisher(o.client, o.config.Destination)
+	o.publisher, err = o.clientFactory.GetPublisher(o.client, o.opts.Destination)
 	return err
 }
 

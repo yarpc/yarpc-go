@@ -42,14 +42,14 @@ const (
 	defaultPrefetchCount = 10
 )
 
-// InboundConfig defines the config in order to create a Inbound.
+// InboundOptions defines the config in order to create a Inbound.
 //
 // PrefetchCount controls the number of messages to buffer locally. Inbounds
 // which process messages very fast may want to specify larger value for
 // PrefetchCount for faster throughput. On the flip side larger values for
 // PrefetchCount will result in more messages being buffered locally causing
 // high memory footprint.
-type InboundConfig struct {
+type InboundOptions struct {
 	Destination   string
 	ConsumerGroup string
 	PrefetchCount int
@@ -58,7 +58,7 @@ type InboundConfig struct {
 // Inbound receives Oneway YARPC requests over Cherami.
 type Inbound struct {
 	transport     *Transport
-	config        InboundConfig
+	opts          InboundOptions
 	consumer      cherami.Consumer
 	router        transport.Router
 	tracer        opentracing.Tracer
@@ -69,14 +69,14 @@ type Inbound struct {
 }
 
 // NewInbound builds a new Cherami inbound.
-func (t *Transport) NewInbound(config InboundConfig) *Inbound {
-	if config.PrefetchCount == 0 {
-		config.PrefetchCount = defaultPrefetchCount
+func (t *Transport) NewInbound(opts InboundOptions) *Inbound {
+	if opts.PrefetchCount == 0 {
+		opts.PrefetchCount = defaultPrefetchCount
 	}
 	return &Inbound{
 		once:          sync.Once(),
 		transport:     t,
-		config:        config,
+		opts:          opts,
 		tracer:        t.tracer,
 		client:        t.client,
 		clientFactory: t.clientFactory,
@@ -111,9 +111,9 @@ func (i *Inbound) start() error {
 	}
 
 	consumer, ch, err := i.clientFactory.GetConsumer(i.client, internal.ConsumerConfig{
-		Destination:   i.config.Destination,
-		ConsumerGroup: i.config.ConsumerGroup,
-		PrefetchCount: i.config.PrefetchCount,
+		Destination:   i.opts.Destination,
+		ConsumerGroup: i.opts.ConsumerGroup,
+		PrefetchCount: i.opts.PrefetchCount,
 	})
 	if err != nil {
 		return err

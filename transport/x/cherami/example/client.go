@@ -68,7 +68,7 @@ func TestCheramiYARPC(t *testing.T) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Oneway: transport.NewOutbound(cherami.OutboundConfig{
+				Oneway: transport.NewOutbound(cherami.OutboundOptions{
 					Destination: destination,
 				}),
 			},
