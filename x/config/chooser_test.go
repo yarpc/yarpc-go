@@ -148,8 +148,8 @@ func TestChooserConfigurator(t *testing.T) {
 							fake-transport:
 								nop: "*.*"
 								fake-list:
-									fake-updater: fake-news
-									watch: true
+									fake-updater:
+										watch: true
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound, ok := c.Outbounds["their-service"]
@@ -237,7 +237,7 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								round-robin:
-									fake-updater: fake-news
+									fake-updater: {}
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound := c.Outbounds["their-service"]
@@ -256,7 +256,7 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								least-pending:
-									fake-updater: fake-news
+									fake-updater: {}
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound := c.Outbounds["their-service"]
@@ -381,7 +381,7 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								bogus-list:
-									fake-updater: fake-news
+									fake-updater: {}
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
@@ -415,7 +415,27 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`unrecognized attributes in peer list config: `,
+				`unrecognized attributes in outbound config: `,
+				`conspicuously`,
+				`present`,
+			},
+		},
+		{
+			desc: "extraneous transport config in combination with list config",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								conspicuously: present
+								fake-list:
+									peers:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`unrecognized attributes in outbound config: `,
 				`conspicuously`,
 				`present`,
 			},
@@ -435,9 +455,8 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`unrecognized attributes in peer list config: `,
+				`has invalid keys:`,
 				`conspicuously`,
-				`present`,
 			},
 		},
 		{
@@ -448,9 +467,9 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								fake-list:
-									fake-updater: fake-news
-									watch: true
-									conspicuously: present
+									fake-updater:
+										watch: true
+										conspicuously: present
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,

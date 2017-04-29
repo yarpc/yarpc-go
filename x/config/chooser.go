@@ -62,7 +62,7 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 	// Special case for single-peer outbounds.
 	if c.Peer != "" {
 		if len(c.Etc) > 0 {
-			return nil, fmt.Errorf("unrecognized attributes in peer list config: %+v", c.Etc)
+			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
 		}
 
 		return peerbind.NewSingle(identify(c.Peer), transport), nil
@@ -78,17 +78,21 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 			continue
 		}
 
-		var peerListUpdaterConfig attributeMap
-		if _, err := c.Etc.Pop(peerListName, &peerListUpdaterConfig); err != nil {
+		var peerListConfig attributeMap
+		if _, err := c.Etc.Pop(peerListName, &peerListConfig); err != nil {
 			return nil, err
 		}
 
-		peerListUpdater, err := buildPeerListUpdater(peerListUpdaterConfig, identify, kit)
+		if len(c.Etc) > 0 {
+			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
+		}
+
+		peerListUpdater, err := buildPeerListUpdater(peerListConfig, identify, kit)
 		if err != nil {
 			return nil, err
 		}
 
-		chooserBuilder, err := peerListSpec.PeerList.Decode(c.Etc)
+		chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -127,9 +131,6 @@ func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier,
 	}
 
 	if len(peers) > 0 {
-		if len(c) > 0 {
-			return nil, fmt.Errorf("unrecognized attributes in peer list config: %+v", c)
-		}
 		return peerbind.BindPeers(identifyAll(identify, peers)), nil
 	}
 
@@ -139,9 +140,14 @@ func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier,
 			continue
 		}
 
+		var peerListUpdaterConfig attributeMap
+		if _, err := c.Pop(peerListUpdaterName, &peerListUpdaterConfig); err != nil {
+			return nil, err
+		}
+
 		// This decodes all attributes on the peer list updater block, including
 		// the field with the name of the peer list updater.
-		peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(c)
+		peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(peerListUpdaterConfig)
 		if err != nil {
 			return nil, err
 		}
