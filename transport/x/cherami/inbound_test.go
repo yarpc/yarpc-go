@@ -36,7 +36,7 @@ func TestInbound(t *testing.T) {
 	mockFactory := &mocks.ClientFactory{}
 	mockFactory.On(`GetConsumer`, mock.Anything, mock.Anything).Return(mockConsumer, nil, nil)
 	transport := NewTransport(nil)
-	inbound := transport.NewInbound(InboundConfig{
+	inbound := transport.NewInbound(InboundOptions{
 		Destination:   `dest`,
 		ConsumerGroup: `cg`,
 	})
