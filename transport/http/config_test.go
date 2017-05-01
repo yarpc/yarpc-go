@@ -164,7 +164,7 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
-				"myservice": wantOutbound{
+				"myservice": {
 					URLTemplate: "http://localhost:4040/yarpc",
 				},
 			},
