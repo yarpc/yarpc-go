@@ -161,7 +161,7 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 
 	// Special case where the URL implies the single peer.
 	if oc.Empty() {
-		return x.NewSingleOutbound(oc.URL), nil
+		return x.NewSingleOutbound(oc.URL, ts.OutboundOptions...), nil
 	}
 
 	chooser, err := oc.PeerList.BuildPeerList(x, hostport.Identify, k)
