@@ -389,6 +389,26 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "invalid peer list decode",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								fake-list:
+									- 127.0.0.1:8080
+									- 127.0.0.1:8081
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`failed to read attribute "fake-list"`,
+			},
+		},
+		{
 			desc: "invalid peer list updater",
 			given: whitespace.Expand(`
 				outbounds:
