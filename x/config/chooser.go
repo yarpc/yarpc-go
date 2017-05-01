@@ -21,6 +21,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -102,11 +103,12 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 		return peerbind.Bind(peerList, peerListUpdater), nil
 	}
 
-	return nil, fmt.Errorf(
-		"no recognized peer list in config: got %s; need one of %s",
-		strings.Join(c.names(), ", "),
-		strings.Join(kit.peerListSpecNames(), ", "),
-	)
+	msg := fmt.Sprintf(
+		"no recognized peer list in config: got %s", strings.Join(c.names(), ", "))
+	if available := kit.peerListSpecNames(); len(available) > 0 {
+		msg = fmt.Sprintf("%s; need one of %s", msg, strings.Join(available, ", "))
+	}
+	return nil, errors.New(msg)
 }
 
 func (c peerList) names() (names []string) {
