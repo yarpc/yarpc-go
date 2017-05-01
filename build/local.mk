@@ -105,10 +105,10 @@ verifyversion: ## verify the version in the changelog is the same as in version.
 
 .PHONY: verifycodecovignores
 verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
-	@find . -name vendor -prune -o -name .nocover -exec dirname '{}' ';' \
+	@find . '(' -name vendor -o -name .glide ')' -prune -o -name .nocover -exec dirname '{}' ';' \
 		| cut -b2- \
 		| while read f; do \
-			if ! grep "$$f" .codecov.yml &>/dev/null; then \
+			if ! grep "$$f" .codecov.yml >/dev/null; then \
 				echo ".codecov.yml is out of date: add $$f to it"; \
 				exit 1; \
 			fi \
