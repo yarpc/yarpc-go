@@ -2,6 +2,8 @@ codecov:
   branch: dev
 
 coverage:
+  range: 50...90
+
   status:
     project:
       default: off
