@@ -47,6 +47,10 @@ staticcheck: deps ## check staticchck
 errcheck: deps ## check errcheck
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make errcheck
 
+.PHONY: verifycodecovignores
+verifycodecovignores: deps ## check verifycodecovignores
+	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifycodecovignores
+
 .PHONY: verifyversion
 verifyversion: deps ## verify the version in the changelog is the same as in version.go
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifyversion
