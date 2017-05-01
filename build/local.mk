@@ -110,6 +110,7 @@ verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 		| while read f; do \
 			if ! grep "$$f" .codecov.yml &>/dev/null; then \
 				echo ".codecov.yml is out of date: add $$f to it"; \
+				exit 1; \
 			fi \
 		done
 
