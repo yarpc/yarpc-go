@@ -38,11 +38,13 @@ type transportConfig struct {
 	keepAlive           time.Duration
 	maxIdleConnsPerHost int
 	tracer              opentracing.Tracer
+	buildClient         func(cfg *transportConfig) *http.Client
 }
 
 var defaultTransportConfig = transportConfig{
 	keepAlive:           30 * time.Second,
 	maxIdleConnsPerHost: 2,
+	buildClient:         buildHTTPClient,
 }
 
 // TransportOption customizes the behavior of an HTTP transport.
@@ -80,6 +82,14 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// Hidden option to override the buildHTTPClient function. This is used only
+// for testing.
+func buildClient(f func(*transportConfig) *http.Client) TransportOption {
+	return func(c *transportConfig) {
+		c.buildClient = f
+	}
+}
+
 // NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
 	cfg := defaultTransportConfig
@@ -90,13 +100,13 @@ func NewTransport(opts ...TransportOption) *Transport {
 
 	return &Transport{
 		once:   intsync.Once(),
-		client: buildClient(&cfg),
+		client: cfg.buildClient(&cfg),
 		peers:  make(map[string]*hostport.Peer),
 		tracer: cfg.tracer,
 	}
 }
 
-func buildClient(cfg *transportConfig) *http.Client {
+func buildHTTPClient(cfg *transportConfig) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			// options lifted from https://golang.org/src/net/http/transport.go
