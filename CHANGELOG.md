@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.8.0 (unreleased)
+v1.8.0 (2017-05-01)
 -------------------
 
 -   Adds consistent structured logging and metrics to all RPCs. This feature
