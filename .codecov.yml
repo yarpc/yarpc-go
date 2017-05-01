@@ -13,6 +13,12 @@ coverage:
       experimental:
         target: 70%
         flags: experimental
+    patch:
+      default: off
+      main:
+        target: 80%
+      experimental:
+        target: 70%
 
 ignore:
   # All packages with .nocover files in them MUST be listed here
