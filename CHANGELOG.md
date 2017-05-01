@@ -4,28 +4,30 @@ Releases
 v1.8.0 (unreleased)
 -------------------
 
+-   Adds consistent structured logging and metrics to all RPCs. This feature
+    may be enabled and configured through `yarpc.Config`.
+-   Adds an `http.AddHeader` option to HTTP outbounds to send certain HTTP
+    headers for all requests.
+-   Options `thrift.Multiplexed` and `thrift.Enveloped` may now be provided for
+    Thrift clients constructed by `yarpc.InjectClients` by adding a `thrift`
+    tag to the corresponding struct field with the name of the option. See the
+    Thrift package documentation for more details.
+-   Adds support for matching and constructing `UnrecognizedProcedureError`s
+    indicating that the router was unable to find a handler for the request.
+-   Adds support for linking peer lists and peer updaters using the `peer.Bind`
+    function.
+-   Adds an accessor to Dispatcher which provides access to the inbound
+    middleware used by that Dispatcher.
+-   Fixes a bug where the TChannel inbounds would not write the response headers
+    if the response body was empty.
+
+Experimental:
+
 -   x/config: The service name is no longer part of the configuration and must
     be passed as an argument to the `LoadConfig*` or `NewDispatcher*` methods.
 -   x/config: Configuration structures may now annotate primitive fields with
     `config:",interpolate"` to support reading environment variables in them.
     See the `TransportSpec` documentation for more information.
--   Options `thrift.Multiplexed` and `thrift.Enveloped` may now be provided for
-    Thrift clients constructed by `yarpc.InjectClients` by adding a `thrift`
-    tag to the corresponding struct field with the name of the option. See the
-    Thrift package documentation for more details.
--   Fixed a bug where the TChannel inbound would not write the response headers
-    if the response body was empty.
--   Adds support for the `UnrecognizedProcedureError` error and error checker,
-    indicating that the router was unable to find a handler for the request.
--   `peer.Bind` returns a `*peer.BoundChooser`.  The `BoundChooser` type is now
-    public.
--   `peer.BindPeers` returns a `*peer.PeersUpdater`.  The `PeersUpdater` type
-    is now public.
--   Adds an accessor to Dispatcher which provides access to the inbound
-    middleware used by that Dispatcher.
--   http: Added an `AddHeader` option to HTTP outbounds to send certain headers
-    for all requests.
--   Adds consistent structured logging and metrics to all RPCs.
 
 
 v1.7.1 (2017-03-29)
