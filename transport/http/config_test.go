@@ -255,7 +255,7 @@ func TestTransportSpec(t *testing.T) {
 			},
 			wantErrors: []string{
 				"cannot configure peer chooser for HTTP outbound",
-				"no recognized peer list in config: got least-pending",
+				`failed to read attribute "least-pending"`,
 			},
 		},
 	}
