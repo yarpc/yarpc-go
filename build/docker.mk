@@ -5,7 +5,8 @@ DOCKER_IMAGE := uber/yarpc-go-$(DOCKER_GO_VERSION)
 ifdef DOCKER_HOST
 DOCKER_BUILD_FLAGS ?= --compress
 endif
-DOCKER_RUN_FLAGS ?= -e V -e RUN -e EXAMPLES_JOBS
+DOCKER_RUN_FLAGS ?= -e V -e RUN -e EXAMPLES_JOBS -e WITHIN_DOCKER=1
+DOCKER_VOLUMES=-v $(shell pwd):/go/src/go.uber.org/yarpc
 
 .PHONY: deps
 deps: $(DOCKER) ## install all dependencies
@@ -17,7 +18,7 @@ build: deps ## go build all packages
 
 .PHONY: generate
 generate: deps ## call generation script
-	PATH=$$PATH:$(BIN) docker run -v $(shell pwd):/go/src/go.uber.org/yarpc $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make generate
+	PATH=$$PATH:$(BIN) docker run $(DOCKER_VOLUMES) $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make generate
 
 .PHONY: nogogenerate
 nogogenerate: deps ## check to make sure go:generate is not used
@@ -77,4 +78,4 @@ examples: deps ## run all examples tests
 
 .PHONY: shell
 shell: deps ## go into a bash shell in docker with the repository linked as a volume
-	PATH=$$PATH:$(BIN) docker run -it $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) /bin/bash
+	PATH=$$PATH:$(BIN) docker run -it $(DOCKER_VOLUMES) $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) /bin/bash
