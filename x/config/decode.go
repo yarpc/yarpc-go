@@ -60,6 +60,14 @@ func (m attributeMap) Get(name string, dst interface{}) (ok bool, err error) {
 	return true, err
 }
 
+func (m attributeMap) keys() []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
 func (m attributeMap) Decode(dst interface{}, opts ...mapdecode.Option) error {
 	return decodeInto(dst, m, opts...)
 }

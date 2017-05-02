@@ -385,7 +385,7 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`no recognized peer list in config: got bogus-list; need one of fake-list, least-pending, round-robin`,
+				`no recognized peer list "bogus-list"; need one of fake-list, least-pending, round-robin`,
 			},
 		},
 		{
@@ -506,7 +506,11 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`no recognized peer list in config: `,
+				`no peer list provided in config`,
+				`need one of`,
+				`fake-list`,
+				`least-pending`,
+				`round-robin`,
 			},
 		},
 	}

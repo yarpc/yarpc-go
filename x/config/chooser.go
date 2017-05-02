@@ -21,7 +21,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -71,56 +70,53 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 	// All multi-peer choosers may combine a peer list (for sharding or
 	// load-balancing) and a peer list updater.
 
-	// Find a property name that corresponds to a peer chooser/list and construct it.
-	for peerListName := range c.Etc {
-		peerListSpec := kit.peerListSpec(peerListName)
-		if peerListSpec == nil {
-			continue
-		}
-
-		var peerListConfig attributeMap
-		if _, err := c.Etc.Pop(peerListName, &peerListConfig); err != nil {
-			return nil, err
-		}
-
-		if len(c.Etc) > 0 {
-			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
-		}
-
-		peerListUpdater, err := buildPeerListUpdater(peerListConfig, identify, kit)
-		if err != nil {
-			return nil, err
-		}
-
-		chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		result, err := chooserBuilder.Build(transport, kit)
-		if err != nil {
-			return nil, err
-		}
-
-		peerList := result.(peer.ChooserList)
-
-		return peerbind.Bind(peerList, peerListUpdater), nil
-	}
-
-	msg := fmt.Sprintf(
-		"no recognized peer list in config: got %s", strings.Join(c.names(), ", "))
-	if available := kit.peerListSpecNames(); len(available) > 0 {
-		msg = fmt.Sprintf("%s; need one of %s", msg, strings.Join(available, ", "))
-	}
-	return nil, errors.New(msg)
+	return pc.buildPeerList(transport, identify, kit)
 }
 
-func (c peerList) names() (names []string) {
-	for name := range c.Etc {
-		names = append(names, name)
+func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
+	peerListName, peerListConfig, err := getPeerListInfo(pc.Etc, kit)
+	if err != nil {
+		return nil, err
 	}
-	sort.Strings(names)
-	return
+	peerListSpec, err := kit.peerListSpec(peerListName)
+	if err != nil {
+		return nil, err
+	}
+
+	peerListUpdater, err := buildPeerListUpdater(peerListConfig, identify, kit)
+	if err != nil {
+		return nil, err
+	}
+
+	chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig)
+	if err != nil {
+		return nil, err
+	}
+	result, err := chooserBuilder.Build(transport, kit)
+	if err != nil {
+		return nil, err
+	}
+	peerList := result.(peer.ChooserList)
+
+	return peerbind.Bind(peerList, peerListUpdater), nil
+}
+
+func getPeerListInfo(etc attributeMap, kit *Kit) (name string, config attributeMap, err error) {
+	names := etc.keys()
+	if len(names) == 0 {
+		return "", nil, fmt.Errorf("no peer list provided in config, need one of: %+v", kit.peerListSpecNames())
+	}
+	if len(names) > 1 {
+		return "", nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", etc)
+	}
+	peerListName := names[0]
+
+	var peerListConfig attributeMap
+	if _, err := etc.Pop(peerListName, &peerListConfig); err != nil {
+		return "", nil, err
+	}
+
+	return peerListName, peerListConfig, nil
 }
 
 func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
@@ -169,18 +165,18 @@ func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier,
 	)
 }
 
+func identifyAll(identify func(string) peer.Identifier, peers []string) []peer.Identifier {
+	pids := make([]peer.Identifier, len(peers))
+	for i, p := range peers {
+		pids[i] = identify(p)
+	}
+	return pids
+}
+
 func configNames(c attributeMap) (names []string) {
 	for name := range c {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 	return
-}
-
-func identifyAll(identify func(string) peer.Identifier, peers []string) []peer.Identifier {
-	pids := make([]peer.Identifier, len(peers))
-	for i, peer := range peers {
-		pids[i] = identify(peer)
-	}
-	return pids
 }
