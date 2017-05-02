@@ -3,7 +3,7 @@ language: go
 go_import_path: go.uber.org/yarpc
 cache:
   directories:
-    - $HOME/.yarpc-go
+    - $HOME/.cache/yarpc-go
     - $HOME/.glide
 matrix:
   include:
