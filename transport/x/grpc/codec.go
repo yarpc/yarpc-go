@@ -25,24 +25,24 @@ import "fmt"
 // customCodec pass bytes to/from the wire without modification.
 type customCodec struct{}
 
-// Marshal takes a []byte pointer and passes it through as a []byte.
+// Marshal takes a []byte and passes it through as a []byte.
 func (customCodec) Marshal(obj interface{}) ([]byte, error) {
 	switch value := obj.(type) {
-	case *[]byte:
-		return *value, nil
+	case []byte:
+		return value, nil
 	default:
-		return nil, newCustomCodecCastError(obj)
+		return nil, newCustomCodecMarshalCastError(obj)
 	}
 }
 
-// Unmarshal takes a []byte pointer and writes it to v.
+// Unmarshal takes a []byte pointer as obj and points it to data.
 func (customCodec) Unmarshal(data []byte, obj interface{}) error {
 	switch value := obj.(type) {
 	case *[]byte:
 		*value = data
 		return nil
 	default:
-		return newCustomCodecCastError(obj)
+		return newCustomCodecUnmarshalCastError(obj)
 	}
 }
 
@@ -52,6 +52,10 @@ func (customCodec) String() string {
 	return "proto"
 }
 
-func newCustomCodecCastError(actualObject interface{}) error {
+func newCustomCodecMarshalCastError(actualObject interface{}) error {
+	return fmt.Errorf("expected object to be of type []byte but got %T", actualObject)
+}
+
+func newCustomCodecUnmarshalCastError(actualObject interface{}) error {
 	return fmt.Errorf("expected object to be of type *[]byte but got %T", actualObject)
 }

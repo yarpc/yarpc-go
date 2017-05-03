@@ -125,7 +125,7 @@ func (o *Outbound) invoke(
 	if err := grpc.Invoke(
 		metadata.NewContext(ctx, md),
 		fullMethod,
-		&requestBody,
+		requestBody,
 		responseBody,
 		o.clientConn,
 		callOptions...,
