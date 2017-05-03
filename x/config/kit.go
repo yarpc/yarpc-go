@@ -21,8 +21,11 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 // Kit carries internal dependencies for building peer lists.
@@ -41,8 +44,17 @@ func (k *Kit) ServiceName() string { return k.name }
 
 var _typeOfKit = reflect.TypeOf((*Kit)(nil))
 
-func (k *Kit) peerListSpec(name string) *compiledPeerListSpec {
-	return k.c.knownPeerLists[name]
+func (k *Kit) peerListSpec(name string) (*compiledPeerListSpec, error) {
+	if spec := k.c.knownPeerLists[name]; spec != nil {
+		return spec, nil
+	}
+
+	msg := fmt.Sprintf("no recognized peer list %q", name)
+	if available := k.peerListSpecNames(); len(available) > 0 {
+		msg = fmt.Sprintf("%s; need one of %s", msg, strings.Join(available, ", "))
+	}
+
+	return nil, errors.New(msg)
 }
 
 func (k *Kit) peerListSpecNames() (names []string) {
