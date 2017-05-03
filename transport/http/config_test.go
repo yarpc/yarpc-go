@@ -316,10 +316,10 @@ func TestTransportSpec(t *testing.T) {
 
 		for svc, want := range outbound.wantOutbounds {
 			ob, ok := cfg.Outbounds[svc].Unary.(*Outbound)
-			if assert.True(t, ok, "expected *Outbound for %q, got %T", cfg.Outbounds[svc].Unary) {
+			if assert.True(t, ok, "expected *Outbound for %q, got %T", svc, cfg.Outbounds[svc].Unary) {
 				// Verify that we install a oneway too
 				_, ok := cfg.Outbounds[svc].Oneway.(*Outbound)
-				assert.True(t, ok, "expected *Outbound for %q oneway, got %T", cfg.Outbounds[svc].Oneway)
+				assert.True(t, ok, "expected *Outbound for %q oneway, got %T", svc, cfg.Outbounds[svc].Oneway)
 
 				assert.Equal(t, want.URLTemplate, ob.urlTemplate.String(), "outbound URLTemplate should match")
 				assert.Equal(t, want.Headers, ob.headers, "outbound headers should match")
