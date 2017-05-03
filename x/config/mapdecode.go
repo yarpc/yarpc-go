@@ -26,7 +26,8 @@ import (
 	"strings"
 
 	"go.uber.org/yarpc/internal/interpolate"
-	"go.uber.org/yarpc/internal/mapdecode"
+
+	"github.com/uber-go/mapdecode"
 )
 
 const (

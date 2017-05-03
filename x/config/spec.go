@@ -28,8 +28,8 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/mapdecode"
 
+	"github.com/uber-go/mapdecode"
 	"go.uber.org/multierr"
 )
 
