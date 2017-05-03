@@ -22,17 +22,20 @@ package config_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"go.uber.org/yarpc"
+	peerapi "go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/x/peerheap"
 	"go.uber.org/yarpc/peer/x/roundrobin"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/x/config"
 	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/opentracing/opentracing-go"
@@ -385,7 +388,11 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`no recognized peer list "bogus-list"; need one of fake-list, least-pending, round-robin`,
+				`no recognized peer list "bogus-list"`,
+				`need one of`,
+				`fake-list`,
+				`least-pending`,
+				`round-robin`,
 			},
 		},
 		{
@@ -421,6 +428,27 @@ func TestChooserConfigurator(t *testing.T) {
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
 				`no recognized peer list updater in config`,
+			},
+		},
+		{
+			desc: "invalid peer list updater decode",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								fake-list:
+									fake-updater:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`failed to read attribute "fake-updater"`,
 			},
 		},
 		{
@@ -480,6 +508,23 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "invalid list peers",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-list:
+									peers:
+										host1: 127.0.0.1:8080
+										host2: 127.0.0.1:8081
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`failed to read attribute "peers"`,
+			},
+		},
+		{
 			desc: "extraneous config in combination with custom updater",
 			given: whitespace.Expand(`
 				outbounds:
@@ -513,6 +558,36 @@ func TestChooserConfigurator(t *testing.T) {
 				`round-robin`,
 			},
 		},
+		{
+			desc: "invalid peer list builder",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								invalid-list:
+									fake-updater: {}
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`could not create invalid-list`,
+			},
+		},
+		{
+			desc: "invalid peer list updater builder",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-list:
+									invalid-updater: {}
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`could not create invalid-updater`,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -522,6 +597,8 @@ func TestChooserConfigurator(t *testing.T) {
 			configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
 			configer.MustRegisterPeerList(peerheap.Spec())
 			configer.MustRegisterPeerList(roundrobin.Spec())
+			configer.MustRegisterPeerList(invalidPeerListSpec())
+			configer.MustRegisterPeerListUpdater(invalidPeerListUpdaterSpec())
 
 			config, err := configer.LoadConfigFromYAML("fake-service", strings.NewReader(tt.given))
 			if err != nil {
@@ -540,5 +617,33 @@ func TestChooserConfigurator(t *testing.T) {
 				tt.test(t, config)
 			}
 		})
+	}
+}
+
+type invalidPeerListConfig struct {
+}
+
+func buildInvalidPeerListConfig(c *invalidPeerListConfig, t peerapi.Transport, kit *config.Kit) (peerapi.ChooserList, error) {
+	return nil, errors.New("could not create invalid-list")
+}
+
+func invalidPeerListSpec() config.PeerListSpec {
+	return config.PeerListSpec{
+		Name:          "invalid-list",
+		BuildPeerList: buildInvalidPeerListConfig,
+	}
+}
+
+type invalidPeerListUpdaterConfig struct {
+}
+
+func buildInvalidPeerListUpdater(c *invalidPeerListUpdaterConfig, kit *config.Kit) (peerapi.Binder, error) {
+	return nil, errors.New("could not create invalid-updater")
+}
+
+func invalidPeerListUpdaterSpec() config.PeerListUpdaterSpec {
+	return config.PeerListUpdaterSpec{
+		Name:                 "invalid-updater",
+		BuildPeerListUpdater: buildInvalidPeerListUpdater,
 	}
 }
