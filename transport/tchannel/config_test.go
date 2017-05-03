@@ -151,7 +151,8 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 			wantErrors: []string{
-				"no recognized peer list in config: got least-pending",
+				`failed to configure unary outbound for "myservice"`,
+				`failed to read attribute "least-pending": wat`,
 			},
 		},
 	}
