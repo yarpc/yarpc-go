@@ -102,21 +102,18 @@ func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string)
 }
 
 func getPeerListInfo(etc attributeMap, kit *Kit) (name string, config attributeMap, err error) {
-	names := etc.keys()
-	if len(names) == 0 {
+	names := etc.Keys()
+	switch len(names) {
+	case 0:
 		return "", nil, fmt.Errorf("no peer list provided in config, need one of: %+v", kit.peerListSpecNames())
-	}
-	if len(names) > 1 {
+	default:
 		return "", nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", etc)
+	case 1:
+		// Empty, use logic below
 	}
-	peerListName := names[0]
-
-	var peerListConfig attributeMap
-	if _, err := etc.Pop(peerListName, &peerListConfig); err != nil {
-		return "", nil, err
-	}
-
-	return peerListName, peerListConfig, nil
+	name = names[0]
+	_, err = etc.Pop(name, &config)
+	return
 }
 
 func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
