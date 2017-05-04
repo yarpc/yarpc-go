@@ -97,15 +97,15 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (tra
 	}
 
 	if cfg.name != "" {
-		return nil, fmt.Errorf("TransportSpec does not accept ServiceName")
+		return nil, fmt.Errorf("TChannel TransportSpec does not accept ServiceName")
 	}
 
 	if cfg.addr != "" {
-		return nil, fmt.Errorf("TransportSpec does not accept ListenAddr")
+		return nil, fmt.Errorf("TChannel TransportSpec does not accept ListenAddr")
 	}
 
 	if cfg.ch != nil {
-		return nil, fmt.Errorf("TransportSpec does not accept WithChannel")
+		return nil, fmt.Errorf("TChannel TransportSpec does not accept WithChannel")
 	}
 
 	cfg.name = k.ServiceName()

@@ -114,19 +114,19 @@ func TestTransportSpec(t *testing.T) {
 			desc:       "WithChannel fails",
 			cfg:        attrs{"tchannel": attrs{"address": ":4040"}},
 			opts:       []Option{WithChannel(someChannel)},
-			wantErrors: []string{"TransportSpec does not accept WithChannel"},
+			wantErrors: []string{"TChannel TransportSpec does not accept WithChannel"},
 		},
 		{
 			desc:       "ServiceName fails",
 			cfg:        attrs{"tchannel": attrs{"address": ":4040"}},
 			opts:       []Option{ServiceName("zzzzzzzzz")},
-			wantErrors: []string{"TransportSpec does not accept ServiceName"},
+			wantErrors: []string{"TChannel TransportSpec does not accept ServiceName"},
 		},
 		{
 			desc:       "ListenAddr fails",
 			cfg:        attrs{"tchannel": attrs{"address": ":4040"}},
 			opts:       []Option{ListenAddr(":8080")},
-			wantErrors: []string{"TransportSpec does not accept ListenAddr"},
+			wantErrors: []string{"TChannel TransportSpec does not accept ListenAddr"},
 		},
 	}
 
