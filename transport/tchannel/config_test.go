@@ -32,6 +32,16 @@ import (
 	tchanneltest "github.com/uber/tchannel-go/testutils"
 )
 
+type badOption struct{}
+
+func (badOption) tchannelOption() {}
+
+func TestTransportSpecInvalidOption(t *testing.T) {
+	assert.Panics(t, func() {
+		TransportSpec(badOption{})
+	})
+}
+
 func TestTransportSpec(t *testing.T) {
 	someChannel := tchanneltest.NewServer(t, nil)
 	defer someChannel.Close()
