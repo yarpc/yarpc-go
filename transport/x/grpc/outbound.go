@@ -32,7 +32,6 @@ import (
 	"go.uber.org/yarpc/internal/errors"
 	internalsync "go.uber.org/yarpc/internal/sync"
 
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -143,7 +142,7 @@ func (o *Outbound) start() error {
 		grpc.WithCodec(customCodec{}),
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
-		grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.outboundOptions.getTracer())),
+		//grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.outboundOptions.getTracer())),
 		grpc.WithUserAgent(UserAgent),
 	)
 	if err != nil {
