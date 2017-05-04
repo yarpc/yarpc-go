@@ -24,7 +24,7 @@ import (
 	"errors"
 	"fmt"
 
-	"go.uber.org/yarpc/internal/mapdecode"
+	"github.com/uber-go/mapdecode"
 )
 
 type attributeMap map[string]interface{}

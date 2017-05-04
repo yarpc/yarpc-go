@@ -10,5 +10,4 @@ cd "${DIR}"
 # running updateLicenses on it.
 update-license $(find . -name '*.go' \
 	| grep -v '^\./vendor' \
-	| grep -v '/thriftrw-plugin-yarpc/internal/tests/' \
-	| grep -v '/internal/mapdecode/mapstructure/')
+	| grep -v '/thriftrw-plugin-yarpc/internal/tests/')
