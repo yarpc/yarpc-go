@@ -168,6 +168,7 @@ func (i *Inbound) getServiceNameAndMethodDesc(procedure transport.Procedure) (st
 			procedure.Service,
 			serviceName,
 			methodName,
+			procedure.Encoding,
 			i.router,
 		).handle,
 	}, nil
