@@ -66,8 +66,11 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 // these will be left unchanged.
 //
 // If this option is not passed, the Transport will build and manage its own
-// Channel. The behavior of that Tchannel may be customized using the
+// Channel. The behavior of that TChannel may be customized using the
 // ListenAddr and ServiceName options.
+//
+// This option is disallowed for NewTransport and transports constructed with
+// the YARPC configuration system.
 func WithChannel(ch Channel) TransportOption {
 	return func(t *transportConfig) {
 		t.ch = ch
@@ -80,7 +83,8 @@ func WithChannel(ch Channel) TransportOption {
 // 	transport := NewChannelTransport(ServiceName("myservice"), ListenAddr(":4040"))
 //
 // This option has no effect if WithChannel was used and the TChannel was
-// already listening.
+// already listening, and it is disallowed for transports constructed with the
+// YARPC configuration system.
 func ListenAddr(addr string) TransportOption {
 	return func(t *transportConfig) {
 		t.addr = addr
@@ -96,11 +100,8 @@ func ListenAddr(addr string) TransportOption {
 // Transport will build its own TChannel Chanel and use this name for that
 // Channel.
 //
-// This option MUST be specified if WithChannel was not used. Note that this
-// is the name of the LOCAL service, not the service you are trying to send
-// requests to.
-//
-// This option has no effect if WithChannel was used.
+// This option has no effect if WithChannel was used, and it is disallowed for
+// transports constructed with the YARPC configuration system.
 func ServiceName(name string) TransportOption {
 	return func(t *transportConfig) {
 		t.name = name
