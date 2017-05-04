@@ -26,8 +26,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
-
-	"github.com/opentracing/opentracing-go"
 )
 
 const transportName = "tchannel"
@@ -35,19 +33,21 @@ const transportName = "tchannel"
 // TransportConfig configures a shared TChannel transport. This is shared
 // between all TChannel outbounds and inbounds of a Dispatcher.
 //
-// 	transports:
+// TransportConfig does not have any parameters at this time.
+type TransportConfig struct{}
+
+// InboundConfig configures a TChannel inbound.
+//
+// 	inbounds:
 // 	  tchannel:
 // 	    address: :4040
-type TransportConfig struct {
+//
+// At most one TChannel inbound may be defined in a single YARPC service.
+type InboundConfig struct {
 	// Address to listen on. Defaults to ":0" (all network interfaces and a
 	// random OS-assigned port).
 	Address string `config:"address,interpolate"`
 }
-
-// InboundConfig configures a TChannel inbound.
-//
-// TChannel inbounds do not support any configuration parameters at this time.
-type InboundConfig struct{}
 
 // OutboundConfig configures a TChannel outbound.
 //
@@ -61,7 +61,16 @@ type OutboundConfig struct {
 
 // TransportSpec returns a TransportSpec for the TChannel unary transport.
 func TransportSpec(opts ...Option) config.TransportSpec {
-	return (&transportSpec{}).Spec(opts...)
+	var ts transportSpec
+	for _, o := range opts {
+		switch opt := o.(type) {
+		case TransportOption:
+			ts.transportOptions = append(ts.transportOptions, opt)
+		default:
+			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
+		}
+	}
+	return ts.Spec()
 }
 
 // transportSpec holds the configurable parts of the TChannel TransportSpec.
@@ -72,17 +81,7 @@ type transportSpec struct {
 	transportOptions []TransportOption
 }
 
-func (ts *transportSpec) Spec(opts ...Option) config.TransportSpec {
-	// Collect transport options
-	for _, o := range opts {
-		switch opt := o.(type) {
-		case TransportOption:
-			ts.transportOptions = append(ts.transportOptions, opt)
-		default:
-			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
-		}
-	}
-
+func (ts *transportSpec) Spec() config.TransportSpec {
 	return config.TransportSpec{
 		Name:               transportName,
 		BuildTransport:     ts.buildTransport,
@@ -92,26 +91,42 @@ func (ts *transportSpec) Spec(opts ...Option) config.TransportSpec {
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
-	var config transportConfig
-	// Default configuration.
-	config.tracer = opentracing.GlobalTracer()
-	config.name = k.ServiceName()
-
-	// Apply the spec's transport options.
-	for _, opt := range ts.transportOptions {
-		opt(&config)
+	var cfg transportConfig
+	for _, o := range ts.transportOptions {
+		o(&cfg)
 	}
 
-	// Override options with configuration.
-	if tc.Address != "" {
-		config.addr = tc.Address
+	if cfg.name != "" {
+		return nil, fmt.Errorf("TChannel TransportSpec does not accept ServiceName")
 	}
 
-	return config.newTransport(), nil
+	if cfg.addr != "" {
+		return nil, fmt.Errorf("TChannel TransportSpec does not accept ListenAddr")
+	}
+
+	if cfg.ch != nil {
+		return nil, fmt.Errorf("TChannel TransportSpec does not accept WithChannel")
+	}
+
+	cfg.name = k.ServiceName()
+	return cfg.newTransport(), nil
 }
 
-func (ts *transportSpec) buildInbound(_ *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
-	return t.(*Transport).NewInbound(), nil
+func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
+	if c.Address == "" {
+		return nil, fmt.Errorf("inbound address is required")
+	}
+
+	trans := t.(*Transport)
+	if trans.addr != "" {
+		// We ensure that trans.addr is empty when buildTransport is called,
+		// so if the string is non-empty right now, another TChannel inbound
+		// already filled it with a value.
+		return nil, fmt.Errorf("at most one TChannel inbound may be specified")
+	}
+
+	trans.addr = c.Address
+	return trans.NewInbound(), nil
 }
 
 func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
@@ -122,5 +137,3 @@ func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Tran
 	}
 	return x.NewOutbound(chooser), nil
 }
-
-// TODO: Document configuration parameters
