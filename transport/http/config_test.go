@@ -266,9 +266,15 @@ func TestTransportSpec(t *testing.T) {
 			env[k] = v
 		}
 		for k, v := range inbound.env {
+			_, ok := env[k]
+			require.False(t, ok,
+				"invalid test: environment variable %q is defined multiple times", k)
 			env[k] = v
 		}
 		for k, v := range outbound.env {
+			_, ok := env[k]
+			require.False(t, ok,
+				"invalid test: environment variable %q is defined multiple times", k)
 			env[k] = v
 		}
 		configurator := config.New(config.InterpolationResolver(mapResolver(env)))
@@ -294,16 +300,17 @@ func TestTransportSpec(t *testing.T) {
 
 		wantErrors := append(append(trans.wantErrors, inbound.wantErrors...), outbound.wantErrors...)
 		if len(wantErrors) > 0 {
-			require.Error(t, err, "expected failure")
+			require.Error(t, err, "expected failure while loading config %+v", cfgData)
 			for _, msg := range wantErrors {
 				assert.Contains(t, err.Error(), msg)
 			}
 			return
 		}
 
-		require.NoError(t, err, "expected success")
+		require.NoError(t, err, "expected success while loading config %+v", cfgData)
 
 		if want := inbound.wantInbound; want != nil {
+			assert.Len(t, cfg.Inbounds, 1, "expected exactly one inbound in %+v", cfgData)
 			ib, ok := cfg.Inbounds[0].(*Inbound)
 			if assert.True(t, ok, "expected *Inbound, got %T", cfg.Inbounds[0]) {
 				assert.Equal(t, want.Address, ib.addr, "inbound address should match")
@@ -316,10 +323,10 @@ func TestTransportSpec(t *testing.T) {
 
 		for svc, want := range outbound.wantOutbounds {
 			ob, ok := cfg.Outbounds[svc].Unary.(*Outbound)
-			if assert.True(t, ok, "expected *Outbound for %q, got %T", cfg.Outbounds[svc].Unary) {
+			if assert.True(t, ok, "expected *Outbound for %q, got %T", svc, cfg.Outbounds[svc].Unary) {
 				// Verify that we install a oneway too
 				_, ok := cfg.Outbounds[svc].Oneway.(*Outbound)
-				assert.True(t, ok, "expected *Outbound for %q oneway, got %T", cfg.Outbounds[svc].Oneway)
+				assert.True(t, ok, "expected *Outbound for %q oneway, got %T", svc, cfg.Outbounds[svc].Oneway)
 
 				assert.Equal(t, want.URLTemplate, ob.urlTemplate.String(), "outbound URLTemplate should match")
 				assert.Equal(t, want.Headers, ob.headers, "outbound headers should match")
@@ -331,7 +338,7 @@ func TestTransportSpec(t *testing.T) {
 	for _, transTT := range transportTests {
 		for _, inboundTT := range inboundTests {
 			for _, outboundTT := range outboundTests {
-				// Special case: No inbounds and outbounds so we have nothing
+				// Special case: No inbounds or outbounds so we have nothing
 				// to test.
 				if inboundTT.empty && outboundTT.empty {
 					continue
