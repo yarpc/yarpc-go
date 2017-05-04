@@ -361,14 +361,14 @@ func TestTransportSpec(t *testing.T) {
 
 		wantErrors := append(append(trans.wantErrors, inbound.wantErrors...), outbound.wantErrors...)
 		if len(wantErrors) > 0 {
-			require.Error(t, err, "expected failure")
+			require.Error(t, err, "expected failure while loading config %+v", cfgData)
 			for _, msg := range wantErrors {
 				assert.Contains(t, err.Error(), msg)
 			}
 			return
 		}
 
-		require.NoError(t, err, "expected success")
+		require.NoError(t, err, "expected success while loading config %+v", cfgData)
 
 		if want := inbound.wantInbound; want != nil {
 			ib, ok := cfg.Inbounds[0].(*Inbound)
