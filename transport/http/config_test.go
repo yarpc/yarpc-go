@@ -266,9 +266,15 @@ func TestTransportSpec(t *testing.T) {
 			env[k] = v
 		}
 		for k, v := range inbound.env {
+			_, ok := env[k]
+			require.False(t, ok,
+				"invalid test: environment variable %q is defined multiple times", k)
 			env[k] = v
 		}
 		for k, v := range outbound.env {
+			_, ok := env[k]
+			require.False(t, ok,
+				"invalid test: environment variable %q is defined multiple times", k)
 			env[k] = v
 		}
 		configurator := config.New(config.InterpolationResolver(mapResolver(env)))

@@ -119,6 +119,9 @@ func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k
 
 	trans := t.(*Transport)
 	if trans.addr != "" {
+		// We ensure that trans.addr is empty when buildTransport is called,
+		// so if the string is non-empty right now, another TChannel inbound
+		// already filled it with a value.
 		return nil, fmt.Errorf("at most one TChannel inbound may be specified")
 	}
 
