@@ -310,6 +310,7 @@ func TestTransportSpec(t *testing.T) {
 		require.NoError(t, err, "expected success while loading config %+v", cfgData)
 
 		if want := inbound.wantInbound; want != nil {
+			assert.Len(t, cfg.Inbounds, 1, "expected exactly one inbound in %+v", cfgData)
 			ib, ok := cfg.Inbounds[0].(*Inbound)
 			if assert.True(t, ok, "expected *Inbound, got %T", cfg.Inbounds[0]) {
 				assert.Equal(t, want.Address, ib.addr, "inbound address should match")
