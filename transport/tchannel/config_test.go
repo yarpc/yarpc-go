@@ -232,8 +232,8 @@ func TestTransportSpec(t *testing.T) {
 
 	for _, inboundTT := range inboundTests {
 		for _, outboundTT := range outboundTests {
-			// Special case: No inbounds and outbounds so we have nothing
-			// to test.
+			// Special case: No inbounds or outbounds so we have nothing to
+			// test.
 			if inboundTT.empty && outboundTT.empty {
 				continue
 			}
