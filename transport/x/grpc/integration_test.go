@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,6 +84,7 @@ type testEnv struct {
 	Inbound             *Inbound
 	Outbound            *Outbound
 	ClientConn          *grpc.ClientConn
+	ContextWrapper      *grpcheader.ContextWrapper
 	ClientConfig        transport.ClientConfig
 	Procedures          []transport.Procedure
 	KeyValueGRPCClient  examplepb.KeyValueClient
@@ -141,10 +143,13 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 	)
 	keyValueYarpcClient := examplepb.NewKeyValueYarpcClient(clientConfig)
 
+	contextWrapper := grpcheader.NewContextWrapper("example-client", "example")
+
 	return &testEnv{
 		inbound,
 		outbound,
 		clientConn,
+		contextWrapper,
 		clientConfig,
 		procedures,
 		keyValueClient,
@@ -173,8 +178,7 @@ func (e *testEnv) SetValueYarpc(ctx context.Context, key string, value string) e
 func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("rpc-service", "example"))
-	response, err := e.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	response, err := e.KeyValueGRPCClient.GetValue(e.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 	if err != nil {
 		return "", err
 	}
@@ -184,8 +188,7 @@ func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) 
 func (e *testEnv) SetValueGRPC(ctx context.Context, key string, value string) error {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("rpc-service", "example"))
-	_, err := e.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	_, err := e.KeyValueGRPCClient.SetValue(e.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 	return err
 }
 
