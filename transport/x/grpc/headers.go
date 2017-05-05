@@ -135,6 +135,9 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 // add to md
 // return error if key already in md
 func addToMetadata(md metadata.MD, key string, value string) error {
+	if value == "" {
+		return nil
+	}
 	if _, ok := md[key]; ok {
 		return fmt.Errorf("duplicate key: %s", key)
 	}
