@@ -16,13 +16,24 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	ggrpc "google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
-func TestBasic(t *testing.T) {
+func TestBasicYarpc(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueYarpc(context.Background(), "foo", "bar"))
 		value, err := e.GetValueYarpc(context.Background(), "foo")
+		assert.NoError(t, err)
+		assert.Equal(t, "bar", value)
+	})
+}
+
+func TestBasicGRPC(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, func(t *testing.T, e *testEnv) {
+		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
+		value, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", value)
 	})
@@ -131,6 +142,7 @@ func (e *testEnv) SetValueYarpc(ctx context.Context, key string, value string) e
 func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("rpc-service", "example"))
 	response, err := e.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 	if err != nil {
 		return "", err
@@ -141,6 +153,7 @@ func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) 
 func (e *testEnv) SetValueGRPC(ctx context.Context, key string, value string) error {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("rpc-service", "example"))
 	_, err := e.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 	return err
 }
