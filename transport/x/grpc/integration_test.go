@@ -143,7 +143,7 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 	)
 	keyValueYarpcClient := examplepb.NewKeyValueYarpcClient(clientConfig)
 
-	contextWrapper := grpcheader.NewContextWrapper("example-client", "example")
+	contextWrapper := grpcheader.NewContextWrapper().WithCaller("example-client").WithService("example")
 
 	return &testEnv{
 		inbound,
