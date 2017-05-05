@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"fmt"
 	"testing"
 
 	"go.uber.org/yarpc/api/transport"
@@ -36,6 +37,7 @@ func TestMetadataToTransportRequest(t *testing.T) {
 		Name             string
 		MD               metadata.MD
 		TransportRequest *transport.Request
+		Error            error
 	}{
 		{
 			Name: "Basic",
@@ -65,8 +67,60 @@ func TestMetadataToTransportRequest(t *testing.T) {
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
 			transportRequest, err := metadataToTransportRequest(tt.MD)
-			require.NoError(t, err)
+			require.Equal(t, tt.Error, err)
 			require.Equal(t, tt.TransportRequest, transportRequest)
+		})
+	}
+}
+
+func TestTransportRequestToMetadata(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		Name             string
+		MD               metadata.MD
+		TransportRequest *transport.Request
+		Error            error
+	}{
+		{
+			Name: "Basic",
+			MD: metadata.Pairs(
+				grpcheader.CallerHeader, "example-caller",
+				grpcheader.ServiceHeader, "example-service",
+				grpcheader.ShardKeyHeader, "example-shard-key",
+				grpcheader.RoutingKeyHeader, "example-routing-key",
+				grpcheader.RoutingDelegateHeader, "example-routing-delegate",
+				grpcheader.EncodingHeader, "example-encoding",
+				"foo", "bar",
+				"baz", "bat",
+			),
+			TransportRequest: &transport.Request{
+				Caller:          "example-caller",
+				Service:         "example-service",
+				ShardKey:        "example-shard-key",
+				RoutingKey:      "example-routing-key",
+				RoutingDelegate: "example-routing-delegate",
+				Encoding:        "example-encoding",
+				Headers: transport.HeadersFromMap(map[string]string{
+					"foo": "bar",
+					"baz": "bat",
+				}),
+			},
+		},
+		{
+			Name: "Reserved header key in application headers",
+			MD:   metadata.Pairs(),
+			TransportRequest: &transport.Request{
+				Headers: transport.HeadersFromMap(map[string]string{
+					grpcheader.CallerHeader: "example-caller",
+				}),
+			},
+			Error: fmt.Errorf("cannot use reserved header in application headers: %s", grpcheader.CallerHeader),
+		},
+	} {
+		t.Run(tt.Name, func(t *testing.T) {
+			md, err := transportRequestToMetadata(tt.TransportRequest)
+			require.Equal(t, tt.Error, err)
+			require.Equal(t, tt.MD, md)
 		})
 	}
 }
