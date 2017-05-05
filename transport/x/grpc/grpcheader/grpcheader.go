@@ -71,15 +71,48 @@ type ContextWrapper struct {
 	md metadata.MD
 }
 
-// NewContextWrapper creates a new ContextWrapper.
+// NewContextWrapper returns a new ContextWrapper.
 //
-// TODO: we probably want a more flexible API when building a ContextWrapper
-// so we can maintain backwards compatiblity in the future, maybe a builder?
-func NewContextWrapper(caller string, service string) *ContextWrapper {
-	return &ContextWrapper{metadata.Pairs(CallerHeader, caller, ServiceHeader, service)}
+// The only fields that a grpc-go client needs to set are caller and service.
+func NewContextWrapper() *ContextWrapper {
+	return &ContextWrapper{metadata.New(nil)}
 }
 
 // Wrap wraps the given context with the headers.
 func (c *ContextWrapper) Wrap(ctx context.Context) context.Context {
 	return metadata.NewOutgoingContext(ctx, c.md)
+}
+
+// WithCaller returns a new ContextWrapper with the given caller.
+func (c *ContextWrapper) WithCaller(caller string) *ContextWrapper {
+	return c.copyAndAdd(CallerHeader, caller)
+}
+
+// WithService returns a new ContextWrapper with the given service.
+func (c *ContextWrapper) WithService(service string) *ContextWrapper {
+	return c.copyAndAdd(ServiceHeader, service)
+}
+
+// WithShardKey returns a new ContextWrapper with the given shard key.
+func (c *ContextWrapper) WithShardKey(shardKey string) *ContextWrapper {
+	return c.copyAndAdd(ShardKeyHeader, shardKey)
+}
+
+// WithRoutingKey returns a new ContextWrapper with the given routing key.
+func (c *ContextWrapper) WithRoutingKey(routingKey string) *ContextWrapper {
+	return c.copyAndAdd(RoutingKeyHeader, routingKey)
+}
+
+// WithRoutingDelegate returns a new ContextWrapper with the given routing delegate.
+func (c *ContextWrapper) WithRoutingDelegate(routingDelegate string) *ContextWrapper {
+	return c.copyAndAdd(RoutingDelegateHeader, routingDelegate)
+}
+
+func (c *ContextWrapper) copyAndAdd(key string, value string) *ContextWrapper {
+	md := c.md
+	if md == nil {
+		md = metadata.New(nil)
+	}
+	md[key] = []string{value}
+	return &ContextWrapper{md}
 }
