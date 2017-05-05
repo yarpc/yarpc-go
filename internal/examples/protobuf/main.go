@@ -93,7 +93,7 @@ func doClient(
 			var response *examplepb.GetValueResponse
 			var err error
 			if *flagGoogleGRPC {
-				response, err = clients.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 				err = fromGRPCError(err)
 			} else {
 				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
@@ -118,7 +118,7 @@ func doClient(
 			defer cancel()
 			var err error
 			if *flagGoogleGRPC {
-				_, err = clients.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 				err = fromGRPCError(err)
 			} else {
 				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})

@@ -24,6 +24,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 )
 
 // Clients holds all clients.
@@ -32,6 +33,7 @@ type Clients struct {
 	SinkYarpcClient     examplepb.SinkYarpcClient
 	KeyValueGRPCClient  examplepb.KeyValueClient
 	SinkGRPCClient      examplepb.SinkClient
+	ContextWrapper      *grpcheader.ContextWrapper
 }
 
 // WithClients calls f on the Clients.
@@ -59,6 +61,7 @@ func WithClients(
 					examplepb.NewSinkYarpcClient(clientInfo.ClientConfig),
 					examplepb.NewKeyValueClient(clientInfo.GRPCClientConn),
 					examplepb.NewSinkClient(clientInfo.GRPCClientConn),
+					clientInfo.ContextWrapper,
 				},
 			)
 		},

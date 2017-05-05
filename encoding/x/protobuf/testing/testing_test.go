@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -66,7 +67,7 @@ func testIntegration(
 ) {
 	_, err := getValue(clients.KeyValueYarpcClient, "foo")
 	assert.Error(t, err)
-	_, err = getValueGRPC(clients.KeyValueGRPCClient, "foo")
+	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Error(t, err)
 
 	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", "bar"))
@@ -74,8 +75,8 @@ func testIntegration(
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", value)
 
-	assert.NoError(t, setValueGRPC(clients.KeyValueGRPCClient, "foo", "barGRPC"))
-	value, err = getValueGRPC(clients.KeyValueGRPCClient, "foo")
+	assert.NoError(t, setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "barGRPC"))
+	value, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "barGRPC", value)
 
@@ -116,20 +117,20 @@ func setValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, val
 	return err
 }
 
-func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, key string) (string, error) {
+func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcheader.ContextWrapper, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	response, err := keyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 	if err != nil {
 		return "", err
 	}
 	return response.Value, nil
 }
 
-func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, key string, value string) error {
+func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcheader.ContextWrapper, key string, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := keyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	_, err := keyValueGRPCClient.SetValue(contextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 	return err
 }
 

@@ -102,17 +102,8 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 	if err != nil {
 		return nil, err
 	}
-	if transportRequest.Caller == "" {
-		transportRequest.Caller = h.grpcServiceName
-	}
 	if transportRequest.Encoding == "" {
 		transportRequest.Encoding = h.encoding
-	}
-	if transportRequest.Encoding == "" {
-		transportRequest.Encoding = protobuf.Encoding
-	}
-	if transportRequest.Service == "" {
-		transportRequest.Service = h.yarpcServiceName
 	}
 	// We must do this to indicate to the protobuf encoding that we
 	// need to return the raw response object over this transport.
