@@ -1,9 +1,30 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package grpc
 
 import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,13 +36,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
-	ggrpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
 func TestBasicYarpc(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueYarpc(context.Background(), "foo", "bar"))
 		value, err := e.GetValueYarpc(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -31,7 +52,7 @@ func TestBasicYarpc(t *testing.T) {
 
 func TestBasicGRPC(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -39,8 +60,18 @@ func TestBasicGRPC(t *testing.T) {
 	})
 }
 
-func doWithTestEnv(t *testing.T, f func(*testing.T, *testEnv)) {
-	testEnv, err := newTestEnv()
+func TestYarpcMetadata(t *testing.T) {
+	t.Parallel()
+	var md metadata.MD
+	doWithTestEnv(t, []InboundOption{withInboundUnaryInterceptor(newMetadataUnaryServerInterceptor(&md))}, nil, func(t *testing.T, e *testEnv) {
+		assert.NoError(t, e.SetValueYarpc(context.Background(), "foo", "bar"))
+		assert.Len(t, md["user-agent"], 1)
+		assert.True(t, strings.Contains(md["user-agent"][0], UserAgent))
+	})
+}
+
+func doWithTestEnv(t *testing.T, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
+	testEnv, err := newTestEnv(inboundOptions, outboundOptions)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, testEnv.Close())
@@ -51,7 +82,7 @@ func doWithTestEnv(t *testing.T, f func(*testing.T, *testEnv)) {
 type testEnv struct {
 	Inbound             *Inbound
 	Outbound            *Outbound
-	ClientConn          *ggrpc.ClientConn
+	ClientConn          *grpc.ClientConn
 	ClientConfig        transport.ClientConfig
 	Procedures          []transport.Procedure
 	KeyValueGRPCClient  examplepb.KeyValueClient
@@ -59,7 +90,7 @@ type testEnv struct {
 	KeyValueYarpcServer *example.KeyValueYarpcServer
 }
 
-func newTestEnv() (_ *testEnv, err error) {
+func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption) (_ *testEnv, err error) {
 	keyValueYarpcServer := example.NewKeyValueYarpcServer()
 	procedures := examplepb.BuildKeyValueYarpcProcedures(keyValueYarpcServer)
 	testRouter := newTestRouter(procedures)
@@ -69,7 +100,7 @@ func newTestEnv() (_ *testEnv, err error) {
 		return nil, err
 	}
 
-	inbound := NewInbound(listener)
+	inbound := NewInbound(listener, inboundOptions...)
 	inbound.SetRouter(testRouter)
 	if err := inbound.Start(); err != nil {
 		return nil, err
@@ -80,7 +111,7 @@ func newTestEnv() (_ *testEnv, err error) {
 		}
 	}()
 
-	clientConn, err := ggrpc.Dial(listener.Addr().String(), ggrpc.WithInsecure())
+	clientConn, err := grpc.Dial(listener.Addr().String(), grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +122,7 @@ func newTestEnv() (_ *testEnv, err error) {
 	}()
 	keyValueClient := examplepb.NewKeyValueClient(clientConn)
 
-	outbound := NewSingleOutbound(listener.Addr().String())
+	outbound := NewSingleOutbound(listener.Addr().String(), outboundOptions...)
 	if err := outbound.Start(); err != nil {
 		return nil, err
 	}
