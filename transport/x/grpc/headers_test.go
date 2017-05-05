@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -39,12 +40,12 @@ func TestMetadataToTransportRequest(t *testing.T) {
 		{
 			Name: "Basic",
 			MD: metadata.Pairs(
-				CallerHeader, "example-caller",
-				ServiceHeader, "example-service",
-				ShardKeyHeader, "example-shard-key",
-				RoutingKeyHeader, "example-routing-key",
-				RoutingDelegateHeader, "example-routing-delegate",
-				EncodingHeader, "example-encoding",
+				grpcheader.CallerHeader, "example-caller",
+				grpcheader.ServiceHeader, "example-service",
+				grpcheader.ShardKeyHeader, "example-shard-key",
+				grpcheader.RoutingKeyHeader, "example-routing-key",
+				grpcheader.RoutingDelegateHeader, "example-routing-delegate",
+				grpcheader.EncodingHeader, "example-encoding",
 				"foo", "bar",
 				"baz", "bat",
 			),

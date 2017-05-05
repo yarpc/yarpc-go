@@ -24,52 +24,25 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
 	"go.uber.org/multierr"
 	"google.golang.org/grpc/metadata"
 )
 
-// these are the same as in transport/http but lowercase
-// http2 does all lowercase headers and this should be explicit
-
-const (
-	// CallerHeader is the header key for the caller.
-	CallerHeader = "rpc-caller"
-	// ServiceHeader is the header key for the service.
-	ServiceHeader = "rpc-service"
-	// ShardKeyHeader is the header key for the shard key.
-	ShardKeyHeader = "rpc-shard-key"
-	// RoutingKeyHeader is the header key for the routing key.
-	RoutingKeyHeader = "rpc-routing-key"
-	// RoutingDelegateHeader is the header key for the routing delegate.
-	RoutingDelegateHeader = "rpc-routing-delegate"
-	// EncodingHeader is the header key for the encoding.
-	// This will be removed when we get encoding propagated using content-type.
-	EncodingHeader = "rpc-encoding"
-)
-
-var (
-	reservedHeaders = map[string]bool{
-		CallerHeader:          true,
-		ServiceHeader:         true,
-		ShardKeyHeader:        true,
-		RoutingKeyHeader:      true,
-		RoutingDelegateHeader: true,
-		EncodingHeader:        true,
-	}
-)
+// TODO: there are way too many repeat calls to strings.ToLower
 
 // transportRequestToMetadata will populate all reserved and application headers
 // from the Request into a new MD.
 func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
 	md := metadata.New(nil)
 	if err := multierr.Combine(
-		addToMetadata(md, CallerHeader, request.Caller),
-		addToMetadata(md, ServiceHeader, request.Service),
-		addToMetadata(md, ShardKeyHeader, request.ShardKey),
-		addToMetadata(md, RoutingKeyHeader, request.RoutingKey),
-		addToMetadata(md, RoutingDelegateHeader, request.RoutingDelegate),
-		addToMetadata(md, EncodingHeader, string(request.Encoding)),
+		addToMetadata(md, grpcheader.CallerHeader, request.Caller),
+		addToMetadata(md, grpcheader.ServiceHeader, request.Service),
+		addToMetadata(md, grpcheader.ShardKeyHeader, request.ShardKey),
+		addToMetadata(md, grpcheader.RoutingKeyHeader, request.RoutingKey),
+		addToMetadata(md, grpcheader.RoutingDelegateHeader, request.RoutingDelegate),
+		addToMetadata(md, grpcheader.EncodingHeader, string(request.Encoding)),
 	); err != nil {
 		return md, err
 	}
@@ -80,8 +53,7 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 // headers into a new Request, only not setting the Body field.
 func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 	request := &transport.Request{
-		// NewHeadersWithCapacity handles if capacity <= 0
-		Headers: transport.NewHeadersWithCapacity(md.Len() - len(reservedHeaders)),
+		Headers: transport.NewHeadersWithCapacity(md.Len()),
 	}
 	for header := range md {
 		header = transport.CanonicalizeHeaderKey(header)
@@ -90,17 +62,17 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			return nil, err
 		}
 		switch header {
-		case CallerHeader:
+		case grpcheader.CallerHeader:
 			request.Caller = value
-		case ServiceHeader:
+		case grpcheader.ServiceHeader:
 			request.Service = value
-		case ShardKeyHeader:
+		case grpcheader.ShardKeyHeader:
 			request.ShardKey = value
-		case RoutingKeyHeader:
+		case grpcheader.RoutingKeyHeader:
 			request.RoutingKey = value
-		case RoutingDelegateHeader:
+		case grpcheader.RoutingDelegateHeader:
 			request.RoutingDelegate = value
-		case EncodingHeader:
+		case grpcheader.EncodingHeader:
 			request.Encoding = transport.Encoding(value)
 		default:
 			request.Headers = request.Headers.With(header, value)
@@ -113,7 +85,7 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 	for header, value := range headers.Items() {
 		header = transport.CanonicalizeHeaderKey(header)
-		if _, ok := reservedHeaders[header]; ok {
+		if grpcheader.IsReserved(header) {
 			return fmt.Errorf("cannot use reserved header in application headers: %s", header)
 		}
 		if err := addToMetadata(md, header, value); err != nil {
@@ -128,7 +100,7 @@ func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 	headers := transport.NewHeadersWithCapacity(md.Len())
 	for header := range md {
 		header = transport.CanonicalizeHeaderKey(header)
-		if _, ok := reservedHeaders[header]; ok {
+		if grpcheader.IsReserved(header) {
 			continue
 		}
 		value, err := getFromMetadata(md, header)
