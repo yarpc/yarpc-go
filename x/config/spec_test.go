@@ -741,6 +741,109 @@ func TestCompilePeerListUpdaterSpec(t *testing.T) {
 		})
 	}
 }
+
+func TestCompilePeerListPreset(t *testing.T) {
+	tests := []struct {
+		desc     string
+		spec     PeerListPreset
+		wantName string
+		wantErr  string
+	}{
+		{
+			desc:    "missing name",
+			wantErr: "Name is required",
+		},
+		{
+			desc: "missing BuildPeerList",
+			spec: PeerListPreset{
+				Name: "random",
+			},
+			wantErr: "BuildPeerList is required",
+		},
+		{
+			desc: "not a function",
+			spec: PeerListPreset{
+				Name:          "much sadness",
+				BuildPeerList: 10,
+			},
+			wantErr: "invalid BuildPeerList int: must be a function",
+		},
+		{
+			desc: "too many arguments",
+			spec: PeerListPreset{
+				Name:          "much sadness",
+				BuildPeerList: func(a, b, c, d int) {},
+			},
+			wantErr: "invalid BuildPeerList func(int, int, int, int): must accept exactly two arguments, found 4",
+		},
+		{
+			desc: "wrong kind of first argument",
+			spec: PeerListPreset{
+				Name:          "much sadness",
+				BuildPeerList: func(a, b int) {},
+			},
+			wantErr: "invalid BuildPeerList func(int, int): must accept a peer.Transport as its first argument, found int",
+		},
+		{
+			desc: "wrong kind of second",
+			spec: PeerListPreset{
+				Name:          "much sadness",
+				BuildPeerList: func(peer.Transport, int) {},
+			},
+			wantErr: "invalid BuildPeerList func(peer.Transport, int): must accept a *config.Kit as its second argument, found int",
+		},
+		{
+			desc: "wrong number of returns",
+			spec: PeerListPreset{
+				Name:          "much sadness",
+				BuildPeerList: func(t peer.Transport, k *Kit) {},
+			},
+			wantErr: "invalid BuildPeerList func(peer.Transport, *config.Kit): must return exactly two results, found 0",
+		},
+		{
+			desc: "wrong type of first return",
+			spec: PeerListPreset{
+				Name: "much sadness",
+				BuildPeerList: func(t peer.Transport, b *Kit) (int, error) {
+					return 0, nil
+				},
+			},
+			wantErr: "invalid BuildPeerList func(peer.Transport, *config.Kit) (int, error): must return a peer.Chooser as its first result, found int",
+		},
+		{
+			desc: "wrong type of second return",
+			spec: PeerListPreset{
+				Name: "much sadness",
+				BuildPeerList: func(t peer.Transport, k *Kit) (peer.Chooser, int) {
+					return nil, 0
+				},
+			},
+			wantErr: "invalid BuildPeerList func(peer.Transport, *config.Kit) (peer.Chooser, int): must return an error as its second result, found int",
+		},
+		{
+			desc: "such gladness",
+			spec: PeerListPreset{
+				Name: "such gladness",
+				BuildPeerList: func(t peer.Transport, k *Kit) (peer.Chooser, error) {
+					return nil, nil
+				},
+			},
+			wantName: "such gladness",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			s, err := compilePeerListPreset(tt.spec)
+			if err != nil {
+				assert.Equal(t, tt.wantErr, err.Error(), "expected error")
+			} else {
+				assert.Equal(t, tt.wantName, s.name, "expected name")
+			}
+		})
+	}
+}
+
 func TestValidateConfigFunc(t *testing.T) {
 	tests := []struct {
 		desc string

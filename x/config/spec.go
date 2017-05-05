@@ -206,6 +206,12 @@ type TransportSpec struct {
 	BuildUnaryOutbound  interface{}
 	BuildOnewayOutbound interface{}
 
+	// Named presets.
+	//
+	// These may be used by specifying a `with` key in the outbound
+	// configuration.
+	PeerListPresets []PeerListPreset
+
 	// TODO(abg): Allow functions to return and accept specific
 	// implementations. Instead of returning a transport.Transport and
 	// accepting a transport.Transport, we could make it so that
@@ -215,6 +221,27 @@ type TransportSpec struct {
 	//
 	// This will get rid of the `t.(*http.Transport)` users will have to do
 	// the first thing inside their BuildInbound.
+}
+
+// PeerListPreset defines a named preset for a peer list. Peer list presets
+// may be used by specifying a `with` key in the outbound configuration.
+//
+// 	http:
+// 	  with: mypreset
+type PeerListPreset struct {
+	Name string
+
+	// A function in the shape,
+	//
+	//  func(peer.Transport, *config.Kit) (peer.Chooser, error)
+	//
+	// Where the first argument is the transport object for which this preset
+	// is being built.
+	BuildPeerList interface{}
+
+	// NOTE(abg): BuildPeerList /could/ be a well-defined func type rather
+	// than an interface{}. We've kept it as an interface{} so that we have
+	// the freedom to add more information to the functions in the future.
 }
 
 // PeerListSpec specifies the configuration parameters for an outbound peer
@@ -294,6 +321,7 @@ var (
 	_typeOfOnewayOutbound = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
 	_typeOfPeerTransport  = reflect.TypeOf((*peer.Transport)(nil)).Elem()
 	_typeOfPeerList       = reflect.TypeOf((*peer.ChooserList)(nil)).Elem()
+	_typeOfPeerChooser    = reflect.TypeOf((*peer.Chooser)(nil)).Elem()
 	_typeOfBinder         = reflect.TypeOf((*peer.Binder)(nil)).Elem()
 )
 
@@ -310,6 +338,8 @@ type compiledTransportSpec struct {
 	Inbound        *configSpec
 	UnaryOutbound  *configSpec
 	OnewayOutbound *configSpec
+
+	PeerListPresets map[string]*compiledPeerListPreset
 }
 
 func (s *compiledTransportSpec) SupportsUnaryOutbound() bool {
@@ -354,6 +384,28 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	if spec.BuildOnewayOutbound != nil {
 		out.OnewayOutbound = appendError(compileOnewayOutboundConfig(spec.BuildOnewayOutbound))
 	}
+
+	if len(spec.PeerListPresets) > 0 {
+		out.PeerListPresets = make(map[string]*compiledPeerListPreset)
+	}
+	for _, p := range spec.PeerListPresets {
+		if _, ok := out.PeerListPresets[p.Name]; ok {
+			err = multierr.Append(err, fmt.Errorf(
+				"found multiple peer lists with the name %q under transport %q",
+				p.Name, spec.Name))
+			continue
+		}
+
+		cp, e := compilePeerListPreset(p)
+		if e != nil {
+			err = multierr.Append(err, fmt.Errorf(
+				"failed to compile preset for transport %q: %v", spec.Name, e))
+			continue
+		}
+
+		out.PeerListPresets[p.Name] = cp
+	}
+
 	return &out, err
 }
 
@@ -455,6 +507,56 @@ func validateConfigFunc(t reflect.Type, outputType reflect.Type) error {
 	}
 
 	return nil
+}
+
+type compiledPeerListPreset struct {
+	name    string
+	factory reflect.Value
+}
+
+// Build builds the peer.Chooser from the compiled peer list preset.
+func (c *compiledPeerListPreset) Build(t peer.Transport, k *Kit) (peer.Chooser, error) {
+	results := c.factory.Call([]reflect.Value{reflect.ValueOf(t), reflect.ValueOf(k)})
+	chooser, _ := results[0].Interface().(peer.Chooser)
+	err, _ := results[1].Interface().(error)
+	return chooser, err
+}
+
+func compilePeerListPreset(preset PeerListPreset) (*compiledPeerListPreset, error) {
+	if preset.Name == "" {
+		return nil, errors.New("Name is required")
+	}
+
+	if preset.BuildPeerList == nil {
+		return nil, errors.New("BuildPeerList is required")
+	}
+
+	v := reflect.ValueOf(preset.BuildPeerList)
+	t := v.Type()
+
+	var err error
+	switch {
+	case t.Kind() != reflect.Func:
+		err = errors.New("must be a function")
+	case t.NumIn() != 2:
+		err = fmt.Errorf("must accept exactly two arguments, found %v", t.NumIn())
+	case t.In(0) != _typeOfPeerTransport:
+		err = fmt.Errorf("must accept a peer.Transport as its first argument, found %v", t.In(0))
+	case t.In(1) != _typeOfKit:
+		err = fmt.Errorf("must accept a %v as its second argument, found %v", _typeOfKit, t.In(1))
+	case t.NumOut() != 2:
+		err = fmt.Errorf("must return exactly two results, found %v", t.NumOut())
+	case t.Out(0) != _typeOfPeerChooser:
+		err = fmt.Errorf("must return a peer.Chooser as its first result, found %v", t.Out(0))
+	case t.Out(1) != _typeOfError:
+		err = fmt.Errorf("must return an error as its second result, found %v", t.Out(1))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid BuildPeerList %v: %v", t, err)
+	}
+
+	return &compiledPeerListPreset{name: preset.Name, factory: v}, nil
 }
 
 // Compiled internal representation of a user-specified PeerListSpec.

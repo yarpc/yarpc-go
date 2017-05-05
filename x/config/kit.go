@@ -36,6 +36,16 @@ type Kit struct {
 	c *Configurator
 
 	name string
+
+	// TransportSpec currently being used. This may or may not be set.
+	transportSpec *compiledTransportSpec
+}
+
+// Returns a shallow copy of this Kit with spec set to the given value.
+func (k *Kit) withTransportSpec(spec *compiledTransportSpec) *Kit {
+	newK := *k
+	newK.transportSpec = spec
+	return &newK
 }
 
 // ServiceName returns the name of the service for which components are being
@@ -51,6 +61,30 @@ func (k *Kit) peerListSpec(name string) (*compiledPeerListSpec, error) {
 
 	msg := fmt.Sprintf("no recognized peer list %q", name)
 	if available := k.peerListSpecNames(); len(available) > 0 {
+		msg = fmt.Sprintf("%s; need one of %s", msg, strings.Join(available, ", "))
+	}
+
+	return nil, errors.New(msg)
+}
+
+func (k *Kit) peerListPreset(name string) (*compiledPeerListPreset, error) {
+	if k.transportSpec == nil {
+		// Currently, transportspec is set only if we're inside build*Outbound.
+		return nil, errors.New(
+			"invalid Kit: make sure you passed in the same Kit your Build function received")
+	}
+
+	if spec := k.transportSpec.PeerListPresets[name]; spec != nil {
+		return spec, nil
+	}
+
+	available := make([]string, 0, len(k.transportSpec.PeerListPresets))
+	for name := range k.transportSpec.PeerListPresets {
+		available = append(available, name)
+	}
+
+	msg := fmt.Sprintf("no recognized peer list preset %q", name)
+	if len(available) > 0 {
 		msg = fmt.Sprintf("%s; need one of %s", msg, strings.Join(available, ", "))
 	}
 

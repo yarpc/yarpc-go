@@ -29,8 +29,12 @@ import (
 
 	"go.uber.org/yarpc"
 	peerapi "go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/peer/peertest"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/peer/roundrobin"
 	"go.uber.org/yarpc/peer/x/peerheap"
 	"go.uber.org/yarpc/transport/http"
@@ -38,6 +42,7 @@ import (
 	"go.uber.org/yarpc/x/config"
 	"go.uber.org/yarpc/yarpctest"
 
+	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -127,6 +132,52 @@ func TestChooserConfigurator(t *testing.T) {
 
 				updater, ok := chooser.Updater().(*peer.PeersUpdater)
 				require.True(t, ok, "updater is a static peer list updater")
+
+				list, ok := chooser.ChooserList().(*yarpctest.FakePeerList)
+				require.True(t, ok, "list is a fake peer list")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = updater
+				_ = list
+			},
+		},
+		{
+			desc: "peer list preset",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								with: fake
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, len(transports), 1, "must have one transport")
+
+				transport, ok := transports[0].(*yarpctest.FakeTransport)
+				require.True(t, ok, "must be a fake transport")
+				assert.Equal(t, transport.NopOption(), ":1234", "transport configured")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.BoundChooser)
+				require.True(t, ok, "unary chooser must be a bound chooser")
+
+				updater, ok := chooser.Updater().(*yarpctest.FakePeerListUpdater)
+				require.True(t, ok, "updater is a fake peer list updater")
 
 				list, ok := chooser.ChooserList().(*yarpctest.FakePeerList)
 				require.True(t, ok, "list is a fake peer list")
@@ -396,6 +447,22 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "invalid peer list preset",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								with: bogus
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`no recognized peer list preset "bogus"`,
+				`need one of`,
+				`fake`,
+			},
+		},
+		{
 			desc: "invalid peer list decode",
 			given: whitespace.Expand(`
 				transports:
@@ -527,6 +594,22 @@ func TestChooserConfigurator(t *testing.T) {
 				`failed to configure unary outbound for "their-service": `,
 				`has invalid keys:`,
 				`conspicuously`,
+			},
+		},
+		{
+			desc: "extraneous config in combination with preset",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								with: fake
+								conspicuously: present
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`conspicuously`,
+				`present`,
 			},
 		},
 		{
@@ -668,4 +751,37 @@ func invalidPeerListUpdaterSpec() config.PeerListUpdaterSpec {
 		Name:                 "invalid-updater",
 		BuildPeerListUpdater: buildInvalidPeerListUpdater,
 	}
+}
+
+func TestBuildPeerListInvalidKit(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// We build a fake InboundConfig that embeds the PeerList. This will let
+	// us call PeerList.BuildPeerList with the wrong Kit.
+	type inboundConfig struct {
+		config.PeerList
+	}
+
+	configer := yarpctest.NewFakeConfigurator()
+	configer.MustRegisterTransport(config.TransportSpec{
+		Name: "foo",
+		BuildTransport: func(struct{}, *config.Kit) (transport.Transport, error) {
+			return transporttest.NewMockTransport(mockCtrl), nil
+		},
+		BuildInbound: func(cfg *inboundConfig, _ transport.Transport, k *config.Kit) (transport.Inbound, error) {
+			_, err := cfg.PeerList.BuildPeerList(peertest.NewMockTransport(mockCtrl), hostport.Identify, k)
+			assert.Error(t, err, "BuildPeerList should fail with an invalid Kit")
+			return transporttest.NewMockInbound(mockCtrl), err
+		},
+	})
+
+	_, err := configer.LoadConfig("myservice", map[string]interface{}{
+		"inbounds": map[string]interface{}{
+			"foo": map[string]interface{}{"with": "irrelevant"},
+		},
+	})
+	require.Error(t, err, "LoadConfig should fail")
+	assert.Contains(t, err.Error(),
+		"invalid Kit: make sure you passed in the same Kit your Build function received")
 }

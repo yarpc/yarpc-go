@@ -23,6 +23,7 @@ package yarpctest
 import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	peerbind "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
 )
@@ -59,6 +60,9 @@ func FakeTransportSpec() config.TransportSpec {
 		Name:               "fake-transport",
 		BuildTransport:     buildFakeTransport,
 		BuildUnaryOutbound: buildFakeOutbound,
+		PeerListPresets: []config.PeerListPreset{
+			FakePeerListPreset(),
+		},
 	}
 }
 
@@ -116,4 +120,18 @@ func NewFakeConfigurator() *config.Configurator {
 	configurator.MustRegisterPeerList(FakePeerListSpec())
 	configurator.MustRegisterPeerListUpdater(FakePeerListUpdaterSpec())
 	return configurator
+}
+
+// FakePeerListPreset is a PeerListPreset which builds a FakePeerList buind to
+// a FakePeerListUpdater.
+func FakePeerListPreset() config.PeerListPreset {
+	return config.PeerListPreset{
+		Name: "fake",
+		BuildPeerList: func(peer.Transport, *config.Kit) (peer.Chooser, error) {
+			return peerbind.Bind(
+				NewFakePeerList(), func(peer.List) transport.Lifecycle {
+					return NewFakePeerListUpdater()
+				}), nil
+		},
+	}
 }

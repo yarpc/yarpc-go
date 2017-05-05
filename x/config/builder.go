@@ -42,8 +42,8 @@ type buildableInbound struct {
 }
 
 type buildableOutbound struct {
-	Transport string
-	Value     *buildable
+	TransportSpec *compiledTransportSpec
+	Value         *buildable
 }
 
 type builder struct {
@@ -117,14 +117,14 @@ func (b *builder) Build() (yarpc.Config, error) {
 		}
 
 		if o := c.Unary; o != nil {
-			ob.Unary, err = buildUnaryOutbound(o.Value, transports[o.Transport], b.kit)
+			ob.Unary, err = buildUnaryOutbound(o, transports[o.TransportSpec.Name], b.kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure unary outbound for %q: %v`, ccname, err))
 				continue
 			}
 		}
 		if o := c.Oneway; o != nil {
-			ob.Oneway, err = buildOnewayOutbound(o.Value, transports[o.Transport], b.kit)
+			ob.Oneway, err = buildOnewayOutbound(o, transports[o.TransportSpec.Name], b.kit)
 			if err != nil {
 				errs = multierr.Append(errs, fmt.Errorf(`failed to configure oneway outbound for %q: %v`, ccname, err))
 				continue
@@ -162,8 +162,8 @@ func buildInbound(cv *buildable, t transport.Transport, k *Kit) (transport.Inbou
 
 // buildUnaryOutbound builds an UnaryOutbound from the given value. This will panic
 // if the output type for this is not transport.UnaryOutbound.
-func buildUnaryOutbound(cv *buildable, t transport.Transport, k *Kit) (transport.UnaryOutbound, error) {
-	result, err := cv.Build(t, k)
+func buildUnaryOutbound(o *buildableOutbound, t transport.Transport, k *Kit) (transport.UnaryOutbound, error) {
+	result, err := o.Value.Build(t, k.withTransportSpec(o.TransportSpec))
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +172,8 @@ func buildUnaryOutbound(cv *buildable, t transport.Transport, k *Kit) (transport
 
 // buildOnewayOutbound builds an OnewayOutbound from the given value. This will
 // panic if the output type for this is not transport.OnewayOutbound.
-func buildOnewayOutbound(cv *buildable, t transport.Transport, k *Kit) (transport.OnewayOutbound, error) {
-	result, err := cv.Build(t, k)
+func buildOnewayOutbound(o *buildableOutbound, t transport.Transport, k *Kit) (transport.OnewayOutbound, error) {
+	result, err := o.Value.Build(t, k.withTransportSpec(o.TransportSpec))
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (b *builder) AddUnaryOutbound(
 		b.clients[outboundKey] = cc
 	}
 
-	cc.Unary = &buildableOutbound{Transport: spec.Name, Value: cv}
+	cc.Unary = &buildableOutbound{TransportSpec: spec, Value: cv}
 	return nil
 }
 
@@ -277,7 +277,7 @@ func (b *builder) AddOnewayOutbound(
 		b.clients[outboundKey] = cc
 	}
 
-	cc.Oneway = &buildableOutbound{Transport: spec.Name, Value: cv}
+	cc.Oneway = &buildableOutbound{TransportSpec: spec, Value: cv}
 	return nil
 }
 
