@@ -431,6 +431,28 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "too many peer list updaters",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								fake-list:
+									fake-updater:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
+									invalid-updater:
+										- 127.0.0.1:8080
+										- 127.0.0.1:8081
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`found too many peer list updaters in config: got`,
+				"fake-updater", "invalid-updater",
+			},
+		},
+		{
 			desc: "invalid peer list updater decode",
 			given: whitespace.Expand(`
 				transports:
