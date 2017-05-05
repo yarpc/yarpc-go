@@ -21,7 +21,12 @@
 // Package grpcheader provides the headers for gRPC.
 package grpcheader
 
-import "strings"
+import (
+	"context"
+	"strings"
+
+	"google.golang.org/grpc/metadata"
+)
 
 // these are the same as in transport/http but lowercase
 // http2 does all lowercase headers and this should be explicit
@@ -57,4 +62,24 @@ var (
 func IsReserved(header string) bool {
 	_, ok := reservedHeaders[strings.ToLower(header)]
 	return ok
+}
+
+// ContextWrapper wraps a context for grpc-go with the required headers for yarpc.
+//
+// This is a convienence object when using grpc-go clients.
+type ContextWrapper struct {
+	md metadata.MD
+}
+
+// NewContextWrapper creates a new ContextWrapper.
+//
+// TODO: we probably want a more flexible API when building a ContextWrapper
+// so we can maintain backwards compatiblity in the future, maybe a builder?
+func NewContextWrapper(caller string, service string) *ContextWrapper {
+	return &ContextWrapper{metadata.Pairs(CallerHeader, caller, ServiceHeader, service)}
+}
+
+// Wrap wraps the given context with the headers.
+func (c *ContextWrapper) Wrap(ctx context.Context) context.Context {
+	return metadata.NewOutgoingContext(ctx, c.md)
 }
