@@ -58,19 +58,24 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 	c := pc.peerList
 	// Establish a peer selection strategy.
 
-	// Special case for single-peer outbounds.
 	if c.Peer != "" {
+		// myoutbound:
+		//   outboundopt1: ...
+		//   outboundopt2: ...
+		//   peer: 127.0.0.1:8080
 		if len(c.Etc) > 0 {
 			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
 		}
-
 		return peerbind.NewSingle(identify(c.Peer), transport), nil
 	}
 
-	// All multi-peer choosers may combine a peer list (for sharding or
-	// load-balancing) and a peer list updater.
-
+	// myoutbound:
+	//   outboundopt1: ...
+	//   outboundopt2: ...
+	//   my-peer-list:
+	//     ...
 	return pc.buildPeerList(transport, identify, kit)
+
 }
 
 func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
@@ -78,11 +83,22 @@ func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string)
 	if err != nil {
 		return nil, err
 	}
+
 	peerListSpec, err := kit.peerListSpec(peerListName)
 	if err != nil {
 		return nil, err
 	}
 
+	// This builds the peer list updater and also removes its entry from the
+	// map. Given,
+	//
+	//   least-pending:
+	//     failurePenalty: 5s
+	//     dns:
+	//       ..
+	//
+	// We will be left with only failurePenalty in the map so that we can simply
+	// decode it into the peer list configuration type.
 	peerListUpdater, err := buildPeerListUpdater(peerListConfig, identify, kit)
 	if err != nil {
 		return nil, err
@@ -101,65 +117,110 @@ func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string)
 	return peerbind.Bind(peerList, peerListUpdater), nil
 }
 
+// getPeerListInfo extracts the peer list entry from the given attribute map. It
+// must be the only remaining entry.
+//
+// For example, in
+//
+//   myoutbound:
+//     outboundopt1: ...
+//     outboundopt2: ...
+//     my-peer-list:
+//       ...
+//
+// By the time getPeerListInfo is called, the map must only be,
+//
+//   my-peer-list:
+//     ...
+//
+// The name of the peer list (my-peer-list) is returned with the attributes
+// specified under that entry.
 func getPeerListInfo(etc attributeMap, kit *Kit) (name string, config attributeMap, err error) {
 	names := etc.Keys()
 	switch len(names) {
 	case 0:
-		return "", nil, fmt.Errorf("no peer list provided in config, need one of: %+v", kit.peerListSpecNames())
+		err = fmt.Errorf("no peer list provided in config, need one of: %+v", kit.peerListSpecNames())
 	default:
-		return "", nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", etc)
+		err = fmt.Errorf("unrecognized attributes in outbound config: %+v", etc)
 	case 1:
-		// Empty, use logic below
+		name = names[0]
+		_, err = etc.Pop(name, &config)
 	}
-	name = names[0]
-	_, err = etc.Pop(name, &config)
 	return
 }
 
+// buildPeerListUpdater builds the peer list updater given the peer list
+// configuration map. For example, we might get,
+//
+//   least-pending:
+//     failurePenalty: 5s
+//     dns:
+//       name: myservice.example.com
+//       record: A
 func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
+	// Special case for explicit list of peers.
 	var peers []string
-	_, err := c.Pop("peers", &peers)
+	if _, err := c.Pop("peers", &peers); err != nil {
+		return nil, err
+	}
+	if len(peers) > 0 {
+		return peerbind.BindPeers(identifyAll(identify, peers)), nil
+	}
+	// TODO: Make peers a separate peer list updater that is registered by
+	// default instead of special casing here.
+
+	var (
+		// The peer list updater config is in the same namespace as the
+		// attributes for the peer list config. We want to ensure that there is
+		// exactly one peer list updater in the config.
+		foundUpdaters []string
+
+		// The peer list updater spec we'll actually use.
+		peerListUpdaterSpec *compiledPeerListUpdaterSpec
+	)
+
+	for name := range c {
+		spec := kit.peerListUpdaterSpec(name)
+		if spec != nil {
+			peerListUpdaterSpec = spec
+			foundUpdaters = append(foundUpdaters, name)
+		}
+	}
+
+	switch len(foundUpdaters) {
+	case 0:
+		return nil, fmt.Errorf(
+			"no recognized peer list updater in config: got %s; need one of %s",
+			strings.Join(configNames(c), ", "),
+			strings.Join(kit.peerListUpdaterSpecNames(), ", "),
+		)
+	default:
+		sort.Strings(foundUpdaters) // deterministic error message
+		return nil, fmt.Errorf(
+			"found too many peer list updaters in config: got %s",
+			strings.Join(foundUpdaters, ", "))
+	case 1:
+		// fall through to logic below
+	}
+
+	var peerListUpdaterConfig attributeMap
+	if _, err := c.Pop(foundUpdaters[0], &peerListUpdaterConfig); err != nil {
+		return nil, err
+	}
+
+	// This decodes all attributes on the peer list updater block, including the
+	// field with the name of the peer list updater.
+	peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(peerListUpdaterConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(peers) > 0 {
-		return peerbind.BindPeers(identifyAll(identify, peers)), nil
+	result, err := peerListUpdaterBuilder.Build(kit)
+	if err != nil {
+		return nil, err
 	}
 
-	for peerListUpdaterName := range c {
-		peerListUpdaterSpec := kit.peerListUpdaterSpec(peerListUpdaterName)
-		if peerListUpdaterSpec == nil {
-			continue
-		}
-
-		var peerListUpdaterConfig attributeMap
-		if _, err := c.Pop(peerListUpdaterName, &peerListUpdaterConfig); err != nil {
-			return nil, err
-		}
-
-		// This decodes all attributes on the peer list updater block, including
-		// the field with the name of the peer list updater.
-		peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(peerListUpdaterConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		result, err := peerListUpdaterBuilder.Build(kit)
-		if err != nil {
-			return nil, err
-		}
-
-		binder := result.(peer.Binder)
-
-		return binder, nil
-	}
-
-	return nil, fmt.Errorf(
-		"no recognized peer list updater in config: got %s; need one of %s",
-		strings.Join(configNames(c), ", "),
-		strings.Join(kit.peerListUpdaterSpecNames(), ", "),
-	)
+	return result.(peer.Binder), nil
 }
 
 func identifyAll(identify func(string) peer.Identifier, peers []string) []peer.Identifier {
