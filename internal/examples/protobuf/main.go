@@ -33,6 +33,7 @@ import (
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 
 	"google.golang.org/grpc"
@@ -55,11 +56,11 @@ func do() error {
 	}
 	keyValueYarpcServer := example.NewKeyValueYarpcServer()
 	sinkYarpcServer := example.NewSinkYarpcServer(true)
-	return example.WithClients(
+	return exampleutil.WithClients(
 		transportType,
 		keyValueYarpcServer,
 		sinkYarpcServer,
-		func(clients *example.Clients) error {
+		func(clients *exampleutil.Clients) error {
 			return doClient(keyValueYarpcServer, sinkYarpcServer, clients)
 		},
 	)
@@ -68,7 +69,7 @@ func do() error {
 func doClient(
 	keyValueYarpcServer *example.KeyValueYarpcServer,
 	sinkYarpcServer *example.SinkYarpcServer,
-	clients *example.Clients,
+	clients *exampleutil.Clients,
 ) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {

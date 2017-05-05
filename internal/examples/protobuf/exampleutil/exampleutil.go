@@ -18,49 +18,49 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package testing
+package exampleutil
 
 import (
-	"testing"
-
-	"go.uber.org/yarpc/internal/examples/protobuf/example"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
-	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 )
 
-func BenchmarkIntegration(b *testing.B) {
-	for _, transportType := range testutils.AllTransportTypes {
-		b.Run(transportType.String(), func(b *testing.B) { benchmarkIntegrationForTransportType(b, transportType) })
-	}
+// Clients holds all clients.
+type Clients struct {
+	KeyValueYarpcClient examplepb.KeyValueYarpcClient
+	SinkYarpcClient     examplepb.SinkYarpcClient
+	KeyValueGRPCClient  examplepb.KeyValueClient
+	SinkGRPCClient      examplepb.SinkClient
 }
 
-func benchmarkIntegrationForTransportType(b *testing.B, transportType testutils.TransportType) {
-	keyValueYarpcServer := example.NewKeyValueYarpcServer()
-	sinkYarpcServer := example.NewSinkYarpcServer(false)
-	exampleutil.WithClients(
+// WithClients calls f on the Clients.
+func WithClients(
+	transportType testutils.TransportType,
+	keyValueYarpcServer examplepb.KeyValueYarpcServer,
+	sinkYarpcServer examplepb.SinkYarpcServer,
+	f func(*Clients) error,
+) error {
+	var procedures []transport.Procedure
+	if keyValueYarpcServer != nil {
+		procedures = append(procedures, examplepb.BuildKeyValueYarpcProcedures(keyValueYarpcServer)...)
+	}
+	if sinkYarpcServer != nil {
+		procedures = append(procedures, examplepb.BuildSinkYarpcProcedures(sinkYarpcServer)...)
+	}
+	return testutils.WithClientInfo(
+		"example",
+		procedures,
 		transportType,
-		keyValueYarpcServer,
-		sinkYarpcServer,
-		func(clients *exampleutil.Clients) error {
-			benchmarkIntegration(b, clients.KeyValueYarpcClient, clients.SinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
-			return nil
+		func(clientInfo *testutils.ClientInfo) error {
+			return f(
+				&Clients{
+					examplepb.NewKeyValueYarpcClient(clientInfo.ClientConfig),
+					examplepb.NewSinkYarpcClient(clientInfo.ClientConfig),
+					examplepb.NewKeyValueClient(clientInfo.GRPCClientConn),
+					examplepb.NewSinkClient(clientInfo.GRPCClientConn),
+				},
+			)
 		},
 	)
-}
-
-func benchmarkIntegration(
-	b *testing.B,
-	keyValueYarpcClient examplepb.KeyValueYarpcClient,
-	sinkYarpcClient examplepb.SinkYarpcClient,
-	keyValueYarpcServer *example.KeyValueYarpcServer,
-	sinkYarpcServer *example.SinkYarpcServer,
-) {
-	b.Run("Get", func(b *testing.B) {
-		setValue(keyValueYarpcClient, "foo", "bar")
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			getValue(keyValueYarpcClient, "foo")
-		}
-	})
 }

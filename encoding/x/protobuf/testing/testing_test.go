@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 
 	"github.com/stretchr/testify/assert"
@@ -45,11 +46,11 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 	sinkYarpcServer := example.NewSinkYarpcServer(true)
 	assert.NoError(
 		t,
-		example.WithClients(
+		exampleutil.WithClients(
 			transportType,
 			keyValueYarpcServer,
 			sinkYarpcServer,
-			func(clients *example.Clients) error {
+			func(clients *exampleutil.Clients) error {
 				testIntegration(t, clients, keyValueYarpcServer, sinkYarpcServer)
 				return nil
 			},
@@ -59,7 +60,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 
 func testIntegration(
 	t *testing.T,
-	clients *example.Clients,
+	clients *exampleutil.Clients,
 	keyValueYarpcServer *example.KeyValueYarpcServer,
 	sinkYarpcServer *example.SinkYarpcServer,
 ) {
