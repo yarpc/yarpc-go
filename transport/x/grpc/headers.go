@@ -29,25 +29,33 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// these are the same as in transport/http but lowercase
+// http2 does all lowercase headers and this should be explicit
+
 const (
-	// these are the same as in transport/http but lowercase
-	// http2 does all lowercase headers and this should be explicit
-	callerHeader          = "rpc-caller"
-	serviceHeader         = "rpc-service"
-	shardKeyHeader        = "rpc-shard-key"
-	routingKeyHeader      = "rpc-routing-key"
-	routingDelegateHeader = "rpc-routing-delegate"
-	encodingHeader        = "rpc-encoding"
+	// CallerHeader is the header key for the caller.
+	CallerHeader = "rpc-caller"
+	// ServiceHeader is the header key for the service.
+	ServiceHeader = "rpc-service"
+	// ShardKeyHeader is the header key for the shard key.
+	ShardKeyHeader = "rpc-shard-key"
+	// RoutingKeyHeader is the header key for the routing key.
+	RoutingKeyHeader = "rpc-routing-key"
+	// RoutingDelegateHeader is the header key for the routing delegate.
+	RoutingDelegateHeader = "rpc-routing-delegate"
+	// EncodingHeader is the header key for the encoding.
+	// This will be removed when we get encoding propagated using content-type.
+	EncodingHeader = "rpc-encoding"
 )
 
 var (
 	reservedHeaders = map[string]bool{
-		callerHeader:          true,
-		serviceHeader:         true,
-		shardKeyHeader:        true,
-		routingKeyHeader:      true,
-		routingDelegateHeader: true,
-		encodingHeader:        true,
+		CallerHeader:          true,
+		ServiceHeader:         true,
+		ShardKeyHeader:        true,
+		RoutingKeyHeader:      true,
+		RoutingDelegateHeader: true,
+		EncodingHeader:        true,
 	}
 )
 
@@ -56,12 +64,12 @@ var (
 func transportRequestToMetadata(request *transport.Request) (metadata.MD, error) {
 	md := metadata.New(nil)
 	if err := multierr.Combine(
-		addToMetadata(md, callerHeader, request.Caller),
-		addToMetadata(md, serviceHeader, request.Service),
-		addToMetadata(md, shardKeyHeader, request.ShardKey),
-		addToMetadata(md, routingKeyHeader, request.RoutingKey),
-		addToMetadata(md, routingDelegateHeader, request.RoutingDelegate),
-		addToMetadata(md, encodingHeader, string(request.Encoding)),
+		addToMetadata(md, CallerHeader, request.Caller),
+		addToMetadata(md, ServiceHeader, request.Service),
+		addToMetadata(md, ShardKeyHeader, request.ShardKey),
+		addToMetadata(md, RoutingKeyHeader, request.RoutingKey),
+		addToMetadata(md, RoutingDelegateHeader, request.RoutingDelegate),
+		addToMetadata(md, EncodingHeader, string(request.Encoding)),
 	); err != nil {
 		return md, err
 	}
@@ -82,17 +90,17 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			return nil, err
 		}
 		switch header {
-		case callerHeader:
+		case CallerHeader:
 			request.Caller = value
-		case serviceHeader:
+		case ServiceHeader:
 			request.Service = value
-		case shardKeyHeader:
+		case ShardKeyHeader:
 			request.ShardKey = value
-		case routingKeyHeader:
+		case RoutingKeyHeader:
 			request.RoutingKey = value
-		case routingDelegateHeader:
+		case RoutingDelegateHeader:
 			request.RoutingDelegate = value
-		case encodingHeader:
+		case EncodingHeader:
 			request.Encoding = transport.Encoding(value)
 		default:
 			request.Headers = request.Headers.With(header, value)

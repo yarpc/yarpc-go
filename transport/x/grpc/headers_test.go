@@ -39,12 +39,12 @@ func TestMetadataToTransportRequest(t *testing.T) {
 		{
 			Name: "Basic",
 			MD: metadata.Pairs(
-				callerHeader, "example-caller",
-				serviceHeader, "example-service",
-				shardKeyHeader, "example-shard-key",
-				routingKeyHeader, "example-routing-key",
-				routingDelegateHeader, "example-routing-delegate",
-				encodingHeader, "example-encoding",
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				ShardKeyHeader, "example-shard-key",
+				RoutingKeyHeader, "example-routing-key",
+				RoutingDelegateHeader, "example-routing-delegate",
+				EncodingHeader, "example-encoding",
 				"foo", "bar",
 				"baz", "bat",
 			),
