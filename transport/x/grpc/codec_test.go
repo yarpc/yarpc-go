@@ -28,7 +28,7 @@ import (
 
 func TestCustomCodecMarshalBytes(t *testing.T) {
 	value := []byte("test")
-	data, err := customCodec{}.Marshal(&value)
+	data, err := customCodec{}.Marshal(value)
 	assert.Equal(t, value, data)
 	assert.NoError(t, err)
 }
@@ -37,7 +37,7 @@ func TestCustomCodecMarshalCastError(t *testing.T) {
 	value := "test"
 	data, err := customCodec{}.Marshal(&value)
 	assert.Equal(t, []byte(nil), data)
-	assert.Equal(t, newCustomCodecCastError(&value), err)
+	assert.Equal(t, newCustomCodecMarshalCastError(&value), err)
 }
 
 func TestCustomCodecUnmarshalBytes(t *testing.T) {
@@ -51,7 +51,7 @@ func TestCustomCodecUnmarshalCastError(t *testing.T) {
 	var value string
 	err := customCodec{}.Unmarshal([]byte("test"), &value)
 	assert.Equal(t, "", value)
-	assert.Equal(t, newCustomCodecCastError(&value), err)
+	assert.Equal(t, newCustomCodecUnmarshalCastError(&value), err)
 }
 
 func TestCustomCodecString(t *testing.T) {

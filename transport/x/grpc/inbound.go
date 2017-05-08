@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	internalsync "go.uber.org/yarpc/internal/sync"
 
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -95,7 +94,7 @@ func (i *Inbound) start() error {
 		grpc.CustomCodec(customCodec{}),
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
-		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.inboundOptions.getTracer())),
+		//grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.inboundOptions.getTracer())),
 	)
 	for _, serviceDesc := range serviceDescs {
 		server.RegisterService(serviceDesc, noopGrpcStruct{})

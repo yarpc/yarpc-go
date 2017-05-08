@@ -1,10 +1,10 @@
-hash: 733dbe39a05cf3d6d9bb4250d170d4e0f2e7627924f45cbfc9ebeca9eaadc228
-updated: 2017-04-19T15:13:50.386855787-07:00
+hash: 0857ee8e9ee348488ac73cd74dbd9369d50acd05ce91edfe1abe09c2371a6c8d
+updated: 2017-05-04T10:33:18.940107111-07:00
 imports:
 - name: github.com/apache/thrift
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
   repo: git://git.apache.org/thrift.git
   vcs: git
-  version: b2a4d4ae21c789b689dd162deb819665567f481c
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -12,7 +12,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/cactus/go-statsd-client
-  version: d8eabe07bc70ff9ba6a56836cde99d1ea3d005f7
+  version: 91c326c3f7bd20f0226d3d1c289dd9f8ce28d33d
   subpackages:
   - statsd
 - name: github.com/codahale/hdrhistogram
@@ -44,6 +44,7 @@ imports:
   version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
   subpackages:
   - proto
+  - ptypes/any
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/grpc-ecosystem/grpc-opentracing
@@ -56,10 +57,8 @@ imports:
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
-- name: github.com/mitchellh/mapstructure
-  version: 53818660ed4955e899c0bcafa97299a388bd7c8e
 - name: github.com/opentracing/opentracing-go
-  version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
+  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
   subpackages:
   - ext
   - log
@@ -103,6 +102,10 @@ imports:
   version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
+- name: github.com/uber-go/mapdecode
+  version: de2188dac6034e69c22e1e43d3b8d8ff915e7f5b
+  subpackages:
+  - internal/mapstructure
 - name: github.com/uber-go/tally
   version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
   subpackages:
@@ -179,7 +182,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 1550bc05539134bbf8612a35f34a79ab8bf34ee3
+  version: 6a4e056f2cc954cfec3581729e758909604b3f76
   subpackages:
   - buffer
   - internal/bufferpool
@@ -189,7 +192,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
+  version: feeb485667d1fdabe727840fe00adc22431bc86e
   repo: https://github.com/golang/net
   subpackages:
   - context
@@ -217,12 +220,17 @@ imports:
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
+- name: google.golang.org/genproto
+  version: 411e09b969b1170a9f0c467558eb4c4c110d9c77
+  subpackages:
+  - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
+  version: d2e1b51f33ff8c5e4a15560ff049d200e83726c5
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
   - credentials
+  - grpclb/grpc_lb_v1
   - grpclog
   - internal
   - keepalive
@@ -230,6 +238,7 @@ imports:
   - naming
   - peer
   - stats
+  - status
   - tap
   - transport
 - name: gopkg.in/redis.v5

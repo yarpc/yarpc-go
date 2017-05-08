@@ -152,5 +152,5 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
 	err = multierr.Append(err, grpc.SendHeader(ctx, responseWriter.md))
 	data := responseWriter.Bytes()
-	return &data, err
+	return data, err
 }
