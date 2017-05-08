@@ -33,10 +33,6 @@ func createEchoT(encoding string, transport string, t crossdock.T) crossdock.T {
 	}
 	t.Tag("transport", transport)
 	t.Tag("encoding", encoding)
-	if t.Param(params.GoServer) != "" {
-		t.Tag("server", t.Param(params.GoServer))
-	} else {
-		t.Tag("server", t.Param(params.Server))
-	}
+	t.Tag("server", t.Param(params.Server))
 	return t
 }

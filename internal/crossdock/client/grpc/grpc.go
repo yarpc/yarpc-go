@@ -36,7 +36,7 @@ var encodingToRunFunc = map[string]func(crossdock.T, string){
 
 // Run starts the grpc behavior, testing grpc over encodings.
 func Run(t crossdock.T) {
-	encoding := t.Param(params.GoEncoding)
+	encoding := t.Param(params.Encoding)
 	f, ok := encodingToRunFunc[encoding]
 	if !ok {
 		crossdock.Fatals(t).Fail("unknown encoding", "%v", encoding)

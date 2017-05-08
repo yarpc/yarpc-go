@@ -49,10 +49,7 @@ func Create(t crossdock.T) *yarpc.Dispatcher {
 func CreateDispatcherForTransport(t crossdock.T, trans string) *yarpc.Dispatcher {
 	fatals := crossdock.Fatals(t)
 
-	server := t.Param(params.GoServer)
-	if server == "" {
-		server = t.Param(params.Server)
-	}
+	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
 	var unaryOutbound transport.UnaryOutbound
