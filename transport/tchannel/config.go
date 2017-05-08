@@ -26,6 +26,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
+
+	opentracing "github.com/opentracing/opentracing-go"
 )
 
 const transportName = "tchannel"
@@ -92,6 +94,9 @@ func (ts *transportSpec) Spec() config.TransportSpec {
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
 	var cfg transportConfig
+	// Default configuration.
+	cfg.tracer = opentracing.GlobalTracer()
+
 	for _, o := range ts.transportOptions {
 		o(&cfg)
 	}
