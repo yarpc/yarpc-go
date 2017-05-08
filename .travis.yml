@@ -1,9 +1,12 @@
 sudo: false
 language: go
 go_import_path: go.uber.org/yarpc
+env:
+  global:
+    - XDG_CACHE_HOME=$HOME/.cache
 cache:
   directories:
-    - $HOME/.cache/yarpc-go
+    - $XDG_CACHE_HOME/yarpc-go
     - $HOME/.glide
 matrix:
   include:
