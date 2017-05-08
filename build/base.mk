@@ -16,6 +16,3 @@ BIN = $(CACHE)/bin
 .PHONY: clean
 clean: ## remove installed binaries and artifacts
 	rm -rf $(CACHE_BASE)
-
-pp:
-	echo $(CACHE_BASE)
