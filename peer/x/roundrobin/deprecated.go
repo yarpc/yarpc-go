@@ -25,12 +25,12 @@ import (
 	newrr "go.uber.org/yarpc/peer/roundrobin"
 )
 
-// Capacity is DEPRECATED, see "go.uber.org/yarpc/peer/roundrobin#Capacity"
+// Capacity is DEPRECATED, see "http://go.uber.org/yarpc/peer/roundrobin#Capacity"
 func Capacity(cap int) newrr.ListOption {
 	return newrr.Capacity(cap)
 }
 
-// New is DEPRECATED, see "go.uber.org/yarpc/peer/roundrobin#New"
+// New is DEPRECATED, see "http://go.uber.org/yarpc/peer/roundrobin#New"
 func New(transport peer.Transport, opts ...newrr.ListOption) *newrr.List {
 	return newrr.New(transport, opts...)
 }
