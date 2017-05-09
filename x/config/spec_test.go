@@ -122,6 +122,46 @@ func TestCompileTransportSpec(t *testing.T) {
 			supportsOneway:      true,
 			onewayOutboundInput: _typeOfEmptyStruct,
 		},
+		{
+			desc: "bad peer list preset",
+			spec: TransportSpec{
+				Name:               "foo",
+				BuildTransport:     func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
+				BuildUnaryOutbound: func(struct{}, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
+				PeerListPresets: []PeerListPreset{
+					{
+						Name:          "fake",
+						BuildPeerList: func(transport.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
+					},
+				},
+			},
+			wantErr: []string{
+				`failed to compile preset for transport "foo":`,
+				"invalid BuildPeerList func(transport.Transport, *config.Kit) (peer.Chooser, error):",
+				"must accept a peer.Transport as its first argument, found transport.Transport",
+			},
+		},
+		{
+			desc: "peer list preset collision",
+			spec: TransportSpec{
+				Name:               "foo",
+				BuildTransport:     func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
+				BuildUnaryOutbound: func(struct{}, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
+				PeerListPresets: []PeerListPreset{
+					{
+						Name:          "fake",
+						BuildPeerList: func(peer.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
+					},
+					{
+						Name:          "fake",
+						BuildPeerList: func(peer.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
+					},
+				},
+			},
+			wantErr: []string{
+				`found multiple peer lists with the name "fake" under transport "foo"`,
+			},
+		},
 	}
 
 	for _, tt := range tests {
