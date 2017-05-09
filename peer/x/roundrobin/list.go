@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 	ysync "go.uber.org/yarpc/internal/sync"
 
-	"github.com/uber-go/atomic"
+	"go.uber.org/atomic"
 	"go.uber.org/multierr"
 )
 
@@ -91,36 +91,51 @@ type List struct {
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures.
 func (pl *List) Update(updates peer.ListUpdates) error {
-	additions := updates.Additions
-	removals := updates.Removals
-
-	if len(additions) == 0 && len(removals) == 0 {
+	if len(updates.Additions) == 0 && len(updates.Removals) == 0 {
 		return nil
 	}
 
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	var errs error
 	if pl.shouldRetainPeers.Load() {
-		for _, peerID := range removals {
-			errs = multierr.Append(errs, pl.removePeerIdentifier(peerID))
-		}
+		return pl.updateInitialized(updates)
+	}
+	return pl.updateUninitialized(updates)
+}
 
-		for _, peerID := range additions {
-			errs = multierr.Append(errs, pl.addPeerIdentifier(peerID))
-		}
-		return errs
+// updateInitialized applies peer list updates when the peer list
+// is able to retain peers, putting the updates into the available
+// or unavailable containers.
+//
+// Must be run inside a mutex.Lock()
+func (pl *List) updateInitialized(updates peer.ListUpdates) error {
+	var errs error
+	for _, peerID := range updates.Removals {
+		errs = multierr.Append(errs, pl.removePeerIdentifier(peerID))
 	}
 
-	for _, peerID := range removals {
+	for _, peerID := range updates.Additions {
+		errs = multierr.Append(errs, pl.addPeerIdentifier(peerID))
+	}
+	return errs
+}
+
+// updateUninitialized applies peer list updates when the peer list
+// is **not** able to retain peers, putting the updates into a single
+// uninitialized peer list.
+//
+// Must be run inside a mutex.Lock()
+func (pl *List) updateUninitialized(updates peer.ListUpdates) error {
+	var errs error
+	for _, peerID := range updates.Removals {
 		if _, ok := pl.uninitializedPeers[peerID.Identifier()]; ok {
 			delete(pl.uninitializedPeers, peerID.Identifier())
 		} else {
 			errs = multierr.Append(errs, peer.ErrPeerRemoveNotInList(peerID.Identifier()))
 		}
 	}
-	for _, peerID := range additions {
+	for _, peerID := range updates.Additions {
 		pl.uninitializedPeers[peerID.Identifier()] = peerID
 	}
 
@@ -172,9 +187,9 @@ func (pl *List) start() error {
 	defer pl.lock.Unlock()
 
 	var errs error
-	for _, pid := range pl.uninitializedPeers {
+	for k, pid := range pl.uninitializedPeers {
 		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
-		delete(pl.uninitializedPeers, pid.Identifier())
+		delete(pl.uninitializedPeers, k)
 	}
 
 	pl.shouldRetainPeers.Store(true)
