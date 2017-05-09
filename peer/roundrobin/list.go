@@ -66,7 +66,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		once:               ysync.Once(),
 		uninitializedPeers: make(map[string]peer.Identifier, cfg.capacity),
 		unavailablePeers:   make(map[string]peer.Peer, cfg.capacity),
-		availablePeerRing:  NewPeerRing(cfg.capacity),
+		availablePeerRing:  newPeerRing(cfg.capacity),
 		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
@@ -80,7 +80,7 @@ type List struct {
 	uninitializedPeers map[string]peer.Identifier
 
 	unavailablePeers   map[string]peer.Peer
-	availablePeerRing  *PeerRing
+	availablePeerRing  *peerRing
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
