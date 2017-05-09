@@ -695,6 +695,18 @@ func TestRoundRobinList(t *testing.T) {
 			expectedRunning:            false,
 		},
 		{
+			msg: "remove peer not in list before start",
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
+				UpdateAction{
+					RemovedPeerIDs: []string{"3"},
+					ExpectedErr:    peer.ErrPeerRemoveNotInList("3"),
+				},
+			},
+			expectedUninitializedPeers: []string{"1", "2"},
+			expectedRunning:            false,
+		},
+		{
 			msg: "update before start",
 			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
