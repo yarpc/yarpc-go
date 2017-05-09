@@ -1,5 +1,12 @@
 include build/base.mk
 ifndef SUPPRESS_DOCKER
+ifneq ($(shell docker version >/dev/null; echo $$?),0)
+$(info -----------------------------------------------------------------)
+$(info Most of our make commands run inside Docker but you do not have)
+$(info Docker running. Please start Docker or set SUPPRESS_DOCKER=1 to)
+$(info run the command against your system, and try again.)
+$(error Docker is not running)
+endif
 include build/dockerdeps.mk
 include build/docker.mk
 else
