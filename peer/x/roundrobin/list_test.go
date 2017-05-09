@@ -38,9 +38,6 @@ func TestRoundRobinList(t *testing.T) {
 	type testStruct struct {
 		msg string
 
-		// StartWaitTimeout is how long the list will block on starteing in Update calls
-		startWaitTimeout time.Duration
-
 		// PeerIDs that will be returned from the transport's OnRetain with "Available" status
 		retainedAvailablePeerIDs []string
 
@@ -66,6 +63,9 @@ func TestRoundRobinList(t *testing.T) {
 
 		// PeerIDs expected to be in the PeerList's "Unavailable" list after the actions have been applied
 		expectedUnavailablePeers []string
+
+		// PeerIDs expected to be in the PeerList's "Uninitialized" list after the actions have been applied
+		expectedUninitializedPeers []string
 
 		// Boolean indicating whether the PeerList is "running" after the actions have been applied
 		expectedRunning bool
@@ -120,7 +120,8 @@ func TestRoundRobinList(t *testing.T) {
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
-			expectedRunning: false,
+			expectedUninitializedPeers: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"},
+			expectedRunning:            false,
 		},
 		{
 			msg: "start many and choose",
@@ -160,7 +161,6 @@ func TestRoundRobinList(t *testing.T) {
 			releasedPeerIDs:          []string{},
 			peerListActions: []PeerListAction{
 				StopAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: context.DeadlineExceeded},
 			},
 			expectedRunning: false,
 		},
@@ -201,7 +201,8 @@ func TestRoundRobinList(t *testing.T) {
 					ExpectedErr: peer.ErrTransportHasNoReferenceToPeer{},
 				},
 			},
-			expectedRunning: false,
+			expectedUninitializedPeers: []string{"1"},
+			expectedRunning:            false,
 		},
 		{
 			msg: "assure stop is idempotent",
@@ -225,7 +226,8 @@ func TestRoundRobinList(t *testing.T) {
 					},
 				},
 			},
-			expectedRunning: false,
+			expectedUninitializedPeers: []string{"1"},
+			expectedRunning:            false,
 		},
 		{
 			msg: "start stop release multiple errors",
@@ -243,7 +245,8 @@ func TestRoundRobinList(t *testing.T) {
 					),
 				},
 			},
-			expectedRunning: false,
+			expectedUninitializedPeers: []string{"1", "2", "3"},
+			expectedRunning:            false,
 		},
 		{
 			msg: "choose before start",
@@ -260,32 +263,12 @@ func TestRoundRobinList(t *testing.T) {
 			expectedRunning: false,
 		},
 		{
-			msg:                      "update before start",
-			startWaitTimeout:         time.Second,
+			msg: "update before start",
 			retainedAvailablePeerIDs: []string{"1"},
 			expectedAvailablePeers:   []string{"1"},
 			peerListActions: []PeerListAction{
-				ConcurrentAction{
-					Actions: []PeerListAction{
-						UpdateAction{AddedPeerIDs: []string{"1"}},
-						StartAction{},
-					},
-					Wait: 20 * time.Millisecond,
-				},
-			},
-			expectedRunning: true,
-		},
-		{
-			msg:              "update timeout before start",
-			startWaitTimeout: 30 * time.Millisecond,
-			peerListActions: []PeerListAction{
-				ConcurrentAction{
-					Actions: []PeerListAction{
-						UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: context.DeadlineExceeded},
-						StartAction{},
-					},
-					Wait: 50 * time.Millisecond,
-				},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
+				StartAction{},
 			},
 			expectedRunning: true,
 		},
@@ -689,6 +672,146 @@ func TestRoundRobinList(t *testing.T) {
 			},
 			expectedRunning: true,
 		},
+		{
+			msg: "update no start",
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1"}},
+				UpdateAction{AddedPeerIDs: []string{"2"}},
+				UpdateAction{RemovedPeerIDs: []string{"1"}},
+			},
+			expectedUninitializedPeers: []string{"2"},
+			expectedRunning:            false,
+		},
+		{
+			msg: "update after stop",
+			peerListActions: []PeerListAction{
+				StartAction{},
+				StopAction{},
+				UpdateAction{AddedPeerIDs: []string{"1"}},
+				UpdateAction{AddedPeerIDs: []string{"2"}},
+				UpdateAction{RemovedPeerIDs: []string{"1"}},
+			},
+			expectedUninitializedPeers: []string{"2"},
+			expectedRunning:            false,
+		},
+		{
+			msg: "update before start",
+			retainedAvailablePeerIDs: []string{"1", "2"},
+			expectedAvailablePeers:   []string{"1", "2"},
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
+				StartAction{},
+			},
+			expectedRunning: true,
+		},
+		{
+			msg: "update before start, and stop",
+			retainedAvailablePeerIDs: []string{"1", "2"},
+			releasedPeerIDs:          []string{"1", "2"},
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
+				StartAction{},
+				StopAction{},
+			},
+			expectedUninitializedPeers: []string{"1", "2"},
+			expectedRunning:            false,
+		},
+		{
+			msg: "update before start, and update after stop",
+			retainedAvailablePeerIDs: []string{"1", "2"},
+			releasedPeerIDs:          []string{"1", "2"},
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
+				StartAction{},
+				StopAction{},
+				UpdateAction{AddedPeerIDs: []string{"3"}, RemovedPeerIDs: []string{"1"}},
+			},
+			expectedUninitializedPeers: []string{"2", "3"},
+			expectedRunning:            false,
+		},
+		{
+			msg: "concurrent update and start",
+			retainedAvailablePeerIDs: []string{"1", "2"},
+			expectedAvailablePeers:   []string{"1", "2"},
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1"}},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						StartAction{},
+						UpdateAction{AddedPeerIDs: []string{"2"}},
+						StartAction{},
+					},
+				},
+			},
+			expectedRunning: true,
+		},
+		{
+			msg: "concurrent update and stop",
+			retainedAvailablePeerIDs: []string{"1", "2"},
+			releasedPeerIDs:          []string{"1", "2"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
+				ConcurrentAction{
+					Actions: []PeerListAction{
+						StopAction{},
+						UpdateAction{RemovedPeerIDs: []string{"2"}},
+						StopAction{},
+					},
+				},
+			},
+			expectedUninitializedPeers: []string{"1"},
+			expectedRunning:            false,
+		},
+		{
+			msg: "notify before start",
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
+				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available, Unretained: true},
+				NotifyStatusChangeAction{PeerID: "2", NewConnectionStatus: peer.Unavailable, Unretained: true},
+			},
+			expectedUninitializedPeers: []string{"1", "2"},
+			expectedRunning:            false,
+		},
+		{
+			msg: "notify after stop",
+			retainedAvailablePeerIDs: []string{"1", "2"},
+			releasedPeerIDs:          []string{"1", "2"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2"}},
+				StopAction{},
+				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
+				NotifyStatusChangeAction{PeerID: "2", NewConnectionStatus: peer.Unavailable},
+			},
+			expectedUninitializedPeers: []string{"1", "2"},
+			expectedRunning:            false,
+		},
+		{
+			msg: "start with available and unavailable",
+			retainedAvailablePeerIDs:   []string{"1", "2"},
+			retainedUnavailablePeerIDs: []string{"3", "4"},
+			expectedAvailablePeers:     []string{"1", "2"},
+			expectedUnavailablePeers:   []string{"3", "4"},
+			peerListActions: []PeerListAction{
+				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4"}},
+				StartAction{},
+			},
+			expectedRunning: true,
+		},
+		{
+			msg: "stop with available and unavailable",
+			retainedAvailablePeerIDs:   []string{"1", "2"},
+			retainedUnavailablePeerIDs: []string{"3", "4"},
+			releasedPeerIDs:            []string{"1", "2", "3", "4"},
+			peerListActions: []PeerListAction{
+				StartAction{},
+				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4"}},
+				StopAction{},
+			},
+			expectedUninitializedPeers: []string{"1", "2", "3", "4"},
+			expectedRunning:            false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -711,9 +834,6 @@ func TestRoundRobinList(t *testing.T) {
 			ExpectPeerReleases(transport, tt.errReleasedPeerIDs, tt.releaseErr)
 
 			var opts []ListOption
-			if tt.startWaitTimeout != 0 {
-				opts = append(opts, StartupWait(tt.startWaitTimeout))
-			}
 			pl := New(transport, opts...)
 
 			deps := ListActionDeps{
@@ -737,6 +857,15 @@ func TestRoundRobinList(t *testing.T) {
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in unavailable peerlist", expectedUnavailablePeer))
 				if ok {
 					assert.Equal(t, expectedUnavailablePeer, p.Identifier())
+				}
+			}
+
+			assert.Len(t, pl.uninitializedPeers, len(tt.expectedUninitializedPeers), "invalid uninitialized peerlist size")
+			for _, expectedUninitializedPeer := range tt.expectedUninitializedPeers {
+				p, ok := pl.uninitializedPeers[expectedUninitializedPeer]
+				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in uninitialized peerlist", expectedUninitializedPeer))
+				if ok {
+					assert.Equal(t, expectedUninitializedPeer, p.Identifier())
 				}
 			}
 

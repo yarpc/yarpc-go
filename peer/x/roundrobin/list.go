@@ -24,38 +24,26 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	ysync "go.uber.org/yarpc/internal/sync"
 
+	"github.com/uber-go/atomic"
 	"go.uber.org/multierr"
 )
 
 type listConfig struct {
-	startupWait time.Duration
-	capacity    int
+	capacity int
 }
 
 var defaultListConfig = listConfig{
-	startupWait: 5 * time.Second,
-	capacity:    10,
+	capacity: 10,
 }
 
 // ListOption customizes the behavior of a roundrobin list.
 type ListOption func(*listConfig)
-
-// StartupWait specifies how long updates to the list will wait
-// before the list has been started
-//
-// Defaults to 5 seconds.
-func StartupWait(t time.Duration) ListOption {
-	return func(c *listConfig) {
-		c.startupWait = t
-	}
-}
 
 // Capacity specifies the default capacity of the underlying
 // data structures for this list
@@ -76,11 +64,11 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 
 	return &List{
 		once:               ysync.Once(),
+		uninitializedPeers: make(map[string]peer.Identifier, cfg.capacity),
 		unavailablePeers:   make(map[string]peer.Peer, cfg.capacity),
 		availablePeerRing:  NewPeerRing(cfg.capacity),
 		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
-		startupWait:        cfg.startupWait,
 	}
 }
 
@@ -88,26 +76,21 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 type List struct {
 	lock sync.Mutex
 
+	shouldRetainPeers  atomic.Bool
+	uninitializedPeers map[string]peer.Identifier
+
 	unavailablePeers   map[string]peer.Peer
 	availablePeerRing  *PeerRing
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
-	startupWait        time.Duration
 
 	once ysync.LifecycleOnce
 }
 
 // Update applies the additions and removals of peer Identifiers to the list
 // it returns a multi-error result of every failure that happened without
-// circuit breaking due to failures
+// circuit breaking due to failures.
 func (pl *List) Update(updates peer.ListUpdates) error {
-	// Wait for the list to be running before we accept updates.
-	ctx, cancel := context.WithTimeout(context.Background(), pl.startupWait)
-	defer cancel()
-	if err := pl.once.WhenRunning(ctx); err != nil {
-		return err
-	}
-
 	additions := updates.Additions
 	removals := updates.Removals
 
@@ -119,13 +102,26 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 	defer pl.lock.Unlock()
 
 	var errs error
+	if pl.shouldRetainPeers.Load() {
+		for _, peerID := range removals {
+			errs = multierr.Append(errs, pl.removePeerIdentifier(peerID))
+		}
 
-	for _, peerID := range removals {
-		errs = multierr.Append(errs, pl.removePeerIdentifier(peerID))
+		for _, peerID := range additions {
+			errs = multierr.Append(errs, pl.addPeerIdentifier(peerID))
+		}
+		return errs
 	}
 
+	for _, peerID := range removals {
+		if _, ok := pl.uninitializedPeers[peerID.Identifier()]; ok {
+			delete(pl.uninitializedPeers, peerID.Identifier())
+		} else {
+			errs = multierr.Append(errs, peer.ErrPeerRemoveNotInList(peerID.Identifier()))
+		}
+	}
 	for _, peerID := range additions {
-		errs = multierr.Append(errs, pl.addPeerIdentifier(peerID))
+		pl.uninitializedPeers[peerID.Identifier()] = peerID
 	}
 
 	return errs
@@ -168,7 +164,22 @@ func (pl *List) addToAvailablePeers(p peer.Peer) error {
 
 // Start notifies the List that requests will start coming
 func (pl *List) Start() error {
-	return pl.once.Start(nil)
+	return pl.once.Start(pl.start)
+}
+
+func (pl *List) start() error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	var errs error
+	for _, pid := range pl.uninitializedPeers {
+		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
+		delete(pl.uninitializedPeers, pid.Identifier())
+	}
+
+	pl.shouldRetainPeers.Store(true)
+
+	return errs
 }
 
 // Stop notifies the List that requests will stop coming
@@ -185,11 +196,21 @@ func (pl *List) clearPeers() error {
 
 	availablePeers := pl.availablePeerRing.RemoveAll()
 	errs = append(errs, pl.releaseAll(availablePeers)...)
+	pl.addToUninitialized(availablePeers)
 
 	unvavailablePeers := pl.removeAllUnavailable()
 	errs = append(errs, pl.releaseAll(unvavailablePeers)...)
+	pl.addToUninitialized(unvavailablePeers)
+
+	pl.shouldRetainPeers.Store(false)
 
 	return multierr.Combine(errs...)
+}
+
+func (pl *List) addToUninitialized(peers []peer.Peer) {
+	for _, p := range peers {
+		pl.uninitializedPeers[p.Identifier()] = p
+	}
 }
 
 // removeAllUnavailable will clear the unavailablePeers list and

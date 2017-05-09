@@ -190,13 +190,22 @@ type NotifyStatusChangeAction struct {
 
 	// NewConnectionStatus is the new ConnectionStatus of the Peer
 	NewConnectionStatus peer.ConnectionStatus
+
+	// Unretained indicates that this notify occurs to a peer that has never been
+	// retained on the transport (to test edge cases).
+	Unretained bool
 }
 
 // Apply will run the NotifyStatusChanged function on the PeerList with the provided Peer
 func (a NotifyStatusChangeAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDeps) {
-	deps.Peers[a.PeerID].PeerStatus.ConnectionStatus = a.NewConnectionStatus
-
 	plSub := pl.(peer.Subscriber)
+
+	if a.Unretained {
+		plSub.NotifyStatusChanged(MockPeerIdentifier(a.PeerID))
+		return
+	}
+
+	deps.Peers[a.PeerID].PeerStatus.ConnectionStatus = a.NewConnectionStatus
 
 	plSub.NotifyStatusChanged(deps.Peers[a.PeerID])
 }
