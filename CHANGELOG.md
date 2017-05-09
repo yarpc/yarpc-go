@@ -13,6 +13,7 @@ v1.9.0-dev (unreleased)
     x/config.
 -   x/roundrobin: Added support for taking peer list updates before and after
     the peer list has been started.
+-   Moved the RoundRobin Peer List out of the /x/ package
 
 
 v1.8.0 (2017-05-01)
