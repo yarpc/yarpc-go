@@ -126,7 +126,7 @@ func NewFakeConfigurator() *config.Configurator {
 // a FakePeerListUpdater.
 func FakePeerListPreset() config.PeerListPreset {
 	return config.PeerListPreset{
-		Name: "fake",
+		Name: "fake-preset",
 		BuildPeerList: func(peer.Transport, *config.Kit) (peer.Chooser, error) {
 			return peerbind.Bind(
 				NewFakePeerList(), func(peer.List) transport.Lifecycle {

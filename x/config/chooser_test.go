@@ -155,7 +155,7 @@ func TestChooserConfigurator(t *testing.T) {
 						unary:
 							fake-transport:
 								nop: "*.*"
-								with: fake
+								with: fake-preset
 			`),
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound, ok := c.Outbounds["their-service"]
@@ -603,7 +603,7 @@ func TestChooserConfigurator(t *testing.T) {
 					their-service:
 						unary:
 							fake-transport:
-								with: fake
+								with: fake-preset
 								conspicuously: present
 			`),
 			wantErr: []string{
