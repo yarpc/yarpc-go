@@ -11,6 +11,8 @@ v1.9.0-dev (unreleased)
     `InboundOptions` and `OutboundOptions`.
 -   x/cherami: Added support for configuring the Cherami transport using
     x/config.
+-   x/roundrobin: Added support for taking peer list updates before and after
+    the peer list has been started.
 
 
 v1.8.0 (2017-05-01)
