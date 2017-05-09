@@ -258,6 +258,19 @@ func TestTransportSpec(t *testing.T) {
 				`failed to read attribute "least-pending"`,
 			},
 		},
+		{
+			desc: "unknown preset",
+			cfg: attrs{
+				"myservice": attrs{
+					"http": attrs{"with": "derp"},
+				},
+			},
+			wantErrors: []string{
+				`failed to configure unary outbound for "myservice":`,
+				"cannot configure peer chooser for HTTP outbound:",
+				`no recognized peer list preset "derp"`,
+			},
+		},
 	}
 
 	runTest := func(t *testing.T, trans transportTest, inbound inboundTest, outbound outboundTest) {

@@ -50,7 +50,7 @@ type peerList struct {
 // the configuration for the single-peer case from its "url" attribute.
 func (pc PeerList) Empty() bool {
 	c := pc.peerList
-	return c.Peer == "" && len(c.Etc) == 0
+	return c.Peer == "" && c.Preset == "" && len(c.Etc) == 0
 }
 
 // BuildPeerList translates a chooser configuration into a peer chooser, backed
