@@ -385,11 +385,14 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 		out.OnewayOutbound = appendError(compileOnewayOutboundConfig(spec.BuildOnewayOutbound))
 	}
 
-	if len(spec.PeerListPresets) > 0 {
-		out.PeerListPresets = make(map[string]*compiledPeerListPreset)
+	if len(spec.PeerListPresets) == 0 {
+		return &out, err
 	}
+
+	presets := make(map[string]*compiledPeerListPreset, len(spec.PeerListPresets))
+	out.PeerListPresets = presets
 	for _, p := range spec.PeerListPresets {
-		if _, ok := out.PeerListPresets[p.Name]; ok {
+		if _, ok := presets[p.Name]; ok {
 			err = multierr.Append(err, fmt.Errorf(
 				"found multiple peer lists with the name %q under transport %q",
 				p.Name, spec.Name))
@@ -403,7 +406,7 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 			continue
 		}
 
-		out.PeerListPresets[p.Name] = cp
+		presets[p.Name] = cp
 	}
 
 	return &out, err
