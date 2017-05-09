@@ -241,6 +241,52 @@ func TestTransportSpec(t *testing.T) {
 			},
 		},
 		{
+			desc: "outbound header config",
+			opts: []Option{
+				AddHeader("X-Token", "token-1"),
+			},
+			cfg: attrs{
+				"myservice": attrs{
+					"http": attrs{
+						"url": "http://localhost/",
+						"headers": attrs{
+							"x-token":   "token-3",
+							"X-Token-2": "token-2",
+						},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					URLTemplate: "http://localhost/",
+					Headers: http.Header{
+						"X-Token":   {"token-1", "token-3"},
+						"X-Token-2": {"token-2"},
+					},
+				},
+			},
+		},
+		{
+			desc: "outbound header config with peer",
+			cfg: attrs{
+				"myservice": attrs{
+					"http": attrs{
+						"url":     "http://localhost/yarpc",
+						"peer":    "127.0.0.1:8080",
+						"headers": attrs{"x-token": "token"},
+					},
+				},
+			},
+			wantOutbounds: map[string]wantOutbound{
+				"myservice": {
+					URLTemplate: "http://localhost/yarpc",
+					Headers: http.Header{
+						"X-Token": {"token"},
+					},
+				},
+			},
+		},
+		{
 			desc: "outbound peer build error",
 			cfg: attrs{
 				"myservice": attrs{
