@@ -31,6 +31,8 @@ import (
 )
 
 // TODO: there are way too many repeat calls to strings.ToLower
+// Note that these calls are done indirectly, primarily through
+// transport.CanonicalizeHeaderKey and grpcheader.IsReserved
 
 // transportRequestToMetadata will populate all reserved and application headers
 // from the Request into a new MD.
@@ -55,12 +57,17 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 	request := &transport.Request{
 		Headers: transport.NewHeadersWithCapacity(md.Len()),
 	}
-	for header := range md {
-		header = transport.CanonicalizeHeaderKey(header)
-		value, err := getFromMetadata(md, header)
-		if err != nil {
-			return nil, err
+	for header, values := range md {
+		var value string
+		switch len(values) {
+		case 0:
+			continue
+		case 1:
+			value = values[0]
+		default:
+			return nil, fmt.Errorf("header has more than one value: %s", header)
 		}
+		header = transport.CanonicalizeHeaderKey(header)
 		switch header {
 		case grpcheader.CallerHeader:
 			request.Caller = value
@@ -98,14 +105,19 @@ func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 // getApplicationHeaders returns the headers from md without any reserved headers.
 func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
 	headers := transport.NewHeadersWithCapacity(md.Len())
-	for header := range md {
+	for header, values := range md {
 		header = transport.CanonicalizeHeaderKey(header)
 		if grpcheader.IsReserved(header) {
 			continue
 		}
-		value, err := getFromMetadata(md, header)
-		if err != nil {
-			return headers, err
+		var value string
+		switch len(values) {
+		case 0:
+			continue
+		case 1:
+			value = values[0]
+		default:
+			return headers, fmt.Errorf("header has more than one value: %s", header)
 		}
 		headers = headers.With(header, value)
 	}
@@ -123,22 +135,4 @@ func addToMetadata(md metadata.MD, key string, value string) error {
 	}
 	md[key] = []string{value}
 	return nil
-}
-
-// get from md
-// return "" if not present
-// return error if more than one value
-func getFromMetadata(md metadata.MD, key string) (string, error) {
-	values, ok := md[key]
-	if !ok {
-		return "", nil
-	}
-	switch len(values) {
-	case 0:
-		return "", nil
-	case 1:
-		return values[0], nil
-	default:
-		return "", fmt.Errorf("key has more than one value: %s", key)
-	}
 }

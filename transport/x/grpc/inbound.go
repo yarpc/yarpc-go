@@ -96,7 +96,7 @@ func (i *Inbound) start() error {
 		// this needs a lot of review
 		//grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.inboundOptions.getTracer())),
 
-		// TODO this handles when nil, but should not rely on this
+		// TODO grpc.UnaryInterceptor handles when parameter is nil, but should not rely on this
 		grpc.UnaryInterceptor(i.inboundOptions.getUnaryInterceptor()),
 	)
 	for _, serviceDesc := range serviceDescs {
@@ -166,7 +166,6 @@ func (i *Inbound) getServiceNameAndMethodDesc(procedure transport.Procedure) (st
 	return serviceName, grpc.MethodDesc{
 		MethodName: methodName,
 		// TODO: what if two procedures have the same serviceName and methodName, but a different service?
-		// TODO: should we handle procedure.Encoding somehow?
 		Handler: newHandler(
 			procedure.Service,
 			serviceName,
