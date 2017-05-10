@@ -40,8 +40,9 @@ type PeerList struct {
 // peerList is the private representation of PeerList that captures
 // decoded configuration without revealing it on the public type.
 type peerList struct {
-	Peer string       `config:"peer,interpolate"`
-	Etc  attributeMap `config:",squash"`
+	Peer   string       `config:"peer,interpolate"`
+	Preset string       `config:"with,interpolate"`
+	Etc    attributeMap `config:",squash"`
 }
 
 // Empty returns whether the peer list configuration is empty.
@@ -49,7 +50,7 @@ type peerList struct {
 // the configuration for the single-peer case from its "url" attribute.
 func (pc PeerList) Empty() bool {
 	c := pc.peerList
-	return c.Peer == "" && len(c.Etc) == 0
+	return c.Peer == "" && c.Preset == "" && len(c.Etc) == 0
 }
 
 // BuildPeerList translates a chooser configuration into a peer chooser, backed
@@ -57,8 +58,8 @@ func (pc PeerList) Empty() bool {
 func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
 	c := pc.peerList
 	// Establish a peer selection strategy.
-
-	if c.Peer != "" {
+	switch {
+	case c.Peer != "":
 		// myoutbound:
 		//   outboundopt1: ...
 		//   outboundopt2: ...
@@ -67,15 +68,29 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
 		}
 		return peerbind.NewSingle(identify(c.Peer), transport), nil
+	case c.Preset != "":
+		// myoutbound:
+		//   outboundopt1: ...
+		//   outboundopt2: ...
+		//   with: somepreset
+		if len(c.Etc) > 0 {
+			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
+		}
+
+		preset, err := kit.peerListPreset(c.Preset)
+		if err != nil {
+			return nil, err
+		}
+
+		return preset.Build(transport, kit)
+	default:
+		// myoutbound:
+		//   outboundopt1: ...
+		//   outboundopt2: ...
+		//   my-peer-list:
+		//     ...
+		return pc.buildPeerList(transport, identify, kit)
 	}
-
-	// myoutbound:
-	//   outboundopt1: ...
-	//   outboundopt2: ...
-	//   my-peer-list:
-	//     ...
-	return pc.buildPeerList(transport, identify, kit)
-
 }
 
 func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
