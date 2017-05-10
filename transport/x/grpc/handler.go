@@ -40,6 +40,7 @@ type handler struct {
 	yarpcServiceName string
 	grpcServiceName  string
 	grpcMethodName   string
+	encoding         transport.Encoding
 	router           transport.Router
 }
 
@@ -47,13 +48,15 @@ func newHandler(
 	yarpcServiceName string,
 	grpcServiceName string,
 	grpcMethodName string,
+	encoding transport.Encoding,
 	router transport.Router,
 ) *handler {
 	return &handler{
-		yarpcServiceName,
-		grpcServiceName,
-		grpcMethodName,
-		router,
+		yarpcServiceName: yarpcServiceName,
+		grpcServiceName:  grpcServiceName,
+		grpcMethodName:   grpcMethodName,
+		encoding:         encoding,
+		router:           router,
 	}
 }
 
@@ -95,12 +98,15 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 	if md == nil || !ok {
 		return nil, fmt.Errorf("cannot get metadata from ctx: %v", ctx)
 	}
-	transportRequest := &transport.Request{}
-	if err := populateTransportRequest(md, transportRequest); err != nil {
+	transportRequest, err := metadataToTransportRequest(md)
+	if err != nil {
 		return nil, err
 	}
 	if transportRequest.Caller == "" {
 		transportRequest.Caller = h.grpcServiceName
+	}
+	if transportRequest.Encoding == "" {
+		transportRequest.Encoding = h.encoding
 	}
 	if transportRequest.Encoding == "" {
 		transportRequest.Encoding = protobuf.Encoding

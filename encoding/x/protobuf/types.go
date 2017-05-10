@@ -35,7 +35,7 @@ const (
 	// Encoding is the name of this encoding.
 	Encoding transport.Encoding = "protobuf"
 
-	rawResponseHeaderKey = "yarpc-protobuf-raw-response"
+	rawResponseHeaderKey = "rpc-protobuf-raw-response"
 )
 
 // SetRawResponse will set rawResponseHeaderKey to "true".
