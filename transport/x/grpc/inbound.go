@@ -96,7 +96,7 @@ func (i *Inbound) start() error {
 		// this needs a lot of review
 		//grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.inboundOptions.getTracer())),
 
-		// TODO this handles when nil, but should not rely on this
+		// TODO grpc.UnaryInterceptor handles when parameter is nil, but should not rely on this
 		grpc.UnaryInterceptor(i.inboundOptions.getUnaryInterceptor()),
 	)
 	for _, serviceDesc := range serviceDescs {
