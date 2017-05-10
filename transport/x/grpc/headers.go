@@ -31,6 +31,8 @@ import (
 )
 
 // TODO: there are way too many repeat calls to strings.ToLower
+// Note that these calls are done indirectly, primarily through
+// transport.CanonicalizeHeaderKey and grpcheader.IsReserved
 
 // transportRequestToMetadata will populate all reserved and application headers
 // from the Request into a new MD.
