@@ -52,11 +52,11 @@ func newHandler(
 	router transport.Router,
 ) *handler {
 	return &handler{
-		yarpcServiceName,
-		grpcServiceName,
-		grpcMethodName,
-		encoding,
-		router,
+		yarpcServiceName: yarpcServiceName,
+		grpcServiceName:  grpcServiceName,
+		grpcMethodName:   grpcMethodName,
+		encoding:         encoding,
+		router:           router,
 	}
 }
 

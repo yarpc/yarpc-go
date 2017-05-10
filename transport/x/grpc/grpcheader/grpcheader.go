@@ -18,7 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package grpcheader provides the headers for gRPC.
+// Package grpcheader provides the headers functionality for gRPC.
+//
+// This is separated from the main grpc package so that it can be used
+// with grpc-go clients without needing to import so many yarpc packages,
+// as well as for future cross-package yarpc work.
 package grpcheader
 
 import (
@@ -32,17 +36,29 @@ import (
 // http2 does all lowercase headers and this should be explicit
 
 const (
-	// CallerHeader is the header key for the caller.
+	// CallerHeader is the header key for the name of the service sending the
+	// request. This corresponds to the Request.Caller attribute.
+	// This header is required.
 	CallerHeader = "rpc-caller"
-	// ServiceHeader is the header key for the service.
+	// ServiceHeader is the header key for the name of the service to which
+	// the request is being sent. This corresponds to the Request.Service attribute.
+	// This header is required.
 	ServiceHeader = "rpc-service"
-	// ShardKeyHeader is the header key for the shard key.
+	// ShardKeyHeader is the header key for the shard key used by the destined service
+	// to shard the request. This corresponds to the Request.ShardKey attribute.
+	// This header is optional.
 	ShardKeyHeader = "rpc-shard-key"
-	// RoutingKeyHeader is the header key for the routing key.
+	// RoutingKeyHeader is the header key for the traffic group responsible for
+	// handling the request. This corresponds to the Request.RoutingKey attribute.
+	// This header is optional.
 	RoutingKeyHeader = "rpc-routing-key"
-	// RoutingDelegateHeader is the header key for the routing delegate.
+	// RoutingDelegateHeader is the header key for a service that can proxy the
+	// destined service. This corresponds to the Request.RoutingDelegate attribute.
+	// This header is optional.
 	RoutingDelegateHeader = "rpc-routing-delegate"
-	// EncodingHeader is the header key for the encoding.
+	// EncodingHeader is the header key for the encoding used for the request body.
+	// This corresponds to the Request.Encoding attribute.
+	//
 	// This will be removed when we get encoding propagated using content-type.
 	EncodingHeader = "rpc-encoding"
 )
@@ -66,7 +82,7 @@ func IsReserved(header string) bool {
 
 // ContextWrapper wraps a context for grpc-go with the required headers for yarpc.
 //
-// This is a convienence object when using grpc-go clients.
+// This is a convenience object for use when using grpc-go clients.
 type ContextWrapper struct {
 	md metadata.MD
 }
@@ -112,6 +128,8 @@ func (c *ContextWrapper) copyAndAdd(key string, value string) *ContextWrapper {
 	md := c.md
 	if md == nil {
 		md = metadata.New(nil)
+	} else {
+		md = md.Copy()
 	}
 	md[key] = []string{value}
 	return &ContextWrapper{md}
