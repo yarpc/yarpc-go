@@ -19,7 +19,7 @@ EXTRA_GO_BIN_DEPS = \
 # but have to pin to 0.12.3 due to https://github.com/Masterminds/glide/issues/745
 GLIDE_VERSION := 0.12.3
 THRIFT_VERSION := 1.0.0-dev
-PROTOC_VERSION := 3.2.0
+PROTOC_VERSION := 3.3.0
 RAGEL_VERSION := 6.9
 
 GLIDE_OS := $(UNAME_OS)
