@@ -32,7 +32,7 @@ import (
 
 func TestMetadataToTransportRequest(t *testing.T) {
 	t.Parallel()
-	for _, tt := range []struct {
+	tests := []struct {
 		Name             string
 		MD               metadata.MD
 		TransportRequest *transport.Request
@@ -62,7 +62,8 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				}),
 			},
 		},
-	} {
+	}
+	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			transportRequest, err := metadataToTransportRequest(tt.MD)
 			require.NoError(t, err)
