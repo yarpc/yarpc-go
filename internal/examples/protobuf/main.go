@@ -33,6 +33,7 @@ import (
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 
 	"google.golang.org/grpc"
@@ -55,11 +56,11 @@ func do() error {
 	}
 	keyValueYarpcServer := example.NewKeyValueYarpcServer()
 	sinkYarpcServer := example.NewSinkYarpcServer(true)
-	return example.WithClients(
+	return exampleutil.WithClients(
 		transportType,
 		keyValueYarpcServer,
 		sinkYarpcServer,
-		func(clients *example.Clients) error {
+		func(clients *exampleutil.Clients) error {
 			return doClient(keyValueYarpcServer, sinkYarpcServer, clients)
 		},
 	)
@@ -68,7 +69,7 @@ func do() error {
 func doClient(
 	keyValueYarpcServer *example.KeyValueYarpcServer,
 	sinkYarpcServer *example.SinkYarpcServer,
-	clients *example.Clients,
+	clients *exampleutil.Clients,
 ) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -92,7 +93,7 @@ func doClient(
 			var response *examplepb.GetValueResponse
 			var err error
 			if *flagGoogleGRPC {
-				response, err = clients.KeyValueGRPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 				err = fromGRPCError(err)
 			} else {
 				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
@@ -117,7 +118,7 @@ func doClient(
 			defer cancel()
 			var err error
 			if *flagGoogleGRPC {
-				_, err = clients.KeyValueGRPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 				err = fromGRPCError(err)
 			} else {
 				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})

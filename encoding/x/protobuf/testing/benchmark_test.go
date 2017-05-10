@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
 )
 
@@ -37,11 +38,11 @@ func BenchmarkIntegration(b *testing.B) {
 func benchmarkIntegrationForTransportType(b *testing.B, transportType testutils.TransportType) {
 	keyValueYarpcServer := example.NewKeyValueYarpcServer()
 	sinkYarpcServer := example.NewSinkYarpcServer(false)
-	example.WithClients(
+	exampleutil.WithClients(
 		transportType,
 		keyValueYarpcServer,
 		sinkYarpcServer,
-		func(clients *example.Clients) error {
+		func(clients *exampleutil.Clients) error {
 			benchmarkIntegration(b, clients.KeyValueYarpcClient, clients.SinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
 			return nil
 		},

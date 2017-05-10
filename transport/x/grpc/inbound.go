@@ -95,6 +95,9 @@ func (i *Inbound) start() error {
 		// TODO: does this actually work for yarpc
 		// this needs a lot of review
 		//grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.inboundOptions.getTracer())),
+
+		// TODO grpc.UnaryInterceptor handles when parameter is nil, but should not rely on this
+		grpc.UnaryInterceptor(i.inboundOptions.getUnaryInterceptor()),
 	)
 	for _, serviceDesc := range serviceDescs {
 		server.RegisterService(serviceDesc, noopGrpcStruct{})

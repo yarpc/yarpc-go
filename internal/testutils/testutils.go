@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
 	"go.uber.org/multierr"
 	ggrpc "google.golang.org/grpc"
@@ -88,6 +89,7 @@ func ParseTransportType(s string) (TransportType, error) {
 type ClientInfo struct {
 	ClientConfig   transport.ClientConfig
 	GRPCClientConn *ggrpc.ClientConn
+	ContextWrapper *grpcheader.ContextWrapper
 }
 
 // WithClientInfo wraps a function by setting up a client and server dispatcher and giving
@@ -133,6 +135,7 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 		&ClientInfo{
 			clientDispatcher.ClientConfig(serviceName),
 			grpcClientConn,
+			grpcheader.NewContextWrapper().WithCaller(serviceName + "-client").WithService(serviceName),
 		},
 	)
 }

@@ -20,7 +20,10 @@
 
 package grpc
 
-import "github.com/opentracing/opentracing-go"
+import (
+	"github.com/opentracing/opentracing-go"
+	"google.golang.org/grpc"
+)
 
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
@@ -43,7 +46,8 @@ func WithOutboundTracer(tracer opentracing.Tracer) OutboundOption {
 }
 
 type inboundOptions struct {
-	tracer opentracing.Tracer
+	tracer           opentracing.Tracer
+	unaryInterceptor grpc.UnaryServerInterceptor
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
@@ -59,6 +63,13 @@ func (i *inboundOptions) getTracer() opentracing.Tracer {
 		return opentracing.GlobalTracer()
 	}
 	return i.tracer
+}
+
+// TODO: this should cover the tracer interceptor too
+// grpc-go only allows one interceptor, so need to handle all cases
+// working on this with go-grpc-middleware
+func (i *inboundOptions) getUnaryInterceptor() grpc.UnaryServerInterceptor {
+	return i.unaryInterceptor
 }
 
 type outboundOptions struct {
@@ -78,4 +89,11 @@ func (o *outboundOptions) getTracer() opentracing.Tracer {
 		return opentracing.GlobalTracer()
 	}
 	return o.tracer
+}
+
+// for testing only for now
+func withInboundUnaryInterceptor(unaryInterceptor grpc.UnaryServerInterceptor) InboundOption {
+	return func(inboundOptions *inboundOptions) {
+		inboundOptions.unaryInterceptor = unaryInterceptor
+	}
 }
