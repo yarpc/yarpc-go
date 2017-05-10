@@ -21,10 +21,7 @@
 package grpc
 
 import (
-<<<<<<< HEAD
 	"fmt"
-=======
->>>>>>> dev
 	"testing"
 
 	"go.uber.org/yarpc/api/transport"
