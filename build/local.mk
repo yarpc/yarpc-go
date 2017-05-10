@@ -34,6 +34,9 @@ build: __eval_packages ## go build all packages
 generate: $(GEN_BINS) $(GEN_BINS_INTERNAL) ## call generation script
 	@go get github.com/golang/mock/mockgen
 	@PATH=$(BIN):$$PATH ./scripts/generate.sh
+ifdef WITHIN_DOCKER
+	@chown -R --reference . .
+endif
 
 .PHONY: nogogenerate
 nogogenerate: __eval_go_files ## check to make sure go:generate is not used
