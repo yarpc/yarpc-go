@@ -249,7 +249,7 @@ func TestTransportSpec(t *testing.T) {
 				"myservice": attrs{
 					"http": attrs{
 						"url": "http://localhost/",
-						"headers": attrs{
+						"addHeaders": attrs{
 							"x-token":   "token-3",
 							"X-Token-2": "token-2",
 						},
@@ -271,9 +271,9 @@ func TestTransportSpec(t *testing.T) {
 			cfg: attrs{
 				"myservice": attrs{
 					"http": attrs{
-						"url":     "http://localhost/yarpc",
-						"peer":    "127.0.0.1:8080",
-						"headers": attrs{"x-token": "token"},
+						"url":        "http://localhost/yarpc",
+						"peer":       "127.0.0.1:8080",
+						"addHeaders": attrs{"x-token": "token"},
 					},
 				},
 			},

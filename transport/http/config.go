@@ -153,23 +153,23 @@ type OutboundConfig struct {
 	// required.
 	URL string `config:"url,interpolate"`
 
-	// HTTP headers that will be sent with all requests made through this
+	// HTTP headers that will be added to all requests made through this
 	// outbound.
 	//
 	//  http:
 	//    url: "http://localhost:8080/yarpc"
-	//    headers:
+	//    addHeaders:
 	//      X-Caller: myserice
 	//      X-Token: foo
-	Headers map[string]string `config:"headers"`
+	AddHeaders map[string]string `config:"addHeaders"`
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (*Outbound, error) {
 	x := t.(*Transport)
 
 	opts := ts.OutboundOptions
-	if len(oc.Headers) > 0 {
-		for k, v := range oc.Headers {
+	if len(oc.AddHeaders) > 0 {
+		for k, v := range oc.AddHeaders {
 			opts = append(opts, AddHeader(k, v))
 		}
 	}
