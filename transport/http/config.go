@@ -39,8 +39,6 @@ import (
 // interpreted. This allows configuration parameters to override Option
 // provided to TransportSpec.
 func TransportSpec(opts ...Option) config.TransportSpec {
-	// TODO: Presets. Support "with:" and allow passing those in using
-	// varargs on TransportSpec().
 	var ts transportSpec
 	for _, o := range opts {
 		switch opt := o.(type) {
@@ -154,14 +152,31 @@ type OutboundConfig struct {
 	// URL to which requests will be sent for this outbound. This field is
 	// required.
 	URL string `config:"url,interpolate"`
+
+	// HTTP headers that will be added to all requests made through this
+	// outbound.
+	//
+	//  http:
+	//    url: "http://localhost:8080/yarpc"
+	//    addHeaders:
+	//      X-Caller: myserice
+	//      X-Token: foo
+	AddHeaders map[string]string `config:"addHeaders"`
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (*Outbound, error) {
 	x := t.(*Transport)
 
+	opts := ts.OutboundOptions
+	if len(oc.AddHeaders) > 0 {
+		for k, v := range oc.AddHeaders {
+			opts = append(opts, AddHeader(k, v))
+		}
+	}
+
 	// Special case where the URL implies the single peer.
 	if oc.Empty() {
-		return x.NewSingleOutbound(oc.URL, ts.OutboundOptions...), nil
+		return x.NewSingleOutbound(oc.URL, opts...), nil
 	}
 
 	chooser, err := oc.PeerList.BuildPeerList(x, hostport.Identify, k)
@@ -169,7 +184,6 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 		return nil, fmt.Errorf("cannot configure peer chooser for HTTP outbound: %v", err)
 	}
 
-	opts := ts.OutboundOptions
 	if oc.URL != "" {
 		opts = append(opts, URLTemplate(oc.URL))
 	}
