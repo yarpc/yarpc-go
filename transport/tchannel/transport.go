@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"fmt"
+	"net"
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
@@ -43,11 +44,12 @@ type Transport struct {
 	lock sync.Mutex
 	once intsync.LifecycleOnce
 
-	ch     Channel
-	router transport.Router
-	tracer opentracing.Tracer
-	name   string
-	addr   string
+	ch       Channel
+	router   transport.Router
+	tracer   opentracing.Tracer
+	name     string
+	addr     string
+	listener net.Listener
 
 	peers map[string]*hostport.Peer
 }
@@ -75,11 +77,12 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 	// }
 
 	return &Transport{
-		once:   intsync.Once(),
-		name:   config.name,
-		addr:   config.addr,
-		tracer: config.tracer,
-		peers:  make(map[string]*hostport.Peer),
+		once:     intsync.Once(),
+		name:     config.name,
+		addr:     config.addr,
+		listener: config.listener,
+		tracer:   config.tracer,
+		peers:    make(map[string]*hostport.Peer),
 	}, nil
 }
 
@@ -167,27 +170,32 @@ func (t *Transport) start() error {
 	}
 	t.ch = ch
 
-	// Default to ListenIP if addr wasn't given.
-	addr := t.addr
-	if addr == "" {
-		listenIP, err := tchannel.ListenIP()
-		if err != nil {
+	if t.listener != nil {
+		if err := t.ch.Serve(t.listener); err != nil {
 			return err
 		}
+	} else {
+		// Default to ListenIP if addr wasn't given.
+		addr := t.addr
+		if addr == "" {
+			listenIP, err := tchannel.ListenIP()
+			if err != nil {
+				return err
+			}
 
-		addr = listenIP.String() + ":0"
-		// TODO(abg): Find a way to export this to users
-	}
+			addr = listenIP.String() + ":0"
+			// TODO(abg): Find a way to export this to users
+		}
 
-	// TODO(abg): If addr was just the port (":4040"), we want to use
-	// ListenIP() + ":4040" rather than just ":4040".
+		// TODO(abg): If addr was just the port (":4040"), we want to use
+		// ListenIP() + ":4040" rather than just ":4040".
 
-	if err := t.ch.ListenAndServe(addr); err != nil {
-		return err
+		if err := t.ch.ListenAndServe(addr); err != nil {
+			return err
+		}
 	}
 
 	t.addr = t.ch.PeerInfo().HostPort
-
 	return nil
 }
 

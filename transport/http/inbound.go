@@ -53,6 +53,8 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
+//
+// Note that this will change to take a net.Listener in 2.0.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
 		once:      sync.Once(),
@@ -66,10 +68,26 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	return i
 }
 
+// NewInboundForListener builds a new HTTP inbound that listens on the given listener.
+//
+// Note that this will be NewInbound in 2.0.
+func (t *Transport) NewInboundForListener(listener net.Listener, opts ...InboundOption) *Inbound {
+	i := &Inbound{
+		once:     sync.Once(),
+		listener: listener,
+		tracer:   t.tracer,
+	}
+	for _, opt := range opts {
+		opt(i)
+	}
+	return i
+}
+
 // Inbound receives YARPC requests using an HTTP server. It may be constructed
 // using the NewInbound method on the Transport.
 type Inbound struct {
 	addr       string
+	listener   net.Listener
 	mux        *http.ServeMux
 	muxPattern string
 	server     *intnet.HTTPServer
@@ -119,11 +137,17 @@ func (i *Inbound) start() error {
 	}
 
 	i.server = intnet.NewHTTPServer(&http.Server{
-		Addr:    i.addr,
 		Handler: httpHandler,
 	})
-	if err := i.server.ListenAndServe(); err != nil {
-		return err
+	if i.listener != nil {
+		if err := i.server.Serve(i.listener); err != nil {
+			return err
+		}
+	} else {
+		i.server.Addr = i.addr
+		if err := i.server.ListenAndServe(); err != nil {
+			return err
+		}
 	}
 
 	i.addr = i.server.Listener().Addr().String() // in case it changed

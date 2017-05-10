@@ -21,6 +21,8 @@
 package tchannel
 
 import (
+	"net"
+
 	"github.com/uber/tchannel-go"
 	"golang.org/x/net/context"
 )
@@ -39,6 +41,7 @@ type Channel interface {
 	Close()
 	GetSubChannel(serviceName string, opts ...tchannel.SubChannelOption) *tchannel.SubChannel
 	ListenAndServe(hostPort string) error
+	Serve(listener net.Listener) error
 	PeerInfo() tchannel.LocalPeerInfo
 	RootPeers() *tchannel.RootPeerList
 	ServiceName() string

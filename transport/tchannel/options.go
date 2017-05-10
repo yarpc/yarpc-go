@@ -20,7 +20,11 @@
 
 package tchannel
 
-import "github.com/opentracing/opentracing-go"
+import (
+	"net"
+
+	"github.com/opentracing/opentracing-go"
+)
 
 // transportConfig is suitable for conveying options to TChannel transport
 // constructors.
@@ -31,10 +35,11 @@ import "github.com/opentracing/opentracing-go"
 // peer lists.
 // TODO update above when NewTransport is real.
 type transportConfig struct {
-	ch     Channel
-	tracer opentracing.Tracer
-	addr   string
-	name   string
+	ch       Channel
+	tracer   opentracing.Tracer
+	addr     string
+	listener net.Listener
+	name     string
 }
 
 // TransportOption customizes the behavior of a TChannel Transport.
@@ -68,9 +73,19 @@ func WithChannel(ch Channel) TransportOption {
 //
 // This option has no effect if WithChannel was used and the TChannel was
 // already listening.
+//
+// This is deprecated in favor of Listener.
+// If Listener is also specified, this option will be ignored.
 func ListenAddr(addr string) TransportOption {
 	return func(t *transportConfig) {
 		t.addr = addr
+	}
+}
+
+// Listener specifies the listener that TChannel should listen on.
+func Listener(listener net.Listener) TransportOption {
+	return func(t *transportConfig) {
+		t.listener = listener
 	}
 }
 
