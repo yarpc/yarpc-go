@@ -163,7 +163,6 @@ func (i *Inbound) getServiceNameAndMethodDesc(procedure transport.Procedure) (st
 	return serviceName, grpc.MethodDesc{
 		MethodName: methodName,
 		// TODO: what if two procedures have the same serviceName and methodName, but a different service?
-		// TODO: should we handle procedure.Encoding somehow?
 		Handler: newHandler(
 			procedure.Service,
 			serviceName,
