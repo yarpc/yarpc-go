@@ -26,6 +26,4 @@ const (
 	Server     = "server"
 	HTTPServer = "httpserver"
 	Transport  = "transport"
-	GoEncoding = "go_encoding"
-	GoServer   = "go_server"
 )
