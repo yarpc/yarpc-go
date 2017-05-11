@@ -29,13 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNoopTransport(t *testing.T) {
-	noopTransport := noopTransport{}
-	assert.NoError(t, noopTransport.Start())
-	assert.NoError(t, noopTransport.Stop())
-	assert.False(t, noopTransport.IsRunning())
-}
-
 func TestNewTransportSpecOptions(t *testing.T) {
 	transportSpec, err := newTransportSpec(
 		WithInboundTracer(nil),
