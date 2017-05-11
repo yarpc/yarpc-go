@@ -66,7 +66,7 @@ func CreateDispatcherForTransport(t crossdock.T, trans string) *yarpc.Dispatcher
 
 		unaryOutbound = tchannelTransport.NewSingleOutbound(server + ":8082")
 	case "grpc":
-		unaryOutbound = grpc.NewSingleOutbound(server + ":8089")
+		unaryOutbound = grpc.NewTransport().NewSingleOutbound(server + ":8089")
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}

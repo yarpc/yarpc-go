@@ -106,7 +106,7 @@ func do() error {
 	case "tchannel":
 		outbound = tchannelTransport.NewSingleOutbound("127.0.0.1:28941")
 	case "grpc":
-		outbound = grpc.NewSingleOutbound("127.0.0.1:24038")
+		outbound = grpc.NewTransport().NewSingleOutbound("127.0.0.1:24038")
 	default:
 		return fmt.Errorf("invalid outbound: %q", outboundName)
 	}

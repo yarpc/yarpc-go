@@ -103,7 +103,7 @@ func do() error {
 		if err != nil {
 			return err
 		}
-		inbound = grpc.NewInbound(listener)
+		inbound = grpc.NewTransport().NewInbound(listener)
 		go func() {
 			if err := gohttp.ListenAndServe(":3244", nil); err != nil {
 				log.Fatal(err)

@@ -59,7 +59,7 @@ func Start() {
 		Inbounds: yarpc.Inbounds{
 			tchannelTransport.NewInbound(),
 			httpTransport.NewInbound(":8081"),
-			grpc.NewInbound(grpcListener),
+			grpc.NewTransport().NewInbound(grpcListener),
 		},
 	})
 

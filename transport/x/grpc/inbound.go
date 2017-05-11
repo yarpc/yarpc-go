@@ -48,8 +48,7 @@ type Inbound struct {
 	server         *grpc.Server
 }
 
-// NewInbound returns a new Inbound for the given listener.
-func NewInbound(listener net.Listener, options ...InboundOption) *Inbound {
+func newInbound(listener net.Listener, options ...InboundOption) *Inbound {
 	return &Inbound{internalsync.Once(), sync.Mutex{}, listener, newInboundOptions(options), nil, nil}
 }
 
