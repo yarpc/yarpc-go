@@ -56,7 +56,7 @@ func TransportSpec(opts ...Option) config.TransportSpec {
 //
 // inbounds:
 //   grpc:
-//     address: ":80
+//     address: ":80"
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
@@ -67,7 +67,7 @@ type InboundConfig struct {
 // outbounds:
 //   myservice:
 //     grpc:
-//       address: ":80
+//       address: ":80"
 type OutboundConfig struct {
 	// Address to connect to. This field is required.
 	Address string `config:"address,interpolate"`
@@ -93,7 +93,7 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 	return transportSpec, nil
 }
 
-func (t *transportSpec) buildTransport(_ struct{}, _ *config.Kit) (transport.Transport, error) {
+func (t *transportSpec) buildTransport(struct{}, *config.Kit) (transport.Transport, error) {
 	return noopTransport{}, nil
 }
 
