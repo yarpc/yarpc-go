@@ -98,6 +98,11 @@ func TestTransportSpec(t *testing.T) {
 			wantInbound: &wantInbound{Address: "127.0.0.1:34568"},
 		},
 		{
+			desc:       "bad inbound address",
+			inboundCfg: attrs{"address": "derp"},
+			wantErrors: []string{"address derp"},
+		},
+		{
 			desc: "simple outbound",
 			outboundCfg: attrs{
 				"myservice": attrs{
