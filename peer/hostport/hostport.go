@@ -54,9 +54,9 @@ func NewPeer(pid PeerIdentifier, transport peer.Transport) *Peer {
 
 // Peer keeps a subscriber to send status updates to it, and the peer.Transport that created it
 type Peer struct {
-	l sync.RWMutex
-
 	PeerIdentifier
+
+	lock sync.RWMutex
 
 	transport        peer.Transport
 	subscribers      map[peer.Subscriber]struct{}
@@ -76,18 +76,16 @@ func (p *Peer) Transport() peer.Transport {
 }
 
 // Subscribe adds a subscriber to the peer's subscriber map
-// This function isn't thread safe
 func (p *Peer) Subscribe(sub peer.Subscriber) {
-	p.l.Lock()
+	p.lock.Lock()
 	p.subscribers[sub] = struct{}{}
-	p.l.Unlock()
+	p.lock.Unlock()
 }
 
 // Unsubscribe removes a subscriber from the peer's subscriber map
-// This function isn't thread safe
 func (p *Peer) Unsubscribe(sub peer.Subscriber) error {
-	p.l.Lock()
-	defer p.l.Unlock()
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	if _, ok := p.subscribers[sub]; !ok {
 		return peer.ErrPeerHasNoReferenceToSubscriber{
 			PeerIdentifier: p.PeerIdentifier,
@@ -100,9 +98,11 @@ func (p *Peer) Unsubscribe(sub peer.Subscriber) error {
 }
 
 // NumSubscribers returns the number of subscriptions attached to the peer
-// This function isn't thread safe
 func (p *Peer) NumSubscribers() int {
-	return len(p.subscribers)
+	p.lock.RLock()
+	subs := len(p.subscribers)
+	p.lock.RUnlock()
+	return subs
 }
 
 // Status returns the current status of the hostport.Peer
@@ -132,9 +132,9 @@ func (p *Peer) EndRequest() {
 }
 
 func (p *Peer) notifyStatusChanged() {
-	p.l.RLock()
+	p.lock.RLock()
 	for sub := range p.subscribers {
 		sub.NotifyStatusChanged(p)
 	}
-	p.l.RUnlock()
+	p.lock.RUnlock()
 }
