@@ -89,4 +89,5 @@ __check_docker:
 		echo "See https://docs.docker.com/engine/installation/ to get started with Docker." >&2; \
 		echo "Alternatively, set SUPPRESS_DOCKER=1 to run the command locally against your system." >&2; \
 		echo "Docker is not running" >&2; \
+		exit 1; \
 	fi
