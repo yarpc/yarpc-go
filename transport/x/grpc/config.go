@@ -94,7 +94,7 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 }
 
 func (t *transportSpec) buildTransport(_ struct{}, _ *config.Kit) (transport.Transport, error) {
-	return nil, nil
+	return noopTransport{}, nil
 }
 
 func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, _ transport.Transport, _ *config.Kit) (transport.Inbound, error) {
@@ -118,3 +118,9 @@ func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, _ tra
 func newRequiredFieldMissingError(field string) error {
 	return fmt.Errorf("required field missing: %s", field)
 }
+
+type noopTransport struct{}
+
+func (noopTransport) Start() error    { return nil }
+func (noopTransport) Stop() error     { return nil }
+func (noopTransport) IsRunning() bool { return false }
