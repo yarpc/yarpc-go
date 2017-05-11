@@ -25,11 +25,24 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Option is an interface shared by InboundOption and OutboundOption
+// allowing either to be recognized by TransportSpec().
+type Option interface {
+	grpcOption()
+}
+
+var _ Option = (InboundOption)(nil)
+var _ Option = (OutboundOption)(nil)
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
+func (InboundOption) grpcOption() {}
+
 // OutboundOption is an option for an outbound.
 type OutboundOption func(*outboundOptions)
+
+func (OutboundOption) grpcOption() {}
 
 // WithInboundTracer specifies the tracer to use for an inbound.
 func WithInboundTracer(tracer opentracing.Tracer) InboundOption {
