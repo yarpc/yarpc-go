@@ -45,16 +45,18 @@ import (
 // 	http:
 // 	  peer: 127.0.0.1:8080
 //
+// Note that how this string is interpreted is transport-dependent.
+//
 // `with` specifies that a named peer chooser preset defined by the transport
-// should be used rather than defining one by-hand in the configuration.
+// should be used rather than defining one by hand in the configuration.
 //
 // 	# Given a dev-proxy preset on your TransportSpec,
 // 	http:
 // 	  with: dev-proxy
 //
-// If the name of a registered PeerListSpec was used as the key, an object
-// specifying the configuration parameters for the PeerListSpec is expected
-// along with the name of a known peer list updater and its configuration.
+// If the name of a registered PeerListSpec is the key, an object specifying
+// the configuration parameters for the PeerListSpec is expected along with
+// the name of a known peer list updater and its configuration.
 //
 // 	# cfg.RegisterPeerList(roundrobin.Spec())
 // 	round-robin:

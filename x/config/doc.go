@@ -26,8 +26,10 @@
 //
 // To build a Dispatcher, first create a new Configurator. This object will be
 // responsible for loading your configuration. It does not yet know about the
-// different transports, peer lists, etc. that you want to use. Inform it
-// about them by registering them with it.
+// different transports, peer lists, etc. that you want to use. You can inform
+// the Configurator about the different transports, peer lists, etc. by
+// registering them using RegisterTransport, RegisterPeerList, and
+// RegisterPeerListUpdater.
 //
 // 	cfg := config.New()
 // 	cfg.MustRegisterTransport(http.TransportSpec())
@@ -214,8 +216,8 @@
 // 	        - 127.0.0.1:8082
 //
 // In the example above, the system will round-robin the requests between the
-// different addresses. The specified URL will be used as a template for the
-// HTTP requests made to these hosts.
+// different addresses. In case of the HTTP transport, the URL will be used as
+// a template for the HTTP requests made to these hosts.
 //
 // Finally, the TransportSpec for a Transport may include named presets for
 // peer lists in its definition. These may be referenced by name in the config

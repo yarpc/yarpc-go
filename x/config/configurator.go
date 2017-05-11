@@ -68,7 +68,7 @@ func New(opts ...Option) *Configurator {
 // it how to load configuration and build inbounds and outbounds for that
 // transport.
 //
-// An error is returned if the TransportSpec was invalid. Use
+// An error is returned if the TransportSpec is invalid. Use
 // MustRegisterTransport if you want to panic in case of registration failure.
 //
 // If a transport with the same name already exists, it will be replaced.
@@ -90,7 +90,7 @@ func (c *Configurator) RegisterTransport(t TransportSpec) error {
 }
 
 // MustRegisterTransport registers the given TransportSpec with the
-// Configurator. This function panics if the TransportSpec was invalid.
+// Configurator. This function panics if the TransportSpec is invalid.
 func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 	if err := c.RegisterTransport(t); err != nil {
 		panic(err)
@@ -100,7 +100,7 @@ func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 // RegisterPeerList registers a PeerListSpec with the given Configurator,
 // teaching it how to build peer lists of this kind from configuration.
 //
-// An error is returned if the PeerListSpec was invalid. Use
+// An error is returned if the PeerListSpec is invalid. Use
 // MustRegisterPeerList to panic in the case of registration failure.
 //
 // If a peer list with the same name already exists, it will be replaced.
