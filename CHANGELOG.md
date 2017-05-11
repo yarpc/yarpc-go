@@ -14,7 +14,7 @@ v1.9.0-dev (unreleased)
 -   x/roundrobin: Added support for taking peer list updates before and after
     the peer list has been started.
 -   Moved the RoundRobin Peer List out of the /x/ package.
-
+-   Fix race conditions in hostport.Peer.
 
 v1.8.0 (2017-05-01)
 -------------------
