@@ -15,6 +15,8 @@ v1.9.0-dev (unreleased)
     the peer list has been started.
 -   Moved the RoundRobin Peer List out of the /x/ package.
 -   Fix race conditions in hostport.Peer.
+-   transport/x/grpc: Remove NewInbound and NewSingleOutbound in favor of
+    functions on Transport
 
 v1.8.0 (2017-05-01)
 -------------------
