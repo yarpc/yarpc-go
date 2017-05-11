@@ -147,7 +147,7 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
 type OutboundConfig struct {
-	config.PeerList
+	config.PeerChooser
 
 	// URL to which requests will be sent for this outbound. This field is
 	// required.
@@ -179,7 +179,7 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 		return x.NewSingleOutbound(oc.URL, opts...), nil
 	}
 
-	chooser, err := oc.PeerList.BuildPeerList(x, hostport.Identify, k)
+	chooser, err := oc.BuildPeerChooser(x, hostport.Identify, k)
 	if err != nil {
 		return nil, fmt.Errorf("cannot configure peer chooser for HTTP outbound: %v", err)
 	}

@@ -123,38 +123,38 @@ func TestCompileTransportSpec(t *testing.T) {
 			onewayOutboundInput: _typeOfEmptyStruct,
 		},
 		{
-			desc: "bad peer list preset",
+			desc: "bad peer chooser preset",
 			spec: TransportSpec{
 				Name:               "foo",
 				BuildTransport:     func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
 				BuildUnaryOutbound: func(struct{}, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
-				PeerListPresets: []PeerListPreset{
+				PeerChooserPresets: []PeerChooserPreset{
 					{
-						Name:          "fake",
-						BuildPeerList: func(transport.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
+						Name:             "fake",
+						BuildPeerChooser: func(transport.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
 					},
 				},
 			},
 			wantErr: []string{
 				`failed to compile preset for transport "foo":`,
-				"invalid BuildPeerList func(transport.Transport, *config.Kit) (peer.Chooser, error):",
+				"invalid BuildPeerChooser func(transport.Transport, *config.Kit) (peer.Chooser, error):",
 				"must accept a peer.Transport as its first argument, found transport.Transport",
 			},
 		},
 		{
-			desc: "peer list preset collision",
+			desc: "peer chooser preset collision",
 			spec: TransportSpec{
 				Name:               "foo",
 				BuildTransport:     func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
 				BuildUnaryOutbound: func(struct{}, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
-				PeerListPresets: []PeerListPreset{
+				PeerChooserPresets: []PeerChooserPreset{
 					{
-						Name:          "fake",
-						BuildPeerList: func(peer.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
+						Name:             "fake",
+						BuildPeerChooser: func(peer.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
 					},
 					{
-						Name:          "fake",
-						BuildPeerList: func(peer.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
+						Name:             "fake",
+						BuildPeerChooser: func(peer.Transport, *Kit) (peer.Chooser, error) { panic("kthxbye") },
 					},
 				},
 			},
@@ -782,10 +782,10 @@ func TestCompilePeerListUpdaterSpec(t *testing.T) {
 	}
 }
 
-func TestCompilePeerListPreset(t *testing.T) {
+func TestCompilePeerChooserPreset(t *testing.T) {
 	tests := []struct {
 		desc     string
-		spec     PeerListPreset
+		spec     PeerChooserPreset
 		wantName string
 		wantErr  string
 	}{
@@ -794,77 +794,77 @@ func TestCompilePeerListPreset(t *testing.T) {
 			wantErr: "Name is required",
 		},
 		{
-			desc: "missing BuildPeerList",
-			spec: PeerListPreset{
+			desc: "missing BuildPeerChooser",
+			spec: PeerChooserPreset{
 				Name: "random",
 			},
-			wantErr: "BuildPeerList is required",
+			wantErr: "BuildPeerChooser is required",
 		},
 		{
 			desc: "not a function",
-			spec: PeerListPreset{
-				Name:          "much sadness",
-				BuildPeerList: 10,
+			spec: PeerChooserPreset{
+				Name:             "much sadness",
+				BuildPeerChooser: 10,
 			},
-			wantErr: "invalid BuildPeerList int: must be a function",
+			wantErr: "invalid BuildPeerChooser int: must be a function",
 		},
 		{
 			desc: "too many arguments",
-			spec: PeerListPreset{
-				Name:          "much sadness",
-				BuildPeerList: func(a, b, c, d int) {},
+			spec: PeerChooserPreset{
+				Name:             "much sadness",
+				BuildPeerChooser: func(a, b, c, d int) {},
 			},
-			wantErr: "invalid BuildPeerList func(int, int, int, int): must accept exactly two arguments, found 4",
+			wantErr: "invalid BuildPeerChooser func(int, int, int, int): must accept exactly two arguments, found 4",
 		},
 		{
 			desc: "wrong kind of first argument",
-			spec: PeerListPreset{
-				Name:          "much sadness",
-				BuildPeerList: func(a, b int) {},
+			spec: PeerChooserPreset{
+				Name:             "much sadness",
+				BuildPeerChooser: func(a, b int) {},
 			},
-			wantErr: "invalid BuildPeerList func(int, int): must accept a peer.Transport as its first argument, found int",
+			wantErr: "invalid BuildPeerChooser func(int, int): must accept a peer.Transport as its first argument, found int",
 		},
 		{
 			desc: "wrong kind of second",
-			spec: PeerListPreset{
-				Name:          "much sadness",
-				BuildPeerList: func(peer.Transport, int) {},
+			spec: PeerChooserPreset{
+				Name:             "much sadness",
+				BuildPeerChooser: func(peer.Transport, int) {},
 			},
-			wantErr: "invalid BuildPeerList func(peer.Transport, int): must accept a *config.Kit as its second argument, found int",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, int): must accept a *config.Kit as its second argument, found int",
 		},
 		{
 			desc: "wrong number of returns",
-			spec: PeerListPreset{
-				Name:          "much sadness",
-				BuildPeerList: func(t peer.Transport, k *Kit) {},
+			spec: PeerChooserPreset{
+				Name:             "much sadness",
+				BuildPeerChooser: func(t peer.Transport, k *Kit) {},
 			},
-			wantErr: "invalid BuildPeerList func(peer.Transport, *config.Kit): must return exactly two results, found 0",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, *config.Kit): must return exactly two results, found 0",
 		},
 		{
 			desc: "wrong type of first return",
-			spec: PeerListPreset{
+			spec: PeerChooserPreset{
 				Name: "much sadness",
-				BuildPeerList: func(t peer.Transport, b *Kit) (int, error) {
+				BuildPeerChooser: func(t peer.Transport, b *Kit) (int, error) {
 					return 0, nil
 				},
 			},
-			wantErr: "invalid BuildPeerList func(peer.Transport, *config.Kit) (int, error): must return a peer.Chooser as its first result, found int",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, *config.Kit) (int, error): must return a peer.Chooser as its first result, found int",
 		},
 		{
 			desc: "wrong type of second return",
-			spec: PeerListPreset{
+			spec: PeerChooserPreset{
 				Name: "much sadness",
-				BuildPeerList: func(t peer.Transport, k *Kit) (peer.Chooser, int) {
+				BuildPeerChooser: func(t peer.Transport, k *Kit) (peer.Chooser, int) {
 					return nil, 0
 				},
 			},
-			wantErr: "invalid BuildPeerList func(peer.Transport, *config.Kit) (peer.Chooser, int): must return an error as its second result, found int",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, *config.Kit) (peer.Chooser, int): must return an error as its second result, found int",
 		},
 		{
 			desc: "such gladness",
-			spec: PeerListPreset{
+			spec: PeerChooserPreset{
 				Name: "such gladness",
-				BuildPeerList: func(t peer.Transport, k *Kit) (peer.Chooser, error) {
+				BuildPeerChooser: func(t peer.Transport, k *Kit) (peer.Chooser, error) {
 					return nil, nil
 				},
 			},
@@ -874,7 +874,7 @@ func TestCompilePeerListPreset(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			s, err := compilePeerListPreset(tt.spec)
+			s, err := compilePeerChooserPreset(tt.spec)
 			if err != nil {
 				assert.Equal(t, tt.wantErr, err.Error(), "expected error")
 			} else {

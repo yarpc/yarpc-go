@@ -29,17 +29,17 @@ import (
 	peerbind "go.uber.org/yarpc/peer"
 )
 
-// PeerList facilitates decoding and building peer choosers.
+// PeerChooser facilitates decoding and building peer choosers.
 // The peer chooser combines a peer list (for the peer selection strategy, like
 // least-pending or round-robin) with a peer list binder (like static peers or
 // dynamic peers from DNS or watching a file in a particular format).
-type PeerList struct {
-	peerList
+type PeerChooser struct {
+	peerChooser
 }
 
-// peerList is the private representation of PeerList that captures
+// peerChooser is the private representation of PeerChooser that captures
 // decoded configuration without revealing it on the public type.
-type peerList struct {
+type peerChooser struct {
 	Peer   string       `config:"peer,interpolate"`
 	Preset string       `config:"with,interpolate"`
 	Etc    attributeMap `config:",squash"`
@@ -48,15 +48,14 @@ type peerList struct {
 // Empty returns whether the peer list configuration is empty.
 // This is a facility for the HTTP transport specifically since it can infer
 // the configuration for the single-peer case from its "url" attribute.
-func (pc PeerList) Empty() bool {
-	c := pc.peerList
+func (pc PeerChooser) Empty() bool {
+	c := pc.peerChooser
 	return c.Peer == "" && c.Preset == "" && len(c.Etc) == 0
 }
 
-// BuildPeerList translates a chooser configuration into a peer chooser, backed
-// by a peer list bound to a peer list binder.
-func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
-	c := pc.peerList
+// BuildPeerChooser translates the decoded configuration into a peer.Chooser.
+func (pc PeerChooser) BuildPeerChooser(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
+	c := pc.peerChooser
 	// Establish a peer selection strategy.
 	switch {
 	case c.Peer != "":
@@ -77,7 +76,7 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
 		}
 
-		preset, err := kit.peerListPreset(c.Preset)
+		preset, err := kit.peerChooserPreset(pc.Preset)
 		if err != nil {
 			return nil, err
 		}
@@ -89,11 +88,11 @@ func (pc PeerList) BuildPeerList(transport peer.Transport, identify func(string)
 		//   outboundopt2: ...
 		//   my-peer-list:
 		//     ...
-		return pc.buildPeerList(transport, identify, kit)
+		return pc.buildPeerChooser(transport, identify, kit)
 	}
 }
 
-func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
+func (pc PeerChooser) buildPeerChooser(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
 	peerListName, peerListConfig, err := getPeerListInfo(pc.Etc, kit)
 	if err != nil {
 		return nil, err
@@ -127,9 +126,9 @@ func (pc PeerList) buildPeerList(transport peer.Transport, identify func(string)
 	if err != nil {
 		return nil, err
 	}
-	peerList := result.(peer.ChooserList)
+	peerChooser := result.(peer.ChooserList)
 
-	return peerbind.Bind(peerList, peerListUpdater), nil
+	return peerbind.Bind(peerChooser, peerListUpdater), nil
 }
 
 // getPeerListInfo extracts the peer list entry from the given attribute map. It

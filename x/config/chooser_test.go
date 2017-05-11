@@ -145,7 +145,7 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
-			desc: "peer list preset",
+			desc: "peer chooser preset",
 			given: whitespace.Expand(`
 				transports:
 					fake-transport:
@@ -447,7 +447,7 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
-			desc: "invalid peer list preset",
+			desc: "invalid peer chooser preset",
 			given: whitespace.Expand(`
 				outbounds:
 					their-service:
@@ -457,7 +457,7 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`no recognized peer list preset "bogus"`,
+				`no recognized peer chooser preset "bogus"`,
 				`need one of`,
 				`fake`,
 			},
@@ -760,7 +760,7 @@ func TestBuildPeerListInvalidKit(t *testing.T) {
 	// We build a fake InboundConfig that embeds the PeerList. This will let
 	// us call PeerList.BuildPeerList with the wrong Kit.
 	type inboundConfig struct {
-		config.PeerList
+		config.PeerChooser
 	}
 
 	configer := yarpctest.NewFakeConfigurator()
@@ -770,7 +770,7 @@ func TestBuildPeerListInvalidKit(t *testing.T) {
 			return transporttest.NewMockTransport(mockCtrl), nil
 		},
 		BuildInbound: func(cfg *inboundConfig, _ transport.Transport, k *config.Kit) (transport.Inbound, error) {
-			_, err := cfg.PeerList.BuildPeerList(peertest.NewMockTransport(mockCtrl), hostport.Identify, k)
+			_, err := cfg.BuildPeerChooser(peertest.NewMockTransport(mockCtrl), hostport.Identify, k)
 			assert.Error(t, err, "BuildPeerList should fail with an invalid Kit")
 			return transporttest.NewMockInbound(mockCtrl), err
 		},
