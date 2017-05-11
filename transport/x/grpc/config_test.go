@@ -29,6 +29,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNoopTransport(t *testing.T) {
+	noopTransport := noopTransport{}
+	assert.NoError(t, noopTransport.Start())
+	assert.NoError(t, noopTransport.Stop())
+	assert.False(t, noopTransport.IsRunning())
+}
+
 func TestNewTransportSpecOptions(t *testing.T) {
 	transportSpec, err := newTransportSpec(
 		WithInboundTracer(nil),
@@ -50,6 +57,10 @@ func TestConfigBuildUnaryOutboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
 	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, nil, nil)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
+}
+
+func TestTransportSpecUnknownOption(t *testing.T) {
+	assert.Panics(t, func() { TransportSpec(testOption{}) })
 }
 
 func TestTransportSpec(t *testing.T) {
@@ -170,3 +181,7 @@ func mapResolver(m map[string]string) func(string) (string, bool) {
 		return
 	}
 }
+
+type testOption struct{}
+
+func (testOption) grpcOption() {}
