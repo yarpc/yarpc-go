@@ -40,16 +40,9 @@ const transportName = "grpc"
 // interpreted. This allows configuration parameters to override Options
 // provided to TransportSpec.
 func TransportSpec(opts ...Option) config.TransportSpec {
-	transportSpec := &transportSpec{}
-	for _, o := range opts {
-		switch opt := o.(type) {
-		case InboundOption:
-			transportSpec.InboundOptions = append(transportSpec.InboundOptions, opt)
-		case OutboundOption:
-			transportSpec.OutboundOptions = append(transportSpec.OutboundOptions, opt)
-		default:
-			panic(fmt.Sprintf("unknown option of type %T: %v", o, o))
-		}
+	transportSpec, err := newTransportSpec(opts...)
+	if err != nil {
+		panic(err.Error())
 	}
 	return config.TransportSpec{
 		Name:               transportName,
@@ -83,6 +76,21 @@ type OutboundConfig struct {
 type transportSpec struct {
 	InboundOptions  []InboundOption
 	OutboundOptions []OutboundOption
+}
+
+func newTransportSpec(opts ...Option) (*transportSpec, error) {
+	transportSpec := &transportSpec{}
+	for _, o := range opts {
+		switch opt := o.(type) {
+		case InboundOption:
+			transportSpec.InboundOptions = append(transportSpec.InboundOptions, opt)
+		case OutboundOption:
+			transportSpec.OutboundOptions = append(transportSpec.OutboundOptions, opt)
+		default:
+			return nil, fmt.Errorf("unknown option of type %T: %v", o, o)
+		}
+	}
+	return transportSpec, nil
 }
 
 func (t *transportSpec) buildTransport(_ struct{}, _ *config.Kit) (transport.Transport, error) {
