@@ -9,7 +9,7 @@ DOCKER_RUN_FLAGS ?= -e V -e RUN -e EXAMPLES_JOBS -e WITHIN_DOCKER=1
 DOCKER_VOLUME_FLAGS=-v $(shell pwd):/go/src/go.uber.org/yarpc
 
 .PHONY: deps
-deps: $(DOCKER) ## install all dependencies
+deps: $(DOCKER) __check_docker ## install all dependencies
 	PATH=$$PATH:$(BIN) docker build $(DOCKER_BUILD_FLAGS) -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
 
 .PHONY: build
@@ -79,3 +79,7 @@ examples: deps ## run all examples tests
 .PHONY: shell
 shell: deps ## go into a bash shell in docker with the repository linked as a volume
 	PATH=$$PATH:$(BIN) docker run -it $(DOCKER_VOLUME_FLAGS) $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) /bin/bash
+
+.PHONY: __check_docker
+__check_docker:
+	@PATH=$$PATH:$(BIN) ./scripts/check-docker.sh
