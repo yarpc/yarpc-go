@@ -126,9 +126,3 @@ func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, _ tra
 func newRequiredFieldMissingError(field string) error {
 	return fmt.Errorf("required field missing: %s", field)
 }
-
-type noopTransport struct{}
-
-func (noopTransport) Start() error    { return nil }
-func (noopTransport) Stop() error     { return nil }
-func (noopTransport) IsRunning() bool { return false }
