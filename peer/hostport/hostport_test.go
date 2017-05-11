@@ -22,6 +22,7 @@ package hostport
 
 import (
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
@@ -247,6 +248,27 @@ func TestPeer(t *testing.T) {
 			expectedStatus: peer.Status{
 				PendingRequestCount: 0,
 				ConnectionStatus:    peer.Unavailable,
+			},
+		},
+		{
+			msg: "concurrent update and subscribe",
+			SubDefinitions: []SubscriberDefinition{
+				{ID: "1", ExpectedNotifyCount: 2},
+			},
+			actions: []PeerAction{
+				PeerConcurrentAction{
+					Actions: []PeerAction{
+						SubscribeAction{SubscriberID: "1", ExpectedSubCount: 1},
+						SetStatusAction{InputStatus: peer.Available},
+						SetStatusAction{InputStatus: peer.Available},
+					},
+					Wait: time.Millisecond * 70,
+				},
+			},
+			expectedSubscribers: []string{"1"},
+			expectedStatus: peer.Status{
+				PendingRequestCount: 0,
+				ConnectionStatus:    peer.Available,
 			},
 		},
 	}

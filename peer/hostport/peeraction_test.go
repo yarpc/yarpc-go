@@ -22,7 +22,9 @@ package hostport
 
 import (
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 
@@ -117,6 +119,32 @@ func (ua UnsubscribeAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
 	} else {
 		assert.Nil(t, ua.ExpectedErrType)
 	}
+}
+
+// PeerConcurrentAction will run a series of actions in parallel
+type PeerConcurrentAction struct {
+	Actions []PeerAction
+	Wait    time.Duration
+}
+
+// Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
+// between each action. Returns when all actions have finished executing
+func (a PeerConcurrentAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
+	var wg sync.WaitGroup
+
+	wg.Add(len(a.Actions))
+	for _, action := range a.Actions {
+		go func(ac PeerAction) {
+			defer wg.Done()
+			ac.Apply(t, p, d)
+		}(action)
+
+		if a.Wait > 0 {
+			time.Sleep(a.Wait)
+		}
+	}
+
+	wg.Wait()
 }
 
 // ApplyPeerActions runs all the PeerActions on the Peer
