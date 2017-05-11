@@ -21,6 +21,8 @@
 package hostport
 
 import (
+	"sync"
+
 	"go.uber.org/yarpc/api/peer"
 
 	"go.uber.org/atomic"
@@ -41,22 +43,25 @@ func Identify(peer string) peer.Identifier {
 
 // NewPeer creates a new hostport.Peer from a hostport.PeerIdentifier, peer.Transport, and peer.Subscriber
 func NewPeer(pid PeerIdentifier, transport peer.Transport) *Peer {
-	return &Peer{
-		PeerIdentifier:   pid,
-		transport:        transport,
-		subscribers:      make(map[peer.Subscriber]struct{}),
-		connectionStatus: peer.Unavailable,
+	p := &Peer{
+		PeerIdentifier: pid,
+		transport:      transport,
+		subscribers:    make(map[peer.Subscriber]struct{}),
 	}
+	p.connectionStatus.Store(int32(peer.Unavailable))
+	return p
 }
 
 // Peer keeps a subscriber to send status updates to it, and the peer.Transport that created it
 type Peer struct {
+	l sync.RWMutex
+
 	PeerIdentifier
 
 	transport        peer.Transport
 	subscribers      map[peer.Subscriber]struct{}
 	pending          atomic.Int32
-	connectionStatus peer.ConnectionStatus
+	connectionStatus atomic.Int32
 }
 
 // HostPort surfaces the HostPort in this function, if you want to access the hostport directly (for a downstream call)
@@ -73,12 +78,16 @@ func (p *Peer) Transport() peer.Transport {
 // Subscribe adds a subscriber to the peer's subscriber map
 // This function isn't thread safe
 func (p *Peer) Subscribe(sub peer.Subscriber) {
+	p.l.Lock()
 	p.subscribers[sub] = struct{}{}
+	p.l.Unlock()
 }
 
 // Unsubscribe removes a subscriber from the peer's subscriber map
 // This function isn't thread safe
 func (p *Peer) Unsubscribe(sub peer.Subscriber) error {
+	p.l.Lock()
+	defer p.l.Unlock()
 	if _, ok := p.subscribers[sub]; !ok {
 		return peer.ErrPeerHasNoReferenceToSubscriber{
 			PeerIdentifier: p.PeerIdentifier,
@@ -100,13 +109,13 @@ func (p *Peer) NumSubscribers() int {
 func (p *Peer) Status() peer.Status {
 	return peer.Status{
 		PendingRequestCount: int(p.pending.Load()),
-		ConnectionStatus:    p.connectionStatus,
+		ConnectionStatus:    peer.ConnectionStatus(p.connectionStatus.Load()),
 	}
 }
 
 // SetStatus sets the status of the Peer (to be used by the peer.Transport)
 func (p *Peer) SetStatus(status peer.ConnectionStatus) {
-	p.connectionStatus = status
+	p.connectionStatus.Store(int32(status))
 	p.notifyStatusChanged()
 }
 
@@ -123,7 +132,9 @@ func (p *Peer) EndRequest() {
 }
 
 func (p *Peer) notifyStatusChanged() {
+	p.l.RLock()
 	for sub := range p.subscribers {
 		sub.NotifyStatusChanged(p)
 	}
+	p.l.RUnlock()
 }
