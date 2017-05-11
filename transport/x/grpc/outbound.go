@@ -52,8 +52,7 @@ type Outbound struct {
 	clientConn      *grpc.ClientConn
 }
 
-// NewSingleOutbound returns a new Outbound for the given adrress.
-func NewSingleOutbound(address string, options ...OutboundOption) *Outbound {
+func newSingleOutbound(address string, options ...OutboundOption) *Outbound {
 	return &Outbound{internalsync.Once(), sync.Mutex{}, address, newOutboundOptions(options), nil}
 }
 

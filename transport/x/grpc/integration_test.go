@@ -97,12 +97,14 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 	procedures := examplepb.BuildKeyValueYarpcProcedures(keyValueYarpcServer)
 	testRouter := newTestRouter(procedures)
 
+	t := NewTransport()
+
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
 	}
 
-	inbound := NewInbound(listener, inboundOptions...)
+	inbound := t.NewInbound(listener, inboundOptions...)
 	inbound.SetRouter(testRouter)
 	if err := inbound.Start(); err != nil {
 		return nil, err
@@ -124,7 +126,7 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 	}()
 	keyValueClient := examplepb.NewKeyValueClient(clientConn)
 
-	outbound := NewSingleOutbound(listener.Addr().String(), outboundOptions...)
+	outbound := t.NewSingleOutbound(listener.Addr().String(), outboundOptions...)
 	if err := outbound.Start(); err != nil {
 		return nil, err
 	}

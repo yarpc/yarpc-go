@@ -109,7 +109,7 @@ func do() error {
 		if err != nil {
 			return err
 		}
-		inbound = grpc.NewInbound(listener)
+		inbound = grpc.NewTransport().NewInbound(listener)
 	default:
 		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}

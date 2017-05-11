@@ -168,7 +168,7 @@ func NewClientDispatcher(transportType TransportType, config *DispatcherConfig) 
 		unaryOutbound = httpOutbound
 	case TransportTypeGRPC:
 		onewayOutbound = http.NewTransport().NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d", httpPort))
-		unaryOutbound = grpc.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
+		unaryOutbound = grpc.NewTransport().NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", port))
 	default:
 		return nil, fmt.Errorf("invalid TransportType: %v", transportType)
 	}
@@ -216,7 +216,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 			Inbounds: yarpc.Inbounds{
 				tchannelTransport.NewInbound(),
 				http.NewTransport().NewInbound(fmt.Sprintf("127.0.0.1:%d", httpPort)),
-				grpc.NewInbound(grpcListener),
+				grpc.NewTransport().NewInbound(grpcListener),
 			},
 		},
 	)

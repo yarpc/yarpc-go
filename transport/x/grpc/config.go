@@ -113,14 +113,14 @@ func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, _ transport.T
 	if err != nil {
 		return nil, err
 	}
-	return NewInbound(listener, t.InboundOptions...), nil
+	return newInbound(listener, t.InboundOptions...), nil
 }
 
 func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, _ transport.Transport, _ *config.Kit) (transport.UnaryOutbound, error) {
 	if outboundConfig.Address == "" {
 		return nil, newRequiredFieldMissingError("address")
 	}
-	return NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
+	return newSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
 }
 
 func newRequiredFieldMissingError(field string) error {
