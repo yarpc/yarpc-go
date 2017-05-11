@@ -32,10 +32,10 @@ const transportName = "grpc"
 
 // TransportSpec returns a TransportSpec for the gRPC transport.
 //
-// See InboundConfig and OutboundConfig for details on the
+// See TransportConfig, InboundConfig, and OutboundConfig for details on the
 // different configuration parameters supported by this Transport.
 //
-// Any InboundOption or OutboundOption may be passed to this function.
+// Any TransportOption, InboundOption, or OutboundOption may be passed to this function.
 // These options will be applied BEFORE configuration parameters are
 // interpreted. This allows configuration parameters to override Options
 // provided to TransportSpec.
@@ -51,6 +51,11 @@ func TransportSpec(opts ...Option) config.TransportSpec {
 		BuildUnaryOutbound: transportSpec.buildUnaryOutbound,
 	}
 }
+
+// TransportConfig configures a gRPC Transport.
+//
+// This is currently just a placeholder.
+type TransportConfig struct{}
 
 // InboundConfig configures a gRPC Inbound.
 //
@@ -74,14 +79,17 @@ type OutboundConfig struct {
 }
 
 type transportSpec struct {
-	InboundOptions  []InboundOption
-	OutboundOptions []OutboundOption
+	TransportOptions []TransportOption
+	InboundOptions   []InboundOption
+	OutboundOptions  []OutboundOption
 }
 
 func newTransportSpec(opts ...Option) (*transportSpec, error) {
 	transportSpec := &transportSpec{}
 	for _, o := range opts {
 		switch opt := o.(type) {
+		case TransportOption:
+			transportSpec.TransportOptions = append(transportSpec.TransportOptions, opt)
 		case InboundOption:
 			transportSpec.InboundOptions = append(transportSpec.InboundOptions, opt)
 		case OutboundOption:
@@ -93,8 +101,8 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 	return transportSpec, nil
 }
 
-func (t *transportSpec) buildTransport(struct{}, *config.Kit) (transport.Transport, error) {
-	return noopTransport{}, nil
+func (t *transportSpec) buildTransport(*TransportConfig, *config.Kit) (transport.Transport, error) {
+	return NewTransport(t.TransportOptions...), nil
 }
 
 func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, _ transport.Transport, _ *config.Kit) (transport.Inbound, error) {
