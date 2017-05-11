@@ -30,7 +30,15 @@ import (
 
 const transportName = "grpc"
 
-// TransportSpec
+// TransportSpec returns a TransportSpec for the gRPC transport.
+//
+// See InboundConfig and OutboundConfig for details on the
+// different configuration parameters supported by this Transport.
+//
+// Any InboundOption or OutboundOption may be passed to this function.
+// These options will be applied BEFORE configuration parameters are
+// interpreted. This allows configuration parameters to override Options
+// provided to TransportSpec.
 func TransportSpec(opts ...Option) config.TransportSpec {
 	transportSpec := &transportSpec{}
 	for _, o := range opts {
@@ -51,16 +59,22 @@ func TransportSpec(opts ...Option) config.TransportSpec {
 	}
 }
 
-// TransportConfig
-type TransportConfig struct{}
-
-// InboundConfig
+// InboundConfig configures a gRPC Inbound.
+//
+// inbounds:
+//   grpc:
+//     address: ":80
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
 }
 
-// OutboundConfig
+// OutboundConfig configures a gRPC Outbound.
+//
+// outbounds:
+//   myservice:
+//     grpc:
+//       address: ":80
 type OutboundConfig struct {
 	// Address to connect to. This field is required.
 	Address string `config:"address,interpolate"`
@@ -71,7 +85,7 @@ type transportSpec struct {
 	OutboundOptions []OutboundOption
 }
 
-func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *config.Kit) (transport.Transport, error) {
+func (t *transportSpec) buildTransport(_ struct{}, _ *config.Kit) (transport.Transport, error) {
 	return nil, nil
 }
 
