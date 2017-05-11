@@ -31,7 +31,14 @@ type Option func(*Configurator)
 // config:",interpolate" or config:"$name,interpolate" where $name is encoded
 // name of that field.
 //
-// See TransportSpec documentation for more information.
+// Only primitive types (numbers, strings, and time.Duration) are
+// interpolated.
+//
+// 	type myConfig struct {
+// 		Host string `config:"host,interpolate"`
+// 		Port int `config:",interpolate"`
+// 		Timeout time.Duration `config:",interpolate"`
+// 	}
 func InterpolationResolver(f func(k string) (v string, ok bool)) Option {
 	return func(c *Configurator) {
 		c.resolver = f

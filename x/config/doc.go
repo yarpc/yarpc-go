@@ -24,13 +24,20 @@
 //
 // Usage
 //
-// To build a Dispatcher, set up a Configurator and inform it about the
-// different transports that it needs to support. This object is re-usable
-// and may be stored as a singleton in your application.
+// To build a Dispatcher, first create a new Configurator. This object will be
+// responsible for loading your configuration. It does not yet know about the
+// different transports, peer lists, etc. that you want to use. Inform it
+// about them by registering them with it.
 //
 // 	cfg := config.New()
 // 	cfg.MustRegisterTransport(http.TransportSpec())
-// 	cfg.MustRegisterTransport(redis.TransportSpec())
+// 	cfg.MustRegisterTransport(cherami.TransportSpec())
+// 	cfg.MustRegisterPeerList(roundrobin.Spec())
+//
+// This object is re-usable and may be stored as a singleton in your
+// application. Custom transports, peer lists, and peer list updaters may be
+// integrated with the configuration system by registering more
+// TransportSpecs, PeerListSpecs, and PeerListUpdaterSpecs with it.
 //
 // Use LoadConfigFromYAML to load a yarpc.Config from YAML and pass that to
 // yarpc.NewDispatcher.
@@ -86,13 +93,13 @@
 // The 'inbounds' attribute configures the different ways in which the service
 // receives requests. It is represented as a mapping between inbound transport
 // type and its configuration. For example, the following states that we want
-// to receive requests over HTTP and Redis.
+// to receive requests over HTTP and Cherami.
 //
 // 	inbounds:
-// 	  redis:
-// 	    # ...
+// 	  cherami:
+// 	    destination: /myservice/requests
 // 	  http:
-// 	    # ...
+// 	    address: :8080
 //
 // (For details on the configuration parameters of individual transport types,
 // check the documentation for the corresponding transport package.)
@@ -102,20 +109,20 @@
 //
 // 	inbounds:
 // 	  http:
-// 	    # ...
+// 	    address: :8081
 // 	  http-deprecated:
 // 	    type: http
-// 	    # ...
+// 	    address: :8080
 //
 // Any inbound can be disabled by adding a 'disabled' attribute.
 //
 // 	inbounds:
 // 	  http:
-// 	    # ...
+// 	    address: :8080
 // 	  http-deprecated:
 // 	    type: http
 // 	    disabled: true
-// 	    # ...
+// 	    address: :8081
 //
 // Outbound Configuration
 //
@@ -136,33 +143,33 @@
 // keys: unary, oneway. These specify the configurations for the corresponding
 // RPC types for that service. For example, the following specifies that we
 // make Unary requests to keyvalue service over HTTP and Oneway requests over
-// Redis.
+// Cherami.
 //
 // 	keyvalue:
 // 	  unary:
 // 	    http:
-// 	      # ...
+// 	      url: http://127.0.0.1:8082/yarpc
 // 	  oneway:
-// 	    redis:
-// 	      # ...
+// 	    cherami:
+// 	      destination: /keyvalue/requests
 //
 // For convenience, if there is only one outbound configuration for a service,
 // it may be specified one level higher (without the 'unary' or 'oneway'
-// attributes). In this case, all RPC types supported by that transport will
-// be set. For example, the HTTP transport supports both, Unary and Oneway RPC
-// types so the following states that requests for both RPC types must be made
-// over HTTP.
+// attributes). In this case, that transport will be used to send requests for
+// all compatible RPC types. For example, the HTTP transport supports both,
+// Unary and Oneway RPC types so the following states that requests for both
+// RPC types must be made over HTTP.
 //
 // 	keyvalue:
 // 	  http:
-// 	    # ...
+// 	    url: http://127.0.0.1:8080/
 //
 // Similarly, the following states that we only make Oneway requests to the
-// "email" service and those are always made over Redis.
+// "email" service and those are always made over Cherami.
 //
 // 	email:
-// 	  redis:
-// 	    # ...
+// 	  cherami:
+// 	    destination: /email/send_queue
 //
 // When the name of the target service differs from the outbound name, it may
 // be overridden with the 'service' key.
@@ -179,6 +186,48 @@
 // 	  oneway:
 // 	    # ...
 //
+// Peer Configuration
+//
+// Transports that support peer management and selection through YARPC accept
+// some additional keys in their outbound configuration.
+//
+// An explicit peer may be specified for a supported transport by using the
+// `peer` option.
+//
+// 	keyvalue:
+// 	  tchannel:
+// 	    peer: 127.0.0.1:4040
+//
+// All requests made to this outbound will be made through this peer.
+//
+// If a peer list was registered with the system, the name of the peer list
+// may be used to specify a more complex peer selection and load balancing
+// strategy.
+//
+// 	keyvalue:
+// 	  http:
+// 	    url: https://host/yarpc
+// 	    round-robin:
+// 	      peers:
+// 	        - 127.0.0.1:8080
+// 	        - 127.0.0.1:8081
+// 	        - 127.0.0.1:8082
+//
+// In the example above, the system will round-robin the requests between the
+// different addresses. The specified URL will be used as a template for the
+// HTTP requests made to these hosts.
+//
+// Finally, the TransportSpec for a Transport may include named presets for
+// peer lists in its definition. These may be referenced by name in the config
+// using the `with` key.
+//
+// 	# Given a preset "dev-proxy" that was included in the TransportSpec, the
+// 	# following is valid.
+// 	keyvalue:
+// 	  http:
+// 	    url: https://host/yarpc
+// 	    with: dev-proxy
+//
 // Transport Configuration
 //
 // The 'transports' attribute configures the Transport objects that are shared
@@ -186,28 +235,82 @@
 // represented as a mapping between the transport name and its configuration.
 //
 // 	transports:
-// 	  redis:
-// 	    # ...
+// 	  cherami:
+// 	    timeout: 5s
 // 	  http:
-// 	    # ...
+// 	    keepAlive: 30s
 //
 // (For details on the configuration parameters of individual transport types,
 // check the documentation for the corresponding transport package.)
 //
-// Defining a Transport
+// Customizing Configuration
 //
-// To teach a Configurator about a Transport, register a TransportSpec against
-// it.
+// When building your own TransportSpec, PeerListSpec, or PeerListUpdaterSpec,
+// you will define functions accepting structs or pointers to structs which
+// define the different configuration parameters needed to build that entity.
+// These configuration parameters will be decoded from the user-specified
+// configuration using a case-insensitive match on the field names.
 //
-// 	cfg.RegisterTransport(TransportSpec{
-// 		Name: "mytransport",
-// 		BuildTransport: func(*myTransportConfig) (transport.Transport, error) {
-// 			// ...
-// 		},
-// 		...
-// 	})
+// Given the struct,
 //
-// This transport will be configured under the 'mytransport' key in the
-// parsed configuration data. See documentation for TransportSpec for details
-// on what each field of TransportSpec means and how it behaves.
+// 	type MyConfig struct {
+// 		URL string
+// 	}
+//
+// An object containing a `url`, `URL` or `Url` key with a string value will
+// be accepted in place of MyConfig.
+//
+// Configuration structs can use standard Go primitive types, time.Duration,
+// maps, slices, and other similar structs. For example only, an outbound
+// might accept a config containing an array of host:port structs (in
+// practice, an outbound would use a config.PeerList to build a peer.Chooser).
+//
+// 	type Peer struct {
+// 		Host string
+// 		Port int
+// 	}
+//
+// 	type MyOutboundConfig struct{ Peers []Peer }
+//
+// The above will accept the following YAML:
+//
+// 	myoutbound:
+// 	  peers:
+// 	    - host: localhost
+// 	      port: 8080
+// 	    - host: anotherhost
+// 	      port: 8080
+//
+// Field names can be changed by adding a `config` tag to fields in the
+// configuration struct.
+//
+// 	type MyInboundConfig struct {
+// 		Address string `config:"addr"`
+// 	}
+//
+// This struct will accept the `addr` key, not `address`.
+//
+// In addition to specifying the field name, the `config` tag may also include
+// an `interpolate` option to request interpolation of variables in the form
+// ${NAME} or ${NAME:default} at the time the value is decoded. By default,
+// environment variables are used to fill these variables; this may be changed
+// with the InterpolationResolver option.
+//
+// Interpolation may be requested only for primitive fields and time.Duration.
+//
+// 	type MyConfig struct {
+// 		Address string `config:"addr,interpolate"`
+// 		Timeout time.Duration `config:",interpolate"`
+// 	}
+//
+// Note that for the second field, we don't change the name with the tag; we
+// only indicate that we want interpolation for that variable.
+//
+// In the example above, values for both, Address and Timeout may contain
+// strings in the form ${NAME} or ${NAME:default} anywhere in the value. These
+// will be replaced with the value of the environment variable or the default
+// (if specified) if the environment variable was unset.
+//
+// 	addr: localhost:${PORT}
+// 	timeout: ${TIMEOUT_SECONDS:5}s
 package config
