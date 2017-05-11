@@ -9,7 +9,7 @@ DOCKER_RUN_FLAGS ?= -e V -e RUN -e EXAMPLES_JOBS -e WITHIN_DOCKER=1
 DOCKER_VOLUME_FLAGS=-v $(shell pwd):/go/src/go.uber.org/yarpc
 
 .PHONY: deps
-deps: $(DOCKER) ## install all dependencies
+deps: $(DOCKER) __check_docker ## install all dependencies
 	PATH=$$PATH:$(BIN) docker build $(DOCKER_BUILD_FLAGS) -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
 
 .PHONY: build
@@ -79,3 +79,14 @@ examples: deps ## run all examples tests
 .PHONY: shell
 shell: deps ## go into a bash shell in docker with the repository linked as a volume
 	PATH=$$PATH:$(BIN) docker run -it $(DOCKER_VOLUME_FLAGS) $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) /bin/bash
+
+.PHONY: __check_docker
+__check_docker:
+	@if ! docker version >/dev/null; then \
+		echo "-----------------------------------------------------------------" >&2; \
+		echo "Most of our make commands run inside Docker but you do not appear to have" >&2; \
+		echo "the Docker daemon running. Please start the Docker daemon and try again." >&2; \
+		echo "See https://docs.docker.com/engine/installation/ to get started with Docker." >&2; \
+		echo "Alternatively, set SUPPRESS_DOCKER=1 to run the command locally against your system." >&2; \
+		echo "Docker is not running" >&2; \
+	fi
