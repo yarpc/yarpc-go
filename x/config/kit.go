@@ -28,10 +28,8 @@ import (
 	"strings"
 )
 
-// Kit carries internal dependencies for building peer lists.
-// The kit gets threaded through transport, outbound, and inbound builders
-// so they can thread the kit through functions like BuildPeerList on a
-// PeerListConfig.
+// Kit is an opaque object that carries context for the Configurator. Build
+// functions that receive this object MUST NOT modify it.
 type Kit struct {
 	c *Configurator
 

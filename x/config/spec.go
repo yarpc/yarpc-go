@@ -39,124 +39,32 @@ import (
 //
 // Every TransportSpec MUST have a BuildTransport function. The spec may
 // provide BuildInbound, BuildUnaryOutbound, and BuildOnewayOutbound functions
-// if the Transport supports that functoinality. For example, if a transport
+// if the Transport supports that functionality. For example, if a transport
 // only supports incoming and outgoing Oneway requests, its spec will provide a
 // BuildTransport, BuildInbound, and BuildOnewayOutbound function.
 //
 // The signature of BuildTransport must have the shape:
 //
-//  func(C, *config.Kit) (T, error)
+//  func(C, *config.Kit) (transport.Transport, error)
 //
 // Where C is a struct defining the configuration parameters for the transport,
 // the kit carries information and tools from the configurator to this and
-// other builders, and T is the transport type.
+// other builders.
 //
-// The remaining Build* functions must have a similar interface, but also carry
-// the transport instance.
-//
-// Each Build* function has the shape:
+// The remaining Build* functions must have a similar signature, but also
+// receive the transport instance.
 //
 // 	func(C, transport.Transport, *config.Kit) (X, error)
 //
-// Where X is the entity type, albeit an inbound or a unary or oneway outbound.
+// Where X is one of, transport.Inbound, transport.UnaryOutbound, or
+// transport.OnewayOutbound.
+//
 // For example,
 //
-// 	func(HttpOutboundConfig, transport.Transport) (transport.UnaryOutbound, error)
+// 	func(*OutboundConfig, transport.Transport) (transport.UnaryOutbound, error)
 //
-// Is a function to build an HTTP unary outbound from its outbound
-// configuration and the corresponding transport.
-//
-// The Configurator will decode and fill the requested struct type from the
-// input configuration. For example, given,
-//
-// 	type HttpOutboundConfig struct {
-// 		URL string
-// 	}
-//
-// Configurator expects the outbound configuration for HTTP to have a 'url'
-// field. In YAML, the following,
-//
-// 	outbounds:
-// 	  myservice:
-// 	    http:
-// 	      url: http://localhost:8080
-//
-// Will be decoded into,
-//
-//	HttpOutboundConfig{URL: "http://localhost:8080"}
-//
-// A case-insensitive match is performed to map fields from configuration data
-// to structs.
-//
-// Configuration structs can use standard Go primitive types, time.Duration,
-// maps, slices, and other similar structs. For example only, an outbound might
-// accept a config containing an array of host:port structs (In practice, an
-// outbound would use a PeerListConfig to build a peer.ChooserList).
-//
-// 	type Peer struct {
-// 		Host string
-// 		Port int
-// 	}
-//
-// 	type MyOutboundConfig struct{ Peers []Peer }
-//
-// Will expect the following YAML.
-//
-// 	myoutbound:
-// 	  peers:
-// 		- host: localhost
-// 		  port: 8080
-// 		- host: anotherhost
-// 		  port: 8080
-//
-// Customizing Field Names
-//
-// If a field name differs from the name of the field inside the
-// configuration data, a `config` tag may be added to the struct to specify a
-// different name.
-//
-// 	type MyInboundConfig struct {
-// 		Peer string `config:"peer"`
-// 	}
-//
-// The configuration for this struct will be in the shape,
-//
-// 	myinbound:
-// 	  peer: foo
-//
-// Runtime Variables
-//
-// In addition to specifying the field name, the `config` tag may also include
-// an `interpolate` option to request interpolation of variables in the form
-// ${NAME} or ${NAME:default} at the time the value is decoded. By default,
-// environment variables are used to fill the variables; this may be changed
-// with the InterpolationResolver option. The `interpolate` option may be
-// applied to primitive types (strings, integers, booleans, floats, and
-// time.Duration) only.
-//
-// For example in,
-//
-// 	type MyInboundConfig struct {
-// 		QueueName string `config:"queue,interpolate"`
-// 		Timeout time.Duration `config:",interpolate"`
-// 		// If the name is left empty, the default name is used.
-// 	}
-//
-// The values for both QueueName and Timeout may contain strings in the form
-// ${NAME} to be replaced with the value of that environment variable. The
-// form ${NAME:default} may be used to provide a default value if the
-// environment variable is not set.
-//
-// 	myinbound:
-// 	  queue: inbound-requests-${STAGE:dev}
-// 	  timeout: ${REQUEST_TIMEOUT:5s}
-//
-// The above states that the queue inbound-requests-dev should be used by
-// default, but if the STAGE environment variable is set, the queue
-// inbound-requests-${STAGE} should be used. Similarly, it also states that a
-// timeout of 5 seconds should be used by default, unless the REQUEST_TIMEOUT
-// environment variable is set in which case the timeout specified in the
-// environment variable should be used.
+// Is a function to build a unary outbound from its outbound configuration and
+// the corresponding transport.
 type TransportSpec struct {
 	// Name of the transport
 	Name string
@@ -172,8 +80,7 @@ type TransportSpec struct {
 	// Transport defined by this spec.
 	BuildTransport interface{}
 
-	// TODO(abg): Make error returns optional -- if the function doesn't
-	// return an error value, we can just wrap it to always return nil there.
+	// TODO(abg): Make error returns optional
 
 	// A function in the shape,
 	//
@@ -246,20 +153,19 @@ type PeerChooserPreset struct {
 }
 
 // PeerListSpec specifies the configuration parameters for an outbound peer
-// chooser (load balancer or sharding). These specifications are registered
-// against a Configurator to teach it how to parse the configuration for that
-// peer chooser and build instances of it.
+// list. Peer lists dictate the peer selection strategy and receive updates of
+// new and removed peers from peer updaters. These specifications are
+// registered against a Configurator to teach it how to parse the
+// configuration for that peer list and build instances of it.
 //
-// For example, if we register a "dns-srv" peer list binder and a "random" peer
-// chooser, we can use "with: dns-srv" and "choose: random" to select a random
-// task (by host and port) from DNS A and SRV records for each outbound
-// request.
+// For example, we could implement and register a peer list spec that selects
+// peers at random and a peer list updater which pushes updates to it by
+// polling a specific DNS A record.
 //
-//  myoutbound:
-//   peers:
-//    with: dns-srv
-//    choose: random
-//    service: fortune.yarpc.io
+// 	myoutbound:
+// 	  random:
+// 	    dns:
+// 	      name: myservice.example.com
 type PeerListSpec struct {
 	Name string
 
@@ -268,31 +174,31 @@ type PeerListSpec struct {
 	//  func(C, *config.Kit) (peer.ChooserList, error)
 	//
 	// Where C is a struct or pointer to a struct defining the configuration
-	// parameters accepted by this peer chooser.
+	// parameters needed to build this peer list. Parameters on the struct
+	// should not conflict with peer list updater names as they share the
+	// namespace with these fields.
 	//
 	// BuildPeerList is required.
 	BuildPeerList interface{}
 }
 
-// PeerListUpdaterSpec specifies the configuration parameters for an outbound peer
-// binding (like DNS). These specifications are registered against a
-// Configurator to teach it how to parse the configuration for that peer binder
-// and build instances of it.
+// PeerListUpdaterSpec specifies the configuration parameters for an outbound
+// peer list updater. Peer list updaters inform peer lists about peers as they
+// are added or removed. These specifications are registered against a
+// Configurator to teach it how to parse the configuration for that peer list
+// updater and build instances of it.
 //
-// Every PeerListUpdaterSpec MUST have a BuildPeerListUpdater function.
+// For example, we could implement a peer list updater which monitors a
+// specific file on the system for a list of peers and pushes updates to any
+// peer list.
 //
-// For example, if we register a "dns-srv" peer list binder and a "random" peer
-// chooser, we can use "with: dns-srv" and "choose: random" to select a random
-// task (by host and port) from DNS A and SRV records for each outbound
-// request.
-//
-//  myoutbound:
-//   peers:
-//    with: dns-srv
-//    choose: random
-//    service: fortune.yarpc.io
+// 	myoutbound:
+// 	  round-robin:
+// 	    peers-file:
+// 	      format: json
+// 	      path: /etc/hosts.json
 type PeerListUpdaterSpec struct {
-	// Name of the peer selection strategy
+	// Name of the peer selection strategy.
 	Name string
 
 	// A function in the shape,
@@ -302,13 +208,9 @@ type PeerListUpdaterSpec struct {
 	// Where C is a struct or pointer to a struct defining the configuration
 	// parameters accepted by this peer chooser.
 	//
-	// This function will be called with the parsed configuration to build a
-	// peer chooser for an outbound that uses a peer chooser.
-	//
-	// For example, the HTTP and TChannel outbound configurations embed a peer
-	// chooser configuration. Peer choosers support a single peer or arrays of
-	// peers.  Using the "with" property, an outbound can use an alternate peer
-	// chooser registered by name on a YARPC Configurator using a PeerListSpec.
+	// The returned peer binder will receive the peer list specified alongside
+	// the peer updater; it should return a peer updater that feeds updates to
+	// that peer list once started.
 	//
 	// BuildPeerListUpdater is required.
 	BuildPeerListUpdater interface{}

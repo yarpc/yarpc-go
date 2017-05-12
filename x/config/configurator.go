@@ -36,9 +36,10 @@ import (
 
 // Configurator helps build Dispatchers using runtime configuration.
 //
-// An empty Configurator does not know about any transports. Inform it about
-// the different transports and their configuration parameters using the
-// RegisterTransport function.
+// A new Configurator does not know about any transports, peer lists, or peer
+// list updaters. Inform it about them by using the RegisterTransport,
+// RegisterPeerList, and RegisterPeerListUpdater functions, or their Must*
+// variants.
 type Configurator struct {
 	knownTransports       map[string]*compiledTransportSpec
 	knownPeerLists        map[string]*compiledPeerListSpec
@@ -48,9 +49,6 @@ type Configurator struct {
 
 // New sets up a new empty Configurator. The returned Configurator does not
 // know about any Transports, peer lists, or peer list updaters.
-// Individual TransportSpecs, PeerListSpecs, and PeerListUpdaterSpecs must be registered
-// against it using the RegisterTransport, RegisterPeerList, and RegisterPeerListUpdater
-// functions.
 func New(opts ...Option) *Configurator {
 	c := &Configurator{
 		knownTransports:       make(map[string]*compiledTransportSpec),
@@ -66,14 +64,17 @@ func New(opts ...Option) *Configurator {
 	return c
 }
 
-// RegisterTransport registers a TransportSpec with the given Configurator. An
-// error is returned if the TransportSpec was invalid.
+// RegisterTransport registers a TransportSpec with the Configurator, teaching
+// it how to load configuration and build inbounds and outbounds for that
+// transport.
 //
-// If a transport with the same name was already registered, it will be
-// overwritten.
+// An error is returned if the TransportSpec is invalid. Use
+// MustRegisterTransport if you want to panic in case of registration failure.
 //
-// Use MustRegisterTransport if you want to panic in case of registration
-// failure.
+// If a transport with the same name already exists, it will be replaced.
+//
+// See TransportSpec for details on how to integrate your own transport with
+// the system.
 func (c *Configurator) RegisterTransport(t TransportSpec) error {
 	if t.Name == "" {
 		return errors.New("name is required")
@@ -84,25 +85,28 @@ func (c *Configurator) RegisterTransport(t TransportSpec) error {
 		return fmt.Errorf("invalid TransportSpec for %q: %v", t.Name, err)
 	}
 
-	// TODO: Panic if a transport with the given name is already registered?
 	c.knownTransports[t.Name] = spec
 	return nil
 }
 
 // MustRegisterTransport registers the given TransportSpec with the
-// Configurator. This function panics if the TransportSpec was invalid.
+// Configurator. This function panics if the TransportSpec is invalid.
 func (c *Configurator) MustRegisterTransport(t TransportSpec) {
 	if err := c.RegisterTransport(t); err != nil {
 		panic(err)
 	}
 }
 
-// RegisterPeerList registers a PeerListSpec with the given Configurator. Returns
-// an error if the PeerListSpec is invalid.
+// RegisterPeerList registers a PeerListSpec with the given Configurator,
+// teaching it how to build peer lists of this kind from configuration.
 //
-// If a chooser with the same name already exists, it will be replaced.
+// An error is returned if the PeerListSpec is invalid. Use
+// MustRegisterPeerList to panic in the case of registration failure.
 //
-// Use MustRegisterPeerList to panic in the case of registration failure.
+// If a peer list with the same name already exists, it will be replaced.
+//
+// See PeerListSpec for details on how to integrate your own peer list with
+// the system.
 func (c *Configurator) RegisterPeerList(s PeerListSpec) error {
 	if s.Name == "" {
 		return errors.New("name is required")
@@ -126,15 +130,17 @@ func (c *Configurator) MustRegisterPeerList(s PeerListSpec) {
 }
 
 // RegisterPeerListUpdater registers a PeerListUpdaterSpec with the given
-// Configurator.
-// Returns an error if the PeerListUpdaterSpec is invalid.
+// Configurator, teaching it how to build peer list updaters of this kind from
+// configuration.
 //
-// A binder enables custom peer list bindings, like DNS with SRV + A records or
-// a task list file watcher.
+// Returns an error if the PeerListUpdaterSpec is invalid.  Use
+// MustRegisterPeerListUpdater to panic if the registration fails.
 //
-// If a binder with the same name already exists, it will be replaced.
+// If a peer list updater with the same name already exists, it will be
+// replaced.
 //
-// Use MustRegisterPeerListUpdater to panic if the registration fails.
+// See PeerListUpdaterSpec for details on how to integrate your own peer list
+// updater with the system.
 func (c *Configurator) RegisterPeerListUpdater(s PeerListUpdaterSpec) error {
 	if s.Name == "" {
 		return errors.New("name is required")
@@ -149,18 +155,18 @@ func (c *Configurator) RegisterPeerListUpdater(s PeerListUpdaterSpec) error {
 	return nil
 }
 
-// MustRegisterPeerListUpdater registers the given PeerListUpdaterSpec with the
-// Configurator.
-// This function panics if the PeerListUpdaterSpec is invalid.
+// MustRegisterPeerListUpdater registers the given PeerListUpdaterSpec with
+// the Configurator. This function panics if the PeerListUpdaterSpec is
+// invalid.
 func (c *Configurator) MustRegisterPeerListUpdater(s PeerListUpdaterSpec) {
 	if err := c.RegisterPeerListUpdater(s); err != nil {
 		panic(err)
 	}
 }
 
-// LoadConfigFromYAML loads a yarpc.Config from YAML. Use LoadConfig if you
-// have your own map[string]interface{} or map[interface{}]interface{} to
-// provide.
+// LoadConfigFromYAML loads a yarpc.Config from YAML data. Use LoadConfig if
+// you have already parsed a map[string]interface{} or
+// map[interface{}]interface{}.
 func (c *Configurator) LoadConfigFromYAML(serviceName string, r io.Reader) (yarpc.Config, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {

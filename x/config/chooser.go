@@ -29,10 +29,74 @@ import (
 	peerbind "go.uber.org/yarpc/peer"
 )
 
-// PeerChooser facilitates decoding and building peer choosers.
-// The peer chooser combines a peer list (for the peer selection strategy, like
-// least-pending or round-robin) with a peer list binder (like static peers or
-// dynamic peers from DNS or watching a file in a particular format).
+// PeerChooser facilitates decoding and building peer choosers. A peer chooser
+// combines a peer list (which implements the peer selection strategy) and a
+// peer list updater (which informs the peer list about different peers),
+// allowing transports to rely on these two pieces for peer selection and load
+// balancing.
+//
+// Format
+//
+// Peer chooser configuration may define only one of the following keys:
+// `peer`, `with`, or the name of any registered PeerListSpec.
+//
+// `peer` indicates that requests must be sent to a single peer.
+//
+// 	http:
+// 	  peer: 127.0.0.1:8080
+//
+// Note that how this string is interpreted is transport-dependent.
+//
+// `with` specifies that a named peer chooser preset defined by the transport
+// should be used rather than defining one by hand in the configuration.
+//
+// 	# Given a dev-proxy preset on your TransportSpec,
+// 	http:
+// 	  with: dev-proxy
+//
+// If the name of a registered PeerListSpec is the key, an object specifying
+// the configuration parameters for the PeerListSpec is expected along with
+// the name of a known peer list updater and its configuration.
+//
+// 	# cfg.RegisterPeerList(roundrobin.Spec())
+// 	round-robin:
+// 	  peers:
+// 	    - 127.0.0.1:8080
+// 	    - 127.0.0.1:8081
+//
+// In the example above, there are no configuration parameters for the round
+// robin peer list. The only remaining key is the name of the peer list
+// updater: `peers` which is just a static list of peers.
+//
+// Integration
+//
+// To integrate peer choosers with your transport, embed this struct into your
+// outbound configuration.
+//
+// 	type myOutboundConfig struct {
+// 		config.PeerChooser
+//
+// 		Address string
+// 	}
+//
+// Then in your Build*Outbound function, use the PeerChooser.BuildPeerChooser
+// method to retrieve a peer chooser for your outbound. The following example
+// only works if your transport implements the peer.Transport interface.
+//
+// 	func buildOutbound(cfg *myOutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
+// 		myTransport := t.(*MyTransport)
+// 		peerChooser, err := cfg.BuildPeerChooser(myTransport, hostport.Identify, k)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		return myTransport.NewOutbound(peerChooser), nil
+// 	}
+//
+// The *config.Kit received by the Build*Outbound function MUST be passed to
+// the BuildPeerChooser function as-is.
+//
+// Note that the keys for the PeerChooser: peer, with, and any peer list name,
+// share the namespace with the attributes of your outbound configuration.
 type PeerChooser struct {
 	peerChooser
 }
@@ -45,35 +109,42 @@ type peerChooser struct {
 	Etc    attributeMap `config:",squash"`
 }
 
-// Empty returns whether the peer list configuration is empty.
-// This is a facility for the HTTP transport specifically since it can infer
-// the configuration for the single-peer case from its "url" attribute.
+// Empty returns true if the PeerChooser is empty, i.e., it does not have any
+// keys defined.
+//
+// This allows Build*Outbound functions to handle the case where the peer
+// configuration is specified in a different way than the standard peer
+// configuration.
 func (pc PeerChooser) Empty() bool {
-	c := pc.peerChooser
-	return c.Peer == "" && c.Preset == "" && len(c.Etc) == 0
+	return pc.Peer == "" && pc.Preset == "" && len(pc.Etc) == 0
 }
 
 // BuildPeerChooser translates the decoded configuration into a peer.Chooser.
+//
+// The identify function informs us how to convert string-based peer names
+// into peer identifiers for the transport.
+//
+// The Kit received by the Build*Outbound function MUST be passed to
+// BuildPeerChooser as-is.
 func (pc PeerChooser) BuildPeerChooser(transport peer.Transport, identify func(string) peer.Identifier, kit *Kit) (peer.Chooser, error) {
-	c := pc.peerChooser
 	// Establish a peer selection strategy.
 	switch {
-	case c.Peer != "":
+	case pc.Peer != "":
 		// myoutbound:
 		//   outboundopt1: ...
 		//   outboundopt2: ...
 		//   peer: 127.0.0.1:8080
-		if len(c.Etc) > 0 {
-			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
+		if len(pc.Etc) > 0 {
+			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", pc.Etc)
 		}
-		return peerbind.NewSingle(identify(c.Peer), transport), nil
-	case c.Preset != "":
+		return peerbind.NewSingle(identify(pc.Peer), transport), nil
+	case pc.Preset != "":
 		// myoutbound:
 		//   outboundopt1: ...
 		//   outboundopt2: ...
 		//   with: somepreset
-		if len(c.Etc) > 0 {
-			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", c.Etc)
+		if len(pc.Etc) > 0 {
+			return nil, fmt.Errorf("unrecognized attributes in outbound config: %+v", pc.Etc)
 		}
 
 		preset, err := kit.peerChooserPreset(pc.Preset)
