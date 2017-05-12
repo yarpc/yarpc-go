@@ -39,14 +39,14 @@ func buildFakeTransport(c *FakeTransportConfig, kit *config.Kit) (transport.Tran
 
 // FakeOutboundConfig configures the FakeOutbound.
 type FakeOutboundConfig struct {
-	config.PeerList
+	config.PeerChooser
 
 	Nop string `config:"nop"`
 }
 
 func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config.Kit) (transport.UnaryOutbound, error) {
 	x := t.(*FakeTransport)
-	chooser, err := c.PeerList.BuildPeerList(x, hostport.Identify, kit)
+	chooser, err := c.BuildPeerChooser(x, hostport.Identify, kit)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +60,8 @@ func FakeTransportSpec() config.TransportSpec {
 		Name:               "fake-transport",
 		BuildTransport:     buildFakeTransport,
 		BuildUnaryOutbound: buildFakeOutbound,
-		PeerListPresets: []config.PeerListPreset{
-			FakePeerListPreset(),
+		PeerChooserPresets: []config.PeerChooserPreset{
+			FakePeerChooserPreset(),
 		},
 	}
 }
@@ -122,12 +122,12 @@ func NewFakeConfigurator() *config.Configurator {
 	return configurator
 }
 
-// FakePeerListPreset is a PeerListPreset which builds a FakePeerList buind to
+// FakePeerChooserPreset is a PeerChooserPreset which builds a FakePeerList buind to
 // a FakePeerListUpdater.
-func FakePeerListPreset() config.PeerListPreset {
-	return config.PeerListPreset{
+func FakePeerChooserPreset() config.PeerChooserPreset {
+	return config.PeerChooserPreset{
 		Name: "fake-preset",
-		BuildPeerList: func(peer.Transport, *config.Kit) (peer.Chooser, error) {
+		BuildPeerChooser: func(peer.Transport, *config.Kit) (peer.Chooser, error) {
 			return peerbind.Bind(
 				NewFakePeerList(), func(peer.List) transport.Lifecycle {
 					return NewFakePeerListUpdater()

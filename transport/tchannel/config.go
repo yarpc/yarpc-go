@@ -58,7 +58,7 @@ type InboundConfig struct {
 // 	    tchannel:
 // 	      peer: 127.0.0.1:4040
 type OutboundConfig struct {
-	config.PeerList
+	config.PeerChooser
 }
 
 // TransportSpec returns a TransportSpec for the TChannel unary transport.
@@ -136,7 +136,7 @@ func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k
 
 func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
 	x := t.(*Transport)
-	chooser, err := oc.PeerList.BuildPeerList(x, hostport.Identify, k)
+	chooser, err := oc.BuildPeerChooser(x, hostport.Identify, k)
 	if err != nil {
 		return nil, err
 	}

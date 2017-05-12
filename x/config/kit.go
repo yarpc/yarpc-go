@@ -67,23 +67,23 @@ func (k *Kit) peerListSpec(name string) (*compiledPeerListSpec, error) {
 	return nil, errors.New(msg)
 }
 
-func (k *Kit) peerListPreset(name string) (*compiledPeerListPreset, error) {
+func (k *Kit) peerChooserPreset(name string) (*compiledPeerChooserPreset, error) {
 	if k.transportSpec == nil {
 		// Currently, transportspec is set only if we're inside build*Outbound.
 		return nil, errors.New(
 			"invalid Kit: make sure you passed in the same Kit your Build function received")
 	}
 
-	if spec := k.transportSpec.PeerListPresets[name]; spec != nil {
+	if spec := k.transportSpec.PeerChooserPresets[name]; spec != nil {
 		return spec, nil
 	}
 
-	available := make([]string, 0, len(k.transportSpec.PeerListPresets))
-	for name := range k.transportSpec.PeerListPresets {
+	available := make([]string, 0, len(k.transportSpec.PeerChooserPresets))
+	for name := range k.transportSpec.PeerChooserPresets {
 		available = append(available, name)
 	}
 
-	msg := fmt.Sprintf("no recognized peer list preset %q", name)
+	msg := fmt.Sprintf("no recognized peer chooser preset %q", name)
 	if len(available) > 0 {
 		msg = fmt.Sprintf("%s; need one of %s", msg, strings.Join(available, ", "))
 	}

@@ -314,7 +314,7 @@ func TestTransportSpec(t *testing.T) {
 			wantErrors: []string{
 				`failed to configure unary outbound for "myservice":`,
 				"cannot configure peer chooser for HTTP outbound:",
-				`no recognized peer list preset "derp"`,
+				`no recognized peer chooser preset "derp"`,
 			},
 		},
 	}
