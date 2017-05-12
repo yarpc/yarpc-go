@@ -18,36 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package googlegrpc
 
 import (
-	"go.uber.org/yarpc/internal/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/internal/crossdock/server/googlegrpc"
-	"go.uber.org/yarpc/internal/crossdock/server/http"
-	"go.uber.org/yarpc/internal/crossdock/server/oneway"
-	"go.uber.org/yarpc/internal/crossdock/server/tch"
-	"go.uber.org/yarpc/internal/crossdock/server/yarpc"
+	"log"
+	"net"
+
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
+
+	"google.golang.org/grpc"
 )
 
-// Start starts all required Crossdock test servers
+var grpcServer *grpc.Server
+
+// Start starts the test grpc-go server.
 func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
-	googlegrpc.Start()
+	if err := start(); err != nil {
+		log.Panic(err)
+	}
 }
 
-// Stop stops all required Crossdock test servers
+// Stop stops the test grpc-go server.
 func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
-	googlegrpc.Stop()
+	if err := stop(); err != nil {
+		log.Print(err)
+	}
 }
 
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
+func start() error {
+	listener, err := net.Listen("tcp", ":8090")
+	if err != nil {
+		return err
+	}
+	grpcServer = grpc.NewServer()
+	crossdockpb.RegisterEchoServer(grpcServer, newEchoServer())
+	go func() {
+		if err := grpcServer.Serve(listener); err != nil {
+			log.Print(err)
+		}
+	}()
+	return nil
+}
+
+func stop() error {
+	if grpcServer != nil {
+		grpcServer.Stop()
+	}
+	return nil
+}
