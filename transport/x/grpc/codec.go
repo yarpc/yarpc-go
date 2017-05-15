@@ -47,10 +47,10 @@ func (customCodec) Unmarshal(data []byte, obj interface{}) error {
 }
 
 func (customCodec) String() string {
-	// setting this to what amounts to a nonsense value
-	// the encoding should always be inferred from the headers
-	// setting this to a name that is not an encoding will assure
-	// we get an error if this is used as the encoding value
+	// Setting this to what amounts to a nonsense value.
+	// The encoding should always be inferred from the headers.
+	// Setting this to a name that is not an encoding will assure
+	// we get an error if this is used as the encoding value.
 	return "yarpc"
 }
 
