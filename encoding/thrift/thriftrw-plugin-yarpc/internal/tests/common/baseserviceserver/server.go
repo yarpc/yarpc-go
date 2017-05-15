@@ -36,7 +36,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Healthy),
 				},
-				Signature: "Healthy() (bool)",
+				Signature:    "Healthy() (bool)",
+				ThriftModule: common.ThriftModule,
 			},
 		},
 	}

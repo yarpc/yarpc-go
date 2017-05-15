@@ -51,7 +51,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.CompareAndSwap),
 				},
-				Signature: "CompareAndSwap(Request *atomic.CompareAndSwap)",
+				Signature:    "CompareAndSwap(Request *atomic.CompareAndSwap)",
+				ThriftModule: atomic.ThriftModule,
 			},
 
 			thrift.Method{
@@ -61,7 +62,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Forget),
 				},
-				Signature: "Forget(Key *string)",
+				Signature:    "Forget(Key *string)",
+				ThriftModule: atomic.ThriftModule,
 			},
 
 			thrift.Method{
@@ -71,7 +73,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Increment),
 				},
-				Signature: "Increment(Key *string, Value *int64)",
+				Signature:    "Increment(Key *string, Value *int64)",
+				ThriftModule: atomic.ThriftModule,
 			},
 		},
 	}
