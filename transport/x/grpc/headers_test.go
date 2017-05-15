@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 )
@@ -174,5 +175,20 @@ func TestTransportRequestToMetadata(t *testing.T) {
 			require.Equal(t, tt.Error, err)
 			require.Equal(t, tt.MD, md)
 		})
+	}
+}
+
+func TestGetContentSubtype(t *testing.T) {
+	tests := []struct {
+		contentType    string
+		contentSubtype string
+	}{
+		{"application/grpc", ""},
+		{"application/grpc+proto", "proto"},
+		{"application/grpc;proto", "proto"},
+		{"application/grpc-proto", ""},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.contentSubtype, getContentSubtype(tt.contentType))
 	}
 }
