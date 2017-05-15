@@ -33,7 +33,7 @@ import (
 
 const (
 	// Encoding is the name of this encoding.
-	Encoding transport.Encoding = "protobuf"
+	Encoding transport.Encoding = "proto"
 
 	rawResponseHeaderKey = "rpc-protobuf-raw-response"
 )

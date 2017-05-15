@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
@@ -145,7 +146,10 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 	)
 	keyValueYarpcClient := examplepb.NewKeyValueYarpcClient(clientConfig)
 
-	contextWrapper := grpcheader.NewContextWrapper().WithCaller("example-client").WithService("example")
+	contextWrapper := grpcheader.NewContextWrapper().
+		WithCaller("example-client").
+		WithService("example").
+		WithEncoding(string(protobuf.Encoding))
 
 	return &testEnv{
 		inbound,

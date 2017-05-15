@@ -38,6 +38,8 @@ type ContextWrapper struct {
 // NewContextWrapper returns a new ContextWrapper.
 //
 // The only fields that a grpc-go client needs to set are caller and service.
+// Encoding is also required if content-type is not set properly.
+// See the documention on EncodingHeader.
 func NewContextWrapper() *ContextWrapper {
 	return &ContextWrapper{metadata.New(nil)}
 }
@@ -70,6 +72,11 @@ func (c *ContextWrapper) WithRoutingKey(routingKey string) *ContextWrapper {
 // WithRoutingDelegate returns a new ContextWrapper with the given routing delegate.
 func (c *ContextWrapper) WithRoutingDelegate(routingDelegate string) *ContextWrapper {
 	return c.copyAndAdd(RoutingDelegateHeader, routingDelegate)
+}
+
+// WithEncoding returns a new ContextWrapper with the given encoding.
+func (c *ContextWrapper) WithEncoding(encoding string) *ContextWrapper {
+	return c.copyAndAdd(EncodingHeader, encoding)
 }
 
 func (c *ContextWrapper) copyAndAdd(key string, value string) *ContextWrapper {
