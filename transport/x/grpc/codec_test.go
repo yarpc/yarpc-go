@@ -55,5 +55,5 @@ func TestCustomCodecUnmarshalCastError(t *testing.T) {
 }
 
 func TestCustomCodecString(t *testing.T) {
-	assert.Equal(t, "proto", customCodec{}.String())
+	assert.Equal(t, "yarpc", customCodec{}.String())
 }

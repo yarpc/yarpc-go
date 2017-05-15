@@ -47,9 +47,11 @@ func (customCodec) Unmarshal(data []byte, obj interface{}) error {
 }
 
 func (customCodec) String() string {
-	// TODO: faking this as proto to be compatible with existing grpc clients
-	// https://github.com/yarpc/yarpc-go/issues/911
-	return "proto"
+	// setting this to what amounts to a nonsense value
+	// the encoding should always be inferred from the headers
+	// setting this to a name that is not an encoding will assure
+	// we get an error if this is used as the encoding value
+	return "yarpc"
 }
 
 func newCustomCodecMarshalCastError(actualObject interface{}) error {
