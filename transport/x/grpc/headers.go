@@ -31,7 +31,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const baseContentType = "application/grpc"
+const (
+	baseContentType   = "application/grpc"
+	contentTypeHeader = "content-type"
+)
 
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
@@ -84,7 +87,7 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			request.RoutingDelegate = value
 		case grpcheader.EncodingHeader:
 			request.Encoding = transport.Encoding(value)
-		case "content-type":
+		case contentTypeHeader:
 			// if request.Encoding was set, do not parse content-type
 			// this results in EncodingHeader overriding content-type
 			if request.Encoding == "" {
