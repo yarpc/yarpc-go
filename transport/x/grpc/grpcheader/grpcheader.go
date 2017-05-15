@@ -53,8 +53,11 @@ const (
 	RoutingDelegateHeader = "rpc-routing-delegate"
 	// EncodingHeader is the header key for the encoding used for the request body.
 	// This corresponds to the Request.Encoding attribute.
-	//
-	// This will be removed when we get encoding propagated using content-type.
+	// If this is not set, content-type will attempt to be read for the encoding per
+	// the gRPC wire format http://www.grpc.io/docs/guides/wire.html
+	// For example, a content-type of "application/grpc+proto" will be intepreted
+	// as the proto encoding.
+	// This header is required unless content-type is set properly.
 	EncodingHeader = "rpc-encoding"
 )
 

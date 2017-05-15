@@ -135,7 +135,10 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 		&ClientInfo{
 			clientDispatcher.ClientConfig(serviceName),
 			grpcClientConn,
-			grpcheader.NewContextWrapper().WithCaller(serviceName + "-client").WithService(serviceName),
+			grpcheader.NewContextWrapper().
+				WithCaller(serviceName + "-client").
+				WithService(serviceName).
+				WithEncoding("proto"),
 		},
 	)
 }

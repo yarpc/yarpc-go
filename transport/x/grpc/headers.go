@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"fmt"
+	"strings"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
@@ -29,6 +30,8 @@ import (
 	"go.uber.org/multierr"
 	"google.golang.org/grpc/metadata"
 )
+
+const baseContentType = "application/grpc"
 
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
@@ -81,6 +84,12 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			request.RoutingDelegate = value
 		case grpcheader.EncodingHeader:
 			request.Encoding = transport.Encoding(value)
+		case "content-type":
+			// if request.Encoding was set, do not parse content-type
+			// this results in EncodingHeader overriding content-type
+			if request.Encoding == "" {
+				request.Encoding = transport.Encoding(getContentSubtype(value))
+			}
 		default:
 			request.Headers = request.Headers.With(header, value)
 		}
@@ -135,4 +144,18 @@ func addToMetadata(md metadata.MD, key string, value string) error {
 	}
 	md[key] = []string{value}
 	return nil
+}
+
+// getContentSubtype attempts to get the content subtype.
+// returns "" if no content subtype can be parsed.
+func getContentSubtype(contentType string) string {
+	if !strings.HasPrefix(contentType, baseContentType) || len(contentType) == len(baseContentType) {
+		return ""
+	}
+	switch contentType[len(baseContentType)] {
+	case '+', ';':
+		return contentType[len(baseContentType)+1:]
+	default:
+		return ""
+	}
 }
