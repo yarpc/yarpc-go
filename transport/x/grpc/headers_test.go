@@ -89,6 +89,32 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				}),
 			},
 		},
+		{
+			Name: "Content-type overridden",
+			MD: metadata.Pairs(
+				grpcheader.CallerHeader, "example-caller",
+				grpcheader.ServiceHeader, "example-service",
+				grpcheader.ShardKeyHeader, "example-shard-key",
+				grpcheader.RoutingKeyHeader, "example-routing-key",
+				grpcheader.RoutingDelegateHeader, "example-routing-delegate",
+				grpcheader.EncodingHeader, "example-encoding-override",
+				"content-type", "application/grpc+example-encoding",
+				"foo", "bar",
+				"baz", "bat",
+			),
+			TransportRequest: &transport.Request{
+				Caller:          "example-caller",
+				Service:         "example-service",
+				ShardKey:        "example-shard-key",
+				RoutingKey:      "example-routing-key",
+				RoutingDelegate: "example-routing-delegate",
+				Encoding:        "example-encoding-override",
+				Headers: transport.HeadersFromMap(map[string]string{
+					"foo": "bar",
+					"baz": "bat",
+				}),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
