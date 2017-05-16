@@ -45,11 +45,13 @@ services:
             - BEHAVIOR_JSON=client,server,transport
             - SKIP_JSON=client:java+transport:tchannel,server:java+transport:tchannel
             - BEHAVIOR_THRIFT=client,server,transport
+            - SKIP_THRIFT=client:java+transport:tchannel,server:java+transport:tchannel
             - BEHAVIOR_PROTOBUF=client,server,transport
             - SKIP_PROTOBUF=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_GRPC=client,server,encoding
             - SKIP_GRPC=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
-            - SKIP_THRIFT=client:java+transport:tchannel,server:java+transport:tchannel
+            - BEHAVIOR_GOOGLE_GRPC_CLIENT=client,server,encoding
+            - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
