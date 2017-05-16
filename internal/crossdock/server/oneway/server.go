@@ -22,7 +22,6 @@ package oneway
 
 import (
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -46,23 +45,19 @@ func Start() {
 	httpTransport := http.NewTransport()
 	inbounds := []transport.Inbound{httpTransport.NewInbound(":8084")}
 
-	if useRedis() {
-		rds := redis.NewInbound(
-			redis.NewRedis5Client("redis:6379"),
-			"yarpc/oneway",
-			"yarpc/oneway/processing",
-			time.Second,
-		)
-		inbounds = append(inbounds, rds)
-	}
+	rds := redis.NewInbound(
+		redis.NewRedis5Client("redis:6379"),
+		"yarpc/oneway",
+		"yarpc/oneway/processing",
+		time.Second,
+	)
+	inbounds = append(inbounds, rds)
 
-	if useCherami() {
-		cheramiInboud, err := initCheramiInbound()
-		if err != nil {
-			log.Printf(`error init cherami inbound %v\n`, err)
-		}
-		inbounds = append(inbounds, cheramiInboud)
+	cheramiInbound, err := initCheramiInbound()
+	if err != nil {
+		log.Printf(`error init cherami inbound %v\n`, err)
 	}
+	inbounds = append(inbounds, cheramiInbound)
 
 	dispatcher = yarpc.NewDispatcher(yarpc.Config{
 		Name:     "oneway-server",
@@ -89,18 +84,6 @@ func Stop() {
 	if err := dispatcher.Stop(); err != nil {
 		log.Println("oneway server dispatcher failed to stop:", err.Error())
 	}
-}
-
-// useRedis checks to see if a redis server is expected to be
-// available
-func useRedis() bool {
-	return os.Getenv("REDIS") == "enabled"
-}
-
-// useCherami checks to see if a cherami server is expected to be
-// available
-func useCherami() bool {
-	return os.Getenv("CHERAMI") == "enabled"
 }
 
 func initCheramiInbound() (*cherami.Inbound, error) {
