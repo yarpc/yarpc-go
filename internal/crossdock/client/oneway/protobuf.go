@@ -37,7 +37,7 @@ func Protobuf(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-ch
 	client := crossdockpb.NewOnewayYarpcClient(dispatcher.ClientConfig("oneway-server"))
 	token := getRandomID()
 
-	// ensure channel hasn't been filled yet
+	// ensure server hasn't called us prematurely
 	select {
 	case <-serverCalledBack:
 		fatals.FailNow("oneway protobuf test failed", "client waited for server to fill channel")
