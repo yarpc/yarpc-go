@@ -24,26 +24,102 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-// Procedure represent a registered procedure on a dispatcher.
-type Procedure struct {
-	Name      string `json:"name"`
-	Encoding  string `json:"encoding"`
-	Signature string `json:"signature"`
-	RPCType   string `json:"rpcType"`
-}
-
 // IntrospectProcedures is a convenience function that translate a slice of
 // transport.Procedure to a slice of introspection.Procedure. This output is
 // used in debug and yarpcmeta.
-func IntrospectProcedures(routerProcs []transport.Procedure) []Procedure {
+func IntrospectProcedures(routerProcs []transport.Procedure) Procedures {
 	procedures := make([]Procedure, 0, len(routerProcs))
 	for _, p := range routerProcs {
+		var spec interface{}
+		switch p.HandlerSpec.Type() {
+		case transport.Unary:
+			spec = p.HandlerSpec.Unary()
+		case transport.Oneway:
+			spec = p.HandlerSpec.Oneway()
+		}
+		var IDLEntryPoint *IDLFile
+		if spec != nil {
+			if i, ok := spec.(IntrospectableHandler); ok {
+				if i := i.Introspect(); i != nil {
+					IDLEntryPoint = i.IDLEntryPoint
+				}
+			}
+		}
 		procedures = append(procedures, Procedure{
-			Name:      p.Name,
-			Encoding:  string(p.Encoding),
-			Signature: p.Signature,
-			RPCType:   p.HandlerSpec.Type().String(),
+			Name:          p.Name,
+			Encoding:      string(p.Encoding),
+			Signature:     p.Signature,
+			RPCType:       p.HandlerSpec.Type().String(),
+			IDLEntryPoint: IDLEntryPoint,
 		})
 	}
 	return procedures
+}
+
+// Procedure represent a registered procedure on a dispatcher.
+type Procedure struct {
+	Name          string   `json:"name"`
+	Encoding      string   `json:"encoding"`
+	Signature     string   `json:"signature"`
+	RPCType       string   `json:"rpcType"`
+	IDLEntryPoint *IDLFile `json:"idlEntryPoint,omitempty"`
+}
+
+// Procedures is a slice of Procedure.
+type Procedures []Procedure
+
+// Flatmap iterates recursively over every idl modules. The cb function is
+// called onces for every unique idl module (based on FilePath). Iteration is
+// aborted if cb returns true.
+func (ps Procedures) Flatmap(cb func(*IDLFile) bool) {
+	ft := newIDLFlattener(cb)
+	for _, p := range ps {
+		if p.IDLEntryPoint != nil {
+			ft.Collect(p.IDLEntryPoint)
+		}
+	}
+}
+
+// IDLFiles returns a slice with all idl modules.
+func (ps Procedures) IDLFiles() IDLFiles {
+	var r []IDLFile
+	ps.Flatmap(func(m *IDLFile) bool {
+		r = append(r, *m)
+		return false
+	})
+	return r
+}
+
+// IDLFileByFilePath returns the idl modules matching the given filepath.
+func (ps Procedures) IDLFileByFilePath(filePath string) (r *IDLFile, ok bool) {
+	ps.Flatmap(func(m *IDLFile) bool {
+		if m.FilePath == filePath {
+			r = m
+			return true
+		}
+		return false
+	})
+	return r, r != nil
+}
+
+// IDLTree builds an IDL tree from all idl modules.
+func (ps Procedures) IDLTree() IDLTree {
+	tb := newIDLTreeBuilder()
+	for _, p := range ps {
+		if p.IDLEntryPoint != nil {
+			tb.Collect(p.IDLEntryPoint)
+		}
+	}
+	return tb.Root
+}
+
+// BasicIDLOnly filters out the content and references to included IDLs on
+// every procedures.
+func (ps Procedures) BasicIDLOnly() {
+	for _, p := range ps {
+		if p.IDLEntryPoint != nil {
+			p.IDLEntryPoint.Content = ""
+			p.IDLEntryPoint.Includes = nil
+		}
+	}
 }
