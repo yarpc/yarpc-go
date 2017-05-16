@@ -74,7 +74,7 @@ func Start() {
 	h := &onewayHandler{http.NewTransport()}
 	dispatcher.Register(raw.OnewayProcedure("echo/raw", h.EchoRaw))
 	dispatcher.Register(json.OnewayProcedure("echo/json", h.EchoJSON))
-	dispatcher.Register(onewayserver.New(h))
+	dispatcher.Register(onewayserver.New(&thriftHandler{h}))
 
 	if err := dispatcher.Start(); err != nil {
 		log.Println("oneway server dispatcher failed to load:", err.Error())
