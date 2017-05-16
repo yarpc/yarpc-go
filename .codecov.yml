@@ -19,7 +19,6 @@ ignore:
   # All packages with .nocover files in them MUST be listed here
  - /encoding/thrift/internal/
  - /encoding/x/protobuf/internal/wirepb/
- - /internal/crossdock
  - /internal/crossdock/client
  - /internal/crossdock/client/apachethrift
  - /internal/crossdock/client/ctxpropagation
