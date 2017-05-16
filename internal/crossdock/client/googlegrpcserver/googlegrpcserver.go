@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package googlegrpcclient
+package googlegrpcserver
 
 import (
 	"context"
@@ -34,10 +34,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-var wrap = grpcheader.NewContextWrapper().
+var contextWrapper = grpcheader.NewContextWrapper().
 	WithCaller("client").
 	WithService("yarpc-test").
-	WithEncoding("proto").Wrap
+	WithEncoding("proto")
 
 // Run tests a grpc-go call to the yarpc server.
 func Run(t crossdock.T) {
@@ -57,7 +57,7 @@ func Run(t crossdock.T) {
 
 	token := random.String(5)
 
-	pong, err := client.Echo(wrap(ctx), &crossdockpb.Ping{Beep: token})
+	pong, err := client.Echo(contextWrapper.Wrap(ctx), &crossdockpb.Ping{Beep: token})
 
 	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
 	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)
