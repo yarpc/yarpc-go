@@ -1,5 +1,5 @@
 hash: 0857ee8e9ee348488ac73cd74dbd9369d50acd05ce91edfe1abe09c2371a6c8d
-updated: 2017-05-04T10:33:18.940107111-07:00
+updated: 2017-05-15T16:18:35.08530739-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -41,14 +41,14 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
+  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
   subpackages:
   - proto
   - ptypes/any
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/grpc-ecosystem/grpc-opentracing
-  version: ef7d6c8df7564c20c0a19ed9737f6d67990c61fa
+  version: 6c130eed1e297e1aa4d415a50c90d0c81c52677e
   subpackages:
   - go/otgrpc
 - name: github.com/mattn/go-shellwords
@@ -79,13 +79,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  version: 9e0844febd9e2856f839c9cb974fbd676d1755a8
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a1dba9ce8baed984a2495b658c82687f8157b98f
+  version: 6ac8c5d890d415025dd5aae7595bcb2a6e7e2fad
   subpackages:
   - xfs
 - name: github.com/Sirupsen/logrus
@@ -99,7 +99,7 @@ imports:
   - mock
   - require
 - name: github.com/uber-common/bark
-  version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
+  version: 148dd9dfbd0feb293fc81593a8c10c99877f81bc
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/mapdecode
@@ -107,14 +107,14 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
+  version: e9b601813b0be4771b1b3995390567b67ab2b3fc
   subpackages:
   - m3
   - m3/customtransports
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: 5b9071f590e7c32b88b950ffc2a4e20ef74d2804
+  version: 342225eee85ea6188907a44790788a5650b1d7a1
   subpackages:
   - client/cherami
   - common
@@ -123,7 +123,7 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: c12c343b8a1428f8968e596b1a3ef263897ce751
+  version: 491bc3af350b3cdc0780c6f99ca9fd0a82aeb850
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
@@ -137,7 +137,7 @@ imports:
   - transport
   - utils
 - name: github.com/uber/jaeger-lib
-  version: ffca3143c929e9b97325e6bebcc380e8c6e5fa0d
+  version: e3c1d3b562900c6ac0a7ded654cb95d88e72b63e
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
@@ -182,7 +182,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 6a4e056f2cc954cfec3581729e758909604b3f76
+  version: fab453050a7a08c35f31fc5fff6f2dbd962285ab
   subpackages:
   - buffer
   - internal/bufferpool
@@ -192,7 +192,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: feeb485667d1fdabe727840fe00adc22431bc86e
+  version: 34057069f4ab13dc4433c68d368737ebeafcccdc
   repo: https://github.com/golang/net
   subpackages:
   - context
@@ -204,19 +204,19 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
+  version: 9f30dcbe5be197894515a338a9bda9253567ea8f
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: fc7fa097411d30e6708badff276c4c164425590c
+  version: a9a820217f98f7c8a207ec1e45a874e1fe12c478
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: d63e2b22b05a9682de336cd4802bba367ed429e7
+  version: 4bb9a6d30bdc727aebd0747694f31de632a5282e
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -250,7 +250,7 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports:
 - name: github.com/golang/lint
   version: cb00e5669539f047b2f4c53a421a01b0c8e172c6
@@ -267,6 +267,6 @@ testImports:
   subpackages:
   - update-license
 - name: honnef.co/go/tools
-  version: 6c3814a19596cc3f3de23f0442023a5adbb28eb6
+  version: f637af825144df9db357bdbe921707f4a535f316
   subpackages:
   - cmd/staticcheck

@@ -162,7 +162,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestBinary),
 				},
-				Signature: "TestBinary(Thing []byte) ([]byte)",
+				Signature:    "TestBinary(Thing []byte) ([]byte)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -172,7 +173,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestByte),
 				},
-				Signature: "TestByte(Thing *int8) (int8)",
+				Signature:    "TestByte(Thing *int8) (int8)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -182,7 +184,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestDouble),
 				},
-				Signature: "TestDouble(Thing *float64) (float64)",
+				Signature:    "TestDouble(Thing *float64) (float64)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -192,7 +195,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestEnum),
 				},
-				Signature: "TestEnum(Thing *gauntlet.Numberz) (gauntlet.Numberz)",
+				Signature:    "TestEnum(Thing *gauntlet.Numberz) (gauntlet.Numberz)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -202,7 +206,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestException),
 				},
-				Signature: "TestException(Arg *string)",
+				Signature:    "TestException(Arg *string)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -212,7 +217,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestI32),
 				},
-				Signature: "TestI32(Thing *int32) (int32)",
+				Signature:    "TestI32(Thing *int32) (int32)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -222,7 +228,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestI64),
 				},
-				Signature: "TestI64(Thing *int64) (int64)",
+				Signature:    "TestI64(Thing *int64) (int64)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -232,7 +239,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestInsanity),
 				},
-				Signature: "TestInsanity(Argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity)",
+				Signature:    "TestInsanity(Argument *gauntlet.Insanity) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -242,7 +250,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestList),
 				},
-				Signature: "TestList(Thing []int32) ([]int32)",
+				Signature:    "TestList(Thing []int32) ([]int32)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -252,7 +261,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMap),
 				},
-				Signature: "TestMap(Thing map[int32]int32) (map[int32]int32)",
+				Signature:    "TestMap(Thing map[int32]int32) (map[int32]int32)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -262,7 +272,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMapMap),
 				},
-				Signature: "TestMapMap(Hello *int32) (map[int32]map[int32]int32)",
+				Signature:    "TestMapMap(Hello *int32) (map[int32]map[int32]int32)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -272,7 +283,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMulti),
 				},
-				Signature: "TestMulti(Arg0 *int8, Arg1 *int32, Arg2 *int64, Arg3 map[int16]string, Arg4 *gauntlet.Numberz, Arg5 *gauntlet.UserId) (*gauntlet.Xtruct)",
+				Signature:    "TestMulti(Arg0 *int8, Arg1 *int32, Arg2 *int64, Arg3 map[int16]string, Arg4 *gauntlet.Numberz, Arg5 *gauntlet.UserId) (*gauntlet.Xtruct)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -282,7 +294,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestMultiException),
 				},
-				Signature: "TestMultiException(Arg0 *string, Arg1 *string) (*gauntlet.Xtruct)",
+				Signature:    "TestMultiException(Arg0 *string, Arg1 *string) (*gauntlet.Xtruct)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -292,7 +305,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestNest),
 				},
-				Signature: "TestNest(Thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2)",
+				Signature:    "TestNest(Thing *gauntlet.Xtruct2) (*gauntlet.Xtruct2)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -302,7 +316,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.TestOneway),
 				},
-				Signature: "TestOneway(SecondsToSleep *int32)",
+				Signature:    "TestOneway(SecondsToSleep *int32)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -312,7 +327,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestSet),
 				},
-				Signature: "TestSet(Thing map[int32]struct{}) (map[int32]struct{})",
+				Signature:    "TestSet(Thing map[int32]struct{}) (map[int32]struct{})",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -322,7 +338,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestString),
 				},
-				Signature: "TestString(Thing *string) (string)",
+				Signature:    "TestString(Thing *string) (string)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -332,7 +349,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestStringMap),
 				},
-				Signature: "TestStringMap(Thing map[string]string) (map[string]string)",
+				Signature:    "TestStringMap(Thing map[string]string) (map[string]string)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -342,7 +360,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestStruct),
 				},
-				Signature: "TestStruct(Thing *gauntlet.Xtruct) (*gauntlet.Xtruct)",
+				Signature:    "TestStruct(Thing *gauntlet.Xtruct) (*gauntlet.Xtruct)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -352,7 +371,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestTypedef),
 				},
-				Signature: "TestTypedef(Thing *gauntlet.UserId) (gauntlet.UserId)",
+				Signature:    "TestTypedef(Thing *gauntlet.UserId) (gauntlet.UserId)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -362,7 +382,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TestVoid),
 				},
-				Signature: "TestVoid()",
+				Signature:    "TestVoid()",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 		},
 	}

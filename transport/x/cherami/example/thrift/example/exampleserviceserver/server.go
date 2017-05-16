@@ -57,7 +57,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Award),
 				},
-				Signature: "Award(Token *string)",
+				Signature:    "Award(Token *string)",
+				ThriftModule: example.ThriftModule,
 			},
 		},
 	}

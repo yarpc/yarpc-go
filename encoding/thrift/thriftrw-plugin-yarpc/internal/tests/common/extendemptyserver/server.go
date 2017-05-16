@@ -39,7 +39,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Hello),
 				},
-				Signature: "Hello()",
+				Signature:    "Hello()",
+				ThriftModule: common.ThriftModule,
 			},
 		},
 	}

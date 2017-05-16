@@ -57,7 +57,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Echo),
 				},
-				Signature: "Echo(Ping *echo.Ping) (*echo.Pong)",
+				Signature:    "Echo(Ping *echo.Ping) (*echo.Pong)",
+				ThriftModule: echo.ThriftModule,
 			},
 		},
 	}

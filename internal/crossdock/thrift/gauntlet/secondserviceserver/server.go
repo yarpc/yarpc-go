@@ -61,7 +61,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.BlahBlah),
 				},
-				Signature: "BlahBlah()",
+				Signature:    "BlahBlah()",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 
 			thrift.Method{
@@ -71,7 +72,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.SecondtestString),
 				},
-				Signature: "SecondtestString(Thing *string) (string)",
+				Signature:    "SecondtestString(Thing *string) (string)",
+				ThriftModule: gauntlet.ThriftModule,
 			},
 		},
 	}

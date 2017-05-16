@@ -57,7 +57,8 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Sink),
 				},
-				Signature: "Sink(Snk *sink.SinkRequest)",
+				Signature:    "Sink(Snk *sink.SinkRequest)",
+				ThriftModule: sink.ThriftModule,
 			},
 		},
 	}
