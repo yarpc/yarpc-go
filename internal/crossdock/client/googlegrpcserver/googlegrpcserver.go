@@ -25,32 +25,34 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
+	"go.uber.org/yarpc/transport/x/grpc"
 
 	"github.com/crossdock/crossdock-go"
-	"google.golang.org/grpc"
 )
 
-var contextWrapper = grpcheader.NewContextWrapper().
-	WithCaller("client").
-	WithService("yarpc-test").
-	WithEncoding("proto")
-
-// Run tests a grpc-go call to the yarpc server.
+// Run tests a yarpc call to the grpc-go server.
 func Run(t crossdock.T) {
-	//client := crossdockpb.NewEchoClient(grpc.)
 	fatals := crossdock.Fatals(t)
 
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%s:8090", server), grpc.WithInsecure())
-	fatals.NoError(err, "grpc.Dial failed")
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: "client",
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: grpc.NewTransport().NewSingleOutbound(fmt.Sprintf("%s:8090", server)),
+			},
+		},
+	})
+	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
+	defer dispatcher.Stop()
 
-	client := crossdockpb.NewEchoClient(clientConn)
+	client := crossdockpb.NewEchoYarpcClient(dispatcher.ClientConfig("yarpc-test"))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

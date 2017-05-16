@@ -41,7 +41,6 @@ var wrap = grpcheader.NewContextWrapper().
 
 // Run tests a grpc-go call to the yarpc server.
 func Run(t crossdock.T) {
-	//client := crossdockpb.NewEchoClient(grpc.)
 	fatals := crossdock.Fatals(t)
 
 	server := t.Param(params.Server)

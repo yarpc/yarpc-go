@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/errorstchclient"
 	"go.uber.org/yarpc/internal/crossdock/client/gauntlet"
 	"go.uber.org/yarpc/internal/crossdock/client/googlegrpcclient"
+	"go.uber.org/yarpc/internal/crossdock/client/googlegrpcserver"
 	"go.uber.org/yarpc/internal/crossdock/client/grpc"
 	"go.uber.org/yarpc/internal/crossdock/client/headers"
 	"go.uber.org/yarpc/internal/crossdock/client/httpserver"
@@ -46,6 +47,7 @@ var behaviors = crossdock.Behaviors{
 	"thrift":                echo.Thrift,
 	"protobuf":              echo.Protobuf,
 	"google_grpc_client":    googlegrpcclient.Run,
+	"google_grpc_server":    googlegrpcserver.Run,
 	"grpc":                  grpc.Run,
 	"headers":               headers.Run,
 	"errors_httpclient":     errorshttpclient.Run,
