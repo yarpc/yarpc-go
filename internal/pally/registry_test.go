@@ -22,6 +22,7 @@ package pally
 
 import (
 	"context"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
@@ -283,6 +284,38 @@ func BenchmarkCreateNewMetrics(b *testing.B) {
 			}
 		})
 	})
+}
+
+func BenchmarkScrape(b *testing.B) {
+	r := NewRegistry()
+	// Populate the registry with a few metrics.
+	r.MustCounter(Opts{
+		Name:        "foo",
+		Help:        "Some help.",
+		ConstLabels: Labels{"bar": "baz1"},
+	})
+	r.MustGauge(Opts{
+		Name:        "foo",
+		Help:        "Some help.",
+		ConstLabels: Labels{"bar": "baz2"},
+	})
+	r.MustLatencies(LatencyOpts{
+		Opts: Opts{
+			Name:        "foo",
+			Help:        "Some help.",
+			ConstLabels: Labels{"bar": "baz3"},
+		},
+		Unit:    time.Millisecond,
+		Buckets: []time.Duration{time.Millisecond, 10 * time.Millisecond, 100 * time.Millisecond},
+	})
+
+	req := httptest.NewRequest("GET", "/" /* target */, nil /* body */)
+	resw := httptest.NewRecorder()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.ServeHTTP(resw, req)
+		resw.Body.Reset()
+	}
 }
 
 // Create a real, M3-backed Tally scope.

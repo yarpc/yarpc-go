@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	promproto "github.com/prometheus/client_model/go"
 	"github.com/uber-go/tally"
 	"go.uber.org/atomic"
 )
@@ -38,10 +39,20 @@ type value struct {
 	opts              Opts
 	desc              *prometheus.Desc
 	variableLabelVals []string
+	labelPairs        []*promproto.LabelPair
 }
 
 func newValue(opts Opts) value {
-	return value{opts: opts, desc: opts.describe()}
+	return value{
+		opts:       opts,
+		desc:       opts.describe(),
+		labelPairs: opts.labelPairs(nil /* variable label vals */),
+	}
+}
+
+// Desc implements half of prometheus.Metric.
+func (v value) Desc() *prometheus.Desc {
+	return v.desc
 }
 
 // Describe implements half of prometheus.Collector.
