@@ -103,8 +103,8 @@ type protoHandler struct {
 }
 
 // Echo implements the Oneway::Echo procedure.
-func (t *protoHandler) Echo(ctx context.Context, token *crossdockpb.Token) error {
+func (p *protoHandler) Echo(ctx context.Context, token *crossdockpb.Token) error {
 	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
-	t.callHome(ctx, callBackAddr, []byte(token.Value), protobuf.Encoding)
+	p.callHome(ctx, callBackAddr, []byte(token.Value), protobuf.Encoding)
 	return nil
 }
