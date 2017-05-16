@@ -26,7 +26,9 @@ import (
 	"math"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
+	promproto "github.com/prometheus/client_model/go"
 )
 
 // Opts configure Counters, Gauges, CounterVectors, and GaugeVectors.
@@ -45,6 +47,31 @@ func (o Opts) describe() *prometheus.Desc {
 		o.VariableLabels,
 		prometheus.Labels(o.ConstLabels),
 	)
+}
+
+func (o Opts) labelPairs(variableLabelVals []string) []*promproto.LabelPair {
+	n := len(o.ConstLabels) + len(o.VariableLabels)
+	if n == 0 {
+		return nil
+	}
+	pairs := make([]*promproto.LabelPair, 0, n)
+	for k, v := range o.ConstLabels {
+		pairs = append(pairs, &promproto.LabelPair{
+			Name:  proto.String(k),
+			Value: proto.String(v),
+		})
+	}
+	if len(variableLabelVals) != len(o.VariableLabels) {
+		// We're creating a scalar metric, so we should ignore variable labels.
+		return pairs
+	}
+	for i := range o.VariableLabels {
+		pairs = append(pairs, &promproto.LabelPair{
+			Name:  proto.String(o.VariableLabels[i]),
+			Value: proto.String(variableLabelVals[i]),
+		})
+	}
+	return pairs
 }
 
 func (o Opts) validate() error {

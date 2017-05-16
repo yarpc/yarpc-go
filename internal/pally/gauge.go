@@ -23,7 +23,9 @@ package pally
 import (
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
+	promproto "github.com/prometheus/client_model/go"
 	"github.com/uber-go/tally"
 )
 
@@ -36,18 +38,14 @@ func newGauge(opts Opts) *gauge {
 	return &gauge{value: newValue(opts)}
 }
 
+func (g *gauge) Write(m *promproto.Metric) error {
+	m.Label = g.labelPairs
+	m.Gauge = &promproto.Gauge{Value: proto.Float64(float64(g.Load()))}
+	return nil
+}
+
 func (g *gauge) Collect(ch chan<- prometheus.Metric) {
-	// TODO: Implement prometheus.Metric directly, which allows us to avoid
-	// this allocation.
-	m, err := prometheus.NewConstMetric(
-		g.desc,
-		prometheus.GaugeValue,
-		float64(g.Load()),
-		g.variableLabelVals...,
-	)
-	if err == nil {
-		ch <- m
-	}
+	ch <- g
 }
 
 func (g *gauge) push(scope tally.Scope) {
@@ -97,9 +95,11 @@ func (gv *gaugeVector) Collect(ch chan<- prometheus.Metric) { (*vector)(gv).Coll
 func (gv *gaugeVector) push(scope tally.Scope)              { (*vector)(gv).push(scope) }
 
 func newDynamicGauge(opts Opts, desc *prometheus.Desc, variableLabelVals []string) metric {
+	scrubbed := scrubLabelValues(variableLabelVals)
 	return &gauge{value: value{
 		opts:              opts,
 		desc:              desc,
-		variableLabelVals: scrubLabelValues(variableLabelVals),
+		variableLabelVals: scrubbed,
+		labelPairs:        opts.labelPairs(scrubbed),
 	}}
 }

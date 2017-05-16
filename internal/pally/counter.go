@@ -23,7 +23,9 @@ package pally
 import (
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
+	promproto "github.com/prometheus/client_model/go"
 	"github.com/uber-go/tally"
 )
 
@@ -44,18 +46,14 @@ func (c *counter) diff() int64 {
 	return diff
 }
 
+func (c *counter) Write(m *promproto.Metric) error {
+	m.Label = c.labelPairs
+	m.Counter = &promproto.Counter{Value: proto.Float64(float64(c.Load()))}
+	return nil
+}
+
 func (c *counter) Collect(ch chan<- prometheus.Metric) {
-	// TODO: Implement prometheus.Metric directly, which allows us to avoid
-	// this allocation.
-	m, err := prometheus.NewConstMetric(
-		c.desc,
-		prometheus.CounterValue,
-		float64(c.Load()),
-		c.variableLabelVals...,
-	)
-	if err == nil {
-		ch <- m
-	}
+	ch <- c
 }
 
 func (c *counter) push(scope tally.Scope) {
@@ -105,9 +103,11 @@ func (cv *counterVector) Collect(ch chan<- prometheus.Metric) { (*vector)(cv).Co
 func (cv *counterVector) push(scope tally.Scope)              { (*vector)(cv).push(scope) }
 
 func newDynamicCounter(opts Opts, desc *prometheus.Desc, variableLabelVals []string) metric {
+	scrubbed := scrubLabelValues(variableLabelVals)
 	return &counter{value: value{
 		opts:              opts,
 		desc:              desc,
-		variableLabelVals: scrubLabelValues(variableLabelVals),
+		variableLabelVals: scrubbed,
+		labelPairs:        opts.labelPairs(scrubbed),
 	}}
 }

@@ -26,7 +26,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
+	promproto "github.com/prometheus/client_model/go"
 	"github.com/uber-go/tally"
 	"go.uber.org/atomic"
 )
@@ -70,13 +72,15 @@ type histogram struct {
 	desc              *prometheus.Desc
 	tally             tally.Histogram
 	variableLabelVals []string
+	labelPairs        []*promproto.LabelPair
 }
 
 func newHistogram(opts LatencyOpts) *histogram {
 	return &histogram{
-		buckets: opts.buckets(),
-		opts:    opts,
-		desc:    opts.describe(),
+		buckets:    opts.buckets(),
+		opts:       opts,
+		desc:       opts.describe(),
+		labelPairs: opts.labelPairs(nil /* variable label vals */),
 	}
 }
 
@@ -111,29 +115,36 @@ func (h *histogram) push(scope tally.Scope) {
 	}
 }
 
-func (h *histogram) Collect(ch chan<- prometheus.Metric) {
-	// TODO: Implement prometheus.Metric directly, which avoids all these
-	// allocations.
+func (h *histogram) Desc() *prometheus.Desc {
+	return h.desc
+}
+
+func (h *histogram) Write(m *promproto.Metric) error {
 	n := uint64(0)
-	promBuckets := make(map[float64]uint64, len(h.buckets)-1)
+	promBuckets := make([]*promproto.Bucket, 0, len(h.buckets)-1)
 	for _, b := range h.buckets {
 		n += uint64(b.Load())
 		if b.upper == math.MaxInt64 {
 			// Prometheus doesn't want us to export the final catch-all bucket.
 			continue
 		}
-		promBuckets[float64(b.upper)] += n
+		promBuckets = append(promBuckets, &promproto.Bucket{
+			CumulativeCount: proto.Uint64(n),
+			UpperBound:      proto.Float64(float64(b.upper)),
+		})
 	}
-	m, err := prometheus.NewConstHistogram(
-		h.desc,
-		n, // count of observations
-		float64(h.sum.Load()), // sum of observations
-		promBuckets,
-		h.variableLabelVals...,
-	)
-	if err == nil {
-		ch <- m
+
+	m.Label = h.labelPairs
+	m.Histogram = &promproto.Histogram{
+		SampleCount: proto.Uint64(n),
+		SampleSum:   proto.Float64(float64(h.sum.Load())),
+		Bucket:      promBuckets,
 	}
+	return nil
+}
+
+func (h *histogram) Collect(ch chan<- prometheus.Metric) {
+	ch <- h
 }
 
 func (h *histogram) Describe(ch chan<- *prometheus.Desc) {
@@ -195,11 +206,13 @@ func (vec *histogramVector) newHistogram(key []byte, variableLabelVals []string)
 	if len(vec.opts.VariableLabels) != len(variableLabelVals) {
 		return nil, errInconsistentCardinality
 	}
+	scrubbed := scrubLabelValues(variableLabelVals)
 	m = &histogram{
 		buckets:           vec.opts.buckets(),
 		opts:              vec.opts,
 		desc:              vec.desc,
-		variableLabelVals: scrubLabelValues(variableLabelVals),
+		variableLabelVals: scrubbed,
+		labelPairs:        vec.opts.labelPairs(scrubbed),
 	}
 	vec.histograms[string(key)] = m
 	return m, nil
