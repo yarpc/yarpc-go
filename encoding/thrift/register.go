@@ -67,6 +67,8 @@ type Method struct {
 	// This is useful for introspection.
 	Signature string
 
+	// ThriftModule, if non-nil, refers to the Thrift module from where this
+	// method is coming from.
 	ThriftModule *thriftreflect.ThriftModule
 }
 
