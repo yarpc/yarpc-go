@@ -19,27 +19,54 @@ ignore:
   # All packages with .nocover files in them MUST be listed here
  - /encoding/thrift/internal/
  - /encoding/x/protobuf/internal/wirepb/
- - /internal/crossdock/client/dispatcher/
- - /internal/crossdock/crossdockpb/
- - /internal/crossdock/thrift/
- - /internal/crossdock/thrift/echo/
- - /internal/crossdock/thrift/echo/echoclient/
- - /internal/crossdock/thrift/echo/echoserver/
- - /internal/crossdock/thrift/echo/yarpc/
- - /internal/crossdock/thrift/gauntlet/
- - /internal/crossdock/thrift/gauntlet/secondserviceclient/
- - /internal/crossdock/thrift/gauntlet/secondserviceserver/
- - /internal/crossdock/thrift/gauntlet/thrifttestclient/
- - /internal/crossdock/thrift/gauntlet/thrifttestserver/
- - /internal/crossdock/thrift/gauntlet/yarpc/
- - /internal/crossdock/thrift/gen-go/
- - /internal/crossdock/thrift/gen-go/echo/
- - /internal/crossdock/thrift/gen-go/gauntlet_apache/
- - /internal/crossdock/thrift/gen-go/gauntlet_tchannel/
- - /internal/crossdock/thrift/oneway/
- - /internal/crossdock/thrift/oneway/onewayclient/
- - /internal/crossdock/thrift/oneway/onewayserver/
- - /internal/crossdock/thrift/oneway/yarpc/
+ - /internal/crossdock
+ - /internal/crossdock/client
+ - /internal/crossdock/client/apachethrift
+ - /internal/crossdock/client/ctxpropagation
+ - /internal/crossdock/client/dispatcher
+ - /internal/crossdock/client/echo
+ - /internal/crossdock/client/errorshttpclient
+ - /internal/crossdock/client/errorstchclient
+ - /internal/crossdock/client/gauntlet
+ - /internal/crossdock/client/googlegrpcclient
+ - /internal/crossdock/client/googlegrpcserver
+ - /internal/crossdock/client/grpc
+ - /internal/crossdock/client/headers
+ - /internal/crossdock/client/httpserver
+ - /internal/crossdock/client/oneway
+ - /internal/crossdock/client/onewayctxpropagation
+ - /internal/crossdock/client/params
+ - /internal/crossdock/client/random
+ - /internal/crossdock/client/tchclient
+ - /internal/crossdock/client/tchserver
+ - /internal/crossdock/client/timeout
+ - /internal/crossdock/crossdockpb
+ - /internal/crossdock/internal
+ - /internal/crossdock/server
+ - /internal/crossdock/server/apachethrift
+ - /internal/crossdock/server/googlegrpc
+ - /internal/crossdock/server/http
+ - /internal/crossdock/server/oneway
+ - /internal/crossdock/server/tch
+ - /internal/crossdock/server/yarpc
+ - /internal/crossdock/thrift/echo
+ - /internal/crossdock/thrift/echo/echoclient
+ - /internal/crossdock/thrift/echo/echoserver
+ - /internal/crossdock/thrift/echo/echotest
+ - /internal/crossdock/thrift/gauntlet
+ - /internal/crossdock/thrift/gauntlet/secondserviceclient
+ - /internal/crossdock/thrift/gauntlet/secondserviceserver
+ - /internal/crossdock/thrift/gauntlet/secondservicetest
+ - /internal/crossdock/thrift/gauntlet/thrifttestclient
+ - /internal/crossdock/thrift/gauntlet/thrifttestserver
+ - /internal/crossdock/thrift/gauntlet/thrifttesttest
+ - /internal/crossdock/thrift/gen-go/echo
+ - /internal/crossdock/thrift/gen-go/gauntlet_apache
+ - /internal/crossdock/thrift/gen-go/gauntlet_tchannel
+ - /internal/crossdock/thrift/oneway
+ - /internal/crossdock/thrift/oneway/onewayclient
+ - /internal/crossdock/thrift/oneway/onewayserver
+ - /internal/crossdock/thrift/oneway/onewaytest
  - /internal/examples/protobuf/examplepb/
  - /internal/mapdecode/mapstructure/
  - /internal/service-test/
