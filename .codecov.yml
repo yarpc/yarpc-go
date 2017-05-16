@@ -8,7 +8,7 @@ coverage:
     project:
       default: off
       main:
-        target: 80%
+        target: 81.5%
         flags: main
       experimental:
         target: 70%
