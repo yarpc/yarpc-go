@@ -65,7 +65,6 @@ func TestInvalidServiceNames(t *testing.T) {
 		"no--duplication",
 		"no---duplication",
 		"endswithadash-",
-		"endswithemoji😢",
 		"endswithasterisk*",
 		"internal*-asterisk",
 	}
