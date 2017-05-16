@@ -1,0 +1,11 @@
+FROM gliderlabs/alpine:3.4
+
+RUN \
+  apk add --update \
+    curl \
+    make \
+  && rm -rf /var/cache/apk/*
+WORKDIR /app
+ADD dockerbuilddeps.mk /app/
+ADD build/base.mk build/crossdockdeps.mk build/dockerdeps.mk /app/build/
+RUN make -f dockerbuilddeps.mk
