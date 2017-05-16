@@ -18,36 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package server
+package googlegrpc
 
 import (
-	"go.uber.org/yarpc/internal/crossdock/server/apachethrift"
-	"go.uber.org/yarpc/internal/crossdock/server/googlegrpc"
-	"go.uber.org/yarpc/internal/crossdock/server/http"
-	"go.uber.org/yarpc/internal/crossdock/server/oneway"
-	"go.uber.org/yarpc/internal/crossdock/server/tch"
-	"go.uber.org/yarpc/internal/crossdock/server/yarpc"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
+
+	"golang.org/x/net/context"
 )
 
-// Start starts all required Crossdock test servers
-func Start() {
-	tch.Start()
-	yarpc.Start()
-	http.Start()
-	apachethrift.Start()
-	oneway.Start()
-	googlegrpc.Start()
+type echoServer struct{}
+
+func newEchoServer() *echoServer {
+	return &echoServer{}
 }
 
-// Stop stops all required Crossdock test servers
-func Stop() {
-	tch.Stop()
-	yarpc.Stop()
-	http.Stop()
-	apachethrift.Stop()
-	oneway.Stop()
-	googlegrpc.Stop()
+func (*echoServer) Echo(_ context.Context, request *crossdockpb.Ping) (*crossdockpb.Pong, error) {
+	if request == nil {
+		return nil, nil
+	}
+	return &crossdockpb.Pong{Boop: request.Beep}, nil
 }
-
-// TODO(abg): We should probably use defers to ensure things that started up
-// successfully are stopped before we exit.
