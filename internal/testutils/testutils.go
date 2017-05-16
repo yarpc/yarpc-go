@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
@@ -135,7 +136,10 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 		&ClientInfo{
 			clientDispatcher.ClientConfig(serviceName),
 			grpcClientConn,
-			grpcheader.NewContextWrapper().WithCaller(serviceName + "-client").WithService(serviceName),
+			grpcheader.NewContextWrapper().
+				WithCaller(serviceName + "-client").
+				WithService(serviceName).
+				WithEncoding(string(protobuf.Encoding)),
 		},
 	)
 }
