@@ -103,12 +103,14 @@ func BuildProcedures(s Service, opts ...RegisterOption) []transport.Procedure {
 				UnaryHandler: method.HandlerSpec.Unary,
 				Protocol:     proto,
 				Enveloping:   rc.Enveloping,
+				ThriftModule: method.ThriftModule,
 			})
 		case transport.Oneway:
 			spec = transport.NewOnewayHandlerSpec(thriftOnewayHandler{
 				OnewayHandler: method.HandlerSpec.Oneway,
 				Protocol:      proto,
 				Enveloping:    rc.Enveloping,
+				ThriftModule:  method.ThriftModule,
 			})
 		default:
 			panic(fmt.Sprintf("Invalid handler type for %T", method))

@@ -23,20 +23,27 @@ package thrift
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/introspection"
 
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
 )
+
+var _ introspection.IntrospectableHandler = (*thriftUnaryHandler)(nil)
+var _ introspection.IntrospectableHandler = (*thriftOnewayHandler)(nil)
 
 // thriftUnaryHandler wraps a Thrift Handler into a transport.UnaryHandler
 type thriftUnaryHandler struct {
 	UnaryHandler UnaryHandler
 	Protocol     protocol.Protocol
 	Enveloping   bool
+	ThriftModule *thriftreflect.ThriftModule
 }
 
 // thriftOnewayHandler wraps a Thrift Handler into a transport.OnewayHandler
@@ -44,6 +51,37 @@ type thriftOnewayHandler struct {
 	OnewayHandler OnewayHandler
 	Protocol      protocol.Protocol
 	Enveloping    bool
+	ThriftModule  *thriftreflect.ThriftModule
+}
+
+func (t thriftUnaryHandler) Introspect() *introspection.Handler {
+	m := mapThriftModuleToIDLFile(t.ThriftModule)
+	r := introspection.Handler{
+		IDLEntryPoint: &m,
+	}
+	return &r
+}
+
+func (t thriftOnewayHandler) Introspect() *introspection.Handler {
+	m := mapThriftModuleToIDLFile(t.ThriftModule)
+	r := introspection.Handler{
+		IDLEntryPoint: &m,
+	}
+	return &r
+}
+
+func mapThriftModuleToIDLFile(m *thriftreflect.ThriftModule) introspection.IDLFile {
+	includes := make([]introspection.IDLFile, 0, len(m.Includes))
+	for _, i := range m.Includes {
+		includes = append(includes, mapThriftModuleToIDLFile(i))
+	}
+	r := introspection.IDLFile{
+		FilePath: m.FilePath,
+		Checksum: fmt.Sprintf("sha1:%s", m.SHA1),
+		Includes: includes,
+		Content:  m.Raw,
+	}
+	return r
 }
 
 func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
