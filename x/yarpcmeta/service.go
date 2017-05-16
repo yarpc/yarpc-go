@@ -22,6 +22,7 @@ package yarpcmeta
 
 import (
 	"context"
+	"errors"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -48,6 +49,7 @@ type procsResponse struct {
 
 func (m *service) procs(ctx context.Context, body interface{}) (*procsResponse, error) {
 	procedures := introspection.IntrospectProcedures(m.disp.Router().Procedures())
+	procedures.BasicIDLOnly()
 	return &procsResponse{
 		Service:    m.disp.Name(),
 		Procedures: procedures,
@@ -56,7 +58,86 @@ func (m *service) procs(ctx context.Context, body interface{}) (*procsResponse, 
 
 func (m *service) introspect(ctx context.Context, body interface{}) (*introspection.DispatcherStatus, error) {
 	status := m.disp.Introspect()
+	status.Procedures.BasicIDLOnly()
 	return &status, nil
+}
+
+type idlsQuery struct {
+	EntryPoint string   `json:"entryPoint,omitempty"`
+	Selection  []string `json:"selection,omitempty"`
+}
+
+type idlFile struct {
+	FilePath string   `json:"filePath"`
+	Checksum string   `json:"checksum"`
+	Includes []string `json:"includes,omitempty"`
+	Content  string   `json:"content,omitempty"`
+}
+
+type idlsResponse struct {
+	IDLs []idlFile `json:"idls"`
+}
+
+func (r *idlsResponse) Append(m *introspection.IDLFile) bool {
+	includes := make([]string, len(m.Includes))
+	for i := range m.Includes {
+		includes[i] = m.Includes[i].FilePath
+	}
+	r.IDLs = append(r.IDLs, idlFile{
+		FilePath: m.FilePath,
+		Checksum: m.Checksum,
+		Includes: includes,
+		Content:  m.Content,
+	})
+	return false
+}
+
+func (m *service) idls(ctx context.Context, rq *idlsQuery) (*idlsResponse, error) {
+	procedures := introspection.IntrospectProcedures(m.disp.Router().Procedures())
+
+	// return the flattened tree by default.
+	if rq == nil || (rq.EntryPoint == "" && len(rq.Selection) == 0) {
+		var r idlsResponse
+		procedures.Flatmap(r.Append)
+		return &r, nil
+	}
+
+	if rq.EntryPoint != "" && len(rq.Selection) > 0 {
+		return nil, errors.New(`ask for either an "entryPoint" or a "selection", but not both`)
+	}
+
+	// find the idl requested among all of them and return it with all its
+	// recursive includes.
+	if rq.EntryPoint != "" {
+		var r idlsResponse
+		procedures.Flatmap(func(m *introspection.IDLFile) bool {
+			if m.FilePath == rq.EntryPoint {
+				m.Flatmap(r.Append)
+				return true
+			}
+			return false
+		})
+		return &r, nil
+	}
+
+	// find and return every idl matching the selection. No includes are returned.
+	var selection map[string]struct{}
+	if len(rq.Selection) > 0 {
+		selection = make(map[string]struct{})
+		for _, s := range rq.Selection {
+			selection[s] = struct{}{}
+		}
+	}
+
+	var r idlsResponse
+	procedures.Flatmap(func(m *introspection.IDLFile) bool {
+		if _, ok := selection[m.FilePath]; ok {
+			r.Append(m)
+		}
+		return false
+	})
+
+	return &r, nil
 }
 
 // Procedures returns the procedures to register on a dispatcher.
@@ -70,6 +151,8 @@ func (m *service) Procedures() []transport.Procedure {
 			`procedures() {"service": "...", "procedures": [{"name": "..."}]}`},
 		{"yarpc::introspect", m.introspect,
 			`introspect() {...}`},
+		{"yarpc::idls", m.idls,
+			`idls() {...}`},
 	}
 	var r []transport.Procedure
 	for _, m := range methods {
