@@ -21,12 +21,10 @@
 package yarpc
 
 import (
-	"html/template"
-	"io"
-	"log"
 	"net/http"
 	"sync"
 
+	"go.uber.org/yarpc/internal/debug"
 	"go.uber.org/yarpc/internal/introspection"
 )
 
@@ -56,169 +54,50 @@ func removeDispatcherFromDebugPages(disp *Dispatcher) {
 	}
 }
 
+var _ debug.IntrospectionProvider = (*introspectionProvider)(nil)
+
+type introspectionProvider struct{}
+
+func (introspectionProvider) Dispatchers() []introspection.DispatcherStatus {
+	dispatchersLock.RLock()
+	defer dispatchersLock.RUnlock()
+
+	r := make([]introspection.DispatcherStatus, len(dispatchers))
+	for idx, d := range dispatchers {
+		r[idx] = d.Introspect()
+	}
+	return r
+}
+
+func (introspectionProvider) DispatchersByName(name string) []introspection.DispatcherStatus {
+	dispatchersLock.RLock()
+	defer dispatchersLock.RUnlock()
+
+	r := make([]introspection.DispatcherStatus, 0, len(dispatchers))
+	for _, d := range dispatchers {
+		if d.Name() == name {
+			r = append(r, d.Introspect())
+		}
+	}
+	return r
+}
+
+func (introspectionProvider) PackageVersions() []introspection.PackageVersion {
+	return PackageVersions
+}
+
+func introspectDispatchers() []introspection.DispatcherStatus {
+	dispatchersLock.RLock()
+	defer dispatchersLock.RUnlock()
+
+	r := make([]introspection.DispatcherStatus, len(dispatchers))
+	for idx, d := range dispatchers {
+		r[idx] = d.Introspect()
+	}
+	return r
+}
+
 func init() {
-	http.HandleFunc("/debug/yarpc", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(w, req)
-	})
+	debugPages := debug.NewPages(introspectionProvider{})
+	debugPages.RegisterOn(http.DefaultServeMux)
 }
-
-func render(w io.Writer, req *http.Request) {
-	data := struct {
-		Dispatchers     []introspection.DispatcherStatus
-		PackageVersions []introspection.PackageVersion
-	}{
-		PackageVersions: PackageVersions,
-	}
-
-	for _, disp := range dispatchers {
-		data.Dispatchers = append(data.Dispatchers, disp.Introspect())
-	}
-
-	if err := pageTmpl.ExecuteTemplate(w, "Page", data); err != nil {
-		log.Printf("yarpc/debug: Failed executing template: %v", err)
-	}
-}
-
-var pageTmpl = template.Must(template.New("Page").Funcs(template.FuncMap{}).Parse(pageHTML))
-
-const pageHTML = `
-<html>
-	<head>
-	<title>/debug/yarpc</title>
-	<style type="text/css">
-		body {
-			font-family: "Courier New", Courier, monospace;
-		}
-		table {
-			color:#333333;
-			border-width: 1px;
-			border-color: #3A3A3A;
-			border-collapse: collapse;
-		}
-		table th {
-			border-width: 1px;
-			padding: 8px;
-			border-style: solid;
-			border-color: #3A3A3A;
-			background-color: #B3B3B3;
-		}
-		table td {
-			border-width: 1px;
-			padding: 8px;
-			border-style: solid;
-			border-color: #3A3A3A;
-			background-color: #ffffff;
-		}
-		header::after {
-			content: "";
-			clear: both;
-			display: table;
-		}
-		h1 {
-			width: 40%;
-			float: left;
-			margin: 0;
-		}
-		div.dependencies {
-			width: 60%;
-			float: left;
-			font-size: small;
-			text-align: right;
-		}
-	</style>
-	</head>
-	<body>
-
-<header>
-<h1>/debug/yarpc</h1>
-<div class="dependencies">
-	{{range .PackageVersions}}
-	<span>{{.Name}}={{.Version}}</span>
-	{{end}}
-</div>
-</header>
-
-{{range .Dispatchers}}
-	<hr />
-	<h2>Dispatcher "{{.Name}}" <small>({{.ID}})</small></h2>
-	<table>
-		<tr>
-			<th>Procedure</th>
-			<th>Encoding</th>
-			<th>Signature</th>
-			<th>RPC Type</th>
-		</tr>
-		{{range .Procedures}}
-		<tr>
-			<td>{{.Name}}</td>
-			<td>{{.Encoding}}</td>
-			<td>{{.Signature}}</td>
-			<td>{{.RPCType}}</td>
-		</tr>
-		{{end}}
-	</table>
-	<h3>Inbounds</h3>
-	<table>
-		<tr>
-			<th>Transport</th>
-			<th>Endpoint</th>
-			<th>State</th>
-		</tr>
-		{{range .Inbounds}}
-		<tr>
-			<td>{{.Transport}}</td>
-			<td>{{.Endpoint}}</td>
-			<td>{{.State}}</td>
-		</tr>
-		{{end}}
-	</table>
-	<h3>Outbounds</h3>
-	<table>
-		<thead>
-		<tr>
-			<th>Outbound Key</th>
-			<th>Service</th>
-			<th>Transport</th>
-			<th>RPC Type</th>
-			<th>Endpoint</th>
-			<th>State</th>
-			<th colspan="3">Chooser</th>
-		</tr>
-		<tr>
-			<th></th>
-			<th></th>
-			<th></th>
-			<th></th>
-			<th></th>
-			<th>Name</th>
-			<th>State</th>
-			<th>Peers</th>
-		</tr>
-		</thead>
-		<tbody>
-		{{range .Outbounds}}
-		<tr>
-			<td>{{.OutboundKey}}</td>
-			<td>{{.Service}}</td>
-			<td>{{.Transport}}</td>
-			<td>{{.RPCType}}</td>
-			<td>{{.Endpoint}}</td>
-			<td>{{.State}}</td>
-			<td>{{.Chooser.Name}}</td>
-			<td>{{.Chooser.State}}</td>
-			<td>
-				<ul>
-				{{range .Chooser.Peers}}
-					<li>{{.Identifier}} ({{.State}})</li>
-				{{end}}
-				</ul>
-			</td>
-		</tr>
-		</tbody>
-		{{end}}
-	</table>
-{{end}}
-	</body>
-</html>
-`
