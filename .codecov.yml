@@ -40,7 +40,28 @@ ignore:
  - /internal/crossdock/thrift/oneway/onewayclient/
  - /internal/crossdock/thrift/oneway/onewayserver/
  - /internal/crossdock/thrift/oneway/yarpc/
- - /internal/examples/protobuf/examplepb/
+ - /internal/examples/json-keyvalue/client
+ - /internal/examples/json-keyvalue/server
+ - /internal/examples/protobuf
+ - /internal/examples/protobuf/example
+ - /internal/examples/protobuf/examplepb
+ - /internal/examples/protobuf/exampleutil
+ - /internal/examples/thrift-hello/hello
+ - /internal/examples/thrift-hello/hello/echo
+ - /internal/examples/thrift-hello/hello/echo/helloclient
+ - /internal/examples/thrift-hello/hello/echo/helloserver
+ - /internal/examples/thrift-hello/hello/echo/hellotest
+ - /internal/examples/thrift-keyvalue/keyvalue/client
+ - /internal/examples/thrift-keyvalue/keyvalue/kv
+ - /internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient
+ - /internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueserver
+ - /internal/examples/thrift-keyvalue/keyvalue/kv/keyvaluetest
+ - /internal/examples/thrift-keyvalue/keyvalue/server
+ - /internal/examples/thrift-oneway
+ - /internal/examples/thrift-oneway/sink
+ - /internal/examples/thrift-oneway/sink/helloclient
+ - /internal/examples/thrift-oneway/sink/helloserver
+ - /internal/examples/thrift-oneway/sink/hellotest
  - /internal/mapdecode/mapstructure/
  - /internal/service-test/
  - /yarpcproto/
