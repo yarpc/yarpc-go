@@ -52,8 +52,9 @@ services:
             - SKIP_GRPC=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_GOOGLE_GRPC_CLIENT=client,server
             - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
-            - BEHAVIOR_GOOGLE_GRPC_SERVER=client,server
-            - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+              # TODO: uncomment when transport errors are implemented and we no longer wrap protobuf responses
+              #- BEHAVIOR_GOOGLE_GRPC_SERVER=client,server
+              #- SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server

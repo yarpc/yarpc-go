@@ -46,7 +46,7 @@ func Run(t crossdock.T) {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%s:8090", server), grpc.WithInsecure())
+	clientConn, err := grpc.Dial(fmt.Sprintf("%s:8089", server), grpc.WithInsecure())
 	fatals.NoError(err, "grpc.Dial failed")
 
 	client := crossdockpb.NewEchoClient(clientConn)

@@ -59,7 +59,7 @@ func Run(t crossdock.T) {
 
 	token := random.String(5)
 
-	pong, err := client.Echo(contextWrapper.Wrap(ctx), &crossdockpb.Ping{Beep: token})
+	pong, err := client.Echo(ctx, &crossdockpb.Ping{Beep: token})
 
 	crossdock.Fatals(t).NoError(err, "call to Echo::echo failed: %v", err)
 	crossdock.Assert(t).Equal(token, pong.Boop, "server said: %v", pong.Boop)
