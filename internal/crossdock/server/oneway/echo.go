@@ -31,6 +31,8 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/encoding/x/protobuf"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -53,13 +55,6 @@ type jsonToken struct{ Token string }
 func (o *onewayHandler) EchoJSON(ctx context.Context, token *jsonToken) error {
 	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
 	o.callHome(ctx, callBackAddr, []byte(token.Token), json.Encoding)
-	return nil
-}
-
-// Echo implements the Oneway::Echo procedure.
-func (o *onewayHandler) Echo(ctx context.Context, Token *string) error {
-	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
-	o.callHome(ctx, callBackAddr, []byte(*Token), thrift.Encoding)
 	return nil
 }
 
@@ -90,4 +85,26 @@ func (o *onewayHandler) callHome(ctx context.Context, callBackAddr string, body 
 	if err != nil {
 		panic(fmt.Sprintf("could not make call back to client: %s", err))
 	}
+}
+
+type thriftHandler struct {
+	*onewayHandler
+}
+
+// Echo implements the Oneway::Echo procedure.
+func (t *thriftHandler) Echo(ctx context.Context, Token *string) error {
+	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
+	t.callHome(ctx, callBackAddr, []byte(*Token), thrift.Encoding)
+	return nil
+}
+
+type protoHandler struct {
+	*onewayHandler
+}
+
+// Echo implements the Oneway::Echo procedure.
+func (p *protoHandler) Echo(ctx context.Context, token *crossdockpb.Token) error {
+	callBackAddr := yarpc.CallFromContext(ctx).Header(callBackAddrHeader)
+	p.callHome(ctx, callBackAddr, []byte(token.Value), protobuf.Encoding)
+	return nil
 }

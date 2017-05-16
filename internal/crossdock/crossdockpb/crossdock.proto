@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package uber.yarpc.internal.crossdock;
 
+import "go.uber.org/yarpc/yarpcproto/yarpc.proto";
+
 option go_package = "crossdockpb";
 
 message Ping {
@@ -14,4 +16,12 @@ message Pong {
 
 service Echo {
   rpc Echo(Ping) returns (Pong);
+}
+
+message Token {
+  string value = 1;
+}
+
+service Oneway {
+  rpc Echo(Token) returns (uber.yarpc.Oneway);
 }

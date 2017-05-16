@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
+	"go.uber.org/yarpc/yarpcproto"
 )
 
 // EchoYarpcClient is the yarpc client-side interface for the Echo service.
@@ -107,4 +108,68 @@ func newEcho_EchoYarpcResponse() proto.Message {
 var (
 	emptyEcho_EchoYarpcRequest  = &Ping{}
 	emptyEcho_EchoYarpcResponse = &Pong{}
+)
+
+// OnewayYarpcClient is the yarpc client-side interface for the Oneway service.
+type OnewayYarpcClient interface {
+	Echo(context.Context, *Token, ...yarpc.CallOption) (yarpc.Ack, error)
+}
+
+// NewOnewayYarpcClient builds a new yarpc client for the Oneway service.
+func NewOnewayYarpcClient(clientConfig transport.ClientConfig) OnewayYarpcClient {
+	return &_OnewayYarpcCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Oneway", clientConfig)}
+}
+
+// OnewayYarpcServer is the yarpc server-side interface for the Oneway service.
+type OnewayYarpcServer interface {
+	Echo(context.Context, *Token) error
+}
+
+// BuildOnewayYarpcProcedures prepares an implementation of the Oneway service for yarpc registration.
+func BuildOnewayYarpcProcedures(server OnewayYarpcServer) []transport.Procedure {
+	handler := &_OnewayYarpcHandler{server}
+	return protobuf.BuildProcedures(
+		"uber.yarpc.internal.crossdock.Oneway",
+		map[string]transport.UnaryHandler{},
+		map[string]transport.OnewayHandler{
+			"Echo": protobuf.NewOnewayHandler(handler.Echo, newOneway_EchoYarpcRequest),
+		},
+	)
+}
+
+type _OnewayYarpcCaller struct {
+	client protobuf.Client
+}
+
+func (c *_OnewayYarpcCaller) Echo(ctx context.Context, request *Token, options ...yarpc.CallOption) (yarpc.Ack, error) {
+	return c.client.CallOneway(ctx, "Echo", request, options...)
+}
+
+type _OnewayYarpcHandler struct {
+	server OnewayYarpcServer
+}
+
+func (h *_OnewayYarpcHandler) Echo(ctx context.Context, requestMessage proto.Message) error {
+	var request *Token
+	var ok bool
+	if requestMessage != nil {
+		request, ok = requestMessage.(*Token)
+		if !ok {
+			return protobuf.CastError(emptyOneway_EchoYarpcRequest, requestMessage)
+		}
+	}
+	return h.server.Echo(ctx, request)
+}
+
+func newOneway_EchoYarpcRequest() proto.Message {
+	return &Token{}
+}
+
+func newOneway_EchoYarpcResponse() proto.Message {
+	return &yarpcproto.Oneway{}
+}
+
+var (
+	emptyOneway_EchoYarpcRequest  = &Token{}
+	emptyOneway_EchoYarpcResponse = &yarpcproto.Oneway{}
 )

@@ -45,6 +45,8 @@ func Run(t crossdock.T) {
 		JSON(t, dispatcher, serverCalledBack, callBackAddr)
 	case "thrift":
 		Thrift(t, dispatcher, serverCalledBack, callBackAddr)
+	case "protobuf":
+		Protobuf(t, dispatcher, serverCalledBack, callBackAddr)
 	default:
 		crossdock.Fatals(t).Fail("unknown encoding", "%v", encoding)
 	}

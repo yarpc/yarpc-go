@@ -24,31 +24,31 @@ import (
 	"context"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayclient"
+	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 
 	"github.com/crossdock/crossdock-go"
 )
 
-// Thrift starts an http oneway run using Thrift encoding
-func Thrift(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
+// Protobuf starts an http oneway run using Protobuf encoding
+func Protobuf(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan []byte, callBackAddr string) {
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
-	client := onewayclient.New(dispatcher.ClientConfig("oneway-server"))
+	client := crossdockpb.NewOnewayYarpcClient(dispatcher.ClientConfig("oneway-server"))
 	token := getRandomID()
 
 	// ensure server hasn't called us prematurely
 	select {
 	case <-serverCalledBack:
-		fatals.FailNow("oneway thrift test failed", "client waited for server to fill channel")
+		fatals.FailNow("oneway protobuf test failed", "client waited for server to fill channel")
 	default:
 	}
 
-	ack, err := client.Echo(context.Background(), &token, yarpc.WithHeader("callBackAddr", callBackAddr))
+	ack, err := client.Echo(context.Background(), &crossdockpb.Token{Value: token}, yarpc.WithHeader("callBackAddr", callBackAddr))
 
 	fatals.NoError(err, "call to Oneway::echo failed: %v", err)
 	fatals.NotNil(ack, "ack is nil")
 
 	serverToken := <-serverCalledBack
-	assert.Equal(token, string(serverToken), "Thrift token mismatch")
+	assert.Equal(token, string(serverToken), "Protobuf token mismatch")
 }

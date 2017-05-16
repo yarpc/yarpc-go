@@ -79,7 +79,6 @@ services:
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport,ctxavailabletransports
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
             - BEHAVIOR_ONEWAY=client_oneway,server_oneway,transport_oneway,encoding
-            - SKIP_ONEWAY=encoding:protobuf
             - BEHAVIOR_ONEWAY_CTXPROPAGATION=client_oneway,server_oneway,transport_oneway
 
             - REPORT=compact

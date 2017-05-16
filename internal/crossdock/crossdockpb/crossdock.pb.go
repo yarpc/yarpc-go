@@ -31,12 +31,14 @@ It is generated from these files:
 It has these top-level messages:
 	Ping
 	Pong
+	Token
 */
 package crossdockpb
 
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import uber_yarpc "go.uber.org/yarpc/yarpcproto"
 
 import strings "strings"
 import reflect "reflect"
@@ -89,9 +91,25 @@ func (m *Pong) GetBoop() string {
 	return ""
 }
 
+type Token struct {
+	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (m *Token) Reset()                    { *m = Token{} }
+func (*Token) ProtoMessage()               {}
+func (*Token) Descriptor() ([]byte, []int) { return fileDescriptorCrossdock, []int{2} }
+
+func (m *Token) GetValue() string {
+	if m != nil {
+		return m.Value
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*Ping)(nil), "uber.yarpc.internal.crossdock.Ping")
 	proto.RegisterType((*Pong)(nil), "uber.yarpc.internal.crossdock.Pong")
+	proto.RegisterType((*Token)(nil), "uber.yarpc.internal.crossdock.Token")
 }
 func (this *Ping) Equal(that interface{}) bool {
 	if that == nil {
@@ -153,6 +171,36 @@ func (this *Pong) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Token) Equal(that interface{}) bool {
+	if that == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	}
+
+	that1, ok := that.(*Token)
+	if !ok {
+		that2, ok := that.(Token)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	} else if this == nil {
+		return false
+	}
+	if this.Value != that1.Value {
+		return false
+	}
+	return true
+}
 func (this *Ping) GoString() string {
 	if this == nil {
 		return "nil"
@@ -170,6 +218,16 @@ func (this *Pong) GoString() string {
 	s := make([]string, 0, 5)
 	s = append(s, "&crossdockpb.Pong{")
 	s = append(s, "Boop: "+fmt.Sprintf("%#v", this.Boop)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *Token) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&crossdockpb.Token{")
+	s = append(s, "Value: "+fmt.Sprintf("%#v", this.Value)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -254,6 +312,70 @@ var _Echo_serviceDesc = grpc.ServiceDesc{
 	Metadata: "internal/crossdock/crossdockpb/crossdock.proto",
 }
 
+// Client API for Oneway service
+
+type OnewayClient interface {
+	Echo(ctx context.Context, in *Token, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error)
+}
+
+type onewayClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewOnewayClient(cc *grpc.ClientConn) OnewayClient {
+	return &onewayClient{cc}
+}
+
+func (c *onewayClient) Echo(ctx context.Context, in *Token, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error) {
+	out := new(uber_yarpc.Oneway)
+	err := grpc.Invoke(ctx, "/uber.yarpc.internal.crossdock.Oneway/Echo", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Oneway service
+
+type OnewayServer interface {
+	Echo(context.Context, *Token) (*uber_yarpc.Oneway, error)
+}
+
+func RegisterOnewayServer(s *grpc.Server, srv OnewayServer) {
+	s.RegisterService(&_Oneway_serviceDesc, srv)
+}
+
+func _Oneway_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Token)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OnewayServer).Echo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.internal.crossdock.Oneway/Echo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OnewayServer).Echo(ctx, req.(*Token))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Oneway_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "uber.yarpc.internal.crossdock.Oneway",
+	HandlerType: (*OnewayServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Echo",
+			Handler:    _Oneway_Echo_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "internal/crossdock/crossdockpb/crossdock.proto",
+}
+
 func (m *Ping) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -298,6 +420,30 @@ func (m *Pong) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintCrossdock(dAtA, i, uint64(len(m.Boop)))
 		i += copy(dAtA[i:], m.Boop)
+	}
+	return i, nil
+}
+
+func (m *Token) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Token) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Value) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCrossdock(dAtA, i, uint64(len(m.Value)))
+		i += copy(dAtA[i:], m.Value)
 	}
 	return i, nil
 }
@@ -349,6 +495,16 @@ func (m *Pong) Size() (n int) {
 	return n
 }
 
+func (m *Token) Size() (n int) {
+	var l int
+	_ = l
+	l = len(m.Value)
+	if l > 0 {
+		n += 1 + l + sovCrossdock(uint64(l))
+	}
+	return n
+}
+
 func sovCrossdock(x uint64) (n int) {
 	for {
 		n++
@@ -378,6 +534,16 @@ func (this *Pong) String() string {
 	}
 	s := strings.Join([]string{`&Pong{`,
 		`Boop:` + fmt.Sprintf("%v", this.Boop) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Token) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Token{`,
+		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -548,6 +714,85 @@ func (m *Pong) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *Token) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCrossdock
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Token: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Token: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCrossdock
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCrossdock
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Value = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCrossdock(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCrossdock
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func skipCrossdock(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
@@ -658,18 +903,22 @@ func init() {
 }
 
 var fileDescriptorCrossdock = []byte{
-	// 193 bytes of a gzipped FileDescriptorProto
+	// 261 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xcb, 0xcc, 0x2b, 0x49,
 	0x2d, 0xca, 0x4b, 0xcc, 0xd1, 0x4f, 0x2e, 0xca, 0x2f, 0x2e, 0x4e, 0xc9, 0x4f, 0xce, 0x46, 0xb0,
 	0x0a, 0x92, 0x10, 0x6c, 0xbd, 0x82, 0xa2, 0xfc, 0x92, 0x7c, 0x21, 0xd9, 0xd2, 0xa4, 0xd4, 0x22,
-	0xbd, 0xca, 0xc4, 0xa2, 0x82, 0x64, 0xb8, 0x56, 0x3d, 0xb8, 0x22, 0x25, 0x29, 0x2e, 0x96, 0x80,
-	0xcc, 0xbc, 0x74, 0x21, 0x21, 0x2e, 0x96, 0xa4, 0xd4, 0xd4, 0x02, 0x09, 0x46, 0x05, 0x46, 0x0d,
-	0xce, 0x20, 0x30, 0x1b, 0x2c, 0x97, 0x0f, 0x95, 0xcb, 0xcf, 0x47, 0xc8, 0xe5, 0xe7, 0x17, 0x18,
-	0x45, 0x70, 0xb1, 0xb8, 0x26, 0x67, 0xe4, 0x0b, 0x05, 0x40, 0x69, 0x65, 0x3d, 0xbc, 0xf6, 0xe8,
-	0x81, 0x2c, 0x91, 0x22, 0xa8, 0x28, 0x3f, 0x2f, 0xdd, 0xc9, 0xf2, 0xc2, 0x43, 0x39, 0x86, 0x1b,
-	0x0f, 0xe5, 0x18, 0x3e, 0x3c, 0x94, 0x63, 0x6c, 0x78, 0x24, 0xc7, 0xb8, 0xe2, 0x91, 0x1c, 0xe3,
-	0x89, 0x47, 0x72, 0x8c, 0x17, 0x1e, 0xc9, 0x31, 0x3e, 0x78, 0x24, 0xc7, 0xf8, 0xe2, 0x91, 0x1c,
-	0xc3, 0x87, 0x47, 0x72, 0x8c, 0x13, 0x1e, 0xcb, 0x31, 0x44, 0x71, 0x23, 0xf9, 0x3d, 0x89, 0x0d,
-	0xec, 0x65, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0x56, 0xe7, 0x08, 0x7f, 0x24, 0x01, 0x00,
-	0x00,
+	0xbd, 0xca, 0xc4, 0xa2, 0x82, 0x64, 0xb8, 0x56, 0x3d, 0xb8, 0x22, 0x29, 0x8d, 0xf4, 0x7c, 0x3d,
+	0xb0, 0x8a, 0xfc, 0xa2, 0x74, 0x7d, 0xb0, 0x2a, 0x08, 0x09, 0xd6, 0x0c, 0x61, 0x42, 0x0c, 0x52,
+	0x92, 0xe2, 0x62, 0x09, 0xc8, 0xcc, 0x4b, 0x17, 0x12, 0xe2, 0x62, 0x49, 0x4a, 0x4d, 0x2d, 0x90,
+	0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c, 0x02, 0xb3, 0xc1, 0x72, 0xf9, 0x50, 0xb9, 0xfc, 0x7c, 0x84,
+	0x5c, 0x7e, 0x7e, 0x81, 0x92, 0x2c, 0x17, 0x6b, 0x48, 0x7e, 0x76, 0x6a, 0x9e, 0x90, 0x08, 0x17,
+	0x6b, 0x59, 0x62, 0x4e, 0x69, 0x2a, 0x54, 0x16, 0xc2, 0x31, 0x8a, 0xe0, 0x62, 0x71, 0x4d, 0xce,
+	0xc8, 0x17, 0x0a, 0x80, 0xd2, 0xca, 0x7a, 0x78, 0x1d, 0xac, 0x07, 0x72, 0x83, 0x14, 0x41, 0x45,
+	0xf9, 0x79, 0xe9, 0x46, 0x5e, 0x5c, 0x6c, 0xfe, 0x79, 0xa9, 0xe5, 0x89, 0x95, 0x42, 0x0e, 0x50,
+	0xb3, 0x55, 0x08, 0x68, 0x03, 0xbb, 0x53, 0x4a, 0x08, 0x59, 0x15, 0xc4, 0x04, 0x27, 0xcb, 0x0b,
+	0x0f, 0xe5, 0x18, 0x6e, 0x3c, 0x94, 0x63, 0xf8, 0xf0, 0x50, 0x8e, 0xb1, 0xe1, 0x91, 0x1c, 0xe3,
+	0x8a, 0x47, 0x72, 0x8c, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91, 0x1c,
+	0xe3, 0x8b, 0x47, 0x72, 0x0c, 0x1f, 0x1e, 0xc9, 0x31, 0x4e, 0x78, 0x2c, 0xc7, 0x10, 0xc5, 0x8d,
+	0x14, 0x21, 0x49, 0x6c, 0xe0, 0xe0, 0x33, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x40, 0xb3, 0xaa,
+	0xd5, 0xb9, 0x01, 0x00, 0x00,
 }
