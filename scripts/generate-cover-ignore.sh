@@ -5,13 +5,13 @@
 # It uses the following logic:
 #
 #   - Add every directory that contains a generated go file
-#   - Add every directory and subdirectory in IGNORE_DIRS (in source.sh)
-#   - Remove every directory (but not subdirectory) in WHITELIST (in source.sh)
+#   - Add every directory and subdirectory in IGNORE_DIRS (in helpers.sh)
+#   - Remove every directory (but not subdirectory) in WHITELIST (in helpers.sh)
 
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
-source "${DIR}/scripts/source.sh"
+source "${DIR}/scripts/helpers.sh"
 cd "${DIR}"
 
 remove_existing_nocover_files() {

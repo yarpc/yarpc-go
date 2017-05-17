@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
-source "${DIR}/scripts/source.sh"
+source "${DIR}/scripts/helpers.sh"
 cd "${DIR}"
 
 
@@ -19,6 +19,6 @@ for dir in $(not_cover_ignore_dirs); do
 done
 
 if [ -n "${NO_TEST_FILE_DIRS}" ]; then
-  echo "error: at least one _test.go file must be in these directories: ${NO_TEST_FILE_DIRS}" >&2
+  echo "error: at least one _test.go file must be in all directories with go files so that they are counted for code coverage: ${NO_TEST_FILE_DIRS}" >&2
   exit 1
 fi
