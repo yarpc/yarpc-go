@@ -106,7 +106,17 @@ add_nocover_files() {
   done
 }
 
+generate_codecov_file() {
+  local tmpfile="$(mktemp)"
+  head -$(grep -n ^ignore: .codecov.yml | cut -f 1 -d :) .codecov.yml > "${tmpfile}"
+  for d in $@; do
+    echo " - /${d}" >> ${tmpfile}
+  done
+  mv "${tmpfile}" .codecov.yml
+}
+
 dirs="$(cover_ignore_dirs)"
 
 remove_existing_nocover_files
 add_nocover_files ${dirs}
+generate_codecov_file ${dirs}
