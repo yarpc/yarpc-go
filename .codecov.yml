@@ -111,6 +111,7 @@ ignore:
  - /internal/examples/thrift-oneway/sink/helloserver/
  - /internal/examples/thrift-oneway/sink/hellotest/
  - /internal/service-test/
+ - /internal/testutils/
  - /serialize/internal/
  - /transport/x/cherami/example/
  - /transport/x/cherami/example/thrift/example/

@@ -17,6 +17,7 @@ IGNORE_DIRS="\
   internal/crossdock \
   internal/examples \
   internal/service-test \
+  internal/testutils \
   transport/x/cherami/example"
 
 WHITELIST="\
