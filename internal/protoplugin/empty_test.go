@@ -20,8 +20,4 @@
 
 // This file was added so that code coverage touches this package
 
-package middlewaretest
-
-import "testing"
-
-func TestEmpty(t *testing.T) {}
+package protoplugin
