@@ -45,6 +45,8 @@ import (
 func TestBasicYarpc(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+		_, err := e.GetValueYarpc(context.Background(), "foo")
+		assert.Error(t, err)
 		assert.NoError(t, e.SetValueYarpc(context.Background(), "foo", "bar"))
 		value, err := e.GetValueYarpc(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -55,6 +57,8 @@ func TestBasicYarpc(t *testing.T) {
 func TestBasicGRPC(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+		_, err := e.GetValueGRPC(context.Background(), "foo")
+		assert.Error(t, err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.NoError(t, err)
