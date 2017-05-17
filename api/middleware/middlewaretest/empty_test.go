@@ -18,10 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// This file was added so that code coverage touches this package
+// This file was added so that code coverage touches this package.
 
 package middlewaretest
-
-import "testing"
-
-func TestEmpty(t *testing.T) {}

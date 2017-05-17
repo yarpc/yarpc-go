@@ -20,4 +20,4 @@
 
 // This file was added so that code coverage touches this package.
 
-package protoplugin
+package introspection
