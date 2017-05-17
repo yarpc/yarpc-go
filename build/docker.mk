@@ -57,7 +57,7 @@ verifyversion: deps ## verify the version in the changelog is the same as in ver
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifyversion
 
 .PHONY: verifytestfiles
-verifytestfiles: deps ## verify all go packages that are no ignored for code coverage have test files
+verifytestfiles: deps ## verify all go packages that are not ignored for code coverage have test files
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifytestfiles
 
 .PHONY: lint

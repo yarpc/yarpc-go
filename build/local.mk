@@ -118,7 +118,7 @@ verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 		done
 
 .PHONY: verifytestfiles
-verifytestfiles: ## verify all go packages that are no ignored for code coverage have test files
+verifytestfiles: ## verify all go packages that are not ignored for code coverage have test files
 	@./scripts/check-test-files.sh
 
 .PHONY: lint
