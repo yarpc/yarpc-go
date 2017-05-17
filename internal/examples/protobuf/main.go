@@ -26,6 +26,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -54,6 +55,20 @@ func do() error {
 	if err != nil {
 		return err
 	}
+	return run(
+		transportType,
+		*flagGoogleGRPC,
+		os.Stdin,
+		os.Stdout,
+	)
+}
+
+func run(
+	transportType testutils.TransportType,
+	googleGRPC bool,
+	input io.Reader,
+	output io.Writer,
+) error {
 	keyValueYarpcServer := example.NewKeyValueYarpcServer()
 	sinkYarpcServer := example.NewSinkYarpcServer(true)
 	return exampleutil.WithClients(
@@ -61,7 +76,14 @@ func do() error {
 		keyValueYarpcServer,
 		sinkYarpcServer,
 		func(clients *exampleutil.Clients) error {
-			return doClient(keyValueYarpcServer, sinkYarpcServer, clients)
+			return doClient(
+				keyValueYarpcServer,
+				sinkYarpcServer,
+				clients,
+				googleGRPC,
+				input,
+				output,
+			)
 		},
 	)
 }
@@ -70,11 +92,14 @@ func doClient(
 	keyValueYarpcServer *example.KeyValueYarpcServer,
 	sinkYarpcServer *example.SinkYarpcServer,
 	clients *exampleutil.Clients,
+	googleGRPC bool,
+	input io.Reader,
+	output io.Writer,
 ) error {
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(line)
+		fmt.Fprintln(output, line)
 		args := strings.Split(line, " ")
 		if len(args) < 1 || len(args[0]) < 3 {
 			continue
@@ -84,7 +109,7 @@ func doClient(
 		switch cmd {
 		case "get":
 			if len(args) != 1 {
-				fmt.Println("usage: get key")
+				fmt.Fprintln(output, "usage: get key")
 				continue
 			}
 			key := args[0]
@@ -92,21 +117,21 @@ func doClient(
 			defer cancel()
 			var response *examplepb.GetValueResponse
 			var err error
-			if *flagGoogleGRPC {
+			if googleGRPC {
 				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 				err = fromGRPCError(err)
 			} else {
 				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 			}
 			if err != nil {
-				fmt.Printf("get %s failed: %s\n", key, err.Error())
+				fmt.Fprintf(output, "get %s failed: %s\n", key, err.Error())
 			} else {
-				fmt.Println(key, "=", response.Value)
+				fmt.Fprintln(output, key, "=", response.Value)
 			}
 			continue
 		case "set":
 			if len(args) != 1 && len(args) != 2 {
-				fmt.Println("usage: set key [value]")
+				fmt.Fprintln(output, "usage: set key [value]")
 				continue
 			}
 			key := args[0]
@@ -117,37 +142,37 @@ func doClient(
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			var err error
-			if *flagGoogleGRPC {
+			if googleGRPC {
 				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 				err = fromGRPCError(err)
 			} else {
 				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 			}
 			if err != nil {
-				fmt.Printf("set %s = %s failed: %v\n", key, value, err.Error())
+				fmt.Fprintf(output, "set %s = %s failed: %v\n", key, value, err.Error())
 			}
 			continue
 		case "fire":
 			if len(args) != 1 {
-				fmt.Println("usage: fire value")
+				fmt.Fprintln(output, "usage: fire value")
 				continue
 			}
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			if _, err := clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
-				fmt.Printf("fire %s failed: %s\n", value, err.Error())
+				fmt.Fprintf(output, "fire %s failed: %s\n", value, err.Error())
 			}
 			if err := sinkYarpcServer.WaitFireDone(); err != nil {
-				fmt.Println(err)
+				fmt.Fprintln(output, err)
 			}
 			continue
 		case "fired-values":
 			if len(args) != 0 {
-				fmt.Println("usage: fired-values")
+				fmt.Fprintln(output, "usage: fired-values")
 				continue
 			}
-			fmt.Println(strings.Join(sinkYarpcServer.Values(), " "))
+			fmt.Fprintln(output, strings.Join(sinkYarpcServer.Values(), " "))
 			continue
 		case "exit":
 			return nil
