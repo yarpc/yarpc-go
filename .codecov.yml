@@ -15,6 +15,7 @@ coverage:
         flags: experimental
     patch: no
 
+# This list is generated using scripts/generate-cover-ignore.sh
 # All packages with .nocover files in them MUST be listed here
 ignore:
  - /encoding/thrift/internal/
