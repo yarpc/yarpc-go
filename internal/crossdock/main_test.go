@@ -68,10 +68,15 @@ func TestCrossdock(t *testing.T) {
 			axes: axes{"transport": []string{"http", "tchannel"}},
 		},
 		{
-			name: "errors_httpclient",
+			name: "protobuf",
+			axes: axes{"transport": []string{"http", "tchannel"}},
 		},
 		{
-			name: "errors_tchclient",
+			name: "grpc",
+			axes: axes{"encoding": []string{"raw", "json", "thrift", "protobuf"}},
+		},
+		{
+			name: "google_grpc_client",
 		},
 		{
 			name: "headers",
@@ -79,6 +84,12 @@ func TestCrossdock(t *testing.T) {
 				"transport": []string{"http", "tchannel"},
 				"encoding":  []string{"raw", "json", "thrift"},
 			},
+		},
+		{
+			name: "errors_httpclient",
+		},
+		{
+			name: "errors_tchclient",
 		},
 		{
 			name: "tchclient",
@@ -145,7 +156,7 @@ func TestCrossdock(t *testing.T) {
 				"server_oneway": "127.0.0.1",
 			},
 			axes: axes{
-				"encoding":         []string{"raw", "json", "thrift"},
+				"encoding":         []string{"raw", "json", "thrift", "protobuf"},
 				"transport_oneway": []string{"http"},
 			},
 		},
