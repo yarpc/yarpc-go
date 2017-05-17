@@ -27,7 +27,6 @@ WHITELIST="\
   api/transport/transporttest \
   encoding/thrift \
   encoding/thrift/thriftrw-plugin-yarpc \
-  internal/crossdock \
   internal/interpolate \
   internal/sync \
   transport/x/redis/redistest"
@@ -118,7 +117,7 @@ generate_codecov_file() {
   local tmpfile="$(mktemp)"
   head -$(grep -n ^ignore: .codecov.yml | cut -f 1 -d :) .codecov.yml > "${tmpfile}"
   for d in $@; do
-    echo " - /${d}" >> ${tmpfile}
+    echo " - /${d}/" >> ${tmpfile}
   done
   mv "${tmpfile}" .codecov.yml
 }
