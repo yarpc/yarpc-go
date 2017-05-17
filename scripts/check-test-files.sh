@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# This file generates the .nocover files and the ignore directories in .codecov.yml.
-#
-# It uses the following logic:
-#
-#   - Add every directory that contains a generated go file
-#   - Add every directory and subdirectory in IGNORE_DIRS
-#   - Remove every directory (but not subdirectory) in WHITELIST
-
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${0}")/.." && pwd)"
