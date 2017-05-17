@@ -134,7 +134,9 @@ func dirhash(dir string) (map[string]string, error) {
 		if err != nil {
 			return err
 		}
-		fileHashes[path] = fileHash
+		if !strings.HasSuffix(path, ".nocover") {
+			fileHashes[path] = fileHash
+		}
 		return nil
 	})
 

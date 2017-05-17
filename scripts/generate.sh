@@ -113,6 +113,7 @@ rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # 
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
 
 scripts/update-licenses.sh
+scripts/generate-cover-ignore.sh
 
 rm -f .dockerignore
 cat .gitignore | sed 's/^\///' > .dockerignore

@@ -15,32 +15,107 @@ coverage:
         flags: experimental
     patch: no
 
+# This list is generated using scripts/generate-cover-ignore.sh
+# All packages with .nocover files in them MUST be listed here
 ignore:
-  # All packages with .nocover files in them MUST be listed here
  - /encoding/thrift/internal/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoretest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storetest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseservicetest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyservicetest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptytest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlytest/
  - /encoding/x/protobuf/internal/wirepb/
+ - /internal/crossdock/
+ - /internal/crossdock/client/
+ - /internal/crossdock/client/apachethrift/
+ - /internal/crossdock/client/ctxpropagation/
  - /internal/crossdock/client/dispatcher/
+ - /internal/crossdock/client/echo/
+ - /internal/crossdock/client/errorshttpclient/
+ - /internal/crossdock/client/errorstchclient/
+ - /internal/crossdock/client/gauntlet/
+ - /internal/crossdock/client/googlegrpcclient/
+ - /internal/crossdock/client/googlegrpcserver/
+ - /internal/crossdock/client/grpc/
+ - /internal/crossdock/client/headers/
+ - /internal/crossdock/client/httpserver/
+ - /internal/crossdock/client/oneway/
+ - /internal/crossdock/client/onewayctxpropagation/
+ - /internal/crossdock/client/params/
+ - /internal/crossdock/client/random/
+ - /internal/crossdock/client/tchclient/
+ - /internal/crossdock/client/tchserver/
+ - /internal/crossdock/client/timeout/
  - /internal/crossdock/crossdockpb/
- - /internal/crossdock/thrift/
+ - /internal/crossdock/internal/
+ - /internal/crossdock/server/
+ - /internal/crossdock/server/apachethrift/
+ - /internal/crossdock/server/googlegrpc/
+ - /internal/crossdock/server/http/
+ - /internal/crossdock/server/oneway/
+ - /internal/crossdock/server/tch/
+ - /internal/crossdock/server/yarpc/
  - /internal/crossdock/thrift/echo/
  - /internal/crossdock/thrift/echo/echoclient/
  - /internal/crossdock/thrift/echo/echoserver/
- - /internal/crossdock/thrift/echo/yarpc/
+ - /internal/crossdock/thrift/echo/echotest/
  - /internal/crossdock/thrift/gauntlet/
  - /internal/crossdock/thrift/gauntlet/secondserviceclient/
  - /internal/crossdock/thrift/gauntlet/secondserviceserver/
+ - /internal/crossdock/thrift/gauntlet/secondservicetest/
  - /internal/crossdock/thrift/gauntlet/thrifttestclient/
  - /internal/crossdock/thrift/gauntlet/thrifttestserver/
- - /internal/crossdock/thrift/gauntlet/yarpc/
- - /internal/crossdock/thrift/gen-go/
+ - /internal/crossdock/thrift/gauntlet/thrifttesttest/
  - /internal/crossdock/thrift/gen-go/echo/
  - /internal/crossdock/thrift/gen-go/gauntlet_apache/
  - /internal/crossdock/thrift/gen-go/gauntlet_tchannel/
  - /internal/crossdock/thrift/oneway/
  - /internal/crossdock/thrift/oneway/onewayclient/
  - /internal/crossdock/thrift/oneway/onewayserver/
- - /internal/crossdock/thrift/oneway/yarpc/
+ - /internal/crossdock/thrift/oneway/onewaytest/
+ - /internal/examples/json-keyvalue/client/
+ - /internal/examples/json-keyvalue/server/
+ - /internal/examples/protobuf/
+ - /internal/examples/protobuf/example/
  - /internal/examples/protobuf/examplepb/
- - /internal/mapdecode/mapstructure/
+ - /internal/examples/protobuf/exampleutil/
+ - /internal/examples/thrift-hello/hello/
+ - /internal/examples/thrift-hello/hello/echo/
+ - /internal/examples/thrift-hello/hello/echo/helloclient/
+ - /internal/examples/thrift-hello/hello/echo/helloserver/
+ - /internal/examples/thrift-hello/hello/echo/hellotest/
+ - /internal/examples/thrift-keyvalue/keyvalue/client/
+ - /internal/examples/thrift-keyvalue/keyvalue/kv/
+ - /internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient/
+ - /internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueserver/
+ - /internal/examples/thrift-keyvalue/keyvalue/kv/keyvaluetest/
+ - /internal/examples/thrift-keyvalue/keyvalue/server/
+ - /internal/examples/thrift-oneway/
+ - /internal/examples/thrift-oneway/sink/
+ - /internal/examples/thrift-oneway/sink/helloclient/
+ - /internal/examples/thrift-oneway/sink/helloserver/
+ - /internal/examples/thrift-oneway/sink/hellotest/
  - /internal/service-test/
+ - /internal/testutils/
+ - /serialize/internal/
+ - /transport/x/cherami/example/
+ - /transport/x/cherami/example/thrift/example/
+ - /transport/x/cherami/example/thrift/example/exampleserviceclient/
+ - /transport/x/cherami/example/thrift/example/exampleserviceserver/
+ - /transport/x/cherami/example/thrift/example/exampleservicetest/
  - /yarpcproto/
