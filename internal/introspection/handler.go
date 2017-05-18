@@ -27,5 +27,5 @@ type IntrospectableHandler interface {
 
 // Handler is the introspection reported by IntrospectableHandler.
 type Handler struct {
-	IDLEntryPoint *IDLModule
+	IDLEntryPoint *IDLFile
 }
