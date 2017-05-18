@@ -21,7 +21,6 @@
 package protoplugin
 
 import (
-	"flag"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,17 +31,12 @@ import (
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
-var (
-	importPrefix = flag.String("import_prefix", "", "prefix to be added to go package paths for imported proto files")
-)
-
 func run(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
 	fileSuffix string,
 ) error {
-	flag.Parse()
 	request, err := parseRequest(os.Stdin)
 	if err != nil {
 		return err
@@ -53,18 +47,14 @@ func run(
 		for _, p := range strings.Split(request.GetParameter(), ",") {
 			spec := strings.SplitN(p, "=", 2)
 			if len(spec) == 1 {
-				if err := flag.CommandLine.Set(spec[0], ""); err != nil {
-					return err
-				}
 				continue
 			}
 			name, value := spec[0], spec[1]
-			if strings.HasPrefix(name, "M") {
+			switch {
+			case name == "import_prefix":
+				registry.SetPrefix(value)
+			case strings.HasPrefix(name, "M"):
 				registry.AddPackageMap(name[1:], value)
-				continue
-			}
-			if err := flag.CommandLine.Set(name, value); err != nil {
-				return err
 			}
 		}
 	}
@@ -76,7 +66,6 @@ func run(
 		baseImports,
 		fileSuffix,
 	)
-	registry.SetPrefix(*importPrefix)
 	if err := registry.Load(request); err != nil {
 		return emitError(err)
 	}
