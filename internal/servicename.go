@@ -41,9 +41,9 @@ func ValidateServiceName(name string) error {
 		return errors.New("service name must be at least two characters long")
 	}
 	return multierr.Combine(
+		checkHyphens(name),
 		checkFirstCharacter(name),
 		checkForbiddenCharacters(name),
-		checkHyphens(name),
 		checkUUIDs(name),
 	)
 }
