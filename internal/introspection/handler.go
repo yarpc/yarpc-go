@@ -20,10 +20,12 @@
 
 package introspection
 
+// IntrospectableHandler is what you think it is.
 type IntrospectableHandler interface {
 	Introspect() *Handler
 }
 
+// Handler is the introspection reported by IntrospectableHandler.
 type Handler struct {
 	IDLEntryPoint *IDLModule
 }
