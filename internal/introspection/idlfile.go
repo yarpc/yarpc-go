@@ -22,40 +22,49 @@ package introspection
 
 import "strings"
 
-// IDLModule is a generic IDL module. For example, a thrift file or a protobuf
-// one.
-type IDLModule struct {
-	FilePath   string      `json:"filePath"`
-	SHA1       string      `json:"sha1"`
-	Includes   []IDLModule `json:"includes,omitempty"`
-	RawContent string      `json:"rawContent,omitempty"`
+// IDLFile is a generic IDL file. For example, a thrift or protobuf IDL.
+type IDLFile struct {
+	// FilePath starts from an arbitrary root containing the file and all its
+	// includes.
+	FilePath string `json:"filePath"`
+
+	// Checksum of Content. The format is: "${type}:${hex}". For example, a
+	// sha1 checksum would look like:
+	// "sha1:d55f7ce6138889e9e45b62df3741820777c65fcd".
+	Checksum string `json:"checksum"`
+
+	// Includes are themselves IDLFile(s).
+	Includes []IDLFile `json:"includes,omitempty"`
+
+	// Content is the IDL file content.
+	Content string `json:"content,omitempty"`
 }
 
 // Flatmap iterates recursively over the idl module and its includes. The cb
 // function is called onces for every unique idl module (based on FilePath).
 // Iteration is aborted if cb returns true.
-func (im *IDLModule) Flatmap(cb func(*IDLModule) bool) {
+func (im *IDLFile) Flatmap(cb func(*IDLFile) bool) {
 	ft := newIDLFlattener(cb)
 	ft.Collect(im)
 }
 
-// IDLModules is a sortable slice of IDLModule.
-type IDLModules []IDLModule
+// IDLFiles is a sortable slice of IDLFile.
+type IDLFiles []IDLFile
 
-func (ims IDLModules) Len() int {
+func (ims IDLFiles) Len() int {
 	return len(ims)
 }
 
-func (ims IDLModules) Less(i int, j int) bool {
+func (ims IDLFiles) Less(i int, j int) bool {
 	return ims[i].FilePath < ims[j].FilePath
 }
 
-func (ims IDLModules) Swap(i int, j int) {
+func (ims IDLFiles) Swap(i int, j int) {
 	ims[i], ims[j] = ims[j], ims[i]
 }
 
 // IDLTree builds an IDL tree from a slice of Module.
-func (ims IDLModules) IDLTree() IDLTree {
+func (ims IDLFiles) IDLTree() IDLTree {
 	tb := newIDLTreeBuilder()
 	for i := range ims {
 		tb.Collect(&ims[i])
@@ -66,7 +75,7 @@ func (ims IDLModules) IDLTree() IDLTree {
 // Flatmap iterates recursively over every idl modules. The cb function is
 // called onces for every unique idl module (based on FilePath). Iteration is
 // aborted if cb returns true.
-func (ims IDLModules) Flatmap(cb func(*IDLModule) bool) {
+func (ims IDLFiles) Flatmap(cb func(*IDLFile) bool) {
 	ft := newIDLFlattener(cb)
 	for i := range ims {
 		ft.Collect(&ims[i])
@@ -77,10 +86,10 @@ func (ims IDLModules) Flatmap(cb func(*IDLModule) bool) {
 // names to IDLtrees. And of course, a tree can have any number of idl modules.
 type IDLTree struct {
 	Dir     map[string]*IDLTree `json:"dir,omitempty"`
-	Modules IDLModules          `json:"modules,omitempty"`
+	Modules IDLFiles            `json:"modules,omitempty"`
 }
 
-// Compact replaces any tree with a single directory and no IDLModules by it's
+// Compact replaces any tree with a single directory and no IDLFiles by it's
 // single child. The the lone directory name is appended to the parent's
 // directory. I would write an example, but go doc would likely fuck up
 // rendering it anyway.
@@ -101,17 +110,17 @@ func (it *IDLTree) Compact() {
 
 type idlFlattener struct {
 	seen map[string]struct{}
-	cb   func(*IDLModule) bool
+	cb   func(*IDLFile) bool
 }
 
-func newIDLFlattener(cb func(*IDLModule) bool) idlFlattener {
+func newIDLFlattener(cb func(*IDLFile) bool) idlFlattener {
 	return idlFlattener{
 		seen: make(map[string]struct{}),
 		cb:   cb,
 	}
 }
 
-func (idf *idlFlattener) Collect(m *IDLModule) {
+func (idf *idlFlattener) Collect(m *IDLFile) {
 	if _, ok := idf.seen[m.FilePath]; !ok {
 		idf.seen[m.FilePath] = struct{}{}
 		if idf.cb(m) {
@@ -134,7 +143,7 @@ func newIDLTreeBuilder() idlTreeBuilder {
 	}
 }
 
-func (ib *idlTreeBuilder) Collect(m *IDLModule) {
+func (ib *idlTreeBuilder) Collect(m *IDLFile) {
 	if _, ok := ib.seen[m.FilePath]; ok {
 		return
 	}
