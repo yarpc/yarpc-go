@@ -36,21 +36,71 @@ package protoplugin
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"strings"
 	"text/template"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 	protogenerator "github.com/gogo/protobuf/protoc-gen-gogo/generator"
+	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
-// Run is the main function for a protobuf plugin to call.
-func Run(
+// Do is a helper function for protobuf plugins.
+//
+//   func main() {
+//     if err := protoplugin.Do(runner); err != nil {
+//       log.Fatal(err)
+//     }
+//   }
+func Do(runner Runner) error {
+	request, err := ReadRequest(os.Stdin)
+	if err != nil {
+		return err
+	}
+	return WriteResponse(os.Stdout, runner.Run(request))
+}
+
+// ReadRequest reads the request from the reader.
+func ReadRequest(reader io.Reader) (*plugin_go.CodeGeneratorRequest, error) {
+	input, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	request := &plugin_go.CodeGeneratorRequest{}
+	if err := proto.Unmarshal(input, request); err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
+// WriteResponse writes the response to the writer.
+func WriteResponse(writer io.Writer, response *plugin_go.CodeGeneratorResponse) error {
+	buf, err := proto.Marshal(response)
+	if err != nil {
+		return err
+	}
+	if _, err := writer.Write(buf); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Runner runs the plugin logic.
+type Runner interface {
+	Run(*plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse
+}
+
+// NewRunner returns a new Runner.
+func NewRunner(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
 	fileSuffix string,
-) error {
-	return run(tmpl, templateInfoChecker, baseImports, fileSuffix)
+) Runner {
+	return newRunner(tmpl, templateInfoChecker, baseImports, fileSuffix)
 }
 
 // TemplateInfo is the info passed to a template.

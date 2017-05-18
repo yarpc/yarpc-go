@@ -182,21 +182,26 @@ var (
 {{end}}
 `
 
-var funcMap = template.FuncMap{"unaryMethods": unaryMethods, "onewayMethods": onewayMethods, "trimPrefixPeriod": trimPrefixPeriod}
+var runner = protoplugin.NewRunner(
+	template.Must(template.New("tmpl").Funcs(
+		template.FuncMap{
+			"unaryMethods":     unaryMethods,
+			"onewayMethods":    onewayMethods,
+			"trimPrefixPeriod": trimPrefixPeriod,
+		}).Parse(tmpl)),
+	checkTemplateInfo,
+	[]string{
+		"context",
+		"github.com/gogo/protobuf/proto",
+		"go.uber.org/yarpc",
+		"go.uber.org/yarpc/api/transport",
+		"go.uber.org/yarpc/encoding/x/protobuf",
+	},
+	"pb.yarpc.go",
+)
 
 func main() {
-	if err := protoplugin.Run(
-		template.Must(template.New("tmpl").Funcs(funcMap).Parse(tmpl)),
-		checkTemplateInfo,
-		[]string{
-			"context",
-			"github.com/gogo/protobuf/proto",
-			"go.uber.org/yarpc",
-			"go.uber.org/yarpc/api/transport",
-			"go.uber.org/yarpc/encoding/x/protobuf",
-		},
-		"pb.yarpc.go",
-	); err != nil {
+	if err := protoplugin.Do(runner); err != nil {
 		log.Fatal(err)
 	}
 }
