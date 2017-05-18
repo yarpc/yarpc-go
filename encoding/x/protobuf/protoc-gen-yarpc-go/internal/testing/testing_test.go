@@ -51,7 +51,7 @@ func TestGolden(t *testing.T) {
 	require.NoError(t, err)
 	expectedCodeGeneratorResponse := &plugin_go.CodeGeneratorResponse{
 		File: []*plugin_go.CodeGeneratorResponse_File{
-			&plugin_go.CodeGeneratorResponse_File{
+			{
 				Name:    proto.String("encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/testing.pb.yarpc.go"),
 				Content: proto.String(string(content)),
 			},
