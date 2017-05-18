@@ -21,10 +21,6 @@
 package protoplugin
 
 import (
-	"flag"
-	"io"
-	"io/ioutil"
-	"os"
 	"strings"
 	"text/template"
 
@@ -32,98 +28,71 @@ import (
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
-var (
-	importPrefix = flag.String("import_prefix", "", "prefix to be added to go package paths for imported proto files")
-)
+type runner struct {
+	tmpl                *template.Template
+	templateInfoChecker func(*TemplateInfo) error
+	baseImports         []string
+	fileSuffix          string
+}
 
-func run(
+func newRunner(
 	tmpl *template.Template,
 	templateInfoChecker func(*TemplateInfo) error,
 	baseImports []string,
 	fileSuffix string,
-) error {
-	flag.Parse()
-	request, err := parseRequest(os.Stdin)
-	if err != nil {
-		return err
-	}
+) *runner {
+	return &runner{tmpl, templateInfoChecker, baseImports, fileSuffix}
+}
 
+func (r *runner) Run(request *plugin_go.CodeGeneratorRequest) *plugin_go.CodeGeneratorResponse {
 	registry := newRegistry()
 	if request.Parameter != nil {
 		for _, p := range strings.Split(request.GetParameter(), ",") {
 			spec := strings.SplitN(p, "=", 2)
 			if len(spec) == 1 {
-				if err := flag.CommandLine.Set(spec[0], ""); err != nil {
-					return err
-				}
 				continue
 			}
 			name, value := spec[0], spec[1]
-			if strings.HasPrefix(name, "M") {
+			switch {
+			case name == "import_prefix":
+				registry.SetPrefix(value)
+			case strings.HasPrefix(name, "M"):
 				registry.AddPackageMap(name[1:], value)
-				continue
-			}
-			if err := flag.CommandLine.Set(name, value); err != nil {
-				return err
 			}
 		}
 	}
 
 	generator := newGenerator(
 		registry,
-		tmpl,
-		templateInfoChecker,
-		baseImports,
-		fileSuffix,
+		r.tmpl,
+		r.templateInfoChecker,
+		r.baseImports,
+		r.fileSuffix,
 	)
-	registry.SetPrefix(*importPrefix)
 	if err := registry.Load(request); err != nil {
-		return emitError(err)
+		return newResponseError(err)
 	}
 
 	var targets []*File
 	for _, target := range request.FileToGenerate {
 		file, err := registry.LookupFile(target)
 		if err != nil {
-			return err
+			return newResponseError(err)
 		}
 		targets = append(targets, file)
 	}
 
 	out, err := generator.Generate(targets)
 	if err != nil {
-		return emitError(err)
+		return newResponseError(err)
 	}
-	return emitFiles(out)
+	return newResponseFiles(out)
 }
 
-func parseRequest(reader io.Reader) (*plugin_go.CodeGeneratorRequest, error) {
-	input, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	request := &plugin_go.CodeGeneratorRequest{}
-	if err := proto.Unmarshal(input, request); err != nil {
-		return nil, err
-	}
-	return request, nil
+func newResponseFiles(files []*plugin_go.CodeGeneratorResponse_File) *plugin_go.CodeGeneratorResponse {
+	return &plugin_go.CodeGeneratorResponse{File: files}
 }
 
-func emitFiles(files []*plugin_go.CodeGeneratorResponse_File) error {
-	return emitResponse(&plugin_go.CodeGeneratorResponse{File: files})
-}
-
-func emitError(err error) error {
-	return emitResponse(&plugin_go.CodeGeneratorResponse{Error: proto.String(err.Error())})
-}
-
-func emitResponse(response *plugin_go.CodeGeneratorResponse) error {
-	buf, err := proto.Marshal(response)
-	if err != nil {
-		return err
-	}
-	if _, err := os.Stdout.Write(buf); err != nil {
-		return err
-	}
-	return nil
+func newResponseError(err error) *plugin_go.CodeGeneratorResponse {
+	return &plugin_go.CodeGeneratorResponse{Error: proto.String(err.Error())}
 }

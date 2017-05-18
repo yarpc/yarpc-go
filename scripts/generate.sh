@@ -98,6 +98,8 @@ protoc_go_grpc internal/examples/protobuf/examplepb/example.proto
 protoc_yarpc_go internal/examples/protobuf/examplepb/example.proto
 protoc_go_grpc internal/crossdock/crossdockpb/crossdock.proto
 protoc_yarpc_go internal/crossdock/crossdockpb/crossdock.proto
+protoc_go_grpc encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto
+protoc_yarpc_go encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto
 
 ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go
