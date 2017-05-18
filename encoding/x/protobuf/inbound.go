@@ -99,12 +99,12 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	var wireError *wirepb.Error
 	if appErr != nil {
 		wireError = &wirepb.Error{
-			appErr.Error(),
+			Message: appErr.Error(),
 		}
 	}
 	wireResponse := &wirepb.Response{
-		responseData,
-		wireError,
+		Payload: responseData,
+		Error:   wireError,
 	}
 	protoBuffer := getBuffer()
 	defer putBuffer(protoBuffer)
