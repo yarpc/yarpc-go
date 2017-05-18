@@ -56,6 +56,10 @@ verifycodecovignores: deps ## check verifycodecovignores
 verifyversion: deps ## verify the version in the changelog is the same as in version.go
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifyversion
 
+.PHONY: verifytestfiles
+verifytestfiles: deps ## verify all go packages that are not ignored for code coverage have test files
+	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifytestfiles
+
 .PHONY: lint
 lint: deps ## run all linters
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make lint
