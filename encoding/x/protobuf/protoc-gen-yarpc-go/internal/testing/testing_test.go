@@ -37,6 +37,7 @@ import (
 
 func TestGolden(t *testing.T) {
 	codeGeneratorRequest := &plugin_go.CodeGeneratorRequest{
+		Parameter: proto.String("Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto"),
 		FileToGenerate: []string{
 			"encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
 		},

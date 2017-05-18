@@ -6,12 +6,12 @@ package testing
 
 import (
 	"context"
-	"yarpcproto"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
+	"go.uber.org/yarpc/yarpcproto"
 )
 
 // KeyValueYarpcClient is the yarpc client-side interface for the KeyValue service.
