@@ -25,7 +25,7 @@ package introspection
 type DispatcherStatus struct {
 	Name            string           `json:"name"`
 	ID              string           `json:"id"`
-	Procedures      []Procedure      `json:"procedures"`
+	Procedures      Procedures       `json:"procedures"`
 	Inbounds        []InboundStatus  `json:"inbounds"`
 	Outbounds       []OutboundStatus `json:"outbounds"`
 	PackageVersions []PackageVersion `json:"packageVersions"`
