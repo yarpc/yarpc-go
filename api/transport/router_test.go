@@ -22,6 +22,7 @@ package transport
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,4 +48,66 @@ func TestProcedureLogMarshaling(t *testing.T) {
 		"encoding":  "raw",
 		"signature": "signature",
 	}, enc.Fields, "Unexpected output from marshaling procedure.")
+}
+
+func TestProcedureSort(t *testing.T) {
+	ps := Procedures{
+		{
+			Service:  "moe",
+			Name:     "echo",
+			Encoding: "json",
+		},
+		{
+			Service: "moe",
+		},
+		{
+			Service: "larry",
+		},
+		{
+			Service: "moe",
+			Name:    "ping",
+		},
+		{
+			Service:  "moe",
+			Name:     "echo",
+			Encoding: "raw",
+		},
+		{
+			Service: "moe",
+			Name:    "poke",
+		},
+		{
+			Service: "curly",
+		},
+	}
+	sort.Sort(ps)
+	assert.Equal(t, Procedures{
+		{
+			Service: "curly",
+		},
+		{
+			Service: "larry",
+		},
+		{
+			Service: "moe",
+		},
+		{
+			Service:  "moe",
+			Name:     "echo",
+			Encoding: "json",
+		},
+		{
+			Service:  "moe",
+			Name:     "echo",
+			Encoding: "raw",
+		},
+		{
+			Service: "moe",
+			Name:    "ping",
+		},
+		{
+			Service: "moe",
+			Name:    "poke",
+		},
+	}, ps, "should order procedures lexicographically on (service, procedure, encoding)")
 }

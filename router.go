@@ -110,7 +110,7 @@ func (m MapRouter) Procedures() []transport.Procedure {
 	for _, v := range m.serviceProcedures {
 		procs = append(procs, v)
 	}
-	sort.Sort(proceduresByServiceProcedure(procs))
+	sort.Sort(transport.Procedures(procs))
 	return procs
 }
 
@@ -146,18 +146,4 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 	}
 
 	return transport.HandlerSpec{}, transport.UnrecognizedProcedureError(req)
-}
-
-type proceduresByServiceProcedure []transport.Procedure
-
-func (sp proceduresByServiceProcedure) Len() int {
-	return len(sp)
-}
-
-func (sp proceduresByServiceProcedure) Less(i int, j int) bool {
-	return sp[i].Less(sp[j])
-}
-
-func (sp proceduresByServiceProcedure) Swap(i int, j int) {
-	sp[i], sp[j] = sp[j], sp[i]
 }
