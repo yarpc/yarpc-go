@@ -21,6 +21,7 @@
 package protobuf
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -147,32 +148,31 @@ func getProtoRequest(ctx context.Context, transportRequest *transport.Request, n
 }
 
 func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message) error {
-	switch encoding {
-	case Encoding:
-		return unmarshalProto(reader, message)
-	case JSONEncoding:
-		return unmarshalJSON(reader, message)
-	default:
-		return fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
-	}
-}
-
-func unmarshalProto(reader io.Reader, message proto.Message) error {
 	buf := buffer.Get()
 	defer buffer.Put(buf)
 	if _, err := buf.ReadFrom(reader); err != nil {
 		return err
 	}
 	body := buf.Bytes()
-	// is this possible?
-	if body != nil {
-		return proto.Unmarshal(body, message)
+	if len(body) == 0 {
+		return nil
 	}
-	return nil
+	switch encoding {
+	case Encoding:
+		return unmarshalProto(body, message)
+	case JSONEncoding:
+		return unmarshalJSON(body, message)
+	default:
+		return fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
+	}
 }
 
-func unmarshalJSON(reader io.Reader, message proto.Message) error {
-	return _jsonUnmarshaler.Unmarshal(reader, message)
+func unmarshalProto(body []byte, message proto.Message) error {
+	return proto.Unmarshal(body, message)
+}
+
+func unmarshalJSON(body []byte, message proto.Message) error {
+	return _jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
 }
 
 func marshal(encoding transport.Encoding, message proto.Message) ([]byte, func(), error) {
