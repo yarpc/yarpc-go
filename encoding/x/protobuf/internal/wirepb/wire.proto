@@ -11,6 +11,6 @@ message Error {
 
 // Response contains the response from executing a request.
 message Response {
-  bytes payload = 1;
+  string payload = 1;
   Error error = 2;
 }

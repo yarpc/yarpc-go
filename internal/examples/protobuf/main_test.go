@@ -81,6 +81,6 @@ func TestExample(t *testing.T) {
 
 func testExample(t *testing.T, transportType testutils.TransportType, googleGRPC bool) {
 	output := bytes.NewBuffer(nil)
-	require.NoError(t, run(transportType, googleGRPC, strings.NewReader(testInput), output))
+	require.NoError(t, run(transportType, googleGRPC, false, strings.NewReader(testInput), output))
 	require.Equal(t, testOutput, strings.TrimSpace(output.String()))
 }

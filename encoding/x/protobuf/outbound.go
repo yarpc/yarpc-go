@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
@@ -81,9 +82,9 @@ func (c *client) Call(
 		return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
 	}
 	var response proto.Message
-	if wireResponse.Payload != nil {
+	if wireResponse.Payload != "" {
 		response = newResponse()
-		if err := unmarshal(transportRequest.Encoding, bytes.NewReader(wireResponse.Payload), response); err != nil {
+		if err := unmarshal(transportRequest.Encoding, strings.NewReader(wireResponse.Payload), response); err != nil {
 			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
 		}
 	}
