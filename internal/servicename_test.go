@@ -28,6 +28,7 @@ import (
 
 func TestValidServiceNames(t *testing.T) {
 	tests := []string{
+		"aa",
 		"superskipper",
 		"supper-skipper",
 		"supperskipper83",
@@ -37,12 +38,13 @@ func TestValidServiceNames(t *testing.T) {
 		"a77gb7e4-51cb-4808-a9ef-875568bde54aeviluuid", // not valid UUID
 	}
 	for _, n := range tests {
-		assert.NoError(t, ValidateServiceName(n), n)
+		assert.NoError(t, ValidateServiceName(n), "Expected %q to be a valid service name.", n)
 	}
 }
 
 func TestInvalidServiceNames(t *testing.T) {
 	tests := []string{
+		"a",
 		"a77ab7e4-51cb-4808-a9ef-875568bde54a",
 		"urn:uuid:a77ab7e4-51cb-4808-a9ef-875568bde54a",
 		"26695a10-a384-48e7-8867-6d48b7fae80a",
@@ -63,8 +65,10 @@ func TestInvalidServiceNames(t *testing.T) {
 		"no--duplication",
 		"no---duplication",
 		"endswithadash-",
+		"endswithasterisk*",
+		"internal*-asterisk",
 	}
 	for _, n := range tests {
-		assert.Error(t, ValidateServiceName(n), n)
+		assert.Error(t, ValidateServiceName(n), "Expected %q to be an invalid service name", n)
 	}
 }
