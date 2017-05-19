@@ -29,7 +29,7 @@ import (
 )
 
 type serverEncodingError struct {
-	Encoding  transport.Encoding
+	Encodings []transport.Encoding
 	Caller    string
 	Service   string
 	Procedure string
@@ -45,9 +45,19 @@ type serverEncodingError struct {
 func (e serverEncodingError) Error() string {
 	parts := []string{"failed to"}
 	if e.IsResponse {
-		parts = append(parts, fmt.Sprintf("encode %q response", string(e.Encoding)))
+		switch len(e.Encodings) {
+		case 1:
+			parts = append(parts, fmt.Sprintf("encode %q response", string(e.Encodings[0])))
+		default:
+			parts = append(parts, fmt.Sprintf("encode %v response", e.Encodings))
+		}
 	} else {
-		parts = append(parts, fmt.Sprintf("decode %q request", string(e.Encoding)))
+		switch len(e.Encodings) {
+		case 1:
+			parts = append(parts, fmt.Sprintf("decode %q request", string(e.Encodings[0])))
+		default:
+			parts = append(parts, fmt.Sprintf("decode %v request", e.Encodings))
+		}
 	}
 	if e.IsHeader {
 		parts = append(parts, "headers")
@@ -70,7 +80,7 @@ func (e serverEncodingError) AsHandlerError() errors.HandlerError {
 
 func newServerEncodingError(req *transport.Request, err error) serverEncodingError {
 	return serverEncodingError{
-		Encoding:  req.Encoding,
+		Encodings: []transport.Encoding{req.Encoding},
 		Caller:    req.Caller,
 		Service:   req.Service,
 		Procedure: req.Procedure,
@@ -120,7 +130,7 @@ func Expect(req *transport.Request, want ...transport.Encoding) error {
 	}
 
 	return serverEncodingError{
-		Encoding:  req.Encoding,
+		Encodings: want,
 		Caller:    req.Caller,
 		Service:   req.Service,
 		Procedure: req.Procedure,
@@ -135,5 +145,10 @@ type encodingMismatchError struct {
 }
 
 func (e encodingMismatchError) Error() string {
-	return fmt.Sprintf("expected one of encodings %v but got %q", e.Want, e.Got)
+	switch len(e.Want) {
+	case 1:
+		return fmt.Sprintf("expected encoding %q but got %q", e.Want[0], e.Got)
+	default:
+		return fmt.Sprintf("expected one of encodings %v but got %q", e.Want, e.Got)
+	}
 }
