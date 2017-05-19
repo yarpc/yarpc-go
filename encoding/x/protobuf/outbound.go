@@ -23,12 +23,12 @@ package protobuf
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf/internal/wirepb"
-	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/procedure"
 
@@ -51,12 +51,10 @@ func (c *client) Call(
 	newResponse func() proto.Message,
 	options ...yarpc.CallOption,
 ) (proto.Message, error) {
-	transportRequest, err := c.buildTransportRequest(requestMethodName, request)
-	if err != nil {
-		return nil, err
+	ctx, call, transportRequest, cleanup, err := c.buildTransportRequest(ctx, requestMethodName, request, options)
+	if cleanup != nil {
+		defer cleanup()
 	}
-	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
-	ctx, err = call.WriteToRequest(ctx, transportRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -69,32 +67,23 @@ func (c *client) Call(
 	if _, err := call.ReadFromResponse(ctx, transportResponse); err != nil {
 		return nil, err
 	}
-	buf := buffer.Get()
-	defer buffer.Put(buf)
-	if _, err := buf.ReadFrom(transportResponse.Body); err != nil {
-		return nil, err
-	}
-	responseData := buf.Bytes()
-	if responseData == nil {
-		return nil, nil
-	}
 	// TODO: the error from Call will be the application error, we might
 	// also have a response returned however
 	if isRawResponse(transportResponse.Headers) {
 		response := newResponse()
-		if err := proto.Unmarshal(responseData, response); err != nil {
+		if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response); err != nil {
 			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
 		}
 		return response, nil
 	}
 	wireResponse := &wirepb.Response{}
-	if err := proto.Unmarshal(responseData, wireResponse); err != nil {
+	if err := unmarshal(transportRequest.Encoding, transportResponse.Body, wireResponse); err != nil {
 		return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
 	}
 	var response proto.Message
 	if wireResponse.Payload != nil {
 		response = newResponse()
-		if err := proto.Unmarshal(wireResponse.Payload, response); err != nil {
+		if err := unmarshal(transportRequest.Encoding, bytes.NewReader(wireResponse.Payload), response); err != nil {
 			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
 		}
 	}
@@ -110,35 +99,44 @@ func (c *client) CallOneway(
 	request proto.Message,
 	options ...yarpc.CallOption,
 ) (transport.Ack, error) {
-	transportRequest, err := c.buildTransportRequest(requestMethodName, request)
-	if err != nil {
-		return nil, err
+	ctx, _, transportRequest, cleanup, err := c.buildTransportRequest(ctx, requestMethodName, request, options)
+	if cleanup != nil {
+		defer cleanup()
 	}
-	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
-	ctx, err = call.WriteToRequest(ctx, transportRequest)
 	if err != nil {
 		return nil, err
 	}
 	return c.clientConfig.GetOnewayOutbound().CallOneway(ctx, transportRequest)
 }
 
-func (c *client) buildTransportRequest(requestMethodName string, request proto.Message) (*transport.Request, error) {
+func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, func(), error) {
 	transportRequest := &transport.Request{
 		Caller:    c.clientConfig.Caller(),
 		Service:   c.clientConfig.Service(),
-		Encoding:  Encoding,
 		Procedure: procedure.ToName(c.serviceName, requestMethodName),
 	}
+	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
+	ctx, err := call.WriteToRequest(ctx, transportRequest)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	// Encoding may be set from the WithEncoding option
+	// If not set, we assume we want to use the default Encoding
+	if transportRequest.Encoding == "" {
+		transportRequest.Encoding = Encoding
+	}
+	if transportRequest.Encoding != Encoding && transportRequest.Encoding != JSONEncoding {
+		return nil, nil, nil, nil, fmt.Errorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
+	}
 	if request != nil {
-		protoBuffer := getBuffer()
-		defer putBuffer(protoBuffer)
-		if err := protoBuffer.Marshal(request); err != nil {
-			return nil, encoding.RequestBodyEncodeError(transportRequest, err)
+		requestData, cleanup, err := marshal(transportRequest.Encoding, request)
+		if err != nil {
+			return nil, nil, nil, cleanup, encoding.RequestBodyEncodeError(transportRequest, err)
 		}
-		requestData := protoBuffer.Bytes()
 		if requestData != nil {
 			transportRequest.Body = bytes.NewReader(requestData)
 		}
+		return ctx, call, transportRequest, cleanup, nil
 	}
-	return transportRequest, nil
+	return ctx, call, transportRequest, nil, nil
 }
