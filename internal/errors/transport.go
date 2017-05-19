@@ -46,7 +46,7 @@ import (
 // 	 +--------> handlerTimeoutError <---------+
 // 	 |
 // 	 +--------> remoteTimeoutError
-//   |
+//	 |
 // 	 +--------> clientTimeoutError
 //
 // Only the handler versions of the error types are HandlerErrors. If a handler
