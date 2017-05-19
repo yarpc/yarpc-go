@@ -81,6 +81,14 @@ func WithRoutingDelegate(rd string) CallOption {
 	return CallOption(encoding.WithRoutingDelegate(rd))
 }
 
+// WithEncoding sets the encoding for the request.
+//
+// Only certain clients will handle this option. If a given client
+// does not handle this option, it will be ignored.
+func WithEncoding(e transport.Encoding) CallOption {
+	return CallOption(encoding.WithEncoding(e))
+}
+
 // Call provides information about the current request inside handlers. An
 // instance of Call for the current request can be obtained by calling
 // CallFromContext on the request context.
