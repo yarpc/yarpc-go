@@ -35,6 +35,11 @@ const (
 	// Encoding is the name of this encoding.
 	Encoding transport.Encoding = "proto"
 
+	// JSONEncoding is the name of the JSON encoding.
+	//
+	// Protobuf handlers are able to handle both Encoding and JSONEncoding encodings.
+	JSONEncoding transport.Encoding = "json"
+
 	rawResponseHeaderKey = "rpc-protobuf-raw-response"
 )
 
@@ -70,6 +75,11 @@ func BuildProcedures(
 				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
 				Encoding:    Encoding,
 			},
+			transport.Procedure{
+				Name:        procedure.ToName(serviceName, methodName),
+				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
+				Encoding:    JSONEncoding,
+			},
 		)
 	}
 	for methodName, onewayHandler := range methodNameToOnewayHandler {
@@ -79,6 +89,11 @@ func BuildProcedures(
 				Name:        procedure.ToName(serviceName, methodName),
 				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandler),
 				Encoding:    Encoding,
+			},
+			transport.Procedure{
+				Name:        procedure.ToName(serviceName, methodName),
+				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandler),
+				Encoding:    JSONEncoding,
 			},
 		)
 	}

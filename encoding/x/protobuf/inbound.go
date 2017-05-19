@@ -22,6 +22,8 @@ package protobuf
 
 import (
 	"context"
+	"fmt"
+	"io"
 
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
@@ -29,8 +31,11 @@ import (
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 )
+
+var _jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
 
 type unaryHandler struct {
 	handle     func(context.Context, proto.Message) (proto.Message, error)
@@ -45,25 +50,9 @@ func newUnaryHandler(
 }
 
 func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.Request, responseWriter transport.ResponseWriter) error {
-	if err := encoding.Expect(transportRequest, Encoding); err != nil {
+	ctx, call, request, err := getProtoRequest(ctx, transportRequest, u.newRequest)
+	if err != nil {
 		return err
-	}
-	ctx, call := apiencoding.NewInboundCall(ctx)
-	if err := call.ReadFromRequest(transportRequest); err != nil {
-		return err
-	}
-	buf := buffer.Get()
-	defer buffer.Put(buf)
-	if _, err := buf.ReadFrom(transportRequest.Body); err != nil {
-		return err
-	}
-	body := buf.Bytes()
-	request := u.newRequest()
-	// is this possible?
-	if body != nil {
-		if err := proto.Unmarshal(body, request); err != nil {
-			return encoding.RequestBodyDecodeError(transportRequest, err)
-		}
 	}
 	response, appErr := u.handle(ctx, request)
 	if appErr != nil {
@@ -73,13 +62,15 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		return err
 	}
 	var responseData []byte
+	var responseCleanup func()
 	if response != nil {
-		protoBuffer := getBuffer()
-		defer putBuffer(protoBuffer)
-		if err := protoBuffer.Marshal(response); err != nil {
+		responseData, responseCleanup, err = marshal(transportRequest.Encoding, response)
+		if responseCleanup != nil {
+			defer responseCleanup()
+		}
+		if err != nil {
 			return encoding.ResponseBodyEncodeError(transportRequest, err)
 		}
-		responseData = protoBuffer.Bytes()
 	}
 	// We have to detect if our transport requires a raw response
 	// It is not possible to propagate this information on ctx with the current API
@@ -99,19 +90,21 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	var wireError *wirepb.Error
 	if appErr != nil {
 		wireError = &wirepb.Error{
-			appErr.Error(),
+			Message: appErr.Error(),
 		}
 	}
 	wireResponse := &wirepb.Response{
-		responseData,
-		wireError,
+		Payload: responseData,
+		Error:   wireError,
 	}
-	protoBuffer := getBuffer()
-	defer putBuffer(protoBuffer)
-	if err := protoBuffer.Marshal(wireResponse); err != nil {
+	wireData, wireCleanup, err := marshal(transportRequest.Encoding, wireResponse)
+	if wireCleanup != nil {
+		defer wireCleanup()
+	}
+	if err != nil {
 		return encoding.ResponseBodyEncodeError(transportRequest, err)
 	}
-	_, err := responseWriter.Write(protoBuffer.Bytes())
+	_, err = responseWriter.Write(wireData)
 	return err
 }
 
@@ -128,25 +121,84 @@ func newOnewayHandler(
 }
 
 func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *transport.Request) error {
-	if err := encoding.Expect(transportRequest, Encoding); err != nil {
+	ctx, _, request, err := getProtoRequest(ctx, transportRequest, o.newRequest)
+	if err != nil {
 		return err
+	}
+	return o.handleOneway(ctx, request)
+}
+
+func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {
+	if err := encoding.Expect(transportRequest, Encoding, JSONEncoding); err != nil {
+		return nil, nil, nil, err
 	}
 	ctx, call := apiencoding.NewInboundCall(ctx)
 	if err := call.ReadFromRequest(transportRequest); err != nil {
-		return err
+		return nil, nil, nil, err
 	}
+	request := newRequest()
+	if err := unmarshal(transportRequest.Encoding, transportRequest.Body, request); err != nil {
+		return nil, nil, nil, encoding.RequestBodyDecodeError(transportRequest, err)
+	}
+	return ctx, call, request, nil
+}
+
+func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message) error {
+	switch encoding {
+	case Encoding:
+		return unmarshalProto(reader, message)
+	case JSONEncoding:
+		return unmarshalJSON(reader, message)
+	default:
+		return fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
+	}
+}
+
+func unmarshalProto(reader io.Reader, message proto.Message) error {
 	buf := buffer.Get()
 	defer buffer.Put(buf)
-	if _, err := buf.ReadFrom(transportRequest.Body); err != nil {
+	if _, err := buf.ReadFrom(reader); err != nil {
 		return err
 	}
 	body := buf.Bytes()
-	request := o.newRequest()
 	// is this possible?
 	if body != nil {
-		if err := proto.Unmarshal(body, request); err != nil {
-			return encoding.RequestBodyDecodeError(transportRequest, err)
-		}
+		return proto.Unmarshal(body, message)
 	}
-	return o.handleOneway(ctx, request)
+	return nil
+}
+
+func unmarshalJSON(reader io.Reader, message proto.Message) error {
+	return jsonpb.Unmarshal(reader, message)
+}
+
+func marshal(encoding transport.Encoding, message proto.Message) ([]byte, func(), error) {
+	switch encoding {
+	case Encoding:
+		return marshalProto(message)
+	case JSONEncoding:
+		return marshalJSON(message)
+	default:
+		return nil, nil, fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
+	}
+}
+
+func marshalProto(message proto.Message) ([]byte, func(), error) {
+	protoBuffer := getBuffer()
+	cleanup := func() { putBuffer(protoBuffer) }
+	if err := protoBuffer.Marshal(message); err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	return protoBuffer.Bytes(), cleanup, nil
+}
+
+func marshalJSON(message proto.Message) ([]byte, func(), error) {
+	buf := buffer.Get()
+	cleanup := func() { buffer.Put(buf) }
+	if err := _jsonUnmarshaler.Unmarshal(buf, message); err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	return buf.Bytes(), cleanup, nil
 }
