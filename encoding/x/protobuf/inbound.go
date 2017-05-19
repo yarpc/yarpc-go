@@ -35,7 +35,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-var _jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
+var (
+	_jsonMarshaler   = &jsonpb.Marshaler{}
+	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
+)
 
 type unaryHandler struct {
 	handle     func(context.Context, proto.Message) (proto.Message, error)
@@ -169,7 +172,7 @@ func unmarshalProto(reader io.Reader, message proto.Message) error {
 }
 
 func unmarshalJSON(reader io.Reader, message proto.Message) error {
-	return jsonpb.Unmarshal(reader, message)
+	return _jsonUnmarshaler.Unmarshal(reader, message)
 }
 
 func marshal(encoding transport.Encoding, message proto.Message) ([]byte, func(), error) {
@@ -196,7 +199,7 @@ func marshalProto(message proto.Message) ([]byte, func(), error) {
 func marshalJSON(message proto.Message) ([]byte, func(), error) {
 	buf := buffer.Get()
 	cleanup := func() { buffer.Put(buf) }
-	if err := _jsonUnmarshaler.Unmarshal(buf, message); err != nil {
+	if err := _jsonMarshaler.Marshal(buf, message); err != nil {
 		cleanup()
 		return nil, nil, err
 	}
