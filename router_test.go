@@ -22,6 +22,7 @@ package yarpc_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"go.uber.org/yarpc"
@@ -42,6 +43,8 @@ func TestMapRouter(t *testing.T) {
 
 	foo := transporttest.NewMockUnaryHandler(mockCtrl)
 	bar := transporttest.NewMockUnaryHandler(mockCtrl)
+	bazJSON := transporttest.NewMockUnaryHandler(mockCtrl)
+	bazThrift := transporttest.NewMockUnaryHandler(mockCtrl)
 	m.Register([]transport.Procedure{
 		{
 			Name:        "foo",
@@ -52,32 +55,47 @@ func TestMapRouter(t *testing.T) {
 			Service:     "anotherservice",
 			HandlerSpec: transport.NewUnaryHandlerSpec(bar),
 		},
+		{
+			Name:        "baz",
+			Encoding:    "json",
+			HandlerSpec: transport.NewUnaryHandlerSpec(bazJSON),
+		},
+		{
+			Name:        "baz",
+			Encoding:    "thrift",
+			HandlerSpec: transport.NewUnaryHandlerSpec(bazThrift),
+		},
 	})
 
 	tests := []struct {
-		service, procedure string
-		want               transport.UnaryHandler
+		service, procedure, encoding string
+		want                         transport.UnaryHandler
 	}{
-		{"myservice", "foo", foo},
-		{"", "foo", foo},
-		{"anotherservice", "foo", nil},
-		{"", "bar", nil},
-		{"myservice", "bar", nil},
-		{"anotherservice", "bar", bar},
+		{"myservice", "foo", "", foo},
+		{"", "foo", "", foo},
+		{"anotherservice", "foo", "", nil},
+		{"", "bar", "", nil},
+		{"myservice", "bar", "", nil},
+		{"anotherservice", "bar", "", bar},
+		{"myservice", "baz", "thrift", bazThrift},
+		{"", "baz", "thrift", bazThrift},
+		{"myservice", "baz", "json", bazJSON},
+		{"", "baz", "json", bazJSON},
 	}
 
 	for _, tt := range tests {
 		got, err := m.Choose(context.Background(), &transport.Request{
 			Service:   tt.service,
 			Procedure: tt.procedure,
+			Encoding:  transport.Encoding(tt.encoding),
 		})
 		if tt.want != nil {
 			assert.NoError(t, err,
-				"Choose(%q, %q) failed", tt.service, tt.procedure)
+				"Choose(%q, %q, %q) failed", tt.service, tt.procedure, tt.encoding)
 			assert.True(t, tt.want == got.Unary(), // want == match, not deep equals
-				"Choose(%q, %q) did not match", tt.service, tt.procedure)
+				"Choose(%q, %q, %q) did not match", tt.service, tt.procedure, tt.encoding)
 		} else {
-			assert.Error(t, err)
+			assert.Error(t, err, fmt.Sprintf("Expected error for (%q, %q, %q)", tt.service, tt.procedure, tt.encoding))
 		}
 	}
 }
@@ -137,6 +155,25 @@ func TestEmptyProcedureRegistration(t *testing.T) {
 	procedures := []transport.Procedure{
 		{
 			Name:    "",
+			Service: "test",
+		},
+	}
+
+	assert.Panics(t,
+		func() { m.Register(procedures) },
+		"expected router panic")
+}
+
+func TestAmbiguousProcedureRegistration(t *testing.T) {
+	m := yarpc.NewMapRouter("test-service-name")
+
+	procedures := []transport.Procedure{
+		{
+			Name:    "foo",
+			Service: "test",
+		},
+		{
+			Name:    "foo",
 			Service: "test",
 		},
 	}

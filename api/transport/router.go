@@ -40,7 +40,8 @@ type Procedure struct {
 	// HandlerSpec specifiying which handler and rpc type.
 	HandlerSpec HandlerSpec
 
-	// Encoding of the handler, for introspection.
+	// Encoding of the handler, optional, used for introspection, and used for
+	// routing if present.
 	Encoding Encoding
 
 	// Signature of the handler, for introspection. This should be a snippet of
@@ -59,8 +60,11 @@ func (p Procedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return enc.AddObject("handler", p.HandlerSpec)
 }
 
-// Less orders procedures lexicographically on (Service, Name).
+// Less orders procedures lexicographically on (Service, Name, Encoding).
 func (p Procedure) Less(other Procedure) bool {
+	if p.Name == other.Name {
+		return p.Encoding < other.Encoding
+	}
 	if p.Service == other.Service {
 		return p.Name < other.Name
 	}
