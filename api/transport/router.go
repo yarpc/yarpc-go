@@ -61,14 +61,29 @@ func (p Procedure) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 }
 
 // Less orders procedures lexicographically on (Service, Name, Encoding).
-func (p Procedure) Less(other Procedure) bool {
-	if p.Name == other.Name {
-		return p.Encoding < other.Encoding
+func (p Procedure) Less(o Procedure) bool {
+	if p.Service != o.Service {
+		return p.Service < o.Service
 	}
-	if p.Service == other.Service {
-		return p.Name < other.Name
+	if p.Name != o.Name {
+		return p.Name < o.Name
 	}
-	return p.Service < other.Service
+	return p.Encoding < o.Encoding
+}
+
+// Procedures is a sortable slice of procedures.
+type Procedures []Procedure
+
+func (ps Procedures) Len() int {
+	return len(ps)
+}
+
+func (ps Procedures) Less(i int, j int) bool {
+	return ps[i].Less(ps[j])
+}
+
+func (ps Procedures) Swap(i int, j int) {
+	ps[i], ps[j] = ps[j], ps[i]
 }
 
 // Router maintains and provides access to a collection of procedures
