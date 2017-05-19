@@ -42,14 +42,15 @@ var (
 type Inbound struct {
 	once           internalsync.LifecycleOnce
 	lock           sync.Mutex
+	t              *Transport
 	listener       net.Listener
 	inboundOptions *inboundOptions
 	router         transport.Router
 	server         *grpc.Server
 }
 
-func newInbound(listener net.Listener, options ...InboundOption) *Inbound {
-	return &Inbound{internalsync.Once(), sync.Mutex{}, listener, newInboundOptions(options), nil, nil}
+func newInbound(t *Transport, listener net.Listener, options ...InboundOption) *Inbound {
+	return &Inbound{internalsync.Once(), sync.Mutex{}, t, listener, newInboundOptions(options), nil, nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -76,7 +77,7 @@ func (i *Inbound) SetRouter(router transport.Router) {
 
 // Transports implements transport.Inbound#Transports.
 func (i *Inbound) Transports() []transport.Transport {
-	return []transport.Transport{}
+	return []transport.Transport{i.t}
 }
 
 func (i *Inbound) start() error {

@@ -57,10 +57,10 @@ func (t *Transport) IsRunning() bool {
 
 // NewInbound returns a new Inbound for the given listener.
 func (t *Transport) NewInbound(listener net.Listener, options ...InboundOption) *Inbound {
-	return newInbound(listener, options...)
+	return newInbound(t, listener, options...)
 }
 
 // NewSingleOutbound returns a new Outbound for the given adrress.
 func (t *Transport) NewSingleOutbound(address string, options ...OutboundOption) *Outbound {
-	return newSingleOutbound(address, options...)
+	return newSingleOutbound(t, address, options...)
 }
