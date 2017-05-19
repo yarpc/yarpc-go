@@ -135,45 +135,42 @@ func (i *Inbound) getServiceDescs() ([]*grpc.ServiceDesc, error) {
 	if len(procedures) == 0 {
 		return nil, errRouterHasNoProcedures
 	}
-	grpcServiceNameToServiceDesc := make(map[string]*grpc.ServiceDesc)
+
+	serviceNameToMethodNames := make(map[string]map[string]bool)
 	for _, procedure := range procedures {
-		serviceName, methodDesc, err := i.getServiceNameAndMethodDesc(procedure)
+		serviceName, methodName, err := procedureNameToServiceNameMethodName(procedure.Name)
 		if err != nil {
 			return nil, err
 		}
-		serviceDesc, ok := grpcServiceNameToServiceDesc[serviceName]
+		methodNames, ok := serviceNameToMethodNames[serviceName]
 		if !ok {
-			serviceDesc = &grpc.ServiceDesc{
-				ServiceName: serviceName,
-				HandlerType: (*noopGrpcInterface)(nil),
-			}
-			grpcServiceNameToServiceDesc[serviceName] = serviceDesc
+			methodNames = make(map[string]bool)
+			serviceNameToMethodNames[serviceName] = methodNames
 		}
-		serviceDesc.Methods = append(serviceDesc.Methods, methodDesc)
+		methodNames[methodName] = true
 	}
-	serviceDescs := make([]*grpc.ServiceDesc, 0, len(grpcServiceNameToServiceDesc))
-	for _, serviceDesc := range grpcServiceNameToServiceDesc {
+
+	serviceDescs := make([]*grpc.ServiceDesc, 0, len(serviceNameToMethodNames))
+	for serviceName, methodNames := range serviceNameToMethodNames {
+		serviceDesc := &grpc.ServiceDesc{
+			ServiceName: serviceName,
+			HandlerType: (*noopGrpcInterface)(nil),
+			Methods:     make([]grpc.MethodDesc, 0, len(methodNames)),
+		}
+		for methodName := range methodNames {
+			serviceDesc.Methods = append(serviceDesc.Methods, grpc.MethodDesc{
+				MethodName: methodName,
+				Handler: newHandler(
+					serviceName,
+					methodName,
+					i.router,
+				).handle,
+			})
+		}
 		serviceDescs = append(serviceDescs, serviceDesc)
 	}
-	return serviceDescs, nil
-}
 
-func (i *Inbound) getServiceNameAndMethodDesc(procedure transport.Procedure) (string, grpc.MethodDesc, error) {
-	serviceName, methodName, err := procedureNameToServiceNameMethodName(procedure.Name)
-	if err != nil {
-		return "", grpc.MethodDesc{}, err
-	}
-	return serviceName, grpc.MethodDesc{
-		MethodName: methodName,
-		// TODO: what if two procedures have the same serviceName and methodName, but a different service?
-		Handler: newHandler(
-			procedure.Service,
-			serviceName,
-			methodName,
-			procedure.Encoding,
-			i.router,
-		).handle,
-	}, nil
+	return serviceDescs, nil
 }
 
 type noopGrpcInterface interface{}
