@@ -33,3 +33,17 @@ func TestBadRequestError(t *testing.T) {
 	assert.True(t, IsBadRequestError(err))
 	assert.Equal(t, "BadRequest: derp", err.Error())
 }
+
+func TestUnrecognizedProcedureError(t *testing.T) {
+	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
+	assert.True(t, IsUnrecognizedProcedureError(err))
+	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
+	assert.Equal(t, `unrecognized procedure "nyuck" for service "curly"`, err.Error())
+}
+
+func TestUnrecognizedEncodingError(t *testing.T) {
+	err := UnrecognizedEncodingError(&Request{Encoding: "gob"}, []string{"thrift", "json", "proto"})
+	assert.True(t, IsUnrecognizedEncodingError(err))
+	assert.False(t, IsUnrecognizedEncodingError(errors.New("derp")))
+	assert.Equal(t, `expected encoding "thrift", "json", or "proto" but got "gob"`, err.Error())
+}
