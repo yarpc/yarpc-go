@@ -69,10 +69,8 @@ func NewMapRouter(defaultService string) MapRouter {
 // inherit the default service name of the router.
 // Procedures should specify their encoding, and multiple procedures with the
 // same name and service name can exist if they handle different encodings.
-// However, specifying the encoding is optional since it was not required
-// in version 1.
-// If a procedure does not specify an encoding, it can only support one handler
-// and its inherent encoding.
+// If a procedure does not specify an encoding, it can only support one handler.
+// The router will select that handler regardless of the encoding.
 func (m MapRouter) Register(rs []transport.Procedure) {
 	for _, r := range rs {
 		if r.Service == "" {
@@ -159,8 +157,7 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 		service = m.defaultService
 	}
 
-	// Fully specified combinations of service, procedure, and encoding shadow
-	// and precede less specific combinations with an encoding wild card.
+	// Fully specified combinations of service, procedure, and encoding.
 	spe := serviceProcedureEncoding{
 		service:   service,
 		procedure: procedure,
@@ -170,9 +167,8 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 		return procedure.HandlerSpec, nil
 	}
 
-	// Fall back to the original behavior for backward compatibility: route all
-	// encodings to the same procedure, if a model specifies a handler
-	// generically.
+	// Alternately use the original behavior: route all encodings to the same
+	// handler.
 	sp := serviceProcedure{
 		service:   service,
 		procedure: procedure,
@@ -195,6 +191,15 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 			return m.serviceProcedureEncodings[spe].HandlerSpec, nil
 		}
 
+		// Alternately, we bypass the handler and provide an unrecognized
+		// encoding error that explicates what all of the encoding options
+		// were.
+
+		// In a future breaking-change, this should be the only way to produce
+		// an unrecognized encoding error.
+		// Registration would require a specific encoding, there would be no
+		// catch-all handler, and the router would guarantee that the provided
+		// request encoding matches the handler's accepted encoding.
 		return transport.HandlerSpec{}, transport.UnrecognizedEncodingError(req, want)
 	}
 
