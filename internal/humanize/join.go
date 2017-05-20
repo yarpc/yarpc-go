@@ -18,27 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package joinencodings
+package humanize
 
 import "fmt"
 
-// Join joins a list of encodings as a English (Chicago Style Manual)
-// string for presentation in diagnostic messages.
-func Join(encs []string) string {
-	switch len(encs) {
+// QuotedJoin transforms a list of terms into an English (Chicago Manual Style)
+// serial comma delimited list with the given conjunction ("and", "or") and
+// each term enquoted.
+// It displays the "none" case if the list is empty, like "no soup".
+func QuotedJoin(terms []string, conjunction, none string) string {
+	switch len(terms) {
 	case 0:
-		return "no encodings"
+		return none
 	case 1:
-		return fmt.Sprintf("%q", encs[0])
+		return fmt.Sprintf("%q", terms[0])
 	case 2:
-		return fmt.Sprintf("%q or %q", encs[0], encs[1])
+		return fmt.Sprintf("%q %s %q", terms[0], conjunction, terms[1])
 	default:
 		i := 1
 		inner := ""
-		for ; i < len(encs)-1; i++ {
-			inner = fmt.Sprintf("%s, %q", inner, encs[i])
+		for ; i < len(terms)-1; i++ {
+			inner = fmt.Sprintf("%s, %q", inner, terms[i])
 		}
-		// first, inner, inner, or last
-		return fmt.Sprintf("%q%s, or %q", encs[0], inner, encs[i])
+		// first, inner, inner, and/or last
+		return fmt.Sprintf("%q%s, %s %q", terms[0], inner, conjunction, terms[i])
 	}
 }

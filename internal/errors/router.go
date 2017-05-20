@@ -23,7 +23,7 @@ package errors
 import (
 	"fmt"
 
-	"go.uber.org/yarpc/internal/joinencodings"
+	"go.uber.org/yarpc/internal/humanize"
 )
 
 // UnrecognizedProcedureError indicates that a request could not be handled locally because
@@ -87,7 +87,7 @@ type unrecognizedEncodingError struct {
 func (unrecognizedEncodingError) unrecognizedEncodingError() {}
 
 func (e unrecognizedEncodingError) Error() string {
-	return fmt.Sprintf("expected encoding %s but got %q", joinencodings.Join(e.Want), e.Got)
+	return fmt.Sprintf("expected encoding %s but got %q", humanize.QuotedJoin(e.Want, "or", "no encodings"), e.Got)
 }
 
 // AsHandlerError for unrecognizedEncodingError.

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package joinencodings
+package humanize
 
 import (
 	"testing"
@@ -26,29 +26,29 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestJoinEncodings(t *testing.T) {
+func TestQuotedJoin(t *testing.T) {
 	tests := []struct {
-		encodings []string
-		want      string
+		terms []string
+		want  string
 	}{
 		{
-			want: `no encodings`,
+			want: "none",
 		},
 		{
-			encodings: []string{
+			terms: []string{
 				"json",
 			},
 			want: `"json"`,
 		},
 		{
-			encodings: []string{
+			terms: []string{
 				"json",
 				"thrift",
 			},
 			want: `"json" or "thrift"`,
 		},
 		{
-			encodings: []string{
+			terms: []string{
 				"json",
 				"thrift",
 				"proto",
@@ -58,6 +58,6 @@ func TestJoinEncodings(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, Join(tt.encodings), "join %+v", tt.encodings)
+		assert.Equal(t, tt.want, QuotedJoin(tt.terms, "or", "none"), "join %+v", tt.terms)
 	}
 }

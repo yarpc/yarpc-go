@@ -26,7 +26,7 @@ import (
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/joinencodings"
+	"go.uber.org/yarpc/internal/humanize"
 )
 
 var (
@@ -94,7 +94,7 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 				panic(fmt.Sprintf("Cannot register multiple handlers for every encoding for service %q and procedure  %q", sp.service, sp.procedure))
 			}
 			if se, ok := m.supportedEncodings[sp]; ok {
-				panic(fmt.Sprintf("Cannot register a handler for every encoding for service %q and procedure %q when there are already handlers for specific encodings %s", sp.service, sp.procedure, joinencodings.Join(se)))
+				panic(fmt.Sprintf("Cannot register a handler for every encoding for service %q and procedure %q when there are already handlers for specific encodings %s", sp.service, sp.procedure, humanize.QuotedJoin(se, "or", "no encodings")))
 			}
 			// This supports wild card encodings (for backward compatibility,
 			// since type models like Thrift were not previously required to
