@@ -132,8 +132,22 @@ func (m MapRouter) Procedures() []transport.Procedure {
 	for _, v := range m.serviceProcedureEncodings {
 		procs = append(procs, v)
 	}
-	sort.Sort(transport.Procedures(procs))
+	sort.Sort(sortableProcedures(procs))
 	return procs
+}
+
+type sortableProcedures []transport.Procedure
+
+func (ps sortableProcedures) Len() int {
+	return len(ps)
+}
+
+func (ps sortableProcedures) Less(i int, j int) bool {
+	return ps[i].Less(ps[j])
+}
+
+func (ps sortableProcedures) Swap(i int, j int) {
+	ps[i], ps[j] = ps[j], ps[i]
 }
 
 // Choose retrives the HandlerSpec for the service, procedure, and encoding

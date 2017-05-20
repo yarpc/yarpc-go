@@ -71,21 +71,6 @@ func (p Procedure) Less(o Procedure) bool {
 	return p.Encoding < o.Encoding
 }
 
-// Procedures is a sortable slice of procedures.
-type Procedures []Procedure
-
-func (ps Procedures) Len() int {
-	return len(ps)
-}
-
-func (ps Procedures) Less(i int, j int) bool {
-	return ps[i].Less(ps[j])
-}
-
-func (ps Procedures) Swap(i int, j int) {
-	ps[i], ps[j] = ps[j], ps[i]
-}
-
 // Router maintains and provides access to a collection of procedures
 type Router interface {
 	// Procedures returns a list of procedures that
