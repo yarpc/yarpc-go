@@ -81,6 +81,8 @@ func TestMapRouter(t *testing.T) {
 		{"", "baz", "thrift", bazThrift},
 		{"myservice", "baz", "json", bazJSON},
 		{"", "baz", "json", bazJSON},
+		{"myservice", "baz", "proto", nil},
+		{"", "baz", "proto", nil},
 	}
 
 	for _, tt := range tests {
@@ -117,6 +119,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 		},
 		{
 			Name:        "foo",
+			Encoding:    "json",
 			HandlerSpec: foo,
 		},
 		{
@@ -139,6 +142,7 @@ func TestMapRouter_Procedures(t *testing.T) {
 		},
 		{
 			Name:        "foo",
+			Encoding:    "json",
 			Service:     "myservice",
 			HandlerSpec: foo,
 		},
@@ -183,7 +187,47 @@ func TestAmbiguousProcedureRegistration(t *testing.T) {
 		"expected router panic")
 }
 
-func TestRouterWithMiddleware(t *testing.T) {
+func TestEncodingBeforeWildcardProcedureRegistration(t *testing.T) {
+	m := yarpc.NewMapRouter("test-service-name")
+
+	procedures := []transport.Procedure{
+		{
+			Name:     "foo",
+			Service:  "test",
+			Encoding: "json",
+		},
+		{
+			Name:    "foo",
+			Service: "test",
+		},
+	}
+
+	assert.Panics(t,
+		func() { m.Register(procedures) },
+		"expected router panic")
+}
+
+func TestWildcardBeforeEncodingProcedureRegistration(t *testing.T) {
+	m := yarpc.NewMapRouter("test-service-name")
+
+	procedures := []transport.Procedure{
+		{
+			Name:    "foo",
+			Service: "test",
+		},
+		{
+			Name:     "foo",
+			Service:  "test",
+			Encoding: "json",
+		},
+	}
+
+	assert.Panics(t,
+		func() { m.Register(procedures) },
+		"expected router panic")
+}
+
+func IgnoreTestRouterWithMiddleware(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

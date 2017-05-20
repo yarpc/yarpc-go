@@ -20,7 +20,11 @@
 
 package errors
 
-import "fmt"
+import (
+	"fmt"
+
+	"go.uber.org/yarpc/internal/joinencodings"
+)
 
 // UnrecognizedProcedureError indicates that a request could not be handled locally because
 // the router contained no handler for the request.
@@ -54,5 +58,39 @@ func (e unrecognizedProcedureError) Error() string {
 
 // AsHandlerError for unrecognizedProcedureError.
 func (e unrecognizedProcedureError) AsHandlerError() HandlerError {
+	return HandlerBadRequestError(e)
+}
+
+// UnrecognizedEncodingError indicates that a request could not be handled locally because
+// the router contained no handler for the request's specific encoding.
+type UnrecognizedEncodingError interface {
+	error
+
+	unrecognizedEncodingError()
+}
+
+// RouterUnrecognizedEncodingError returns an error indicating that the router
+// could find no corresponding handler for the request's specific encoding.
+func RouterUnrecognizedEncodingError(want []string, got string) error {
+	return unrecognizedEncodingError{
+		Want: want,
+		Got:  got,
+	}
+}
+
+type unrecognizedEncodingError struct {
+	Want []string
+	Got  string
+}
+
+// brands this uniquely as an unrecognized encoding error.
+func (unrecognizedEncodingError) unrecognizedEncodingError() {}
+
+func (e unrecognizedEncodingError) Error() string {
+	return fmt.Sprintf("expected encoding %s but got %q", joinencodings.Join(e.Want), e.Got)
+}
+
+// AsHandlerError for unrecognizedEncodingError.
+func (e unrecognizedEncodingError) AsHandlerError() HandlerError {
 	return HandlerBadRequestError(e)
 }
