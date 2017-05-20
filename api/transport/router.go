@@ -40,8 +40,8 @@ type Procedure struct {
 	// HandlerSpec specifiying which handler and rpc type.
 	HandlerSpec HandlerSpec
 
-	// Encoding of the handler, optional, used for introspection, and used for
-	// routing if present.
+	// Encoding of the handler (optional) used for introspection and routing
+	// (if present).
 	Encoding Encoding
 
 	// Signature of the handler, for introspection. This should be a snippet of
