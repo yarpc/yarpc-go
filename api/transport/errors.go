@@ -20,7 +20,9 @@
 
 package transport
 
-import "go.uber.org/yarpc/internal/errors"
+import (
+	"go.uber.org/yarpc/internal/errors"
+)
 
 // InboundBadRequestError builds an error which indicates that an inbound
 // cannot process a request because it is a bad request.
@@ -61,5 +63,20 @@ func UnrecognizedProcedureError(req *Request) error {
 // Router.Choose if the router cannot find a handler for the request.
 func IsUnrecognizedProcedureError(err error) bool {
 	_, ok := err.(errors.UnrecognizedProcedureError)
+	return ok
+}
+
+// UnrecognizedEncodingError returns an error for the given request, such that
+// IsUnrecognizedEncodingError can distinguish it from other errors coming out
+// of router.Choose.
+func UnrecognizedEncodingError(req *Request, want []string) error {
+	return errors.RouterUnrecognizedEncodingError(want, string(req.Encoding))
+}
+
+// IsUnrecognizedEncodingError returns true for errors returned by
+// Router.Choose if the router cannot find a handler for the request's
+// encoding.
+func IsUnrecognizedEncodingError(err error) bool {
+	_, ok := err.(errors.UnrecognizedEncodingError)
 	return ok
 }
