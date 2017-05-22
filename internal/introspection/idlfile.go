@@ -85,44 +85,52 @@ func (ims IDLFiles) Flatmap(cb func(*IDLFile) bool) {
 // IDLTree is a tree of IDLs. A tree can have directories. Dir maps directory
 // names to IDLtrees. And of course, a tree can have any number of idl modules.
 type IDLTree struct {
-	Dir     map[string]*IDLTree `json:"dir,omitempty"`
-	Modules IDLFiles            `json:"modules,omitempty"`
+	Dir   map[string]*IDLTree `json:"dir,omitempty"`
+	Files IDLFiles            `json:"files,omitempty"`
 }
 
 // Compact replaces any tree with a single directory and no IDLFiles by it's
-// single child. The the lone directory name is appended to the parent's
-// directory. I would write an example, but go doc would likely fuck up
-// rendering it anyway.
+// single child. The lone directory name is appended to the parent's directory.
+// Example:
+//	/a/
+//	- /b/
+//	  - /c/
+//	    - foo.thrift
+// Becomes:
+//	/a/b/c/:
+//	- foo.thrift
+// This is mainly useful for user interface rendering.
 func (it *IDLTree) Compact() {
 	for _, l1tree := range it.Dir {
 		l1tree.Compact()
 	}
 	for l1dir, l1tree := range it.Dir {
-		if len(l1tree.Dir) == 1 && len(l1tree.Modules) == 0 {
-			for l2dir, l2tree := range l1tree.Dir {
-				compactedDir := l1dir + "/" + l2dir
-				it.Dir = map[string]*IDLTree{compactedDir: l2tree}
-				break
-			}
+		if !(len(l1tree.Dir) == 1 && len(l1tree.Files) == 0) {
+			continue
+		}
+		for l2dir, l2tree := range l1tree.Dir {
+			compactedDir := l1dir + "/" + l2dir
+			it.Dir = map[string]*IDLTree{compactedDir: l2tree}
+			break
 		}
 	}
 }
 
 type idlFlattener struct {
-	seen map[string]struct{}
-	cb   func(*IDLFile) bool
+	seenIDLs map[string]struct{}
+	cb       func(*IDLFile) bool
 }
 
 func newIDLFlattener(cb func(*IDLFile) bool) idlFlattener {
 	return idlFlattener{
-		seen: make(map[string]struct{}),
-		cb:   cb,
+		seenIDLs: make(map[string]struct{}),
+		cb:       cb,
 	}
 }
 
 func (idf *idlFlattener) Collect(m *IDLFile) {
-	if _, ok := idf.seen[m.FilePath]; !ok {
-		idf.seen[m.FilePath] = struct{}{}
+	if _, ok := idf.seenIDLs[m.FilePath]; !ok {
+		idf.seenIDLs[m.FilePath] = struct{}{}
 		if idf.cb(m) {
 			return
 		}
@@ -133,43 +141,43 @@ func (idf *idlFlattener) Collect(m *IDLFile) {
 }
 
 type idlTreeBuilder struct {
-	seen map[string]struct{}
-	Root IDLTree
+	seenIDLs map[string]struct{}
+	Root     IDLTree
 }
 
 func newIDLTreeBuilder() idlTreeBuilder {
 	return idlTreeBuilder{
-		seen: make(map[string]struct{}),
+		seenIDLs: make(map[string]struct{}),
 	}
 }
 
 func (ib *idlTreeBuilder) Collect(m *IDLFile) {
-	if _, ok := ib.seen[m.FilePath]; ok {
+	if _, ok := ib.seenIDLs[m.FilePath]; ok {
 		return
 	}
 
-	ib.seen[m.FilePath] = struct{}{}
+	ib.seenIDLs[m.FilePath] = struct{}{}
 	n := &ib.Root
-	parts := strings.Split(m.FilePath, "/")
-	for i, part := range parts {
-		if i == len(parts)-1 {
-			continue
-		}
+	segments := strings.Split(m.FilePath, "/")
+	if len(segments) >= 1 {
+		segments = segments[0 : len(segments)-1]
+	}
+	for _, segment := range segments {
 		if n.Dir == nil {
 			newNode := IDLTree{}
-			n.Dir = map[string]*IDLTree{part: &newNode}
+			n.Dir = map[string]*IDLTree{segment: &newNode}
 			n = &newNode
 		} else {
-			if subNode, ok := n.Dir[part]; ok {
+			if subNode, ok := n.Dir[segment]; ok {
 				n = subNode
 			} else {
 				newNode := IDLTree{}
-				n.Dir[part] = &newNode
+				n.Dir[segment] = &newNode
 				n = &newNode
 			}
 		}
 	}
-	n.Modules = append(n.Modules, *m)
+	n.Files = append(n.Files, *m)
 	for i := range m.Includes {
 		ib.Collect(&m.Includes[i])
 	}
