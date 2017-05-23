@@ -92,7 +92,7 @@ func (m MapRouter) Register(rs []transport.Procedure) {
 				panic(fmt.Sprintf("Cannot register multiple handlers for every encoding for service %q and procedure  %q", sp.service, sp.procedure))
 			}
 			if se, ok := m.supportedEncodings[sp]; ok {
-				panic(fmt.Sprintf("Cannot register a handler for every encoding for service %q and procedure %q when there are already handlers for specific encodings %s", sp.service, sp.procedure, humanize.QuotedJoin(se, "or", "no encodings")))
+				panic(fmt.Sprintf("Cannot register a handler for every encoding for service %q and procedure %q when there are already handlers for %s", sp.service, sp.procedure, humanize.QuotedJoin(se, "and", "no encodings")))
 			}
 			// This supports wild card encodings (for backward compatibility,
 			// since type models like Thrift were not previously required to
@@ -178,29 +178,15 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 	}
 
 	// Supported procedure, unrecognized encoding.
-	if want, ok := m.supportedEncodings[sp]; ok {
-
+	if wantEncodings := m.supportedEncodings[sp]; len(wantEncodings) == 1 {
 		// To maintain backward compatibility with the error messages provided
 		// on the wire (as verified by Crossdock across all language
 		// implementations), this routes an invalid encoding to the sole
 		// implementation of a procedure.
 		// The handler is then responsible for detecting the invalid encoding
 		// and providing an error including "failed to decode".
-		if len(want) == 1 {
-			spe.encoding = transport.Encoding(want[0])
-			return m.serviceProcedureEncodings[spe].HandlerSpec, nil
-		}
-
-		// Alternately, we bypass the handler and provide an unrecognized
-		// encoding error that explicates what all of the encoding options
-		// were.
-
-		// In a future breaking-change, this should be the only way to produce
-		// an unrecognized encoding error.
-		// Registration would require a specific encoding, there would be no
-		// catch-all handler, and the router would guarantee that the provided
-		// request encoding matches the handler's accepted encoding.
-		return transport.HandlerSpec{}, transport.UnrecognizedEncodingError(req, want)
+		spe.encoding = transport.Encoding(wantEncodings[0])
+		return m.serviceProcedureEncodings[spe].HandlerSpec, nil
 	}
 
 	return transport.HandlerSpec{}, transport.UnrecognizedProcedureError(req)

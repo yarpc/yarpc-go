@@ -54,27 +54,12 @@ func IsTimeoutError(err error) bool {
 // such that IsUnrecognizedProcedureError can distinguish it from other errors
 // coming out of router.Choose.
 func UnrecognizedProcedureError(req *Request) error {
-	return errors.RouterUnrecognizedProcedureError(req.Service, req.Procedure)
+	return errors.RouterUnrecognizedProcedureError(req.Service, req.Procedure, string(req.Encoding))
 }
 
 // IsUnrecognizedProcedureError returns true for errors returned by
 // Router.Choose if the router cannot find a handler for the request.
 func IsUnrecognizedProcedureError(err error) bool {
 	_, ok := err.(errors.UnrecognizedProcedureError)
-	return ok
-}
-
-// UnrecognizedEncodingError returns an error for the given request, such that
-// IsUnrecognizedEncodingError can distinguish it from other errors coming out
-// of router.Choose.
-func UnrecognizedEncodingError(req *Request, want []string) error {
-	return errors.RouterUnrecognizedEncodingError(want, string(req.Encoding))
-}
-
-// IsUnrecognizedEncodingError returns true for errors returned by
-// Router.Choose if the router cannot find a handler for the request's
-// encoding.
-func IsUnrecognizedEncodingError(err error) bool {
-	_, ok := err.(errors.UnrecognizedEncodingError)
 	return ok
 }

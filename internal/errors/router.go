@@ -20,11 +20,7 @@
 
 package errors
 
-import (
-	"fmt"
-
-	"go.uber.org/yarpc/internal/humanize"
-)
+import "fmt"
 
 // UnrecognizedProcedureError indicates that a request could not be handled locally because
 // the router contained no handler for the request.
@@ -36,61 +32,29 @@ type UnrecognizedProcedureError interface {
 
 // RouterUnrecognizedProcedureError returns an error indicating that the router
 // could find no corresponding handler for the request.
-func RouterUnrecognizedProcedureError(service, procedure string) error {
+func RouterUnrecognizedProcedureError(service, procedure, encoding string) error {
 	return unrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
+		Encoding:  encoding,
 	}
 }
 
 // unrecognizedProcedureError is a failure to process a request because the
-// procedure and/or service name was unrecognized.
+// procedure, service and/or encoding was unrecognized.
 type unrecognizedProcedureError struct {
 	Service   string
 	Procedure string
+	Encoding  string
 }
 
 func (unrecognizedProcedureError) unrecognizedProcedureError() {}
 
 func (e unrecognizedProcedureError) Error() string {
-	return fmt.Sprintf(`unrecognized procedure %q for service %q`, e.Procedure, e.Service)
+	return fmt.Sprintf(`unrecognized procedure %q and encoding %q for service %q`, e.Procedure, e.Encoding, e.Service)
 }
 
 // AsHandlerError for unrecognizedProcedureError.
 func (e unrecognizedProcedureError) AsHandlerError() HandlerError {
-	return HandlerBadRequestError(e)
-}
-
-// UnrecognizedEncodingError indicates that a request could not be handled locally because
-// the router contained no handler for the request's specific encoding.
-type UnrecognizedEncodingError interface {
-	error
-
-	unrecognizedEncodingError()
-}
-
-// RouterUnrecognizedEncodingError returns an error indicating that the router
-// could find no corresponding handler for the request's specific encoding.
-func RouterUnrecognizedEncodingError(want []string, got string) error {
-	return unrecognizedEncodingError{
-		Want: want,
-		Got:  got,
-	}
-}
-
-type unrecognizedEncodingError struct {
-	Want []string
-	Got  string
-}
-
-// brands this uniquely as an unrecognized encoding error.
-func (unrecognizedEncodingError) unrecognizedEncodingError() {}
-
-func (e unrecognizedEncodingError) Error() string {
-	return fmt.Sprintf("expected encoding %s but got %q", humanize.QuotedJoin(e.Want, "or", "no encodings"), e.Got)
-}
-
-// AsHandlerError for unrecognizedEncodingError.
-func (e unrecognizedEncodingError) AsHandlerError() HandlerError {
 	return HandlerBadRequestError(e)
 }

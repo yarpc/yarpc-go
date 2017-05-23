@@ -35,6 +35,5 @@ func TestCoverBrands(t *testing.T) {
 	handlerUnexpectedError{}.unexpectedError()
 	remoteBadRequestError("").badRequestError()
 	remoteUnexpectedError("").unexpectedError()
-	unrecognizedEncodingError{}.unrecognizedEncodingError()
 	unrecognizedProcedureError{}.unrecognizedProcedureError()
 }

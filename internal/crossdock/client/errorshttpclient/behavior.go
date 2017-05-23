@@ -151,8 +151,8 @@ func Run(t crossdock.T) {
 			},
 			body:       `{"token":"10"}`,
 			wantStatus: 400,
-			wantBody: `BadRequest: unrecognized procedure ` +
-				`"echo" for service "not-yarpc-test"` + "\n",
+			wantBody: `BadRequest: unrecognized procedure "echo" ` +
+				`and encoding "json" for service "not-yarpc-test"` + "\n",
 		},
 		{
 			name: "no procedure",
@@ -191,7 +191,8 @@ func Run(t crossdock.T) {
 			body:       "{}",
 			wantStatus: 400,
 			wantBody: `BadRequest: unrecognized procedure ` +
-				`"no-such-procedure" for service "yarpc-test"` + "\n",
+				`"no-such-procedure" and encoding "json" for service ` +
+				`"yarpc-test"` + "\n",
 		},
 		{
 			name: "no timeout",
