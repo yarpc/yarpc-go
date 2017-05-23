@@ -129,7 +129,7 @@ test: $(THRIFTRW) __eval_packages ## run all tests
 	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
 
 .PHONY: cover
-cover: $(THRIFTRW) $(GOCOVMERGE) $(COVER) __eval_packages ## run all tests and output code coverage
+cover: $(THRIFTRW) $(GOCOVMERGE) $(PARALLEL_EXEC) $(COVER) __eval_packages ## run all tests and output code coverage
 	PATH=$(BIN):$$PATH ./scripts/cover.sh $(PACKAGES)
 	go tool cover -html=coverage.main.txt -o cover.main.html
 	go tool cover -html=coverage.x.txt -o cover.x.html
