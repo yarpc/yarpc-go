@@ -97,6 +97,18 @@ func (s *Single) IsRunning() bool {
 
 // Introspect returns a ChooserStatus with a single PeerStatus.
 func (s *Single) Introspect() introspection.ChooserStatus {
+	if !s.once.IsRunning() {
+		return introspection.ChooserStatus{
+			Name: "Single",
+			Peers: []introspection.PeerStatus{
+				{
+					Identifier: s.pid.Identifier(),
+					State: "uninitialized",
+				},
+			},
+		}
+	}
+
 	peerStatus := s.p.Status()
 	peer := introspection.PeerStatus{
 		Identifier: s.p.Identifier(),
