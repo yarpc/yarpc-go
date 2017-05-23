@@ -75,7 +75,6 @@ for pkg in "$@"; do
 done
 parallel-exec --fast-fail --no-log --max-concurrent-cmds 4 --dir "${DIR}" "${commands_file}" 2>&1 \
 		| grep -v 'warning: no packages being tested depend on'
-exit 0
 
 # Merge cross-package coverage and then split the result into main and
 # experimental coverages.
