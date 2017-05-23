@@ -35,8 +35,8 @@ func TestBadRequestError(t *testing.T) {
 }
 
 func TestUnrecognizedProcedureError(t *testing.T) {
-	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck", Encoding: Encoding("raw")})
+	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
 	assert.True(t, IsUnrecognizedProcedureError(err))
 	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
-	assert.Equal(t, `unrecognized procedure "nyuck" and encoding "raw" for service "curly"`, err.Error())
+	assert.Equal(t, `unrecognized procedure "nyuck" for service "curly"`, err.Error())
 }

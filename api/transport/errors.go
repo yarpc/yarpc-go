@@ -54,7 +54,7 @@ func IsTimeoutError(err error) bool {
 // such that IsUnrecognizedProcedureError can distinguish it from other errors
 // coming out of router.Choose.
 func UnrecognizedProcedureError(req *Request) error {
-	return errors.RouterUnrecognizedProcedureError(req.Service, req.Procedure, string(req.Encoding))
+	return errors.RouterUnrecognizedProcedureError(req.Service, req.Procedure)
 }
 
 // IsUnrecognizedProcedureError returns true for errors returned by

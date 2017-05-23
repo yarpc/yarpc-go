@@ -27,6 +27,6 @@ import (
 )
 
 func TestUnrecognizedProcedureError(t *testing.T) {
-	err := RouterUnrecognizedProcedureError("curly", "echo", "raw").(unrecognizedProcedureError)
-	assert.Equal(t, `BadRequest: unrecognized procedure "echo" and encoding "raw" for service "curly"`, err.AsHandlerError().Error())
+	err := RouterUnrecognizedProcedureError("curly", "echo").(unrecognizedProcedureError)
+	assert.Equal(t, `BadRequest: unrecognized procedure "echo" for service "curly"`, err.AsHandlerError().Error())
 }

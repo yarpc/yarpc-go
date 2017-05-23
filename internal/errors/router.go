@@ -32,26 +32,24 @@ type UnrecognizedProcedureError interface {
 
 // RouterUnrecognizedProcedureError returns an error indicating that the router
 // could find no corresponding handler for the request.
-func RouterUnrecognizedProcedureError(service, procedure, encoding string) error {
+func RouterUnrecognizedProcedureError(service, procedure string) error {
 	return unrecognizedProcedureError{
 		Service:   service,
 		Procedure: procedure,
-		Encoding:  encoding,
 	}
 }
 
 // unrecognizedProcedureError is a failure to process a request because the
-// procedure, service and/or encoding was unrecognized.
+// procedure and/or service name was unrecognized.
 type unrecognizedProcedureError struct {
 	Service   string
 	Procedure string
-	Encoding  string
 }
 
 func (unrecognizedProcedureError) unrecognizedProcedureError() {}
 
 func (e unrecognizedProcedureError) Error() string {
-	return fmt.Sprintf(`unrecognized procedure %q and encoding %q for service %q`, e.Procedure, e.Encoding, e.Service)
+	return fmt.Sprintf(`unrecognized procedure %q for service %q`, e.Procedure, e.Service)
 }
 
 // AsHandlerError for unrecognizedProcedureError.
