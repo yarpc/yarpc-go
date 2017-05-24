@@ -18,25 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package humanize
 
-import (
-	"errors"
-	"testing"
+import "fmt"
 
-	"github.com/stretchr/testify/assert"
-)
-
-func TestBadRequestError(t *testing.T) {
-	err := errors.New("derp")
-	err = InboundBadRequestError(err)
-	assert.True(t, IsBadRequestError(err))
-	assert.Equal(t, "BadRequest: derp", err.Error())
-}
-
-func TestUnrecognizedProcedureError(t *testing.T) {
-	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
-	assert.True(t, IsUnrecognizedProcedureError(err))
-	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
-	assert.Equal(t, `unrecognized procedure "nyuck" for service "curly"`, err.Error())
+// QuotedJoin transforms a list of terms into an English (Chicago Manual Style)
+// serial comma delimited list with the given conjunction ("and", "or") and
+// each term enquoted.
+// It displays the "none" case if the list is empty, like "no soup".
+func QuotedJoin(terms []string, conjunction, none string) string {
+	switch len(terms) {
+	case 0:
+		return none
+	case 1:
+		return fmt.Sprintf("%q", terms[0])
+	case 2:
+		return fmt.Sprintf("%q %s %q", terms[0], conjunction, terms[1])
+	default:
+		i := 1
+		inner := ""
+		for ; i < len(terms)-1; i++ {
+			inner = fmt.Sprintf("%s, %q", inner, terms[i])
+		}
+		// first, inner, inner, and/or last
+		return fmt.Sprintf("%q%s, %s %q", terms[0], inner, conjunction, terms[i])
+	}
 }

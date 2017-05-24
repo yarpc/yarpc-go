@@ -18,25 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package humanize
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBadRequestError(t *testing.T) {
-	err := errors.New("derp")
-	err = InboundBadRequestError(err)
-	assert.True(t, IsBadRequestError(err))
-	assert.Equal(t, "BadRequest: derp", err.Error())
-}
+func TestQuotedJoin(t *testing.T) {
+	tests := []struct {
+		terms []string
+		want  string
+	}{
+		{
+			want: "none",
+		},
+		{
+			terms: []string{
+				"json",
+			},
+			want: `"json"`,
+		},
+		{
+			terms: []string{
+				"json",
+				"thrift",
+			},
+			want: `"json" or "thrift"`,
+		},
+		{
+			terms: []string{
+				"json",
+				"thrift",
+				"proto",
+			},
+			want: `"json", "thrift", or "proto"`,
+		},
+	}
 
-func TestUnrecognizedProcedureError(t *testing.T) {
-	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
-	assert.True(t, IsUnrecognizedProcedureError(err))
-	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
-	assert.Equal(t, `unrecognized procedure "nyuck" for service "curly"`, err.Error())
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, QuotedJoin(tt.terms, "or", "none"), "join %+v", tt.terms)
+	}
 }

@@ -18,25 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package transport
+package errors
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBadRequestError(t *testing.T) {
-	err := errors.New("derp")
-	err = InboundBadRequestError(err)
-	assert.True(t, IsBadRequestError(err))
-	assert.Equal(t, "BadRequest: derp", err.Error())
-}
-
 func TestUnrecognizedProcedureError(t *testing.T) {
-	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
-	assert.True(t, IsUnrecognizedProcedureError(err))
-	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
-	assert.Equal(t, `unrecognized procedure "nyuck" for service "curly"`, err.Error())
+	err := RouterUnrecognizedProcedureError("curly", "echo").(unrecognizedProcedureError)
+	assert.Equal(t, `BadRequest: unrecognized procedure "echo" for service "curly"`, err.AsHandlerError().Error())
 }
