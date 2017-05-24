@@ -87,6 +87,30 @@ func (a StopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	assert.Equal(t, a.ExpectedState, l.LifecycleState())
 }
 
+// WaitForStartAction is a singleton that will block until the lifecycle
+// reports that it has started.
+var WaitForStartAction waitForStartAction
+
+type waitForStartAction struct{}
+
+// Apply blocks until the lifecycle starts.
+func (a waitForStartAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+	<-l.Started()
+	assert.True(t, l.LifecycleState() >= Running, "expected lifecycle to be started")
+}
+
+// WaitForStopAction is a singleton that will block until the lifecycle
+// reports that it has started.
+var WaitForStopAction waitForStopAction
+
+type waitForStopAction struct{}
+
+// Apply blocks until the lifecycle stops or errs out.
+func (a waitForStopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+	<-l.Stopped()
+	assert.True(t, l.LifecycleState() >= Stopped, "expected lifecycle to be started")
+}
+
 // GetStateAction is an action for checking the LifecycleOnce's state
 type GetStateAction struct {
 	ExpectedState LifecycleState
@@ -95,6 +119,16 @@ type GetStateAction struct {
 // Apply Checks the state on the LifecycleOnce
 func (a GetStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	assert.True(t, a.ExpectedState <= l.LifecycleState())
+}
+
+// Actions executes a plan of actions in order sequentially.
+type Actions []LifecycleAction
+
+// Apply runs all of the ConcurrentAction's actions sequentially.
+func (a Actions) Apply(t *testing.T, l wrappedLifecycleOnce) {
+	for _, action := range a {
+		action.Apply(t, l)
+	}
 }
 
 // ConcurrentAction executes a plan of actions, with a given interval between

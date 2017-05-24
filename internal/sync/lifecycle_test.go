@@ -53,10 +53,77 @@ func TestLifecycleOnce(t *testing.T) {
 			expectedFinalState: Running,
 		},
 		{
+			msg: "Start and Started",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{ExpectedState: Running},
+						Actions{
+							WaitForStartAction,
+							GetStateAction{ExpectedState: Running},
+						},
+					},
+				},
+			},
+			expectedFinalState: Running,
+		},
+		{
 			msg: "Stop",
 			actions: []LifecycleAction{
 				StartAction{ExpectedState: Running},
 				StopAction{ExpectedState: Stopped},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Stop and Stopped",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StopAction{ExpectedState: Stopped},
+						Actions{
+							WaitForStopAction,
+							GetStateAction{ExpectedState: Stopped},
+						},
+					},
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Error and Stopped",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						StartAction{
+							Err:           fmt.Errorf("abort"),
+							ExpectedErr:   fmt.Errorf("abort"),
+							ExpectedState: Errored,
+						},
+						Actions{
+							WaitForStopAction,
+							GetStateAction{ExpectedState: Errored},
+						},
+					},
+				},
+			},
+			expectedFinalState: Errored,
+		},
+		{
+			msg: "Start, Stop, and Stopped",
+			actions: []LifecycleAction{
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						Actions{
+							StartAction{ExpectedState: Running},
+							StopAction{ExpectedState: Stopped},
+						},
+						Actions{
+							WaitForStopAction,
+							GetStateAction{ExpectedState: Stopped},
+						},
+					},
+				},
 			},
 			expectedFinalState: Stopped,
 		},
