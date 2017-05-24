@@ -124,16 +124,12 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		Caller:    c.clientConfig.Caller(),
 		Service:   c.clientConfig.Service(),
 		Procedure: procedure.ToName(c.serviceName, requestMethodName),
+		Encoding:  c.encoding,
 	}
 	call := apiencoding.NewOutboundCall(encoding.FromOptions(options)...)
 	ctx, err := call.WriteToRequest(ctx, transportRequest)
 	if err != nil {
 		return nil, nil, nil, nil, err
-	}
-	// Encoding may be set from the WithEncoding option
-	// If not set, we assume we want to use the default Encoding
-	if transportRequest.Encoding == "" {
-		transportRequest.Encoding = Encoding
 	}
 	if transportRequest.Encoding != Encoding && transportRequest.Encoding != JSONEncoding {
 		return nil, nil, nil, nil, fmt.Errorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)

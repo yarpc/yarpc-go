@@ -43,6 +43,9 @@ const (
 	rawResponseHeaderKey = "rpc-protobuf-raw-response"
 )
 
+// UseJSON says to use the json encoding for client/server communication.
+var UseJSON ClientOption = useJSON{}
+
 // SetRawResponse will set rawResponseHeaderKey to "true".
 //
 // rawResponseHeaderKey is a header key attached to either a request or

@@ -54,8 +54,8 @@ type {{$service.GetName}}YarpcClient interface {
 }
 
 // New{{$service.GetName}}YarpcClient builds a new yarpc client for the {{$service.GetName}} service.
-func New{{$service.GetName}}YarpcClient(clientConfig transport.ClientConfig) {{$service.GetName}}YarpcClient {
-	return &_{{$service.GetName}}YarpcCaller{protobuf.NewClient("{{trimPrefixPeriod $service.FQSN}}", clientConfig)}
+func New{{$service.GetName}}YarpcClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YarpcClient {
+	return &_{{$service.GetName}}YarpcCaller{protobuf.NewClient("{{trimPrefixPeriod $service.FQSN}}", clientConfig, options...)}
 }
 
 // {{$service.GetName}}YarpcServer is the yarpc server-side interface for the {{$service.GetName}} service.
