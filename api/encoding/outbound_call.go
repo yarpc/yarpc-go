@@ -37,7 +37,6 @@ type OutboundCall struct {
 	shardKey        *string
 	routingKey      *string
 	routingDelegate *string
-	encoding        *transport.Encoding
 
 	// If non-nil, response headers should be written here.
 	responseHeaders *map[string]string
@@ -69,9 +68,6 @@ func (c *OutboundCall) WriteToRequest(ctx context.Context, req *transport.Reques
 	}
 	if c.routingDelegate != nil {
 		req.RoutingDelegate = *c.routingDelegate
-	}
-	if c.encoding != nil {
-		req.Encoding = *c.encoding
 	}
 
 	// NB(abg): context and error are unused for now but we want to leave room
