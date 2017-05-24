@@ -105,7 +105,11 @@ func (t *transportSpec) buildTransport(*TransportConfig, *config.Kit) (transport
 	return NewTransport(t.TransportOptions...), nil
 }
 
-func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, _ transport.Transport, _ *config.Kit) (transport.Inbound, error) {
+func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *config.Kit) (transport.Inbound, error) {
+	trans, ok := tr.(*Transport)
+	if !ok {
+		return nil, newTransportCastError(tr)
+	}
 	if inboundConfig.Address == "" {
 		return nil, newRequiredFieldMissingError("address")
 	}
@@ -113,14 +117,22 @@ func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, _ transport.T
 	if err != nil {
 		return nil, err
 	}
-	return newInbound(listener, t.InboundOptions...), nil
+	return trans.NewInbound(listener, t.InboundOptions...), nil
 }
 
-func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, _ transport.Transport, _ *config.Kit) (transport.UnaryOutbound, error) {
+func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, tr transport.Transport, _ *config.Kit) (transport.UnaryOutbound, error) {
+	trans, ok := tr.(*Transport)
+	if !ok {
+		return nil, newTransportCastError(tr)
+	}
 	if outboundConfig.Address == "" {
 		return nil, newRequiredFieldMissingError("address")
 	}
-	return newSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
+	return trans.NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
+}
+
+func newTransportCastError(tr transport.Transport) error {
+	return fmt.Errorf("could not cast %T to a *grpc.Transport", tr)
 }
 
 func newRequiredFieldMissingError(field string) error {

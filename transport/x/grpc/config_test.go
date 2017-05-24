@@ -42,13 +42,13 @@ func TestNewTransportSpecOptions(t *testing.T) {
 
 func TestConfigBuildInboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildInbound(&InboundConfig{}, nil, nil)
+	_, err := transportSpec.buildInbound(&InboundConfig{}, NewTransport(), nil)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 
 func TestConfigBuildUnaryOutboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
-	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, nil, nil)
+	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, NewTransport(), nil)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 

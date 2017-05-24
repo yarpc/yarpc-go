@@ -18,69 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package humanize
 
 import (
-	"bytes"
-	"strings"
 	"testing"
 
-	"go.uber.org/yarpc/internal/testutils"
-
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-const (
-	testInput = `get foo
-get foo
-set foo bar
-get foo
-get foo
-set baz qux
-get baz
-get foo
-get baz
-fire foo
-fire bar
-fired-values
-exit`
-	testOutput = `get foo
-get foo failed: key not set: foo
-get foo
-get foo failed: key not set: foo
-set foo bar
-get foo
-foo = bar
-get foo
-foo = bar
-set baz qux
-get baz
-baz = qux
-get foo
-foo = bar
-get baz
-baz = qux
-fire foo
-fire bar
-fired-values
-foo bar
-exit`
-)
-
-func TestExample(t *testing.T) {
-	t.Parallel()
-	for _, transportType := range testutils.AllTransportTypes {
-		t.Run(transportType.String(), func(t *testing.T) {
-			testExample(t, transportType, false)
-		})
+func TestQuotedJoin(t *testing.T) {
+	tests := []struct {
+		terms []string
+		want  string
+	}{
+		{
+			want: "none",
+		},
+		{
+			terms: []string{
+				"json",
+			},
+			want: `"json"`,
+		},
+		{
+			terms: []string{
+				"json",
+				"thrift",
+			},
+			want: `"json" or "thrift"`,
+		},
+		{
+			terms: []string{
+				"json",
+				"thrift",
+				"proto",
+			},
+			want: `"json", "thrift", or "proto"`,
+		},
 	}
-	t.Run("google-grpc", func(t *testing.T) {
-		testExample(t, testutils.TransportTypeGRPC, true)
-	})
-}
 
-func testExample(t *testing.T, transportType testutils.TransportType, googleGRPC bool) {
-	output := bytes.NewBuffer(nil)
-	require.NoError(t, run(transportType, googleGRPC, false, strings.NewReader(testInput), output))
-	require.Equal(t, testOutput, strings.TrimSpace(output.String()))
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, QuotedJoin(tt.terms, "or", "none"), "join %+v", tt.terms)
+	}
 }

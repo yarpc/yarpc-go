@@ -13,6 +13,7 @@ EXTRA_GO_BIN_DEPS = \
 	github.com/golang/lint/golint \
 	github.com/wadey/gocovmerge \
 	golang.org/x/tools/cmd/cover \
+	go.uber.org/tools/parallel-exec \
 	honnef.co/go/tools/cmd/staticcheck
 
 # all we want is go get -u github.com/Masterminds/glide
@@ -127,6 +128,7 @@ ERRCHECK = $(BIN)/errcheck
 STATICCHECK = $(BIN)/staticcheck
 COVER = $(BIN)/cover
 GOCOVMERGE = $(BIN)/gocovmerge
+PARALLEL_EXEC = $(BIN)/parallel-exec
 
 .PHONY: predeps
 predeps: $(GLIDE) $(THRIFT) $(PROTOC) $(RAGEL)

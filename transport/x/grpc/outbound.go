@@ -47,13 +47,14 @@ var _ transport.UnaryOutbound = (*Outbound)(nil)
 type Outbound struct {
 	once            internalsync.LifecycleOnce
 	lock            sync.Mutex
+	t               *Transport
 	address         string
 	outboundOptions *outboundOptions
 	clientConn      *grpc.ClientConn
 }
 
-func newSingleOutbound(address string, options ...OutboundOption) *Outbound {
-	return &Outbound{internalsync.Once(), sync.Mutex{}, address, newOutboundOptions(options), nil}
+func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
+	return &Outbound{internalsync.Once(), sync.Mutex{}, t, address, newOutboundOptions(options), nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -73,7 +74,7 @@ func (o *Outbound) IsRunning() bool {
 
 // Transports implements transport.Inbound#Transports.
 func (o *Outbound) Transports() []transport.Transport {
-	return []transport.Transport{}
+	return []transport.Transport{o.t}
 }
 
 // Call implements transport.UnaryOutbound#Call.

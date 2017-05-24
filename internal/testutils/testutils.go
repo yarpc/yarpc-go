@@ -22,6 +22,7 @@ package testutils
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 
@@ -203,6 +204,7 @@ func NewServerDispatcher(procedures []transport.Procedure, config *DispatcherCon
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("tchannelPort: %d, httpPort: %d, grpcPort: %d", tchannelPort, httpPort, grpcPort)
 	tchannelTransport, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName(config.GetServiceName()),
 		tchannel.ListenAddr(fmt.Sprintf("127.0.0.1:%d", tchannelPort)),

@@ -2,26 +2,13 @@
 
 set -e
 
+DIR="$(cd "$(dirname "${0}")/.." && pwd)"
+cd "${DIR}"
+
 if echo "${GOPATH}" | grep : >/dev/null; then
 	echo "error: GOPATH must be one directory, but has multiple directories separated by colons: ${GOPATH}" >&2
 	exit 1
 fi
-
-start_waitpids() {
-	WAITPIDS=
-}
-
-do_waitpid() {
-	$@ &
-	WAITPIDS="${WAITPIDS} $!"
-}
-
-reset_waitpids() {
-	for waitpid in ${WAITPIDS}; do
-		wait "${waitpid}" || exit 1
-	done
-	WAITPIDS=
-}
 
 COVER=cover
 ROOT_PKG=go.uber.org/yarpc
@@ -48,7 +35,9 @@ for pkg in "$@"; do
 done
 
 i=0
-start_waitpids
+commands_file="$(mktemp)"
+echo 'commands:' >> "${commands_file}"
+trap 'rm -rf "${commands_file}"' EXIT
 for pkg in "$@"; do
 	if ! ls "${GOPATH}/src/${pkg}" | grep _test\.go$ >/dev/null; then
 		continue
@@ -82,10 +71,10 @@ for pkg in "$@"; do
 		args="-coverprofile $COVER/cover.${i}.out -covermode=atomic -coverpkg $coverpkg"
 	fi
 
-	do_waitpid go test -race $args "$pkg" 2>&1 \
-		| grep -v 'warning: no packages being tested depend on'
+  echo " - go test -race ${args} \"${pkg}\"" >> "${commands_file}"
 done
-reset_waitpids
+parallel-exec --fast-fail --no-log --max-concurrent-cmds 4 --dir "${DIR}" "${commands_file}" 2>&1 \
+		| grep -v 'warning: no packages being tested depend on'
 
 # Merge cross-package coverage and then split the result into main and
 # experimental coverages.

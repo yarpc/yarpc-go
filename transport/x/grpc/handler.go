@@ -37,26 +37,20 @@ import (
 )
 
 type handler struct {
-	yarpcServiceName string
-	grpcServiceName  string
-	grpcMethodName   string
-	encoding         transport.Encoding
-	router           transport.Router
+	grpcServiceName string
+	grpcMethodName  string
+	router          transport.Router
 }
 
 func newHandler(
-	yarpcServiceName string,
 	grpcServiceName string,
 	grpcMethodName string,
-	encoding transport.Encoding,
 	router transport.Router,
 ) *handler {
 	return &handler{
-		yarpcServiceName: yarpcServiceName,
-		grpcServiceName:  grpcServiceName,
-		grpcMethodName:   grpcMethodName,
-		encoding:         encoding,
-		router:           router,
+		grpcServiceName: grpcServiceName,
+		grpcMethodName:  grpcMethodName,
+		router:          router,
 	}
 }
 
@@ -101,9 +95,6 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 	transportRequest, err := metadataToTransportRequest(md)
 	if err != nil {
 		return nil, err
-	}
-	if transportRequest.Encoding == "" {
-		transportRequest.Encoding = h.encoding
 	}
 	// We must do this to indicate to the protobuf encoding that we
 	// need to return the raw response object over this transport.

@@ -69,10 +69,6 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 	if config.ch != nil {
 		return nil, fmt.Errorf("NewTransport does not accept WithChannel, use NewChannelTransport")
 	}
-	// TODO consider surfacing again, instead of err on start
-	// if config.name == "" {
-	// 	return nil, errChannelOrServiceNameIsRequired
-	// }
 
 	return config.newTransport(), nil
 }
