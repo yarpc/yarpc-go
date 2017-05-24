@@ -117,9 +117,14 @@ type Client interface {
 	) (transport.Ack, error)
 }
 
+// ClientOption is an option for a new Client.
+type ClientOption interface {
+	apply(*client)
+}
+
 // NewClient creates a new client.
-func NewClient(serviceName string, clientConfig transport.ClientConfig) Client {
-	return newClient(serviceName, clientConfig)
+func NewClient(serviceName string, clientConfig transport.ClientConfig, options ...ClientOption) Client {
+	return newClient(serviceName, clientConfig, options...)
 }
 
 // NewUnaryHandler returns a new UnaryHandler.
@@ -141,6 +146,12 @@ func NewOnewayHandler(
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
 func CastError(expectedType proto.Message, actualType proto.Message) error {
 	return fmt.Errorf("expected proto.Message to have type %T but had type %T", expectedType, actualType)
+}
+
+type useJSON struct{}
+
+func (useJSON) apply(client *client) {
+	client.encoding = JSONEncoding
 }
 
 func isRawResponse(headers transport.Headers) bool {

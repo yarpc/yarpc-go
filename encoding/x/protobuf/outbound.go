@@ -39,10 +39,19 @@ import (
 type client struct {
 	serviceName  string
 	clientConfig transport.ClientConfig
+	encoding     transport.Encoding
 }
 
-func newClient(serviceName string, clientConfig transport.ClientConfig) *client {
-	return &client{serviceName, clientConfig}
+func newClient(serviceName string, clientConfig transport.ClientConfig, options ...ClientOption) *client {
+	client := &client{
+		serviceName:  serviceName,
+		clientConfig: clientConfig,
+		encoding:     Encoding,
+	}
+	for _, option := range options {
+		option.apply(client)
+	}
+	return client
 }
 
 func (c *client) Call(
