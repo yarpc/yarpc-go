@@ -20,6 +20,8 @@
 
 package encoding
 
+import "go.uber.org/yarpc/api/transport"
+
 // CallOption defines options that may be passed in at call sites to other
 // services.
 //
@@ -54,4 +56,12 @@ func WithRoutingKey(rk string) CallOption {
 // WithRoutingDelegate sets the routing delegate for the request.
 func WithRoutingDelegate(rd string) CallOption {
 	return CallOption{func(o *OutboundCall) { o.routingDelegate = &rd }}
+}
+
+// WithEncoding sets the encoding for the request.
+//
+// Only certain clients will handle this option. If a given client
+// does not handle this option, it will be ignored.
+func WithEncoding(e transport.Encoding) CallOption {
+	return CallOption{func(o *OutboundCall) { o.encoding = &e }}
 }

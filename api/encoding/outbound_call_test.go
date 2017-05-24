@@ -120,6 +120,17 @@ func TestOutboundCallWriteToRequest(t *testing.T) {
 				RoutingDelegate: "zzz",
 			},
 		},
+		{
+			desc: "encoding",
+			giveOptions: []CallOption{
+				WithHeader("foo", "bar"),
+				WithEncoding(transport.Encoding("derp")),
+			},
+			wantRequest: transport.Request{
+				Headers:  transport.NewHeaders().With("foo", "bar"),
+				Encoding: transport.Encoding("derp"),
+			},
+		},
 	}
 
 	for _, tt := range tests {
