@@ -44,7 +44,7 @@ import (
 	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/golang/mock/gomock"
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
