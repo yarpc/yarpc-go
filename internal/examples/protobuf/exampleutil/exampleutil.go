@@ -22,6 +22,7 @@ package exampleutil
 
 import (
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
@@ -29,11 +30,13 @@ import (
 
 // Clients holds all clients.
 type Clients struct {
-	KeyValueYarpcClient examplepb.KeyValueYarpcClient
-	SinkYarpcClient     examplepb.SinkYarpcClient
-	KeyValueGRPCClient  examplepb.KeyValueClient
-	SinkGRPCClient      examplepb.SinkClient
-	ContextWrapper      *grpcheader.ContextWrapper
+	KeyValueYarpcClient     examplepb.KeyValueYarpcClient
+	SinkYarpcClient         examplepb.SinkYarpcClient
+	KeyValueYarpcJSONClient examplepb.KeyValueYarpcClient
+	SinkYarpcJSONClient     examplepb.SinkYarpcClient
+	KeyValueGRPCClient      examplepb.KeyValueClient
+	SinkGRPCClient          examplepb.SinkClient
+	ContextWrapper          *grpcheader.ContextWrapper
 }
 
 // WithClients calls f on the Clients.
@@ -59,6 +62,8 @@ func WithClients(
 				&Clients{
 					examplepb.NewKeyValueYarpcClient(clientInfo.ClientConfig),
 					examplepb.NewSinkYarpcClient(clientInfo.ClientConfig),
+					examplepb.NewKeyValueYarpcClient(clientInfo.ClientConfig, protobuf.UseJSON),
+					examplepb.NewSinkYarpcClient(clientInfo.ClientConfig, protobuf.UseJSON),
 					examplepb.NewKeyValueClient(clientInfo.GRPCClientConn),
 					examplepb.NewSinkClient(clientInfo.GRPCClientConn),
 					clientInfo.ContextWrapper,
