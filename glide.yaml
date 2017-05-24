@@ -77,6 +77,7 @@ testImport:
 - package: github.com/wadey/gocovmerge
 - package: go.uber.org/tools
   subpackages:
+  - parallel-exec
   - update-license
 - package: honnef.co/go/tools
   subpackages:

@@ -1,5 +1,5 @@
 hash: 0857ee8e9ee348488ac73cd74dbd9369d50acd05ce91edfe1abe09c2371a6c8d
-updated: 2017-05-15T16:18:35.08530739-07:00
+updated: 2017-05-23T16:42:24.964765613+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -41,7 +41,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
+  version: 7a211bcf3bce0e3f1d74f9894916e6f116ae83b4
   subpackages:
   - proto
   - ptypes/any
@@ -79,17 +79,17 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 9e0844febd9e2856f839c9cb974fbd676d1755a8
+  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 6ac8c5d890d415025dd5aae7595bcb2a6e7e2fad
+  version: 65c1f6f8f0fc1e2185eb9863a3bc751496404259
   subpackages:
   - xfs
 - name: github.com/Sirupsen/logrus
-  version: 10f801ebc38b33738c9d17d50860f484a0988ff5
+  version: 5e5dc898656f695e2a086b8e12559febbfc01562
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -114,7 +114,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: 342225eee85ea6188907a44790788a5650b1d7a1
+  version: ccfe5e5b6acff3ffa7f0482df25a17d9db13d788
   subpackages:
   - client/cherami
   - common
@@ -123,7 +123,7 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: 491bc3af350b3cdc0780c6f99ca9fd0a82aeb850
+  version: be4d5fc25dbf54affd1d8be5bf49bd3fc0440330
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
@@ -137,7 +137,7 @@ imports:
   - transport
   - utils
 - name: github.com/uber/jaeger-lib
-  version: e3c1d3b562900c6ac0a7ded654cb95d88e72b63e
+  version: b9a0fa4923ad750facbd5a4b93fc6d450bc45ccc
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
@@ -192,7 +192,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 34057069f4ab13dc4433c68d368737ebeafcccdc
+  version: 5961165da77ad3a2abf3a77ea904c13a76b0b073
   repo: https://github.com/golang/net
   subpackages:
   - context
@@ -204,24 +204,24 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 9f30dcbe5be197894515a338a9bda9253567ea8f
+  version: dbc2be9168a660ef302e04b6ff6406de6f967473
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: a9a820217f98f7c8a207ec1e45a874e1fe12c478
+  version: 19e51611da83d6be54ddafce4a4af510cb3e9ea4
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 4bb9a6d30bdc727aebd0747694f31de632a5282e
+  version: bf4b54dc687c73b6ef63de8b8abf0ad3951e3edc
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 411e09b969b1170a9f0c467558eb4c4c110d9c77
+  version: d80a6e20e776b0b17a324d0ba1ab50a39c8e8944
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -263,10 +263,10 @@ testImports:
 - name: github.com/wadey/gocovmerge
   version: b5bfa59ec0adc420475f97f89b58045c721d761c
 - name: go.uber.org/tools
-  version: 5908733c544153a245dddd039959386356fbc082
+  version: ce2550dad7144b81ae2f67dc5e55597643f6902b
   subpackages:
   - update-license
 - name: honnef.co/go/tools
-  version: f637af825144df9db357bdbe921707f4a535f316
+  version: e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90
   subpackages:
   - cmd/staticcheck
