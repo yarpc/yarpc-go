@@ -42,6 +42,7 @@ import (
 
 var flagOutbound = flag.String("outbound", "tchannel", "The outbound to use for unary calls")
 var flagGoogleGRPC = flag.Bool("google-grpc", false, "Use google grpc for outbound KeyValue calls")
+var flagBlock = flag.Bool("block", false, "Block and run the server forever instead of running the client")
 
 func main() {
 	flag.Parse()
@@ -58,6 +59,7 @@ func do() error {
 	return run(
 		transportType,
 		*flagGoogleGRPC,
+		*flagBlock,
 		os.Stdin,
 		os.Stdout,
 	)
@@ -66,6 +68,7 @@ func do() error {
 func run(
 	transportType testutils.TransportType,
 	googleGRPC bool,
+	block bool,
 	input io.Reader,
 	output io.Writer,
 ) error {
@@ -81,6 +84,7 @@ func run(
 				sinkYarpcServer,
 				clients,
 				googleGRPC,
+				block,
 				input,
 				output,
 			)
@@ -93,9 +97,14 @@ func doClient(
 	sinkYarpcServer *example.SinkYarpcServer,
 	clients *exampleutil.Clients,
 	googleGRPC bool,
+	block bool,
 	input io.Reader,
 	output io.Writer,
 ) error {
+	if block {
+		log.Println("ready")
+		select {}
+	}
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
 		line := scanner.Text()

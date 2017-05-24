@@ -41,8 +41,8 @@ type KeyValueYarpcClient interface {
 }
 
 // NewKeyValueYarpcClient builds a new yarpc client for the KeyValue service.
-func NewKeyValueYarpcClient(clientConfig transport.ClientConfig) KeyValueYarpcClient {
-	return &_KeyValueYarpcCaller{protobuf.NewClient("uber.yarpc.internal.examples.protobuf.example.KeyValue", clientConfig)}
+func NewKeyValueYarpcClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) KeyValueYarpcClient {
+	return &_KeyValueYarpcCaller{protobuf.NewClient("uber.yarpc.internal.examples.protobuf.example.KeyValue", clientConfig, options...)}
 }
 
 // KeyValueYarpcServer is the yarpc server-side interface for the KeyValue service.
@@ -157,8 +157,8 @@ type SinkYarpcClient interface {
 }
 
 // NewSinkYarpcClient builds a new yarpc client for the Sink service.
-func NewSinkYarpcClient(clientConfig transport.ClientConfig) SinkYarpcClient {
-	return &_SinkYarpcCaller{protobuf.NewClient("uber.yarpc.internal.examples.protobuf.example.Sink", clientConfig)}
+func NewSinkYarpcClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) SinkYarpcClient {
+	return &_SinkYarpcCaller{protobuf.NewClient("uber.yarpc.internal.examples.protobuf.example.Sink", clientConfig, options...)}
 }
 
 // SinkYarpcServer is the yarpc server-side interface for the Sink service.

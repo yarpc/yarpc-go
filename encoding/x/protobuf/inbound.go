@@ -98,7 +98,7 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 		}
 	}
 	wireResponse := &wirepb.Response{
-		Payload: responseData,
+		Payload: string(responseData),
 		Error:   wireError,
 	}
 	wireData, wireCleanup, err := marshal(transportRequest.Encoding, wireResponse)

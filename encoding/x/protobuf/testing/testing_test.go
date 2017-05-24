@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -69,11 +70,18 @@ func testIntegration(
 	assert.Error(t, err)
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Error(t, err)
+	_, err = getValue(clients.KeyValueYarpcJSONClient, "foo")
+	assert.Error(t, err)
 
 	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", "bar"))
 	value, err := getValue(clients.KeyValueYarpcClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", value)
+
+	assert.NoError(t, setValue(clients.KeyValueYarpcJSONClient, "foo", "baz"))
+	value, err = getValue(clients.KeyValueYarpcJSONClient, "foo")
+	assert.NoError(t, err)
+	assert.Equal(t, "baz", value)
 
 	assert.NoError(t, setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "barGRPC"))
 	value, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
@@ -97,23 +105,25 @@ func testIntegration(
 	assert.NoError(t, sinkYarpcServer.WaitFireDone())
 	assert.NoError(t, fire(clients.SinkYarpcClient, "bar"))
 	assert.NoError(t, sinkYarpcServer.WaitFireDone())
-	assert.Equal(t, []string{"foo", "bar"}, sinkYarpcServer.Values())
+	assert.NoError(t, fire(clients.SinkYarpcJSONClient, "baz"))
+	assert.NoError(t, sinkYarpcServer.WaitFireDone())
+	assert.Equal(t, []string{"foo", "bar", "baz"}, sinkYarpcServer.Values())
 }
 
-func getValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string) (string, error) {
+func getValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, options ...yarpc.CallOption) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	response, err := keyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	response, err := keyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key}, options...)
 	if err != nil {
 		return "", err
 	}
 	return response.Value, nil
 }
 
-func setValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, value string) error {
+func setValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, value string, options ...yarpc.CallOption) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	_, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}, options...)
 	return err
 }
 
@@ -134,9 +144,9 @@ func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 	return err
 }
 
-func fire(sinkYarpcClient examplepb.SinkYarpcClient, value string) error {
+func fire(sinkYarpcClient examplepb.SinkYarpcClient, value string, options ...yarpc.CallOption) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value})
+	_, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}, options...)
 	return err
 }

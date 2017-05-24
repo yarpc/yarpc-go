@@ -40,8 +40,8 @@ type EchoYarpcClient interface {
 }
 
 // NewEchoYarpcClient builds a new yarpc client for the Echo service.
-func NewEchoYarpcClient(clientConfig transport.ClientConfig) EchoYarpcClient {
-	return &_EchoYarpcCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Echo", clientConfig)}
+func NewEchoYarpcClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) EchoYarpcClient {
+	return &_EchoYarpcCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Echo", clientConfig, options...)}
 }
 
 // EchoYarpcServer is the yarpc server-side interface for the Echo service.
@@ -116,8 +116,8 @@ type OnewayYarpcClient interface {
 }
 
 // NewOnewayYarpcClient builds a new yarpc client for the Oneway service.
-func NewOnewayYarpcClient(clientConfig transport.ClientConfig) OnewayYarpcClient {
-	return &_OnewayYarpcCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Oneway", clientConfig)}
+func NewOnewayYarpcClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) OnewayYarpcClient {
+	return &_OnewayYarpcCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Oneway", clientConfig, options...)}
 }
 
 // OnewayYarpcServer is the yarpc server-side interface for the Oneway service.
