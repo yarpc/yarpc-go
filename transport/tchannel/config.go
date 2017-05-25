@@ -22,21 +22,27 @@ package tchannel
 
 import (
 	"fmt"
+	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/x/config"
-
-	opentracing "github.com/opentracing/opentracing-go"
 )
-
-const transportName = "tchannel"
 
 // TransportConfig configures a shared TChannel transport. This is shared
 // between all TChannel outbounds and inbounds of a Dispatcher.
 //
-// TransportConfig does not have any parameters at this time.
-type TransportConfig struct{}
+//  transports:
+//    tchannel:
+//      connTimeout: 500ms
+//      connBackoff:
+//        exponential:
+//          first: 10ms
+//          max: 30s
+type TransportConfig struct {
+	ConnTimeout time.Duration  `config:"connTimeout"`
+	ConnBackoff config.Backoff `config:"connBackoff"`
+}
 
 // InboundConfig configures a TChannel inbound.
 //
@@ -93,13 +99,21 @@ func (ts *transportSpec) Spec() config.TransportSpec {
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
-	var options transportOptions
-	// Default configuration.
-	options.tracer = opentracing.GlobalTracer()
+	options := newTransportOptions()
 
 	for _, opt := range ts.transportOptions {
 		opt(&options)
 	}
+
+	if tc.ConnTimeout != 0 {
+		options.connTimeout = tc.ConnTimeout
+	}
+
+	strategy, err := tc.ConnBackoff.Strategy()
+	if err != nil {
+		return nil, err
+	}
+	options.connBackoffStrategy = strategy
 
 	if options.name != "" {
 		return nil, fmt.Errorf("TChannel TransportSpec does not accept ServiceName")
@@ -114,7 +128,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (tra
 	}
 
 	options.name = k.ServiceName()
-	return options.newTransport(), nil
+	return options.newTransport()
 }
 
 func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
