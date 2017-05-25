@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/interpolate"
 	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -52,6 +53,7 @@ func TestChooserConfigurator(t *testing.T) {
 	tests := []struct {
 		desc    string
 		given   string
+		env     map[string]string
 		wantErr []string
 		test    func(*testing.T, yarpc.Config)
 	}{
@@ -693,11 +695,98 @@ func TestChooserConfigurator(t *testing.T) {
 				`could not create invalid-updater`,
 			},
 		},
+		{
+			desc: "interpolation fallback",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":${FIRST_VAR:1234}"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "${SECOND_VAR:*.*}"
+								peer: 127.0.0.1:${THIRD_VAR:8080}
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+				assert.Equal(t, "*.*", unary.NopOption(), "must have configured pattern")
+
+				transports := unary.Transports()
+				require.Equal(t, 1, len(transports), "must have one transport")
+
+				transport, ok := transports[0].(*yarpctest.FakeTransport)
+				require.True(t, ok, "must be a fake transport")
+				assert.Equal(t, ":1234", transport.NopOption(), "transport configured")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.Single)
+				require.True(t, ok, "unary chooser must be a single peer chooser")
+				assert.Equal(t, "127.0.0.1:8080", chooser.Introspect().Peers[0].Identifier, "incorrect peer")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = chooser
+			},
+		},
+		{
+			desc: "interpolation to env var",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":${FIRST_VAR:1234}"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "${SECOND_VAR:*.*}"
+								peer: 127.0.0.1:${THIRD_VAR:808-0}
+			`),
+			env: map[string]string{
+				"FIRST_VAR":  "3456",
+				"SECOND_VAR": "A*A",
+				"THIRD_VAR":  "9000",
+			},
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+				assert.Equal(t, "A*A", unary.NopOption(), "must have configured pattern")
+
+				transports := unary.Transports()
+				require.Equal(t, 1, len(transports), "must have one transport")
+
+				transport, ok := transports[0].(*yarpctest.FakeTransport)
+				require.True(t, ok, "must be a fake transport")
+				assert.Equal(t, ":3456", transport.NopOption(), "transport configured")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.Single)
+				require.True(t, ok, "unary chooser must be a single peer chooser")
+				assert.Equal(t, "127.0.0.1:9000", chooser.Introspect().Peers[0].Identifier, "incorrect peer")
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = chooser
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			configer := yarpctest.NewFakeConfigurator()
+			configer := yarpctest.NewFakeConfigurator(config.InterpolationResolver(mapVariableResolver(tt.env)))
 			configer.MustRegisterTransport(http.TransportSpec())
 			configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
 			configer.MustRegisterPeerList(peerheap.Spec())
@@ -784,4 +873,11 @@ func TestBuildPeerListInvalidKit(t *testing.T) {
 	require.Error(t, err, "LoadConfig should fail")
 	assert.Contains(t, err.Error(),
 		"invalid Kit: make sure you passed in the same Kit your Build function received")
+}
+
+func mapVariableResolver(m map[string]string) interpolate.VariableResolver {
+	return func(name string) (value string, ok bool) {
+		value, ok = m[name]
+		return
+	}
 }

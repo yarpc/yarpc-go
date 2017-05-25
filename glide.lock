@@ -1,5 +1,5 @@
-hash: 0857ee8e9ee348488ac73cd74dbd9369d50acd05ce91edfe1abe09c2371a6c8d
-updated: 2017-05-23T16:42:24.964765613+02:00
+hash: 10debb000c317eb59be59cbc5e9d7c020a3f511bf7d425e5c3a9fbb826840424
+updated: 2017-05-25T14:31:08.585852033-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -16,7 +16,7 @@ imports:
   subpackages:
   - statsd
 - name: github.com/codahale/hdrhistogram
-  version: 3a0bb77429bd3a61596f5e8a3172445844342120
+  version: f8ad88b59a584afeee9d334eff879b104439117b
 - name: github.com/crossdock/crossdock-go
   version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
   subpackages:
@@ -32,10 +32,13 @@ imports:
   version: 100ba4e885062801d56799d78530b73b178a78f3
   subpackages:
   - gogoproto
+  - jsonpb
   - proto
   - protoc-gen-gogo/descriptor
   - protoc-gen-gogo/generator
   - protoc-gen-gogo/plugin
+  - sortkeys
+  - types
 - name: github.com/golang/mock
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
@@ -64,7 +67,7 @@ imports:
   - log
   - mocktracer
 - name: github.com/pborman/uuid
-  version: 1b00554d822231195d1babd97ff4a781231955c9
+  version: c55201b036063326c5b1b89ccfe45a184973d073
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -89,7 +92,7 @@ imports:
   subpackages:
   - xfs
 - name: github.com/Sirupsen/logrus
-  version: 5e5dc898656f695e2a086b8e12559febbfc01562
+  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -99,11 +102,11 @@ imports:
   - mock
   - require
 - name: github.com/uber-common/bark
-  version: 148dd9dfbd0feb293fc81593a8c10c99877f81bc
+  version: 1276fd80f25d786f9cff3ccce89c0c43e5b2667e
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/mapdecode
-  version: de2188dac6034e69c22e1e43d3b8d8ff915e7f5b
+  version: fc15a00afdfa0ed029d15ee2cf07bf0eba988334
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
@@ -192,7 +195,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 5961165da77ad3a2abf3a77ea904c13a76b0b073
+  version: 5b58a9c3e1690d33a592e5b791638e25eb9b3f70
   repo: https://github.com/golang/net
   subpackages:
   - context
@@ -204,7 +207,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: dbc2be9168a660ef302e04b6ff6406de6f967473
+  version: a55a76086885b80f79961eacb876ebd8caf3868d
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -241,8 +244,10 @@ imports:
   - status
   - tap
   - transport
+- name: gopkg.in/bsm/ratelimit.v1
+  version: db14e161995a5177acef654cb0dd785e8ee8bc22
 - name: gopkg.in/redis.v5
-  version: a16aeec10ff407b1e7be6dd35797ccf5426ef0f0
+  version: b6bfe529a846fbb9a58c832ce71c61b6fde12c15
   subpackages:
   - internal
   - internal/consistenthash
@@ -250,7 +255,7 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
+  version: a83829b6f1293c91addabc89d0571c246397bbf4
 testImports:
 - name: github.com/golang/lint
   version: cb00e5669539f047b2f4c53a421a01b0c8e172c6
@@ -265,6 +270,7 @@ testImports:
 - name: go.uber.org/tools
   version: ce2550dad7144b81ae2f67dc5e55597643f6902b
   subpackages:
+  - parallel-exec
   - update-license
 - name: honnef.co/go/tools
   version: e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90

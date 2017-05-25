@@ -30,7 +30,7 @@ import (
 
 // FakeTransportConfig configures the FakeTransport.
 type FakeTransportConfig struct {
-	Nop string `config:"nop"`
+	Nop string `config:"nop,interpolate"`
 }
 
 func buildFakeTransport(c *FakeTransportConfig, kit *config.Kit) (transport.Transport, error) {
@@ -41,7 +41,7 @@ func buildFakeTransport(c *FakeTransportConfig, kit *config.Kit) (transport.Tran
 type FakeOutboundConfig struct {
 	config.PeerChooser
 
-	Nop string `config:"nop"`
+	Nop string `config:"nop,interpolate"`
 }
 
 func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config.Kit) (transport.UnaryOutbound, error) {
@@ -114,8 +114,8 @@ func FakePeerListUpdaterSpec() config.PeerListUpdaterSpec {
 // NewFakeConfigurator returns a configurator with fake-transport,
 // fake-peer-list, and fake-peer-list-updater specs already registered,
 // suitable for testing the configurator.
-func NewFakeConfigurator() *config.Configurator {
-	configurator := config.New()
+func NewFakeConfigurator(opts ...config.Option) *config.Configurator {
+	configurator := config.New(opts...)
 	configurator.MustRegisterTransport(FakeTransportSpec())
 	configurator.MustRegisterPeerList(FakePeerListSpec())
 	configurator.MustRegisterPeerListUpdater(FakePeerListUpdaterSpec())

@@ -19,7 +19,7 @@ import:
 - package: github.com/mattn/go-shellwords
   version: ^1
 - package: github.com/uber-go/mapdecode
-  version: ~0.2
+  version: ~0.3
 - package: github.com/opentracing/opentracing-go
   version: ^1
 - package: github.com/prometheus/client_golang
