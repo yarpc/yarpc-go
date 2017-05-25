@@ -44,7 +44,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 7cc19b78d562895b13596ddce7aafb59dd789318
+  version: 7a211bcf3bce0e3f1d74f9894916e6f116ae83b4
   subpackages:
   - proto
   - ptypes/any
