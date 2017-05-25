@@ -101,8 +101,8 @@ func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Lo
 	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
 	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
 
-	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(observer, cfg.OutboundMiddleware.Unary)
-	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(observer, cfg.OutboundMiddleware.Oneway)
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(cfg.OutboundMiddleware.Unary, observer)
+	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, observer)
 
 	return cfg
 }
