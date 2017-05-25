@@ -17,6 +17,8 @@ v1.9.0-dev (unreleased)
 -   Fix race conditions in hostport.Peer.
 -   transport/x/grpc: Remove NewInbound and NewSingleOutbound in favor of
     functions on Transport
+-   x/config: Fix bug where embedded struct fields could not be interpolated.
+
 
 v1.8.0 (2017-05-01)
 -------------------
