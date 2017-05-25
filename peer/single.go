@@ -103,7 +103,7 @@ func (s *Single) Introspect() introspection.ChooserStatus {
 			Peers: []introspection.PeerStatus{
 				{
 					Identifier: s.pid.Identifier(),
-					State: "uninitialized",
+					State:      "uninitialized",
 				},
 			},
 		}

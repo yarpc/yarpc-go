@@ -749,10 +749,10 @@ func TestChooserConfigurator(t *testing.T) {
 								nop: "${SECOND_VAR:*.*}"
 								peer: 127.0.0.1:${THIRD_VAR:808-0}
 			`),
-			env: map[string]string {
-				"FIRST_VAR": "3456",
+			env: map[string]string{
+				"FIRST_VAR":  "3456",
 				"SECOND_VAR": "A*A",
-				"THIRD_VAR": "9000",
+				"THIRD_VAR":  "9000",
 			},
 			test: func(t *testing.T, c yarpc.Config) {
 				outbound, ok := c.Outbounds["their-service"]
