@@ -21,6 +21,8 @@
 package http
 
 import (
+	"context"
+	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -32,12 +34,14 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/opentracing/opentracing-go"
+	"golang.org/x/net/proxy"
 )
 
 type transportConfig struct {
 	keepAlive           time.Duration
 	maxIdleConnsPerHost int
 	tracer              opentracing.Tracer
+	socks5Proxy         string
 }
 
 var defaultTransportConfig = transportConfig{
@@ -49,6 +53,16 @@ var defaultTransportConfig = transportConfig{
 type TransportOption func(*transportConfig)
 
 func (TransportOption) httpOption() {}
+
+// NilOption is empty option - example use case:
+// opt := NilOption
+// if (thing) {
+//	opt = OtherOption
+// }
+//
+func NilOption() TransportOption {
+	return func(*transportConfig) {}
+}
 
 // KeepAlive specifies the keep-alive period for the network connection. If
 // zero, keep-alives are disabled.
@@ -80,6 +94,14 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// Socks5Proxy sets up outbounds connections to run through the specified proxy
+// of the format host:port
+func Socks5Proxy(hostPort string) TransportOption {
+	return func(c *transportConfig) {
+		c.socks5Proxy = hostPort
+	}
+}
+
 // NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
 	cfg := defaultTransportConfig
@@ -97,19 +119,31 @@ func NewTransport(opts ...TransportOption) *Transport {
 }
 
 func buildClient(cfg *transportConfig) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: cfg.keepAlive,
-			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConnsPerHost:   cfg.maxIdleConnsPerHost,
-		},
+	transport := &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: cfg.keepAlive,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConnsPerHost:   cfg.maxIdleConnsPerHost,
 	}
+
+	// Explicit passing this option in will override the ProxyFromEnvironment
+	if cfg.socks5Proxy != "" {
+		dialer, err := proxy.SOCKS5("tcp", cfg.socks5Proxy, nil, proxy.Direct)
+		if err != nil {
+			log.Fatalf("Error creating SOCKS proxy: %v", err)
+		}
+		// set our socks5 as the dialer
+		transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.Dial(network, addr)
+		}
+	}
+
+	return &http.Client{Transport: transport}
 }
 
 // Transport keeps track of HTTP peers and the associated HTTP client. It
