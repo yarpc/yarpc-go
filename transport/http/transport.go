@@ -35,7 +35,6 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/opentracing/opentracing-go"
-	"golang.org/x/net/proxy"
 )
 
 type transportConfig struct {
