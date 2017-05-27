@@ -22,11 +22,12 @@ package http
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"golang.org/x/net/proxy"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -55,10 +56,10 @@ type TransportOption func(*transportConfig)
 func (TransportOption) httpOption() {}
 
 // NilOption is empty option - example use case:
-// opt := NilOption
-// if (thing) {
-//	opt = OtherOption
-// }
+//  opt := NilOption
+//  if (thing) {
+//	 opt = OtherOption
+//  }
 //
 func NilOption() TransportOption {
 	return func(*transportConfig) {}
@@ -110,15 +111,18 @@ func NewTransport(opts ...TransportOption) *Transport {
 		o(&cfg)
 	}
 
+	client, transport := buildClient(&cfg)
 	return &Transport{
-		once:   intsync.Once(),
-		client: buildClient(&cfg),
-		peers:  make(map[string]*hostport.Peer),
-		tracer: cfg.tracer,
+		once:        intsync.Once(),
+		transport:   transport,
+		client:      client,
+		peers:       make(map[string]*hostport.Peer),
+		tracer:      cfg.tracer,
+		socks5Proxy: cfg.socks5Proxy,
 	}
 }
 
-func buildClient(cfg *transportConfig) *http.Client {
+func buildClient(cfg *transportConfig) (*http.Client, *http.Transport) {
 	transport := &http.Transport{
 		// options lifted from https://golang.org/src/net/http/transport.go
 		Proxy: http.ProxyFromEnvironment,
@@ -131,19 +135,7 @@ func buildClient(cfg *transportConfig) *http.Client {
 		MaxIdleConnsPerHost:   cfg.maxIdleConnsPerHost,
 	}
 
-	// Explicit passing this option in will override the ProxyFromEnvironment
-	if cfg.socks5Proxy != "" {
-		dialer, err := proxy.SOCKS5("tcp", cfg.socks5Proxy, nil, proxy.Direct)
-		if err != nil {
-			log.Fatalf("Error creating SOCKS proxy: %v", err)
-		}
-		// set our socks5 as the dialer
-		transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.Dial(network, addr)
-		}
-	}
-
-	return &http.Client{Transport: transport}
+	return &http.Client{Transport: transport}, transport
 }
 
 // Transport keeps track of HTTP peers and the associated HTTP client. It
@@ -153,10 +145,12 @@ type Transport struct {
 	lock sync.Mutex
 	once intsync.LifecycleOnce
 
-	client *http.Client
-	peers  map[string]*hostport.Peer
+	transport *http.Transport
+	client    *http.Client
+	peers     map[string]*hostport.Peer
 
-	tracer opentracing.Tracer
+	tracer      opentracing.Tracer
+	socks5Proxy string
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -164,7 +158,18 @@ var _ transport.Transport = (*Transport)(nil)
 // Start starts the HTTP transport.
 func (a *Transport) Start() error {
 	return a.once.Start(func() error {
-		return nil // Nothing to do
+		// Explicit passing this option in will override the ProxyFromEnvironment
+		if a.socks5Proxy != "" {
+			dialer, err := proxy.SOCKS5("tcp", a.socks5Proxy, nil, proxy.Direct)
+			if err != nil {
+				return err
+			}
+			// set our socks5 as the dialer
+			a.transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			}
+		}
+		return nil
 	})
 }
 
