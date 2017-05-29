@@ -329,7 +329,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			method := client.MethodByName(tt.method)
 			assert.True(t, method.IsValid(), "Method %q not found", tt.method)
 
-			ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
 			defer cancel()
 
 			args := append([]interface{}{ctx}, tt.methodArgs...)
