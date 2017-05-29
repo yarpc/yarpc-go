@@ -297,3 +297,11 @@ func TestTransportClientWithMaxIdleConnections(t *testing.T) {
 
 	assert.NotNil(t, transport.client)
 }
+
+func TestTransportClientWithSocks5Proxy(t *testing.T) {
+	// Unfortunately the client.transport.Dialer is obfuscated in the client, so we can't really
+	// assert this worked.
+	transport := NewTransport(Socks5ProxyHostPort("localhost:1234"))
+	err := transport.Start()
+	assert.Nil(t, err)
+}

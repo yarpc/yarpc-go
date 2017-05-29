@@ -21,10 +21,13 @@
 package http
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"golang.org/x/net/proxy"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -38,6 +41,7 @@ type transportConfig struct {
 	keepAlive           time.Duration
 	maxIdleConnsPerHost int
 	tracer              opentracing.Tracer
+	socks5ProxyHostPort string
 }
 
 var defaultTransportConfig = transportConfig{
@@ -49,6 +53,16 @@ var defaultTransportConfig = transportConfig{
 type TransportOption func(*transportConfig)
 
 func (TransportOption) httpOption() {}
+
+// NilOption is empty option - example use case:
+//  opt := NilOption
+//  if (thing) {
+//	 opt = OtherOption
+//  }
+//
+func NilOption() TransportOption {
+	return func(*transportConfig) {}
+}
 
 // KeepAlive specifies the keep-alive period for the network connection. If
 // zero, keep-alives are disabled.
@@ -80,6 +94,14 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// Socks5ProxyHostPort sets up outbounds connections to run through the specified proxy
+// of the format host:port
+func Socks5ProxyHostPort(hostPort string) TransportOption {
+	return func(c *transportConfig) {
+		c.socks5ProxyHostPort = hostPort
+	}
+}
+
 // NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
 	cfg := defaultTransportConfig
@@ -88,41 +110,44 @@ func NewTransport(opts ...TransportOption) *Transport {
 		o(&cfg)
 	}
 
+	client, transport := buildClient(&cfg)
 	return &Transport{
-		once:   intsync.Once(),
-		client: buildClient(&cfg),
-		peers:  make(map[string]*hostport.Peer),
-		tracer: cfg.tracer,
+		once:                intsync.Once(),
+		transport:           transport,
+		client:              client,
+		peers:               make(map[string]*hostport.Peer),
+		tracer:              cfg.tracer,
+		socks5ProxyHostPort: cfg.socks5ProxyHostPort,
 	}
 }
 
-func buildClient(cfg *transportConfig) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: cfg.keepAlive,
-			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConnsPerHost:   cfg.maxIdleConnsPerHost,
-		},
+func buildClient(cfg *transportConfig) (*http.Client, *http.Transport) {
+	transport := &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: cfg.keepAlive,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConnsPerHost:   cfg.maxIdleConnsPerHost,
 	}
+
+	return &http.Client{Transport: transport}, transport
 }
 
 // Transport keeps track of HTTP peers and the associated HTTP client. It
 // allows using a single HTTP client to make requests to multiple YARPC
 // services and pooling the resources needed therein.
 type Transport struct {
-	lock sync.Mutex
-	once intsync.LifecycleOnce
-
-	client *http.Client
-	peers  map[string]*hostport.Peer
-
-	tracer opentracing.Tracer
+	lock                sync.Mutex
+	once                intsync.LifecycleOnce
+	transport           *http.Transport
+	client              *http.Client
+	peers               map[string]*hostport.Peer
+	tracer              opentracing.Tracer
+	socks5ProxyHostPort string
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -130,7 +155,18 @@ var _ transport.Transport = (*Transport)(nil)
 // Start starts the HTTP transport.
 func (a *Transport) Start() error {
 	return a.once.Start(func() error {
-		return nil // Nothing to do
+		// Explicit passing this option in will override the ProxyFromEnvironment
+		if a.socks5ProxyHostPort != "" {
+			dialer, err := proxy.SOCKS5("tcp", a.socks5ProxyHostPort, nil, proxy.Direct)
+			if err != nil {
+				return err
+			}
+			// set our socks5 as the dialer
+			a.transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			}
+		}
+		return nil
 	})
 }
 
