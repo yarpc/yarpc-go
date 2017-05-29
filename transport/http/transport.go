@@ -41,7 +41,7 @@ type transportConfig struct {
 	keepAlive           time.Duration
 	maxIdleConnsPerHost int
 	tracer              opentracing.Tracer
-	socks5Proxy         string
+	socks5ProxyHostPort string
 }
 
 var defaultTransportConfig = transportConfig{
@@ -94,11 +94,11 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
-// Socks5Proxy sets up outbounds connections to run through the specified proxy
+// Socks5ProxyHostPort sets up outbounds connections to run through the specified proxy
 // of the format host:port
-func Socks5Proxy(hostPort string) TransportOption {
+func Socks5ProxyHostPort(hostPort string) TransportOption {
 	return func(c *transportConfig) {
-		c.socks5Proxy = hostPort
+		c.socks5ProxyHostPort = hostPort
 	}
 }
 
@@ -112,12 +112,12 @@ func NewTransport(opts ...TransportOption) *Transport {
 
 	client, transport := buildClient(&cfg)
 	return &Transport{
-		once:        intsync.Once(),
-		transport:   transport,
-		client:      client,
-		peers:       make(map[string]*hostport.Peer),
-		tracer:      cfg.tracer,
-		socks5Proxy: cfg.socks5Proxy,
+		once:                intsync.Once(),
+		transport:           transport,
+		client:              client,
+		peers:               make(map[string]*hostport.Peer),
+		tracer:              cfg.tracer,
+		socks5ProxyHostPort: cfg.socks5ProxyHostPort,
 	}
 }
 
@@ -141,15 +141,13 @@ func buildClient(cfg *transportConfig) (*http.Client, *http.Transport) {
 // allows using a single HTTP client to make requests to multiple YARPC
 // services and pooling the resources needed therein.
 type Transport struct {
-	lock sync.Mutex
-	once intsync.LifecycleOnce
-
-	transport *http.Transport
-	client    *http.Client
-	peers     map[string]*hostport.Peer
-
-	tracer      opentracing.Tracer
-	socks5Proxy string
+	lock                sync.Mutex
+	once                intsync.LifecycleOnce
+	transport           *http.Transport
+	client              *http.Client
+	peers               map[string]*hostport.Peer
+	tracer              opentracing.Tracer
+	socks5ProxyHostPort string
 }
 
 var _ transport.Transport = (*Transport)(nil)
@@ -158,8 +156,8 @@ var _ transport.Transport = (*Transport)(nil)
 func (a *Transport) Start() error {
 	return a.once.Start(func() error {
 		// Explicit passing this option in will override the ProxyFromEnvironment
-		if a.socks5Proxy != "" {
-			dialer, err := proxy.SOCKS5("tcp", a.socks5Proxy, nil, proxy.Direct)
+		if a.socks5ProxyHostPort != "" {
+			dialer, err := proxy.SOCKS5("tcp", a.socks5ProxyHostPort, nil, proxy.Direct)
 			if err != nil {
 				return err
 			}
