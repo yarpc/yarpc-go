@@ -186,16 +186,14 @@ func TestSimpleRoundTrip(t *testing.T) {
 			requestBody:   "foo",
 			responseError: errors.HandlerUnexpectedError(fmt.Errorf("great sadness")),
 			wantError: func(err error) {
-				assert.True(t, trans.IsUnexpectedError(err), err)
-				assert.Equal(t, "UnexpectedError: great sadness", err.Error())
+				assert.True(t, trans.IsUnexpectedError(err), err.Error())
 			},
 		},
 		{
 			requestBody:   "bar",
 			responseError: errors.HandlerBadRequestError(fmt.Errorf("missing service name")),
 			wantError: func(err error) {
-				assert.True(t, trans.IsBadRequestError(err))
-				assert.Equal(t, "BadRequest: missing service name", err.Error())
+				assert.True(t, trans.IsBadRequestError(err), err.Error())
 			},
 		},
 		{
@@ -204,11 +202,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
 			),
 			wantError: func(err error) {
-				assert.True(t, trans.IsUnexpectedError(err))
-				assert.Equal(t,
-					`UnexpectedError: error for procedure "hello" of service "testService": `+
-						`UnexpectedError: error for procedure "foo" of service "bar": great sadness`,
-					err.Error())
+				assert.True(t, trans.IsUnexpectedError(err), err.Error())
 			},
 		},
 		{
@@ -217,11 +211,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`BadRequest: unrecognized procedure "echo" for service "derp"`,
 			),
 			wantError: func(err error) {
-				assert.True(t, trans.IsUnexpectedError(err))
-				assert.Equal(t,
-					`UnexpectedError: error for procedure "hello" of service "testService": `+
-						`BadRequest: unrecognized procedure "echo" for service "derp"`,
-					err.Error())
+				assert.True(t, trans.IsUnexpectedError(err), err.Error())
 			},
 		},
 	}
@@ -271,11 +261,6 @@ func TestSimpleRoundTrip(t *testing.T) {
 				if tt.wantError != nil {
 					if assert.Error(t, err, "%T: expected error, got %v", trans, res) {
 						tt.wantError(err)
-
-						// none of the errors returned by Call can be valid
-						// Handler errors.
-						_, ok := err.(errors.HandlerError)
-						assert.False(t, ok, "%T: %T must not be a HandlerError", trans, err)
 					}
 				} else {
 					responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{

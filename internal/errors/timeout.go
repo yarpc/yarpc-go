@@ -21,84 +21,32 @@
 package errors
 
 import (
-	"fmt"
 	"time"
+
+	"go.uber.org/yarpc/api/errors"
 )
-
-// TimeoutError indicates that an error occurred due to a context deadline over
-// the course of a request over any transport.
-type TimeoutError interface {
-	error
-
-	timeoutError()
-}
-
-// handlerTimeoutError represents a timeout on the handler side.
-type handlerTimeoutError struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Duration  time.Duration
-}
-
-var _ TimeoutError = handlerTimeoutError{}
-var _ HandlerError = handlerTimeoutError{}
 
 // HandlerTimeoutError constructs an instance of a TimeoutError representing
 // a timeout that occurred during the handler execution, with the caller,
 // service, procedure and duration waited.
-func HandlerTimeoutError(Caller string, Service string, Procedure string, Duration time.Duration) error {
-	return handlerTimeoutError{
-		Caller:    Caller,
-		Service:   Service,
-		Procedure: Procedure,
-		Duration:  Duration,
-	}
-}
-
-func (handlerTimeoutError) timeoutError() {}
-func (handlerTimeoutError) handlerError() {}
-
-func (e handlerTimeoutError) Error() string {
-	return fmt.Sprintf(`Timeout: call to procedure %q of service %q from caller %q timed out after %v`,
-		e.Procedure, e.Service, e.Caller, e.Duration)
+//
+// Deprecated: use errors.DeadlineExceeded instead.
+func HandlerTimeoutError(caller string, service string, procedure string, duration time.Duration) error {
+	return errors.DeadlineExceeded("caller: %s service: %s procedure: %s duration: %v", caller, service, procedure, duration)
 }
 
 // RemoteTimeoutError represents a TimeoutError from a remote handler.
-type RemoteTimeoutError string
-
-var _ TimeoutError = RemoteTimeoutError("")
-
-func (RemoteTimeoutError) timeoutError() {}
-
-func (e RemoteTimeoutError) Error() string {
-	return string(e)
+//
+// Deprecated: use errors.DeadlineExceeded instead.
+func RemoteTimeoutError(message string) error {
+	return errors.DeadlineExceeded(message)
 }
-
-// clientTimeoutError represents a timeout on the client side.
-type clientTimeoutError struct {
-	Service   string
-	Procedure string
-	Duration  time.Duration
-}
-
-var _ TimeoutError = clientTimeoutError{}
 
 // ClientTimeoutError constructs an instance of a TimeoutError representing
 // a timeout that occurred while the client was waiting during a request to a
 // remote handler. It includes the service, procedure and duration waited.
-func ClientTimeoutError(Service string, Procedure string, Duration time.Duration) error {
-	return clientTimeoutError{
-		Service:   Service,
-		Procedure: Procedure,
-		Duration:  Duration,
-	}
-}
-
-func (clientTimeoutError) timeoutError() {}
-func (clientTimeoutError) clientError()  {}
-
-func (e clientTimeoutError) Error() string {
-	return fmt.Sprintf(`client timeout for procedure %q of service %q after %v`,
-		e.Procedure, e.Service, e.Duration)
+//
+// Deprecated: use errors.DeadlineExceeded instead.
+func ClientTimeoutError(service string, procedure string, duration time.Duration) error {
+	return errors.DeadlineExceeded("service: %s procedure: %s duration: %v", service, procedure, duration)
 }

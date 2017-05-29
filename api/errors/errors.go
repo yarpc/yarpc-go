@@ -133,6 +133,11 @@ func Unimplemented(format string, args ...interface{}) error {
 	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNIMPLEMENTED, format, args...)
 }
 
+// Internal returns a new yarpc error with type ERROR_TYPE_INTERNAL.
+func Internal(format string, args ...interface{}) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_INTERNAL, format, args...)
+}
+
 // Unavailable returns a new yarpc error with type ERROR_TYPE_UNAVAILABLE.
 func Unavailable(format string, args ...interface{}) error {
 	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNAVAILABLE, format, args...)
@@ -168,20 +173,16 @@ type yarpcError struct {
 func (e *yarpcError) Error() string {
 	// TODO: this needs escaping etc
 	buffer := bytes.NewBuffer(nil)
-	_, _ = buffer.WriteString(`{"type":"`)
+	_, _ = buffer.WriteString(`type: `)
 	_, _ = buffer.WriteString(e.Type.String())
-	_, _ = buffer.WriteString(`"`)
 	if e.Name != "" {
-		_, _ = buffer.WriteString(`, "name":"`)
+		_, _ = buffer.WriteString(` name: `)
 		_, _ = buffer.WriteString(e.Name)
-		_, _ = buffer.WriteString(`"`)
 	}
 	if e.Message != "" {
-		_, _ = buffer.WriteString(`, "message":"`)
+		_, _ = buffer.WriteString(` message: `)
 		_, _ = buffer.WriteString(e.Message)
-		_, _ = buffer.WriteString(`"`)
 	}
-	_, _ = buffer.WriteString(`}`)
 	return buffer.String()
 }
 

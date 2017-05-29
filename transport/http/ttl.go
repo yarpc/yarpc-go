@@ -70,7 +70,7 @@ type invalidTTLError struct {
 	TTL       string
 }
 
-func (e invalidTTLError) AsHandlerError() errors.HandlerError {
+func (e invalidTTLError) AsHandlerError() error {
 	return errors.HandlerBadRequestError(e)
 }
 

@@ -20,39 +20,12 @@
 
 package errors
 
-import "fmt"
-
-// UnrecognizedProcedureError indicates that a request could not be handled locally because
-// the router contained no handler for the request.
-type UnrecognizedProcedureError interface {
-	error
-
-	unrecognizedProcedureError()
-}
+import "go.uber.org/yarpc/api/errors"
 
 // RouterUnrecognizedProcedureError returns an error indicating that the router
 // could find no corresponding handler for the request.
+//
+// Deprecated: Use errors.Unimplemented instead.
 func RouterUnrecognizedProcedureError(service, procedure string) error {
-	return unrecognizedProcedureError{
-		Service:   service,
-		Procedure: procedure,
-	}
-}
-
-// unrecognizedProcedureError is a failure to process a request because the
-// procedure and/or service name was unrecognized.
-type unrecognizedProcedureError struct {
-	Service   string
-	Procedure string
-}
-
-func (unrecognizedProcedureError) unrecognizedProcedureError() {}
-
-func (e unrecognizedProcedureError) Error() string {
-	return fmt.Sprintf(`unrecognized procedure %q for service %q`, e.Procedure, e.Service)
-}
-
-// AsHandlerError for unrecognizedProcedureError.
-func (e unrecognizedProcedureError) AsHandlerError() HandlerError {
-	return HandlerBadRequestError(e)
+	return errors.Unimplemented("service: %s procedure: %s", service, procedure)
 }
