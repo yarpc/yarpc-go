@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rereader
+package ioutil
 
 import (
 	"bytes"
@@ -241,7 +241,7 @@ func TestReReader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			reader, closer := New(tt.source)
+			reader, closer := NewRereader(tt.source)
 			defer closer()
 			ApplyReReaderActions(t, reader, tt.actions)
 		})
