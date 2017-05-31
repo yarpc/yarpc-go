@@ -211,7 +211,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`BadRequest: unrecognized procedure "echo" for service "derp"`,
 			),
 			wantError: func(err error) {
-				assert.True(t, trans.IsUnexpectedError(err), err.Error())
+				assert.True(t, trans.IsBadRequestError(err), err.Error())
 			},
 		},
 	}
