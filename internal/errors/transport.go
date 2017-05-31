@@ -25,7 +25,6 @@ import (
 	"fmt"
 
 	"go.uber.org/yarpc/api/errors"
-	"go.uber.org/yarpc/yarpcproto"
 )
 
 // ErrNoRouter indicates that Start was called without first calling
@@ -36,14 +35,8 @@ var ErrNoRouter = stderrors.New("no router configured for transport inbound")
 // if it is already one.
 //
 // Deprecated.
-func AsHandlerError(service, procedure string, err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Type(err) == yarpcproto.ERROR_TYPE_INTERNAL {
-		return err
-	}
-	return errors.DeadlineExceeded("service", service, "procedure", procedure, "error", err.Error())
+func AsHandlerError(service string, procedure string, err error) error {
+	return errors.WithKeyValues(err, "service", service, "procedure", procedure)
 }
 
 // UnsupportedTypeError is a failure to process a request because the RPC type

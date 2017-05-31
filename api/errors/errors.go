@@ -78,6 +78,24 @@ func Details(err error) map[string]string {
 	return copyStringStringMap(yarpcError.Details)
 }
 
+// WithKeyValues adds the given keyValues to the error.
+//
+// If the error is a yarpc error, this will just add the keyValues.
+// If the error is not a yarpc error, this will return a new yarpc error of type ERROR_TYPE_UNKNOWN
+// with an additional keyValue pair of "error", err.Error().
+// If keyValues contains a key of "error" and a new yarpc error is created, this key will be overwritten.
+func WithKeyValues(err error, keyValues ...string) error {
+	if err == nil {
+		return nil
+	}
+	yarpcError, ok := err.(*yarpcError)
+	if !ok {
+		return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNKNOWN, append([]string{"error", err.Error()}, keyValues...))
+	}
+	c := yarpcError.copyAndAdd(keyValues...)
+	return c
+}
+
 // Cancelled returns a new yarpc error with type ERROR_TYPE_CANCELLED.
 func Cancelled(keyValues ...string) error {
 	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_CANCELLED, keyValues)
@@ -174,8 +192,28 @@ type yarpcError struct {
 	orderedDetailsKeys []string
 }
 
+func newWellKnownYarpcError(errorType yarpcproto.ErrorType, keyValues []string) *yarpcError {
+	e := &yarpcError{
+		Type:               errorType,
+		Details:            make(map[string]string, len(keyValues)/2),
+		orderedDetailsKeys: make([]string, 0, len(keyValues)/2),
+	}
+	e.add(keyValues...)
+	return e
+}
+
+func newUserDefinedYarpcError(name string, keyValues []string) *yarpcError {
+	e := &yarpcError{
+		Type:               yarpcproto.ERROR_TYPE_APPLICATION,
+		Name:               name,
+		Details:            make(map[string]string, len(keyValues)/2),
+		orderedDetailsKeys: make([]string, 0, len(keyValues)/2),
+	}
+	e.add(keyValues...)
+	return e
+}
+
 func (e *yarpcError) Error() string {
-	// TODO: this needs escaping etc
 	buffer := bytes.NewBuffer(nil)
 	_, _ = buffer.WriteString(`type: `)
 	_, _ = buffer.WriteString(strings.TrimPrefix(e.Type.String(), "ERROR_TYPE_"))
@@ -197,33 +235,20 @@ func (e *yarpcError) Error() string {
 	return buffer.String()
 }
 
-func newWellKnownYarpcError(errorType yarpcproto.ErrorType, keyValues []string) *yarpcError {
-	details, orderedDetailsKeys := keyValueMapAndOrderedKeys(keyValues)
-	return &yarpcError{
-		Type:               errorType,
-		Details:            details,
-		orderedDetailsKeys: orderedDetailsKeys,
+func (e *yarpcError) copyAndAdd(keyValues ...string) *yarpcError {
+	c := &yarpcError{
+		Type:               e.Type,
+		Name:               e.Name,
+		Details:            copyStringStringMap(e.Details),
+		orderedDetailsKeys: copyStringSlice(e.orderedDetailsKeys),
 	}
+	c.add(keyValues...)
+	return c
 }
 
-func newUserDefinedYarpcError(name string, keyValues []string) *yarpcError {
-	details, orderedDetailsKeys := keyValueMapAndOrderedKeys(keyValues)
-	return &yarpcError{
-		Type:               yarpcproto.ERROR_TYPE_APPLICATION,
-		Name:               name,
-		Details:            details,
-		orderedDetailsKeys: orderedDetailsKeys,
-	}
-}
-
-func keyValueMapAndOrderedKeys(keyValues []string) (map[string]string, []string) {
-	if len(keyValues) == 0 {
-		return nil, nil
-	}
-	m := make(map[string]string, len(keyValues)/2)
-	orderedKeys := make([]string, 0, len(keyValues)/2)
+func (e *yarpcError) add(keyValues ...string) {
 	for i := 0; i < len(keyValues); i += 2 {
-		key := canonicalizeMapKey(keyValues[i])
+		key := strings.ToLower(keyValues[i])
 		var value string
 		if i == len(keyValues)-1 {
 			value = "missing"
@@ -231,11 +256,10 @@ func keyValueMapAndOrderedKeys(keyValues []string) (map[string]string, []string)
 			value = keyValues[i+1]
 		}
 		if value != "" {
-			m[key] = value
-			orderedKeys = append(orderedKeys, key)
+			e.Details[key] = value
+			e.orderedDetailsKeys = append(e.orderedDetailsKeys, key)
 		}
 	}
-	return m, orderedKeys
 }
 
 func copyStringStringMap(m map[string]string) map[string]string {
@@ -246,6 +270,10 @@ func copyStringStringMap(m map[string]string) map[string]string {
 	return c
 }
 
-func canonicalizeMapKey(key string) string {
-	return strings.ToLower(key)
+func copyStringSlice(s []string) []string {
+	c := make([]string, len(s))
+	for i, value := range s {
+		c[i] = value
+	}
+	return c
 }

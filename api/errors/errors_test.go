@@ -34,6 +34,7 @@ func TestErrorString(t *testing.T) {
 	assert.Equal(t, "type: CANCELLED details: foo:bar baz:missing", Cancelled("foo", "bar", "baz").Error())
 	assert.Equal(t, "type: CANCELLED details: foo:bar baz:bat", Cancelled("foo", "bar", "baz", "bat").Error())
 	assert.Equal(t, "type: CANCELLED details: foo:bar baz:bat", Cancelled("foo", "bar", "baz", "bat", "ban", "").Error())
+	assert.Equal(t, "type: CANCELLED details: foo:bar baz:bat too:tee", WithKeyValues(Cancelled("foo", "bar", "baz", "bat", "ban", ""), "too", "tee").Error())
 	assert.Equal(t, "type: APPLICATION name: hello", Application("hello").Error())
 	assert.Equal(t, "type: APPLICATION name: hello", Application("hello", "foo", "").Error())
 	assert.Equal(t, "type: APPLICATION name: hello details: foo:missing", Application("hello", "foo").Error())
