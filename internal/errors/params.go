@@ -34,5 +34,5 @@ func MissingParameters(params []string) error {
 	if len(params) == 0 {
 		return nil
 	}
-	return errors.InvalidArgument("missingParameters: %s", strings.Join(params, ","))
+	return errors.InvalidArgument("missingParameters", strings.Join(params, ","))
 }

@@ -28,7 +28,7 @@ import "go.uber.org/yarpc/api/errors"
 //
 // Deprecated: Use errors.InvalidArgument instead.
 func HandlerBadRequestError(err error) error {
-	return errors.InvalidArgument(err.Error())
+	return errors.InvalidArgument("error", err.Error())
 }
 
 // RemoteBadRequestError builds a new BadRequestError with the given message.
@@ -37,5 +37,5 @@ func HandlerBadRequestError(err error) error {
 //
 // Deprecated: Use errors.InvalidArgument instead.
 func RemoteBadRequestError(message string) error {
-	return errors.InvalidArgument(message)
+	return errors.InvalidArgument("message", message)
 }

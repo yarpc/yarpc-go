@@ -27,5 +27,5 @@ import "go.uber.org/yarpc/api/errors"
 //
 // Deprecated: Use errors.Unimplemented instead.
 func RouterUnrecognizedProcedureError(service, procedure string) error {
-	return errors.Unimplemented("service: %s procedure: %s", service, procedure)
+	return errors.Unimplemented("service", service, "procedure", procedure)
 }

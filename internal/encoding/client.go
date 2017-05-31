@@ -21,50 +21,17 @@
 package encoding
 
 import (
-	"fmt"
-	"strings"
-
+	"go.uber.org/yarpc/api/errors"
 	"go.uber.org/yarpc/api/transport"
 )
 
-type clientEncodingError struct {
-	Encoding  transport.Encoding
-	Service   string
-	Procedure string
-	Reason    error
-
-	// These parameters control whether the error is for a request or a response,
-	// and whether it's for a header or body.
-
-	IsResponse bool
-	IsHeader   bool
-}
-
-func (e clientEncodingError) Error() string {
-	parts := []string{"failed to"}
-	if e.IsResponse {
-		parts = append(parts, fmt.Sprintf("decode %q response", string(e.Encoding)))
-	} else {
-		parts = append(parts, fmt.Sprintf("encode %q request", string(e.Encoding)))
-	}
-	if e.IsHeader {
-		parts = append(parts, "headers")
-	} else {
-		parts = append(parts, "body")
-	}
-	parts = append(parts,
-		fmt.Sprintf("for procedure %q of service %q: %v",
-			e.Procedure, e.Service, e.Reason))
-	return strings.Join(parts, " ")
-}
-
-func newClientEncodingError(req *transport.Request, err error) clientEncodingError {
-	return clientEncodingError{
-		Encoding:  req.Encoding,
-		Service:   req.Service,
-		Procedure: req.Procedure,
-		Reason:    err,
-	}
+func newClientEncodingError(req *transport.Request, err error) error {
+	return errors.InvalidArgument(
+		"encoding", string(req.Encoding),
+		"service", req.Service,
+		"procedure", req.Procedure,
+		"error", err.Error(),
+	)
 }
 
 // RequestBodyEncodeError builds an error that represents a failure to encode
@@ -76,24 +43,17 @@ func RequestBodyEncodeError(req *transport.Request, err error) error {
 // ResponseBodyDecodeError builds an error that represents a failure to decode
 // the response body.
 func ResponseBodyDecodeError(req *transport.Request, err error) error {
-	e := newClientEncodingError(req, err)
-	e.IsResponse = true
-	return e
+	return newClientEncodingError(req, err)
 }
 
 // RequestHeadersEncodeError builds an error that represents a failure to
 // encode the request headers.
 func RequestHeadersEncodeError(req *transport.Request, err error) error {
-	e := newClientEncodingError(req, err)
-	e.IsHeader = true
-	return e
+	return newClientEncodingError(req, err)
 }
 
 // ResponseHeadersDecodeError builds an error that represents a failure to
 // decode the response headers.
 func ResponseHeadersDecodeError(req *transport.Request, err error) error {
-	e := newClientEncodingError(req, err)
-	e.IsHeader = true
-	e.IsResponse = true
-	return e
+	return newClientEncodingError(req, err)
 }

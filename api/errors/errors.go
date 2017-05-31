@@ -22,14 +22,14 @@ package errors
 
 import (
 	"bytes"
-	"fmt"
+	"strings"
 
 	"go.uber.org/yarpc/yarpcproto"
 )
 
 // TODO: What to do with ERROR_TYPE_UNKNOWN? Should we use use this for ERROR_TYPE_APPLICATION?
 // TODO: What to do with ERROR_TYPE_INTERNAL? Should we have a function to create an error of this type?
-// TODO: should we have specific fields for each error type instead of format string, args ...interface{}?
+// TODO: should we have specific fields for each error type instead of keyValues ...string?
 
 // Type will extract the ErrorType from a yarpc error.
 //
@@ -64,100 +64,100 @@ func Name(err error) string {
 	return yarpcError.Name
 }
 
-// Message will extract the error message from a yarpc error.
+// Detais will extract a copy the error details from a yarpc error.
 //
 // This will return empty if the given error is nil or not a yarpc error.
-func Message(err error) string {
+func Details(err error) map[string]string {
 	if err == nil {
-		return ""
+		return nil
 	}
 	yarpcError, ok := err.(*yarpcError)
 	if !ok {
-		return ""
+		return nil
 	}
-	return yarpcError.Message
+	return copyStringStringMap(yarpcError.Details)
 }
 
 // Cancelled returns a new yarpc error with type ERROR_TYPE_CANCELLED.
-func Cancelled(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_CANCELLED, format, args...)
+func Cancelled(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_CANCELLED, keyValues)
 }
 
 // InvalidArgument returns a new yarpc error with type ERROR_TYPE_INVALID_ARGUMENT.
-func InvalidArgument(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_INVALID_ARGUMENT, format, args...)
+func InvalidArgument(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_INVALID_ARGUMENT, keyValues)
 }
 
 // DeadlineExceeded returns a new yarpc error with type ERROR_TYPE_DEADLINE_EXCEEDED.
-func DeadlineExceeded(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_DEADLINE_EXCEEDED, format, args...)
+func DeadlineExceeded(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_DEADLINE_EXCEEDED, keyValues)
 }
 
 // NotFound returns a new yarpc error with type ERROR_TYPE_NOT_FOUND.
-func NotFound(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_NOT_FOUND, format, args...)
+func NotFound(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_NOT_FOUND, keyValues)
 }
 
 // AlreadyExists returns a new yarpc error with type ERROR_TYPE_ALREADY_EXISTS.
-func AlreadyExists(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_ALREADY_EXISTS, format, args...)
+func AlreadyExists(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_ALREADY_EXISTS, keyValues)
 }
 
 // PermissionDenied returns a new yarpc error with type ERROR_TYPE_PERMISSION_DENIED.
-func PermissionDenied(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_PERMISSION_DENIED, format, args...)
+func PermissionDenied(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_PERMISSION_DENIED, keyValues)
 }
 
 // ResourceExhausted returns a new yarpc error with type ERROR_TYPE_RESOURCE_EXHAUSTED.
-func ResourceExhausted(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_RESOURCE_EXHAUSTED, format, args...)
+func ResourceExhausted(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_RESOURCE_EXHAUSTED, keyValues)
 }
 
 // FailedPrecondition returns a new yarpc error with type ERROR_TYPE_FAILED_PRECONDITION.
-func FailedPrecondition(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_FAILED_PRECONDITION, format, args...)
+func FailedPrecondition(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_FAILED_PRECONDITION, keyValues)
 }
 
 // Aborted returns a new yarpc error with type ERROR_TYPE_ABORTED.
-func Aborted(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_ABORTED, format, args...)
+func Aborted(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_ABORTED, keyValues)
 }
 
 // OutOfRange returns a new yarpc error with type ERROR_TYPE_OUT_OF_RANGE.
-func OutOfRange(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_OUT_OF_RANGE, format, args...)
+func OutOfRange(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_OUT_OF_RANGE, keyValues)
 }
 
 // Unimplemented returns a new yarpc error with type ERROR_TYPE_UNIMPLEMENTED.
-func Unimplemented(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNIMPLEMENTED, format, args...)
+func Unimplemented(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNIMPLEMENTED, keyValues)
 }
 
 // Internal returns a new yarpc error with type ERROR_TYPE_INTERNAL.
-func Internal(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_INTERNAL, format, args...)
+func Internal(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_INTERNAL, keyValues)
 }
 
 // Unavailable returns a new yarpc error with type ERROR_TYPE_UNAVAILABLE.
-func Unavailable(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNAVAILABLE, format, args...)
+func Unavailable(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNAVAILABLE, keyValues)
 }
 
 // DataLoss returns a new yarpc error with type ERROR_TYPE_DATA_LOSS.
-func DataLoss(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_DATA_LOSS, format, args...)
+func DataLoss(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_DATA_LOSS, keyValues)
 }
 
 // Unauthenticated returns a new yarpc error with type ERROR_TYPE_UNAUTHENTICATED.
-func Unauthenticated(format string, args ...interface{}) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNAUTHENTICATED, format, args...)
+func Unauthenticated(keyValues ...string) error {
+	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNAUTHENTICATED, keyValues)
 }
 
 // Application returns a new yarpc error with type ERROR_TYPE_APPLICATION and the given user-defined name.
 //
 // TODO: Validate that the name is only lowercase letters and dashes, and figure out what to do if not.
-func Application(name string, format string, args ...interface{}) error {
-	return newUserDefinedYarpcError(name, format, args...)
+func Application(name string, keyValues ...string) error {
+	return newUserDefinedYarpcError(name, keyValues)
 }
 
 type yarpcError struct {
@@ -166,37 +166,86 @@ type yarpcError struct {
 	// Name is the user-defined name of the error. This is only valid if Type is
 	// ERROR_TYPE_APPLICATION, otherwise the return value for Name will be empty.
 	Name string
-	// Message contains the error message.
-	Message string
+	// Details contains a map of additional details about the error.
+	// The keys will be converted to all lower case, and two keys that are the same
+	// when lowercase will have the latter key overridden.
+	Details map[string]string
+
+	orderedDetailsKeys []string
 }
 
 func (e *yarpcError) Error() string {
 	// TODO: this needs escaping etc
 	buffer := bytes.NewBuffer(nil)
 	_, _ = buffer.WriteString(`type: `)
-	_, _ = buffer.WriteString(e.Type.String())
+	_, _ = buffer.WriteString(strings.TrimPrefix(e.Type.String(), "ERROR_TYPE_"))
 	if e.Name != "" {
 		_, _ = buffer.WriteString(` name: `)
 		_, _ = buffer.WriteString(e.Name)
 	}
-	if e.Message != "" {
-		_, _ = buffer.WriteString(` message: `)
-		_, _ = buffer.WriteString(e.Message)
+	if len(e.Details) != 0 {
+		_, _ = buffer.WriteString(` details: `)
+		for i, key := range e.orderedDetailsKeys {
+			_, _ = buffer.WriteString(key)
+			_, _ = buffer.WriteString(`:`)
+			_, _ = buffer.WriteString(e.Details[key])
+			if i != len(e.Details)-1 {
+				_, _ = buffer.WriteString(` `)
+			}
+		}
 	}
 	return buffer.String()
 }
 
-func newWellKnownYarpcError(errorType yarpcproto.ErrorType, format string, args ...interface{}) *yarpcError {
+func newWellKnownYarpcError(errorType yarpcproto.ErrorType, keyValues []string) *yarpcError {
+	details, orderedDetailsKeys := keyValueMapAndOrderedKeys(keyValues)
 	return &yarpcError{
-		Type:    errorType,
-		Message: fmt.Sprintf(format, args...),
+		Type:               errorType,
+		Details:            details,
+		orderedDetailsKeys: orderedDetailsKeys,
 	}
 }
 
-func newUserDefinedYarpcError(name string, format string, args ...interface{}) *yarpcError {
+func newUserDefinedYarpcError(name string, keyValues []string) *yarpcError {
+	details, orderedDetailsKeys := keyValueMapAndOrderedKeys(keyValues)
 	return &yarpcError{
-		Type:    yarpcproto.ERROR_TYPE_APPLICATION,
-		Name:    name,
-		Message: fmt.Sprintf(format, args...),
+		Type:               yarpcproto.ERROR_TYPE_APPLICATION,
+		Name:               name,
+		Details:            details,
+		orderedDetailsKeys: orderedDetailsKeys,
 	}
+}
+
+func keyValueMapAndOrderedKeys(keyValues []string) (map[string]string, []string) {
+	if len(keyValues) == 0 {
+		return nil, nil
+	}
+	m := make(map[string]string, len(keyValues)/2)
+	orderedKeys := make([]string, 0, len(keyValues)/2)
+	for i := 0; i < len(keyValues); i += 2 {
+		key := canonicalizeMapKey(keyValues[i])
+		var value string
+		if i == len(keyValues)-1 {
+			value = "missing"
+		} else {
+			value = keyValues[i+1]
+		}
+		if value != "" {
+			m[key] = value
+			orderedKeys = append(orderedKeys, key)
+		}
+	}
+	return m, orderedKeys
+}
+
+func copyStringStringMap(m map[string]string) map[string]string {
+	c := make(map[string]string, len(m))
+	for key, value := range m {
+		c[key] = value
+	}
+	return c
+}
+
+func canonicalizeMapKey(key string) string {
+	return strings.ToLower(key)
 }

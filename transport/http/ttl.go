@@ -22,12 +22,11 @@ package http
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
+	"go.uber.org/yarpc/api/errors"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 )
 
 // parseTTL takes a context parses the given TTL, clamping the context to that
@@ -42,41 +41,18 @@ func parseTTL(ctx context.Context, req *transport.Request, ttl string) (_ contex
 
 	ttlms, err := strconv.Atoi(ttl)
 	if err != nil {
-		return ctx, func() {}, invalidTTLError{
-			Service:   req.Service,
-			Procedure: req.Procedure,
-			TTL:       ttl,
-		}
+		return ctx, func() {}, newInvalidTTLError(req.Service, req.Procedure, ttl)
 	}
 
 	// negative TTLs are invalid
 	if ttlms < 0 {
-		return ctx, func() {}, invalidTTLError{
-			Service:   req.Service,
-			Procedure: req.Procedure,
-			TTL:       fmt.Sprint(ttlms),
-		}
+		return ctx, func() {}, newInvalidTTLError(req.Service, req.Procedure, ttl)
 	}
 
 	ctx, cancel = context.WithTimeout(ctx, time.Duration(ttlms)*time.Millisecond)
 	return ctx, cancel, nil
 }
 
-// invalidTTLError is a failure to process a request because the TTL was in an
-// invalid format.
-type invalidTTLError struct {
-	Service   string
-	Procedure string
-	TTL       string
-}
-
-func (e invalidTTLError) AsHandlerError() error {
-	return errors.HandlerBadRequestError(e)
-}
-
-func (e invalidTTLError) Error() string {
-	return fmt.Sprintf(
-		`invalid TTL %q for procedure %q of service %q: must be positive integer`,
-		e.TTL, e.Procedure, e.Service,
-	)
+func newInvalidTTLError(service string, procedure string, ttl string) error {
+	return errors.InvalidArgument("service", service, "procedure", procedure, "ttl", ttl)
 }

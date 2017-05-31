@@ -28,7 +28,7 @@ import "go.uber.org/yarpc/api/errors"
 //
 // Deprecated: Use errors.Internal instead.
 func HandlerUnexpectedError(err error) error {
-	return errors.Internal(err.Error())
+	return errors.Internal("error", err.Error())
 }
 
 // RemoteUnexpectedError builds a new UnexpectedError with the given message.
@@ -37,5 +37,5 @@ func HandlerUnexpectedError(err error) error {
 //
 // Deprecated: Use errors.Internal instead.
 func RemoteUnexpectedError(message string) error {
-	return errors.Internal(message)
+	return errors.Internal("message", message)
 }

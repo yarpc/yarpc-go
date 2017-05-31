@@ -43,7 +43,7 @@ func AsHandlerError(service, procedure string, err error) error {
 	if errors.Type(err) == yarpcproto.ERROR_TYPE_INTERNAL {
 		return err
 	}
-	return errors.Internal("service: %s procedure: %s message: %s", service, procedure, err.Error())
+	return errors.DeadlineExceeded("service", service, "procedure", procedure, "error", err.Error())
 }
 
 // UnsupportedTypeError is a failure to process a request because the RPC type

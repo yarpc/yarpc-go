@@ -32,14 +32,14 @@ import (
 //
 // Deprecated: use errors.DeadlineExceeded instead.
 func HandlerTimeoutError(caller string, service string, procedure string, duration time.Duration) error {
-	return errors.DeadlineExceeded("caller: %s service: %s procedure: %s duration: %v", caller, service, procedure, duration)
+	return errors.DeadlineExceeded("caller", caller, "service", service, "procedure", procedure, "duration", duration.String())
 }
 
 // RemoteTimeoutError represents a TimeoutError from a remote handler.
 //
 // Deprecated: use errors.DeadlineExceeded instead.
 func RemoteTimeoutError(message string) error {
-	return errors.DeadlineExceeded(message)
+	return errors.DeadlineExceeded("message", message)
 }
 
 // ClientTimeoutError constructs an instance of a TimeoutError representing
@@ -48,5 +48,5 @@ func RemoteTimeoutError(message string) error {
 //
 // Deprecated: use errors.DeadlineExceeded instead.
 func ClientTimeoutError(service string, procedure string, duration time.Duration) error {
-	return errors.DeadlineExceeded("service: %s procedure: %s duration: %v", service, procedure, duration)
+	return errors.DeadlineExceeded("service", service, "procedure", procedure, "duration", duration.String())
 }
