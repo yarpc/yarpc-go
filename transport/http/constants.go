@@ -20,7 +20,11 @@
 
 package http
 
+import "time"
+
 const transportName = "http"
+
+var defaultConnTimeout = 500 * time.Millisecond
 
 // HTTP headers used in requests and responses to send YARPC metadata.
 const (

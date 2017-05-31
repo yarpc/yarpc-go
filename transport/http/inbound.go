@@ -119,8 +119,9 @@ func (i *Inbound) start() error {
 	}
 
 	i.server = intnet.NewHTTPServer(&http.Server{
-		Addr:    i.addr,
-		Handler: httpHandler,
+		Addr:      i.addr,
+		Handler:   httpHandler,
+		ConnState: i.onConnStateChanged,
 	})
 	if err := i.server.ListenAndServe(); err != nil {
 		return err
