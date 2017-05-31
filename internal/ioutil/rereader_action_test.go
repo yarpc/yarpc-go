@@ -27,13 +27,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// ReReaderAction defines actions that can be applied to a ReReader.
-type ReReaderAction interface {
-	// Apply runs a function on the ReReader
-	Apply(*testing.T, *ReReader)
+// RereaderAction defines actions that can be applied to a Rereader.
+type RereaderAction interface {
+	// Apply runs a function on the Rereader
+	Apply(*testing.T, *Rereader)
 }
 
-// ReadAction is an action that runs a read on the ReReader.
+// ReadAction is an action that runs a read on the Rereader.
 type ReadAction struct {
 	Into      []byte
 	WantBytes []byte
@@ -41,8 +41,8 @@ type ReadAction struct {
 	WantError error
 }
 
-// Apply runs "Read" on the ReReader and validates the result.
-func (a ReadAction) Apply(t *testing.T, rr *ReReader) {
+// Apply runs "Read" on the Rereader and validates the result.
+func (a ReadAction) Apply(t *testing.T, rr *Rereader) {
 	n, err := rr.Read(a.Into)
 
 	assert.Equal(t, a.WantN, n)
@@ -50,19 +50,19 @@ func (a ReadAction) Apply(t *testing.T, rr *ReReader) {
 	assert.Equal(t, a.WantBytes, a.Into)
 }
 
-// ResetAction is an action that resets the ReReader.
+// ResetAction is an action that resets the Rereader.
 type ResetAction struct {
 	WantError error
 }
 
-// Apply runs "Reset" on the ReReader.
-func (a ResetAction) Apply(t *testing.T, rr *ReReader) {
+// Apply runs "Reset" on the Rereader.
+func (a ResetAction) Apply(t *testing.T, rr *Rereader) {
 	err := rr.Reset()
 	assert.Equal(t, a.WantError, err)
 }
 
-// ApplyReReaderActions runs all the ReReaderActions on the ReReader.
-func ApplyReReaderActions(t *testing.T, rr *ReReader, actions []ReReaderAction) {
+// ApplyRereaderActions runs all the RereaderActions on the Rereader.
+func ApplyRereaderActions(t *testing.T, rr *Rereader, actions []RereaderAction) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {
 			action.Apply(t, rr)

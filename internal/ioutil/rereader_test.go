@@ -27,21 +27,21 @@ import (
 	"testing"
 )
 
-func TestReReader(t *testing.T) {
+func TestRereader(t *testing.T) {
 	type testStruct struct {
 		msg string
 
 		// Source reader that will be used for all reads
 		source io.Reader
 
-		// A list of actions that will be applied on the ReReader
-		actions []ReReaderAction
+		// A list of actions that will be applied on the Rereader
+		actions []RereaderAction
 	}
 	tests := []testStruct{
 		{
 			msg:    "read once",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 14),
 					WantBytes: []byte("this is a test"),
@@ -52,7 +52,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "read twice",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 4),
 					WantBytes: []byte("this"),
@@ -68,7 +68,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "read into larger buffer",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      []byte("-------------------"),
 					WantBytes: []byte("this is a test-----"),
@@ -79,7 +79,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "read end of file error",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 14),
 					WantBytes: []byte("this is a test"),
@@ -95,7 +95,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "reread once",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 14),
 					WantBytes: []byte("this is a test"),
@@ -112,7 +112,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "reread partial",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 14),
 					WantBytes: []byte("this is a test"),
@@ -134,7 +134,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "reread end of file",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 14),
 					WantBytes: []byte("this is a test"),
@@ -156,7 +156,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "reread 5 times",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 14),
 					WantBytes: []byte("this is a test"),
@@ -197,7 +197,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "reset before read",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ResetAction{
 					WantError: errors.New("cannot reset the rereader until we've finished reading the current reader"),
 				},
@@ -206,7 +206,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "reset before read finished",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 13),
 					WantBytes: []byte("this is a tes"),
@@ -220,7 +220,7 @@ func TestReReader(t *testing.T) {
 		{
 			msg:    "reset before second read finished",
 			source: bytes.NewBufferString("this is a test"),
-			actions: []ReReaderAction{
+			actions: []RereaderAction{
 				ReadAction{
 					Into:      make([]byte, 14),
 					WantBytes: []byte("this is a test"),
@@ -243,7 +243,7 @@ func TestReReader(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			reader, closer := NewRereader(tt.source)
 			defer closer()
-			ApplyReReaderActions(t, reader, tt.actions)
+			ApplyRereaderActions(t, reader, tt.actions)
 		})
 	}
 }
