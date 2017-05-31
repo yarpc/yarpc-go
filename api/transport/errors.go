@@ -32,7 +32,7 @@ import (
 //
 // Deprecated: Use errors.InvalidArgument instead.
 func InboundBadRequestError(err error) error {
-	return errors.InvalidArgument(err.Error())
+	return errors.InvalidArgument("error", err.Error())
 }
 
 // IsBadRequestError returns true if the request could not be processed
@@ -48,7 +48,6 @@ func IsBadRequestError(err error) bool {
 //
 // Deprecated: Use errors.Type(err) instead.
 func IsUnexpectedError(err error) bool {
-	// TODO: we don't actually make errors of this type
 	return errors.Type(err) == yarpcproto.ERROR_TYPE_INTERNAL
 }
 
@@ -65,7 +64,7 @@ func IsTimeoutError(err error) bool {
 //
 // Deprecated: Use errors.Unimplemented instead.
 func UnrecognizedProcedureError(req *Request) error {
-	return errors.Unimplemented("service: %s procedure: %s", req.Service, req.Procedure)
+	return errors.Unimplemented("service", req.Service, "procedure", req.Procedure)
 }
 
 // IsUnrecognizedProcedureError returns true for errors returned by

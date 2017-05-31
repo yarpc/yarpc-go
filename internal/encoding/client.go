@@ -21,39 +21,43 @@
 package encoding
 
 import (
+	"strconv"
+
 	"go.uber.org/yarpc/api/errors"
 	"go.uber.org/yarpc/api/transport"
 )
 
-func newClientEncodingError(req *transport.Request, err error) error {
-	return errors.InvalidArgument(
-		"encoding", string(req.Encoding),
-		"service", req.Service,
-		"procedure", req.Procedure,
-		"error", err.Error(),
-	)
-}
-
 // RequestBodyEncodeError builds an error that represents a failure to encode
 // the request body.
 func RequestBodyEncodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, err)
+	return newClientEncodingError(req, err, true, false)
 }
 
 // ResponseBodyDecodeError builds an error that represents a failure to decode
 // the response body.
 func ResponseBodyDecodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, err)
+	return newClientEncodingError(req, err, false, false)
 }
 
 // RequestHeadersEncodeError builds an error that represents a failure to
 // encode the request headers.
 func RequestHeadersEncodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, err)
+	return newClientEncodingError(req, err, true, true)
 }
 
 // ResponseHeadersDecodeError builds an error that represents a failure to
 // decode the response headers.
 func ResponseHeadersDecodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, err)
+	return newClientEncodingError(req, err, false, true)
+}
+
+func newClientEncodingError(req *transport.Request, err error, isRequest bool, isHeaders bool) error {
+	return errors.InvalidArgument(
+		"encoding", string(req.Encoding),
+		"service", req.Service,
+		"procedure", req.Procedure,
+		"is_headers", strconv.FormatBool(isHeaders),
+		"is_request", strconv.FormatBool(isRequest),
+		"error", err.Error(),
+	)
 }

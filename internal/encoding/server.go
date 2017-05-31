@@ -22,43 +22,34 @@ package encoding
 
 import (
 	"fmt"
+	"strconv"
 
 	"go.uber.org/yarpc/api/errors"
 	"go.uber.org/yarpc/api/transport"
 )
 
-func newServerEncodingError(req *transport.Request, err error) error {
-	return errors.InvalidArgument(
-		"encoding", string(req.Encoding),
-		"caller", req.Caller,
-		"service", req.Service,
-		"procedure", req.Procedure,
-		"error", err.Error(),
-	)
-}
-
 // RequestBodyDecodeError builds an error that represents a failure to decode
 // the request body.
 func RequestBodyDecodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, err)
+	return newServerEncodingError(req, err, true, false)
 }
 
 // ResponseBodyEncodeError builds an error that represents a failure to encode
 // the response body.
 func ResponseBodyEncodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, err)
+	return newServerEncodingError(req, err, false, false)
 }
 
 // RequestHeadersDecodeError builds an error that represents a failure to
 // decode the request headers.
 func RequestHeadersDecodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, err)
+	return newServerEncodingError(req, err, true, true)
 }
 
 // ResponseHeadersEncodeError builds an error that represents a failure to
 // encode the response headers.
 func ResponseHeadersEncodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, err)
+	return newServerEncodingError(req, err, false, true)
 }
 
 // Expect verifies that the given request has one of the given encodings
@@ -70,5 +61,17 @@ func Expect(req *transport.Request, want ...transport.Encoding) error {
 			return nil
 		}
 	}
-	return newServerEncodingError(req, fmt.Errorf("expected one of encodings %v but got %q", want, got))
+	return newServerEncodingError(req, fmt.Errorf("expected one of encodings %v but got %q", want, got), true, false)
+}
+
+func newServerEncodingError(req *transport.Request, err error, isRequest bool, isHeaders bool) error {
+	return errors.InvalidArgument(
+		"encoding", string(req.Encoding),
+		"caller", req.Caller,
+		"service", req.Service,
+		"procedure", req.Procedure,
+		"is_request", strconv.FormatBool(isRequest),
+		"is_headers", strconv.FormatBool(isHeaders),
+		"error", err.Error(),
+	)
 }
