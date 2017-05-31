@@ -56,8 +56,8 @@ func newClientEncodingError(req *transport.Request, err error, isRequest bool, i
 		"encoding", string(req.Encoding),
 		"service", req.Service,
 		"procedure", req.Procedure,
-		"is_headers", strconv.FormatBool(isHeaders),
 		"is_request", strconv.FormatBool(isRequest),
+		"is_headers", strconv.FormatBool(isHeaders),
 		"error", err.Error(),
 	)
 }
