@@ -155,6 +155,24 @@ func (h *helloHandler) Echo(ctx context.Context, e *echo.EchoRequest) (*echo.Ech
 }
 ```
 
+#### JSON handler
+
+To create a handler which supports JSON encoding rather than Thrift, you can use the `json.Procedure` function:
+
+```go
+type fooInput struct {
+	Input string `json:"input"`
+}
+type fooOutput struct {
+	Output string `json:"output"`
+}
+dispatcher.Register(json.Procedure("Foo::bar", func(_ context.Context, data *fooInput) (*fooOutput, error) {
+	return &fooOutput{
+		Output: data.Input,
+	}, nil
+}))
+```
+
 ### Call
 
 To send a request on an outbound, we construct a client using the corresponding
@@ -181,9 +199,9 @@ if err != nil {
 fmt.Println(res)
 ```
 
-#### Call via Curl on HTTP
+#### Calling from the commmand line
 
-Here is an example of calling the `yarpc/procedures` (introspection JSON handler) via curl against an HTTP inbound:
+It is often useful to call a remote procedure from the command line for development and debugging purposes. For procedures which use a TChannel or HTTP inbound and Thrift encoding, [yab][yab] is the simplest tool for the job. For services with an HTTP inbound and JSON encoding you can use `cURL` to achieve this:
 
 ```sh
 curl -v http://${host}:${port} \
@@ -191,7 +209,21 @@ curl -v http://${host}:${port} \
   -H 'Rpc-Encoding: json' \
   -H 'Context-TTL-MS: 2000' \
   -H 'Rpc-Service: ${service}' \
-  -H 'Rpc-Procedure: yarpc/procedures' -d '{}'
+  -H 'Rpc-Procedure: Foo::bar' -d '{"input": "test"}'
+```
+
+#### Introspection handlers (experimental)
+
+YARPC ships with an experimental `yarpcmeta` package which contains some introspective functions which might be useful. Note that this package may change in the future and should not be relied on. To enable the meta procedures, register them with your dispatcher:
+
+```go
+yarpcmeta.Register(dispatcher)
+```
+
+You can then either use `yab` or `curl` to list available procedures:
+
+```bash
+$ yab -e json -p "http://${host}:${port}" ${service} yarpc::procedures
 ```
 
 ### Other Examples
@@ -204,6 +236,7 @@ encodings.
 [oneway]: https://github.com/yarpc/yarpc-go/tree/master/internal/examples/thrift-oneway
 [thrift-keyvalue]: https://github.com/yarpc/yarpc-go/tree/master/internal/examples/thrift-keyvalue
 [json-keyvalue]: https://github.com/yarpc/yarpc-go/tree/master/internal/examples/json-keyvalue
+[yab]: https://github.com/yarpc/yab
 
 <!--
 TODO
