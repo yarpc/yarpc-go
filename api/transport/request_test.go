@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,7 @@ func TestValidator(t *testing.T) {
 		transportType transport.Type
 		ttl           time.Duration
 
-		wantErr string
+		wantErr error
 	}{
 		{
 			// No error
@@ -58,7 +59,7 @@ func TestValidator(t *testing.T) {
 				Service:   "service",
 				Procedure: "hello",
 			},
-			wantErr: "missing encoding",
+			wantErr: errors.MissingParameters([]string{"encoding"}),
 		},
 		{
 			req: &transport.Request{
@@ -66,7 +67,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: "missing caller name",
+			wantErr: errors.MissingParameters([]string{"caller"}),
 		},
 		{
 			req: &transport.Request{
@@ -74,7 +75,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: "missing service name",
+			wantErr: errors.MissingParameters([]string{"service"}),
 		},
 		{
 			req: &transport.Request{
@@ -82,7 +83,7 @@ func TestValidator(t *testing.T) {
 				Service:  "service",
 				Encoding: "raw",
 			},
-			wantErr: "missing procedure",
+			wantErr: errors.MissingParameters([]string{"procedure"}),
 		},
 		{
 			req: &transport.Request{
@@ -92,11 +93,11 @@ func TestValidator(t *testing.T) {
 				Encoding:  "raw",
 			},
 			transportType: transport.Unary,
-			wantErr:       "missing TTL",
+			wantErr:       errors.MissingParameters([]string{"TTL"}),
 		},
 		{
 			req:     &transport.Request{},
-			wantErr: "missing service name, procedure, caller name, and encoding",
+			wantErr: errors.MissingParameters([]string{"service", "procedure", "caller", "encoding"}),
 		},
 	}
 
@@ -115,9 +116,9 @@ func TestValidator(t *testing.T) {
 			err = request.ValidateUnaryContext(ctx)
 		}
 
-		if tt.wantErr != "" {
+		if tt.wantErr != nil {
 			if assert.Error(t, err) {
-				assert.Equal(t, tt.wantErr, err.Error())
+				assert.Equal(t, tt.wantErr.Error(), err.Error())
 			}
 		} else {
 			assert.NoError(t, err)
