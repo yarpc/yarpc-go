@@ -31,15 +31,9 @@ type Option interface {
 
 var _ Option = (TransportOption)(nil)
 
-// transportConfig is suitable for conveying options to TChannel transport
-// constructors.
-// At time of writing, there is only a ChannelTransport constructor, which
-// supports options like WithChannel that only apply to this constructor form.
-// The transportConfig should also be suitable, albeit with extraneous properties,
-// if used for NewTransport, which will return a Transport suitable for YARPC
-// peer lists.
-// TODO update above when NewTransport is real.
-type transportConfig struct {
+// transportOptions is suitable for conveying options to TChannel transport
+// constructors (NewTransport and NewChannelTransport).
+type transportOptions struct {
 	ch     Channel
 	tracer opentracing.Tracer
 	addr   string
@@ -47,7 +41,7 @@ type transportConfig struct {
 }
 
 // TransportOption customizes the behavior of a TChannel Transport.
-type TransportOption func(*transportConfig)
+type TransportOption func(*transportOptions)
 
 // TransportOption makes all TransportOptions recognizeable as Option so
 // TransportSpec will accept them.
@@ -56,7 +50,7 @@ func (TransportOption) tchannelOption() {}
 // Tracer specifies the request tracer used for RPCs passing through the
 // TChannel transport.
 func Tracer(tracer opentracing.Tracer) TransportOption {
-	return func(t *transportConfig) {
+	return func(t *transportOptions) {
 		t.tracer = tracer
 	}
 }
@@ -72,8 +66,8 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 // This option is disallowed for NewTransport and transports constructed with
 // the YARPC configuration system.
 func WithChannel(ch Channel) TransportOption {
-	return func(t *transportConfig) {
-		t.ch = ch
+	return func(options *transportOptions) {
+		options.ch = ch
 	}
 }
 
@@ -86,8 +80,8 @@ func WithChannel(ch Channel) TransportOption {
 // already listening, and it is disallowed for transports constructed with the
 // YARPC configuration system.
 func ListenAddr(addr string) TransportOption {
-	return func(t *transportConfig) {
-		t.addr = addr
+	return func(options *transportOptions) {
+		options.addr = addr
 	}
 }
 
@@ -103,7 +97,7 @@ func ListenAddr(addr string) TransportOption {
 // This option has no effect if WithChannel was used, and it is disallowed for
 // transports constructed with the YARPC configuration system.
 func ServiceName(name string) TransportOption {
-	return func(t *transportConfig) {
-		t.name = name
+	return func(options *transportOptions) {
+		options.name = name
 	}
 }
