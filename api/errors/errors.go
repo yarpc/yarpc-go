@@ -64,7 +64,7 @@ func Name(err error) string {
 	return yarpcError.Name
 }
 
-// Detais will extract a copy the error details from a yarpc error.
+// Details will extract a copy the error details from a yarpc error.
 //
 // This will return empty if the given error is nil or not a yarpc error.
 func Details(err error) map[string]string {
