@@ -93,28 +93,28 @@ func (ts *transportSpec) Spec() config.TransportSpec {
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
-	var cfg transportConfig
+	var options transportOptions
 	// Default configuration.
-	cfg.tracer = opentracing.GlobalTracer()
+	options.tracer = opentracing.GlobalTracer()
 
-	for _, o := range ts.transportOptions {
-		o(&cfg)
+	for _, opt := range ts.transportOptions {
+		opt(&options)
 	}
 
-	if cfg.name != "" {
+	if options.name != "" {
 		return nil, fmt.Errorf("TChannel TransportSpec does not accept ServiceName")
 	}
 
-	if cfg.addr != "" {
+	if options.addr != "" {
 		return nil, fmt.Errorf("TChannel TransportSpec does not accept ListenAddr")
 	}
 
-	if cfg.ch != nil {
+	if options.ch != nil {
 		return nil, fmt.Errorf("TChannel TransportSpec does not accept WithChannel")
 	}
 
-	cfg.name = k.ServiceName()
-	return cfg.newTransport(), nil
+	options.name = k.ServiceName()
+	return options.newTransport(), nil
 }
 
 func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {

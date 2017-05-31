@@ -429,10 +429,10 @@ type wantHTTPClient struct {
 // useFakeBuildClient verifies the configuration we use to build an HTTP
 // client.
 func useFakeBuildClient(t *testing.T, want *wantHTTPClient) TransportOption {
-	return buildClient(func(cfg *transportConfig) *http.Client {
-		assert.Equal(t, want.KeepAlive, cfg.keepAlive, "http.Client: KeepAlive should match")
-		assert.Equal(t, want.MaxIdleConnsPerHost, cfg.maxIdleConnsPerHost,
+	return buildClient(func(options *transportOptions) *http.Client {
+		assert.Equal(t, want.KeepAlive, options.keepAlive, "http.Client: KeepAlive should match")
+		assert.Equal(t, want.MaxIdleConnsPerHost, options.maxIdleConnsPerHost,
 			"http.Client: MaxIdleConnsPerHost should match")
-		return buildHTTPClient(cfg)
+		return buildHTTPClient(options)
 	})
 }

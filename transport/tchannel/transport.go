@@ -60,25 +60,25 @@ type Transport struct {
 // Either the local service name (with the ServiceName option) or a user-owned
 // TChannel (with the WithChannel option) MUST be specified.
 func NewTransport(opts ...TransportOption) (*Transport, error) {
-	var config transportConfig
-	config.tracer = opentracing.GlobalTracer()
+	var options transportOptions
+	options.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
-		opt(&config)
+		opt(&options)
 	}
 
-	if config.ch != nil {
+	if options.ch != nil {
 		return nil, fmt.Errorf("NewTransport does not accept WithChannel, use NewChannelTransport")
 	}
 
-	return config.newTransport(), nil
+	return options.newTransport(), nil
 }
 
-func (config transportConfig) newTransport() *Transport {
+func (o transportOptions) newTransport() *Transport {
 	return &Transport{
 		once:   intsync.Once(),
-		name:   config.name,
-		addr:   config.addr,
-		tracer: config.tracer,
+		name:   o.name,
+		addr:   o.addr,
+		tracer: o.tracer,
 		peers:  make(map[string]*hostport.Peer),
 	}
 }
