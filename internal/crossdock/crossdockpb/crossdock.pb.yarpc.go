@@ -26,6 +26,7 @@ package crossdockpb
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
@@ -173,3 +174,16 @@ var (
 	emptyOneway_EchoYarpcRequest  = &Token{}
 	emptyOneway_EchoYarpcResponse = &yarpcproto.Oneway{}
 )
+
+func init() {
+	yarpc.RegisterClientBuilder(
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) EchoYarpcClient {
+			return NewEchoYarpcClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		},
+	)
+	yarpc.RegisterClientBuilder(
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) OnewayYarpcClient {
+			return NewOnewayYarpcClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		},
+	)
+}
