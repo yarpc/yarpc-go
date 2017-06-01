@@ -22,7 +22,6 @@ package ioutil
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"testing"
 )
@@ -199,7 +198,7 @@ func TestRereader(t *testing.T) {
 			source: bytes.NewBufferString("this is a test"),
 			actions: []RereaderAction{
 				ResetAction{
-					WantError: errors.New("cannot reset the rereader until we've finished reading the current reader"),
+					WantError: ResetError,
 				},
 			},
 		},
@@ -213,7 +212,7 @@ func TestRereader(t *testing.T) {
 					WantN:     13,
 				},
 				ResetAction{
-					WantError: errors.New("cannot reset the rereader until we've finished reading the current reader"),
+					WantError: ResetError,
 				},
 			},
 		},
@@ -233,7 +232,7 @@ func TestRereader(t *testing.T) {
 					WantN:     13,
 				},
 				ResetAction{
-					WantError: errors.New("cannot reset the rereader until we've finished reading the current reader"),
+					WantError: ResetError,
 				},
 			},
 		},
