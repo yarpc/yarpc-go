@@ -1,5 +1,4 @@
 IGNORE_DIRS="\
-  internal/crossdock \
   internal/examples \
   internal/service-test \
   internal/testutils \
