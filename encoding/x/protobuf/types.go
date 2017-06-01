@@ -23,6 +23,8 @@ package protobuf
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -144,6 +146,19 @@ func NewOnewayHandler(
 	newRequest func() proto.Message,
 ) transport.OnewayHandler {
 	return newOnewayHandler(handleOneway, newRequest)
+}
+
+// ClientBuilderOptions returns ClientOptions that yarpc.InjectClients should use for a
+// specific client given information about the field into which the client is being injected.
+func ClientBuilderOptions(_ transport.ClientConfig, structField reflect.StructField) []ClientOption {
+	var opts []ClientOption
+	for _, opt := range uniqueLowercaseStrings(strings.Split(structField.Tag.Get("proto"), ",")) {
+		switch opt {
+		case "use_json":
+			opts = append(opts, UseJSON)
+		}
+	}
+	return opts
 }
 
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
