@@ -117,12 +117,8 @@ verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 			fi \
 		done
 
-.PHONY: verifytestfiles
-verifytestfiles: ## verify all go packages that are not ignored for code coverage have test files
-	@./scripts/check-test-files.sh
-
 .PHONY: lint
-lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion verifycodecovignores verifytestfiles ## run all linters
+lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion verifycodecovignores ## run all linters
 
 .PHONY: test
 test: $(THRIFTRW) __eval_packages ## run all tests
