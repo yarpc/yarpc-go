@@ -40,10 +40,22 @@ func TestNewTransportSpecOptions(t *testing.T) {
 	require.Equal(t, 2, len(transportSpec.OutboundOptions))
 }
 
+func TestConfigBuildInboundOtherTransport(t *testing.T) {
+	transportSpec := &transportSpec{}
+	_, err := transportSpec.buildInbound(&InboundConfig{}, testTransport{}, nil)
+	require.Equal(t, newTransportCastError(testTransport{}), err)
+}
+
 func TestConfigBuildInboundRequiredAddress(t *testing.T) {
 	transportSpec := &transportSpec{}
 	_, err := transportSpec.buildInbound(&InboundConfig{}, NewTransport(), nil)
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
+}
+
+func TestConfigBuildUnaryOutboundOtherTransport(t *testing.T) {
+	transportSpec := &transportSpec{}
+	_, err := transportSpec.buildUnaryOutbound(&OutboundConfig{}, testTransport{}, nil)
+	require.Equal(t, newTransportCastError(testTransport{}), err)
 }
 
 func TestConfigBuildUnaryOutboundRequiredAddress(t *testing.T) {
@@ -183,3 +195,9 @@ func mapResolver(m map[string]string) func(string) (string, bool) {
 type testOption struct{}
 
 func (testOption) grpcOption() {}
+
+type testTransport struct{}
+
+func (testTransport) Start() error    { return nil }
+func (testTransport) Stop() error     { return nil }
+func (testTransport) IsRunning() bool { return false }
