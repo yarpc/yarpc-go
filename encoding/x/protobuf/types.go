@@ -154,7 +154,7 @@ func ClientBuilderOptions(_ transport.ClientConfig, structField reflect.StructFi
 	var opts []ClientOption
 	for _, opt := range uniqueLowercaseStrings(strings.Split(structField.Tag.Get("proto"), ",")) {
 		switch opt {
-		case "use_json":
+		case "json":
 			opts = append(opts, UseJSON)
 		}
 	}

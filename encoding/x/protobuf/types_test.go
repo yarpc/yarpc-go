@@ -29,5 +29,5 @@ import (
 
 func TestClientBuilderOptions(t *testing.T) {
 	assert.Nil(t, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue"`}))
-	assert.Equal(t, []ClientOption{UseJSON}, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue" proto:"use_json"`}))
+	assert.Equal(t, []ClientOption{UseJSON}, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue" proto:"json"`}))
 }
