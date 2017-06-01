@@ -20,4 +20,7 @@
 
 package testing
 
-import _ "go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go/internal/lib" // needed to make sure this is picked up for code coverage
+import (
+	// this is to make sure scripts/cover.sh picks this up with .Deps
+	_ "go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go/internal/lib"
+)
