@@ -20,7 +20,11 @@
 
 package codes
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 const (
 	// Not an error; returned on success
@@ -236,4 +240,42 @@ func (c Code) String() string {
 		return s
 	}
 	return strconv.Itoa(int(c))
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (c Code) MarshalText() ([]byte, error) {
+	s, ok := codeToString[int(c)]
+	if ok {
+		return []byte(s), nil
+	}
+	return nil, fmt.Errorf("unknown code: %d", int(c))
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (c *Code) UnmarshalText(text []byte) error {
+	i, ok := stringToCode[strings.ToLower(string(text))]
+	if !ok {
+		return fmt.Errorf("unknown code string: %s", string(text))
+	}
+	*c = Code(i)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c Code) MarshalJSON() ([]byte, error) {
+	s, ok := codeToString[int(c)]
+	if ok {
+		return []byte(s), nil
+	}
+	return nil, fmt.Errorf("unknown code: %d", int(c))
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *Code) UnmarshalJSON(text []byte) error {
+	i, ok := stringToCode[strings.ToLower(string(text))]
+	if !ok {
+		return fmt.Errorf("unknown code string: %s", string(text))
+	}
+	*c = Code(i)
+	return nil
 }
