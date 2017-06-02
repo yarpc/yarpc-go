@@ -18,6 +18,7 @@ v1.9.0-dev (unreleased)
 -   transport/x/grpc: Remove NewInbound and NewSingleOutbound in favor of
     functions on Transport
 -   x/config: Fix bug where embedded struct fields could not be interpolated.
+-   Pool inbound thrift request buffers to reduce allocations.
 
 
 v1.8.0 (2017-05-01)
