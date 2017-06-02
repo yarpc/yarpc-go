@@ -183,45 +183,45 @@ const (
 )
 
 var (
-	codeToString = map[int]string{
-		0:  "none",
-		1:  "cancelled",
-		2:  "unknown",
-		3:  "invalid-argument",
-		4:  "deadline-exceeded",
-		5:  "not-found",
-		6:  "already-exists",
-		7:  "permission-denied",
-		8:  "resource-exhausted",
-		9:  "failed-precondition",
-		10: "aborted",
-		11: "out-of-range",
-		12: "unimplemented",
-		13: "internal",
-		14: "unavailable",
-		15: "data-loss",
-		16: "unauthenticated",
-		17: "application",
+	codeToString = map[Code]string{
+		None:               "none",
+		Cancelled:          "cancelled",
+		Unknown:            "unknown",
+		InvalidArgument:    "invalid-argument",
+		DeadlineExceeded:   "deadline-exceeded",
+		NotFound:           "not-found",
+		AlreadyExists:      "already-exists",
+		PermissionDenied:   "permission-denied",
+		ResourceExhausted:  "resource-exhausted",
+		FailedPrecondition: "failed-precondition",
+		Aborted:            "aborted",
+		OutOfRange:         "out-of-range",
+		Unimplemented:      "unimplemented",
+		Internal:           "internal",
+		Unavailable:        "unavailable",
+		DataLoss:           "data-loss",
+		Unauthenticated:    "unauthenticated",
+		Application:        "application",
 	}
-	stringToCode = map[string]int{
-		"none":                0,
-		"cancelled":           1,
-		"unknown":             2,
-		"invalid-argument":    3,
-		"deadline-exceeded":   4,
-		"not-found":           5,
-		"already-exists":      6,
-		"permission-denied":   7,
-		"resource-exhausted":  8,
-		"failed-precondition": 9,
-		"aborted":             10,
-		"out-of-range":        11,
-		"unimplemented":       12,
-		"internal":            13,
-		"unavailable":         14,
-		"data-loss":           15,
-		"unauthenticated":     16,
-		"application":         17,
+	stringToCode = map[string]Code{
+		"none":                None,
+		"cancelled":           Cancelled,
+		"unknown":             Unknown,
+		"invalid-argument":    InvalidArgument,
+		"deadline-exceeded":   DeadlineExceeded,
+		"not-found":           NotFound,
+		"already-exists":      AlreadyExists,
+		"permission-denied":   PermissionDenied,
+		"resource-exhausted":  ResourceExhausted,
+		"failed-precondition": FailedPrecondition,
+		"aborted":             Aborted,
+		"out-of-range":        OutOfRange,
+		"unimplemented":       Unimplemented,
+		"internal":            Internal,
+		"unavailable":         Unavailable,
+		"data-loss":           DataLoss,
+		"unauthenticated":     Unauthenticated,
+		"application":         Application,
 	}
 )
 
@@ -235,7 +235,7 @@ type Code int
 
 // String returns the the string representation of the Code.
 func (c Code) String() string {
-	s, ok := codeToString[int(c)]
+	s, ok := codeToString[c]
 	if ok {
 		return s
 	}
@@ -244,7 +244,7 @@ func (c Code) String() string {
 
 // MarshalText implements encoding.TextMarshaler.
 func (c Code) MarshalText() ([]byte, error) {
-	s, ok := codeToString[int(c)]
+	s, ok := codeToString[c]
 	if ok {
 		return []byte(s), nil
 	}
@@ -257,13 +257,13 @@ func (c *Code) UnmarshalText(text []byte) error {
 	if !ok {
 		return fmt.Errorf("unknown code string: %s", string(text))
 	}
-	*c = Code(i)
+	*c = i
 	return nil
 }
 
 // MarshalJSON implements json.Marshaler.
 func (c Code) MarshalJSON() ([]byte, error) {
-	s, ok := codeToString[int(c)]
+	s, ok := codeToString[c]
 	if ok {
 		return []byte(`"` + s + `"`), nil
 	}
@@ -280,6 +280,6 @@ func (c *Code) UnmarshalJSON(text []byte) error {
 	if !ok {
 		return fmt.Errorf("unknown code string: %s", s)
 	}
-	*c = Code(i)
+	*c = i
 	return nil
 }
