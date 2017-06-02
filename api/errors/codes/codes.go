@@ -223,6 +223,26 @@ var (
 		"unauthenticated":     Unauthenticated,
 		"application":         Application,
 	}
+	codeToHTTPStatusCode = map[Code]int{
+		None:               200,
+		Cancelled:          499,
+		Unknown:            500,
+		InvalidArgument:    400,
+		DeadlineExceeded:   504,
+		NotFound:           404,
+		AlreadyExists:      409,
+		PermissionDenied:   403,
+		ResourceExhausted:  429,
+		FailedPrecondition: 400,
+		Aborted:            409,
+		OutOfRange:         400,
+		Unimplemented:      501,
+		Internal:           500,
+		Unavailable:        503,
+		DataLoss:           500,
+		Unauthenticated:    401,
+		Application:        500,
+	}
 )
 
 // Code represents the type of error for an RPC call.
@@ -282,4 +302,13 @@ func (c *Code) UnmarshalJSON(text []byte) error {
 	}
 	*c = i
 	return nil
+}
+
+// HTTPStatusCode returns the HTTP status code for the given Code.
+func (c Code) HTTPStatusCode() (int, error) {
+	s, ok := codeToHTTPStatusCode[c]
+	if !ok {
+		return 0, fmt.Errorf("unknown code: %d", int(c))
+	}
+	return s, nil
 }
