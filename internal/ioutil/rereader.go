@@ -95,7 +95,7 @@ func (rr *Rereader) Read(p []byte) (n int, err error) {
 //     return an io.EOF error), Reset will return an error.
 func (rr *Rereader) Reset() error {
 	if _, err := rr.Read(rr.testbuf[:]); err != io.EOF {
-		return ResetError
+		return ErrReset
 	}
 
 	if !rr.useBuffer.Load() {
@@ -108,5 +108,5 @@ func (rr *Rereader) Reset() error {
 	return err
 }
 
-// ResetError is the error returned when we can't reset a Rereader.
-var ResetError = errors.New("cannot reset the rereader until we've finished reading the current reader")
+// ErrReset is the error returned when we can't reset a Rereader.
+var ErrReset = errors.New("cannot reset the rereader until we've finished reading the current reader")

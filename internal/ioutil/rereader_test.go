@@ -198,7 +198,7 @@ func TestRereader(t *testing.T) {
 			source: bytes.NewBufferString("this is a test"),
 			actions: []RereaderAction{
 				ResetAction{
-					WantError: ResetError,
+					WantError: ErrReset,
 				},
 			},
 		},
@@ -212,7 +212,7 @@ func TestRereader(t *testing.T) {
 					WantN:     13,
 				},
 				ResetAction{
-					WantError: ResetError,
+					WantError: ErrReset,
 				},
 			},
 		},
@@ -232,7 +232,7 @@ func TestRereader(t *testing.T) {
 					WantN:     13,
 				},
 				ResetAction{
-					WantError: ResetError,
+					WantError: ErrReset,
 				},
 			},
 		},
