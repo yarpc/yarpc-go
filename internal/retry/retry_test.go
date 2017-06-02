@@ -27,13 +27,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
+	iioutil "go.uber.org/yarpc/internal/ioutil"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpctest"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -46,7 +47,7 @@ func TestMiddleware(t *testing.T) {
 		retries      int
 		retrytimeout time.Duration
 
-		events []OutboundEvent
+		events []*OutboundEvent
 
 		wantError            string
 		wantApplicationError bool
@@ -63,7 +64,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Second,
 			retries:      1,
 			retrytimeout: time.Millisecond * 500,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
@@ -83,7 +84,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Second,
 			retries:      1,
 			retrytimeout: time.Millisecond * 500,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
@@ -109,7 +110,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Second,
 			retries:      4,
 			retrytimeout: time.Millisecond * 500,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
@@ -153,7 +154,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Second,
 			retries:      1,
 			retrytimeout: time.Millisecond * 500,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
@@ -173,7 +174,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Second,
 			retries:      1,
 			retrytimeout: time.Millisecond * 500,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
@@ -199,7 +200,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Millisecond * 300,
 			retries:      1,
 			retrytimeout: time.Millisecond * 500,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantTimeout:   time.Millisecond * 300,
 					WantService:   "serv",
@@ -220,7 +221,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Millisecond * 75,
 			retries:      1,
 			retrytimeout: time.Millisecond * 50,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantTimeout:    time.Millisecond * 50,
 					WantService:    "serv",
@@ -248,7 +249,7 @@ func TestMiddleware(t *testing.T) {
 			},
 			retries:      1,
 			retrytimeout: time.Millisecond * 50,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantTimeout:    time.Millisecond * 50,
 					WantService:    "serv",
@@ -277,7 +278,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Millisecond * 400,
 			retries:      1,
 			retrytimeout: time.Millisecond * 50,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantTimeout:   time.Millisecond * 50,
 					WantService:   "serv",
@@ -295,6 +296,28 @@ func TestMiddleware(t *testing.T) {
 			},
 			wantError: errors.RemoteUnexpectedError("unexpected error 2").Error(),
 		},
+		{
+			msg: "Reset Error",
+			request: &transport.Request{
+				Service:   "serv",
+				Procedure: "proc",
+				Body:      bytes.NewBufferString("body"),
+			},
+			reqTimeout:   time.Millisecond * 400,
+			retries:      1,
+			retrytimeout: time.Millisecond * 50,
+			events: []*OutboundEvent{
+				{
+					WantTimeout:   time.Millisecond * 50,
+					WantService:   "serv",
+					WantProcedure: "proc",
+					// We have explicitly not read the body, which will not exhaust the
+					// req body io.Reader.
+					GiveError: errors.RemoteUnexpectedError("unexpected error 1"),
+				},
+			},
+			wantError: iioutil.ErrReset.Error(),
+		},
 	}
 
 	for _, tt := range tests {
@@ -307,10 +330,8 @@ func TestMiddleware(t *testing.T) {
 			out.Start()
 
 			retry := NewUnaryMiddleware(
-				MiddlewareOptions{
-					Retries: tt.retries,
-					Timeout: tt.retrytimeout,
-				},
+				Retries(tt.retries),
+				PerRequestTimeout(tt.retrytimeout),
 			)
 
 			ctx := context.Background()
