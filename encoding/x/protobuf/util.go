@@ -18,6 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// This file was added so that code coverage touches this package.
+package protobuf
 
-package protoplugin
+import "strings"
+
+func uniqueLowercaseStrings(s []string) []string {
+	m := make(map[string]bool, len(s))
+	for _, e := range s {
+		if e != "" {
+			m[strings.ToLower(e)] = true
+		}
+	}
+	c := make([]string, 0, len(m))
+	for key := range m {
+		c = append(c, key)
+	}
+	return c
+}

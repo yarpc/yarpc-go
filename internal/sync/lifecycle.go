@@ -65,6 +65,8 @@ type LifecycleOnce interface {
 	LifecycleState() LifecycleState
 	IsRunning() bool
 	WhenRunning(context.Context) error
+	Stopped() <-chan struct{}
+	Started() <-chan struct{}
 }
 
 type lifecycleOnce struct {
@@ -180,6 +182,16 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 
 	<-l.stopCh
 	return l.loadError()
+}
+
+// Started returns a channel that will close when the lifecycle starts.
+func (l *lifecycleOnce) Started() <-chan struct{} {
+	return l.startCh
+}
+
+// Stopped returns a channel that will close when the lifecycle stops.
+func (l *lifecycleOnce) Stopped() <-chan struct{} {
+	return l.stopCh
 }
 
 func (l *lifecycleOnce) setError(err error) {

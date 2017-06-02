@@ -18,6 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// This file was added so that code coverage touches this package.
+package testing
 
-package lib
+import (
+	// this is to make sure scripts/cover.sh picks this up with .Deps
+	_ "go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go/internal/lib"
+)

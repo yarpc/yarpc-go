@@ -18,6 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// This file was added so that code coverage touches this package.
+package protobuf
 
-package transporttest
+import (
+	"sort"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestUniqueLowercaseStrings(t *testing.T) {
+	tests := []struct {
+		give []string
+		want []string
+	}{
+		{
+			give: []string{"foo", "bar", "baz"},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			give: []string{"foo", "BAR", "bAz"},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			give: []string{"foo", "BAR", "bAz", "bar"},
+			want: []string{"foo", "bar", "baz"},
+		},
+	}
+	for _, tt := range tests {
+		got := uniqueLowercaseStrings(tt.give)
+		sort.Strings(tt.want)
+		sort.Strings(got)
+		assert.Equal(t, tt.want, got)
+	}
+}

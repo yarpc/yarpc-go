@@ -47,25 +47,25 @@ var errChannelOrServiceNameIsRequired = errors.New(
 // and peer managament.
 // Use NewTransport and its NewOutbound to support YARPC peer.Choosers.
 func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
-	var config transportConfig
-	config.tracer = opentracing.GlobalTracer()
+	var options transportOptions
+	options.tracer = opentracing.GlobalTracer()
 	for _, opt := range opts {
-		opt(&config)
+		opt(&options)
 	}
 
 	// Attempt to construct a channel on behalf of the caller if none given.
 	// Defer the error until Start since NewChannelTransport does not have
 	// an error return.
 	var err error
-	ch := config.ch
+	ch := options.ch
 
 	if ch == nil {
-		if config.name == "" {
+		if options.name == "" {
 			err = errChannelOrServiceNameIsRequired
 		} else {
-			opts := tchannel.ChannelOptions{Tracer: config.tracer}
-			ch, err = tchannel.NewChannel(config.name, &opts)
-			config.ch = ch
+			opts := tchannel.ChannelOptions{Tracer: options.tracer}
+			ch, err = tchannel.NewChannel(options.name, &opts)
+			options.ch = ch
 		}
 	}
 
@@ -73,15 +73,15 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 		return nil, err
 	}
 
-	return config.newChannelTransport(), nil
+	return options.newChannelTransport(), nil
 }
 
-func (config transportConfig) newChannelTransport() *ChannelTransport {
+func (options transportOptions) newChannelTransport() *ChannelTransport {
 	return &ChannelTransport{
 		once:   sync.Once(),
-		ch:     config.ch,
-		addr:   config.addr,
-		tracer: config.tracer,
+		ch:     options.ch,
+		addr:   options.addr,
+		tracer: options.tracer,
 	}
 }
 

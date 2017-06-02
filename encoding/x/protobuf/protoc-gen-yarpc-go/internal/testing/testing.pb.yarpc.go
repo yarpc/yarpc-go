@@ -26,6 +26,7 @@ package testing
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
@@ -214,3 +215,16 @@ var (
 	emptySink_FireYarpcRequest  = &FireRequest{}
 	emptySink_FireYarpcResponse = &yarpcproto.Oneway{}
 )
+
+func init() {
+	yarpc.RegisterClientBuilder(
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) KeyValueYarpcClient {
+			return NewKeyValueYarpcClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		},
+	)
+	yarpc.RegisterClientBuilder(
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) SinkYarpcClient {
+			return NewSinkYarpcClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		},
+	)
+}

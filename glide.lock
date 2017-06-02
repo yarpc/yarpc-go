@@ -1,5 +1,5 @@
-hash: 10debb000c317eb59be59cbc5e9d7c020a3f511bf7d425e5c3a9fbb826840424
-updated: 2017-05-25T14:31:08.585852033-07:00
+hash: 8793bcb4eee4eb80becc43a88599b36f16d69a2238db366c13aba9116d8e2259
+updated: 2017-05-31T17:12:06.375610058-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -16,7 +16,7 @@ imports:
   subpackages:
   - statsd
 - name: github.com/codahale/hdrhistogram
-  version: f8ad88b59a584afeee9d334eff879b104439117b
+  version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/crossdock/crossdock-go
   version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
   subpackages:
@@ -67,7 +67,7 @@ imports:
   - log
   - mocktracer
 - name: github.com/pborman/uuid
-  version: c55201b036063326c5b1b89ccfe45a184973d073
+  version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -96,17 +96,17 @@ imports:
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
-  version: 4d4bfba8f1d1027c4fdbe371823030df51419987
+  version: e964b172ca7f4c322ee4c39ea605ff53fab44f79
   subpackages:
   - assert
   - mock
   - require
 - name: github.com/uber-common/bark
-  version: 1276fd80f25d786f9cff3ccce89c0c43e5b2667e
+  version: d52ffa061726911f47fcd3d9e8b9b55f22794772
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/mapdecode
-  version: fc15a00afdfa0ed029d15ee2cf07bf0eba988334
+  version: 2d8ecd5e64c88634bd7dfcbc9fd2a9e813830e8d
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
@@ -164,7 +164,7 @@ imports:
 - name: go.uber.org/atomic
   version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/multierr
-  version: a3d1fc1f1316d4132fc61f4ea1159ae0613fb474
+  version: ef109dc7f883f3a99db2d89edc701c25cac40571
 - name: go.uber.org/thriftrw
   version: dde90c2a40f45fb2b6361d13c1b4bf09465401c0
   subpackages:
@@ -195,7 +195,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 5b58a9c3e1690d33a592e5b791638e25eb9b3f70
+  version: 3da985ce5951d99de868be4385f21ea6c2b22f24
   repo: https://github.com/golang/net
   subpackages:
   - context
