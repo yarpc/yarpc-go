@@ -164,6 +164,7 @@ func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
 func (l *lifecycleOnce) Stop(f func() error) error {
 	if l.state.CAS(int32(Idle), int32(Stopped)) {
 		close(l.startCh)
+		close(l.stoppingCh)
 		close(l.stopCh)
 		return nil
 	}

@@ -99,6 +99,18 @@ func (a waitForStartAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	assert.True(t, l.LifecycleState() >= Running, "expected lifecycle to be started")
 }
 
+// WaitForStoppingAction is a singleton that will block until the lifecycle
+// reports that it has begun stopping.
+var WaitForStoppingAction waitForStoppingAction
+
+type waitForStoppingAction struct{}
+
+// Apply blocks until the lifecycle stops or errs out.
+func (a waitForStoppingAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+	<-l.Stopping()
+	assert.True(t, l.LifecycleState() >= Stopping, "expected lifecycle to be stopping")
+}
+
 // WaitForStopAction is a singleton that will block until the lifecycle
 // reports that it has started.
 var WaitForStopAction waitForStopAction
@@ -111,7 +123,9 @@ func (a waitForStopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	assert.True(t, l.LifecycleState() >= Stopped, "expected lifecycle to be started")
 }
 
-// GetStateAction is an action for checking the LifecycleOnce's state
+// GetStateAction is an action for checking the LifecycleOnce's state.
+// Since a goroutine may be delayed, the action only ensures that the lifecycle
+// has at least reached the given state.
 type GetStateAction struct {
 	ExpectedState LifecycleState
 }
@@ -119,6 +133,16 @@ type GetStateAction struct {
 // Apply Checks the state on the LifecycleOnce
 func (a GetStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	assert.True(t, a.ExpectedState <= l.LifecycleState())
+}
+
+// ExactStateAction is an action for checking the LifecycleOnce's exact state.
+type ExactStateAction struct {
+	ExpectedState LifecycleState
+}
+
+// Apply Checks the state on the LifecycleOnce
+func (a ExactStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+	assert.True(t, a.ExpectedState == l.LifecycleState())
 }
 
 // Actions executes a plan of actions in order sequentially.
@@ -158,6 +182,14 @@ func (a ConcurrentAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	}
 
 	wg.Wait()
+}
+
+// WaitAction is a plan to sleep for a duration.
+type WaitAction time.Duration
+
+// Apply waits the specified duration.
+func (a WaitAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+	time.Sleep(time.Duration(a))
 }
 
 // ApplyLifecycleActions runs all the LifecycleActions on the LifecycleOnce
