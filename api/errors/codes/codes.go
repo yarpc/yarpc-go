@@ -265,16 +265,20 @@ func (c *Code) UnmarshalText(text []byte) error {
 func (c Code) MarshalJSON() ([]byte, error) {
 	s, ok := codeToString[int(c)]
 	if ok {
-		return []byte(s), nil
+		return []byte(`"` + s + `"`), nil
 	}
 	return nil, fmt.Errorf("unknown code: %d", int(c))
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (c *Code) UnmarshalJSON(text []byte) error {
-	i, ok := stringToCode[strings.ToLower(string(text))]
+	s := string(text)
+	if len(s) < 3 || s[0] != '"' || s[len(s)-1] != '"' {
+		return fmt.Errorf("invalid code string: %s", s)
+	}
+	i, ok := stringToCode[strings.ToLower(s[1:len(s)-1])]
 	if !ok {
-		return fmt.Errorf("unknown code string: %s", string(text))
+		return fmt.Errorf("unknown code string: %s", s)
 	}
 	*c = Code(i)
 	return nil

@@ -180,14 +180,14 @@ func Application(name string, keyValues ...string) error {
 
 type yarpcError struct {
 	// Code is the code of the error. This should never be set to None.
-	Code codes.Code
+	Code codes.Code `json:"code,omitempty"`
 	// Name is the user-defined name of the error. This is only valid if Code is
 	// Application, otherwise the return value for Name will be empty.
-	Name string
+	Name string `json:"name,omitempty"`
 	// Details contains a map of additional details about the error.
 	// The keys will be converted to all lower case, and two keys that are the same
 	// when lowercase will have the latter key overridden.
-	Details map[string]string
+	Details map[string]string `json:"details,omitempty"`
 
 	orderedDetailsKeys []string
 }
