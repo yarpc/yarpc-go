@@ -22,7 +22,7 @@ package transport
 
 import (
 	"go.uber.org/yarpc/api/errors"
-	"go.uber.org/yarpc/yarpcproto"
+	"go.uber.org/yarpc/api/errors/codes"
 )
 
 // InboundBadRequestError builds an error which indicates that an inbound
@@ -38,24 +38,24 @@ func InboundBadRequestError(err error) error {
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.
 //
-// Deprecated: Use errors.Type(err) instead.
+// Deprecated: Use errors.Code(err) instead.
 func IsBadRequestError(err error) bool {
-	return errors.Type(err) == yarpcproto.ERROR_TYPE_INVALID_ARGUMENT
+	return errors.Code(err) == codes.INVALID_ARGUMENT
 }
 
 // IsUnexpectedError returns true if the server panicked or failed to process
 // the request with an unhandled error.
 //
-// Deprecated: Use errors.Type(err) instead.
+// Deprecated: Use errors.Code(err) instead.
 func IsUnexpectedError(err error) bool {
-	return errors.Type(err) == yarpcproto.ERROR_TYPE_INTERNAL
+	return errors.Code(err) == codes.INTERNAL
 }
 
 // IsTimeoutError return true if the given error is a TimeoutError.
 //
-// Deprecated: Use errors.Type(err) instead.
+// Deprecated: Use errors.Code(err) instead.
 func IsTimeoutError(err error) bool {
-	return errors.Type(err) == yarpcproto.ERROR_TYPE_DEADLINE_EXCEEDED
+	return errors.Code(err) == codes.DEADLINE_EXCEEDED
 }
 
 // UnrecognizedProcedureError returns an error for the given request,
@@ -72,5 +72,5 @@ func UnrecognizedProcedureError(req *Request) error {
 //
 // Deprecated: Use IsUnrecognizedProcedureError instead.
 func IsUnrecognizedProcedureError(err error) bool {
-	return errors.Type(err) == yarpcproto.ERROR_TYPE_UNIMPLEMENTED
+	return errors.Code(err) == codes.UNIMPLEMENTED
 }

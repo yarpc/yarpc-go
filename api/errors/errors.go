@@ -24,32 +24,32 @@ import (
 	"bytes"
 	"strings"
 
-	"go.uber.org/yarpc/yarpcproto"
+	"go.uber.org/yarpc/api/errors/codes"
 )
 
-// TODO: What to do with ERROR_TYPE_UNKNOWN? Should we use use this for ERROR_TYPE_APPLICATION?
-// TODO: What to do with ERROR_TYPE_INTERNAL? Should we have a function to create an error of this type?
-// TODO: should we have specific fields for each error type instead of keyValues ...string?
+// TODO: What to do with UNKNOWN? Should we use use this for APPLICATION?
+// TODO: What to do with INTERNAL? Should we have a function to create an error of this code?
+// TODO: should we have specific fields for each error code instead of keyValues ...string?
 
-// Type will extract the ErrorType from a yarpc error.
+// Code will extract the Code from a yarpc error.
 //
-// This will return ERROR_TYPE_NONE if the given error is nil or not a yarpc error.
+// This will return NONE if the given error is nil or not a yarpc error.
 // This function is the defined way to test if an error is a yarpc error.
-func Type(err error) yarpcproto.ErrorType {
+func Code(err error) codes.Code {
 	if err == nil {
-		return yarpcproto.ERROR_TYPE_NONE
+		return codes.NONE
 	}
 	yarpcError, ok := err.(*yarpcError)
 	if !ok {
-		return yarpcproto.ERROR_TYPE_NONE
+		return codes.NONE
 	}
-	return yarpcError.Type
+	return yarpcError.Code
 }
 
 // Name will extract the user-defined error name from a yarpc error.
 //
 // This will return empty is the given error is nil, not a yarpc error, or the
-// ErrorType is not ERROR_TYPE_APPLICATION.
+// Code is not APPLICATION.
 func Name(err error) string {
 	if err == nil {
 		return ""
@@ -58,7 +58,7 @@ func Name(err error) string {
 	if !ok {
 		return ""
 	}
-	if yarpcError.Type != yarpcproto.ERROR_TYPE_APPLICATION {
+	if yarpcError.Code != codes.APPLICATION {
 		return ""
 	}
 	return yarpcError.Name
@@ -81,7 +81,7 @@ func Details(err error) map[string]string {
 // WithKeyValues adds the given keyValues to the error.
 //
 // If the error is a yarpc error, this will just add the keyValues.
-// If the error is not a yarpc error, this will return a new yarpc error of type ERROR_TYPE_UNKNOWN
+// If the error is not a yarpc error, this will return a new yarpc error of code UNKNOWN
 // with an additional keyValue pair of "error", err.Error().
 // If keyValues contains a key of "error" and a new yarpc error is created, this key will be overwritten.
 func WithKeyValues(err error, keyValues ...string) error {
@@ -90,88 +90,88 @@ func WithKeyValues(err error, keyValues ...string) error {
 	}
 	yarpcError, ok := err.(*yarpcError)
 	if !ok {
-		return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNKNOWN, append([]string{"error", err.Error()}, keyValues...))
+		return newWellKnownYarpcError(codes.UNKNOWN, append([]string{"error", err.Error()}, keyValues...))
 	}
 	c := yarpcError.copyAndAdd(keyValues...)
 	return c
 }
 
-// Cancelled returns a new yarpc error with type ERROR_TYPE_CANCELLED.
+// Cancelled returns a new yarpc error with code CANCELLED.
 func Cancelled(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_CANCELLED, keyValues)
+	return newWellKnownYarpcError(codes.CANCELLED, keyValues)
 }
 
-// InvalidArgument returns a new yarpc error with type ERROR_TYPE_INVALID_ARGUMENT.
+// InvalidArgument returns a new yarpc error with code INVALID_ARGUMENT.
 func InvalidArgument(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_INVALID_ARGUMENT, keyValues)
+	return newWellKnownYarpcError(codes.INVALID_ARGUMENT, keyValues)
 }
 
-// DeadlineExceeded returns a new yarpc error with type ERROR_TYPE_DEADLINE_EXCEEDED.
+// DeadlineExceeded returns a new yarpc error with code DEADLINE_EXCEEDED.
 func DeadlineExceeded(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_DEADLINE_EXCEEDED, keyValues)
+	return newWellKnownYarpcError(codes.DEADLINE_EXCEEDED, keyValues)
 }
 
-// NotFound returns a new yarpc error with type ERROR_TYPE_NOT_FOUND.
+// NotFound returns a new yarpc error with code NOT_FOUND.
 func NotFound(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_NOT_FOUND, keyValues)
+	return newWellKnownYarpcError(codes.NOT_FOUND, keyValues)
 }
 
-// AlreadyExists returns a new yarpc error with type ERROR_TYPE_ALREADY_EXISTS.
+// AlreadyExists returns a new yarpc error with code ALREADY_EXISTS.
 func AlreadyExists(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_ALREADY_EXISTS, keyValues)
+	return newWellKnownYarpcError(codes.ALREADY_EXISTS, keyValues)
 }
 
-// PermissionDenied returns a new yarpc error with type ERROR_TYPE_PERMISSION_DENIED.
+// PermissionDenied returns a new yarpc error with code PERMISSION_DENIED.
 func PermissionDenied(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_PERMISSION_DENIED, keyValues)
+	return newWellKnownYarpcError(codes.PERMISSION_DENIED, keyValues)
 }
 
-// ResourceExhausted returns a new yarpc error with type ERROR_TYPE_RESOURCE_EXHAUSTED.
+// ResourceExhausted returns a new yarpc error with code RESOURCE_EXHAUSTED.
 func ResourceExhausted(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_RESOURCE_EXHAUSTED, keyValues)
+	return newWellKnownYarpcError(codes.RESOURCE_EXHAUSTED, keyValues)
 }
 
-// FailedPrecondition returns a new yarpc error with type ERROR_TYPE_FAILED_PRECONDITION.
+// FailedPrecondition returns a new yarpc error with code FAILED_PRECONDITION.
 func FailedPrecondition(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_FAILED_PRECONDITION, keyValues)
+	return newWellKnownYarpcError(codes.FAILED_PRECONDITION, keyValues)
 }
 
-// Aborted returns a new yarpc error with type ERROR_TYPE_ABORTED.
+// Aborted returns a new yarpc error with code ABORTED.
 func Aborted(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_ABORTED, keyValues)
+	return newWellKnownYarpcError(codes.ABORTED, keyValues)
 }
 
-// OutOfRange returns a new yarpc error with type ERROR_TYPE_OUT_OF_RANGE.
+// OutOfRange returns a new yarpc error with code OUT_OF_RANGE.
 func OutOfRange(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_OUT_OF_RANGE, keyValues)
+	return newWellKnownYarpcError(codes.OUT_OF_RANGE, keyValues)
 }
 
-// Unimplemented returns a new yarpc error with type ERROR_TYPE_UNIMPLEMENTED.
+// Unimplemented returns a new yarpc error with code UNIMPLEMENTED.
 func Unimplemented(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNIMPLEMENTED, keyValues)
+	return newWellKnownYarpcError(codes.UNIMPLEMENTED, keyValues)
 }
 
-// Internal returns a new yarpc error with type ERROR_TYPE_INTERNAL.
+// Internal returns a new yarpc error with code INTERNAL.
 func Internal(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_INTERNAL, keyValues)
+	return newWellKnownYarpcError(codes.INTERNAL, keyValues)
 }
 
-// Unavailable returns a new yarpc error with type ERROR_TYPE_UNAVAILABLE.
+// Unavailable returns a new yarpc error with code UNAVAILABLE.
 func Unavailable(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNAVAILABLE, keyValues)
+	return newWellKnownYarpcError(codes.UNAVAILABLE, keyValues)
 }
 
-// DataLoss returns a new yarpc error with type ERROR_TYPE_DATA_LOSS.
+// DataLoss returns a new yarpc error with code DATA_LOSS.
 func DataLoss(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_DATA_LOSS, keyValues)
+	return newWellKnownYarpcError(codes.DATA_LOSS, keyValues)
 }
 
-// Unauthenticated returns a new yarpc error with type ERROR_TYPE_UNAUTHENTICATED.
+// Unauthenticated returns a new yarpc error with code UNAUTHENTICATED.
 func Unauthenticated(keyValues ...string) error {
-	return newWellKnownYarpcError(yarpcproto.ERROR_TYPE_UNAUTHENTICATED, keyValues)
+	return newWellKnownYarpcError(codes.UNAUTHENTICATED, keyValues)
 }
 
-// Application returns a new yarpc error with type ERROR_TYPE_APPLICATION and the given user-defined name.
+// Application returns a new yarpc error with code APPLICATION and the given user-defined name.
 //
 // TODO: Validate that the name is only lowercase letters and dashes, and figure out what to do if not.
 func Application(name string, keyValues ...string) error {
@@ -179,10 +179,10 @@ func Application(name string, keyValues ...string) error {
 }
 
 type yarpcError struct {
-	// Type is the type of the error. This should never be set to ERROR_TYPE_NONE.
-	Type yarpcproto.ErrorType
-	// Name is the user-defined name of the error. This is only valid if Type is
-	// ERROR_TYPE_APPLICATION, otherwise the return value for Name will be empty.
+	// Code is the code of the error. This should never be set to NONE.
+	Code codes.Code
+	// Name is the user-defined name of the error. This is only valid if Code is
+	// APPLICATION, otherwise the return value for Name will be empty.
 	Name string
 	// Details contains a map of additional details about the error.
 	// The keys will be converted to all lower case, and two keys that are the same
@@ -192,9 +192,9 @@ type yarpcError struct {
 	orderedDetailsKeys []string
 }
 
-func newWellKnownYarpcError(errorType yarpcproto.ErrorType, keyValues []string) *yarpcError {
+func newWellKnownYarpcError(code codes.Code, keyValues []string) *yarpcError {
 	e := &yarpcError{
-		Type:               errorType,
+		Code:               code,
 		Details:            make(map[string]string, len(keyValues)/2),
 		orderedDetailsKeys: make([]string, 0, len(keyValues)/2),
 	}
@@ -204,7 +204,7 @@ func newWellKnownYarpcError(errorType yarpcproto.ErrorType, keyValues []string) 
 
 func newUserDefinedYarpcError(name string, keyValues []string) *yarpcError {
 	e := &yarpcError{
-		Type:               yarpcproto.ERROR_TYPE_APPLICATION,
+		Code:               codes.APPLICATION,
 		Name:               name,
 		Details:            make(map[string]string, len(keyValues)/2),
 		orderedDetailsKeys: make([]string, 0, len(keyValues)/2),
@@ -215,8 +215,8 @@ func newUserDefinedYarpcError(name string, keyValues []string) *yarpcError {
 
 func (e *yarpcError) Error() string {
 	buffer := bytes.NewBuffer(nil)
-	_, _ = buffer.WriteString(`type: `)
-	_, _ = buffer.WriteString(strings.TrimPrefix(e.Type.String(), "ERROR_TYPE_"))
+	_, _ = buffer.WriteString(`code: `)
+	_, _ = buffer.WriteString(e.Code.String())
 	if e.Name != "" {
 		_, _ = buffer.WriteString(` name: `)
 		_, _ = buffer.WriteString(e.Name)
@@ -237,7 +237,7 @@ func (e *yarpcError) Error() string {
 
 func (e *yarpcError) copyAndAdd(keyValues ...string) *yarpcError {
 	c := &yarpcError{
-		Type:               e.Type,
+		Code:               e.Code,
 		Name:               e.Name,
 		Details:            copyStringStringMap(e.Details),
 		orderedDetailsKeys: copyStringSlice(e.orderedDetailsKeys),
