@@ -33,15 +33,6 @@ import (
 	"go.uber.org/atomic"
 )
 
-// NewOutboundEventCallable sets up an OutboundEventCallable.
-func NewOutboundEventCallable(t require.TestingT, events []OutboundEvent) *OutboundEventCallable {
-	return &OutboundEventCallable{
-		t:      t,
-		events: events,
-		index:  atomic.NewInt32(0),
-	}
-}
-
 // OutboundEventCallable is an object that can be used in conjunction with a
 // yarpctest.FakeOutbound to create Fake functionality for an outbound through
 // OutboundEvents.
@@ -51,8 +42,17 @@ func NewOutboundEventCallable(t require.TestingT, events []OutboundEvent) *Outbo
 // too few requests were called.
 type OutboundEventCallable struct {
 	t      require.TestingT
-	events []OutboundEvent
+	events []*OutboundEvent
 	index  *atomic.Int32
+}
+
+// NewOutboundEventCallable sets up an OutboundEventCallable.
+func NewOutboundEventCallable(t require.TestingT, events []*OutboundEvent) *OutboundEventCallable {
+	return &OutboundEventCallable{
+		t:      t,
+		events: events,
+		index:  atomic.NewInt32(0),
+	}
 }
 
 // Call implements the yarpctest.OutboundCallable function signature.  It will
@@ -110,7 +110,7 @@ type OutboundEvent struct {
 
 // Call will validate a single call to the outbound event based on
 // the OutboundEvent's parameters.
-func (e OutboundEvent) Call(ctx context.Context, t require.TestingT, req *transport.Request) (*transport.Response, error) {
+func (e *OutboundEvent) Call(ctx context.Context, t require.TestingT, req *transport.Request) (*transport.Response, error) {
 	if e.WantTimeout != 0 {
 		timeoutBounds := e.WantTimeoutBounds
 		if timeoutBounds == 0 {

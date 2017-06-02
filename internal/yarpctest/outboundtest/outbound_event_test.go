@@ -43,7 +43,7 @@ func TestOutboundEvent(t *testing.T) {
 		request    *transport.Request
 		reqTimeout time.Duration
 
-		event OutboundEvent
+		event *OutboundEvent
 
 		wantExecutionStatus  iyarpctest.FakeTestStatus
 		wantExecutionErrors  []string
@@ -67,7 +67,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body:            bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Second,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantTimeout:         time.Second,
 				WantTimeoutBounds:   time.Millisecond * 20,
 				WantCaller:          "caller",
@@ -98,7 +98,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body:            bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Second,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantCaller:          "caller",
 				WantService:         "service",
 				WantEncoding:        transport.Encoding("encoding"),
@@ -138,7 +138,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body:            bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Second,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantTimeout:       time.Second,
 				WantTimeoutBounds: time.Millisecond * 20,
 				WantBody:          "body",
@@ -153,7 +153,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body: bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Second,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantTimeout:  time.Second,
 				WantBody:     "body",
 				GiveRespBody: "respbody",
@@ -167,7 +167,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body: bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Second,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantTimeout:  time.Second * 2,
 				WantBody:     "body",
 				GiveRespBody: "respbody",
@@ -184,7 +184,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body: bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Second * 2,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantTimeout:  time.Second,
 				WantBody:     "body",
 				GiveRespBody: "respbody",
@@ -200,7 +200,7 @@ func TestOutboundEvent(t *testing.T) {
 			request: &transport.Request{
 				Body: bytes.NewBufferString("body"),
 			},
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantTimeout:  time.Second,
 				WantBody:     "body",
 				GiveRespBody: "respbody",
@@ -217,7 +217,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body:    bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Second,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantHeaders:  transport.NewHeaders().With("key", "val"),
 				WantBody:     "body",
 				GiveRespBody: "respbody",
@@ -236,7 +236,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body: bytes.NewBufferString("body22"),
 			},
 			reqTimeout: time.Second,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantBody:     "body",
 				GiveRespBody: "respbody",
 			},
@@ -252,7 +252,7 @@ func TestOutboundEvent(t *testing.T) {
 				Body: bytes.NewBufferString("body"),
 			},
 			reqTimeout: time.Millisecond * 10,
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WaitForTimeout: true,
 				WantBody:       "body",
 				GiveRespBody:   "respbody",
@@ -265,7 +265,7 @@ func TestOutboundEvent(t *testing.T) {
 			request: &transport.Request{
 				Body: bytes.NewBufferString("body"),
 			},
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WaitForTimeout: true,
 				WantBody:       "body",
 				GiveRespBody:   "respbody",
@@ -280,7 +280,7 @@ func TestOutboundEvent(t *testing.T) {
 			request: &transport.Request{
 				Body: bytes.NewBufferString("body"),
 			},
-			event: OutboundEvent{
+			event: &OutboundEvent{
 				WantBody:             "body",
 				GiveRespBody:         "respbody",
 				GiveApplicationError: true,
@@ -340,7 +340,7 @@ func TestOutboundCallable(t *testing.T) {
 		reqs       []*transport.Request
 		reqTimeout time.Duration
 
-		events []OutboundEvent
+		events []*OutboundEvent
 
 		wantExecutionStatus iyarpctest.FakeTestStatus
 		wantExecutionErrors []string
@@ -356,7 +356,7 @@ func TestOutboundCallable(t *testing.T) {
 				},
 			},
 			reqTimeout: time.Second,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
@@ -380,7 +380,7 @@ func TestOutboundCallable(t *testing.T) {
 				},
 			},
 			reqTimeout: time.Second,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
@@ -403,7 +403,7 @@ func TestOutboundCallable(t *testing.T) {
 				},
 			},
 			reqTimeout: time.Second,
-			events: []OutboundEvent{
+			events: []*OutboundEvent{
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
