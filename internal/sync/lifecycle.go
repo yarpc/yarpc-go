@@ -65,14 +65,18 @@ type LifecycleOnce interface {
 	LifecycleState() LifecycleState
 	IsRunning() bool
 	WhenRunning(context.Context) error
-	Stopped() <-chan struct{}
 	Started() <-chan struct{}
+	Stopping() <-chan struct{}
+	Stopped() <-chan struct{}
 }
 
 type lifecycleOnce struct {
 	// startCh closes to allow goroutines to resume after the lifecycle is in
 	// the Running state or beyond.
 	startCh chan struct{}
+	// stoppingCh closes to allow goroutines to resume after the lifecycle is
+	// in the Stopping state or beyond.
+	stoppingCh chan struct{}
 	// stopCh closes to allow goroutines to resume after the lifecycle is in
 	// the Stopped state or Errored.
 	stopCh chan struct{}
@@ -95,8 +99,9 @@ type lifecycleOnce struct {
 //    function must be called at most once.
 func Once() LifecycleOnce {
 	return &lifecycleOnce{
-		startCh: make(chan struct{}, 0),
-		stopCh:  make(chan struct{}, 0),
+		startCh:    make(chan struct{}, 0),
+		stoppingCh: make(chan struct{}, 0),
+		stopCh:     make(chan struct{}, 0),
 	}
 }
 
@@ -114,6 +119,7 @@ func (l *lifecycleOnce) Start(f func() error) error {
 		if err != nil {
 			l.setError(err)
 			l.state.Store(int32(Errored))
+			close(l.stoppingCh)
 			close(l.stopCh)
 		} else {
 			l.state.Store(int32(Running))
@@ -165,6 +171,8 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 	<-l.startCh
 
 	if l.state.CAS(int32(Running), int32(Stopping)) {
+		close(l.stoppingCh)
+
 		var err error
 		if f != nil {
 			err = f()
@@ -187,6 +195,11 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 // Started returns a channel that will close when the lifecycle starts.
 func (l *lifecycleOnce) Started() <-chan struct{} {
 	return l.startCh
+}
+
+// Stopping returns a channel that will close when the lifecycle is stopping.
+func (l *lifecycleOnce) Stopping() <-chan struct{} {
+	return l.stoppingCh
 }
 
 // Stopped returns a channel that will close when the lifecycle stops.
