@@ -153,7 +153,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		if apierrors.Code(err) != codes.UNIMPLEMENTED {
+		if apierrors.Code(err) != codes.Unimplemented {
 			return err
 		}
 		if tcall, ok := call.(tchannelCall); !ok {

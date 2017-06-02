@@ -40,7 +40,7 @@ func InboundBadRequestError(err error) error {
 //
 // Deprecated: Use errors.Code(err) instead.
 func IsBadRequestError(err error) bool {
-	return errors.Code(err) == codes.INVALID_ARGUMENT
+	return errors.Code(err) == codes.InvalidArgument
 }
 
 // IsUnexpectedError returns true if the server panicked or failed to process
@@ -48,14 +48,14 @@ func IsBadRequestError(err error) bool {
 //
 // Deprecated: Use errors.Code(err) instead.
 func IsUnexpectedError(err error) bool {
-	return errors.Code(err) == codes.INTERNAL
+	return errors.Code(err) == codes.Internal
 }
 
 // IsTimeoutError return true if the given error is a TimeoutError.
 //
 // Deprecated: Use errors.Code(err) instead.
 func IsTimeoutError(err error) bool {
-	return errors.Code(err) == codes.DEADLINE_EXCEEDED
+	return errors.Code(err) == codes.DeadlineExceeded
 }
 
 // UnrecognizedProcedureError returns an error for the given request,
@@ -72,5 +72,5 @@ func UnrecognizedProcedureError(req *Request) error {
 //
 // Deprecated: Use IsUnrecognizedProcedureError instead.
 func IsUnrecognizedProcedureError(err error) bool {
-	return errors.Code(err) == codes.UNIMPLEMENTED
+	return errors.Code(err) == codes.Unimplemented
 }
