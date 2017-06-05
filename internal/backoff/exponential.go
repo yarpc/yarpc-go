@@ -68,14 +68,14 @@ func BaseJump(t time.Duration) ExponentialOption {
 	}
 }
 
-// MaxBackoff sets the max backoff that will ever be used in backoff.
+// MaxBackoff sets absolute max time that will ever be returned for a backoff.
 func MaxBackoff(t time.Duration) ExponentialOption {
 	return func(options *exponentialOptions) {
 		options.max = t
 	}
 }
 
-// MinBackoff sets the min backoff that will ever be used in backoff.
+// MinBackoff sets absolute min time that will ever be returned for a backoff.
 func MinBackoff(t time.Duration) ExponentialOption {
 	return func(options *exponentialOptions) {
 		options.min = t
@@ -92,7 +92,9 @@ func randGenerator(rand *rand.Rand) ExponentialOption {
 
 // Exponential is an exponential backoff strategy with jitter.  Under the
 // aws backoff strategies this is a "Full Jitter" backoff implementation
-// https://www.awsarchitectureblog.com/2015/03/backoff.html
+// https://www.awsarchitectureblog.com/2015/03/backoff.html with the addition
+// of a Min and Max Value.  The range of durations will be contained in
+// a closed [Min, Max] interval.
 // It is a stateless implementation and is safe to use concurrently.
 type Exponential struct {
 	opts exponentialOptions
@@ -118,14 +120,14 @@ func NewExponential(opts ...ExponentialOption) (*Exponential, error) {
 // Duration takes an attempt number and returns the duration the caller should
 // wait.
 func (e *Exponential) Duration(attempts uint) time.Duration {
-	backoffSansMin := (1 << attempts) * e.opts.base.Nanoseconds()
+	minlessBackoff := (1 << attempts) * e.opts.base.Nanoseconds()
 
 	// either the bit shift went negative, or we went past the max
 	// duration we're willing to backoff.
 	// In both cases we should go to our max value
-	if backoffSansMin > e.opts.minMaxDiff || backoffSansMin <= 0 {
-		backoffSansMin = e.opts.minMaxDiff
+	if minlessBackoff > e.opts.minMaxDiff || minlessBackoff <= 0 {
+		minlessBackoff = e.opts.minMaxDiff
 	}
 
-	return e.opts.min + time.Duration(e.opts.rand.Int63n(backoffSansMin+1))
+	return e.opts.min + time.Duration(e.opts.rand.Int63n(minlessBackoff+1))
 }
