@@ -35,6 +35,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/backoff"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -44,8 +45,9 @@ func TestMiddleware(t *testing.T) {
 		request    *transport.Request
 		reqTimeout time.Duration
 
-		retries      int
+		retries      uint
 		retrytimeout time.Duration
+		retryBackoff backoff.Strategy
 
 		events []*OutboundEvent
 
@@ -318,6 +320,77 @@ func TestMiddleware(t *testing.T) {
 			},
 			wantError: iioutil.ErrReset.Error(),
 		},
+		{
+			msg: "backoff timeout",
+			request: &transport.Request{
+				Service:   "serv",
+				Procedure: "proc",
+				Body:      bytes.NewBufferString("body"),
+			},
+			reqTimeout:   time.Millisecond * 100,
+			retries:      1,
+			retrytimeout: time.Millisecond * 50,
+			retryBackoff: backoff.FixedBackoff(time.Millisecond * 25).Backoff,
+			events: []*OutboundEvent{
+				{
+					WantTimeout:    time.Millisecond * 50,
+					WantService:    "serv",
+					WantProcedure:  "proc",
+					WantBody:       "body",
+					WaitForTimeout: true,
+					GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+				},
+				{
+					WantTimeout:   time.Millisecond * 25,
+					WantService:   "serv",
+					WantProcedure: "proc",
+					WantBody:      "body",
+					GiveRespBody:  "respbody",
+				},
+			},
+			wantBody: "respbody",
+		},
+		{
+			msg: "sequential backoff timeout",
+			request: &transport.Request{
+				Service:   "serv",
+				Procedure: "proc",
+				Body:      bytes.NewBufferString("body"),
+			},
+			reqTimeout:   time.Millisecond * 400,
+			retries:      2,
+			retrytimeout: time.Millisecond * 100,
+			retryBackoff: newSequentialBackoff(time.Millisecond * 50).Backoff,
+			events: []*OutboundEvent{
+				{
+					WantTimeout:       time.Millisecond * 100,
+					WantTimeoutBounds: time.Millisecond * 20,
+					WantService:       "serv",
+					WantProcedure:     "proc",
+					WantBody:          "body",
+					WaitForTimeout:    true,
+					GiveError:         errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+				},
+				{
+					WantTimeout:       time.Millisecond * 100,
+					WantTimeoutBounds: time.Millisecond * 20,
+					WantService:       "serv",
+					WantProcedure:     "proc",
+					WantBody:          "body",
+					WaitForTimeout:    true,
+					GiveError:         errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+				},
+				{
+					WantTimeout:       time.Millisecond * 50,
+					WantTimeoutBounds: time.Millisecond * 20,
+					WantService:       "serv",
+					WantProcedure:     "proc",
+					WantBody:          "body",
+					GiveRespBody:      "respbody",
+				},
+			},
+			wantBody: "respbody",
+		},
 	}
 
 	for _, tt := range tests {
@@ -332,6 +405,7 @@ func TestMiddleware(t *testing.T) {
 			retry := NewUnaryMiddleware(
 				Retries(tt.retries),
 				PerRequestTimeout(tt.retrytimeout),
+				BackoffStrategy(tt.retryBackoff),
 			)
 
 			ctx := context.Background()
@@ -353,4 +427,19 @@ func TestMiddleware(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Sequential backoff will increment the backoff sequentially based
+// on the number of attempts.
+// It is useful in tests so we have a reproducible backoff time.
+func newSequentialBackoff(base time.Duration) *sequentialBackoff {
+	return &sequentialBackoff{base}
+}
+
+type sequentialBackoff struct {
+	base time.Duration
+}
+
+func (s *sequentialBackoff) Backoff(attempts uint) time.Duration {
+	return time.Duration(s.base.Nanoseconds() * int64(attempts+1))
 }
