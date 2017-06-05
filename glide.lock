@@ -1,10 +1,10 @@
-hash: 733dbe39a05cf3d6d9bb4250d170d4e0f2e7627924f45cbfc9ebeca9eaadc228
-updated: 2017-04-19T15:13:50.386855787-07:00
+hash: 29144baa77054355758e8b2da7b79c984294ca3ed9bf67516b57aeca9e3430a5
+updated: 2017-06-05T14:16:11.26558199-07:00
 imports:
 - name: github.com/apache/thrift
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
   repo: git://git.apache.org/thrift.git
   vcs: git
-  version: b2a4d4ae21c789b689dd162deb819665567f481c
   subpackages:
   - lib/go/thrift
 - name: github.com/beorn7/perks
@@ -12,7 +12,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/cactus/go-statsd-client
-  version: d8eabe07bc70ff9ba6a56836cde99d1ea3d005f7
+  version: 91c326c3f7bd20f0226d3d1c289dd9f8ce28d33d
   subpackages:
   - statsd
 - name: github.com/codahale/hdrhistogram
@@ -41,13 +41,14 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
+  version: 5a0f697c9ed9d68fef0116532c6e05cfeae00e55
   subpackages:
   - proto
+  - ptypes/any
 - name: github.com/gorilla/websocket
-  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+  version: a91eba7f97777409bc2c443f5534d41dd20c5720
 - name: github.com/grpc-ecosystem/grpc-opentracing
-  version: ef7d6c8df7564c20c0a19ed9737f6d67990c61fa
+  version: 6c130eed1e297e1aa4d415a50c90d0c81c52677e
   subpackages:
   - go/otgrpc
 - name: github.com/mattn/go-shellwords
@@ -57,9 +58,9 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mitchellh/mapstructure
-  version: 53818660ed4955e899c0bcafa97299a388bd7c8e
+  version: d0303fe809921458f417bcf828397a65db30a7e4
 - name: github.com/opentracing/opentracing-go
-  version: 6edb48674bd9467b8e91fda004f2bd7202d60ce4
+  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
   subpackages:
   - ext
   - log
@@ -80,38 +81,38 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a1dba9ce8baed984a2495b658c82687f8157b98f
+  version: 65c1f6f8f0fc1e2185eb9863a3bc751496404259
   subpackages:
   - xfs
 - name: github.com/Sirupsen/logrus
-  version: 10f801ebc38b33738c9d17d50860f484a0988ff5
+  version: 5e5dc898656f695e2a086b8e12559febbfc01562
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
-  version: 4d4bfba8f1d1027c4fdbe371823030df51419987
+  version: f6abca593680b2315d2075e0f5e2a9751e3f431a
   subpackages:
   - assert
   - mock
   - require
 - name: github.com/uber-common/bark
-  version: 8841a0f8e7ca869284ccb29c08a14cf3f4310f46
+  version: 148dd9dfbd0feb293fc81593a8c10c99877f81bc
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/tally
-  version: 4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab
+  version: e9b601813b0be4771b1b3995390567b67ab2b3fc
   subpackages:
   - m3
   - m3/customtransports
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: 5b9071f590e7c32b88b950ffc2a4e20ef74d2804
+  version: 7a6f6147da201fd682cd8f22dc07e9289c939e5c
   subpackages:
   - client/cherami
   - common
@@ -120,7 +121,7 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: c12c343b8a1428f8968e596b1a3ef263897ce751
+  version: be4d5fc25dbf54affd1d8be5bf49bd3fc0440330
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
@@ -134,11 +135,11 @@ imports:
   - transport
   - utils
 - name: github.com/uber/jaeger-lib
-  version: ffca3143c929e9b97325e6bebcc380e8c6e5fa0d
+  version: b9a0fa4923ad750facbd5a4b93fc6d450bc45ccc
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
-  version: 0b7f160817553b0bacb5b108dd84a5022dbdd1c4
+  version: b99c1d7cecb0fdc882bed0098e7cae6ec7459059
   subpackages:
   - hyperbahn
   - hyperbahn/gen-go/hyperbahn
@@ -153,6 +154,7 @@ imports:
   - thrift
   - thrift/gen-go/meta
   - tnet
+  - tos
   - trand
   - typed
 - name: go.uber.org/atomic
@@ -179,7 +181,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 1550bc05539134bbf8612a35f34a79ab8bf34ee3
+  version: fab453050a7a08c35f31fc5fff6f2dbd962285ab
   subpackages:
   - buffer
   - internal/bufferpool
@@ -189,40 +191,50 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
+  version: 59a0b19b5533c7977ddeb86b017bf507ed407b12
   repo: https://github.com/golang/net
   subpackages:
+  - bpf
   - context
   - context/ctxhttp
   - http2
   - http2/hpack
   - idna
+  - internal/iana
+  - internal/socket
   - internal/timeseries
+  - ipv4
+  - ipv6
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
+  version: b90f89a1e7a9c1f6b918820b3daa7f08488c8594
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: fc7fa097411d30e6708badff276c4c164425590c
+  version: ccbd3f7822129ff389f8ca4858a9b9d4d910531c
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: d63e2b22b05a9682de336cd4802bba367ed429e7
+  version: b62b8c72b8132d85d39147764e7b5780e5cff5fe
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
+- name: google.golang.org/genproto
+  version: aa2eb687b4d3e17154372564ad8d6bf11c3cf21f
+  subpackages:
+  - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
+  version: d2e1b51f33ff8c5e4a15560ff049d200e83726c5
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
   - credentials
+  - grpclb/grpc_lb_v1
   - grpclog
   - internal
   - keepalive
@@ -230,6 +242,7 @@ imports:
   - naming
   - peer
   - stats
+  - status
   - tap
   - transport
 - name: gopkg.in/redis.v5
@@ -241,10 +254,10 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports:
 - name: github.com/golang/lint
-  version: cb00e5669539f047b2f4c53a421a01b0c8e172c6
+  version: c5fb716d6688a859aae56d26d3e6070808df29f7
   subpackages:
   - golint
 - name: github.com/kisielk/errcheck
@@ -254,10 +267,10 @@ testImports:
 - name: github.com/wadey/gocovmerge
   version: b5bfa59ec0adc420475f97f89b58045c721d761c
 - name: go.uber.org/tools
-  version: 5908733c544153a245dddd039959386356fbc082
+  version: ce2550dad7144b81ae2f67dc5e55597643f6902b
   subpackages:
   - update-license
 - name: honnef.co/go/tools
-  version: 6c3814a19596cc3f3de23f0442023a5adbb28eb6
+  version: e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90
   subpackages:
   - cmd/staticcheck

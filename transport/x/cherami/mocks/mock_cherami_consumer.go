@@ -47,6 +47,16 @@ func (_m *Consumer) Close() {
 	_m.Called()
 }
 
+// Pause provides a mock function with given fields:
+func (_m *Consumer) Pause() {
+	_m.Called()
+}
+
+// Resume provides a mock function with given fields:
+func (_m *Consumer) Resume() {
+	_m.Called()
+}
+
 // NackDelivery provides a mock function with given fields: deliveryToken
 func (_m *Consumer) NackDelivery(deliveryToken string) error {
 	ret := _m.Called(deliveryToken)
