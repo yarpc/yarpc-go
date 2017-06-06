@@ -42,6 +42,20 @@ func NopOutboundOption(nopOption string) FakeOutboundOption {
 	}
 }
 
+// OutboundCallable is a function that will be called for for an outbound's
+// `Call` method.
+type OutboundCallable func(ctx context.Context, req *transport.Request) (*transport.Response, error)
+
+// OutboundCallOverride returns an option to set the "callOverride" for a
+// FakeTransport.NewOutbound.
+// This can be used to set the functionality for the FakeOutbound's `Call`
+// function.
+func OutboundCallOverride(callable OutboundCallable) FakeOutboundOption {
+	return func(o *FakeOutbound) {
+		o.callOverride = callable
+	}
+}
+
 // NewOutbound returns a FakeOutbound with a given peer chooser and options.
 func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
 	o := &FakeOutbound{
@@ -57,10 +71,11 @@ func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) 
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
-	once      intsync.LifecycleOnce
-	transport *FakeTransport
-	chooser   peer.Chooser
-	nopOption string
+	once         intsync.LifecycleOnce
+	transport    *FakeTransport
+	chooser      peer.Chooser
+	nopOption    string
+	callOverride OutboundCallable
 }
 
 // Chooser returns theis FakeOutbound's peer chooser.
@@ -95,5 +110,8 @@ func (o *FakeOutbound) Transports() []transport.Transport {
 
 // Call pretends to send a unary RPC, but actually just returns an error.
 func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	return nil, fmt.Errorf(`FakeOutbound does not support calls. It's fake`)
+	if o.callOverride != nil {
+		return o.callOverride(ctx, req)
+	}
+	return nil, fmt.Errorf(`No Outbound callable specified on the outbound`)
 }
