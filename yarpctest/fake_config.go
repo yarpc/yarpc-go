@@ -68,10 +68,11 @@ func FakeTransportSpec() config.TransportSpec {
 
 // FakePeerListConfig configures the FakePeerList.
 type FakePeerListConfig struct {
+	Nop string `config:"nop,interpolate"`
 }
 
 func buildFakePeerList(c *FakePeerListConfig, t peer.Transport, kit *config.Kit) (peer.ChooserList, error) {
-	return NewFakePeerList(), nil
+	return NewFakePeerList(ListNop(c.Nop)), nil
 }
 
 // FakePeerListSpec returns a configurator spec for the fake-list FakePeerList
@@ -89,6 +90,7 @@ func FakePeerListSpec() config.PeerListSpec {
 // NewFakePeerListUpdater when you build a peer list with this config.
 type FakePeerListUpdaterConfig struct {
 	FakeUpdater string `config:"fake-updater"`
+	Nop         string `config:"nop,interpolate"`
 	Watch       bool   `config:"watch"`
 }
 
@@ -96,6 +98,9 @@ func buildFakePeerListUpdater(c *FakePeerListUpdaterConfig, kit *config.Kit) (pe
 	var opts []FakePeerListUpdaterOption
 	if c.Watch {
 		opts = append(opts, Watch)
+	}
+	if c.Nop != "" {
+		opts = append(opts, UpdaterNop(c.Nop))
 	}
 	return func(pl peer.List) transport.Lifecycle {
 		return NewFakePeerListUpdater(opts...)

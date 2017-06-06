@@ -29,16 +29,32 @@ import (
 	intsync "go.uber.org/yarpc/internal/sync"
 )
 
+// FakePeerListOption is an option for NewFakePeerList.
+type FakePeerListOption func(*FakePeerList)
+
+// ListNop is a fake option for NewFakePeerList that sets a nop var. It's fake.
+func ListNop(nop string) func(*FakePeerList) {
+	return func(u *FakePeerList) {
+		u.nop = nop
+	}
+}
+
 // FakePeerList is a fake peer list.
 type FakePeerList struct {
 	transport.Lifecycle
+
+	nop string
 }
 
 // NewFakePeerList returns a fake peer list.
-func NewFakePeerList() *FakePeerList {
-	return &FakePeerList{
+func NewFakePeerList(opts ...FakePeerListOption) *FakePeerList {
+	pl := &FakePeerList{
 		Lifecycle: intsync.NewNopLifecycle(),
 	}
+	for _, opt := range opts {
+		opt(pl)
+	}
+	return pl
 }
 
 // Choose pretends to choose a peer, but actually always returns an error. It's fake.
@@ -49,4 +65,9 @@ func (c *FakePeerList) Choose(ctx context.Context, req *transport.Request) (peer
 // Update pretends to add or remove peers.
 func (c *FakePeerList) Update(up peer.ListUpdates) error {
 	return nil
+}
+
+// Nop returns the Peer List's nop variable.
+func (c *FakePeerList) Nop() string {
+	return c.nop
 }

@@ -189,7 +189,7 @@ func (pc PeerChooser) buildPeerChooser(transport peer.Transport, identify func(s
 		return nil, err
 	}
 
-	chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig)
+	chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig, interpolateWith(kit.resolver))
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier,
 
 	// This decodes all attributes on the peer list updater block, including the
 	// field with the name of the peer list updater.
-	peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(peerListUpdaterConfig)
+	peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(peerListUpdaterConfig, interpolateWith(kit.resolver))
 	if err != nil {
 		return nil, err
 	}
