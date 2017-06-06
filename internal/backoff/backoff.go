@@ -22,6 +22,9 @@ package backoff
 
 import "time"
 
-// Strategy defines a function that will return a
-// backoff time given an attempt number.
-type Strategy func(attempts uint) time.Duration
+// Strategy is a function that will return a backoff function.
+// The backoff function returns a time to wait for a given number of attempts.
+// Each backoff function must be referentially independent and lockless for the
+// best performance, or thread safe if it has shared state with other
+// instances.
+type Strategy func() func(attempts uint) time.Duration

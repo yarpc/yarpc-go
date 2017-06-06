@@ -35,8 +35,7 @@ type ExponentialOption func(*exponentialOptions)
 // exponentialOptions are the configuration options for an exponential backoff
 type exponentialOptions struct {
 	base, min, max time.Duration
-	rand           *rand.Rand
-	minMaxDiff     int64
+	newRand        func() *rand.Rand
 }
 
 func (e exponentialOptions) validate() (err error) {
@@ -55,11 +54,44 @@ func (e exponentialOptions) validate() (err error) {
 	return err
 }
 
-var defaultExponentialOpts = exponentialOptions{
-	base: time.Millisecond,
-	max:  time.Hour, // :shrug:
-	rand: rand.New(rand.NewSource(time.Now().UnixNano())),
+func newRand() *rand.Rand {
+	return rand.New(rand.NewSource(time.Now().UnixNano()))
 }
+
+var defaultExponentialOpts = exponentialOptions{
+	base:    100 * time.Millisecond,
+	min:     100 * time.Millisecond,
+	max:     time.Minute,
+	newRand: newRand,
+}
+
+// DefaultExponential is an exponential backoff.Strategy configured
+// with a 100ms minimum delay, a 100ms base for a jittered exponential backoff
+// curve, and a maximum time to recovery of one minute.
+//
+// Exponential strategies are not thread safe.
+// Use the Isolate() method to obtain an independent backoff generator with the
+// same options and a referentially independent random number generator.
+var DefaultExponential = (&exponentialStrategy{
+	opts: defaultExponentialOpts,
+}).NewBackoff
+
+var shortOpts = exponentialOptions{
+	base:    time.Duration(0),
+	min:     time.Duration(0),
+	max:     100 * time.Millisecond,
+	newRand: newRand,
+}
+
+// ShortExponential is a shorted backoff strategy with 0 min, 0 base, and a
+// 100ms max.
+//
+// Exponential strategies are not thread safe.
+// Use the Isolate() method to obtain an independent backoff generator with the
+// same options and a referentially independent random number generator.
+var ShortExponential = (&exponentialStrategy{
+	opts: shortOpts,
+}).NewBackoff
 
 // BaseJump sets the default "jump" the exponential backoff strategy will use.
 func BaseJump(t time.Duration) ExponentialOption {
@@ -84,24 +116,28 @@ func MinBackoff(t time.Duration) ExponentialOption {
 
 // randGenerator is an internal option for overriding the random number
 // generator.
-func randGenerator(rand *rand.Rand) ExponentialOption {
+func randGenerator(newRand func() *rand.Rand) ExponentialOption {
 	return func(options *exponentialOptions) {
-		options.rand = rand
+		options.newRand = newRand
 	}
 }
 
-// Exponential is an exponential backoff strategy with jitter.  Under the
-// aws backoff strategies this is a "Full Jitter" backoff implementation
-// https://www.awsarchitectureblog.com/2015/03/backoff.html with the addition
-// of a Min and Max Value.  The range of durations will be contained in
-// a closed [Min, Max] interval.
-// It is a stateless implementation and is safe to use concurrently.
-type Exponential struct {
+type exponentialStrategy struct {
 	opts exponentialOptions
 }
 
-// NewExponential returns a new Exponential Backoff Strategy.
-func NewExponential(opts ...ExponentialOption) (*Exponential, error) {
+// NewExponential returns a new exponential backoff strategy, which in turn
+// returns backoff functions.
+//
+// Exponential is an exponential backoff strategy with jitter.  Under the
+// AWS backoff strategies this is a "Full Jitter" backoff implementation
+// https://www.awsarchitectureblog.com/2015/03/backoff.html with the addition
+// of a Min and Max Value.  The range of durations will be contained in
+// a closed [Min, Max] interval.
+//
+// Backoff functions are lockless and referentially independent, but not
+// thread-safe.
+func NewExponential(opts ...ExponentialOption) (func() func(uint) time.Duration, error) {
 	options := defaultExponentialOpts
 	for _, opt := range opts {
 		opt(&options)
@@ -110,24 +146,39 @@ func NewExponential(opts ...ExponentialOption) (*Exponential, error) {
 	if err := options.validate(); err != nil {
 		return nil, err
 	}
-	options.minMaxDiff = options.max.Nanoseconds() - options.min.Nanoseconds()
 
-	return &Exponential{
+	return (&exponentialStrategy{
 		opts: options,
-	}, nil
+	}).NewBackoff, nil
+}
+
+func (e *exponentialStrategy) NewBackoff() func(uint) time.Duration {
+	return (&exponentialBackoff{
+		base:       e.opts.base,
+		min:        e.opts.min,
+		max:        e.opts.max,
+		minMaxDiff: e.opts.max.Nanoseconds() - e.opts.min.Nanoseconds(),
+		rand:       e.opts.newRand(),
+	}).Duration
+}
+
+type exponentialBackoff struct {
+	base, min, max time.Duration
+	minMaxDiff     int64
+	rand           *rand.Rand
 }
 
 // Duration takes an attempt number and returns the duration the caller should
 // wait.
-func (e *Exponential) Duration(attempts uint) time.Duration {
-	minlessBackoff := (1 << attempts) * e.opts.base.Nanoseconds()
+func (e *exponentialBackoff) Duration(attempts uint) time.Duration {
+	minlessBackoff := (1 << attempts) * e.base.Nanoseconds()
 
 	// either the bit shift went negative, or we went past the max
 	// duration we're willing to backoff.
 	// In both cases we should go to our max value
-	if minlessBackoff > e.opts.minMaxDiff || minlessBackoff <= 0 {
-		minlessBackoff = e.opts.minMaxDiff
+	if minlessBackoff > e.minMaxDiff || minlessBackoff <= 0 {
+		minlessBackoff = e.minMaxDiff
 	}
 
-	return e.opts.min + time.Duration(e.opts.rand.Int63n(minlessBackoff+1))
+	return e.min + time.Duration(e.rand.Int63n(minlessBackoff+1))
 }

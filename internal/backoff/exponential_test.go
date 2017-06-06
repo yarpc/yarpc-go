@@ -238,11 +238,11 @@ func TestExponential(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			randSrc := &mutableRandSrc{val: 0}
-			exp, err := NewExponential(
+			strategy, err := NewExponential(
 				BaseJump(tt.giveBase),
 				MinBackoff(tt.giveMin),
 				MaxBackoff(tt.giveMax),
-				randGenerator(rand.New(randSrc)),
+				randGenerator(func() *rand.Rand { return rand.New(randSrc) }),
 			)
 			if err != nil {
 				assert.True(t, len(tt.wantErrors) > 0, "got unexpected error: %s", err.Error())
@@ -252,9 +252,10 @@ func TestExponential(t *testing.T) {
 				return
 			}
 			require.True(t, len(tt.wantErrors) == 0, "didn't get expected error")
+			backoff := strategy()
 			for _, attempt := range tt.attempts {
 				randSrc.val = attempt.giveRandResult
-				assert.Equal(t, attempt.wantBackoff, exp.Duration(attempt.giveAttempt), "backoff for backoffAttempt %q did not match", attempt.msg)
+				assert.Equal(t, attempt.wantBackoff, backoff(attempt.giveAttempt), "backoff for backoffAttempt %q did not match", attempt.msg)
 			}
 		})
 	}
