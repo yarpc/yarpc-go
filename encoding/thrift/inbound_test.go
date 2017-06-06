@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/errors"
+	"go.uber.org/yarpc/api/errors/codes"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 
@@ -45,9 +47,9 @@ func TestThriftHandler(t *testing.T) {
 		responseEnvelopeType wire.EnvelopeType // envelope type returned by handler
 		responseIsAppError   bool              // whether the handler encountered an application error
 
-		wantEnvelope *wire.Envelope // envelope expected written to the wire
-		expectHandle bool           // whether an actual call to the handler is expected
-		wantError    string         // if non empty, an error is expected
+		wantEnvelope  *wire.Envelope // envelope expected written to the wire
+		expectHandle  bool           // whether an actual call to the handler is expected
+		wantErrorCode codes.Code
 	}{
 		{
 			giveEnvelope: &wire.Envelope{
@@ -89,9 +91,7 @@ func TestThriftHandler(t *testing.T) {
 				Type:  wire.Exception,
 				Value: requestBody,
 			},
-			wantError: `failed to decode "thrift" request body for procedure ` +
-				`"MyService::someMethod" of service "service" from caller "caller": ` +
-				"unexpected envelope type: Exception",
+			wantErrorCode: codes.InvalidArgument,
 		},
 		{
 			giveEnvelope: &wire.Envelope{
@@ -102,9 +102,7 @@ func TestThriftHandler(t *testing.T) {
 			},
 			expectHandle:         true,
 			responseEnvelopeType: wire.OneWay,
-			wantError: `failed to encode "thrift" response body for procedure ` +
-				`"MyService::someMethod" of service "service" from caller "caller": ` +
-				"unexpected envelope type: OneWay",
+			wantErrorCode:        codes.InvalidArgument,
 		},
 	}
 
@@ -149,9 +147,9 @@ func TestThriftHandler(t *testing.T) {
 			Body:      bytes.NewReader([]byte("irrelevant")),
 		}, rw)
 
-		if tt.wantError != "" {
+		if tt.wantErrorCode != codes.None {
 			if assert.Error(t, err, "expected an error") {
-				assert.Contains(t, err.Error(), tt.wantError)
+				assert.Equal(t, errors.Code(err), tt.wantErrorCode)
 			}
 		} else {
 			assert.NoError(t, err, "expected no error")
