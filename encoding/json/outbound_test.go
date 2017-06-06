@@ -23,12 +23,13 @@ package json
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io/ioutil"
 	"reflect"
 	"testing"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/errors"
+	"go.uber.org/yarpc/api/errors/codes"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/clientconfig"
@@ -59,11 +60,11 @@ func TestCall(t *testing.T) {
 		// whether the outbound receives the request
 		noCall bool
 
-		// Either want, or wantType and wantErr must be set.
-		want        interface{} // expected response body
-		wantHeaders map[string]string
-		wantType    reflect.Type // type of response body
-		wantErr     string       // error message
+		// Either want, or wantType and wantErrorCode must be set.
+		want          interface{} // expected response body
+		wantHeaders   map[string]string
+		wantType      reflect.Type // type of response body
+		wantErrorCode codes.Code
 	}{
 		{
 			procedure:       "foo",
@@ -78,14 +79,14 @@ func TestCall(t *testing.T) {
 			encodedRequest:  `[1,2,3]`,
 			encodedResponse: `invalid JSON`,
 			wantType:        _typeOfMapInterface,
-			wantErr:         `failed to decode "json" response body for procedure "bar" of service "service"`,
+			wantErrorCode:   codes.InvalidArgument,
 		},
 		{
-			procedure: "baz",
-			body:      func() {}, // funcs cannot be json.Marshal'ed
-			noCall:    true,
-			wantType:  _typeOfMapInterface,
-			wantErr:   `failed to encode "json" request body for procedure "baz" of service "service"`,
+			procedure:     "baz",
+			body:          func() {}, // funcs cannot be json.Marshal'ed
+			noCall:        true,
+			wantType:      _typeOfMapInterface,
+			wantErrorCode: codes.InvalidArgument,
 		},
 		{
 			procedure:       "requestHeaders",
@@ -144,9 +145,9 @@ func TestCall(t *testing.T) {
 		opts = append(opts, yarpc.ResponseHeaders(&resHeaders))
 
 		err := client.Call(ctx, tt.procedure, tt.body, &resBody, opts...)
-		if tt.wantErr != "" {
+		if tt.wantErrorCode != codes.None {
 			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), tt.wantErr)
+				assert.True(t, errors.Code(err) == tt.wantErrorCode)
 			}
 		} else {
 			if assert.NoError(t, err) {
@@ -181,7 +182,7 @@ func TestCallOneway(t *testing.T) {
 		// whether the outbound receives the request
 		noCall bool
 
-		wantErr string // error message
+		wantErrorCode codes.Code
 	}{
 		{
 			procedure:      "foo",
@@ -189,10 +190,10 @@ func TestCallOneway(t *testing.T) {
 			encodedRequest: `["foo","bar"]` + "\n",
 		},
 		{
-			procedure: "baz",
-			body:      func() {}, // funcs cannot be json.Marshal'ed
-			noCall:    true,
-			wantErr:   `failed to encode "json" request body for procedure "baz" of service "service"`,
+			procedure:     "baz",
+			body:          func() {}, // funcs cannot be json.Marshal'ed
+			noCall:        true,
+			wantErrorCode: codes.InvalidArgument,
 		},
 		{
 			procedure:      "requestHeaders",
@@ -220,11 +221,11 @@ func TestCallOneway(t *testing.T) {
 					Body:      bytes.NewReader([]byte(tt.encodedRequest)),
 				})
 
-			if tt.wantErr != "" {
+			if tt.wantErrorCode != codes.None {
 				outbound.
 					EXPECT().
 					CallOneway(gomock.Any(), reqMatcher).
-					Return(nil, errors.New(tt.wantErr))
+					Return(nil, errors.Internal())
 			} else {
 				outbound.
 					EXPECT().
@@ -240,9 +241,9 @@ func TestCallOneway(t *testing.T) {
 		}
 
 		ack, err := client.CallOneway(ctx, tt.procedure, tt.body, opts...)
-		if tt.wantErr != "" {
+		if tt.wantErrorCode != codes.None {
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.True(t, errors.Code(err) == tt.wantErrorCode)
 		} else {
 			assert.NoError(t, err, "")
 			assert.Equal(t, ack.String(), "success")
