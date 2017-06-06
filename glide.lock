@@ -1,5 +1,5 @@
-hash: feda0d471332d081d5d3149551e8241b341c7dc754d2591b0eb65c86bb08e2aa
-updated: 2017-06-05T14:33:12.608206444-07:00
+hash: 491c0872fdae119d4a27c024404d2a14769ddaa56cc02421d12ed88aa34a7718
+updated: 2017-06-06T14:56:46.171893-07:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -92,7 +92,7 @@ imports:
   subpackages:
   - xfs
 - name: github.com/Sirupsen/logrus
-  version: 5e5dc898656f695e2a086b8e12559febbfc01562
+  version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -218,14 +218,14 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: ccbd3f7822129ff389f8ca4858a9b9d4d910531c
+  version: ab6d1c143672de99b9dfde433b7f6affb278cc74
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: b62b8c72b8132d85d39147764e7b5780e5cff5fe
+  version: 92d42b9ff15f625347a13b6aeafd04a33537ce91
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
