@@ -33,11 +33,19 @@ func Watch(u *FakePeerListUpdater) {
 	u.watch = true
 }
 
+// UpdaterNop is a fake option for NewFakePeerListUpdater that sets a nop var. It's fake.
+func UpdaterNop(nop string) func(*FakePeerListUpdater) {
+	return func(u *FakePeerListUpdater) {
+		u.nop = nop
+	}
+}
+
 // FakePeerListUpdater is a fake peer list updater.  It doesn't actually update
 // a peer list.
 type FakePeerListUpdater struct {
 	transport.Lifecycle
 	watch bool
+	nop   string
 }
 
 // NewFakePeerListUpdater returns a new FakePeerListUpdater, applying any
@@ -56,4 +64,9 @@ func NewFakePeerListUpdater(opts ...FakePeerListUpdaterOption) *FakePeerListUpda
 // fake.
 func (u *FakePeerListUpdater) Watch() bool {
 	return u.watch
+}
+
+// Nop returns the nop variable.
+func (u *FakePeerListUpdater) Nop() string {
+	return u.nop
 }

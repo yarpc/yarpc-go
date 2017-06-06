@@ -26,6 +26,8 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"go.uber.org/yarpc/internal/interpolate"
 )
 
 // Kit is an opaque object that carries context for the Configurator. Build
@@ -34,6 +36,9 @@ type Kit struct {
 	c *Configurator
 
 	name string
+
+	// Used to resolve interpolated variables.
+	resolver interpolate.VariableResolver
 
 	// TransportSpec currently being used. This may or may not be set.
 	transportSpec *compiledTransportSpec

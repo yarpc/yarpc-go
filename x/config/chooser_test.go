@@ -782,6 +782,55 @@ func TestChooserConfigurator(t *testing.T) {
 				_ = chooser
 			},
 		},
+		{
+			desc: "interpolation to env var for chooser and updater",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-list:
+									nop: "${LIST_VAR:list}"
+									fake-updater:
+										nop: "${UPDATER_VAR:updater}"
+										watch: true
+			`),
+			env: map[string]string{
+				"LIST_VAR":    "envlist",
+				"UPDATER_VAR": "envupdater",
+			},
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, 1, len(transports), "must have one transport")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*peer.BoundChooser)
+				require.True(t, ok, "unary chooser must be a bound chooser")
+
+				updater, ok := chooser.Updater().(*yarpctest.FakePeerListUpdater)
+				require.True(t, ok, "updater is a peer list updater")
+				assert.True(t, updater.Watch(), "peer list updater configured to watch")
+				assert.Equal(t, "envupdater", updater.Nop(), "did not properly interpolate variables for peer updater")
+
+				list, ok := chooser.ChooserList().(*yarpctest.FakePeerList)
+				require.True(t, ok, "list is a fake peer list")
+				assert.Equal(t, "envlist", list.Nop(), "did not properly interpolate variables for peer list")
+				_ = list
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = chooser
+			},
+		},
 	}
 
 	for _, tt := range tests {
