@@ -23,8 +23,8 @@ Experimental:
     the peer list has been started.
 -   x/config: Fix bug where embedded struct fields could not be interpolated.
 -   x/config: Fix bug where Chooser and Updater fields could not be interpolated.
--   x/grpc: Remove `NewInbound` and `NewSingleOutbound` in favor of functions
-    on `Transport`.
+-   x/grpc: Remove `NewInbound` and `NewSingleOutbound` in favor of methods on
+    `Transport`.
 -   x/grpc: Use `rpc-caller`, `rpc-service`, `rpc-encoding`, `rpc-shard-key`,
     `rpc-routing-key`, `rpc-routing-delegate` headers.
 -   x/protobuf: Handle JSON-encoded protobuf requests and return JSON-encoded
