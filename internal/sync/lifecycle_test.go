@@ -23,6 +23,7 @@ package sync
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -81,10 +82,8 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StopAction{ExpectedState: Stopped},
-						Actions{
-							WaitForStopAction,
-							GetStateAction{ExpectedState: Stopped},
-						},
+						WaitForStoppingAction,
+						WaitForStopAction,
 					},
 				},
 			},
@@ -99,6 +98,10 @@ func TestLifecycleOnce(t *testing.T) {
 							Err:           fmt.Errorf("abort"),
 							ExpectedErr:   fmt.Errorf("abort"),
 							ExpectedState: Errored,
+						},
+						Actions{
+							WaitForStoppingAction,
+							GetStateAction{ExpectedState: Errored},
 						},
 						Actions{
 							WaitForStopAction,
@@ -118,10 +121,8 @@ func TestLifecycleOnce(t *testing.T) {
 							StartAction{ExpectedState: Running},
 							StopAction{ExpectedState: Stopped},
 						},
-						Actions{
-							WaitForStopAction,
-							GetStateAction{ExpectedState: Stopped},
-						},
+						WaitForStoppingAction,
+						WaitForStopAction,
 					},
 				},
 			},
@@ -146,10 +147,34 @@ func TestLifecycleOnce(t *testing.T) {
 				StartAction{ExpectedState: Running},
 				ConcurrentAction{
 					Actions: []LifecycleAction{
-						StopAction{ExpectedState: Stopped, Wait: 20 * time.Millisecond},
+						StopAction{ExpectedState: Stopped, Wait: 15 * time.Millisecond},
 						GetStateAction{ExpectedState: Stopping},
+						GetStateAction{ExpectedState: Stopped},
 					},
 					Wait: 10 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Delayed stop, wait for stopping",
+			actions: []LifecycleAction{
+				StartAction{ExpectedState: Running},
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						Actions{
+							StartAction{ExpectedState: Running},
+							WaitAction(20 * time.Millisecond),
+							StopAction{ExpectedState: Stopped, Wait: 20 * time.Millisecond},
+						},
+						Actions{
+							WaitForStoppingAction,
+							WaitAction(10 * time.Millisecond),
+							ExactStateAction{ExpectedState: Stopping},
+							WaitAction(20 * time.Millisecond),
+							GetStateAction{ExpectedState: Stopped},
+						},
+					},
 				},
 			},
 			expectedFinalState: Stopped,
@@ -166,7 +191,6 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedErr:   errors.New("expected error"),
 						},
 						StartAction{
-
 							Err:           errors.New("not an expected error 1"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
@@ -414,4 +438,25 @@ func TestLifecycleOnce(t *testing.T) {
 			assert.Equal(t, tt.expectedFinalState, once.LifecycleState())
 		})
 	}
+}
+
+// TestStopping verifies that a lifecycle object can spawn a goroutine and wait
+// for that goroutine to exit in its stopping state.  The goroutine must wrap
+// up its work when it detects that the lifecycle has begun stopping.  If it
+// waited for the stopped channel, the stop callback would deadlock.
+func TestStopping(t *testing.T) {
+	l := Once()
+	l.Start(nil)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		<-l.Stopping()
+		wg.Done()
+	}()
+
+	l.Stop(func() error {
+		wg.Wait()
+		return nil
+	})
 }
