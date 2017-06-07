@@ -213,7 +213,7 @@ func (c *Configurator) NewDispatcher(serviceName string, data interface{}) (*yar
 }
 
 func (c *Configurator) load(serviceName string, cfg *yarpcConfig) (_ yarpc.Config, err error) {
-	b := newBuilder(serviceName, &Kit{name: serviceName, c: c}, c.resolver)
+	b := newBuilder(serviceName, &Kit{name: serviceName, c: c, resolver: c.resolver})
 
 	for _, inbound := range cfg.Inbounds {
 		if e := c.loadInboundInto(b, inbound); e != nil {
