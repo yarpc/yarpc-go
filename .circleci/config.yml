@@ -1,6 +1,8 @@
 defaults: &defaults
   working_directory: /checkout
   resource_class: large
+  docker:
+    - image: golang:1.8.3
   steps:
     - checkout
     - setup_remote_docker:
@@ -12,23 +14,17 @@ defaults: &defaults
 version: 2
 jobs:
   crossdock:
-    docker:
-      - image: golang:1.8.0
     environment:
       - CI_TYPES: "crossdock"
     <<: *defaults
 
   test:
-    docker:
-      - image: golang:1.8.0
     environment:
       - DOCKER_GO_VERSION: 1.8
       - CI_TYPES: "deps lint test examples"
     <<: *defaults
 
   coverage:
-    docker:
-      - image: golang:1.7.0
     environment:
       - DOCKER_GO_VERSION: "1.7"
       - CI_TYPES: "deps cover"
