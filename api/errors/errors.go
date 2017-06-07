@@ -22,6 +22,7 @@ package errors
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"go.uber.org/yarpc/api/errors/codes"
@@ -78,8 +79,46 @@ func Details(err error) map[string]string {
 	return copyStringStringMap(yarpcError.Details)
 }
 
+// WithCode converts the given error to have the given code.
+//
+// If the error is nil, this will return nil.
+// If the error is a yarpc error, this will convert the error, as well as add the original error code as a cause.
+// If the error is not a yarpc error, this will create a new error with the given code.
+// Note that the codes None and Application should not be used, if they are, the original error will be returned.
+// TODO: what to do if None or Application are used?
+func WithCode(err error, code codes.Code, keyValues ...string) error {
+	if err == nil {
+		return nil
+	}
+	switch code {
+	case codes.None, codes.Application:
+		return err
+	}
+	yarpcError, ok := err.(*yarpcError)
+	if !ok {
+		return newWellKnownYarpcError(code, append([]string{"error", err.Error()}, keyValues...))
+	}
+	if yarpcError.Code == code {
+		return yarpcError
+	}
+	c := yarpcError.copyAndAdd(keyValues...)
+
+	i := 1
+	for {
+		if _, ok := c.Details[fmt.Sprintf("cause-%d", i)]; !ok {
+			break
+		}
+		i++
+	}
+	c.add(fmt.Sprintf("cause-%d", i), c.Code.String())
+
+	c.Code = code
+	return c
+}
+
 // WithKeyValues adds the given keyValues to the error.
 //
+// If the error is nil, this will return nil.
 // If the error is a yarpc error, this will just add the keyValues.
 // If the error is not a yarpc error, this will return a new yarpc error of code Unknown
 // with an additional keyValue pair of "error", err.Error().

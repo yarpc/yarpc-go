@@ -23,6 +23,8 @@ package errors
 import (
 	"testing"
 
+	"go.uber.org/yarpc/api/errors/codes"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,6 +37,7 @@ func TestErrorString(t *testing.T) {
 	assert.Equal(t, "code: cancelled details: foo:bar baz:bat", Cancelled("foo", "bar", "baz", "bat").Error())
 	assert.Equal(t, "code: cancelled details: foo:bar baz:bat", Cancelled("foo", "bar", "baz", "bat", "ban", "").Error())
 	assert.Equal(t, "code: cancelled details: foo:bar baz:bat too:tee", WithKeyValues(Cancelled("foo", "bar", "baz", "bat", "ban", ""), "too", "tee").Error())
+	assert.Equal(t, "code: invalid-argument details: foo:bar baz:bat too:tee cause-1:cancelled", WithCode(Cancelled("foo", "bar", "baz", "bat", "ban", ""), codes.InvalidArgument, "too", "tee").Error())
 	assert.Equal(t, "code: application name: hello", Application("hello").Error())
 	assert.Equal(t, "code: application name: hello", Application("hello", "foo", "").Error())
 	assert.Equal(t, "code: application name: hello details: foo:missing", Application("hello", "foo").Error())
