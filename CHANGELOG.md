@@ -19,7 +19,7 @@ v1.9.0-dev (unreleased)
 -   x/config: Fix bug where Chooser and Updater fields could not be interpolated.
 -   Pool inbound thrift request buffers to reduce allocations.
 -   x/grpc: Remove NewInbound and NewSingleOutbound in favor of
-    functions on Transport
+    functions on Transport.
 -   x/grpc: Use `rpc-caller`, `rpc-service`, `rpc-encoding`, `rpc-shard-key`,
     `rpc-routing-key`, `rpc-routing-delegate` headers.
 -   x/protobuf: Handle JSON-encoded protobuf requests and return JSON-encoded
