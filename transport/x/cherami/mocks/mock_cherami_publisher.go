@@ -47,6 +47,16 @@ func (_m *Publisher) Open() error {
 	return r0
 }
 
+// Pause provides a mock function with given fields:
+func (_m *Publisher) Pause() {
+	_m.Called()
+}
+
+// Resume provides a mock function with given fields:
+func (_m *Publisher) Resume() {
+	_m.Called()
+}
+
 // Publish provides a mock function with given fields: message
 func (_m *Publisher) Publish(message *cherami.PublisherMessage) *cherami.PublisherReceipt {
 	ret := _m.Called(message)
