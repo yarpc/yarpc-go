@@ -20,48 +20,22 @@
 
 package errors
 
-// BadRequestError is a failure to process a request because the request was
-// invalid.
-type BadRequestError interface {
-	error
-
-	badRequestError()
-}
-
-type handlerBadRequestError struct {
-	Reason error
-}
-
-var _ BadRequestError = handlerBadRequestError{}
-var _ HandlerError = handlerBadRequestError{}
+import "go.uber.org/yarpc/api/errors"
 
 // HandlerBadRequestError wraps the given error into a BadRequestError.
 //
 // It represents a local failure while processing an invalid request.
-func HandlerBadRequestError(err error) HandlerError {
-	return handlerBadRequestError{Reason: err}
+//
+// Deprecated: Use errors.InvalidArgument instead.
+func HandlerBadRequestError(err error) error {
+	return errors.InvalidArgument("error", err.Error())
 }
-
-func (handlerBadRequestError) handlerError()    {}
-func (handlerBadRequestError) badRequestError() {}
-
-func (e handlerBadRequestError) Error() string {
-	return "BadRequest: " + e.Reason.Error()
-}
-
-type remoteBadRequestError string
-
-var _ BadRequestError = remoteBadRequestError("")
 
 // RemoteBadRequestError builds a new BadRequestError with the given message.
 //
 // It represents a BadRequest failure from a remote service.
-func RemoteBadRequestError(message string) BadRequestError {
-	return remoteBadRequestError(message)
-}
-
-func (remoteBadRequestError) badRequestError() {}
-
-func (e remoteBadRequestError) Error() string {
-	return string(e)
+//
+// Deprecated: Use errors.InvalidArgument instead.
+func RemoteBadRequestError(message string) error {
+	return errors.InvalidArgument("message", message)
 }

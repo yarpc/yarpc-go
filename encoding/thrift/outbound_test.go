@@ -23,12 +23,13 @@ package thrift
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"io/ioutil"
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/errors"
+	"go.uber.org/yarpc/api/errors/codes"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/clientconfig"
@@ -54,7 +55,7 @@ func TestClient(t *testing.T) {
 		expectCall          bool           // whether outbound.Call is expected
 		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
 		wantRequestBody     *wire.Value    // expect Encode(x)
-		wantError           string         // whether an error is expected
+		wantErrorCode       codes.Code
 	}{
 		{
 			desc:            "happy case",
@@ -85,8 +86,7 @@ func TestClient(t *testing.T) {
 			desc:            "wrong envelope type for request",
 			clientOptions:   []ClientOption{Enveloped},
 			giveRequestBody: fakeEnveloper(wire.Reply),
-			wantError: `failed to encode "thrift" request body for procedure ` +
-				`"MyService::someMethod" of service "service": unexpected envelope type: Reply`,
+			wantErrorCode:   codes.InvalidArgument,
 		},
 		{
 			desc:            "TApplicationException",
@@ -108,9 +108,7 @@ func TestClient(t *testing.T) {
 					{ID: 2, Value: wire.NewValueI32(7)},
 				}}),
 			},
-			wantError: `thrift request to procedure "MyService::someMethod" of ` +
-				`service "service" encountered an internal failure: ` +
-				"TApplicationException{Message: great sadness, Type: PROTOCOL_ERROR}",
+			wantErrorCode: codes.Internal,
 		},
 		{
 			desc:            "wrong envelope type for response",
@@ -129,77 +127,78 @@ func TestClient(t *testing.T) {
 				Type:  wire.Call,
 				Value: wire.NewValueStruct(wire.Struct{}),
 			},
-			wantError: `failed to decode "thrift" response body for procedure ` +
-				`"MyService::someMethod" of service "service": unexpected envelope type: Call`,
+			wantErrorCode: codes.InvalidArgument,
 		},
 	}
 
 	for _, tt := range tests {
-		mockCtrl := gomock.NewController(t)
-		defer mockCtrl.Finish()
+		t.Run(tt.desc, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-		proto := NewMockProtocol(mockCtrl)
+			proto := NewMockProtocol(mockCtrl)
 
-		if tt.wantRequestEnvelope != nil {
-			proto.EXPECT().EncodeEnveloped(*tt.wantRequestEnvelope, gomock.Any()).
-				Do(func(_ wire.Envelope, w io.Writer) {
-					_, err := w.Write([]byte("irrelevant"))
-					require.NoError(t, err, "Write() failed")
-				}).Return(nil)
-		}
-
-		if tt.wantRequestBody != nil {
-			proto.EXPECT().Encode(*tt.wantRequestBody, gomock.Any()).
-				Do(func(_ wire.Value, w io.Writer) {
-					_, err := w.Write([]byte("irrelevant"))
-					require.NoError(t, err, "Write() failed")
-				}).Return(nil)
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		trans := transporttest.NewMockUnaryOutbound(mockCtrl)
-		if tt.expectCall {
-			trans.EXPECT().Call(ctx,
-				transporttest.NewRequestMatcher(t, &transport.Request{
-					Caller:    "caller",
-					Service:   "service",
-					Encoding:  Encoding,
-					Procedure: "MyService::someMethod",
-					Body:      bytes.NewReader([]byte("irrelevant")),
-				}),
-			).Return(&transport.Response{
-				Body: ioutil.NopCloser(bytes.NewReader([]byte("irrelevant"))),
-			}, nil)
-		}
-
-		if tt.giveResponseEnvelope != nil {
-			proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(*tt.giveResponseEnvelope, nil)
-		}
-
-		if tt.giveResponseBody != nil {
-			proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(*tt.giveResponseBody, nil)
-		}
-
-		opts := tt.clientOptions
-		opts = append(opts, Protocol(proto))
-		c := New(Config{
-			Service: "MyService",
-			ClientConfig: clientconfig.MultiOutbound("caller", "service",
-				transport.Outbounds{
-					Unary: trans,
-				}),
-		}, opts...)
-
-		_, err := c.Call(ctx, tt.giveRequestBody)
-		if tt.wantError != "" {
-			if assert.Error(t, err, "%v: expected failure", tt.desc) {
-				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)
+			if tt.wantRequestEnvelope != nil {
+				proto.EXPECT().EncodeEnveloped(*tt.wantRequestEnvelope, gomock.Any()).
+					Do(func(_ wire.Envelope, w io.Writer) {
+						_, err := w.Write([]byte("irrelevant"))
+						require.NoError(t, err, "Write() failed")
+					}).Return(nil)
 			}
-		} else {
-			assert.NoError(t, err, "%v: expected success", tt.desc)
-		}
+
+			if tt.wantRequestBody != nil {
+				proto.EXPECT().Encode(*tt.wantRequestBody, gomock.Any()).
+					Do(func(_ wire.Value, w io.Writer) {
+						_, err := w.Write([]byte("irrelevant"))
+						require.NoError(t, err, "Write() failed")
+					}).Return(nil)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
+			trans := transporttest.NewMockUnaryOutbound(mockCtrl)
+			if tt.expectCall {
+				trans.EXPECT().Call(ctx,
+					transporttest.NewRequestMatcher(t, &transport.Request{
+						Caller:    "caller",
+						Service:   "service",
+						Encoding:  Encoding,
+						Procedure: "MyService::someMethod",
+						Body:      bytes.NewReader([]byte("irrelevant")),
+					}),
+				).Return(&transport.Response{
+					Body: ioutil.NopCloser(bytes.NewReader([]byte("irrelevant"))),
+				}, nil)
+			}
+
+			if tt.giveResponseEnvelope != nil {
+				proto.EXPECT().DecodeEnveloped(gomock.Any()).Return(*tt.giveResponseEnvelope, nil)
+			}
+
+			if tt.giveResponseBody != nil {
+				proto.EXPECT().Decode(gomock.Any(), wire.TStruct).Return(*tt.giveResponseBody, nil)
+			}
+
+			opts := tt.clientOptions
+			opts = append(opts, Protocol(proto))
+			c := New(Config{
+				Service: "MyService",
+				ClientConfig: clientconfig.MultiOutbound("caller", "service",
+					transport.Outbounds{
+						Unary: trans,
+					}),
+			}, opts...)
+
+			_, err := c.Call(ctx, tt.giveRequestBody)
+			if tt.wantErrorCode != codes.None {
+				if assert.Error(t, err, "%v: expected failure", tt.desc) {
+					assert.Equal(t, tt.wantErrorCode, errors.Code(err), err.Error())
+				}
+			} else {
+				assert.NoError(t, err, "%v: expected success", tt.desc)
+			}
+		})
 	}
 }
 
@@ -220,7 +219,7 @@ func TestClientOneway(t *testing.T) {
 		expectCall          bool           // whether outbound.Call is expected
 		wantRequestEnvelope *wire.Envelope // expect EncodeEnveloped(x)
 		wantRequestBody     *wire.Value    // expect Encode(x)
-		wantError           string         // whether an error is expected
+		wantErrorCode       codes.Code
 	}{
 		{
 			desc:            "happy case",
@@ -247,8 +246,7 @@ func TestClientOneway(t *testing.T) {
 			giveRequestBody: fakeEnveloper(wire.Reply),
 			clientOptions:   []ClientOption{Enveloped},
 
-			wantError: `failed to encode "thrift" request body for procedure ` +
-				`"MyService::someMethod" of service "MyService": unexpected envelope type: Reply`,
+			wantErrorCode: codes.InvalidArgument,
 		},
 	}
 
@@ -288,11 +286,11 @@ func TestClientOneway(t *testing.T) {
 		})
 
 		if tt.expectCall {
-			if tt.wantError != "" {
+			if tt.wantErrorCode != codes.None {
 				onewayOutbound.
 					EXPECT().
 					CallOneway(ctx, requestMatcher).
-					Return(nil, errors.New(tt.wantError))
+					Return(nil, errors.Internal())
 			} else {
 				onewayOutbound.
 					EXPECT().
@@ -312,9 +310,9 @@ func TestClientOneway(t *testing.T) {
 		}, opts...)
 
 		ack, err := c.CallOneway(ctx, tt.giveRequestBody)
-		if tt.wantError != "" {
+		if tt.wantErrorCode != codes.None {
 			if assert.Error(t, err, "%v: expected failure", tt.desc) {
-				assert.Contains(t, err.Error(), tt.wantError, "%v: error mismatch", tt.desc)
+				assert.Equal(t, errors.Code(err), tt.wantErrorCode)
 			}
 		} else {
 			assert.NoError(t, err, "%v: expected success", tt.desc)

@@ -18,14 +18,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package errors
+package codes
 
-import "fmt"
+import (
+	"testing"
 
-// ErrOutboundNotStarted represents a failure because Start() was not called
-// on an outbound or if Stop() was called.
-type ErrOutboundNotStarted string
+	"github.com/stretchr/testify/require"
+)
 
-func (e ErrOutboundNotStarted) Error() string {
-	return fmt.Sprintf("%s has not been started or was stopped", string(e))
+func TestMarshalText(t *testing.T) {
+	for code := range codeToString {
+		t.Run(code.String(), func(t *testing.T) {
+			text, err := code.MarshalText()
+			require.NoError(t, err)
+			var unmarshalledCode Code
+			require.NoError(t, (&unmarshalledCode).UnmarshalText(text))
+			require.Equal(t, code, unmarshalledCode)
+		})
+	}
+}
+
+func TestMarshalJSON(t *testing.T) {
+	for code := range codeToString {
+		t.Run(code.String(), func(t *testing.T) {
+			text, err := code.MarshalJSON()
+			require.NoError(t, err)
+			var unmarshalledCode Code
+			require.NoError(t, (&unmarshalledCode).UnmarshalJSON(text))
+			require.Equal(t, code, unmarshalledCode)
+		})
+	}
 }
