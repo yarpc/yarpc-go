@@ -4,28 +4,35 @@ Releases
 v1.9.0-dev (unreleased)
 -------------------
 
+-   Different encodings can now register handlers under the same procedure
+    name.
 -   http: Added support for configuring the HTTP transport using x/config.
 -   tchannel: Added support for configuring the TChannel transport using
     x/config.
+-   Moved the RoundRobin Peer List out of the /x/ package.
+-   Fixed race conditions in hostport.Peer.
+-   Buffers for inbound Thrift requests are now pooled to reduce allocations.
+
+Experimental:
+
 -   x/cherami: Renamed the `InboundConfig` and `OutboundConfig` structures to
     `InboundOptions` and `OutboundOptions`.
 -   x/cherami: Added support for configuring the Cherami transport using
     x/config.
 -   x/roundrobin: Added support for taking peer list updates before and after
     the peer list has been started.
--   Moved the RoundRobin Peer List out of the /x/ package.
--   Fix race conditions in hostport.Peer.
 -   x/config: Fix bug where embedded struct fields could not be interpolated.
 -   x/config: Fix bug where Chooser and Updater fields could not be interpolated.
--   Pool inbound thrift request buffers to reduce allocations.
--   x/grpc: Remove NewInbound and NewSingleOutbound in favor of
-    functions on Transport.
+-   x/grpc: Remove `NewInbound` and `NewSingleOutbound` in favor of functions
+    on `Transport`.
 -   x/grpc: Use `rpc-caller`, `rpc-service`, `rpc-encoding`, `rpc-shard-key`,
     `rpc-routing-key`, `rpc-routing-delegate` headers.
 -   x/protobuf: Handle JSON-encoded protobuf requests and return JSON-encoded
     protobuf responses if the `rpc-encoding` header is set to `json`. Protobuf
     clients may use JSON by supplying the `protobuf.UseJSON` option.
--   x/protobuf: Support instantiating clients with yarpc.InjectClients.
+-   x/protobuf: Support instantiating clients with `yarpc.InjectClients`.
+-   x/protobuf: Changed the encoding name from "protobuf" to "proto". This will
+    break existing users of this encoding.
 
 
 v1.8.0 (2017-05-01)
