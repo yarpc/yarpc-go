@@ -31,8 +31,8 @@ Experimental:
     protobuf responses if the `rpc-encoding` header is set to `json`. Protobuf
     clients may use JSON by supplying the `protobuf.UseJSON` option.
 -   x/protobuf: Support instantiating clients with `yarpc.InjectClients`.
--   x/protobuf: Changed the encoding name from "protobuf" to "proto". This will
-    break existing users of this encoding.
+-   x/protobuf: The wire representation of request metadata was changed. This
+    will break existing users of this encoding.
 
 
 v1.8.0 (2017-05-01)
