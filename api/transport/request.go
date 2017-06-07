@@ -89,13 +89,13 @@ type Encoding string
 func ValidateRequest(req *Request) error {
 	var missingParams []string
 	if req.Service == "" {
-		missingParams = append(missingParams, "service name")
+		missingParams = append(missingParams, "service")
 	}
 	if req.Procedure == "" {
 		missingParams = append(missingParams, "procedure")
 	}
 	if req.Caller == "" {
-		missingParams = append(missingParams, "caller name")
+		missingParams = append(missingParams, "caller")
 	}
 	if req.Encoding == "" {
 		missingParams = append(missingParams, "encoding")

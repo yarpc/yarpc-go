@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/yarpc"
 	encodingapi "go.uber.org/yarpc/api/encoding"
+	"go.uber.org/yarpc/api/errors"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
 	"go.uber.org/yarpc/internal/encoding"
@@ -164,11 +165,11 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 		if err := exc.FromWire(envelope.Value); err != nil {
 			return wire.Value{}, encoding.ResponseBodyDecodeError(treq, err)
 		}
-		return wire.Value{}, thriftException{
-			Service:   treq.Service,
-			Procedure: treq.Procedure,
-			Reason:    &exc,
-		}
+		return wire.Value{}, errors.Internal(
+			"service", treq.Service,
+			"procedure", treq.Procedure,
+			"reason", fmt.Sprintf("%v", &exc),
+		)
 	default:
 		return wire.Value{}, encoding.ResponseBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
@@ -235,16 +236,4 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 
 	treq.Body = &buffer
 	return &treq, proto, nil
-}
-
-type thriftException struct {
-	Service   string
-	Procedure string
-	Reason    *internal.TApplicationException
-}
-
-func (e thriftException) Error() string {
-	return fmt.Sprintf(
-		"thrift request to procedure %q of service %q encountered an internal failure: %v",
-		e.Procedure, e.Service, e.Reason)
 }

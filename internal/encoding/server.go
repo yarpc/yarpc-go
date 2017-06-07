@@ -22,101 +22,34 @@ package encoding
 
 import (
 	"fmt"
-	"strings"
+	"strconv"
 
+	"go.uber.org/yarpc/api/errors"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 )
-
-type serverEncodingError struct {
-	Encodings []transport.Encoding
-	Caller    string
-	Service   string
-	Procedure string
-	Reason    error
-
-	// These parameters control whether the error is for a request or a response,
-	// and whether it's for a header or body.
-
-	IsResponse bool
-	IsHeader   bool
-}
-
-func (e serverEncodingError) Error() string {
-	parts := []string{"failed to"}
-	if e.IsResponse {
-		switch len(e.Encodings) {
-		case 1:
-			parts = append(parts, fmt.Sprintf("encode %q response", string(e.Encodings[0])))
-		default:
-			parts = append(parts, fmt.Sprintf("encode %v response", e.Encodings))
-		}
-	} else {
-		switch len(e.Encodings) {
-		case 1:
-			parts = append(parts, fmt.Sprintf("decode %q request", string(e.Encodings[0])))
-		default:
-			parts = append(parts, fmt.Sprintf("decode %v request", e.Encodings))
-		}
-	}
-	if e.IsHeader {
-		parts = append(parts, "headers")
-	} else {
-		parts = append(parts, "body")
-	}
-	parts = append(parts,
-		fmt.Sprintf("for procedure %q of service %q from caller %q: %v",
-			e.Procedure, e.Service, e.Caller, e.Reason))
-	return strings.Join(parts, " ")
-}
-
-// AsHandlerError converts this error into a handler-level error.
-func (e serverEncodingError) AsHandlerError() errors.HandlerError {
-	if e.IsResponse {
-		return errors.HandlerUnexpectedError(e)
-	}
-	return errors.HandlerBadRequestError(e)
-}
-
-func newServerEncodingError(req *transport.Request, err error) serverEncodingError {
-	return serverEncodingError{
-		Encodings: []transport.Encoding{req.Encoding},
-		Caller:    req.Caller,
-		Service:   req.Service,
-		Procedure: req.Procedure,
-		Reason:    err,
-	}
-}
 
 // RequestBodyDecodeError builds an error that represents a failure to decode
 // the request body.
 func RequestBodyDecodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, err)
+	return newServerEncodingError(req, err, true, false)
 }
 
 // ResponseBodyEncodeError builds an error that represents a failure to encode
 // the response body.
 func ResponseBodyEncodeError(req *transport.Request, err error) error {
-	e := newServerEncodingError(req, err)
-	e.IsResponse = true
-	return e
+	return newServerEncodingError(req, err, false, false)
 }
 
 // RequestHeadersDecodeError builds an error that represents a failure to
 // decode the request headers.
 func RequestHeadersDecodeError(req *transport.Request, err error) error {
-	e := newServerEncodingError(req, err)
-	e.IsHeader = true
-	return e
+	return newServerEncodingError(req, err, true, true)
 }
 
 // ResponseHeadersEncodeError builds an error that represents a failure to
 // encode the response headers.
 func ResponseHeadersEncodeError(req *transport.Request, err error) error {
-	e := newServerEncodingError(req, err)
-	e.IsResponse = true
-	e.IsHeader = true
-	return e
+	return newServerEncodingError(req, err, false, true)
 }
 
 // Expect verifies that the given request has one of the given encodings
@@ -128,27 +61,17 @@ func Expect(req *transport.Request, want ...transport.Encoding) error {
 			return nil
 		}
 	}
-
-	return serverEncodingError{
-		Encodings: want,
-		Caller:    req.Caller,
-		Service:   req.Service,
-		Procedure: req.Procedure,
-		Reason:    encodingMismatchError{Want: want, Got: got},
-	}
+	return newServerEncodingError(req, fmt.Errorf("expected one of encodings %v but got %q", want, got), true, false)
 }
 
-// encodingMismatchError represenst a encoding mismatch
-type encodingMismatchError struct {
-	Want []transport.Encoding
-	Got  transport.Encoding
-}
-
-func (e encodingMismatchError) Error() string {
-	switch len(e.Want) {
-	case 1:
-		return fmt.Sprintf("expected encoding %q but got %q", e.Want[0], e.Got)
-	default:
-		return fmt.Sprintf("expected one of encodings %v but got %q", e.Want, e.Got)
-	}
+func newServerEncodingError(req *transport.Request, err error, isRequest bool, isHeaders bool) error {
+	return errors.InvalidArgument(
+		"encoding", string(req.Encoding),
+		"caller", req.Caller,
+		"service", req.Service,
+		"procedure", req.Procedure,
+		"is_request", strconv.FormatBool(isRequest),
+		"is_headers", strconv.FormatBool(isHeaders),
+		"error", err.Error(),
+	)
 }

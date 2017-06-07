@@ -20,49 +20,22 @@
 
 package errors
 
-// UnexpectedError is a server failure due to unhandled errors. This can be
-// caused if the remote server panics while processing the request or fails to
-// handle any other errors.
-type UnexpectedError interface {
-	error
-
-	unexpectedError()
-}
-
-type handlerUnexpectedError struct {
-	Reason error
-}
-
-var _ UnexpectedError = handlerUnexpectedError{}
-var _ HandlerError = handlerUnexpectedError{}
+import "go.uber.org/yarpc/api/errors"
 
 // HandlerUnexpectedError wraps the given error into an UnexpectedError.
 //
-// It represens a local failure while processing a request.
-func HandlerUnexpectedError(err error) HandlerError {
-	return handlerUnexpectedError{Reason: err}
+// It represents a local failure while processing a request.
+//
+// Deprecated: Use errors.Internal instead.
+func HandlerUnexpectedError(err error) error {
+	return errors.Internal("error", err.Error())
 }
-
-func (handlerUnexpectedError) handlerError()    {}
-func (handlerUnexpectedError) unexpectedError() {}
-
-func (e handlerUnexpectedError) Error() string {
-	return "UnexpectedError: " + e.Reason.Error()
-}
-
-type remoteUnexpectedError string
-
-var _ UnexpectedError = remoteUnexpectedError("")
 
 // RemoteUnexpectedError builds a new UnexpectedError with the given message.
 //
 // It represents an UnexpectedError from a remote service.
-func RemoteUnexpectedError(message string) UnexpectedError {
-	return remoteUnexpectedError(message)
-}
-
-func (remoteUnexpectedError) unexpectedError() {}
-
-func (e remoteUnexpectedError) Error() string {
-	return string(e)
+//
+// Deprecated: Use errors.Internal instead.
+func RemoteUnexpectedError(message string) error {
+	return errors.Internal("message", message)
 }

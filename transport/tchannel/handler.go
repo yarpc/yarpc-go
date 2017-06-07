@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"time"
 
+	apierrors "go.uber.org/yarpc/api/errors"
+	"go.uber.org/yarpc/api/errors/codes"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
@@ -151,7 +153,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		if _, ok := err.(errors.UnrecognizedProcedureError); !ok {
+		if apierrors.Code(err) != codes.Unimplemented {
 			return err
 		}
 		if tcall, ok := call.(tchannelCall); !ok {

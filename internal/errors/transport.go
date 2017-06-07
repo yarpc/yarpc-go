@@ -21,93 +21,22 @@
 package errors
 
 import (
-	"errors"
+	stderrors "errors"
 	"fmt"
+
+	"go.uber.org/yarpc/api/errors"
 )
 
-// HandlerError represents handler errors on the handler side.
-//
-// The general hierarchy we have is:
-//
-// 	BadRequestError                   HandlerError
-// 	 |                                        |
-// 	 +--------> handlerBadRequestError <------+
-// 	 |                                        |
-// 	 +--------> remoteBadRequestError         |
-// 	                                          |
-// 	UnexpectedError                           |
-// 	 |                                        |
-// 	 +--------> handlerUnexpectedError <------+
-// 	 |                                        |
-// 	 +--------> remoteUnexpectedError         |
-// 	                                          |
-// 	TimeoutError                              |
-// 	 |                                        |
-// 	 +--------> handlerTimeoutError <---------+
-// 	 |
-// 	 +--------> remoteTimeoutError
-//	 |
-// 	 +--------> clientTimeoutError
-//
-// Only the handler versions of the error types are HandlerErrors. If a handler
-// returns one of the remote or client version, they will be wrapped in a new
-// UnexpectedError.
-//
-// HandlerError represents error types that can be returned from a handler that
-// the Inbound implementation MUST handle. The inbound implementation can then
-// returns the remote version of the error to the user.
-//
-// Currently, this includes BadRequestError, UnexpectedError and TimeoutError.
-// Error types which know how to convert themselves into BadRequestError,
-// UnexpectedError or TimeoutError may provide a `AsHandlerError()
-// HandlerError` method.
-type HandlerError interface {
-	error
-
-	handlerError()
-}
-
-type asHandlerError interface {
-	AsHandlerError() HandlerError
-}
+// ErrNoRouter indicates that Start was called without first calling
+// SetRouter for an inbound transport.
+var ErrNoRouter = stderrors.New("no router configured for transport inbound")
 
 // AsHandlerError converts an error into a HandlerError, leaving it unchanged
 // if it is already one.
-func AsHandlerError(service, procedure string, err error) error {
-	if err == nil {
-		return err
-	}
-
-	switch e := err.(type) {
-	case HandlerError:
-		return e
-	case asHandlerError:
-		return e.AsHandlerError()
-	default:
-		return ProcedureFailedError{
-			Service:   service,
-			Procedure: procedure,
-			Reason:    err,
-		}.AsHandlerError()
-	}
-}
-
-// ProcedureFailedError is a failure to execute a procedure due to an
-// unexpected error.
-type ProcedureFailedError struct {
-	Service   string
-	Procedure string
-	Reason    error
-}
-
-func (e ProcedureFailedError) Error() string {
-	return fmt.Sprintf(`error for procedure %q of service %q: %v`,
-		e.Procedure, e.Service, e.Reason)
-}
-
-// AsHandlerError for ProcedureFailedError.
-func (e ProcedureFailedError) AsHandlerError() HandlerError {
-	return HandlerUnexpectedError(e)
+//
+// Deprecated.
+func AsHandlerError(service string, procedure string, err error) error {
+	return errors.WithKeyValues(err, "service", service, "procedure", procedure)
 }
 
 // UnsupportedTypeError is a failure to process a request because the RPC type
@@ -117,12 +46,6 @@ type UnsupportedTypeError struct {
 	Type      string
 }
 
-//TODO(apb): add tests for UnsupportedTypeError error
-
 func (e UnsupportedTypeError) Error() string {
 	return fmt.Sprintf(`unsupported RPC type %q for transport %q`, e.Type, e.Transport)
 }
-
-// ErrNoRouter indicates that Start was called without first calling
-// SetRouter for an inbound transport.
-var ErrNoRouter = errors.New("no router configured for transport inbound")
