@@ -15,11 +15,17 @@ v1.9.0-dev (unreleased)
     the peer list has been started.
 -   Moved the RoundRobin Peer List out of the /x/ package.
 -   Fix race conditions in hostport.Peer.
--   transport/x/grpc: Remove NewInbound and NewSingleOutbound in favor of
-    functions on Transport
 -   x/config: Fix bug where embedded struct fields could not be interpolated.
 -   x/config: Fix bug where Chooser and Updater fields could not be interpolated.
 -   Pool inbound thrift request buffers to reduce allocations.
+-   x/grpc: Remove NewInbound and NewSingleOutbound in favor of
+    functions on Transport.
+-   x/grpc: Use `rpc-caller`, `rpc-service`, `rpc-encoding`, `rpc-shard-key`,
+    `rpc-routing-key`, `rpc-routing-delegate` headers.
+-   x/protobuf: Handle JSON-encoded protobuf requests and return JSON-encoded
+    protobuf responses if the `rpc-encoding` header is set to `json`. Protobuf
+    clients may use JSON by supplying the `protobuf.UseJSON` option.
+-   x/protobuf: Support instantiating clients with yarpc.InjectClients.
 
 
 v1.8.0 (2017-05-01)
