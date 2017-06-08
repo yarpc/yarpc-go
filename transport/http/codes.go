@@ -46,6 +46,32 @@ var (
 		yarpc.CodeDataLoss:           500,
 		yarpc.CodeUnauthenticated:    401,
 	}
+
+	_httpStatusCodeToCodes = map[int][]yarpc.Code{
+		200: []yarpc.Code{yarpc.CodeOK},
+		400: []yarpc.Code{
+			yarpc.CodeInvalidArgument,
+			yarpc.CodeFailedPrecondition,
+			yarpc.CodeOutOfRange,
+		},
+		401: []yarpc.Code{yarpc.CodeUnauthenticated},
+		403: []yarpc.Code{yarpc.CodePermissionDenied},
+		404: []yarpc.Code{yarpc.CodeNotFound},
+		409: []yarpc.Code{
+			yarpc.CodeAborted,
+			yarpc.CodeAlreadyExists,
+		},
+		429: []yarpc.Code{yarpc.CodeResourceExhausted},
+		499: []yarpc.Code{yarpc.CodeCancelled},
+		500: []yarpc.Code{
+			yarpc.CodeUnknown,
+			yarpc.CodeInternal,
+			yarpc.CodeDataLoss,
+		},
+		501: []yarpc.Code{yarpc.CodeUnimplemented},
+		503: []yarpc.Code{yarpc.CodeUnavailable},
+		504: []yarpc.Code{yarpc.CodeDeadlineExceeded},
+	}
 )
 
 // CodeToHTTPStatusCode returns the HTTP status code for the given Code.
@@ -55,4 +81,20 @@ func CodeToHTTPStatusCode(code yarpc.Code) (int, error) {
 		return 0, fmt.Errorf("unknown code: %v", code)
 	}
 	return statusCode, nil
+}
+
+// TODO: Is there any use to this? The original thinking was that it would be nice
+// to have a function that returns the most "general" yarpc.Code for the given HTTP
+// status code, but this doesn't really work in practice.
+
+// HTTPStatusCodeToCodes returns the Codes that correspond to the given HTTP status code,
+// or nil if no Codes correspond to the given HTTP status code.
+func HTTPStatusCodeToCodes(httpStatusCode int) []yarpc.Code {
+	codes, ok := _httpStatusCodeToCodes[httpStatusCode]
+	if !ok {
+		return nil
+	}
+	c := make([]yarpc.Code, len(codes))
+	copy(c, codes)
+	return c
 }
