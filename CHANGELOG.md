@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.9.0-dev (unreleased)
+v1.9.0 (2017-06-08)
 -------------------
 
 -   Different encodings can now register handlers under the same procedure
