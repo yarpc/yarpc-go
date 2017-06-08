@@ -215,7 +215,7 @@ func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
 	if rs, ok := d.outbounds[outboundKey]; ok {
 		return clientconfig.MultiOutbound(d.name, rs.ServiceName, rs)
 	}
-	panic(noOutboundForOutboundKey{OutboundKey: outboundKey})
+	panic(fmt.Sprintf("no configured outbound transport for outbound key %q", outboundKey))
 }
 
 // InboundMiddleware returns the middleware applied to all inbound handlers.
