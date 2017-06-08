@@ -36,6 +36,48 @@ func IsYARPCError(err error) bool {
 	return ok
 }
 
+// ErrorCode returns the Code for the given error, or CodeOK if the given
+// error is not a YARPC error.
+//
+// While a YARPC error will never have CodeOK as an error code, this should not be
+// used to test if an error is a YARPC error, use IsYARPCError instead.
+func ErrorCode(err error) Code {
+	if err == nil {
+		return CodeOK
+	}
+	yarpcError, ok := err.(*yarpcError)
+	if !ok {
+		return CodeOK
+	}
+	return yarpcError.Code
+}
+
+// ErrorName returns the name for the given error, or "" if the given
+// error is not a YARPC error created with NamedErrorf that has a non-empty name.
+func ErrorName(err error) string {
+	if err == nil {
+		return ""
+	}
+	yarpcError, ok := err.(*yarpcError)
+	if !ok {
+		return ""
+	}
+	return yarpcError.Name
+}
+
+// ErrorMessage returns the message for the given error, or "" if the given
+// error is not a YARPC error or the YARPC error had no message.
+func ErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	yarpcError, ok := err.(*yarpcError)
+	if !ok {
+		return ""
+	}
+	return yarpcError.Message
+}
+
 // NamedErrorf returns a new yarpc error with code CodeUnknown and the given name.
 // This should be used for user-defined errors.
 func NamedErrorf(name string, format string, args ...interface{}) error {

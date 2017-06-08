@@ -49,27 +49,78 @@ var (
 )
 
 func TestErrorsString(t *testing.T) {
-	for code, errorConstructor := range _codeToErrorConstructor {
-		t.Run(code.String(), func(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
 			yarpcError, ok := errorConstructor("hello %d", 1).(*yarpcError)
 			require.True(t, ok)
 			require.Equal(t, fmt.Sprintf("code:%s message:hello 1", code.String()), yarpcError.Error())
-		})
-	}
-	t.Run("Named", func(t *testing.T) {
-		yarpcError, ok := NamedErrorf("foo", "hello %d", 1).(*yarpcError)
-		require.True(t, ok)
-		require.Equal(t, "code:unknown name:foo message:hello 1", yarpcError.Error())
-	})
+		},
+		func(t *testing.T) {
+			yarpcError, ok := NamedErrorf("foo", "hello %d", 1).(*yarpcError)
+			require.True(t, ok)
+			require.Equal(t, "code:unknown name:foo message:hello 1", yarpcError.Error())
+		},
+	)
 }
 
 func TestIsYARPCError(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.True(t, IsYARPCError(errorConstructor("")))
+		},
+		func(t *testing.T) {
+			require.True(t, IsYARPCError(NamedErrorf("", "")))
+		},
+	)
+}
+
+func TestErrorCode(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.Equal(t, code, ErrorCode(errorConstructor("")))
+		},
+		func(t *testing.T) {
+			require.Equal(t, CodeUnknown, ErrorCode(NamedErrorf("", "")))
+		},
+	)
+}
+
+func TestErrorName(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.Empty(t, ErrorName(errorConstructor("")))
+		},
+		func(t *testing.T) {
+			require.Equal(t, "foo", ErrorName(NamedErrorf("foo", "")))
+		},
+	)
+}
+
+func TestErrorMessage(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.Equal(t, "hello 1", ErrorMessage(errorConstructor("hello %d", 1)))
+		},
+		func(t *testing.T) {
+			require.Equal(t, "hello 1", ErrorMessage(NamedErrorf("foo", "hello %d", 1)))
+		},
+	)
+}
+
+func testAllErrorConstructors(
+	t *testing.T,
+	errorConstructorFunc func(*testing.T, Code, func(string, ...interface{}) error),
+	namedFunc func(*testing.T),
+) {
 	for code, errorConstructor := range _codeToErrorConstructor {
 		t.Run(code.String(), func(t *testing.T) {
-			require.True(t, IsYARPCError(errorConstructor("")))
+			errorConstructorFunc(t, code, errorConstructor)
 		})
 	}
-	t.Run("Named", func(t *testing.T) {
-		require.True(t, IsYARPCError(NamedErrorf("", "")))
-	})
+	t.Run("Named", namedFunc)
 }
