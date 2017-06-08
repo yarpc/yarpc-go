@@ -62,3 +62,14 @@ func TestErrorsString(t *testing.T) {
 		require.Equal(t, "code:unknown name:foo message:hello 1", yarpcError.Error())
 	})
 }
+
+func TestIsYARPCError(t *testing.T) {
+	for code, errorConstructor := range _codeToErrorConstructor {
+		t.Run(code.String(), func(t *testing.T) {
+			require.True(t, IsYARPCError(errorConstructor("")))
+		})
+	}
+	t.Run("Named", func(t *testing.T) {
+		require.True(t, IsYARPCError(NamedErrorf("", "")))
+	})
+}

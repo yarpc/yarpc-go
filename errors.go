@@ -27,6 +27,15 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
+// IsYARPCError returns true if the given error is a non-nil YARPC error.
+func IsYARPCError(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(*yarpcError)
+	return ok
+}
+
 // NamedErrorf returns a new yarpc error with code CodeUnknown and the given name.
 // This should be used for user-defined errors.
 func NamedErrorf(name string, format string, args ...interface{}) error {
