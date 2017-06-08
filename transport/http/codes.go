@@ -76,8 +76,9 @@ var (
 	}
 )
 
-// CodeToHTTPStatusCode returns the HTTP status code for the given Code.
-func CodeToHTTPStatusCode(code yarpc.Code) (int, error) {
+// codeToHTTPStatusCode returns the HTTP status code for the given Code,
+// or error if the Code is unknown.
+func codeToHTTPStatusCode(code yarpc.Code) (int, error) {
 	statusCode, ok := _codeToHTTPStatusCode[code]
 	if !ok {
 		return 0, fmt.Errorf("unknown code: %v", code)
@@ -89,9 +90,9 @@ func CodeToHTTPStatusCode(code yarpc.Code) (int, error) {
 // to have a function that returns the most "general" yarpc.Code for the given HTTP
 // status code, but this doesn't really work in practice.
 
-// HTTPStatusCodeToCodes returns the Codes that correspond to the given HTTP status code,
-// or nil if no Codes correspond to the given HTTP status code.
-func HTTPStatusCodeToCodes(httpStatusCode int) []yarpc.Code {
+// httpStatusCodeToCodes returns the Codes that correspond to the given HTTP status
+// code, or nil if no Codes correspond to the given HTTP status code.
+func httpStatusCodeToCodes(httpStatusCode int) []yarpc.Code {
 	codes, ok := _httpStatusCodeToCodes[httpStatusCode]
 	if !ok {
 		return nil
