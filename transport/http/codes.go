@@ -26,6 +26,8 @@ import (
 	"go.uber.org/yarpc"
 )
 
+// TODO: Should we expose the maps as public variables to document the mappings?
+
 var (
 	_codeToHTTPStatusCode = map[yarpc.Code]int{
 		yarpc.CodeOK:                 200,

@@ -26,6 +26,9 @@ import (
 	"strings"
 )
 
+// TODO: Should we note the HTTP/Google API mapping in the individal Code godoc comments,
+// or just have these noted in each transport package?
+
 const (
 	// CodeOK means no error; returned on success
 	//
