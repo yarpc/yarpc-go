@@ -50,29 +50,29 @@ var (
 	}
 
 	_httpStatusCodeToCodes = map[int][]yarpc.Code{
-		200: []yarpc.Code{yarpc.CodeOK},
-		400: []yarpc.Code{
+		200: {yarpc.CodeOK},
+		400: {
 			yarpc.CodeInvalidArgument,
 			yarpc.CodeFailedPrecondition,
 			yarpc.CodeOutOfRange,
 		},
-		401: []yarpc.Code{yarpc.CodeUnauthenticated},
-		403: []yarpc.Code{yarpc.CodePermissionDenied},
-		404: []yarpc.Code{yarpc.CodeNotFound},
-		409: []yarpc.Code{
+		401: {yarpc.CodeUnauthenticated},
+		403: {yarpc.CodePermissionDenied},
+		404: {yarpc.CodeNotFound},
+		409: {
 			yarpc.CodeAborted,
 			yarpc.CodeAlreadyExists,
 		},
-		429: []yarpc.Code{yarpc.CodeResourceExhausted},
-		499: []yarpc.Code{yarpc.CodeCancelled},
-		500: []yarpc.Code{
+		429: {yarpc.CodeResourceExhausted},
+		499: {yarpc.CodeCancelled},
+		500: {
 			yarpc.CodeUnknown,
 			yarpc.CodeInternal,
 			yarpc.CodeDataLoss,
 		},
-		501: []yarpc.Code{yarpc.CodeUnimplemented},
-		503: []yarpc.Code{yarpc.CodeUnavailable},
-		504: []yarpc.Code{yarpc.CodeDeadlineExceeded},
+		501: {yarpc.CodeUnimplemented},
+		503: {yarpc.CodeUnavailable},
+		504: {yarpc.CodeDeadlineExceeded},
 	}
 )
 
