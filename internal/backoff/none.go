@@ -20,16 +20,18 @@
 
 package backoff
 
-import (
-	"testing"
-	"time"
+import "go.uber.org/yarpc/api/backoff"
 
-	"github.com/stretchr/testify/assert"
-)
+// The None backoff strategy could be implemented as a trivial singleton, but
+// for brevity, is just a degenerate case of the exponential backoff.
 
-func TestShort(t *testing.T) {
-	short := Short.Backoff()
-	assert.Equal(t, time.Duration(0), short.Duration(0))
-	assert.Equal(t, time.Duration(0), short.Duration(1))
-	assert.Equal(t, time.Duration(0), short.Duration(2))
+var noneOpts = exponentialOptions{
+	newRand: newRand,
+}
+
+// None is a shorted backoff strategy that will always produce a 0ms duration.
+// This strategy is intended to minimize arbitrary delays during tests or
+// maximize load on a benchmark.
+var None backoff.Strategy = &ExponentialStrategy{
+	opts: noneOpts,
 }

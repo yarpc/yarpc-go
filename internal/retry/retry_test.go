@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/errors"
 	iioutil "go.uber.org/yarpc/internal/ioutil"
@@ -35,7 +36,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/backoff"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -51,6 +51,7 @@ func TestMiddleware(t *testing.T) {
 
 		events []*OutboundEvent
 
+		wantTimeLimit        time.Duration
 		wantError            string
 		wantApplicationError bool
 		wantBody             string
@@ -330,7 +331,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Millisecond * 100,
 			retries:      1,
 			retrytimeout: time.Millisecond * 50,
-			retryBackoff: backoff.FixedBackoff(time.Millisecond * 25).Backoff,
+			retryBackoff: newFixedBackoff(time.Millisecond * 25),
 			events: []*OutboundEvent{
 				{
 					WantTimeout:    time.Millisecond * 50,
@@ -360,7 +361,7 @@ func TestMiddleware(t *testing.T) {
 			reqTimeout:   time.Millisecond * 400,
 			retries:      2,
 			retrytimeout: time.Millisecond * 100,
-			retryBackoff: newSequentialBackoff(time.Millisecond * 50).Backoff,
+			retryBackoff: newSequentialBackoff(time.Millisecond * 50),
 			events: []*OutboundEvent{
 				{
 					WantTimeout:       time.Millisecond * 100,
@@ -391,6 +392,31 @@ func TestMiddleware(t *testing.T) {
 			},
 			wantBody: "respbody",
 		},
+		{
+			msg: "backoff context will timeout",
+			request: &transport.Request{
+				Service:   "serv",
+				Procedure: "proc",
+				Body:      bytes.NewBufferString("body"),
+			},
+			reqTimeout:   time.Millisecond * 60,
+			retries:      2,
+			retrytimeout: time.Millisecond * 30,
+			retryBackoff: newFixedBackoff(time.Millisecond * 5000),
+			events: []*OutboundEvent{
+				{
+					WantTimeout:       time.Millisecond * 30,
+					WantTimeoutBounds: time.Millisecond * 10,
+					WantService:       "serv",
+					WantProcedure:     "proc",
+					WantBody:          "body",
+					WaitForTimeout:    true,
+					GiveError:         errors.RemoteUnexpectedError("unexpected error 2"),
+				},
+			},
+			wantTimeLimit: time.Millisecond * 40,
+			wantError:     errors.RemoteUnexpectedError("unexpected error 2").Error(),
+		},
 	}
 
 	for _, tt := range tests {
@@ -401,6 +427,10 @@ func TestMiddleware(t *testing.T) {
 			trans := yarpctest.NewFakeTransport()
 			out := trans.NewOutbound(yarpctest.NewFakePeerList(), yarpctest.OutboundCallOverride(callable.Call))
 			out.Start()
+
+			if tt.wantTimeLimit == 0 {
+				tt.wantTimeLimit = tt.reqTimeout + time.Millisecond*10
+			}
 
 			retry := NewUnaryMiddleware(
 				Retries(tt.retries),
@@ -414,7 +444,15 @@ func TestMiddleware(t *testing.T) {
 				defer cancel()
 				ctx = newCtx
 			}
+
+			start := time.Now()
 			resp, err := retry.Call(ctx, tt.request, out)
+			elapsed := time.Now().Sub(start)
+
+			if tt.reqTimeout > 0 {
+				assert.True(t, tt.wantTimeLimit > elapsed, "execution took to long, wanted %s, took %s", tt.wantTimeLimit, elapsed)
+			}
+
 			if tt.wantError != "" {
 				assert.EqualError(t, err, tt.wantError)
 				require.NotNil(t, resp)
@@ -440,6 +478,27 @@ type sequentialBackoff struct {
 	base time.Duration
 }
 
-func (s *sequentialBackoff) Backoff(attempts uint) time.Duration {
+func (s *sequentialBackoff) Backoff() backoff.Backoff {
+	return s
+}
+
+func (s *sequentialBackoff) Duration(attempts uint) time.Duration {
 	return time.Duration(s.base.Nanoseconds() * int64(attempts+1))
+}
+
+// Fixed backoff will always return the same backoff.
+func newFixedBackoff(boff time.Duration) *fixedBackoff {
+	return &fixedBackoff{boff}
+}
+
+type fixedBackoff struct {
+	boff time.Duration
+}
+
+func (f *fixedBackoff) Backoff() backoff.Backoff {
+	return f
+}
+
+func (f *fixedBackoff) Duration(_ uint) time.Duration {
+	return f.boff
 }
