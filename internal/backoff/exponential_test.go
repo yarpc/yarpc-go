@@ -26,8 +26,29 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+func TestInvalidFirst(t *testing.T) {
+	_, err := NewExponential(
+		FirstBackoff(time.Duration(0)),
+	)
+	assert.Equal(t, err.Error(), "invalid first duration for exponential backoff, need greater than zero")
+}
+
+func TestInvalidMax(t *testing.T) {
+	_, err := NewExponential(
+		MaxBackoff(-1 * time.Second),
+	)
+	assert.Equal(t, err.Error(), "invalid max for exponential backoff, need greater than or equal to zero")
+}
+
+func TestInvalidFirstAndMax(t *testing.T) {
+	_, err := NewExponential(
+		FirstBackoff(time.Duration(0)),
+		MaxBackoff(-1*time.Second),
+	)
+	assert.Equal(t, err.Error(), "invalid first duration for exponential backoff, need greater than zero; invalid max for exponential backoff, need greater than or equal to zero")
+}
 
 func TestExponential(t *testing.T) {
 	type backoffAttempt struct {
@@ -39,57 +60,16 @@ func TestExponential(t *testing.T) {
 	type testStruct struct {
 		msg string
 
-		giveBase time.Duration
-		giveMin  time.Duration
-		giveMax  time.Duration
+		giveFirst time.Duration
+		giveMax   time.Duration
 
 		attempts []backoffAttempt
-
-		wantErrors []string
 	}
 	tests := []testStruct{
 		{
-			msg:      "invalid base",
-			giveBase: time.Duration(0),
-			giveMax:  time.Duration(0),
-			giveMin:  time.Duration(0),
-			wantErrors: []string{
-				"invalid base for exponential backoff, need greater than zero",
-			},
-		},
-		{
-			msg:      "invalid min",
-			giveBase: time.Duration(1000),
-			giveMax:  time.Duration(0),
-			giveMin:  time.Duration(-100),
-			wantErrors: []string{
-				"invalid min for exponential backoff, need greater than or equal to zero",
-			},
-		},
-		{
-			msg:      "invalid max & min",
-			giveBase: time.Duration(1000),
-			giveMax:  time.Duration(-1),
-			giveMin:  time.Duration(-100),
-			wantErrors: []string{
-				"invalid min for exponential backoff, need greater than or equal to zero",
-				"invalid max for exponential backoff, need greater than or equal to zero",
-			},
-		},
-		{
-			msg:      "invalid with max less than min",
-			giveBase: time.Duration(1000),
-			giveMax:  time.Millisecond,
-			giveMin:  time.Second,
-			wantErrors: []string{
-				"exponential max value must be greater than min value",
-			},
-		},
-		{
-			msg:      "valid durations",
-			giveBase: time.Nanosecond,
-			giveMax:  time.Nanosecond * 100,
-			giveMin:  time.Duration(0),
+			msg:       "valid durations",
+			giveFirst: time.Nanosecond,
+			giveMax:   time.Nanosecond * 100,
 			attempts: []backoffAttempt{
 				{
 					msg:            "zero attempt max backoff",
@@ -183,78 +163,21 @@ func TestExponential(t *testing.T) {
 				},
 			},
 		},
-		{
-			msg:      "valid duration with min",
-			giveBase: time.Nanosecond,
-			giveMax:  time.Nanosecond * 100,
-			giveMin:  time.Nanosecond * 10,
-			attempts: []backoffAttempt{
-				{
-					msg:            "zero attempt max backoff",
-					giveAttempt:    0,
-					giveRandResult: int64(1 << 0),
-					wantBackoff:    time.Nanosecond * 11,
-				},
-				{
-					msg:            "zero attempt min backoff",
-					giveAttempt:    0,
-					giveRandResult: 0,
-					wantBackoff:    time.Nanosecond * 10,
-				},
-				{
-					msg:            "one attempt max backoff",
-					giveAttempt:    1,
-					giveRandResult: int64(1 << 1),
-					wantBackoff:    time.Nanosecond * 12,
-				},
-				{
-					msg:            "two attempts max backoff",
-					giveAttempt:    2,
-					giveRandResult: int64(1 << 2),
-					wantBackoff:    time.Nanosecond * 14,
-				},
-				{
-					msg:            "three attempts max backoff",
-					giveAttempt:    3,
-					giveRandResult: int64(1 << 3),
-					wantBackoff:    time.Nanosecond * 18,
-				},
-				{
-					msg:            "four attempts max backoff",
-					giveAttempt:    4,
-					giveRandResult: int64(1 << 4),
-					wantBackoff:    time.Nanosecond * 26,
-				},
-				{
-					msg:            "four attempts min backoff (with wrapped rand value)",
-					giveAttempt:    4,
-					giveRandResult: int64(1<<4) + 1,
-					wantBackoff:    time.Nanosecond * 10,
-				},
-			},
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			randSrc := &mutableRandSrc{val: 0}
-			exp, err := NewExponential(
-				BaseJump(tt.giveBase),
-				MinBackoff(tt.giveMin),
+			strategy, err := NewExponential(
+				FirstBackoff(tt.giveFirst),
 				MaxBackoff(tt.giveMax),
-				randGenerator(rand.New(randSrc)),
+				randGenerator(func() *rand.Rand { return rand.New(randSrc) }),
 			)
-			if err != nil {
-				assert.True(t, len(tt.wantErrors) > 0, "got unexpected error: %s", err.Error())
-				for _, wantErr := range tt.wantErrors {
-					assert.Contains(t, err.Error(), wantErr)
-				}
-				return
-			}
-			require.True(t, len(tt.wantErrors) == 0, "didn't get expected error")
+			assert.NoError(t, err)
+			backoff := strategy.Backoff()
 			for _, attempt := range tt.attempts {
 				randSrc.val = attempt.giveRandResult
-				assert.Equal(t, attempt.wantBackoff, exp.Duration(attempt.giveAttempt), "backoff for backoffAttempt %q did not match", attempt.msg)
+				assert.Equal(t, attempt.wantBackoff, backoff.Duration(attempt.giveAttempt), "backoff for backoffAttempt %q did not match", attempt.msg)
 			}
 		})
 	}
