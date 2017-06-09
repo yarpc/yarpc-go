@@ -78,7 +78,7 @@ func Retries(retries uint) PolicyOption {
 }
 
 // PerRequestTimeout is the Timeout we will enforce per request (if this
-// is less than the context deadline, we'll use that instead).
+// is greater than the context deadline, we'll use that instead).
 //
 // Defaults to 1 second.
 func PerRequestTimeout(timeout time.Duration) PolicyOption {
