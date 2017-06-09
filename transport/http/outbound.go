@@ -248,6 +248,11 @@ func (o *Outbound) callWithPeer(
 	}
 
 	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+
+	if thriftEnvelope, ok := treq.TransportHeaders["Thrift-Envelope"]; ok {
+		req.Header.Set("RPC-Thrift-Envelope", thriftEnvelope)
+	}
+
 	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
 	if err != nil {
 		return nil, err

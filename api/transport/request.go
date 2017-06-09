@@ -62,6 +62,10 @@ type Request struct {
 
 	// Request payload.
 	Body io.Reader
+
+	// TransportHeaders are other transport headers that the transport may expose
+	// to the encodings.
+	TransportHeaders map[string]string
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.

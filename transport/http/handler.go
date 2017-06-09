@@ -75,13 +75,21 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
+	var transportHeaders map[string]string
+	if thriftEnvelope := req.Header.Get("RPC-Thrift-Envelope"); len(thriftEnvelope) > 0 {
+		transportHeaders = map[string]string{
+			"Thrift-Envelope": thriftEnvelope,
+		}
+	}
+
 	treq := &transport.Request{
-		Caller:    popHeader(req.Header, CallerHeader),
-		Service:   popHeader(req.Header, ServiceHeader),
-		Procedure: popHeader(req.Header, ProcedureHeader),
-		Encoding:  transport.Encoding(popHeader(req.Header, EncodingHeader)),
-		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
-		Body:      req.Body,
+		Caller:           popHeader(req.Header, CallerHeader),
+		Service:          popHeader(req.Header, ServiceHeader),
+		Procedure:        popHeader(req.Header, ProcedureHeader),
+		Encoding:         transport.Encoding(popHeader(req.Header, EncodingHeader)),
+		TransportHeaders: transportHeaders,
+		Headers:          applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
+		Body:             req.Body,
 	}
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err
