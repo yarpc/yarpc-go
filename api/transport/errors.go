@@ -20,46 +20,57 @@
 
 package transport
 
-import "go.uber.org/yarpc/internal/errors"
+import (
+	"go.uber.org/yarpc/api/errors"
+	"go.uber.org/yarpc/api/errors/codes"
+)
 
 // InboundBadRequestError builds an error which indicates that an inbound
 // cannot process a request because it is a bad request.
 //
 // IsBadRequestError returns true for these errors.
+//
+// Deprecated: Use errors.InvalidArgument instead.
 func InboundBadRequestError(err error) error {
-	return errors.HandlerBadRequestError(err)
+	return errors.InvalidArgument("error", err.Error())
 }
 
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.
+//
+// Deprecated: Use errors.Code(err) instead.
 func IsBadRequestError(err error) bool {
-	_, ok := err.(errors.BadRequestError)
-	return ok
+	return errors.Code(err) == codes.InvalidArgument
 }
 
 // IsUnexpectedError returns true if the server panicked or failed to process
 // the request with an unhandled error.
+//
+// Deprecated: Use errors.Code(err) instead.
 func IsUnexpectedError(err error) bool {
-	_, ok := err.(errors.UnexpectedError)
-	return ok
+	return errors.Code(err) == codes.Internal
 }
 
 // IsTimeoutError return true if the given error is a TimeoutError.
+//
+// Deprecated: Use errors.Code(err) instead.
 func IsTimeoutError(err error) bool {
-	_, ok := err.(errors.TimeoutError)
-	return ok
+	return errors.Code(err) == codes.DeadlineExceeded
 }
 
 // UnrecognizedProcedureError returns an error for the given request,
 // such that IsUnrecognizedProcedureError can distinguish it from other errors
 // coming out of router.Choose.
+//
+// Deprecated: Use errors.Unimplemented instead.
 func UnrecognizedProcedureError(req *Request) error {
-	return errors.RouterUnrecognizedProcedureError(req.Service, req.Procedure)
+	return errors.Unimplemented("service", req.Service, "procedure", req.Procedure)
 }
 
 // IsUnrecognizedProcedureError returns true for errors returned by
 // Router.Choose if the router cannot find a handler for the request.
+//
+// Deprecated: Use IsUnrecognizedProcedureError instead.
 func IsUnrecognizedProcedureError(err error) bool {
-	_, ok := err.(errors.UnrecognizedProcedureError)
-	return ok
+	return errors.Code(err) == codes.Unimplemented
 }

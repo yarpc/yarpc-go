@@ -31,12 +31,10 @@ func TestBadRequestError(t *testing.T) {
 	err := errors.New("derp")
 	err = InboundBadRequestError(err)
 	assert.True(t, IsBadRequestError(err))
-	assert.Equal(t, "BadRequest: derp", err.Error())
 }
 
 func TestUnrecognizedProcedureError(t *testing.T) {
 	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
 	assert.True(t, IsUnrecognizedProcedureError(err))
 	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
-	assert.Equal(t, `unrecognized procedure "nyuck" for service "curly"`, err.Error())
 }
