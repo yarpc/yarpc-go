@@ -23,56 +23,56 @@ package grpc
 import (
 	"fmt"
 
-	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/yarpcerrors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	_codeToGRPCCode = map[yarpc.Code]codes.Code{
-		yarpc.CodeOK:                 codes.OK,
-		yarpc.CodeCancelled:          codes.Canceled,
-		yarpc.CodeUnknown:            codes.Unknown,
-		yarpc.CodeInvalidArgument:    codes.InvalidArgument,
-		yarpc.CodeDeadlineExceeded:   codes.DeadlineExceeded,
-		yarpc.CodeNotFound:           codes.NotFound,
-		yarpc.CodeAlreadyExists:      codes.AlreadyExists,
-		yarpc.CodePermissionDenied:   codes.PermissionDenied,
-		yarpc.CodeResourceExhausted:  codes.ResourceExhausted,
-		yarpc.CodeFailedPrecondition: codes.FailedPrecondition,
-		yarpc.CodeAborted:            codes.Aborted,
-		yarpc.CodeOutOfRange:         codes.OutOfRange,
-		yarpc.CodeUnimplemented:      codes.Unimplemented,
-		yarpc.CodeInternal:           codes.Internal,
-		yarpc.CodeUnavailable:        codes.Unavailable,
-		yarpc.CodeDataLoss:           codes.DataLoss,
-		yarpc.CodeUnauthenticated:    codes.Unauthenticated,
+	_codeToGRPCCode = map[yarpcerrors.Code]codes.Code{
+		yarpcerrors.CodeOK:                 codes.OK,
+		yarpcerrors.CodeCancelled:          codes.Canceled,
+		yarpcerrors.CodeUnknown:            codes.Unknown,
+		yarpcerrors.CodeInvalidArgument:    codes.InvalidArgument,
+		yarpcerrors.CodeDeadlineExceeded:   codes.DeadlineExceeded,
+		yarpcerrors.CodeNotFound:           codes.NotFound,
+		yarpcerrors.CodeAlreadyExists:      codes.AlreadyExists,
+		yarpcerrors.CodePermissionDenied:   codes.PermissionDenied,
+		yarpcerrors.CodeResourceExhausted:  codes.ResourceExhausted,
+		yarpcerrors.CodeFailedPrecondition: codes.FailedPrecondition,
+		yarpcerrors.CodeAborted:            codes.Aborted,
+		yarpcerrors.CodeOutOfRange:         codes.OutOfRange,
+		yarpcerrors.CodeUnimplemented:      codes.Unimplemented,
+		yarpcerrors.CodeInternal:           codes.Internal,
+		yarpcerrors.CodeUnavailable:        codes.Unavailable,
+		yarpcerrors.CodeDataLoss:           codes.DataLoss,
+		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
 	}
 
-	_grpcCodeToCode = map[codes.Code]yarpc.Code{
-		codes.OK:                 yarpc.CodeOK,
-		codes.Canceled:           yarpc.CodeCancelled,
-		codes.Unknown:            yarpc.CodeUnknown,
-		codes.InvalidArgument:    yarpc.CodeInvalidArgument,
-		codes.DeadlineExceeded:   yarpc.CodeDeadlineExceeded,
-		codes.NotFound:           yarpc.CodeNotFound,
-		codes.AlreadyExists:      yarpc.CodeAlreadyExists,
-		codes.PermissionDenied:   yarpc.CodePermissionDenied,
-		codes.ResourceExhausted:  yarpc.CodeResourceExhausted,
-		codes.FailedPrecondition: yarpc.CodeFailedPrecondition,
-		codes.Aborted:            yarpc.CodeAborted,
-		codes.OutOfRange:         yarpc.CodeOutOfRange,
-		codes.Unimplemented:      yarpc.CodeUnimplemented,
-		codes.Internal:           yarpc.CodeInternal,
-		codes.Unavailable:        yarpc.CodeUnavailable,
-		codes.DataLoss:           yarpc.CodeDataLoss,
-		codes.Unauthenticated:    yarpc.CodeUnauthenticated,
+	_grpcCodeToCode = map[codes.Code]yarpcerrors.Code{
+		codes.OK:                 yarpcerrors.CodeOK,
+		codes.Canceled:           yarpcerrors.CodeCancelled,
+		codes.Unknown:            yarpcerrors.CodeUnknown,
+		codes.InvalidArgument:    yarpcerrors.CodeInvalidArgument,
+		codes.DeadlineExceeded:   yarpcerrors.CodeDeadlineExceeded,
+		codes.NotFound:           yarpcerrors.CodeNotFound,
+		codes.AlreadyExists:      yarpcerrors.CodeAlreadyExists,
+		codes.PermissionDenied:   yarpcerrors.CodePermissionDenied,
+		codes.ResourceExhausted:  yarpcerrors.CodeResourceExhausted,
+		codes.FailedPrecondition: yarpcerrors.CodeFailedPrecondition,
+		codes.Aborted:            yarpcerrors.CodeAborted,
+		codes.OutOfRange:         yarpcerrors.CodeOutOfRange,
+		codes.Unimplemented:      yarpcerrors.CodeUnimplemented,
+		codes.Internal:           yarpcerrors.CodeInternal,
+		codes.Unavailable:        yarpcerrors.CodeUnavailable,
+		codes.DataLoss:           yarpcerrors.CodeDataLoss,
+		codes.Unauthenticated:    yarpcerrors.CodeUnauthenticated,
 	}
 )
 
 // codeToGRPCCode returns the gRPC Code for the given Code,
 // or error if the Code is unknown.
-func codeToGRPCCode(code yarpc.Code) (codes.Code, error) {
+func codeToGRPCCode(code yarpcerrors.Code) (codes.Code, error) {
 	grpcCode, ok := _codeToGRPCCode[code]
 	if !ok {
 		return 0, fmt.Errorf("unknown code: %v", code)
@@ -82,7 +82,7 @@ func codeToGRPCCode(code yarpc.Code) (codes.Code, error) {
 
 // grpcCodeToCode returns the Code for the given gRPC Code,
 // or error if the gRPC Code is unknown.
-func grpcCodeToCode(grpcCode codes.Code) (yarpc.Code, error) {
+func grpcCodeToCode(grpcCode codes.Code) (yarpcerrors.Code, error) {
 	code, ok := _grpcCodeToCode[grpcCode]
 	if !ok {
 		return 0, fmt.Errorf("unknown gRPC code: %v", grpcCode)

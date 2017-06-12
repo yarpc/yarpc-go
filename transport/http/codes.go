@@ -23,62 +23,62 @@ package http
 import (
 	"fmt"
 
-	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/yarpcerrors"
 )
 
 // TODO: Should we expose the maps as public variables to document the mappings?
 
 var (
-	_codeToHTTPStatusCode = map[yarpc.Code]int{
-		yarpc.CodeOK:                 200,
-		yarpc.CodeCancelled:          499,
-		yarpc.CodeUnknown:            500,
-		yarpc.CodeInvalidArgument:    400,
-		yarpc.CodeDeadlineExceeded:   504,
-		yarpc.CodeNotFound:           404,
-		yarpc.CodeAlreadyExists:      409,
-		yarpc.CodePermissionDenied:   403,
-		yarpc.CodeResourceExhausted:  429,
-		yarpc.CodeFailedPrecondition: 400,
-		yarpc.CodeAborted:            409,
-		yarpc.CodeOutOfRange:         400,
-		yarpc.CodeUnimplemented:      501,
-		yarpc.CodeInternal:           500,
-		yarpc.CodeUnavailable:        503,
-		yarpc.CodeDataLoss:           500,
-		yarpc.CodeUnauthenticated:    401,
+	_codeToHTTPStatusCode = map[yarpcerrors.Code]int{
+		yarpcerrors.CodeOK:                 200,
+		yarpcerrors.CodeCancelled:          499,
+		yarpcerrors.CodeUnknown:            500,
+		yarpcerrors.CodeInvalidArgument:    400,
+		yarpcerrors.CodeDeadlineExceeded:   504,
+		yarpcerrors.CodeNotFound:           404,
+		yarpcerrors.CodeAlreadyExists:      409,
+		yarpcerrors.CodePermissionDenied:   403,
+		yarpcerrors.CodeResourceExhausted:  429,
+		yarpcerrors.CodeFailedPrecondition: 400,
+		yarpcerrors.CodeAborted:            409,
+		yarpcerrors.CodeOutOfRange:         400,
+		yarpcerrors.CodeUnimplemented:      501,
+		yarpcerrors.CodeInternal:           500,
+		yarpcerrors.CodeUnavailable:        503,
+		yarpcerrors.CodeDataLoss:           500,
+		yarpcerrors.CodeUnauthenticated:    401,
 	}
 
-	_httpStatusCodeToCodes = map[int][]yarpc.Code{
-		200: {yarpc.CodeOK},
+	_httpStatusCodeToCodes = map[int][]yarpcerrors.Code{
+		200: {yarpcerrors.CodeOK},
 		400: {
-			yarpc.CodeInvalidArgument,
-			yarpc.CodeFailedPrecondition,
-			yarpc.CodeOutOfRange,
+			yarpcerrors.CodeInvalidArgument,
+			yarpcerrors.CodeFailedPrecondition,
+			yarpcerrors.CodeOutOfRange,
 		},
-		401: {yarpc.CodeUnauthenticated},
-		403: {yarpc.CodePermissionDenied},
-		404: {yarpc.CodeNotFound},
+		401: {yarpcerrors.CodeUnauthenticated},
+		403: {yarpcerrors.CodePermissionDenied},
+		404: {yarpcerrors.CodeNotFound},
 		409: {
-			yarpc.CodeAborted,
-			yarpc.CodeAlreadyExists,
+			yarpcerrors.CodeAborted,
+			yarpcerrors.CodeAlreadyExists,
 		},
-		429: {yarpc.CodeResourceExhausted},
-		499: {yarpc.CodeCancelled},
+		429: {yarpcerrors.CodeResourceExhausted},
+		499: {yarpcerrors.CodeCancelled},
 		500: {
-			yarpc.CodeUnknown,
-			yarpc.CodeInternal,
-			yarpc.CodeDataLoss,
+			yarpcerrors.CodeUnknown,
+			yarpcerrors.CodeInternal,
+			yarpcerrors.CodeDataLoss,
 		},
-		501: {yarpc.CodeUnimplemented},
-		503: {yarpc.CodeUnavailable},
-		504: {yarpc.CodeDeadlineExceeded},
+		501: {yarpcerrors.CodeUnimplemented},
+		503: {yarpcerrors.CodeUnavailable},
+		504: {yarpcerrors.CodeDeadlineExceeded},
 	}
 )
 
 // codeToHTTPStatusCode returns the HTTP status code for the given Code,
 // or error if the Code is unknown.
-func codeToHTTPStatusCode(code yarpc.Code) (int, error) {
+func codeToHTTPStatusCode(code yarpcerrors.Code) (int, error) {
 	statusCode, ok := _codeToHTTPStatusCode[code]
 	if !ok {
 		return 0, fmt.Errorf("unknown code: %v", code)
@@ -87,17 +87,17 @@ func codeToHTTPStatusCode(code yarpc.Code) (int, error) {
 }
 
 // TODO: Is there any use to this? The original thinking was that it would be nice
-// to have a function that returns the most "general" yarpc.Code for the given HTTP
+// to have a function that returns the most "general" yarpcerrors.Code for the given HTTP
 // status code, but this doesn't really work in practice.
 
 // httpStatusCodeToCodes returns the Codes that correspond to the given HTTP status
 // code, or nil if no Codes correspond to the given HTTP status code.
-func httpStatusCodeToCodes(httpStatusCode int) []yarpc.Code {
+func httpStatusCodeToCodes(httpStatusCode int) []yarpcerrors.Code {
 	codes, ok := _httpStatusCodeToCodes[httpStatusCode]
 	if !ok {
 		return nil
 	}
-	c := make([]yarpc.Code, len(codes))
+	c := make([]yarpcerrors.Code, len(codes))
 	copy(c, codes)
 	return c
 }
