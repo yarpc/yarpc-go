@@ -23,8 +23,6 @@ package yarpcerrors
 import (
 	"bytes"
 	"fmt"
-
-	"go.uber.org/yarpc/api/transport"
 )
 
 // IsYARPCError returns true if the given error is a non-nil YARPC error.
@@ -162,45 +160,6 @@ func DataLossErrorf(format string, args ...interface{}) error {
 // UnauthenticatedErrorf returns a new yarpc error with code CodeUnauthenticated.
 func UnauthenticatedErrorf(format string, args ...interface{}) error {
 	return newYARPCError(CodeUnauthenticated, "", format, args...)
-}
-
-// IsBadRequestError returns true on an error returned by RPC clients if the
-// request was rejected by YARPC because it was invalid.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsBadRequestError(err) {
-// 		fmt.Println("invalid request:", err)
-// 	}
-//
-// Deprecated.
-func IsBadRequestError(err error) bool {
-	return transport.IsBadRequestError(err)
-}
-
-// IsUnexpectedError returns true on an error returned by RPC clients if the
-// server panicked or failed with an unhandled error.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsUnexpectedError(err) {
-// 		fmt.Println("internal server error:", err)
-// 	}
-//
-// Deprecated.
-func IsUnexpectedError(err error) bool {
-	return transport.IsUnexpectedError(err)
-}
-
-// IsTimeoutError returns true on an error returned by RPC clients if the given
-// error is a TimeoutError.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsTimeoutError(err) {
-// 		fmt.Println("request timed out:", err)
-// 	}
-//
-// Deprecated.
-func IsTimeoutError(err error) bool {
-	return transport.IsTimeoutError(err)
 }
 
 type yarpcError struct {
