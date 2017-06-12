@@ -23,14 +23,14 @@ package request
 import (
 	"context"
 
-	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/api/yarpcerrors"
 )
 
 // ValidateUnaryContext validates that a context for a unary request is valid
 // and contains all required information.
 func ValidateUnaryContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return errors.MissingParameters([]string{"TTL"})
+		return yarpcerrors.InvalidArgumentErrorf("missing TTL")
 	}
 
 	return nil

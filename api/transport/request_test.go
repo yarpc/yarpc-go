@@ -39,7 +39,7 @@ func TestValidator(t *testing.T) {
 		transportType transport.Type
 		ttl           time.Duration
 
-		wantErr string
+		wantMissingParams []string
 	}{
 		{
 			// No error
@@ -58,7 +58,7 @@ func TestValidator(t *testing.T) {
 				Service:   "service",
 				Procedure: "hello",
 			},
-			wantErr: "missing encoding",
+			wantMissingParams: []string{"encoding"},
 		},
 		{
 			req: &transport.Request{
@@ -66,7 +66,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: "missing caller name",
+			wantMissingParams: []string{"caller"},
 		},
 		{
 			req: &transport.Request{
@@ -74,7 +74,7 @@ func TestValidator(t *testing.T) {
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			wantErr: "missing service name",
+			wantMissingParams: []string{"service"},
 		},
 		{
 			req: &transport.Request{
@@ -82,21 +82,22 @@ func TestValidator(t *testing.T) {
 				Service:  "service",
 				Encoding: "raw",
 			},
-			wantErr: "missing procedure",
+			wantMissingParams: []string{"procedure"},
 		},
 		{
+			// TODO: a test for this really belongs in internal/request instead
 			req: &transport.Request{
 				Caller:    "caller",
 				Service:   "service",
 				Procedure: "hello",
 				Encoding:  "raw",
 			},
-			transportType: transport.Unary,
-			wantErr:       "missing TTL",
+			transportType:     transport.Unary,
+			wantMissingParams: []string{"TTL"},
 		},
 		{
-			req:     &transport.Request{},
-			wantErr: "missing service name, procedure, caller name, and encoding",
+			req:               &transport.Request{},
+			wantMissingParams: []string{"encoding", "caller", "service", "procedure"},
 		},
 	}
 
@@ -115,9 +116,11 @@ func TestValidator(t *testing.T) {
 			err = request.ValidateUnaryContext(ctx)
 		}
 
-		if tt.wantErr != "" {
+		if len(tt.wantMissingParams) > 0 {
 			if assert.Error(t, err) {
-				assert.Equal(t, tt.wantErr, err.Error())
+				for _, wantMissingParam := range tt.wantMissingParams {
+					assert.Contains(t, err.Error(), wantMissingParam)
+				}
 			}
 		} else {
 			assert.NoError(t, err)
