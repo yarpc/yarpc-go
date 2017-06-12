@@ -18,45 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package yarpcerrors
 
-import "go.uber.org/yarpc/api/transport"
+import (
+	"testing"
 
-// IsBadRequestError returns true on an error returned by RPC clients if the
-// request was rejected by YARPC because it was invalid.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsBadRequestError(err) {
-// 		fmt.Println("invalid request:", err)
-// 	}
-//
-// Deprecated.
-func IsBadRequestError(err error) bool {
-	return transport.IsBadRequestError(err)
+	"github.com/stretchr/testify/require"
+)
+
+func TestCodesMarshalText(t *testing.T) {
+	for code := range _codeToString {
+		t.Run(code.String(), func(t *testing.T) {
+			text, err := code.MarshalText()
+			require.NoError(t, err)
+			var unmarshalledCode Code
+			require.NoError(t, (&unmarshalledCode).UnmarshalText(text))
+			require.Equal(t, code, unmarshalledCode)
+		})
+	}
 }
 
-// IsUnexpectedError returns true on an error returned by RPC clients if the
-// server panicked or failed with an unhandled error.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsUnexpectedError(err) {
-// 		fmt.Println("internal server error:", err)
-// 	}
-//
-// Deprecated.
-func IsUnexpectedError(err error) bool {
-	return transport.IsUnexpectedError(err)
+func TestCodesMarshalJSON(t *testing.T) {
+	for code := range _codeToString {
+		t.Run(code.String(), func(t *testing.T) {
+			text, err := code.MarshalJSON()
+			require.NoError(t, err)
+			var unmarshalledCode Code
+			require.NoError(t, (&unmarshalledCode).UnmarshalJSON(text))
+			require.Equal(t, code, unmarshalledCode)
+		})
+	}
 }
 
-// IsTimeoutError returns true on an error returned by RPC clients if the given
-// error is a TimeoutError.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsTimeoutError(err) {
-// 		fmt.Println("request timed out:", err)
-// 	}
-//
-// Deprecated.
-func IsTimeoutError(err error) bool {
-	return transport.IsTimeoutError(err)
+func TestCodesMapOneToOneAndCovered(t *testing.T) {
+	require.Equal(t, len(_codeToString), len(_stringToCode))
+	for code, s := range _codeToString {
+		otherCode, ok := _stringToCode[s]
+		require.True(t, ok)
+		require.Equal(t, code, otherCode)
+	}
 }

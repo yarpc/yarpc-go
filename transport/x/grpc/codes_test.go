@@ -18,45 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc
+package grpc
 
-import "go.uber.org/yarpc/api/transport"
+import (
+	"testing"
 
-// IsBadRequestError returns true on an error returned by RPC clients if the
-// request was rejected by YARPC because it was invalid.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsBadRequestError(err) {
-// 		fmt.Println("invalid request:", err)
-// 	}
-//
-// Deprecated.
-func IsBadRequestError(err error) bool {
-	return transport.IsBadRequestError(err)
-}
+	"github.com/stretchr/testify/require"
+)
 
-// IsUnexpectedError returns true on an error returned by RPC clients if the
-// server panicked or failed with an unhandled error.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsUnexpectedError(err) {
-// 		fmt.Println("internal server error:", err)
-// 	}
-//
-// Deprecated.
-func IsUnexpectedError(err error) bool {
-	return transport.IsUnexpectedError(err)
-}
-
-// IsTimeoutError returns true on an error returned by RPC clients if the given
-// error is a TimeoutError.
-//
-// 	res, err := client.Call(...)
-// 	if yarpc.IsTimeoutError(err) {
-// 		fmt.Println("request timed out:", err)
-// 	}
-//
-// Deprecated.
-func IsTimeoutError(err error) bool {
-	return transport.IsTimeoutError(err)
+func TestCodes(t *testing.T) {
+	for code, grpcCode := range _codeToGRPCCode {
+		t.Run(code.String(), func(t *testing.T) {
+			getGRPCCode, err := codeToGRPCCode(code)
+			require.NoError(t, err)
+			require.Equal(t, grpcCode, getGRPCCode)
+			getCode, err := grpcCodeToCode(grpcCode)
+			require.NoError(t, err)
+			require.Equal(t, code, getCode)
+		})
+	}
 }
