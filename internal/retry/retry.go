@@ -46,7 +46,7 @@ type middlewareOptions struct {
 }
 
 var defaultMiddlewareOptions = middlewareOptions{
-	retries:         1,
+	retries:         0,
 	timeout:         time.Second,
 	backoffStrategy: ibackoff.None,
 }
