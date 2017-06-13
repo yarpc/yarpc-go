@@ -64,10 +64,9 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// TODO: what to do about this?
 	//err = errors.AsHandlerError(service, procedure, err)
 	status := http.StatusInternalServerError
-	if transport.IsBadRequestError(err) {
-		status = http.StatusBadRequest
-	} else if transport.IsTimeoutError(err) {
-		status = http.StatusGatewayTimeout
+	if yarpcerrors.IsYARPCError(err) {
+		// TODO: what to do with error?
+		status, _ = codeToHTTPStatusCode(yarpcerrors.ErrorCode(err))
 	}
 	http.Error(w, err.Error(), status)
 }
