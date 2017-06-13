@@ -30,6 +30,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/config"
 )
 
 // TransportSpec specifies the configuration parameters for a transport. These
@@ -590,7 +591,7 @@ type configSpec struct {
 }
 
 // Decode the configuration for this type from the data map.
-func (cs *configSpec) Decode(attrs attributeMap, opts ...mapdecode.Option) (*buildable, error) {
+func (cs *configSpec) Decode(attrs config.AttributeMap, opts ...mapdecode.Option) (*buildable, error) {
 	inputConfig := reflect.New(cs.inputType)
 	if err := attrs.Decode(inputConfig.Interface(), opts...); err != nil {
 		return nil, fmt.Errorf("failed to decode %v: %v", cs.inputType, err)

@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/config"
 )
 
 var _typeOfEmptyStruct = reflect.TypeOf(struct{}{})
@@ -217,7 +218,7 @@ func TestConfigSpecDecode(t *testing.T) {
 		compiler func(interface{}) (*configSpec, error)
 
 		// Attributes to decode
-		attrs attributeMap
+		attrs config.AttributeMap
 
 		// Whether we want a specific value decoded or an error message
 		want    interface{}
@@ -227,7 +228,7 @@ func TestConfigSpecDecode(t *testing.T) {
 			desc:     "decode failure",
 			build:    func(struct{}, *Kit) (transport.Transport, error) { panic("kthxbye") },
 			compiler: compileTransportConfig,
-			attrs:    attributeMap{"unexpected": 42},
+			attrs:    config.AttributeMap{"unexpected": 42},
 			wantErr: []string{
 				"failed to decode struct {}",
 				"has invalid keys: unexpected",
@@ -237,28 +238,28 @@ func TestConfigSpecDecode(t *testing.T) {
 			desc:     "decode struct{}",
 			build:    func(struct{}, transport.Transport, *Kit) (transport.Inbound, error) { panic("kthxbye") },
 			compiler: compileInboundConfig,
-			attrs:    attributeMap{},
+			attrs:    config.AttributeMap{},
 			want:     struct{}{},
 		},
 		{
 			desc:     "decode item",
 			build:    func(item, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			compiler: compileUnaryOutboundConfig,
-			attrs:    attributeMap{"key": "key", "value": "value"},
+			attrs:    config.AttributeMap{"key": "key", "value": "value"},
 			want:     someItem,
 		},
 		{
 			desc:     "decode *item",
 			build:    func(*item, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			compiler: compileUnaryOutboundConfig,
-			attrs:    attributeMap{"key": "key", "value": "value"},
+			attrs:    config.AttributeMap{"key": "key", "value": "value"},
 			want:     ptrToSomeItem,
 		},
 		{
 			desc:     "decode **item",
 			build:    func(**item, transport.Transport, *Kit) (transport.UnaryOutbound, error) { panic("kthxbye") },
 			compiler: compileUnaryOutboundConfig,
-			attrs:    attributeMap{"key": "key", "value": "value"},
+			attrs:    config.AttributeMap{"key": "key", "value": "value"},
 			want:     &ptrToSomeItem,
 		},
 	}

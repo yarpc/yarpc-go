@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/config"
 	peerbind "go.uber.org/yarpc/peer"
 )
 
@@ -104,9 +105,9 @@ type PeerChooser struct {
 // peerChooser is the private representation of PeerChooser that captures
 // decoded configuration without revealing it on the public type.
 type peerChooser struct {
-	Peer   string       `config:"peer,interpolate"`
-	Preset string       `config:"with,interpolate"`
-	Etc    attributeMap `config:",squash"`
+	Peer   string              `config:"peer,interpolate"`
+	Preset string              `config:"with,interpolate"`
+	Etc    config.AttributeMap `config:",squash"`
 }
 
 // Empty returns true if the PeerChooser is empty, i.e., it does not have any
@@ -189,7 +190,7 @@ func (pc PeerChooser) buildPeerChooser(transport peer.Transport, identify func(s
 		return nil, err
 	}
 
-	chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig, interpolateWith(kit.resolver))
+	chooserBuilder, err := peerListSpec.PeerList.Decode(peerListConfig, config.InterpolateWith(kit.resolver))
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +221,7 @@ func (pc PeerChooser) buildPeerChooser(transport peer.Transport, identify func(s
 //
 // The name of the peer list (my-peer-list) is returned with the attributes
 // specified under that entry.
-func getPeerListInfo(etc attributeMap, kit *Kit) (name string, config attributeMap, err error) {
+func getPeerListInfo(etc config.AttributeMap, kit *Kit) (name string, config config.AttributeMap, err error) {
 	names := etc.Keys()
 	switch len(names) {
 	case 0:
@@ -242,7 +243,7 @@ func getPeerListInfo(etc attributeMap, kit *Kit) (name string, config attributeM
 //     dns:
 //       name: myservice.example.com
 //       record: A
-func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
+func buildPeerListUpdater(c config.AttributeMap, identify func(string) peer.Identifier, kit *Kit) (peer.Binder, error) {
 	// Special case for explicit list of peers.
 	var peers []string
 	if _, err := c.Pop("peers", &peers); err != nil {
@@ -288,14 +289,14 @@ func buildPeerListUpdater(c attributeMap, identify func(string) peer.Identifier,
 		// fall through to logic below
 	}
 
-	var peerListUpdaterConfig attributeMap
+	var peerListUpdaterConfig config.AttributeMap
 	if _, err := c.Pop(foundUpdaters[0], &peerListUpdaterConfig); err != nil {
 		return nil, err
 	}
 
 	// This decodes all attributes on the peer list updater block, including the
 	// field with the name of the peer list updater.
-	peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(peerListUpdaterConfig, interpolateWith(kit.resolver))
+	peerListUpdaterBuilder, err := peerListUpdaterSpec.PeerListUpdater.Decode(peerListUpdaterConfig, config.InterpolateWith(kit.resolver))
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +317,7 @@ func identifyAll(identify func(string) peer.Identifier, peers []string) []peer.I
 	return pids
 }
 
-func configNames(c attributeMap) (names []string) {
+func configNames(c config.AttributeMap) (names []string) {
 	for name := range c {
 		names = append(names, name)
 	}
