@@ -31,32 +31,29 @@ type serviceProcedure struct {
 	procedure string
 }
 
-// newProcedurePolicyProvider creates a new PolicyProvider that
+// procedurePolicyProvider is a new PolicyProvider that
 // has the ability to convert a context and transport request to
 // determine which retry policy to use.
 // The PolicyProvider has the ability to register policies based
 // on service and procedure attributes.  It also has the ability
 // to specify the default retry policy.
-func newProcedurePolicyProvider() *procedurePolicyProvider {
-	return &procedurePolicyProvider{
-		serviceProcedureToPolicy: make(map[serviceProcedure]*Policy),
-		serviceToPolicy:          make(map[string]*Policy),
-		defaultPolicy:            &defaultPolicy,
-	}
-}
-
 type procedurePolicyProvider struct {
 	serviceProcedureToPolicy map[serviceProcedure]*Policy
 	serviceToPolicy          map[string]*Policy
 	defaultPolicy            *Policy
 }
 
-func (ppp *procedurePolicyProvider) registerServiceProcedure(service, procedure string, pol *Policy) *procedurePolicyProvider {
-	sp := serviceProcedure{
-		service:   service,
-		procedure: procedure,
+func newProcedurePolicyProvider() *procedurePolicyProvider {
+	defaultCopy := defaultPolicy
+	return &procedurePolicyProvider{
+		serviceProcedureToPolicy: make(map[serviceProcedure]*Policy),
+		serviceToPolicy:          make(map[string]*Policy),
+		defaultPolicy:            &defaultCopy,
 	}
-	ppp.serviceProcedureToPolicy[sp] = pol
+}
+
+func (ppp *procedurePolicyProvider) registerServiceProcedure(service, procedure string, pol *Policy) *procedurePolicyProvider {
+	ppp.serviceProcedureToPolicy[serviceProcedure{service, procedure}] = pol
 	return ppp
 }
 
@@ -72,11 +69,7 @@ func (ppp *procedurePolicyProvider) registerDefault(pol *Policy) *procedurePolic
 
 // GetPolicy returns a policy for the provided context and request.
 func (ppp *procedurePolicyProvider) GetPolicy(_ context.Context, req *transport.Request) *Policy {
-	sp := serviceProcedure{
-		service:   req.Service,
-		procedure: req.Procedure,
-	}
-	if pol, ok := ppp.serviceProcedureToPolicy[sp]; ok {
+	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{req.Service, req.Procedure}]; ok {
 		return pol
 	}
 	if pol, ok := ppp.serviceToPolicy[req.Service]; ok {
