@@ -90,9 +90,10 @@ func (r RequestAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 		require.NotNil(t, resp)
 		assert.Equal(t, r.wantApplicationError, resp.ApplicationError)
 	} else {
-		require.NotNil(t, resp)
-		body, err := ioutil.ReadAll(resp.Body)
 		assert.NoError(t, err)
+		require.NotNil(t, resp)
+		body, decodeErr := ioutil.ReadAll(resp.Body)
+		assert.NoError(t, decodeErr)
 		assert.Equal(t, r.wantBody, string(body))
 	}
 }
