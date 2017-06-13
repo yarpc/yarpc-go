@@ -33,7 +33,6 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
@@ -412,15 +411,16 @@ func getErrFromResponse(response *http.Response) error {
 	// Trim the trailing newline from HTTP error messages
 	message := strings.TrimSuffix(string(contents), "\n")
 
+	// TODO: we can get more specific than this
 	if response.StatusCode >= 400 && response.StatusCode < 500 {
-		return errors.RemoteBadRequestError(message)
+		return yarpcerrors.InvalidArgumentErrorf(message)
 	}
 
 	if response.StatusCode == http.StatusGatewayTimeout {
-		return errors.RemoteTimeoutError(message)
+		return yarpcerrors.DeadlineExceededErrorf(message)
 	}
 
-	return errors.RemoteUnexpectedError(message)
+	return yarpcerrors.InternalErrorf(message)
 }
 
 // Introspect returns basic status about this outbound.

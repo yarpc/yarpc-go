@@ -25,8 +25,8 @@ import (
 	"io"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/sync"
@@ -217,11 +217,13 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 
 func fromSystemError(err tchannel.SystemError) error {
 	switch err.Code() {
-	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
-		return errors.RemoteBadRequestError(err.Message())
+	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy:
+		return yarpcerrors.CancelledErrorf(err.Message())
+	case tchannel.ErrCodeBadRequest:
+		return yarpcerrors.InvalidArgumentErrorf(err.Message())
 	case tchannel.ErrCodeTimeout:
-		return errors.RemoteTimeoutError(err.Message())
+		return yarpcerrors.DeadlineExceededErrorf(err.Message())
 	default:
-		return errors.RemoteUnexpectedError(err.Message())
+		return yarpcerrors.InternalErrorf(err.Message())
 	}
 }

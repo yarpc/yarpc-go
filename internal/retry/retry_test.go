@@ -128,7 +128,7 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteTimeoutError("remote timed out"),
+					GiveError:     yarpcerrors.DeadlineExceededErrorf("remote timed out"),
 				},
 				{
 					WantService:   "serv",
