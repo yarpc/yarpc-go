@@ -20,11 +20,6 @@
 
 package errors
 
-import (
-	"fmt"
-	"time"
-)
-
 // TimeoutError indicates that an error occurred due to a context deadline over
 // the course of a request over any transport.
 type TimeoutError interface {
@@ -42,32 +37,4 @@ func (RemoteTimeoutError) timeoutError() {}
 
 func (e RemoteTimeoutError) Error() string {
 	return string(e)
-}
-
-// clientTimeoutError represents a timeout on the client side.
-type clientTimeoutError struct {
-	Service   string
-	Procedure string
-	Duration  time.Duration
-}
-
-var _ TimeoutError = clientTimeoutError{}
-
-// ClientTimeoutError constructs an instance of a TimeoutError representing
-// a timeout that occurred while the client was waiting during a request to a
-// remote handler. It includes the service, procedure and duration waited.
-func ClientTimeoutError(Service string, Procedure string, Duration time.Duration) error {
-	return clientTimeoutError{
-		Service:   Service,
-		Procedure: Procedure,
-		Duration:  Duration,
-	}
-}
-
-func (clientTimeoutError) timeoutError() {}
-func (clientTimeoutError) clientError()  {}
-
-func (e clientTimeoutError) Error() string {
-	return fmt.Sprintf(`client timeout for procedure %q of service %q after %v`,
-		e.Procedure, e.Service, e.Duration)
 }

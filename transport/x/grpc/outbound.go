@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/errors"
 	internalsync "go.uber.org/yarpc/internal/sync"
 
@@ -168,7 +169,7 @@ func errorToGRPCError(ctx context.Context, request *transport.Request, start tim
 	ttl := deadline.Sub(start)
 	switch grpc.Code(err) {
 	case codes.DeadlineExceeded:
-		return errors.ClientTimeoutError(request.Service, request.Procedure, ttl)
+		return yarpcerrors.DeadlineExceededErrorf("service:%q procedure:%q ttl:%v", request.Service, request.Procedure, ttl)
 	case codes.Unimplemented, codes.InvalidArgument, codes.NotFound:
 		return errors.RemoteBadRequestError(grpc.ErrorDesc(err))
 	case codes.Canceled, codes.AlreadyExists, codes.PermissionDenied,

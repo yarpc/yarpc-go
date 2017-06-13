@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/errors"
 	iioutil "go.uber.org/yarpc/internal/ioutil"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
@@ -121,7 +122,7 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.ClientTimeoutError("serv", "proc", time.Millisecond*300),
+					GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", time.Millisecond*300),
 				},
 				{
 					WantService:   "serv",
@@ -228,7 +229,7 @@ func TestMiddleware(t *testing.T) {
 					WantProcedure:  "proc",
 					WantBody:       "body",
 					WaitForTimeout: true,
-					GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+					GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", time.Millisecond*50),
 				},
 				{
 					WantTimeout:   time.Millisecond * 25,
@@ -256,7 +257,7 @@ func TestMiddleware(t *testing.T) {
 					WantProcedure:  "proc",
 					WantBody:       "body",
 					WaitForTimeout: true,
-					GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+					GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", time.Millisecond*50),
 				},
 				{
 					WantTimeout:   time.Millisecond * 50,

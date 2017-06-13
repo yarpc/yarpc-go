@@ -32,6 +32,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
@@ -275,7 +276,9 @@ func (o *Outbound) callWithPeer(
 		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {
 			end := time.Now()
-			return nil, errors.ClientTimeoutError(treq.Service, treq.Procedure, end.Sub(start))
+			return nil, yarpcerrors.DeadlineExceededErrorf(
+				"client timeout for procedure %q or service %q after %v",
+				treq.Procedure, treq.Service, end.Sub(start))
 		}
 
 		return nil, err

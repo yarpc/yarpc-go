@@ -25,8 +25,6 @@ import "testing"
 func TestCoverBrands(t *testing.T) {
 	// sorted
 	RemoteTimeoutError("").timeoutError()
-	clientTimeoutError{}.clientError()
-	clientTimeoutError{}.timeoutError()
 	handlerBadRequestError{}.badRequestError()
 	handlerBadRequestError{}.handlerError()
 	handlerUnexpectedError{}.handlerError()
