@@ -33,37 +33,6 @@ type TimeoutError interface {
 	timeoutError()
 }
 
-// handlerTimeoutError represents a timeout on the handler side.
-type handlerTimeoutError struct {
-	Caller    string
-	Service   string
-	Procedure string
-	Duration  time.Duration
-}
-
-var _ TimeoutError = handlerTimeoutError{}
-var _ HandlerError = handlerTimeoutError{}
-
-// HandlerTimeoutError constructs an instance of a TimeoutError representing
-// a timeout that occurred during the handler execution, with the caller,
-// service, procedure and duration waited.
-func HandlerTimeoutError(Caller string, Service string, Procedure string, Duration time.Duration) error {
-	return handlerTimeoutError{
-		Caller:    Caller,
-		Service:   Service,
-		Procedure: Procedure,
-		Duration:  Duration,
-	}
-}
-
-func (handlerTimeoutError) timeoutError() {}
-func (handlerTimeoutError) handlerError() {}
-
-func (e handlerTimeoutError) Error() string {
-	return fmt.Sprintf(`Timeout: call to procedure %q of service %q from caller %q timed out after %v`,
-		e.Procedure, e.Service, e.Caller, e.Duration)
-}
-
 // RemoteTimeoutError represents a TimeoutError from a remote handler.
 type RemoteTimeoutError string
 

@@ -29,8 +29,6 @@ func TestCoverBrands(t *testing.T) {
 	clientTimeoutError{}.timeoutError()
 	handlerBadRequestError{}.badRequestError()
 	handlerBadRequestError{}.handlerError()
-	handlerTimeoutError{}.handlerError()
-	handlerTimeoutError{}.timeoutError()
 	handlerUnexpectedError{}.handlerError()
 	handlerUnexpectedError{}.unexpectedError()
 	remoteBadRequestError("").badRequestError()
