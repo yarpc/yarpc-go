@@ -20,18 +20,16 @@
 
 package backoff
 
-import "go.uber.org/yarpc/api/backoff"
+import (
+	"testing"
+	"time"
 
-// The Short backoff strategy could be implemented as a trivial singleton, but
-// for brevity, is just a degenerate case of the exponential backoff.
+	"github.com/stretchr/testify/assert"
+)
 
-var shortOpts = exponentialOptions{
-	newRand: newRand,
-}
-
-// Short is a shorted backoff strategy that will always produce a 0ms duration.
-// This strategy is intended to minimize arbitrary delays during tests or
-// maximize load on a benchmark.
-var Short backoff.Strategy = &ExponentialStrategy{
-	opts: shortOpts,
+func TestNone(t *testing.T) {
+	none := None.Backoff()
+	assert.Equal(t, time.Duration(0), none.Duration(0))
+	assert.Equal(t, time.Duration(0), none.Duration(1))
+	assert.Equal(t, time.Duration(0), none.Duration(2))
 }

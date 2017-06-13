@@ -24,7 +24,9 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
+	ibackoff "go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/ioutil"
 )
 
@@ -32,16 +34,21 @@ import (
 type middlewareOptions struct {
 	// Retries is the number of attempts we will retry (after the
 	// initial attempt.
-	retries int
+	retries uint
 
 	// Timeout is the Timeout we will enforce per request (if this
 	// is less than the context deadline, we'll use that instead).
 	timeout time.Duration
+
+	// backoffStrategy is a backoff strategy that will be called after every
+	// retry.
+	backoffStrategy backoff.Strategy
 }
 
 var defaultMiddlewareOptions = middlewareOptions{
-	retries: 1,
-	timeout: time.Second,
+	retries:         0,
+	timeout:         time.Second,
+	backoffStrategy: ibackoff.None,
 }
 
 // MiddlewareOption customizes the behavior of a retry middleware.
@@ -51,7 +58,7 @@ type MiddlewareOption func(*middlewareOptions)
 // initial attempt.
 //
 // Defaults to 1.
-func Retries(retries int) MiddlewareOption {
+func Retries(retries uint) MiddlewareOption {
 	return func(options *middlewareOptions) {
 		options.retries = retries
 	}
@@ -64,6 +71,18 @@ func Retries(retries int) MiddlewareOption {
 func PerRequestTimeout(timeout time.Duration) MiddlewareOption {
 	return func(options *middlewareOptions) {
 		options.timeout = timeout
+	}
+}
+
+// BackoffStrategy sets the backoff strategy that will be used after each
+// failed request.
+//
+// Defaults to no backoff.
+func BackoffStrategy(strategy backoff.Strategy) MiddlewareOption {
+	return func(options *middlewareOptions) {
+		if strategy != nil {
+			options.backoffStrategy = strategy
+		}
 	}
 }
 
@@ -87,9 +106,11 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 	rereader, finish := ioutil.NewRereader(request.Body)
 	defer finish()
 	request.Body = rereader
+	boff := r.opts.backoffStrategy.Backoff()
 
-	for i := 0; i < r.opts.retries+1; i++ {
-		subCtx, cancel := context.WithTimeout(ctx, r.getTimeout(ctx))
+	for i := uint(0); i < r.opts.retries+1; i++ {
+		timeout, _ := getTimeLeft(ctx, r.opts.timeout)
+		subCtx, cancel := context.WithTimeout(ctx, timeout)
 		resp, err = out.Call(subCtx, request)
 		cancel() // Clear the new ctx immdediately after the call
 
@@ -104,21 +125,28 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 			return resp, err
 		}
 
-		// TODO add backoff semantics
+		boffDur := boff.Duration(i)
+		if _, ctxWillTimeout := getTimeLeft(ctx, boffDur); ctxWillTimeout {
+			return resp, err
+		}
+		time.Sleep(boffDur)
 	}
 	return resp, err
 }
 
-func (r *OutboundMiddleware) getTimeout(ctx context.Context) time.Duration {
+// getTimeLeft will return the amount of time left in the context or the
+// "max" duration passed in.  It will also return a boolean indicating
+// whether the context will timeout.
+func getTimeLeft(ctx context.Context, max time.Duration) (timeleft time.Duration, ctxWillTimeout bool) {
 	ctxDeadline, ok := ctx.Deadline()
 	if !ok {
-		return r.opts.timeout
+		return max, false
 	}
 	now := time.Now()
-	if ctxDeadline.After(now.Add(r.opts.timeout)) {
-		return r.opts.timeout
+	if ctxDeadline.After(now.Add(max)) {
+		return max, false
 	}
-	return ctxDeadline.Sub(now)
+	return ctxDeadline.Sub(now), true
 }
 
 func isRetryable(err error) bool {
