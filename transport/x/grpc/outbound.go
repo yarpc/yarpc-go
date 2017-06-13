@@ -28,10 +28,13 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	internalsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // UserAgent is the User-Agent that will be set for requests.
@@ -81,9 +84,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	}
 	var responseBody []byte
 	responseMD := metadata.New(nil)
-	if err := o.invoke(ctx, request, &responseBody, &responseMD); err != nil {
-		return nil, err
-	}
+	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD)
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, err
@@ -91,7 +92,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	return &transport.Response{
 		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
 		Headers: responseHeaders,
-	}, nil
+	}, invokeErrorToYARPCError(invokeErr, responseMD)
 }
 
 func (o *Outbound) invoke(
@@ -117,17 +118,14 @@ func (o *Outbound) invoke(
 	if responseMD != nil {
 		callOptions = []grpc.CallOption{grpc.Header(responseMD)}
 	}
-	if err := grpc.Invoke(
+	return grpc.Invoke(
 		metadata.NewContext(ctx, md),
 		fullMethod,
 		requestBody,
 		responseBody,
 		o.clientConn,
 		callOptions...,
-	); err != nil {
-		return grpcErrorToYARPCError(err)
-	}
-	return nil
+	)
 }
 
 func (o *Outbound) start() error {
@@ -157,4 +155,30 @@ func (o *Outbound) stop() error {
 		return o.clientConn.Close()
 	}
 	return nil
+}
+
+func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
+	if err == nil {
+		return nil
+	}
+	if yarpcerrors.IsYARPCError(err) {
+		return err
+	}
+	status, ok := status.FromError(err)
+	// if not a yarpc error or grpc error, just return the error
+	if !ok {
+		return err
+	}
+	code, ok := _grpcCodeToCode[status.Code()]
+	if !ok {
+		code = yarpcerrors.CodeUnknown
+	}
+	var name string
+	if responseMD != nil {
+		value, ok := responseMD[grpcheader.ErrorNameHeader]
+		if ok && len(value) == 1 {
+			name = value[0]
+		}
+	}
+	return yarpcerrors.FromHeaders(code, name, status.Message())
 }

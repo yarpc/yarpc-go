@@ -25,7 +25,6 @@ import (
 
 	"go.uber.org/yarpc/api/yarpcerrors"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
 
@@ -69,26 +68,6 @@ var (
 		codes.DataLoss:           yarpcerrors.CodeDataLoss,
 		codes.Unauthenticated:    yarpcerrors.CodeUnauthenticated,
 	}
-
-	// TODO: Don't want to expose this in yarpcerrors, what to do?
-	_codeToErrorConstructor = map[yarpcerrors.Code]func(string, ...interface{}) error{
-		yarpcerrors.CodeCancelled:          yarpcerrors.CancelledErrorf,
-		yarpcerrors.CodeUnknown:            yarpcerrors.UnknownErrorf,
-		yarpcerrors.CodeInvalidArgument:    yarpcerrors.InvalidArgumentErrorf,
-		yarpcerrors.CodeDeadlineExceeded:   yarpcerrors.DeadlineExceededErrorf,
-		yarpcerrors.CodeNotFound:           yarpcerrors.NotFoundErrorf,
-		yarpcerrors.CodeAlreadyExists:      yarpcerrors.AlreadyExistsErrorf,
-		yarpcerrors.CodePermissionDenied:   yarpcerrors.PermissionDeniedErrorf,
-		yarpcerrors.CodeResourceExhausted:  yarpcerrors.ResourceExhaustedErrorf,
-		yarpcerrors.CodeFailedPrecondition: yarpcerrors.FailedPreconditionErrorf,
-		yarpcerrors.CodeAborted:            yarpcerrors.AbortedErrorf,
-		yarpcerrors.CodeOutOfRange:         yarpcerrors.OutOfRangeErrorf,
-		yarpcerrors.CodeUnimplemented:      yarpcerrors.UnimplementedErrorf,
-		yarpcerrors.CodeInternal:           yarpcerrors.InternalErrorf,
-		yarpcerrors.CodeUnavailable:        yarpcerrors.UnavailableErrorf,
-		yarpcerrors.CodeDataLoss:           yarpcerrors.DataLossErrorf,
-		yarpcerrors.CodeUnauthenticated:    yarpcerrors.UnauthenticatedErrorf,
-	}
 )
 
 // codeToGRPCCode returns the gRPC Code for the given Code,
@@ -109,16 +88,4 @@ func grpcCodeToCode(grpcCode codes.Code) (yarpcerrors.Code, error) {
 		return 0, fmt.Errorf("unknown gRPC code: %v", grpcCode)
 	}
 	return code, nil
-}
-
-func grpcErrorToYARPCError(err error) error {
-	code, ok := _grpcCodeToCode[grpc.Code(err)]
-	if !ok {
-		code = yarpcerrors.CodeUnknown
-	}
-	errorConstructor, ok := _codeToErrorConstructor[code]
-	if !ok {
-		errorConstructor = yarpcerrors.UnknownErrorf
-	}
-	return errorConstructor(grpc.ErrorDesc(err))
 }
