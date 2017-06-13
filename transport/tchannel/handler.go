@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 
 	"github.com/opentracing/opentracing-go"
@@ -100,7 +99,8 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		return
 	}
 
-	err = errors.AsHandlerError(call.ServiceName(), call.MethodString(), err)
+	// TODO: what to do with this?
+	//err = errors.AsHandlerError(call.ServiceName(), call.MethodString(), err)
 	status := tchannel.ErrCodeUnexpected
 	if transport.IsBadRequestError(err) {
 		status = tchannel.ErrCodeBadRequest
@@ -172,7 +172,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
 
 	default:
-		err = errors.UnsupportedTypeError{Transport: "TChannel", Type: spec.Type().String()}
+		err = yarpcerrors.UnimplementedErrorf("transport:tchannel type:%s", spec.Type().String())
 	}
 
 	return err

@@ -29,7 +29,6 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
-	"go.uber.org/yarpc/internal/errors"
 	iioutil "go.uber.org/yarpc/internal/ioutil"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpctest"
@@ -90,7 +89,7 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteUnexpectedError("unknown error"),
+					GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 				},
 				{
 					WantService:   "serv",
@@ -116,7 +115,7 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteUnexpectedError("unknown error"),
+					GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 				},
 				{
 					WantService:   "serv",
@@ -134,7 +133,7 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteUnexpectedError("unknown error"),
+					GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 				},
 				{
 					WantService:   "serv",
@@ -160,10 +159,10 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteBadRequestError("bad request!"),
+					GiveError:     yarpcerrors.InvalidArgumentErrorf("bad request!"),
 				},
 			},
-			wantError: errors.RemoteBadRequestError("bad request!").Error(),
+			wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 		},
 		{
 			msg: "retry once, then hard failure",
@@ -180,16 +179,16 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteUnexpectedError("unknown error"),
+					GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 				},
 				{
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteBadRequestError("bad request!"),
+					GiveError:     yarpcerrors.InvalidArgumentErrorf("bad request!"),
 				},
 			},
-			wantError: errors.RemoteBadRequestError("bad request!").Error(),
+			wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 		},
 		{
 			msg: "ctx timeout less than retry timeout",
@@ -285,17 +284,17 @@ func TestMiddleware(t *testing.T) {
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteUnexpectedError("unexpected error 1"),
+					GiveError:     yarpcerrors.InternalErrorf("unexpected error 1"),
 				},
 				{
 					WantTimeout:   time.Millisecond * 50,
 					WantService:   "serv",
 					WantProcedure: "proc",
 					WantBody:      "body",
-					GiveError:     errors.RemoteUnexpectedError("unexpected error 2"),
+					GiveError:     yarpcerrors.InternalErrorf("unexpected error 2"),
 				},
 			},
-			wantError: errors.RemoteUnexpectedError("unexpected error 2").Error(),
+			wantError: yarpcerrors.InternalErrorf("unexpected error 2").Error(),
 		},
 		{
 			msg: "Reset Error",
@@ -314,7 +313,7 @@ func TestMiddleware(t *testing.T) {
 					WantProcedure: "proc",
 					// We have explicitly not read the body, which will not exhaust the
 					// req body io.Reader.
-					GiveError: errors.RemoteUnexpectedError("unexpected error 1"),
+					GiveError: yarpcerrors.InternalErrorf("unexpected error 1"),
 				},
 			},
 			wantError: iioutil.ErrReset.Error(),

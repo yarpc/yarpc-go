@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
 
@@ -56,15 +56,13 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	service := req.Header.Get(ServiceHeader)
-	procedure := req.Header.Get(ProcedureHeader)
-
 	err := h.callHandler(w, req, start)
 	if err == nil {
 		return
 	}
 
-	err = errors.AsHandlerError(service, procedure, err)
+	// TODO: what to do about this?
+	//err = errors.AsHandlerError(service, procedure, err)
 	status := http.StatusInternalServerError
 	if transport.IsBadRequestError(err) {
 		status = http.StatusBadRequest
@@ -115,7 +113,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
-		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: spec.Type().String()}
+		err = yarpcerrors.UnimplementedErrorf("transport:http type:%s", spec.Type().String())
 	}
 
 	updateSpanWithErr(span, err)

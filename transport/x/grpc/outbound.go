@@ -25,16 +25,12 @@ import (
 	"context"
 	"io/ioutil"
 	"sync"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
-	"go.uber.org/yarpc/internal/errors"
 	internalsync "go.uber.org/yarpc/internal/sync"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -104,7 +100,6 @@ func (o *Outbound) invoke(
 	responseBody *[]byte,
 	responseMD *metadata.MD,
 ) error {
-	start := time.Now()
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
@@ -130,7 +125,7 @@ func (o *Outbound) invoke(
 		o.clientConn,
 		callOptions...,
 	); err != nil {
-		return errorToGRPCError(ctx, request, start, err)
+		return grpcErrorToYARPCError(err)
 	}
 	return nil
 }
@@ -162,22 +157,4 @@ func (o *Outbound) stop() error {
 		return o.clientConn.Close()
 	}
 	return nil
-}
-
-func errorToGRPCError(ctx context.Context, request *transport.Request, start time.Time, err error) error {
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-	switch grpc.Code(err) {
-	case codes.DeadlineExceeded:
-		return yarpcerrors.DeadlineExceededErrorf("service:%q procedure:%q ttl:%v", request.Service, request.Procedure, ttl)
-	case codes.Unimplemented, codes.InvalidArgument, codes.NotFound:
-		return errors.RemoteBadRequestError(grpc.ErrorDesc(err))
-	case codes.Canceled, codes.AlreadyExists, codes.PermissionDenied,
-		codes.Unauthenticated, codes.ResourceExhausted, codes.FailedPrecondition,
-		codes.Aborted, codes.OutOfRange, codes.Internal,
-		codes.Unavailable, codes.DataLoss, codes.Unknown:
-		fallthrough
-	default:
-		return errors.RemoteUnexpectedError(grpc.ErrorDesc(err))
-	}
 }

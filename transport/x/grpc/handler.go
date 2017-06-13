@@ -27,8 +27,8 @@ import (
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/x/protobuf"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 
 	"golang.org/x/net/context"
@@ -126,7 +126,7 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request)
 	case transport.Unary:
 		return h.callUnary(ctx, transportRequest, handlerSpec.Unary())
 	default:
-		return nil, errors.UnsupportedTypeError{"grpc", handlerSpec.Type().String()}
+		return nil, yarpcerrors.UnimplementedErrorf("transport:grpc type:%s", handlerSpec.Type().String())
 	}
 }
 
