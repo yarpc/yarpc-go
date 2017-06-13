@@ -61,11 +61,9 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO: what to do about this?
-	//err = errors.AsHandlerError(service, procedure, err)
 	status := http.StatusInternalServerError
 	if yarpcerrors.IsYARPCError(err) {
-		// TODO: what to do with error?
+		// TODO: what to do with error from codeToHTTPStatusCode?
 		status, _ = codeToHTTPStatusCode(yarpcerrors.ErrorCode(err))
 	}
 	http.Error(w, err.Error(), status)

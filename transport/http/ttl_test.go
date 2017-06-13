@@ -38,28 +38,25 @@ func TestParseTTL(t *testing.T) {
 	}
 
 	tests := []struct {
-		ttlString   string
-		wantErr     error
-		wantMessage string
+		ttlString string
+		wantErr   error
 	}{
 		{ttlString: "1"},
 		{
 			ttlString: "-1000",
-			wantErr: invalidTTLError{
-				Service:   "service",
-				Procedure: "hello",
-				TTL:       "-1000",
-			},
-			wantMessage: `invalid TTL "-1000" for procedure "hello" of service "service": must be positive integer`,
+			wantErr: newInvalidTTLError(
+				"service",
+				"hello",
+				"-1000",
+			),
 		},
 		{
 			ttlString: "not an integer",
-			wantErr: invalidTTLError{
-				Service:   "service",
-				Procedure: "hello",
-				TTL:       "not an integer",
-			},
-			wantMessage: `invalid TTL "not an integer" for procedure "hello" of service "service": must be positive integer`,
+			wantErr: newInvalidTTLError(
+				"service",
+				"hello",
+				"not an integer",
+			),
 		},
 	}
 
@@ -70,7 +67,6 @@ func TestParseTTL(t *testing.T) {
 
 			if tt.wantErr != nil && assert.Error(t, err) {
 				assert.Equal(t, tt.wantErr, err)
-				assert.Equal(t, tt.wantMessage, err.Error())
 			} else {
 				assert.NoError(t, err)
 				_, ok := ctx.Deadline()

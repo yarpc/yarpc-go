@@ -33,6 +33,7 @@ import (
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 
@@ -189,54 +190,57 @@ func TestHandlerFailures(t *testing.T) {
 
 	tests := []struct {
 		req *http.Request
-		msg string
 
 		// if we expect an error as a result of the TTL
-		errTTL bool
+		errTTL   bool
+		wantCode yarpcerrors.Code
 	}{
-		{req: &http.Request{Method: "GET"}, msg: "404 page not found\n"},
+		{
+			req:      &http.Request{Method: "GET"},
+			wantCode: yarpcerrors.CodeNotFound,
+		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			msg: "BadRequest: missing caller name\n",
+			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			msg: "BadRequest: missing service name\n",
+			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			msg: "BadRequest: missing procedure\n",
+			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			msg:    "BadRequest: missing TTL\n",
-			errTTL: true,
+			wantCode: yarpcerrors.CodeInvalidArgument,
+			errTTL:   true,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 			},
-			msg: "BadRequest: missing service name, procedure, caller name, and encoding\n",
+			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			msg:    `BadRequest: invalid TTL "not a number" for procedure "hello" of service "fake": must be positive integer` + "\n",
-			errTTL: true,
+			wantCode: yarpcerrors.CodeInvalidArgument,
+			errTTL:   true,
 		},
 	}
 
@@ -263,9 +267,11 @@ func TestHandlerFailures(t *testing.T) {
 		rw := httptest.NewRecorder()
 		h.ServeHTTP(rw, tt.req)
 
-		code := rw.Code
-		assert.True(t, code >= 400 && code < 500, "expected 400 level code")
-		assert.Equal(t, tt.msg, rw.Body.String())
+		httpStatusCode := rw.Code
+		assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
+		code, err := httpStatusCodeToCode(httpStatusCode)
+		assertNoError(t, err)
+		assert.Equal(t, tt.wantCode, code)
 	}
 }
 
