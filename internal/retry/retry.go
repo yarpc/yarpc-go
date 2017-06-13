@@ -76,7 +76,7 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 	boff := policy.backoffStrategy.Backoff()
 
 	for i := uint(0); i < policy.retries+1; i++ {
-		timeout, _ := getTimeLeft(ctx, policy.timeout)
+		timeout, _ := getTimeLeft(ctx, policy.maxRequestTimeout)
 		subCtx, cancel := context.WithTimeout(ctx, timeout)
 		resp, err = out.Call(subCtx, request)
 		cancel() // Clear the new ctx immdediately after the call

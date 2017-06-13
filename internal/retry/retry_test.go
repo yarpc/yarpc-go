@@ -437,7 +437,7 @@ func TestMiddleware(t *testing.T) {
 					func(context.Context, *transport.Request) *Policy {
 						return NewPolicy(
 							Retries(tt.retries),
-							PerRequestTimeout(tt.retrytimeout),
+							MaxRequestTimeout(tt.retrytimeout),
 							BackoffStrategy(tt.retryBackoff),
 						)
 					},

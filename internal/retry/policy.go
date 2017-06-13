@@ -34,9 +34,9 @@ import (
 type PolicyProvider func(context.Context, *transport.Request) *Policy
 
 var defaultPolicy = Policy{
-	retries:         0,
-	timeout:         time.Second,
-	backoffStrategy: ibackoff.None,
+	retries:           0,
+	maxRequestTimeout: time.Second,
+	backoffStrategy:   ibackoff.None,
 }
 
 // Policy defines how a retry will be applied.  It contains all the information
@@ -46,9 +46,10 @@ type Policy struct {
 	// initial attempt.
 	retries uint
 
-	// timeout is the Timeout we will enforce per request (if this
-	// is less than the context deadline, we'll use that instead).
-	timeout time.Duration
+	// maxRequestTimeout is the Timeout we will enforce per request (if this
+	// is more than the context deadline, we'll use the context deadline
+	// instead).
+	maxRequestTimeout time.Duration
 
 	// backoffStrategy is a backoff strategy that will be called after every
 	// retry.
@@ -77,13 +78,13 @@ func Retries(retries uint) PolicyOption {
 	}
 }
 
-// PerRequestTimeout is the Timeout we will enforce per request (if this
+// MaxRequestTimeout is the Timeout we will enforce per request (if this
 // is greater than the context deadline, we'll use that instead).
 //
 // Defaults to 1 second.
-func PerRequestTimeout(timeout time.Duration) PolicyOption {
+func MaxRequestTimeout(timeout time.Duration) PolicyOption {
 	return func(pol *Policy) {
-		pol.timeout = timeout
+		pol.maxRequestTimeout = timeout
 	}
 }
 
