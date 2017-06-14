@@ -61,7 +61,7 @@ func TestBasicGRPC(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
-		assert.Equal(t, status.New(codes.NotFound, "foo").Err(), err)
+		assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -85,6 +85,15 @@ func TestYarpcNamedError(t *testing.T) {
 		e.KeyValueYarpcServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
 		_, err := e.GetValueYarpc(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.NamedErrorf("bar", "baz 1"), err)
+	})
+}
+
+func TestYarpcGRPCError(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYarpcServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
+		_, err := e.GetValueYarpc(context.Background(), "foo")
+		assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("bar 1"), err)
 	})
 }
 
