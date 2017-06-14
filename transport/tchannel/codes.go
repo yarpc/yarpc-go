@@ -26,55 +26,34 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// TODO note does not cover all Codes, for now will return ErrCodeUnexpected
 // TODO: need to review all of this
 
 var (
+	// this covers all 500-level codes, so if the code is not in the map,
+	// it should not result in tchannel returning an error.
 	_codeToTChannelCode = map[yarpcerrors.Code]tchannel.SystemErrCode{
-		//yarpcerrors.CodeOK: ,
-		yarpcerrors.CodeCancelled:        tchannel.ErrCodeCancelled,
-		yarpcerrors.CodeUnknown:          tchannel.ErrCodeUnexpected,
+		// this is a 400-level code, what to do?
+		yarpcerrors.CodeCancelled: tchannel.ErrCodeCancelled,
+		yarpcerrors.CodeUnknown:   tchannel.ErrCodeUnexpected,
+		// this is a 400-level code, what to do?
 		yarpcerrors.CodeInvalidArgument:  tchannel.ErrCodeBadRequest,
 		yarpcerrors.CodeDeadlineExceeded: tchannel.ErrCodeTimeout,
-		//yarpcerrors.CodeNotFound: ,
-		//yarpcerrors.CodeAlreadyExists: ,
-		//yarpcerrors.CodePermissionDenied: ,
-		//yarpcerrors.CodeResourceExhausted: ,
-		//yarpcerrors.CodeFailedPrecondition: ,
-		//yarpcerrors.CodeAborted: ,
-		//yarpcerrors.CodeOutOfRange: ,
-		//yarpcerrors.CodeUnimplemented: ,
-		yarpcerrors.CodeInternal:    tchannel.ErrCodeUnexpected,
-		yarpcerrors.CodeUnavailable: tchannel.ErrCodeNetwork,
-		yarpcerrors.CodeDataLoss:    tchannel.ErrCodeUnexpected,
-		//yarpcerrors.CodeUnauthenticated: ,
+		yarpcerrors.CodeUnimplemented:    tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeInternal:         tchannel.ErrCodeUnexpected,
+		yarpcerrors.CodeUnavailable:      tchannel.ErrCodeNetwork,
+		yarpcerrors.CodeDataLoss:         tchannel.ErrCodeUnexpected,
 	}
 
 	_tchannelCodeToCode = map[tchannel.SystemErrCode]yarpcerrors.Code{
-		tchannel.ErrCodeTimeout:    yarpcerrors.CodeDeadlineExceeded,
+		tchannel.ErrCodeTimeout: yarpcerrors.CodeDeadlineExceeded,
+		// this is a 400-level code, what to do?
 		tchannel.ErrCodeCancelled:  yarpcerrors.CodeCancelled,
 		tchannel.ErrCodeBusy:       yarpcerrors.CodeUnavailable,
 		tchannel.ErrCodeDeclined:   yarpcerrors.CodeUnavailable,
 		tchannel.ErrCodeUnexpected: yarpcerrors.CodeInternal,
+		// this is a 400-level code, what to do?
 		tchannel.ErrCodeBadRequest: yarpcerrors.CodeInvalidArgument,
 		tchannel.ErrCodeNetwork:    yarpcerrors.CodeUnavailable,
 		tchannel.ErrCodeProtocol:   yarpcerrors.CodeInternal,
 	}
 )
-
-func codeToTChannelCode(code yarpcerrors.Code) tchannel.SystemErrCode {
-	tchannelCode, ok := _codeToTChannelCode[code]
-	if !ok {
-		return tchannel.ErrCodeUnexpected
-	}
-	return tchannelCode
-}
-
-func tchannelCodeToCode(tchannelCode tchannel.SystemErrCode) yarpcerrors.Code {
-	code, ok := _tchannelCodeToCode[tchannelCode]
-	if !ok {
-		// TODO: is this correct?
-		return yarpcerrors.CodeUnknown
-	}
-	return code
-}
