@@ -81,10 +81,8 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StopAction{ExpectedState: Stopped},
-						Actions{
-							WaitForStopAction,
-							GetStateAction{ExpectedState: Stopped},
-						},
+						WaitForStoppingAction,
+						WaitForStopAction,
 					},
 				},
 			},
@@ -99,6 +97,10 @@ func TestLifecycleOnce(t *testing.T) {
 							Err:           fmt.Errorf("abort"),
 							ExpectedErr:   fmt.Errorf("abort"),
 							ExpectedState: Errored,
+						},
+						Actions{
+							WaitForStoppingAction,
+							GetStateAction{ExpectedState: Errored},
 						},
 						Actions{
 							WaitForStopAction,
@@ -118,10 +120,8 @@ func TestLifecycleOnce(t *testing.T) {
 							StartAction{ExpectedState: Running},
 							StopAction{ExpectedState: Stopped},
 						},
-						Actions{
-							WaitForStopAction,
-							GetStateAction{ExpectedState: Stopped},
-						},
+						WaitForStoppingAction,
+						WaitForStopAction,
 					},
 				},
 			},
@@ -148,8 +148,54 @@ func TestLifecycleOnce(t *testing.T) {
 					Actions: []LifecycleAction{
 						StopAction{ExpectedState: Stopped, Wait: 20 * time.Millisecond},
 						GetStateAction{ExpectedState: Stopping},
+						GetStateAction{ExpectedState: Stopped},
 					},
 					Wait: 10 * time.Millisecond,
+				},
+			},
+			expectedFinalState: Stopped,
+		},
+		{
+			msg: "Delayed stop, wait for stopping",
+			// The purpose of this test is to verify that the stopping state is
+			// occupied for the duration of the Stop() call.
+			//
+			// Timeline:
+			// - 0ms Idle
+			// - 0ms Starting
+			// - 0–20ms Running
+			// - 20–40ms Stopping
+			// - 40–ms Stopped
+			//
+			// First group:
+			// - 0ms Start (0ms)
+			// - 0ms Wait (20ms)
+			// - 20ms Stop (20ms)
+			//
+			// Second group:
+			// - 0ms Wait until Stopping
+			// - 20ms Resume
+			// - 20ms Wait (10ms)
+			// - 30ms Expect Stopping state
+			// - 30ms Wait (20ms)
+			// - 50ms Expect Stopped state
+			actions: []LifecycleAction{
+				StartAction{ExpectedState: Running},
+				ConcurrentAction{
+					Actions: []LifecycleAction{
+						Actions{
+							StartAction{ExpectedState: Running},
+							WaitAction(20 * time.Millisecond),
+							StopAction{ExpectedState: Stopped, Wait: 20 * time.Millisecond},
+						},
+						Actions{
+							WaitForStoppingAction,
+							WaitAction(10 * time.Millisecond),
+							ExactStateAction{ExpectedState: Stopping},
+							WaitAction(20 * time.Millisecond),
+							GetStateAction{ExpectedState: Stopped},
+						},
+					},
 				},
 			},
 			expectedFinalState: Stopped,
@@ -166,7 +212,6 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedErr:   errors.New("expected error"),
 						},
 						StartAction{
-
 							Err:           errors.New("not an expected error 1"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
@@ -414,4 +459,32 @@ func TestLifecycleOnce(t *testing.T) {
 			assert.Equal(t, tt.expectedFinalState, once.LifecycleState())
 		})
 	}
+}
+
+// TestStopping verifies that a lifecycle object can spawn a goroutine and wait
+// for that goroutine to exit in its stopping state.  The goroutine must wrap
+// up its work when it detects that the lifecycle has begun stopping.  If it
+// waited for the stopped channel, the stop callback would deadlock.
+func TestStopping(t *testing.T) {
+	l := Once()
+	l.Start(nil)
+
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-l.Stopping():
+		case <-time.After(time.Second):
+			assert.Fail(t, "deadlock")
+		}
+		close(done)
+	}()
+
+	l.Stop(func() error {
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			assert.Fail(t, "deadlock")
+		}
+		return nil
+	})
 }
