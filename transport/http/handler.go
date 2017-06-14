@@ -48,28 +48,35 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	start := time.Now()
-
-	defer req.Body.Close()
-	if req.Method != "POST" {
-		http.NotFound(w, req)
-		return
-	}
-
-	err := h.callHandler(w, req, start)
+	err := h.callHandler(w, req)
 	if err == nil {
 		return
 	}
-
 	status := http.StatusInternalServerError
 	if yarpcerrors.IsYARPCError(err) {
-		// TODO: what to do with error from codeToHTTPStatusCode?
-		status, _ = codeToHTTPStatusCode(yarpcerrors.ErrorCode(err))
+		// TODO: mismatch between yarpcerrors.ErrorCode and yarpcerrors.IsYARPCError
+		getStatus, ok := _codeToHTTPStatusCode[yarpcerrors.ErrorCode(err)]
+		if ok {
+			status = getStatus
+		}
 	}
-	http.Error(w, err.Error(), status)
+	if name := yarpcerrors.ErrorName(err); name != "" {
+		// TODO: validate name?
+		w.Header().Set(ErrorNameHeader, name)
+	}
+	message := yarpcerrors.ErrorMessage(err)
+	if message == "" {
+		message = err.Error()
+	}
+	http.Error(w, message, status)
 }
 
-func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
+func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
+	start := time.Now()
+	defer req.Body.Close()
+	if req.Method != "POST" {
+		return yarpcerrors.NotFoundErrorf("only POST is allowed")
+	}
 	treq := &transport.Request{
 		Caller:    popHeader(req.Header, CallerHeader),
 		Service:   popHeader(req.Header, ServiceHeader),

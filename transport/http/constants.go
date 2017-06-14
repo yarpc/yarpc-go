@@ -58,6 +58,9 @@ const (
 
 	// Whether the response body contains an application error.
 	ApplicationStatusHeader = "Rpc-Status"
+
+	// ErrorNameHeader contains the name of a user-defined error.
+	ErrorNameHeader = "Rpc-Error-Name"
 )
 
 // Valid values for the Rpc-Status header.

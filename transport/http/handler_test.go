@@ -269,8 +269,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		httpStatusCode := rw.Code
 		assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
-		code, err := httpStatusCodeToCode(httpStatusCode)
-		assertNoError(t, err)
+		code := httpStatusCodeToBestCode(httpStatusCode)
 		assert.Equal(t, tt.wantCode, code)
 	}
 }
@@ -322,7 +321,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	code := httpResponse.Code
 	assert.True(t, code >= 500 && code < 600, "expected 500 level response")
 	assert.Equal(t,
-		`UnexpectedError: error for procedure "hello" of service "fake": great sadness`+"\n",
+		`great sadness`+"\n",
 		httpResponse.Body.String())
 }
 
@@ -365,10 +364,7 @@ func TestHandlerPanic(t *testing.T) {
 	defer cancel()
 	_, err := client.Call(ctx, "panic", []byte{})
 
-	assert.True(t, transport.IsUnexpectedError(err), "Must be an UnexpectedError")
-	assert.Equal(t,
-		`UnexpectedError: error for procedure "panic" of service "yarpc-test": panic: oops I panicked!`,
-		err.Error())
+	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.ErrorCode(err))
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

@@ -285,6 +285,8 @@ func (o *Outbound) callWithPeer(
 
 	span.SetTag("http.status_code", response.StatusCode)
 
+	// TODO: does this still apply with the new error API?
+	// TODO Behavior for 300-range status codes is undefined
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		appHeaders := applicationHeaders.FromHTTPHeaders(
 			response.Header, transport.NewHeaders())
@@ -296,7 +298,7 @@ func (o *Outbound) callWithPeer(
 		}, nil
 	}
 
-	return nil, getErrFromResponse(response)
+	return nil, getYARPCErrorFromResponse(response)
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(error), error) {
@@ -397,30 +399,19 @@ func (o *Outbound) getHTTPClient(p *hostport.Peer) (*http.Client, error) {
 	return t.client, nil
 }
 
-func getErrFromResponse(response *http.Response) error {
-	// TODO Behavior for 300-range status codes is undefined
+func getYARPCErrorFromResponse(response *http.Response) error {
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return err
+		return yarpcerrors.InternalErrorf(err.Error())
 	}
-
 	if err := response.Body.Close(); err != nil {
-		return err
+		return yarpcerrors.InternalErrorf(err.Error())
 	}
-
-	// Trim the trailing newline from HTTP error messages
-	message := strings.TrimSuffix(string(contents), "\n")
-
-	// TODO: we can get more specific than this
-	if response.StatusCode >= 400 && response.StatusCode < 500 {
-		return yarpcerrors.InvalidArgumentErrorf(message)
-	}
-
-	if response.StatusCode == http.StatusGatewayTimeout {
-		return yarpcerrors.DeadlineExceededErrorf(message)
-	}
-
-	return yarpcerrors.InternalErrorf(message)
+	return yarpcerrors.FromHeaders(
+		httpStatusCodeToBestCode(response.StatusCode),
+		response.Header.Get(ErrorNameHeader),
+		strings.TrimSuffix(string(contents), "\n"),
+	)
 }
 
 // Introspect returns basic status about this outbound.

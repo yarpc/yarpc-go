@@ -86,10 +86,6 @@ func codeToHTTPStatusCode(code yarpcerrors.Code) (int, error) {
 	return statusCode, nil
 }
 
-// TODO: Is there any use to this? The original thinking was that it would be nice
-// to have a function that returns the most "general" yarpcerrors.Code for the given HTTP
-// status code, but this doesn't really work in practice.
-
 // httpStatusCodeToCodes returns the Codes that correspond to the given HTTP status
 // code, or nil if no Codes correspond to the given HTTP status code.
 func httpStatusCodeToCodes(httpStatusCode int) []yarpcerrors.Code {
@@ -100,4 +96,22 @@ func httpStatusCodeToCodes(httpStatusCode int) []yarpcerrors.Code {
 	c := make([]yarpcerrors.Code, len(codes))
 	copy(c, codes)
 	return c
+}
+
+// httpStatusCodeToBestCode does a best-effort conversion from the given HTTP status
+// code to a Code.
+//
+// If one Code maps to the given HTTP status code, that Code is returned.
+// If more than one Code maps to the given HTTP status Code, one Code is returned.
+// If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
+// Else, yarpcerrors.CodeUnknown is returned.
+func httpStatusCodeToBestCode(httpStatusCode int) yarpcerrors.Code {
+	codes, ok := _httpStatusCodeToCodes[httpStatusCode]
+	if !ok || len(codes) == 0 {
+		if httpStatusCode >= 400 && httpStatusCode < 500 {
+			return yarpcerrors.CodeInvalidArgument
+		}
+		return yarpcerrors.CodeUnknown
+	}
+	return codes[0]
 }
