@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
@@ -39,14 +40,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func TestBasicYarpc(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYarpc(context.Background(), "foo")
-		assert.Error(t, err)
+		assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 		assert.NoError(t, e.SetValueYarpc(context.Background(), "foo", "bar"))
 		value, err := e.GetValueYarpc(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -58,7 +61,7 @@ func TestBasicGRPC(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
-		assert.Error(t, err)
+		assert.Equal(t, status.New(codes.NotFound, "foo").Err(), err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.NoError(t, err)

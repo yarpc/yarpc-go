@@ -176,6 +176,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	var name string
 	if responseMD != nil {
 		value, ok := responseMD[grpcheader.ErrorNameHeader]
+		// TODO: what to do if the length is > 1?
 		if ok && len(value) == 1 {
 			name = value[0]
 		}

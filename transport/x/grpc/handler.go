@@ -69,7 +69,7 @@ func (h *handler) handle(
 	err = handlerErrorToGRPCError(err, responseMD)
 	// TODO: what to do with error?
 	_ = grpc.SendHeader(ctx, responseMD)
-	return err
+	return response, err
 }
 
 func (h *handler) handleBeforeErrorConversion(
