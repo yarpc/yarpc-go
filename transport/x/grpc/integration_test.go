@@ -79,6 +79,15 @@ func TestYarpcMetadata(t *testing.T) {
 	})
 }
 
+func TestYarpcNamedError(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYarpcServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
+		_, err := e.GetValueYarpc(context.Background(), "foo")
+		assert.Equal(t, yarpcerrors.NamedErrorf("bar", "baz 1"), err)
+	})
+}
+
 func doWithTestEnv(t *testing.T, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
 	testEnv, err := newTestEnv(inboundOptions, outboundOptions)
 	require.NoError(t, err)

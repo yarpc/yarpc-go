@@ -44,15 +44,26 @@ var (
 type KeyValueYarpcServer struct {
 	sync.RWMutex
 	items map[string]string
+	// if next error is set it will be returned along with an empty response
+	// from any call to KeyValueYarpcServer, and then set to nil
+	nextError error
 }
 
 // NewKeyValueYarpcServer returns a new KeyValueYarpcServer.
 func NewKeyValueYarpcServer() *KeyValueYarpcServer {
-	return &KeyValueYarpcServer{sync.RWMutex{}, make(map[string]string)}
+	return &KeyValueYarpcServer{sync.RWMutex{}, make(map[string]string), nil}
 }
 
 // GetValue implements GetValue.
 func (k *KeyValueYarpcServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
+	k.Lock()
+	if k.nextError != nil {
+		err := k.nextError
+		k.nextError = nil
+		k.Unlock()
+		return nil, err
+	}
+	k.Unlock()
 	if request == nil {
 		return nil, errRequestNil
 	}
@@ -70,6 +81,14 @@ func (k *KeyValueYarpcServer) GetValue(ctx context.Context, request *examplepb.G
 
 // SetValue implements SetValue.
 func (k *KeyValueYarpcServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
+	k.Lock()
+	if k.nextError != nil {
+		err := k.nextError
+		k.nextError = nil
+		k.Unlock()
+		return nil, err
+	}
+	k.Unlock()
 	if request == nil {
 		return nil, errRequestNil
 	}
@@ -84,6 +103,13 @@ func (k *KeyValueYarpcServer) SetValue(ctx context.Context, request *examplepb.S
 	}
 	k.Unlock()
 	return nil, nil
+}
+
+// SetNextError sets the error to return on the next call to KeyValueYarpcServer.
+func (k *KeyValueYarpcServer) SetNextError(err error) {
+	k.Lock()
+	defer k.Unlock()
+	k.nextError = err
 }
 
 // SinkYarpcServer implements examplepb.SinkYarpcServer.
