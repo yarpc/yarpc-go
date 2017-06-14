@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"time"
 
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/x/protobuf"
@@ -65,8 +64,12 @@ func (h *handler) handle(
 	decodeFunc func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
 ) (interface{}, error) {
-	response, err := h.handleBeforeErrorConversion(server, ctx, decodeFunc, interceptor)
-	return response, handlerErrorToGRPCError(ctx, err)
+	responseMD := metadata.New(nil)
+	response, err := h.handleBeforeErrorConversion(server, ctx, decodeFunc, interceptor, responseMD)
+	err = handlerErrorToGRPCError(err, responseMD)
+	// TODO: what to do with error?
+	_ = grpc.SendHeader(ctx, responseMD)
+	return err
 }
 
 func (h *handler) handleBeforeErrorConversion(
@@ -74,6 +77,7 @@ func (h *handler) handleBeforeErrorConversion(
 	ctx context.Context,
 	decodeFunc func(interface{}) error,
 	interceptor grpc.UnaryServerInterceptor,
+	responseMD metadata.MD,
 ) (interface{}, error) {
 	transportRequest, err := h.getTransportRequest(ctx, decodeFunc)
 	if err != nil {
@@ -92,11 +96,11 @@ func (h *handler) handleBeforeErrorConversion(
 				if !ok {
 					return nil, yarpcerrors.InternalErrorf("expected *transport.Request, got %T", request)
 				}
-				return h.call(ctx, transportRequest)
+				return h.call(ctx, transportRequest, responseMD)
 			},
 		)
 	}
-	return h.call(ctx, transportRequest)
+	return h.call(ctx, transportRequest, responseMD)
 }
 
 func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error) (*transport.Request, error) {
@@ -129,33 +133,32 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 	return transportRequest, nil
 }
 
-func (h *handler) call(ctx context.Context, transportRequest *transport.Request) (interface{}, error) {
+func (h *handler) call(ctx context.Context, transportRequest *transport.Request, responseMD metadata.MD) (interface{}, error) {
 	handlerSpec, err := h.router.Choose(ctx, transportRequest)
 	if err != nil {
 		return nil, err
 	}
 	switch handlerSpec.Type() {
 	case transport.Unary:
-		return h.callUnary(ctx, transportRequest, handlerSpec.Unary())
+		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseMD)
 	default:
 		return nil, yarpcerrors.UnimplementedErrorf("transport:grpc type:%s", handlerSpec.Type().String())
 	}
 }
 
-func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler) (interface{}, error) {
+func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseMD metadata.MD) (interface{}, error) {
 	if err := request.ValidateUnaryContext(ctx); err != nil {
 		return nil, err
 	}
-	responseWriter := newResponseWriter()
+	responseWriter := newResponseWriter(responseMD)
 	// TODO: do we always want to return the data from responseWriter.Bytes, or return nil for the data if there is an error?
 	// For now, we are always returning the data
 	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
-	err = multierr.Append(err, grpc.SendHeader(ctx, responseWriter.md))
 	data := responseWriter.Bytes()
 	return data, err
 }
 
-func handlerErrorToGRPCError(ctx context.Context, err error) error {
+func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 	if err == nil {
 		return nil
 	}
@@ -170,9 +173,8 @@ func handlerErrorToGRPCError(ctx context.Context, err error) error {
 	}
 	// if the yarpc error has a name, set the header
 	if name := yarpcerrors.ErrorName(err); name != "" {
-		// TODO: does this work?
-		// TODO: what to do with error from grpc.SetHeader?
-		_ = grpc.SetHeader(ctx, metadata.MD{grpcheader.ErrorNameHeader: []string{name}})
+		// TODO: what to do with error?
+		_ = addToMetadata(responseMD, grpcheader.ErrorNameHeader, name)
 	}
 	// TODO: mismatch between IsYARPCError and yarpcerrors.ErrorCode
 	// maybe just rely on yarpcerrors.ErrorCode != yarpcerrors.CodeOK

@@ -34,10 +34,10 @@ type responseWriter struct {
 	isApplicationError bool
 }
 
-func newResponseWriter() *responseWriter {
+func newResponseWriter(md metadata.MD) *responseWriter {
 	return &responseWriter{
 		bytes.NewBuffer(nil),
-		metadata.New(nil),
+		md,
 		false,
 	}
 }
