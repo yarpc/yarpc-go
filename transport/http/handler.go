@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"net/http"
-	"sync"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -192,8 +191,10 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w      http.ResponseWriter
-	lock   sync.Mutex
+	w http.ResponseWriter
+	// TODO: tchannel doesn't lock, do we need to?
+	// added documentation on ResponseWriter that it is not thread-safe
+	//lock   sync.Mutex
 	buffer *bytes.Buffer
 }
 
@@ -203,8 +204,8 @@ func newResponseWriter(w http.ResponseWriter) *responseWriter {
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
-	rw.lock.Lock()
-	defer rw.lock.Unlock()
+	//rw.lock.Lock()
+	//defer rw.lock.Unlock()
 	if rw.buffer == nil {
 		rw.buffer = buffer.Get()
 	}
@@ -224,8 +225,8 @@ func (rw *responseWriter) AddSystemHeader(key string, value string) {
 }
 
 func (rw *responseWriter) Close(httpStatusCode int) {
-	rw.lock.Lock()
-	defer rw.lock.Unlock()
+	//rw.lock.Lock()
+	//defer rw.lock.Unlock()
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?

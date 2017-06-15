@@ -31,6 +31,15 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
+const (
+	// ErrorCodeHeaderKey is the response header key for the error code.
+	ErrorCodeHeaderKey = "rpc-error-code"
+	// ErrorNameHeaderKey is the response header key for the error name.
+	ErrorNameHeaderKey = "rpc-error-name"
+	// ErrorMessageHeaderKey is the response header key for the error message.
+	ErrorMessageHeaderKey = "rpc-error-message"
+)
+
 // readRequestHeaders reads headers and baggage from an incoming request.
 func readRequestHeaders(
 	ctx context.Context,
