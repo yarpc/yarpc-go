@@ -90,6 +90,7 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
 	start := time.Now()
+	// you MUST close the responseWriter no matter what
 	responseWriter := newResponseWriter(call.Response(), call.Format())
 
 	handlerErr := h.callHandler(ctx, call, responseWriter, start)
@@ -250,10 +251,10 @@ func (rw *responseWriter) Close() error {
 		if err != nil {
 			return multierr.Append(retErr, err)
 		}
+		defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
 		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
 			return multierr.Append(retErr, err)
 		}
-		retErr = multierr.Append(retErr, bodyWriter.Close())
 	}
 
 	if retErr != nil {

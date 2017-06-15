@@ -443,7 +443,7 @@ func TestResponseWriter(t *testing.T) {
 		resp := newResponseRecorder()
 		call.resp = resp
 
-		w := newResponseWriter(new(transport.Request), call)
+		w := newResponseWriter(call.Response(), call.Format())
 		tt.apply(w)
 		assert.NoError(t, w.Close())
 
@@ -455,15 +455,6 @@ func TestResponseWriter(t *testing.T) {
 			assert.True(t, resp.applicationError, "expected an application error")
 		}
 	}
-}
-
-func TestResponseWriterAddHeadersAfterWrite(t *testing.T) {
-	call := &fakeInboundCall{format: tchannel.Raw, resp: newResponseRecorder()}
-	w := newResponseWriter(new(transport.Request), call)
-	w.Write([]byte("foo"))
-	assert.Panics(t, func() {
-		w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
-	})
 }
 
 func TestResponseWriterFailure(t *testing.T) {
@@ -489,32 +480,22 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newResponseWriter(
-			new(transport.Request),
-			&fakeInboundCall{
-				format: tchannel.Raw,
-				resp:   resp,
-			},
-		)
+		w := newResponseWriter(resp, tchannel.Raw)
 		_, err := w.Write([]byte("foo"))
-		assert.Error(t, err)
+		assert.NoError(t, err)
+		_, err = w.Write([]byte("bar"))
+		assert.NoError(t, err)
+		err = w.Close()
+		assert.Error(t, w.Close())
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
 		}
-
-		// writing again should also fail
-		_, err = w.Write([]byte("bar"))
-		assert.Error(t, err)
-		assert.Error(t, w.Close())
 	}
 }
 
 func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	res := newResponseRecorder()
-	w := newResponseWriter(
-		new(transport.Request),
-		&fakeInboundCall{format: tchannel.Raw, resp: res},
-	)
+	w := newResponseWriter(res, tchannel.Raw)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	require.NoError(t, w.Close())
