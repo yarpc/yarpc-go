@@ -22,10 +22,10 @@ package timeout
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
@@ -61,14 +61,14 @@ func Run(t crossdock.T) {
 	trans := t.Param(params.Transport)
 	switch trans {
 	case "http":
-		form := strings.HasPrefix(err.Error(),
-			`client timeout for procedure "sleep/raw" of service "yarpc-test" after`)
-		assert.True(form, "should be a client timeout: %q", err.Error())
+		assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "should be a client timeout: %q", err.Error())
 	case "tchannel":
-		form := strings.HasPrefix(err.Error(), `timeout`)
-		assert.True(form,
+		assert.Equal(
+			yarpcerrors.CodeDeadlineExceeded,
+			yarpcerrors.ErrorCode(err),
 			"should be a remote timeout (we cant represent client timeout with tchannel): %q",
-			err.Error())
+			err.Error(),
+		)
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}

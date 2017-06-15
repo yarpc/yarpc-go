@@ -276,7 +276,7 @@ func (o *Outbound) callWithPeer(
 		if err == context.DeadlineExceeded {
 			end := time.Now()
 			return nil, yarpcerrors.DeadlineExceededErrorf(
-				"client timeout for procedure %q or service %q after %v",
+				"client timeout for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
 

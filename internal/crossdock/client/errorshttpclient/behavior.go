@@ -120,9 +120,9 @@ func Run(t crossdock.T) {
 		wantStatus int
 		skipStatus int
 
-		skipBody           string
-		wantBody           string
-		wantBodyStartsWith string
+		skipBody         string
+		wantBody         string
+		wantBodyContains string
 
 		// hack to get java/python/node crossdock tests passing for now :(
 		// this is because we're changing when we validate the TTL
@@ -230,7 +230,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody: `BadRequest: invalid TTL "moo" for procedure "echo" ` +
+			wantBody: `invalid TTL "moo" for procedure "echo" ` +
 				`of service "yarpc-test": must be positive integer` + "\n",
 		},
 		{
@@ -244,7 +244,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "i am not json",
 			wantStatus: 400,
-			wantBodyStartsWith: `BadRequest: failed to decode "json" request body ` +
+			wantBodyContains: `failed to decode "json" request body ` +
 				`for procedure "echo" of service "yarpc-test" from ` +
 				`caller "yarpc-test":`,
 		},
@@ -288,7 +288,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 500,
-			wantBodyStartsWith: `UnexpectedError: failed to encode "json" response ` +
+			wantBodyContains: `UnexpectedError: failed to encode "json" response ` +
 				`body for procedure "bad-response" of service "yarpc-test" ` +
 				`from caller "yarpc-test":`,
 		},
@@ -308,8 +308,7 @@ func Run(t crossdock.T) {
 				"transport": {"http": {"host": "` + t.Param(params.Server) + `", "port": 8081}}
 			}`,
 			wantStatus: 500,
-			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
-				`BadRequest: failed to decode "thrift" request body for procedure "Echo::echo" ` +
+			wantBodyContains: `failed to decode "thrift" request body for procedure "Echo::echo" ` +
 				`of service "yarpc-test" from caller "yarpc-test": `,
 		},
 		{
@@ -327,9 +326,8 @@ func Run(t crossdock.T) {
 				"body": "{}",
 				"transport": {"http": {"host": "` + t.Param(params.Server) + `", "port": 8081}}
 			}`,
-			wantStatus: 500,
-			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service "yarpc-test": ` +
-				`UnexpectedError: error for procedure "unexpected-error" of service "yarpc-test": error` + "\n",
+			wantStatus:       500,
+			wantBodyContains: `error` + "\n",
 		},
 		{
 			name: "remote timeout",
@@ -342,7 +340,7 @@ func Run(t crossdock.T) {
 			},
 			wantStatus: 504,
 			skipStatus: 400,
-			wantBodyStartsWith: `Timeout: call to procedure "waitfortimeout/raw"` +
+			wantBodyContains: `call to procedure "waitfortimeout/raw"` +
 				` of service "yarpc-test" from caller "yarpc-test" timed out after`,
 		},
 		{
@@ -366,9 +364,8 @@ func Run(t crossdock.T) {
 			skipBody: `UnexpectedError: error for procedure "phone" of service` +
 				` "yarpc-test": BadRequest: unrecognized procedure "sleep" for` +
 				` service "yarpc-test"` + "\n",
-			wantStatus: 500,
-			wantBodyStartsWith: `UnexpectedError: error for procedure "phone" of service` +
-				` "yarpc-test": client timeout for procedure "sleep" of service "yarpc-test" after`,
+			wantStatus:       504,
+			wantBodyContains: `client timeout for procedure "sleep" of service "yarpc-test" after`,
 		},
 	}
 
@@ -389,13 +386,8 @@ func Run(t crossdock.T) {
 		if tt.wantBody != "" {
 			assert.Equal(tt.wantBody, res.Body, "response body should be informative error")
 		}
-		if tt.wantBodyStartsWith != "" {
-			i := len(tt.wantBodyStartsWith)
-			if i > len(res.Body) {
-				i = len(res.Body)
-			}
-			body := res.Body[:i]
-			assert.Equal(tt.wantBodyStartsWith, body,
+		if tt.wantBodyContains != "" {
+			assert.Contains(res.Body, tt.wantBodyContains,
 				"%s: response body should be informative error", tt.name)
 		}
 	}
