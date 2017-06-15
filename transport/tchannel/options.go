@@ -20,7 +20,14 @@
 
 package tchannel
 
-import "github.com/opentracing/opentracing-go"
+import (
+	"time"
+
+	backoffapi "go.uber.org/yarpc/api/backoff"
+	"go.uber.org/yarpc/internal/backoff"
+
+	"github.com/opentracing/opentracing-go"
+)
 
 // Option allows customizing the YARPC TChannel transport.
 // TransportSpec() accepts any TransportOption, and may in the future also
@@ -33,11 +40,28 @@ var _ Option = (TransportOption)(nil)
 
 // transportOptions is suitable for conveying options to TChannel transport
 // constructors (NewTransport and NewChannelTransport).
+// At time of writing, there is only a ChannelTransport constructor, which
+// supports options like WithChannel that only apply to this constructor form.
+// The transportOptions should also be suitable, albeit with extraneous properties,
+// if used for NewTransport, which will return a Transport suitable for YARPC
+// peer lists.
+// TODO update above when NewTransport is real.
 type transportOptions struct {
-	ch     Channel
-	tracer opentracing.Tracer
-	addr   string
-	name   string
+	ch                  Channel
+	tracer              opentracing.Tracer
+	addr                string
+	name                string
+	connTimeout         time.Duration
+	connBackoffStrategy backoffapi.Strategy
+}
+
+// newTransportOptions constructs the default transport options struct
+func newTransportOptions() transportOptions {
+	return transportOptions{
+		tracer:              opentracing.GlobalTracer(),
+		connTimeout:         defaultConnTimeout,
+		connBackoffStrategy: backoff.DefaultExponential,
+	}
 }
 
 // TransportOption customizes the behavior of a TChannel Transport.
@@ -99,5 +123,33 @@ func ListenAddr(addr string) TransportOption {
 func ServiceName(name string) TransportOption {
 	return func(options *transportOptions) {
 		options.name = name
+	}
+}
+
+// ConnTimeout specifies the time that TChannel will wait for a
+// connection attempt to any retained peer.
+//
+// The default is half of a second.
+func ConnTimeout(d time.Duration) TransportOption {
+	return func(options *transportOptions) {
+		options.connTimeout = d
+	}
+}
+
+// ConnBackoff specifies the connection backoff strategy for delays between
+// connection attempts for each peer.
+//
+// ConnBackoff accepts a function that creates new backoff instances.
+// The transport uses this to make referentially independent backoff instances
+// that will not be shared across goroutines.
+//
+// The backoff instance is a function that accepts connection attempts and
+// returns a duration.
+//
+// The default is exponential backoff starting with 10ms fully jittered,
+// doubling each attempt, with a maximum interval of 30s.
+func ConnBackoff(s backoffapi.Strategy) TransportOption {
+	return func(options *transportOptions) {
+		options.connBackoffStrategy = s
 	}
 }
