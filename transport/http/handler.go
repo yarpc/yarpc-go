@@ -24,10 +24,12 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
 
@@ -48,9 +50,23 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	err := h.callHandler(w, req)
+	responseWriter := newResponseWriter(w)
+	err := h.callHandler(responseWriter, req)
 	if err == nil {
+		responseWriter.Close(http.StatusOK)
 		return
+	}
+	if name := yarpcerrors.ErrorName(err); name != "" {
+		// TODO: validate name?
+		responseWriter.AddSystemHeader(ErrorNameHeader, name)
+	}
+	message := yarpcerrors.ErrorMessage(err)
+	if message == "" {
+		message = err.Error()
+	}
+	if message != "" {
+		// TODO: the []byte cast makes a copy of message, kind of messy
+		responseWriter.Write([]byte(message + "\n"))
 	}
 	status := http.StatusInternalServerError
 	if yarpcerrors.IsYARPCError(err) {
@@ -60,18 +76,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			status = getStatus
 		}
 	}
-	if name := yarpcerrors.ErrorName(err); name != "" {
-		// TODO: validate name?
-		w.Header().Set(ErrorNameHeader, name)
-	}
-	message := yarpcerrors.ErrorMessage(err)
-	if message == "" {
-		message = err.Error()
-	}
-	http.Error(w, message, status)
+	responseWriter.Close(status)
 }
 
-func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
+func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) error {
 	start := time.Now()
 	defer req.Body.Close()
 	if req.Method != "POST" {
@@ -111,7 +119,7 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request) error {
 		if err := request.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
-		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
+		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	case transport.Oneway:
 		err = handleOnewayRequest(span, treq, spec.Oneway())
@@ -184,22 +192,44 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w http.ResponseWriter
+	w      http.ResponseWriter
+	lock   sync.Mutex
+	buffer *bytes.Buffer
 }
 
-func newResponseWriter(w http.ResponseWriter) responseWriter {
+func newResponseWriter(w http.ResponseWriter) *responseWriter {
 	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
-	return responseWriter{w: w}
+	return &responseWriter{w: w}
 }
 
-func (rw responseWriter) Write(s []byte) (int, error) {
-	return rw.w.Write(s)
+func (rw *responseWriter) Write(s []byte) (int, error) {
+	rw.lock.Lock()
+	defer rw.lock.Unlock()
+	if rw.buffer == nil {
+		rw.buffer = buffer.Get()
+	}
+	return rw.buffer.Write(s)
 }
 
-func (rw responseWriter) AddHeaders(h transport.Headers) {
+func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
-func (rw responseWriter) SetApplicationError() {
+func (rw *responseWriter) SetApplicationError() {
 	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
+}
+
+func (rw *responseWriter) AddSystemHeader(key string, value string) {
+	rw.w.Header().Set(key, value)
+}
+
+func (rw *responseWriter) Close(httpStatusCode int) {
+	rw.lock.Lock()
+	defer rw.lock.Unlock()
+	rw.w.WriteHeader(httpStatusCode)
+	if rw.buffer != nil {
+		// TODO: what to do with error?
+		_, _ = rw.w.Write(rw.buffer.Bytes())
+		buffer.Put(rw.buffer)
+	}
 }

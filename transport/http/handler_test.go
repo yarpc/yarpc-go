@@ -394,6 +394,7 @@ func TestResponseWriter(t *testing.T) {
 
 	_, err := writer.Write([]byte("hello"))
 	require.NoError(t, err)
+	writer.Close(http.StatusOK)
 
 	assert.Equal(t, "bar", recorder.Header().Get("rpc-header-foo"))
 	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
