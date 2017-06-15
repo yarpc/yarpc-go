@@ -60,13 +60,13 @@ func newRand() *rand.Rand {
 }
 
 var defaultExponentialOpts = exponentialOptions{
-	first:   100 * time.Millisecond,
+	first:   10 * time.Millisecond,
 	max:     time.Minute,
 	newRand: newRand,
 }
 
 // DefaultExponential is an exponential backoff.Strategy with full jitter.
-// The first attempt has a range of 0 to 100ms and each successive attempt
+// The first attempt has a range of 0 to 10ms and each successive attempt
 // doubles the range of the possible delay.
 //
 // Exponential strategies are not thread safe.

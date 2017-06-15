@@ -22,16 +22,16 @@ package backoff
 
 import "go.uber.org/yarpc/api/backoff"
 
-// The Short backoff strategy could be implemented as a trivial singleton, but
+// The None backoff strategy could be implemented as a trivial singleton, but
 // for brevity, is just a degenerate case of the exponential backoff.
 
-var shortOpts = exponentialOptions{
+var noneOpts = exponentialOptions{
 	newRand: newRand,
 }
 
-// Short is a shorted backoff strategy that will always produce a 0ms duration.
+// None is a shorted backoff strategy that will always produce a 0ms duration.
 // This strategy is intended to minimize arbitrary delays during tests or
 // maximize load on a benchmark.
-var Short backoff.Strategy = &ExponentialStrategy{
-	opts: shortOpts,
+var None backoff.Strategy = &ExponentialStrategy{
+	opts: noneOpts,
 }

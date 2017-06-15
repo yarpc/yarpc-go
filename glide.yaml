@@ -37,7 +37,7 @@ import:
 - package: github.com/uber/jaeger-client-go
   version: '>=1, <3'
 - package: github.com/uber/tchannel-go
-  version: ^1.4
+  version: ^1
 - package: github.com/uber-go/tally
   version: ^3
 - package: go.uber.org/atomic
@@ -76,6 +76,7 @@ testImport:
 - package: github.com/kisielk/gotool
 - package: github.com/wadey/gocovmerge
 - package: go.uber.org/tools
+  version: master
   subpackages:
   - parallel-exec
   - update-license

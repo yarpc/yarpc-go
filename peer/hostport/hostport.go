@@ -133,8 +133,13 @@ func (p *Peer) EndRequest() {
 
 func (p *Peer) notifyStatusChanged() {
 	p.lock.RLock()
+	subs := make([]peer.Subscriber, 0, len(p.subscribers))
 	for sub := range p.subscribers {
-		sub.NotifyStatusChanged(p)
+		subs = append(subs, sub)
 	}
 	p.lock.RUnlock()
+
+	for _, sub := range subs {
+		sub.NotifyStatusChanged(p)
+	}
 }

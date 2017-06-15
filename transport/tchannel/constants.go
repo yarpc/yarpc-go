@@ -18,18 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package backoff
+package tchannel
 
-import (
-	"testing"
-	"time"
+import "time"
 
-	"github.com/stretchr/testify/assert"
-)
+const transportName = "tchannel"
 
-func TestShort(t *testing.T) {
-	short := Short.Backoff()
-	assert.Equal(t, time.Duration(0), short.Duration(0))
-	assert.Equal(t, time.Duration(0), short.Duration(1))
-	assert.Equal(t, time.Duration(0), short.Duration(2))
-}
+var defaultConnTimeout = 500 * time.Millisecond

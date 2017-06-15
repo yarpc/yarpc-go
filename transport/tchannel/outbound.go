@@ -158,21 +158,21 @@ func (o *Outbound) callWithPeer(ctx context.Context, req *transport.Request, pee
 	}, getResponseErrorAndDeleteHeaderKeys(headers)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(error), error) {
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*tchannelPeer, func(error), error) {
 	p, onFinish, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	hpPeer, ok := p.(*hostport.Peer)
+	tp, ok := p.(*tchannelPeer)
 	if !ok {
 		return nil, nil, peer.ErrInvalidPeerConversion{
 			Peer:         p,
-			ExpectedType: "*hostport.Peer",
+			ExpectedType: "*tchannelPeer",
 		}
 	}
 
-	return hpPeer, onFinish, nil
+	return tp, onFinish, nil
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.
