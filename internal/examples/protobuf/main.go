@@ -23,7 +23,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -32,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -128,12 +128,11 @@ func doClient(
 			var err error
 			if googleGRPC {
 				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
-				err = fromGRPCError(err)
 			} else {
 				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 			}
 			if err != nil {
-				fmt.Fprintf(output, "get %s failed: %s\n", key, err.Error())
+				fmt.Fprintf(output, "get %s failed: %s\n", key, getErrorMessage(err))
 			} else {
 				fmt.Fprintln(output, key, "=", response.Value)
 			}
@@ -153,12 +152,11 @@ func doClient(
 			var err error
 			if googleGRPC {
 				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
-				err = fromGRPCError(err)
 			} else {
 				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 			}
 			if err != nil {
-				fmt.Fprintf(output, "set %s = %s failed: %v\n", key, value, err.Error())
+				fmt.Fprintf(output, "set %s = %s failed: %v\n", key, value, getErrorMessage(err))
 			}
 			continue
 		case "fire":
@@ -170,7 +168,7 @@ func doClient(
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			if _, err := clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
-				fmt.Fprintf(output, "fire %s failed: %s\n", value, err.Error())
+				fmt.Fprintf(output, "fire %s failed: %s\n", value, getErrorMessage(err))
 			}
 			if err := sinkYarpcServer.WaitFireDone(); err != nil {
 				fmt.Fprintln(output, err)
@@ -192,9 +190,12 @@ func doClient(
 	return scanner.Err()
 }
 
-func fromGRPCError(err error) error {
-	if err != nil {
-		return errors.New(grpc.ErrorDesc(err))
+func getErrorMessage(err error) string {
+	if yarpcerrors.IsYARPCError(err) {
+		return yarpcerrors.ErrorMessage(err)
 	}
-	return nil
+	if errorDesc := grpc.ErrorDesc(err); errorDesc != "" {
+		return errorDesc
+	}
+	return err.Error()
 }
