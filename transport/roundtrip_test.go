@@ -256,7 +256,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 
 			handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
 				r.Headers.Del("user-agent") // for gRPC
-				r.Headers.Del(":authority") // grpc gRPC
+				r.Headers.Del(":authority") // for gRPC
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				if tt.responseError != nil {
