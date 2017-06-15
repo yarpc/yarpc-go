@@ -168,7 +168,7 @@ func UnauthenticatedErrorf(format string, args ...interface{}) error {
 // If the specified code is not CodeUnknown, this will not set the name field.
 //
 // This function should not be used by server implementations, use the individual
-// error constructors instead. This should only be uused by transport implementations.
+// error constructors instead. This should only be used by transport implementations.
 func FromHeaders(code Code, name string, message string) error {
 	switch code {
 	case CodeOK:
