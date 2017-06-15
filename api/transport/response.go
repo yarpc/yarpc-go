@@ -30,6 +30,8 @@ type Response struct {
 }
 
 // ResponseWriter allows Handlers to write responses in a streaming fashion.
+//
+// Functions on ResponseWriter are not thread-safe.
 type ResponseWriter interface {
 	io.Writer
 
