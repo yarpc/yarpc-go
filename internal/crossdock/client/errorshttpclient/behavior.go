@@ -259,7 +259,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody: `BadRequest: failed to decode "json" request body ` +
+			wantBody: `failed to decode "json" request body ` +
 				`for procedure "echo" of service "yarpc-test" from ` +
 				`caller "yarpc-test": expected encoding "json" but got "thrift"` + "\n",
 		},
@@ -274,8 +274,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 500,
-			wantBody: `UnexpectedError: error for procedure "unexpected-error" ` +
-				`of service "yarpc-test": error` + "\n",
+			wantBody:   `error` + "\n",
 		},
 		{
 			name: "bad response",
@@ -287,8 +286,8 @@ func Run(t crossdock.T) {
 				"Context-TTL-MS": "100",
 			},
 			body:       "{}",
-			wantStatus: 500,
-			wantBodyContains: `UnexpectedError: failed to encode "json" response ` +
+			wantStatus: 400,
+			wantBodyContains: `failed to encode "json" response ` +
 				`body for procedure "bad-response" of service "yarpc-test" ` +
 				`from caller "yarpc-test":`,
 		},
@@ -307,7 +306,7 @@ func Run(t crossdock.T) {
 				"body": "not a Thrift payload",
 				"transport": {"http": {"host": "` + t.Param(params.Server) + `", "port": 8081}}
 			}`,
-			wantStatus: 500,
+			wantStatus: 400,
 			wantBodyContains: `failed to decode "thrift" request body for procedure "Echo::echo" ` +
 				`of service "yarpc-test" from caller "yarpc-test": `,
 		},
