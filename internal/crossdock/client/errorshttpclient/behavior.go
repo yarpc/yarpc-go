@@ -150,8 +150,8 @@ func Run(t crossdock.T) {
 				"Context-TTL-MS": "100",
 			},
 			body:       `{"token":"10"}`,
-			wantStatus: 400,
-			wantBody: `BadRequest: unrecognized procedure ` +
+			wantStatus: 501,
+			wantBody: `unrecognized procedure ` +
 				`"echo" for service "not-yarpc-test"` + "\n",
 		},
 		{
@@ -189,8 +189,8 @@ func Run(t crossdock.T) {
 				"Context-TTL-MS": "100",
 			},
 			body:       "{}",
-			wantStatus: 400,
-			wantBody: `BadRequest: unrecognized procedure ` +
+			wantStatus: 501,
+			wantBody: `unrecognized procedure ` +
 				`"no-such-procedure" for service "yarpc-test"` + "\n",
 		},
 		{
@@ -217,7 +217,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   "BadRequest: missing encoding\n",
+			wantBody:   "missing encoding\n",
 		},
 		{
 			name: "invalid timeout",
@@ -230,8 +230,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody: `invalid TTL "moo" for procedure "echo" ` +
-				`of service "yarpc-test": must be positive integer` + "\n",
+			wantBody:   `invalid ttl moo for service "yarpc-test" and procedure "echo"` + "\n",
 		},
 		{
 			name: "invalid request",
