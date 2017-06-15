@@ -39,7 +39,6 @@ ignore:
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyclient/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlytest/
- - /encoding/x/protobuf/internal/wirepb/
  - /encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/
  - /internal/crossdock/crossdockpb/
  - /internal/crossdock/thrift/echo/

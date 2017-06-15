@@ -104,7 +104,6 @@ ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go
 generated_by_ragel internal/interpolate/parse.go
 
-touch encoding/x/protobuf/internal/wirepb/.nocover
 touch internal/crossdock/thrift/gen-go/echo/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover
