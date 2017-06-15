@@ -40,6 +40,18 @@ const (
 	ErrorMessageHeaderKey = "rpc-error-message"
 )
 
+var _reservedHeaderKeys = map[string]bool{
+	ErrorCodeHeaderKey:    true,
+	ErrorNameHeaderKey:    true,
+	ErrorMessageHeaderKey: true,
+}
+
+func isReservedHeaderKey(key string) bool {
+	// TODO: lowercase?
+	_, ok := _reservedHeaderKeys[key]
+	return ok
+}
+
 // readRequestHeaders reads headers and baggage from an incoming request.
 func readRequestHeaders(
 	ctx context.Context,

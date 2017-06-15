@@ -104,12 +104,12 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
-		responseWriter.AddHeader(ErrorCodeHeaderKey, string(text))
+		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
 		if name := yarpcerrors.ErrorName(yarpcError); name != "" {
-			responseWriter.AddHeader(ErrorNameHeaderKey, name)
+			responseWriter.addHeader(ErrorNameHeaderKey, name)
 		}
 		if message := yarpcerrors.ErrorMessage(yarpcError); message != "" {
-			responseWriter.AddHeader(ErrorMessageHeaderKey, message)
+			responseWriter.addHeader(ErrorMessageHeaderKey, message)
 		}
 	}
 	if err := responseWriter.Close(); err != nil {
@@ -204,11 +204,15 @@ func newResponseWriter(response inboundCallResponse, format tchannel.Format) *re
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.Items() {
-		rw.AddHeader(k, v)
+		// TODO: is this considered a breaking change?
+		if isReservedHeaderKey(k) {
+			panic("cannot use reserved header key " + k)
+		}
+		rw.addHeader(k, v)
 	}
 }
 
-func (rw *responseWriter) AddHeader(key string, value string) {
+func (rw *responseWriter) addHeader(key string, value string) {
 	rw.headers = rw.headers.With(key, value)
 }
 
