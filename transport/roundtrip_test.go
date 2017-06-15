@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"testing"
 	"time"
 
@@ -35,6 +36,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/x/grpc"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -161,10 +163,34 @@ func (tt tchannelTransport) WithRouterOneway(r transport.Router, f func(transpor
 	panic("tchannel does not support oneway calls")
 }
 
+// grpcTransport implements a roundTripTransport for gRPC.
+type grpcTransport struct{ t *testing.T }
+
+func (gt grpcTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
+	grpcTransport := grpc.NewTransport()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(gt.t, err)
+	i := grpcTransport.NewInbound(listener)
+	i.SetRouter(r)
+	require.NoError(gt.t, i.Start(), "failed to start")
+	defer i.Stop()
+
+	o := grpcTransport.NewSingleOutbound(listener.Addr().String())
+	require.NoError(gt.t, o.Start(), "failed to start outbound")
+	defer o.Stop()
+	f(o)
+}
+
+func (gt grpcTransport) WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound)) {
+	panic("grpc does not support oneway calls")
+}
+
 func TestSimpleRoundTrip(t *testing.T) {
 	transports := []roundTripTransport{
 		httpTransport{t},
 		tchannelTransport{t},
+		grpcTransport{t},
 	}
 
 	tests := []struct {
@@ -229,6 +255,8 @@ func TestSimpleRoundTrip(t *testing.T) {
 			})
 
 			handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
+				r.Headers.Del("user-agent") // for gRPC
+				r.Headers.Del(":authority") // grpc gRPC
 				assert.True(t, requestMatcher.Matches(r), "request mismatch: received %v", r)
 
 				if tt.responseError != nil {
