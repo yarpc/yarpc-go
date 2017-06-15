@@ -28,7 +28,6 @@ import (
 
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/x/protobuf/internal/wirepb"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 
@@ -76,40 +75,11 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 			return encoding.ResponseBodyEncodeError(transportRequest, err)
 		}
 	}
-	// We have to detect if our transport requires a raw response
-	// It is not possible to propagate this information on ctx with the current API
-	// we we attach this in the relevant transport (currently only gRPC) on the headers
-	// If we are sending a raw response back to a YARPC client, it needs to understand
-	// this is happening, so we attach the headers on the response as well
-	// Other clients (namely the existing gRPC clients outside of YARPC) understand
-	// that the response is the raw response.
-	if isRawResponse(transportRequest.Headers) {
-		responseWriter.AddHeaders(getRawResponseHeaders())
-		_, err := responseWriter.Write(responseData)
-		if err != nil {
-			return err
-		}
-		return appErr
-	}
-	var wireError *wirepb.Error
-	if appErr != nil {
-		wireError = &wirepb.Error{
-			Message: appErr.Error(),
-		}
-	}
-	wireResponse := &wirepb.Response{
-		Payload: string(responseData),
-		Error:   wireError,
-	}
-	wireData, wireCleanup, err := marshal(transportRequest.Encoding, wireResponse)
-	if wireCleanup != nil {
-		defer wireCleanup()
-	}
+	_, err = responseWriter.Write(responseData)
 	if err != nil {
-		return encoding.ResponseBodyEncodeError(transportRequest, err)
+		return err
 	}
-	_, err = responseWriter.Write(wireData)
-	return err
+	return appErr
 }
 
 type onewayHandler struct {

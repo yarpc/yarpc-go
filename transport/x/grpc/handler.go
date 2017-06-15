@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
-	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
@@ -112,11 +111,6 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 	if err != nil {
 		return nil, err
 	}
-	// We must do this to indicate to the protobuf encoding that we
-	// need to return the raw response object over this transport.
-	//
-	// See the commentary within encoding/x/protobuf/inbound.go.
-	transportRequest.Headers = protobuf.SetRawResponse(transportRequest.Headers)
 	var data []byte
 	if err := decodeFunc(&data); err != nil {
 		return nil, err
