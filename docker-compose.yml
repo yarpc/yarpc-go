@@ -58,10 +58,10 @@ services:
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
-            - SKIP_ERRORS_HTTPCLIENT=server:java
+            - SKIP_ERRORS_HTTPCLIENT=server:java,server:node,server:python
             # BEHAVIOR_ERRORSHTTPIN TODO
             - BEHAVIOR_ERRORS_TCHCLIENT=errors_tchclient,server
-            - SKIP_ERRORS_TCHCLIENT=server:java
+            - SKIP_ERRORS_TCHCLIENT=server:java,server:node,server:python
             # BEHAVIOR_ERRORSTCHIN TODO
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - SKIP_TCHCLIENT=client:java,server:java,encoding:protobuf
