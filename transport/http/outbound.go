@@ -88,13 +88,15 @@ func AddHeader(key, value string) OutboundOption {
 	}
 }
 
-// NewOutbound builds an HTTP outbound which sends requests to peers supplied
+// NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
 //
-// Peer Choosers used with the HTTP outbound MUST yield *hostport.Peer
-// objects. Also note that the Chooser MUST have started before Outbound.Start
-// is called.
+// The peer chooser and outbound must share the same transport, in this case
+// the HTTP transport.
+// The peer chooser must use the transport's RetainPeer to obtain peer
+// instances and return those peers to the outbound when it calls Choose.
+// The concrete peer type is private and intrinsic to the HTTP transport.
 func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
 		once:        sync.Once(),
@@ -109,18 +111,20 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 	return o
 }
 
-// NewOutbound builds an HTTP outbound which sends requests to peers supplied
+// NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
 //
-// Peer Choosers used with the HTTP outbound MUST yield *hostport.Peer
-// objects. Also note that the Chooser MUST have started before Outbound.Start
-// is called.
+// The peer chooser and outbound must share the same transport, in this case
+// the HTTP transport.
+// The peer chooser must use the transport's RetainPeer to obtain peer
+// instances and return those peers to the outbound when it calls Choose.
+// The concrete peer type is private and intrinsic to the HTTP transport.
 func NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	return NewTransport().NewOutbound(chooser, opts...)
 }
 
-// NewSingleOutbound builds an outbound which sends YARPC requests over HTTP
+// NewSingleOutbound builds an outbound that sends YARPC requests over HTTP
 // to the specified URL.
 //
 // The URLTemplate option has no effect in this form.
@@ -240,7 +244,7 @@ func (o *Outbound) callWithPeer(
 	treq *transport.Request,
 	start time.Time,
 	ttl time.Duration,
-	p *hostport.Peer,
+	p *httpPeer,
 ) (*transport.Response, error) {
 	req, err := o.createRequest(p, treq)
 	if err != nil {
@@ -255,12 +259,7 @@ func (o *Outbound) callWithPeer(
 	defer span.Finish()
 	req = o.withCoreHeaders(req, treq, ttl)
 
-	client, err := o.getHTTPClient(p)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := client.Do(req.WithContext(ctx))
+	response, err := p.transport.client.Do(req.WithContext(ctx))
 
 	if err != nil {
 		// Workaround borrowed from ctxhttp until
@@ -277,6 +276,10 @@ func (o *Outbound) callWithPeer(
 			end := time.Now()
 			return nil, errors.ClientTimeoutError(treq.Service, treq.Procedure, end.Sub(start))
 		}
+
+		// Note that the connection may have been lost so the peer connection
+		// maintenance loop resumes probing for availability.
+		p.OnDisconnected()
 
 		return nil, err
 	}
@@ -297,24 +300,24 @@ func (o *Outbound) callWithPeer(
 	return nil, getErrFromResponse(response)
 }
 
-func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*hostport.Peer, func(error), error) {
+func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*httpPeer, func(error), error) {
 	p, onFinish, err := o.chooser.Choose(ctx, treq)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	hpPeer, ok := p.(*hostport.Peer)
+	hpPeer, ok := p.(*httpPeer)
 	if !ok {
 		return nil, nil, peer.ErrInvalidPeerConversion{
 			Peer:         p,
-			ExpectedType: "*hostport.Peer",
+			ExpectedType: "*httpPeer",
 		}
 	}
 
 	return hpPeer, onFinish, nil
 }
 
-func (o *Outbound) createRequest(p *hostport.Peer, treq *transport.Request) (*http.Request, error) {
+func (o *Outbound) createRequest(p *httpPeer, treq *transport.Request) (*http.Request, error) {
 	newURL := *o.urlTemplate
 	newURL.Host = p.HostPort()
 	return http.NewRequest("POST", newURL.String(), treq.Body)
@@ -382,17 +385,6 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	}
 
 	return req
-}
-
-func (o *Outbound) getHTTPClient(p *hostport.Peer) (*http.Client, error) {
-	t, ok := p.Transport().(*Transport)
-	if !ok {
-		return nil, peer.ErrInvalidTransportConversion{
-			Transport:    p.Transport(),
-			ExpectedType: "*http.Transport",
-		}
-	}
-	return t.client, nil
 }
 
 func getErrFromResponse(response *http.Response) error {

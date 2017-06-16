@@ -78,31 +78,58 @@ func (ts *transportSpec) Spec() config.TransportSpec {
 // TransportConfig configures the shared HTTP Transport. This is shared
 // between all HTTP outbounds and inbounds of a Dispatcher.
 //
-// 	transports:
-// 	  http:
-// 	    keepAlive: 30s
+//  transports:
+//    http:
+//      keepAlive: 30s
+//      maxIdleConnsPerHost: 2
+//      connTimeout: 500ms
+//      connBackoff:
+//        exponential:
+//          first: 10ms
+//          max: 30s
 //
 // All parameters of TransportConfig are optional. This section may be omitted
 // in the transports section.
 type TransportConfig struct {
 	// Specifies the keep-alive period for all HTTP clients. This field is
 	// optional.
-	KeepAlive time.Duration `config:"keepAlive"`
+	KeepAlive           time.Duration  `config:"keepAlive"`
+	MaxIdleConnsPerHost int            `config:"maxIdleConnsPerHost"`
+	ConnTimeout         time.Duration  `config:"connTimeout"`
+	ConnBackoff         config.Backoff `config:"connBackoff"`
 }
 
 func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
-	opts := ts.TransportOptions
-	if tc.KeepAlive > 0 {
-		opts = append(opts, KeepAlive(tc.KeepAlive))
+	options := newTransportOptions()
+
+	for _, opt := range ts.TransportOptions {
+		opt(&options)
 	}
-	return NewTransport(opts...), nil
+
+	if tc.KeepAlive > 0 {
+		options.keepAlive = tc.KeepAlive
+	}
+	if tc.MaxIdleConnsPerHost > 0 {
+		options.maxIdleConnsPerHost = tc.MaxIdleConnsPerHost
+	}
+	if tc.ConnTimeout > 0 {
+		options.connTimeout = tc.ConnTimeout
+	}
+
+	strategy, err := tc.ConnBackoff.Strategy()
+	if err != nil {
+		return nil, err
+	}
+	options.connBackoffStrategy = strategy
+
+	return options.newTransport(), nil
 }
 
 // InboundConfig configures an HTTP inbound.
 //
-// 	inbounds:
-// 	  http:
-// 	    address: ":80"
+//  inbounds:
+//    http:
+//      address: ":80"
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
