@@ -4,6 +4,9 @@ Releases
 v1.10.0 (unreleased)
 -------------------
 
+-   Thrift: UberFx-compatible modules are now generated for each service inside
+    a subpackage. Disable this by passing a `-no-fx` flag to the plugin.
+
 
 v1.9.0 (2017-06-08)
 -------------------
