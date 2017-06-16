@@ -47,9 +47,9 @@ services:
             - BEHAVIOR_THRIFT=client,server,transport
             - SKIP_THRIFT=client:java+transport:tchannel,server:java+transport:tchannel
             - BEHAVIOR_PROTOBUF=client,server,transport
-            - SKIP_PROTOBUF=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_PROTOBUF=client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_GRPC=client,server,encoding
-            - SKIP_GRPC=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_GRPC=client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_GOOGLE_GRPC_CLIENT=client,server
             - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
               # TODO: uncomment when transport errors are implemented and we no longer wrap protobuf responses
