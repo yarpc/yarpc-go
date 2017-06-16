@@ -68,8 +68,6 @@ func TestOutboundEvent(t *testing.T) {
 			},
 			reqTimeout: time.Second,
 			event: &OutboundEvent{
-				WantTimeout:         time.Second,
-				WantTimeoutBounds:   time.Millisecond * 20,
 				WantCaller:          "caller",
 				WantService:         "service",
 				WantEncoding:        transport.Encoding("encoding"),
@@ -139,10 +137,8 @@ func TestOutboundEvent(t *testing.T) {
 			},
 			reqTimeout: time.Second,
 			event: &OutboundEvent{
-				WantTimeout:       time.Second,
-				WantTimeoutBounds: time.Millisecond * 20,
-				WantBody:          "body",
-				GiveRespBody:      "respbody",
+				WantBody:     "body",
+				GiveRespBody: "respbody",
 			},
 			wantBody:            "respbody",
 			wantExecutionStatus: iyarpctest.Finished,
@@ -154,61 +150,11 @@ func TestOutboundEvent(t *testing.T) {
 			},
 			reqTimeout: time.Second,
 			event: &OutboundEvent{
-				WantTimeout:  time.Second,
 				WantBody:     "body",
 				GiveRespBody: "respbody",
 			},
 			wantBody:            "respbody",
 			wantExecutionStatus: iyarpctest.Finished,
-		},
-		{
-			msg: "timeout smaller than expected",
-			request: &transport.Request{
-				Body: bytes.NewBufferString("body"),
-			},
-			reqTimeout: time.Second,
-			event: &OutboundEvent{
-				WantTimeout:  time.Second * 2,
-				WantBody:     "body",
-				GiveRespBody: "respbody",
-			},
-			wantBody:            "respbody",
-			wantExecutionStatus: iyarpctest.Finished,
-			wantExecutionErrors: []string{
-				"deadline was less than expected",
-			},
-		},
-		{
-			msg: "timeout larger than expected",
-			request: &transport.Request{
-				Body: bytes.NewBufferString("body"),
-			},
-			reqTimeout: time.Second * 2,
-			event: &OutboundEvent{
-				WantTimeout:  time.Second,
-				WantBody:     "body",
-				GiveRespBody: "respbody",
-			},
-			wantBody:            "respbody",
-			wantExecutionStatus: iyarpctest.Finished,
-			wantExecutionErrors: []string{
-				"deadline was greater than expected",
-			},
-		},
-		{
-			msg: "wanttimeout with no deadline",
-			request: &transport.Request{
-				Body: bytes.NewBufferString("body"),
-			},
-			event: &OutboundEvent{
-				WantTimeout:  time.Second,
-				WantBody:     "body",
-				GiveRespBody: "respbody",
-			},
-			wantExecutionStatus: iyarpctest.Fatal,
-			wantExecutionErrors: []string{
-				"wanted context deadline, but there was no deadline",
-			},
 		},
 		{
 			msg: "invalid number of header keys",

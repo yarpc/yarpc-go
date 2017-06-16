@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 
@@ -78,10 +77,6 @@ func (c *OutboundEventCallable) Cleanup() {
 // It has explicit checks for all request and timeout attributes, and it
 // can return all the information needed from the request.
 type OutboundEvent struct {
-	// context.Deadline validation
-	WantTimeout       time.Duration
-	WantTimeoutBounds time.Duration
-
 	// transport.Request validation
 	WantCaller          string
 	WantService         string
@@ -111,18 +106,6 @@ type OutboundEvent struct {
 // Call will validate a single call to the outbound event based on
 // the OutboundEvent's parameters.
 func (e *OutboundEvent) Call(ctx context.Context, t require.TestingT, req *transport.Request) (*transport.Response, error) {
-	if e.WantTimeout != 0 {
-		timeoutBounds := e.WantTimeoutBounds
-		if timeoutBounds == 0 {
-			timeoutBounds = time.Millisecond * 20
-		}
-		deadline, ok := ctx.Deadline()
-		require.True(t, ok, "wanted context deadline, but there was no deadline")
-		deadlineDuration := deadline.Sub(time.Now())
-		assert.True(t, deadlineDuration > (e.WantTimeout-timeoutBounds), "deadline was less than expected, want %q (within %s), got %q", e.WantTimeout, timeoutBounds, deadlineDuration)
-		assert.True(t, deadlineDuration < (e.WantTimeout+timeoutBounds), "deadline was greater than expected, want %q (within %s), got %q", e.WantTimeout, timeoutBounds, deadlineDuration)
-	}
-
 	assertEqualIfSet(t, e.WantCaller, req.Caller, "invalid Caller")
 	assertEqualIfSet(t, e.WantService, req.Service, "invalid Service")
 	assertEqualIfSet(t, string(e.WantEncoding), string(req.Encoding), "invalid Encoding")

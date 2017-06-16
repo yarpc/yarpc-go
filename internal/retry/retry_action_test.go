@@ -52,7 +52,6 @@ type RequestAction struct {
 
 	events []*OutboundEvent
 
-	wantTimeLimit        time.Duration
 	wantError            string
 	wantApplicationError bool
 	wantBody             string
@@ -68,22 +67,12 @@ func (r RequestAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 
 	ctx := context.Background()
 	if r.reqTimeout != 0 {
-		if r.wantTimeLimit == 0 {
-			r.wantTimeLimit = r.reqTimeout + time.Millisecond*10
-		}
-
 		newCtx, cancel := context.WithTimeout(ctx, r.reqTimeout)
 		defer cancel()
 		ctx = newCtx
 	}
 
-	start := time.Now()
 	resp, err := mw.Call(ctx, r.request, out)
-	elapsed := time.Now().Sub(start)
-
-	if r.wantTimeLimit > 0 {
-		assert.True(t, r.wantTimeLimit > elapsed, "execution took to long, wanted %s, took %s", r.wantTimeLimit, elapsed)
-	}
 
 	if r.wantError != "" {
 		assert.EqualError(t, err, r.wantError)
