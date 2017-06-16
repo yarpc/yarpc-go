@@ -73,7 +73,7 @@ for pkg in "$@"; do
 
   echo " - go test -race ${args} \"${pkg}\"" >> "${commands_file}"
 done
-parallel-exec --fast-fail --no-log --max-concurrent-cmds 4 --dir "${DIR}" "${commands_file}" 2>&1 \
+parallel-exec --fast-fail --max-concurrent-cmds 4 --dir "${DIR}" "${commands_file}" 2>&1 \
 		| grep -v 'warning: no packages being tested depend on'
 
 # Merge cross-package coverage and then split the result into main and
