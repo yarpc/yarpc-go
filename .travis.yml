@@ -24,6 +24,10 @@ matrix:
       sudo: required
       services:
         - docker
+    - env: CI_TYPES='deps examples lint test' SUPPRESS_CROSSDOCK=1 DOCKER_GO_VERSION=1.9
+      sudo: required
+      services:
+        - docker
 before_install:
   - make travis-docker-load
 script:
