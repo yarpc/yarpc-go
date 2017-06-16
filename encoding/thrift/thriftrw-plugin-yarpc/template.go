@@ -89,6 +89,11 @@ func (s *Svc) TestPackagePath() string {
 	return fmt.Sprintf("%s/%stest", s.Module.ImportPath, strings.ToLower(s.Name))
 }
 
+// FxPackagePath returns the import path to the Fx package for this service.
+func (s *Svc) FxPackagePath() string {
+	return fmt.Sprintf("%s/%sfx", s.Module.ImportPath, strings.ToLower(s.Name))
+}
+
 // templateData contains all the data needed for the different code gen
 // templates used by this plugin.
 type templateData struct {
