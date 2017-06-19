@@ -148,7 +148,7 @@ func (s TransportSpec) TestConcurrentClientsRoundRobin(t *testing.T) {
 	call := func() {
 		defer wg.Done()
 		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 150*time.Millisecond)
 		defer cancel()
 		assert.NoError(t, Call(ctx, rawClient))
 	}
