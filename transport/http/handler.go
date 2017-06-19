@@ -65,7 +65,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if message != "" {
 		// TODO: the []byte cast makes a copy of message, kind of messy
-		responseWriter.Write([]byte(message + "\n"))
+		_, _ = responseWriter.Write([]byte(message + "\n"))
 	}
 	status := http.StatusInternalServerError
 	if yarpcerrors.IsYARPCError(err) {
