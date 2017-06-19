@@ -33,7 +33,7 @@ func IsYARPCError(err error) bool {
 	return ErrorCode(err) != CodeOK
 }
 
-// ToYARPCError is a convienence function with the following logic:
+// ToYARPCError is a convenience function with the following logic:
 //
 // - If err is nil, ToYARPCError returns nil
 // - If err is a YARPC error, ToYARPCError returns err with no changes.
