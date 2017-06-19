@@ -185,7 +185,7 @@ func TestSimpleVectors(t *testing.T) {
 
 			tt.f(t, r, tt.opts)
 
-			time.Sleep(5 * _tick)
+			time.Sleep(10 * _tick)
 			tt.wantTally.Test(t, scope)
 
 			pallytest.AssertPrometheus(t, r, tt.wantProm)
