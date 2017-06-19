@@ -59,7 +59,7 @@ generated_by_ragel() {
 
 # Strip thrift warnings.
 strip_thrift_warnings() {
-  grep -v '^\[WARNING:' | sed '/^\s*$/d'
+  grep -v '^\[WARNING:.*emphasize the signedness' | sed '/^\s*$/d'
 }
 
 mockgen -destination=api/middleware/middlewaretest/router.go -package=middlewaretest go.uber.org/yarpc/api/middleware Router
