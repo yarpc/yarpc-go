@@ -26,6 +26,7 @@ import (
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/humanize"
 )
 
@@ -189,5 +190,5 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 		return m.serviceProcedureEncodings[spe].HandlerSpec, nil
 	}
 
-	return transport.HandlerSpec{}, transport.UnrecognizedProcedureError(req)
+	return transport.HandlerSpec{}, yarpcerrors.UnimplementedErrorf("unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }

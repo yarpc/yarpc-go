@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	trans "go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
@@ -212,14 +211,14 @@ func TestSimpleRoundTrip(t *testing.T) {
 			requestBody:   "foo",
 			responseError: yarpcerrors.InternalErrorf("great sadness"),
 			wantError: func(err error) {
-				assert.True(t, trans.IsUnexpectedError(err), err.Error())
+				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal, err.Error())
 			},
 		},
 		{
 			requestBody:   "bar",
 			responseError: yarpcerrors.InvalidArgumentErrorf("missing service name"),
 			wantError: func(err error) {
-				assert.True(t, trans.IsBadRequestError(err), err.Error())
+				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument, err.Error())
 			},
 		},
 		{
@@ -228,7 +227,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`error for procedure "foo" of service "bar": great sadness`,
 			),
 			wantError: func(err error) {
-				assert.True(t, trans.IsUnexpectedError(err), err.Error())
+				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal, err.Error())
 			},
 		},
 		{
@@ -237,7 +236,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`BadRequest: unrecognized procedure "echo" for service "derp"`,
 			),
 			wantError: func(err error) {
-				assert.True(t, trans.IsBadRequestError(err), err.Error())
+				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument, err.Error())
 			},
 		},
 	}

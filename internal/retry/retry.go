@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/ioutil"
 )
 
@@ -128,5 +129,10 @@ func getTimeLeft(ctx context.Context, max time.Duration) (timeleft time.Duration
 
 func isRetryable(err error) bool {
 	// TODO(#1080) Update Error assertions to be more granular.
-	return transport.IsUnexpectedError(err) || transport.IsTimeoutError(err)
+	switch yarpcerrors.ErrorCode(err) {
+	case yarpcerrors.CodeInternal, yarpcerrors.CodeDeadlineExceeded:
+		return true
+	default:
+		return false
+	}
 }
