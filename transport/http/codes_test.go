@@ -27,13 +27,15 @@ import (
 )
 
 func TestCodes(t *testing.T) {
-	for code, httpStatusCode := range _codeToHTTPStatusCode {
+	for code, httpStatusCode := range CodeToHTTPStatusCode {
 		t.Run(code.String(), func(t *testing.T) {
-			getHTTPStatusCode, err := codeToHTTPStatusCode(code)
-			require.NoError(t, err)
+			getHTTPStatusCode, ok := CodeToHTTPStatusCode[code]
+			require.True(t, ok)
 			require.Equal(t, httpStatusCode, getHTTPStatusCode)
-			getCodes := httpStatusCodeToCodes(httpStatusCode)
+			getCodes, ok := HTTPStatusCodeToCodes[httpStatusCode]
+			require.True(t, ok)
 			require.Contains(t, getCodes, code)
+			require.Contains(t, getCodes, HTTPStatusCodeToBestCode(httpStatusCode))
 		})
 	}
 }
