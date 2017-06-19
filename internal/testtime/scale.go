@@ -32,9 +32,9 @@ import (
 var (
 	// X is the multiplier from the TEST_TIME_SCALE environment variable.
 	X = 1.0
-	// Millisecond is a millisecond dialated into test time by TEST_TIME_SCALE.
+	// Millisecond is a millisecond dilated into test time by TEST_TIME_SCALE.
 	Millisecond = time.Millisecond
-	// Second is a second dialated into test time by TEST_TIME_SCALE.
+	// Second is a second dilated into test time by TEST_TIME_SCALE.
 	Second = time.Second
 )
 

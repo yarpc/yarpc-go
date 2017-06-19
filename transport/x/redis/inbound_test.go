@@ -22,9 +22,9 @@ package redis
 
 import (
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/x/redis/redistest"
 
 	"github.com/golang/mock/gomock"
@@ -33,7 +33,7 @@ import (
 
 func TestOperationOrder(t *testing.T) {
 	queueKey, processingKey := "queueKey", "processingKey"
-	timeout := time.Second
+	timeout := testtime.Second
 
 	mockCtrl := gomock.NewController(t)
 	client := redistest.NewMockClient(mockCtrl)

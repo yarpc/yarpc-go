@@ -22,9 +22,9 @@ package pally
 
 import (
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/internal/pally/pallytest"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,7 +47,7 @@ func TestCounter(t *testing.T) {
 	counter.Add(2)
 	assert.Equal(t, int64(3), counter.Load(), "Unexpected in-memory counter value.")
 
-	time.Sleep(5 * _tick)
+	testtime.Sleep(5 * _tick)
 	counter.Inc()
 	assert.Equal(t, int64(4), counter.Load(), "Unexpected in-memory counter value after sleep.")
 

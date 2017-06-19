@@ -26,11 +26,11 @@ import (
 	"errors"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -75,7 +75,7 @@ func TestUnaryChain(t *testing.T) {
 			before.Count, after.Count = 0, 0
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 			defer cancel()
 
 			req := &transport.Request{
@@ -128,7 +128,7 @@ func TestOnewayChain(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 			defer cancel()
 
 			var res transport.Ack

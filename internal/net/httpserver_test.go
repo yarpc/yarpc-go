@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/testtime"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -99,6 +101,6 @@ func TestStopError(t *testing.T) {
 	server := NewHTTPServer(&http.Server{Addr: ":0"})
 	require.NoError(t, server.ListenAndServe())
 	require.NoError(t, server.Listener().Close())
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(5 * testtime.Millisecond)
 	require.Error(t, server.Stop())
 }

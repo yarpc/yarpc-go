@@ -25,7 +25,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc"
 	peerapi "go.uber.org/yarpc/api/peer"
@@ -33,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/interpolate"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/whitespace"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -276,7 +276,7 @@ func TestChooserConfigurator(t *testing.T) {
 				require.True(t, binder.IsRunning(), "binder is running")
 
 				ctx := context.Background()
-				ctx, cancel := context.WithTimeout(ctx, time.Second)
+				ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 				defer cancel()
 				peer, onFinish, err := chooser.Choose(ctx, nil)
 				require.NoError(t, err, "error choosing peer")

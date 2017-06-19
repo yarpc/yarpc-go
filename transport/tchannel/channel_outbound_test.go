@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -124,7 +125,7 @@ func TestChannelOutboundHeaders(t *testing.T) {
 					if ctx == nil {
 						ctx = context.Background()
 					}
-					ctx, cancel := context.WithTimeout(ctx, time.Second)
+					ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 					defer cancel()
 
 					res, err := out.Call(
@@ -173,7 +174,7 @@ func TestChannelCallSuccess(t *testing.T) {
 
 			dl, ok := ctx.Deadline()
 			assert.True(t, ok, "deadline expected")
-			assert.WithinDuration(t, time.Now(), dl, 200*time.Millisecond)
+			assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
 
 			err = writeArgs(call.Response(),
 				[]byte{
@@ -193,7 +194,7 @@ func TestChannelCallSuccess(t *testing.T) {
 			require.NoError(t, out.Start(), "failed to start outbound")
 			defer out.Stop()
 
-			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 			defer cancel()
 			res, err := out.Call(
 				ctx,
@@ -274,7 +275,7 @@ func TestChannelCallFailures(t *testing.T) {
 					require.NoError(t, out.Start(), "failed to start outbound")
 					defer out.Stop()
 
-					ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+					ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 					defer cancel()
 					_, err = out.Call(
 						ctx,
@@ -315,7 +316,7 @@ func TestChannelCallError(t *testing.T) {
 
 			dl, ok := ctx.Deadline()
 			assert.True(t, ok, "deadline expected")
-			assert.WithinDuration(t, time.Now(), dl, 200*time.Millisecond)
+			assert.WithinDuration(t, time.Now(), dl, 200*testtime.Millisecond)
 
 			call.Response().SetApplicationError()
 
@@ -336,7 +337,7 @@ func TestChannelCallError(t *testing.T) {
 			require.NoError(t, out.Start(), "failed to start outbound")
 			defer out.Stop()
 
-			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 			defer cancel()
 			res, err := out.Call(
 				ctx,
@@ -435,7 +436,7 @@ func TestChannelCallWithoutStarting(t *testing.T) {
 			// TODO: If we change Start() to establish a connection to the host, this
 			// hostport will have to be changed to a real server.
 
-			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 			defer cancel()
 			_, err = out.Call(
 				ctx,

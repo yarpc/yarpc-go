@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -78,7 +79,7 @@ func (a ChooseMultiAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionD
 	for _, expectedPeer := range a.ExpectedPeers {
 		action := ChooseAction{
 			ExpectedPeer:        expectedPeer,
-			InputContextTimeout: 20 * time.Millisecond,
+			InputContextTimeout: 20 * testtime.Millisecond,
 		}
 		action.Apply(t, pl, deps)
 	}
@@ -175,7 +176,7 @@ func (a ConcurrentAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionDe
 		}(action)
 
 		if a.Wait > 0 {
-			time.Sleep(a.Wait)
+			testtime.Sleep(a.Wait)
 		}
 	}
 
