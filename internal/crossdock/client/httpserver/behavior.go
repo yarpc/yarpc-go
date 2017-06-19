@@ -75,5 +75,5 @@ func runRaw(t crossdock.T, disp *yarpc.Dispatcher) {
 		return
 	}
 
-	assert.Equal(yarpc.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
+	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
 }

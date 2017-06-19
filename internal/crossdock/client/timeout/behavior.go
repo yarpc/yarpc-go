@@ -54,5 +54,5 @@ func Run(t crossdock.T) {
 		return
 	}
 
-	assert.Equal(yarpc.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
+	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
 }
