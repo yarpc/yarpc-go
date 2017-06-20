@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
@@ -271,7 +272,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				return err
 			})
 
-			ctx, cancel := context.WithTimeout(rootCtx, 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(rootCtx, 200*testtime.Millisecond)
 			defer cancel()
 
 			router := staticRouter{Handler: handler}
@@ -345,7 +346,7 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 
 				// Pretend to work: this delay should not slow down tests since it is a
 				// server-side operation
-				time.Sleep(5 * time.Second)
+				testtime.Sleep(5 * time.Second)
 
 				// close the channel, telling the client (which should not be waiting for
 				// a response) that the handler finished executing

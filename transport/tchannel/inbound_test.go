@@ -25,12 +25,12 @@ import (
 	"context"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,7 +113,7 @@ func TestInboundSubServices(t *testing.T) {
 		{"subservice2", "hello"},
 		{"subservice2", "monde"},
 	} {
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 		defer cancel()
 		res, err := o.Call(
 			ctx,
@@ -169,7 +169,7 @@ func TestArbitraryInboundServiceOutboundCallerName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 			defer cancel()
 			res, err := o.Call(
 				ctx,

@@ -25,20 +25,32 @@ import (
 	"fmt"
 )
 
-// IsYARPCError returns true if the given error is a non-nil YARPC error.
+// IsYARPCError is a convenience function that returns true if the given error
+// is a non-nil YARPC error.
+//
+// This is equivalent to yarpcerrors.ErrorCode(err) != yarpcerrors.CodeOK.
 func IsYARPCError(err error) bool {
+	return ErrorCode(err) != CodeOK
+}
+
+// ToYARPCError is a convenience function with the following logic:
+//
+// - If err is nil, ToYARPCError returns nil
+// - If err is a YARPC error, ToYARPCError returns err with no changes.
+// - If err is not a YARPC error, ToYARPCError returns a new YARPC error with code
+//   CodeUnknown and message err.Error().
+func ToYARPCError(err error) error {
 	if err == nil {
-		return false
+		return nil
 	}
-	_, ok := err.(*yarpcError)
-	return ok
+	if IsYARPCError(err) {
+		return err
+	}
+	return UnknownErrorf(err.Error())
 }
 
 // ErrorCode returns the Code for the given error, or CodeOK if the given
 // error is not a YARPC error.
-//
-// While a YARPC error will never have CodeOK as an error code, this should not be
-// used to test if an error is a YARPC error, use IsYARPCError instead.
 func ErrorCode(err error) Code {
 	if err == nil {
 		return CodeOK
@@ -77,7 +89,12 @@ func ErrorMessage(err error) string {
 }
 
 // NamedErrorf returns a new yarpc error with code CodeUnknown and the given name.
+//
 // This should be used for user-defined errors.
+//
+// The name must only contain lowercase letters from a-z and dashes (-), and
+// cannot start or end in a dash. If the name is something else, an error with
+// code CodeInternal will be returned.
 func NamedErrorf(name string, format string, args ...interface{}) error {
 	return FromHeaders(CodeUnknown, name, fmt.Sprintf(format, args...))
 }
@@ -167,9 +184,16 @@ func UnauthenticatedErrorf(format string, args ...interface{}) error {
 // If the specified code is CodeOK, this will return nil.
 // If the specified code is not CodeUnknown, this will not set the name field.
 //
+// The name must only contain lowercase letters from a-z and dashes (-), and
+// cannot start or end in a dash. If the name is something else, an error with
+// code CodeInternal will be returned.
+//
 // This function should not be used by server implementations, use the individual
 // error constructors instead. This should only be used by transport implementations.
 func FromHeaders(code Code, name string, message string) error {
+	if err := validateName(name); err != nil {
+		return err
+	}
 	switch code {
 	case CodeOK:
 		return nil
@@ -186,6 +210,10 @@ func FromHeaders(code Code, name string, message string) error {
 		}
 	}
 }
+
+// ** All constructors of yarpcErrors must always set a Code that is not CodeOK. **
+//
+// Currently, the only constructor of yarpcErrors is FromHeaders, which enforces this.
 
 type yarpcError struct {
 	// Code is the code of the error. This should never be set to CodeOK.

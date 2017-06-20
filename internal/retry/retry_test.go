@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	iioutil "go.uber.org/yarpc/internal/ioutil"
+	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 )
 
@@ -38,7 +39,7 @@ func TestMiddleware(t *testing.T) {
 		msg string
 
 		retries      uint
-		retrytimeout time.Duration
+		retryTimeout time.Duration
 		retryBackoff backoff.Strategy
 
 		actions []MiddlewareAction
@@ -47,7 +48,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "no retry",
 			retries:      1,
-			retrytimeout: time.Millisecond * 500,
+			retryTimeout: time.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -71,7 +72,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "single retry",
 			retries:      1,
-			retrytimeout: time.Millisecond * 500,
+			retryTimeout: time.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -101,7 +102,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "multiple retries",
 			retries:      4,
-			retrytimeout: time.Millisecond * 500,
+			retryTimeout: time.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -149,7 +150,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "immediate hard failure",
 			retries:      1,
-			retrytimeout: time.Millisecond * 500,
+			retryTimeout: time.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -173,7 +174,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "retry once, then hard failure",
 			retries:      1,
-			retrytimeout: time.Millisecond * 500,
+			retryTimeout: time.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -203,7 +204,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "ctx timeout less than retry timeout",
 			retries:      1,
-			retrytimeout: time.Millisecond * 500,
+			retryTimeout: time.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -227,7 +228,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "ctx timeout less than retry timeout",
 			retries:      1,
-			retrytimeout: time.Millisecond * 50,
+			retryTimeout: time.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -258,7 +259,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "no ctx timeout",
 			retries:      1,
-			retrytimeout: time.Millisecond * 50,
+			retryTimeout: time.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -288,7 +289,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "exhaust retries",
 			retries:      1,
-			retrytimeout: time.Millisecond * 50,
+			retryTimeout: time.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -318,7 +319,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "Reset Error",
 			retries:      1,
-			retrytimeout: time.Millisecond * 50,
+			retryTimeout: time.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -343,7 +344,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "backoff timeout",
 			retries:      1,
-			retrytimeout: time.Millisecond * 50,
+			retryTimeout: time.Millisecond * 50,
 			retryBackoff: newFixedBackoff(time.Millisecond * 25),
 			actions: []MiddlewareAction{
 				RequestAction{
@@ -375,7 +376,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "sequential backoff timeout",
 			retries:      2,
-			retrytimeout: time.Millisecond * 100,
+			retryTimeout: time.Millisecond * 100,
 			retryBackoff: newSequentialBackoff(time.Millisecond * 50),
 			actions: []MiddlewareAction{
 				RequestAction{
@@ -414,7 +415,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "backoff context will timeout",
 			retries:      2,
-			retrytimeout: time.Millisecond * 30,
+			retryTimeout: time.Millisecond * 30,
 			retryBackoff: newFixedBackoff(time.Millisecond * 5000),
 			actions: []MiddlewareAction{
 				RequestAction{
@@ -440,7 +441,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "concurrent retries",
 			retries:      2,
-			retrytimeout: time.Millisecond * 50,
+			retryTimeout: time.Millisecond * 50,
 			retryBackoff: newFixedBackoff(time.Millisecond * 25),
 			actions: []MiddlewareAction{
 				ConcurrentAction{
@@ -525,7 +526,7 @@ func TestMiddleware(t *testing.T) {
 					func(context.Context, *transport.Request) *Policy {
 						return NewPolicy(
 							Retries(tt.retries),
-							MaxRequestTimeout(tt.retrytimeout),
+							MaxRequestTimeout(testtime.Scale(tt.retryTimeout)),
 							BackoffStrategy(tt.retryBackoff),
 						)
 					},

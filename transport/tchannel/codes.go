@@ -26,32 +26,30 @@ import (
 	"github.com/uber/tchannel-go"
 )
 
-// TODO: need to review all of this
-
 var (
-	// this covers all 500-level codes, so if the code is not in the map,
-	// it should not result in tchannel returning an error.
-	_codeToTChannelCode = map[yarpcerrors.Code]tchannel.SystemErrCode{
-		// this is a 400-level code, what to do?
-		yarpcerrors.CodeCancelled: tchannel.ErrCodeCancelled,
-		yarpcerrors.CodeUnknown:   tchannel.ErrCodeUnexpected,
-		// this is a 400-level code, what to do?
-		yarpcerrors.CodeInvalidArgument:  tchannel.ErrCodeBadRequest,
-		yarpcerrors.CodeDeadlineExceeded: tchannel.ErrCodeTimeout,
-		yarpcerrors.CodeUnimplemented:    tchannel.ErrCodeBadRequest,
-		yarpcerrors.CodeInternal:         tchannel.ErrCodeUnexpected,
-		yarpcerrors.CodeUnavailable:      tchannel.ErrCodeNetwork,
-		yarpcerrors.CodeDataLoss:         tchannel.ErrCodeUnexpected,
+	// CodeToTChannelCode maps Codes to their corresponding TChannel SystemErrCode.
+	//
+	// This only covers system-level errors, so if the code is not in the map,
+	// it should not result in TChannel returning a system-level error.
+	CodeToTChannelCode = map[yarpcerrors.Code]tchannel.SystemErrCode{
+		yarpcerrors.CodeCancelled:         tchannel.ErrCodeCancelled,
+		yarpcerrors.CodeUnknown:           tchannel.ErrCodeUnexpected,
+		yarpcerrors.CodeInvalidArgument:   tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeDeadlineExceeded:  tchannel.ErrCodeTimeout,
+		yarpcerrors.CodeUnimplemented:     tchannel.ErrCodeBadRequest,
+		yarpcerrors.CodeInternal:          tchannel.ErrCodeUnexpected,
+		yarpcerrors.CodeUnavailable:       tchannel.ErrCodeDeclined,
+		yarpcerrors.CodeDataLoss:          tchannel.ErrCodeProtocol,
+		yarpcerrors.CodeResourceExhausted: tchannel.ErrCodeBusy,
 	}
 
-	_tchannelCodeToCode = map[tchannel.SystemErrCode]yarpcerrors.Code{
-		tchannel.ErrCodeTimeout: yarpcerrors.CodeDeadlineExceeded,
-		// this is a 400-level code, what to do?
+	// TChannelCodeToCode maps TChannel SystemErrCodes to their corresponding Code.
+	TChannelCodeToCode = map[tchannel.SystemErrCode]yarpcerrors.Code{
+		tchannel.ErrCodeTimeout:    yarpcerrors.CodeDeadlineExceeded,
 		tchannel.ErrCodeCancelled:  yarpcerrors.CodeCancelled,
 		tchannel.ErrCodeBusy:       yarpcerrors.CodeUnavailable,
 		tchannel.ErrCodeDeclined:   yarpcerrors.CodeUnavailable,
 		tchannel.ErrCodeUnexpected: yarpcerrors.CodeInternal,
-		// this is a 400-level code, what to do?
 		tchannel.ErrCodeBadRequest: yarpcerrors.CodeInvalidArgument,
 		tchannel.ErrCodeNetwork:    yarpcerrors.CodeUnavailable,
 		tchannel.ErrCodeProtocol:   yarpcerrors.CodeInternal,

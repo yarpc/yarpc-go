@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -34,6 +33,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/routertest"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -95,7 +95,7 @@ func TestHandlerErrors(t *testing.T) {
 
 		respRecorder := newResponseRecorder()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
 		tchHandler.handle(ctx, &fakeInboundCall{
 			service: "service",
@@ -185,7 +185,7 @@ func TestHandlerFailures(t *testing.T) {
 			},
 			expectCall: func(h *transporttest.MockUnaryHandler) {
 				h.EXPECT().Handle(
-					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
+					transporttest.NewContextMatcher(t, transporttest.ContextTTL(testtime.Second)),
 					transporttest.NewRequestMatcher(
 						t, &transport.Request{
 							Caller:    "bar",
@@ -218,7 +218,7 @@ func TestHandlerFailures(t *testing.T) {
 					Body:      bytes.NewReader([]byte("{}")),
 				}
 				h.EXPECT().Handle(
-					transporttest.NewContextMatcher(t, transporttest.ContextTTL(time.Second)),
+					transporttest.NewContextMatcher(t, transporttest.ContextTTL(testtime.Second)),
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Return(
@@ -231,7 +231,7 @@ func TestHandlerFailures(t *testing.T) {
 		{
 			desc: "handler timeout",
 			ctxFunc: func() (context.Context, context.CancelFunc) {
-				return context.WithTimeout(context.Background(), time.Millisecond)
+				return context.WithTimeout(context.Background(), testtime.Millisecond)
 			},
 			sendCall: &fakeInboundCall{
 				service: "foo",
@@ -251,7 +251,7 @@ func TestHandlerFailures(t *testing.T) {
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
-						t, transporttest.ContextTTL(time.Millisecond)),
+						t, transporttest.ContextTTL(testtime.Millisecond)),
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Do(func(ctx context.Context, _ *transport.Request, _ transport.ResponseWriter) {
@@ -280,7 +280,7 @@ func TestHandlerFailures(t *testing.T) {
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
-						t, transporttest.ContextTTL(time.Second)),
+						t, transporttest.ContextTTL(testtime.Second)),
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Do(func(context.Context, *transport.Request, transport.ResponseWriter) {
@@ -292,7 +292,7 @@ func TestHandlerFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		if tt.ctx != nil {
 			ctx = tt.ctx
 		} else if tt.ctxFunc != nil {

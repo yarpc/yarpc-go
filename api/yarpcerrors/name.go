@@ -18,39 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package redis
+package yarpcerrors
 
-import (
-	"testing"
-
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/transport/x/redis/redistest"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestOperationOrder(t *testing.T) {
-	queueKey, processingKey := "queueKey", "processingKey"
-	timeout := testtime.Second
-
-	mockCtrl := gomock.NewController(t)
-	client := redistest.NewMockClient(mockCtrl)
-
-	gomock.InOrder(
-		client.EXPECT().BRPopLPush(queueKey, processingKey, timeout),
-		client.EXPECT().LRem(queueKey, gomock.Any()),
-	)
-
-	inbound := NewInbound(client, queueKey, processingKey, timeout)
-	inbound.SetRouter(&transporttest.MockRouter{})
-
-	assert.Equal(t, queueKey, inbound.queueKey)
-	assert.Equal(t, processingKey, inbound.processingKey)
-
-	// We're specifically testing the ingestion loop; with the current client
-	// code, it's extremely difficult to make substantive assertions about the
-	// number of messages handled.
-	inbound.handle()
+func validateName(name string) error {
+	if name == "" {
+		return nil
+	}
+	// I think that name is a global reference to a slice effectively, so len(name) has some overheade
+	// https://stackoverflow.com/questions/26634554/go-multiple-len-calls-vs-performance
+	// https://blog.golang.org/strings
+	lenNameMinusOne := len(name) - 1
+	for i, b := range name {
+		if (i == 0 || i == lenNameMinusOne) && b == '-' {
+			return InternalErrorf("invalid error name, must only start or end with lowercase letters: %s", name)
+		}
+		if !((b >= 'a' && b <= 'z') || b == '-') {
+			return InternalErrorf("invalid error name, must only contain lowercase letters and dashes: %s", name)
+		}
+	}
+	return nil
 }

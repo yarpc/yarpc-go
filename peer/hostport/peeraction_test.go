@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -140,7 +141,7 @@ func (a PeerConcurrentAction) Apply(t *testing.T, p *Peer, d *Dependencies) {
 		}(action)
 
 		if a.Wait > 0 {
-			time.Sleep(a.Wait)
+			testtime.Sleep(a.Wait)
 		}
 	}
 

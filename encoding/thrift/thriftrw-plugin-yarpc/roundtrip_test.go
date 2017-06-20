@@ -27,7 +27,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -45,6 +44,7 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyserver"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
 
 	"github.com/stretchr/testify/assert"
@@ -329,7 +329,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			method := client.MethodByName(tt.method)
 			assert.True(t, method.IsValid(), "Method %q not found", tt.method)
 
-			ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(ctx, 200*testtime.Millisecond)
 			defer cancel()
 
 			args := append([]interface{}{ctx}, tt.methodArgs...)

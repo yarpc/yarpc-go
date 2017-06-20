@@ -18,50 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pally
+package yarpcerrors
 
 import (
 	"testing"
 
-	"go.uber.org/yarpc/internal/pally/pallytest"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestCounter(t *testing.T) {
-	r := NewRegistry(Labeled(Labels{"service": "users"}))
-	counter, err := r.NewCounter(Opts{
-		Name:        "test_counter",
-		Help:        "Some help.",
-		ConstLabels: Labels{"foo": "bar"},
-	})
-	require.NoError(t, err, "Unexpected error constructing counter.")
+func TestValidateName(t *testing.T) {
+	testValidateName(t, "", false)
+	testValidateName(t, "hello", false)
+	testValidateName(t, "hello-foo", false)
+	testValidateName(t, "-", true)
+	testValidateName(t, "-hello", true)
+	testValidateName(t, "hello-", true)
+	testValidateName(t, "Hello", true)
+}
 
-	scope := newTestScope()
-	stop, err := r.Push(scope, _tick)
-	require.NoError(t, err, "Unexpected error starting Tally push.")
-
-	counter.Inc()
-	counter.Add(2)
-	assert.Equal(t, int64(3), counter.Load(), "Unexpected in-memory counter value.")
-
-	testtime.Sleep(5 * _tick)
-	counter.Inc()
-	assert.Equal(t, int64(4), counter.Load(), "Unexpected in-memory counter value after sleep.")
-
-	stop()
-
-	export := TallyExpectation{
-		Type:   "counter",
-		Name:   "test_counter",
-		Labels: Labels{"foo": "bar", "service": "users"},
-		Value:  4,
+func testValidateName(t *testing.T, name string, expectError bool) {
+	if expectError {
+		assert.Equal(t, CodeInternal, ErrorCode(validateName(name)), "expected error for %s", name)
+	} else {
+		assert.NoError(t, validateName(name), "expected no error for %s", name)
 	}
-	export.Test(t, scope)
-
-	pallytest.AssertPrometheus(t, r, "# HELP test_counter Some help.\n"+
-		"# TYPE test_counter counter\n"+
-		`test_counter{foo="bar",service="users"} 4`)
 }

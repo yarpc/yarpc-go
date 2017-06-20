@@ -24,12 +24,12 @@ import (
 	"context"
 	"net"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/integrationtest"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/tchannel"
 
@@ -52,7 +52,7 @@ var spec = integrationtest.TransportSpec{
 	NewClientTransport: func(t *testing.T) peer.Transport {
 		x, err := tchannel.NewTransport(
 			tchannel.ServiceName("client"),
-			tchannel.ConnTimeout(10*time.Millisecond),
+			tchannel.ConnTimeout(10*testtime.Millisecond),
 			tchannel.ConnBackoff(backoff.None),
 		)
 		require.NoError(t, err, "must construct transport")
@@ -74,7 +74,7 @@ var spec = integrationtest.TransportSpec{
 // handshake.
 func TestWithRoundRobin(t *testing.T) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 
 	permanent, permanentAddr := spec.NewServer(t, "")
