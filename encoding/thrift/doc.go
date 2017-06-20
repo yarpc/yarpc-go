@@ -33,12 +33,13 @@
 // 	thriftrw --plugin yarpc myservice.thrift
 //
 // In addition to generating code for types specified in your Thrift file,
-// this will generate two packages for each service in the file: a client
-// package, a server package, and a test package.
+// this will generate the following packages for each service in the file: a
+// client package, a server package, a test package, and an UberFx module.
 //
 // 	myservice
 // 	   |- myserviceclient
 // 	   |- myserviceserver
+// 	   |- myservicefx
 // 	   |- myservicetest
 //
 // The client package allows sending requests through a YARPC dispatcher.
@@ -56,6 +57,12 @@
 // 	mockCtrl := gomock.NewController(t)
 // 	client := myservicetest.NewMockClient(mockCtrl)
 // 	client.EXPECT().Hello(request).Return(response, nil)
+//
+// The Fx package provides an UberFx-compatible constructor for service
+// clients. This may be used with Provide to make service clients available in
+// the container.
+//
+// 	fx.Provide(myservicefx.Client("myservice"))
 //
 // Automatically Building Clients
 //

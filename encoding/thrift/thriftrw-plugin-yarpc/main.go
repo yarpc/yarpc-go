@@ -45,12 +45,16 @@ var (
 		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
 	_noGomock = flag.Bool("no-gomock", false,
 		"Don't generate gomock mocks for service clients")
+	_noFx = flag.Bool("no-fx", false, "Don't generate Fx module")
 )
 
 type g struct{}
 
 func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
 	generators := []genFunc{clientGenerator, serverGenerator}
+	if !*_noFx {
+		generators = append(generators, fxGenerator)
+	}
 	if !*_noGomock {
 		generators = append(generators, gomockGenerator)
 	}
