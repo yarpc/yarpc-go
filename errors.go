@@ -43,7 +43,7 @@ func IsBadRequestError(err error) bool {
 // 		fmt.Println("internal server error:", err)
 // 	}
 //
-// Deprecated: use yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal instead
+// Deprecated: use yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal instead.
 func IsUnexpectedError(err error) bool {
 	return yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal
 }

@@ -29,9 +29,6 @@ import "go.uber.org/yarpc/api/yarpcerrors"
 //
 // Deprecated: use yarpcerrors.InvalidArgumentErrorf instead.
 func InboundBadRequestError(err error) error {
-	if err == nil {
-		return nil
-	}
 	return yarpcerrors.InvalidArgumentErrorf(err.Error())
 }
 
