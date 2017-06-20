@@ -269,7 +269,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		httpStatusCode := rw.Code
 		assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
-		code := httpStatusCodeToBestCode(httpStatusCode)
+		code := StatusCodeToBestCode(httpStatusCode)
 		assert.Equal(t, tt.wantCode, code)
 	}
 }
