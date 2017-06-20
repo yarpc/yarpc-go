@@ -38,8 +38,8 @@ var (
 		yarpcerrors.CodeDeadlineExceeded:  tchannel.ErrCodeTimeout,
 		yarpcerrors.CodeUnimplemented:     tchannel.ErrCodeBadRequest,
 		yarpcerrors.CodeInternal:          tchannel.ErrCodeUnexpected,
-		yarpcerrors.CodeUnavailable:       tchannel.ErrCodeNetwork,
-		yarpcerrors.CodeDataLoss:          tchannel.ErrCodeUnexpected,
+		yarpcerrors.CodeUnavailable:       tchannel.ErrCodeDeclined,
+		yarpcerrors.CodeDataLoss:          tchannel.ErrCodeProtocol,
 		yarpcerrors.CodeResourceExhausted: tchannel.ErrCodeBusy,
 	}
 
