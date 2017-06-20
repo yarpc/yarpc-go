@@ -28,7 +28,7 @@ import (
 // IsYARPCError is a convenience function that returns true if the given error
 // is a non-nil YARPC error.
 //
-// This is equivalent to yarpcerrors.ErrorCode(err) == yarpcerrors.CodeOK.
+// This is equivalent to yarpcerrors.ErrorCode(err) != yarpcerrors.CodeOK.
 func IsYARPCError(err error) bool {
 	return ErrorCode(err) != CodeOK
 }
