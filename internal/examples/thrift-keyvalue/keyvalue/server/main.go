@@ -36,12 +36,16 @@ import (
 	"go.uber.org/yarpc/x/yarpcmeta"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
 )
 
-var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
+var (
+	flagInbound  = flag.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
+	flagEnvelope = flag.Bool("enveloped", false, "enable thrift envelopes")
+)
 
 type handler struct {
 	sync.RWMutex
@@ -119,7 +123,12 @@ func do() error {
 	})
 
 	handler := handler{items: make(map[string]string)}
-	dispatcher.Register(keyvalueserver.New(&handler))
+
+	var opts []thrift.RegisterOption
+	if *flagEnvelope {
+		opts = append(opts, thrift.Enveloped)
+	}
+	dispatcher.Register(keyvalueserver.New(&handler, opts...))
 
 	yarpcmeta.Register(dispatcher)
 

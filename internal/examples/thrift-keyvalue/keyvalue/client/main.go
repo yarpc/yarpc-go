@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient"
 
 	"go.uber.org/yarpc"
@@ -50,6 +51,11 @@ func do() error {
 	flag.StringVar(
 		&outboundName,
 		"outbound", "", "name of the outbound to use (http/tchannel/grpc)",
+	)
+	enveloped := false
+	flag.BoolVar(
+		&enveloped,
+		"enveloped", false, "enable thrift envelopes",
 	)
 
 	flag.Parse()
@@ -89,7 +95,11 @@ func do() error {
 	}
 	defer dispatcher.Stop()
 
-	client := keyvalueclient.New(dispatcher.ClientConfig("keyvalue"))
+	var opts []thrift.ClientOption
+	if enveloped {
+		opts = append(opts, thrift.Enveloped)
+	}
+	client := keyvalueclient.New(dispatcher.ClientConfig("keyvalue"), opts...)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	rootCtx := context.Background()

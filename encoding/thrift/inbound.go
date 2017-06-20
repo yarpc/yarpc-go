@@ -63,9 +63,15 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 		return err
 	}
 
-	// We disable enveloping if either the client or the transport requires it.
+	enveloped := t.Enveloping
+	if thriftEnvelopeStr, ok := treq.TransportHeaders["Thrift-Envelope"]; ok {
+		// If the request has the Thrift envelope header, we should read it regardless
+		// of the configuration on the local side.
+		enveloped = thriftEnvelopeStr == "true"
+	}
+
 	proto := t.Protocol
-	if !t.Enveloping {
+	if !enveloped {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Call, // we only decode requests

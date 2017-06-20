@@ -193,12 +193,14 @@ func (c thriftClient) CallOneway(ctx context.Context, reqBody envelope.Enveloper
 }
 
 func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transport.Request, protocol.Protocol, error) {
+	thriftEnvelope := "true"
 	proto := c.p
 	if !c.Enveloping {
 		proto = disableEnvelopingProtocol{
 			Protocol: proto,
 			Type:     wire.Reply, // we only decode replies with this instance
 		}
+		thriftEnvelope = "false"
 	}
 
 	treq := transport.Request{
@@ -206,6 +208,9 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 		Service:   c.cc.Service(),
 		Encoding:  Encoding,
 		Procedure: procedure.ToName(c.thriftService, reqBody.MethodName()),
+		TransportHeaders: map[string]string{
+			"Thrift-Envelope": thriftEnvelope,
+		},
 	}
 
 	value, err := reqBody.ToWire()
