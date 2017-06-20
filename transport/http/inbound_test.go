@@ -30,12 +30,12 @@ import (
 	"os"
 	"syscall"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -139,7 +139,7 @@ func TestInboundMux(t *testing.T) {
 	require.NoError(t, o.Start(), "failed to start outbound")
 	defer o.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err = o.Call(ctx, &transport.Request{
 		Caller:    "foo",

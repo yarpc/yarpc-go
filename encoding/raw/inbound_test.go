@@ -24,11 +24,11 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,7 +107,7 @@ func TestRawHandler(t *testing.T) {
 		}
 		close(writer)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
 
 		err := handler.Handle(ctx, &transport.Request{

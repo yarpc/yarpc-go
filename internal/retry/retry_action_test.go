@@ -30,6 +30,7 @@ import (
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpctest"
 
@@ -67,7 +68,7 @@ func (r RequestAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 
 	ctx := context.Background()
 	if r.reqTimeout != 0 {
-		newCtx, cancel := context.WithTimeout(ctx, r.reqTimeout)
+		newCtx, cancel := context.WithTimeout(ctx, testtime.Scale(r.reqTimeout))
 		defer cancel()
 		ctx = newCtx
 	}
@@ -108,7 +109,7 @@ func (a ConcurrentAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 		}(action)
 
 		if a.Wait > 0 {
-			time.Sleep(a.Wait)
+			testtime.Sleep(a.Wait)
 		}
 	}
 
