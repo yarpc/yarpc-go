@@ -26,13 +26,13 @@ import (
 	"net"
 	"strings"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
 	"github.com/stretchr/testify/assert"
@@ -169,7 +169,7 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 }
 
 func (e *testEnv) GetValueYarpc(ctx context.Context, key string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 	response, err := e.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 	if err != nil {
@@ -179,14 +179,14 @@ func (e *testEnv) GetValueYarpc(ctx context.Context, key string) (string, error)
 }
 
 func (e *testEnv) SetValueYarpc(ctx context.Context, key string, value string) error {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 	_, err := e.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 	return err
 }
 
 func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 	response, err := e.KeyValueGRPCClient.GetValue(e.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 	if err != nil {
@@ -196,7 +196,7 @@ func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) 
 }
 
 func (e *testEnv) SetValueGRPC(ctx context.Context, key string, value string) error {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 	_, err := e.KeyValueGRPCClient.SetValue(e.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 	return err

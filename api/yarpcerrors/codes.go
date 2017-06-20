@@ -26,37 +26,22 @@ import (
 	"strings"
 )
 
-// TODO: Should we note the HTTP/Google API mapping in the individal Code godoc comments,
-// or just have these noted in each transport package?
-
 const (
 	// CodeOK means no error; returned on success
-	//
-	// HTTP Mapping: 200 OK
-	// Google API Mapping: Code.OK
 	CodeOK Code = 0
 
 	// CodeCancelled means the operation was cancelled, typically by the caller.
-	//
-	// HTTP Mapping: 499 Client Closed Request
-	// Google API Mapping: Code.CANCELLED
 	CodeCancelled Code = 1
 
 	// CodeUnknown means an unknown error. Errors raised by APIs
 	// that do not return enough error information
 	// may be converted to this error.
-	//
-	// HTTP Mapping: 500 Internal Server Error
-	// Google API Mapping: Code.UNKNOWN
 	CodeUnknown Code = 2
 
 	// CodeInvalidArgument means the client specified an invalid argument.
 	// Note that this differs from `FailedPrecondition`. `InvalidArgument`
 	// indicates arguments that are problematic regardless of the state of
 	// the system (e.g., a malformed file name).
-	//
-	// HTTP Mapping: 400 Bad Request
-	// Google API Mapping: Code.INVALID_ARGUMENT
 	CodeInvalidArgument Code = 3
 
 	// CodeDeadlineExceeded means the deadline expired before the operation could
@@ -64,25 +49,16 @@ const (
 	// may be returned even if the operation has completed successfully. For example,
 	// a successful response from a server could have been delayed long
 	// enough for the deadline to expire.
-	//
-	// HTTP Mapping: 504 Gateway Timeout
-	// Google API Mapping: Code.DEADLINE_EXCEEDED
 	CodeDeadlineExceeded Code = 4
 
 	// CodeNotFound means some requested entity (e.g., file or directory) was not found.
 	// For privacy reasons, this code *may* be returned when the client
 	// does not have the access rights to the entity, though such usage is
 	// discouraged.
-	//
-	// HTTP Mapping: 404 Not Found
-	// Google API Mapping: Code.NOT_FOUND
 	CodeNotFound Code = 5
 
 	// CodeAlreadyExists means the entity that a client attempted to create
 	// (e.g., file or directory) already exists.
-	//
-	// HTTP Mapping: 409 Conflict
-	// Google API Mapping: Code.ALREADY_EXISTS
 	CodeAlreadyExists Code = 6
 
 	// CodePermissionDenied means the caller does not have permission to execute
@@ -91,16 +67,10 @@ const (
 	// instead for those errors). `PermissionDenied` must not be
 	// used if the caller can not be identified (use `Unauthenticated`
 	// instead for those errors).
-	//
-	// HTTP Mapping: 403 Forbidden
-	// Google API Mapping: Code.PERMISSION_DENIED
 	CodePermissionDenied Code = 7
 
 	// CodeResourceExhausted means some resource has been exhausted, perhaps a per-user
 	// quota, or perhaps the entire file system is out of space.
-	//
-	// HTTP Mapping: 429 Too Many Requests
-	// Google API Mapping: Code.RESOURCE_EXHAUSTED
 	CodeResourceExhausted Code = 8
 
 	// CodeFailedPrecondition means the operation was rejected because the system is not
@@ -118,9 +88,6 @@ const (
 	//      fails because the directory is non-empty, `FailedPrecondition`
 	//      should be returned since the client should not retry unless
 	//      the files are deleted from the directory.
-	//
-	// HTTP Mapping: 400 Bad Request
-	// Google API Mapping: Code.FAILED_PRECONDITION
 	CodeFailedPrecondition Code = 9
 
 	// CodeAborted means the operation was aborted, typically due to a concurrency issue
@@ -128,9 +95,6 @@ const (
 	//
 	// See the guidelines above for deciding between `FailedPrecondition`,
 	// `Aborted`, and `Unavailable`.
-	//
-	// HTTP Mapping: 409 Conflict
-	// Google API Mapping: Code.ABORTED
 	CodeAborted Code = 10
 
 	// CodeOutOfRange means the operation was attempted past the valid range.
@@ -148,24 +112,15 @@ const (
 	// error) when it applies so that callers who are iterating through
 	// a space can easily look for an `OutOfRange` error to detect when
 	// they are done.
-	//
-	// HTTP Mapping: 400 Bad Request
-	// Google API Mapping: Code.OUT_OF_RANGE
 	CodeOutOfRange Code = 11
 
 	// CodeUnimplemented means the operation is not implemented or is not
 	// supported/enabled in this service.
-	//
-	// HTTP Mapping: 501 Not Implemented
-	// Google API Mapping: Code.UNIMPLEMENTED
 	CodeUnimplemented Code = 12
 
 	// CodeInternal means an internal error. This means that some invariants expected
 	// by the underlying system have been broken. This error code is reserved
 	// for serious errors.
-	//
-	// HTTP Mapping: 500 Internal Server Error
-	// Google API Mapping: Code.INTERNAL
 	CodeInternal Code = 13
 
 	// CodeUnavailable means the service is currently unavailable. This is most likely a
@@ -173,22 +128,13 @@ const (
 	//
 	// See the guidelines above for deciding between `FailedPrecondition`,
 	// `Aborted`, and `Unavailable`.
-	//
-	// HTTP Mapping: 503 Service Unavailable
-	// Google API Mapping: Code.UNAVAILABLE
 	CodeUnavailable Code = 14
 
 	// CodeDataLoss means unrecoverable data loss or corruption.
-	//
-	// HTTP Mapping: 500 Internal Server Error
-	// Google API Mapping: Code.DATA_LOSS
 	CodeDataLoss Code = 15
 
 	// CodeUnauthenticated means the request does not have valid authentication
 	// credentials for the operation.
-	//
-	// HTTP Mapping: 401 Unauthorized
-	// Google API Mapping: Code.UNAUTHENTICATED
 	CodeUnauthenticated Code = 16
 )
 

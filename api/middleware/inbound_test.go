@@ -25,12 +25,12 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -43,7 +43,7 @@ func TestUnaryNopInboundMiddleware(t *testing.T) {
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	wrappedH := middleware.ApplyUnaryInbound(h, middleware.NopUnaryInbound)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	req := &transport.Request{
 		Caller:    "somecaller",
@@ -66,7 +66,7 @@ func TestOnewayNopInboundMiddleware(t *testing.T) {
 	h := transporttest.NewMockOnewayHandler(mockCtrl)
 	wrappedH := middleware.ApplyOnewayInbound(h, middleware.NopOnewayInbound)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	req := &transport.Request{
 		Caller:    "somecaller",

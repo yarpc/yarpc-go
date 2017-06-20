@@ -23,12 +23,12 @@ package testing
 import (
 	"context"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 
@@ -111,7 +111,7 @@ func testIntegration(
 }
 
 func getValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, options ...yarpc.CallOption) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key}, options...)
 	if err != nil {
@@ -121,14 +121,14 @@ func getValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, opt
 }
 
 func setValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, value string, options ...yarpc.CallOption) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}, options...)
 	return err
 }
 
 func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcheader.ContextWrapper, key string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 	if err != nil {
@@ -138,14 +138,14 @@ func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 }
 
 func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcheader.ContextWrapper, key string, value string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err := keyValueGRPCClient.SetValue(contextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 	return err
 }
 
 func fire(sinkYarpcClient examplepb.SinkYarpcClient, value string, options ...yarpc.CallOption) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}, options...)
 	return err

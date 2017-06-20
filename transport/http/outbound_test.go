@@ -29,10 +29,10 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +46,7 @@ func TestCallSuccess(t *testing.T) {
 			ttl := req.Header.Get(TTLMSHeader)
 			ttlms, err := strconv.Atoi(ttl)
 			assert.NoError(t, err, "can parse TTL header")
-			assert.InDelta(t, ttlms, 1000, 5, "ttl header within tolerance")
+			assert.InDelta(t, ttlms, testtime.X*1000.0, testtime.X*5.0, "ttl header within tolerance")
 
 			assert.Equal(t, "caller", req.Header.Get(CallerHeader))
 			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
@@ -70,7 +70,7 @@ func TestCallSuccess(t *testing.T) {
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	res, err := out.Call(ctx, &transport.Request{
 		Caller:    "caller",
@@ -153,7 +153,7 @@ func TestOutboundHeaders(t *testing.T) {
 		ctx := tt.context
 		if ctx == nil {
 			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), testtime.Second)
 			defer cancel()
 		}
 
@@ -225,7 +225,7 @@ func TestOutboundApplicationError(t *testing.T) {
 		defer out.Stop()
 
 		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
 		defer cancel()
 
 		res, err := out.Call(ctx, &transport.Request{
@@ -274,7 +274,7 @@ func TestCallFailures(t *testing.T) {
 		require.NoError(t, out.Start(), "failed to start outbound")
 		defer out.Stop()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
 		_, err := out.Call(ctx, &transport.Request{
 			Caller:    "caller",
@@ -339,7 +339,7 @@ func TestCallWithoutStarting(t *testing.T) {
 	httpTransport := NewTransport()
 	out := httpTransport.NewSingleOutbound("http://127.0.0.1:9999")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 	defer cancel()
 	_, err := out.Call(
 		ctx,

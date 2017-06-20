@@ -25,10 +25,10 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/x/redis/redistest"
 
 	"github.com/golang/mock/gomock"
@@ -52,7 +52,7 @@ func TestCall(t *testing.T) {
 	assert.NoError(t, err, "could not start redis outbound")
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 
 	ack, err := out.CallOneway(ctx, &transport.Request{
@@ -128,7 +128,7 @@ func TestCallWithoutStarting(t *testing.T) {
 	out := NewOnewayOutbound(client, "queueKey")
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 10*testtime.Millisecond)
 	defer cancel()
 
 	ack, err := out.CallOneway(

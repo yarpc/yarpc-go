@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc/internal/testtime"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/atomic"
 )
@@ -54,7 +56,7 @@ func (a StartAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	err := l.Start(func() error {
 		assert.False(t, l.running.Swap(true), "expected no other running action")
 		if a.Wait > 0 {
-			time.Sleep(a.Wait)
+			testtime.Sleep(a.Wait)
 		}
 		assert.True(t, l.running.Swap(false), "expected no other running action")
 		return a.Err
@@ -77,7 +79,7 @@ func (a StopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	err := l.Stop(func() error {
 		assert.False(t, l.running.Swap(true), "expected no other running action")
 		if a.Wait > 0 {
-			time.Sleep(a.Wait)
+			testtime.Sleep(a.Wait)
 		}
 		assert.True(t, l.running.Swap(false), "expected no other running action")
 		return a.Err
@@ -177,7 +179,7 @@ func (a ConcurrentAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 		}(action)
 
 		if a.Wait > 0 {
-			time.Sleep(a.Wait)
+			testtime.Sleep(a.Wait)
 		}
 	}
 
@@ -189,7 +191,7 @@ type WaitAction time.Duration
 
 // Apply waits the specified duration.
 func (a WaitAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
-	time.Sleep(time.Duration(a))
+	testtime.Sleep(time.Duration(a))
 }
 
 // ApplyLifecycleActions runs all the LifecycleActions on the LifecycleOnce

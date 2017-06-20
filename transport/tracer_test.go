@@ -23,12 +23,12 @@ package transport_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 
@@ -71,7 +71,7 @@ func (h handler) echoEcho(ctx context.Context) error {
 
 func (h handler) createContextWithBaggage(tracer opentracing.Tracer) (context.Context, func()) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 
 	span := tracer.StartSpan("test")
 	// no defer span.Finish()
