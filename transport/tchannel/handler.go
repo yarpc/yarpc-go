@@ -286,7 +286,7 @@ func getSystemError(err error) (tchannel.SystemError, bool) {
 	// we figure out if there is a system error code that represents it
 
 	// TODO: mismatch between yarpcerrors.IsYARPCError and yarpcerrors.ErrorCode
-	tchannelCode, ok := _codeToTChannelCode[yarpcerrors.ErrorCode(err)]
+	tchannelCode, ok := CodeToTChannelCode[yarpcerrors.ErrorCode(err)]
 	if !ok {
 		// there is no system code for the YARPC error, so it is an application error
 		return tchannel.SystemError{}, false

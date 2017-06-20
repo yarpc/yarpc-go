@@ -172,7 +172,7 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 	}
 	// TODO: mismatch between IsYARPCError and yarpcerrors.ErrorCode
 	// maybe just rely on yarpcerrors.ErrorCode != yarpcerrors.CodeOK
-	grpcCode, ok := _codeToGRPCCode[yarpcerrors.ErrorCode(err)]
+	grpcCode, ok := CodeToGRPCCode[yarpcerrors.ErrorCode(err)]
 	// should only happen if yarpcerrors.IsYARPCError does not work
 	// or _codeToGRPCCode does not cover all codes
 	if !ok {

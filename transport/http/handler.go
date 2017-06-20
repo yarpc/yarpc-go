@@ -70,7 +70,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	status := http.StatusInternalServerError
 	if yarpcerrors.IsYARPCError(err) {
 		// TODO: mismatch between yarpcerrors.ErrorCode and yarpcerrors.IsYARPCError
-		getStatus, ok := _codeToHTTPStatusCode[yarpcerrors.ErrorCode(err)]
+		getStatus, ok := CodeToStatusCode[yarpcerrors.ErrorCode(err)]
 		if ok {
 			status = getStatus
 		}

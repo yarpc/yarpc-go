@@ -408,7 +408,7 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 		return yarpcerrors.InternalErrorf(err.Error())
 	}
 	return yarpcerrors.FromHeaders(
-		httpStatusCodeToBestCode(response.StatusCode),
+		StatusCodeToBestCode(response.StatusCode),
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(string(contents), "\n"),
 	)
