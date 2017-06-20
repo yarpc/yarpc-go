@@ -25,10 +25,10 @@ import (
 	"context"
 	"io"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -124,7 +124,7 @@ func TestThriftHandler(t *testing.T) {
 				}).Return(nil)
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
 
 		handler := func(ctx context.Context, w wire.Value) (Response,

@@ -22,10 +22,10 @@ package http
 
 import (
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
+	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/peer/hostport"
 
 	"github.com/crossdock/crossdock-go/assert"
@@ -285,7 +285,7 @@ func TestTransportClient(t *testing.T) {
 func TestTransportClientWithKeepAlive(t *testing.T) {
 	// Unfortunately the KeepAlive is obfuscated in the client, so we can't really
 	// assert this worked.
-	transport := NewTransport(KeepAlive(time.Second))
+	transport := NewTransport(KeepAlive(testtime.Second))
 
 	assert.NotNil(t, transport.client)
 }

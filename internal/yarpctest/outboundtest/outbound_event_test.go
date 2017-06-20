@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/testtime"
 	iyarpctest "go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/yarpctest"
 
@@ -245,7 +246,7 @@ func TestOutboundEvent(t *testing.T) {
 			testResult := iyarpctest.WithFakeTestingT(func(ft require.TestingT) {
 				ctx := context.Background()
 				if tt.reqTimeout != 0 {
-					newCtx, cancel := context.WithTimeout(ctx, tt.reqTimeout)
+					newCtx, cancel := context.WithTimeout(ctx, testtime.Scale(tt.reqTimeout))
 					defer cancel()
 					ctx = newCtx
 				}
@@ -380,7 +381,7 @@ func TestOutboundCallable(t *testing.T) {
 
 				ctx := context.Background()
 				if tt.reqTimeout != 0 {
-					newCtx, cancel := context.WithTimeout(ctx, tt.reqTimeout)
+					newCtx, cancel := context.WithTimeout(ctx, testtime.Scale(tt.reqTimeout))
 					defer cancel()
 					ctx = newCtx
 				}

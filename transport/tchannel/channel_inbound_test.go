@@ -26,12 +26,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -127,7 +127,7 @@ func TestChannelInboundExistingMethods(t *testing.T) {
 	defer x.Stop()
 
 	// Make a call to the "echo" method which should call our pre-registered method.
-	ctx, cancel := tjson.NewContext(time.Second)
+	ctx, cancel := tjson.NewContext(testtime.Second)
 	defer cancel()
 
 	var resp map[string]string
@@ -168,7 +168,7 @@ func TestChannelInboundMaskedMethods(t *testing.T) {
 	defer x.Stop()
 
 	// Make a call to the "echo" method which should call our pre-registered method.
-	ctx, cancel := tjson.NewContext(time.Second)
+	ctx, cancel := tjson.NewContext(testtime.Second)
 	defer cancel()
 
 	var resp map[string]string
@@ -224,7 +224,7 @@ func TestChannelInboundSubServices(t *testing.T) {
 		{"subservice2", "hello"},
 		{"subservice2", "monde"},
 	} {
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*testtime.Millisecond)
 		defer cancel()
 		res, err := o.Call(
 			ctx,

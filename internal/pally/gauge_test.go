@@ -22,9 +22,9 @@ package pally
 
 import (
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/internal/pally/pallytest"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,7 +47,7 @@ func TestGauge(t *testing.T) {
 	gauge.Store(42)
 	assert.Equal(t, int64(42), gauge.Load(), "Unexpected in-memory gauge value.")
 
-	time.Sleep(5 * _tick)
+	testtime.Sleep(5 * _tick)
 	gauge.Store(4)
 	assert.Equal(t, int64(4), gauge.Load(), "Unexpected in-memory gauge value after sleep.")
 

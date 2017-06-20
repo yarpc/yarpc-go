@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 	peerbind "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/roundrobin"
 
@@ -121,12 +122,12 @@ func (s TransportSpec) TestConnectAndStopRoundRobin(t *testing.T) {
 	go func() {
 		defer close(done)
 		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 50*testtime.Millisecond)
 		defer cancel()
 		assert.Error(t, Call(ctx, rawClient))
 	}()
 
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(10 * testtime.Millisecond)
 	assert.NoError(t, client.Stop())
 
 	<-done
@@ -148,13 +149,13 @@ func (s TransportSpec) TestConcurrentClientsRoundRobin(t *testing.T) {
 	call := func() {
 		defer wg.Done()
 		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 150*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 150*testtime.Millisecond)
 		defer cancel()
 		assert.NoError(t, Call(ctx, rawClient))
 	}
 	for i := 0; i < count; i++ {
 		go call()
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(10 * testtime.Millisecond)
 	}
 
 	wg.Wait()
@@ -173,7 +174,7 @@ func (s TransportSpec) TestBackoffConnRoundRobin(t *testing.T) {
 		defer client.Stop()
 
 		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 		defer cancel()
 
 		// Eventually succeeds, when the server comes online.
@@ -181,7 +182,7 @@ func (s TransportSpec) TestBackoffConnRoundRobin(t *testing.T) {
 	}()
 
 	// Give the client time to make multiple connection attempts.
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(10 * testtime.Millisecond)
 	server, _ := s.NewServer(t, addr)
 	defer server.Stop()
 
@@ -201,7 +202,7 @@ func (s TransportSpec) TestReconnRoundRobin(t *testing.T) {
 	// Induce a connection
 	func() {
 		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
 		defer cancel()
 		assert.NoError(t, Call(ctx, rawClient))
 	}()
@@ -212,11 +213,11 @@ func (s TransportSpec) TestReconnRoundRobin(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		CallUntilSuccess(t, rawClient, 100*time.Millisecond)
+		CallUntilSuccess(t, rawClient, 100*testtime.Millisecond)
 	}()
 
 	// Restart the server so it can reconnect.
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(20 * testtime.Millisecond)
 	restoredServer, _ := s.NewServer(t, addr)
 	defer restoredServer.Stop()
 
@@ -247,7 +248,7 @@ func CallUntilSuccess(t *testing.T, rawClient raw.Client, interval time.Duration
 
 // Call sends an echo request to the client.
 func Call(ctx context.Context, rawClient raw.Client) error {
-	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
 	defer cancel()
 	res, err := rawClient.Call(ctx, "echo", []byte("hello"))
 	if err != nil {

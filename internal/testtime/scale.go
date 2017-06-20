@@ -18,39 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package redis
+// Package testtime provides ways to scale time for tests running on CPU
+// starved systems.
+package testtime
 
 import (
-	"testing"
-
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/testtime"
-	"go.uber.org/yarpc/transport/x/redis/redistest"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
+	"fmt"
+	"os"
+	"strconv"
+	"time"
 )
 
-func TestOperationOrder(t *testing.T) {
-	queueKey, processingKey := "queueKey", "processingKey"
-	timeout := testtime.Second
+var (
+	// X is the multiplier from the TEST_TIME_SCALE environment variable.
+	X = 1.0
+	// Millisecond is a millisecond dilated into test time by TEST_TIME_SCALE.
+	Millisecond = time.Millisecond
+	// Second is a second dilated into test time by TEST_TIME_SCALE.
+	Second = time.Second
+)
 
-	mockCtrl := gomock.NewController(t)
-	client := redistest.NewMockClient(mockCtrl)
+func init() {
+	if v := os.Getenv("TEST_TIME_SCALE"); v != "" {
+		fv, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			panic(err)
+		}
+		X = fv
+		fmt.Fprintln(os.Stderr, "Scaling test time by factor", X)
+	}
 
-	gomock.InOrder(
-		client.EXPECT().BRPopLPush(queueKey, processingKey, timeout),
-		client.EXPECT().LRem(queueKey, gomock.Any()),
-	)
+	Millisecond = Scale(time.Millisecond)
+	Second = Scale(time.Second)
+}
 
-	inbound := NewInbound(client, queueKey, processingKey, timeout)
-	inbound.SetRouter(&transporttest.MockRouter{})
+// Scale returns the timeout multiplied by any set multiplier.
+func Scale(timeout time.Duration) time.Duration {
+	return time.Duration(X * float64(timeout))
+}
 
-	assert.Equal(t, queueKey, inbound.queueKey)
-	assert.Equal(t, processingKey, inbound.processingKey)
-
-	// We're specifically testing the ingestion loop; with the current client
-	// code, it's extremely difficult to make substantive assertions about the
-	// number of messages handled.
-	inbound.handle()
+// Sleep sleeps the given duration in test time scale.
+func Sleep(duration time.Duration) {
+	time.Sleep(Scale(duration))
 }

@@ -27,12 +27,12 @@ import (
 	"io"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/procedure"
+	"go.uber.org/yarpc/internal/testtime"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -156,7 +156,7 @@ func TestClient(t *testing.T) {
 				}).Return(nil)
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
 
 		trans := transporttest.NewMockUnaryOutbound(mockCtrl)
