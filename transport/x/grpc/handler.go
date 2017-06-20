@@ -170,18 +170,10 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 		// TODO: what to do with error?
 		_ = addToMetadata(responseMD, grpcheader.ErrorNameHeader, name)
 	}
-	// TODO: mismatch between IsYARPCError and yarpcerrors.ErrorCode
-	// maybe just rely on yarpcerrors.ErrorCode != yarpcerrors.CodeOK
 	grpcCode, ok := CodeToGRPCCode[yarpcerrors.ErrorCode(err)]
-	// should only happen if yarpcerrors.IsYARPCError does not work
-	// or _codeToGRPCCode does not cover all codes
+	// should only happen if CodeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown
 	}
-	// TODO: should always be set if yarpcerrors.IsYARPCError, this is weird
-	grpcMessage := yarpcerrors.ErrorMessage(err)
-	if grpcMessage == "" {
-		grpcMessage = err.Error()
-	}
-	return status.Error(grpcCode, grpcMessage)
+	return status.Error(grpcCode, yarpcerrors.ErrorMessage(err))
 }

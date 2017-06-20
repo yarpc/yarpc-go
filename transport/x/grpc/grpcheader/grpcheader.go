@@ -59,6 +59,10 @@ const (
 	// as the proto encoding.
 	// This header is required unless content-type is set properly.
 	EncodingHeader = "rpc-encoding"
+
+	// TODO: do we want to figure out if we can propagate the error name on some
+	// standard gRPC header? This would make error messages better for native gRPC clients.
+
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
 )

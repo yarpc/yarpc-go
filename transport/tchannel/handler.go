@@ -89,18 +89,14 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 }
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
-	start := time.Now()
 	// you MUST close the responseWriter no matter what
 	responseWriter := newResponseWriter(call.Response(), call.Format())
 
-	handlerErr := h.callHandler(ctx, call, responseWriter, start)
+	handlerErr := h.callHandler(ctx, call, responseWriter)
 	if handlerErr != nil {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
-		yarpcError := handlerErr
-		if !yarpcerrors.IsYARPCError(yarpcError) {
-			yarpcError = yarpcerrors.UnknownErrorf(yarpcError.Error())
-		}
+		yarpcError := yarpcerrors.ToYARPCError(handlerErr)
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
@@ -123,7 +119,8 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	}
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter, start time.Time) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) error {
+	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
@@ -243,8 +240,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 func (rw *responseWriter) Close() error {
 	retErr := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer)
 	// TODO: the only reason the transport.Request is needed is for this error,
-	// this whole setup with ResponseHeadersEncodeError is an abomination of the principle
-	// of passing constructors what they explicitly need
+	// this whole setup with ResponseHeadersEncodeError should be changed
 	//if retErr != nil {
 	//retErr = encoding.ResponseHeadersEncodeError(rw.treq, err)
 	//}
@@ -285,16 +281,11 @@ func getSystemError(err error) (tchannel.SystemError, bool) {
 	// at this point, the error is a YARPC error that might be an application error
 	// we figure out if there is a system error code that represents it
 
-	// TODO: mismatch between yarpcerrors.IsYARPCError and yarpcerrors.ErrorCode
 	tchannelCode, ok := CodeToTChannelCode[yarpcerrors.ErrorCode(err)]
 	if !ok {
 		// there is no system code for the YARPC error, so it is an application error
 		return tchannel.SystemError{}, false
 	}
 	// we have a system code, so we will make a SystemError
-	message := yarpcerrors.ErrorMessage(err)
-	if message == "" {
-		message = err.Error()
-	}
-	return tchannel.NewSystemError(tchannelCode, message).(tchannel.SystemError), true
+	return tchannel.NewSystemError(tchannelCode, yarpcerrors.ErrorMessage(err)).(tchannel.SystemError), true
 }
