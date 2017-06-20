@@ -15,6 +15,7 @@ TAGS
 encoding/thrift/thriftrw-plugin-yarpc/thriftrw-plugin-yarpc
 encoding/x/protobuf/protoc-gen-yarpc-go/protoc-gen-yarpc-go
 internal/crossdock/crossdock
+internal/docgen/docgen
 internal/examples/json-keyvalue/client/client
 internal/examples/json-keyvalue/server/server
 internal/examples/protobuf/protobuf
