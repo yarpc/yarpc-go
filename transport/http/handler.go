@@ -50,30 +50,20 @@ type handler struct {
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
-	err := h.callHandler(responseWriter, req)
+	err := yarpcerrors.ToYARPCError(h.callHandler(responseWriter, req))
 	if err == nil {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
 	if name := yarpcerrors.ErrorName(err); name != "" {
-		// TODO: validate name?
 		responseWriter.AddSystemHeader(ErrorNameHeader, name)
 	}
-	message := yarpcerrors.ErrorMessage(err)
-	if message == "" {
-		message = err.Error()
-	}
-	if message != "" {
-		// TODO: the []byte cast makes a copy of message, kind of messy
-		_, _ = responseWriter.Write([]byte(message + "\n"))
-	}
-	status := http.StatusInternalServerError
-	if yarpcerrors.IsYARPCError(err) {
-		// TODO: mismatch between yarpcerrors.ErrorCode and yarpcerrors.IsYARPCError
-		getStatus, ok := CodeToStatusCode[yarpcerrors.ErrorCode(err)]
-		if ok {
-			status = getStatus
-		}
+	// TODO: would prefer to have error message be on a header so we can
+	// have non-nil responses with errors, discuss
+	_, _ = responseWriter.Write([]byte(yarpcerrors.ErrorMessage(err) + "\n"))
+	status, ok := CodeToStatusCode[yarpcerrors.ErrorCode(err)]
+	if !ok {
+		status = http.StatusInternalServerError
 	}
 	responseWriter.Close(status)
 }
@@ -191,10 +181,7 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w http.ResponseWriter
-	// TODO: tchannel doesn't lock, do we need to?
-	// added documentation on ResponseWriter that it is not thread-safe
-	//lock   sync.Mutex
+	w      http.ResponseWriter
 	buffer *bytes.Buffer
 }
 
@@ -204,8 +191,6 @@ func newResponseWriter(w http.ResponseWriter) *responseWriter {
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
-	//rw.lock.Lock()
-	//defer rw.lock.Unlock()
 	if rw.buffer == nil {
 		rw.buffer = buffer.Get()
 	}
@@ -225,8 +210,6 @@ func (rw *responseWriter) AddSystemHeader(key string, value string) {
 }
 
 func (rw *responseWriter) Close(httpStatusCode int) {
-	//rw.lock.Lock()
-	//defer rw.lock.Unlock()
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?
