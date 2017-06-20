@@ -20,16 +20,11 @@
 
 package http
 
-import (
-	"fmt"
-
-	"go.uber.org/yarpc/api/yarpcerrors"
-)
-
-// TODO: Should we expose the maps as public variables to document the mappings?
+import "go.uber.org/yarpc/api/yarpcerrors"
 
 var (
-	_codeToHTTPStatusCode = map[yarpcerrors.Code]int{
+	// CodeToStatusCode maps all Codes to their corresponding HTTP status code.
+	CodeToStatusCode = map[yarpcerrors.Code]int{
 		yarpcerrors.CodeOK:                 200,
 		yarpcerrors.CodeCancelled:          499,
 		yarpcerrors.CodeUnknown:            500,
@@ -49,7 +44,8 @@ var (
 		yarpcerrors.CodeUnauthenticated:    401,
 	}
 
-	_httpStatusCodeToCodes = map[int][]yarpcerrors.Code{
+	// StatusCodeToCodes maps HTTP status codes to a slice of their corresponding Codes.
+	StatusCodeToCodes = map[int][]yarpcerrors.Code{
 		200: {yarpcerrors.CodeOK},
 		400: {
 			yarpcerrors.CodeInvalidArgument,
@@ -66,8 +62,8 @@ var (
 		429: {yarpcerrors.CodeResourceExhausted},
 		499: {yarpcerrors.CodeCancelled},
 		500: {
-			yarpcerrors.CodeUnknown,
 			yarpcerrors.CodeInternal,
+			yarpcerrors.CodeUnknown,
 			yarpcerrors.CodeDataLoss,
 		},
 		501: {yarpcerrors.CodeUnimplemented},
@@ -76,28 +72,20 @@ var (
 	}
 )
 
-// codeToHTTPStatusCode returns the HTTP status code for the given Code,
-// or error if the Code is unknown.
-func codeToHTTPStatusCode(code yarpcerrors.Code) (int, error) {
-	statusCode, ok := _codeToHTTPStatusCode[code]
-	if !ok {
-		return 0, fmt.Errorf("unknown code: %v", code)
+// StatusCodeToBestCode does a best-effort conversion from the given HTTP status
+// code to a Code.
+//
+// If one Code maps to the given HTTP status code, that Code is returned.
+// If more than one Code maps to the given HTTP status Code, one Code is returned.
+// If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
+// Else, yarpcerrors.CodeUnknown is returned.
+func StatusCodeToBestCode(statusCode int) yarpcerrors.Code {
+	codes, ok := StatusCodeToCodes[statusCode]
+	if !ok || len(codes) == 0 {
+		if statusCode >= 400 && statusCode < 500 {
+			return yarpcerrors.CodeInvalidArgument
+		}
+		return yarpcerrors.CodeUnknown
 	}
-	return statusCode, nil
-}
-
-// TODO: Is there any use to this? The original thinking was that it would be nice
-// to have a function that returns the most "general" yarpcerrors.Code for the given HTTP
-// status code, but this doesn't really work in practice.
-
-// httpStatusCodeToCodes returns the Codes that correspond to the given HTTP status
-// code, or nil if no Codes correspond to the given HTTP status code.
-func httpStatusCodeToCodes(httpStatusCode int) []yarpcerrors.Code {
-	codes, ok := _httpStatusCodeToCodes[httpStatusCode]
-	if !ok {
-		return nil
-	}
-	c := make([]yarpcerrors.Code, len(codes))
-	copy(c, codes)
-	return c
+	return codes[0]
 }

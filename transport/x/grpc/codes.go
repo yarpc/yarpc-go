@@ -21,15 +21,14 @@
 package grpc
 
 import (
-	"fmt"
-
 	"go.uber.org/yarpc/api/yarpcerrors"
 
 	"google.golang.org/grpc/codes"
 )
 
 var (
-	_codeToGRPCCode = map[yarpcerrors.Code]codes.Code{
+	// CodeToGRPCCode maps all Codes to their corresponding gRPC Code.
+	CodeToGRPCCode = map[yarpcerrors.Code]codes.Code{
 		yarpcerrors.CodeOK:                 codes.OK,
 		yarpcerrors.CodeCancelled:          codes.Canceled,
 		yarpcerrors.CodeUnknown:            codes.Unknown,
@@ -49,7 +48,8 @@ var (
 		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
 	}
 
-	_grpcCodeToCode = map[codes.Code]yarpcerrors.Code{
+	// GRPCCodeToCode maps all gRPC Codes to their corresponding Code.
+	GRPCCodeToCode = map[codes.Code]yarpcerrors.Code{
 		codes.OK:                 yarpcerrors.CodeOK,
 		codes.Canceled:           yarpcerrors.CodeCancelled,
 		codes.Unknown:            yarpcerrors.CodeUnknown,
@@ -69,23 +69,3 @@ var (
 		codes.Unauthenticated:    yarpcerrors.CodeUnauthenticated,
 	}
 )
-
-// codeToGRPCCode returns the gRPC Code for the given Code,
-// or error if the Code is unknown.
-func codeToGRPCCode(code yarpcerrors.Code) (codes.Code, error) {
-	grpcCode, ok := _codeToGRPCCode[code]
-	if !ok {
-		return 0, fmt.Errorf("unknown code: %v", code)
-	}
-	return grpcCode, nil
-}
-
-// grpcCodeToCode returns the Code for the given gRPC Code,
-// or error if the gRPC Code is unknown.
-func grpcCodeToCode(grpcCode codes.Code) (yarpcerrors.Code, error) {
-	code, ok := _grpcCodeToCode[grpcCode]
-	if !ok {
-		return 0, fmt.Errorf("unknown gRPC code: %v", grpcCode)
-	}
-	return code, nil
-}
