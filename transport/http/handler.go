@@ -54,6 +54,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
+	// TODO: what to do with error?
+	if errorCodeText, marshalErr := yarpcerrors.ErrorCode(err).MarshalText(); marshalErr != nil {
+		responseWriter.AddSystemHeader(ErrorCodeHeader, string(errorCodeText))
+	}
 	if name := yarpcerrors.ErrorName(err); name != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, name)
 	}

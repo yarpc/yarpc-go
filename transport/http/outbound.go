@@ -398,8 +398,17 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 	if err := response.Body.Close(); err != nil {
 		return yarpcerrors.InternalErrorf(err.Error())
 	}
+	// use the status code if we can't get a code from the headers
+	code := StatusCodeToBestCode(response.StatusCode)
+	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
+		var errorCode yarpcerrors.Code
+		// TODO: what to do with error?
+		if err := (&errorCode).UnmarshalText([]byte(errorCodeText)); err != nil {
+			code = errorCode
+		}
+	}
 	return yarpcerrors.FromHeaders(
-		StatusCodeToBestCode(response.StatusCode),
+		code,
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(string(contents), "\n"),
 	)
