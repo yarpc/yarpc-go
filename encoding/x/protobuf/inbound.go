@@ -21,23 +21,13 @@
 package protobuf
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"io"
 
-	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf/internal/wirepb"
-	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
-)
-
-var (
-	_jsonMarshaler   = &jsonpb.Marshaler{}
-	_jsonUnmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
 )
 
 type unaryHandler struct {
@@ -144,63 +134,4 @@ func getProtoRequest(ctx context.Context, transportRequest *transport.Request, n
 		return nil, nil, nil, encoding.RequestBodyDecodeError(transportRequest, err)
 	}
 	return ctx, call, request, nil
-}
-
-func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message) error {
-	buf := buffer.Get()
-	defer buffer.Put(buf)
-	if _, err := buf.ReadFrom(reader); err != nil {
-		return err
-	}
-	body := buf.Bytes()
-	if len(body) == 0 {
-		return nil
-	}
-	switch encoding {
-	case Encoding:
-		return unmarshalProto(body, message)
-	case JSONEncoding:
-		return unmarshalJSON(body, message)
-	default:
-		return fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
-	}
-}
-
-func unmarshalProto(body []byte, message proto.Message) error {
-	return proto.Unmarshal(body, message)
-}
-
-func unmarshalJSON(body []byte, message proto.Message) error {
-	return _jsonUnmarshaler.Unmarshal(bytes.NewReader(body), message)
-}
-
-func marshal(encoding transport.Encoding, message proto.Message) ([]byte, func(), error) {
-	switch encoding {
-	case Encoding:
-		return marshalProto(message)
-	case JSONEncoding:
-		return marshalJSON(message)
-	default:
-		return nil, nil, fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
-	}
-}
-
-func marshalProto(message proto.Message) ([]byte, func(), error) {
-	protoBuffer := getBuffer()
-	cleanup := func() { putBuffer(protoBuffer) }
-	if err := protoBuffer.Marshal(message); err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	return protoBuffer.Bytes(), cleanup, nil
-}
-
-func marshalJSON(message proto.Message) ([]byte, func(), error) {
-	buf := buffer.Get()
-	cleanup := func() { buffer.Put(buf) }
-	if err := _jsonMarshaler.Marshal(buf, message); err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	return buf.Bytes(), cleanup, nil
 }
