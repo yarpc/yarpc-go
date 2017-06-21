@@ -72,7 +72,7 @@ func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 		return
 	}
 
-	if yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument {
+	if yarpcerrors.IsInvalidArgument(err) {
 		t.Skipf("handlertimeout/raw procedure not implemented: %v", err)
 		return
 	}

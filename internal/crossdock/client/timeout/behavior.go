@@ -48,7 +48,7 @@ func Run(t crossdock.T) {
 	_, err := client.Call(ctx, "sleep/raw", nil)
 	fatals.Error(err, "expected a failure for timeout")
 
-	if yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument {
+	if yarpcerrors.IsInvalidArgument(err) {
 		t.Skipf("sleep/raw method not implemented: %v", err)
 		return
 	}

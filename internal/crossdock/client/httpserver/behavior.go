@@ -69,7 +69,7 @@ func runRaw(t crossdock.T, disp *yarpc.Dispatcher) {
 	_, err := client.Call(ctx, "handlertimeout/raw", nil)
 	fatals.Error(err, "expected an error")
 
-	if yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument {
+	if yarpcerrors.IsInvalidArgument(err) {
 		t.Skipf("handlertimeout/raw method not implemented: %v", err)
 		return
 	}

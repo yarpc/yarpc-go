@@ -527,7 +527,7 @@ func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}, 
 }
 
 func isUnrecognizedProcedure(err error) bool {
-	if yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument {
+	if yarpcerrors.IsInvalidArgument(err) {
 		// TODO: Once all other languages implement the gauntlet test
 		// subject, we can remove this check.
 		return strings.Contains(err.Error(), "unrecognized procedure")

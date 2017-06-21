@@ -35,24 +35,24 @@ func InboundBadRequestError(err error) error {
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.
 //
-// Deprecated: use yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument instead.
+// Deprecated: use yarpcerrors.IsInvalidArgument(err) instead.
 func IsBadRequestError(err error) bool {
-	return yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument
+	return yarpcerrors.IsInvalidArgument(err)
 }
 
 // IsUnexpectedError returns true if the server panicked or failed to process
 // the request with an unhandled error.
 //
-// Deprecated: use yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal instead.
+// Deprecated: use yarpcerrors.IsInternal(err) instead.
 func IsUnexpectedError(err error) bool {
-	return yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal
+	return yarpcerrors.IsInternal(err)
 }
 
 // IsTimeoutError return true if the given error is a TimeoutError.
 //
-// Deprecated: use yarpcerrors.ErrorCode(err) == yarpcerrors.CodeDeadlineExceeded instead.
+// Deprecated: use yarpcerrors.IsDeadlineExceeded(err) instead.
 func IsTimeoutError(err error) bool {
-	return yarpcerrors.ErrorCode(err) == yarpcerrors.CodeDeadlineExceeded
+	return yarpcerrors.IsDeadlineExceeded(err)
 }
 
 // UnrecognizedProcedureError returns an error for the given request,
@@ -67,7 +67,7 @@ func UnrecognizedProcedureError(req *Request) error {
 // IsUnrecognizedProcedureError returns true for errors returned by
 // Router.Choose if the router cannot find a handler for the request.
 //
-// Deprecated: use yarpcerrors.ErrorCode(err) == yarpcerrors.CodeUnimplemented instead.
+// Deprecated: use yarpcerrors.IsUnimplemented(err) instead.
 func IsUnrecognizedProcedureError(err error) bool {
-	return yarpcerrors.ErrorCode(err) == yarpcerrors.CodeUnimplemented
+	return yarpcerrors.IsUnimplemented(err)
 }

@@ -211,14 +211,14 @@ func TestSimpleRoundTrip(t *testing.T) {
 			requestBody:   "foo",
 			responseError: yarpcerrors.InternalErrorf("great sadness"),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal, err.Error())
+				assert.True(t, yarpcerrors.IsInternal(err), err.Error())
 			},
 		},
 		{
 			requestBody:   "bar",
 			responseError: yarpcerrors.InvalidArgumentErrorf("missing service name"),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument, err.Error())
+				assert.True(t, yarpcerrors.IsInvalidArgument(err), err.Error())
 			},
 		},
 		{
@@ -227,7 +227,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`error for procedure "foo" of service "bar": great sadness`,
 			),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInternal, err.Error())
+				assert.True(t, yarpcerrors.IsInternal(err), err.Error())
 			},
 		},
 		{
@@ -236,7 +236,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				`BadRequest: unrecognized procedure "echo" for service "derp"`,
 			),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.ErrorCode(err) == yarpcerrors.CodeInvalidArgument, err.Error())
+				assert.True(t, yarpcerrors.IsInvalidArgument(err), err.Error())
 			},
 		},
 	}
