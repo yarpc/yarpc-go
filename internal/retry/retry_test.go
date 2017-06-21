@@ -48,7 +48,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "no retry",
 			retries:      1,
-			retryTimeout: time.Millisecond * 500,
+			retryTimeout: testtime.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -56,7 +56,7 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Second,
+					reqTimeout: testtime.Second,
 					events: []*OutboundEvent{
 						{
 							WantService:   "serv",
@@ -72,7 +72,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "single retry",
 			retries:      1,
-			retryTimeout: time.Millisecond * 500,
+			retryTimeout: testtime.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -80,7 +80,7 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Second,
+					reqTimeout: testtime.Second,
 					events: []*OutboundEvent{
 						{
 							WantService:   "serv",
@@ -102,7 +102,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "multiple retries",
 			retries:      4,
-			retryTimeout: time.Millisecond * 500,
+			retryTimeout: testtime.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -110,7 +110,7 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Second,
+					reqTimeout: testtime.Second,
 					events: []*OutboundEvent{
 						{
 							WantService:   "serv",
@@ -122,7 +122,7 @@ func TestMiddleware(t *testing.T) {
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.ClientTimeoutError("serv", "proc", time.Millisecond*300),
+							GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*300),
 						},
 						{
 							WantService:   "serv",
@@ -150,7 +150,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "immediate hard failure",
 			retries:      1,
-			retryTimeout: time.Millisecond * 500,
+			retryTimeout: testtime.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -158,7 +158,7 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Second,
+					reqTimeout: testtime.Second,
 					events: []*OutboundEvent{
 						{
 							WantService:   "serv",
@@ -174,7 +174,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "retry once, then hard failure",
 			retries:      1,
-			retryTimeout: time.Millisecond * 500,
+			retryTimeout: testtime.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -182,7 +182,7 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Second,
+					reqTimeout: testtime.Second,
 					events: []*OutboundEvent{
 						{
 							WantService:   "serv",
@@ -204,7 +204,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "ctx timeout less than retry timeout",
 			retries:      1,
-			retryTimeout: time.Millisecond * 500,
+			retryTimeout: testtime.Millisecond * 500,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -212,9 +212,10 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Millisecond * 300,
+					reqTimeout: testtime.Millisecond * 300,
 					events: []*OutboundEvent{
 						{
+							WantTimeout:   testtime.Millisecond * 300,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
@@ -228,7 +229,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "ctx timeout less than retry timeout",
 			retries:      1,
-			retryTimeout: time.Millisecond * 50,
+			retryTimeout: testtime.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -236,16 +237,18 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Millisecond * 75,
+					reqTimeout: testtime.Millisecond * 75,
 					events: []*OutboundEvent{
 						{
+							WantTimeout:    testtime.Millisecond * 50,
 							WantService:    "serv",
 							WantProcedure:  "proc",
 							WantBody:       "body",
 							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+							GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 						},
 						{
+							WantTimeout:   testtime.Millisecond * 25,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
@@ -259,7 +262,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "no ctx timeout",
 			retries:      1,
-			retryTimeout: time.Millisecond * 50,
+			retryTimeout: testtime.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -269,13 +272,15 @@ func TestMiddleware(t *testing.T) {
 					},
 					events: []*OutboundEvent{
 						{
+							WantTimeout:    testtime.Millisecond * 50,
 							WantService:    "serv",
 							WantProcedure:  "proc",
 							WantBody:       "body",
 							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+							GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 						},
 						{
+							WantTimeout:   testtime.Millisecond * 50,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
@@ -289,7 +294,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "exhaust retries",
 			retries:      1,
-			retryTimeout: time.Millisecond * 50,
+			retryTimeout: testtime.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -297,15 +302,17 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Millisecond * 400,
+					reqTimeout: testtime.Millisecond * 400,
 					events: []*OutboundEvent{
 						{
+							WantTimeout:   testtime.Millisecond * 50,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
 							GiveError:     errors.RemoteUnexpectedError("unexpected error 1"),
 						},
 						{
+							WantTimeout:   testtime.Millisecond * 50,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
@@ -319,7 +326,7 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "Reset Error",
 			retries:      1,
-			retryTimeout: time.Millisecond * 50,
+			retryTimeout: testtime.Millisecond * 50,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -327,9 +334,10 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Millisecond * 400,
+					reqTimeout: testtime.Millisecond * 400,
 					events: []*OutboundEvent{
 						{
+							WantTimeout:   testtime.Millisecond * 50,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							// We have explicitly not read the body, which will not exhaust the
@@ -344,8 +352,8 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "backoff timeout",
 			retries:      1,
-			retryTimeout: time.Millisecond * 50,
-			retryBackoff: newFixedBackoff(time.Millisecond * 25),
+			retryTimeout: testtime.Millisecond * 50,
+			retryBackoff: newFixedBackoff(testtime.Millisecond * 25),
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -353,16 +361,18 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Millisecond * 100,
+					reqTimeout: testtime.Millisecond * 100,
 					events: []*OutboundEvent{
 						{
+							WantTimeout:    testtime.Millisecond * 50,
 							WantService:    "serv",
 							WantProcedure:  "proc",
 							WantBody:       "body",
 							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+							GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 						},
 						{
+							WantTimeout:   testtime.Millisecond * 25,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
@@ -376,8 +386,8 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "sequential backoff timeout",
 			retries:      2,
-			retryTimeout: time.Millisecond * 100,
-			retryBackoff: newSequentialBackoff(time.Millisecond * 50),
+			retryTimeout: testtime.Millisecond * 100,
+			retryBackoff: newSequentialBackoff(testtime.Millisecond * 50),
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -385,27 +395,33 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Millisecond * 400,
+					reqTimeout: testtime.Millisecond * 400,
 					events: []*OutboundEvent{
 						{
-							WantService:    "serv",
-							WantProcedure:  "proc",
-							WantBody:       "body",
-							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+							WantTimeout:       testtime.Millisecond * 100,
+							WantTimeoutBounds: testtime.Millisecond * 20,
+							WantService:       "serv",
+							WantProcedure:     "proc",
+							WantBody:          "body",
+							WaitForTimeout:    true,
+							GiveError:         errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 						},
 						{
-							WantService:    "serv",
-							WantProcedure:  "proc",
-							WantBody:       "body",
-							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+							WantTimeout:       testtime.Millisecond * 100,
+							WantTimeoutBounds: testtime.Millisecond * 20,
+							WantService:       "serv",
+							WantProcedure:     "proc",
+							WantBody:          "body",
+							WaitForTimeout:    true,
+							GiveError:         errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 						},
 						{
-							WantService:   "serv",
-							WantProcedure: "proc",
-							WantBody:      "body",
-							GiveRespBody:  "respbody",
+							WantTimeout:       testtime.Millisecond * 50,
+							WantTimeoutBounds: testtime.Millisecond * 20,
+							WantService:       "serv",
+							WantProcedure:     "proc",
+							WantBody:          "body",
+							GiveRespBody:      "respbody",
 						},
 					},
 					wantBody: "respbody",
@@ -415,8 +431,8 @@ func TestMiddleware(t *testing.T) {
 		{
 			msg:          "backoff context will timeout",
 			retries:      2,
-			retryTimeout: time.Millisecond * 30,
-			retryBackoff: newFixedBackoff(time.Millisecond * 5000),
+			retryTimeout: testtime.Millisecond * 30,
+			retryBackoff: newFixedBackoff(testtime.Millisecond * 5000),
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -424,25 +440,28 @@ func TestMiddleware(t *testing.T) {
 						Procedure: "proc",
 						Body:      bytes.NewBufferString("body"),
 					},
-					reqTimeout: time.Millisecond * 60,
+					reqTimeout: testtime.Millisecond * 60,
 					events: []*OutboundEvent{
 						{
-							WantService:    "serv",
-							WantProcedure:  "proc",
-							WantBody:       "body",
-							WaitForTimeout: true,
-							GiveError:      errors.RemoteUnexpectedError("unexpected error 2"),
+							WantTimeout:       testtime.Millisecond * 30,
+							WantTimeoutBounds: testtime.Millisecond * 10,
+							WantService:       "serv",
+							WantProcedure:     "proc",
+							WantBody:          "body",
+							WaitForTimeout:    true,
+							GiveError:         errors.RemoteUnexpectedError("unexpected error 2"),
 						},
 					},
-					wantError: errors.RemoteUnexpectedError("unexpected error 2").Error(),
+					wantTimeLimit: testtime.Millisecond * 40,
+					wantError:     errors.RemoteUnexpectedError("unexpected error 2").Error(),
 				},
 			},
 		},
 		{
 			msg:          "concurrent retries",
 			retries:      2,
-			retryTimeout: time.Millisecond * 50,
-			retryBackoff: newFixedBackoff(time.Millisecond * 25),
+			retryTimeout: testtime.Millisecond * 50,
+			retryBackoff: newFixedBackoff(testtime.Millisecond * 25),
 			actions: []MiddlewareAction{
 				ConcurrentAction{
 					Actions: []MiddlewareAction{
@@ -452,16 +471,18 @@ func TestMiddleware(t *testing.T) {
 								Procedure: "proc",
 								Body:      bytes.NewBufferString("body"),
 							},
-							reqTimeout: time.Millisecond * 100,
+							reqTimeout: testtime.Millisecond * 100,
 							events: []*OutboundEvent{
 								{
+									WantTimeout:    testtime.Millisecond * 50,
 									WantService:    "serv",
 									WantProcedure:  "proc",
 									WantBody:       "body",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 								},
 								{
+									WantTimeout:   testtime.Millisecond * 25,
 									WantService:   "serv",
 									WantProcedure: "proc",
 									WantBody:      "body",
@@ -476,9 +497,10 @@ func TestMiddleware(t *testing.T) {
 								Procedure: "proc2",
 								Body:      bytes.NewBufferString("body2"),
 							},
-							reqTimeout: time.Second,
+							reqTimeout: testtime.Second,
 							events: []*OutboundEvent{
 								{
+									WantTimeout:   testtime.Millisecond * 50,
 									WantService:   "serv2",
 									WantProcedure: "proc2",
 									WantBody:      "body2",
@@ -493,25 +515,27 @@ func TestMiddleware(t *testing.T) {
 								Procedure: "proc3",
 								Body:      bytes.NewBufferString("body3"),
 							},
-							reqTimeout: time.Millisecond * 100,
+							reqTimeout: testtime.Millisecond * 100,
 							events: []*OutboundEvent{
 								{
+									WantTimeout:    testtime.Millisecond * 50,
 									WantService:    "serv3",
 									WantProcedure:  "proc3",
 									WantBody:       "body3",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv3", "proc3", time.Millisecond*50),
+									GiveError:      errors.ClientTimeoutError("serv3", "proc3", testtime.Millisecond*50),
 								},
 								{
+									WantTimeout:    testtime.Millisecond * 25,
 									WantService:    "serv3",
 									WantProcedure:  "proc3",
 									WantBody:       "body3",
 									GiveRespBody:   "respbody",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv3", "proc3", time.Millisecond*25),
+									GiveError:      errors.ClientTimeoutError("serv3", "proc3", testtime.Millisecond*25),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv3", "proc3", time.Millisecond*25).Error(),
+							wantError: errors.ClientTimeoutError("serv3", "proc3", testtime.Millisecond*25).Error(),
 						},
 					},
 				},
