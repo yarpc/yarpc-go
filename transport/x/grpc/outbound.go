@@ -186,6 +186,8 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	// if there was no message, the message will be the name, so we leave it as the message
 	if name != "" && message != "" && message != name {
 		message = strings.TrimPrefix(message, name+": ")
+	} else if name != "" && message == name {
+		message = ""
 	}
 	return yarpcerrors.FromHeaders(code, name, message)
 }
