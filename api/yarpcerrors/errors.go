@@ -179,6 +179,86 @@ func UnauthenticatedErrorf(format string, args ...interface{}) error {
 	return FromHeaders(CodeUnauthenticated, "", fmt.Sprintf(format, args...))
 }
 
+// IsCancelled returns true if ErrorCode(err) == CodeCancelled.
+func IsCancelled(err error) {
+	return ErrorCode(err) == CodeCodeCancelled
+}
+
+// IsUnknown returns true if ErrorCode(err) == CodeUnknown.
+func IsUnknown(err error) {
+	return ErrorCode(err) == CodeCodeUnknown
+}
+
+// IsInvalidArgument returns true if ErrorCode(err) == CodeInvalidArgument.
+func IsInvalidArgument(err error) {
+	return ErrorCode(err) == CodeCodeInvalidArgument
+}
+
+// IsDeadlineExceeded returns true if ErrorCode(err) == CodeDeadlineExceeded.
+func IsDeadlineExceeded(err error) {
+	return ErrorCode(err) == CodeCodeDeadlineExceeded
+}
+
+// IsNotFound returns true if ErrorCode(err) == CodeNotFound.
+func IsNotFound(err error) {
+	return ErrorCode(err) == CodeCodeNotFound
+}
+
+// IsAlreadyExists returns true if ErrorCode(err) == CodeAlreadyExists.
+func IsAlreadyExists(err error) {
+	return ErrorCode(err) == CodeCodeAlreadyExists
+}
+
+// IsPermissionDenied returns true if ErrorCode(err) == CodePermissionDenied.
+func IsPermissionDenied(err error) {
+	return ErrorCode(err) == CodeCodePermissionDenied
+}
+
+// IsResourceExhausted returns true if ErrorCode(err) == CodeResourceExhausted.
+func IsResourceExhausted(err error) {
+	return ErrorCode(err) == CodeCodeResourceExhausted
+}
+
+// IsFailedPrecondition returns true if ErrorCode(err) == CodeFailedPrecondition.
+func IsFailedPrecondition(err error) {
+	return ErrorCode(err) == CodeCodeFailedPrecondition
+}
+
+// IsAborted returns true if ErrorCode(err) == CodeAborted.
+func IsAborted(err error) {
+	return ErrorCode(err) == CodeCodeAborted
+}
+
+// IsOutOfRange returns true if ErrorCode(err) == CodeOutOfRange.
+func IsOutOfRange(err error) {
+	return ErrorCode(err) == CodeCodeOutOfRange
+}
+
+// IsUnimplemented returns true if ErrorCode(err) == CodeUnimplemented.
+func IsUnimplemented(err error) {
+	return ErrorCode(err) == CodeCodeUnimplemented
+}
+
+// IsInternal returns true if ErrorCode(err) == CodeInternal.
+func IsInternal(err error) {
+	return ErrorCode(err) == CodeCodeInternal
+}
+
+// IsUnavailable returns true if ErrorCode(err) == CodeUnavailable.
+func IsUnavailable(err error) {
+	return ErrorCode(err) == CodeCodeUnavailable
+}
+
+// IsDataLoss returns true if ErrorCode(err) == CodeDataLoss.
+func IsDataLoss(err error) {
+	return ErrorCode(err) == CodeCodeDataLoss
+}
+
+// IsUnauthenticated returns true if ErrorCode(err) == CodeUnauthenticated.
+func IsUnauthenticated(err error) {
+	return ErrorCode(err) == CodeCodeUnauthenticated
+}
+
 // FromHeaders returns a new yarpc error from headers transmitted from the server side.
 //
 // If the specified code is CodeOK, this will return nil.
