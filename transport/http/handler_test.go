@@ -363,7 +363,7 @@ func TestHandlerPanic(t *testing.T) {
 	defer cancel()
 	_, err := client.Call(ctx, "panic", []byte{})
 
-	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.ErrorCode(err))
+	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.ErrorCode(err))
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

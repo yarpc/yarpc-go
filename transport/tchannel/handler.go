@@ -107,12 +107,13 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 			responseWriter.addHeader(ErrorMessageHeaderKey, message)
 		}
 	}
-	if err := responseWriter.Close(); err != nil {
+	systemError, ok := getSystemError(handlerErr)
+	if err := responseWriter.Close(ok); err != nil {
 		// TODO: log error
 		_ = call.Response().SendSystemError(tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error()))
 		return
 	}
-	if systemError, ok := getSystemError(handlerErr); ok {
+	if ok {
 		// TODO: log error
 		_ = call.Response().SendSystemError(systemError)
 	}
@@ -236,7 +237,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	return n, err
 }
 
-func (rw *responseWriter) Close() error {
+func (rw *responseWriter) Close(hasSystemError bool) error {
 	retErr := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer)
 	// TODO: the only reason the transport.Request is needed is for this error,
 	// this whole setup with ResponseHeadersEncodeError should be changed
@@ -245,13 +246,22 @@ func (rw *responseWriter) Close() error {
 	//}
 
 	// Arg3Writer must be opened and closed regardless of if there is data
-	bodyWriter, err := rw.response.Arg3Writer()
-	if err != nil {
-		return multierr.Append(retErr, err)
+	// However, if there is a system error, we do not want to do this
+	// TODO: dhgfkjashhflkasjhflkjashflkasdjhfasldkjhasdlkjfhasdlkfhasdlkf
+	if !hasSystemError && rw.buffer == nil {
+		bodyWriter, err := rw.response.Arg3Writer()
+		if err != nil {
+			return multierr.Append(retErr, err)
+		}
+		defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
 	}
-	defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
 	if rw.buffer != nil {
 		defer buffer.Put(rw.buffer)
+		bodyWriter, err := rw.response.Arg3Writer()
+		if err != nil {
+			return multierr.Append(retErr, err)
+		}
+		defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
 		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
 			return multierr.Append(retErr, err)
 		}

@@ -62,8 +62,8 @@ var (
 		429: {yarpcerrors.CodeResourceExhausted},
 		499: {yarpcerrors.CodeCancelled},
 		500: {
-			yarpcerrors.CodeInternal,
 			yarpcerrors.CodeUnknown,
+			yarpcerrors.CodeInternal,
 			yarpcerrors.CodeDataLoss,
 		},
 		501: {yarpcerrors.CodeUnimplemented},
