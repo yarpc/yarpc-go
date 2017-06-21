@@ -24,8 +24,12 @@ import (
 	"context"
 	"testing"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -65,12 +69,16 @@ func testIntegration(
 	keyValueYarpcServer *example.KeyValueYarpcServer,
 	sinkYarpcServer *example.SinkYarpcServer,
 ) {
+	//keyValueYarpcServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
+	//_, err := getValue(clients.KeyValueYarpcClient, "foo")
+	//assert.Equal(t, yarpcerrors.NamedErrorf("foo-bar", "baz"), err)
+
 	_, err := getValue(clients.KeyValueYarpcClient, "foo")
-	assert.Error(t, err)
+	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
-	assert.Error(t, err)
+	assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 	_, err = getValue(clients.KeyValueYarpcJSONClient, "foo")
-	assert.Error(t, err)
+	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 
 	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", "bar"))
 	value, err := getValue(clients.KeyValueYarpcClient, "foo")
