@@ -115,7 +115,7 @@ func (o *Outbound) invoke(
 	}
 	var callOptions []grpc.CallOption
 	if responseMD != nil {
-		callOptions = []grpc.CallOption{grpc.Header(responseMD)}
+		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
 	return grpc.Invoke(
 		metadata.NewContext(ctx, md),

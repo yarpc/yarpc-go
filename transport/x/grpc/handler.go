@@ -66,7 +66,7 @@ func (h *handler) handle(
 	response, err := h.handleBeforeErrorConversion(server, ctx, decodeFunc, interceptor, responseMD)
 	err = handlerErrorToGRPCError(err, responseMD)
 	// TODO: what to do with error?
-	_ = grpc.SendHeader(ctx, responseMD)
+	_ = grpc.SetTrailer(ctx, responseMD)
 	return response, err
 }
 
@@ -147,6 +147,9 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	// TODO: do we always want to return the data from responseWriter.Bytes, or return nil for the data if there is an error?
 	// For now, we are always returning the data
 	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
+	// TODO: use pooled buffers
+	// we have to return the data up the stack, but we can probably do something complicated
+	// with the Codec where we put the buffer back on Marshal
 	data := responseWriter.Bytes()
 	return data, err
 }
