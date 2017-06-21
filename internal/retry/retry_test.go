@@ -47,7 +47,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*500),
+					MaxRequestTimeout(testtime.Millisecond*500),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -75,7 +75,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*500),
+					MaxRequestTimeout(testtime.Millisecond*500),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -109,7 +109,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(4),
-					MaxRequestTimeout(time.Millisecond*500),
+					MaxRequestTimeout(testtime.Millisecond*500),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -161,7 +161,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*500),
+					MaxRequestTimeout(testtime.Millisecond*500),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -189,7 +189,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*500),
+					MaxRequestTimeout(testtime.Millisecond*500),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -223,7 +223,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*500),
+					MaxRequestTimeout(testtime.Millisecond*500),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -252,7 +252,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*50),
+					MaxRequestTimeout(testtime.Millisecond*50),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -289,7 +289,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*50),
+					MaxRequestTimeout(testtime.Millisecond*50),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -325,7 +325,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*50),
+					MaxRequestTimeout(testtime.Millisecond*50),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -361,7 +361,7 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*50),
+					MaxRequestTimeout(testtime.Millisecond*50),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -391,8 +391,8 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*50),
-					BackoffStrategy(newFixedBackoff(time.Millisecond*25)),
+					MaxRequestTimeout(testtime.Millisecond*50),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*25)),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -429,8 +429,8 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(2),
-					MaxRequestTimeout(time.Millisecond*100),
-					BackoffStrategy(newSequentialBackoff(time.Millisecond*50)),
+					MaxRequestTimeout(testtime.Millisecond*100),
+					BackoffStrategy(newSequentialBackoff(testtime.Millisecond*50)),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -478,8 +478,8 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(2),
-					MaxRequestTimeout(time.Millisecond*30),
-					BackoffStrategy(newFixedBackoff(time.Millisecond*5000)),
+					MaxRequestTimeout(testtime.Millisecond*30),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*5000)),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -511,8 +511,8 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(2),
-					MaxRequestTimeout(time.Millisecond*50),
-					BackoffStrategy(newFixedBackoff(time.Millisecond*25)),
+					MaxRequestTimeout(testtime.Millisecond*50),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*25)),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -599,29 +599,29 @@ func TestMiddleware(t *testing.T) {
 			policyProvider: newProcedurePolicyProvider().registerDefault(
 				NewPolicy(
 					Retries(2),
-					MaxRequestTimeout(time.Millisecond*20),
-					BackoffStrategy(newFixedBackoff(time.Millisecond*25)),
+					MaxRequestTimeout(testtime.Millisecond*20),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*25)),
 				),
 			).registerService(
 				"serviceRoute",
 				NewPolicy(
 					Retries(1),
-					MaxRequestTimeout(time.Millisecond*50),
-					BackoffStrategy(newFixedBackoff(time.Millisecond*50)),
+					MaxRequestTimeout(testtime.Millisecond*50),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*50)),
 				),
 			).registerServiceProcedure(
 				"serviceRoute",
 				"procedureRoute",
 				NewPolicy(
 					Retries(0),
-					MaxRequestTimeout(time.Millisecond*100),
+					MaxRequestTimeout(testtime.Millisecond*100),
 				),
 			).registerServiceProcedure(
 				"serviceRoute",
 				"fakeProcedureRoute",
 				NewPolicy(
 					Retries(100),
-					MaxRequestTimeout(time.Millisecond*10000),
+					MaxRequestTimeout(testtime.Millisecond*10000),
 				),
 			),
 			actions: []MiddlewareAction{
@@ -633,33 +633,33 @@ func TestMiddleware(t *testing.T) {
 								Procedure: "nonProcedureRoute",
 								Body:      bytes.NewBufferString("body1"),
 							},
-							reqTimeout: time.Millisecond * 200,
+							reqTimeout: testtime.Millisecond * 200,
 							events: []*OutboundEvent{
 								{
-									WantTimeout:    time.Millisecond * 20,
+									WantTimeout:    testtime.Millisecond * 20,
 									WantService:    "nonServiceRoute",
 									WantProcedure:  "nonProcedureRoute",
 									WantBody:       "body1",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*20),
+									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
 								},
 								{
-									WantTimeout:    time.Millisecond * 20,
+									WantTimeout:    testtime.Millisecond * 20,
 									WantService:    "nonServiceRoute",
 									WantProcedure:  "nonProcedureRoute",
 									WantBody:       "body1",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*20),
+									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
 								},
 								{
-									WantTimeout:   time.Millisecond * 20,
+									WantTimeout:   testtime.Millisecond * 20,
 									WantService:   "nonServiceRoute",
 									WantProcedure: "nonProcedureRoute",
 									WantBody:      "body1",
-									GiveError:     errors.ClientTimeoutError("serv", "proc", time.Millisecond*20),
+									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv", "proc", time.Millisecond*20).Error(),
+							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20).Error(),
 						},
 						RequestAction{
 							request: &transport.Request{
@@ -667,25 +667,25 @@ func TestMiddleware(t *testing.T) {
 								Procedure: "nonProcedureRoute",
 								Body:      bytes.NewBufferString("body2"),
 							},
-							reqTimeout: time.Millisecond * 200,
+							reqTimeout: testtime.Millisecond * 200,
 							events: []*OutboundEvent{
 								{
-									WantTimeout:    time.Millisecond * 50,
+									WantTimeout:    testtime.Millisecond * 50,
 									WantService:    "serviceRoute",
 									WantProcedure:  "nonProcedureRoute",
 									WantBody:       "body2",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 								},
 								{
-									WantTimeout:   time.Millisecond * 50,
+									WantTimeout:   testtime.Millisecond * 50,
 									WantService:   "serviceRoute",
 									WantProcedure: "nonProcedureRoute",
 									WantBody:      "body2",
-									GiveError:     errors.ClientTimeoutError("serv", "proc", time.Millisecond*50),
+									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv", "proc", time.Millisecond*50).Error(),
+							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50).Error(),
 						},
 						RequestAction{
 							request: &transport.Request{
@@ -693,17 +693,17 @@ func TestMiddleware(t *testing.T) {
 								Procedure: "procedureRoute",
 								Body:      bytes.NewBufferString("body3"),
 							},
-							reqTimeout: time.Millisecond * 200,
+							reqTimeout: testtime.Millisecond * 200,
 							events: []*OutboundEvent{
 								{
-									WantTimeout:   time.Millisecond * 100,
+									WantTimeout:   testtime.Millisecond * 100,
 									WantService:   "serviceRoute",
 									WantProcedure: "procedureRoute",
 									WantBody:      "body3",
-									GiveError:     errors.ClientTimeoutError("serv", "proc", time.Millisecond*100),
+									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*100),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv", "proc", time.Millisecond*100).Error(),
+							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*100).Error(),
 						},
 					},
 				},
