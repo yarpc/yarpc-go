@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/internal/testtime"
 )
 
 func TestLifecycleOnce(t *testing.T) {
@@ -132,10 +133,10 @@ func TestLifecycleOnce(t *testing.T) {
 			actions: []LifecycleAction{
 				ConcurrentAction{
 					Actions: []LifecycleAction{
-						StartAction{ExpectedState: Running, Wait: 20 * time.Millisecond},
+						StartAction{ExpectedState: Running, Wait: 20 * testtime.Millisecond},
 						GetStateAction{ExpectedState: Starting},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 10 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Running,
@@ -146,11 +147,11 @@ func TestLifecycleOnce(t *testing.T) {
 				StartAction{ExpectedState: Running},
 				ConcurrentAction{
 					Actions: []LifecycleAction{
-						StopAction{ExpectedState: Stopped, Wait: 20 * time.Millisecond},
+						StopAction{ExpectedState: Stopped, Wait: 20 * testtime.Millisecond},
 						GetStateAction{ExpectedState: Stopping},
 						GetStateAction{ExpectedState: Stopped},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 10 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Stopped,
@@ -185,14 +186,14 @@ func TestLifecycleOnce(t *testing.T) {
 					Actions: []LifecycleAction{
 						Actions{
 							StartAction{ExpectedState: Running},
-							WaitAction(20 * time.Millisecond),
-							StopAction{ExpectedState: Stopped, Wait: 20 * time.Millisecond},
+							WaitAction(20 * testtime.Millisecond),
+							StopAction{ExpectedState: Stopped, Wait: 20 * testtime.Millisecond},
 						},
 						Actions{
 							WaitForStoppingAction,
-							WaitAction(10 * time.Millisecond),
+							WaitAction(10 * testtime.Millisecond),
 							ExactStateAction{ExpectedState: Stopping},
-							WaitAction(20 * time.Millisecond),
+							WaitAction(20 * testtime.Millisecond),
 							GetStateAction{ExpectedState: Stopped},
 						},
 					},
@@ -206,7 +207,7 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          40 * testtime.Millisecond,
 							Err:           errors.New("expected error"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
@@ -217,13 +218,13 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedErr:   errors.New("expected error"),
 						},
 						StartAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          40 * testtime.Millisecond,
 							Err:           errors.New("not an expected error 2"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
 						},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 10 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Errored,
@@ -234,11 +235,11 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          10 * time.Millisecond,
+							Wait:          10 * testtime.Millisecond,
 							ExpectedState: Running,
 						},
 						StopAction{
-							Wait:          10 * time.Millisecond,
+							Wait:          10 * testtime.Millisecond,
 							Err:           errors.New("expected error"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
@@ -254,7 +255,7 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedErr:   errors.New("expected error"),
 						},
 					},
-					Wait: 30 * time.Millisecond,
+					Wait: 30 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Errored,
@@ -268,25 +269,25 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StopAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          40 * testtime.Millisecond,
 							Err:           errors.New("expected error"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
 						},
 						StopAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          40 * testtime.Millisecond,
 							Err:           errors.New("not an expected error 1"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
 						},
 						StopAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          40 * testtime.Millisecond,
 							Err:           errors.New("not an expected error 2"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
 						},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 10 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Errored,
@@ -306,7 +307,7 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StopAction{
-							Wait:          10 * time.Millisecond,
+							Wait:          10 * testtime.Millisecond,
 							ExpectedState: Stopped,
 						},
 						StartAction{
@@ -315,7 +316,7 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Stopped,
 						},
 					},
-					Wait: 20 * time.Millisecond,
+					Wait: 20 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Stopped,
@@ -332,15 +333,15 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          50 * time.Millisecond,
+							Wait:          50 * testtime.Millisecond,
 							ExpectedState: Running,
 						},
 						StopAction{
-							Wait:          10 * time.Millisecond,
+							Wait:          10 * testtime.Millisecond,
 							ExpectedState: Stopped,
 						},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 10 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Stopped,
@@ -355,18 +356,18 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          50 * time.Millisecond,
+							Wait:          50 * testtime.Millisecond,
 							Err:           errors.New("expected error"),
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
 						},
 						StopAction{
-							Wait:          10 * time.Millisecond,
+							Wait:          10 * testtime.Millisecond,
 							ExpectedState: Errored,
 							ExpectedErr:   errors.New("expected error"),
 						},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 10 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Errored,
@@ -388,11 +389,11 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          30 * time.Millisecond,
+							Wait:          30 * testtime.Millisecond,
 							ExpectedState: Running,
 						},
 						StopAction{
-							Wait:          30 * time.Millisecond,
+							Wait:          30 * testtime.Millisecond,
 							ExpectedState: Stopped,
 						},
 						StartAction{
@@ -400,7 +401,7 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Stopping,
 						},
 					},
-					Wait: 20 * time.Millisecond,
+					Wait: 20 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Stopped,
@@ -421,7 +422,7 @@ func TestLifecycleOnce(t *testing.T) {
 				ConcurrentAction{
 					Actions: []LifecycleAction{
 						StartAction{
-							Wait:          30 * time.Millisecond,
+							Wait:          30 * testtime.Millisecond,
 							ExpectedState: Running,
 						},
 						StartAction{
@@ -429,7 +430,7 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Running,
 						},
 						StopAction{
-							Wait:          40 * time.Millisecond,
+							Wait:          40 * testtime.Millisecond,
 							ExpectedState: Stopped,
 						},
 						StartAction{
@@ -441,7 +442,7 @@ func TestLifecycleOnce(t *testing.T) {
 							ExpectedState: Stopped,
 						},
 					},
-					Wait: 10 * time.Millisecond,
+					Wait: 10 * testtime.Millisecond,
 				},
 			},
 			expectedFinalState: Stopped,
