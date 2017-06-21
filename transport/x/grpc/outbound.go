@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"strings"
 	"sync"
 
 	"go.uber.org/yarpc"
@@ -180,5 +181,11 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 			name = value[0]
 		}
 	}
-	return yarpcerrors.FromHeaders(code, name, status.Message())
+	message := status.Message()
+	// we put the name as a prefix for grpc compatibility
+	// if there was no message, the message will be the name, so we leave it as the message
+	if name != "" && message != "" && message != name {
+		message = strings.TrimPrefix(message, name+": ")
+	}
+	return yarpcerrors.FromHeaders(code, name, message)
 }
