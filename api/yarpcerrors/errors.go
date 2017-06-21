@@ -180,83 +180,83 @@ func UnauthenticatedErrorf(format string, args ...interface{}) error {
 }
 
 // IsCancelled returns true if ErrorCode(err) == CodeCancelled.
-func IsCancelled(err error) {
-	return ErrorCode(err) == CodeCodeCancelled
+func IsCancelled(err error) bool {
+	return ErrorCode(err) == CodeCancelled
 }
 
 // IsUnknown returns true if ErrorCode(err) == CodeUnknown.
-func IsUnknown(err error) {
-	return ErrorCode(err) == CodeCodeUnknown
+func IsUnknown(err error) bool {
+	return ErrorCode(err) == CodeUnknown
 }
 
 // IsInvalidArgument returns true if ErrorCode(err) == CodeInvalidArgument.
-func IsInvalidArgument(err error) {
-	return ErrorCode(err) == CodeCodeInvalidArgument
+func IsInvalidArgument(err error) bool {
+	return ErrorCode(err) == CodeInvalidArgument
 }
 
 // IsDeadlineExceeded returns true if ErrorCode(err) == CodeDeadlineExceeded.
-func IsDeadlineExceeded(err error) {
-	return ErrorCode(err) == CodeCodeDeadlineExceeded
+func IsDeadlineExceeded(err error) bool {
+	return ErrorCode(err) == CodeDeadlineExceeded
 }
 
 // IsNotFound returns true if ErrorCode(err) == CodeNotFound.
-func IsNotFound(err error) {
-	return ErrorCode(err) == CodeCodeNotFound
+func IsNotFound(err error) bool {
+	return ErrorCode(err) == CodeNotFound
 }
 
 // IsAlreadyExists returns true if ErrorCode(err) == CodeAlreadyExists.
-func IsAlreadyExists(err error) {
-	return ErrorCode(err) == CodeCodeAlreadyExists
+func IsAlreadyExists(err error) bool {
+	return ErrorCode(err) == CodeAlreadyExists
 }
 
 // IsPermissionDenied returns true if ErrorCode(err) == CodePermissionDenied.
-func IsPermissionDenied(err error) {
-	return ErrorCode(err) == CodeCodePermissionDenied
+func IsPermissionDenied(err error) bool {
+	return ErrorCode(err) == CodePermissionDenied
 }
 
 // IsResourceExhausted returns true if ErrorCode(err) == CodeResourceExhausted.
-func IsResourceExhausted(err error) {
-	return ErrorCode(err) == CodeCodeResourceExhausted
+func IsResourceExhausted(err error) bool {
+	return ErrorCode(err) == CodeResourceExhausted
 }
 
 // IsFailedPrecondition returns true if ErrorCode(err) == CodeFailedPrecondition.
-func IsFailedPrecondition(err error) {
-	return ErrorCode(err) == CodeCodeFailedPrecondition
+func IsFailedPrecondition(err error) bool {
+	return ErrorCode(err) == CodeFailedPrecondition
 }
 
 // IsAborted returns true if ErrorCode(err) == CodeAborted.
-func IsAborted(err error) {
-	return ErrorCode(err) == CodeCodeAborted
+func IsAborted(err error) bool {
+	return ErrorCode(err) == CodeAborted
 }
 
 // IsOutOfRange returns true if ErrorCode(err) == CodeOutOfRange.
-func IsOutOfRange(err error) {
-	return ErrorCode(err) == CodeCodeOutOfRange
+func IsOutOfRange(err error) bool {
+	return ErrorCode(err) == CodeOutOfRange
 }
 
 // IsUnimplemented returns true if ErrorCode(err) == CodeUnimplemented.
-func IsUnimplemented(err error) {
-	return ErrorCode(err) == CodeCodeUnimplemented
+func IsUnimplemented(err error) bool {
+	return ErrorCode(err) == CodeUnimplemented
 }
 
 // IsInternal returns true if ErrorCode(err) == CodeInternal.
-func IsInternal(err error) {
-	return ErrorCode(err) == CodeCodeInternal
+func IsInternal(err error) bool {
+	return ErrorCode(err) == CodeInternal
 }
 
 // IsUnavailable returns true if ErrorCode(err) == CodeUnavailable.
-func IsUnavailable(err error) {
-	return ErrorCode(err) == CodeCodeUnavailable
+func IsUnavailable(err error) bool {
+	return ErrorCode(err) == CodeUnavailable
 }
 
 // IsDataLoss returns true if ErrorCode(err) == CodeDataLoss.
-func IsDataLoss(err error) {
-	return ErrorCode(err) == CodeCodeDataLoss
+func IsDataLoss(err error) bool {
+	return ErrorCode(err) == CodeDataLoss
 }
 
 // IsUnauthenticated returns true if ErrorCode(err) == CodeUnauthenticated.
-func IsUnauthenticated(err error) {
-	return ErrorCode(err) == CodeCodeUnauthenticated
+func IsUnauthenticated(err error) bool {
+	return ErrorCode(err) == CodeUnauthenticated
 }
 
 // FromHeaders returns a new yarpc error from headers transmitted from the server side.
