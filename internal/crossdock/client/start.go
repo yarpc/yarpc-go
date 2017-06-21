@@ -21,6 +21,7 @@
 package client
 
 import (
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc/internal/crossdock/client/apachethrift"
 	"go.uber.org/yarpc/internal/crossdock/client/ctxpropagation"
 	"go.uber.org/yarpc/internal/crossdock/client/echo"
@@ -37,8 +38,6 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/tchclient"
 	"go.uber.org/yarpc/internal/crossdock/client/tchserver"
 	"go.uber.org/yarpc/internal/crossdock/client/timeout"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 var behaviors = crossdock.Behaviors{

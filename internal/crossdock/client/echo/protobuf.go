@@ -24,11 +24,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // Protobuf implements the 'protobuf' behavior.

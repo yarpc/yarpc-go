@@ -26,14 +26,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/backoff"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
-
-	"github.com/opentracing/opentracing-go"
 )
 
 type transportOptions struct {

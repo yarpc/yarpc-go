@@ -25,13 +25,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"go.uber.org/yarpc/transport/x/grpc"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // Run tests a yarpc call to the grpc-go server.

@@ -26,10 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/atomic"
+	"go.uber.org/yarpc/internal/testtime"
 )
 
 type wrappedLifecycleOnce struct {

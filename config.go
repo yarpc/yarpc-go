@@ -24,13 +24,12 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/yarpc/api/middleware"
-	"go.uber.org/yarpc/internal/observability"
-	"go.uber.org/yarpc/internal/pally"
-
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/uber-go/tally"
+	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/internal/observability"
+	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

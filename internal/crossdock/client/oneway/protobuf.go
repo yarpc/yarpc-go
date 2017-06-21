@@ -23,10 +23,9 @@ package oneway
 import (
 	"context"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // Protobuf starts an http oneway run using Protobuf encoding

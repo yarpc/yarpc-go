@@ -27,14 +27,13 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/uber/tchannel-go/testutils/testreader"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/clientconfig"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/tchannel-go/testutils/testreader"
 )
 
 func TestCall(t *testing.T) {

@@ -25,11 +25,10 @@ import (
 	"log"
 	"time"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloclient"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloserver"
-
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/x/redis"
 )

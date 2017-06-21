@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

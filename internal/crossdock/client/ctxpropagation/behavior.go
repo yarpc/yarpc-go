@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
@@ -34,9 +36,6 @@ import (
 	server "go.uber.org/yarpc/internal/crossdock/server/yarpc"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/crossdock/crossdock-go"
-	"github.com/opentracing/opentracing-go"
 )
 
 // Run verifies that opentracing context is propagated across multiple hops.

@@ -22,7 +22,6 @@ package googlegrpc
 
 import (
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-
 	"golang.org/x/net/context"
 )
 

@@ -23,10 +23,9 @@ package oneway
 import (
 	"context"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 type jsonToken struct {

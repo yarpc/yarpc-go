@@ -25,9 +25,8 @@ import (
 	"reflect"
 	"strings"
 
-	"go.uber.org/yarpc/internal/interpolate"
-
 	"github.com/uber-go/mapdecode"
+	"go.uber.org/yarpc/internal/interpolate"
 )
 
 const (

@@ -26,11 +26,10 @@ import (
 	"reflect"
 	"strings"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/uber-go/mapdecode"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // TransportSpec specifies the configuration parameters for a transport. These

@@ -27,14 +27,13 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 	"golang.org/x/net/context"
 )
 

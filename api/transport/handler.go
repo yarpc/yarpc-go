@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/internal/errors"
-
 	"go.uber.org/zap/zapcore"
 )
 

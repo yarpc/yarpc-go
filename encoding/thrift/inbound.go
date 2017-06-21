@@ -24,13 +24,12 @@ import (
 	"bytes"
 	"context"
 
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
-
-	"go.uber.org/thriftrw/protocol"
-	"go.uber.org/thriftrw/wire"
 )
 
 // thriftUnaryHandler wraps a Thrift Handler into a transport.UnaryHandler

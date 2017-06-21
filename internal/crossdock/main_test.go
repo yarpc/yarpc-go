@@ -24,12 +24,11 @@ import (
 	"net/url"
 	"testing"
 
-	"go.uber.org/yarpc/internal/crossdock/client"
-	"go.uber.org/yarpc/internal/crossdock/server"
-
 	"github.com/crossdock/crossdock-go"
 	"github.com/opentracing/opentracing-go"
 	jaeger "github.com/uber/jaeger-client-go"
+	"go.uber.org/yarpc/internal/crossdock/client"
+	"go.uber.org/yarpc/internal/crossdock/server"
 )
 
 const clientURL = "http://127.0.0.1:8080"

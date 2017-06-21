@@ -23,12 +23,11 @@ package oneway
 import (
 	"context"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // Run starts the oneway behavior, testing a combination of encodings and transports

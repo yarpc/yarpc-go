@@ -25,9 +25,8 @@ import (
 	"strings"
 	"testing"
 
-	"go.uber.org/yarpc/internal/testutils"
-
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testutils"
 )
 
 const (

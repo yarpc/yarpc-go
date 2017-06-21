@@ -25,12 +25,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-
-	"github.com/crossdock/crossdock-go"
 	"google.golang.org/grpc"
 )
 

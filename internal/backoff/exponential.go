@@ -25,9 +25,8 @@ import (
 	"math/rand"
 	"time"
 
-	"go.uber.org/yarpc/api/backoff"
-
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc/api/backoff"
 )
 
 var (

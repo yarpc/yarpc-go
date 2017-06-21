@@ -7,7 +7,6 @@ package testing
 import (
 	"context"
 	"reflect"
-
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"

@@ -24,10 +24,9 @@ import (
 	"fmt"
 	"strings"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-
-	"go.uber.org/multierr"
 	"google.golang.org/grpc/metadata"
 )
 

@@ -23,12 +23,11 @@ package peer
 import (
 	"context"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	intsync "go.uber.org/yarpc/internal/sync"
-
-	"go.uber.org/multierr"
 )
 
 // Bind couples a peer list with a peer list updater.

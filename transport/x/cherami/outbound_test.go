@@ -23,10 +23,9 @@ package cherami
 import (
 	"testing"
 
-	"go.uber.org/yarpc/transport/x/cherami/mocks"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/yarpc/transport/x/cherami/mocks"
 )
 
 func TestOutbound(t *testing.T) {

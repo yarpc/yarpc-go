@@ -23,11 +23,10 @@ package roundrobin
 import (
 	"testing"
 
-	"go.uber.org/yarpc/api/peer/peertest"
-	newrr "go.uber.org/yarpc/peer/roundrobin"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/peer/peertest"
+	newrr "go.uber.org/yarpc/peer/roundrobin"
 )
 
 func TestCreate(t *testing.T) {

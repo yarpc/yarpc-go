@@ -24,10 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/internal/whitespace"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/whitespace"
 	"gopkg.in/yaml.v2"
 )
 

@@ -25,10 +25,9 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel/internal"
-
-	"github.com/uber/tchannel-go"
 )
 
 // readRequestHeaders reads headers and baggage from an incoming request.

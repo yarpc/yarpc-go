@@ -21,9 +21,8 @@
 package peertest
 
 import (
-	"go.uber.org/yarpc/api/peer"
-
 	"github.com/golang/mock/gomock"
+	"go.uber.org/yarpc/api/peer"
 )
 
 // SubscriberDefinition is an abstraction for defining a PeerSubscriber with

@@ -26,9 +26,8 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 	"google.golang.org/grpc"
 )
 

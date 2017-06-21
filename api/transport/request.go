@@ -24,7 +24,6 @@ import (
 	"io"
 
 	"go.uber.org/yarpc/internal/errors"
-
 	"go.uber.org/zap/zapcore"
 )
 

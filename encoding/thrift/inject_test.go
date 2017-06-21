@@ -24,10 +24,9 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport/transporttest"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/transport/transporttest"
 )
 
 type someInterface interface{}

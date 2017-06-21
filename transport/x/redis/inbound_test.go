@@ -23,12 +23,11 @@ package redis
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/x/redis/redistest"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestOperationOrder(t *testing.T) {

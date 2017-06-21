@@ -26,12 +26,11 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/api/peer"
-	. "go.uber.org/yarpc/api/peer/peertest"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc/api/peer"
+	. "go.uber.org/yarpc/api/peer/peertest"
 )
 
 func TestRoundRobinList(t *testing.T) {

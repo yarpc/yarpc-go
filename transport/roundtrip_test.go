@@ -28,6 +28,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel-go"
+	"github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc/api/transport"
 	trans "go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -36,11 +40,6 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uber/tchannel-go"
-	"github.com/uber/tchannel-go/testutils"
 )
 
 // all tests in this file should use these names for callers and services.

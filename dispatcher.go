@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
@@ -35,8 +36,6 @@ import (
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
 	intsync "go.uber.org/yarpc/internal/sync"
-
-	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 

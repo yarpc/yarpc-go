@@ -25,7 +25,6 @@ import (
 	"net"
 
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-
 	"google.golang.org/grpc"
 )
 

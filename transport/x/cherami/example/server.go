@@ -24,11 +24,10 @@ import (
 	"context"
 	"fmt"
 
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example/exampleserviceserver"
-
-	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 )
 
 // ServerConfig is the configuration needed to create a ExampleService

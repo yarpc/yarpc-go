@@ -27,7 +27,6 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	internalsync "go.uber.org/yarpc/internal/sync"
-
 	"google.golang.org/grpc"
 )
 

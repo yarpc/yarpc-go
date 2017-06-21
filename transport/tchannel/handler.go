@@ -25,14 +25,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/uber/tchannel-go"
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
-
-	"github.com/opentracing/opentracing-go"
-	"github.com/uber/tchannel-go"
-	"go.uber.org/multierr"
 	ncontext "golang.org/x/net/context"
 )
 

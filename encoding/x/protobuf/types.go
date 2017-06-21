@@ -26,11 +26,10 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/procedure"
-
-	"github.com/gogo/protobuf/proto"
 )
 
 const (

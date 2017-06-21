@@ -24,12 +24,11 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/procedure"
-
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/thriftreflect"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/procedure"
 )
 
 // Register calls the RouteTable's Register method.

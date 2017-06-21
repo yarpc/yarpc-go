@@ -30,11 +30,10 @@ import (
 	"syscall"
 	"time"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo"
 	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloclient"
 	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloserver"
-
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/http"
 )
 

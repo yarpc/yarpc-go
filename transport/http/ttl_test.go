@@ -24,9 +24,8 @@ import (
 	"context"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestParseTTL(t *testing.T) {

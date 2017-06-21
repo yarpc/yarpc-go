@@ -22,7 +22,6 @@ package grpc
 
 import (
 	"go.uber.org/yarpc/api/yarpcerrors"
-
 	"google.golang.org/grpc/codes"
 )
 
