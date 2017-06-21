@@ -27,17 +27,16 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/json"
-	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	tjson "github.com/uber/tchannel-go/json"
 	"github.com/uber/tchannel-go/testutils"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/json"
+	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/testtime"
 )
 
 func TestChannelInboundStartNew(t *testing.T) {

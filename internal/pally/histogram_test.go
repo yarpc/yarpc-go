@@ -25,9 +25,8 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/internal/pally/pallytest"
-
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/pally/pallytest"
 )
 
 func TestLatencies(t *testing.T) {

@@ -25,9 +25,8 @@ import (
 	"errors"
 	"io"
 
-	"go.uber.org/yarpc/internal/buffer"
-
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/internal/buffer"
 )
 
 // TODO Optimizations:

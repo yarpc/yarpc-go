@@ -21,10 +21,9 @@
 package grpc
 
 import (
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc/internal/crossdock/client/echo"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 var encodingToRunFunc = map[string]func(crossdock.T, string){

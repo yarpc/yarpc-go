@@ -36,7 +36,6 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
-
 	"google.golang.org/grpc"
 )
 

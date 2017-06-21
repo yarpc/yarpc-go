@@ -25,14 +25,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/uber/tchannel-go"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
-
-	"github.com/opentracing/opentracing-go"
-	"github.com/uber/tchannel-go"
 )
 
 // Transport is a TChannel transport suitable for use with YARPC's peer

@@ -23,10 +23,9 @@ package oneway
 import (
 	"context"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // Raw starts an http run using raw encoding

@@ -23,12 +23,11 @@ package main
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storefx"
 	"go.uber.org/yarpc/transport/http"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestFxClient(t *testing.T) {

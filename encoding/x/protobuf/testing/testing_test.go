@@ -24,6 +24,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
@@ -31,8 +32,6 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestIntegration(t *testing.T) {

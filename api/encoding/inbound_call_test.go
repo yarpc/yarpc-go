@@ -25,11 +25,10 @@ import (
 	"sort"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
 )
 
 func TestInboundCallReadFromRequest(t *testing.T) {

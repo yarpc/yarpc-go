@@ -25,15 +25,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
+	"github.com/uber/tchannel-go/thrift"
+	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc/internal/crossdock/client/gauntlet"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gen-go/echo"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gen-go/gauntlet_tchannel"
-
-	"github.com/crossdock/crossdock-go"
-	"github.com/uber/tchannel-go/thrift"
-	"go.uber.org/thriftrw/ptr"
 )
 
 func runThrift(t crossdock.T, call call) {

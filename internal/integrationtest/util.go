@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -35,9 +37,6 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	peerbind "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/roundrobin"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (

@@ -27,6 +27,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
@@ -34,10 +37,6 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/multierr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

@@ -24,14 +24,13 @@ import (
 	"context"
 	"io"
 
+	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/sync"
-
-	"github.com/uber/tchannel-go"
 )
 
 var (

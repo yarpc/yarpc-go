@@ -26,10 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/internal/testtime"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // There are no actual tests in this file, it contains a series of helper methods

@@ -23,9 +23,8 @@ package hostport
 import (
 	"sync"
 
-	"go.uber.org/yarpc/api/peer"
-
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/api/peer"
 )
 
 // PeerIdentifier uniquely references a host:port combination using a common interface

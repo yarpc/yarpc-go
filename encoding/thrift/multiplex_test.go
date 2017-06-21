@@ -24,10 +24,9 @@ import (
 	"bytes"
 	"testing"
 
-	"go.uber.org/thriftrw/wire"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/thriftrw/wire"
 )
 
 func TestMultiplexedEncode(t *testing.T) {

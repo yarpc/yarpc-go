@@ -26,6 +26,7 @@ import (
 	"net"
 	"strconv"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/x/protobuf"
@@ -33,8 +34,6 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-
-	"go.uber.org/multierr"
 	ggrpc "google.golang.org/grpc"
 )
 

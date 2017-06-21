@@ -23,11 +23,10 @@ package tchannel
 import (
 	"errors"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/sync"
-
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/sync"
 )
 
 var errChannelOrServiceNameIsRequired = errors.New(

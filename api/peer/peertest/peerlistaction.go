@@ -27,11 +27,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // ListActionDeps are passed through PeerListActions' Apply methods in order

@@ -26,10 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/x/config"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/x/config"
 )
 
 func TestTransportSpec(t *testing.T) {

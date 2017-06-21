@@ -23,11 +23,10 @@ package tchclient
 import (
 	"time"
 
-	"go.uber.org/yarpc/internal/crossdock/client/random"
-	"go.uber.org/yarpc/internal/crossdock/internal"
-
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go/json"
+	"go.uber.org/yarpc/internal/crossdock/client/random"
+	"go.uber.org/yarpc/internal/crossdock/internal"
 )
 
 func runJSON(t crossdock.T, call call) {

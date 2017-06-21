@@ -24,6 +24,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
@@ -31,9 +33,6 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/mocktracer"
 )
 
 type echoReqBody struct{}

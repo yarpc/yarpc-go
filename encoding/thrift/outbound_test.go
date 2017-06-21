@@ -28,17 +28,16 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/clientconfig"
-	"go.uber.org/yarpc/internal/procedure"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/envelope"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/clientconfig"
+	"go.uber.org/yarpc/internal/procedure"
+	"go.uber.org/yarpc/internal/testtime"
 )
 
 func valueptr(v wire.Value) *wire.Value { return &v }

@@ -26,6 +26,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/opentracing/opentracing-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	peerapi "go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/peer/peertest"
@@ -42,11 +46,6 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/x/config"
 	"go.uber.org/yarpc/yarpctest"
-
-	"github.com/golang/mock/gomock"
-	"github.com/opentracing/opentracing-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestChooserConfigurator(t *testing.T) {

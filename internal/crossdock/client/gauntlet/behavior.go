@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
+	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
@@ -35,9 +37,6 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceclient"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestclient"
-
-	"github.com/crossdock/crossdock-go"
-	"go.uber.org/thriftrw/ptr"
 )
 
 const serverName = "yarpc-test"

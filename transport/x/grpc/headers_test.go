@@ -24,11 +24,10 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"google.golang.org/grpc/metadata"
 )
 

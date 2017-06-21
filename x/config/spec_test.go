@@ -26,11 +26,10 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
 )
 
 var _typeOfEmptyStruct = reflect.TypeOf(struct{}{})

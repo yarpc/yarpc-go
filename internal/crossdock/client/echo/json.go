@@ -24,11 +24,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc/encoding/json"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // jsonEcho contains an echo request or response for the JSON echo endpoint.

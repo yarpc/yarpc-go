@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
@@ -33,8 +34,6 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/internal"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 func createHeadersT(t crossdock.T) crossdock.T {

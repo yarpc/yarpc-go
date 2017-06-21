@@ -23,10 +23,9 @@ package grpc
 import (
 	"testing"
 
-	"go.uber.org/yarpc/x/config"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/x/config"
 )
 
 func TestNewTransportSpecOptions(t *testing.T) {

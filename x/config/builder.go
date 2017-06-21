@@ -23,10 +23,9 @@ package config
 import (
 	"fmt"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-
-	"go.uber.org/multierr"
 )
 
 type buildableOutbounds struct {

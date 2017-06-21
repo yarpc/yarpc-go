@@ -26,13 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/whitespace"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/whitespace"
 	"gopkg.in/yaml.v2"
 )
 

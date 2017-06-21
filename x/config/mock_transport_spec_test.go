@@ -24,9 +24,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/golang/mock/gomock"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // Builds mockTransportSpec objects.

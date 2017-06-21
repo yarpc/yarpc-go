@@ -26,13 +26,12 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go/internal/lib"
-	_ "go.uber.org/yarpc/yarpcproto" // needed for proto.RegisterFile for Oneway type
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go/internal/lib"
+	_ "go.uber.org/yarpc/yarpcproto" // needed for proto.RegisterFile for Oneway type
 )
 
 func TestGolden(t *testing.T) {
