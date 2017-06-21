@@ -44,7 +44,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestBasicYarpc(t *testing.T) {
+func TestYarpcBasic(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYarpc(context.Background(), "foo")
@@ -56,7 +56,7 @@ func TestBasicYarpc(t *testing.T) {
 	})
 }
 
-func TestBasicGRPC(t *testing.T) {
+func TestGRPCBasic(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
@@ -78,6 +78,15 @@ func TestYarpcMetadata(t *testing.T) {
 	})
 }
 
+func TestYarpcWellKnownError(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYarpcServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
+		_, err := e.GetValueYarpc(context.Background(), "foo")
+		assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("bar 1"), err)
+	})
+}
+
 func TestYarpcNamedError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
@@ -87,12 +96,21 @@ func TestYarpcNamedError(t *testing.T) {
 	})
 }
 
-func TestYarpcGRPCError(t *testing.T) {
+func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYarpcServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
-		_, err := e.GetValueYarpc(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("bar 1"), err)
+		_, err := e.GetValueGRPC(context.Background(), "foo")
+		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
+	})
+}
+
+func TestGRPCNamedError(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYarpcServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
+		_, err := e.GetValueGRPC(context.Background(), "foo")
+		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
 	})
 }
 
