@@ -21,13 +21,21 @@
 package testing
 
 import (
+	"io/ioutil"
+	"log"
 	"testing"
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
+	"google.golang.org/grpc/grpclog"
 )
+
+func init() {
+	log.SetOutput(ioutil.Discard)
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
+}
 
 func BenchmarkIntegration(b *testing.B) {
 	for _, transportType := range testutils.AllTransportTypes {
