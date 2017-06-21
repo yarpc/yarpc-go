@@ -403,7 +403,7 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
 		var errorCode yarpcerrors.Code
 		// TODO: what to do with error?
-		if err := (&errorCode).UnmarshalText([]byte(errorCodeText)); err != nil {
+		if err := (&errorCode).UnmarshalText([]byte(errorCodeText)); err == nil {
 			code = errorCode
 		}
 	}
