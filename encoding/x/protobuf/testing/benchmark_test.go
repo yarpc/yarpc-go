@@ -21,46 +21,63 @@
 package testing
 
 import (
+	"io/ioutil"
+	"log"
 	"testing"
 
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
+	"google.golang.org/grpc/grpclog"
 )
 
-func BenchmarkIntegration(b *testing.B) {
+func init() {
+	log.SetOutput(ioutil.Discard)
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
+}
+
+func BenchmarkIntegrationYARPC(b *testing.B) {
 	for _, transportType := range testutils.AllTransportTypes {
-		b.Run(transportType.String(), func(b *testing.B) { benchmarkIntegrationForTransportType(b, transportType) })
+		b.Run(transportType.String(), func(b *testing.B) {
+			benchmarkForTransportType(b, transportType, func(clients *exampleutil.Clients) error {
+				benchmarkIntegrationYARPC(b, clients.KeyValueYarpcClient)
+				return nil
+			})
+		})
 	}
 }
 
-func benchmarkIntegrationForTransportType(b *testing.B, transportType testutils.TransportType) {
-	keyValueYarpcServer := example.NewKeyValueYarpcServer()
-	sinkYarpcServer := example.NewSinkYarpcServer(false)
-	exampleutil.WithClients(
-		transportType,
-		keyValueYarpcServer,
-		sinkYarpcServer,
-		func(clients *exampleutil.Clients) error {
-			benchmarkIntegration(b, clients.KeyValueYarpcClient, clients.SinkYarpcClient, keyValueYarpcServer, sinkYarpcServer)
-			return nil
-		},
-	)
+func BenchmarkIntegrationGRPC(b *testing.B) {
+	benchmarkForTransportType(b, testutils.TransportTypeGRPC, func(clients *exampleutil.Clients) error {
+		benchmarkIntegrationGRPC(b, clients.KeyValueGRPCClient, clients.ContextWrapper)
+		return nil
+	})
 }
 
-func benchmarkIntegration(
-	b *testing.B,
-	keyValueYarpcClient examplepb.KeyValueYarpcClient,
-	sinkYarpcClient examplepb.SinkYarpcClient,
-	keyValueYarpcServer *example.KeyValueYarpcServer,
-	sinkYarpcServer *example.SinkYarpcServer,
-) {
+func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {
+	keyValueYarpcServer := example.NewKeyValueYarpcServer()
+	sinkYarpcServer := example.NewSinkYarpcServer(false)
+	exampleutil.WithClients(transportType, keyValueYarpcServer, sinkYarpcServer, f)
+}
+
+func benchmarkIntegrationYARPC(b *testing.B, keyValueYarpcClient examplepb.KeyValueYarpcClient) {
 	b.Run("Get", func(b *testing.B) {
 		setValue(keyValueYarpcClient, "foo", "bar")
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			getValue(keyValueYarpcClient, "foo")
+		}
+	})
+}
+
+func benchmarkIntegrationGRPC(b *testing.B, keyValueClient examplepb.KeyValueClient, contextWrapper *grpcheader.ContextWrapper) {
+	b.Run("Get", func(b *testing.B) {
+		setValueGRPC(keyValueClient, contextWrapper, "foo", "bar")
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			getValueGRPC(keyValueClient, contextWrapper, "foo")
 		}
 	})
 }
