@@ -244,13 +244,14 @@ func (rw *responseWriter) Close() error {
 	//retErr = encoding.ResponseHeadersEncodeError(rw.treq, err)
 	//}
 
+	// Arg3Writer must be opened and closed regardless of if there is data
+	bodyWriter, err := rw.response.Arg3Writer()
+	if err != nil {
+		return multierr.Append(retErr, err)
+	}
+	defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
 	if rw.buffer != nil {
 		defer buffer.Put(rw.buffer)
-		bodyWriter, err := rw.response.Arg3Writer()
-		if err != nil {
-			return multierr.Append(retErr, err)
-		}
-		defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
 		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
 			return multierr.Append(retErr, err)
 		}
