@@ -24,12 +24,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 func runJSON(t crossdock.T, dispatcher *yarpc.Dispatcher) {

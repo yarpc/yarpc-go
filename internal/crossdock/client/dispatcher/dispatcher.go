@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
@@ -33,9 +35,6 @@ import (
 	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/transport/x/redis"
-
-	"github.com/crossdock/crossdock-go"
-	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 )
 
 // Create creates an RPC from the given parameters or fails the whole behavior.

@@ -23,11 +23,10 @@ package tchserver
 import (
 	"fmt"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 const (

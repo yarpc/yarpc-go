@@ -24,9 +24,8 @@ import (
 	"fmt"
 	"sync"
 
-	"go.uber.org/yarpc/api/peer"
-
 	"github.com/golang/mock/gomock"
+	"go.uber.org/yarpc/api/peer"
 )
 
 // MockPeerIdentifier is a small wrapper around the PeerIdentifier interfaces for a string

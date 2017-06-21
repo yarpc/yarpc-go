@@ -26,17 +26,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/backoff"
 	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
-
-	"github.com/opentracing/opentracing-go"
 )
 
 type transportOptions struct {
 	keepAlive           time.Duration
 	maxIdleConnsPerHost int
+	connTimeout         time.Duration
+	connBackoffStrategy backoffapi.Strategy
 	tracer              opentracing.Tracer
 	buildClient         func(*transportOptions) *http.Client
 }
@@ -44,7 +47,15 @@ type transportOptions struct {
 var defaultTransportOptions = transportOptions{
 	keepAlive:           30 * time.Second,
 	maxIdleConnsPerHost: 2,
+	connTimeout:         defaultConnTimeout,
+	connBackoffStrategy: backoff.DefaultExponential,
 	buildClient:         buildHTTPClient,
+}
+
+func newTransportOptions() transportOptions {
+	options := defaultTransportOptions
+	options.tracer = opentracing.GlobalTracer()
+	return options
 }
 
 // TransportOption customizes the behavior of an HTTP transport.
@@ -74,6 +85,28 @@ func MaxIdleConnsPerHost(i int) TransportOption {
 	}
 }
 
+// ConnTimeout is the time that the transport will wait for a connection attempt.
+// If a peer has been retained by a peer list, connection attempts are
+// performed in a goroutine off the request path.
+//
+// The default is half a second.
+func ConnTimeout(d time.Duration) TransportOption {
+	return func(options *transportOptions) {
+		options.connTimeout = d
+	}
+}
+
+// ConnBackoff specifies the connection backoff strategy for delays between
+// connection attempts for each peer.
+//
+// The default is exponential backoff starting with 10ms fully jittered,
+// doubling each attempt, with a maximum interval of 30s.
+func ConnBackoff(s backoffapi.Strategy) TransportOption {
+	return func(options *transportOptions) {
+		options.connBackoffStrategy = s
+	}
+}
+
 // Tracer configures a tracer for the transport and all its inbounds and
 // outbounds.
 func Tracer(tracer opentracing.Tracer) TransportOption {
@@ -92,17 +125,21 @@ func buildClient(f func(*transportOptions) *http.Client) TransportOption {
 
 // NewTransport creates a new HTTP transport for managing peers and sending requests
 func NewTransport(opts ...TransportOption) *Transport {
-	options := defaultTransportOptions
-	options.tracer = opentracing.GlobalTracer()
+	options := newTransportOptions()
 	for _, opt := range opts {
 		opt(&options)
 	}
+	return options.newTransport()
+}
 
+func (o *transportOptions) newTransport() *Transport {
 	return &Transport{
-		once:   intsync.Once(),
-		client: options.buildClient(&options),
-		peers:  make(map[string]*hostport.Peer),
-		tracer: options.tracer,
+		once:                intsync.Once(),
+		client:              o.buildClient(o),
+		connTimeout:         o.connTimeout,
+		connBackoffStrategy: o.connBackoffStrategy,
+		peers:               make(map[string]*httpPeer),
+		tracer:              o.tracer,
 	}
 }
 
@@ -130,7 +167,11 @@ type Transport struct {
 	once intsync.LifecycleOnce
 
 	client *http.Client
-	peers  map[string]*hostport.Peer
+	peers  map[string]*httpPeer
+
+	connTimeout         time.Duration
+	connBackoffStrategy backoffapi.Strategy
+	connectorsGroup     sync.WaitGroup
 
 	tracer opentracing.Tracer
 }
@@ -147,7 +188,8 @@ func (a *Transport) Start() error {
 // Stop stops the HTTP transport.
 func (a *Transport) Stop() error {
 	return a.once.Stop(func() error {
-		return nil // Nothing to do
+		a.connectorsGroup.Wait()
+		return nil
 	})
 }
 
@@ -175,15 +217,15 @@ func (a *Transport) RetainPeer(pid peer.Identifier, sub peer.Subscriber) (peer.P
 }
 
 // **NOTE** should only be called while the lock write mutex is acquired
-func (a *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) *hostport.Peer {
+func (a *Transport) getOrCreatePeer(pid hostport.PeerIdentifier) *httpPeer {
 	if p, ok := a.peers[pid.Identifier()]; ok {
 		return p
 	}
 
-	p := hostport.NewPeer(pid, a)
-	p.SetStatus(peer.Available)
-
+	p := newPeer(pid, a)
 	a.peers[p.Identifier()] = p
+	a.connectorsGroup.Add(1)
+	go p.MaintainConn()
 
 	return p
 }
@@ -207,6 +249,7 @@ func (a *Transport) ReleasePeer(pid peer.Identifier, sub peer.Subscriber) error 
 
 	if p.NumSubscribers() == 0 {
 		delete(a.peers, pid.Identifier())
+		p.Release()
 	}
 
 	return nil

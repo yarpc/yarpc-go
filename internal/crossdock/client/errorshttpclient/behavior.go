@@ -27,9 +27,8 @@ import (
 	"net/url"
 	"strings"
 
-	"go.uber.org/yarpc/internal/crossdock/client/params"
-
 	"github.com/crossdock/crossdock-go"
+	"go.uber.org/yarpc/internal/crossdock/client/params"
 )
 
 type httpClient struct {

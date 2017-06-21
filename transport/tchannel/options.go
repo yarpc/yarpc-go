@@ -23,10 +23,9 @@ package tchannel
 import (
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
-
-	"github.com/opentracing/opentracing-go"
 )
 
 // Option allows customizing the YARPC TChannel transport.

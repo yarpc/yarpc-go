@@ -30,16 +30,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel-go"
+	traw "github.com/uber/tchannel-go/raw"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	yhttp "go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uber/tchannel-go"
-	traw "github.com/uber/tchannel-go/raw"
 	ncontext "golang.org/x/net/context"
 )
 

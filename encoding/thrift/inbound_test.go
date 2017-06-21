@@ -26,14 +26,13 @@ import (
 	"io"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/testtime"
 )
 
 func TestThriftHandler(t *testing.T) {

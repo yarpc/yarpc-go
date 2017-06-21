@@ -24,10 +24,9 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/yarpc/internal/crossdock/client/random"
-
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go/raw"
+	"go.uber.org/yarpc/internal/crossdock/client/random"
 )
 
 func runRaw(t crossdock.T, call call) {

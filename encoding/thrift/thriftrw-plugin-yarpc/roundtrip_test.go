@@ -28,6 +28,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
@@ -46,10 +49,6 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/thriftrw/ptr"
 )
 
 func TestRoundTrip(t *testing.T) {

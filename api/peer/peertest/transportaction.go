@@ -24,9 +24,8 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc/api/peer"
-
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/peer"
 )
 
 // TransportDeps are passed through all the TransportActions in order to pass certain

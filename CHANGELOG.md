@@ -4,6 +4,12 @@ Releases
 v1.10.0 (unreleased)
 -------------------
 
+-   Thrift: UberFx-compatible modules are now generated for each service inside
+    a subpackage. Disable this by passing a `-no-fx` flag to the plugin.
+-   Improves resilience of HTTP and TChannel by broadcasting peer availability
+    to peer lists like round robin. A round robin or least pending peer list
+    blocks requests until a peer becomes available.
+
 
 v1.9.0 (2017-06-08)
 -------------------

@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	"go.uber.org/yarpc/api/yarpcerrors"
-
 	"go.uber.org/zap/zapcore"
 )
 

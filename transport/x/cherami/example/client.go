@@ -25,12 +25,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example/exampleserviceclient"
-
-	"github.com/stretchr/testify/assert"
-	cherami_client "github.com/uber/cherami-client-go/client/cherami"
 )
 
 // TestCheramiYARPC will create a yarpc client (using cherami transport), and issue an one way rpc call to the server

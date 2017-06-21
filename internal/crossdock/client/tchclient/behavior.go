@@ -23,10 +23,9 @@ package tchclient
 import (
 	"fmt"
 
-	"go.uber.org/yarpc/internal/crossdock/client/params"
-
 	"github.com/crossdock/crossdock-go"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/internal/crossdock/client/params"
 )
 
 const (

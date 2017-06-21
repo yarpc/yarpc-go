@@ -24,12 +24,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // Thrift implements the 'thrift' behavior.

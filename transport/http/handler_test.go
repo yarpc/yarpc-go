@@ -30,17 +30,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/opentracing/opentracing-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
-
-	"github.com/golang/mock/gomock"
-	"github.com/opentracing/opentracing-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHandlerSuccess(t *testing.T) {

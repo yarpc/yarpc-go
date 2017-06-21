@@ -24,13 +24,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 func runRaw(t crossdock.T, dispatcher *yarpc.Dispatcher) {

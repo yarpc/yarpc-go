@@ -27,10 +27,9 @@ import (
 	"io/ioutil"
 	"os"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/interpolate"
-
-	"go.uber.org/multierr"
 	"gopkg.in/yaml.v2"
 )
 

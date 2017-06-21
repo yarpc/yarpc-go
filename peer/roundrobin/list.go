@@ -25,13 +25,12 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/atomic"
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	ysync "go.uber.org/yarpc/internal/sync"
-
-	"go.uber.org/atomic"
-	"go.uber.org/multierr"
 )
 
 type listConfig struct {

@@ -21,9 +21,8 @@
 package pally_test
 
 import (
-	"go.uber.org/yarpc/internal/pally"
-
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/yarpc/internal/pally"
 )
 
 // For expvar-style usage (where all metrics are package-global), create a

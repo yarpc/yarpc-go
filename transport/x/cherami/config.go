@@ -27,10 +27,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/x/config"
-
-	"github.com/uber/cherami-client-go/client/cherami"
 )
 
 const (

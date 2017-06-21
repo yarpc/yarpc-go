@@ -24,7 +24,6 @@ import (
 	"bytes"
 
 	"go.uber.org/yarpc/api/transport"
-
 	"google.golang.org/grpc/metadata"
 )
 

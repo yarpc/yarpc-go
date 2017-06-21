@@ -26,11 +26,10 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestEncodeAndDecodeHeaders(t *testing.T) {

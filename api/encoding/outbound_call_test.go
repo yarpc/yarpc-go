@@ -24,10 +24,9 @@ import (
 	"context"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestOutboundCallWriteToRequest(t *testing.T) {

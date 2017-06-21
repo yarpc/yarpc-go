@@ -25,13 +25,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/procedure"
-
-	"github.com/gogo/protobuf/proto"
 )
 
 type client struct {

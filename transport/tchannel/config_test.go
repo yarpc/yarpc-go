@@ -24,12 +24,11 @@ import (
 	"fmt"
 	"testing"
 
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/x/config"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tchanneltest "github.com/uber/tchannel-go/testutils"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/x/config"
 )
 
 type badOption struct{}

@@ -28,10 +28,9 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testtime"
 )
 
 func TestStartAndStop(t *testing.T) {

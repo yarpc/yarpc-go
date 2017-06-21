@@ -25,16 +25,15 @@ import (
 	"context"
 	"fmt"
 
+	"go.uber.org/thriftrw/envelope"
+	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/procedure"
-
-	"go.uber.org/thriftrw/envelope"
-	"go.uber.org/thriftrw/protocol"
-	"go.uber.org/thriftrw/wire"
 )
 
 // Client is a generic Thrift client. It speaks in raw Thrift payloads.

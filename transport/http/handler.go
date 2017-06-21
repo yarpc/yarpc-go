@@ -26,14 +26,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
-
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 )
 
 func popHeader(h http.Header, n string) string {

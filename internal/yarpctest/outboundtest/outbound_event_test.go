@@ -28,13 +28,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/testtime"
 	iyarpctest "go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/yarpctest"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestOutboundEvent(t *testing.T) {

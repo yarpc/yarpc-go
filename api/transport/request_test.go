@@ -26,10 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/request"
-
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
 )
 

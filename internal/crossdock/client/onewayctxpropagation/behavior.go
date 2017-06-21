@@ -23,12 +23,11 @@ package onewayctxpropagation
 import (
 	"context"
 
+	"github.com/crossdock/crossdock-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/dispatcher"
-
-	"github.com/crossdock/crossdock-go"
-	opentracing "github.com/opentracing/opentracing-go"
 )
 
 // Run starts the behavior, testing oneway context propagation

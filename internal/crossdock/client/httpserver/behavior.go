@@ -25,13 +25,12 @@ import (
 	"fmt"
 	"time"
 
+	crossdock "github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/transport/http"
-
-	crossdock "github.com/crossdock/crossdock-go"
 )
 
 // Run exercise a yarpc client against a rigged httpserver.

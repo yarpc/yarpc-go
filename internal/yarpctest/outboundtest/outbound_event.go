@@ -25,11 +25,10 @@ import (
 	"context"
 	"io/ioutil"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // OutboundEventCallable is an object that can be used in conjunction with a

@@ -26,13 +26,12 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/middleware/middlewaretest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMapRouter(t *testing.T) {

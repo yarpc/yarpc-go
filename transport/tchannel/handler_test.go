@@ -27,6 +27,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/json"
@@ -34,11 +38,6 @@ import (
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uber/tchannel-go"
 )
 
 func TestHandlerErrors(t *testing.T) {

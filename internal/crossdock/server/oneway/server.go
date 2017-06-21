@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	cherami_client "github.com/uber/cherami-client-go/client/cherami"
+	cherami_type "github.com/uber/cherami-thrift/.generated/go/cherami"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/json"
@@ -35,9 +37,6 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/x/cherami"
 	"go.uber.org/yarpc/transport/x/redis"
-
-	cherami_client "github.com/uber/cherami-client-go/client/cherami"
-	cherami_type "github.com/uber/cherami-thrift/.generated/go/cherami"
 )
 
 var dispatcher *yarpc.Dispatcher

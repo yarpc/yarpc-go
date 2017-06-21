@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

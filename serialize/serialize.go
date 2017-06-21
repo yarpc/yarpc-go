@@ -26,12 +26,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/serialize/internal"
-
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/serialize/internal"
 )
 
 // version indicates which underlying serialization method will be used

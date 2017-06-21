@@ -23,11 +23,10 @@ package pally
 import (
 	"testing"
 
-	"go.uber.org/yarpc/internal/pally/pallytest"
-	"go.uber.org/yarpc/internal/testtime"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/pally/pallytest"
+	"go.uber.org/yarpc/internal/testtime"
 )
 
 func TestCounter(t *testing.T) {

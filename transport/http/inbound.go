@@ -24,13 +24,12 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/internal/sync"
-
-	"github.com/opentracing/opentracing-go"
 )
 
 // InboundOption customizes the behavior of an HTTP Inbound constructed with

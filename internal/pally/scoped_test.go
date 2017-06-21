@@ -25,9 +25,8 @@ import (
 	"net/http"
 	"time"
 
-	"go.uber.org/yarpc/internal/pally"
-
 	"github.com/uber-go/tally"
+	"go.uber.org/yarpc/internal/pally"
 )
 
 // If you'd prefer to use pure dependency injection and scope your metrics

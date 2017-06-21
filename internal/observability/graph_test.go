@@ -24,10 +24,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/pally"
-
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 

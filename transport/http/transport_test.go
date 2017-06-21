@@ -23,13 +23,12 @@ package http
 import (
 	"testing"
 
+	"github.com/crossdock/crossdock-go/assert"
+	"github.com/golang/mock/gomock"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/peer/hostport"
-
-	"github.com/crossdock/crossdock-go/assert"
-	"github.com/golang/mock/gomock"
 )
 
 type peerExpectation struct {

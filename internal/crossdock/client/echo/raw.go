@@ -25,11 +25,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc/encoding/raw"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 // Raw implements the 'raw' behavior.

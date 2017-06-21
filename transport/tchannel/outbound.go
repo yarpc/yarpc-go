@@ -23,6 +23,7 @@ package tchannel
 import (
 	"context"
 
+	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
@@ -30,8 +31,6 @@ import (
 	intsync "go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
-
-	"github.com/uber/tchannel-go"
 )
 
 var (

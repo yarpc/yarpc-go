@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/crossdock/client/gauntlet"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
@@ -31,8 +32,6 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/internal"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
-
-	"github.com/crossdock/crossdock-go"
 )
 
 func runThrift(t crossdock.T, dispatcher *yarpc.Dispatcher) {

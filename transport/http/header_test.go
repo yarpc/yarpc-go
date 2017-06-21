@@ -24,9 +24,8 @@ import (
 	"net/http"
 	"testing"
 
-	"go.uber.org/yarpc/api/transport"
-
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestHeaders(t *testing.T) {
