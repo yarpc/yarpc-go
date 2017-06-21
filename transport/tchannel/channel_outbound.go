@@ -217,7 +217,7 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 func fromSystemError(err tchannel.SystemError) error {
 	code, ok := TChannelCodeToCode[err.Code()]
 	if !ok {
-		return yarpcerrors.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code")
+		return yarpcerrors.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
 	return yarpcerrors.FromHeaders(code, "", err.Message())
 }
