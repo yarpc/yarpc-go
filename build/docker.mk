@@ -64,6 +64,10 @@ lint: deps ## run all linters
 test: deps ## run all tests
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make test
 
+.PHONY: flakytest
+flakytest: deps ## run all tests with constrained cpu to emulate flaky environments.
+	PATH=$$PATH:$(BIN) docker run --cpus=1 $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make test
+
 .PHONY: cover
 cover: deps ## run all tests and output code coverage
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make cover
