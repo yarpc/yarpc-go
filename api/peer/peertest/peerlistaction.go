@@ -78,7 +78,7 @@ func (a ChooseMultiAction) Apply(t *testing.T, pl peer.Chooser, deps ListActionD
 	for _, expectedPeer := range a.ExpectedPeers {
 		action := ChooseAction{
 			ExpectedPeer:        expectedPeer,
-			InputContextTimeout: 20 * testtime.Millisecond,
+			InputContextTimeout: 50 * testtime.Millisecond,
 		}
 		action.Apply(t, pl, deps)
 	}

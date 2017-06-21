@@ -58,7 +58,6 @@ type TransportSpec struct {
 func (s TransportSpec) Test(t *testing.T) {
 	t.Run("reuseConnRoundRobin", s.TestConcurrentClientsRoundRobin)
 	t.Run("backoffConnRoundRobin", s.TestBackoffConnRoundRobin)
-	t.Run("reconRoundRobin", s.TestReconnRoundRobin)
 	t.Run("connectAndStopRoundRobin", s.TestConnectAndStopRoundRobin)
 }
 
@@ -184,41 +183,6 @@ func (s TransportSpec) TestBackoffConnRoundRobin(t *testing.T) {
 	time.Sleep(10 * testtime.Millisecond)
 	server, _ := s.NewServer(t, addr)
 	defer server.Stop()
-
-	<-done
-}
-
-// TestReconnRoundRobin is a reusable test that exercises any
-// transport's ability to reconnect to a peer if it is temporarily unavailable
-// while being retained.
-func (s TransportSpec) TestReconnRoundRobin(t *testing.T) {
-	server, addr := s.NewServer(t, ":0")
-	// server.Stop() is explicit in this test.
-
-	client, rawClient := s.NewClient(t, []string{addr})
-	defer client.Stop()
-
-	// Induce a connection
-	func() {
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
-		defer cancel()
-		assert.NoError(t, Call(ctx, rawClient))
-	}()
-
-	// Stop the server so a subsequent request must fail
-	server.Stop()
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		CallUntilSuccess(t, rawClient, 100*testtime.Millisecond)
-	}()
-
-	// Restart the server so it can reconnect.
-	time.Sleep(20 * testtime.Millisecond)
-	restoredServer, _ := s.NewServer(t, addr)
-	defer restoredServer.Stop()
 
 	<-done
 }
