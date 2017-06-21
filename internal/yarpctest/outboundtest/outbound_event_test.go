@@ -299,7 +299,7 @@ func TestOutboundEvent(t *testing.T) {
 			testResult := iyarpctest.WithFakeTestingT(func(ft require.TestingT) {
 				ctx := context.Background()
 				if tt.reqTimeout != 0 {
-					newCtx, cancel := context.WithTimeout(ctx, testtime.Scale(tt.reqTimeout))
+					newCtx, cancel := context.WithTimeout(ctx, tt.reqTimeout)
 					defer cancel()
 					ctx = newCtx
 				}
@@ -434,7 +434,7 @@ func TestOutboundCallable(t *testing.T) {
 
 				ctx := context.Background()
 				if tt.reqTimeout != 0 {
-					newCtx, cancel := context.WithTimeout(ctx, testtime.Scale(tt.reqTimeout))
+					newCtx, cancel := context.WithTimeout(ctx, tt.reqTimeout)
 					defer cancel()
 					ctx = newCtx
 				}
