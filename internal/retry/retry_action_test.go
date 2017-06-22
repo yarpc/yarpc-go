@@ -82,7 +82,7 @@ func (r RequestAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 	elapsed := time.Now().Sub(start)
 
 	if r.wantTimeLimit > 0 {
-		assert.True(t, r.wantTimeLimit > elapsed, "execution took to long, wanted %s, took %s", r.wantTimeLimit, elapsed)
+		assert.True(t, r.wantTimeLimit > elapsed, "execution took too long, wanted %s, took %s", r.wantTimeLimit, elapsed)
 	}
 
 	if r.wantError != "" {
