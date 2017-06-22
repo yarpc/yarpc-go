@@ -51,7 +51,7 @@ type KeyValueYARPCServer struct {
 
 // NewKeyValueYARPCServer returns a new KeyValueYARPCServer.
 func NewKeyValueYARPCServer() *KeyValueYARPCServer {
-	return &KeyValueYARPCServer{sync.RWMutex{}, make(map[string]string)}
+	return &KeyValueYARPCServer{sync.RWMutex{}, make(map[string]string), nil}
 }
 
 // GetValue implements GetValue.
