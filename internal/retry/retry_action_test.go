@@ -69,7 +69,7 @@ func (r RequestAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 	ctx := context.Background()
 	if r.reqTimeout != 0 {
 		if r.wantTimeLimit == 0 {
-			r.wantTimeLimit = r.reqTimeout + testtime.Millisecond*10
+			r.wantTimeLimit = r.reqTimeout * 2
 		}
 
 		newCtx, cancel := context.WithTimeout(ctx, r.reqTimeout)

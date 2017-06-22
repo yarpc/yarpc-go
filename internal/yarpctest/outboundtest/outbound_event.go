@@ -114,7 +114,7 @@ func (e *OutboundEvent) Call(ctx context.Context, t require.TestingT, req *trans
 	if e.WantTimeout != 0 {
 		timeoutBounds := e.WantTimeoutBounds
 		if timeoutBounds == 0 {
-			timeoutBounds = testtime.Millisecond * 20
+			timeoutBounds = testtime.Millisecond * 30
 		}
 		deadline, ok := ctx.Deadline()
 		require.True(t, ok, "wanted context deadline, but there was no deadline")
