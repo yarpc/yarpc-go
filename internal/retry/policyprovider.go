@@ -27,8 +27,8 @@ import (
 )
 
 type serviceProcedure struct {
-	service   string
-	procedure string
+	Service   string
+	Procedure string
 }
 
 // procedurePolicyProvider is a new PolicyProvider that
@@ -39,7 +39,6 @@ type serviceProcedure struct {
 // to specify the default retry policy.
 type procedurePolicyProvider struct {
 	serviceProcedureToPolicy map[serviceProcedure]*Policy
-	serviceToPolicy          map[string]*Policy
 	defaultPolicy            *Policy
 }
 
@@ -47,24 +46,20 @@ func newProcedurePolicyProvider() *procedurePolicyProvider {
 	defaultCopy := defaultPolicy
 	return &procedurePolicyProvider{
 		serviceProcedureToPolicy: make(map[serviceProcedure]*Policy),
-		serviceToPolicy:          make(map[string]*Policy),
 		defaultPolicy:            &defaultCopy,
 	}
 }
 
-func (ppp *procedurePolicyProvider) registerServiceProcedure(service, procedure string, pol *Policy) *procedurePolicyProvider {
+func (ppp *procedurePolicyProvider) registerServiceProcedure(service, procedure string, pol *Policy) {
 	ppp.serviceProcedureToPolicy[serviceProcedure{service, procedure}] = pol
-	return ppp
 }
 
-func (ppp *procedurePolicyProvider) registerService(service string, pol *Policy) *procedurePolicyProvider {
-	ppp.serviceToPolicy[service] = pol
-	return ppp
+func (ppp *procedurePolicyProvider) registerService(service string, pol *Policy) {
+	ppp.serviceProcedureToPolicy[serviceProcedure{Service: service}] = pol
 }
 
-func (ppp *procedurePolicyProvider) registerDefault(pol *Policy) *procedurePolicyProvider {
+func (ppp *procedurePolicyProvider) registerDefault(pol *Policy) {
 	ppp.defaultPolicy = pol
-	return ppp
 }
 
 // GetPolicy returns a policy for the provided context and request.
@@ -72,7 +67,7 @@ func (ppp *procedurePolicyProvider) GetPolicy(_ context.Context, req *transport.
 	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{req.Service, req.Procedure}]; ok {
 		return pol
 	}
-	if pol, ok := ppp.serviceToPolicy[req.Service]; ok {
+	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{Service: req.Service}]; ok {
 		return pol
 	}
 	return ppp.defaultPolicy
