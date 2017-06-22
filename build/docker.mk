@@ -5,7 +5,15 @@ DOCKER_IMAGE := uber/yarpc-go-$(DOCKER_GO_VERSION)
 ifdef DOCKER_HOST
 DOCKER_BUILD_FLAGS ?= --compress
 endif
+
 DOCKER_RUN_FLAGS ?= -e V -e RUN -e EXAMPLES_JOBS -e WITHIN_DOCKER=1
+ifneq ($(TEST_TIME_SCALE),)
+DOCKER_RUN_FLAGS += -e TEST_TIME_SCALE
+endif
+ifneq ($(DOCKER_CPUS),)
+DOCKER_RUN_FLAGS += --cpus=$(DOCKER_CPUS)
+endif
+
 DOCKER_VOLUME_FLAGS=-v $(shell pwd):/go/src/go.uber.org/yarpc
 
 .PHONY: deps
@@ -63,10 +71,6 @@ lint: deps ## run all linters
 .PHONY: test
 test: deps ## run all tests
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make test
-
-.PHONY: flakytest
-flakytest: deps ## run all tests with constrained cpu to emulate flaky environments.
-	PATH=$$PATH:$(BIN) docker run --cpus=1 $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make test
 
 .PHONY: cover
 cover: deps ## run all tests and output code coverage
