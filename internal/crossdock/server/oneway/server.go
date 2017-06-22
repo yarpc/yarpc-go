@@ -75,7 +75,7 @@ func Start() {
 	dispatcher.Register(raw.OnewayProcedure("echo/raw", h.EchoRaw))
 	dispatcher.Register(json.OnewayProcedure("echo/json", h.EchoJSON))
 	dispatcher.Register(onewayserver.New(&thriftHandler{h}))
-	dispatcher.Register(crossdockpb.BuildOnewayYarpcProcedures(&protoHandler{h}))
+	dispatcher.Register(crossdockpb.BuildOnewayYARPCProcedures(&protoHandler{h}))
 
 	if err := dispatcher.Start(); err != nil {
 		log.Println("oneway server dispatcher failed to load:", err.Error())

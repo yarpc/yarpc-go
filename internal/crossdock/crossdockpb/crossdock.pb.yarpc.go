@@ -35,60 +35,60 @@ import (
 	"go.uber.org/yarpc/yarpcproto"
 )
 
-// EchoYarpcClient is the yarpc client-side interface for the Echo service.
-type EchoYarpcClient interface {
+// EchoYARPCClient is the YARPC client-side interface for the Echo service.
+type EchoYARPCClient interface {
 	Echo(context.Context, *Ping, ...yarpc.CallOption) (*Pong, error)
 }
 
-// NewEchoYarpcClient builds a new yarpc client for the Echo service.
-func NewEchoYarpcClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) EchoYarpcClient {
-	return &_EchoYarpcCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Echo", clientConfig, options...)}
+// NewEchoYARPCClient builds a new YARPC client for the Echo service.
+func NewEchoYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) EchoYARPCClient {
+	return &_EchoYARPCCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Echo", clientConfig, options...)}
 }
 
-// EchoYarpcServer is the yarpc server-side interface for the Echo service.
-type EchoYarpcServer interface {
+// EchoYARPCServer is the YARPC server-side interface for the Echo service.
+type EchoYARPCServer interface {
 	Echo(context.Context, *Ping) (*Pong, error)
 }
 
-// BuildEchoYarpcProcedures prepares an implementation of the Echo service for yarpc registration.
-func BuildEchoYarpcProcedures(server EchoYarpcServer) []transport.Procedure {
-	handler := &_EchoYarpcHandler{server}
+// BuildEchoYARPCProcedures prepares an implementation of the Echo service for YARPC registration.
+func BuildEchoYARPCProcedures(server EchoYARPCServer) []transport.Procedure {
+	handler := &_EchoYARPCHandler{server}
 	return protobuf.BuildProcedures(
 		"uber.yarpc.internal.crossdock.Echo",
 		map[string]transport.UnaryHandler{
-			"Echo": protobuf.NewUnaryHandler(handler.Echo, newEcho_EchoYarpcRequest),
+			"Echo": protobuf.NewUnaryHandler(handler.Echo, newEcho_EchoYARPCRequest),
 		},
 		map[string]transport.OnewayHandler{},
 	)
 }
 
-type _EchoYarpcCaller struct {
+type _EchoYARPCCaller struct {
 	client protobuf.Client
 }
 
-func (c *_EchoYarpcCaller) Echo(ctx context.Context, request *Ping, options ...yarpc.CallOption) (*Pong, error) {
-	responseMessage, err := c.client.Call(ctx, "Echo", request, newEcho_EchoYarpcResponse, options...)
+func (c *_EchoYARPCCaller) Echo(ctx context.Context, request *Ping, options ...yarpc.CallOption) (*Pong, error) {
+	responseMessage, err := c.client.Call(ctx, "Echo", request, newEcho_EchoYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*Pong)
 	if !ok {
-		return nil, protobuf.CastError(emptyEcho_EchoYarpcResponse, responseMessage)
+		return nil, protobuf.CastError(emptyEcho_EchoYARPCResponse, responseMessage)
 	}
 	return response, err
 }
 
-type _EchoYarpcHandler struct {
-	server EchoYarpcServer
+type _EchoYARPCHandler struct {
+	server EchoYARPCServer
 }
 
-func (h *_EchoYarpcHandler) Echo(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+func (h *_EchoYARPCHandler) Echo(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
 	var request *Ping
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*Ping)
 		if !ok {
-			return nil, protobuf.CastError(emptyEcho_EchoYarpcRequest, requestMessage)
+			return nil, protobuf.CastError(emptyEcho_EchoYARPCRequest, requestMessage)
 		}
 	}
 	response, err := h.server.Echo(ctx, request)
@@ -98,92 +98,92 @@ func (h *_EchoYarpcHandler) Echo(ctx context.Context, requestMessage proto.Messa
 	return response, err
 }
 
-func newEcho_EchoYarpcRequest() proto.Message {
+func newEcho_EchoYARPCRequest() proto.Message {
 	return &Ping{}
 }
 
-func newEcho_EchoYarpcResponse() proto.Message {
+func newEcho_EchoYARPCResponse() proto.Message {
 	return &Pong{}
 }
 
 var (
-	emptyEcho_EchoYarpcRequest  = &Ping{}
-	emptyEcho_EchoYarpcResponse = &Pong{}
+	emptyEcho_EchoYARPCRequest  = &Ping{}
+	emptyEcho_EchoYARPCResponse = &Pong{}
 )
 
-// OnewayYarpcClient is the yarpc client-side interface for the Oneway service.
-type OnewayYarpcClient interface {
+// OnewayYARPCClient is the YARPC client-side interface for the Oneway service.
+type OnewayYARPCClient interface {
 	Echo(context.Context, *Token, ...yarpc.CallOption) (yarpc.Ack, error)
 }
 
-// NewOnewayYarpcClient builds a new yarpc client for the Oneway service.
-func NewOnewayYarpcClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) OnewayYarpcClient {
-	return &_OnewayYarpcCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Oneway", clientConfig, options...)}
+// NewOnewayYARPCClient builds a new YARPC client for the Oneway service.
+func NewOnewayYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) OnewayYARPCClient {
+	return &_OnewayYARPCCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Oneway", clientConfig, options...)}
 }
 
-// OnewayYarpcServer is the yarpc server-side interface for the Oneway service.
-type OnewayYarpcServer interface {
+// OnewayYARPCServer is the YARPC server-side interface for the Oneway service.
+type OnewayYARPCServer interface {
 	Echo(context.Context, *Token) error
 }
 
-// BuildOnewayYarpcProcedures prepares an implementation of the Oneway service for yarpc registration.
-func BuildOnewayYarpcProcedures(server OnewayYarpcServer) []transport.Procedure {
-	handler := &_OnewayYarpcHandler{server}
+// BuildOnewayYARPCProcedures prepares an implementation of the Oneway service for YARPC registration.
+func BuildOnewayYARPCProcedures(server OnewayYARPCServer) []transport.Procedure {
+	handler := &_OnewayYARPCHandler{server}
 	return protobuf.BuildProcedures(
 		"uber.yarpc.internal.crossdock.Oneway",
 		map[string]transport.UnaryHandler{},
 		map[string]transport.OnewayHandler{
-			"Echo": protobuf.NewOnewayHandler(handler.Echo, newOneway_EchoYarpcRequest),
+			"Echo": protobuf.NewOnewayHandler(handler.Echo, newOneway_EchoYARPCRequest),
 		},
 	)
 }
 
-type _OnewayYarpcCaller struct {
+type _OnewayYARPCCaller struct {
 	client protobuf.Client
 }
 
-func (c *_OnewayYarpcCaller) Echo(ctx context.Context, request *Token, options ...yarpc.CallOption) (yarpc.Ack, error) {
+func (c *_OnewayYARPCCaller) Echo(ctx context.Context, request *Token, options ...yarpc.CallOption) (yarpc.Ack, error) {
 	return c.client.CallOneway(ctx, "Echo", request, options...)
 }
 
-type _OnewayYarpcHandler struct {
-	server OnewayYarpcServer
+type _OnewayYARPCHandler struct {
+	server OnewayYARPCServer
 }
 
-func (h *_OnewayYarpcHandler) Echo(ctx context.Context, requestMessage proto.Message) error {
+func (h *_OnewayYARPCHandler) Echo(ctx context.Context, requestMessage proto.Message) error {
 	var request *Token
 	var ok bool
 	if requestMessage != nil {
 		request, ok = requestMessage.(*Token)
 		if !ok {
-			return protobuf.CastError(emptyOneway_EchoYarpcRequest, requestMessage)
+			return protobuf.CastError(emptyOneway_EchoYARPCRequest, requestMessage)
 		}
 	}
 	return h.server.Echo(ctx, request)
 }
 
-func newOneway_EchoYarpcRequest() proto.Message {
+func newOneway_EchoYARPCRequest() proto.Message {
 	return &Token{}
 }
 
-func newOneway_EchoYarpcResponse() proto.Message {
+func newOneway_EchoYARPCResponse() proto.Message {
 	return &yarpcproto.Oneway{}
 }
 
 var (
-	emptyOneway_EchoYarpcRequest  = &Token{}
-	emptyOneway_EchoYarpcResponse = &yarpcproto.Oneway{}
+	emptyOneway_EchoYARPCRequest  = &Token{}
+	emptyOneway_EchoYARPCResponse = &yarpcproto.Oneway{}
 )
 
 func init() {
 	yarpc.RegisterClientBuilder(
-		func(clientConfig transport.ClientConfig, structField reflect.StructField) EchoYarpcClient {
-			return NewEchoYarpcClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) EchoYARPCClient {
+			return NewEchoYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	)
 	yarpc.RegisterClientBuilder(
-		func(clientConfig transport.ClientConfig, structField reflect.StructField) OnewayYarpcClient {
-			return NewOnewayYarpcClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) OnewayYARPCClient {
+			return NewOnewayYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	)
 }

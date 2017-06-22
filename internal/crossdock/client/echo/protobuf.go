@@ -44,7 +44,7 @@ func ProtobufForTransport(t crossdock.T, transport string) {
 	fatals.NoError(dispatcher.Start(), "could not start Dispatcher")
 	defer dispatcher.Stop()
 
-	client := crossdockpb.NewEchoYarpcClient(dispatcher.ClientConfig("yarpc-test"))
+	client := crossdockpb.NewEchoYARPCClient(dispatcher.ClientConfig("yarpc-test"))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 

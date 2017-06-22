@@ -47,16 +47,16 @@ func TestIntegration(t *testing.T) {
 }
 
 func testIntegrationForTransportType(t *testing.T, transportType testutils.TransportType) {
-	keyValueYarpcServer := example.NewKeyValueYarpcServer()
-	sinkYarpcServer := example.NewSinkYarpcServer(true)
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	sinkYARPCServer := example.NewSinkYARPCServer(true)
 	assert.NoError(
 		t,
 		exampleutil.WithClients(
 			transportType,
-			keyValueYarpcServer,
-			sinkYarpcServer,
+			keyValueYARPCServer,
+			sinkYARPCServer,
 			func(clients *exampleutil.Clients) error {
-				testIntegration(t, clients, keyValueYarpcServer, sinkYarpcServer)
+				testIntegration(t, clients, keyValueYARPCServer, sinkYARPCServer)
 				return nil
 			},
 		),
@@ -66,30 +66,30 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 func testIntegration(
 	t *testing.T,
 	clients *exampleutil.Clients,
-	keyValueYarpcServer *example.KeyValueYarpcServer,
-	sinkYarpcServer *example.SinkYarpcServer,
+	keyValueYARPCServer *example.KeyValueYARPCServer,
+	sinkYARPCServer *example.SinkYARPCServer,
 ) {
-	keyValueYarpcServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
-	_, err := getValue(clients.KeyValueYarpcClient, "foo")
+	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
+	_, err := getValue(clients.KeyValueYARPCClient, "foo")
 	assert.Equal(t, yarpcerrors.NamedErrorf("foo-bar", "baz"), err)
-	keyValueYarpcServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
+	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
 
-	_, err = getValue(clients.KeyValueYarpcClient, "foo")
+	_, err = getValue(clients.KeyValueYARPCClient, "foo")
 	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
-	_, err = getValue(clients.KeyValueYarpcJSONClient, "foo")
+	_, err = getValue(clients.KeyValueYARPCJSONClient, "foo")
 	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 
-	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", "bar"))
-	value, err := getValue(clients.KeyValueYarpcClient, "foo")
+	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", "bar"))
+	value, err := getValue(clients.KeyValueYARPCClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", value)
 
-	assert.NoError(t, setValue(clients.KeyValueYarpcJSONClient, "foo", "baz"))
-	value, err = getValue(clients.KeyValueYarpcJSONClient, "foo")
+	assert.NoError(t, setValue(clients.KeyValueYARPCJSONClient, "foo", "baz"))
+	value, err = getValue(clients.KeyValueYARPCJSONClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "baz", value)
 
@@ -98,42 +98,42 @@ func testIntegration(
 	assert.NoError(t, err)
 	assert.Equal(t, "barGRPC", value)
 
-	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", ""))
-	_, err = getValue(clients.KeyValueYarpcClient, "foo")
+	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", ""))
+	_, err = getValue(clients.KeyValueYARPCClient, "foo")
 	assert.Error(t, err)
 
-	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "foo", "baz"))
-	assert.NoError(t, setValue(clients.KeyValueYarpcClient, "baz", "bat"))
-	value, err = getValue(clients.KeyValueYarpcClient, "foo")
+	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", "baz"))
+	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "baz", "bat"))
+	value, err = getValue(clients.KeyValueYARPCClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "baz", value)
-	value, err = getValue(clients.KeyValueYarpcClient, "baz")
+	value, err = getValue(clients.KeyValueYARPCClient, "baz")
 	assert.NoError(t, err)
 	assert.Equal(t, "bat", value)
 
-	assert.NoError(t, fire(clients.SinkYarpcClient, "foo"))
-	assert.NoError(t, sinkYarpcServer.WaitFireDone())
-	assert.NoError(t, fire(clients.SinkYarpcClient, "bar"))
-	assert.NoError(t, sinkYarpcServer.WaitFireDone())
-	assert.NoError(t, fire(clients.SinkYarpcJSONClient, "baz"))
-	assert.NoError(t, sinkYarpcServer.WaitFireDone())
-	assert.Equal(t, []string{"foo", "bar", "baz"}, sinkYarpcServer.Values())
+	assert.NoError(t, fire(clients.SinkYARPCClient, "foo"))
+	assert.NoError(t, sinkYARPCServer.WaitFireDone())
+	assert.NoError(t, fire(clients.SinkYARPCClient, "bar"))
+	assert.NoError(t, sinkYARPCServer.WaitFireDone())
+	assert.NoError(t, fire(clients.SinkYARPCJSONClient, "baz"))
+	assert.NoError(t, sinkYARPCServer.WaitFireDone())
+	assert.Equal(t, []string{"foo", "bar", "baz"}, sinkYARPCServer.Values())
 }
 
-func getValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, options ...yarpc.CallOption) (string, error) {
+func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, options ...yarpc.CallOption) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	response, err := keyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key}, options...)
+	response, err := keyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key}, options...)
 	if err != nil {
 		return "", err
 	}
 	return response.Value, nil
 }
 
-func setValue(keyValueYarpcClient examplepb.KeyValueYarpcClient, key string, value string, options ...yarpc.CallOption) error {
+func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, value string, options ...yarpc.CallOption) error {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := keyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}, options...)
+	_, err := keyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value}, options...)
 	return err
 }
 
@@ -154,9 +154,9 @@ func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 	return err
 }
 
-func fire(sinkYarpcClient examplepb.SinkYarpcClient, value string, options ...yarpc.CallOption) error {
+func fire(sinkYARPCClient examplepb.SinkYARPCClient, value string, options ...yarpc.CallOption) error {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
-	_, err := sinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}, options...)
+	_, err := sinkYARPCClient.Fire(ctx, &examplepb.FireRequest{value}, options...)
 	return err
 }

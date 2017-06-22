@@ -40,8 +40,8 @@ var (
 	errRequestValueNil = yarpcerrors.InvalidArgumentErrorf("request value nil")
 )
 
-// KeyValueYarpcServer implements examplepb.KeyValueYarpcServer.
-type KeyValueYarpcServer struct {
+// KeyValueYARPCServer implements examplepb.KeyValueYARPCServer.
+type KeyValueYARPCServer struct {
 	sync.RWMutex
 	items map[string]string
 	// if next error is set it will be returned along with an empty response
@@ -49,13 +49,13 @@ type KeyValueYarpcServer struct {
 	nextError error
 }
 
-// NewKeyValueYarpcServer returns a new KeyValueYarpcServer.
-func NewKeyValueYarpcServer() *KeyValueYarpcServer {
-	return &KeyValueYarpcServer{sync.RWMutex{}, make(map[string]string), nil}
+// NewKeyValueYARPCServer returns a new KeyValueYARPCServer.
+func NewKeyValueYARPCServer() *KeyValueYARPCServer {
+	return &KeyValueYARPCServer{sync.RWMutex{}, make(map[string]string)}
 }
 
 // GetValue implements GetValue.
-func (k *KeyValueYarpcServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
+func (k *KeyValueYARPCServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
 	k.Lock()
 	if k.nextError != nil {
 		err := k.nextError
@@ -80,7 +80,7 @@ func (k *KeyValueYarpcServer) GetValue(ctx context.Context, request *examplepb.G
 }
 
 // SetValue implements SetValue.
-func (k *KeyValueYarpcServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
+func (k *KeyValueYARPCServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
 	k.Lock()
 	if k.nextError != nil {
 		err := k.nextError
@@ -105,31 +105,31 @@ func (k *KeyValueYarpcServer) SetValue(ctx context.Context, request *examplepb.S
 	return nil, nil
 }
 
-// SetNextError sets the error to return on the next call to KeyValueYarpcServer.
-func (k *KeyValueYarpcServer) SetNextError(err error) {
+// SetNextError sets the error to return on the next call to KeyValueYARPCServer.
+func (k *KeyValueYARPCServer) SetNextError(err error) {
 	k.Lock()
 	defer k.Unlock()
 	k.nextError = err
 }
 
-// SinkYarpcServer implements examplepb.SinkYarpcServer.
-type SinkYarpcServer struct {
+// SinkYARPCServer implements examplepb.SinkYARPCServer.
+type SinkYARPCServer struct {
 	sync.RWMutex
 	values   []string
 	fireDone chan struct{}
 }
 
-// NewSinkYarpcServer returns a new SinkYarpcServer.
-func NewSinkYarpcServer(withFireDone bool) *SinkYarpcServer {
+// NewSinkYARPCServer returns a new SinkYARPCServer.
+func NewSinkYARPCServer(withFireDone bool) *SinkYARPCServer {
 	var fireDone chan struct{}
 	if withFireDone {
 		fireDone = make(chan struct{})
 	}
-	return &SinkYarpcServer{sync.RWMutex{}, make([]string, 0), fireDone}
+	return &SinkYARPCServer{sync.RWMutex{}, make([]string, 0), fireDone}
 }
 
 // Fire implements Fire.
-func (s *SinkYarpcServer) Fire(ctx context.Context, request *examplepb.FireRequest) error {
+func (s *SinkYARPCServer) Fire(ctx context.Context, request *examplepb.FireRequest) error {
 	if request == nil {
 		return errRequestNil
 	}
@@ -151,7 +151,7 @@ func (s *SinkYarpcServer) Fire(ctx context.Context, request *examplepb.FireReque
 }
 
 // Values returns a copy of the values that have been fired.
-func (s *SinkYarpcServer) Values() []string {
+func (s *SinkYARPCServer) Values() []string {
 	s.RLock()
 	values := make([]string, len(s.values))
 	copy(values, s.values)
@@ -162,7 +162,7 @@ func (s *SinkYarpcServer) Values() []string {
 // WaitFireDone blocks until a fire is done, if withFireDone is set.
 //
 // If will timeout after FireDoneTimeout and return error.
-func (s *SinkYarpcServer) WaitFireDone() error {
+func (s *SinkYARPCServer) WaitFireDone() error {
 	if s.fireDone == nil {
 		return nil
 	}
