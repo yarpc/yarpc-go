@@ -71,16 +71,16 @@ func run(
 	input io.Reader,
 	output io.Writer,
 ) error {
-	keyValueYarpcServer := example.NewKeyValueYarpcServer()
-	sinkYarpcServer := example.NewSinkYarpcServer(true)
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	sinkYARPCServer := example.NewSinkYARPCServer(true)
 	return exampleutil.WithClients(
 		transportType,
-		keyValueYarpcServer,
-		sinkYarpcServer,
+		keyValueYARPCServer,
+		sinkYARPCServer,
 		func(clients *exampleutil.Clients) error {
 			return doClient(
-				keyValueYarpcServer,
-				sinkYarpcServer,
+				keyValueYARPCServer,
+				sinkYARPCServer,
 				clients,
 				googleGRPC,
 				block,
@@ -92,8 +92,8 @@ func run(
 }
 
 func doClient(
-	keyValueYarpcServer *example.KeyValueYarpcServer,
-	sinkYarpcServer *example.SinkYarpcServer,
+	keyValueYARPCServer *example.KeyValueYARPCServer,
+	sinkYARPCServer *example.SinkYARPCServer,
 	clients *exampleutil.Clients,
 	googleGRPC bool,
 	block bool,
@@ -129,7 +129,7 @@ func doClient(
 				response, err = clients.KeyValueGRPCClient.GetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
 				err = fromGRPCError(err)
 			} else {
-				response, err = clients.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+				response, err = clients.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 			}
 			if err != nil {
 				fmt.Fprintf(output, "get %s failed: %s\n", key, err.Error())
@@ -154,7 +154,7 @@ func doClient(
 				_, err = clients.KeyValueGRPCClient.SetValue(clients.ContextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})
 				err = fromGRPCError(err)
 			} else {
-				_, err = clients.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+				_, err = clients.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 			}
 			if err != nil {
 				fmt.Fprintf(output, "set %s = %s failed: %v\n", key, value, err.Error())
@@ -168,10 +168,10 @@ func doClient(
 			value := args[0]
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
-			if _, err := clients.SinkYarpcClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
+			if _, err := clients.SinkYARPCClient.Fire(ctx, &examplepb.FireRequest{value}); err != nil {
 				fmt.Fprintf(output, "fire %s failed: %s\n", value, err.Error())
 			}
-			if err := sinkYarpcServer.WaitFireDone(); err != nil {
+			if err := sinkYARPCServer.WaitFireDone(); err != nil {
 				fmt.Fprintln(output, err)
 			}
 			continue
@@ -180,7 +180,7 @@ func doClient(
 				fmt.Fprintln(output, "usage: fired-values")
 				continue
 			}
-			fmt.Fprintln(output, strings.Join(sinkYarpcServer.Values(), " "))
+			fmt.Fprintln(output, strings.Join(sinkYARPCServer.Values(), " "))
 			continue
 		case "exit":
 			return nil

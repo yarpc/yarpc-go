@@ -30,10 +30,10 @@ import (
 
 // Clients holds all clients.
 type Clients struct {
-	KeyValueYarpcClient     examplepb.KeyValueYarpcClient
-	SinkYarpcClient         examplepb.SinkYarpcClient
-	KeyValueYarpcJSONClient examplepb.KeyValueYarpcClient
-	SinkYarpcJSONClient     examplepb.SinkYarpcClient
+	KeyValueYARPCClient     examplepb.KeyValueYARPCClient
+	SinkYARPCClient         examplepb.SinkYARPCClient
+	KeyValueYARPCJSONClient examplepb.KeyValueYARPCClient
+	SinkYARPCJSONClient     examplepb.SinkYARPCClient
 	KeyValueGRPCClient      examplepb.KeyValueClient
 	SinkGRPCClient          examplepb.SinkClient
 	ContextWrapper          *grpcheader.ContextWrapper
@@ -42,16 +42,16 @@ type Clients struct {
 // WithClients calls f on the Clients.
 func WithClients(
 	transportType testutils.TransportType,
-	keyValueYarpcServer examplepb.KeyValueYarpcServer,
-	sinkYarpcServer examplepb.SinkYarpcServer,
+	keyValueYARPCServer examplepb.KeyValueYARPCServer,
+	sinkYARPCServer examplepb.SinkYARPCServer,
 	f func(*Clients) error,
 ) error {
 	var procedures []transport.Procedure
-	if keyValueYarpcServer != nil {
-		procedures = append(procedures, examplepb.BuildKeyValueYarpcProcedures(keyValueYarpcServer)...)
+	if keyValueYARPCServer != nil {
+		procedures = append(procedures, examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)...)
 	}
-	if sinkYarpcServer != nil {
-		procedures = append(procedures, examplepb.BuildSinkYarpcProcedures(sinkYarpcServer)...)
+	if sinkYARPCServer != nil {
+		procedures = append(procedures, examplepb.BuildSinkYARPCProcedures(sinkYARPCServer)...)
 	}
 	return testutils.WithClientInfo(
 		"example",
@@ -60,10 +60,10 @@ func WithClients(
 		func(clientInfo *testutils.ClientInfo) error {
 			return f(
 				&Clients{
-					examplepb.NewKeyValueYarpcClient(clientInfo.ClientConfig),
-					examplepb.NewSinkYarpcClient(clientInfo.ClientConfig),
-					examplepb.NewKeyValueYarpcClient(clientInfo.ClientConfig, protobuf.UseJSON),
-					examplepb.NewSinkYarpcClient(clientInfo.ClientConfig, protobuf.UseJSON),
+					examplepb.NewKeyValueYARPCClient(clientInfo.ClientConfig),
+					examplepb.NewSinkYARPCClient(clientInfo.ClientConfig),
+					examplepb.NewKeyValueYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
+					examplepb.NewSinkYARPCClient(clientInfo.ClientConfig, protobuf.UseJSON),
 					examplepb.NewKeyValueClient(clientInfo.GRPCClientConn),
 					examplepb.NewSinkClient(clientInfo.GRPCClientConn),
 					clientInfo.ContextWrapper,

@@ -96,5 +96,5 @@ func register(reg *yarpc.Dispatcher) {
 	reg.Register(raw.Procedure("sleep/raw", SleepRaw))
 	reg.Register(raw.Procedure("waitfortimeout/raw", WaitForTimeoutRaw))
 
-	reg.Register(crossdockpb.BuildEchoYarpcProcedures(EchoProtobuf{}))
+	reg.Register(crossdockpb.BuildEchoYARPCProcedures(EchoProtobuf{}))
 }

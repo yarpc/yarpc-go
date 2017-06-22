@@ -42,7 +42,7 @@ func BenchmarkIntegrationYARPC(b *testing.B) {
 	for _, transportType := range testutils.AllTransportTypes {
 		b.Run(transportType.String(), func(b *testing.B) {
 			benchmarkForTransportType(b, transportType, func(clients *exampleutil.Clients) error {
-				benchmarkIntegrationYARPC(b, clients.KeyValueYarpcClient)
+				benchmarkIntegrationYARPC(b, clients.KeyValueYARPCClient)
 				return nil
 			})
 		})
@@ -57,17 +57,17 @@ func BenchmarkIntegrationGRPC(b *testing.B) {
 }
 
 func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {
-	keyValueYarpcServer := example.NewKeyValueYarpcServer()
-	sinkYarpcServer := example.NewSinkYarpcServer(false)
-	exampleutil.WithClients(transportType, keyValueYarpcServer, sinkYarpcServer, f)
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	sinkYARPCServer := example.NewSinkYARPCServer(false)
+	exampleutil.WithClients(transportType, keyValueYARPCServer, sinkYARPCServer, f)
 }
 
-func benchmarkIntegrationYARPC(b *testing.B, keyValueYarpcClient examplepb.KeyValueYarpcClient) {
+func benchmarkIntegrationYARPC(b *testing.B, keyValueYARPCClient examplepb.KeyValueYARPCClient) {
 	b.Run("Get", func(b *testing.B) {
-		setValue(keyValueYarpcClient, "foo", "bar")
+		setValue(keyValueYARPCClient, "foo", "bar")
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			getValue(keyValueYarpcClient, "foo")
+			getValue(keyValueYARPCClient, "foo")
 		}
 	})
 }
