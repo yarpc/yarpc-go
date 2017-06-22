@@ -29,7 +29,7 @@ To use:
 */
 package main
 
-// TODO: there is some crazy bug with protobuf that if you declare:
+// Note there is some crazy bug with protobuf that if you declare:
 //
 //   func bar() (kv.GetValueResponse, error) {
 //     return nil, errors.New("nil response and non-nil error")

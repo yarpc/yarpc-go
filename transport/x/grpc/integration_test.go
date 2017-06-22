@@ -41,13 +41,13 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func TestBasicYarpc(t *testing.T) {
+func TestBasicYARPC(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
-		_, err := e.GetValueYarpc(context.Background(), "foo")
+		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Error(t, err)
-		assert.NoError(t, e.SetValueYarpc(context.Background(), "foo", "bar"))
-		value, err := e.GetValueYarpc(context.Background(), "foo")
+		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
+		value, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", value)
 	})
@@ -65,11 +65,11 @@ func TestBasicGRPC(t *testing.T) {
 	})
 }
 
-func TestYarpcMetadata(t *testing.T) {
+func TestYARPCMetadata(t *testing.T) {
 	t.Parallel()
 	var md metadata.MD
 	doWithTestEnv(t, []InboundOption{withInboundUnaryInterceptor(newMetadataUnaryServerInterceptor(&md))}, nil, func(t *testing.T, e *testEnv) {
-		assert.NoError(t, e.SetValueYarpc(context.Background(), "foo", "bar"))
+		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
 		assert.Len(t, md["user-agent"], 1)
 		assert.True(t, strings.Contains(md["user-agent"][0], UserAgent))
 	})
@@ -92,13 +92,13 @@ type testEnv struct {
 	ClientConfig        transport.ClientConfig
 	Procedures          []transport.Procedure
 	KeyValueGRPCClient  examplepb.KeyValueClient
-	KeyValueYarpcClient examplepb.KeyValueYarpcClient
-	KeyValueYarpcServer *example.KeyValueYarpcServer
+	KeyValueYARPCClient examplepb.KeyValueYARPCClient
+	KeyValueYARPCServer *example.KeyValueYARPCServer
 }
 
 func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption) (_ *testEnv, err error) {
-	keyValueYarpcServer := example.NewKeyValueYarpcServer()
-	procedures := examplepb.BuildKeyValueYarpcProcedures(keyValueYarpcServer)
+	keyValueYARPCServer := example.NewKeyValueYARPCServer()
+	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)
 
 	t := NewTransport()
@@ -147,7 +147,7 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 			Unary:       outbound,
 		},
 	)
-	keyValueYarpcClient := examplepb.NewKeyValueYarpcClient(clientConfig)
+	keyValueYARPCClient := examplepb.NewKeyValueYARPCClient(clientConfig)
 
 	contextWrapper := grpcheader.NewContextWrapper().
 		WithCaller("example-client").
@@ -162,25 +162,25 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 		clientConfig,
 		procedures,
 		keyValueClient,
-		keyValueYarpcClient,
-		keyValueYarpcServer,
+		keyValueYARPCClient,
+		keyValueYARPCServer,
 	}, nil
 }
 
-func (e *testEnv) GetValueYarpc(ctx context.Context, key string) (string, error) {
+func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	response, err := e.KeyValueYarpcClient.GetValue(ctx, &examplepb.GetValueRequest{key})
+	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
 	if err != nil {
 		return "", err
 	}
 	return response.Value, nil
 }
 
-func (e *testEnv) SetValueYarpc(ctx context.Context, key string, value string) error {
+func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string) error {
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
-	_, err := e.KeyValueYarpcClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
+	_, err := e.KeyValueYARPCClient.SetValue(ctx, &examplepb.SetValueRequest{key, value})
 	return err
 }
 

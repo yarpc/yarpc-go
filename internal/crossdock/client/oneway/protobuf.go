@@ -33,7 +33,7 @@ func Protobuf(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-ch
 	assert := crossdock.Assert(t)
 	fatals := crossdock.Fatals(t)
 
-	client := crossdockpb.NewOnewayYarpcClient(dispatcher.ClientConfig("oneway-server"))
+	client := crossdockpb.NewOnewayYARPCClient(dispatcher.ClientConfig("oneway-server"))
 	token := getRandomID()
 
 	// ensure server hasn't called us prematurely
