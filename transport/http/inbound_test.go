@@ -34,9 +34,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
@@ -150,7 +150,7 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
-		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.ErrorCode(err))
+		assert.Equal(t, yarpc.CodeNotFound, yarpc.ErrorCode(err))
 	}
 
 	o.setURLTemplate("http://host:port/rpc/v1")

@@ -21,50 +21,51 @@
 package grpc
 
 import (
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"google.golang.org/grpc/codes"
 )
 
 var (
 	// CodeToGRPCCode maps all Codes to their corresponding gRPC Code.
-	CodeToGRPCCode = map[yarpcerrors.Code]codes.Code{
-		yarpcerrors.CodeOK:                 codes.OK,
-		yarpcerrors.CodeCancelled:          codes.Canceled,
-		yarpcerrors.CodeUnknown:            codes.Unknown,
-		yarpcerrors.CodeInvalidArgument:    codes.InvalidArgument,
-		yarpcerrors.CodeDeadlineExceeded:   codes.DeadlineExceeded,
-		yarpcerrors.CodeNotFound:           codes.NotFound,
-		yarpcerrors.CodeAlreadyExists:      codes.AlreadyExists,
-		yarpcerrors.CodePermissionDenied:   codes.PermissionDenied,
-		yarpcerrors.CodeResourceExhausted:  codes.ResourceExhausted,
-		yarpcerrors.CodeFailedPrecondition: codes.FailedPrecondition,
-		yarpcerrors.CodeAborted:            codes.Aborted,
-		yarpcerrors.CodeOutOfRange:         codes.OutOfRange,
-		yarpcerrors.CodeUnimplemented:      codes.Unimplemented,
-		yarpcerrors.CodeInternal:           codes.Internal,
-		yarpcerrors.CodeUnavailable:        codes.Unavailable,
-		yarpcerrors.CodeDataLoss:           codes.DataLoss,
-		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
+	CodeToGRPCCode = map[transport.Code]codes.Code{
+		yarpc.CodeOK:                 codes.OK,
+		yarpc.CodeCancelled:          codes.Canceled,
+		yarpc.CodeUnknown:            codes.Unknown,
+		yarpc.CodeInvalidArgument:    codes.InvalidArgument,
+		yarpc.CodeDeadlineExceeded:   codes.DeadlineExceeded,
+		yarpc.CodeNotFound:           codes.NotFound,
+		yarpc.CodeAlreadyExists:      codes.AlreadyExists,
+		yarpc.CodePermissionDenied:   codes.PermissionDenied,
+		yarpc.CodeResourceExhausted:  codes.ResourceExhausted,
+		yarpc.CodeFailedPrecondition: codes.FailedPrecondition,
+		yarpc.CodeAborted:            codes.Aborted,
+		yarpc.CodeOutOfRange:         codes.OutOfRange,
+		yarpc.CodeUnimplemented:      codes.Unimplemented,
+		yarpc.CodeInternal:           codes.Internal,
+		yarpc.CodeUnavailable:        codes.Unavailable,
+		yarpc.CodeDataLoss:           codes.DataLoss,
+		yarpc.CodeUnauthenticated:    codes.Unauthenticated,
 	}
 
 	// GRPCCodeToCode maps all gRPC Codes to their corresponding Code.
-	GRPCCodeToCode = map[codes.Code]yarpcerrors.Code{
-		codes.OK:                 yarpcerrors.CodeOK,
-		codes.Canceled:           yarpcerrors.CodeCancelled,
-		codes.Unknown:            yarpcerrors.CodeUnknown,
-		codes.InvalidArgument:    yarpcerrors.CodeInvalidArgument,
-		codes.DeadlineExceeded:   yarpcerrors.CodeDeadlineExceeded,
-		codes.NotFound:           yarpcerrors.CodeNotFound,
-		codes.AlreadyExists:      yarpcerrors.CodeAlreadyExists,
-		codes.PermissionDenied:   yarpcerrors.CodePermissionDenied,
-		codes.ResourceExhausted:  yarpcerrors.CodeResourceExhausted,
-		codes.FailedPrecondition: yarpcerrors.CodeFailedPrecondition,
-		codes.Aborted:            yarpcerrors.CodeAborted,
-		codes.OutOfRange:         yarpcerrors.CodeOutOfRange,
-		codes.Unimplemented:      yarpcerrors.CodeUnimplemented,
-		codes.Internal:           yarpcerrors.CodeInternal,
-		codes.Unavailable:        yarpcerrors.CodeUnavailable,
-		codes.DataLoss:           yarpcerrors.CodeDataLoss,
-		codes.Unauthenticated:    yarpcerrors.CodeUnauthenticated,
+	GRPCCodeToCode = map[codes.Code]transport.Code{
+		codes.OK:                 yarpc.CodeOK,
+		codes.Canceled:           yarpc.CodeCancelled,
+		codes.Unknown:            yarpc.CodeUnknown,
+		codes.InvalidArgument:    yarpc.CodeInvalidArgument,
+		codes.DeadlineExceeded:   yarpc.CodeDeadlineExceeded,
+		codes.NotFound:           yarpc.CodeNotFound,
+		codes.AlreadyExists:      yarpc.CodeAlreadyExists,
+		codes.PermissionDenied:   yarpc.CodePermissionDenied,
+		codes.ResourceExhausted:  yarpc.CodeResourceExhausted,
+		codes.FailedPrecondition: yarpc.CodeFailedPrecondition,
+		codes.Aborted:            yarpc.CodeAborted,
+		codes.OutOfRange:         yarpc.CodeOutOfRange,
+		codes.Unimplemented:      yarpc.CodeUnimplemented,
+		codes.Internal:           yarpc.CodeInternal,
+		codes.Unavailable:        yarpc.CodeUnavailable,
+		codes.DataLoss:           yarpc.CodeDataLoss,
+		codes.Unauthenticated:    yarpc.CodeUnauthenticated,
 	}
 )

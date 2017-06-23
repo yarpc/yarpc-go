@@ -22,7 +22,8 @@ package tchannel
 
 import (
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 )
 
 var (
@@ -30,27 +31,27 @@ var (
 	//
 	// This only covers system-level errors, so if the code is not in the map,
 	// it should not result in TChannel returning a system-level error.
-	CodeToTChannelCode = map[yarpcerrors.Code]tchannel.SystemErrCode{
-		yarpcerrors.CodeCancelled:         tchannel.ErrCodeCancelled,
-		yarpcerrors.CodeUnknown:           tchannel.ErrCodeUnexpected,
-		yarpcerrors.CodeInvalidArgument:   tchannel.ErrCodeBadRequest,
-		yarpcerrors.CodeDeadlineExceeded:  tchannel.ErrCodeTimeout,
-		yarpcerrors.CodeUnimplemented:     tchannel.ErrCodeBadRequest,
-		yarpcerrors.CodeInternal:          tchannel.ErrCodeUnexpected,
-		yarpcerrors.CodeUnavailable:       tchannel.ErrCodeDeclined,
-		yarpcerrors.CodeDataLoss:          tchannel.ErrCodeProtocol,
-		yarpcerrors.CodeResourceExhausted: tchannel.ErrCodeBusy,
+	CodeToTChannelCode = map[transport.Code]tchannel.SystemErrCode{
+		yarpc.CodeCancelled:         tchannel.ErrCodeCancelled,
+		yarpc.CodeUnknown:           tchannel.ErrCodeUnexpected,
+		yarpc.CodeInvalidArgument:   tchannel.ErrCodeBadRequest,
+		yarpc.CodeDeadlineExceeded:  tchannel.ErrCodeTimeout,
+		yarpc.CodeUnimplemented:     tchannel.ErrCodeBadRequest,
+		yarpc.CodeInternal:          tchannel.ErrCodeUnexpected,
+		yarpc.CodeUnavailable:       tchannel.ErrCodeDeclined,
+		yarpc.CodeDataLoss:          tchannel.ErrCodeProtocol,
+		yarpc.CodeResourceExhausted: tchannel.ErrCodeBusy,
 	}
 
 	// TChannelCodeToCode maps TChannel SystemErrCodes to their corresponding Code.
-	TChannelCodeToCode = map[tchannel.SystemErrCode]yarpcerrors.Code{
-		tchannel.ErrCodeTimeout:    yarpcerrors.CodeDeadlineExceeded,
-		tchannel.ErrCodeCancelled:  yarpcerrors.CodeCancelled,
-		tchannel.ErrCodeBusy:       yarpcerrors.CodeUnavailable,
-		tchannel.ErrCodeDeclined:   yarpcerrors.CodeUnavailable,
-		tchannel.ErrCodeUnexpected: yarpcerrors.CodeInternal,
-		tchannel.ErrCodeBadRequest: yarpcerrors.CodeInvalidArgument,
-		tchannel.ErrCodeNetwork:    yarpcerrors.CodeUnavailable,
-		tchannel.ErrCodeProtocol:   yarpcerrors.CodeInternal,
+	TChannelCodeToCode = map[tchannel.SystemErrCode]transport.Code{
+		tchannel.ErrCodeTimeout:    yarpc.CodeDeadlineExceeded,
+		tchannel.ErrCodeCancelled:  yarpc.CodeCancelled,
+		tchannel.ErrCodeBusy:       yarpc.CodeUnavailable,
+		tchannel.ErrCodeDeclined:   yarpc.CodeUnavailable,
+		tchannel.ErrCodeUnexpected: yarpc.CodeInternal,
+		tchannel.ErrCodeBadRequest: yarpc.CodeInvalidArgument,
+		tchannel.ErrCodeNetwork:    yarpc.CodeUnavailable,
+		tchannel.ErrCodeProtocol:   yarpc.CodeInternal,
 	}
 )

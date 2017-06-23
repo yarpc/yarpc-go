@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
@@ -190,8 +190,8 @@ func doClient(
 }
 
 func getErrorMessage(err error) string {
-	if yarpcerrors.IsYARPCError(err) {
-		return yarpcerrors.ErrorMessage(err)
+	if yarpc.IsYARPCError(err) {
+		return yarpc.ErrorMessage(err)
 	}
 	if errorDesc := grpc.ErrorDesc(err); errorDesc != "" {
 		return errorDesc

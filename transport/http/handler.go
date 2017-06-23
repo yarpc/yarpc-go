@@ -28,8 +28,8 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
@@ -49,22 +49,22 @@ type handler struct {
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
-	err := yarpcerrors.ToYARPCError(h.callHandler(responseWriter, req))
+	err := yarpc.ToYARPCError(h.callHandler(responseWriter, req))
 	if err == nil {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
 	// TODO: what to do with error?
-	if errorCodeText, marshalErr := yarpcerrors.ErrorCode(err).MarshalText(); marshalErr == nil {
+	if errorCodeText, marshalErr := yarpc.ErrorCode(err).MarshalText(); marshalErr == nil {
 		responseWriter.AddSystemHeader(ErrorCodeHeader, string(errorCodeText))
 	}
-	if name := yarpcerrors.ErrorName(err); name != "" {
+	if name := yarpc.ErrorName(err); name != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, name)
 	}
 	// TODO: would prefer to have error message be on a header so we can
 	// have non-nil responses with errors, discuss
-	_, _ = responseWriter.Write([]byte(yarpcerrors.ErrorMessage(err) + "\n"))
-	status, ok := CodeToStatusCode[yarpcerrors.ErrorCode(err)]
+	_, _ = responseWriter.Write([]byte(yarpc.ErrorMessage(err) + "\n"))
+	status, ok := CodeToStatusCode[yarpc.ErrorCode(err)]
 	if !ok {
 		status = http.StatusInternalServerError
 	}
@@ -75,7 +75,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) 
 	start := time.Now()
 	defer req.Body.Close()
 	if req.Method != "POST" {
-		return yarpcerrors.NotFoundErrorf("only POST is allowed")
+		return yarpc.NotFoundErrorf("only POST is allowed")
 	}
 	treq := &transport.Request{
 		Caller:    popHeader(req.Header, CallerHeader),
@@ -117,7 +117,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) 
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
-		err = yarpcerrors.UnimplementedErrorf("transport:http type:%s", spec.Type().String())
+		err = yarpc.UnimplementedErrorf("transport:http type:%s", spec.Type().String())
 	}
 
 	updateSpanWithErr(span, err)

@@ -25,12 +25,12 @@ import (
 	"net/http"
 	"time"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc"
 )
 
 func handlerTimeoutRawHandler(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
-	err := yarpcerrors.DeadlineExceededErrorf(
+	err := yarpc.DeadlineExceededErrorf(
 		"call to procedure %q of service %q from caller %q timed out after %v",
 		"caller", "service", "handlertimeout/raw", time.Now().Sub(start))
 	w.WriteHeader(http.StatusGatewayTimeout)

@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"strings"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 )
 
 type clientEncodingError struct {
@@ -57,7 +57,7 @@ func (e *clientEncodingError) YARPCError() error {
 		fmt.Sprintf("for procedure %q of service %q: %v",
 			e.Procedure, e.Service, e.Reason))
 	// TODO: is this the right error type?
-	return yarpcerrors.InvalidArgumentErrorf(strings.Join(parts, " "))
+	return yarpc.InvalidArgumentErrorf(strings.Join(parts, " "))
 }
 
 func newClientEncodingError(req *transport.Request, err error) *clientEncodingError {

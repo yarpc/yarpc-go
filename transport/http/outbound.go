@@ -32,9 +32,9 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
@@ -273,7 +273,7 @@ func (o *Outbound) callWithPeer(
 		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {
 			end := time.Now()
-			return nil, yarpcerrors.DeadlineExceededErrorf(
+			return nil, yarpc.DeadlineExceededErrorf(
 				"client timeout for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
@@ -393,22 +393,22 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 func getYARPCErrorFromResponse(response *http.Response) error {
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return yarpcerrors.InternalErrorf(err.Error())
+		return yarpc.InternalErrorf(err.Error())
 	}
 	if err := response.Body.Close(); err != nil {
-		return yarpcerrors.InternalErrorf(err.Error())
+		return yarpc.InternalErrorf(err.Error())
 	}
 	// use the status code if we can't get a code from the headers
 	code := StatusCodeToBestCode(response.StatusCode)
 	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
-		var errorCode yarpcerrors.Code
+		var errorCode transport.Code
 		// TODO: what to do with error?
 		if err := (&errorCode).UnmarshalText([]byte(errorCodeText)); err == nil {
 			code = errorCode
 		}
 	}
-	return yarpcerrors.FromHeaders(
-		code,
+	return transport.FromHeaders(
+		transport.Code(code),
 		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(string(contents), "\n"),
 	)

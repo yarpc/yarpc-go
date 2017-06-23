@@ -27,7 +27,6 @@ import (
 
 	crossdock "github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/transport/http"
@@ -69,10 +68,10 @@ func runRaw(t crossdock.T, disp *yarpc.Dispatcher) {
 	_, err := client.Call(ctx, "handlertimeout/raw", nil)
 	fatals.Error(err, "expected an error")
 
-	if yarpcerrors.IsInvalidArgument(err) {
+	if yarpc.IsInvalidArgument(err) {
 		t.Skipf("handlertimeout/raw method not implemented: %v", err)
 		return
 	}
 
-	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
+	assert.Equal(yarpc.CodeDeadlineExceeded, yarpc.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
 }

@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 )
 
@@ -35,9 +35,9 @@ const (
 )
 
 var (
-	errRequestNil      = yarpcerrors.InvalidArgumentErrorf("request nil")
-	errRequestKeyNil   = yarpcerrors.InvalidArgumentErrorf("request key nil")
-	errRequestValueNil = yarpcerrors.InvalidArgumentErrorf("request value nil")
+	errRequestNil      = yarpc.InvalidArgumentErrorf("request nil")
+	errRequestKeyNil   = yarpc.InvalidArgumentErrorf("request key nil")
+	errRequestValueNil = yarpc.InvalidArgumentErrorf("request value nil")
 )
 
 // KeyValueYarpcServer implements examplepb.KeyValueYarpcServer.
@@ -76,7 +76,7 @@ func (k *KeyValueYarpcServer) GetValue(ctx context.Context, request *examplepb.G
 		return &examplepb.GetValueResponse{value}, nil
 	}
 	k.RUnlock()
-	return nil, yarpcerrors.NotFoundErrorf(request.Key)
+	return nil, yarpc.NotFoundErrorf(request.Key)
 }
 
 // SetValue implements SetValue.
@@ -145,7 +145,7 @@ func (s *SinkYarpcServer) Fire(ctx context.Context, request *examplepb.FireReque
 	select {
 	case s.fireDone <- struct{}{}:
 	case <-time.After(FireDoneTimeout):
-		return yarpcerrors.DeadlineExceededErrorf("fire done not handled after %v", FireDoneTimeout)
+		return yarpc.DeadlineExceededErrorf("fire done not handled after %v", FireDoneTimeout)
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func (s *SinkYarpcServer) WaitFireDone() error {
 	select {
 	case <-s.fireDone:
 	case <-time.After(FireDoneTimeout):
-		return yarpcerrors.DeadlineExceededErrorf("fire not done after %v", FireDoneTimeout)
+		return yarpc.DeadlineExceededErrorf("fire not done after %v", FireDoneTimeout)
 	}
 	return nil
 }

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -92,7 +91,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		return
 	}
 	// Bad request errors are the caller's fault.
-	if yarpcerrors.IsInvalidArgument(err) {
+	if transport.IsInvalidArgument(err) {
 		c.edge.callerErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.callerFailures.Get("bad_request"); err == nil {
 			counter.Inc()
@@ -101,7 +100,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 	}
 	// For now, assume that all other errors are the server's fault.
 	c.edge.serverErrLatencies.Observe(elapsed)
-	if yarpcerrors.IsInternal(err) {
+	if transport.IsInternal(err) {
 		if counter, err := c.edge.serverFailures.Get("unexpected"); err == nil {
 			counter.Inc()
 		}

@@ -26,7 +26,6 @@ import (
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
@@ -72,12 +71,12 @@ func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 		return
 	}
 
-	if yarpcerrors.IsInvalidArgument(err) {
+	if yarpc.IsInvalidArgument(err) {
 		t.Skipf("handlertimeout/raw procedure not implemented: %v", err)
 		return
 	}
 
-	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
+	assert.Equal(yarpc.CodeDeadlineExceeded, yarpc.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
 }
 
 func rawCall(

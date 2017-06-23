@@ -20,55 +20,58 @@
 
 package http
 
-import "go.uber.org/yarpc/api/yarpcerrors"
+import (
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+)
 
 var (
 	// CodeToStatusCode maps all Codes to their corresponding HTTP status code.
-	CodeToStatusCode = map[yarpcerrors.Code]int{
-		yarpcerrors.CodeOK:                 200,
-		yarpcerrors.CodeCancelled:          499,
-		yarpcerrors.CodeUnknown:            500,
-		yarpcerrors.CodeInvalidArgument:    400,
-		yarpcerrors.CodeDeadlineExceeded:   504,
-		yarpcerrors.CodeNotFound:           404,
-		yarpcerrors.CodeAlreadyExists:      409,
-		yarpcerrors.CodePermissionDenied:   403,
-		yarpcerrors.CodeResourceExhausted:  429,
-		yarpcerrors.CodeFailedPrecondition: 400,
-		yarpcerrors.CodeAborted:            409,
-		yarpcerrors.CodeOutOfRange:         400,
-		yarpcerrors.CodeUnimplemented:      501,
-		yarpcerrors.CodeInternal:           500,
-		yarpcerrors.CodeUnavailable:        503,
-		yarpcerrors.CodeDataLoss:           500,
-		yarpcerrors.CodeUnauthenticated:    401,
+	CodeToStatusCode = map[transport.Code]int{
+		yarpc.CodeOK:                 200,
+		yarpc.CodeCancelled:          499,
+		yarpc.CodeUnknown:            500,
+		yarpc.CodeInvalidArgument:    400,
+		yarpc.CodeDeadlineExceeded:   504,
+		yarpc.CodeNotFound:           404,
+		yarpc.CodeAlreadyExists:      409,
+		yarpc.CodePermissionDenied:   403,
+		yarpc.CodeResourceExhausted:  429,
+		yarpc.CodeFailedPrecondition: 400,
+		yarpc.CodeAborted:            409,
+		yarpc.CodeOutOfRange:         400,
+		yarpc.CodeUnimplemented:      501,
+		yarpc.CodeInternal:           500,
+		yarpc.CodeUnavailable:        503,
+		yarpc.CodeDataLoss:           500,
+		yarpc.CodeUnauthenticated:    401,
 	}
 
 	// StatusCodeToCodes maps HTTP status codes to a slice of their corresponding Codes.
-	StatusCodeToCodes = map[int][]yarpcerrors.Code{
-		200: {yarpcerrors.CodeOK},
+	StatusCodeToCodes = map[int][]transport.Code{
+		200: {yarpc.CodeOK},
 		400: {
-			yarpcerrors.CodeInvalidArgument,
-			yarpcerrors.CodeFailedPrecondition,
-			yarpcerrors.CodeOutOfRange,
+			yarpc.CodeInvalidArgument,
+			yarpc.CodeFailedPrecondition,
+			yarpc.CodeOutOfRange,
 		},
-		401: {yarpcerrors.CodeUnauthenticated},
-		403: {yarpcerrors.CodePermissionDenied},
-		404: {yarpcerrors.CodeNotFound},
+		401: {yarpc.CodeUnauthenticated},
+		403: {yarpc.CodePermissionDenied},
+		404: {yarpc.CodeNotFound},
 		409: {
-			yarpcerrors.CodeAborted,
-			yarpcerrors.CodeAlreadyExists,
+			yarpc.CodeAborted,
+			yarpc.CodeAlreadyExists,
 		},
-		429: {yarpcerrors.CodeResourceExhausted},
-		499: {yarpcerrors.CodeCancelled},
+		429: {yarpc.CodeResourceExhausted},
+		499: {yarpc.CodeCancelled},
 		500: {
-			yarpcerrors.CodeUnknown,
-			yarpcerrors.CodeInternal,
-			yarpcerrors.CodeDataLoss,
+			yarpc.CodeUnknown,
+			yarpc.CodeInternal,
+			yarpc.CodeDataLoss,
 		},
-		501: {yarpcerrors.CodeUnimplemented},
-		503: {yarpcerrors.CodeUnavailable},
-		504: {yarpcerrors.CodeDeadlineExceeded},
+		501: {yarpc.CodeUnimplemented},
+		503: {yarpc.CodeUnavailable},
+		504: {yarpc.CodeDeadlineExceeded},
 	}
 )
 
@@ -77,15 +80,15 @@ var (
 //
 // If one Code maps to the given HTTP status code, that Code is returned.
 // If more than one Code maps to the given HTTP status Code, one Code is returned.
-// If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
-// Else, yarpcerrors.CodeUnknown is returned.
-func StatusCodeToBestCode(statusCode int) yarpcerrors.Code {
+// If the Code is >=400 and < 500, yarpc.CodeInvalidArgument is returned.
+// Else, yarpc.CodeUnknown is returned.
+func StatusCodeToBestCode(statusCode int) transport.Code {
 	codes, ok := StatusCodeToCodes[statusCode]
 	if !ok || len(codes) == 0 {
 		if statusCode >= 400 && statusCode < 500 {
-			return yarpcerrors.CodeInvalidArgument
+			return yarpc.CodeInvalidArgument
 		}
-		return yarpcerrors.CodeUnknown
+		return yarpc.CodeUnknown
 	}
 	return codes[0]
 }

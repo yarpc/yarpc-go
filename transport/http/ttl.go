@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 )
 
 // parseTTL takes a context parses the given TTL, clamping the context to that
@@ -63,5 +63,5 @@ func parseTTL(ctx context.Context, req *transport.Request, ttl string) (_ contex
 }
 
 func newInvalidTTLError(service string, procedure string, ttl string) error {
-	return yarpcerrors.InvalidArgumentErrorf("invalid ttl %s for service %q and procedure %q", ttl, service, procedure)
+	return yarpc.InvalidArgumentErrorf("invalid ttl %s for service %q and procedure %q", ttl, service, procedure)
 }

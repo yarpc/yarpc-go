@@ -29,7 +29,6 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	internalsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"google.golang.org/grpc"
@@ -161,7 +160,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if err == nil {
 		return nil
 	}
-	if yarpcerrors.IsYARPCError(err) {
+	if yarpc.IsYARPCError(err) {
 		return err
 	}
 	status, ok := status.FromError(err)
@@ -171,7 +170,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	}
 	code, ok := GRPCCodeToCode[status.Code()]
 	if !ok {
-		code = yarpcerrors.CodeUnknown
+		code = yarpc.CodeUnknown
 	}
 	var name string
 	if responseMD != nil {
@@ -189,5 +188,5 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return yarpcerrors.FromHeaders(code, name, message)
+	return transport.FromHeaders(transport.Code(code), name, message)
 }

@@ -33,9 +33,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/testutils"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
@@ -209,34 +209,34 @@ func TestSimpleRoundTrip(t *testing.T) {
 		},
 		{
 			requestBody:   "foo",
-			responseError: yarpcerrors.InternalErrorf("great sadness"),
+			responseError: yarpc.InternalErrorf("great sadness"),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.IsInternal(err), err.Error())
+				assert.True(t, yarpc.IsInternal(err), err.Error())
 			},
 		},
 		{
 			requestBody:   "bar",
-			responseError: yarpcerrors.InvalidArgumentErrorf("missing service name"),
+			responseError: yarpc.InvalidArgumentErrorf("missing service name"),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.IsInvalidArgument(err), err.Error())
+				assert.True(t, yarpc.IsInvalidArgument(err), err.Error())
 			},
 		},
 		{
 			requestBody: "baz",
-			responseError: yarpcerrors.InternalErrorf(
+			responseError: yarpc.InternalErrorf(
 				`error for procedure "foo" of service "bar": great sadness`,
 			),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.IsInternal(err), err.Error())
+				assert.True(t, yarpc.IsInternal(err), err.Error())
 			},
 		},
 		{
 			requestBody: "qux",
-			responseError: yarpcerrors.InvalidArgumentErrorf(
+			responseError: yarpc.InvalidArgumentErrorf(
 				`BadRequest: unrecognized procedure "echo" for service "derp"`,
 			),
 			wantError: func(err error) {
-				assert.True(t, yarpcerrors.IsInvalidArgument(err), err.Error())
+				assert.True(t, yarpc.IsInvalidArgument(err), err.Error())
 			},
 		},
 	}

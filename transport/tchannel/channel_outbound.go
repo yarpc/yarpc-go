@@ -25,8 +25,8 @@ import (
 	"io"
 
 	"github.com/uber/tchannel-go"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
@@ -217,9 +217,9 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 func fromSystemError(err tchannel.SystemError) error {
 	code, ok := TChannelCodeToCode[err.Code()]
 	if !ok {
-		return yarpcerrors.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code", err)
+		return yarpc.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
-	return yarpcerrors.FromHeaders(code, "", err.Message())
+	return transport.FromHeaders(transport.Code(code), "", err.Message())
 }
 
 func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
@@ -232,14 +232,14 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 	if !ok {
 		return nil
 	}
-	var errorCode yarpcerrors.Code
+	var errorCode transport.Code
 	if err := (&errorCode).UnmarshalText([]byte(errorCodeString)); err != nil {
 		return err
 	}
-	if errorCode == yarpcerrors.CodeOK {
-		return yarpcerrors.InternalErrorf("got CodeOK from error header")
+	if errorCode == yarpc.CodeOK {
+		return yarpc.InternalErrorf("got CodeOK from error header")
 	}
 	errorName, _ := headers.Get(ErrorNameHeaderKey)
 	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
-	return yarpcerrors.FromHeaders(errorCode, errorName, errorMessage)
+	return transport.FromHeaders(transport.Code(errorCode), errorName, errorMessage)
 }

@@ -37,7 +37,6 @@ import (
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 )
@@ -192,53 +191,53 @@ func TestHandlerFailures(t *testing.T) {
 
 		// if we expect an error as a result of the TTL
 		errTTL   bool
-		wantCode yarpcerrors.Code
+		wantCode transport.Code
 	}{
 		{
 			req:      &http.Request{Method: "GET"},
-			wantCode: yarpcerrors.CodeNotFound,
+			wantCode: yarpc.CodeNotFound,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpc.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpc.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpc.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpc.CodeInvalidArgument,
 			errTTL:   true,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpc.CodeInvalidArgument,
 		},
 		{
 			req: &http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
 			},
-			wantCode: yarpcerrors.CodeInvalidArgument,
+			wantCode: yarpc.CodeInvalidArgument,
 			errTTL:   true,
 		},
 	}
@@ -363,7 +362,7 @@ func TestHandlerPanic(t *testing.T) {
 	defer cancel()
 	_, err := client.Call(ctx, "panic", []byte{})
 
-	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.ErrorCode(err))
+	assert.Equal(t, yarpc.CodeUnknown, yarpc.ErrorCode(err))
 }
 
 func headerCopyWithout(headers http.Header, names ...string) http.Header {

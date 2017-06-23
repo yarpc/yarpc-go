@@ -29,7 +29,6 @@ import (
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/thrift"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
@@ -527,7 +526,7 @@ func BuildArgs(t crossdock.T, desc string, ft reflect.Type, give []interface{}, 
 }
 
 func isUnrecognizedProcedure(err error) bool {
-	if yarpcerrors.IsInvalidArgument(err) {
+	if yarpc.IsInvalidArgument(err) {
 		// TODO: Once all other languages implement the gauntlet test
 		// subject, we can remove this check.
 		return strings.Contains(err.Error(), "unrecognized procedure")

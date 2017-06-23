@@ -29,8 +29,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/request"
@@ -95,15 +95,15 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	if handlerErr != nil {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
-		yarpcError := yarpcerrors.ToYARPCError(handlerErr)
+		yarpcError := yarpc.ToYARPCError(handlerErr)
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
-		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
+		text, _ := yarpc.ErrorCode(yarpcError).MarshalText()
 		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
-		if name := yarpcerrors.ErrorName(yarpcError); name != "" {
+		if name := yarpc.ErrorName(yarpcError); name != "" {
 			responseWriter.addHeader(ErrorNameHeaderKey, name)
 		}
-		if message := yarpcerrors.ErrorMessage(yarpcError); message != "" {
+		if message := yarpc.ErrorMessage(yarpcError); message != "" {
 			responseWriter.addHeader(ErrorMessageHeaderKey, message)
 		}
 	}
@@ -157,7 +157,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		if yarpcerrors.ErrorCode(err) != yarpcerrors.CodeUnimplemented {
+		if yarpc.ErrorCode(err) != yarpc.CodeUnimplemented {
 			return err
 		}
 		if tcall, ok := call.(tchannelCall); !ok {
@@ -177,7 +177,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	default:
-		err = yarpcerrors.UnimplementedErrorf("transport:tchannel type:%s", spec.Type().String())
+		err = yarpc.UnimplementedErrorf("transport:tchannel type:%s", spec.Type().String())
 	}
 
 	return err
@@ -284,18 +284,18 @@ func getSystemError(err error) (tchannel.SystemError, bool) {
 		return systemError, true
 	}
 	// if the error is not a YARPC error, return a SystemError of type ErrCodeUnexpected
-	if !yarpcerrors.IsYARPCError(err) {
+	if !yarpc.IsYARPCError(err) {
 		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error()).(tchannel.SystemError), true
 	}
 
 	// at this point, the error is a YARPC error that might be an application error
 	// we figure out if there is a system error code that represents it
 
-	tchannelCode, ok := CodeToTChannelCode[yarpcerrors.ErrorCode(err)]
+	tchannelCode, ok := CodeToTChannelCode[yarpc.ErrorCode(err)]
 	if !ok {
 		// there is no system code for the YARPC error, so it is an application error
 		return tchannel.SystemError{}, false
 	}
 	// we have a system code, so we will make a SystemError
-	return tchannel.NewSystemError(tchannelCode, yarpcerrors.ErrorMessage(err)).(tchannel.SystemError), true
+	return tchannel.NewSystemError(tchannelCode, yarpc.ErrorMessage(err)).(tchannel.SystemError), true
 }

@@ -24,8 +24,8 @@ import (
 	"bytes"
 	"time"
 
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"golang.org/x/net/context"
@@ -92,7 +92,7 @@ func (h *handler) handleBeforeErrorConversion(
 			func(ctx context.Context, request interface{}) (interface{}, error) {
 				transportRequest, ok := request.(*transport.Request)
 				if !ok {
-					return nil, yarpcerrors.InternalErrorf("expected *transport.Request, got %T", request)
+					return nil, yarpc.InternalErrorf("expected *transport.Request, got %T", request)
 				}
 				return h.call(ctx, transportRequest, responseMD)
 			},
@@ -104,7 +104,7 @@ func (h *handler) handleBeforeErrorConversion(
 func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error) (*transport.Request, error) {
 	md, ok := metadata.FromContext(ctx)
 	if md == nil || !ok {
-		return nil, yarpcerrors.InternalErrorf("cannot get metadata from ctx: %v", ctx)
+		return nil, yarpc.InternalErrorf("cannot get metadata from ctx: %v", ctx)
 	}
 	transportRequest, err := metadataToTransportRequest(md)
 	if err != nil {
@@ -135,7 +135,7 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request,
 	case transport.Unary:
 		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseMD)
 	default:
-		return nil, yarpcerrors.UnimplementedErrorf("transport:grpc type:%s", handlerSpec.Type().String())
+		return nil, yarpc.UnimplementedErrorf("transport:grpc type:%s", handlerSpec.Type().String())
 	}
 }
 
@@ -164,11 +164,11 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 	}
 	// if this is not a yarpc error, return the error
 	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerrors.IsYARPCError(err) {
+	if !yarpc.IsYARPCError(err) {
 		return err
 	}
-	name := yarpcerrors.ErrorName(err)
-	message := yarpcerrors.ErrorMessage(err)
+	name := yarpc.ErrorName(err)
+	message := yarpc.ErrorMessage(err)
 	// if the yarpc error has a name, set the header
 	if name != "" {
 		// TODO: what to do with error?
@@ -182,7 +182,7 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 			message = name + ": " + message
 		}
 	}
-	grpcCode, ok := CodeToGRPCCode[yarpcerrors.ErrorCode(err)]
+	grpcCode, ok := CodeToGRPCCode[yarpc.ErrorCode(err)]
 	// should only happen if CodeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown

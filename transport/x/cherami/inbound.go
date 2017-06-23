@@ -28,8 +28,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/multierr"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
@@ -106,7 +106,7 @@ func (i *Inbound) Start() error {
 
 func (i *Inbound) start() error {
 	if i.router == nil {
-		return yarpcerrors.InternalErrorf("no router configured for transport inbound")
+		return yarpc.InternalErrorf("no router configured for transport inbound")
 	}
 
 	consumer, ch, err := i.clientFactory.GetConsumer(i.client, internal.ConsumerConfig{
@@ -189,7 +189,7 @@ func (i *Inbound) handleMsg(msg []byte) error {
 	}
 
 	if spec.Type() != transport.Oneway {
-		err = yarpcerrors.UnimplementedErrorf("transport:%s type:%s", transportName, spec.Type().String())
+		err = yarpc.UnimplementedErrorf("transport:%s type:%s", transportName, spec.Type().String())
 		return transport.UpdateSpanWithErr(span, err)
 	}
 
