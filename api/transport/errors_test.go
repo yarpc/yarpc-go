@@ -22,9 +22,32 @@ package transport
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	_codeToErrorConstructor = map[Code]func(string, ...interface{}) error{
+		CodeCancelled:          CancelledErrorf,
+		CodeUnknown:            UnknownErrorf,
+		CodeInvalidArgument:    InvalidArgumentErrorf,
+		CodeDeadlineExceeded:   DeadlineExceededErrorf,
+		CodeNotFound:           NotFoundErrorf,
+		CodeAlreadyExists:      AlreadyExistsErrorf,
+		CodePermissionDenied:   PermissionDeniedErrorf,
+		CodeResourceExhausted:  ResourceExhaustedErrorf,
+		CodeFailedPrecondition: FailedPreconditionErrorf,
+		CodeAborted:            AbortedErrorf,
+		CodeOutOfRange:         OutOfRangeErrorf,
+		CodeUnimplemented:      UnimplementedErrorf,
+		CodeInternal:           InternalErrorf,
+		CodeUnavailable:        UnavailableErrorf,
+		CodeDataLoss:           DataLossErrorf,
+		CodeUnauthenticated:    UnauthenticatedErrorf,
+	}
 )
 
 func TestBadRequestError(t *testing.T) {
@@ -37,4 +60,99 @@ func TestUnrecognizedProcedureError(t *testing.T) {
 	err := UnrecognizedProcedureError(&Request{Service: "curly", Procedure: "nyuck"})
 	assert.True(t, IsUnrecognizedProcedureError(err))
 	assert.False(t, IsUnrecognizedProcedureError(errors.New("derp")))
+}
+
+func TestErrorsString(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			yarpcError, ok := errorConstructor("hello %d", 1).(*yarpcError)
+			require.True(t, ok)
+			require.Equal(t, fmt.Sprintf("code:%s message:hello 1", code.String()), yarpcError.Error())
+		},
+		func(t *testing.T) {
+			yarpcError, ok := NamedErrorf("foo", "hello %d", 1).(*yarpcError)
+			require.True(t, ok)
+			require.Equal(t, "code:unknown name:foo message:hello 1", yarpcError.Error())
+		},
+	)
+}
+
+func TestIsYARPCError(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.True(t, IsYARPCError(errorConstructor("")))
+		},
+		func(t *testing.T) {
+			require.True(t, IsYARPCError(NamedErrorf("", "")))
+		},
+	)
+}
+
+func TestErrorCode(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.Equal(t, code, ErrorCode(errorConstructor("")))
+		},
+		func(t *testing.T) {
+			require.Equal(t, CodeUnknown, ErrorCode(NamedErrorf("", "")))
+		},
+	)
+}
+
+func TestErrorName(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.Empty(t, ErrorName(errorConstructor("")))
+		},
+		func(t *testing.T) {
+			require.Equal(t, "foo", ErrorName(NamedErrorf("foo", "")))
+		},
+	)
+}
+
+func TestErrorMessage(t *testing.T) {
+	testAllErrorConstructors(
+		t,
+		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
+			require.Equal(t, "hello 1", ErrorMessage(errorConstructor("hello %d", 1)))
+		},
+		func(t *testing.T) {
+			require.Equal(t, "hello 1", ErrorMessage(NamedErrorf("foo", "hello %d", 1)))
+		},
+	)
+}
+
+func testAllErrorConstructors(
+	t *testing.T,
+	errorConstructorFunc func(*testing.T, Code, func(string, ...interface{}) error),
+	namedFunc func(*testing.T),
+) {
+	for code, errorConstructor := range _codeToErrorConstructor {
+		t.Run(code.String(), func(t *testing.T) {
+			errorConstructorFunc(t, code, errorConstructor)
+		})
+	}
+	t.Run("Named", namedFunc)
+}
+
+func TestValidateErrorName(t *testing.T) {
+	testValidateErrorName(t, "", false)
+	testValidateErrorName(t, "hello", false)
+	testValidateErrorName(t, "hello-foo", false)
+	testValidateErrorName(t, "-", true)
+	testValidateErrorName(t, "-hello", true)
+	testValidateErrorName(t, "hello-", true)
+	testValidateErrorName(t, "Hello", true)
+}
+
+func testValidateErrorName(t *testing.T, name string, expectError bool) {
+	if expectError {
+		assert.Equal(t, CodeInternal, ErrorCode(validateErrorName(name)), "expected error for %s", name)
+	} else {
+		assert.NoError(t, validateErrorName(name), "expected no error for %s", name)
+	}
 }

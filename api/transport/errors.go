@@ -20,54 +20,378 @@
 
 package transport
 
-import "go.uber.org/yarpc/api/yarpcerrors"
+import (
+	"bytes"
+	"fmt"
+)
 
 // InboundBadRequestError builds an error which indicates that an inbound
 // cannot process a request because it is a bad request.
 //
 // IsBadRequestError returns true for these errors.
 //
-// Deprecated: use yarpcerrors.InvalidArgumentErrorf instead.
+// Deprecated: use InvalidArgumentErrorf instead.
 func InboundBadRequestError(err error) error {
-	return yarpcerrors.InvalidArgumentErrorf(err.Error())
+	return InvalidArgumentErrorf(err.Error())
 }
 
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.
 //
-// Deprecated: use yarpcerrors.IsInvalidArgument(err) instead.
+// Deprecated: use IsInvalidArgument(err) instead.
 func IsBadRequestError(err error) bool {
-	return yarpcerrors.IsInvalidArgument(err)
+	return IsInvalidArgument(err)
 }
 
 // IsUnexpectedError returns true if the server panicked or failed to process
 // the request with an unhandled error.
 //
-// Deprecated: use yarpcerrors.IsInternal(err) instead.
+// Deprecated: use IsInternal(err) instead.
 func IsUnexpectedError(err error) bool {
-	return yarpcerrors.IsInternal(err)
+	return IsInternal(err)
 }
 
 // IsTimeoutError return true if the given error is a TimeoutError.
 //
-// Deprecated: use yarpcerrors.IsDeadlineExceeded(err) instead.
+// Deprecated: use IsDeadlineExceeded(err) instead.
 func IsTimeoutError(err error) bool {
-	return yarpcerrors.IsDeadlineExceeded(err)
+	return IsDeadlineExceeded(err)
 }
 
 // UnrecognizedProcedureError returns an error for the given request,
 // such that IsUnrecognizedProcedureError can distinguish it from other errors
 // coming out of router.Choose.
 //
-// Deprecated: use yarpcerrors.UnimplementedErrorf instead.
+// Deprecated: use UnimplementedErrorf instead.
 func UnrecognizedProcedureError(req *Request) error {
-	return yarpcerrors.UnimplementedErrorf("unrecognized procedure %q for service %q", req.Procedure, req.Service)
+	return UnimplementedErrorf("unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }
 
 // IsUnrecognizedProcedureError returns true for errors returned by
 // Router.Choose if the router cannot find a handler for the request.
 //
-// Deprecated: use yarpcerrors.IsUnimplemented(err) instead.
+// Deprecated: use IsUnimplemented(err) instead.
 func IsUnrecognizedProcedureError(err error) bool {
-	return yarpcerrors.IsUnimplemented(err)
+	return IsUnimplemented(err)
+}
+
+// IsYARPCError returns true if the given error is a non-nil YARPC error.
+//
+// This is equivalent to ErrorCode(err) != CodeOK.
+func IsYARPCError(err error) bool {
+	return ErrorCode(err) != CodeOK
+}
+
+// ToYARPCError converts the given error into a YARPC error. This function
+// returns nil if the error is nil.
+//
+// If the error is already a YARPC error, it will be returned as-is.
+// Otherwise it will be converted into an error with CodeUnknown.
+func ToYARPCError(err error) error {
+	switch {
+	case err == nil:
+		return nil
+	case IsYARPCError(err):
+		return err
+	default:
+		// TODO(abg): Can't pass untrusted strings as the template to Sprintf.
+		return UnknownErrorf(err.Error())
+	}
+}
+
+// ErrorCode returns the Code for the given error, or CodeOK if the given
+// error is not a YARPC error.
+func ErrorCode(err error) Code {
+	if err == nil {
+		return CodeOK
+	}
+	// TODO(abg): What if yerr is nil?
+	if yerr, ok := err.(*yarpcError); ok {
+		return yerr.Code
+	}
+	return CodeOK
+}
+
+// ErrorName returns the name for the given error, or "" if the given
+// error is not a YARPC error created with NamedErrorf that has a non-empty name.
+func ErrorName(err error) string {
+	if err == nil {
+		return ""
+	}
+	// TODO(abg): What if yerr is nil?
+	if yerr, ok := err.(*yarpcError); ok {
+		return yerr.Name
+	}
+	return ""
+}
+
+// ErrorMessage returns the message for the given error, or "" if the given
+// error is not a YARPC error or the YARPC error had no message.
+func ErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	// TODO(abg): What if yerr is nil?
+	if yerr, ok := err.(*yarpcError); ok {
+		return yerr.Message
+	}
+	return ""
+}
+
+// NamedErrorf returns a new YARPC error with code CodeUnknown and the given
+// name.
+//
+// This should be used for user-defined errors.
+//
+// The name must only contain lowercase letters from a-z and dashes (-), and
+// cannot start or end in a dash. If the name is something else, an error with
+// code CodeInternal will be returned.
+func NamedErrorf(name string, format string, args ...interface{}) error {
+	// TODO(abg): Define what "name" means in the documentation.
+	return FromHeaders(CodeUnknown, name, fmt.Sprintf(format, args...))
+}
+
+// CancelledErrorf returns a new yarpc error with code CodeCancelled.
+func CancelledErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeCancelled, "", fmt.Sprintf(format, args...))
+}
+
+// UnknownErrorf returns a new yarpc error with code CodeUnknown.
+func UnknownErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeUnknown, "", fmt.Sprintf(format, args...))
+}
+
+// InvalidArgumentErrorf returns a new yarpc error with code CodeInvalidArgument.
+func InvalidArgumentErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeInvalidArgument, "", fmt.Sprintf(format, args...))
+}
+
+// DeadlineExceededErrorf returns a new yarpc error with code CodeDeadlineExceeded.
+func DeadlineExceededErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeDeadlineExceeded, "", fmt.Sprintf(format, args...))
+}
+
+// NotFoundErrorf returns a new yarpc error with code CodeNotFound.
+func NotFoundErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeNotFound, "", fmt.Sprintf(format, args...))
+}
+
+// AlreadyExistsErrorf returns a new yarpc error with code CodeAlreadyExists.
+func AlreadyExistsErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeAlreadyExists, "", fmt.Sprintf(format, args...))
+}
+
+// PermissionDeniedErrorf returns a new yarpc error with code CodePermissionDenied.
+func PermissionDeniedErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodePermissionDenied, "", fmt.Sprintf(format, args...))
+}
+
+// ResourceExhaustedErrorf returns a new yarpc error with code CodeResourceExhausted.
+func ResourceExhaustedErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeResourceExhausted, "", fmt.Sprintf(format, args...))
+}
+
+// FailedPreconditionErrorf returns a new yarpc error with code CodeFailedPrecondition.
+func FailedPreconditionErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeFailedPrecondition, "", fmt.Sprintf(format, args...))
+}
+
+// AbortedErrorf returns a new yarpc error with code CodeAborted.
+func AbortedErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeAborted, "", fmt.Sprintf(format, args...))
+}
+
+// OutOfRangeErrorf returns a new yarpc error with code CodeOutOfRange.
+func OutOfRangeErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeOutOfRange, "", fmt.Sprintf(format, args...))
+}
+
+// UnimplementedErrorf returns a new yarpc error with code CodeUnimplemented.
+func UnimplementedErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeUnimplemented, "", fmt.Sprintf(format, args...))
+}
+
+// InternalErrorf returns a new yarpc error with code CodeInternal.
+func InternalErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeInternal, "", fmt.Sprintf(format, args...))
+}
+
+// UnavailableErrorf returns a new yarpc error with code CodeUnavailable.
+func UnavailableErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeUnavailable, "", fmt.Sprintf(format, args...))
+}
+
+// DataLossErrorf returns a new yarpc error with code CodeDataLoss.
+func DataLossErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeDataLoss, "", fmt.Sprintf(format, args...))
+}
+
+// UnauthenticatedErrorf returns a new yarpc error with code CodeUnauthenticated.
+func UnauthenticatedErrorf(format string, args ...interface{}) error {
+	return FromHeaders(CodeUnauthenticated, "", fmt.Sprintf(format, args...))
+}
+
+// IsCancelled returns true if ErrorCode(err) == CodeCancelled.
+func IsCancelled(err error) bool {
+	return ErrorCode(err) == CodeCancelled
+}
+
+// IsUnknown returns true if ErrorCode(err) == CodeUnknown.
+func IsUnknown(err error) bool {
+	return ErrorCode(err) == CodeUnknown
+}
+
+// IsInvalidArgument returns true if ErrorCode(err) == CodeInvalidArgument.
+func IsInvalidArgument(err error) bool {
+	return ErrorCode(err) == CodeInvalidArgument
+}
+
+// IsDeadlineExceeded returns true if ErrorCode(err) == CodeDeadlineExceeded.
+func IsDeadlineExceeded(err error) bool {
+	return ErrorCode(err) == CodeDeadlineExceeded
+}
+
+// IsNotFound returns true if ErrorCode(err) == CodeNotFound.
+func IsNotFound(err error) bool {
+	return ErrorCode(err) == CodeNotFound
+}
+
+// IsAlreadyExists returns true if ErrorCode(err) == CodeAlreadyExists.
+func IsAlreadyExists(err error) bool {
+	return ErrorCode(err) == CodeAlreadyExists
+}
+
+// IsPermissionDenied returns true if ErrorCode(err) == CodePermissionDenied.
+func IsPermissionDenied(err error) bool {
+	return ErrorCode(err) == CodePermissionDenied
+}
+
+// IsResourceExhausted returns true if ErrorCode(err) == CodeResourceExhausted.
+func IsResourceExhausted(err error) bool {
+	return ErrorCode(err) == CodeResourceExhausted
+}
+
+// IsFailedPrecondition returns true if ErrorCode(err) == CodeFailedPrecondition.
+func IsFailedPrecondition(err error) bool {
+	return ErrorCode(err) == CodeFailedPrecondition
+}
+
+// IsAborted returns true if ErrorCode(err) == CodeAborted.
+func IsAborted(err error) bool {
+	return ErrorCode(err) == CodeAborted
+}
+
+// IsOutOfRange returns true if ErrorCode(err) == CodeOutOfRange.
+func IsOutOfRange(err error) bool {
+	return ErrorCode(err) == CodeOutOfRange
+}
+
+// IsUnimplemented returns true if ErrorCode(err) == CodeUnimplemented.
+func IsUnimplemented(err error) bool {
+	return ErrorCode(err) == CodeUnimplemented
+}
+
+// IsInternal returns true if ErrorCode(err) == CodeInternal.
+func IsInternal(err error) bool {
+	return ErrorCode(err) == CodeInternal
+}
+
+// IsUnavailable returns true if ErrorCode(err) == CodeUnavailable.
+func IsUnavailable(err error) bool {
+	return ErrorCode(err) == CodeUnavailable
+}
+
+// IsDataLoss returns true if ErrorCode(err) == CodeDataLoss.
+func IsDataLoss(err error) bool {
+	return ErrorCode(err) == CodeDataLoss
+}
+
+// IsUnauthenticated returns true if ErrorCode(err) == CodeUnauthenticated.
+func IsUnauthenticated(err error) bool {
+	return ErrorCode(err) == CodeUnauthenticated
+}
+
+// ** All constructors of yarpcErrors must always set a Code that is not CodeOK. **
+//
+// Currently, the only constructor of yarpcErrors is FromHeaders, which
+// enforces this.
+
+type yarpcError struct {
+	// Code is the code of the error. This should never be set to CodeOK.
+	Code Code `json:"code,omitempty"`
+
+	// Name is the name of the error. This should only be set if the
+	// Code is CodeUnknown.
+	Name string `json:"name,omitempty"`
+
+	// Message is the message of the error.
+	Message string `json:"message,omitempty"`
+}
+
+// FromHeaders returns a new yarpc error from headers transmitted from
+// the server side.
+//
+// If the specified code is CodeOK, this will return nil.
+// If the specified code is not CodeUnknown, this will not set the name field.
+//
+// The name must only contain lowercase letters from a-z and dashes (-), and
+// cannot start or end in a dash. If the name is something else, an error with
+// code CodeInternal will be returned.
+//
+// This function should not be used by server implementations, use the individual
+// error constructors instead. This should only be used by transport implementations.
+func FromHeaders(code Code, name string, message string) error {
+	// TODO(abg): "FromHeaders" doesn't work here. No headers are
+	// involved.
+	if err := validateErrorName(name); err != nil {
+		return err
+	}
+	switch code {
+	case CodeOK:
+		return nil
+	case CodeUnknown:
+		return &yarpcError{
+			Code:    code,
+			Name:    name,
+			Message: message,
+		}
+	default:
+		return &yarpcError{
+			Code:    code,
+			Message: message,
+		}
+	}
+}
+
+func (e *yarpcError) Error() string {
+	buffer := bytes.NewBufferString(`code:`)
+	_, _ = buffer.WriteString(e.Code.String())
+	if e.Name != "" {
+		_, _ = buffer.WriteString(` name:`)
+		_, _ = buffer.WriteString(e.Name)
+	}
+	if e.Message != "" {
+		_, _ = buffer.WriteString(` message:`)
+		_, _ = buffer.WriteString(e.Message)
+	}
+	return buffer.String()
+}
+
+func validateErrorName(name string) error {
+	if name == "" {
+		return nil
+	}
+	// I think that name is a global reference to a slice effectively, so len(name) has some overheade
+	// https://stackoverflow.com/questions/26634554/go-multiple-len-calls-vs-performance
+	// https://blog.golang.org/strings
+	lenNameMinusOne := len(name) - 1
+	for i, b := range name {
+		if (i == 0 || i == lenNameMinusOne) && b == '-' {
+			return InternalErrorf("invalid error name, must only start or end with lowercase letters: %s", name)
+		}
+		if !((b >= 'a' && b <= 'z') || b == '-') {
+			return InternalErrorf("invalid error name, must only contain lowercase letters and dashes: %s", name)
+		}
+	}
+	return nil
 }
