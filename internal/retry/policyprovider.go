@@ -51,7 +51,7 @@ func newProcedurePolicyProvider() *procedurePolicyProvider {
 }
 
 func (ppp *procedurePolicyProvider) registerServiceProcedure(service, procedure string, pol *Policy) {
-	ppp.serviceProcedureToPolicy[serviceProcedure{service, procedure}] = pol
+	ppp.serviceProcedureToPolicy[serviceProcedure{Service: service, Procedure: procedure}] = pol
 }
 
 func (ppp *procedurePolicyProvider) registerService(service string, pol *Policy) {
