@@ -22,7 +22,6 @@ package retry
 
 import (
 	"bytes"
-	"context"
 	"testing"
 	"time"
 
@@ -38,17 +37,19 @@ func TestMiddleware(t *testing.T) {
 	type testStruct struct {
 		msg string
 
-		retries      uint
-		retryTimeout time.Duration
-		retryBackoff backoff.Strategy
+		policyProvider *procedurePolicyProvider
 
 		actions []MiddlewareAction
 	}
 	tests := []testStruct{
 		{
-			msg:          "no retry",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 500,
+			msg: "no retry",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*500),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -70,9 +71,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "single retry",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 500,
+			msg: "single retry",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*500),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -100,9 +105,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "multiple retries",
-			retries:      4,
-			retryTimeout: testtime.Millisecond * 500,
+			msg: "multiple retries",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(4),
+					MaxRequestTimeout(testtime.Millisecond*500),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -148,9 +157,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "immediate hard failure",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 500,
+			msg: "immediate hard failure",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*500),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -172,9 +185,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "retry once, then hard failure",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 500,
+			msg: "retry once, then hard failure",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*500),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -202,9 +219,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "ctx timeout less than retry timeout",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 500,
+			msg: "ctx timeout less than retry timeout",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*500),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -227,9 +248,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "ctx timeout less than retry timeout",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 50,
+			msg: "ctx timeout less than retry timeout",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*50),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -260,9 +285,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "no ctx timeout",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 50,
+			msg: "no ctx timeout",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*50),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -292,9 +321,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "exhaust retries",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 50,
+			msg: "exhaust retries",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*50),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -324,9 +357,13 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "Reset Error",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 50,
+			msg: "Reset Error",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*50),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -350,10 +387,14 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "backoff timeout",
-			retries:      1,
-			retryTimeout: testtime.Millisecond * 50,
-			retryBackoff: newFixedBackoff(testtime.Millisecond * 25),
+			msg: "backoff timeout",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*50),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*25)),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -384,10 +425,14 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "sequential backoff timeout",
-			retries:      2,
-			retryTimeout: testtime.Millisecond * 100,
-			retryBackoff: newSequentialBackoff(testtime.Millisecond * 50),
+			msg: "sequential backoff timeout",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(2),
+					MaxRequestTimeout(testtime.Millisecond*100),
+					BackoffStrategy(newSequentialBackoff(testtime.Millisecond*50)),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -429,10 +474,14 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "backoff context will timeout",
-			retries:      2,
-			retryTimeout: testtime.Millisecond * 30,
-			retryBackoff: newFixedBackoff(testtime.Millisecond * 5000),
+			msg: "backoff context will timeout",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(2),
+					MaxRequestTimeout(testtime.Millisecond*30),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*5000)),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				RequestAction{
 					request: &transport.Request{
@@ -458,10 +507,14 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg:          "concurrent retries",
-			retries:      2,
-			retryTimeout: testtime.Millisecond * 50,
-			retryBackoff: newFixedBackoff(testtime.Millisecond * 25),
+			msg: "concurrent retries",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(2),
+					MaxRequestTimeout(testtime.Millisecond*50),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*25)),
+				),
+			).provider,
 			actions: []MiddlewareAction{
 				ConcurrentAction{
 					Actions: []MiddlewareAction{
@@ -541,20 +594,127 @@ func TestMiddleware(t *testing.T) {
 				},
 			},
 		},
+		{
+			msg: "multiple retry policies",
+			policyProvider: newPolicyProviderBuilder().registerDefault(
+				NewPolicy(
+					Retries(2),
+					MaxRequestTimeout(testtime.Millisecond*20),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*25)),
+				),
+			).registerService(
+				"serviceRoute",
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(testtime.Millisecond*50),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*50)),
+				),
+			).registerServiceProcedure(
+				"serviceRoute",
+				"procedureRoute",
+				NewPolicy(
+					Retries(0),
+					MaxRequestTimeout(testtime.Millisecond*100),
+				),
+			).registerServiceProcedure(
+				"serviceRoute",
+				"fakeProcedureRoute",
+				NewPolicy(
+					Retries(100),
+					MaxRequestTimeout(testtime.Millisecond*10000),
+				),
+			).provider,
+			actions: []MiddlewareAction{
+				ConcurrentAction{
+					Actions: []MiddlewareAction{
+						RequestAction{
+							request: &transport.Request{
+								Service:   "nonServiceRoute",
+								Procedure: "nonProcedureRoute",
+								Body:      bytes.NewBufferString("body1"),
+							},
+							reqTimeout: testtime.Millisecond * 200,
+							events: []*OutboundEvent{
+								{
+									WantTimeout:    testtime.Millisecond * 20,
+									WantService:    "nonServiceRoute",
+									WantProcedure:  "nonProcedureRoute",
+									WantBody:       "body1",
+									WaitForTimeout: true,
+									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
+								},
+								{
+									WantTimeout:    testtime.Millisecond * 20,
+									WantService:    "nonServiceRoute",
+									WantProcedure:  "nonProcedureRoute",
+									WantBody:       "body1",
+									WaitForTimeout: true,
+									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
+								},
+								{
+									WantTimeout:   testtime.Millisecond * 20,
+									WantService:   "nonServiceRoute",
+									WantProcedure: "nonProcedureRoute",
+									WantBody:      "body1",
+									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
+								},
+							},
+							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20).Error(),
+						},
+						RequestAction{
+							request: &transport.Request{
+								Service:   "serviceRoute",
+								Procedure: "nonProcedureRoute",
+								Body:      bytes.NewBufferString("body2"),
+							},
+							reqTimeout: testtime.Millisecond * 200,
+							events: []*OutboundEvent{
+								{
+									WantTimeout:    testtime.Millisecond * 50,
+									WantService:    "serviceRoute",
+									WantProcedure:  "nonProcedureRoute",
+									WantBody:       "body2",
+									WaitForTimeout: true,
+									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+								},
+								{
+									WantTimeout:   testtime.Millisecond * 50,
+									WantService:   "serviceRoute",
+									WantProcedure: "nonProcedureRoute",
+									WantBody:      "body2",
+									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+								},
+							},
+							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50).Error(),
+						},
+						RequestAction{
+							request: &transport.Request{
+								Service:   "serviceRoute",
+								Procedure: "procedureRoute",
+								Body:      bytes.NewBufferString("body3"),
+							},
+							reqTimeout: testtime.Millisecond * 200,
+							events: []*OutboundEvent{
+								{
+									WantTimeout:   testtime.Millisecond * 100,
+									WantService:   "serviceRoute",
+									WantProcedure: "procedureRoute",
+									WantBody:      "body3",
+									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*100),
+								},
+							},
+							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*100).Error(),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			retry := NewUnaryMiddleware(
-				WithPolicyProvider(
-					func(context.Context, *transport.Request) *Policy {
-						return NewPolicy(
-							Retries(tt.retries),
-							MaxRequestTimeout(tt.retryTimeout),
-							BackoffStrategy(tt.retryBackoff),
-						)
-					},
-				),
+				WithPolicyProvider(tt.policyProvider.GetPolicy),
 			)
 
 			ApplyMiddlewareActions(t, retry, tt.actions)
@@ -596,4 +756,29 @@ func (f *fixedBackoff) Backoff() backoff.Backoff {
 
 func (f *fixedBackoff) Duration(_ uint) time.Duration {
 	return f.boff
+}
+
+type policyProviderBuilder struct {
+	provider *procedurePolicyProvider
+}
+
+func newPolicyProviderBuilder() *policyProviderBuilder {
+	return &policyProviderBuilder{
+		provider: newProcedurePolicyProvider(),
+	}
+}
+
+func (pb *policyProviderBuilder) registerServiceProcedure(service, procedure string, pol *Policy) *policyProviderBuilder {
+	pb.provider.registerServiceProcedure(service, procedure, pol)
+	return pb
+}
+
+func (pb *policyProviderBuilder) registerService(service string, pol *Policy) *policyProviderBuilder {
+	pb.provider.registerService(service, pol)
+	return pb
+}
+
+func (pb *policyProviderBuilder) registerDefault(pol *Policy) *policyProviderBuilder {
+	pb.provider.registerDefault(pol)
+	return pb
 }
