@@ -508,6 +508,24 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "concurrent retries",
+			// Policies:
+			//   default: 	   retries=2   timeout=50ms  backoff=25ms
+			// Request 1: "One retry"
+			// ms :  timeout:100ms
+			// 000:  initial request
+			// 050:  error: Timeout
+			// 075:  retry #1 (expected timeout for request: 25ms)
+			// 075:  Successful response
+			// Request 2: "Bad request does not retry"
+			// ms :  timeout:1s
+			// 000:  initial request
+			// 050:  Final error: Bad Request (no retries)
+			// Request 3: "Request times out"
+			// ms :  timeout:100ms
+			// 000:  initial request
+			// 050:  error: Timeout
+			// 075:  retry #1 (expected timeout for request: 25ms)
+			// 100:  final error: Timeout
 			policyProvider: newPolicyProviderBuilder().registerDefault(
 				NewPolicy(
 					Retries(2),
@@ -596,6 +614,29 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "multiple retry policies",
+			// Policies:
+			//   default: 	   retries=2   timeout=20ms  backoff=25ms
+			//   s="s": 	   retries=1   timeout=50ms  backoff=50ms
+			//   s="s",p="p":  retries=0   timeout=100ms backoff=None
+			//   s="s",p="fp": retries=100 timeout=10s   backoff=None // Fake policy
+			// Request 1: "Default retry policy"
+			// ms :  service:"ns" proc:"np" timeout:200ms expectedPolicy:"default"
+			// 000:  initial request
+			// 020:  error: Timeout
+			// 045:  retry #1
+			// 065:  error: Timeout
+			// 090:  retry #2
+			// 110:  final error: Timeout
+			// Request 2: "Service Retry Policy"
+			// ms :  service:"s" proc:"np" timeout:200ms expectedPolicy:"s="s""
+			// 000:  initial request
+			// 050:  error: Timeout
+			// 100:  retry #1
+			// 150:  final error: Timeout
+			// Request 2: "ServiceProcedure Retry Policy"
+			// ms :  service:"s" proc:"p" timeout:200ms expectedPolicy:"s="s",p="p""
+			// 000:  initial request
+			// 100:  final error: Timeout
 			policyProvider: newPolicyProviderBuilder().registerDefault(
 				NewPolicy(
 					Retries(2),
@@ -603,22 +644,22 @@ func TestMiddleware(t *testing.T) {
 					BackoffStrategy(newFixedBackoff(testtime.Millisecond*25)),
 				),
 			).registerService(
-				"serviceRoute",
+				"s",
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*50),
 					BackoffStrategy(newFixedBackoff(testtime.Millisecond*50)),
 				),
 			).registerServiceProcedure(
-				"serviceRoute",
-				"procedureRoute",
+				"s",
+				"p",
 				NewPolicy(
 					Retries(0),
 					MaxRequestTimeout(testtime.Millisecond*100),
 				),
 			).registerServiceProcedure(
-				"serviceRoute",
-				"fakeProcedureRoute",
+				"s",
+				"fp",
 				NewPolicy(
 					Retries(100),
 					MaxRequestTimeout(testtime.Millisecond*10000),
@@ -629,32 +670,32 @@ func TestMiddleware(t *testing.T) {
 					Actions: []MiddlewareAction{
 						RequestAction{
 							request: &transport.Request{
-								Service:   "nonServiceRoute",
-								Procedure: "nonProcedureRoute",
+								Service:   "ns",
+								Procedure: "np",
 								Body:      bytes.NewBufferString("body1"),
 							},
 							reqTimeout: testtime.Millisecond * 200,
 							events: []*OutboundEvent{
 								{
 									WantTimeout:    testtime.Millisecond * 20,
-									WantService:    "nonServiceRoute",
-									WantProcedure:  "nonProcedureRoute",
+									WantService:    "ns",
+									WantProcedure:  "np",
 									WantBody:       "body1",
 									WaitForTimeout: true,
 									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*20),
 								},
 								{
 									WantTimeout:    testtime.Millisecond * 20,
-									WantService:    "nonServiceRoute",
-									WantProcedure:  "nonProcedureRoute",
+									WantService:    "ns",
+									WantProcedure:  "np",
 									WantBody:       "body1",
 									WaitForTimeout: true,
 									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*20),
 								},
 								{
 									WantTimeout:   testtime.Millisecond * 20,
-									WantService:   "nonServiceRoute",
-									WantProcedure: "nonProcedureRoute",
+									WantService:   "ns",
+									WantProcedure: "np",
 									WantBody:      "body1",
 									GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*20),
 								},
@@ -663,24 +704,24 @@ func TestMiddleware(t *testing.T) {
 						},
 						RequestAction{
 							request: &transport.Request{
-								Service:   "serviceRoute",
-								Procedure: "nonProcedureRoute",
+								Service:   "s",
+								Procedure: "np",
 								Body:      bytes.NewBufferString("body2"),
 							},
 							reqTimeout: testtime.Millisecond * 200,
 							events: []*OutboundEvent{
 								{
 									WantTimeout:    testtime.Millisecond * 50,
-									WantService:    "serviceRoute",
-									WantProcedure:  "nonProcedureRoute",
+									WantService:    "s",
+									WantProcedure:  "np",
 									WantBody:       "body2",
 									WaitForTimeout: true,
 									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 								},
 								{
 									WantTimeout:   testtime.Millisecond * 50,
-									WantService:   "serviceRoute",
-									WantProcedure: "nonProcedureRoute",
+									WantService:   "s",
+									WantProcedure: "np",
 									WantBody:      "body2",
 									GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 								},
@@ -689,16 +730,16 @@ func TestMiddleware(t *testing.T) {
 						},
 						RequestAction{
 							request: &transport.Request{
-								Service:   "serviceRoute",
-								Procedure: "procedureRoute",
+								Service:   "s",
+								Procedure: "p",
 								Body:      bytes.NewBufferString("body3"),
 							},
 							reqTimeout: testtime.Millisecond * 200,
 							events: []*OutboundEvent{
 								{
 									WantTimeout:   testtime.Millisecond * 100,
-									WantService:   "serviceRoute",
-									WantProcedure: "procedureRoute",
+									WantService:   "s",
+									WantProcedure: "p",
 									WantBody:      "body3",
 									GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*100),
 								},
