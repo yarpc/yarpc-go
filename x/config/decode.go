@@ -24,9 +24,8 @@ import (
 	"errors"
 	"fmt"
 
-	"go.uber.org/yarpc/internal/config"
-
 	"github.com/uber-go/mapdecode"
+	"go.uber.org/yarpc/internal/config"
 )
 
 type yarpcConfig struct {
