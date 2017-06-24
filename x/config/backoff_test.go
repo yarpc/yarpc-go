@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/config"
 	"go.uber.org/yarpc/internal/whitespace"
 	"gopkg.in/yaml.v2"
 )
@@ -72,18 +73,18 @@ func TestBackoffConfig(t *testing.T) {
 			var data map[string]interface{}
 			require.NoError(t, yaml.Unmarshal([]byte(text), &data))
 
-			var config Backoff
-			err := decodeInto(&config, data, interpolateWith(mapVariableResolver(tt.env)))
+			var cfg Backoff
+			err := config.DecodeInto(&cfg, data, config.InterpolateWith(mapVariableResolver(tt.env)))
 
 			if err == nil {
-				_, err = config.Strategy()
+				_, err = cfg.Strategy()
 			}
 
 			if tt.err {
 				require.NotNil(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, config, tt.want)
+				assert.Equal(t, cfg, tt.want)
 			}
 		})
 	}

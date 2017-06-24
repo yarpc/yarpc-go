@@ -187,7 +187,7 @@ func TestInterpolateHook(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			var dest someStruct
-			err := decodeInto(&dest, tt.give, interpolateWith(mapVariableResolver(tt.env)))
+			err := DecodeInto(&dest, tt.give, InterpolateWith(mapVariableResolver(tt.env)))
 
 			if len(tt.wantErrors) > 0 {
 				require.Error(t, err)
