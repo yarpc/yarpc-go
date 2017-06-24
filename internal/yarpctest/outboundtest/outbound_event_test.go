@@ -66,8 +66,10 @@ func TestOutboundEvent(t *testing.T) {
 				Headers:         transport.NewHeaders().With("key", "val"),
 				Body:            bytes.NewBufferString("body"),
 			},
-			reqTimeout: time.Second,
+			reqTimeout: testtime.Second,
 			event: &OutboundEvent{
+				WantTimeout:         testtime.Second,
+				WantTimeoutBounds:   testtime.Millisecond * 20,
 				WantCaller:          "caller",
 				WantService:         "service",
 				WantEncoding:        transport.Encoding("encoding"),
@@ -95,7 +97,7 @@ func TestOutboundEvent(t *testing.T) {
 				Headers:         transport.NewHeaders().With("key2", "val2"),
 				Body:            bytes.NewBufferString("body"),
 			},
-			reqTimeout: time.Second,
+			reqTimeout: testtime.Second,
 			event: &OutboundEvent{
 				WantCaller:          "caller",
 				WantService:         "service",
@@ -135,10 +137,12 @@ func TestOutboundEvent(t *testing.T) {
 				Headers:         transport.NewHeaders().With("key2", "val2"),
 				Body:            bytes.NewBufferString("body"),
 			},
-			reqTimeout: time.Second,
+			reqTimeout: testtime.Second,
 			event: &OutboundEvent{
-				WantBody:     "body",
-				GiveRespBody: "respbody",
+				WantTimeout:       testtime.Second,
+				WantTimeoutBounds: testtime.Millisecond * 20,
+				WantBody:          "body",
+				GiveRespBody:      "respbody",
 			},
 			wantBody:            "respbody",
 			wantExecutionStatus: iyarpctest.Finished,
@@ -148,8 +152,9 @@ func TestOutboundEvent(t *testing.T) {
 			request: &transport.Request{
 				Body: bytes.NewBufferString("body"),
 			},
-			reqTimeout: time.Second,
+			reqTimeout: testtime.Second,
 			event: &OutboundEvent{
+				WantTimeout:  testtime.Second,
 				WantBody:     "body",
 				GiveRespBody: "respbody",
 			},
@@ -157,12 +162,61 @@ func TestOutboundEvent(t *testing.T) {
 			wantExecutionStatus: iyarpctest.Finished,
 		},
 		{
+			msg: "timeout smaller than expected",
+			request: &transport.Request{
+				Body: bytes.NewBufferString("body"),
+			},
+			reqTimeout: testtime.Second,
+			event: &OutboundEvent{
+				WantTimeout:  testtime.Second * 2,
+				WantBody:     "body",
+				GiveRespBody: "respbody",
+			},
+			wantBody:            "respbody",
+			wantExecutionStatus: iyarpctest.Finished,
+			wantExecutionErrors: []string{
+				"deadline was less than expected",
+			},
+		},
+		{
+			msg: "timeout larger than expected",
+			request: &transport.Request{
+				Body: bytes.NewBufferString("body"),
+			},
+			reqTimeout: testtime.Second * 2,
+			event: &OutboundEvent{
+				WantTimeout:  testtime.Second,
+				WantBody:     "body",
+				GiveRespBody: "respbody",
+			},
+			wantBody:            "respbody",
+			wantExecutionStatus: iyarpctest.Finished,
+			wantExecutionErrors: []string{
+				"deadline was greater than expected",
+			},
+		},
+		{
+			msg: "wanttimeout with no deadline",
+			request: &transport.Request{
+				Body: bytes.NewBufferString("body"),
+			},
+			event: &OutboundEvent{
+				WantTimeout:  testtime.Second,
+				WantBody:     "body",
+				GiveRespBody: "respbody",
+			},
+			wantExecutionStatus: iyarpctest.Fatal,
+			wantExecutionErrors: []string{
+				"wanted context deadline, but there was no deadline",
+			},
+		},
+		{
 			msg: "invalid number of header keys",
 			request: &transport.Request{
 				Headers: transport.NewHeaders().With("key2", "val2").With("key3", "val3"),
 				Body:    bytes.NewBufferString("body"),
 			},
-			reqTimeout: time.Second,
+			reqTimeout: testtime.Second,
 			event: &OutboundEvent{
 				WantHeaders:  transport.NewHeaders().With("key", "val"),
 				WantBody:     "body",
@@ -181,7 +235,7 @@ func TestOutboundEvent(t *testing.T) {
 			request: &transport.Request{
 				Body: bytes.NewBufferString("body22"),
 			},
-			reqTimeout: time.Second,
+			reqTimeout: testtime.Second,
 			event: &OutboundEvent{
 				WantBody:     "body",
 				GiveRespBody: "respbody",
@@ -197,7 +251,7 @@ func TestOutboundEvent(t *testing.T) {
 			request: &transport.Request{
 				Body: bytes.NewBufferString("body"),
 			},
-			reqTimeout: time.Millisecond * 10,
+			reqTimeout: testtime.Millisecond * 10,
 			event: &OutboundEvent{
 				WaitForTimeout: true,
 				WantBody:       "body",
@@ -245,7 +299,7 @@ func TestOutboundEvent(t *testing.T) {
 			testResult := iyarpctest.WithFakeTestingT(func(ft require.TestingT) {
 				ctx := context.Background()
 				if tt.reqTimeout != 0 {
-					newCtx, cancel := context.WithTimeout(ctx, testtime.Scale(tt.reqTimeout))
+					newCtx, cancel := context.WithTimeout(ctx, tt.reqTimeout)
 					defer cancel()
 					ctx = newCtx
 				}
@@ -380,7 +434,7 @@ func TestOutboundCallable(t *testing.T) {
 
 				ctx := context.Background()
 				if tt.reqTimeout != 0 {
-					newCtx, cancel := context.WithTimeout(ctx, testtime.Scale(tt.reqTimeout))
+					newCtx, cancel := context.WithTimeout(ctx, tt.reqTimeout)
 					defer cancel()
 					ctx = newCtx
 				}
