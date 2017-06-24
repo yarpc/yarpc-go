@@ -32,37 +32,39 @@ type AttributeMap map[string]interface{}
 
 // PopString will pop a value from the attribute map and return the string
 // it points to, or an error if it couldn't pop the value and decode.
-func (m AttributeMap) PopString(name string) (s string, err error) {
-	_, err = m.Pop(name, &s)
-	return
+func (m AttributeMap) PopString(name string) (string, error) {
+	var s string
+	_, err := m.Pop(name, &s)
+	return s, err
 }
 
 // PopBool will pop a value from the attribute map and return the bool
 // it points to, or an error if it couldn't pop the value and decode.
-func (m AttributeMap) PopBool(name string) (b bool, err error) {
-	_, err = m.Pop(name, &b)
-	return
+func (m AttributeMap) PopBool(name string) (bool, error) {
+	var b bool
+	_, err := m.Pop(name, &b)
+	return b, err
 }
 
 // Pop removes the named key from the AttributeMap and decodes the value into
 // the dst interface.
-func (m AttributeMap) Pop(name string, dst interface{}, opts ...mapdecode.Option) (ok bool, err error) {
-	ok, err = m.Get(name, dst, opts...)
+func (m AttributeMap) Pop(name string, dst interface{}, opts ...mapdecode.Option) (bool, error) {
+	ok, err := m.Get(name, dst, opts...)
 	if ok {
 		delete(m, name)
 	}
-	return
+	return ok, err
 }
 
 // Get grabs a value from the attribute map and decodes it into the dst
 // interface.
-func (m AttributeMap) Get(name string, dst interface{}, opts ...mapdecode.Option) (ok bool, err error) {
+func (m AttributeMap) Get(name string, dst interface{}, opts ...mapdecode.Option) (bool, error) {
 	v, ok := m[name]
 	if !ok {
 		return ok, nil
 	}
 
-	err = DecodeInto(dst, v, opts...)
+	err := DecodeInto(dst, v, opts...)
 	if err != nil {
 		err = fmt.Errorf("failed to read attribute %q: %v. got error: %s", name, v, err)
 	}
