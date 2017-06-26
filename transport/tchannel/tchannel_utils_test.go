@@ -65,17 +65,23 @@ func (w *bufferArgWriter) Flush() error { return nil }
 //
 // Provide nil for arg2 or arg3 to get Arg2Reader or Arg3Reader to fail.
 type fakeInboundCall struct {
-	service    string
-	caller     string
-	method     string
-	format     tchannel.Format
-	arg2, arg3 []byte
-	resp       inboundCallResponse
+	service         string
+	caller          string
+	method          string
+	shardkey        string
+	routingkey      string
+	routingdelegate string
+	format          tchannel.Format
+	arg2, arg3      []byte
+	resp            inboundCallResponse
 }
 
 func (i *fakeInboundCall) ServiceName() string           { return i.service }
 func (i *fakeInboundCall) CallerName() string            { return i.caller }
 func (i *fakeInboundCall) MethodString() string          { return i.method }
+func (i *fakeInboundCall) ShardKey() string              { return i.shardkey }
+func (i *fakeInboundCall) RoutingKey() string            { return i.routingkey }
+func (i *fakeInboundCall) RoutingDelegate() string       { return i.routingdelegate }
 func (i *fakeInboundCall) Format() tchannel.Format       { return i.format }
 func (i *fakeInboundCall) Response() inboundCallResponse { return i.resp }
 

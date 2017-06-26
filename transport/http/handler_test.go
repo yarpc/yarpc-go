@@ -52,6 +52,9 @@ func TestHandlerSuccess(t *testing.T) {
 	headers.Set(TTLMSHeader, "1000")
 	headers.Set(ProcedureHeader, "nyuck")
 	headers.Set(ServiceHeader, "curly")
+	headers.Set(ShardKeyHeader, "shard")
+	headers.Set(RoutingKeyHeader, "routekey")
+	headers.Set(RoutingDelegateHeader, "routedelegate")
 
 	router := transporttest.NewMockRouter(mockCtrl)
 	rpcHandler := transporttest.NewMockUnaryHandler(mockCtrl)
@@ -68,11 +71,14 @@ func TestHandlerSuccess(t *testing.T) {
 		),
 		transporttest.NewRequestMatcher(
 			t, &transport.Request{
-				Caller:    "moe",
-				Service:   "curly",
-				Encoding:  raw.Encoding,
-				Procedure: "nyuck",
-				Body:      bytes.NewReader([]byte("Nyuck Nyuck")),
+				Caller:          "moe",
+				Service:         "curly",
+				Encoding:        raw.Encoding,
+				Procedure:       "nyuck",
+				ShardKey:        "shard",
+				RoutingKey:      "routekey",
+				RoutingDelegate: "routedelegate",
+				Body:            bytes.NewReader([]byte("Nyuck Nyuck")),
 			},
 		),
 		gomock.Any(),

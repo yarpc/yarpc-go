@@ -9,6 +9,8 @@ v1.10.0 (unreleased)
 -   Improves resilience of HTTP and TChannel by broadcasting peer availability
     to peer lists like round robin. A round robin or least pending peer list
     blocks requests until a peer becomes available.
+-   Add support for reading ShardKey, RoutingKey, and RoutingDelegate for
+    inbound http and tchannel calls.
 
 
 v1.9.0 (2017-06-08)

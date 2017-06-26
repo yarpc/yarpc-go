@@ -26,6 +26,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/config"
 )
 
 type buildableOutbounds struct {
@@ -80,7 +81,7 @@ func (b *builder) Build() (yarpc.Config, error) {
 		var err error
 		if !ok {
 			// No configuration provided for the transport. Use an empty map.
-			cv, err = spec.Transport.Decode(attributeMap{}, interpolateWith(b.kit.resolver))
+			cv, err = spec.Transport.Decode(config.AttributeMap{}, config.InterpolateWith(b.kit.resolver))
 			if err != nil {
 				return yarpc.Config{}, err
 			}
@@ -174,8 +175,8 @@ func buildOnewayOutbound(o *buildableOutbound, t transport.Transport, k *Kit) (t
 	return result.(transport.OnewayOutbound), nil
 }
 
-func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs attributeMap) error {
-	cv, err := spec.Transport.Decode(attrs, interpolateWith(b.kit.resolver))
+func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs config.AttributeMap) error {
+	cv, err := spec.Transport.Decode(attrs, config.InterpolateWith(b.kit.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode transport configuration: %v", err)
 	}
@@ -184,13 +185,13 @@ func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs attribut
 	return nil
 }
 
-func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeMap) error {
+func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs config.AttributeMap) error {
 	if spec.Inbound == nil {
 		return fmt.Errorf("transport %q does not support inbound requests", spec.Name)
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.Inbound.Decode(attrs, interpolateWith(b.kit.resolver))
+	cv, err := spec.Inbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode inbound configuration: %v", err)
 	}
@@ -203,7 +204,7 @@ func (b *builder) AddInboundConfig(spec *compiledTransportSpec, attrs attributeM
 }
 
 func (b *builder) AddImplicitOutbound(
-	spec *compiledTransportSpec, outboundKey, service string, attrs attributeMap,
+	spec *compiledTransportSpec, outboundKey, service string, attrs config.AttributeMap,
 ) error {
 	var errs error
 	supportsOutbound := false
@@ -230,14 +231,14 @@ func (b *builder) AddImplicitOutbound(
 }
 
 func (b *builder) AddUnaryOutbound(
-	spec *compiledTransportSpec, outboundKey, service string, attrs attributeMap,
+	spec *compiledTransportSpec, outboundKey, service string, attrs config.AttributeMap,
 ) error {
 	if spec.UnaryOutbound == nil {
 		return fmt.Errorf("transport %q does not support unary outbound requests", spec.Name)
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.UnaryOutbound.Decode(attrs, interpolateWith(b.kit.resolver))
+	cv, err := spec.UnaryOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode unary outbound configuration: %v", err)
 	}
@@ -253,14 +254,14 @@ func (b *builder) AddUnaryOutbound(
 }
 
 func (b *builder) AddOnewayOutbound(
-	spec *compiledTransportSpec, outboundKey, service string, attrs attributeMap,
+	spec *compiledTransportSpec, outboundKey, service string, attrs config.AttributeMap,
 ) error {
 	if spec.OnewayOutbound == nil {
 		return fmt.Errorf("transport %q does not support oneway outbound requests", spec.Name)
 	}
 
 	b.needTransport(spec)
-	cv, err := spec.OnewayOutbound.Decode(attrs, interpolateWith(b.kit.resolver))
+	cv, err := spec.OnewayOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
 	if err != nil {
 		return fmt.Errorf("failed to decode oneway outbound configuration: %v", err)
 	}

@@ -93,6 +93,21 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		return false
 	}
 
+	if l.ShardKey != r.ShardKey {
+		m.t.Logf("Shard Key mismatch: %s != %s", l.ShardKey, r.ShardKey)
+		return false
+	}
+
+	if l.RoutingKey != r.RoutingKey {
+		m.t.Logf("Routing Key mismatch: %s != %s", l.RoutingKey, r.RoutingKey)
+		return false
+	}
+
+	if l.RoutingDelegate != r.RoutingDelegate {
+		m.t.Logf("Routing Delegate mismatch: %s != %s", l.RoutingDelegate, r.RoutingDelegate)
+		return false
+	}
+
 	// len check to handle nil vs empty cases gracefully.
 	if l.Headers.Len() != r.Headers.Len() {
 		if !reflect.DeepEqual(l.Headers, r.Headers) {

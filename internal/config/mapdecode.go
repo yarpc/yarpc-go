@@ -34,12 +34,16 @@ const (
 	_interpolateOption = "interpolate"
 )
 
-func decodeInto(dst interface{}, src interface{}, opts ...mapdecode.Option) error {
+// DecodeInto will decode the src's data into the dst interface.
+func DecodeInto(dst interface{}, src interface{}, opts ...mapdecode.Option) error {
 	opts = append(opts, mapdecode.TagName(_tagName))
 	return mapdecode.Decode(dst, src, opts...)
 }
 
-func interpolateWith(resolver interpolate.VariableResolver) mapdecode.Option {
+// InterpolateWith is a MapDecode option that will read a structField's tag
+// information, and if the `interpolate` option is set, it will use the
+// interpolate resolver to alter data as it's being decoded into the struct.
+func InterpolateWith(resolver interpolate.VariableResolver) mapdecode.Option {
 	return mapdecode.FieldHook(func(dest reflect.StructField, srcData reflect.Value) (reflect.Value, error) {
 		shouldInterpolate := false
 

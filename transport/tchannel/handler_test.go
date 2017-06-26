@@ -82,12 +82,15 @@ func TestHandlerErrors(t *testing.T) {
 			transporttest.NewContextMatcher(t),
 			transporttest.NewRequestMatcher(t,
 				&transport.Request{
-					Caller:    "caller",
-					Service:   "service",
-					Headers:   transport.HeadersFromMap(tt.wantHeaders),
-					Encoding:  transport.Encoding(tt.format),
-					Procedure: "hello",
-					Body:      bytes.NewReader([]byte("world")),
+					Caller:          "caller",
+					Service:         "service",
+					Headers:         transport.HeadersFromMap(tt.wantHeaders),
+					Encoding:        transport.Encoding(tt.format),
+					Procedure:       "hello",
+					ShardKey:        "shard",
+					RoutingKey:      "routekey",
+					RoutingDelegate: "routedelegate",
+					Body:            bytes.NewReader([]byte("world")),
 				}),
 			gomock.Any(),
 		).Return(nil)
@@ -97,13 +100,16 @@ func TestHandlerErrors(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 		defer cancel()
 		tchHandler.handle(ctx, &fakeInboundCall{
-			service: "service",
-			caller:  "caller",
-			format:  tt.format,
-			method:  "hello",
-			arg2:    tt.headers,
-			arg3:    []byte("world"),
-			resp:    respRecorder,
+			service:         "service",
+			caller:          "caller",
+			format:          tt.format,
+			method:          "hello",
+			shardkey:        "shard",
+			routingkey:      "routekey",
+			routingdelegate: "routedelegate",
+			arg2:            tt.headers,
+			arg3:            []byte("world"),
+			resp:            respRecorder,
 		})
 
 		assert.NoError(t, respRecorder.systemErr, "did not expect an error")

@@ -78,12 +78,15 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) 
 		return yarpcerrors.NotFoundErrorf("only POST is allowed")
 	}
 	treq := &transport.Request{
-		Caller:    popHeader(req.Header, CallerHeader),
-		Service:   popHeader(req.Header, ServiceHeader),
-		Procedure: popHeader(req.Header, ProcedureHeader),
-		Encoding:  transport.Encoding(popHeader(req.Header, EncodingHeader)),
-		Headers:   applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
-		Body:      req.Body,
+		Caller:          popHeader(req.Header, CallerHeader),
+		Service:         popHeader(req.Header, ServiceHeader),
+		Procedure:       popHeader(req.Header, ProcedureHeader),
+		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
+		ShardKey:        popHeader(req.Header, ShardKeyHeader),
+		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
+		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
+		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
+		Body:            req.Body,
 	}
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err

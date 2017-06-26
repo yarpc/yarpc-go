@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/interpolate"
 	"go.uber.org/yarpc/internal/whitespace"
 	"gopkg.in/yaml.v2"
 )
@@ -1119,5 +1120,12 @@ func TestConfigurator(t *testing.T) {
 			require.NoError(t, err, "expected success")
 			assert.Equal(t, tt.wantConfig, gotConfig, "config did not match")
 		})
+	}
+}
+
+func mapVariableResolver(m map[string]string) interpolate.VariableResolver {
+	return func(name string) (value string, ok bool) {
+		value, ok = m[name]
+		return
 	}
 }

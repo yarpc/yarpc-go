@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/internal/config"
 	"go.uber.org/yarpc/internal/interpolate"
 	"gopkg.in/yaml.v2"
 )
@@ -186,7 +187,7 @@ func (c *Configurator) LoadConfigFromYAML(serviceName string, r io.Reader) (yarp
 // expected to conform to.
 func (c *Configurator) LoadConfig(serviceName string, data interface{}) (yarpc.Config, error) {
 	var cfg yarpcConfig
-	if err := decodeInto(&cfg, data); err != nil {
+	if err := config.DecodeInto(&cfg, data); err != nil {
 		return yarpc.Config{}, err
 	}
 	return c.load(serviceName, &cfg)
@@ -258,7 +259,7 @@ func (c *Configurator) loadInboundInto(b *builder, i inbound) error {
 func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) error {
 	// This matches the signature of builder.AddImplicitOutbound,
 	// AddUnaryOutbound and AddOnewayOutbound
-	type adder func(*compiledTransportSpec, string, string, attributeMap) error
+	type adder func(*compiledTransportSpec, string, string, config.AttributeMap) error
 
 	loadUsing := func(o *outbound, adder adder) error {
 		spec, err := c.spec(o.Type)
@@ -292,7 +293,7 @@ func (c *Configurator) loadOutboundInto(b *builder, name string, cfg outbounds) 
 	return nil
 }
 
-func (c *Configurator) loadTransportInto(b *builder, name string, attrs attributeMap) error {
+func (c *Configurator) loadTransportInto(b *builder, name string, attrs config.AttributeMap) error {
 	spec, err := c.spec(name)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration for transport %q: %v", name, err)

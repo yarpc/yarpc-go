@@ -45,6 +45,10 @@ type inboundCall interface {
 	ServiceName() string
 	CallerName() string
 	MethodString() string
+	ShardKey() string
+	RoutingKey() string
+	RoutingDelegate() string
+
 	Format() tchannel.Format
 
 	Arg2Reader() (tchannel.ArgReader, error)
@@ -127,10 +131,13 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	}
 
 	treq := &transport.Request{
-		Caller:    call.CallerName(),
-		Service:   call.ServiceName(),
-		Encoding:  transport.Encoding(call.Format()),
-		Procedure: call.MethodString(),
+		Caller:          call.CallerName(),
+		Service:         call.ServiceName(),
+		Encoding:        transport.Encoding(call.Format()),
+		Procedure:       call.MethodString(),
+		ShardKey:        call.ShardKey(),
+		RoutingKey:      call.RoutingKey(),
+		RoutingDelegate: call.RoutingDelegate(),
 	}
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
