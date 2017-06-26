@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // parseTTL takes a context parses the given TTL, clamping the context to that

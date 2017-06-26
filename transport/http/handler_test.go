@@ -37,9 +37,9 @@ import (
 	yarpc "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestHandlerSuccess(t *testing.T) {

@@ -26,11 +26,11 @@ import (
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (

@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const (

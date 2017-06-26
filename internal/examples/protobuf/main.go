@@ -31,11 +31,11 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testutils"
+	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 )
 

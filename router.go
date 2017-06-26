@@ -26,8 +26,8 @@ import (
 	"sort"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/humanize"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (

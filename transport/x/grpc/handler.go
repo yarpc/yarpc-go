@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
+	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

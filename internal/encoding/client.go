@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 type clientEncodingError struct {

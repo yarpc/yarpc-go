@@ -34,11 +34,11 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces

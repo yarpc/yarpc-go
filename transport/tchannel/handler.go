@@ -30,10 +30,10 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/yarpcerrors"
 	ncontext "golang.org/x/net/context"
 )
 

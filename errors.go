@@ -20,7 +20,7 @@
 
 package yarpc
 
-import "go.uber.org/yarpc/api/yarpcerrors"
+import "go.uber.org/yarpc/yarpcerrors"
 
 // IsBadRequestError returns true on an error returned by RPC clients if the
 // request was rejected by YARPC because it was invalid.

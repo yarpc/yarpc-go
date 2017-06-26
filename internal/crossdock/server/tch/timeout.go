@@ -23,7 +23,7 @@ package tch
 import (
 	"time"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/raw"

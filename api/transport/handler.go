@@ -27,7 +27,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zapcore"
 )
 

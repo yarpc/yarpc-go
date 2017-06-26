@@ -22,7 +22,7 @@ package tchannel
 
 import (
 	"github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (

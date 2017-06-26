@@ -23,7 +23,7 @@ package request
 import (
 	"context"
 
-	"go.uber.org/yarpc/api/yarpcerrors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // ValidateUnaryContext validates that a context for a unary request is valid

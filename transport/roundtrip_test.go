@@ -35,12 +35,12 @@ import (
 	"github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // all tests in this file should use these names for callers and services.

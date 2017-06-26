@@ -29,10 +29,10 @@ import (
 	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/serialize"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const (

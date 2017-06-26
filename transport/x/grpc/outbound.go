@@ -29,9 +29,9 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	internalsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
+	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"

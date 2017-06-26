@@ -20,7 +20,7 @@
 
 package http
 
-import "go.uber.org/yarpc/api/yarpcerrors"
+import "go.uber.org/yarpc/yarpcerrors"
 
 var (
 	// CodeToStatusCode maps all Codes to their corresponding HTTP status code.

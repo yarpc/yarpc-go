@@ -29,13 +29,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestIntegration(t *testing.T) {

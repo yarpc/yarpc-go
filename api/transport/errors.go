@@ -20,7 +20,7 @@
 
 package transport
 
-import "go.uber.org/yarpc/api/yarpcerrors"
+import "go.uber.org/yarpc/yarpcerrors"
 
 // InboundBadRequestError builds an error which indicates that an inbound
 // cannot process a request because it is a bad request.

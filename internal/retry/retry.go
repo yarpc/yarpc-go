@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/api/yarpcerrors"
 	"go.uber.org/yarpc/internal/ioutil"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // MiddlewareOption customizes the behavior of a retry middleware.
