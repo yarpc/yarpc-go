@@ -31,7 +31,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/x/protobuf"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/yarpcproto"
 )
 

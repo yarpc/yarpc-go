@@ -23,7 +23,7 @@ Package main provides a protoc plugin that generates code for the protobuf encod
 
 To use:
 	go get github.com/gogo/protobuf/protoc-gen-gogoslick
-	go get go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go
+	go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
 	protoc --gogoslick_out=. foo.proto
 	protoc --yarpc-go_out=. foo.proto
 */
@@ -50,7 +50,7 @@ package main
 import (
 	"log"
 
-	"go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go/internal/lib"
+	"go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
 	"go.uber.org/yarpc/internal/protoplugin"
 )
 

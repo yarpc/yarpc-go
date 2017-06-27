@@ -22,9 +22,9 @@ $(BIN)/thriftrw-plugin-yarpc: ./encoding/thrift/thriftrw-plugin-yarpc/*.go
 	@mkdir -p $(BIN)
 	go build -o $(BIN)/thriftrw-plugin-yarpc ./encoding/thrift/thriftrw-plugin-yarpc
 
-$(BIN)/protoc-gen-yarpc-go: ./encoding/x/protobuf/protoc-gen-yarpc-go/*.go
+$(BIN)/protoc-gen-yarpc-go: ./encoding/protobuf/protoc-gen-yarpc-go/*.go
 	@mkdir -p $(BIN)
-	go build -o $(BIN)/protoc-gen-yarpc-go ./encoding/x/protobuf/protoc-gen-yarpc-go
+	go build -o $(BIN)/protoc-gen-yarpc-go ./encoding/protobuf/protoc-gen-yarpc-go
 
 .PHONY: build
 build: __eval_packages ## go build all packages

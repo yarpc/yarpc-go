@@ -18,13 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package x contains experimental components. Breaking changes may be made to
-// these APIs between minor releases.
-//
-// If you import subpackages of x/, ensure that you lock to the minor version.
-// In Glide, this is,
-//
-// 	version: ~X.Y
-//
-// Where X.Y is the version of YARPC you are using.
-package x
+package testing
+
+import (
+	// this is to make sure scripts/cover.sh picks this up with .Deps
+	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
+)

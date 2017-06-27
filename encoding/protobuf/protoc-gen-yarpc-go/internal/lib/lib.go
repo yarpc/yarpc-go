@@ -179,7 +179,7 @@ var Runner = protoplugin.NewRunner(
 		"github.com/gogo/protobuf/proto",
 		"go.uber.org/yarpc",
 		"go.uber.org/yarpc/api/transport",
-		"go.uber.org/yarpc/encoding/x/protobuf",
+		"go.uber.org/yarpc/encoding/protobuf",
 	},
 	"pb.yarpc.go",
 )
