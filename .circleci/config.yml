@@ -1,28 +1,40 @@
+defaults: &defaults
+  working_directory: /checkout
+  resource_class: large
+  docker:
+    - image: golang:1.8.3
+  steps:
+    - checkout
+    - setup_remote_docker:
+        reusable: true
+        exclusive: true
+    - run: make ci
+
+
 version: 2
 jobs:
+  crossdock:
+    environment:
+      - CI_TYPES: "crossdock"
+    <<: *defaults
+
+  test:
+    environment:
+      - DOCKER_GO_VERSION: 1.8
+      - CI_TYPES: "deps lint test examples"
+    <<: *defaults
+
+  coverage:
+    environment:
+      - DOCKER_GO_VERSION: "1.7"
+      - CI_TYPES: "deps cover"
+    <<: *defaults
+
+workflows:
+  version: 2
+
   build:
-    docker:
-      - image: golang:1.8.0
-    parallelism: 3
-    working_directory: /checkout
-    steps:
-      - checkout
-      - setup_remote_docker:
-          reusable: true
-          # run tests run on separate docker engines to avoid interference and
-          # and resource contention
-          exclusive: true
-      - restore_cache:
-          key: yarpc-go
-      - run:
-         name: run make ci
-         command:
-           case $CIRCLE_NODE_INDEX in
-           0) CI_TYPES=crossdock make ci ;;
-           1) DOCKER_GO_VERSION=1.8 CI_TYPES="deps lint test examples" make ci ;;
-           2) DOCKER_GO_VERSION=1.7 CI_TYPES="deps cover" make ci ;;
-           esac
-      - save_cache:
-          key: yarpc-go
-          paths:
-            - $HOME/.yarpc-go
+    jobs:
+      - crossdock
+      - test
+      - coverage
