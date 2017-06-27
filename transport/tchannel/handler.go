@@ -246,15 +246,9 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 
 func (rw *responseWriter) Close(hasSystemError bool) error {
 	retErr := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer)
-	// TODO: the only reason the transport.Request is needed is for this error,
-	// this whole setup with ResponseHeadersEncodeError should be changed
-	//if retErr != nil {
-	//retErr = encoding.ResponseHeadersEncodeError(rw.treq, err)
-	//}
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
-	// TODO: dhgfkjashhflkasjhflkjashflkasdjhfasldkjhasdlkjfhasdlkfhasdlkf
 	if !hasSystemError && rw.buffer == nil {
 		bodyWriter, err := rw.response.Arg3Writer()
 		if err != nil {
