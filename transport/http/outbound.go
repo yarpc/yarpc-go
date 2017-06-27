@@ -287,8 +287,6 @@ func (o *Outbound) callWithPeer(
 
 	span.SetTag("http.status_code", response.StatusCode)
 
-	// TODO: does this still apply with the new error API?
-	// TODO Behavior for 300-range status codes is undefined
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		appHeaders := applicationHeaders.FromHTTPHeaders(
 			response.Header, transport.NewHeaders())

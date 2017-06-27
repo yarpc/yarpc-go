@@ -89,19 +89,19 @@ type Encoding string
 func ValidateRequest(req *Request) error {
 	var missingParams []string
 	if req.Service == "" {
-		missingParams = append(missingParams, "service")
+		missingParams = append(missingParams, "service name")
 	}
 	if req.Procedure == "" {
 		missingParams = append(missingParams, "procedure")
 	}
 	if req.Caller == "" {
-		missingParams = append(missingParams, "caller")
+		missingParams = append(missingParams, "caller name")
 	}
 	if req.Encoding == "" {
 		missingParams = append(missingParams, "encoding")
 	}
 	if len(missingParams) > 0 {
-		return yarpcerrors.InvalidArgumentErrorf("missing %s", strings.Join(missingParams, ","))
+		return yarpcerrors.InvalidArgumentErrorf("missing %s", strings.Join(missingParams, ", "))
 	}
 	return nil
 }
