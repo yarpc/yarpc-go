@@ -142,7 +142,9 @@ examples: ## run all examples tests
 
 .PHONY: __eval_packages
 __eval_packages:
+ifndef PACKAGES
 	$(eval PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor))
+endif
 
 .PHONY: __eval_go_files
 __eval_go_files:
