@@ -191,7 +191,6 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 }
 
 type responseWriter struct {
-	// TODO: do we still need this?
 	failedWith error
 	format     tchannel.Format
 	headers    transport.Headers
@@ -210,7 +209,8 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.Items() {
 		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
-			panic("cannot use reserved header key " + k)
+			rw.failedWith = multierr.Append(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
+			return
 		}
 		rw.addHeader(k, v)
 	}
@@ -223,8 +223,7 @@ func (rw *responseWriter) addHeader(key string, value string) {
 func (rw *responseWriter) SetApplicationError() {
 	err := rw.response.SetApplicationError()
 	if err != nil {
-		// TODO: just set failedWith?
-		panic(fmt.Sprintf("SetApplicationError() failed: %v", err))
+		rw.failedWith = multierr.Append(rw.failedWith, fmt.Errorf("SetApplicationError() failed: %v", err))
 	}
 }
 
@@ -239,13 +238,13 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 
 	n, err := rw.buffer.Write(s)
 	if err != nil {
-		rw.failedWith = err
+		rw.failedWith = multierr.Append(rw.failedWith, err)
 	}
 	return n, err
 }
 
 func (rw *responseWriter) Close(hasSystemError bool) error {
-	retErr := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer)
+	retErr := multierr.Append(rw.failedWith, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
@@ -268,10 +267,7 @@ func (rw *responseWriter) Close(hasSystemError bool) error {
 		}
 	}
 
-	if retErr != nil {
-		return retErr
-	}
-	return rw.failedWith
+	return retErr
 }
 
 // getSystemError returns a tchannel.SystemError if the given error represents one.
