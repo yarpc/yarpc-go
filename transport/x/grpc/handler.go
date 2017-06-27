@@ -135,7 +135,7 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request,
 	case transport.Unary:
 		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseMD)
 	default:
-		return nil, yarpcerrors.UnimplementedErrorf("transport:grpc type:%s", handlerSpec.Type().String())
+		return nil, yarpcerrors.UnimplementedErrorf("transport grpc does not handle %s handlers", handlerSpec.Type().String())
 	}
 }
 

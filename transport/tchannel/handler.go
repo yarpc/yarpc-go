@@ -184,7 +184,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	default:
-		err = yarpcerrors.UnimplementedErrorf("transport:tchannel type:%s", spec.Type().String())
+		err = yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String())
 	}
 
 	return err

@@ -120,7 +120,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) 
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
-		err = yarpcerrors.UnimplementedErrorf("transport:http type:%s", spec.Type().String())
+		err = yarpcerrors.UnimplementedErrorf("transport http does not handle %s handlers", spec.Type().String())
 	}
 
 	updateSpanWithErr(span, err)
