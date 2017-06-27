@@ -22,7 +22,6 @@ package protobuf
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -30,6 +29,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/procedure"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 const (
@@ -114,20 +114,26 @@ func NewClient(serviceName string, clientConfig transport.ClientConfig, options 
 	return newClient(serviceName, clientConfig, options...)
 }
 
+// UnaryHandlerParams contains the parameters for creating a new UnaryHandler.
+type UnaryHandlerParams struct {
+	Handle     func(context.Context, proto.Message) (proto.Message, error)
+	NewRequest func() proto.Message
+}
+
 // NewUnaryHandler returns a new UnaryHandler.
-func NewUnaryHandler(
-	handle func(context.Context, proto.Message) (proto.Message, error),
-	newRequest func() proto.Message,
-) transport.UnaryHandler {
-	return newUnaryHandler(handle, newRequest)
+func NewUnaryHandler(params UnaryHandlerParams) transport.UnaryHandler {
+	return newUnaryHandler(params.Handle, params.NewRequest)
+}
+
+// OnewayHandlerParams contains the parameters for creating a new OnewayHandler.
+type OnewayHandlerParams struct {
+	Handle     func(context.Context, proto.Message) error
+	NewRequest func() proto.Message
 }
 
 // NewOnewayHandler returns a new OnewayHandler.
-func NewOnewayHandler(
-	handleOneway func(context.Context, proto.Message) error,
-	newRequest func() proto.Message,
-) transport.OnewayHandler {
-	return newOnewayHandler(handleOneway, newRequest)
+func NewOnewayHandler(params OnewayHandlerParams) transport.OnewayHandler {
+	return newOnewayHandler(params.Handle, params.NewRequest)
 }
 
 // ClientBuilderOptions returns ClientOptions that yarpc.InjectClients should use for a
@@ -145,11 +151,25 @@ func ClientBuilderOptions(_ transport.ClientConfig, structField reflect.StructFi
 
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
 func CastError(expectedType proto.Message, actualType proto.Message) error {
-	return fmt.Errorf("expected proto.Message to have type %T but had type %T", expectedType, actualType)
+	return yarpcerrors.InternalErrorf("expected proto.Message to have type %T but had type %T", expectedType, actualType)
 }
 
 type useJSON struct{}
 
 func (useJSON) apply(client *client) {
 	client.encoding = JSONEncoding
+}
+
+func uniqueLowercaseStrings(s []string) []string {
+	m := make(map[string]bool, len(s))
+	for _, e := range s {
+		if e != "" {
+			m[strings.ToLower(e)] = true
+		}
+	}
+	c := make([]string, 0, len(m))
+	for key := range m {
+		c = append(c, key)
+	}
+	return c
 }

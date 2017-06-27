@@ -22,15 +22,14 @@ package protobuf
 
 import (
 	"bytes"
-	"fmt"
 	"io"
-	"strings"
 	"sync"
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/buffer"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
@@ -42,20 +41,6 @@ var (
 		},
 	}
 )
-
-func uniqueLowercaseStrings(s []string) []string {
-	m := make(map[string]bool, len(s))
-	for _, e := range s {
-		if e != "" {
-			m[strings.ToLower(e)] = true
-		}
-	}
-	c := make([]string, 0, len(m))
-	for key := range m {
-		c = append(c, key)
-	}
-	return c
-}
 
 func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Message) error {
 	buf := buffer.Get()
@@ -73,7 +58,7 @@ func unmarshal(encoding transport.Encoding, reader io.Reader, message proto.Mess
 	case JSONEncoding:
 		return unmarshalJSON(body, message)
 	default:
-		return fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
+		return yarpcerrors.InternalErrorf("encoding.Expect should have handled encoding %q but did not", encoding)
 	}
 }
 
@@ -92,7 +77,7 @@ func marshal(encoding transport.Encoding, message proto.Message) ([]byte, func()
 	case JSONEncoding:
 		return marshalJSON(message)
 	default:
-		return nil, nil, fmt.Errorf("encoding.Expect should have handled encoding %q but did not", encoding)
+		return nil, nil, yarpcerrors.InternalErrorf("encoding.Expect should have handled encoding %q but did not", encoding)
 	}
 }
 

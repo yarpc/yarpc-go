@@ -56,7 +56,12 @@ func BuildEchoYARPCProcedures(server EchoYARPCServer) []transport.Procedure {
 	return protobuf.BuildProcedures(
 		"uber.yarpc.internal.crossdock.Echo",
 		map[string]transport.UnaryHandler{
-			"Echo": protobuf.NewUnaryHandler(handler.Echo, newEcho_EchoYARPCRequest),
+			"Echo": protobuf.NewUnaryHandler(
+				protobuf.UnaryHandlerParams{
+					Handle:     handler.Echo,
+					NewRequest: newEcho_EchoYARPCRequest,
+				},
+			),
 		},
 		map[string]transport.OnewayHandler{},
 	)
@@ -133,7 +138,12 @@ func BuildOnewayYARPCProcedures(server OnewayYARPCServer) []transport.Procedure 
 		"uber.yarpc.internal.crossdock.Oneway",
 		map[string]transport.UnaryHandler{},
 		map[string]transport.OnewayHandler{
-			"Echo": protobuf.NewOnewayHandler(handler.Echo, newOneway_EchoYARPCRequest),
+			"Echo": protobuf.NewOnewayHandler(
+				protobuf.OnewayHandlerParams{
+					Handle:     handler.Echo,
+					NewRequest: newOneway_EchoYARPCRequest,
+				},
+			),
 		},
 	)
 }

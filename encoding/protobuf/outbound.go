@@ -23,7 +23,6 @@ package protobuf
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
@@ -31,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/procedure"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 type client struct {
@@ -110,7 +110,7 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		return nil, nil, nil, nil, err
 	}
 	if transportRequest.Encoding != Encoding && transportRequest.Encoding != JSONEncoding {
-		return nil, nil, nil, nil, fmt.Errorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
+		return nil, nil, nil, nil, yarpcerrors.InternalErrorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
 	}
 	if request != nil {
 		requestData, cleanup, err := marshal(transportRequest.Encoding, request)

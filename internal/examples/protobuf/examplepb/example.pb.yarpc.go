@@ -58,8 +58,18 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 	return protobuf.BuildProcedures(
 		"uber.yarpc.internal.examples.protobuf.example.KeyValue",
 		map[string]transport.UnaryHandler{
-			"GetValue": protobuf.NewUnaryHandler(handler.GetValue, newKeyValue_GetValueYARPCRequest),
-			"SetValue": protobuf.NewUnaryHandler(handler.SetValue, newKeyValue_SetValueYARPCRequest),
+			"GetValue": protobuf.NewUnaryHandler(
+				protobuf.UnaryHandlerParams{
+					Handle:     handler.GetValue,
+					NewRequest: newKeyValue_GetValueYARPCRequest,
+				},
+			),
+			"SetValue": protobuf.NewUnaryHandler(
+				protobuf.UnaryHandlerParams{
+					Handle:     handler.SetValue,
+					NewRequest: newKeyValue_SetValueYARPCRequest,
+				},
+			),
 		},
 		map[string]transport.OnewayHandler{},
 	)
@@ -174,7 +184,12 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 		"uber.yarpc.internal.examples.protobuf.example.Sink",
 		map[string]transport.UnaryHandler{},
 		map[string]transport.OnewayHandler{
-			"Fire": protobuf.NewOnewayHandler(handler.Fire, newSink_FireYARPCRequest),
+			"Fire": protobuf.NewOnewayHandler(
+				protobuf.OnewayHandlerParams{
+					Handle:     handler.Fire,
+					NewRequest: newSink_FireYARPCRequest,
+				},
+			),
 		},
 	)
 }

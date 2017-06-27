@@ -21,11 +21,17 @@
 package protobuf
 
 import (
+	"reflect"
 	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestClientBuilderOptions(t *testing.T) {
+	assert.Nil(t, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue"`}))
+	assert.Equal(t, []ClientOption{UseJSON}, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue" proto:"json"`}))
+}
 
 func TestUniqueLowercaseStrings(t *testing.T) {
 	tests := []struct {
