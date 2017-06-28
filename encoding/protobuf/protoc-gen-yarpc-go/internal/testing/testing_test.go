@@ -30,7 +30,7 @@ import (
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/encoding/x/protobuf/protoc-gen-yarpc-go/internal/lib"
+	"go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
 	_ "go.uber.org/yarpc/yarpcproto" // needed for proto.RegisterFile for Oneway type
 )
 
@@ -38,11 +38,11 @@ func TestGolden(t *testing.T) {
 	codeGeneratorRequest := &plugin_go.CodeGeneratorRequest{
 		Parameter: proto.String("Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto"),
 		FileToGenerate: []string{
-			"encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
+			"encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
 		},
 		ProtoFile: []*descriptor.FileDescriptorProto{
 			getFileDescriptorProto(t, "yarpcproto/yarpc.proto"),
-			getFileDescriptorProto(t, "encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto"),
+			getFileDescriptorProto(t, "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto"),
 		},
 	}
 
@@ -51,7 +51,7 @@ func TestGolden(t *testing.T) {
 	expectedCodeGeneratorResponse := &plugin_go.CodeGeneratorResponse{
 		File: []*plugin_go.CodeGeneratorResponse_File{
 			{
-				Name:    proto.String("encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/testing.pb.yarpc.go"),
+				Name:    proto.String("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.pb.yarpc.go"),
 				Content: proto.String(string(content)),
 			},
 		},

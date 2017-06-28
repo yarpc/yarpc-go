@@ -18,37 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package protobuf
+package testing
 
 import (
-	"sort"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	// this is to make sure scripts/cover.sh picks this up with .Deps
+	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
 )
-
-func TestUniqueLowercaseStrings(t *testing.T) {
-	tests := []struct {
-		give []string
-		want []string
-	}{
-		{
-			give: []string{"foo", "bar", "baz"},
-			want: []string{"foo", "bar", "baz"},
-		},
-		{
-			give: []string{"foo", "BAR", "bAz"},
-			want: []string{"foo", "bar", "baz"},
-		},
-		{
-			give: []string{"foo", "BAR", "bAz", "bar"},
-			want: []string{"foo", "bar", "baz"},
-		},
-	}
-	for _, tt := range tests {
-		got := uniqueLowercaseStrings(tt.give)
-		sort.Strings(tt.want)
-		sort.Strings(got)
-		assert.Equal(t, tt.want, got)
-	}
-}

@@ -22,7 +22,7 @@ package exampleutil
 
 import (
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/x/protobuf"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"

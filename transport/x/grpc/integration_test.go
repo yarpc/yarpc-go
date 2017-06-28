@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/x/protobuf"
+	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"

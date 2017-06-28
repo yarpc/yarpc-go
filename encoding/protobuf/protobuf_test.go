@@ -18,13 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package x contains experimental components. Breaking changes may be made to
-// these APIs between minor releases.
-//
-// If you import subpackages of x/, ensure that you lock to the minor version.
-// In Glide, this is,
-//
-// 	version: ~X.Y
-//
-// Where X.Y is the version of YARPC you are using.
-package x
+package protobuf
+
+import (
+	"reflect"
+	"sort"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestClientBuilderOptions(t *testing.T) {
+	assert.Nil(t, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue"`}))
+	assert.Equal(t, []ClientOption{UseJSON}, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue" proto:"json"`}))
+}
+
+func TestUniqueLowercaseStrings(t *testing.T) {
+	tests := []struct {
+		give []string
+		want []string
+	}{
+		{
+			give: []string{"foo", "bar", "baz"},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			give: []string{"foo", "BAR", "bAz"},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			give: []string{"foo", "BAR", "bAz", "bar"},
+			want: []string{"foo", "bar", "baz"},
+		},
+	}
+	for _, tt := range tests {
+		got := uniqueLowercaseStrings(tt.give)
+		sort.Strings(tt.want)
+		sort.Strings(got)
+		assert.Equal(t, tt.want, got)
+	}
+}

@@ -18,6 +18,7 @@ coverage:
 # This list is generated using scripts/generate-cover-ignore.sh
 # All packages with .nocover files in them MUST be listed here
 ignore:
+ - /encoding/protobuf/protoc-gen-yarpc-go/internal/testing/
  - /encoding/thrift/internal/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient/
@@ -45,7 +46,6 @@ ignore:
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyfx/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlytest/
- - /encoding/x/protobuf/protoc-gen-yarpc-go/internal/testing/
  - /internal/crossdock/crossdockpb/
  - /internal/crossdock/thrift/echo/
  - /internal/crossdock/thrift/echo/echoclient/
