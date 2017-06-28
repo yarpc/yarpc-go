@@ -38,7 +38,7 @@ func TestConfig(t *testing.T) {
 
 		retryConfig string
 
-		wantPolicyProvider *procedurePolicyProvider
+		wantPolicyProvider *ProcedurePolicyProvider
 		wantError          []string
 	}
 	tests := []testStruct{

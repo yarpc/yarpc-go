@@ -88,7 +88,7 @@ type PolicyProviderSpec struct {
 
 // NewPolicyProvider creates a new policy provider that can be used in retry
 // middleware
-func NewPolicyProvider(src interface{}, opts ...mapdecode.Option) (*procedurePolicyProvider, error) {
+func NewPolicyProvider(src interface{}, opts ...mapdecode.Option) (*ProcedurePolicyProvider, error) {
 	var err error
 	var spec PolicyProviderSpec
 
@@ -118,8 +118,8 @@ func (spec PolicyProviderSpec) getPolicies(opts ...mapdecode.Option) (map[string
 	return nameToPolicyMap, errs
 }
 
-func (spec PolicyProviderSpec) getPolicyProvider(nameToPolicy map[string]*Policy) (*procedurePolicyProvider, error) {
-	policyProvider := newProcedurePolicyProvider()
+func (spec PolicyProviderSpec) getPolicyProvider(nameToPolicy map[string]*Policy) (*ProcedurePolicyProvider, error) {
+	policyProvider := NewProcedurePolicyProvider()
 
 	var errs error
 	if spec.Default != "" {
