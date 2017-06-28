@@ -26,11 +26,11 @@ import (
 )
 
 var (
-	// CodeToTChannelCode maps Codes to their corresponding TChannel SystemErrCode.
+	// _codeToTChannelCode maps Codes to their corresponding TChannel SystemErrCode.
 	//
 	// This only covers system-level errors, so if the code is not in the map,
 	// it should not result in TChannel returning a system-level error.
-	CodeToTChannelCode = map[yarpcerrors.Code]tchannel.SystemErrCode{
+	_codeToTChannelCode = map[yarpcerrors.Code]tchannel.SystemErrCode{
 		yarpcerrors.CodeCancelled:         tchannel.ErrCodeCancelled,
 		yarpcerrors.CodeUnknown:           tchannel.ErrCodeUnexpected,
 		yarpcerrors.CodeInvalidArgument:   tchannel.ErrCodeBadRequest,
@@ -42,8 +42,8 @@ var (
 		yarpcerrors.CodeResourceExhausted: tchannel.ErrCodeBusy,
 	}
 
-	// TChannelCodeToCode maps TChannel SystemErrCodes to their corresponding Code.
-	TChannelCodeToCode = map[tchannel.SystemErrCode]yarpcerrors.Code{
+	// _tchannelCodeToCode maps TChannel SystemErrCodes to their corresponding Code.
+	_tchannelCodeToCode = map[tchannel.SystemErrCode]yarpcerrors.Code{
 		tchannel.ErrCodeTimeout:    yarpcerrors.CodeDeadlineExceeded,
 		tchannel.ErrCodeCancelled:  yarpcerrors.CodeCancelled,
 		tchannel.ErrCodeBusy:       yarpcerrors.CodeUnavailable,

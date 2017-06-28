@@ -23,6 +23,7 @@ package http
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/buffer"
+	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -49,13 +51,17 @@ type handler struct {
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
-	err := yarpcerrors.ToYARPCError(h.callHandler(responseWriter, req))
+	service := popHeader(req.Header, ServiceHeader)
+	procedure := popHeader(req.Header, ProcedureHeader)
+	err := errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure)
 	if err == nil {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
-	// TODO: what to do with error?
-	if errorCodeText, marshalErr := yarpcerrors.ErrorCode(err).MarshalText(); marshalErr == nil {
+	if errorCodeText, marshalErr := yarpcerrors.ErrorCode(err).MarshalText(); marshalErr != nil {
+		err = yarpcerrors.InternalErrorf("error %s had code %v which is unknown", err.Error(), yarpcerrors.ErrorCode(err))
+		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
+	} else {
 		responseWriter.AddSystemHeader(ErrorCodeHeader, string(errorCodeText))
 	}
 	if name := yarpcerrors.ErrorName(err); name != "" {
@@ -63,24 +69,24 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	// TODO: would prefer to have error message be on a header so we can
 	// have non-nil responses with errors, discuss
-	_, _ = responseWriter.Write([]byte(yarpcerrors.ErrorMessage(err) + "\n"))
-	status, ok := CodeToStatusCode[yarpcerrors.ErrorCode(err)]
+	_, _ = fmt.Fprintln(responseWriter, yarpcerrors.ErrorMessage(err))
+	status, ok := _codeToStatusCode[yarpcerrors.ErrorCode(err)]
 	if !ok {
 		status = http.StatusInternalServerError
 	}
 	responseWriter.Close(status)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) error {
+func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) error {
 	start := time.Now()
 	defer req.Body.Close()
-	if req.Method != "POST" {
-		return yarpcerrors.NotFoundErrorf("only POST is allowed")
+	if req.Method != http.MethodPost {
+		return yarpcerrors.NotFoundErrorf("request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
-		Service:         popHeader(req.Header, ServiceHeader),
-		Procedure:       popHeader(req.Header, ProcedureHeader),
+		Service:         service,
+		Procedure:       procedure,
 		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
 		ShardKey:        popHeader(req.Header, ShardKeyHeader),
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
@@ -120,7 +126,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) 
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
-		err = yarpcerrors.UnimplementedErrorf("transport:http type:%s", spec.Type().String())
+		err = yarpcerrors.UnimplementedErrorf("transport http does not handle %s handlers", spec.Type().String())
 	}
 
 	updateSpanWithErr(span, err)

@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	// CodeToGRPCCode maps all Codes to their corresponding gRPC Code.
-	CodeToGRPCCode = map[yarpcerrors.Code]codes.Code{
+	// _codeToGRPCCode maps all Codes to their corresponding gRPC Code.
+	_codeToGRPCCode = map[yarpcerrors.Code]codes.Code{
 		yarpcerrors.CodeOK:                 codes.OK,
 		yarpcerrors.CodeCancelled:          codes.Canceled,
 		yarpcerrors.CodeUnknown:            codes.Unknown,
@@ -47,8 +47,8 @@ var (
 		yarpcerrors.CodeUnauthenticated:    codes.Unauthenticated,
 	}
 
-	// GRPCCodeToCode maps all gRPC Codes to their corresponding Code.
-	GRPCCodeToCode = map[codes.Code]yarpcerrors.Code{
+	// _grpcCodeToCode maps all gRPC Codes to their corresponding Code.
+	_grpcCodeToCode = map[codes.Code]yarpcerrors.Code{
 		codes.OK:                 yarpcerrors.CodeOK,
 		codes.Canceled:           yarpcerrors.CodeCancelled,
 		codes.Unknown:            yarpcerrors.CodeUnknown,

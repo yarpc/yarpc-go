@@ -67,7 +67,6 @@ func (e *serverEncodingError) YARPCError() error {
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q from caller %q: %v",
 			e.Procedure, e.Service, e.Caller, e.Reason))
-	// TODO: is this the right error type?
 	return yarpcerrors.InvalidArgumentErrorf(strings.Join(parts, " "))
 }
 

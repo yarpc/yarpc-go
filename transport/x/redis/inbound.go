@@ -191,7 +191,7 @@ func (i *Inbound) handle() (err error) {
 	}
 
 	if spec.Type() != transport.Oneway {
-		err = yarpcerrors.UnimplementedErrorf("transport:%s type:%s", transportName, spec.Type().String())
+		err = yarpcerrors.UnimplementedErrorf("transport %s does not handle %s handlers", transportName, spec.Type().String())
 		return transport.UpdateSpanWithErr(span, err)
 	}
 

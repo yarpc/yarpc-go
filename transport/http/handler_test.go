@@ -274,7 +274,7 @@ func TestHandlerFailures(t *testing.T) {
 
 		httpStatusCode := rw.Code
 		assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
-		code := StatusCodeToBestCode(httpStatusCode)
+		code := statusCodeToBestCode(httpStatusCode)
 		assert.Equal(t, tt.wantCode, code)
 	}
 }
@@ -326,7 +326,7 @@ func TestHandlerInternalFailure(t *testing.T) {
 	code := httpResponse.Code
 	assert.True(t, code >= 500 && code < 600, "expected 500 level response")
 	assert.Equal(t,
-		`great sadness`+"\n",
+		`error for service 'fake' and procedure 'hello': great sadness`+"\n",
 		httpResponse.Body.String())
 }
 

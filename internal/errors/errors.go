@@ -18,23 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+package errors
 
-import (
-	"testing"
+import "go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/stretchr/testify/require"
-)
-
-func TestCodes(t *testing.T) {
-	for code, grpcCode := range _codeToGRPCCode {
-		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := _codeToGRPCCode[code]
-			require.True(t, ok)
-			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := _grpcCodeToCode[grpcCode]
-			require.True(t, ok)
-			require.Equal(t, code, getCode)
-		})
+// WrapHandlerError is a convenience function with the following logic:
+//
+// - If err is nil, WrapHandlerError returns nil
+// - If err is a YARPC error, WrapHandlerError returns err with no changes.
+// - If err is not a YARPC error, WrapHandlerError returns a new YARPC error with code
+//   CodeUnknown and message err.Error(), along with service and procedure information.
+func WrapHandlerError(err error, service string, procedure string) error {
+	if err == nil {
+		return nil
 	}
+	if yarpcerrors.IsYARPCError(err) {
+		return err
+	}
+	return yarpcerrors.UnknownErrorf("error for service '%s' and procedure '%s': %s", service, procedure, err.Error())
 }

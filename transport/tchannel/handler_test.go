@@ -417,7 +417,7 @@ func TestResponseWriter(t *testing.T) {
 
 		w := newResponseWriter(call.Response(), call.Format())
 		tt.apply(w)
-		assert.NoError(t, w.Close(false))
+		assert.NoError(t, w.Close())
 
 		assert.Nil(t, resp.systemErr)
 		assert.Equal(t, tt.arg2, resp.arg2.Bytes())
@@ -457,8 +457,8 @@ func TestResponseWriterFailure(t *testing.T) {
 		assert.NoError(t, err)
 		_, err = w.Write([]byte("bar"))
 		assert.NoError(t, err)
-		err = w.Close(false)
-		assert.Error(t, w.Close(false))
+		err = w.Close()
+		assert.Error(t, w.Close())
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
 		}
@@ -470,7 +470,7 @@ func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	w := newResponseWriter(res, tchannel.Raw)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
-	require.NoError(t, w.Close(false))
+	require.NoError(t, w.Close())
 
 	assert.NotEmpty(t, res.arg2.Bytes(), "headers must not be empty")
 	assert.Empty(t, res.arg3.Bytes(), "body must be empty but was %#v", res.arg3.Bytes())

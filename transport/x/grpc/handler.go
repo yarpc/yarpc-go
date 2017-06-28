@@ -135,7 +135,7 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request,
 	case transport.Unary:
 		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseMD)
 	default:
-		return nil, yarpcerrors.UnimplementedErrorf("transport:grpc type:%s", handlerSpec.Type().String())
+		return nil, yarpcerrors.UnimplementedErrorf("transport grpc does not handle %s handlers", handlerSpec.Type().String())
 	}
 }
 
@@ -182,8 +182,8 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 			message = name + ": " + message
 		}
 	}
-	grpcCode, ok := CodeToGRPCCode[yarpcerrors.ErrorCode(err)]
-	// should only happen if CodeToGRPCCode does not cover all codes
+	grpcCode, ok := _codeToGRPCCode[yarpcerrors.ErrorCode(err)]
+	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown
 	}

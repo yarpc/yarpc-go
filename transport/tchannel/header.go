@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"strings"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
@@ -46,8 +47,7 @@ var _reservedHeaderKeys = map[string]bool{
 }
 
 func isReservedHeaderKey(key string) bool {
-	// TODO: lowercase?
-	_, ok := _reservedHeaderKeys[key]
+	_, ok := _reservedHeaderKeys[strings.ToLower(key)]
 	return ok
 }
 

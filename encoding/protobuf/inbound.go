@@ -46,10 +46,9 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	if err != nil {
 		return err
 	}
+
 	response, appErr := u.handle(ctx, request)
-	if appErr != nil {
-		responseWriter.SetApplicationError()
-	}
+
 	if err := call.WriteToResponse(responseWriter); err != nil {
 		return err
 	}
@@ -67,6 +66,9 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 	_, err = responseWriter.Write(responseData)
 	if err != nil {
 		return err
+	}
+	if appErr != nil {
+		responseWriter.SetApplicationError()
 	}
 	return appErr
 }
