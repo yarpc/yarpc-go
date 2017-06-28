@@ -22,7 +22,6 @@ package backoff
 
 import (
 	"errors"
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -146,14 +145,14 @@ func (e *ExponentialStrategy) Backoff() backoff.Backoff {
 }
 
 // IsEqual returns whether this strategy is equivalent to another strategy
-func (e *ExponentialStrategy) IsEqual(o *ExponentialStrategy) (bool, string) {
+func (e *ExponentialStrategy) IsEqual(o *ExponentialStrategy) bool {
 	if e.opts.first != o.opts.first {
-		return false, fmt.Sprintf("expected first to be %s, got %s", e.opts.first, o.opts.first)
+		return false
 	}
 	if e.opts.max != o.opts.max {
-		return false, fmt.Sprintf("expected max to be %s, got %s", e.opts.max, o.opts.max)
+		return false
 	}
-	return true, ""
+	return true
 }
 
 // ExponentialBackoff is an instance of the exponential backoff strategy with

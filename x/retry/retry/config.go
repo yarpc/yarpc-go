@@ -32,9 +32,18 @@ import (
 
 // PolicySpec defines how to construct a retry Policy.
 type PolicySpec struct {
-	Retries           uint           `config:"retries"`
-	MaxRequestTimeout time.Duration  `config:"maxtimeout"`
-	BackoffStrategy   config.Backoff `config:"backoff"`
+	// Retries indicates the number of retries will be attempted on
+	// failed requests.
+	Retries uint `config:"retries"`
+
+	// MaxRequestTimeout indicates the max timeout that every request
+	// through the retry middleware will have.  If the timeout is greater
+	// than the request timeout we'll use the request timeout instead.
+	MaxRequestTimeout time.Duration `config:"maxtimeout"`
+
+	// BackoffStrategy indicates which backoff strategy will be used between
+	// each retry attempt.
+	BackoffStrategy config.Backoff `config:"backoff"`
 }
 
 func (p PolicySpec) policy() (*Policy, error) {
@@ -49,20 +58,32 @@ func (p PolicySpec) policy() (*Policy, error) {
 	), nil
 }
 
-// OverrideSpec defines per Service or per service+procedure
+// OverrideSpec defines per service or per service+procedure
 // Policies that will be applied in the PolicyProvider.
 type OverrideSpec struct {
-	Service   string `config:"service"`
+	// Service is a YARPC service name for an override.
+	Service string `config:"service"`
+
+	// Procedure is a YARPC procedure name for an override.
 	Procedure string `config:"procedure"`
-	With      string `config:"with"`
+
+	// WithPolicy specifies the policy name to use for the override.
+	// It MUST reference an existing policy.
+	WithPolicy string `config:"with"`
 }
 
 // PolicyProviderSpec is a definition of how to create a retry
 // policy provider.
 type PolicyProviderSpec struct {
-	Policies  map[string]PolicySpec `config:"policies"`
-	Default   string                `config:"default"`
-	Overrides []OverrideSpec        `config:"overrides"`
+	// NameToPolicies is a map of names to policy configs which
+	// can be referenced later.
+	NameToPolicies map[string]PolicySpec `config:"policies"`
+
+	// Default is the Default policy that will be used.
+	Default string `config:"default"`
+
+	// Overrides are custom overrides for retry policies.
+	Overrides []OverrideSpec `config:"overrides"`
 }
 
 // NewPolicyProvider creates a new policy provider that can be used in retry
@@ -75,44 +96,44 @@ func NewPolicyProvider(src interface{}, opts ...mapdecode.Option) (*procedurePol
 		return nil, err
 	}
 
-	var policies map[string]*Policy
-	if policies, err = spec.getPolicies(opts...); err != nil {
+	var nameToPolicy map[string]*Policy
+	if nameToPolicy, err = spec.getPolicies(opts...); err != nil {
 		return nil, err
 	}
 
-	return spec.getPolicyProvider(policies)
+	return spec.getPolicyProvider(nameToPolicy)
 }
 
 func (spec PolicyProviderSpec) getPolicies(opts ...mapdecode.Option) (map[string]*Policy, error) {
 	var errs error
-	policyMap := make(map[string]*Policy, len(spec.Policies))
-	for name, policySpec := range spec.Policies {
+	nameToPolicyMap := make(map[string]*Policy, len(spec.NameToPolicies))
+	for name, policySpec := range spec.NameToPolicies {
 		policy, err := policySpec.policy()
 		if err != nil {
 			errs = multierr.Append(errs, err)
 			continue
 		}
-		policyMap[name] = policy
+		nameToPolicyMap[name] = policy
 	}
-	return policyMap, errs
+	return nameToPolicyMap, errs
 }
 
-func (spec PolicyProviderSpec) getPolicyProvider(policies map[string]*Policy) (*procedurePolicyProvider, error) {
+func (spec PolicyProviderSpec) getPolicyProvider(nameToPolicy map[string]*Policy) (*procedurePolicyProvider, error) {
 	policyProvider := newProcedurePolicyProvider()
 
 	var errs error
 	if spec.Default != "" {
-		if defaultPol, ok := policies[spec.Default]; ok {
+		if defaultPol, ok := nameToPolicy[spec.Default]; ok {
 			policyProvider.registerDefault(defaultPol)
 		} else {
-			errs = multierr.Append(errs, fmt.Errorf("invalid default retry policy: %q, possiblities are: %v", spec.Default, keys(policies)))
+			errs = multierr.Append(errs, fmt.Errorf("invalid default retry policy: %q, possiblities are: %v", spec.Default, keys(nameToPolicy)))
 		}
 	}
 
 	for _, override := range spec.Overrides {
-		pol, ok := policies[override.With]
+		pol, ok := nameToPolicy[override.WithPolicy]
 		if !ok {
-			errs = multierr.Append(errs, fmt.Errorf("invalid retry policy: %q, possiblities are: %v", override.With, keys(policies)))
+			errs = multierr.Append(errs, fmt.Errorf("invalid retry policy: %q, possiblities are: %v", override.WithPolicy, keys(nameToPolicy)))
 			continue
 		}
 
@@ -126,7 +147,7 @@ func (spec PolicyProviderSpec) getPolicyProvider(policies map[string]*Policy) (*
 			continue
 		}
 
-		errs = multierr.Append(errs, fmt.Errorf("did not specify a service or procedure for retry policy override: %q", override.With))
+		errs = multierr.Append(errs, fmt.Errorf("did not specify a service or procedure for retry policy override: %q", override.WithPolicy))
 	}
 
 	if errs != nil {
@@ -136,9 +157,9 @@ func (spec PolicyProviderSpec) getPolicyProvider(policies map[string]*Policy) (*
 	return policyProvider, nil
 }
 
-func keys(polMap map[string]*Policy) []string {
-	ks := make([]string, 0, len(polMap))
-	for k, _ := range polMap {
+func keys(nameToPolicy map[string]*Policy) []string {
+	ks := make([]string, 0, len(nameToPolicy))
+	for k := range nameToPolicy {
 		ks = append(ks, k)
 	}
 	return ks

@@ -21,11 +21,12 @@
 package retry
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/crossdock/crossdock-go/assert"
-	"github.com/crossdock/crossdock-go/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/whitespace"
 	"gopkg.in/yaml.v2"
@@ -399,6 +400,9 @@ func assertPoliciesAreEqual(t *testing.T, expected, actual *Policy) {
 	actualStrat, ok := actual.backoffStrategy.(*backoff.ExponentialStrategy)
 	require.True(t, ok, "second strategy was not an exponential strategy")
 
-	isEqual, msg := expectedStrat.IsEqual(actualStrat)
-	assert.True(t, isEqual, msg)
+	assert.True(
+		t,
+		expectedStrat.IsEqual(actualStrat),
+		fmt.Sprintf("expected backoff %v is not equalt to actual backoff %v", expectedStrat, actualStrat),
+	)
 }
