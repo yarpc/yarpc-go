@@ -72,14 +72,14 @@ var (
 	}
 )
 
-// StatusCodeToBestCode does a best-effort conversion from the given HTTP status
+// statusCodeToBestCode does a best-effort conversion from the given HTTP status
 // code to a Code.
 //
 // If one Code maps to the given HTTP status code, that Code is returned.
 // If more than one Code maps to the given HTTP status Code, one Code is returned.
 // If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
 // Else, yarpcerrors.CodeUnknown is returned.
-func StatusCodeToBestCode(statusCode int) yarpcerrors.Code {
+func statusCodeToBestCode(statusCode int) yarpcerrors.Code {
 	codes, ok := StatusCodeToCodes[statusCode]
 	if !ok || len(codes) == 0 {
 		if statusCode >= 400 && statusCode < 500 {

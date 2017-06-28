@@ -35,7 +35,7 @@ func TestCodes(t *testing.T) {
 			getCodes, ok := StatusCodeToCodes[statusCode]
 			require.True(t, ok)
 			require.Contains(t, getCodes, code)
-			require.Contains(t, getCodes, StatusCodeToBestCode(statusCode))
+			require.Contains(t, getCodes, statusCodeToBestCode(statusCode))
 		})
 	}
 }

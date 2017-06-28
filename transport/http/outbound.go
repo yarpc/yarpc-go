@@ -397,7 +397,7 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 		return yarpcerrors.InternalErrorf(err.Error())
 	}
 	// use the status code if we can't get a code from the headers
-	code := StatusCodeToBestCode(response.StatusCode)
+	code := statusCodeToBestCode(response.StatusCode)
 	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
 		var errorCode yarpcerrors.Code
 		// TODO: what to do with error?
