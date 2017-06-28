@@ -182,8 +182,8 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 			message = name + ": " + message
 		}
 	}
-	grpcCode, ok := CodeToGRPCCode[yarpcerrors.ErrorCode(err)]
-	// should only happen if CodeToGRPCCode does not cover all codes
+	grpcCode, ok := _codeToGRPCCode[yarpcerrors.ErrorCode(err)]
+	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown
 	}

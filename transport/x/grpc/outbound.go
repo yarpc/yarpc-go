@@ -169,7 +169,7 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if !ok {
 		return err
 	}
-	code, ok := GRPCCodeToCode[status.Code()]
+	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
 		code = yarpcerrors.CodeUnknown
 	}
