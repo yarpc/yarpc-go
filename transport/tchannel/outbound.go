@@ -31,10 +31,11 @@ import (
 	intsync "go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
-	errDoNotUseContextWithHeaders = yarpcerrors.IllegalArgumentErrorf("tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
+	errDoNotUseContextWithHeaders = yarpcerrors.InvalidArgumentErrorf("tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
 
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
