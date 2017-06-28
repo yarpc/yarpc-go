@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/ioutil"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -43,10 +44,14 @@ type middlewareOptions struct {
 	// policyProvider is a function that will provide a Retry policy for a
 	// context and request.
 	policyProvider PolicyProvider
+
+	// tallyScope is an interface for recording metrics.
+	scope tally.Scope
 }
 
 var defaultMiddlewareOptions = middlewareOptions{
 	policyProvider: nil,
+	scope: tally.NoopScope,
 }
 
 // WithPolicyProvider allows a custom retry policy to be used in the retry
@@ -57,19 +62,30 @@ func WithPolicyProvider(provider PolicyProvider) MiddlewareOption {
 	})
 }
 
+// TallyScope sets a Tally scope that will be used to record retry metrics.
+func TallyScope(scope tally.Scope) MiddlewareOption {
+	return func(opts *middlewareOptions) {
+		opts.scope = scope
+	}
+}
+
 // NewUnaryMiddleware creates a new Retry Middleware
 func NewUnaryMiddleware(opts ...MiddlewareOption) *OutboundMiddleware {
 	options := defaultMiddlewareOptions
 	for _, opt := range opts {
 		opt.apply(&options)
 	}
-	return &OutboundMiddleware{options}
+	return &OutboundMiddleware{
+		provider: options.policyProvider,
+		observer: newObserver(options.scope),
+	}
 }
 
 // OutboundMiddleware is a retry middleware that wraps a UnaryOutbound with
 // Middleware.
 type OutboundMiddleware struct {
-	opts middlewareOptions
+	provider PolicyProvider
+	observer *observer
 }
 
 // Call implements the middleware.UnaryOutbound interface.
@@ -87,17 +103,25 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 	boff := policy.opts.backoffStrategy.Backoff()
 
 	for i := uint(0); i < policy.opts.retries+1; i++ {
+		r.observer.call()
 		timeout, _ := getTimeLeft(ctx, policy.opts.maxRequestTimeout)
 		subCtx, cancel := context.WithTimeout(ctx, timeout)
 		resp, err = out.Call(subCtx, request)
 		cancel() // Clear the new ctx immdediately after the call
 
 		if err == nil || !isRetryable(err) {
+			r.observer.success()
+			return resp, err
+		}
+
+		if !isRetryable(err) {
+			r.observer.unretryableError()
 			return resp, err
 		}
 
 		// Reset the rereader so we can do another request.
 		if resetErr := rereader.Reset(); resetErr != nil {
+			r.observer.yarpcError()
 			// TODO(#1080) Append the reset error to the err.
 			err = resetErr
 			return resp, err
@@ -105,18 +129,20 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 
 		boffDur := boff.Duration(i)
 		if _, ctxWillTimeout := getTimeLeft(ctx, boffDur); ctxWillTimeout {
+			r.observer.noTimeError()
 			return resp, err
 		}
 		time.Sleep(boffDur)
 	}
+	r.observer.maxAttemptsError()
 	return resp, err
 }
 
 func (r *OutboundMiddleware) getPolicy(ctx context.Context, request *transport.Request) *Policy {
-	if r.opts.policyProvider == nil {
+	if r.provider == nil {
 		return nil
 	}
-	return r.opts.policyProvider.Policy(ctx, request)
+	return r.provider.Policy(ctx, request)
 }
 
 // getTimeLeft will return the amount of time left in the context or the "max"
