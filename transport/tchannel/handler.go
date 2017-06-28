@@ -178,19 +178,16 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		return err, nil
 	}
 
-	var appErr error
 	switch spec.Type() {
 	case transport.Unary:
 		if err := request.ValidateUnaryContext(ctx); err != nil {
 			return err, nil
 		}
-		appErr = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
+		return nil, transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	default:
-		err = yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String())
+		return yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String()), nil
 	}
-
-	return err, appErr
 }
 
 type responseWriter struct {

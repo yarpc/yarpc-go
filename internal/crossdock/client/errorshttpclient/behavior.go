@@ -229,7 +229,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 400,
-			wantBody:   `invalid ttl moo for service "yarpc-test" and procedure "echo"` + "\n",
+			wantBody:   `invalid TTL moo for service "yarpc-test" and procedure "echo"` + "\n",
 		},
 		{
 			name: "invalid request",
