@@ -113,7 +113,7 @@ func Run(t crossdock.T) {
 					return
 				}
 				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(tchannel.ErrCodeBadRequest, code, "must produce bad request error")
+				assert.Equal(tchannel.ErrCodeBadRequest, code, "must produce bad request error: %v", err)
 				assert.Contains(err.Error(), `unrecognized procedure "no-such-procedure"`, "must mention unrecongized procedure in error message")
 			},
 		},

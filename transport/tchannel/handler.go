@@ -270,7 +270,7 @@ func getSystemError(err error) error {
 		return err
 	}
 	status := tchannel.ErrCodeUnexpected
-	if yarpcerrors.IsInvalidArgument(err) {
+	if yarpcerrors.IsInvalidArgument(err) || yarpcerrors.IsUnimplemented(err) {
 		status = tchannel.ErrCodeBadRequest
 	} else if yarpcerrors.IsDeadlineExceeded(err) {
 		status = tchannel.ErrCodeTimeout
