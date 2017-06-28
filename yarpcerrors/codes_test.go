@@ -32,7 +32,7 @@ func TestCodesMarshalText(t *testing.T) {
 			text, err := code.MarshalText()
 			require.NoError(t, err)
 			var unmarshalledCode Code
-			require.NoError(t, (&unmarshalledCode).UnmarshalText(text))
+			require.NoError(t, unmarshalledCode.UnmarshalText(text))
 			require.Equal(t, code, unmarshalledCode)
 		})
 	}
@@ -44,7 +44,7 @@ func TestCodesMarshalJSON(t *testing.T) {
 			text, err := code.MarshalJSON()
 			require.NoError(t, err)
 			var unmarshalledCode Code
-			require.NoError(t, (&unmarshalledCode).UnmarshalJSON(text))
+			require.NoError(t, unmarshalledCode.UnmarshalJSON(text))
 			require.Equal(t, code, unmarshalledCode)
 		})
 	}

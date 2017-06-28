@@ -233,7 +233,7 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 		return nil
 	}
 	var errorCode yarpcerrors.Code
-	if err := (&errorCode).UnmarshalText([]byte(errorCodeString)); err != nil {
+	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
 		return err
 	}
 	if errorCode == yarpcerrors.CodeOK {
