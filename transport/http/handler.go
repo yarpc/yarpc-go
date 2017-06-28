@@ -23,6 +23,7 @@ package http
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -57,8 +58,10 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		responseWriter.Close(http.StatusOK)
 		return
 	}
-	// TODO: what to do with error?
-	if errorCodeText, marshalErr := yarpcerrors.ErrorCode(err).MarshalText(); marshalErr == nil {
+	if errorCodeText, marshalErr := yarpcerrors.ErrorCode(err).MarshalText(); marshalErr != nil {
+		err = yarpcerrors.InternalErrorf("error %s had code %v which is unknown", err.Error(), yarpcerrors.ErrorCode(err))
+		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
+	} else {
 		responseWriter.AddSystemHeader(ErrorCodeHeader, string(errorCodeText))
 	}
 	if name := yarpcerrors.ErrorName(err); name != "" {
@@ -66,7 +69,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	// TODO: would prefer to have error message be on a header so we can
 	// have non-nil responses with errors, discuss
-	_, _ = responseWriter.Write([]byte(yarpcerrors.ErrorMessage(err) + "\n"))
+	_, _ = fmt.Fprintln(responseWriter, yarpcerrors.ErrorMessage(err))
 	status, ok := CodeToStatusCode[yarpcerrors.ErrorCode(err)]
 	if !ok {
 		status = http.StatusInternalServerError
@@ -77,8 +80,8 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) error {
 	start := time.Now()
 	defer req.Body.Close()
-	if req.Method != "POST" {
-		return yarpcerrors.NotFoundErrorf("only POST is allowed")
+	if req.Method != http.MethodPost {
+		return yarpcerrors.NotFoundErrorf("request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
