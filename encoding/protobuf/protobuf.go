@@ -159,7 +159,6 @@ type useJSON struct{}
 func (useJSON) apply(client *client) {
 	client.encoding = JSONEncoding
 }
-
 func uniqueLowercaseStrings(s []string) []string {
 	m := make(map[string]bool, len(s))
 	for _, e := range s {

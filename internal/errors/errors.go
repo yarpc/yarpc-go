@@ -35,5 +35,5 @@ func WrapHandlerError(err error, service string, procedure string) error {
 	if yarpcerrors.IsYARPCError(err) {
 		return err
 	}
-	return yarpcerrors.UnknownErrorf("error for service '%s' and procedure '%s': %s", service, procedure, err.Error())
+	return yarpcerrors.UnknownErrorf("error for service %q and procedure %q: %s", service, procedure, err.Error())
 }
