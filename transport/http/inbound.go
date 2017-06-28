@@ -26,10 +26,10 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // InboundOption customizes the behavior of an HTTP Inbound constructed with
@@ -105,7 +105,7 @@ func (i *Inbound) Start() error {
 
 func (i *Inbound) start() error {
 	if i.router == nil {
-		return errors.ErrNoRouter
+		return yarpcerrors.InternalErrorf("no router configured for transport inbound")
 	}
 
 	var httpHandler http.Handler = handler{

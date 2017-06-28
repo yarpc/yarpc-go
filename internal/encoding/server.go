@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 type serverEncodingError struct {
@@ -42,7 +42,7 @@ type serverEncodingError struct {
 	IsHeader   bool
 }
 
-func (e serverEncodingError) Error() string {
+func (e *serverEncodingError) YARPCError() error {
 	parts := []string{"failed to"}
 	if e.IsResponse {
 		switch len(e.Encodings) {
@@ -67,19 +67,11 @@ func (e serverEncodingError) Error() string {
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q from caller %q: %v",
 			e.Procedure, e.Service, e.Caller, e.Reason))
-	return strings.Join(parts, " ")
+	return yarpcerrors.InvalidArgumentErrorf(strings.Join(parts, " "))
 }
 
-// AsHandlerError converts this error into a handler-level error.
-func (e serverEncodingError) AsHandlerError() errors.HandlerError {
-	if e.IsResponse {
-		return errors.HandlerUnexpectedError(e)
-	}
-	return errors.HandlerBadRequestError(e)
-}
-
-func newServerEncodingError(req *transport.Request, err error) serverEncodingError {
-	return serverEncodingError{
+func newServerEncodingError(req *transport.Request, err error) *serverEncodingError {
+	return &serverEncodingError{
 		Encodings: []transport.Encoding{req.Encoding},
 		Caller:    req.Caller,
 		Service:   req.Service,
@@ -91,7 +83,7 @@ func newServerEncodingError(req *transport.Request, err error) serverEncodingErr
 // RequestBodyDecodeError builds an error that represents a failure to decode
 // the request body.
 func RequestBodyDecodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, err)
+	return newServerEncodingError(req, err).YARPCError()
 }
 
 // ResponseBodyEncodeError builds an error that represents a failure to encode
@@ -99,7 +91,7 @@ func RequestBodyDecodeError(req *transport.Request, err error) error {
 func ResponseBodyEncodeError(req *transport.Request, err error) error {
 	e := newServerEncodingError(req, err)
 	e.IsResponse = true
-	return e
+	return e.YARPCError()
 }
 
 // RequestHeadersDecodeError builds an error that represents a failure to
@@ -107,7 +99,7 @@ func ResponseBodyEncodeError(req *transport.Request, err error) error {
 func RequestHeadersDecodeError(req *transport.Request, err error) error {
 	e := newServerEncodingError(req, err)
 	e.IsHeader = true
-	return e
+	return e.YARPCError()
 }
 
 // ResponseHeadersEncodeError builds an error that represents a failure to
@@ -116,7 +108,7 @@ func ResponseHeadersEncodeError(req *transport.Request, err error) error {
 	e := newServerEncodingError(req, err)
 	e.IsResponse = true
 	e.IsHeader = true
-	return e
+	return e.YARPCError()
 }
 
 // Expect verifies that the given request has one of the given encodings
@@ -129,13 +121,13 @@ func Expect(req *transport.Request, want ...transport.Encoding) error {
 		}
 	}
 
-	return serverEncodingError{
+	return (&serverEncodingError{
 		Encodings: want,
 		Caller:    req.Caller,
 		Service:   req.Service,
 		Procedure: req.Procedure,
-		Reason:    encodingMismatchError{Want: want, Got: got},
-	}
+		Reason:    &encodingMismatchError{Want: want, Got: got},
+	}).YARPCError()
 }
 
 // encodingMismatchError represenst a encoding mismatch
@@ -144,7 +136,7 @@ type encodingMismatchError struct {
 	Got  transport.Encoding
 }
 
-func (e encodingMismatchError) Error() string {
+func (e *encodingMismatchError) Error() string {
 	switch len(e.Want) {
 	case 1:
 		return fmt.Sprintf("expected encoding %q but got %q", e.Want[0], e.Got)

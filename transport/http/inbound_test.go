@@ -39,6 +39,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestStartAddrInUse(t *testing.T) {
@@ -149,7 +150,7 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
-		assert.Equal(t, err.Error(), "404 page not found")
+		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.ErrorCode(err))
 	}
 
 	o.setURLTemplate("http://host:port/rpc/v1")

@@ -27,12 +27,12 @@ import (
 )
 
 func TestCodes(t *testing.T) {
-	for code, grpcCode := range CodeToGRPCCode {
+	for code, grpcCode := range _codeToGRPCCode {
 		t.Run(code.String(), func(t *testing.T) {
-			getGRPCCode, ok := CodeToGRPCCode[code]
+			getGRPCCode, ok := _codeToGRPCCode[code]
 			require.True(t, ok)
 			require.Equal(t, grpcCode, getGRPCCode)
-			getCode, ok := GRPCCodeToCode[grpcCode]
+			getCode, ok := _grpcCodeToCode[grpcCode]
 			require.True(t, ok)
 			require.Equal(t, code, getCode)
 		})

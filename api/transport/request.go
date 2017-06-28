@@ -22,8 +22,9 @@ package transport
 
 import (
 	"io"
+	"strings"
 
-	"go.uber.org/yarpc/internal/errors"
+	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -100,7 +101,7 @@ func ValidateRequest(req *Request) error {
 		missingParams = append(missingParams, "encoding")
 	}
 	if len(missingParams) > 0 {
-		return errors.MissingParameters(missingParams)
+		return yarpcerrors.InvalidArgumentErrorf("missing %s", strings.Join(missingParams, ", "))
 	}
 	return nil
 }

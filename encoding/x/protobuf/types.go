@@ -40,27 +40,10 @@ const (
 	//
 	// Protobuf handlers are able to handle both Encoding and JSONEncoding encodings.
 	JSONEncoding transport.Encoding = "json"
-
-	rawResponseHeaderKey = "rpc-protobuf-raw-response"
 )
 
 // UseJSON says to use the json encoding for client/server communication.
 var UseJSON ClientOption = useJSON{}
-
-// SetRawResponse will set rawResponseHeaderKey to "true".
-//
-// rawResponseHeaderKey is a header key attached to either a request or
-// response that signals a UnaryHandler to not encode an application error
-// inside a wirepb.Response object, instead marshalling the actual response.
-//
-// Note per the documentation on transport.Headers#With, the returned Header
-// may not be the same as the input header, so the caller should always
-// update the header with:
-//
-//   header = protobuf.SetRawResponse(header)
-func SetRawResponse(headers transport.Headers) transport.Headers {
-	return headers.With(rawResponseHeaderKey, "1")
-}
 
 // ***all below functions should only be called by generated code***
 
@@ -169,13 +152,4 @@ type useJSON struct{}
 
 func (useJSON) apply(client *client) {
 	client.encoding = JSONEncoding
-}
-
-func isRawResponse(headers transport.Headers) bool {
-	rawResponse, ok := headers.Get(rawResponseHeaderKey)
-	return ok && rawResponse == "1"
-}
-
-func getRawResponseHeaders() transport.Headers {
-	return SetRawResponse(transport.Headers{})
 }

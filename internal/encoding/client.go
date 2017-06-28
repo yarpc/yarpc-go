@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 type clientEncodingError struct {
@@ -40,7 +41,7 @@ type clientEncodingError struct {
 	IsHeader   bool
 }
 
-func (e clientEncodingError) Error() string {
+func (e *clientEncodingError) YARPCError() error {
 	parts := []string{"failed to"}
 	if e.IsResponse {
 		parts = append(parts, fmt.Sprintf("decode %q response", string(e.Encoding)))
@@ -55,11 +56,11 @@ func (e clientEncodingError) Error() string {
 	parts = append(parts,
 		fmt.Sprintf("for procedure %q of service %q: %v",
 			e.Procedure, e.Service, e.Reason))
-	return strings.Join(parts, " ")
+	return yarpcerrors.InvalidArgumentErrorf(strings.Join(parts, " "))
 }
 
-func newClientEncodingError(req *transport.Request, err error) clientEncodingError {
-	return clientEncodingError{
+func newClientEncodingError(req *transport.Request, err error) *clientEncodingError {
+	return &clientEncodingError{
 		Encoding:  req.Encoding,
 		Service:   req.Service,
 		Procedure: req.Procedure,
@@ -70,7 +71,7 @@ func newClientEncodingError(req *transport.Request, err error) clientEncodingErr
 // RequestBodyEncodeError builds an error that represents a failure to encode
 // the request body.
 func RequestBodyEncodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, err)
+	return newClientEncodingError(req, err).YARPCError()
 }
 
 // ResponseBodyDecodeError builds an error that represents a failure to decode
@@ -78,7 +79,7 @@ func RequestBodyEncodeError(req *transport.Request, err error) error {
 func ResponseBodyDecodeError(req *transport.Request, err error) error {
 	e := newClientEncodingError(req, err)
 	e.IsResponse = true
-	return e
+	return e.YARPCError()
 }
 
 // RequestHeadersEncodeError builds an error that represents a failure to
@@ -86,7 +87,7 @@ func ResponseBodyDecodeError(req *transport.Request, err error) error {
 func RequestHeadersEncodeError(req *transport.Request, err error) error {
 	e := newClientEncodingError(req, err)
 	e.IsHeader = true
-	return e
+	return e.YARPCError()
 }
 
 // ResponseHeadersDecodeError builds an error that represents a failure to
@@ -95,5 +96,5 @@ func ResponseHeadersDecodeError(req *transport.Request, err error) error {
 	e := newClientEncodingError(req, err)
 	e.IsHeader = true
 	e.IsResponse = true
-	return e
+	return e.YARPCError()
 }

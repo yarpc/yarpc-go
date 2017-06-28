@@ -58,11 +58,12 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
 
-	if err := results[1].Interface(); err != nil {
-		return err.(error)
+	if err := call.WriteToResponse(rw); err != nil {
+		return err
 	}
 
-	if err := call.WriteToResponse(rw); err != nil {
+	if err, _ := results[1].Interface().(error); err != nil {
+		rw.SetApplicationError()
 		return err
 	}
 

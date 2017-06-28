@@ -18,16 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package protobuf
+package yarpcerrors
 
-type applicationError struct {
-	Message string
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestCodesMarshalText(t *testing.T) {
+	for code := range _codeToString {
+		t.Run(code.String(), func(t *testing.T) {
+			text, err := code.MarshalText()
+			require.NoError(t, err)
+			var unmarshalledCode Code
+			require.NoError(t, unmarshalledCode.UnmarshalText(text))
+			require.Equal(t, code, unmarshalledCode)
+		})
+	}
 }
 
-func newApplicationError(message string) *applicationError {
-	return &applicationError{message}
+func TestCodesMarshalJSON(t *testing.T) {
+	for code := range _codeToString {
+		t.Run(code.String(), func(t *testing.T) {
+			text, err := code.MarshalJSON()
+			require.NoError(t, err)
+			var unmarshalledCode Code
+			require.NoError(t, unmarshalledCode.UnmarshalJSON(text))
+			require.Equal(t, code, unmarshalledCode)
+		})
+	}
 }
 
-func (a *applicationError) Error() string {
-	return a.Message
+func TestCodesMapOneToOneAndCovered(t *testing.T) {
+	require.Equal(t, len(_codeToString), len(_stringToCode))
+	for code, s := range _codeToString {
+		otherCode, ok := _stringToCode[s]
+		require.True(t, ok)
+		require.Equal(t, code, otherCode)
+	}
 }

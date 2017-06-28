@@ -127,7 +127,6 @@ func TestHandlerFailures(t *testing.T) {
 		sendCall   *fakeInboundCall
 		expectCall func(*transporttest.MockUnaryHandler)
 
-		wantErrors []string               // error message contents
 		wantStatus tchannel.SystemErrCode // expected status
 	}{
 		{
@@ -141,7 +140,6 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte{0x00, 0x00},
 				arg3:    []byte{0x00},
 			},
-			wantErrors: []string{"timeout required"},
 			wantStatus: tchannel.ErrCodeBadRequest,
 		},
 		{
@@ -153,10 +151,6 @@ func TestHandlerFailures(t *testing.T) {
 				format:  tchannel.Raw,
 				arg2:    nil,
 				arg3:    []byte{0x00},
-			},
-			wantErrors: []string{
-				`BadRequest: failed to decode "raw" request headers for`,
-				`procedure "hello" of service "foo" from caller "bar"`,
 			},
 			wantStatus: tchannel.ErrCodeBadRequest,
 		},
@@ -170,10 +164,6 @@ func TestHandlerFailures(t *testing.T) {
 				arg2:    []byte("{not valid JSON}"),
 				arg3:    []byte{0x00},
 			},
-			wantErrors: []string{
-				`BadRequest: failed to decode "json" request headers for`,
-				`procedure "hello" of service "foo" from caller "bar"`,
-			},
 			wantStatus: tchannel.ErrCodeBadRequest,
 		},
 		{
@@ -185,9 +175,6 @@ func TestHandlerFailures(t *testing.T) {
 				format:  tchannel.Raw,
 				arg2:    []byte{0x00, 0x00},
 				arg3:    nil,
-			},
-			wantErrors: []string{
-				`UnexpectedError: error for procedure "hello" of service "foo"`,
 			},
 			wantStatus: tchannel.ErrCodeUnexpected,
 		},
@@ -214,10 +201,6 @@ func TestHandlerFailures(t *testing.T) {
 						},
 					), gomock.Any(),
 				).Return(fmt.Errorf("great sadness"))
-			},
-			wantErrors: []string{
-				`UnexpectedError: error for procedure "hello" of service "foo":`,
-				"great sadness",
 			},
 			wantStatus: tchannel.ErrCodeUnexpected,
 		},
@@ -248,12 +231,7 @@ func TestHandlerFailures(t *testing.T) {
 						"serialization derp",
 					)))
 			},
-			wantErrors: []string{
-				`UnexpectedError: failed to encode "json" response body for`,
-				`procedure "hello" of service "foo" from caller "bar":`,
-				`serialization derp`,
-			},
-			wantStatus: tchannel.ErrCodeUnexpected,
+			wantStatus: tchannel.ErrCodeBadRequest,
 		},
 		{
 			desc: "handler timeout",
@@ -285,8 +263,6 @@ func TestHandlerFailures(t *testing.T) {
 					<-ctx.Done()
 				}).Return(context.DeadlineExceeded)
 			},
-			wantErrors: []string{
-				`tchannel error ErrCodeTimeout: Timeout: call to procedure "waituntiltimeout" of service "foo" from caller "bar" timed out after `},
 			wantStatus: tchannel.ErrCodeTimeout,
 		},
 		{
@@ -315,9 +291,6 @@ func TestHandlerFailures(t *testing.T) {
 				).Do(func(context.Context, *transport.Request, transport.ResponseWriter) {
 					panic("oops I panicked!")
 				})
-			},
-			wantErrors: []string{
-				`UnexpectedError: error for procedure "panic" of service "foo": panic: oops I panicked!`,
 			},
 			wantStatus: tchannel.ErrCodeUnexpected,
 		},
@@ -356,12 +329,6 @@ func TestHandlerFailures(t *testing.T) {
 		systemErr, isSystemErr := err.(tchannel.SystemError)
 		require.True(t, isSystemErr, "expected %v for %q to be a system error", err, tt.desc)
 		assert.Equal(t, tt.wantStatus, systemErr.Code(), tt.desc)
-
-		for _, msg := range tt.wantErrors {
-			assert.Contains(
-				t, err.Error(), msg,
-				"error should contain message for %q", tt.desc)
-		}
 
 		mockCtrl.Finish()
 	}
@@ -448,7 +415,7 @@ func TestResponseWriter(t *testing.T) {
 		resp := newResponseRecorder()
 		call.resp = resp
 
-		w := newResponseWriter(new(transport.Request), call)
+		w := newResponseWriter(call.Response(), call.Format())
 		tt.apply(w)
 		assert.NoError(t, w.Close())
 
@@ -460,15 +427,6 @@ func TestResponseWriter(t *testing.T) {
 			assert.True(t, resp.applicationError, "expected an application error")
 		}
 	}
-}
-
-func TestResponseWriterAddHeadersAfterWrite(t *testing.T) {
-	call := &fakeInboundCall{format: tchannel.Raw, resp: newResponseRecorder()}
-	w := newResponseWriter(new(transport.Request), call)
-	w.Write([]byte("foo"))
-	assert.Panics(t, func() {
-		w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
-	})
 }
 
 func TestResponseWriterFailure(t *testing.T) {
@@ -494,32 +452,22 @@ func TestResponseWriterFailure(t *testing.T) {
 		resp := newResponseRecorder()
 		tt.setupResp(resp)
 
-		w := newResponseWriter(
-			new(transport.Request),
-			&fakeInboundCall{
-				format: tchannel.Raw,
-				resp:   resp,
-			},
-		)
+		w := newResponseWriter(resp, tchannel.Raw)
 		_, err := w.Write([]byte("foo"))
-		assert.Error(t, err)
+		assert.NoError(t, err)
+		_, err = w.Write([]byte("bar"))
+		assert.NoError(t, err)
+		err = w.Close()
+		assert.Error(t, w.Close())
 		for _, msg := range tt.messages {
 			assert.Contains(t, err.Error(), msg)
 		}
-
-		// writing again should also fail
-		_, err = w.Write([]byte("bar"))
-		assert.Error(t, err)
-		assert.Error(t, w.Close())
 	}
 }
 
 func TestResponseWriterEmptyBodyHeaders(t *testing.T) {
 	res := newResponseRecorder()
-	w := newResponseWriter(
-		new(transport.Request),
-		&fakeInboundCall{format: tchannel.Raw, resp: res},
-	)
+	w := newResponseWriter(res, tchannel.Raw)
 
 	w.AddHeaders(transport.NewHeaders().With("foo", "bar"))
 	require.NoError(t, w.Close())

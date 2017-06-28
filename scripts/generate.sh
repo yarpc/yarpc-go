@@ -98,7 +98,6 @@ thrift-gen --generateThrift --outputDir internal/crossdock/thrift/gen-go --input
 thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift --out internal/crossdock/thrift/gen-go internal/crossdock/thrift/gauntlet_apache.thrift | strip_thrift_warnings
 
 protoc_go yarpcproto/yarpc.proto
-protoc_go encoding/x/protobuf/internal/wirepb/wire.proto
 protoc_go_grpc internal/examples/protobuf/examplepb/example.proto
 protoc_yarpc_go internal/examples/protobuf/examplepb/example.proto
 protoc_go_grpc internal/crossdock/crossdockpb/crossdock.proto
@@ -110,7 +109,6 @@ ragel -Z -G2 -o internal/interpolate/parse.go internal/interpolate/parse.rl
 gofmt -s -w internal/interpolate/parse.go
 generated_by_ragel internal/interpolate/parse.go
 
-touch encoding/x/protobuf/internal/wirepb/.nocover
 touch internal/crossdock/thrift/gen-go/echo/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_apache/.nocover
 touch internal/crossdock/thrift/gen-go/gauntlet_tchannel/.nocover

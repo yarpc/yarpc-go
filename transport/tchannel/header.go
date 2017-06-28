@@ -24,11 +24,32 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"strings"
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel/internal"
 )
+
+const (
+	// ErrorCodeHeaderKey is the response header key for the error code.
+	ErrorCodeHeaderKey = "$rpc$-error-code"
+	// ErrorNameHeaderKey is the response header key for the error name.
+	ErrorNameHeaderKey = "$rpc$-error-name"
+	// ErrorMessageHeaderKey is the response header key for the error message.
+	ErrorMessageHeaderKey = "$rpc$-error-message"
+)
+
+var _reservedHeaderKeys = map[string]bool{
+	ErrorCodeHeaderKey:    true,
+	ErrorNameHeaderKey:    true,
+	ErrorMessageHeaderKey: true,
+}
+
+func isReservedHeaderKey(key string) bool {
+	_, ok := _reservedHeaderKeys[strings.ToLower(key)]
+	return ok
+}
 
 // readRequestHeaders reads headers and baggage from an incoming request.
 func readRequestHeaders(

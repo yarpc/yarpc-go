@@ -20,48 +20,20 @@
 
 package errors
 
-import (
-	"fmt"
-	"strings"
-)
+import "go.uber.org/yarpc/yarpcerrors"
 
-// MissingParameters returns an error representing a failure to process a
-// request because it was missing required parameters.
-func MissingParameters(params []string) error {
-	if len(params) == 0 {
+// WrapHandlerError is a convenience function with the following logic:
+//
+// - If err is nil, WrapHandlerError returns nil
+// - If err is a YARPC error, WrapHandlerError returns err with no changes.
+// - If err is not a YARPC error, WrapHandlerError returns a new YARPC error with code
+//   CodeUnknown and message err.Error(), along with service and procedure information.
+func WrapHandlerError(err error, service string, procedure string) error {
+	if err == nil {
 		return nil
 	}
-
-	return missingParametersError{Parameters: params}
-}
-
-// missingParametersError is a failure to process a request because it was
-// missing required parameters.
-type missingParametersError struct {
-	// Names of the missing parameters.
-	//
-	// Precondition: len(Parameters) > 0
-	Parameters []string
-}
-
-func (e missingParametersError) AsHandlerError() HandlerError {
-	return HandlerBadRequestError(e)
-}
-
-func (e missingParametersError) Error() string {
-	s := "missing "
-	ps := e.Parameters
-	if len(ps) == 1 {
-		s += ps[0]
-		return s
+	if yarpcerrors.IsYARPCError(err) {
+		return err
 	}
-
-	if len(ps) == 2 {
-		s += fmt.Sprintf("%s and %s", ps[0], ps[1])
-		return s
-	}
-
-	s += strings.Join(ps[:len(ps)-1], ", ")
-	s += fmt.Sprintf(", and %s", ps[len(ps)-1])
-	return s
+	return yarpcerrors.UnknownErrorf("error for service %q and procedure %q: %s", service, procedure, err.Error())
 }

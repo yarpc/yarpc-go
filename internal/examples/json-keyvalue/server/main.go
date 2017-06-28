@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var flagInbound = flag.String("inbound", "", "name of the inbound to use (http/tchannel/grpc)")
@@ -63,9 +64,12 @@ type handler struct {
 
 func (h *handler) Get(ctx context.Context, body *getRequest) (*getResponse, error) {
 	h.RLock()
-	result := &getResponse{Value: h.items[body.Key]}
+	value, ok := h.items[body.Key]
 	h.RUnlock()
-	return result, nil
+	if !ok {
+		return nil, yarpcerrors.NotFoundErrorf(body.Key)
+	}
+	return &getResponse{Value: value}, nil
 }
 
 func (h *handler) Set(ctx context.Context, body *setRequest) (*setResponse, error) {

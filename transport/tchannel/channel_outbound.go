@@ -27,10 +27,10 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
@@ -185,7 +185,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
-	}, nil
+	}, getResponseErrorAndDeleteHeaderKeys(headers)
 }
 
 // Introspect returns basic status about this outbound.
@@ -215,12 +215,31 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 }
 
 func fromSystemError(err tchannel.SystemError) error {
-	switch err.Code() {
-	case tchannel.ErrCodeCancelled, tchannel.ErrCodeBusy, tchannel.ErrCodeBadRequest:
-		return errors.RemoteBadRequestError(err.Message())
-	case tchannel.ErrCodeTimeout:
-		return errors.RemoteTimeoutError(err.Message())
-	default:
-		return errors.RemoteUnexpectedError(err.Message())
+	code, ok := _tchannelCodeToCode[err.Code()]
+	if !ok {
+		return yarpcerrors.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
+	return yarpcerrors.FromHeaders(code, "", err.Message())
+}
+
+func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
+	defer func() {
+		headers.Del(ErrorCodeHeaderKey)
+		headers.Del(ErrorNameHeaderKey)
+		headers.Del(ErrorMessageHeaderKey)
+	}()
+	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
+	if !ok {
+		return nil
+	}
+	var errorCode yarpcerrors.Code
+	if err := errorCode.UnmarshalText([]byte(errorCodeString)); err != nil {
+		return err
+	}
+	if errorCode == yarpcerrors.CodeOK {
+		return yarpcerrors.InternalErrorf("got CodeOK from error header")
+	}
+	errorName, _ := headers.Get(ErrorNameHeaderKey)
+	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
+	return yarpcerrors.FromHeaders(errorCode, errorName, errorMessage)
 }

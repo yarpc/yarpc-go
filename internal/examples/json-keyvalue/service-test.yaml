@@ -19,7 +19,7 @@ run:
       exit
     output: |
       sending request "get" to service "keyvalue" (encoding "json")
-      foo =
+      get "foo" failed: code:not-found message:foo
       sending request "set" to service "keyvalue" (encoding "json")
       sending request "get" to service "keyvalue" (encoding "json")
       foo = bar

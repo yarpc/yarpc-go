@@ -27,10 +27,10 @@ import (
 
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	iioutil "go.uber.org/yarpc/internal/ioutil"
 	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -91,7 +91,7 @@ func TestMiddleware(t *testing.T) {
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteUnexpectedError("unknown error"),
+							GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 						},
 						{
 							WantService:   "serv",
@@ -125,25 +125,25 @@ func TestMiddleware(t *testing.T) {
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteUnexpectedError("unknown error"),
+							GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 						},
 						{
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*300),
+							GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*300),
 						},
 						{
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteTimeoutError("remote timed out"),
+							GiveError:     yarpcerrors.DeadlineExceededErrorf("remote timed out"),
 						},
 						{
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteUnexpectedError("unknown error"),
+							GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 						},
 						{
 							WantService:   "serv",
@@ -177,10 +177,10 @@ func TestMiddleware(t *testing.T) {
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteBadRequestError("bad request!"),
+							GiveError:     yarpcerrors.InvalidArgumentErrorf("bad request!"),
 						},
 					},
-					wantError: errors.RemoteBadRequestError("bad request!").Error(),
+					wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 				},
 			},
 		},
@@ -205,16 +205,16 @@ func TestMiddleware(t *testing.T) {
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteUnexpectedError("unknown error"),
+							GiveError:     yarpcerrors.InternalErrorf("unknown error"),
 						},
 						{
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteBadRequestError("bad request!"),
+							GiveError:     yarpcerrors.InvalidArgumentErrorf("bad request!"),
 						},
 					},
-					wantError: errors.RemoteBadRequestError("bad request!").Error(),
+					wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 				},
 			},
 		},
@@ -270,7 +270,7 @@ func TestMiddleware(t *testing.T) {
 							WantProcedure:  "proc",
 							WantBody:       "body",
 							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+							GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 						},
 						{
 							WantTimeout:   testtime.Millisecond * 25,
@@ -306,7 +306,7 @@ func TestMiddleware(t *testing.T) {
 							WantProcedure:  "proc",
 							WantBody:       "body",
 							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+							GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 						},
 						{
 							WantTimeout:   testtime.Millisecond * 50,
@@ -342,17 +342,17 @@ func TestMiddleware(t *testing.T) {
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteUnexpectedError("unexpected error 1"),
+							GiveError:     yarpcerrors.InternalErrorf("unexpected error 1"),
 						},
 						{
 							WantTimeout:   testtime.Millisecond * 50,
 							WantService:   "serv",
 							WantProcedure: "proc",
 							WantBody:      "body",
-							GiveError:     errors.RemoteUnexpectedError("unexpected error 2"),
+							GiveError:     yarpcerrors.InternalErrorf("unexpected error 2"),
 						},
 					},
-					wantError: errors.RemoteUnexpectedError("unexpected error 2").Error(),
+					wantError: yarpcerrors.InternalErrorf("unexpected error 2").Error(),
 				},
 			},
 		},
@@ -379,7 +379,7 @@ func TestMiddleware(t *testing.T) {
 							WantProcedure: "proc",
 							// We have explicitly not read the body, which will not exhaust the
 							// req body io.Reader.
-							GiveError: errors.RemoteUnexpectedError("unexpected error 1"),
+							GiveError: yarpcerrors.InternalErrorf("unexpected error 1"),
 						},
 					},
 					wantError: iioutil.ErrReset.Error(),
@@ -410,7 +410,7 @@ func TestMiddleware(t *testing.T) {
 							WantProcedure:  "proc",
 							WantBody:       "body",
 							WaitForTimeout: true,
-							GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+							GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 						},
 						{
 							WantTimeout:   testtime.Millisecond * 25,
@@ -449,7 +449,7 @@ func TestMiddleware(t *testing.T) {
 							WantProcedure:     "proc",
 							WantBody:          "body",
 							WaitForTimeout:    true,
-							GiveError:         errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+							GiveError:         yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 						},
 						{
 							WantTimeout:       testtime.Millisecond * 100,
@@ -458,7 +458,7 @@ func TestMiddleware(t *testing.T) {
 							WantProcedure:     "proc",
 							WantBody:          "body",
 							WaitForTimeout:    true,
-							GiveError:         errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+							GiveError:         yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 						},
 						{
 							WantTimeout:       testtime.Millisecond * 50,
@@ -498,11 +498,11 @@ func TestMiddleware(t *testing.T) {
 							WantProcedure:     "proc",
 							WantBody:          "body",
 							WaitForTimeout:    true,
-							GiveError:         errors.RemoteUnexpectedError("unexpected error 2"),
+							GiveError:         yarpcerrors.InternalErrorf("unexpected error 2"),
 						},
 					},
 					wantTimeLimit: testtime.Millisecond * 40,
-					wantError:     errors.RemoteUnexpectedError("unexpected error 2").Error(),
+					wantError:     yarpcerrors.InternalErrorf("unexpected error 2").Error(),
 				},
 			},
 		},
@@ -532,7 +532,7 @@ func TestMiddleware(t *testing.T) {
 									WantProcedure:  "proc",
 									WantBody:       "body",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 								},
 								{
 									WantTimeout:   testtime.Millisecond * 25,
@@ -557,10 +557,10 @@ func TestMiddleware(t *testing.T) {
 									WantService:   "serv2",
 									WantProcedure: "proc2",
 									WantBody:      "body2",
-									GiveError:     errors.RemoteBadRequestError("bad request!"),
+									GiveError:     yarpcerrors.InvalidArgumentErrorf("bad request!"),
 								},
 							},
-							wantError: errors.RemoteBadRequestError("bad request!").Error(),
+							wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 						},
 						RequestAction{
 							request: &transport.Request{
@@ -576,7 +576,7 @@ func TestMiddleware(t *testing.T) {
 									WantProcedure:  "proc3",
 									WantBody:       "body3",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv3", "proc3", testtime.Millisecond*50),
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv3 procedure:proc3 ttl:%v", testtime.Millisecond*50),
 								},
 								{
 									WantTimeout:    testtime.Millisecond * 25,
@@ -585,10 +585,10 @@ func TestMiddleware(t *testing.T) {
 									WantBody:       "body3",
 									GiveRespBody:   "respbody",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv3", "proc3", testtime.Millisecond*25),
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv3 procedure:proc3 ttl:%v", testtime.Millisecond*25),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv3", "proc3", testtime.Millisecond*25).Error(),
+							wantError: yarpcerrors.DeadlineExceededErrorf("service:serv3 procedure:proc3 ttl:%v", testtime.Millisecond*25).Error(),
 						},
 					},
 				},
@@ -641,7 +641,7 @@ func TestMiddleware(t *testing.T) {
 									WantProcedure:  "nonProcedureRoute",
 									WantBody:       "body1",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*20),
 								},
 								{
 									WantTimeout:    testtime.Millisecond * 20,
@@ -649,17 +649,17 @@ func TestMiddleware(t *testing.T) {
 									WantProcedure:  "nonProcedureRoute",
 									WantBody:       "body1",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*20),
 								},
 								{
 									WantTimeout:   testtime.Millisecond * 20,
 									WantService:   "nonServiceRoute",
 									WantProcedure: "nonProcedureRoute",
 									WantBody:      "body1",
-									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20),
+									GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*20),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*20).Error(),
+							wantError: yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*20).Error(),
 						},
 						RequestAction{
 							request: &transport.Request{
@@ -675,17 +675,17 @@ func TestMiddleware(t *testing.T) {
 									WantProcedure:  "nonProcedureRoute",
 									WantBody:       "body2",
 									WaitForTimeout: true,
-									GiveError:      errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 								},
 								{
 									WantTimeout:   testtime.Millisecond * 50,
 									WantService:   "serviceRoute",
 									WantProcedure: "nonProcedureRoute",
 									WantBody:      "body2",
-									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50),
+									GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*50).Error(),
+							wantError: yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*50).Error(),
 						},
 						RequestAction{
 							request: &transport.Request{
@@ -700,10 +700,10 @@ func TestMiddleware(t *testing.T) {
 									WantService:   "serviceRoute",
 									WantProcedure: "procedureRoute",
 									WantBody:      "body3",
-									GiveError:     errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*100),
+									GiveError:     yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*100),
 								},
 							},
-							wantError: errors.ClientTimeoutError("serv", "proc", testtime.Millisecond*100).Error(),
+							wantError: yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*100).Error(),
 						},
 					},
 				},

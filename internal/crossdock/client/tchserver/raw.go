@@ -22,15 +22,14 @@ package tchserver
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/internal"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func runRaw(t crossdock.T, dispatcher *yarpc.Dispatcher) {
@@ -73,16 +72,12 @@ func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 		return
 	}
 
-	if transport.IsBadRequestError(err) {
+	if yarpcerrors.IsInvalidArgument(err) {
 		t.Skipf("handlertimeout/raw procedure not implemented: %v", err)
 		return
 	}
 
-	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
-
-	form := strings.HasPrefix(err.Error(),
-		`Timeout: call to procedure "handlertimeout/raw" of service "service" from caller "caller" timed out after`)
-	assert.True(form, "must be a remote handler timeout: %q", err.Error())
+	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
 }
 
 func rawCall(

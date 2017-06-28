@@ -34,11 +34,11 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // this ensures the HTTP outbound implements both transport.Outbound interfaces
@@ -273,7 +273,9 @@ func (o *Outbound) callWithPeer(
 		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {
 			end := time.Now()
-			return nil, errors.ClientTimeoutError(treq.Service, treq.Procedure, end.Sub(start))
+			return nil, yarpcerrors.DeadlineExceededErrorf(
+				"client timeout for procedure %q of service %q after %v",
+				treq.Procedure, treq.Service, end.Sub(start))
 		}
 
 		// Note that the connection may have been lost so the peer connection
@@ -296,7 +298,7 @@ func (o *Outbound) callWithPeer(
 		}, nil
 	}
 
-	return nil, getErrFromResponse(response)
+	return nil, getYARPCErrorFromResponse(response)
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*httpPeer, func(error), error) {
@@ -386,29 +388,28 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	return req
 }
 
-func getErrFromResponse(response *http.Response) error {
-	// TODO Behavior for 300-range status codes is undefined
+func getYARPCErrorFromResponse(response *http.Response) error {
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return err
+		return yarpcerrors.InternalErrorf(err.Error())
 	}
-
 	if err := response.Body.Close(); err != nil {
-		return err
+		return yarpcerrors.InternalErrorf(err.Error())
 	}
-
-	// Trim the trailing newline from HTTP error messages
-	message := strings.TrimSuffix(string(contents), "\n")
-
-	if response.StatusCode >= 400 && response.StatusCode < 500 {
-		return errors.RemoteBadRequestError(message)
+	// use the status code if we can't get a code from the headers
+	code := statusCodeToBestCode(response.StatusCode)
+	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
+		var errorCode yarpcerrors.Code
+		// TODO: what to do with error?
+		if err := errorCode.UnmarshalText([]byte(errorCodeText)); err == nil {
+			code = errorCode
+		}
 	}
-
-	if response.StatusCode == http.StatusGatewayTimeout {
-		return errors.RemoteTimeoutError(message)
-	}
-
-	return errors.RemoteUnexpectedError(message)
+	return yarpcerrors.FromHeaders(
+		code,
+		response.Header.Get(ErrorNameHeader),
+		strings.TrimSuffix(string(contents), "\n"),
+	)
 }
 
 // Introspect returns basic status about this outbound.

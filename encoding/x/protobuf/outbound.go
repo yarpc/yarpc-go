@@ -24,13 +24,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/x/protobuf/internal/wirepb"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/procedure"
 )
@@ -76,28 +74,9 @@ func (c *client) Call(
 	if _, err := call.ReadFromResponse(ctx, transportResponse); err != nil {
 		return nil, err
 	}
-	// TODO: the error from Call will be the application error, we might
-	// also have a response returned however
-	if isRawResponse(transportResponse.Headers) {
-		response := newResponse()
-		if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response); err != nil {
-			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
-		}
-		return response, nil
-	}
-	wireResponse := &wirepb.Response{}
-	if err := unmarshal(transportRequest.Encoding, transportResponse.Body, wireResponse); err != nil {
+	response := newResponse()
+	if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response); err != nil {
 		return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
-	}
-	var response proto.Message
-	if wireResponse.Payload != "" {
-		response = newResponse()
-		if err := unmarshal(transportRequest.Encoding, strings.NewReader(wireResponse.Payload), response); err != nil {
-			return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
-		}
-	}
-	if wireResponse.Error != nil {
-		return response, newApplicationError(wireResponse.Error.Message)
 	}
 	return response, nil
 }

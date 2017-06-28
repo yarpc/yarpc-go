@@ -23,9 +23,10 @@ package tch
 import (
 	"time"
 
+	"go.uber.org/yarpc/yarpcerrors"
+
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/raw"
-	"go.uber.org/yarpc/internal/errors"
 	"golang.org/x/net/context"
 )
 
@@ -36,9 +37,9 @@ type handlerTimeoutRawHandler struct{}
 
 func (handlerTimeoutRawHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	start := time.Now()
-	err := errors.HandlerTimeoutError("caller", "service",
-		"handlertimeout/raw", time.Now().Sub(start))
-	err = errors.AsHandlerError("service", "handlertimeout/raw", err)
+	err := yarpcerrors.DeadlineExceededErrorf(
+		"call to procedure %q of service %q from caller %q timed out after %v",
+		"caller", "service", "handlertimeout/raw", time.Now().Sub(start))
 	err = tchannel.NewSystemError(tchannel.ErrCodeTimeout, err.Error())
 	return nil, err
 }

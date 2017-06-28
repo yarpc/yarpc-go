@@ -21,6 +21,7 @@
 package tchannel
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -29,9 +30,11 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/yarpcerrors"
 	ncontext "golang.org/x/net/context"
 )
 
@@ -90,31 +93,38 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 }
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
-	start := time.Now()
-	err := h.callHandler(ctx, call, start)
-	if err == nil {
-		return
-	}
+	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
+	responseWriter := newResponseWriter(call.Response(), call.Format())
 
-	if _, ok := err.(tchannel.SystemError); ok {
+	err := h.callHandler(ctx, call, responseWriter)
+	if err != nil && !responseWriter.isApplicationError {
 		// TODO: log error
-		_ = call.Response().SendSystemError(err)
+		_ = call.Response().SendSystemError(getSystemError(err))
 		return
 	}
-
-	err = errors.AsHandlerError(call.ServiceName(), call.MethodString(), err)
-	status := tchannel.ErrCodeUnexpected
-	if transport.IsBadRequestError(err) {
-		status = tchannel.ErrCodeBadRequest
-	} else if transport.IsTimeoutError(err) {
-		status = tchannel.ErrCodeTimeout
+	if err != nil && responseWriter.isApplicationError {
+		// we have an error, so we're going to propagate it as a yarpc error,
+		// regardless of whether or not it is a system error.
+		yarpcError := errors.WrapHandlerError(err, call.ServiceName(), call.MethodString())
+		// TODO: what to do with error? we could have a whole complicated scheme to
+		// return a SystemError here, might want to do that
+		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
+		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
+		if name := yarpcerrors.ErrorName(yarpcError); name != "" {
+			responseWriter.addHeader(ErrorNameHeaderKey, name)
+		}
+		if message := yarpcerrors.ErrorMessage(yarpcError); message != "" {
+			responseWriter.addHeader(ErrorMessageHeaderKey, message)
+		}
 	}
-
-	// TODO: log error
-	_ = call.Response().SendSystemError(tchannel.NewSystemError(status, err.Error()))
+	if err := responseWriter.Close(); err != nil {
+		// TODO: log error
+		_ = call.Response().SendSystemError(getSystemError(err))
+	}
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, start time.Time) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) error {
+	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
 		return tchannel.ErrTimeoutRequired
@@ -148,16 +158,13 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 	defer body.Close()
 	treq.Body = body
 
-	rw := newResponseWriter(treq, call)
-	defer rw.Close() // TODO(abg): log if this errors
-
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		if _, ok := err.(errors.UnrecognizedProcedureError); !ok {
+		if yarpcerrors.ErrorCode(err) != yarpcerrors.CodeUnimplemented {
 			return err
 		}
 		if tcall, ok := call.(tchannelCall); !ok {
@@ -174,65 +181,46 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, start time.T
 		if err := request.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
-		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, rw)
+		return transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	default:
-		err = errors.UnsupportedTypeError{Transport: "TChannel", Type: spec.Type().String()}
+		return yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String())
 	}
-
-	return err
 }
 
 type responseWriter struct {
-	treq         *transport.Request
-	failedWith   error
-	bodyWriter   tchannel.ArgWriter
-	format       tchannel.Format
-	headers      transport.Headers
-	response     inboundCallResponse
-	wroteHeaders bool
+	failedWith         error
+	format             tchannel.Format
+	headers            transport.Headers
+	buffer             *bytes.Buffer
+	response           inboundCallResponse
+	isApplicationError bool
 }
 
-func newResponseWriter(treq *transport.Request, call inboundCall) *responseWriter {
+func newResponseWriter(response inboundCallResponse, format tchannel.Format) *responseWriter {
 	return &responseWriter{
-		treq:     treq,
-		response: call.Response(),
-		format:   call.Format(),
+		response: response,
+		format:   format,
 	}
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	if rw.wroteHeaders {
-		panic("AddHeaders() cannot be called after calling Write().")
-	}
 	for k, v := range h.Items() {
-		rw.headers = rw.headers.With(k, v)
+		// TODO: is this considered a breaking change?
+		if isReservedHeaderKey(k) {
+			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
+			return
+		}
+		rw.addHeader(k, v)
 	}
+}
+
+func (rw *responseWriter) addHeader(key string, value string) {
+	rw.headers = rw.headers.With(key, value)
 }
 
 func (rw *responseWriter) SetApplicationError() {
-	if rw.wroteHeaders {
-		panic("SetApplicationError() cannot be called after calling Write().")
-	}
-	err := rw.response.SetApplicationError()
-	if err != nil {
-		panic(fmt.Sprintf("SetApplicationError() failed: %v", err))
-	}
-}
-
-func (rw *responseWriter) ensureWroteHeaders() error {
-	if rw.wroteHeaders {
-		return nil
-	}
-
-	rw.wroteHeaders = true
-	if err := writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer); err != nil {
-		err = encoding.ResponseHeadersEncodeError(rw.treq, err)
-		rw.failedWith = err
-		return err
-	}
-
-	return nil
+	rw.isApplicationError = true
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
@@ -240,35 +228,62 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 		return 0, rw.failedWith
 	}
 
-	if err := rw.ensureWroteHeaders(); err != nil {
-		return 0, err
+	if rw.buffer == nil {
+		rw.buffer = buffer.Get()
 	}
 
-	if rw.bodyWriter == nil {
-		var err error
-		rw.bodyWriter, err = rw.response.Arg3Writer()
-		if err != nil {
-			rw.failedWith = err
-			return 0, err
-		}
-	}
-
-	n, err := rw.bodyWriter.Write(s)
+	n, err := rw.buffer.Write(s)
 	if err != nil {
-		rw.failedWith = err
+		rw.failedWith = appendError(rw.failedWith, err)
 	}
 	return n, err
 }
 
 func (rw *responseWriter) Close() error {
-	err := rw.ensureWroteHeaders()
+	retErr := rw.failedWith
+	if rw.isApplicationError {
+		if err := rw.response.SetApplicationError(); err != nil {
+			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
+		}
+	}
+	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
 
-	if rw.bodyWriter != nil {
-		err = multierr.Append(err, rw.bodyWriter.Close())
+	// Arg3Writer must be opened and closed regardless of if there is data
+	// However, if there is a system error, we do not want to do this
+	bodyWriter, err := rw.response.Arg3Writer()
+	if err != nil {
+		return appendError(retErr, err)
+	}
+	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
+	if rw.buffer != nil {
+		defer buffer.Put(rw.buffer)
+		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
+			return appendError(retErr, err)
+		}
 	}
 
-	if err != nil {
+	return retErr
+}
+
+func getSystemError(err error) error {
+	if _, ok := err.(tchannel.SystemError); ok {
 		return err
 	}
-	return rw.failedWith
+	status := tchannel.ErrCodeUnexpected
+	if yarpcerrors.IsInvalidArgument(err) || yarpcerrors.IsUnimplemented(err) {
+		status = tchannel.ErrCodeBadRequest
+	} else if yarpcerrors.IsDeadlineExceeded(err) {
+		status = tchannel.ErrCodeTimeout
+	}
+	return tchannel.NewSystemError(status, err.Error())
+}
+
+func appendError(left error, right error) error {
+	if _, ok := left.(tchannel.SystemError); ok {
+		return left
+	}
+	if _, ok := right.(tchannel.SystemError); ok {
+		return right
+	}
+	return multierr.Append(left, right)
 }

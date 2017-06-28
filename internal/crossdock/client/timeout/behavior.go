@@ -22,14 +22,12 @@ package timeout
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/crossdock/crossdock-go"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	disp "go.uber.org/yarpc/internal/crossdock/client/dispatcher"
-	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // Run tests if a yarpc client returns correctly a client timeout error behind
@@ -50,25 +48,10 @@ func Run(t crossdock.T) {
 	_, err := client.Call(ctx, "sleep/raw", nil)
 	fatals.Error(err, "expected a failure for timeout")
 
-	if transport.IsBadRequestError(err) {
+	if yarpcerrors.IsInvalidArgument(err) {
 		t.Skipf("sleep/raw method not implemented: %v", err)
 		return
 	}
 
-	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
-
-	trans := t.Param(params.Transport)
-	switch trans {
-	case "http":
-		form := strings.HasPrefix(err.Error(),
-			`client timeout for procedure "sleep/raw" of service "yarpc-test" after`)
-		assert.True(form, "should be a client timeout: %q", err.Error())
-	case "tchannel":
-		form := strings.HasPrefix(err.Error(), `timeout`)
-		assert.True(form,
-			"should be a remote timeout (we cant represent client timeout with tchannel): %q",
-			err.Error())
-	default:
-		fatals.Fail("", "unknown transport %q", trans)
-	}
+	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
 }

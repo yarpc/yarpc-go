@@ -23,15 +23,14 @@ package httpserver
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	crossdock "github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // Run exercise a yarpc client against a rigged httpserver.
@@ -70,14 +69,10 @@ func runRaw(t crossdock.T, disp *yarpc.Dispatcher) {
 	_, err := client.Call(ctx, "handlertimeout/raw", nil)
 	fatals.Error(err, "expected an error")
 
-	if transport.IsBadRequestError(err) {
+	if yarpcerrors.IsInvalidArgument(err) {
 		t.Skipf("handlertimeout/raw method not implemented: %v", err)
 		return
 	}
 
-	assert.True(transport.IsTimeoutError(err), "returns a TimeoutError: %T", err)
-
-	form := strings.HasPrefix(err.Error(),
-		`Timeout: call to procedure "handlertimeout/raw" of service "service" from caller "caller" timed out after`)
-	assert.True(form, "must be a remote handler timeout: %q", err.Error())
+	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
 }

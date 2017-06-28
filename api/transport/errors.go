@@ -20,46 +20,54 @@
 
 package transport
 
-import "go.uber.org/yarpc/internal/errors"
+import "go.uber.org/yarpc/yarpcerrors"
 
 // InboundBadRequestError builds an error which indicates that an inbound
 // cannot process a request because it is a bad request.
 //
 // IsBadRequestError returns true for these errors.
+//
+// Deprecated: use yarpcerrors.InvalidArgumentErrorf instead.
 func InboundBadRequestError(err error) error {
-	return errors.HandlerBadRequestError(err)
+	return yarpcerrors.InvalidArgumentErrorf(err.Error())
 }
 
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.
+//
+// Deprecated: use yarpcerrors.IsInvalidArgument(err) instead.
 func IsBadRequestError(err error) bool {
-	_, ok := err.(errors.BadRequestError)
-	return ok
+	return yarpcerrors.IsInvalidArgument(err)
 }
 
 // IsUnexpectedError returns true if the server panicked or failed to process
 // the request with an unhandled error.
+//
+// Deprecated: use yarpcerrors.IsInternal(err) instead.
 func IsUnexpectedError(err error) bool {
-	_, ok := err.(errors.UnexpectedError)
-	return ok
+	return yarpcerrors.IsInternal(err)
 }
 
 // IsTimeoutError return true if the given error is a TimeoutError.
+//
+// Deprecated: use yarpcerrors.IsDeadlineExceeded(err) instead.
 func IsTimeoutError(err error) bool {
-	_, ok := err.(errors.TimeoutError)
-	return ok
+	return yarpcerrors.IsDeadlineExceeded(err)
 }
 
 // UnrecognizedProcedureError returns an error for the given request,
 // such that IsUnrecognizedProcedureError can distinguish it from other errors
 // coming out of router.Choose.
+//
+// Deprecated: use yarpcerrors.UnimplementedErrorf instead.
 func UnrecognizedProcedureError(req *Request) error {
-	return errors.RouterUnrecognizedProcedureError(req.Service, req.Procedure)
+	return yarpcerrors.UnimplementedErrorf("unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }
 
 // IsUnrecognizedProcedureError returns true for errors returned by
 // Router.Choose if the router cannot find a handler for the request.
+//
+// Deprecated: use yarpcerrors.IsUnimplemented(err) instead.
 func IsUnrecognizedProcedureError(err error) bool {
-	_, ok := err.(errors.UnrecognizedProcedureError)
-	return ok
+	return yarpcerrors.IsUnimplemented(err)
 }

@@ -44,9 +44,9 @@ fire bar
 fired-values
 exit`
 	testOutput = `get foo
-get foo failed: key not set: foo
+get foo failed: foo
 get foo
-get foo failed: key not set: foo
+get foo failed: foo
 set foo bar
 get foo
 foo = bar

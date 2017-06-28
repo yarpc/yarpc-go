@@ -23,15 +23,18 @@ package http
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func popHeader(h http.Header, n string) string {
@@ -47,37 +50,43 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	start := time.Now()
-
-	defer req.Body.Close()
-	if req.Method != "POST" {
-		http.NotFound(w, req)
-		return
-	}
-
-	service := req.Header.Get(ServiceHeader)
-	procedure := req.Header.Get(ProcedureHeader)
-
-	err := h.callHandler(w, req, start)
+	responseWriter := newResponseWriter(w)
+	service := popHeader(req.Header, ServiceHeader)
+	procedure := popHeader(req.Header, ProcedureHeader)
+	err := errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure)
 	if err == nil {
+		responseWriter.Close(http.StatusOK)
 		return
 	}
-
-	err = errors.AsHandlerError(service, procedure, err)
-	status := http.StatusInternalServerError
-	if transport.IsBadRequestError(err) {
-		status = http.StatusBadRequest
-	} else if transport.IsTimeoutError(err) {
-		status = http.StatusGatewayTimeout
+	if errorCodeText, marshalErr := yarpcerrors.ErrorCode(err).MarshalText(); marshalErr != nil {
+		err = yarpcerrors.InternalErrorf("error %s had code %v which is unknown", err.Error(), yarpcerrors.ErrorCode(err))
+		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
+	} else {
+		responseWriter.AddSystemHeader(ErrorCodeHeader, string(errorCodeText))
 	}
-	http.Error(w, err.Error(), status)
+	if name := yarpcerrors.ErrorName(err); name != "" {
+		responseWriter.AddSystemHeader(ErrorNameHeader, name)
+	}
+	// TODO: would prefer to have error message be on a header so we can
+	// have non-nil responses with errors, discuss
+	_, _ = fmt.Fprintln(responseWriter, yarpcerrors.ErrorMessage(err))
+	status, ok := _codeToStatusCode[yarpcerrors.ErrorCode(err)]
+	if !ok {
+		status = http.StatusInternalServerError
+	}
+	responseWriter.Close(status)
 }
 
-func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start time.Time) error {
+func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) error {
+	start := time.Now()
+	defer req.Body.Close()
+	if req.Method != http.MethodPost {
+		return yarpcerrors.NotFoundErrorf("request method was %s but only %s is allowed", req.Method, http.MethodPost)
+	}
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
-		Service:         popHeader(req.Header, ServiceHeader),
-		Procedure:       popHeader(req.Header, ProcedureHeader),
+		Service:         service,
+		Procedure:       procedure,
 		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
 		ShardKey:        popHeader(req.Header, ShardKeyHeader),
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
@@ -111,13 +120,13 @@ func (h handler) callHandler(w http.ResponseWriter, req *http.Request, start tim
 		if err := request.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
-		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, newResponseWriter(w))
+		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	case transport.Oneway:
 		err = handleOnewayRequest(span, treq, spec.Oneway())
 
 	default:
-		err = errors.UnsupportedTypeError{Transport: "HTTP", Type: spec.Type().String()}
+		err = yarpcerrors.UnimplementedErrorf("transport http does not handle %s handlers", spec.Type().String())
 	}
 
 	updateSpanWithErr(span, err)
@@ -184,22 +193,39 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w http.ResponseWriter
+	w      http.ResponseWriter
+	buffer *bytes.Buffer
 }
 
-func newResponseWriter(w http.ResponseWriter) responseWriter {
+func newResponseWriter(w http.ResponseWriter) *responseWriter {
 	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
-	return responseWriter{w: w}
+	return &responseWriter{w: w}
 }
 
-func (rw responseWriter) Write(s []byte) (int, error) {
-	return rw.w.Write(s)
+func (rw *responseWriter) Write(s []byte) (int, error) {
+	if rw.buffer == nil {
+		rw.buffer = buffer.Get()
+	}
+	return rw.buffer.Write(s)
 }
 
-func (rw responseWriter) AddHeaders(h transport.Headers) {
+func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
 }
 
-func (rw responseWriter) SetApplicationError() {
+func (rw *responseWriter) SetApplicationError() {
 	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
+}
+
+func (rw *responseWriter) AddSystemHeader(key string, value string) {
+	rw.w.Header().Set(key, value)
+}
+
+func (rw *responseWriter) Close(httpStatusCode int) {
+	rw.w.WriteHeader(httpStatusCode)
+	if rw.buffer != nil {
+		// TODO: what to do with error?
+		_, _ = rw.w.Write(rw.buffer.Bytes())
+		buffer.Put(rw.buffer)
+	}
 }

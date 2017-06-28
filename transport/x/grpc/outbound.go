@@ -24,16 +24,17 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"strings"
 	"sync"
-	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/errors"
 	internalsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
+	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // UserAgent is the User-Agent that will be set for requests.
@@ -83,9 +84,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	}
 	var responseBody []byte
 	responseMD := metadata.New(nil)
-	if err := o.invoke(ctx, request, &responseBody, &responseMD); err != nil {
-		return nil, err
-	}
+	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD)
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, err
@@ -93,7 +92,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	return &transport.Response{
 		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
 		Headers: responseHeaders,
-	}, nil
+	}, invokeErrorToYARPCError(invokeErr, responseMD)
 }
 
 func (o *Outbound) invoke(
@@ -102,7 +101,6 @@ func (o *Outbound) invoke(
 	responseBody *[]byte,
 	responseMD *metadata.MD,
 ) error {
-	start := time.Now()
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
@@ -118,19 +116,16 @@ func (o *Outbound) invoke(
 	}
 	var callOptions []grpc.CallOption
 	if responseMD != nil {
-		callOptions = []grpc.CallOption{grpc.Header(responseMD)}
+		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
-	if err := grpc.Invoke(
+	return grpc.Invoke(
 		metadata.NewContext(ctx, md),
 		fullMethod,
 		requestBody,
 		responseBody,
 		o.clientConn,
 		callOptions...,
-	); err != nil {
-		return errorToGRPCError(ctx, request, start, err)
-	}
-	return nil
+	)
 }
 
 func (o *Outbound) start() error {
@@ -162,20 +157,37 @@ func (o *Outbound) stop() error {
 	return nil
 }
 
-func errorToGRPCError(ctx context.Context, request *transport.Request, start time.Time, err error) error {
-	deadline, _ := ctx.Deadline()
-	ttl := deadline.Sub(start)
-	switch grpc.Code(err) {
-	case codes.DeadlineExceeded:
-		return errors.ClientTimeoutError(request.Service, request.Procedure, ttl)
-	case codes.Unimplemented, codes.InvalidArgument, codes.NotFound:
-		return errors.RemoteBadRequestError(grpc.ErrorDesc(err))
-	case codes.Canceled, codes.AlreadyExists, codes.PermissionDenied,
-		codes.Unauthenticated, codes.ResourceExhausted, codes.FailedPrecondition,
-		codes.Aborted, codes.OutOfRange, codes.Internal,
-		codes.Unavailable, codes.DataLoss, codes.Unknown:
-		fallthrough
-	default:
-		return errors.RemoteUnexpectedError(grpc.ErrorDesc(err))
+func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
+	if err == nil {
+		return nil
 	}
+	if yarpcerrors.IsYARPCError(err) {
+		return err
+	}
+	status, ok := status.FromError(err)
+	// if not a yarpc error or grpc error, just return the error
+	if !ok {
+		return err
+	}
+	code, ok := _grpcCodeToCode[status.Code()]
+	if !ok {
+		code = yarpcerrors.CodeUnknown
+	}
+	var name string
+	if responseMD != nil {
+		value, ok := responseMD[grpcheader.ErrorNameHeader]
+		// TODO: what to do if the length is > 1?
+		if ok && len(value) == 1 {
+			name = value[0]
+		}
+	}
+	message := status.Message()
+	// we put the name as a prefix for grpc compatibility
+	// if there was no message, the message will be the name, so we leave it as the message
+	if name != "" && message != "" && message != name {
+		message = strings.TrimPrefix(message, name+": ")
+	} else if name != "" && message == name {
+		message = ""
+	}
+	return yarpcerrors.FromHeaders(code, name, message)
 }
