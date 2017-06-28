@@ -221,10 +221,6 @@ func (rw *responseWriter) addHeader(key string, value string) {
 
 func (rw *responseWriter) SetApplicationError() {
 	rw.isApplicationError = true
-	err := rw.response.SetApplicationError()
-	if err != nil {
-		rw.failedWith = appendError(rw.failedWith, fmt.Errorf("SetApplicationError() failed: %v", err))
-	}
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
@@ -244,7 +240,13 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 }
 
 func (rw *responseWriter) Close() error {
-	retErr := appendError(rw.failedWith, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
+	retErr := rw.failedWith
+	if rw.isApplicationError {
+		if err := rw.response.SetApplicationError(); err != nil {
+			retErr = appendError(retErr, fmt.Errorf("SetApplicationError() failed: %v", err))
+		}
+	}
+	retErr = appendError(retErr, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this

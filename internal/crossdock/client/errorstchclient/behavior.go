@@ -141,12 +141,8 @@ func Run(t crossdock.T) {
 			body:      []byte("{}"),
 			headers:   []byte("{}"),
 			validate: func(res3 []byte, isAppErr bool, err error) {
-				assert.Error(err, "is error")
-				assert.False(isAppErr, "unexpected-error procedure must not produce application error")
-				err, ok := err.(tchannel.SystemError)
-				assert.True(ok, "unexpected-error procedure must produce system error")
-				code := tchannel.GetSystemErrorCode(err)
-				assert.Equal(tchannel.ErrCodeUnexpected, code, "must produce transport error")
+				assert.NoError(err, "not error")
+				assert.True(isAppErr, "unexpected-error procedure must produce application error")
 			},
 		},
 	}
