@@ -107,6 +107,9 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	if err := o.once.WhenRunning(ctx); err != nil {
 		return nil, err
 	}
+	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
+		return nil, errDoNotUseContextWithHeaders
+	}
 
 	// NB(abg): Under the current API, the local service's name is required
 	// twice: once when constructing the TChannel and then again when
