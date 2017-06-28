@@ -93,14 +93,19 @@ func (h handler) Handle(ctx ncontext.Context, call *tchannel.InboundCall) {
 }
 
 func (h handler) handle(ctx context.Context, call inboundCall) {
-	// you MUST close the responseWriter no matter what
+	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
 	responseWriter := newResponseWriter(call.Response(), call.Format())
 
-	handlerErr := h.callHandler(ctx, call, responseWriter)
-	if handlerErr != nil {
+	err, appErr := h.callHandler(ctx, call, responseWriter)
+	if err != nil {
+		// TODO: log error
+		_ = call.Response().SendSystemError(getSystemError(err))
+		return
+	}
+	if appErr != nil {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
-		yarpcError := errors.WrapHandlerError(handlerErr, call.ServiceName(), call.MethodString())
+		yarpcError := errors.WrapHandlerError(appErr, call.ServiceName(), call.MethodString())
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
@@ -112,23 +117,19 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 			responseWriter.addHeader(ErrorMessageHeaderKey, message)
 		}
 	}
-	systemError, ok := getSystemError(handlerErr)
-	if err := responseWriter.Close(ok); err != nil {
+	if err := responseWriter.Close(); err != nil {
 		// TODO: log error
-		_ = call.Response().SendSystemError(tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error()))
-		return
-	}
-	if ok {
-		// TODO: log error
-		_ = call.Response().SendSystemError(systemError)
+		_ = call.Response().SendSystemError(getSystemError(err))
 	}
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) error {
+// first error is system error
+// second error is app error
+func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) (error, error) {
 	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
-		return tchannel.ErrTimeoutRequired
+		return tchannel.ErrTimeoutRequired, nil
 	}
 
 	treq := &transport.Request{
@@ -143,7 +144,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {
-		return encoding.RequestHeadersDecodeError(treq, err)
+		return encoding.RequestHeadersDecodeError(treq, err), nil
 	}
 	treq.Headers = headers
 
@@ -154,41 +155,42 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	body, err := call.Arg3Reader()
 	if err != nil {
-		return err
+		return err, nil
 	}
 	defer body.Close()
 	treq.Body = body
 
 	if err := transport.ValidateRequest(treq); err != nil {
-		return err
+		return err, nil
 	}
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		if yarpcerrors.ErrorCode(err) != yarpcerrors.CodeUnimplemented {
-			return err
+			return err, nil
 		}
 		if tcall, ok := call.(tchannelCall); !ok {
 			if m, ok := h.existing[call.MethodString()]; ok {
 				m.Handle(ctx, tcall.InboundCall)
-				return nil
+				return nil, nil
 			}
 		}
-		return err
+		return err, nil
 	}
 
+	var appErr error
 	switch spec.Type() {
 	case transport.Unary:
 		if err := request.ValidateUnaryContext(ctx); err != nil {
-			return err
+			return err, nil
 		}
-		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
+		appErr = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	default:
 		err = yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String())
 	}
 
-	return err
+	return err, appErr
 }
 
 type responseWriter struct {
@@ -210,7 +212,7 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.Items() {
 		// TODO: is this considered a breaking change?
 		if isReservedHeaderKey(k) {
-			rw.failedWith = multierr.Append(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
+			rw.failedWith = appendError(rw.failedWith, fmt.Errorf("cannot use reserved header key: %s", k))
 			return
 		}
 		rw.addHeader(k, v)
@@ -224,7 +226,7 @@ func (rw *responseWriter) addHeader(key string, value string) {
 func (rw *responseWriter) SetApplicationError() {
 	err := rw.response.SetApplicationError()
 	if err != nil {
-		rw.failedWith = multierr.Append(rw.failedWith, fmt.Errorf("SetApplicationError() failed: %v", err))
+		rw.failedWith = appendError(rw.failedWith, fmt.Errorf("SetApplicationError() failed: %v", err))
 	}
 }
 
@@ -239,61 +241,50 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 
 	n, err := rw.buffer.Write(s)
 	if err != nil {
-		rw.failedWith = multierr.Append(rw.failedWith, err)
+		rw.failedWith = appendError(rw.failedWith, err)
 	}
 	return n, err
 }
 
-func (rw *responseWriter) Close(hasSystemError bool) error {
-	retErr := multierr.Append(rw.failedWith, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
+func (rw *responseWriter) Close() error {
+	retErr := appendError(rw.failedWith, writeHeaders(rw.format, rw.headers, rw.response.Arg2Writer))
 
 	// Arg3Writer must be opened and closed regardless of if there is data
 	// However, if there is a system error, we do not want to do this
-	if !hasSystemError && rw.buffer == nil {
-		bodyWriter, err := rw.response.Arg3Writer()
-		if err != nil {
-			return multierr.Append(retErr, err)
-		}
-		defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
+	bodyWriter, err := rw.response.Arg3Writer()
+	if err != nil {
+		return appendError(retErr, err)
 	}
+	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
 	if rw.buffer != nil {
 		defer buffer.Put(rw.buffer)
-		bodyWriter, err := rw.response.Arg3Writer()
-		if err != nil {
-			return multierr.Append(retErr, err)
-		}
-		defer func() { retErr = multierr.Append(retErr, bodyWriter.Close()) }()
 		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
-			return multierr.Append(retErr, err)
+			return appendError(retErr, err)
 		}
 	}
 
 	return retErr
 }
 
-// getSystemError returns a tchannel.SystemError if the given error represents one.
-func getSystemError(err error) (tchannel.SystemError, bool) {
-	// if there is no error, there is no SystemError
-	if err == nil {
-		return tchannel.SystemError{}, false
+func getSystemError(err error) error {
+	if _, ok := err.(tchannel.SystemError); ok {
+		return err
 	}
-	// if the error is a SystemError, return it
-	if systemError, ok := err.(tchannel.SystemError); ok {
-		return systemError, true
+	status := tchannel.ErrCodeUnexpected
+	if yarpcerrors.IsInvalidArgument(err) {
+		status = tchannel.ErrCodeBadRequest
+	} else if yarpcerrors.IsDeadlineExceeded(err) {
+		status = tchannel.ErrCodeTimeout
 	}
-	// if the error is not a YARPC error, return a SystemError of type ErrCodeUnexpected
-	if !yarpcerrors.IsYARPCError(err) {
-		return tchannel.NewSystemError(tchannel.ErrCodeUnexpected, err.Error()).(tchannel.SystemError), true
-	}
+	return tchannel.NewSystemError(status, err.Error())
+}
 
-	// at this point, the error is a YARPC error that might be an application error
-	// we figure out if there is a system error code that represents it
-
-	tchannelCode, ok := _codeToTChannelCode[yarpcerrors.ErrorCode(err)]
-	if !ok {
-		// there is no system code for the YARPC error, so it is an application error
-		return tchannel.SystemError{}, false
+func appendError(left error, right error) error {
+	if _, ok := left.(tchannel.SystemError); ok {
+		return left
 	}
-	// we have a system code, so we will make a SystemError
-	return tchannel.NewSystemError(tchannelCode, yarpcerrors.ErrorMessage(err)).(tchannel.SystemError), true
+	if _, ok := right.(tchannel.SystemError); ok {
+		return right
+	}
+	return multierr.Append(left, right)
 }
