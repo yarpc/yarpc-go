@@ -30,6 +30,7 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/buffer"
+	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -49,7 +50,9 @@ type handler struct {
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
-	err := yarpcerrors.ToYARPCError(h.callHandler(responseWriter, req))
+	service := popHeader(req.Header, ServiceHeader)
+	procedure := popHeader(req.Header, ProcedureHeader)
+	err := errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure)
 	if err == nil {
 		responseWriter.Close(http.StatusOK)
 		return
@@ -71,7 +74,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter.Close(status)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) error {
+func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) error {
 	start := time.Now()
 	defer req.Body.Close()
 	if req.Method != "POST" {
@@ -79,8 +82,8 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request) 
 	}
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
-		Service:         popHeader(req.Header, ServiceHeader),
-		Procedure:       popHeader(req.Header, ProcedureHeader),
+		Service:         service,
+		Procedure:       procedure,
 		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
 		ShardKey:        popHeader(req.Header, ShardKeyHeader),
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),

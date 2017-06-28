@@ -272,7 +272,7 @@ func Run(t crossdock.T) {
 			},
 			body:       "{}",
 			wantStatus: 500,
-			wantBody:   `error` + "\n",
+			wantBody:   `error for service 'yarpc-test' and procedure 'unexpected-error': error` + "\n",
 		},
 		{
 			name: "bad response",

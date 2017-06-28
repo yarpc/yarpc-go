@@ -33,22 +33,6 @@ func IsYARPCError(err error) bool {
 	return ErrorCode(err) != CodeOK
 }
 
-// ToYARPCError is a convenience function with the following logic:
-//
-// - If err is nil, ToYARPCError returns nil
-// - If err is a YARPC error, ToYARPCError returns err with no changes.
-// - If err is not a YARPC error, ToYARPCError returns a new YARPC error with code
-//   CodeUnknown and message err.Error().
-func ToYARPCError(err error) error {
-	if err == nil {
-		return nil
-	}
-	if IsYARPCError(err) {
-		return err
-	}
-	return UnknownErrorf(err.Error())
-}
-
 // ErrorCode returns the Code for the given error, or CodeOK if the given
 // error is not a YARPC error.
 func ErrorCode(err error) Code {

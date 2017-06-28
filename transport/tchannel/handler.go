@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/yarpcerrors"
 	ncontext "golang.org/x/net/context"
@@ -99,7 +100,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	if handlerErr != nil {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
-		yarpcError := yarpcerrors.ToYARPCError(handlerErr)
+		yarpcError := errors.WrapHandlerError(handlerErr, call.ServiceName(), call.MethodString())
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
