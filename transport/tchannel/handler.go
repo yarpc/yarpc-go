@@ -96,16 +96,16 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	// you MUST close the responseWriter no matter what unless you have a tchannel.SystemError
 	responseWriter := newResponseWriter(call.Response(), call.Format())
 
-	err, appErr := h.callHandler(ctx, call, responseWriter)
-	if err != nil {
+	err := h.callHandler(ctx, call, responseWriter)
+	if err != nil && !responseWriter.isApplicationError {
 		// TODO: log error
 		_ = call.Response().SendSystemError(getSystemError(err))
 		return
 	}
-	if appErr != nil {
+	if err != nil && responseWriter.isApplicationError {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
-		yarpcError := errors.WrapHandlerError(appErr, call.ServiceName(), call.MethodString())
+		yarpcError := errors.WrapHandlerError(err, call.ServiceName(), call.MethodString())
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
 		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
@@ -123,13 +123,11 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	}
 }
 
-// first error is system error
-// second error is app error
-func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) (error, error) {
+func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) error {
 	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
-		return tchannel.ErrTimeoutRequired, nil
+		return tchannel.ErrTimeoutRequired
 	}
 
 	treq := &transport.Request{
@@ -144,7 +142,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {
-		return encoding.RequestHeadersDecodeError(treq, err), nil
+		return encoding.RequestHeadersDecodeError(treq, err)
 	}
 	treq.Headers = headers
 
@@ -155,47 +153,48 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	body, err := call.Arg3Reader()
 	if err != nil {
-		return err, nil
+		return err
 	}
 	defer body.Close()
 	treq.Body = body
 
 	if err := transport.ValidateRequest(treq); err != nil {
-		return err, nil
+		return err
 	}
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
 		if yarpcerrors.ErrorCode(err) != yarpcerrors.CodeUnimplemented {
-			return err, nil
+			return err
 		}
 		if tcall, ok := call.(tchannelCall); !ok {
 			if m, ok := h.existing[call.MethodString()]; ok {
 				m.Handle(ctx, tcall.InboundCall)
-				return nil, nil
+				return nil
 			}
 		}
-		return err, nil
+		return err
 	}
 
 	switch spec.Type() {
 	case transport.Unary:
 		if err := request.ValidateUnaryContext(ctx); err != nil {
-			return err, nil
+			return err
 		}
-		return nil, transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
+		return transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	default:
-		return yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String()), nil
+		return yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String())
 	}
 }
 
 type responseWriter struct {
-	failedWith error
-	format     tchannel.Format
-	headers    transport.Headers
-	buffer     *bytes.Buffer
-	response   inboundCallResponse
+	failedWith         error
+	format             tchannel.Format
+	headers            transport.Headers
+	buffer             *bytes.Buffer
+	response           inboundCallResponse
+	isApplicationError bool
 }
 
 func newResponseWriter(response inboundCallResponse, format tchannel.Format) *responseWriter {
@@ -221,6 +220,7 @@ func (rw *responseWriter) addHeader(key string, value string) {
 }
 
 func (rw *responseWriter) SetApplicationError() {
+	rw.isApplicationError = true
 	err := rw.response.SetApplicationError()
 	if err != nil {
 		rw.failedWith = appendError(rw.failedWith, fmt.Errorf("SetApplicationError() failed: %v", err))

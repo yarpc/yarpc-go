@@ -50,13 +50,13 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 		return err
 	}
 
-	resBody, err := r.UnaryHandler(ctx, reqBody)
-	if err != nil {
-		return err
-	}
-
+	resBody, appErr := r.UnaryHandler(ctx, reqBody)
 	if err := call.WriteToResponse(rw); err != nil {
 		return err
+	}
+	if appErr != nil {
+		rw.SetApplicationError()
+		return appErr
 	}
 
 	if _, err := rw.Write(resBody); err != nil {
