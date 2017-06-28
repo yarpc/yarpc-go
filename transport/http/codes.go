@@ -23,8 +23,8 @@ package http
 import "go.uber.org/yarpc/yarpcerrors"
 
 var (
-	// CodeToStatusCode maps all Codes to their corresponding HTTP status code.
-	CodeToStatusCode = map[yarpcerrors.Code]int{
+	// _codeToStatusCode maps all Codes to their corresponding HTTP status code.
+	_codeToStatusCode = map[yarpcerrors.Code]int{
 		yarpcerrors.CodeOK:                 200,
 		yarpcerrors.CodeCancelled:          499,
 		yarpcerrors.CodeUnknown:            500,
@@ -44,8 +44,8 @@ var (
 		yarpcerrors.CodeUnauthenticated:    401,
 	}
 
-	// StatusCodeToCodes maps HTTP status codes to a slice of their corresponding Codes.
-	StatusCodeToCodes = map[int][]yarpcerrors.Code{
+	// _statusCodeToCodes maps HTTP status codes to a slice of their corresponding Codes.
+	_statusCodeToCodes = map[int][]yarpcerrors.Code{
 		200: {yarpcerrors.CodeOK},
 		400: {
 			yarpcerrors.CodeInvalidArgument,
@@ -80,7 +80,7 @@ var (
 // If the Code is >=400 and < 500, yarpcerrors.CodeInvalidArgument is returned.
 // Else, yarpcerrors.CodeUnknown is returned.
 func statusCodeToBestCode(statusCode int) yarpcerrors.Code {
-	codes, ok := StatusCodeToCodes[statusCode]
+	codes, ok := _statusCodeToCodes[statusCode]
 	if !ok || len(codes) == 0 {
 		if statusCode >= 400 && statusCode < 500 {
 			return yarpcerrors.CodeInvalidArgument

@@ -70,7 +70,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// TODO: would prefer to have error message be on a header so we can
 	// have non-nil responses with errors, discuss
 	_, _ = fmt.Fprintln(responseWriter, yarpcerrors.ErrorMessage(err))
-	status, ok := CodeToStatusCode[yarpcerrors.ErrorCode(err)]
+	status, ok := _codeToStatusCode[yarpcerrors.ErrorCode(err)]
 	if !ok {
 		status = http.StatusInternalServerError
 	}

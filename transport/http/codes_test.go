@@ -27,12 +27,12 @@ import (
 )
 
 func TestCodes(t *testing.T) {
-	for code, statusCode := range CodeToStatusCode {
+	for code, statusCode := range _codeToStatusCode {
 		t.Run(code.String(), func(t *testing.T) {
-			getStatusCode, ok := CodeToStatusCode[code]
+			getStatusCode, ok := _codeToStatusCode[code]
 			require.True(t, ok)
 			require.Equal(t, statusCode, getStatusCode)
-			getCodes, ok := StatusCodeToCodes[statusCode]
+			getCodes, ok := _statusCodeToCodes[statusCode]
 			require.True(t, ok)
 			require.Contains(t, getCodes, code)
 			require.Contains(t, getCodes, statusCodeToBestCode(statusCode))
