@@ -31,9 +31,12 @@ import (
 	intsync "go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var (
+	errDoNotUseContextWithHeaders = yarpcerrors.InvalidArgumentErrorf("tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
+
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)
 )
@@ -73,6 +76,9 @@ func (o *Outbound) Chooser() peer.Chooser {
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
 	if err := o.transport.once.WhenRunning(ctx); err != nil {
 		return nil, err
+	}
+	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
+		return nil, errDoNotUseContextWithHeaders
 	}
 	root := o.transport.ch.RootPeers()
 	p, onFinish, err := o.getPeerForRequest(ctx, req)
