@@ -79,7 +79,7 @@ func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCSe
 		protobuf.BuildProceduresParams{
 			ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
-			{{range $method := unaryMethods $service}}protobuf.BuildProceduresUnaryHandlerParams{
+			{{range $method := unaryMethods $service}}{
 					MethodName: "{{$method.GetName}}",
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
@@ -91,7 +91,7 @@ func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCSe
 			{{end}}
 			},
 			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{
-			{{range $method := onewayMethods $service}}protobuf.BuildProceduresOnewayHandlerParams{
+			{{range $method := onewayMethods $service}}{
 					MethodName: "{{$method.GetName}}",
 					Handler: protobuf.NewOnewayHandler(
 						protobuf.OnewayHandlerParams{
