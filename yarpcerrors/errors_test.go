@@ -21,9 +21,11 @@
 package yarpcerrors
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,6 +47,24 @@ var (
 		CodeUnavailable:        UnavailableErrorf,
 		CodeDataLoss:           DataLossErrorf,
 		CodeUnauthenticated:    UnauthenticatedErrorf,
+	}
+	_codeToIsErrorWithCode = map[Code]func(error) bool{
+		CodeCancelled:          IsCancelled,
+		CodeUnknown:            IsUnknown,
+		CodeInvalidArgument:    IsInvalidArgument,
+		CodeDeadlineExceeded:   IsDeadlineExceeded,
+		CodeNotFound:           IsNotFound,
+		CodeAlreadyExists:      IsAlreadyExists,
+		CodePermissionDenied:   IsPermissionDenied,
+		CodeResourceExhausted:  IsResourceExhausted,
+		CodeFailedPrecondition: IsFailedPrecondition,
+		CodeAborted:            IsAborted,
+		CodeOutOfRange:         IsOutOfRange,
+		CodeUnimplemented:      IsUnimplemented,
+		CodeInternal:           IsInternal,
+		CodeUnavailable:        IsUnavailable,
+		CodeDataLoss:           IsDataLoss,
+		CodeUnauthenticated:    IsUnauthenticated,
 	}
 )
 
@@ -110,6 +130,30 @@ func TestErrorMessage(t *testing.T) {
 			require.Equal(t, "hello 1", ErrorMessage(NamedErrorf("foo", "hello %d", 1)))
 		},
 	)
+}
+
+func TestIsErrorWithCode(t *testing.T) {
+	for code, errorConstructor := range _codeToErrorConstructor {
+		t.Run(code.String(), func(t *testing.T) {
+			isErrorWithCode, ok := _codeToIsErrorWithCode[code]
+			require.True(t, ok)
+			require.True(t, isErrorWithCode(errorConstructor("")))
+		})
+	}
+}
+
+func TestNonYARPCErrors(t *testing.T) {
+	assert.Equal(t, CodeOK, ErrorCode(nil))
+	assert.Equal(t, CodeOK, ErrorCode(errors.New("")))
+	assert.Equal(t, "", ErrorName(nil))
+	assert.Equal(t, "", ErrorName(errors.New("")))
+	assert.Equal(t, "", ErrorMessage(nil))
+	assert.Equal(t, "", ErrorMessage(errors.New("")))
+	assert.Nil(t, FromHeaders(CodeOK, "", ""))
+}
+
+func TestFromHeadersBadName(t *testing.T) {
+	assert.Equal(t, validateName("123"), FromHeaders(CodeUnknown, "123", ""))
 }
 
 func testAllErrorConstructors(
