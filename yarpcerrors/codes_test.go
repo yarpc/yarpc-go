@@ -23,6 +23,7 @@ package yarpcerrors
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,4 +58,15 @@ func TestCodesMapOneToOneAndCovered(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, code, otherCode)
 	}
+}
+
+func TestCodesFailures(t *testing.T) {
+	badCode := Code(100)
+	assert.Equal(t, "100", badCode.String())
+	_, err := badCode.MarshalText()
+	assert.Error(t, err)
+	_, err = badCode.MarshalJSON()
+	assert.Error(t, err)
+	assert.Error(t, badCode.UnmarshalText([]byte("200")))
+	assert.Error(t, badCode.UnmarshalJSON([]byte("200")))
 }
