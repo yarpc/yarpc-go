@@ -43,7 +43,13 @@ type KeyValueYARPCClient interface {
 
 // NewKeyValueYARPCClient builds a new YARPC client for the KeyValue service.
 func NewKeyValueYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) KeyValueYARPCClient {
-	return &_KeyValueYARPCCaller{protobuf.NewClient("uber.yarpc.internal.examples.protobuf.example.KeyValue", clientConfig, options...)}
+	return &_KeyValueYARPCCaller{protobuf.NewClient(
+		protobuf.ClientParams{
+			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.KeyValue",
+			ClientConfig: clientConfig,
+			Options:      options,
+		},
+	)}
 }
 
 // KeyValueYARPCServer is the YARPC server-side interface for the KeyValue service.
@@ -56,22 +62,30 @@ type KeyValueYARPCServer interface {
 func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Procedure {
 	handler := &_KeyValueYARPCHandler{server}
 	return protobuf.BuildProcedures(
-		"uber.yarpc.internal.examples.protobuf.example.KeyValue",
-		map[string]transport.UnaryHandler{
-			"GetValue": protobuf.NewUnaryHandler(
-				protobuf.UnaryHandlerParams{
-					Handle:     handler.GetValue,
-					NewRequest: newKeyValue_GetValueYARPCRequest,
+		protobuf.BuildProceduresParams{
+			ServiceName: "uber.yarpc.internal.examples.protobuf.example.KeyValue",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
+				protobuf.BuildProceduresUnaryHandlerParams{
+					MethodName: "GetValue",
+					Handler: protobuf.NewUnaryHandler(
+						protobuf.UnaryHandlerParams{
+							Handle:     handler.GetValue,
+							NewRequest: newKeyValue_GetValueYARPCRequest,
+						},
+					),
 				},
-			),
-			"SetValue": protobuf.NewUnaryHandler(
-				protobuf.UnaryHandlerParams{
-					Handle:     handler.SetValue,
-					NewRequest: newKeyValue_SetValueYARPCRequest,
+				protobuf.BuildProceduresUnaryHandlerParams{
+					MethodName: "SetValue",
+					Handler: protobuf.NewUnaryHandler(
+						protobuf.UnaryHandlerParams{
+							Handle:     handler.SetValue,
+							NewRequest: newKeyValue_SetValueYARPCRequest,
+						},
+					),
 				},
-			),
+			},
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
 		},
-		map[string]transport.OnewayHandler{},
 	)
 }
 
@@ -169,7 +183,13 @@ type SinkYARPCClient interface {
 
 // NewSinkYARPCClient builds a new YARPC client for the Sink service.
 func NewSinkYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) SinkYARPCClient {
-	return &_SinkYARPCCaller{protobuf.NewClient("uber.yarpc.internal.examples.protobuf.example.Sink", clientConfig, options...)}
+	return &_SinkYARPCCaller{protobuf.NewClient(
+		protobuf.ClientParams{
+			ServiceName:  "uber.yarpc.internal.examples.protobuf.example.Sink",
+			ClientConfig: clientConfig,
+			Options:      options,
+		},
+	)}
 }
 
 // SinkYARPCServer is the YARPC server-side interface for the Sink service.
@@ -181,15 +201,20 @@ type SinkYARPCServer interface {
 func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 	handler := &_SinkYARPCHandler{server}
 	return protobuf.BuildProcedures(
-		"uber.yarpc.internal.examples.protobuf.example.Sink",
-		map[string]transport.UnaryHandler{},
-		map[string]transport.OnewayHandler{
-			"Fire": protobuf.NewOnewayHandler(
-				protobuf.OnewayHandlerParams{
-					Handle:     handler.Fire,
-					NewRequest: newSink_FireYARPCRequest,
+		protobuf.BuildProceduresParams{
+			ServiceName:        "uber.yarpc.internal.examples.protobuf.example.Sink",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{},
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{
+				protobuf.BuildProceduresOnewayHandlerParams{
+					MethodName: "Fire",
+					Handler: protobuf.NewOnewayHandler(
+						protobuf.OnewayHandlerParams{
+							Handle:     handler.Fire,
+							NewRequest: newSink_FireYARPCRequest,
+						},
+					),
 				},
-			),
+			},
 		},
 	)
 }

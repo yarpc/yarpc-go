@@ -42,7 +42,13 @@ type EchoYARPCClient interface {
 
 // NewEchoYARPCClient builds a new YARPC client for the Echo service.
 func NewEchoYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) EchoYARPCClient {
-	return &_EchoYARPCCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Echo", clientConfig, options...)}
+	return &_EchoYARPCCaller{protobuf.NewClient(
+		protobuf.ClientParams{
+			ServiceName:  "uber.yarpc.internal.crossdock.Echo",
+			ClientConfig: clientConfig,
+			Options:      options,
+		},
+	)}
 }
 
 // EchoYARPCServer is the YARPC server-side interface for the Echo service.
@@ -54,16 +60,21 @@ type EchoYARPCServer interface {
 func BuildEchoYARPCProcedures(server EchoYARPCServer) []transport.Procedure {
 	handler := &_EchoYARPCHandler{server}
 	return protobuf.BuildProcedures(
-		"uber.yarpc.internal.crossdock.Echo",
-		map[string]transport.UnaryHandler{
-			"Echo": protobuf.NewUnaryHandler(
-				protobuf.UnaryHandlerParams{
-					Handle:     handler.Echo,
-					NewRequest: newEcho_EchoYARPCRequest,
+		protobuf.BuildProceduresParams{
+			ServiceName: "uber.yarpc.internal.crossdock.Echo",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
+				protobuf.BuildProceduresUnaryHandlerParams{
+					MethodName: "Echo",
+					Handler: protobuf.NewUnaryHandler(
+						protobuf.UnaryHandlerParams{
+							Handle:     handler.Echo,
+							NewRequest: newEcho_EchoYARPCRequest,
+						},
+					),
 				},
-			),
+			},
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
 		},
-		map[string]transport.OnewayHandler{},
 	)
 }
 
@@ -123,7 +134,13 @@ type OnewayYARPCClient interface {
 
 // NewOnewayYARPCClient builds a new YARPC client for the Oneway service.
 func NewOnewayYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) OnewayYARPCClient {
-	return &_OnewayYARPCCaller{protobuf.NewClient("uber.yarpc.internal.crossdock.Oneway", clientConfig, options...)}
+	return &_OnewayYARPCCaller{protobuf.NewClient(
+		protobuf.ClientParams{
+			ServiceName:  "uber.yarpc.internal.crossdock.Oneway",
+			ClientConfig: clientConfig,
+			Options:      options,
+		},
+	)}
 }
 
 // OnewayYARPCServer is the YARPC server-side interface for the Oneway service.
@@ -135,15 +152,20 @@ type OnewayYARPCServer interface {
 func BuildOnewayYARPCProcedures(server OnewayYARPCServer) []transport.Procedure {
 	handler := &_OnewayYARPCHandler{server}
 	return protobuf.BuildProcedures(
-		"uber.yarpc.internal.crossdock.Oneway",
-		map[string]transport.UnaryHandler{},
-		map[string]transport.OnewayHandler{
-			"Echo": protobuf.NewOnewayHandler(
-				protobuf.OnewayHandlerParams{
-					Handle:     handler.Echo,
-					NewRequest: newOneway_EchoYARPCRequest,
+		protobuf.BuildProceduresParams{
+			ServiceName:        "uber.yarpc.internal.crossdock.Oneway",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{},
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{
+				protobuf.BuildProceduresOnewayHandlerParams{
+					MethodName: "Echo",
+					Handler: protobuf.NewOnewayHandler(
+						protobuf.OnewayHandlerParams{
+							Handle:     handler.Echo,
+							NewRequest: newOneway_EchoYARPCRequest,
+						},
+					),
 				},
-			),
+			},
 		},
 	)
 }
