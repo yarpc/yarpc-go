@@ -55,7 +55,13 @@ type {{$service.GetName}}YARPCClient interface {
 
 // New{{$service.GetName}}YARPCClient builds a new YARPC client for the {{$service.GetName}} service.
 func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
-	return &_{{$service.GetName}}YARPCCaller{protobuf.NewClient("{{trimPrefixPeriod $service.FQSN}}", clientConfig, options...)}
+	return &_{{$service.GetName}}YARPCCaller{protobuf.NewClient(
+		protobuf.ClientParams{
+			ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
+			ClientConfig: clientConfig,
+			Options: options,
+		},
+	)}
 }
 
 // {{$service.GetName}}YARPCServer is the YARPC server-side interface for the {{$service.GetName}} service.
@@ -70,25 +76,33 @@ type {{$service.GetName}}YARPCServer interface {
 func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCServer) []transport.Procedure {
 	handler := &_{{$service.GetName}}YARPCHandler{server}
 	return protobuf.BuildProcedures(
-		"{{trimPrefixPeriod $service.FQSN}}",
-		map[string]transport.UnaryHandler{
-		{{range $method := unaryMethods $service}}"{{$method.GetName}}": protobuf.NewUnaryHandler(
-			protobuf.UnaryHandlerParams{
-				Handle: handler.{{$method.GetName}},
-				NewRequest: new{{$service.GetName}}_{{$method.GetName}}YARPCRequest,
+		protobuf.BuildProceduresParams{
+			ServiceName: "{{trimPrefixPeriod $service.FQSN}}",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
+			{{range $method := unaryMethods $service}}protobuf.BuildProceduresUnaryHandlerParams{
+					MethodName: "{{$method.GetName}}",
+					protobuf.NewUnaryHandler(
+						protobuf.UnaryHandlerParams{
+							Handle: handler.{{$method.GetName}},
+							NewRequest: new{{$service.GetName}}_{{$method.GetName}}YARPCRequest,
+						},
+					),
+				},
+			{{end}}
 			},
-		),
-		{{end}}
-		},
-		map[string]transport.OnewayHandler{
-		{{range $method := onewayMethods $service}}"{{$method.GetName}}": protobuf.NewOnewayHandler(
-			protobuf.OnewayHandlerParams{
-				Handle: handler.{{$method.GetName}},
-				NewRequest: new{{$service.GetName}}_{{$method.GetName}}YARPCRequest,
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{
+			{{range $method := onewayMethods $service}}protobuf.BuildProceduresOnewayHandlerParams{
+					MethodName: "{{$method.GetName}}",
+					protobuf.NewOnewayHandler(
+						protobuf.OnewayHandlerParams{
+							Handle: handler.{{$method.GetName}},
+							NewRequest: new{{$service.GetName}}_{{$method.GetName}}YARPCRequest,
+						},
+					),
+				},
+			{{end}}
 			},
-		),
-		{{end}}
-		},
+		}
 	)
 }
 
