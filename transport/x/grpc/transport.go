@@ -22,7 +22,9 @@ package grpc
 
 import (
 	"net"
+	"sync"
 
+	"go.uber.org/yarpc/api/peer"
 	internalsync "go.uber.org/yarpc/internal/sync"
 )
 
@@ -31,13 +33,20 @@ import (
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
+	lock             sync.Mutex
 	once             internalsync.LifecycleOnce
 	transportOptions *transportOptions
+	peers            map[string]*grpcPeer
 }
 
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
-	return &Transport{internalsync.Once(), newTransportOptions(options)}
+	return &Transport{
+		sync.Mutex{},
+		internalsync.Once(),
+		newTransportOptions(options),
+		make(map[string]*grpcPeer),
+	}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -47,6 +56,7 @@ func (t *Transport) Start() error {
 
 // Stop implements transport.Lifecycle#Stop.
 func (t *Transport) Stop() error {
+	// TODO release all remaining retained peers (maybe?)
 	return t.once.Stop(nil)
 }
 
@@ -60,7 +70,46 @@ func (t *Transport) NewInbound(listener net.Listener, options ...InboundOption) 
 	return newInbound(t, listener, options...)
 }
 
+func (t *Transport) NewOutbound(pc peer.Chooser) *Outbound {
+	return newOutbound(t, pc)
+}
+
 // NewSingleOutbound returns a new Outbound for the given adrress.
 func (t *Transport) NewSingleOutbound(address string, options ...OutboundOption) *Outbound {
 	return newSingleOutbound(t, address, options...)
+}
+
+func (t *Transport) RetainPeer(pid peer.Identifier, ps peer.Subscriber) (peer.Peer, error) {
+	address := pid.Identifier()
+	peer, err := t.getPeer(address)
+	if err != nil {
+		return nil, err
+	}
+	peer.Subscribe(ps)
+	return peer, nil
+}
+
+func (t *Transport) ReleasePeer(pid peer.Identifier, ps peer.Subscriber) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	// TODO unsubscribe, then remove from map if no further subscribers, and of
+	// course close the client conn before you leave
+	return nil
+}
+
+func (t *Transport) getPeer(address string) (*grpcPeer, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	peer, ok := t.peers[address]
+	if !ok {
+		peer, err := newPeer(address)
+		if err != nil {
+			return nil, err
+		}
+		t.peers[address] = peer
+	}
+
+	return peer, nil
 }

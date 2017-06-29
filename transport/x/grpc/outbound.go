@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	internalsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
@@ -48,13 +49,19 @@ type Outbound struct {
 	once            internalsync.LifecycleOnce
 	lock            sync.Mutex
 	t               *Transport
-	address         string
+	address         string // TODO nix
+	chooser         peer.Chooser
 	outboundOptions *outboundOptions
 	clientConn      *grpc.ClientConn
 }
 
+func newOutbound(t *Transport, pc peer.Chooser, options ...OutboundOption) *Outbound {
+	return &Outbound{internalsync.Once(), sync.Mutex{}, t, "", pc, newOutboundOptions(options), nil}
+}
+
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	return &Outbound{internalsync.Once(), sync.Mutex{}, t, address, newOutboundOptions(options), nil}
+	// TODO refactor using newOutbound and peer.NewSingle
+	return &Outbound{internalsync.Once(), sync.Mutex{}, t, address, nil, newOutboundOptions(options), nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -101,6 +108,15 @@ func (o *Outbound) invoke(
 	responseBody *[]byte,
 	responseMD *metadata.MD,
 ) error {
+	apiPeer, onFinish, err := o.chooser.Choose(ctx, request)
+	// TODO onFinish(nil) or onFinish(err)
+	_ = onFinish
+	if err != nil {
+		// TODO maybe annotate
+		return err
+	}
+	peer := apiPeer.(*grpcPeer)
+
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
@@ -123,25 +139,20 @@ func (o *Outbound) invoke(
 		fullMethod,
 		requestBody,
 		responseBody,
-		o.clientConn,
+		peer.clientConn,
 		callOptions...,
 	)
 }
 
 func (o *Outbound) start() error {
-	// TODO: redial
-	clientConn, err := grpc.Dial(
-		o.address,
-		grpc.WithInsecure(),
-		grpc.WithCodec(customCodec{}),
-		// TODO: does this actually work for yarpc
-		// this needs a lot of review
-		//grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.outboundOptions.getTracer())),
-		grpc.WithUserAgent(UserAgent),
-	)
-	if err != nil {
-		return err
+	// TODO this will not be conditional when this is done
+	if o.chooser != nil {
+		if err := o.chooser.Start(); err != nil {
+			// TODO maybe multierr this
+			return err
+		}
 	}
+
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	o.clientConn = clientConn
@@ -151,8 +162,12 @@ func (o *Outbound) start() error {
 func (o *Outbound) stop() error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	if o.clientConn != nil {
-		return o.clientConn.Close()
+	// TODO this will not be conditional when this is done
+	if o.chooser != nil {
+		if err := o.chooser.Stop(); err != nil {
+			// TODO maybe multierr this
+			return err
+		}
 	}
 	return nil
 }
