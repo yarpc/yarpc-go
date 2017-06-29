@@ -47,39 +47,54 @@ var UseJSON ClientOption = useJSON{}
 
 // ***all below functions should only be called by generated code***
 
+// BuildProceduresParams contains the parameters for BuildProcedures.
+type BuildProceduresParams struct {
+	ServiceName         string
+	UnaryHandlerParams  []BuildProceduresUnaryHandlerParams
+	OnewayHandlerParams []BuildProceduresOnewayHandlerParams
+}
+
+// BuildProceduresUnaryHandlerParams contains the parameters for a UnaryHandler for BuildProcedures.
+type BuildProceduresUnaryHandlerParams struct {
+	MethodName string
+	Handler    transport.UnaryHandler
+}
+
+// BuildProceduresOnewayHandlerParams contains the parameters for a OnewayHandler for BuildProcedures.
+type BuildProceduresOnewayHandlerParams struct {
+	MethodName string
+	Handler    transport.OnewayHandler
+}
+
 // BuildProcedures builds the transport.Procedures.
-func BuildProcedures(
-	serviceName string,
-	methodNameToUnaryHandler map[string]transport.UnaryHandler,
-	methodNameToOnewayHandler map[string]transport.OnewayHandler,
-) []transport.Procedure {
-	procedures := make([]transport.Procedure, 0, len(methodNameToUnaryHandler))
-	for methodName, unaryHandler := range methodNameToUnaryHandler {
+func BuildProcedures(params BuildProceduresParams) []transport.Procedure {
+	procedures := make([]transport.Procedure, 0, 2*(len(params.UnaryHandlerParams)+len(params.OnewayHandlerParams)))
+	for _, unaryHandlerParams := range params.UnaryHandlerParams {
 		procedures = append(
 			procedures,
 			transport.Procedure{
-				Name:        procedure.ToName(serviceName, methodName),
-				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
+				Name:        procedure.ToName(params.ServiceName, unaryHandlerParams.MethodName),
+				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandlerParams.Handler),
 				Encoding:    Encoding,
 			},
 			transport.Procedure{
-				Name:        procedure.ToName(serviceName, methodName),
-				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandler),
+				Name:        procedure.ToName(params.ServiceName, unaryHandlerParams.MethodName),
+				HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandlerParams.Handler),
 				Encoding:    JSONEncoding,
 			},
 		)
 	}
-	for methodName, onewayHandler := range methodNameToOnewayHandler {
+	for _, onewayHandlerParams := range params.OnewayHandlerParams {
 		procedures = append(
 			procedures,
 			transport.Procedure{
-				Name:        procedure.ToName(serviceName, methodName),
-				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandler),
+				Name:        procedure.ToName(params.ServiceName, onewayHandlerParams.MethodName),
+				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandlerParams.Handler),
 				Encoding:    Encoding,
 			},
 			transport.Procedure{
-				Name:        procedure.ToName(serviceName, methodName),
-				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandler),
+				Name:        procedure.ToName(params.ServiceName, onewayHandlerParams.MethodName),
+				HandlerSpec: transport.NewOnewayHandlerSpec(onewayHandlerParams.Handler),
 				Encoding:    JSONEncoding,
 			},
 		)
@@ -109,9 +124,16 @@ type ClientOption interface {
 	apply(*client)
 }
 
+// ClientParams contains the parameters for creating a new Client.
+type ClientParams struct {
+	ServiceName  string
+	ClientConfig transport.ClientConfig
+	Options      []ClientOption
+}
+
 // NewClient creates a new client.
-func NewClient(serviceName string, clientConfig transport.ClientConfig, options ...ClientOption) Client {
-	return newClient(serviceName, clientConfig, options...)
+func NewClient(params ClientParams) Client {
+	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
 }
 
 // UnaryHandlerParams contains the parameters for creating a new UnaryHandler.
