@@ -72,6 +72,8 @@ var spec = integrationtest.TransportSpec{
 // temporarily. One will be a bogus TCP port that never completes a TChannel
 // handshake.
 func TestWithRoundRobin(t *testing.T) {
+	t.Skip()
+
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
