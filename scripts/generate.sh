@@ -122,3 +122,5 @@ scripts/generate-cover-ignore.sh
 
 rm -f .dockerignore
 cat .gitignore | sed 's/^\///' > .dockerignore
+
+rm -f docs/errors.md && go run internal/docgen/main.go < docs/templates/errors.md > docs/errors.md
