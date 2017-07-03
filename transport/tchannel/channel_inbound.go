@@ -23,7 +23,7 @@ package tchannel
 import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/sync"
 )
 
 // ChannelInbound receives YARPC requests over TChannel.

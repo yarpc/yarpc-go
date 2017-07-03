@@ -29,7 +29,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	ysync "go.uber.org/yarpc/internal/sync"
+	ysync "go.uber.org/yarpc/pkg/sync"
 )
 
 const unavailablePenalty = math.MaxInt32

@@ -27,10 +27,10 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	intsync "go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/errors"
+	intsync "go.uber.org/yarpc/pkg/sync"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 

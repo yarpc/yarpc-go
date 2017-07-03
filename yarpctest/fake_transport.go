@@ -23,8 +23,8 @@ package yarpctest
 import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
+	intsync "go.uber.org/yarpc/pkg/sync"
 )
 
 // FakeTransportOption is an option for NewFakeTransport.

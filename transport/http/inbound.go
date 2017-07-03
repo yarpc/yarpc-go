@@ -28,7 +28,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
-	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/sync"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 

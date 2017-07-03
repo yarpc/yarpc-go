@@ -35,7 +35,7 @@ import (
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
-	intsync "go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/pkg/sync"
 	"go.uber.org/zap"
 )
 

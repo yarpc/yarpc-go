@@ -27,7 +27,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	intsync "go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/pkg/sync"
 )
 
 // Bind couples a peer list with a peer list updater.

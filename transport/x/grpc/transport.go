@@ -23,7 +23,7 @@ package grpc
 import (
 	"net"
 
-	internalsync "go.uber.org/yarpc/internal/sync"
+	internalsync "go.uber.org/yarpc/pkg/sync"
 )
 
 // Transport is a grpc transport.Transport.

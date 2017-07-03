@@ -28,7 +28,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/sync"
 	"go.uber.org/yarpc/serialize"
 )
 

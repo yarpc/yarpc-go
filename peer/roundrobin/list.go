@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	ysync "go.uber.org/yarpc/internal/sync"
+	ysync "go.uber.org/yarpc/pkg/sync"
 )
 
 type listConfig struct {

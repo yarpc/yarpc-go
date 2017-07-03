@@ -24,7 +24,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/pkg/sync"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
 )
 

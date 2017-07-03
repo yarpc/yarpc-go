@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/pkg/sync"
 )
 
 // FakePeerListOption is an option for NewFakePeerList.

@@ -22,7 +22,7 @@ package yarpctest
 
 import (
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
+	intsync "go.uber.org/yarpc/pkg/sync"
 )
 
 // FakePeerListUpdaterOption is an option for NewFakePeerListUpdater.

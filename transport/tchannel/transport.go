@@ -30,8 +30,8 @@ import (
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
+	intsync "go.uber.org/yarpc/pkg/sync"
 )
 
 // Transport is a TChannel transport suitable for use with YARPC's peer

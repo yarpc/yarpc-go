@@ -76,7 +76,7 @@ mockgen -source=vendor/go.uber.org/thriftrw/protocol/protocol.go -destination=en
 mockgen -destination=transport/x/redis/redistest/client.go -package=redistest go.uber.org/yarpc/transport/x/redis Client
 
 generate_stringer ConnectionStatus ./api/peer
-generate_stringer LifecycleState ./internal/sync
+generate_stringer LifecycleState ./pkg/sync
 generate_stringer Type ./api/transport
 
 thriftrw --plugin=yarpc --out=internal/crossdock/thrift internal/crossdock/thrift/echo.thrift
