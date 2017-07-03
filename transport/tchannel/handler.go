@@ -30,10 +30,10 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/pkg/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	ncontext "golang.org/x/net/context"
 )
@@ -229,7 +229,7 @@ func (rw *responseWriter) Write(s []byte) (int, error) {
 	}
 
 	if rw.buffer == nil {
-		rw.buffer = buffer.Get()
+		rw.buffer = bufferpool.Get()
 	}
 
 	n, err := rw.buffer.Write(s)
@@ -256,7 +256,7 @@ func (rw *responseWriter) Close() error {
 	}
 	defer func() { retErr = appendError(retErr, bodyWriter.Close()) }()
 	if rw.buffer != nil {
-		defer buffer.Put(rw.buffer)
+		defer bufferpool.Put(rw.buffer)
 		if _, err := bodyWriter.Write(rw.buffer.Bytes()); err != nil {
 			return appendError(retErr, err)
 		}

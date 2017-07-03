@@ -18,28 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package buffer
+// Package bufferpool maintains a pool of bytes.Buffers for use in
+// encoding and transport implementations.
+package bufferpool
 
 import (
 	"bytes"
 	"sync"
 )
 
-var _pool = sync.Pool{
+var _bufferPool = sync.Pool{
 	New: func() interface{} {
 		return &bytes.Buffer{}
 	},
 }
 
-// Get returns a new Byte Buffer from the buffer pool
-// that has been reset
+// Get returns a new Buffer from the Buffer pool that has been reset.
 func Get() *bytes.Buffer {
-	buf := _pool.Get().(*bytes.Buffer)
+	buf := _bufferPool.Get().(*bytes.Buffer)
 	buf.Reset()
 	return buf
 }
 
-// Put returns byte buffer to the buffer pool
+// Put returns a Buffer to the Buffer pool.
 func Put(buf *bytes.Buffer) {
-	_pool.Put(buf)
+	_bufferPool.Put(buf)
 }

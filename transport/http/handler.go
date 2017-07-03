@@ -30,10 +30,10 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/buffer"
 	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/pkg/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -204,7 +204,7 @@ func newResponseWriter(w http.ResponseWriter) *responseWriter {
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
 	if rw.buffer == nil {
-		rw.buffer = buffer.Get()
+		rw.buffer = bufferpool.Get()
 	}
 	return rw.buffer.Write(s)
 }
@@ -226,6 +226,6 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 	if rw.buffer != nil {
 		// TODO: what to do with error?
 		_, _ = rw.w.Write(rw.buffer.Bytes())
-		buffer.Put(rw.buffer)
+		bufferpool.Put(rw.buffer)
 	}
 }
