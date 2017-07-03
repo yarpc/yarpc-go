@@ -35,23 +35,46 @@ import (
 )
 
 func TestGolden(t *testing.T) {
+	testGolden(
+		t,
+		"encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
+		"encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.pb.yarpc.go",
+		"testing.pb.yarpc.go.golden",
+	)
+}
+
+func TestGoldenNoService(t *testing.T) {
+	testGolden(
+		t,
+		"encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.proto",
+		"encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing_no_service.pb.yarpc.go",
+		"testing_no_service.pb.yarpc.go.golden",
+	)
+}
+
+func testGolden(
+	t *testing.T,
+	inputFilePath string,
+	outputFilePath string,
+	outputGoldenFilePath string,
+) {
 	codeGeneratorRequest := &plugin_go.CodeGeneratorRequest{
 		Parameter: proto.String("Myarpcproto/yarpc.proto=go.uber.org/yarpc/yarpcproto"),
 		FileToGenerate: []string{
-			"encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
+			inputFilePath,
 		},
 		ProtoFile: []*descriptor.FileDescriptorProto{
 			getFileDescriptorProto(t, "yarpcproto/yarpc.proto"),
-			getFileDescriptorProto(t, "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto"),
+			getFileDescriptorProto(t, inputFilePath),
 		},
 	}
 
-	content, err := ioutil.ReadFile("testing.pb.yarpc.go.golden")
+	content, err := ioutil.ReadFile(outputGoldenFilePath)
 	require.NoError(t, err)
 	expectedCodeGeneratorResponse := &plugin_go.CodeGeneratorResponse{
 		File: []*plugin_go.CodeGeneratorResponse_File{
 			{
-				Name:    proto.String("encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.pb.yarpc.go"),
+				Name:    proto.String(outputFilePath),
 				Content: proto.String(string(content)),
 			},
 		},
