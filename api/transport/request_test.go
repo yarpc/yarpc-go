@@ -28,7 +28,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -112,7 +112,7 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			err = request.ValidateUnaryContext(ctx)
+			err = errors.ValidateUnaryContext(ctx)
 		}
 
 		if len(tt.wantMissingParams) > 0 {

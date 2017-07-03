@@ -31,7 +31,6 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/request"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	ncontext "golang.org/x/net/context"
@@ -177,7 +176,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	switch spec.Type() {
 	case transport.Unary:
-		if err := request.ValidateUnaryContext(ctx); err != nil {
+		if err := errors.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		return transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)

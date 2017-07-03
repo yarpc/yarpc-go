@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package request
+package errors
 
 import (
 	"context"
@@ -32,6 +32,5 @@ func ValidateUnaryContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 		return yarpcerrors.InvalidArgumentErrorf("missing TTL")
 	}
-
 	return nil
 }

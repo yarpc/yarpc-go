@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
@@ -140,7 +140,7 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request,
 }
 
 func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseMD metadata.MD) (interface{}, error) {
-	if err := request.ValidateUnaryContext(ctx); err != nil {
+	if err := errors.ValidateUnaryContext(ctx); err != nil {
 		return nil, err
 	}
 	responseWriter := newResponseWriter(responseMD)
