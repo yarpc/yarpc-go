@@ -26,7 +26,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/errors"
 )
 
 type unaryHandler struct {
@@ -60,7 +60,7 @@ func (u *unaryHandler) Handle(ctx context.Context, transportRequest *transport.R
 			defer responseCleanup()
 		}
 		if err != nil {
-			return encoding.ResponseBodyEncodeError(transportRequest, err)
+			return errors.ResponseBodyEncodeError(transportRequest, err)
 		}
 	}
 	_, err = responseWriter.Write(responseData)
@@ -94,7 +94,7 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {
-	if err := encoding.Expect(transportRequest, Encoding, JSONEncoding); err != nil {
+	if err := errors.Expect(transportRequest, Encoding, JSONEncoding); err != nil {
 		return nil, nil, nil, err
 	}
 	ctx, call := apiencoding.NewInboundCall(ctx)
@@ -103,7 +103,7 @@ func getProtoRequest(ctx context.Context, transportRequest *transport.Request, n
 	}
 	request := newRequest()
 	if err := unmarshal(transportRequest.Encoding, transportRequest.Body, request); err != nil {
-		return nil, nil, nil, encoding.RequestBodyDecodeError(transportRequest, err)
+		return nil, nil, nil, errors.RequestBodyDecodeError(transportRequest, err)
 	}
 	return ctx, call, request, nil
 }

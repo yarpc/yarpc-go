@@ -35,9 +35,9 @@ import (
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
+	pkgerrors "go.uber.org/yarpc/pkg/errors"
 )
 
 func TestHandlerErrors(t *testing.T) {
@@ -227,7 +227,7 @@ func TestHandlerFailures(t *testing.T) {
 					transporttest.NewRequestMatcher(t, req),
 					gomock.Any(),
 				).Return(
-					encoding.ResponseBodyEncodeError(req, errors.New(
+					pkgerrors.ResponseBodyEncodeError(req, errors.New(
 						"serialization derp",
 					)))
 			},

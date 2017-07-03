@@ -27,7 +27,7 @@ import (
 
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/errors"
 )
 
 // jsonHandler adapts a user-provided high-level handler into a transport-level
@@ -42,7 +42,7 @@ type jsonHandler struct {
 }
 
 func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := errors.Expect(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return encoding.RequestBodyDecodeError(treq, err)
+		return errors.RequestBodyDecodeError(treq, err)
 	}
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})
@@ -69,14 +69,14 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 
 	result := results[0].Interface()
 	if err := json.NewEncoder(rw).Encode(result); err != nil {
-		return encoding.ResponseBodyEncodeError(treq, err)
+		return errors.ResponseBodyEncodeError(treq, err)
 	}
 
 	return nil
 }
 
 func (h jsonHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := errors.Expect(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -87,7 +87,7 @@ func (h jsonHandler) HandleOneway(ctx context.Context, treq *transport.Request) 
 
 	reqBody, err := h.reader.Read(json.NewDecoder(treq.Body))
 	if err != nil {
-		return encoding.RequestBodyDecodeError(treq, err)
+		return errors.RequestBodyDecodeError(treq, err)
 	}
 
 	results := h.handler.Call([]reflect.Value{reflect.ValueOf(ctx), reqBody})

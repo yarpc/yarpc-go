@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
 	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
 )
 
@@ -152,7 +153,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 
 	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
 	if err != nil {
-		return wire.Value{}, encoding.ResponseBodyDecodeError(treq, err)
+		return wire.Value{}, errors.ResponseBodyDecodeError(treq, err)
 	}
 
 	switch envelope.Type {
@@ -161,7 +162,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 	case wire.Exception:
 		var exc internal.TApplicationException
 		if err := exc.FromWire(envelope.Value); err != nil {
-			return wire.Value{}, encoding.ResponseBodyDecodeError(treq, err)
+			return wire.Value{}, errors.ResponseBodyDecodeError(treq, err)
 		}
 		return wire.Value{}, thriftException{
 			Service:   treq.Service,
@@ -169,7 +170,7 @@ func (c thriftClient) Call(ctx context.Context, reqBody envelope.Enveloper, opts
 			Reason:    &exc,
 		}
 	default:
-		return wire.Value{}, encoding.ResponseBodyDecodeError(
+		return wire.Value{}, errors.ResponseBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 }
@@ -216,7 +217,7 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 
 	reqEnvelopeType := reqBody.EnvelopeType()
 	if reqEnvelopeType != wire.Call && reqEnvelopeType != wire.OneWay {
-		return nil, nil, encoding.RequestBodyEncodeError(
+		return nil, nil, errors.RequestBodyEncodeError(
 			&treq, errUnexpectedEnvelopeType(reqEnvelopeType),
 		)
 	}
@@ -229,7 +230,7 @@ func (c thriftClient) buildTransportRequest(reqBody envelope.Enveloper) (*transp
 		Value: value,
 	}, &buffer)
 	if err != nil {
-		return nil, nil, encoding.RequestBodyEncodeError(&treq, err)
+		return nil, nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = &buffer

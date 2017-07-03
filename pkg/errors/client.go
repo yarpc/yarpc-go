@@ -31,7 +31,7 @@ import (
 // RequestBodyEncodeError builds an error that represents a failure to encode
 // the request body.
 func RequestBodyEncodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, false, false, err).YARPCError()
+	return newClientEncodingError(req, false, false, err)
 }
 
 // ResponseBodyDecodeError builds an error that represents a failure to decode
@@ -43,13 +43,13 @@ func ResponseBodyDecodeError(req *transport.Request, err error) error {
 // RequestHeadersEncodeError builds an error that represents a failure to
 // encode the request headers.
 func RequestHeadersEncodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, false, true err)
+	return newClientEncodingError(req, false, true, err)
 }
 
 // ResponseHeadersDecodeError builds an error that represents a failure to
 // decode the response headers.
 func ResponseHeadersDecodeError(req *transport.Request, err error) error {
-	return newClientEncodingError(req, true, true err)
+	return newClientEncodingError(req, true, true, err)
 }
 
 func newClientEncodingError(req *transport.Request, isResponse bool, isHeader bool, err error) error {

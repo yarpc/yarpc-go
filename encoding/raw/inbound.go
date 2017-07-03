@@ -26,7 +26,7 @@ import (
 
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/errors"
 )
 
 // rawUnaryHandler adapts a Handler into a transport.UnaryHandler
@@ -36,7 +36,7 @@ type rawUnaryHandler struct{ UnaryHandler }
 type rawOnewayHandler struct{ OnewayHandler }
 
 func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := errors.Expect(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -67,7 +67,7 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 }
 
 func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := errors.Expect(treq, Encoding); err != nil {
 		return err
 	}
 
