@@ -18,22 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package errors
+// Package encoding contains helper functionality for encoding implementations.
+package encoding
 
-import "go.uber.org/yarpc/yarpcerrors"
+import (
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/encoding"
+)
 
-// WrapHandlerError is a convenience function with the following logic:
-//
-// - If err is nil, WrapHandlerError returns nil
-// - If err is a YARPC error, WrapHandlerError returns err with no changes.
-// - If err is not a YARPC error, WrapHandlerError returns a new YARPC error with code
-//   CodeUnknown and message err.Error(), along with service and procedure information.
-func WrapHandlerError(err error, service string, procedure string) error {
-	if err == nil {
-		return nil
+// FromOptions converts a collection of yarpc.CallOptions to
+// encoding.CallOptions.
+func FromOptions(opts []yarpc.CallOption) []encoding.CallOption {
+	newOpts := make([]encoding.CallOption, len(opts))
+	for i, o := range opts {
+		newOpts[i] = encoding.CallOption(o)
 	}
-	if yarpcerrors.IsYARPCError(err) {
-		return err
-	}
-	return yarpcerrors.UnknownErrorf("error for service %q and procedure %q: %s", service, procedure, err.Error())
+	return newOpts
 }
