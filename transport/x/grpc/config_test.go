@@ -92,14 +92,14 @@ func TestTransportSpec(t *testing.T) {
 	tests := []test{
 		{
 			desc:        "simple inbound",
-			inboundCfg:  attrs{"address": ":34567"},
-			wantInbound: &wantInbound{Address: ":34567"},
+			inboundCfg:  attrs{"address": ":54567"},
+			wantInbound: &wantInbound{Address: ":54567"},
 		},
 		{
 			desc:        "inbound interpolation",
 			inboundCfg:  attrs{"address": "${HOST:}:${PORT}"},
-			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "34568"},
-			wantInbound: &wantInbound{Address: "127.0.0.1:34568"},
+			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "54568"},
+			wantInbound: &wantInbound{Address: "127.0.0.1:54568"},
 		},
 		{
 			desc:       "bad inbound address",
@@ -110,12 +110,12 @@ func TestTransportSpec(t *testing.T) {
 			desc: "simple outbound",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{"address": "localhost:4040"},
+					transportName: attrs{"address": "localhost:54569"},
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
-					Address: "localhost:4040",
+					Address: "localhost:54569",
 				},
 			},
 		},
@@ -126,10 +126,10 @@ func TestTransportSpec(t *testing.T) {
 					transportName: attrs{"address": "${ADDR}"},
 				},
 			},
-			env: map[string]string{"ADDR": "127.0.0.1:80"},
+			env: map[string]string{"ADDR": "127.0.0.1:54570"},
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
-					Address: "127.0.0.1:80",
+					Address: "127.0.0.1:54570",
 				},
 			},
 		},
