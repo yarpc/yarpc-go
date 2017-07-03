@@ -47,7 +47,7 @@ type thriftOnewayHandler struct {
 }
 
 func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := errors.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 // TODO(apb): reduce commonality between Handle and HandleOneway
 
 func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := errors.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 

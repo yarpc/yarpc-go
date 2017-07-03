@@ -36,7 +36,7 @@ type rawUnaryHandler struct{ UnaryHandler }
 type rawOnewayHandler struct{ OnewayHandler }
 
 func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := errors.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -67,7 +67,7 @@ func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw
 }
 
 func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := errors.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 

@@ -94,7 +94,7 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 }
 
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {
-	if err := errors.Expect(transportRequest, Encoding, JSONEncoding); err != nil {
+	if err := errors.ExpectEncodings(transportRequest, Encoding, JSONEncoding); err != nil {
 		return nil, nil, nil, err
 	}
 	ctx, call := apiencoding.NewInboundCall(ctx)

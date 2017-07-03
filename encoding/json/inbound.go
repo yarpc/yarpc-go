@@ -42,7 +42,7 @@ type jsonHandler struct {
 }
 
 func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := errors.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -76,7 +76,7 @@ func (h jsonHandler) Handle(ctx context.Context, treq *transport.Request, rw tra
 }
 
 func (h jsonHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := errors.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 

@@ -52,9 +52,9 @@ func ResponseHeadersEncodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, true, true, err)
 }
 
-// Expect verifies that the given request has one of the given encodings
-// or it returns an error.
-func Expect(req *transport.Request, want ...transport.Encoding) error {
+// ExpectEncodings verifies that the given request has one of the given
+// encodings or it returns an error.
+func ExpectEncodings(req *transport.Request, want ...transport.Encoding) error {
 	got := req.Encoding
 	for _, w := range want {
 		if w == got {
