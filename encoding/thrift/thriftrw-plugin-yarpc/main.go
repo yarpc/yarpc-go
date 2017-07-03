@@ -26,6 +26,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"go/format"
 	"strings"
 
 	"go.uber.org/thriftrw/plugin"
@@ -80,7 +82,15 @@ func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse
 			}
 		}
 	}
-	return &api.GenerateServiceResponse{Files: files}, nil
+	formattedFiles := make(map[string][]byte, len(files))
+	for path, file := range files {
+		formattedFile, err := format.Source(file)
+		if err != nil {
+			return nil, fmt.Errorf("could not format go code: %v\n%s", err, file)
+		}
+		formattedFiles[path] = formattedFile
+	}
+	return &api.GenerateServiceResponse{Files: formattedFiles}, nil
 }
 
 func splitFunctionPath(input string) (string, string) {
