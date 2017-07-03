@@ -32,7 +32,7 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
-	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/encoding"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
 )
