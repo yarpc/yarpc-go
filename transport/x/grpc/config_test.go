@@ -21,10 +21,12 @@
 package grpc
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/internal/testutils/nettest"
 	"go.uber.org/yarpc/x/config"
 )
 
@@ -89,17 +91,21 @@ func TestTransportSpec(t *testing.T) {
 		wantErrors    []string
 	}
 
+	freeHP1 := nettest.MustGetFreeHostPort()
+	freePort1 := nettest.MustGetFreePort()
+	freePort2 := nettest.MustGetFreePort()
+
 	tests := []test{
 		{
 			desc:        "simple inbound",
-			inboundCfg:  attrs{"address": ":34567"},
-			wantInbound: &wantInbound{Address: ":34567"},
+			inboundCfg:  attrs{"address": freeHP1},
+			wantInbound: &wantInbound{Address: freeHP1},
 		},
 		{
 			desc:        "inbound interpolation",
 			inboundCfg:  attrs{"address": "${HOST:}:${PORT}"},
-			env:         map[string]string{"HOST": "127.0.0.1", "PORT": "34568"},
-			wantInbound: &wantInbound{Address: "127.0.0.1:34568"},
+			env:         map[string]string{"HOST": "127.0.0.1", "PORT": fmt.Sprint(freePort1)},
+			wantInbound: &wantInbound{Address: fmt.Sprintf("127.0.0.1:%v", freePort1)},
 		},
 		{
 			desc:       "bad inbound address",
@@ -110,12 +116,12 @@ func TestTransportSpec(t *testing.T) {
 			desc: "simple outbound",
 			outboundCfg: attrs{
 				"myservice": attrs{
-					transportName: attrs{"address": "localhost:4040"},
+					transportName: attrs{"address": fmt.Sprintf("localhost:%v", freePort2)},
 				},
 			},
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
-					Address: "localhost:4040",
+					Address: fmt.Sprintf("localhost:%v", freePort2),
 				},
 			},
 		},
@@ -126,10 +132,10 @@ func TestTransportSpec(t *testing.T) {
 					transportName: attrs{"address": "${ADDR}"},
 				},
 			},
-			env: map[string]string{"ADDR": "127.0.0.1:80"},
+			env: map[string]string{"ADDR": "127.0.0.1:54570"},
 			wantOutbounds: map[string]wantOutbound{
 				"myservice": {
-					Address: "127.0.0.1:80",
+					Address: "127.0.0.1:54570",
 				},
 			},
 		},
