@@ -37,12 +37,12 @@ const tmpl = `{{$packagePath := .GoPackage.Path}}
 // DO NOT EDIT!
 
 package {{.GoPackage.Name}}
-
+{{if .Services}}
 import (
 	{{range $i := .Imports}}{{if $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
 
 	{{range $i := .Imports}}{{if not $i.Standard}}{{$i | printf "%s\n"}}{{end}}{{end}}
-)
+){{end}}
 
 {{range $service := .Services}}
 // {{$service.GetName}}YARPCClient is the YARPC client-side interface for the {{$service.GetName}} service.
@@ -179,13 +179,13 @@ var (
 	empty{{$service.GetName}}_{{$method.GetName}}YARPCResponse = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
 )
 {{end}}
-func init() { {{range $service := .Services}}
+{{if .Services}}func init() { {{range $service := .Services}}
 	yarpc.RegisterClientBuilder(
 		func(clientConfig transport.ClientConfig, structField reflect.StructField) {{$service.GetName}}YARPCClient {
 			return New{{$service.GetName}}YARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	){{end}}
-}
+}{{end}}
 `
 
 // Runner is the Runner used for protoc-gen-yarpc-go.
