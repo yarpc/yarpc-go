@@ -71,6 +71,31 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
+			msg:            "nil policy",
+			policyProvider: newPolicyProviderBuilder().registerDefault(nil).provider,
+			actions: []MiddlewareAction{
+				RequestAction{
+					request: &transport.Request{
+						Service:   "serv",
+						Procedure: "proc",
+						Body:      bytes.NewBufferString("body"),
+					},
+					reqTimeout: testtime.Second * 5,
+					events: []*OutboundEvent{
+						{
+							WantTimeout:       testtime.Second * 5,
+							WantTimeoutBounds: testtime.Second,
+							WantService:       "serv",
+							WantProcedure:     "proc",
+							WantBody:          "body",
+							GiveRespBody:      "respbody",
+						},
+					},
+					wantBody: "respbody",
+				},
+			},
+		},
+		{
 			msg: "single retry",
 			policyProvider: newPolicyProviderBuilder().registerDefault(
 				NewPolicy(
@@ -761,6 +786,33 @@ func TestMiddleware(t *testing.T) {
 			ApplyMiddlewareActions(t, retry, tt.actions)
 		})
 	}
+}
+
+func TestNilRetry(t *testing.T) {
+	mw := (*OutboundMiddleware)(nil)
+	actions := []MiddlewareAction{
+		RequestAction{
+			request: &transport.Request{
+				Service:   "serv",
+				Procedure: "proc",
+				Body:      bytes.NewBufferString("body"),
+			},
+			reqTimeout: testtime.Second * 5,
+			events: []*OutboundEvent{
+				{
+					WantTimeout:       testtime.Second * 5,
+					WantTimeoutBounds: testtime.Second,
+					WantService:       "serv",
+					WantProcedure:     "proc",
+					WantBody:          "body",
+					GiveRespBody:      "respbody",
+				},
+			},
+			wantBody: "respbody",
+		},
+	}
+
+	ApplyMiddlewareActions(t, mw, actions)
 }
 
 // Sequential backoff will increment the backoff sequentially based

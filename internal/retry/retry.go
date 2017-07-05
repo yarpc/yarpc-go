@@ -70,7 +70,13 @@ type OutboundMiddleware struct {
 
 // Call implements the middleware.UnaryOutbound interface.
 func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (resp *transport.Response, err error) {
+	if r == nil {
+		return out.Call(ctx, request)
+	}
 	policy := r.getPolicy(ctx, request)
+	if policy == nil {
+		return out.Call(ctx, request)
+	}
 	rereader, finish := ioutil.NewRereader(request.Body)
 	defer finish()
 	request.Body = rereader
@@ -104,12 +110,9 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 
 func (r *OutboundMiddleware) getPolicy(ctx context.Context, request *transport.Request) *Policy {
 	if r.opts.policyProvider == nil {
-		return &defaultPolicy
+		return nil
 	}
-	if pol := r.opts.policyProvider(ctx, request); pol != nil {
-		return pol
-	}
-	return &defaultPolicy
+	return r.opts.policyProvider(ctx, request)
 }
 
 // getTimeLeft will return the amount of time left in the context or the
