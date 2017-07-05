@@ -28,8 +28,8 @@ import (
 	"go.uber.org/thriftrw/wire"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/pkg/bufferpool"
 )
 
 // thriftUnaryHandler wraps a Thrift Handler into a transport.UnaryHandler

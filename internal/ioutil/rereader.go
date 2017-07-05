@@ -26,7 +26,7 @@ import (
 	"io"
 
 	"go.uber.org/atomic"
-	"go.uber.org/yarpc/pkg/bufferpool"
+	"go.uber.org/yarpc/internal/bufferpool"
 )
 
 // TODO Optimizations:

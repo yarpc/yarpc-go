@@ -1,5 +1,4 @@
-pkg/ is a collection of utility packages used by the yarpc-go project without
-being specific to its internals.
+pkg/ is a collection of utility packages used by the yarpc-go project.
 
 Utility packages are kept separate from the yarpc-go core codebase to keep it
 as small and concise as possible. If some utilities grow larger and their APIs

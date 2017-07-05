@@ -28,7 +28,7 @@ import (
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/bufferpool"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
