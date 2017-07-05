@@ -54,7 +54,10 @@ import (
 func TestRoundTrip(t *testing.T) {
 	tests := []struct{ enveloped, multiplexed bool }{
 		{true, true},
-		{true, false},
+		// Skipping for now until flaky test fixed.
+		// Uncomment this when fixed.
+		// https://github.com/yarpc/yarpc-go/issues/1171
+		//{true, false},
 		{false, true},
 		{false, false},
 	}
