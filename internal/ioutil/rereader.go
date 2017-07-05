@@ -26,7 +26,7 @@ import (
 	"io"
 
 	"go.uber.org/atomic"
-	"go.uber.org/yarpc/internal/buffer"
+	"go.uber.org/yarpc/internal/bufferpool"
 )
 
 // TODO Optimizations:
@@ -42,11 +42,11 @@ import (
 // re-reader does not support concurrent consumers, as would be necessary
 // for speculative retries.
 func NewRereader(src io.Reader) (*Rereader, func()) {
-	buf := buffer.Get()
+	buf := bufferpool.Get()
 	return &Rereader{
 		teeReader: io.TeeReader(src, buf),
 		buf:       buf,
-	}, func() { buffer.Put(buf) }
+	}, func() { bufferpool.Put(buf) }
 }
 
 // Rereader has the ability to read the same io.Reader multiple times.
