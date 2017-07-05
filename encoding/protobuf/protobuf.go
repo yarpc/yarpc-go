@@ -28,7 +28,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/procedure"
+	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 

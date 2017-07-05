@@ -36,8 +36,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/clientconfig"
-	"go.uber.org/yarpc/internal/procedure"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/pkg/procedure"
 )
 
 func valueptr(v wire.Value) *wire.Value { return &v }
