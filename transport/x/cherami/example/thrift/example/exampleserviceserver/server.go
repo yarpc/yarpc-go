@@ -27,8 +27,8 @@ import (
 	"context"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example"
 )
 
 // Interface is the server-side interface for the ExampleService service.

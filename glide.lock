@@ -1,5 +1,5 @@
 hash: 8d20f47cede94524a67ec67de448ea1555af62810bfe9e5b0b24969f54028a3d
-updated: 2017-06-28T15:56:59.594069242-07:00
+updated: 2017-07-05T16:11:08.303620637-04:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -23,7 +23,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
   - spew
 - name: github.com/facebookgo/clock
@@ -88,11 +88,11 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 822d4a1f8edcbcbc71e8d1fd6527b12331a6d0ad
+  version: e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2
   subpackages:
   - xfs
 - name: github.com/sirupsen/logrus
-  version: 3d4380f53a34dcdc95f0c1db702615992b38d9a4
+  version: 7dd06bf38e1e13df288d471a57d5adbac106be9e
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -165,12 +165,11 @@ imports:
 - name: go.uber.org/atomic
   version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/multierr
-  version: ef109dc7f883f3a99db2d89edc701c25cac40571
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/thriftrw
-  version: dde90c2a40f45fb2b6361d13c1b4bf09465401c0
+  version: 37e6aee10c94fcca3b08944e4dc1f346b052e66f
   subpackages:
   - envelope
-  - internal
   - internal/envelope
   - internal/envelope/exception
   - internal/frame
@@ -196,7 +195,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 8663ed5da4fd087c3cfb99a996e628b72e2f0948
+  version: 570fa1c91359c1869590e9cedf3b53162a51a167
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -213,19 +212,19 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 90796e5a05ce440b41c768bd9af257005e470461
+  version: 6faef541c73732f438fb660a212750a9ba9f9362
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 6353ef0f924300eea566d3438817aa4d3374817e
+  version: 2bf8f2a19ec09c670e931282edfe6567f6be21c9
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: e6cb469339aef5b7be0c89de730d5f3cc8e47e50
+  version: c2d03f470b3e28d9e9eb89e22c8023f2642e802c
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -277,6 +276,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90
+  version: f583b587b6ff1149f9a9b0c16ebdda74da44e1a2
   subpackages:
   - cmd/staticcheck
