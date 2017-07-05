@@ -37,7 +37,7 @@ func TestMiddleware(t *testing.T) {
 	type testStruct struct {
 		msg string
 
-		policyProvider *procedurePolicyProvider
+		policyProvider *ProcedurePolicyProvider
 
 		actions []MiddlewareAction
 	}
@@ -780,7 +780,7 @@ func TestMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			retry := NewUnaryMiddleware(
-				WithPolicyProvider(tt.policyProvider.GetPolicy),
+				WithPolicyProvider(tt.policyProvider),
 			)
 
 			ApplyMiddlewareActions(t, retry, tt.actions)
@@ -852,26 +852,26 @@ func (f *fixedBackoff) Duration(_ uint) time.Duration {
 }
 
 type policyProviderBuilder struct {
-	provider *procedurePolicyProvider
+	provider *ProcedurePolicyProvider
 }
 
 func newPolicyProviderBuilder() *policyProviderBuilder {
 	return &policyProviderBuilder{
-		provider: newProcedurePolicyProvider(),
+		provider: NewProcedurePolicyProvider(),
 	}
 }
 
 func (pb *policyProviderBuilder) registerServiceProcedure(service, procedure string, pol *Policy) *policyProviderBuilder {
-	pb.provider.registerServiceProcedure(service, procedure, pol)
+	pb.provider.RegisterServiceProcedure(service, procedure, pol)
 	return pb
 }
 
 func (pb *policyProviderBuilder) registerService(service string, pol *Policy) *policyProviderBuilder {
-	pb.provider.registerService(service, pol)
+	pb.provider.RegisterService(service, pol)
 	return pb
 }
 
 func (pb *policyProviderBuilder) registerDefault(pol *Policy) *policyProviderBuilder {
-	pb.provider.registerDefault(pol)
+	pb.provider.RegisterDefault(pol)
 	return pb
 }

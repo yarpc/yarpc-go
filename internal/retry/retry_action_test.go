@@ -42,8 +42,8 @@ type MiddlewareAction interface {
 	Apply(*testing.T, middleware.UnaryOutbound)
 }
 
-// RequestAction is an Action for sending a request to a
-// unary outbound middleware and asserting on the result.
+// RequestAction is an Action for sending a request to a unary outbound
+// middleware and asserting on the result.
 type RequestAction struct {
 	msg string
 
@@ -107,8 +107,8 @@ type ConcurrentAction struct {
 	Wait    time.Duration
 }
 
-// Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
-// between each action. Returns when all actions have finished executing
+// Apply runs all the ConcurrentAction's actions in goroutines with a delay of
+// `Wait` between each action. Returns when all actions have finished executing.
 func (a ConcurrentAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 	var wg sync.WaitGroup
 
@@ -127,7 +127,8 @@ func (a ConcurrentAction) Apply(t *testing.T, mw middleware.UnaryOutbound) {
 	wg.Wait()
 }
 
-// ApplyMiddlewareActions runs all the MiddlewareActions on the Unary outbound Middleware
+// ApplyMiddlewareActions runs all the MiddlewareActions on the Unary outbound
+// Middleware.
 func ApplyMiddlewareActions(t *testing.T, mw middleware.UnaryOutbound, actions []MiddlewareAction) {
 	for i, action := range actions {
 		t.Run(fmt.Sprintf("action #%d: %T", i, action), func(t *testing.T) {

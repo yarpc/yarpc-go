@@ -21,34 +21,40 @@
 package retry
 
 import (
-	"context"
 	"time"
 
 	"go.uber.org/yarpc/api/backoff"
-	"go.uber.org/yarpc/api/transport"
 	ibackoff "go.uber.org/yarpc/internal/backoff"
 )
 
-// PolicyProvider returns a retry policy to use for the request,
-// if no policy is available it should return a default policy.
-type PolicyProvider func(context.Context, *transport.Request) *Policy
+// Policy defines how a retry will be applied.  It contains all the information
+// needed to perform a retry.
+type Policy struct {
+	opts policyOptions
+}
 
-var defaultPolicy = Policy{
+// NewPolicy creates a new retry Policy that can be used in retry middleware.
+func NewPolicy(opts ...PolicyOption) *Policy {
+	policyOpts := defaultPolicyOpts
+	for _, opt := range opts {
+		opt.apply(&policyOpts)
+	}
+	return &Policy{opts: policyOpts}
+}
+
+var defaultPolicyOpts = policyOptions{
 	retries:           0,
 	maxRequestTimeout: time.Second,
 	backoffStrategy:   ibackoff.None,
 }
 
-// Policy defines how a retry will be applied.  It contains all the information
-// needed to preform a retry.
-type Policy struct {
-	// retries is the number of attempts we will retry (after the
-	// initial attempt.
+type policyOptions struct {
+	// retries is the number of attempts we will retry (after the initial
+	// attempt).
 	retries uint
 
-	// maxRequestTimeout is the Timeout we will enforce per request (if this
-	// is more than the context deadline, we'll use the context deadline
-	// instead).
+	// maxRequestTimeout is the Timeout we will enforce per request (if this is
+	// more than the context deadline, we'll use the context deadline instead).
 	maxRequestTimeout time.Duration
 
 	// backoffStrategy is a backoff strategy that will be called after every
@@ -56,46 +62,42 @@ type Policy struct {
 	backoffStrategy backoff.Strategy
 }
 
-// NewPolicy creates a new retry Policy that can be used in retry middleware.
-func NewPolicy(opts ...PolicyOption) *Policy {
-	policy := defaultPolicy
-	for _, opt := range opts {
-		opt(&policy)
-	}
-	return &policy
+// PolicyOption customizes the behavior of a retry policy.
+type PolicyOption interface {
+	apply(*policyOptions)
 }
 
-// PolicyOption customizes the behavior of a retry policy.
-type PolicyOption func(*Policy)
+type policyOptionFunc func(*policyOptions)
 
-// Retries is the number of attempts we will retry (after the
-// initial attempt.
+func (f policyOptionFunc) apply(opts *policyOptions) { f(opts) }
+
+// Retries is the number of attempts we will retry (after the initial attempt).
 //
 // Defaults to 1.
 func Retries(retries uint) PolicyOption {
-	return func(pol *Policy) {
-		pol.retries = retries
-	}
+	return policyOptionFunc(func(opts *policyOptions) {
+		opts.retries = retries
+	})
 }
 
-// MaxRequestTimeout is the Timeout we will enforce per request (if this
-// is greater than the context deadline, we'll use that instead).
+// MaxRequestTimeout is the Timeout we will enforce per request (if this is
+// greater than the context deadline, we'll use that instead).
 //
 // Defaults to 1 second.
 func MaxRequestTimeout(timeout time.Duration) PolicyOption {
-	return func(pol *Policy) {
-		pol.maxRequestTimeout = timeout
-	}
+	return policyOptionFunc(func(opts *policyOptions) {
+		opts.maxRequestTimeout = timeout
+	})
 }
 
-// BackoffStrategy sets the backoff strategy that will be used after each
-// failed request.
+// BackoffStrategy sets the backoff strategy that will be used after each failed
+// request.
 //
 // Defaults to no backoff.
 func BackoffStrategy(strategy backoff.Strategy) PolicyOption {
-	return func(pol *Policy) {
+	return policyOptionFunc(func(opts *policyOptions) {
 		if strategy != nil {
-			pol.backoffStrategy = strategy
+			opts.backoffStrategy = strategy
 		}
-	}
+	})
 }
