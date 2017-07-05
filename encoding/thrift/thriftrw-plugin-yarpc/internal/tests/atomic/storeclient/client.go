@@ -5,13 +5,13 @@ package storeclient
 
 import (
 	"context"
-	"reflect"
 	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
-	"go.uber.org/yarpc"
+	"reflect"
 )
 
 // Interface is a client for the Store service.

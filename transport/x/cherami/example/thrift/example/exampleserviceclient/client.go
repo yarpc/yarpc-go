@@ -25,11 +25,11 @@ package exampleserviceclient
 
 import (
 	"context"
-	"reflect"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example"
 	"go.uber.org/yarpc/encoding/thrift"
+	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example"
+	"reflect"
 )
 
 // Interface is a client for the ExampleService service.
