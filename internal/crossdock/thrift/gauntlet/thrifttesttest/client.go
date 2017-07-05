@@ -25,10 +25,10 @@ package thrifttesttest
 
 import (
 	"context"
+	"github.com/golang/mock/gomock"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestclient"
-	"github.com/golang/mock/gomock"
 )
 
 // MockClient implements a gomock-compatible mock client for service
