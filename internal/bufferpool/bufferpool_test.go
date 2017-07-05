@@ -18,24 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package procedure
+package bufferpool
 
 import (
-	"fmt"
-	"strings"
+	"math/rand"
+	"sync"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// ToName gets the procedure name we should use for a method
-// with the given service name and method name.
-func ToName(serviceName string, methodName string) string {
-	return fmt.Sprintf("%s::%s", serviceName, methodName)
-}
+func TestBuffers(t *testing.T) {
+	var wg sync.WaitGroup
+	for g := 0; g < 10; g++ {
+		wg.Add(1)
+		go func() {
+			for i := 0; i < 100; i++ {
+				buf := Get()
+				assert.Zero(t, buf.Len(), "Expected truncated buffer")
 
-// FromName gets the service name and method name from a procdure name.
-func FromName(name string) (serviceName string, methodName string) {
-	parts := strings.SplitN(name, "::", 2)
-	if len(parts) == 1 {
-		return parts[0], ""
+				bytesOfNoise := make([]byte, rand.Intn(5000))
+				_, err := rand.Read(bytesOfNoise)
+				assert.NoError(t, err, "Unexpected error from rand.Read")
+				_, err = buf.Write(bytesOfNoise)
+				assert.NoError(t, err, "Unexpected error from buffer.Write")
+
+				assert.Equal(t, buf.Len(), len(bytesOfNoise), "Expected same buffer size")
+
+				Put(buf)
+			}
+			wg.Done()
+		}()
 	}
-	return parts[0], parts[1]
+	wg.Wait()
 }

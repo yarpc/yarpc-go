@@ -18,28 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package buffer
+// Package procedure contains utilities for handling procedure name mappings.
+package procedure
 
 import (
-	"bytes"
-	"sync"
+	"fmt"
+	"strings"
 )
 
-var _pool = sync.Pool{
-	New: func() interface{} {
-		return &bytes.Buffer{}
-	},
+// ToName gets the procedure name we should use for a method
+// with the given service name and method name.
+func ToName(serviceName string, methodName string) string {
+	return fmt.Sprintf("%s::%s", serviceName, methodName)
 }
 
-// Get returns a new Byte Buffer from the buffer pool
-// that has been reset
-func Get() *bytes.Buffer {
-	buf := _pool.Get().(*bytes.Buffer)
-	buf.Reset()
-	return buf
-}
-
-// Put returns byte buffer to the buffer pool
-func Put(buf *bytes.Buffer) {
-	_pool.Put(buf)
+// FromName gets the service name and method name from a procdure name.
+func FromName(name string) (serviceName string, methodName string) {
+	parts := strings.SplitN(name, "::", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
+	}
+	return parts[0], parts[1]
 }

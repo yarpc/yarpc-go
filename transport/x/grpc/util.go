@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"go.uber.org/yarpc/internal/procedure"
+	"go.uber.org/yarpc/pkg/procedure"
 )
 
 const defaultServiceName = "__default__"

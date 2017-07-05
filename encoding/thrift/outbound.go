@@ -33,7 +33,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift/internal"
 	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/procedure"
+	"go.uber.org/yarpc/pkg/procedure"
 )
 
 // Client is a generic Thrift client. It speaks in raw Thrift payloads.
