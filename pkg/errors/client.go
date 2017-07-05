@@ -28,25 +28,29 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// RequestBodyEncodeError builds an error that represents a failure to encode
+// RequestBodyEncodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to encode
 // the request body.
 func RequestBodyEncodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, false, false, err)
 }
 
-// ResponseBodyDecodeError builds an error that represents a failure to decode
+// ResponseBodyDecodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to decode
 // the response body.
 func ResponseBodyDecodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, true, false, err)
 }
 
-// RequestHeadersEncodeError builds an error that represents a failure to
+// RequestHeadersEncodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to
 // encode the request headers.
 func RequestHeadersEncodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, false, true, err)
 }
 
-// ResponseHeadersDecodeError builds an error that represents a failure to
+// ResponseHeadersDecodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to
 // decode the response headers.
 func ResponseHeadersDecodeError(req *transport.Request, err error) error {
 	return newClientEncodingError(req, true, true, err)

@@ -28,32 +28,37 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// RequestBodyDecodeError builds an error that represents a failure to decode
+// RequestBodyDecodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to decode
 // the request body.
 func RequestBodyDecodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, false, false, err)
 }
 
-// ResponseBodyEncodeError builds an error that represents a failure to encode
+// ResponseBodyEncodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to encode
 // the response body.
 func ResponseBodyEncodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, true, false, err)
 }
 
-// RequestHeadersDecodeError builds an error that represents a failure to
+// RequestHeadersDecodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to
 // decode the request headers.
 func RequestHeadersDecodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, false, true, err)
 }
 
-// ResponseHeadersEncodeError builds an error that represents a failure to
+// ResponseHeadersEncodeError builds a YARPC error with code
+// yarpcerrors.CodeInvalidArgument that represents a failure to
 // encode the response headers.
 func ResponseHeadersEncodeError(req *transport.Request, err error) error {
 	return newServerEncodingError(req, nil, true, true, err)
 }
 
 // ExpectEncodings verifies that the given request has one of the given
-// encodings or it returns an error.
+// encodings, otherwise it returns a YARPC error with code
+// yarpcerrors.CodeInvalidArgument.
 func ExpectEncodings(req *transport.Request, want ...transport.Encoding) error {
 	got := req.Encoding
 	for _, w := range want {

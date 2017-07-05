@@ -27,7 +27,8 @@ import (
 )
 
 // ValidateUnaryContext validates that a context for a unary request is valid
-// and contains all required information.
+// and contains all required information, and returns a YARPC error with code
+// yarpcerrors.CodeInvalidArgument otherwise.
 func ValidateUnaryContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 		return yarpcerrors.InvalidArgumentErrorf("missing TTL")
