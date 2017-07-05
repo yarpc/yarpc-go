@@ -41,7 +41,7 @@ type Clock interface {
 type Throttle struct {
 	// minAllowableTime is the time relative to the unix epoch in nanoseconds
 	// representing the absolute minimum time we will accept requests at.
-	// During normal operation this should be less than the current time.
+	// During unthrottled operation this should be less than the current time.
 	minAllowableTime *atomic.Int64
 	// requestInterval is the number of nanoseconds between requests and
 	// consequently the duration to advance the time each time the throttle
