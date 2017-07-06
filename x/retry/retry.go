@@ -64,9 +64,9 @@ func WithPolicyProvider(provider PolicyProvider) MiddlewareOption {
 
 // TallyScope sets a Tally scope that will be used to record retry metrics.
 func TallyScope(scope tally.Scope) MiddlewareOption {
-	return func(opts *middlewareOptions) {
+	return retryOptionFunc(func(opts *middlewareOptions) {
 		opts.scope = scope
-	}
+	})
 }
 
 // NewUnaryMiddleware creates a new Retry Middleware
@@ -109,7 +109,7 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 		resp, err = out.Call(subCtx, request)
 		cancel() // Clear the new ctx immdediately after the call
 
-		if err == nil || !isRetryable(err) {
+		if err == nil {
 			r.observer.success()
 			return resp, err
 		}

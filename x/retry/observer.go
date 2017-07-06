@@ -33,7 +33,7 @@ type observer struct {
 
 func newObserver(scope tally.Scope) *observer {
 	unretryableErrScope := scope.Tagged(map[string]string{"error": "unretryable"})
-	yarpcErrScope := scope.Tagged(map[string]string{"error": "yarpc"})
+	yarpcErrScope := scope.Tagged(map[string]string{"error": "yarpc_internal"})
 	noTimeErrScope := scope.Tagged(map[string]string{"error": "notime"})
 	maxAttemptsErrScope := scope.Tagged(map[string]string{"error": "max_attempts"})
 	return &observer{

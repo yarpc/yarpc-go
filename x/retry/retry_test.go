@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpcerrors"
+	"github.com/uber-go/tally"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -781,6 +782,7 @@ func TestMiddleware(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			retry := NewUnaryMiddleware(
 				WithPolicyProvider(tt.policyProvider),
+				TallyScope(tally.NoopScope),
 			)
 
 			ApplyMiddlewareActions(t, retry, tt.actions)

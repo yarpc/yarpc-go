@@ -372,7 +372,7 @@ func TestConfig(t *testing.T) {
 			}
 			require.NoError(t, err, "error decoding")
 
-			policyProvider, ok := middleware.opts.policyProvider.(*ProcedurePolicyProvider)
+			policyProvider, ok := middleware.provider.(*ProcedurePolicyProvider)
 			require.True(t, ok, "PolicyProvider was not a ProcedurePolicyProvider")
 			assertPoliciesAreEqual(t, tt.wantPolicyProvider.defaultPolicy, policyProvider.defaultPolicy)
 
