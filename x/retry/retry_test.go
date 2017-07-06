@@ -25,13 +25,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
 	iioutil "go.uber.org/yarpc/internal/ioutil"
 	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpcerrors"
-	"github.com/uber-go/tally"
 )
 
 func TestMiddleware(t *testing.T) {

@@ -51,7 +51,7 @@ type middlewareOptions struct {
 
 var defaultMiddlewareOptions = middlewareOptions{
 	policyProvider: nil,
-	scope: tally.NoopScope,
+	scope:          tally.NoopScope,
 }
 
 // WithPolicyProvider allows a custom retry policy to be used in the retry
