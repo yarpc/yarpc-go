@@ -55,7 +55,7 @@ func TestConfig(t *testing.T) {
 								max: 1s
 				default: once
 			`,
-			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
+			wantPolicyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(time.Millisecond*500),
@@ -91,7 +91,7 @@ func TestConfig(t *testing.T) {
 					- service: myservice
 					  with: service
 			`,
-			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
+			wantPolicyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(time.Millisecond*500),
@@ -149,7 +149,7 @@ func TestConfig(t *testing.T) {
 					  procedure: myprocedure
 					  with: serviceproc
 			`,
-			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
+			wantPolicyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(time.Millisecond*500),
@@ -207,7 +207,7 @@ func TestConfig(t *testing.T) {
 								max: 10s
 				default: once
 			`,
-			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
+			wantPolicyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(time.Millisecond*500),

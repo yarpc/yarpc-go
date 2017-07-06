@@ -29,8 +29,8 @@ import (
 	"go.uber.org/yarpc/x/config"
 )
 
-// PolicySpec defines how to construct a retry Policy.
-type PolicySpec struct {
+// PolicyConfig defines how to construct a retry Policy.
+type PolicyConfig struct {
 	// Retries indicates the number of retries that will be attempted on failed
 	// requests.
 	Retries uint `config:"retries"`
@@ -45,7 +45,7 @@ type PolicySpec struct {
 	BackoffStrategy config.Backoff `config:"backoff"`
 }
 
-func (p PolicySpec) policy() (*Policy, error) {
+func (p PolicyConfig) policy() (*Policy, error) {
 	strategy, err := p.BackoffStrategy.Strategy()
 	if err != nil {
 		return nil, err
@@ -57,9 +57,9 @@ func (p PolicySpec) policy() (*Policy, error) {
 	), nil
 }
 
-// PolicyOverrideSpec defines per service or per service+procedure Policies that
-// will be applied in the PolicyProvider.
-type PolicyOverrideSpec struct {
+// PolicyOverrideConfig defines per service or per service+procedure Policies
+// that will be applied in the PolicyProvider.
+type PolicyOverrideConfig struct {
 	// Service is a YARPC service name for an override.
 	Service string `config:"service"`
 
@@ -71,34 +71,34 @@ type PolicyOverrideSpec struct {
 	WithPolicy string `config:"with"`
 }
 
-// MiddlewareSpec is a definition of how to create a retry middleware.
-type MiddlewareSpec struct {
+// MiddlewareConfig is a definition of how to create a retry middleware.
+type MiddlewareConfig struct {
 	// NameToPolicies is a map of names to policy configs which can be
 	// referenced later.
-	NameToPolicies map[string]PolicySpec `config:"policies"`
+	NameToPolicies map[string]PolicyConfig `config:"policies"`
 
 	// Default is the name of the default policy that will be used.
 	Default string `config:"default"`
 
 	// PolicyOverrides allow changing the retry policies for requests matching
 	// certain criteria.
-	PolicyOverrides []PolicyOverrideSpec `config:"overrides"`
+	PolicyOverrides []PolicyOverrideConfig `config:"overrides"`
 }
 
-// NewUnaryMiddlewareFromConfig creates a new policy provider that can be used in retry
-// middleware
+// NewUnaryMiddlewareFromConfig creates a new policy provider that can be used
+// in retry middleware.
 func NewUnaryMiddlewareFromConfig(src interface{}, opts ...MiddlewareOption) (*OutboundMiddleware, error) {
-	var spec MiddlewareSpec
-	if err := iconfig.DecodeInto(&spec, src); err != nil {
+	var cfg MiddlewareConfig
+	if err := iconfig.DecodeInto(&cfg, src); err != nil {
 		return nil, err
 	}
 
-	nameToPolicy, err := spec.getPolicies()
+	nameToPolicy, err := cfg.getPolicies()
 	if err != nil {
 		return nil, err
 	}
 
-	policyProvider, err := spec.getPolicyProvider(nameToPolicy)
+	policyProvider, err := cfg.getPolicyProvider(nameToPolicy)
 	if err != nil {
 		return nil, err
 	}
@@ -107,11 +107,11 @@ func NewUnaryMiddlewareFromConfig(src interface{}, opts ...MiddlewareOption) (*O
 	return NewUnaryMiddleware(opts...), nil
 }
 
-func (spec MiddlewareSpec) getPolicies() (map[string]*Policy, error) {
+func (cfg MiddlewareConfig) getPolicies() (map[string]*Policy, error) {
 	var errs error
-	nameToPolicyMap := make(map[string]*Policy, len(spec.NameToPolicies))
-	for name, policySpec := range spec.NameToPolicies {
-		policy, err := policySpec.policy()
+	nameToPolicyMap := make(map[string]*Policy, len(cfg.NameToPolicies))
+	for name, policyConfig := range cfg.NameToPolicies {
+		policy, err := policyConfig.policy()
 		if err != nil {
 			errs = multierr.Append(errs, err)
 			continue
@@ -121,19 +121,19 @@ func (spec MiddlewareSpec) getPolicies() (map[string]*Policy, error) {
 	return nameToPolicyMap, errs
 }
 
-func (spec MiddlewareSpec) getPolicyProvider(nameToPolicy map[string]*Policy) (*ProcedurePolicyProvider, error) {
+func (cfg MiddlewareConfig) getPolicyProvider(nameToPolicy map[string]*Policy) (*ProcedurePolicyProvider, error) {
 	policyProvider := NewProcedurePolicyProvider()
 
 	var errs error
-	if spec.Default != "" {
-		if defaultPol, ok := nameToPolicy[spec.Default]; ok {
-			policyProvider.RegisterDefault(defaultPol)
+	if cfg.Default != "" {
+		if defaultPol, ok := nameToPolicy[cfg.Default]; ok {
+			policyProvider.SetDefault(defaultPol)
 		} else {
-			errs = multierr.Append(errs, fmt.Errorf("invalid default retry policy: %q, possiblities are: %v", spec.Default, policyNames(nameToPolicy)))
+			errs = multierr.Append(errs, fmt.Errorf("invalid default retry policy: %q, possiblities are: %v", cfg.Default, policyNames(nameToPolicy)))
 		}
 	}
 
-	for _, override := range spec.PolicyOverrides {
+	for _, override := range cfg.PolicyOverrides {
 		pol, ok := nameToPolicy[override.WithPolicy]
 		if !ok {
 			errs = multierr.Append(errs, fmt.Errorf("invalid retry policy: %q, possiblities are: %v", override.WithPolicy, policyNames(nameToPolicy)))
