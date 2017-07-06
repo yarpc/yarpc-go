@@ -21,6 +21,7 @@
 package ratelimit
 
 import (
+	"fmt"
 	"time"
 
 	"go.uber.org/atomic"
@@ -64,7 +65,7 @@ type throttleOptions struct {
 type Option func(*throttleOptions)
 
 // NewThrottle returns a Throttle that will limit to the given RPS.
-func NewThrottle(rps int, opts ...Option) *Throttle {
+func NewThrottle(rps int, opts ...Option) (*Throttle, error) {
 	options := throttleOptions{burstLimit: 10}
 	for _, opt := range opts {
 		opt(&options)
@@ -73,13 +74,21 @@ func NewThrottle(rps int, opts ...Option) *Throttle {
 		options.clock = clock.NewReal()
 	}
 
+	if rps <= 0 {
+		return nil, fmt.Errorf("rate limiter requests per second must be more than zero")
+	}
+
+	if options.burstLimit < 0 {
+		return nil, fmt.Errorf("rate limiter burst limit must zero or more")
+	}
+
 	throttle := &Throttle{
 		clock:           options.clock,
 		requestInterval: time.Second.Nanoseconds() / int64(rps),
 		maxSlack:        options.burstLimit * time.Second.Nanoseconds() / int64(rps),
 	}
 	throttle.minAllowableTime = atomic.NewInt64(throttle.clock.Now().UnixNano() - throttle.maxSlack)
-	return throttle
+	return throttle, nil
 }
 
 // WithClock returns an option for ratelimit.New that provides an alternate
