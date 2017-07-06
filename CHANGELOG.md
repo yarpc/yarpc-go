@@ -17,6 +17,7 @@ Experimental:
 
 -   x/retry: Added support for creating retry middleware directly from config.
 
+
 v1.9.0 (2017-06-08)
 -------------------
 

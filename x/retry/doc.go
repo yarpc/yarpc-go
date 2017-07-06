@@ -24,14 +24,15 @@
 // Usage
 //
 // To build a retry middleware from config, first decode your configuration into
-// a `map[string]interface{}`
+// a `map[string]interface{}` and pass it into the
+// `NewOutboundMiddlewareFromConfig` function.
 //
 //  var data map[string]interface{}
 //  err := yaml.Unmarshal(myYAMLConfig, &data)
 //  mw, err := retry.NewOutboundMiddlewareFromConfig(data)
 //
 // Retry middleware can also be built by creating a PolicyProvider and passing
-// it in as an option.
+// it in as an option to the `NewOutboundMiddleware` function.
 //
 //  mw := retry.NewOutboundMiddleware(retry.WithPolicyProvider(policyProvider))
 //
@@ -58,20 +59,20 @@
 //
 // Policies Configuration
 //
-// The 'policies' attribute configures different retry policies which can be
-// referenced individually in the 'default' and 'override' sections.
+// The 'policies' attribute is a map from a policy name to the configuration for
+// that policy.
 //
 //  policies:
 //    fastretry:
 //      retries: 5
-//      maxtimeout: 10ms
+//      maxTimeout: 10ms
 //      backoff:
 //        exponential:
 //          first: 5ms
 //          max: 1s
 //    slowretry:
 //      retries: 3
-//      maxtimeout: 100ms
+//      maxTimeout: 100ms
 //      backoff:
 //        exponential:
 //          first: 5ms
@@ -79,18 +80,20 @@
 //
 // This configuration would create two retry policies we could use later.
 //
-// "fastretry" will max out request timeouts to 10 ms, and will re-attempt
-// requests 5 times before failing.  Between every failure, it will initially
-// use a full jitter exponential backoff of 5ms with a max backoff of 1s.
+// The fastretry policy will enforce a per-request timeout of 10 milliseconds,
+// making 5 more attempts after the first failure, with an exponential backoff
+// starting at 5 milliseconds between requests and a maximum of 1 second.
 //
-// "slowretry" will max out request timeouts to 100 ms, and will re-attempt
-// requests 3 times before failing.  Between every failure, it will initially
-// use a full jitter exponential backoff of 5ms with a max backoff of 10s.
+// The slowretry policy will enforce a per-request timeout of 100 milliseconds,
+// and will make 3 more attempts after the first failure, with an exponential
+// backoff starting at 5 milliseconds between requests and a maximum of 10
+// seconds.
 //
 // Default Configuration
 //
-// The 'default' attributes indicates which "policy" will be the default for
-// all retry attempts.
+// The 'default' attributes indicates which policy will be the default for
+// all retry attempts.  The value must be a policy name from the 'policies'
+// section, if unspecified, no retries will be performed by default.
 //
 // 	default: slowretry
 //
@@ -110,13 +113,16 @@
 //      with: slowretry
 //
 // Each override specifies which policy will be used based on the `with`
-// attribute, which must point to one of the 'policies' we've predefined.
-// Additionally, we can specify which "service" the policy will be applied to.
-// or which "service+procedure" combination the policy will be applied to.
+// attribute, which must point to one of the 'policies' we've defined in the
+// 'policies' section.
+// We can specify policies with varying levels of granularity. We can specify
+// both, 'service' and 'procedure' to apply the policy to requests made to that
+// procedure of that service, or we can specify just 'service' to apply the
+// given policy to all requests made to that service.
 //
 // In terms of preference, the order of importance for policies will be:
 //
-//   1) "service"+"procedure" overrides
+//   1) "service" and "procedure" overrides
 //   2) "service" overrides
 //   3) default policy
 package retry
