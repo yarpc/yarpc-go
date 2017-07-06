@@ -44,7 +44,7 @@ func TestConfig(t *testing.T) {
 	tests := []testStruct{
 		{
 			msg: "just default policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					once:
 						retries: 1
@@ -54,7 +54,7 @@ func TestConfig(t *testing.T) {
 								first: 10ms
 								max: 1s
 				default: once
-			`),
+			`,
 			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
 				NewPolicy(
 					Retries(1),
@@ -70,7 +70,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "service+default policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					once:
 						retries: 1
@@ -90,7 +90,7 @@ func TestConfig(t *testing.T) {
 				overrides:
 					- service: myservice
 					  with: service
-			`),
+			`,
 			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
 				NewPolicy(
 					Retries(1),
@@ -118,7 +118,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "service+serviceproc+default policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					once:
 						retries: 1
@@ -148,7 +148,7 @@ func TestConfig(t *testing.T) {
 					- service: myservice
 					  procedure: myprocedure
 					  with: serviceproc
-			`),
+			`,
 			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
 				NewPolicy(
 					Retries(1),
@@ -189,7 +189,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "unused policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					once:
 						retries: 1
@@ -206,7 +206,7 @@ func TestConfig(t *testing.T) {
 								first: 100ms
 								max: 10s
 				default: once
-			`),
+			`,
 			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(
 				NewPolicy(
 					Retries(1),
@@ -222,7 +222,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "invalid default policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					realpolicy:
 						retries: 1
@@ -232,7 +232,7 @@ func TestConfig(t *testing.T) {
 								first: 10ms
 								max: 1s
 				default: fakepolicy
-			`),
+			`,
 			wantError: []string{
 				`invalid default retry policy: "fakepolicy", possiblities are:`,
 				`realpolicy`,
@@ -240,7 +240,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "invalid override policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					realpolicy:
 						retries: 1
@@ -253,7 +253,7 @@ func TestConfig(t *testing.T) {
 				overrides:
 					- service: myservice
 					  with: fakepolicy
-			`),
+			`,
 			wantError: []string{
 				`invalid retry policy: "fakepolicy", possiblities are:`,
 				`realpolicy`,
@@ -261,7 +261,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "missing with in override policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					realpolicy:
 						retries: 1
@@ -273,7 +273,7 @@ func TestConfig(t *testing.T) {
 				default: realpolicy
 				overrides:
 					- service: myservice
-			`),
+			`,
 			wantError: []string{
 				`invalid retry policy: "", possiblities are:`,
 				`realpolicy`,
@@ -281,7 +281,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "no service or procedure in override policy",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					realpolicy:
 						retries: 1
@@ -293,14 +293,14 @@ func TestConfig(t *testing.T) {
 				default: realpolicy
 				overrides:
 					- with: realpolicy
-			`),
+			`,
 			wantError: []string{
 				`did not specify a service or procedure for retry policy override: "realpolicy"`,
 			},
 		},
 		{
 			msg: "invalid policy retries",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					realpolicy:
 						retries: -1
@@ -310,7 +310,7 @@ func TestConfig(t *testing.T) {
 								first: 10ms
 								max: 1s
 				default: realpolicy
-			`),
+			`,
 			wantError: []string{
 				`cannot parse`,
 				`realpolicy`,
@@ -318,7 +318,7 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "invalid policy timeout",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					realpolicy:
 						retries: 1
@@ -328,7 +328,7 @@ func TestConfig(t *testing.T) {
 								first: 10ms
 								max: 1s
 				default: realpolicy
-			`),
+			`,
 			wantError: []string{
 				`error decoding`,
 				`realpolicy`,
@@ -336,14 +336,14 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg: "invalid policy backoff",
-			retryConfig: whitespace.Expand(`
+			retryConfig: `
 				policies:
 					realpolicy:
 						retries: 1
 						maxtimeout: abc
 						backoff: error
 				default: realpolicy
-			`),
+			`,
 			wantError: []string{
 				`error decoding`,
 				`realpolicy`,
@@ -351,18 +351,18 @@ func TestConfig(t *testing.T) {
 		},
 		{
 			msg:                "fallsback to default policy",
-			retryConfig:        whitespace.Expand(``),
-			wantPolicyProvider: newPolicyProviderBuilder().registerDefault(&defaultPolicy).provider,
+			retryConfig:        "",
+			wantPolicyProvider: newPolicyProviderBuilder().provider,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			var data map[string]interface{}
-			err := yaml.Unmarshal([]byte(tt.retryConfig), &data)
+			err := yaml.Unmarshal([]byte(whitespace.Expand(tt.retryConfig)), &data)
 			require.NoError(t, err, "error unmarshalling")
 
-			policyProvider, err := NewPolicyProvider(data)
+			middleware, err := NewUnaryMiddlewareFromConfig(data)
 			if len(tt.wantError) > 0 {
 				require.Error(t, err, "expected error, got none")
 				for _, wantErr := range tt.wantError {
@@ -372,6 +372,8 @@ func TestConfig(t *testing.T) {
 			}
 			require.NoError(t, err, "error decoding")
 
+			policyProvider, ok := middleware.opts.policyProvider.(*ProcedurePolicyProvider)
+			require.True(t, ok, "PolicyProvider was not a ProcedurePolicyProvider")
 			assertPoliciesAreEqual(t, tt.wantPolicyProvider.defaultPolicy, policyProvider.defaultPolicy)
 
 			assert.Equal(t, len(tt.wantPolicyProvider.serviceProcedureToPolicy), len(policyProvider.serviceProcedureToPolicy), "mismatch in number of retry policies")
@@ -391,13 +393,18 @@ func exponentialNoError(exp *backoff.ExponentialStrategy, _ error) *backoff.Expo
 }
 
 func assertPoliciesAreEqual(t *testing.T, expected, actual *Policy) {
-	assert.Equal(t, expected.retries, actual.retries, "did not match on retries")
-	assert.Equal(t, expected.maxRequestTimeout, actual.maxRequestTimeout, "did not match on maxRequestTimeout")
+	if expected == nil {
+		assert.Nil(t, actual)
+		return
+	}
+	require.NotNil(t, expected)
+	assert.Equal(t, expected.opts.retries, actual.opts.retries, "did not match on retries")
+	assert.Equal(t, expected.opts.maxRequestTimeout, actual.opts.maxRequestTimeout, "did not match on maxRequestTimeout")
 
-	expectedStrat, ok := expected.backoffStrategy.(*backoff.ExponentialStrategy)
+	expectedStrat, ok := expected.opts.backoffStrategy.(*backoff.ExponentialStrategy)
 	require.True(t, ok, "first strategy was not an exponential strategy")
 
-	actualStrat, ok := actual.backoffStrategy.(*backoff.ExponentialStrategy)
+	actualStrat, ok := actual.opts.backoffStrategy.(*backoff.ExponentialStrategy)
 	require.True(t, ok, "second strategy was not an exponential strategy")
 
 	assert.True(

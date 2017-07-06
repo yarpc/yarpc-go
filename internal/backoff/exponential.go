@@ -144,7 +144,7 @@ func (e *ExponentialStrategy) Backoff() backoff.Backoff {
 	}
 }
 
-// IsEqual returns whether this strategy is equivalent to another strategy
+// IsEqual returns whether this strategy is equivalent to another strategy.
 func (e *ExponentialStrategy) IsEqual(o *ExponentialStrategy) bool {
 	if e.opts.first != o.opts.first {
 		return false
