@@ -18,18 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package retry implements a retry middleware that may be inserted as
-// outbound unary middleware in YARPC Dispatchers.
+// Package retry provides a YARPC middleware which is able to retry failed
+// outbound unary requests.
 //
 // Usage
 //
-// To build a retry middleware, make sure you have a prepared map of decoded
-// yaml (or whatever source you have) and call into the NewOutboundMiddleware
-// function
+// To build a retry middleware from config, first decode your configuration into
+// a `map[string]interface{}`
 //
 //  var data map[string]interface{}
 //  err := yaml.Unmarshal(myYAMLConfig, &data)
-//  mw, err := retry.NewOutboundMiddleware(data)
+//  mw, err := retry.NewOutboundMiddlewareFromConfig(data)
+//
+// Retry middleware can also be built by creating a PolicyProvider and passing
+// it in as an option.
+//
+//  mw := retry.NewOutboundMiddleware(retry.WithPolicyProvider(policyProvider))
+//
+// Check out the PolicyProvider docs for more details.
 //
 // Configuration
 //
