@@ -153,11 +153,7 @@ func (cfg MiddlewareConfig) getPolicyProvider(nameToPolicy map[string]*Policy) (
 		errs = multierr.Append(errs, fmt.Errorf("did not specify a service or procedure for retry policy override: %q", override.WithPolicy))
 	}
 
-	if errs != nil {
-		return nil, errs
-	}
-
-	return policyProvider, nil
+	return policyProvider, errs
 }
 
 func policyNames(nameToPolicy map[string]*Policy) []string {
