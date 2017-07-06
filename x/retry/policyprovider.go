@@ -29,6 +29,7 @@ import (
 // PolicyProvider returns a retry policy to use for the given context and
 // request.  Nil responses will be interpreted as "no retries".
 type PolicyProvider interface {
+	// Policy returns a policy to use for retries.
 	Policy(context.Context, *transport.Request) *Policy
 }
 

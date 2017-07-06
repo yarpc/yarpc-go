@@ -37,7 +37,7 @@ func TestMiddleware(t *testing.T) {
 	type testStruct struct {
 		msg string
 
-		policyProvider *ProcedurePolicyProvider
+		policyProvider PolicyProvider
 
 		actions []MiddlewareAction
 	}
