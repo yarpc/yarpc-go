@@ -37,9 +37,13 @@ type serviceProcedure struct {
 	Procedure string
 }
 
-// ProcedurePolicyProvider is a PolicyProvider that has the ability to resolve
-// retry policies based on the Service and Procedure of each retry request. It
-// also supports returning a default policy if no Service or Procedure matched.
+// ProcedurePolicyProvider is a PolicyProvider that keeps a registry of three
+// types of Policies with ordered precedence:
+//
+//  1) Policies that should be applied to a specific Service and Procedure
+//     match.
+//  2) Policies that should be applied to a specific Service match.
+//  3) A Default policy that will be applied of there are no matches.
 type ProcedurePolicyProvider struct {
 	serviceProcedureToPolicy map[serviceProcedure]*Policy
 	defaultPolicy            *Policy
@@ -53,27 +57,27 @@ func NewProcedurePolicyProvider() *ProcedurePolicyProvider {
 	}
 }
 
-// RegisterServiceProcedure registers a new Policy that will be used for retries
-// if there is a Service+Procedure match on the request.
+// RegisterServiceProcedure specifies the retry policy for requests that match
+// the given service and procedure name.
 func (ppp *ProcedurePolicyProvider) RegisterServiceProcedure(service, procedure string, pol *Policy) {
 	ppp.serviceProcedureToPolicy[serviceProcedure{Service: service, Procedure: procedure}] = pol
 }
 
-// RegisterService registers a new Policy that will be used for retries if there
-// is a Service match on the request.
+// RegisterService specifies the retry policy for requests that match the given
+// service name.
 func (ppp *ProcedurePolicyProvider) RegisterService(service string, pol *Policy) {
 	ppp.serviceProcedureToPolicy[serviceProcedure{Service: service}] = pol
 }
 
-// RegisterDefault registers a default retry Policy that will be used if there
-// are no matches for any other policy (based on Service or Procedure).
-func (ppp *ProcedurePolicyProvider) RegisterDefault(pol *Policy) {
+// SetDefault specifies the default retry Policy that will be used if there are
+// no matches for any other policy (based on Service or Procedure).
+func (ppp *ProcedurePolicyProvider) SetDefault(pol *Policy) {
 	ppp.defaultPolicy = pol
 }
 
 // Policy returns a policy for the provided context and request.
 func (ppp *ProcedurePolicyProvider) Policy(_ context.Context, req *transport.Request) *Policy {
-	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{req.Service, req.Procedure}]; ok {
+	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{Service: req.Service, Procedure: req.Procedure}]; ok {
 		return pol
 	}
 	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{Service: req.Service}]; ok {

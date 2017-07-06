@@ -49,12 +49,12 @@ var defaultPolicyOpts = policyOptions{
 }
 
 type policyOptions struct {
-	// retries is the number of attempts we will retry (after the initial
-	// attempt).
+	// retries is the number of times we will retry the request (after the
+	// initial attempt).
 	retries uint
 
-	// maxRequestTimeout is the Timeout we will enforce per request (if this is
-	// more than the context deadline, we'll use the context deadline instead).
+	// maxRequestTimeout is the timeout we will enforce for each outgoing
+	// request.  This will be clamped down to the context deadline.
 	maxRequestTimeout time.Duration
 
 	// backoffStrategy is a backoff strategy that will be called after every
@@ -71,7 +71,8 @@ type policyOptionFunc func(*policyOptions)
 
 func (f policyOptionFunc) apply(opts *policyOptions) { f(opts) }
 
-// Retries is the number of attempts we will retry (after the initial attempt).
+// Retries is the number of times we will retry the request (after the initial
+// attempt).
 //
 // Defaults to 1.
 func Retries(retries uint) PolicyOption {
