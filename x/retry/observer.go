@@ -22,50 +22,61 @@ package retry
 
 import "github.com/uber-go/tally"
 
+var (
+	_callsName         = "retry_calls"
+	_successesName     = "retry_successes"
+	_failuresName      = "retry_failures"
+	_errTag            = "error"
+	_unretryableErrTag = "unretryable"
+	_yarpcErrTag       = "yarpc_internal"
+	_noTimeErrTag      = "no_time"
+	_maxAttemptErrTag  = "max_attempts"
+)
+
 type observer struct {
-	unretryableErrorCounter tally.Counter
-	yarpcErrorCounter       tally.Counter
-	noTimeErrorCounter      tally.Counter
-	maxAttemptsErrorCounter tally.Counter
-	successCounter          tally.Counter
-	callCounter             tally.Counter
+	calls           tally.Counter
+	successes       tally.Counter
+	unretryableErrs tally.Counter
+	yarpcErrs       tally.Counter
+	noTimeErrs      tally.Counter
+	maxAttemptErrs  tally.Counter
 }
 
 func newObserver(scope tally.Scope) *observer {
-	unretryableErrScope := scope.Tagged(map[string]string{"error": "unretryable"})
-	yarpcErrScope := scope.Tagged(map[string]string{"error": "yarpc_internal"})
-	noTimeErrScope := scope.Tagged(map[string]string{"error": "notime"})
-	maxAttemptsErrScope := scope.Tagged(map[string]string{"error": "max_attempts"})
+	unretryableErrScope := scope.Tagged(map[string]string{_errTag: _unretryableErrTag})
+	yarpcErrScope := scope.Tagged(map[string]string{_errTag: _yarpcErrTag})
+	noTimeErrScope := scope.Tagged(map[string]string{_errTag: _noTimeErrTag})
+	maxAttemptErrScope := scope.Tagged(map[string]string{_errTag: _maxAttemptErrTag})
 	return &observer{
-		unretryableErrorCounter: unretryableErrScope.Counter("retry_failures"),
-		yarpcErrorCounter:       yarpcErrScope.Counter("retry_failures"),
-		noTimeErrorCounter:      noTimeErrScope.Counter("retry_failures"),
-		maxAttemptsErrorCounter: maxAttemptsErrScope.Counter("retry_failures"),
-		successCounter:          scope.Counter("retry_successes"),
-		callCounter:             scope.Counter("retry_calls"),
+		calls:           scope.Counter(_callsName),
+		successes:       scope.Counter(_successesName),
+		unretryableErrs: unretryableErrScope.Counter(_failuresName),
+		yarpcErrs:       yarpcErrScope.Counter(_failuresName),
+		noTimeErrs:      noTimeErrScope.Counter(_failuresName),
+		maxAttemptErrs:  maxAttemptErrScope.Counter(_failuresName),
 	}
 }
 
-func (o *observer) unretryableError() {
-	o.unretryableErrorCounter.Inc(1)
-}
-
-func (o *observer) yarpcError() {
-	o.yarpcErrorCounter.Inc(1)
-}
-
-func (o *observer) noTimeError() {
-	o.noTimeErrorCounter.Inc(1)
-}
-
-func (o *observer) maxAttemptsError() {
-	o.maxAttemptsErrorCounter.Inc(1)
+func (o *observer) call() {
+	o.calls.Inc(1)
 }
 
 func (o *observer) success() {
-	o.successCounter.Inc(1)
+	o.successes.Inc(1)
 }
 
-func (o *observer) call() {
-	o.callCounter.Inc(1)
+func (o *observer) unretryableError() {
+	o.unretryableErrs.Inc(1)
+}
+
+func (o *observer) yarpcError() {
+	o.yarpcErrs.Inc(1)
+}
+
+func (o *observer) noTimeError() {
+	o.noTimeErrs.Inc(1)
+}
+
+func (o *observer) maxAttemptsError() {
+	o.maxAttemptErrs.Inc(1)
 }

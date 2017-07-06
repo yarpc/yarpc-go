@@ -45,7 +45,7 @@ type middlewareOptions struct {
 	// context and request.
 	policyProvider PolicyProvider
 
-	// tallyScope is an interface for recording metrics.
+	// scope is an interface for recording metrics to tally.
 	scope tally.Scope
 }
 
@@ -62,8 +62,8 @@ func WithPolicyProvider(provider PolicyProvider) MiddlewareOption {
 	})
 }
 
-// TallyScope sets a Tally scope that will be used to record retry metrics.
-func TallyScope(scope tally.Scope) MiddlewareOption {
+// WithTally sets a Tally scope that will be used to record retry metrics.
+func WithTally(scope tally.Scope) MiddlewareOption {
 	return retryOptionFunc(func(opts *middlewareOptions) {
 		opts.scope = scope
 	})
