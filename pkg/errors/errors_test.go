@@ -21,10 +21,8 @@
 package errors
 
 import (
-	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
@@ -35,13 +33,6 @@ func TestWrapHandlerError(t *testing.T) {
 	assert.Nil(t, WrapHandlerError(nil, "foo", "bar"))
 	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.ErrorCode(WrapHandlerError(yarpcerrors.InvalidArgumentErrorf(""), "foo", "bar")))
 	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.ErrorCode(WrapHandlerError(errors.New(""), "foo", "bar")))
-}
-
-func TestValidateUnaryContext(t *testing.T) {
-	assert.Error(t, ValidateUnaryContext(context.Background()))
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
-	defer cancel() // have to not ignore the cancel for linting
-	assert.NoError(t, ValidateUnaryContext(ctx))
 }
 
 func TestExpectEncodings(t *testing.T) {

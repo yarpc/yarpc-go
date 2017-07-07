@@ -176,7 +176,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	switch spec.Type() {
 	case transport.Unary:
-		if err := errors.ValidateUnaryContext(ctx); err != nil {
+		if err := transport.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		return transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)

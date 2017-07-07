@@ -28,7 +28,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -84,7 +83,6 @@ func TestValidator(t *testing.T) {
 			wantMissingParams: []string{"procedure"},
 		},
 		{
-			// TODO: a test for this really belongs in internal/request instead
 			req: &transport.Request{
 				Caller:    "caller",
 				Service:   "service",
@@ -112,7 +110,7 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			err = errors.ValidateUnaryContext(ctx)
+			err = transport.ValidateUnaryContext(ctx)
 		}
 
 		if len(tt.wantMissingParams) > 0 {

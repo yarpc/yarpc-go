@@ -116,7 +116,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			return parseTTLErr
 		}
 
-		if err := errors.ValidateUnaryContext(ctx); err != nil {
+		if err := transport.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)

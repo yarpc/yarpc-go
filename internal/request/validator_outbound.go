@@ -25,7 +25,6 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/pkg/errors"
 )
 
 // UnaryValidatorOutbound wraps an Outbound to validate all outgoing unary requests.
@@ -40,7 +39,7 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 		return nil, err
 	}
 
-	if err := errors.ValidateUnaryContext(ctx); err != nil {
+	if err := transport.ValidateUnaryContext(ctx); err != nil {
 		return nil, err
 	}
 
