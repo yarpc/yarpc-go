@@ -32,28 +32,28 @@ import (
 // yarpcerrors.CodeInvalidArgument that represents a failure to decode
 // the request body.
 func RequestBodyDecodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, nil, false, false, err)
+	return newServerEncodingError(req, nil, false /*isResponse*/, false /*isHeader*/, err)
 }
 
 // ResponseBodyEncodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to encode
 // the response body.
 func ResponseBodyEncodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, nil, true, false, err)
+	return newServerEncodingError(req, nil, true /*isResponse*/, false /*isHeader*/, err)
 }
 
 // RequestHeadersDecodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to
 // decode the request headers.
 func RequestHeadersDecodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, nil, false, true, err)
+	return newServerEncodingError(req, nil, false /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ResponseHeadersEncodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to
 // encode the response headers.
 func ResponseHeadersEncodeError(req *transport.Request, err error) error {
-	return newServerEncodingError(req, nil, true, true, err)
+	return newServerEncodingError(req, nil, true /*isResponse*/, true /*isHeader*/, err)
 }
 
 // ExpectEncodings verifies that the given request has one of the given
@@ -67,7 +67,7 @@ func ExpectEncodings(req *transport.Request, want ...transport.Encoding) error {
 		}
 	}
 
-	return newServerEncodingError(req, want, false, false, newEncodingMismatchError(want, got))
+	return newServerEncodingError(req, want, false /*isResponse*/, false /*isHeader*/, newEncodingMismatchError(want, got))
 }
 
 func newServerEncodingError(req *transport.Request, encodings []transport.Encoding, isResponse bool, isHeader bool, err error) error {

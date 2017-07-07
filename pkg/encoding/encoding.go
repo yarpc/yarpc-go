@@ -27,7 +27,9 @@ import (
 )
 
 // FromOptions converts a collection of yarpc.CallOptions to
-// encoding.CallOptions.
+// encoding.CallOptions. This is to allow the external API of
+// yarpc.CallOptions to be compatible with the encoding.NewOutboundCall
+// API without having to import api/encoding directly.
 func FromOptions(opts []yarpc.CallOption) []encoding.CallOption {
 	newOpts := make([]encoding.CallOption, len(opts))
 	for i, o := range opts {
