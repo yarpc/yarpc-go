@@ -64,6 +64,10 @@ verifycodecovignores: deps ## check verifycodecovignores
 verifyversion: deps ## verify the version in the changelog is the same as in version.go
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifyversion
 
+.PHONY: basiclint
+basiclint: deps ## run gofmt govet golint staticcheck errcheck
+	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make basiclint
+
 .PHONY: lint
 lint: deps ## run all linters
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make lint
