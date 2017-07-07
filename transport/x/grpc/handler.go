@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"bytes"
+	"strings"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -32,61 +33,60 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	gtransport "google.golang.org/grpc/transport"
 )
 
 type handler struct {
-	grpcServiceName string
-	grpcMethodName  string
-	router          transport.Router
+	router      transport.Router
+	interceptor grpc.UnaryServerInterceptor
 }
 
 func newHandler(
-	grpcServiceName string,
-	grpcMethodName string,
 	router transport.Router,
+	interceptor grpc.UnaryServerInterceptor,
 ) *handler {
 	return &handler{
-		grpcServiceName: grpcServiceName,
-		grpcMethodName:  grpcMethodName,
-		router:          router,
+		router:      router,
+		interceptor: interceptor,
 	}
 }
 
-// the grpc-go handler does not put the context.Context as the first argument
-// so we must ignore this file for linting
+func (h *handler) handle(srv interface{}, stream grpc.ServerStream) error {
+	// Grab context information from the stream's context.
+	ctx := stream.Context()
+	cstream, ok := gtransport.StreamFromContext(ctx)
+	if !ok {
+		return yarpcerrors.InvalidArgumentErrorf("received grpc request without stream")
+	}
 
-func (h *handler) handle(
-	server interface{},
-	ctx context.Context,
-	decodeFunc func(interface{}) error,
-	interceptor grpc.UnaryServerInterceptor,
-) (interface{}, error) {
+	// Apply a unary request.
 	responseMD := metadata.New(nil)
-	response, err := h.handleBeforeErrorConversion(server, ctx, decodeFunc, interceptor, responseMD)
+	response, err := h.handleBeforeErrorConversion(ctx, stream.RecvMsg, responseMD, cstream.Method())
 	err = handlerErrorToGRPCError(err, responseMD)
-	// TODO: what to do with error?
-	_ = grpc.SetTrailer(ctx, responseMD)
-	return response, err
+
+	// Send the response attributes back and end the stream.
+	stream.SendMsg(response)
+	stream.SetTrailer(responseMD)
+	return err
 }
 
 func (h *handler) handleBeforeErrorConversion(
-	server interface{},
 	ctx context.Context,
 	decodeFunc func(interface{}) error,
-	interceptor grpc.UnaryServerInterceptor,
 	responseMD metadata.MD,
+	method string,
 ) (interface{}, error) {
-	transportRequest, err := h.getTransportRequest(ctx, decodeFunc)
+	transportRequest, err := h.getTransportRequest(ctx, decodeFunc, method)
 	if err != nil {
 		return nil, err
 	}
-	if interceptor != nil {
-		return interceptor(
+	if h.interceptor != nil {
+		return h.interceptor(
 			ctx,
 			transportRequest,
 			&grpc.UnaryServerInfo{
 				noopGrpcStruct{},
-				toFullMethod(h.grpcServiceName, h.grpcMethodName),
+				method,
 			},
 			func(ctx context.Context, request interface{}) (interface{}, error) {
 				transportRequest, ok := request.(*transport.Request)
@@ -100,7 +100,7 @@ func (h *handler) handleBeforeErrorConversion(
 	return h.call(ctx, transportRequest, responseMD)
 }
 
-func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error) (*transport.Request, error) {
+func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error, method string) (*transport.Request, error) {
 	md, ok := metadata.FromContext(ctx)
 	if md == nil || !ok {
 		return nil, yarpcerrors.InternalErrorf("cannot get metadata from ctx: %v", ctx)
@@ -114,10 +114,14 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 		return nil, err
 	}
 	transportRequest.Body = bytes.NewBuffer(data)
-	procedure, err := procedureToName(h.grpcServiceName, h.grpcMethodName)
+
+	// TODO this is not comprehensive, we should cover all cases
+	sp := strings.Split(method, "/")
+	procedure, err := procedureToName(sp[1], sp[2])
 	if err != nil {
 		return nil, err
 	}
+
 	transportRequest.Procedure = procedure
 	if err := transport.ValidateRequest(transportRequest); err != nil {
 		return nil, err
