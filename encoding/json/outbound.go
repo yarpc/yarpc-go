@@ -28,7 +28,8 @@ import (
 	"go.uber.org/yarpc"
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/encoding"
+	"go.uber.org/yarpc/pkg/errors"
 )
 
 // Client makes JSON requests to a single service.
@@ -72,7 +73,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
-		return encoding.RequestBodyEncodeError(&treq, err)
+		return errors.RequestBodyEncodeError(&treq, err)
 	}
 
 	treq.Body = bytes.NewReader(encoded)
@@ -86,7 +87,7 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 	}
 
 	if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil {
-		return encoding.ResponseBodyDecodeError(&treq, err)
+		return errors.ResponseBodyDecodeError(&treq, err)
 	}
 
 	return tres.Body.Close()
@@ -108,7 +109,7 @@ func (c jsonClient) CallOneway(ctx context.Context, procedure string, reqBody in
 
 	var buff bytes.Buffer
 	if err := json.NewEncoder(&buff).Encode(reqBody); err != nil {
-		return nil, encoding.RequestBodyEncodeError(&treq, err)
+		return nil, errors.RequestBodyEncodeError(&treq, err)
 	}
 	treq.Body = &buff
 

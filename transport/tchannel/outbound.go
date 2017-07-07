@@ -26,11 +26,11 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/encoding"
 	"go.uber.org/yarpc/internal/introspection"
 	intsync "go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -130,7 +130,7 @@ func (o *Outbound) callWithPeer(ctx context.Context, req *transport.Request, pee
 	if err := writeRequestHeaders(ctx, format, reqHeaders, call.Arg2Writer); err != nil {
 		// TODO(abg): This will wrap IO errors while writing headers as encode
 		// errors. We should fix that.
-		return nil, encoding.RequestHeadersEncodeError(req, err)
+		return nil, errors.RequestHeadersEncodeError(req, err)
 	}
 
 	if err := writeBody(req.Body, call); err != nil {
@@ -145,7 +145,7 @@ func (o *Outbound) callWithPeer(ctx context.Context, req *transport.Request, pee
 		}
 		// TODO(abg): This will wrap IO errors while reading headers as decode
 		// errors. We should fix that.
-		return nil, encoding.ResponseHeadersDecodeError(req, err)
+		return nil, errors.ResponseHeadersDecodeError(req, err)
 	}
 
 	resBody, err := res.Arg3Reader()

@@ -18,20 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package request
+// Package errors contains helper functions for working with YARPC errors
+// for encoding and transport implementations.
+package errors
 
-import (
-	"context"
+import "go.uber.org/yarpc/yarpcerrors"
 
-	"go.uber.org/yarpc/yarpcerrors"
-)
-
-// ValidateUnaryContext validates that a context for a unary request is valid
-// and contains all required information.
-func ValidateUnaryContext(ctx context.Context) error {
-	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return yarpcerrors.InvalidArgumentErrorf("missing TTL")
+// WrapHandlerError is a convenience function to help wrap errors returned
+// from a handler.
+//
+// If err is nil, WrapHandlerError returns nil.
+// If err is a YARPC error, WrapHandlerError returns err with no changes.
+// If err is not a YARPC error, WrapHandlerError returns a new YARPC error
+// with code yarpcerrors.CodeUnknown and message err.Error(), along with
+// service and procedure information.
+func WrapHandlerError(err error, service string, procedure string) error {
+	if err == nil {
+		return nil
 	}
-
-	return nil
+	if yarpcerrors.IsYARPCError(err) {
+		return err
+	}
+	return yarpcerrors.UnknownErrorf("error for service %q and procedure %q: %s", service, procedure, err.Error())
 }

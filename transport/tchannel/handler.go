@@ -31,9 +31,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/encoding"
-	"go.uber.org/yarpc/internal/errors"
-	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 	ncontext "golang.org/x/net/context"
 )
@@ -142,7 +140,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
 	if err != nil {
-		return encoding.RequestHeadersDecodeError(treq, err)
+		return errors.RequestHeadersDecodeError(treq, err)
 	}
 	treq.Headers = headers
 
@@ -178,7 +176,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	switch spec.Type() {
 	case transport.Unary:
-		if err := request.ValidateUnaryContext(ctx); err != nil {
+		if err := transport.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		return transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)

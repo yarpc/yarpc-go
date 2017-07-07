@@ -39,7 +39,7 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 		return nil, err
 	}
 
-	if err := ValidateUnaryContext(ctx); err != nil {
+	if err := transport.ValidateUnaryContext(ctx); err != nil {
 		return nil, err
 	}
 

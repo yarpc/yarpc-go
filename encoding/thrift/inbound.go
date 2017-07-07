@@ -29,7 +29,7 @@ import (
 	encodingapi "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/errors"
 )
 
 // thriftUnaryHandler wraps a Thrift Handler into a transport.UnaryHandler
@@ -47,7 +47,7 @@ type thriftOnewayHandler struct {
 }
 
 func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -73,11 +73,11 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 
 	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
 	if err != nil {
-		return encoding.RequestBodyDecodeError(treq, err)
+		return errors.RequestBodyDecodeError(treq, err)
 	}
 
 	if envelope.Type != wire.Call {
-		return encoding.RequestBodyDecodeError(
+		return errors.RequestBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 
@@ -87,7 +87,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 	}
 
 	if resType := res.Body.EnvelopeType(); resType != wire.Reply {
-		return encoding.ResponseBodyEncodeError(
+		return errors.ResponseBodyEncodeError(
 			treq, errUnexpectedEnvelopeType(resType))
 	}
 
@@ -111,7 +111,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 		Value: value,
 	}, rw)
 	if err != nil {
-		return encoding.ResponseBodyEncodeError(treq, err)
+		return errors.ResponseBodyEncodeError(treq, err)
 	}
 
 	return nil
@@ -120,7 +120,7 @@ func (t thriftUnaryHandler) Handle(ctx context.Context, treq *transport.Request,
 // TODO(apb): reduce commonality between Handle and HandleOneway
 
 func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Request) error {
-	if err := encoding.Expect(treq, Encoding); err != nil {
+	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
 	}
 
@@ -146,11 +146,11 @@ func (t thriftOnewayHandler) HandleOneway(ctx context.Context, treq *transport.R
 
 	envelope, err := proto.DecodeEnveloped(bytes.NewReader(buf.Bytes()))
 	if err != nil {
-		return encoding.RequestBodyDecodeError(treq, err)
+		return errors.RequestBodyDecodeError(treq, err)
 	}
 
 	if envelope.Type != wire.OneWay {
-		return encoding.RequestBodyDecodeError(
+		return errors.RequestBodyDecodeError(
 			treq, errUnexpectedEnvelopeType(envelope.Type))
 	}
 
