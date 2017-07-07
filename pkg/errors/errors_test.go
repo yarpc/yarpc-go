@@ -39,7 +39,8 @@ func TestWrapHandlerError(t *testing.T) {
 
 func TestValidateUnaryContext(t *testing.T) {
 	assert.Error(t, ValidateUnaryContext(context.Background()))
-	ctx, _ := context.WithDeadline(context.Background(), time.Now())
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
+	defer cancel() // have to not ignore the cancel for linting
 	assert.NoError(t, ValidateUnaryContext(ctx))
 }
 
