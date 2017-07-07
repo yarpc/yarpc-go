@@ -31,8 +31,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/integrationtest"
-	"go.uber.org/yarpc/internal/ratelimit"
 	"go.uber.org/yarpc/transport/http"
+	"go.uber.org/yarpc/x/ratelimit"
 )
 
 func TestRateLimiterMiddleware(t *testing.T) {

@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/internal/clock"
-	"go.uber.org/yarpc/internal/ratelimit"
+	"go.uber.org/yarpc/x/ratelimit"
 )
 
 func TestThrottle(t *testing.T) {
