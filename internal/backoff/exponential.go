@@ -144,6 +144,17 @@ func (e *ExponentialStrategy) Backoff() backoff.Backoff {
 	}
 }
 
+// IsEqual returns whether this strategy is equivalent to another strategy.
+func (e *ExponentialStrategy) IsEqual(o *ExponentialStrategy) bool {
+	if e.opts.first != o.opts.first {
+		return false
+	}
+	if e.opts.max != o.opts.max {
+		return false
+	}
+	return true
+}
+
 // ExponentialBackoff is an instance of the exponential backoff strategy with
 // full jitter.
 type exponentialBackoff struct {

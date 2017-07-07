@@ -26,45 +26,59 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
+// PolicyProvider returns a retry policy to use for the given context and
+// request.  Nil responses will be interpreted as "no retries".
+type PolicyProvider interface {
+	// Policy returns a policy to use for retries.
+	Policy(context.Context, *transport.Request) *Policy
+}
+
 type serviceProcedure struct {
 	Service   string
 	Procedure string
 }
 
-// procedurePolicyProvider is a new PolicyProvider that
-// has the ability to convert a context and transport request to
-// determine which retry policy to use.
-// The PolicyProvider has the ability to register policies based
-// on service and procedure attributes.  It also has the ability
-// to specify the default retry policy.
-type procedurePolicyProvider struct {
+// ProcedurePolicyProvider is a PolicyProvider that keeps a registry of three
+// types of Policies with ordered precedence:
+//
+//  1) Policies that should be applied to a specific Service and Procedure
+//     match.
+//  2) Policies that should be applied to a specific Service match.
+//  3) A Default policy that will be applied of there are no matches.
+type ProcedurePolicyProvider struct {
 	serviceProcedureToPolicy map[serviceProcedure]*Policy
 	defaultPolicy            *Policy
 }
 
-func newProcedurePolicyProvider() *procedurePolicyProvider {
-	defaultCopy := defaultPolicy
-	return &procedurePolicyProvider{
+// NewProcedurePolicyProvider creates a new ProcedurePolicyProvider.
+func NewProcedurePolicyProvider() *ProcedurePolicyProvider {
+	return &ProcedurePolicyProvider{
 		serviceProcedureToPolicy: make(map[serviceProcedure]*Policy),
-		defaultPolicy:            &defaultCopy,
+		defaultPolicy:            nil,
 	}
 }
 
-func (ppp *procedurePolicyProvider) registerServiceProcedure(service, procedure string, pol *Policy) {
+// RegisterServiceProcedure specifies the retry policy for requests that match
+// the given service and procedure name.
+func (ppp *ProcedurePolicyProvider) RegisterServiceProcedure(service, procedure string, pol *Policy) {
 	ppp.serviceProcedureToPolicy[serviceProcedure{Service: service, Procedure: procedure}] = pol
 }
 
-func (ppp *procedurePolicyProvider) registerService(service string, pol *Policy) {
+// RegisterService specifies the retry policy for requests that match the given
+// service name.
+func (ppp *ProcedurePolicyProvider) RegisterService(service string, pol *Policy) {
 	ppp.serviceProcedureToPolicy[serviceProcedure{Service: service}] = pol
 }
 
-func (ppp *procedurePolicyProvider) registerDefault(pol *Policy) {
+// SetDefault specifies the default retry Policy that will be used if there are
+// no matches for any other policy (based on Service or Procedure).
+func (ppp *ProcedurePolicyProvider) SetDefault(pol *Policy) {
 	ppp.defaultPolicy = pol
 }
 
-// GetPolicy returns a policy for the provided context and request.
-func (ppp *procedurePolicyProvider) GetPolicy(_ context.Context, req *transport.Request) *Policy {
-	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{req.Service, req.Procedure}]; ok {
+// Policy returns a policy for the provided context and request.
+func (ppp *ProcedurePolicyProvider) Policy(_ context.Context, req *transport.Request) *Policy {
+	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{Service: req.Service, Procedure: req.Procedure}]; ok {
 		return pol
 	}
 	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{Service: req.Service}]; ok {

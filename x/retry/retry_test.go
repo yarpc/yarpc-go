@@ -37,14 +37,14 @@ func TestMiddleware(t *testing.T) {
 	type testStruct struct {
 		msg string
 
-		policyProvider *procedurePolicyProvider
+		policyProvider PolicyProvider
 
 		actions []MiddlewareAction
 	}
 	tests := []testStruct{
 		{
 			msg: "no retry",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*500),
@@ -71,8 +71,33 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
+			msg:            "nil policy",
+			policyProvider: newPolicyProviderBuilder().setDefault(nil).provider,
+			actions: []MiddlewareAction{
+				RequestAction{
+					request: &transport.Request{
+						Service:   "serv",
+						Procedure: "proc",
+						Body:      bytes.NewBufferString("body"),
+					},
+					reqTimeout: testtime.Second * 5,
+					events: []*OutboundEvent{
+						{
+							WantTimeout:       testtime.Second * 5,
+							WantTimeoutBounds: testtime.Second,
+							WantService:       "serv",
+							WantProcedure:     "proc",
+							WantBody:          "body",
+							GiveRespBody:      "respbody",
+						},
+					},
+					wantBody: "respbody",
+				},
+			},
+		},
+		{
 			msg: "single retry",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*500),
@@ -106,7 +131,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "multiple retries",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(4),
 					MaxRequestTimeout(testtime.Millisecond*500),
@@ -158,7 +183,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "immediate hard failure",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*500),
@@ -186,7 +211,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "retry once, then hard failure",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*500),
@@ -220,7 +245,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "ctx timeout less than retry timeout",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*500),
@@ -249,7 +274,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "ctx timeout less than retry timeout",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*50),
@@ -286,7 +311,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "no ctx timeout",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*50),
@@ -322,7 +347,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "exhaust retries",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*50),
@@ -358,7 +383,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "Reset Error",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*50),
@@ -388,7 +413,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "backoff timeout",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*50),
@@ -426,7 +451,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "sequential backoff timeout",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(2),
 					MaxRequestTimeout(testtime.Millisecond*100),
@@ -475,7 +500,7 @@ func TestMiddleware(t *testing.T) {
 		},
 		{
 			msg: "backoff context will timeout",
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(2),
 					MaxRequestTimeout(testtime.Millisecond*30),
@@ -526,7 +551,7 @@ func TestMiddleware(t *testing.T) {
 			// 050:  error: Timeout
 			// 075:  retry #1 (expected timeout for request: 25ms)
 			// 100:  final error: Timeout
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(2),
 					MaxRequestTimeout(testtime.Millisecond*50),
@@ -637,7 +662,7 @@ func TestMiddleware(t *testing.T) {
 			// ms :  service:"s" proc:"p" timeout:200ms expectedPolicy:"s="s",p="p""
 			// 000:  initial request
 			// 100:  final error: Timeout
-			policyProvider: newPolicyProviderBuilder().registerDefault(
+			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(2),
 					MaxRequestTimeout(testtime.Millisecond*20),
@@ -755,12 +780,39 @@ func TestMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			retry := NewUnaryMiddleware(
-				WithPolicyProvider(tt.policyProvider.GetPolicy),
+				WithPolicyProvider(tt.policyProvider),
 			)
 
 			ApplyMiddlewareActions(t, retry, tt.actions)
 		})
 	}
+}
+
+func TestNilRetry(t *testing.T) {
+	mw := (*OutboundMiddleware)(nil)
+	actions := []MiddlewareAction{
+		RequestAction{
+			request: &transport.Request{
+				Service:   "serv",
+				Procedure: "proc",
+				Body:      bytes.NewBufferString("body"),
+			},
+			reqTimeout: testtime.Second * 5,
+			events: []*OutboundEvent{
+				{
+					WantTimeout:       testtime.Second * 5,
+					WantTimeoutBounds: testtime.Second,
+					WantService:       "serv",
+					WantProcedure:     "proc",
+					WantBody:          "body",
+					GiveRespBody:      "respbody",
+				},
+			},
+			wantBody: "respbody",
+		},
+	}
+
+	ApplyMiddlewareActions(t, mw, actions)
 }
 
 // Sequential backoff will increment the backoff sequentially based
@@ -800,26 +852,26 @@ func (f *fixedBackoff) Duration(_ uint) time.Duration {
 }
 
 type policyProviderBuilder struct {
-	provider *procedurePolicyProvider
+	provider *ProcedurePolicyProvider
 }
 
 func newPolicyProviderBuilder() *policyProviderBuilder {
 	return &policyProviderBuilder{
-		provider: newProcedurePolicyProvider(),
+		provider: NewProcedurePolicyProvider(),
 	}
 }
 
 func (pb *policyProviderBuilder) registerServiceProcedure(service, procedure string, pol *Policy) *policyProviderBuilder {
-	pb.provider.registerServiceProcedure(service, procedure, pol)
+	pb.provider.RegisterServiceProcedure(service, procedure, pol)
 	return pb
 }
 
 func (pb *policyProviderBuilder) registerService(service string, pol *Policy) *policyProviderBuilder {
-	pb.provider.registerService(service, pol)
+	pb.provider.RegisterService(service, pol)
 	return pb
 }
 
-func (pb *policyProviderBuilder) registerDefault(pol *Policy) *policyProviderBuilder {
-	pb.provider.registerDefault(pol)
+func (pb *policyProviderBuilder) setDefault(pol *Policy) *policyProviderBuilder {
+	pb.provider.SetDefault(pol)
 	return pb
 }

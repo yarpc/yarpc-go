@@ -30,34 +30,38 @@ import (
 )
 
 // MiddlewareOption customizes the behavior of a retry middleware.
-type MiddlewareOption func(*middlewareOptions)
+type MiddlewareOption interface {
+	apply(*middlewareOptions)
+}
+
+type retryOptionFunc func(*middlewareOptions)
+
+func (f retryOptionFunc) apply(opts *middlewareOptions) { f(opts) }
 
 // middlewareOptions enumerates the options for retry middleware.
 type middlewareOptions struct {
-	// policyProvider is a function that will provide a Retry policy
-	// for a context and request.
+	// policyProvider is a function that will provide a Retry policy for a
+	// context and request.
 	policyProvider PolicyProvider
 }
 
 var defaultMiddlewareOptions = middlewareOptions{
-	policyProvider: func(context.Context, *transport.Request) *Policy {
-		return &defaultPolicy
-	},
+	policyProvider: nil,
 }
 
 // WithPolicyProvider allows a custom retry policy to be used in the retry
 // middleware.
 func WithPolicyProvider(provider PolicyProvider) MiddlewareOption {
-	return func(opts *middlewareOptions) {
+	return retryOptionFunc(func(opts *middlewareOptions) {
 		opts.policyProvider = provider
-	}
+	})
 }
 
 // NewUnaryMiddleware creates a new Retry Middleware
 func NewUnaryMiddleware(opts ...MiddlewareOption) *OutboundMiddleware {
 	options := defaultMiddlewareOptions
 	for _, opt := range opts {
-		opt(&options)
+		opt.apply(&options)
 	}
 	return &OutboundMiddleware{options}
 }
@@ -70,14 +74,20 @@ type OutboundMiddleware struct {
 
 // Call implements the middleware.UnaryOutbound interface.
 func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (resp *transport.Response, err error) {
+	if r == nil {
+		return out.Call(ctx, request)
+	}
 	policy := r.getPolicy(ctx, request)
+	if policy == nil {
+		return out.Call(ctx, request)
+	}
 	rereader, finish := ioutil.NewRereader(request.Body)
 	defer finish()
 	request.Body = rereader
-	boff := policy.backoffStrategy.Backoff()
+	boff := policy.opts.backoffStrategy.Backoff()
 
-	for i := uint(0); i < policy.retries+1; i++ {
-		timeout, _ := getTimeLeft(ctx, policy.maxRequestTimeout)
+	for i := uint(0); i < policy.opts.retries+1; i++ {
+		timeout, _ := getTimeLeft(ctx, policy.opts.maxRequestTimeout)
 		subCtx, cancel := context.WithTimeout(ctx, timeout)
 		resp, err = out.Call(subCtx, request)
 		cancel() // Clear the new ctx immdediately after the call
@@ -104,17 +114,14 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 
 func (r *OutboundMiddleware) getPolicy(ctx context.Context, request *transport.Request) *Policy {
 	if r.opts.policyProvider == nil {
-		return &defaultPolicy
+		return nil
 	}
-	if pol := r.opts.policyProvider(ctx, request); pol != nil {
-		return pol
-	}
-	return &defaultPolicy
+	return r.opts.policyProvider.Policy(ctx, request)
 }
 
-// getTimeLeft will return the amount of time left in the context or the
-// "max" duration passed in.  It will also return a boolean indicating
-// whether the context will timeout.
+// getTimeLeft will return the amount of time left in the context or the "max"
+// duration passed in.  It will also return a boolean indicating whether the
+// context will timeout.
 func getTimeLeft(ctx context.Context, max time.Duration) (timeleft time.Duration, ctxWillTimeout bool) {
 	ctxDeadline, ok := ctx.Deadline()
 	if !ok {

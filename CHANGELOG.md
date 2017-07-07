@@ -13,6 +13,10 @@ v1.10.0 (unreleased)
     inbound http and tchannel calls.
 -   Move encoding/x/protobuf to encoding/protobuf.
 
+Experimental:
+
+-   x/retry: Added support for creating retry middleware directly from config.
+
 
 v1.9.0 (2017-06-08)
 -------------------

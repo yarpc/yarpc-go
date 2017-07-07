@@ -5,10 +5,10 @@ package extendonlyclient
 
 import (
 	"go.uber.org/yarpc"
-	"reflect"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
+	"reflect"
 )
 
 // Interface is a client for the ExtendOnly service.

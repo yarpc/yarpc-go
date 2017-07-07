@@ -39,9 +39,10 @@ type Clock interface {
 
 // Throttle is a rate limiter.
 type Throttle struct {
-	// time is the time relative to the unix epoch in nanoseconds when throttle
-	// will allow another request.
-	time *atomic.Int64
+	// minAllowableTime is the time relative to the unix epoch in nanoseconds
+	// representing the absolute minimum time we will accept requests at.
+	// During unthrottled operation this should be less than the current time.
+	minAllowableTime *atomic.Int64
 	// requestInterval is the number of nanoseconds between requests and
 	// consequently the duration to advance the time each time the throttle
 	// allows another request.  The request interval is the inverse of requests
@@ -63,7 +64,7 @@ type throttleOptions struct {
 type Option func(*throttleOptions)
 
 // NewThrottle returns a Throttle that will limit to the given RPS.
-func NewThrottle(rate int, opts ...Option) *Throttle {
+func NewThrottle(rps int, opts ...Option) *Throttle {
 	options := throttleOptions{burstLimit: 10}
 	for _, opt := range opts {
 		opt(&options)
@@ -74,10 +75,10 @@ func NewThrottle(rate int, opts ...Option) *Throttle {
 
 	throttle := &Throttle{
 		clock:           options.clock,
-		requestInterval: time.Second.Nanoseconds() / int64(rate),
-		maxSlack:        -options.burstLimit * time.Second.Nanoseconds() / int64(rate),
+		requestInterval: time.Second.Nanoseconds() / int64(rps),
+		maxSlack:        options.burstLimit * time.Second.Nanoseconds() / int64(rps),
 	}
-	throttle.time = atomic.NewInt64(throttle.clock.Now().UnixNano() + throttle.maxSlack)
+	throttle.minAllowableTime = atomic.NewInt64(throttle.clock.Now().UnixNano() - throttle.maxSlack)
 	return throttle
 }
 
@@ -112,25 +113,25 @@ func (t *Throttle) Throttle() bool {
 	for {
 		// Disallow a request if the next allowable time has advanced beyond
 		// the current time.
-		time := t.time.Load()
-		if now <= time {
+		minAllowableTime := t.minAllowableTime.Load()
+		if now <= minAllowableTime {
 			return true
 		}
 
 		// Clamp the next allowable time so we do not accumulate unlimited
 		// slack when we are idle.
-		next := time
-		minTime := now + t.maxSlack
-		if next < minTime {
-			next = minTime
+		nextMinAllowableTime := minAllowableTime
+		clampedMinAllowableTime := now - t.maxSlack
+		if nextMinAllowableTime < clampedMinAllowableTime {
+			nextMinAllowableTime = clampedMinAllowableTime
 		}
 
 		// Advance the time to the next allowable request.
-		next = next + t.requestInterval
+		nextMinAllowableTime = nextMinAllowableTime + t.requestInterval
 
 		// Attempt to commit the decision to accept a request and postpone the
 		// next allowable request.
-		if t.time.CAS(time, next) {
+		if t.minAllowableTime.CAS(minAllowableTime, nextMinAllowableTime) {
 			return false
 		}
 
