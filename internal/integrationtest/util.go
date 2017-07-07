@@ -97,12 +97,8 @@ func (s TransportSpec) NewServer(t *testing.T, addr string) (*yarpc.Dispatcher, 
 		Name:     "service",
 		Inbounds: yarpc.Inbounds{inbound},
 	})
+	Register(dispatcher)
 
-	handle := func(ctx context.Context, req []byte) ([]byte, error) {
-		return req, nil
-	}
-
-	dispatcher.Register(raw.Procedure("echo", handle))
 	require.NoError(t, dispatcher.Start(), "start server dispatcher")
 
 	return dispatcher, s.Addr(xport, inbound)
@@ -221,4 +217,12 @@ func Call(ctx context.Context, rawClient raw.Client) error {
 		return fmt.Errorf("unexpected response %+v", res)
 	}
 	return nil
+}
+
+// Register registers an echo procedure handler on a dispatcher.
+func Register(dispatcher *yarpc.Dispatcher) {
+	handle := func(ctx context.Context, req []byte) ([]byte, error) {
+		return req, nil
+	}
+	dispatcher.Register(raw.Procedure("echo", handle))
 }

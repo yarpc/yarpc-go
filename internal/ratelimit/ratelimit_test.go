@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/internal/clock"
 	"go.uber.org/yarpc/internal/ratelimit"
@@ -33,7 +34,8 @@ import (
 
 func TestThrottle(t *testing.T) {
 	clock := clock.NewFake()
-	rl := ratelimit.NewThrottle(1, ratelimit.WithClock(clock))
+	rl, err := ratelimit.NewThrottle(1, ratelimit.WithClock(clock))
+	require.NoError(t, err)
 
 	for i := 0; i < 10; i++ {
 		assert.False(t, rl.Throttle(), "slack should allow first %d", i)
@@ -61,7 +63,8 @@ func TestThrottle(t *testing.T) {
 
 func TestThrottleWithoutSlack(t *testing.T) {
 	clock := clock.NewFake()
-	rl := ratelimit.NewThrottle(1, ratelimit.WithClock(clock), ratelimit.WithoutSlack)
+	rl, err := ratelimit.NewThrottle(1, ratelimit.WithClock(clock), ratelimit.WithoutSlack)
+	require.NoError(t, err)
 
 	for i := 0; i < 10; i++ {
 		assert.True(t, rl.Throttle(), "throttle without slack")
@@ -76,7 +79,8 @@ func TestThrottleWithoutSlack(t *testing.T) {
 // Coverage testing for atomic races.
 func TestCompetingThrottles(t *testing.T) {
 	var wg sync.WaitGroup
-	throttle := ratelimit.NewThrottle(1000, ratelimit.WithBurstLimit(20))
+	throttle, err := ratelimit.NewThrottle(1000, ratelimit.WithBurstLimit(20))
+	require.NoError(t, err)
 	count := atomic.NewInt32(0)
 	wg.Add(3)
 	go run(count, throttle, &wg, 100)
@@ -104,4 +108,14 @@ func TestOpenThrottle(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		assert.False(t, rl.Throttle(), "never throttle")
 	}
+}
+
+func TestThrottleInvalidOptions(t *testing.T) {
+	var err error
+
+	_, err = ratelimit.NewThrottle(0)
+	assert.Error(t, err, "misconfigured rps")
+
+	_, err = ratelimit.NewThrottle(10, ratelimit.WithBurstLimit(-1))
+	assert.Error(t, err, "misconfigured burst limit")
 }
