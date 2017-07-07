@@ -117,8 +117,11 @@ verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 			fi \
 		done
 
+.PHONY: basiclint
+basiclint: gofmt govet golint staticcheck errcheck # run gofmt govet golint staticcheck errcheck
+
 .PHONY: lint
-lint: generatenodiff nogogenerate gofmt govet golint staticcheck errcheck verifyversion verifycodecovignores ## run all linters
+lint: basiclint generatenodiff nogogenerate verifyversion verifycodecovignores ## run all linters
 
 .PHONY: test
 test: $(THRIFTRW) __eval_packages ## run all tests
