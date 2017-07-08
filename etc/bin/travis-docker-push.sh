@@ -2,7 +2,7 @@
 
 set -e
 
-DIR="$(cd "$(dirname "${0}")/.." && pwd)"
+DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
 cd "${DIR}"
 
 if [ -z "$DOCKER_EMAIL" ] || [ -z "$DOCKER_USER" ] || [ -z "$DOCKER_PASS" ]; then

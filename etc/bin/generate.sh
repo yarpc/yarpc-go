@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${0}")/.." && pwd)"
+DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
 cd "${DIR}"
 
 if echo "${GOPATH}" | grep : >/dev/null; then
@@ -119,8 +119,8 @@ touch yarpcproto/.nocover
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/second_service-remote # generated and not needed
 rm -rf internal/crossdock/thrift/gen-go/gauntlet_apache/thrift_test-remote # generated and not needed
 
-scripts/update-licenses.sh
-scripts/generate-cover-ignore.sh
+etc/bin/update-licenses.sh
+etc/bin/generate-cover-ignore.sh
 
 rm -f .dockerignore
 cat .gitignore | sed 's/^\///' > .dockerignore

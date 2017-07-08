@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${0}")/.." && pwd)"
+DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
 cd "${DIR}"
 
 if echo "${GOPATH}" | grep : >/dev/null; then

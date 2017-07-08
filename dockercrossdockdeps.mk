@@ -1,3 +1,3 @@
-include build/base.mk
-include build/deps.mk
-include build/crossdockdeps.mk
+include etc/make/base.mk
+include etc/make/deps.mk
+include etc/make/crossdockdeps.mk

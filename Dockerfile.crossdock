@@ -4,7 +4,7 @@ EXPOSE 8080-8090
 ENV SUPPRESS_DOCKER 1
 WORKDIR /go/src/go.uber.org/yarpc
 ADD dockercrossdockdeps.mk /go/src/go.uber.org/yarpc/
-ADD build/base.mk build/deps.mk build/crossdockdeps.mk /go/src/go.uber.org/yarpc/build/
+ADD etc/make/base.mk etc/make/deps.mk etc/make/crossdockdeps.mk /go/src/go.uber.org/yarpc/etc/make/
 RUN make -f dockercrossdockdeps.mk crossdock-predeps
 ADD glide.yaml glide.lock /go/src/go.uber.org/yarpc/
 RUN make -f dockercrossdockdeps.mk glide

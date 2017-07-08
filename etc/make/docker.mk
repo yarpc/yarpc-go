@@ -94,4 +94,4 @@ shell: deps ## go into a bash shell in docker with the repository linked as a vo
 
 .PHONY: __check_docker
 __check_docker:
-	@PATH=$$PATH:$(BIN) ./scripts/check-docker.sh
+	@PATH=$$PATH:$(BIN) ./etc/bin/check-docker.sh

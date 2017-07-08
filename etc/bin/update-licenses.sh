@@ -2,7 +2,7 @@
 
 set -e
 
-DIR="$(cd "$(dirname "${0}")/.." && pwd)"
+DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
 cd "${DIR}"
 
 # We need to ignore internal/tests for licenses so that the golden test for

@@ -109,11 +109,11 @@ define deprule
 ifdef SUPPRESS_DOCKER
 $(BIN)/$(shell basename $1): glide.lock $(GLIDE)
 	@mkdir -p $(BIN)
-	PATH=$(BIN):$(PATH) ./scripts/vendor-build.sh $(BIN) $1
+	PATH=$(BIN):$(PATH) ./etc/bin/vendor-build.sh $(BIN) $1
 else
 $(BIN)/$(shell basename $1): $(GLIDE)
 	@mkdir -p $(BIN)
-	PATH=$(BIN):$(PATH) ./scripts/vendor-build.sh $(BIN) $1
+	PATH=$(BIN):$(PATH) ./etc/bin/vendor-build.sh $(BIN) $1
 endif
 endef
 
