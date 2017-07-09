@@ -24,7 +24,11 @@ import (
 	"context"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/introspection"
 )
+
+var _ introspection.IntrospectableHandler = (*unaryHandlerWithMiddleware)(nil)
+var _ introspection.IntrospectableHandler = (*onewayHandlerWithMiddleware)(nil)
 
 // UnaryInbound defines a transport-level middleware for
 // `UnaryHandler`s.
@@ -69,6 +73,13 @@ type unaryHandlerWithMiddleware struct {
 
 func (h unaryHandlerWithMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	return h.i.Handle(ctx, req, resw, h.h)
+}
+
+func (h unaryHandlerWithMiddleware) Introspect() *introspection.Handler {
+	if i, ok := h.h.(introspection.IntrospectableHandler); ok {
+		return i.Introspect()
+	}
+	return nil
 }
 
 type nopUnaryInbound struct{}
@@ -120,6 +131,13 @@ type onewayHandlerWithMiddleware struct {
 
 func (h onewayHandlerWithMiddleware) HandleOneway(ctx context.Context, req *transport.Request) error {
 	return h.i.HandleOneway(ctx, req, h.h)
+}
+
+func (h onewayHandlerWithMiddleware) Introspect() *introspection.Handler {
+	if i, ok := h.h.(introspection.IntrospectableHandler); ok {
+		return i.Introspect()
+	}
+	return nil
 }
 
 type nopOnewayInbound struct{}
