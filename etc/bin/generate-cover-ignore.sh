@@ -10,8 +10,8 @@
 
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${0}")/.." && pwd)"
-source "${DIR}/scripts/helpers.sh"
+DIR="$(cd "$(dirname "${0}")/../.." && pwd)"
+source "${DIR}/etc/bin/helpers.sh"
 cd "${DIR}"
 
 remove_existing_nocover_files() {

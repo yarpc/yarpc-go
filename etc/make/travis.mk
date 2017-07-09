@@ -34,5 +34,5 @@ endif
 .PHONY: travis-docker-push
 travis-docker-push: ## push crossdock docker image from travis
 ifndef SUPPRESS_CROSSDOCK
-	PATH=$$PATH:$(BIN) ./scripts/travis-docker-push.sh "$(CROSSDOCK_DOCKER_IMAGE)"
+	PATH=$$PATH:$(BIN) ./etc/bin/travis-docker-push.sh "$(CROSSDOCK_DOCKER_IMAGE)"
 endif
