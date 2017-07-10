@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // FakeOutboundOption is an option for FakeTransport.NewOutbound.
@@ -59,7 +59,7 @@ func OutboundCallOverride(callable OutboundCallable) FakeOutboundOption {
 // NewOutbound returns a FakeOutbound with a given peer chooser and options.
 func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
 	o := &FakeOutbound{
-		once:      intsync.Once(),
+		once:      lifecycle.Once(),
 		transport: t,
 		chooser:   c,
 	}
@@ -71,7 +71,7 @@ func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) 
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
-	once         intsync.LifecycleOnce
+	once         lifecycle.LifecycleOnce
 	transport    *FakeTransport
 	chooser      peer.Chooser
 	nopOption    string

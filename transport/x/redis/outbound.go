@@ -28,7 +28,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/serialize"
 )
 
@@ -43,14 +43,14 @@ type Outbound struct {
 	tracer   opentracing.Tracer
 	queueKey string
 
-	once sync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // NewOnewayOutbound creates a redis Outbound that satisfies transport.OnewayOutbound
 // queueKey - key for the queue in redis
 func NewOnewayOutbound(client Client, queueKey string) *Outbound {
 	return &Outbound{
-		once:     sync.Once(),
+		once:     lifecycle.Once(),
 		client:   client,
 		tracer:   opentracing.GlobalTracer(),
 		queueKey: queueKey,

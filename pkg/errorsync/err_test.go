@@ -18,29 +18,71 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package errorsync
 
 import (
-	"go.uber.org/yarpc/api/transport"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// NewNopLifecycle returns a new one-time no-op lifecycle
-func NewNopLifecycle() transport.Lifecycle {
-	return &nopLifecycle{once: Once()}
-}
+func TestErrorWaiter(t *testing.T) {
+	one := errors.New("1")
+	two := errors.New("2")
 
-type nopLifecycle struct {
-	once LifecycleOnce
-}
+	tests := []struct {
+		desc string
+		errs []error
+		want []error
+	}{
+		{
+			"nothing",
+			nil,
+			nil,
+		},
+		{
+			"empty list",
+			[]error{},
+			nil,
+		},
+		{
+			"no errors",
+			[]error{nil, nil, nil},
+			nil,
+		},
+		{
+			"single error",
+			[]error{nil, one, nil},
+			[]error{one},
+		},
+		{
+			"multiple errors",
+			[]error{nil, one, two, nil},
+			[]error{one, two},
+		},
+	}
 
-func (n *nopLifecycle) Start() error {
-	return n.once.Start(nil)
-}
+	for _, tt := range tests {
+		want := make(map[error]struct{})
+		for _, err := range tt.want {
+			want[err] = struct{}{}
+		}
 
-func (n *nopLifecycle) Stop() error {
-	return n.once.Stop(nil)
-}
+		var ew ErrorWaiter
+		for _, err := range tt.errs {
+			// Need to create a local variable to make sure that the correct
+			// value is used by the closure since the value 'err' points to
+			// will change between iterations.
+			errLocal := err
+			ew.Submit(func() error { return errLocal })
+		}
 
-func (n *nopLifecycle) IsRunning() bool {
-	return n.once.IsRunning()
+		got := make(map[error]struct{})
+		for _, err := range ew.Wait() {
+			got[err] = struct{}{}
+		}
+
+		assert.Equal(t, want, got, tt.desc)
+	}
 }

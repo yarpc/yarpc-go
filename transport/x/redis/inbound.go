@@ -29,7 +29,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/serialize"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -54,7 +54,7 @@ type Inbound struct {
 
 	stop chan struct{}
 
-	once sync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // NewInbound creates a redis Inbound that satisfies transport.Inbound.
@@ -65,7 +65,7 @@ type Inbound struct {
 func NewInbound(client Client, queueKey, processingKey string, timeout time.Duration) *Inbound {
 	return &Inbound{
 		tracer: opentracing.GlobalTracer(),
-		once:   sync.Once(),
+		once:   lifecycle.Once(),
 
 		client:        client,
 		timeout:       timeout,

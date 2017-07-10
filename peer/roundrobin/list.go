@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	ysync "go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 type listConfig struct {
@@ -62,7 +62,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 
 	return &List{
-		once:               ysync.Once(),
+		once:               lifecycle.Once(),
 		uninitializedPeers: make(map[string]peer.Identifier, cfg.capacity),
 		unavailablePeers:   make(map[string]peer.Peer, cfg.capacity),
 		availablePeerRing:  newPeerRing(cfg.capacity),
@@ -83,7 +83,7 @@ type List struct {
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
-	once ysync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // Update applies the additions and removals of peer Identifiers to the list

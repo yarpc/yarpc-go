@@ -23,13 +23,13 @@ package tchannel
 import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // Inbound receives YARPC requests over TChannel. It may be constructed using
 // the NewInbound method on a tchannel.Transport.
 type Inbound struct {
-	once      sync.LifecycleOnce
+	once      lifecycle.LifecycleOnce
 	transport *Transport
 }
 
@@ -40,7 +40,7 @@ type Inbound struct {
 // locally- and remotely-initiated persistent connections.
 func (t *Transport) NewInbound() *Inbound {
 	return &Inbound{
-		once:      sync.Once(),
+		once:      lifecycle.Once(),
 		transport: t,
 	}
 }

@@ -29,7 +29,7 @@ import (
 	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/serialize"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -64,7 +64,7 @@ type Inbound struct {
 	client        cherami.Client
 	clientFactory internal.ClientFactory
 
-	once sync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // NewInbound builds a new Cherami inbound.
@@ -73,7 +73,7 @@ func (t *Transport) NewInbound(opts InboundOptions) *Inbound {
 		opts.PrefetchCount = defaultPrefetchCount
 	}
 	return &Inbound{
-		once:          sync.Once(),
+		once:          lifecycle.Once(),
 		transport:     t,
 		opts:          opts,
 		tracer:        t.tracer,

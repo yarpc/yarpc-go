@@ -13,7 +13,6 @@ WHITELIST="\
   encoding/thrift \
   encoding/thrift/thriftrw-plugin-yarpc \
   internal/interpolate \
-  pkg/sync \
   transport/x/redis/redistest"
 
 is_ignore_dir() {

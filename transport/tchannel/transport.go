@@ -31,7 +31,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
-	intsync "go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // Transport is a TChannel transport suitable for use with YARPC's peer
@@ -42,7 +42,7 @@ import (
 // management.
 type Transport struct {
 	lock sync.Mutex
-	once intsync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 
 	ch     Channel
 	router transport.Router
@@ -82,7 +82,7 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 
 func (o transportOptions) newTransport() *Transport {
 	return &Transport{
-		once:                intsync.Once(),
+		once:                lifecycle.Once(),
 		name:                o.name,
 		addr:                o.addr,
 		connTimeout:         o.connTimeout,

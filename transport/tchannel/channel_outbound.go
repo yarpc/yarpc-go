@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/pkg/errors"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -42,7 +42,7 @@ var (
 // channel to make requests to any connected peer.
 func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 	return &ChannelOutbound{
-		once:      sync.Once(),
+		once:      lifecycle.Once(),
 		channel:   t.ch,
 		transport: t,
 	}
@@ -52,7 +52,7 @@ func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 // channel to a specific peer.
 func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 	return &ChannelOutbound{
-		once:      sync.Once(),
+		once:      lifecycle.Once(),
 		channel:   t.ch,
 		transport: t,
 		addr:      addr,
@@ -72,7 +72,7 @@ type ChannelOutbound struct {
 	// Otherwise, the global peer list of the Channel will be used.
 	addr string
 
-	once sync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.

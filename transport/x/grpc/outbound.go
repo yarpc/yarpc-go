@@ -29,7 +29,7 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	internalsync "go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
@@ -45,7 +45,7 @@ var _ transport.UnaryOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
-	once            internalsync.LifecycleOnce
+	once            lifecycle.LifecycleOnce
 	lock            sync.Mutex
 	t               *Transport
 	address         string
@@ -54,7 +54,7 @@ type Outbound struct {
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	return &Outbound{internalsync.Once(), sync.Mutex{}, t, address, newOutboundOptions(options), nil}
+	return &Outbound{lifecycle.Once(), sync.Mutex{}, t, address, newOutboundOptions(options), nil}
 }
 
 // Start implements transport.Lifecycle#Start.

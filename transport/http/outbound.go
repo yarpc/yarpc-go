@@ -37,7 +37,7 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -98,7 +98,7 @@ func AddHeader(key, value string) OutboundOption {
 // The concrete peer type is private and intrinsic to the HTTP transport.
 func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
-		once:        sync.Once(),
+		once:        lifecycle.Once(),
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
@@ -156,7 +156,7 @@ type Outbound struct {
 	// Headers to add to all outgoing requests.
 	headers http.Header
 
-	once sync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // setURLTemplate configures an alternate URL template.

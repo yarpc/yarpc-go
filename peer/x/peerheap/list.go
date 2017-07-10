@@ -29,7 +29,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	ysync "go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 const unavailablePenalty = math.MaxInt32
@@ -60,7 +60,7 @@ func StartupWait(t time.Duration) HeapOption {
 // introduced peer.
 type List struct {
 	mu   sync.Mutex
-	once ysync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 
 	transport peer.Transport
 
@@ -95,7 +95,7 @@ func New(transport peer.Transport, opts ...HeapOption) *List {
 	}
 
 	return &List{
-		once:               ysync.Once(),
+		once:               lifecycle.Once(),
 		transport:          transport,
 		byIdentifier:       make(map[string]*peerScore),
 		peerAvailableEvent: make(chan struct{}, 1),

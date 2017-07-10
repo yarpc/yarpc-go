@@ -30,7 +30,7 @@ import (
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/errors"
-	intsync "go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -47,14 +47,14 @@ var (
 type Outbound struct {
 	transport *Transport
 	chooser   peer.Chooser
-	once      intsync.LifecycleOnce
+	once      lifecycle.LifecycleOnce
 }
 
 // NewOutbound builds a new TChannel outbound that selects a peer for each
 // request using the given peer chooser.
 func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
-		once:      intsync.Once(),
+		once:      lifecycle.Once(),
 		transport: t,
 		chooser:   chooser,
 	}

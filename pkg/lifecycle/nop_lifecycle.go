@@ -18,36 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package lifecycle
 
-import "sync"
+import (
+	"go.uber.org/yarpc/api/transport"
+)
 
-// ErrorWaiter is similar to a WaitGroup except it allows collecting failures
-// from subtasks.
-type ErrorWaiter struct {
-	wait   sync.WaitGroup
-	lock   sync.Mutex
-	errors []error
+// NewNopLifecycle returns a new one-time no-op lifecycle
+func NewNopLifecycle() transport.Lifecycle {
+	return &nopLifecycle{once: Once()}
 }
 
-// Submit submits a task for execution on the ErrorWaiter.
-//
-// The function returns immediately.
-func (ew *ErrorWaiter) Submit(f func() error) {
-	ew.wait.Add(1)
-	go func() {
-		defer ew.wait.Done()
-		if err := f(); err != nil {
-			ew.lock.Lock()
-			ew.errors = append(ew.errors, err)
-			ew.lock.Unlock()
-		}
-	}()
+type nopLifecycle struct {
+	once LifecycleOnce
 }
 
-// Wait waits until all submitted tasks have finished and returns a list of
-// all errors that occurred during task execution in no particular order.
-func (ew *ErrorWaiter) Wait() []error {
-	ew.wait.Wait()
-	return ew.errors
+func (n *nopLifecycle) Start() error {
+	return n.once.Start(nil)
+}
+
+func (n *nopLifecycle) Stop() error {
+	return n.once.Stop(nil)
+}
+
+func (n *nopLifecycle) IsRunning() bool {
+	return n.once.IsRunning()
 }

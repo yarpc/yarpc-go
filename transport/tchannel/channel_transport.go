@@ -26,7 +26,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 var errChannelOrServiceNameIsRequired = errors.New(
@@ -77,7 +77,7 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 
 func (options transportOptions) newChannelTransport() *ChannelTransport {
 	return &ChannelTransport{
-		once:   sync.Once(),
+		once:   lifecycle.Once(),
 		ch:     options.ch,
 		addr:   options.addr,
 		tracer: options.tracer,
@@ -95,7 +95,7 @@ type ChannelTransport struct {
 	tracer opentracing.Tracer
 	router transport.Router
 
-	once sync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // Channel returns the underlying TChannel "Channel" instance.

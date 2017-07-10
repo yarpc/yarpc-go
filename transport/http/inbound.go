@@ -28,7 +28,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
-	"go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -54,7 +54,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:      sync.Once(),
+		once:      lifecycle.Once(),
 		addr:      addr,
 		tracer:    t.tracer,
 		transport: t,
@@ -76,7 +76,7 @@ type Inbound struct {
 	tracer     opentracing.Tracer
 	transport  *Transport
 
-	once sync.LifecycleOnce
+	once lifecycle.LifecycleOnce
 }
 
 // Tracer configures a tracer on this inbound.

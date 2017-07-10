@@ -24,7 +24,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
-	intsync "go.uber.org/yarpc/pkg/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // FakeTransportOption is an option for NewFakeTransport.
@@ -41,7 +41,7 @@ func NopTransportOption(nopOption string) FakeTransportOption {
 // NewFakeTransport returns a fake transport.
 func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 	t := &FakeTransport{
-		Lifecycle: intsync.NewNopLifecycle(),
+		Lifecycle: lifecycle.NewNopLifecycle(),
 	}
 	for _, opt := range opts {
 		opt(t)
