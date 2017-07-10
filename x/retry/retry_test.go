@@ -25,6 +25,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/crossdock/crossdock-go/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
 	iioutil "go.uber.org/yarpc/internal/ioutil"
@@ -40,6 +43,10 @@ func TestMiddleware(t *testing.T) {
 		policyProvider PolicyProvider
 
 		actions []MiddlewareAction
+
+		// These counters are the tally-compatible "name+tags" that point to
+		// the current counter value.
+		wantCounters map[string]int
 	}
 	tests := []testStruct{
 		{
@@ -68,6 +75,10 @@ func TestMiddleware(t *testing.T) {
 					},
 					wantBody: "respbody",
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":     1,
+				"retry_successes+": 1,
 			},
 		},
 		{
@@ -128,6 +139,10 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
+			wantCounters: map[string]int{
+				"retry_calls+":     2,
+				"retry_successes+": 1,
+			},
 		},
 		{
 			msg: "multiple retries",
@@ -180,6 +195,10 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
+			wantCounters: map[string]int{
+				"retry_calls+":     5,
+				"retry_successes+": 1,
+			},
 		},
 		{
 			msg: "immediate hard failure",
@@ -207,6 +226,10 @@ func TestMiddleware(t *testing.T) {
 					},
 					wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":                     1,
+				"retry_failures+error=unretryable": 1,
 			},
 		},
 		{
@@ -242,6 +265,10 @@ func TestMiddleware(t *testing.T) {
 					wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 				},
 			},
+			wantCounters: map[string]int{
+				"retry_calls+":                     2,
+				"retry_failures+error=unretryable": 1,
+			},
 		},
 		{
 			msg: "ctx timeout less than retry timeout",
@@ -270,6 +297,10 @@ func TestMiddleware(t *testing.T) {
 					},
 					wantBody: "respbody",
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":     1,
+				"retry_successes+": 1,
 			},
 		},
 		{
@@ -308,6 +339,10 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
+			wantCounters: map[string]int{
+				"retry_calls+":     2,
+				"retry_successes+": 1,
+			},
 		},
 		{
 			msg: "no ctx timeout",
@@ -343,6 +378,10 @@ func TestMiddleware(t *testing.T) {
 					},
 					wantBody: "respbody",
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":     2,
+				"retry_successes+": 1,
 			},
 		},
 		{
@@ -380,6 +419,10 @@ func TestMiddleware(t *testing.T) {
 					wantError: yarpcerrors.InternalErrorf("unexpected error 2").Error(),
 				},
 			},
+			wantCounters: map[string]int{
+				"retry_calls+":                      2,
+				"retry_failures+error=max_attempts": 1,
+			},
 		},
 		{
 			msg: "Reset Error",
@@ -409,6 +452,10 @@ func TestMiddleware(t *testing.T) {
 					},
 					wantError: iioutil.ErrReset.Error(),
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":                        1,
+				"retry_failures+error=yarpc_internal": 1,
 			},
 		},
 		{
@@ -447,6 +494,10 @@ func TestMiddleware(t *testing.T) {
 					},
 					wantBody: "respbody",
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":     2,
+				"retry_successes+": 1,
 			},
 		},
 		{
@@ -497,6 +548,10 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
+			wantCounters: map[string]int{
+				"retry_calls+":     3,
+				"retry_successes+": 1,
+			},
 		},
 		{
 			msg: "backoff context will timeout",
@@ -529,6 +584,10 @@ func TestMiddleware(t *testing.T) {
 					wantTimeLimit: testtime.Millisecond * 40,
 					wantError:     yarpcerrors.InternalErrorf("unexpected error 2").Error(),
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":                 1,
+				"retry_failures+error=no_time": 1,
 			},
 		},
 		{
@@ -635,6 +694,12 @@ func TestMiddleware(t *testing.T) {
 						},
 					},
 				},
+			},
+			wantCounters: map[string]int{
+				"retry_calls+":                     5,
+				"retry_successes+":                 1,
+				"retry_failures+error=unretryable": 1,
+				"retry_failures+error=no_time":     1,
 			},
 		},
 		{
@@ -774,16 +839,30 @@ func TestMiddleware(t *testing.T) {
 					},
 				},
 			},
+			wantCounters: map[string]int{
+				"retry_calls+":                      6,
+				"retry_successes+":                  0,
+				"retry_failures+error=max_attempts": 3,
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
+			testScope := tally.NewTestScope("", map[string]string{})
+
 			retry := NewUnaryMiddleware(
 				WithPolicyProvider(tt.policyProvider),
+				WithTally(testScope),
 			)
 
 			ApplyMiddlewareActions(t, retry, tt.actions)
+
+			counters := testScope.Snapshot().Counters()
+			for nameAndTags, value := range tt.wantCounters {
+				require.Contains(t, counters, nameAndTags, "name+tag combo was not in the counters")
+				assert.Equal(t, int64(value), counters[nameAndTags].Value(), "counter %s was not as expected", nameAndTags)
+			}
 		})
 	}
 }
