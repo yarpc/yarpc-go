@@ -54,7 +54,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:      lifecycle.Once(),
+		once:      lifecycle.NewOnce(),
 		addr:      addr,
 		tracer:    t.tracer,
 		transport: t,
@@ -76,7 +76,7 @@ type Inbound struct {
 	tracer     opentracing.Tracer
 	transport  *Transport
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // Tracer configures a tracer on this inbound.

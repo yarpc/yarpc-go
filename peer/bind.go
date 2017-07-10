@@ -37,7 +37,7 @@ import (
 // can start and stop updates.
 func Bind(chooserList peer.ChooserList, bind peer.Binder) *BoundChooser {
 	return &BoundChooser{
-		once:        lifecycle.Once(),
+		once:        lifecycle.NewOnce(),
 		chooserList: chooserList,
 		updater:     bind(chooserList),
 	}
@@ -46,7 +46,7 @@ func Bind(chooserList peer.ChooserList, bind peer.Binder) *BoundChooser {
 // BoundChooser is a peer chooser that couples a peer list and a peer list
 // updater for the duration of its lifecycle.
 type BoundChooser struct {
-	once        lifecycle.LifecycleOnce
+	once        *lifecycle.Once
 	updater     transport.Lifecycle // the peer list updater, which to us is just a lifecycle
 	chooserList peer.ChooserList    // the peer list/chooser, also a lifecycle
 }
@@ -130,7 +130,7 @@ func (c *BoundChooser) Introspect() introspection.ChooserStatus {
 func BindPeers(ids []peer.Identifier) peer.Binder {
 	return func(pl peer.List) transport.Lifecycle {
 		return &PeersUpdater{
-			once: lifecycle.Once(),
+			once: lifecycle.NewOnce(),
 			pl:   pl,
 			ids:  ids,
 		}
@@ -139,7 +139,7 @@ func BindPeers(ids []peer.Identifier) peer.Binder {
 
 // PeersUpdater binds a fixed list of peers to a peer list.
 type PeersUpdater struct {
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 	pl   peer.List
 	ids  []peer.Identifier
 }

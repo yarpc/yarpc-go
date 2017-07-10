@@ -77,7 +77,7 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 
 func (options transportOptions) newChannelTransport() *ChannelTransport {
 	return &ChannelTransport{
-		once:   lifecycle.Once(),
+		once:   lifecycle.NewOnce(),
 		ch:     options.ch,
 		addr:   options.addr,
 		tracer: options.tracer,
@@ -95,7 +95,7 @@ type ChannelTransport struct {
 	tracer opentracing.Tracer
 	router transport.Router
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // Channel returns the underlying TChannel "Channel" instance.

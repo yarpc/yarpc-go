@@ -45,7 +45,7 @@ var _ transport.UnaryOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
-	once            lifecycle.LifecycleOnce
+	once            *lifecycle.Once
 	lock            sync.Mutex
 	t               *Transport
 	address         string
@@ -54,7 +54,7 @@ type Outbound struct {
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	return &Outbound{lifecycle.Once(), sync.Mutex{}, t, address, newOutboundOptions(options), nil}
+	return &Outbound{lifecycle.NewOnce(), sync.Mutex{}, t, address, newOutboundOptions(options), nil}
 }
 
 // Start implements transport.Lifecycle#Start.

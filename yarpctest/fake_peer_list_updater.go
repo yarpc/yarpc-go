@@ -52,7 +52,7 @@ type FakePeerListUpdater struct {
 // passed options.
 func NewFakePeerListUpdater(opts ...FakePeerListUpdaterOption) *FakePeerListUpdater {
 	u := &FakePeerListUpdater{
-		Lifecycle: lifecycle.NewNopLifecycle(),
+		Lifecycle: lifecycle.NewNop(),
 	}
 	for _, opt := range opts {
 		opt(u)

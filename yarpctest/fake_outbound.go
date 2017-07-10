@@ -59,7 +59,7 @@ func OutboundCallOverride(callable OutboundCallable) FakeOutboundOption {
 // NewOutbound returns a FakeOutbound with a given peer chooser and options.
 func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) *FakeOutbound {
 	o := &FakeOutbound{
-		once:      lifecycle.Once(),
+		once:      lifecycle.NewOnce(),
 		transport: t,
 		chooser:   c,
 	}
@@ -71,7 +71,7 @@ func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) 
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
-	once         lifecycle.LifecycleOnce
+	once         *lifecycle.Once
 	transport    *FakeTransport
 	chooser      peer.Chooser
 	nopOption    string

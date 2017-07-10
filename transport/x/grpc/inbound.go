@@ -39,7 +39,7 @@ var (
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once           lifecycle.LifecycleOnce
+	once           *lifecycle.Once
 	lock           sync.Mutex
 	t              *Transport
 	listener       net.Listener
@@ -49,7 +49,7 @@ type Inbound struct {
 }
 
 func newInbound(t *Transport, listener net.Listener, options ...InboundOption) *Inbound {
-	return &Inbound{lifecycle.Once(), sync.Mutex{}, t, listener, newInboundOptions(options), nil, nil}
+	return &Inbound{lifecycle.NewOnce(), sync.Mutex{}, t, listener, newInboundOptions(options), nil, nil}
 }
 
 // Start implements transport.Lifecycle#Start.

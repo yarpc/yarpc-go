@@ -41,7 +41,7 @@ func NopTransportOption(nopOption string) FakeTransportOption {
 // NewFakeTransport returns a fake transport.
 func NewFakeTransport(opts ...FakeTransportOption) *FakeTransport {
 	t := &FakeTransport{
-		Lifecycle: lifecycle.NewNopLifecycle(),
+		Lifecycle: lifecycle.NewNop(),
 	}
 	for _, opt := range opts {
 		opt(t)

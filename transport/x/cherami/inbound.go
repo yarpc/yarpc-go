@@ -64,7 +64,7 @@ type Inbound struct {
 	client        cherami.Client
 	clientFactory internal.ClientFactory
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // NewInbound builds a new Cherami inbound.
@@ -73,7 +73,7 @@ func (t *Transport) NewInbound(opts InboundOptions) *Inbound {
 		opts.PrefetchCount = defaultPrefetchCount
 	}
 	return &Inbound{
-		once:          lifecycle.Once(),
+		once:          lifecycle.NewOnce(),
 		transport:     t,
 		opts:          opts,
 		tracer:        t.tracer,

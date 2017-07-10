@@ -134,7 +134,7 @@ func NewTransport(opts ...TransportOption) *Transport {
 
 func (o *transportOptions) newTransport() *Transport {
 	return &Transport{
-		once:                lifecycle.Once(),
+		once:                lifecycle.NewOnce(),
 		client:              o.buildClient(o),
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
@@ -164,7 +164,7 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 // services and pooling the resources needed therein.
 type Transport struct {
 	lock sync.Mutex
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 
 	client *http.Client
 	peers  map[string]*httpPeer

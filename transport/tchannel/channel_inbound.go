@@ -33,7 +33,7 @@ import (
 type ChannelInbound struct {
 	transport *ChannelTransport
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // NewInbound returns a new TChannel inbound backed by a shared TChannel
@@ -46,7 +46,7 @@ type ChannelInbound struct {
 // locally- and remotely-initiated persistent connections.
 func (t *ChannelTransport) NewInbound() *ChannelInbound {
 	return &ChannelInbound{
-		once:      lifecycle.Once(),
+		once:      lifecycle.NewOnce(),
 		transport: t,
 	}
 }

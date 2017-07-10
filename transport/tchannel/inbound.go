@@ -29,7 +29,7 @@ import (
 // Inbound receives YARPC requests over TChannel. It may be constructed using
 // the NewInbound method on a tchannel.Transport.
 type Inbound struct {
-	once      lifecycle.LifecycleOnce
+	once      *lifecycle.Once
 	transport *Transport
 }
 
@@ -40,7 +40,7 @@ type Inbound struct {
 // locally- and remotely-initiated persistent connections.
 func (t *Transport) NewInbound() *Inbound {
 	return &Inbound{
-		once:      lifecycle.Once(),
+		once:      lifecycle.NewOnce(),
 		transport: t,
 	}
 }

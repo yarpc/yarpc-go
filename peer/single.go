@@ -32,7 +32,7 @@ import (
 
 // Single implements the Chooser interface for a single peer
 type Single struct {
-	once          lifecycle.LifecycleOnce
+	once          *lifecycle.Once
 	t             peer.Transport
 	pid           peer.Identifier
 	p             peer.Peer
@@ -43,7 +43,7 @@ type Single struct {
 // NewSingle creates a static Chooser with a single Peer
 func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
 	s := &Single{
-		once: lifecycle.Once(),
+		once: lifecycle.NewOnce(),
 		pid:  pid,
 		t:    transport,
 	}

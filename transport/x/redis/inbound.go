@@ -54,7 +54,7 @@ type Inbound struct {
 
 	stop chan struct{}
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // NewInbound creates a redis Inbound that satisfies transport.Inbound.
@@ -65,7 +65,7 @@ type Inbound struct {
 func NewInbound(client Client, queueKey, processingKey string, timeout time.Duration) *Inbound {
 	return &Inbound{
 		tracer: opentracing.GlobalTracer(),
-		once:   lifecycle.Once(),
+		once:   lifecycle.NewOnce(),
 
 		client:        client,
 		timeout:       timeout,

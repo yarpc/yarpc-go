@@ -43,14 +43,14 @@ type Outbound struct {
 	tracer   opentracing.Tracer
 	queueKey string
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // NewOnewayOutbound creates a redis Outbound that satisfies transport.OnewayOutbound
 // queueKey - key for the queue in redis
 func NewOnewayOutbound(client Client, queueKey string) *Outbound {
 	return &Outbound{
-		once:     lifecycle.Once(),
+		once:     lifecycle.NewOnce(),
 		client:   client,
 		tracer:   opentracing.GlobalTracer(),
 		queueKey: queueKey,

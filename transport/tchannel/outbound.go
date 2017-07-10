@@ -47,14 +47,14 @@ var (
 type Outbound struct {
 	transport *Transport
 	chooser   peer.Chooser
-	once      lifecycle.LifecycleOnce
+	once      *lifecycle.Once
 }
 
 // NewOutbound builds a new TChannel outbound that selects a peer for each
 // request using the given peer chooser.
 func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
-		once:      lifecycle.Once(),
+		once:      lifecycle.NewOnce(),
 		transport: t,
 		chooser:   chooser,
 	}

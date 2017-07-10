@@ -98,7 +98,7 @@ func AddHeader(key, value string) OutboundOption {
 // The concrete peer type is private and intrinsic to the HTTP transport.
 func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
-		once:        lifecycle.Once(),
+		once:        lifecycle.NewOnce(),
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
@@ -156,7 +156,7 @@ type Outbound struct {
 	// Headers to add to all outgoing requests.
 	headers http.Header
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // setURLTemplate configures an alternate URL template.

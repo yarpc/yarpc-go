@@ -46,7 +46,7 @@ type Outbound struct {
 	client        cherami.Client
 	clientFactory internal.ClientFactory
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 type receipt struct{ cherami.PublisherReceipt }
@@ -58,7 +58,7 @@ func (r receipt) String() string {
 // NewOutbound builds a new cherami outbound.
 func (t *Transport) NewOutbound(opts OutboundOptions) *Outbound {
 	return &Outbound{
-		once:          lifecycle.Once(),
+		once:          lifecycle.NewOnce(),
 		transport:     t,
 		opts:          opts,
 		tracer:        t.tracer,

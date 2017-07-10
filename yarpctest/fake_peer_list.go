@@ -49,7 +49,7 @@ type FakePeerList struct {
 // NewFakePeerList returns a fake peer list.
 func NewFakePeerList(opts ...FakePeerListOption) *FakePeerList {
 	pl := &FakePeerList{
-		Lifecycle: lifecycle.NewNopLifecycle(),
+		Lifecycle: lifecycle.NewNop(),
 	}
 	for _, opt := range opts {
 		opt(pl)

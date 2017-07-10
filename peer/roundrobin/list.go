@@ -62,7 +62,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 	}
 
 	return &List{
-		once:               lifecycle.Once(),
+		once:               lifecycle.NewOnce(),
 		uninitializedPeers: make(map[string]peer.Identifier, cfg.capacity),
 		unavailablePeers:   make(map[string]peer.Peer, cfg.capacity),
 		availablePeerRing:  newPeerRing(cfg.capacity),
@@ -83,7 +83,7 @@ type List struct {
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // Update applies the additions and removals of peer Identifiers to the list

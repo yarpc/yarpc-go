@@ -42,7 +42,7 @@ import (
 // management.
 type Transport struct {
 	lock sync.Mutex
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 
 	ch     Channel
 	router transport.Router
@@ -82,7 +82,7 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 
 func (o transportOptions) newTransport() *Transport {
 	return &Transport{
-		once:                lifecycle.Once(),
+		once:                lifecycle.NewOnce(),
 		name:                o.name,
 		addr:                o.addr,
 		connTimeout:         o.connTimeout,

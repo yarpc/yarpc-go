@@ -31,13 +31,13 @@ import (
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
-	once             lifecycle.LifecycleOnce
+	once             *lifecycle.Once
 	transportOptions *transportOptions
 }
 
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
-	return &Transport{lifecycle.Once(), newTransportOptions(options)}
+	return &Transport{lifecycle.NewOnce(), newTransportOptions(options)}
 }
 
 // Start implements transport.Lifecycle#Start.

@@ -60,7 +60,7 @@ func StartupWait(t time.Duration) HeapOption {
 // introduced peer.
 type List struct {
 	mu   sync.Mutex
-	once lifecycle.LifecycleOnce
+	once *lifecycle.Once
 
 	transport peer.Transport
 
@@ -95,7 +95,7 @@ func New(transport peer.Transport, opts ...HeapOption) *List {
 	}
 
 	return &List{
-		once:               lifecycle.Once(),
+		once:               lifecycle.NewOnce(),
 		transport:          transport,
 		byIdentifier:       make(map[string]*peerScore),
 		peerAvailableEvent: make(chan struct{}, 1),
