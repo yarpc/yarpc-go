@@ -96,7 +96,6 @@ func TestMiddlewareLogging(t *testing.T) {
 			zap.String("dest", req.Service),
 			zap.String("procedure", req.Procedure),
 			zap.String("encoding", string(req.Encoding)),
-			zap.String("shardKey", req.ShardKey),
 			zap.String("routingKey", req.RoutingKey),
 			zap.String("routingDelegate", req.RoutingDelegate),
 		}
@@ -237,7 +236,6 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("dest", req.Service),
 		zap.String("procedure", req.Procedure),
 		zap.String("encoding", string(req.Encoding)),
-		zap.String("shardKey", req.ShardKey),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
 		zap.String("rpcType", "Unary"),
