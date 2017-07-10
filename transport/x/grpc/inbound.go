@@ -21,17 +21,17 @@
 package grpc
 
 import (
-	"errors"
 	"net"
 	"sync"
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 )
 
 var (
-	errRouterNotSet = errors.New("router not set")
+	errRouterNotSet = yarpcerrors.InternalErrorf("router not set")
 
 	_ transport.Inbound = (*Inbound)(nil)
 )
@@ -45,14 +45,13 @@ type Inbound struct {
 	inboundOptions *inboundOptions
 	router         transport.Router
 	server         *grpc.Server
-	handler        *handler
 }
 
-// NewInbound returns a new Inbound for the given listener.
-func newInbound(t *Transport, listener net.Listener, options ...InboundOption) *Inbound {
+// newInbound returns a new Inbound for the given listener.
+func newInbound(transport *Transport, listener net.Listener, options ...InboundOption) *Inbound {
 	return &Inbound{
 		once:           lifecycle.NewOnce(),
-		transport:      t,
+		transport:      transport,
 		listener:       listener,
 		inboundOptions: newInboundOptions(options),
 	}
@@ -92,14 +91,14 @@ func (i *Inbound) start() error {
 		return errRouterNotSet
 	}
 
-	i.handler = newHandler(
+	handler := newHandler(
 		i.router,
 		i.inboundOptions.getUnaryInterceptor(),
 	)
 
 	server := grpc.NewServer(
 		grpc.CustomCodec(customCodec{}),
-		grpc.UnknownServiceHandler(i.handler.handle),
+		grpc.UnknownServiceHandler(handler.handle),
 	)
 
 	go func() {
