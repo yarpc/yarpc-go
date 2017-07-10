@@ -158,7 +158,6 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound boo
 	d.add(req.Service)
 	d.add(string(req.Encoding))
 	d.add(req.Procedure)
-	d.add(req.ShardKey)
 	d.add(req.RoutingKey)
 	d.add(req.RoutingDelegate)
 	e := g.getOrCreateEdge(d.digest(), req)
@@ -227,7 +226,6 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		"dest":             pally.ScrubLabelValue(req.Service),
 		"procedure":        pally.ScrubLabelValue(req.Procedure),
 		"encoding":         pally.ScrubLabelValue(string(req.Encoding)),
-		"shard_key":        pally.ScrubLabelValue(req.ShardKey),
 		"routing_key":      pally.ScrubLabelValue(req.RoutingKey),
 		"routing_delegate": pally.ScrubLabelValue(req.RoutingDelegate),
 	}
@@ -313,7 +311,6 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		zap.String("dest", req.Service),
 		zap.String("procedure", req.Procedure),
 		zap.String("encoding", string(req.Encoding)),
-		zap.String("shardKey", req.ShardKey),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
 	)
