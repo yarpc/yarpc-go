@@ -47,7 +47,7 @@ type StartAction struct {
 	Wait          time.Duration
 	Err           error
 	ExpectedErr   error
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
 // Apply runs "Start" on the LifecycleOnce and validates the error
@@ -70,7 +70,7 @@ type StopAction struct {
 	Wait          time.Duration
 	Err           error
 	ExpectedErr   error
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
 // Apply runs "Stop" on the LifecycleOnce and validates the error
@@ -128,7 +128,7 @@ func (a waitForStopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 // Since a goroutine may be delayed, the action only ensures that the lifecycle
 // has at least reached the given state.
 type GetStateAction struct {
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
 // Apply Checks the state on the LifecycleOnce
@@ -138,7 +138,7 @@ func (a GetStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 
 // ExactStateAction is an action for checking the LifecycleOnce's exact state.
 type ExactStateAction struct {
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
 // Apply Checks the state on the LifecycleOnce

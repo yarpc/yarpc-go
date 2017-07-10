@@ -30,12 +30,12 @@ import (
 
 var errDeadlineRequired = errors.New("deadline required")
 
-// LifecycleState represents `states` that a lifecycle object can be in.
-type LifecycleState int
+// State represents `states` that a lifecycle object can be in.
+type State int
 
 const (
 	// Idle indicates the Lifecycle hasn't been operated on yet.
-	Idle LifecycleState = iota
+	Idle State = iota
 
 	// Starting indicates that the Lifecycle has begun it's "start" command
 	// but hasn't finished yet.
@@ -62,7 +62,7 @@ const (
 type LifecycleOnce interface {
 	Start(func() error) error
 	Stop(func() error) error
-	LifecycleState() LifecycleState
+	LifecycleState() State
 	IsRunning() bool
 	WhenRunning(context.Context) error
 	Started() <-chan struct{}
@@ -85,7 +85,7 @@ type lifecycleOnce struct {
 	// err is conferred to whichever goroutine is starting or stopping, until
 	// it has started or stopped, after which `err` becomes immutable.
 	err syncatomic.Value
-	// state is an atomic LifecycleState representing the object's current
+	// state is an atomic State representing the object's current
 	// state (Idle, Starting, Running, Stopping, Stopped, Errored).
 	state atomic.Int32
 }
@@ -134,7 +134,7 @@ func (l *lifecycleOnce) Start(f func() error) error {
 }
 
 func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
-	state := LifecycleState(l.state.Load())
+	state := State(l.state.Load())
 	if state == Running {
 		return nil
 	}
@@ -148,7 +148,7 @@ func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
 
 	select {
 	case <-l.startCh:
-		state := LifecycleState(l.state.Load())
+		state := State(l.state.Load())
 		if state == Running {
 			return nil
 		}
@@ -230,8 +230,8 @@ func (l *lifecycleOnce) loadError() error {
 // start to full stop.
 // The function only guarantees that the lifecycle has at least passed through
 // the returned state and may have progressed further in the intervening time.
-func (l *lifecycleOnce) LifecycleState() LifecycleState {
-	return LifecycleState(l.state.Load())
+func (l *lifecycleOnce) LifecycleState() State {
+	return State(l.state.Load())
 }
 
 // IsRunning will return true if current state of the Lifecycle is running

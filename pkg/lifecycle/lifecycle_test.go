@@ -39,7 +39,7 @@ func TestLifecycleOnce(t *testing.T) {
 		actions []LifecycleAction
 
 		// expected state at the end of the actions
-		expectedFinalState LifecycleState
+		expectedFinalState State
 	}
 	tests := []testStruct{
 		{
