@@ -219,15 +219,15 @@ func (o *Once) loadError() error {
 	return errors.New("lifecycle err was not `error` type")
 }
 
-// LifecycleState returns the state of the object within its life cycle, from
+// State returns the state of the object within its life cycle, from
 // start to full stop.
 // The function only guarantees that the lifecycle has at least passed through
 // the returned state and may have progressed further in the intervening time.
-func (o *Once) LifecycleState() State {
+func (o *Once) State() State {
 	return State(o.state.Load())
 }
 
 // IsRunning will return true if current state of the Lifecycle is running
 func (o *Once) IsRunning() bool {
-	return o.LifecycleState() == Running
+	return o.State() == Running
 }

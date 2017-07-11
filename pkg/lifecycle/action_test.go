@@ -61,7 +61,7 @@ func (a StartAction) Apply(t *testing.T, l wrappedOnce) {
 		return a.Err
 	})
 	assert.Equal(t, a.ExpectedErr, err)
-	state := l.LifecycleState()
+	state := l.State()
 	assert.True(t, a.ExpectedState <= state, "expected %v (or more advanced), got %v after start", a.ExpectedState, state)
 }
 
@@ -85,7 +85,7 @@ func (a StopAction) Apply(t *testing.T, l wrappedOnce) {
 	})
 
 	assert.Equal(t, a.ExpectedErr, err)
-	assert.Equal(t, a.ExpectedState, l.LifecycleState())
+	assert.Equal(t, a.ExpectedState, l.State())
 }
 
 // WaitForStartAction is a singleton that will block until the lifecycle
@@ -97,7 +97,7 @@ type waitForStartAction struct{}
 // Apply blocks until the lifecycle starts.
 func (a waitForStartAction) Apply(t *testing.T, l wrappedOnce) {
 	<-l.Started()
-	assert.True(t, l.LifecycleState() >= Running, "expected lifecycle to be started")
+	assert.True(t, l.State() >= Running, "expected lifecycle to be started")
 }
 
 // WaitForStoppingAction is a singleton that will block until the lifecycle
@@ -109,7 +109,7 @@ type waitForStoppingAction struct{}
 // Apply blocks until the lifecycle stops or errs out.
 func (a waitForStoppingAction) Apply(t *testing.T, l wrappedOnce) {
 	<-l.Stopping()
-	assert.True(t, l.LifecycleState() >= Stopping, "expected lifecycle to be stopping")
+	assert.True(t, l.State() >= Stopping, "expected lifecycle to be stopping")
 }
 
 // WaitForStopAction is a singleton that will block until the lifecycle
@@ -121,7 +121,7 @@ type waitForStopAction struct{}
 // Apply blocks until the lifecycle stops or errs out.
 func (a waitForStopAction) Apply(t *testing.T, l wrappedOnce) {
 	<-l.Stopped()
-	assert.True(t, l.LifecycleState() >= Stopped, "expected lifecycle to be started")
+	assert.True(t, l.State() >= Stopped, "expected lifecycle to be started")
 }
 
 // GetStateAction is an action for checking the Once's state.
@@ -133,7 +133,7 @@ type GetStateAction struct {
 
 // Apply Checks the state on the Once
 func (a GetStateAction) Apply(t *testing.T, l wrappedOnce) {
-	assert.True(t, a.ExpectedState <= l.LifecycleState())
+	assert.True(t, a.ExpectedState <= l.State())
 }
 
 // ExactStateAction is an action for checking the Once's exact state.
@@ -143,7 +143,7 @@ type ExactStateAction struct {
 
 // Apply Checks the state on the Once
 func (a ExactStateAction) Apply(t *testing.T, l wrappedOnce) {
-	assert.True(t, a.ExpectedState == l.LifecycleState())
+	assert.True(t, a.ExpectedState == l.State())
 }
 
 // Actions executes a plan of actions in order sequentially.

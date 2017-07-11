@@ -456,7 +456,7 @@ func TestLifecycleOnce(t *testing.T) {
 			once := NewOnce()
 			ApplyLifecycleActions(t, once, tt.actions)
 
-			assert.Equal(t, tt.expectedFinalState, once.LifecycleState())
+			assert.Equal(t, tt.expectedFinalState, once.State())
 		})
 	}
 }
