@@ -18,17 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package lifecycle
+package lifecycletest
+
+import "go.uber.org/yarpc/pkg/lifecycle"
 
 // NewNop returns a new one-time no-op lifecycle.
 func NewNop() *Nop {
-	return &Nop{once: NewOnce()}
+	return &Nop{once: lifecycle.NewOnce()}
 }
 
 // Nop is a no-op implementation of a lifecycle Once. It advances state but
 // performs no actions.
 type Nop struct {
-	once *Once
+	once *lifecycle.Once
 }
 
 // Start advances the Nop to Running without side-effects.
