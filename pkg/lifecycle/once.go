@@ -61,18 +61,24 @@ const (
 // lifecycle states using at-most-once start and stop implementations in a
 // thread safe manner.
 //
+// Engine is an example of a type that uses a lifecycle.Once to synchronize its
+// lifecycle.
+//
 //   type Engine struct {
-//   	*lifecycle.Once
+//   	once *lifecycle.Once
 //   }
 //
+//   // NewEngine returns a lifecycle example.
 //   func NewEngine() (*Engine, error) {
 //   	return &Engine{
-//   		Once: lifecycle.NewOnce(),
+//   		once: lifecycle.NewOnce(),
 //   	}, nil
 //   }
 //
+//   // Start advances the engine to the running state (if it has not already done
+//   // so), printing "started".
 //   func (e *Engine) Start() error {
-//   	return e.Once.Start(e.start)
+//   	return e.once.Start(e.start)
 //   }
 //
 //   func (e *Engine) start() error {
@@ -80,8 +86,10 @@ const (
 //   	return nil
 //   }
 //
+//   // Stop advances the engine to the stopped state (if it has not already done
+//   // so), printing "stopped".
 //   func (e *Engine) Stop() error {
-//   	return e.Once.Stop(e.stop)
+//   	return e.once.Stop(e.stop)
 //   }
 //
 //   func (e *Engine) stop() error {
