@@ -12,6 +12,9 @@ v1.10.0 (unreleased)
 -   Add support for reading ShardKey, RoutingKey, and RoutingDelegate for
     inbound http and tchannel calls.
 -   Move encoding/x/protobuf to encoding/protobuf.
+-   Exposes the Lifecycle synchronization helper as pkg/lifecycle, for
+    third-party implementations of transports, inbounds, outbounds, peer lists,
+    and peer list bindings.
 
 Experimental:
 
