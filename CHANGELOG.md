@@ -1,7 +1,8 @@
 Releases
 ========
 
-v1.10.0 (unreleased)
+
+v1.10.0 (2017-17-11)
 -------------------
 
 -   Thrift: UberFx-compatible modules are now generated for each service inside
