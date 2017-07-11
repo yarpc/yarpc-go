@@ -18,29 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package lifecycletest
 
-import (
-	"go.uber.org/yarpc/api/transport"
-)
+import "go.uber.org/yarpc/pkg/lifecycle"
 
-// NewNopLifecycle returns a new one-time no-op lifecycle
-func NewNopLifecycle() transport.Lifecycle {
-	return &nopLifecycle{once: Once()}
+// NewNop returns a new one-time no-op lifecycle.
+func NewNop() *Nop {
+	return &Nop{once: lifecycle.NewOnce()}
 }
 
-type nopLifecycle struct {
-	once LifecycleOnce
+// Nop is a no-op implementation of a lifecycle Once. It advances state but
+// performs no actions.
+type Nop struct {
+	once *lifecycle.Once
 }
 
-func (n *nopLifecycle) Start() error {
+// Start advances the Nop to Running without side-effects.
+func (n *Nop) Start() error {
 	return n.once.Start(nil)
 }
 
-func (n *nopLifecycle) Stop() error {
+// Stop advances the Nop to Stopped without side-effects.
+func (n *Nop) Stop() error {
 	return n.once.Stop(nil)
 }
 
-func (n *nopLifecycle) IsRunning() bool {
+// IsRunning returns the Nop lifecycle.Status.
+func (n *Nop) IsRunning() bool {
 	return n.once.IsRunning()
 }

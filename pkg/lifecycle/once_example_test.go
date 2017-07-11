@@ -18,36 +18,59 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package lifecycle_test
 
-import "sync"
+import (
+	"fmt"
 
-// ErrorWaiter is similar to a WaitGroup except it allows collecting failures
-// from subtasks.
-type ErrorWaiter struct {
-	wait   sync.WaitGroup
-	lock   sync.Mutex
-	errors []error
+	"go.uber.org/yarpc/pkg/lifecycle"
+)
+
+// Engine is an example of a type that uses a lifecycle.Once to synchronize its
+// lifecycle.
+type Engine struct {
+	once *lifecycle.Once
 }
 
-// Submit submits a task for execution on the ErrorWaiter.
-//
-// The function returns immediately.
-func (ew *ErrorWaiter) Submit(f func() error) {
-	ew.wait.Add(1)
-	go func() {
-		defer ew.wait.Done()
-		if err := f(); err != nil {
-			ew.lock.Lock()
-			ew.errors = append(ew.errors, err)
-			ew.lock.Unlock()
-		}
-	}()
+// NewEngine returns a lifecycle example.
+func NewEngine() (*Engine, error) {
+	return &Engine{
+		once: lifecycle.NewOnce(),
+	}, nil
 }
 
-// Wait waits until all submitted tasks have finished and returns a list of
-// all errors that occurred during task execution in no particular order.
-func (ew *ErrorWaiter) Wait() []error {
-	ew.wait.Wait()
-	return ew.errors
+// Start advances the engine to the running state (if it has not already done
+// so), printing "started".
+func (e *Engine) Start() error {
+	return e.once.Start(e.start)
+}
+
+func (e *Engine) start() error {
+	fmt.Printf("started\n")
+	return nil
+}
+
+// Stop advances the engine to the stopped state (if it has not already done
+// so), printing "stopped".
+func (e *Engine) Stop() error {
+	return e.once.Stop(e.stop)
+}
+
+func (e *Engine) stop() error {
+	fmt.Printf("stopped\n")
+	return nil
+}
+
+func Example() {
+	engine, err := NewEngine()
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+	go engine.Start() // might win race to start
+	engine.Start()    // blocks until started
+	defer engine.Stop()
+
+	// Output:
+	// started
+	// stopped
 }

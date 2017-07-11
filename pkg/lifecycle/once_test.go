@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package lifecycle
 
 import (
 	"errors"
@@ -39,7 +39,7 @@ func TestLifecycleOnce(t *testing.T) {
 		actions []LifecycleAction
 
 		// expected state at the end of the actions
-		expectedFinalState LifecycleState
+		expectedFinalState State
 	}
 	tests := []testStruct{
 		{
@@ -453,10 +453,10 @@ func TestLifecycleOnce(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			once := Once()
+			once := NewOnce()
 			ApplyLifecycleActions(t, once, tt.actions)
 
-			assert.Equal(t, tt.expectedFinalState, once.LifecycleState())
+			assert.Equal(t, tt.expectedFinalState, once.State())
 		})
 	}
 }
@@ -466,7 +466,7 @@ func TestLifecycleOnce(t *testing.T) {
 // up its work when it detects that the lifecycle has begun stopping.  If it
 // waited for the stopped channel, the stop callback would deadlock.
 func TestStopping(t *testing.T) {
-	l := Once()
+	l := NewOnce()
 	l.Start(nil)
 
 	done := make(chan struct{})

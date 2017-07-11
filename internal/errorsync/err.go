@@ -18,71 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package errorsync
 
-import (
-	"errors"
-	"testing"
+import "sync"
 
-	"github.com/stretchr/testify/assert"
-)
+// ErrorWaiter is similar to a WaitGroup except it allows collecting failures
+// from subtasks.
+type ErrorWaiter struct {
+	wait   sync.WaitGroup
+	lock   sync.Mutex
+	errors []error
+}
 
-func TestErrorWaiter(t *testing.T) {
-	one := errors.New("1")
-	two := errors.New("2")
-
-	tests := []struct {
-		desc string
-		errs []error
-		want []error
-	}{
-		{
-			"nothing",
-			nil,
-			nil,
-		},
-		{
-			"empty list",
-			[]error{},
-			nil,
-		},
-		{
-			"no errors",
-			[]error{nil, nil, nil},
-			nil,
-		},
-		{
-			"single error",
-			[]error{nil, one, nil},
-			[]error{one},
-		},
-		{
-			"multiple errors",
-			[]error{nil, one, two, nil},
-			[]error{one, two},
-		},
-	}
-
-	for _, tt := range tests {
-		want := make(map[error]struct{})
-		for _, err := range tt.want {
-			want[err] = struct{}{}
+// Submit submits a task for execution on the ErrorWaiter.
+//
+// The function returns immediately.
+func (ew *ErrorWaiter) Submit(f func() error) {
+	ew.wait.Add(1)
+	go func() {
+		defer ew.wait.Done()
+		if err := f(); err != nil {
+			ew.lock.Lock()
+			ew.errors = append(ew.errors, err)
+			ew.lock.Unlock()
 		}
+	}()
+}
 
-		var ew ErrorWaiter
-		for _, err := range tt.errs {
-			// Need to create a local variable to make sure that the correct
-			// value is used by the closure since the value 'err' points to
-			// will change between iterations.
-			errLocal := err
-			ew.Submit(func() error { return errLocal })
-		}
-
-		got := make(map[error]struct{})
-		for _, err := range ew.Wait() {
-			got[err] = struct{}{}
-		}
-
-		assert.Equal(t, want, got, tt.desc)
-	}
+// Wait waits until all submitted tasks have finished and returns a list of
+// all errors that occurred during task execution in no particular order.
+func (ew *ErrorWaiter) Wait() []error {
+	ew.wait.Wait()
+	return ew.errors
 }

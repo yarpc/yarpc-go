@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package lifecycle
 
 import (
 	"fmt"
@@ -31,27 +31,27 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 )
 
-type wrappedLifecycleOnce struct {
-	LifecycleOnce
+type wrappedOnce struct {
+	*Once
 	running *atomic.Bool
 }
 
 // LifecycleAction defines actions that can be applied to a Lifecycle
 type LifecycleAction interface {
 	// Apply runs a function on the PeerList and asserts the result
-	Apply(*testing.T, wrappedLifecycleOnce)
+	Apply(*testing.T, wrappedOnce)
 }
 
-// StartAction is an action for testing LifecycleOnce.Start
+// StartAction is an action for testing Once.Start
 type StartAction struct {
 	Wait          time.Duration
 	Err           error
 	ExpectedErr   error
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
-// Apply runs "Start" on the LifecycleOnce and validates the error
-func (a StartAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+// Apply runs "Start" on the Once and validates the error
+func (a StartAction) Apply(t *testing.T, l wrappedOnce) {
 	err := l.Start(func() error {
 		assert.False(t, l.running.Swap(true), "expected no other running action")
 		if a.Wait > 0 {
@@ -61,20 +61,20 @@ func (a StartAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 		return a.Err
 	})
 	assert.Equal(t, a.ExpectedErr, err)
-	state := l.LifecycleState()
+	state := l.State()
 	assert.True(t, a.ExpectedState <= state, "expected %v (or more advanced), got %v after start", a.ExpectedState, state)
 }
 
-// StopAction is an action for testing LifecycleOnce.Stop
+// StopAction is an action for testing Once.Stop
 type StopAction struct {
 	Wait          time.Duration
 	Err           error
 	ExpectedErr   error
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
-// Apply runs "Stop" on the LifecycleOnce and validates the error
-func (a StopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+// Apply runs "Stop" on the Once and validates the error
+func (a StopAction) Apply(t *testing.T, l wrappedOnce) {
 	err := l.Stop(func() error {
 		assert.False(t, l.running.Swap(true), "expected no other running action")
 		if a.Wait > 0 {
@@ -85,7 +85,7 @@ func (a StopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 	})
 
 	assert.Equal(t, a.ExpectedErr, err)
-	assert.Equal(t, a.ExpectedState, l.LifecycleState())
+	assert.Equal(t, a.ExpectedState, l.State())
 }
 
 // WaitForStartAction is a singleton that will block until the lifecycle
@@ -95,9 +95,9 @@ var WaitForStartAction waitForStartAction
 type waitForStartAction struct{}
 
 // Apply blocks until the lifecycle starts.
-func (a waitForStartAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+func (a waitForStartAction) Apply(t *testing.T, l wrappedOnce) {
 	<-l.Started()
-	assert.True(t, l.LifecycleState() >= Running, "expected lifecycle to be started")
+	assert.True(t, l.State() >= Running, "expected lifecycle to be started")
 }
 
 // WaitForStoppingAction is a singleton that will block until the lifecycle
@@ -107,9 +107,9 @@ var WaitForStoppingAction waitForStoppingAction
 type waitForStoppingAction struct{}
 
 // Apply blocks until the lifecycle stops or errs out.
-func (a waitForStoppingAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+func (a waitForStoppingAction) Apply(t *testing.T, l wrappedOnce) {
 	<-l.Stopping()
-	assert.True(t, l.LifecycleState() >= Stopping, "expected lifecycle to be stopping")
+	assert.True(t, l.State() >= Stopping, "expected lifecycle to be stopping")
 }
 
 // WaitForStopAction is a singleton that will block until the lifecycle
@@ -119,38 +119,38 @@ var WaitForStopAction waitForStopAction
 type waitForStopAction struct{}
 
 // Apply blocks until the lifecycle stops or errs out.
-func (a waitForStopAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+func (a waitForStopAction) Apply(t *testing.T, l wrappedOnce) {
 	<-l.Stopped()
-	assert.True(t, l.LifecycleState() >= Stopped, "expected lifecycle to be started")
+	assert.True(t, l.State() >= Stopped, "expected lifecycle to be started")
 }
 
-// GetStateAction is an action for checking the LifecycleOnce's state.
+// GetStateAction is an action for checking the Once's state.
 // Since a goroutine may be delayed, the action only ensures that the lifecycle
 // has at least reached the given state.
 type GetStateAction struct {
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
-// Apply Checks the state on the LifecycleOnce
-func (a GetStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
-	assert.True(t, a.ExpectedState <= l.LifecycleState())
+// Apply Checks the state on the Once
+func (a GetStateAction) Apply(t *testing.T, l wrappedOnce) {
+	assert.True(t, a.ExpectedState <= l.State())
 }
 
-// ExactStateAction is an action for checking the LifecycleOnce's exact state.
+// ExactStateAction is an action for checking the Once's exact state.
 type ExactStateAction struct {
-	ExpectedState LifecycleState
+	ExpectedState State
 }
 
-// Apply Checks the state on the LifecycleOnce
-func (a ExactStateAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
-	assert.True(t, a.ExpectedState == l.LifecycleState())
+// Apply Checks the state on the Once
+func (a ExactStateAction) Apply(t *testing.T, l wrappedOnce) {
+	assert.True(t, a.ExpectedState == l.State())
 }
 
 // Actions executes a plan of actions in order sequentially.
 type Actions []LifecycleAction
 
 // Apply runs all of the ConcurrentAction's actions sequentially.
-func (a Actions) Apply(t *testing.T, l wrappedLifecycleOnce) {
+func (a Actions) Apply(t *testing.T, l wrappedOnce) {
 	for _, action := range a {
 		action.Apply(t, l)
 	}
@@ -167,7 +167,7 @@ type ConcurrentAction struct {
 
 // Apply runs all the ConcurrentAction's actions in goroutines with a delay of `Wait`
 // between each action. Returns when all actions have finished executing
-func (a ConcurrentAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+func (a ConcurrentAction) Apply(t *testing.T, l wrappedOnce) {
 	var wg sync.WaitGroup
 
 	wg.Add(len(a.Actions))
@@ -189,15 +189,15 @@ func (a ConcurrentAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
 type WaitAction time.Duration
 
 // Apply waits the specified duration.
-func (a WaitAction) Apply(t *testing.T, l wrappedLifecycleOnce) {
+func (a WaitAction) Apply(t *testing.T, l wrappedOnce) {
 	testtime.Sleep(time.Duration(a))
 }
 
-// ApplyLifecycleActions runs all the LifecycleActions on the LifecycleOnce
-func ApplyLifecycleActions(t *testing.T, l LifecycleOnce, actions []LifecycleAction) {
-	wrapLife := wrappedLifecycleOnce{
-		LifecycleOnce: l,
-		running:       atomic.NewBool(false),
+// ApplyLifecycleActions runs all the LifecycleActions on the Once
+func ApplyLifecycleActions(t *testing.T, l *Once, actions []LifecycleAction) {
+	wrapLife := wrappedOnce{
+		Once:    l,
+		running: atomic.NewBool(false),
 	}
 
 	for i, action := range actions {

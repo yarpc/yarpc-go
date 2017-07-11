@@ -24,14 +24,14 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
 )
 
 // NewTransport creates a new cherami transport for shared objects between inbound and outbound.
 func NewTransport(client cherami.Client) *Transport {
 	return &Transport{
-		once:          intsync.Once(),
+		once:          lifecycle.NewOnce(),
 		client:        client,
 		tracer:        opentracing.GlobalTracer(),
 		clientFactory: internal.NewClientFactory(),
@@ -40,7 +40,7 @@ func NewTransport(client cherami.Client) *Transport {
 
 // Transport keeps shared objects between inbound and outbound.
 type Transport struct {
-	once intsync.LifecycleOnce
+	once *lifecycle.Once
 
 	client        cherami.Client
 	clientFactory internal.ClientFactory

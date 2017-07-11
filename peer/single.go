@@ -27,12 +27,12 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	intsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // Single implements the Chooser interface for a single peer
 type Single struct {
-	once          intsync.LifecycleOnce
+	once          *lifecycle.Once
 	t             peer.Transport
 	pid           peer.Identifier
 	p             peer.Peer
@@ -43,7 +43,7 @@ type Single struct {
 // NewSingle creates a static Chooser with a single Peer
 func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
 	s := &Single{
-		once: intsync.Once(),
+		once: lifecycle.NewOnce(),
 		pid:  pid,
 		t:    transport,
 	}
@@ -53,7 +53,7 @@ func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
 
 // Choose returns the single peer
 func (s *Single) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
-	if err := s.once.WhenRunning(ctx); err != nil {
+	if err := s.once.WaitUntilRunning(ctx); err != nil {
 		return nil, nil, err
 	}
 	s.p.StartRequest()

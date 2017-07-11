@@ -28,8 +28,8 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
-	"go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -42,7 +42,7 @@ var (
 // channel to make requests to any connected peer.
 func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 	return &ChannelOutbound{
-		once:      sync.Once(),
+		once:      lifecycle.NewOnce(),
 		channel:   t.ch,
 		transport: t,
 	}
@@ -52,7 +52,7 @@ func (t *ChannelTransport) NewOutbound() *ChannelOutbound {
 // channel to a specific peer.
 func (t *ChannelTransport) NewSingleOutbound(addr string) *ChannelOutbound {
 	return &ChannelOutbound{
-		once:      sync.Once(),
+		once:      lifecycle.NewOnce(),
 		channel:   t.ch,
 		transport: t,
 		addr:      addr,
@@ -72,7 +72,7 @@ type ChannelOutbound struct {
 	// Otherwise, the global peer list of the Channel will be used.
 	addr string
 
-	once sync.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // Transports returns the underlying TChannel Transport for this outbound.
@@ -104,7 +104,7 @@ func (o *ChannelOutbound) IsRunning() bool {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {

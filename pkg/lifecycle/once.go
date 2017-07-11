@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package sync
+package lifecycle
 
 import (
 	"context"
@@ -30,12 +30,12 @@ import (
 
 var errDeadlineRequired = errors.New("deadline required")
 
-// LifecycleState represents `states` that a lifecycle object can be in.
-type LifecycleState int
+// State represents `states` that a lifecycle object can be in.
+type State int
 
 const (
 	// Idle indicates the Lifecycle hasn't been operated on yet.
-	Idle LifecycleState = iota
+	Idle State = iota
 
 	// Starting indicates that the Lifecycle has begun it's "start" command
 	// but hasn't finished yet.
@@ -57,20 +57,10 @@ const (
 	Errored
 )
 
-// LifecycleOnce is a helper for implementing transport.Lifecycles
-// with similar behavior.
-type LifecycleOnce interface {
-	Start(func() error) error
-	Stop(func() error) error
-	LifecycleState() LifecycleState
-	IsRunning() bool
-	WhenRunning(context.Context) error
-	Started() <-chan struct{}
-	Stopping() <-chan struct{}
-	Stopped() <-chan struct{}
-}
-
-type lifecycleOnce struct {
+// Once is a helper for implementing objects that advance monotonically through
+// lifecycle states using at-most-once start and stop implementations in a
+// thread safe manner.
+type Once struct {
 	// startCh closes to allow goroutines to resume after the lifecycle is in
 	// the Running state or beyond.
 	startCh chan struct{}
@@ -85,20 +75,21 @@ type lifecycleOnce struct {
 	// err is conferred to whichever goroutine is starting or stopping, until
 	// it has started or stopped, after which `err` becomes immutable.
 	err syncatomic.Value
-	// state is an atomic LifecycleState representing the object's current
+	// state is an atomic State representing the object's current
 	// state (Idle, Starting, Running, Stopping, Stopped, Errored).
 	state atomic.Int32
 }
 
-// Once returns a lifecycle controller.
-// 0. The observable lifecycle state must only go forward from birth to death.
-// 1. Start() must block until the state is >= Running
-// 2. Stop() must block until the state is >= Stopped
-// 3. Stop() must pre-empt Start() if it occurs first
-// 4. Start() and Stop() may be backed by a do actual work function, and that
-//    function must be called at most once.
-func Once() LifecycleOnce {
-	return &lifecycleOnce{
+// NewOnce returns a lifecycle controller.
+//
+//   0. The observable lifecycle state must only go forward from birth to death.
+//   1. Start() must block until the state is >= Running
+//   2. Stop() must block until the state is >= Stopped
+//   3. Stop() must pre-empt Start() if it occurs first
+//   4. Start() and Stop() may be backed by a do-actual-work function, and that
+//      function must be called at-most-once.
+func NewOnce() *Once {
+	return &Once{
 		startCh:    make(chan struct{}, 0),
 		stoppingCh: make(chan struct{}, 0),
 		stopCh:     make(chan struct{}, 0),
@@ -108,8 +99,8 @@ func Once() LifecycleOnce {
 // Start will run the `f` function once and return the error.
 // If Start is called multiple times it will return the error
 // from the first time it was called.
-func (l *lifecycleOnce) Start(f func() error) error {
-	if l.state.CAS(int32(Idle), int32(Starting)) {
+func (o *Once) Start(f func() error) error {
+	if o.state.CAS(int32(Idle), int32(Starting)) {
 		var err error
 		if f != nil {
 			err = f()
@@ -117,24 +108,26 @@ func (l *lifecycleOnce) Start(f func() error) error {
 
 		// skip forward to error state
 		if err != nil {
-			l.setError(err)
-			l.state.Store(int32(Errored))
-			close(l.stoppingCh)
-			close(l.stopCh)
+			o.setError(err)
+			o.state.Store(int32(Errored))
+			close(o.stoppingCh)
+			close(o.stopCh)
 		} else {
-			l.state.Store(int32(Running))
+			o.state.Store(int32(Running))
 		}
-		close(l.startCh)
+		close(o.startCh)
 
 		return err
 	}
 
-	<-l.startCh
-	return l.loadError()
+	<-o.startCh
+	return o.loadError()
 }
 
-func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
-	state := LifecycleState(l.state.Load())
+// WaitUntilRunning blocks until the instance enters the running state, or the
+// context times out.
+func (o *Once) WaitUntilRunning(ctx context.Context) error {
+	state := State(o.state.Load())
 	if state == Running {
 		return nil
 	}
@@ -147,8 +140,8 @@ func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
 	}
 
 	select {
-	case <-l.startCh:
-		state := LifecycleState(l.state.Load())
+	case <-o.startCh:
+		state := State(o.state.Load())
 		if state == Running {
 			return nil
 		}
@@ -161,18 +154,18 @@ func (l *lifecycleOnce) WhenRunning(ctx context.Context) error {
 // Stop will run the `f` function once and return the error.
 // If Stop is called multiple times it will return the error
 // from the first time it was called.
-func (l *lifecycleOnce) Stop(f func() error) error {
-	if l.state.CAS(int32(Idle), int32(Stopped)) {
-		close(l.startCh)
-		close(l.stoppingCh)
-		close(l.stopCh)
+func (o *Once) Stop(f func() error) error {
+	if o.state.CAS(int32(Idle), int32(Stopped)) {
+		close(o.startCh)
+		close(o.stoppingCh)
+		close(o.stopCh)
 		return nil
 	}
 
-	<-l.startCh
+	<-o.startCh
 
-	if l.state.CAS(int32(Running), int32(Stopping)) {
-		close(l.stoppingCh)
+	if o.state.CAS(int32(Running), int32(Stopping)) {
+		close(o.stoppingCh)
 
 		var err error
 		if f != nil {
@@ -180,40 +173,40 @@ func (l *lifecycleOnce) Stop(f func() error) error {
 		}
 
 		if err != nil {
-			l.setError(err)
-			l.state.Store(int32(Errored))
+			o.setError(err)
+			o.state.Store(int32(Errored))
 		} else {
-			l.state.Store(int32(Stopped))
+			o.state.Store(int32(Stopped))
 		}
-		close(l.stopCh)
+		close(o.stopCh)
 		return err
 	}
 
-	<-l.stopCh
-	return l.loadError()
+	<-o.stopCh
+	return o.loadError()
 }
 
 // Started returns a channel that will close when the lifecycle starts.
-func (l *lifecycleOnce) Started() <-chan struct{} {
-	return l.startCh
+func (o *Once) Started() <-chan struct{} {
+	return o.startCh
 }
 
 // Stopping returns a channel that will close when the lifecycle is stopping.
-func (l *lifecycleOnce) Stopping() <-chan struct{} {
-	return l.stoppingCh
+func (o *Once) Stopping() <-chan struct{} {
+	return o.stoppingCh
 }
 
 // Stopped returns a channel that will close when the lifecycle stops.
-func (l *lifecycleOnce) Stopped() <-chan struct{} {
-	return l.stopCh
+func (o *Once) Stopped() <-chan struct{} {
+	return o.stopCh
 }
 
-func (l *lifecycleOnce) setError(err error) {
-	l.err.Store(err)
+func (o *Once) setError(err error) {
+	o.err.Store(err)
 }
 
-func (l *lifecycleOnce) loadError() error {
-	errVal := l.err.Load()
+func (o *Once) loadError() error {
+	errVal := o.err.Load()
 	if errVal == nil {
 		return nil
 	}
@@ -226,15 +219,15 @@ func (l *lifecycleOnce) loadError() error {
 	return errors.New("lifecycle err was not `error` type")
 }
 
-// LifecycleState returns the state of the object within its life cycle, from
+// State returns the state of the object within its life cycle, from
 // start to full stop.
 // The function only guarantees that the lifecycle has at least passed through
 // the returned state and may have progressed further in the intervening time.
-func (l *lifecycleOnce) LifecycleState() LifecycleState {
-	return LifecycleState(l.state.Load())
+func (o *Once) State() State {
+	return State(o.state.Load())
 }
 
 // IsRunning will return true if current state of the Lifecycle is running
-func (l *lifecycleOnce) IsRunning() bool {
-	return l.LifecycleState() == Running
+func (o *Once) IsRunning() bool {
+	return o.State() == Running
 }

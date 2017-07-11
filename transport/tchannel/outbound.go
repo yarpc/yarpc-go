@@ -27,10 +27,10 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	intsync "go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/errors"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -47,14 +47,14 @@ var (
 type Outbound struct {
 	transport *Transport
 	chooser   peer.Chooser
-	once      intsync.LifecycleOnce
+	once      *lifecycle.Once
 }
 
 // NewOutbound builds a new TChannel outbound that selects a peer for each
 // request using the given peer chooser.
 func (t *Transport) NewOutbound(chooser peer.Chooser) *Outbound {
 	return &Outbound{
-		once:      intsync.Once(),
+		once:      lifecycle.NewOnce(),
 		transport: t,
 		chooser:   chooser,
 	}
@@ -74,7 +74,7 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if err := o.transport.once.WhenRunning(ctx); err != nil {
+	if err := o.transport.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {

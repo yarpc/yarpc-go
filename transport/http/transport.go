@@ -31,8 +31,8 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/backoff"
-	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 type transportOptions struct {
@@ -134,7 +134,7 @@ func NewTransport(opts ...TransportOption) *Transport {
 
 func (o *transportOptions) newTransport() *Transport {
 	return &Transport{
-		once:                intsync.Once(),
+		once:                lifecycle.NewOnce(),
 		client:              o.buildClient(o),
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
@@ -164,7 +164,7 @@ func buildHTTPClient(options *transportOptions) *http.Client {
 // services and pooling the resources needed therein.
 type Transport struct {
 	lock sync.Mutex
-	once intsync.LifecycleOnce
+	once *lifecycle.Once
 
 	client *http.Client
 	peers  map[string]*httpPeer

@@ -23,7 +23,7 @@ package grpc
 import (
 	"net"
 
-	internalsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // Transport is a grpc transport.Transport.
@@ -31,13 +31,13 @@ import (
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
-	once             internalsync.LifecycleOnce
+	once             *lifecycle.Once
 	transportOptions *transportOptions
 }
 
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
-	return &Transport{internalsync.Once(), newTransportOptions(options)}
+	return &Transport{lifecycle.NewOnce(), newTransportOptions(options)}
 }
 
 // Start implements transport.Lifecycle#Start.

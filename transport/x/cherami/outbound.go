@@ -27,7 +27,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/serialize"
 	"go.uber.org/yarpc/transport/x/cherami/internal"
 )
@@ -46,7 +46,7 @@ type Outbound struct {
 	client        cherami.Client
 	clientFactory internal.ClientFactory
 
-	once sync.LifecycleOnce
+	once *lifecycle.Once
 }
 
 type receipt struct{ cherami.PublisherReceipt }
@@ -58,7 +58,7 @@ func (r receipt) String() string {
 // NewOutbound builds a new cherami outbound.
 func (t *Transport) NewOutbound(opts OutboundOptions) *Outbound {
 	return &Outbound{
-		once:          sync.Once(),
+		once:          lifecycle.NewOnce(),
 		transport:     t,
 		opts:          opts,
 		tracer:        t.tracer,
@@ -105,7 +105,7 @@ func (o *Outbound) setClientFactory(factory internal.ClientFactory) {
 
 // CallOneway makes a oneway request using Cherami.
 func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 
