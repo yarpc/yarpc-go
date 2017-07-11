@@ -53,7 +53,7 @@ func NewSingle(pid peer.Identifier, transport peer.Transport) *Single {
 
 // Choose returns the single peer
 func (s *Single) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
-	if err := s.once.WhenRunning(ctx); err != nil {
+	if err := s.once.WaitUntilRunning(ctx); err != nil {
 		return nil, nil, err
 	}
 	s.p.StartRequest()

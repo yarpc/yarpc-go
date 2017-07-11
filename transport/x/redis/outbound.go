@@ -86,7 +86,7 @@ func (o *Outbound) IsRunning() bool {
 
 // CallOneway makes a oneway request using redis
 func (o *Outbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 

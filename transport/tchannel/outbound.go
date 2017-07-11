@@ -74,7 +74,7 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if err := o.transport.once.WhenRunning(ctx); err != nil {
+	if err := o.transport.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {

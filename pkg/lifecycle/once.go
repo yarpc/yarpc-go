@@ -162,9 +162,9 @@ func (o *Once) Start(f func() error) error {
 	return o.loadError()
 }
 
-// WhenRunning blocks until the instance enters the running state, or the
+// WaitUntilRunning blocks until the instance enters the running state, or the
 // context times out.
-func (o *Once) WhenRunning(ctx context.Context) error {
+func (o *Once) WaitUntilRunning(ctx context.Context) error {
 	state := State(o.state.Load())
 	if state == Running {
 		return nil

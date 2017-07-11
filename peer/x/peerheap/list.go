@@ -108,7 +108,7 @@ func New(transport peer.Transport, opts ...HeapOption) *List {
 func (pl *List) Update(updates peer.ListUpdates) error {
 	ctx, cancel := context.WithTimeout(context.Background(), pl.startupWait)
 	defer cancel()
-	if err := pl.once.WhenRunning(ctx); err != nil {
+	if err := pl.once.WaitUntilRunning(ctx); err != nil {
 		return err
 	}
 
@@ -193,7 +193,7 @@ func (pl *List) clearPeers() error {
 // The peer heap does not use the given *transport.Request and can safely
 // receive nil.
 func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
-	if err := pl.once.WhenRunning(ctx); err != nil {
+	if err := pl.once.WaitUntilRunning(ctx); err != nil {
 		return nil, nil, err
 	}
 
