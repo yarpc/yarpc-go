@@ -60,52 +60,6 @@ const (
 // Once is a helper for implementing objects that advance monotonically through
 // lifecycle states using at-most-once start and stop implementations in a
 // thread safe manner.
-//
-// Engine is an example of a type that uses a lifecycle.Once to synchronize its
-// lifecycle.
-//
-//   type Engine struct {
-//   	once *lifecycle.Once
-//   }
-//
-//   // NewEngine returns a lifecycle example.
-//   func NewEngine() (*Engine, error) {
-//   	return &Engine{
-//   		once: lifecycle.NewOnce(),
-//   	}, nil
-//   }
-//
-//   // Start advances the engine to the running state (if it has not already done
-//   // so), printing "started".
-//   func (e *Engine) Start() error {
-//   	return e.once.Start(e.start)
-//   }
-//
-//   func (e *Engine) start() error {
-//   	fmt.Printf("started\n")
-//   	return nil
-//   }
-//
-//   // Stop advances the engine to the stopped state (if it has not already done
-//   // so), printing "stopped".
-//   func (e *Engine) Stop() error {
-//   	return e.once.Stop(e.stop)
-//   }
-//
-//   func (e *Engine) stop() error {
-//   	fmt.Printf("stopped\n")
-//   	return nil
-//   }
-//
-//   func main() {
-//   	engine, err := NewEngine()
-//   	if err != nil {
-//   		fmt.Printf("%v\n", err)
-//   	}
-//   	go engine.Start() // might win race to start
-//   	engine.Start()    // blocks until started
-//   	defer engine.Stop()
-//   }
 type Once struct {
 	// startCh closes to allow goroutines to resume after the lifecycle is in
 	// the Running state or beyond.

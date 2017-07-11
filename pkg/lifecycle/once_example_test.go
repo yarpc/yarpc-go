@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package lifecycle_test
 
 import (
 	"fmt"
@@ -61,7 +61,7 @@ func (e *Engine) stop() error {
 	return nil
 }
 
-func main() {
+func Example() {
 	engine, err := NewEngine()
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -69,4 +69,8 @@ func main() {
 	go engine.Start() // might win race to start
 	engine.Start()    // blocks until started
 	defer engine.Stop()
+
+	// Output:
+	// started
+	// stopped
 }
