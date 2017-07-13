@@ -114,7 +114,7 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 			return resp, err
 		}
 
-		if !isRetryable(err) {
+		if !isIdempotentProcedureRetryable(err) {
 			r.observer.unretryableError()
 			return resp, err
 		}
@@ -160,8 +160,7 @@ func getTimeLeft(ctx context.Context, max time.Duration) (timeleft time.Duration
 	return ctxDeadline.Sub(now), true
 }
 
-func isRetryable(err error) bool {
-	// TODO(#1080) Update Error assertions to be more granular.
+func isIdempotentProcedureRetryable(err error) bool {
 	switch yarpcerrors.ErrorCode(err) {
 	case yarpcerrors.CodeInternal, yarpcerrors.CodeDeadlineExceeded, yarpcerrors.CodeUnavailable, yarpcerrors.CodeUnknown:
 		return true
