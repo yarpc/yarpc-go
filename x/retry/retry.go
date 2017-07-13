@@ -163,7 +163,7 @@ func getTimeLeft(ctx context.Context, max time.Duration) (timeleft time.Duration
 func isRetryable(err error) bool {
 	// TODO(#1080) Update Error assertions to be more granular.
 	switch yarpcerrors.ErrorCode(err) {
-	case yarpcerrors.CodeInternal, yarpcerrors.CodeDeadlineExceeded:
+	case yarpcerrors.CodeInternal, yarpcerrors.CodeDeadlineExceeded, yarpcerrors.CodeUnavailable, yarpcerrors.CodeUnknown:
 		return true
 	default:
 		return false
