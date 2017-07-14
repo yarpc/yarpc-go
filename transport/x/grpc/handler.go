@@ -39,7 +39,6 @@ import (
 var (
 	// errInvalidGRPCStream is applied before yarpc so it's a raw GRPC error
 	errInvalidGRPCStream = status.Error(codes.InvalidArgument, "received grpc request with invalid stream")
-
 	errInvalidGRPCMethod = yarpcerrors.InvalidArgumentErrorf("invalid stream method name for request")
 )
 
@@ -72,7 +71,10 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	err = handlerErrorToGRPCError(err, responseMD)
 
 	// Send the response attributes back and end the stream.
-	serverStream.SendMsg(response)
+	if sendErr := serverStream.SendMsg(response); sendErr != nil {
+		// We couldn't send the response.
+		return sendErr
+	}
 	serverStream.SetTrailer(responseMD)
 	return err
 }
@@ -136,7 +138,8 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 
 // procedureFromStreamMethod converts a GRPC stream method into a yarpc
 // procedure name.  This is mostly copied from the GRPC-go server processing
-// logic.
+// logic here:
+// https://github.com/grpc/grpc-go/blob/d6723916d2e73e8824d22a1ba5c52f8e6255e6f8/server.go#L931-L956
 func procedureFromStreamMethod(streamMethod string) (string, error) {
 	if streamMethod != "" && streamMethod[0] == '/' {
 		streamMethod = streamMethod[1:]
