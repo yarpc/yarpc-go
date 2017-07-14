@@ -21,11 +21,11 @@
 package main
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storefx"
 	"go.uber.org/yarpc/transport/http"
 )
@@ -39,12 +39,15 @@ func TestFxClient(t *testing.T) {
 	})
 
 	assert.NotPanics(t, func() {
-		f := storefx.Client("store").(func(*yarpc.Dispatcher) storeclient.Interface)
-		f(d)
+		f := storefx.Client("store").(func(*yarpc.Dispatcher) interface{})
+		s := f(d)
+		clientfield, ok := reflect.TypeOf(s).Elem().FieldByName("Client")
+		assert.True(t, ok)
+		assert.Equal(t, "store", clientfield.Tag)
 	}, "failed to build client")
 
 	assert.Panics(t, func() {
-		f := storefx.Client("not-store").(func(*yarpc.Dispatcher) storeclient.Interface)
+		f := storefx.Client("not-store").(func(*yarpc.Dispatcher) interface{})
 		f(d)
 	}, "expected panic")
 }

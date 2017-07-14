@@ -33,9 +33,13 @@ const fxTemplate = `
 <$pkgname := printf "%sfx" (lower .Name)>
 package <$pkgname>
 
-<$yarpc  := import "go.uber.org/yarpc">
-<$thrift := import "go.uber.org/yarpc/encoding/thrift">
-<$client := import .ClientPackagePath>
+<$fmt     := import "fmt">
+<$reflect := import "reflect">
+
+<$dig     := import "go.uber.org/dig">
+<$yarpc   := import "go.uber.org/yarpc">
+<$thrift  := import "go.uber.org/yarpc/encoding/thrift">
+<$client  := import .ClientPackagePath>
 
 // Client provides a <.Name> client to an Fx application using the given name
 // for routing.
@@ -45,8 +49,16 @@ package <$pkgname>
 // 		newHandler,
 // 	)
 func Client(name string, opts ...<$thrift>.ClientOption) interface{} {
-	return func(d *<$yarpc>.Dispatcher) <$client>.Interface {
-		return <$client>.New(d.ClientConfig(name), opts...)
+	return func(d *<$yarpc>.Dispatcher) interface{} {
+		tag := <$reflect>.StructTag(<$fmt>.Sprintf("name:\"%v\"", name))
+		stype := <$reflect>.StructOf([]<$reflect>.StructField{
+			{Index: 0, Type: <$reflect>.TypeOf(<$dig>.Out), Anonymous: true},
+			{Index: 1, Name: "Client", Type: <$reflect>.TypeOf(<$client>.Interface), Tag: tag},
+		})
+		s := <$reflect>.New(stype)
+		<$client>.New(d.ClientConfig(name), opts...)
+		s.FieldByName("Client").Set(<$reflect>.ValueOf(client))
+		return s
 	}
 }
 `
