@@ -49,13 +49,14 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
 	"go.uber.org/yarpc/internal/protoplugin"
 )
 
 func main() {
-	if err := protoplugin.Do(lib.Runner); err != nil {
+	if err := protoplugin.Do(lib.Runner, os.Stdin, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }
