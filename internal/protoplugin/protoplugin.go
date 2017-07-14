@@ -38,7 +38,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 	"text/template"
 
@@ -50,16 +49,16 @@ import (
 // Do is a helper function for protobuf plugins.
 //
 //   func main() {
-//     if err := protoplugin.Do(runner); err != nil {
+//     if err := protoplugin.Do(runner, os.Stdin, os.Stdout); err != nil {
 //       log.Fatal(err)
 //     }
 //   }
-func Do(runner Runner) error {
-	request, err := ReadRequest(os.Stdin)
+func Do(runner Runner, reader io.Reader, writer io.Writer) error {
+	request, err := ReadRequest(reader)
 	if err != nil {
 		return err
 	}
-	return WriteResponse(os.Stdout, runner.Run(request))
+	return WriteResponse(writer, runner.Run(request))
 }
 
 // ReadRequest reads the request from the reader.
