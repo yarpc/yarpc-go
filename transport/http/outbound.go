@@ -282,7 +282,7 @@ func (o *Outbound) callWithPeer(
 		// maintenance loop resumes probing for availability.
 		p.OnDisconnected()
 
-		return nil, err
+		return nil, yarpcerrors.UnknownErrorf("unknown error from http client: %s", err.Error())
 	}
 
 	span.SetTag("http.status_code", response.StatusCode)
