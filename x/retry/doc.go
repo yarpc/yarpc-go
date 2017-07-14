@@ -111,6 +111,8 @@
 //    - service: fastservice
 //      procedure: slowprocedure
 //      with: slowretry
+//    - procedure: fastprocedure
+//      with: fastretry
 //
 // Each override specifies which policy will be used based on the `with`
 // attribute, which must point to one of the 'policies' we've defined in the
@@ -118,11 +120,13 @@
 // We can specify policies with varying levels of granularity. We can specify
 // both, 'service' and 'procedure' to apply the policy to requests made to that
 // procedure of that service, or we can specify just 'service' to apply the
-// given policy to all requests made to that service.
+// given policy to all requests made to that service, or we can specify a
+// 'procedure' that will get applied to all requests made to a procedure name.
 //
 // In terms of preference, the order of importance for policies will be:
 //
 //   1) "service" and "procedure" overrides
 //   2) "service" overrides
-//   3) default policy
+//   3) "procedure" overrides
+//   4) default policy
 package retry

@@ -117,6 +117,54 @@ func TestConfig(t *testing.T) {
 			).provider,
 		},
 		{
+			msg: "procedure+default policy",
+			retryConfig: `
+				policies:
+					once:
+						retries: 1
+						maxtimeout: 500ms
+						backoff:
+							exponential:
+								first: 10ms
+								max: 1s
+					procedure:
+						retries: 5
+						maxtimeout: 100ms
+						backoff:
+							exponential:
+								first: 100ms
+								max: 10s
+				default: once
+				overrides:
+					- procedure: myproc
+					  with: procedure
+			`,
+			wantPolicyProvider: newPolicyProviderBuilder().setDefault(
+				NewPolicy(
+					Retries(1),
+					MaxRequestTimeout(time.Millisecond*500),
+					BackoffStrategy(
+						exponentialNoError(backoff.NewExponential(
+							backoff.FirstBackoff(time.Millisecond*10),
+							backoff.MaxBackoff(time.Second*1),
+						)),
+					),
+				),
+			).registerProcedure(
+				"myproc",
+				NewPolicy(
+					Retries(5),
+					MaxRequestTimeout(time.Millisecond*100),
+					BackoffStrategy(
+						exponentialNoError(backoff.NewExponential(
+							backoff.FirstBackoff(time.Millisecond*100),
+							backoff.MaxBackoff(time.Second*10),
+						)),
+					),
+				),
+			).provider,
+		},
+		{
 			msg: "service+serviceproc+default policy",
 			retryConfig: `
 				policies:
