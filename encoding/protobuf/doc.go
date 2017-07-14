@@ -19,4 +19,18 @@
 // THE SOFTWARE.
 
 // Package protobuf implements Protocol Buffers encoding support for YARPC.
+//
+// To use this package, you must have protoc installed, as well as the
+// golang protoc plugin from either github.com/golang/protobuf or
+// github.com/gogo/protobuf. We recommend github.com/gogo/protobuf.
+//
+//   go get github.com/gogo/protobuf/protoc-gen-gogoslick
+//
+// You must also install the Protobuf plugin for YARPC.
+//
+//   go get go.uber.org/yarpc/encoding/protoc-gen-yarpc-go
+//
+// To generate YARPC compatible code from a Protobuf file:
+//
+//   protoc --gogoslick_out=. --yarpc-go_out=. foo.proto
 package protobuf
