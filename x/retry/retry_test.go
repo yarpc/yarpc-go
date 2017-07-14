@@ -30,7 +30,6 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
-	iioutil "go.uber.org/yarpc/internal/ioutil"
 	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -425,7 +424,7 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg: "Reset Error",
+			msg: "Retry error after not reading request body",
 			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
@@ -449,13 +448,20 @@ func TestMiddleware(t *testing.T) {
 							// req body io.Reader.
 							GiveError: yarpcerrors.InternalErrorf("unexpected error 1"),
 						},
+						{
+							WantTimeout:   testtime.Millisecond * 50,
+							WantService:   "serv",
+							WantProcedure: "proc",
+							WantBody:      "body",
+							GiveError:     yarpcerrors.InternalErrorf("unexpected error 1"),
+						},
 					},
-					wantError: iioutil.ErrReset.Error(),
+					wantError: yarpcerrors.InternalErrorf("unexpected error 1").Error(),
 				},
 			},
 			wantCounters: map[string]int{
-				"retry_calls+":                        1,
-				"retry_failures+error=yarpc_internal": 1,
+				"retry_calls+":                      2,
+				"retry_failures+error=max_attempts": 1,
 			},
 		},
 		{

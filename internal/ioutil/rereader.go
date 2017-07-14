@@ -44,18 +44,18 @@ func NewRereader(src io.Reader) (*Rereader, func()) {
 	// and can use the buffer directly.
 	if bb, ok := src.(*bytes.Buffer); ok {
 		return &Rereader{
-			buf: bb,
-			bufReader: bytes.NewReader(bb.Bytes()),
-			useBuffer: atomic.NewBool(true),
+			buf:            bb,
+			bufReader:      bytes.NewReader(bb.Bytes()),
+			useBuffer:      atomic.NewBool(true),
 			hasReadFromSrc: atomic.NewBool(false),
-		}, func () {}
+		}, func() {}
 	}
 
 	buf := bufferpool.Get()
 	return &Rereader{
-		src:       src,
-		buf:       buf,
-		useBuffer: atomic.NewBool(false),
+		src:            src,
+		buf:            buf,
+		useBuffer:      atomic.NewBool(false),
 		hasReadFromSrc: atomic.NewBool(false),
 	}, func() { bufferpool.Put(buf) }
 }
