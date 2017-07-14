@@ -103,28 +103,6 @@ func (r *registry) LookupMessage(location string, name string) (*Message, error)
 	return nil, fmt.Errorf("no message found: %s", name)
 }
 
-func (r *registry) LookupEnum(location, name string) (*Enum, error) {
-	if strings.HasPrefix(name, ".") {
-		e, ok := r.enums[name]
-		if !ok {
-			return nil, fmt.Errorf("no enum found: %s", name)
-		}
-		return e, nil
-	}
-	if !strings.HasPrefix(location, ".") {
-		location = fmt.Sprintf(".%s", location)
-	}
-	components := strings.Split(location, ".")
-	for len(components) > 0 {
-		fqen := strings.Join(append(components, name), ".")
-		if e, ok := r.enums[fqen]; ok {
-			return e, nil
-		}
-		components = components[:len(components)-1]
-	}
-	return nil, fmt.Errorf("no enum found: %s", name)
-}
-
 func (r *registry) LookupFile(name string) (*File, error) {
 	f, ok := r.files[name]
 	if !ok {
@@ -150,22 +128,6 @@ func (r *registry) ReserveGoPackageAlias(alias, pkgpath string) error {
 	}
 	r.pkgAliases[alias] = pkgpath
 	return nil
-}
-
-func (r *registry) GetAllFQMNs() []string {
-	var keys []string
-	for k := range r.msgs {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func (r *registry) GetAllFQENs() []string {
-	var keys []string
-	for k := range r.enums {
-		keys = append(keys, k)
-	}
-	return keys
 }
 
 // loadFile loads messages, enumerations and fields from "file".
@@ -291,39 +253,6 @@ func (r *registry) newMethod(svc *Service, md *descriptor.MethodDescriptorProto)
 	}, nil
 }
 
-// resolveFieldPath resolves "path" into a list of fieldDescriptor, starting from "msg".
-func (r *registry) resolveFiledPath(msg *Message, path string) ([]FieldPathComponent, error) {
-	if path == "" {
-		return nil, nil
-	}
-	root := msg
-	var result []FieldPathComponent
-	for i, c := range strings.Split(path, ".") {
-		if i > 0 {
-			f := result[i-1].Target
-			switch f.GetType() {
-			case descriptor.FieldDescriptorProto_TYPE_MESSAGE, descriptor.FieldDescriptorProto_TYPE_GROUP:
-				var err error
-				msg, err = r.LookupMessage(msg.FQMN(), f.GetTypeName())
-				if err != nil {
-					return nil, err
-				}
-			default:
-				return nil, fmt.Errorf("not an aggregate type: %s in %s", f.GetName(), path)
-			}
-		}
-		f := lookupField(msg, c)
-		if f == nil {
-			return nil, fmt.Errorf("no field %q found in %s", path, root.GetName())
-		}
-		if f.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
-			return nil, fmt.Errorf("repeated field not allowed in field path: %s in %s", f.GetName(), path)
-		}
-		result = append(result, FieldPathComponent{Name: c, Target: f})
-	}
-	return result, nil
-}
-
 // defaultGoPackageName returns the default go package name to be used for go files generated from "f".
 // You might need to use an unique alias for the package when you import it.  Use ReserveGoPackageAlias to get a unique alias.
 func defaultGoPackageName(f *descriptor.FileDescriptorProto) string {
@@ -351,15 +280,4 @@ func packageIdentityName(f *descriptor.FileDescriptorProto) string {
 		return strings.TrimSuffix(base, ext)
 	}
 	return f.GetPackage()
-}
-
-// lookupField looks up a field named "name" within "msg".
-// It returns nil if no such field found.
-func lookupField(msg *Message, name string) *Field {
-	for _, f := range msg.Fields {
-		if f.GetName() == name {
-			return f
-		}
-	}
-	return nil
 }
