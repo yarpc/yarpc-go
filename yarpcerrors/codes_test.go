@@ -69,4 +69,5 @@ func TestCodesFailures(t *testing.T) {
 	assert.Error(t, err)
 	assert.Error(t, badCode.UnmarshalText([]byte("200")))
 	assert.Error(t, badCode.UnmarshalJSON([]byte("200")))
+	assert.Error(t, badCode.UnmarshalJSON([]byte(`"200"`)))
 }
