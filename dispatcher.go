@@ -352,10 +352,6 @@ func (d *Dispatcher) Start() error {
 	}
 	d.log.Debug("Started inbounds.")
 
-	d.log.Debug("Registering debug pages.")
-	addDispatcherToDebugPages(d)
-	d.log.Debug("Registered debug pages.")
-
 	d.log.Info("Started up.")
 	return nil
 }
@@ -425,10 +421,6 @@ func (d *Dispatcher) Stop() error {
 	d.log.Debug("Stopping metrics push loop, if any.")
 	d.stopRegistryPush()
 	d.log.Debug("Stopped metrics push loop, if any.")
-
-	d.log.Debug("Unregistering debug pages.")
-	removeDispatcherFromDebugPages(d)
-	d.log.Debug("Unregistered debug pages.")
 
 	d.log.Info("Completed shutdown.")
 	return nil
