@@ -78,6 +78,9 @@ func TestCrossdock(t *testing.T) {
 			name: "google_grpc_client",
 		},
 		{
+			name: "google_grpc_server",
+		},
+		{
 			name: "headers",
 			axes: axes{
 				"transport": []string{"http", "tchannel"},
