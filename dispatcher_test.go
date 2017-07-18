@@ -413,7 +413,8 @@ func TestIntrospect(t *testing.T) {
 		},
 		Outbounds: Outbounds{
 			"test-client": {
-				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:1234"),
+				Unary:  httpTransport.NewSingleOutbound("http://127.0.0.1:1234"),
+				Oneway: httpTransport.NewSingleOutbound("http://127.0.0.1:1234"),
 			},
 		},
 	}
@@ -425,18 +426,19 @@ func TestIntrospect(t *testing.T) {
 	assert.NotEmpty(t, dispatcherStatus.ID)
 	assert.Empty(t, dispatcherStatus.Procedures)
 	assert.Len(t, dispatcherStatus.Inbounds, 1)
-	assert.Len(t, dispatcherStatus.Outbounds, 1)
+	assert.Len(t, dispatcherStatus.Outbounds, 2)
 
 	inboundStatus := dispatcherStatus.Inbounds[0]
 	assert.Equal(t, "http", inboundStatus.Transport)
 	assert.Equal(t, "Stopped", inboundStatus.State)
-	outboundStatus := dispatcherStatus.Outbounds[0]
-	assert.Equal(t, "http", outboundStatus.Transport)
-	assert.Equal(t, "unary", outboundStatus.RPCType)
-	assert.Equal(t, "http://127.0.0.1:1234", outboundStatus.Endpoint)
-	assert.Equal(t, "Stopped", outboundStatus.State)
-	assert.Equal(t, "test-client", outboundStatus.Service)
-	assert.Equal(t, "test-client", outboundStatus.OutboundKey)
+	for _, outboundStatus := range dispatcherStatus.Outbounds {
+		assert.Equal(t, "http", outboundStatus.Transport)
+		assert.True(t, outboundStatus.RPCType == "unary" || outboundStatus.RPCType == "oneway")
+		assert.Equal(t, "http://127.0.0.1:1234", outboundStatus.Endpoint)
+		assert.Equal(t, "Stopped", outboundStatus.State)
+		assert.Equal(t, "test-client", outboundStatus.Service)
+		assert.Equal(t, "test-client", outboundStatus.OutboundKey)
+	}
 
 	packageNameToVersion := make(map[string]string, len(dispatcherStatus.PackageVersions))
 	for _, packageVersion := range dispatcherStatus.PackageVersions {
