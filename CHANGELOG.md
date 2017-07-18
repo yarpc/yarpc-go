@@ -5,7 +5,15 @@ Releases
 v1.11.0 (unreleased)
 -------------------
 
--    No changes yet.
+-   Fixed bug where outbound HTTP errors were not being properly wrapped in
+    yarpc errors.
+
+Experimental:
+
+-   x/retry: Added support for procedure-based retry policies.
+-   x/retry: Fixed bug in retry middleware where a failed request that did not
+    read the request body would not be retried.
+-   x/grpc: Altered inbound GRPC code in order to support RouterMiddleware.
 
 
 v1.10.0 (2017-17-11)
