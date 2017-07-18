@@ -70,6 +70,12 @@ func (ppp *ProcedurePolicyProvider) RegisterService(service string, pol *Policy)
 	ppp.serviceProcedureToPolicy[serviceProcedure{Service: service}] = pol
 }
 
+// RegisterProcedure specifies the retry policy for requests that match the given
+// procedure name.
+func (ppp *ProcedurePolicyProvider) RegisterProcedure(procedure string, pol *Policy) {
+	ppp.serviceProcedureToPolicy[serviceProcedure{Procedure: procedure}] = pol
+}
+
 // SetDefault specifies the default retry Policy that will be used if there are
 // no matches for any other policy (based on Service or Procedure).
 func (ppp *ProcedurePolicyProvider) SetDefault(pol *Policy) {
@@ -82,6 +88,9 @@ func (ppp *ProcedurePolicyProvider) Policy(_ context.Context, req *transport.Req
 		return pol
 	}
 	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{Service: req.Service}]; ok {
+		return pol
+	}
+	if pol, ok := ppp.serviceProcedureToPolicy[serviceProcedure{Procedure: req.Procedure}]; ok {
 		return pol
 	}
 	return ppp.defaultPolicy
