@@ -34,6 +34,13 @@ func TestFakeClockAdd(t *testing.T) {
 	assert.Equal(t, time.Second, clock.Now().Sub(start))
 }
 
+func TestFakeClockSet(t *testing.T) {
+	clock := NewFake()
+	assert.Equal(t, time.Unix(0, 0), clock.Now())
+	clock.Set(time.Unix(100, 0))
+	assert.Equal(t, time.Unix(100, 0), clock.Now())
+}
+
 func TestFakeClockAfter(t *testing.T) {
 	clock := NewFake()
 	start := clock.Now()
