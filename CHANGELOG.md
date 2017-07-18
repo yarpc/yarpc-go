@@ -5,7 +5,7 @@ Releases
 v1.11.0 (unreleased)
 -------------------
 
--    No changes yet.
+-   Thrift: UberFX-compatible module modified to output named type
 
 
 v1.10.0 (2017-17-11)
