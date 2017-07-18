@@ -2,7 +2,7 @@ Releases
 ========
 
 
-v1.11.0 (unreleased)
+v1.11.0 (2017-07-18)
 -------------------
 
 -   Fixed bug where outbound HTTP errors were not being properly wrapped in
