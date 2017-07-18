@@ -167,9 +167,13 @@ func (i *Inbound) Introspect() introspection.InboundStatus {
 	if i.IsRunning() {
 		state = "Started"
 	}
+	var addrString string
+	if addr := i.Addr(); addr != nil {
+		addrString = addr.String()
+	}
 	return introspection.InboundStatus{
 		Transport: "http",
-		Endpoint:  i.Addr().String(),
+		Endpoint:  addrString,
 		State:     state,
 	}
 }

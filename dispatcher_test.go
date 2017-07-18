@@ -23,12 +23,15 @@ package yarpc_test
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
+	tchannelgo "github.com/uber/tchannel-go"
+	thriftrwversion "go.uber.org/thriftrw/version"
 	. "go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
@@ -398,4 +401,58 @@ func TestObservabilityConfig(t *testing.T) {
 			)
 		}
 	}
+}
+
+func TestIntrospect(t *testing.T) {
+	httpTransport := http.NewTransport()
+
+	config := Config{
+		Name: "test",
+		Inbounds: Inbounds{
+			httpTransport.NewInbound(":0"),
+		},
+		Outbounds: Outbounds{
+			"test-client": {
+				Unary:  httpTransport.NewSingleOutbound("http://127.0.0.1:1234"),
+				Oneway: httpTransport.NewSingleOutbound("http://127.0.0.1:1234"),
+			},
+		},
+	}
+	dispatcher := NewDispatcher(config)
+
+	dispatcherStatus := dispatcher.Introspect()
+
+	assert.Equal(t, config.Name, dispatcherStatus.Name)
+	assert.NotEmpty(t, dispatcherStatus.ID)
+	assert.Empty(t, dispatcherStatus.Procedures)
+	assert.Len(t, dispatcherStatus.Inbounds, 1)
+	assert.Len(t, dispatcherStatus.Outbounds, 2)
+
+	inboundStatus := dispatcherStatus.Inbounds[0]
+	assert.Equal(t, "http", inboundStatus.Transport)
+	assert.Equal(t, "Stopped", inboundStatus.State)
+	for _, outboundStatus := range dispatcherStatus.Outbounds {
+		assert.Equal(t, "http", outboundStatus.Transport)
+		assert.True(t, outboundStatus.RPCType == "unary" || outboundStatus.RPCType == "oneway")
+		assert.Equal(t, "http://127.0.0.1:1234", outboundStatus.Endpoint)
+		assert.Equal(t, "Stopped", outboundStatus.State)
+		assert.Equal(t, "test-client", outboundStatus.Service)
+		assert.Equal(t, "test-client", outboundStatus.OutboundKey)
+	}
+
+	packageNameToVersion := make(map[string]string, len(dispatcherStatus.PackageVersions))
+	for _, packageVersion := range dispatcherStatus.PackageVersions {
+		assert.Empty(t, packageNameToVersion[packageVersion.Name])
+		packageNameToVersion[packageVersion.Name] = packageVersion.Version
+	}
+	checkPackageVersion(t, packageNameToVersion, "yarpc", Version)
+	checkPackageVersion(t, packageNameToVersion, "tchannel", tchannelgo.VersionInfo)
+	checkPackageVersion(t, packageNameToVersion, "thriftrw", thriftrwversion.Version)
+	checkPackageVersion(t, packageNameToVersion, "go", runtime.Version())
+}
+
+func checkPackageVersion(t *testing.T, packageNameToVersion map[string]string, key string, expectedVersion string) {
+	version := packageNameToVersion[key]
+	assert.NotEmpty(t, version)
+	assert.Equal(t, expectedVersion, version)
 }
