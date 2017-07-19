@@ -132,14 +132,6 @@ func verifyUnarySignature(n string, t reflect.Type) reflect.Type {
 
 	resBodyType := t.Out(0)
 
-	if !isValidReqResType(reqBodyType) {
-		panic(fmt.Sprintf(
-			"the second argument of the handler for %q must be "+
-				"a struct pointer, a map[string]interface{}, or interface{}, and not: %v",
-			n, reqBodyType,
-		))
-	}
-
 	if !isValidReqResType(resBodyType) {
 		panic(fmt.Sprintf(
 			"the first result of the handler for %q must be "+
