@@ -30,7 +30,6 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
-	iioutil "go.uber.org/yarpc/internal/ioutil"
 	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -425,7 +424,7 @@ func TestMiddleware(t *testing.T) {
 			},
 		},
 		{
-			msg: "Reset Error",
+			msg: "Retry error after not reading request body",
 			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(1),
@@ -449,13 +448,20 @@ func TestMiddleware(t *testing.T) {
 							// req body io.Reader.
 							GiveError: yarpcerrors.InternalErrorf("unexpected error 1"),
 						},
+						{
+							WantTimeout:   testtime.Millisecond * 50,
+							WantService:   "serv",
+							WantProcedure: "proc",
+							WantBody:      "body",
+							GiveError:     yarpcerrors.InternalErrorf("unexpected error 1"),
+						},
 					},
-					wantError: iioutil.ErrReset.Error(),
+					wantError: yarpcerrors.InternalErrorf("unexpected error 1").Error(),
 				},
 			},
 			wantCounters: map[string]int{
-				"retry_calls+":                        1,
-				"retry_failures+error=yarpc_internal": 1,
+				"retry_calls+":                      2,
+				"retry_failures+error=max_attempts": 1,
 			},
 		},
 		{
@@ -707,6 +713,7 @@ func TestMiddleware(t *testing.T) {
 			// Policies:
 			//   default: 	   retries=2   timeout=20ms  backoff=25ms
 			//   s="s": 	   retries=1   timeout=50ms  backoff=50ms
+			//   p="pr": 	   retries=3   timeout=75ms  backoff=10ms
 			//   s="s",p="p":  retries=0   timeout=100ms backoff=None
 			//   s="s",p="fp": retries=100 timeout=10s   backoff=None // Fake policy
 			// Request 1: "Default retry policy"
@@ -727,6 +734,16 @@ func TestMiddleware(t *testing.T) {
 			// ms :  service:"s" proc:"p" timeout:200ms expectedPolicy:"s="s",p="p""
 			// 000:  initial request
 			// 100:  final error: Timeout
+			// Request 3: "Procedure-only Retry Policy"
+			// ms :  service:"ss" proc:"pr" timeout:400ms expectedPolicy:"p="pr""
+			// 000:  initial request
+			// 075:  error: Timeout
+			// 085:  retry #1
+			// 160:  error: Timeout
+			// 170:  retry #2
+			// 245:  error: Timeout
+			// 255:  retry #3
+			// 330:  final error: Timeout
 			policyProvider: newPolicyProviderBuilder().setDefault(
 				NewPolicy(
 					Retries(2),
@@ -739,6 +756,13 @@ func TestMiddleware(t *testing.T) {
 					Retries(1),
 					MaxRequestTimeout(testtime.Millisecond*50),
 					BackoffStrategy(newFixedBackoff(testtime.Millisecond*50)),
+				),
+			).registerProcedure(
+				"pr",
+				NewPolicy(
+					Retries(3),
+					MaxRequestTimeout(testtime.Millisecond*70),
+					BackoffStrategy(newFixedBackoff(testtime.Millisecond*10)),
 				),
 			).registerServiceProcedure(
 				"s",
@@ -836,13 +860,56 @@ func TestMiddleware(t *testing.T) {
 							},
 							wantError: yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*100).Error(),
 						},
+						RequestAction{
+							request: &transport.Request{
+								Service:   "ss",
+								Procedure: "pr",
+								Body:      bytes.NewBufferString("body4"),
+							},
+							reqTimeout: testtime.Millisecond * 400,
+							events: []*OutboundEvent{
+								{
+									WantTimeout:    testtime.Millisecond * 75,
+									WantService:    "ss",
+									WantProcedure:  "pr",
+									WantBody:       "body4",
+									WaitForTimeout: true,
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*75),
+								},
+								{
+									WantTimeout:    testtime.Millisecond * 75,
+									WantService:    "ss",
+									WantProcedure:  "pr",
+									WantBody:       "body4",
+									WaitForTimeout: true,
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*75),
+								},
+								{
+									WantTimeout:    testtime.Millisecond * 75,
+									WantService:    "ss",
+									WantProcedure:  "pr",
+									WantBody:       "body4",
+									WaitForTimeout: true,
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*75),
+								},
+								{
+									WantTimeout:    testtime.Millisecond * 75,
+									WantService:    "ss",
+									WantProcedure:  "pr",
+									WantBody:       "body4",
+									WaitForTimeout: true,
+									GiveError:      yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*75),
+								},
+							},
+							wantError: yarpcerrors.DeadlineExceededErrorf("service:serv procedure:proc ttl:%v", testtime.Millisecond*75).Error(),
+						},
 					},
 				},
 			},
 			wantCounters: map[string]int{
-				"retry_calls+":                      6,
+				"retry_calls+":                      10,
 				"retry_successes+":                  0,
-				"retry_failures+error=max_attempts": 3,
+				"retry_failures+error=max_attempts": 4,
 			},
 		},
 	}
@@ -947,6 +1014,11 @@ func (pb *policyProviderBuilder) registerServiceProcedure(service, procedure str
 
 func (pb *policyProviderBuilder) registerService(service string, pol *Policy) *policyProviderBuilder {
 	pb.provider.RegisterService(service, pol)
+	return pb
+}
+
+func (pb *policyProviderBuilder) registerProcedure(procedure string, pol *Policy) *policyProviderBuilder {
+	pb.provider.RegisterProcedure(procedure, pol)
 	return pb
 }
 

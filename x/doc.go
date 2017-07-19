@@ -18,7 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
-
-// Version is the current version of YARPC.
-const Version = "1.12.0-dev"
+// Package x contains experimental components. Breaking changes may be made to
+// these APIs between minor releases.
+//
+// If you import subpackages of x/, ensure that you lock to the minor version.
+// In Glide, this is,
+//
+// 	version: ~X.Y
+//
+// Where X.Y is the version of YARPC you are using.
+package x

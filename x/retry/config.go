@@ -150,6 +150,11 @@ func (cfg MiddlewareConfig) getPolicyProvider(nameToPolicy map[string]*Policy) (
 			continue
 		}
 
+		if override.Procedure != "" {
+			policyProvider.RegisterProcedure(override.Procedure, pol)
+			continue
+		}
+
 		errs = multierr.Append(errs, fmt.Errorf("did not specify a service or procedure for retry policy override: %q", override.WithPolicy))
 	}
 

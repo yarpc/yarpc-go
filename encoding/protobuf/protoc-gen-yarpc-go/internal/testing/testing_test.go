@@ -31,6 +31,7 @@ import (
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go/internal/lib"
+	"go.uber.org/yarpc/internal/protoplugin"
 	_ "go.uber.org/yarpc/yarpcproto" // needed for proto.RegisterFile for Oneway type
 )
 
@@ -69,6 +70,14 @@ func testGolden(
 		},
 	}
 
+	data, err := proto.Marshal(codeGeneratorRequest)
+	require.NoError(t, err)
+	reader := bytes.NewReader(data)
+	writer := bytes.NewBuffer(nil)
+	require.NoError(t, protoplugin.Do(lib.Runner, reader, writer))
+	codeGeneratorResponse := &plugin_go.CodeGeneratorResponse{}
+	require.NoError(t, proto.Unmarshal(writer.Bytes(), codeGeneratorResponse))
+
 	content, err := ioutil.ReadFile(outputGoldenFilePath)
 	require.NoError(t, err)
 	expectedCodeGeneratorResponse := &plugin_go.CodeGeneratorResponse{
@@ -80,7 +89,7 @@ func testGolden(
 		},
 	}
 
-	require.Equal(t, expectedCodeGeneratorResponse, lib.Runner.Run(codeGeneratorRequest))
+	require.Equal(t, expectedCodeGeneratorResponse, codeGeneratorResponse)
 }
 
 func getFileDescriptorProto(t *testing.T, name string) *descriptor.FileDescriptorProto {
