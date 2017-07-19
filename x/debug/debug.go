@@ -30,6 +30,8 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 )
 
+// NewHandler returns a func to expose dispatcher status and package
+// versions.
 func NewHandler(d *yarpc.Dispatcher) func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
