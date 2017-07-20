@@ -2,7 +2,7 @@ Releases
 ========
 
 
-v1.12.0-dev (unreleased)
+v1.12.0 (2017-07-20)
 -------------------
 
 Experimental:
