@@ -199,7 +199,7 @@ func WithTemplate(tmpl Template) HandlerOption {
 //
 // If set to nil, no logging will be performed.
 //
-// By default, log.Printf is ued.
+// By default, log.Printf is used.
 func WithLogFunc(logFunc func(string, ...interface{})) HandlerOption {
 	return func(handler *handler) {
 		handler.logFunc = logFunc
@@ -233,6 +233,8 @@ func (h *handler) handle(responseWriter http.ResponseWriter, _ *http.Request) {
 	responseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.tmpl.Execute(responseWriter, newTmplData(h.dispatcher.Introspect())); err != nil {
 		if h.logFunc != nil {
+			// TODO: does this work, since we already tried a write?
+			responseWriter.WriteHeader(http.StatusInternalServerError)
 			h.logFunc("yarpc/debug: failed executing template: %v", err)
 		}
 	}

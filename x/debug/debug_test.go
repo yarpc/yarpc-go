@@ -22,6 +22,7 @@ package debug
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -34,19 +35,52 @@ import (
 	yarpchttp "go.uber.org/yarpc/transport/http"
 )
 
-var testTmpl = template.Must(template.New("tmpl").Funcs(template.FuncMap{
-	"jsonMarshal": func(v interface{}) (string, error) {
-		data, err := json.Marshal(v)
-		if err != nil {
-			return "", err
-		}
-		return string(data), nil
-	},
-}).Parse(`{{jsonMarshal .}}`))
+var (
+	jsonTestTmpl = template.Must(template.New("tmpl").Funcs(template.FuncMap{
+		"jsonMarshal": func(v interface{}) (string, error) {
+			data, err := json.Marshal(v)
+			if err != nil {
+				return "", err
+			}
+			return string(data), nil
+		},
+	}).Parse(`{{jsonMarshal .}}`))
+
+	errorTestTmpl = template.Must(template.New("tmpl").Funcs(template.FuncMap{
+		"returnError": func(_ interface{}) (string, error) {
+			return "", errors.New("error")
+		},
+	}).Parse(`{{returnError .}}`))
+)
 
 func TestHandler(t *testing.T) {
+	dispatcher := newTestDispatcher()
+
+	expectedData, err := json.Marshal(newTmplData(dispatcher.Introspect()))
+	require.NoError(t, err)
+
+	responseRecorder := httptest.NewRecorder()
+	NewHandler(dispatcher, WithTemplate(jsonTestTmpl), WithLogFunc(nil))(responseRecorder, nil)
+
+	require.Equal(t, http.StatusOK, responseRecorder.Code)
+	data, err := ioutil.ReadAll(responseRecorder.Body)
+	require.NoError(t, err)
+	require.Equal(t, string(expectedData), string(data))
+}
+
+func TestHandlerError(t *testing.T) {
+	dispatcher := newTestDispatcher()
+	logged := false
+
+	responseRecorder := httptest.NewRecorder()
+	NewHandler(dispatcher, WithTemplate(errorTestTmpl), WithLogFunc(func(string, ...interface{}) { logged = true }))(responseRecorder, nil)
+	require.Equal(t, http.StatusInternalServerError, responseRecorder.Code)
+	require.True(t, logged)
+}
+
+func newTestDispatcher() *yarpc.Dispatcher {
 	httpTransport := yarpchttp.NewTransport()
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+	return yarpc.NewDispatcher(yarpc.Config{
 		Name: "test",
 		Inbounds: yarpc.Inbounds{
 			httpTransport.NewInbound(":0"),
@@ -58,15 +92,4 @@ func TestHandler(t *testing.T) {
 			},
 		},
 	})
-
-	expectedData, err := json.Marshal(newTmplData(dispatcher.Introspect()))
-	require.NoError(t, err)
-
-	responseRecorder := httptest.NewRecorder()
-	NewHandler(dispatcher, WithTemplate(testTmpl), WithLogFunc(nil))(responseRecorder, nil)
-
-	require.Equal(t, http.StatusOK, responseRecorder.Code)
-	data, err := ioutil.ReadAll(responseRecorder.Body)
-	require.NoError(t, err)
-	require.Equal(t, string(expectedData), string(data))
 }
