@@ -22,7 +22,6 @@ package debug
 
 import (
 	"html/template"
-	"io"
 	"log"
 	"net/http"
 
@@ -30,34 +29,9 @@ import (
 	"go.uber.org/yarpc/internal/introspection"
 )
 
-// NewHandler returns a func to expose dispatcher status and package
-// versions.
-func NewHandler(d *yarpc.Dispatcher) func(w http.ResponseWriter, req *http.Request) {
-	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		render(w, req, d)
-	}
-}
-
-func render(w io.Writer, req *http.Request, dispatcher *yarpc.Dispatcher) {
-	data := struct {
-		Dispatchers     []introspection.DispatcherStatus
-		PackageVersions []introspection.PackageVersion
-	}{
-		Dispatchers: []introspection.DispatcherStatus{
-			dispatcher.Introspect(),
-		},
-		PackageVersions: yarpc.PackageVersions,
-	}
-
-	if err := pageTmpl.ExecuteTemplate(w, "Page", data); err != nil {
-		log.Printf("yarpc/debug: Failed executing template: %v", err)
-	}
-}
-
-var pageTmpl = template.Must(template.New("Page").Funcs(template.FuncMap{}).Parse(pageHTML))
-
-const pageHTML = `
+var (
+	// DefaultTmpl is the default template used.
+	DefaultTmpl = template.Must(template.New("tmpl").Parse(`
 <html>
 	<head>
 	<title>/debug/yarpc</title>
@@ -196,4 +170,73 @@ const pageHTML = `
 {{end}}
 	</body>
 </html>
-`
+`))
+
+	// DefaultLogFunc is the default logging function used when there is a rendering error.
+	DefaultLogFunc = log.Printf
+)
+
+// HandlerOption is an option for a new Handler.
+type HandlerOption func(*handler)
+
+// WithTemplate sets the template to be used for rendering.
+//
+// By default, DefaultTmpl is used.
+func WithTemplate(tmpl *template.Template) HandlerOption {
+	return func(handler *handler) {
+		handler.tmpl = tmpl
+	}
+}
+
+// WithLogFunc set the logging function to use when there is a rendering error.
+//
+// If set to nil, no logging will be performed.
+//
+// By default, log.Printf is ued.
+func WithLogFunc(logFunc func(string, ...interface{})) HandlerOption {
+	return func(handler *handler) {
+		handler.logFunc = logFunc
+	}
+}
+
+// NewHandler returns a http.HandlerFunc to expose dispatcher status and package versions.
+func NewHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) http.HandlerFunc {
+	return newHandler(dispatcher, opts...).handle
+}
+
+type handler struct {
+	dispatcher *yarpc.Dispatcher
+	tmpl       *template.Template
+	logFunc    func(string, ...interface{})
+}
+
+func newHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) *handler {
+	handler := &handler{
+		dispatcher: dispatcher,
+		tmpl:       DefaultTmpl,
+		logFunc:    DefaultLogFunc,
+	}
+	for _, opt := range opts {
+		opt(handler)
+	}
+	return handler
+}
+
+func (h *handler) handle(responseWriter http.ResponseWriter, request *http.Request) {
+	data := struct {
+		Dispatchers     []introspection.DispatcherStatus
+		PackageVersions []introspection.PackageVersion
+	}{
+		Dispatchers: []introspection.DispatcherStatus{
+			h.dispatcher.Introspect(),
+		},
+		PackageVersions: yarpc.PackageVersions,
+	}
+
+	responseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := h.tmpl.Execute(responseWriter, data); err != nil {
+		if h.logFunc != nil {
+			h.logFunc("yarpc/debug: failed executing template: %v", err)
+		}
+	}
+}
