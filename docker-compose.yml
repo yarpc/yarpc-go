@@ -150,4 +150,3 @@ services:
           dockerfile: Dockerfile.1.8
         environment:
             - REDIS=enabled
-            - CHERAMI=enabled
