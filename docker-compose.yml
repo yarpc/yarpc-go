@@ -5,10 +5,7 @@ services:
         image: crossdock/crossdock
         dns_search: .
         depends_on:
-          cherami:
-            condition: service_healthy
-          redis:
-            condition: service_healthy
+          - proxy_dep
         links:
             - go
             - node
@@ -87,10 +84,7 @@ services:
     go:
         dns_search: .
         depends_on:
-          cherami:
-            condition: service_healthy
-          redis:
-            condition: service_healthy
+          - proxy_dep
         build:
           context: .
           dockerfile: Dockerfile.crossdock
@@ -138,10 +132,7 @@ services:
     gotest:
         dns_search: .
         depends_on:
-          cherami:
-            condition: service_healthy
-          redis:
-            condition: service_healthy
+          - proxy_dep
         links:
             - redis
             - cherami
@@ -150,3 +141,14 @@ services:
           dockerfile: Dockerfile.1.8
         environment:
             - REDIS=enabled
+            - CHERAMI=enabled
+
+    #https://github.com/docker/compose/issues/4369
+
+    proxy_dep:
+        image: busybox
+        depends_on:
+          cherami:
+            condition: service_healthy
+          redis:
+            condition: service_healthy
