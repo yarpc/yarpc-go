@@ -7,6 +7,8 @@ services:
         depends_on:
           cherami:
             condition: service_healthy
+          redis:
+            condition: service_healthy
         links:
             - go
             - node
@@ -87,6 +89,8 @@ services:
         depends_on:
           cherami:
             condition: service_healthy
+          redis:
+            condition: service_healthy
         build:
           context: .
           dockerfile: Dockerfile.crossdock
@@ -123,7 +127,7 @@ services:
             - SYNC=1
 
     redis:
-        image: redis
+        image: healthcheck/redis
         ports:
             - 6379
 
