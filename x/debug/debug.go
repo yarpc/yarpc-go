@@ -232,9 +232,9 @@ func newHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) *handler {
 func (h *handler) handle(responseWriter http.ResponseWriter, _ *http.Request) {
 	responseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.tmpl.Execute(responseWriter, newTmplData(h.dispatcher.Introspect())); err != nil {
+		// TODO: does this work, since we already tried a write?
+		responseWriter.WriteHeader(http.StatusInternalServerError)
 		if h.logFunc != nil {
-			// TODO: does this work, since we already tried a write?
-			responseWriter.WriteHeader(http.StatusInternalServerError)
 			h.logFunc("yarpc/debug: failed executing template: %v", err)
 		}
 	}
