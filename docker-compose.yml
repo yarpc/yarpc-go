@@ -134,3 +134,17 @@ services:
     cherami:
         dns_search: .
         image: ubercherami/cherami-server-standalone
+
+    gotest:
+        dns_search: .
+        depends_on:
+          cherami:
+            condition: service_healthy
+          redis:
+            condition: service_healthy
+        build:
+          context: .
+          dockerfile: Dockerfile.1.8
+        environment:
+            - REDIS=enabled
+            - CHERAMI=enabled
