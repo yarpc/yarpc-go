@@ -22,6 +22,7 @@ package debug
 
 import (
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 
@@ -176,13 +177,19 @@ var (
 	DefaultLogFunc = log.Printf
 )
 
+// Template represents a template created from either the html/template
+// or text/template packages.
+type Template interface {
+	Execute(io.Writer, interface{}) error
+}
+
 // HandlerOption is an option for a new Handler.
 type HandlerOption func(*handler)
 
 // WithTemplate sets the template to be used for rendering.
 //
 // By default, DefaultTmpl is used.
-func WithTemplate(tmpl *template.Template) HandlerOption {
+func WithTemplate(tmpl Template) HandlerOption {
 	return func(handler *handler) {
 		handler.tmpl = tmpl
 	}
@@ -206,7 +213,7 @@ func NewHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) http.Handle
 
 type handler struct {
 	dispatcher *yarpc.Dispatcher
-	tmpl       *template.Template
+	tmpl       Template
 	logFunc    func(string, ...interface{})
 }
 
@@ -222,21 +229,27 @@ func newHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) *handler {
 	return handler
 }
 
-func (h *handler) handle(responseWriter http.ResponseWriter, request *http.Request) {
-	data := struct {
-		Dispatchers     []introspection.DispatcherStatus
-		PackageVersions []introspection.PackageVersion
-	}{
-		Dispatchers: []introspection.DispatcherStatus{
-			h.dispatcher.Introspect(),
-		},
-		PackageVersions: yarpc.PackageVersions,
-	}
-
+func (h *handler) handle(responseWriter http.ResponseWriter, _ *http.Request) {
 	responseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.Execute(responseWriter, data); err != nil {
+	if err := h.tmpl.Execute(responseWriter, newTmplData(h.dispatcher.Introspect())); err != nil {
 		if h.logFunc != nil {
 			h.logFunc("yarpc/debug: failed executing template: %v", err)
 		}
+	}
+}
+
+type tmplData struct {
+	Dispatchers     []introspection.DispatcherStatus
+	PackageVersions []introspection.PackageVersion
+}
+
+func newTmplData(dispatcherStatus introspection.DispatcherStatus) *tmplData {
+	// TODO: Why don't we just use dispatcherStatus as the data directly, it has
+	// PackageVersions on it already, do we want to use multiple dispatchers in the future?
+	return &tmplData{
+		Dispatchers: []introspection.DispatcherStatus{
+			dispatcherStatus,
+		},
+		PackageVersions: yarpc.PackageVersions,
 	}
 }
