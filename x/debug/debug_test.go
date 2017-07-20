@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	jsonTestTmpl = template.Must(template.New("tmpl").Funcs(template.FuncMap{
+	_jsonTestTmpl = template.Must(template.New("tmpl").Funcs(template.FuncMap{
 		"jsonMarshal": func(v interface{}) (string, error) {
 			data, err := json.Marshal(v)
 			if err != nil {
@@ -46,7 +46,7 @@ var (
 		},
 	}).Parse(`{{jsonMarshal .}}`))
 
-	errorTestTmpl = template.Must(template.New("tmpl").Funcs(template.FuncMap{
+	_errorTestTmpl = template.Must(template.New("tmpl").Funcs(template.FuncMap{
 		"returnError": func(_ interface{}) (string, error) {
 			return "", errors.New("error")
 		},
@@ -60,7 +60,7 @@ func TestHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	responseRecorder := httptest.NewRecorder()
-	NewHandler(dispatcher, WithTemplate(jsonTestTmpl), WithLogFunc(nil))(responseRecorder, nil)
+	NewHandler(dispatcher, withTemplate(_jsonTestTmpl), WithLogFunc(nil))(responseRecorder, nil)
 
 	require.Equal(t, http.StatusOK, responseRecorder.Code)
 	data, err := ioutil.ReadAll(responseRecorder.Body)
@@ -73,7 +73,7 @@ func TestHandlerError(t *testing.T) {
 	logged := false
 
 	responseRecorder := httptest.NewRecorder()
-	NewHandler(dispatcher, WithTemplate(errorTestTmpl), WithLogFunc(func(string, ...interface{}) { logged = true }))(responseRecorder, nil)
+	NewHandler(dispatcher, withTemplate(_errorTestTmpl), WithLogFunc(func(string, ...interface{}) { logged = true }))(responseRecorder, nil)
 	require.Equal(t, http.StatusInternalServerError, responseRecorder.Code)
 	require.True(t, logged)
 }

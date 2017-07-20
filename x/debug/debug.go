@@ -31,8 +31,11 @@ import (
 )
 
 var (
-	// DefaultTmpl is the default template used.
-	DefaultTmpl = template.Must(template.New("tmpl").Parse(`
+	// DefaultLogFunc is the default logging function used when there is a rendering error.
+	DefaultLogFunc = log.Printf
+
+	// _defaultTmpl is the default template used.
+	_defaultTmpl = template.Must(template.New("tmpl").Parse(`
 <html>
 	<head>
 	<title>/debug/yarpc</title>
@@ -172,28 +175,10 @@ var (
 	</body>
 </html>
 `))
-
-	// DefaultLogFunc is the default logging function used when there is a rendering error.
-	DefaultLogFunc = log.Printf
 )
-
-// Template represents a template created from either the html/template
-// or text/template packages.
-type Template interface {
-	Execute(io.Writer, interface{}) error
-}
 
 // HandlerOption is an option for a new Handler.
 type HandlerOption func(*handler)
-
-// WithTemplate sets the template to be used for rendering.
-//
-// By default, DefaultTmpl is used.
-func WithTemplate(tmpl Template) HandlerOption {
-	return func(handler *handler) {
-		handler.tmpl = tmpl
-	}
-}
 
 // WithLogFunc set the logging function to use when there is a rendering error.
 //
@@ -213,15 +198,15 @@ func NewHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) http.Handle
 
 type handler struct {
 	dispatcher *yarpc.Dispatcher
-	tmpl       Template
 	logFunc    func(string, ...interface{})
+	tmpl       templateIface
 }
 
 func newHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) *handler {
 	handler := &handler{
 		dispatcher: dispatcher,
-		tmpl:       DefaultTmpl,
 		logFunc:    DefaultLogFunc,
+		tmpl:       _defaultTmpl,
 	}
 	for _, opt := range opts {
 		opt(handler)
@@ -253,5 +238,20 @@ func newTmplData(dispatcherStatus introspection.DispatcherStatus) *tmplData {
 			dispatcherStatus,
 		},
 		PackageVersions: yarpc.PackageVersions,
+	}
+}
+
+// templateIface represents a template created from either the html/template
+// or text/template packages.
+type templateIface interface {
+	Execute(io.Writer, interface{}) error
+}
+
+// withTemplate sets the template to be used for rendering.
+//
+// By default, _defaultTmpl is used.
+func withTemplate(tmpl templateIface) HandlerOption {
+	return func(handler *handler) {
+		handler.tmpl = tmpl
 	}
 }
