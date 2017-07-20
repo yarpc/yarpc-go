@@ -60,7 +60,7 @@ func TestHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	responseRecorder := httptest.NewRecorder()
-	NewHandler(dispatcher, Template(_jsonTestTmpl), Logger(nil))(responseRecorder, nil)
+	NewHandler(dispatcher, tmpl(_jsonTestTmpl))(responseRecorder, nil)
 
 	require.Equal(t, http.StatusOK, responseRecorder.Code)
 	data, err := ioutil.ReadAll(responseRecorder.Body)
@@ -72,7 +72,7 @@ func TestHandlerError(t *testing.T) {
 	dispatcher := newTestDispatcher()
 
 	responseRecorder := httptest.NewRecorder()
-	NewHandler(dispatcher, Template(_errorTestTmpl))(responseRecorder, nil)
+	NewHandler(dispatcher, tmpl(_errorTestTmpl))(responseRecorder, nil)
 	require.Equal(t, http.StatusInternalServerError, responseRecorder.Code)
 }
 

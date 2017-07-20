@@ -21,9 +21,9 @@
 package debug
 
 import (
+	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"runtime/debug"
 
@@ -178,11 +178,6 @@ var (
 
 // NewHandler returns a http.HandlerFunc to expose dispatcher status and package versions.
 func NewHandler(dispatcher *yarpc.Dispatcher, opts ...Option) http.HandlerFunc {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
-		}
-	}()
 	return newHandler(dispatcher, opts...).handle
 }
 
@@ -197,11 +192,17 @@ func newHandler(dispatcher *yarpc.Dispatcher, options ...Option) *handler {
 	return &handler{
 		dispatcher: dispatcher,
 		logger:     opts.logger,
-		tmpl:       opts.template,
+		tmpl:       opts.tmpl,
 	}
 }
 
 func (h *handler) handle(responseWriter http.ResponseWriter, _ *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			h.logger.Error(fmt.Sprintf("Unary handler panicked: %v\n%s", r, debug.Stack()))
+		}
+	}()
 	responseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.tmpl.Execute(responseWriter, newTmplData(h.dispatcher.Introspect())); err != nil {
 		// TODO: does this work, since we already tried a write?
