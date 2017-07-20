@@ -30,7 +30,6 @@ import (
 	"text/template"
 
 	"github.com/stretchr/testify/require"
-
 	"go.uber.org/yarpc"
 	yarpchttp "go.uber.org/yarpc/transport/http"
 )

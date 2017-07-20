@@ -21,7 +21,6 @@
 package debug
 
 import (
-	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -200,7 +199,7 @@ func (h *handler) handle(responseWriter http.ResponseWriter, _ *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
 			responseWriter.WriteHeader(http.StatusInternalServerError)
-			h.logger.Error(fmt.Sprintf("Unary handler panicked: %v\n%s", r, debug.Stack()))
+			h.logger.Error("Unary handler panicked:", zap.Any("recover", r), zap.ByteString("stacktrace", debug.Stack()))
 		}
 	}()
 	responseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
