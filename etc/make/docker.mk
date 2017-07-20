@@ -81,8 +81,9 @@ cover: deps ## run all tests and output code coverage
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make cover
 
 .PHONY: codecov
+codecov: SHELL := /bin/bash
 codecov: deps ## run code coverage and upload to coveralls
-	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make codecov
+	PATH=$$PATH:$(BIN) docker run $(shell bash <(curl -s https://codecov.io/env)) $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make codecov
 
 .PHONY: examples
 examples: deps ## run all examples tests

@@ -35,13 +35,16 @@ clean: ## remove installed binaries and artifacts
 	rm -rf $(CACHE_BASE)
 
 .PHONY: compose-codecov
+compose-codecov: SHELL := /bin/bash
 compose-codecov: $(DOCKER_COMPOSE) ## run code coverage and upload to coveralls inside docker-compose
 	$(DOCKER_COMPOSE) kill
 	$(DOCKER_COMPOSE) rm --force
-	$(DOCKER_COMPOSE) run $(DOCKER_RUN_FLAGS) gotest make codecov
+	$(DOCKER_COMPOSE) build gotest
+	$(DOCKER_COMPOSE) run $(shell bash <(curl -s https://codecov.io/env)) $(DOCKER_RUN_FLAGS) gotest make codecov
 
 .PHONY: compose-test
 compose-test: $(DOCKER_COMPOSE) ## run all tests inside docker-compose
 	$(DOCKER_COMPOSE) kill
 	$(DOCKER_COMPOSE) rm --force
+	$(DOCKER_COMPOSE) build gotest
 	$(DOCKER_COMPOSE) run $(DOCKER_RUN_FLAGS) gotest make test
