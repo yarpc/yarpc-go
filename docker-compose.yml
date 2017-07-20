@@ -142,6 +142,9 @@ services:
             condition: service_healthy
           redis:
             condition: service_healthy
+        links:
+            - redis
+            - cherami
         build:
           context: .
           dockerfile: Dockerfile.1.8
