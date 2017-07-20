@@ -68,10 +68,10 @@ for pkg in "$@"; do
 
 	args=""
 	if [[ -n "$coverpkg" ]]; then
-		args="-coverprofile $COVER/cover.${i}.out -covermode=atomic -coverpkg $coverpkg"
+		args="-coverprofile $COVER/cover.${i}.out -covermode=count -coverpkg $coverpkg"
 	fi
 
-  echo " - go test -race ${args} \"${pkg}\"" >> "${commands_file}"
+  echo " - go test ${args} \"${pkg}\"" >> "${commands_file}"
 done
 parallel-exec --fast-fail --no-log --max-concurrent-cmds 4 --dir "${DIR}" "${commands_file}" 2>&1 \
 		| grep -v 'warning: no packages being tested depend on'
