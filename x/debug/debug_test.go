@@ -60,7 +60,7 @@ func TestHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	responseRecorder := httptest.NewRecorder()
-	NewHandler(dispatcher, withTemplate(_jsonTestTmpl), WithLogFunc(nil))(responseRecorder, nil)
+	NewHandler(dispatcher, Template(_jsonTestTmpl), Logger(nil))(responseRecorder, nil)
 
 	require.Equal(t, http.StatusOK, responseRecorder.Code)
 	data, err := ioutil.ReadAll(responseRecorder.Body)
@@ -70,12 +70,10 @@ func TestHandler(t *testing.T) {
 
 func TestHandlerError(t *testing.T) {
 	dispatcher := newTestDispatcher()
-	logged := false
 
 	responseRecorder := httptest.NewRecorder()
-	NewHandler(dispatcher, withTemplate(_errorTestTmpl), WithLogFunc(func(string, ...interface{}) { logged = true }))(responseRecorder, nil)
+	NewHandler(dispatcher, Template(_errorTestTmpl))(responseRecorder, nil)
 	require.Equal(t, http.StatusInternalServerError, responseRecorder.Code)
-	require.True(t, logged)
 }
 
 func newTestDispatcher() *yarpc.Dispatcher {

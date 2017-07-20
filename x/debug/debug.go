@@ -25,15 +25,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"runtime/debug"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/zap"
 )
 
 var (
-	// DefaultLogFunc is the default logging function used when there is a rendering error.
-	DefaultLogFunc = log.Printf
-
 	// _defaultTmpl is the default template used.
 	_defaultTmpl = template.Must(template.New("tmpl").Parse(`
 <html>
@@ -177,41 +176,29 @@ var (
 `))
 )
 
-// HandlerOption is an option for a new Handler.
-type HandlerOption func(*handler)
-
-// WithLogFunc set the logging function to use when there is a rendering error.
-//
-// If set to nil, no logging will be performed.
-//
-// By default, log.Printf is used.
-func WithLogFunc(logFunc func(string, ...interface{})) HandlerOption {
-	return func(handler *handler) {
-		handler.logFunc = logFunc
-	}
-}
-
 // NewHandler returns a http.HandlerFunc to expose dispatcher status and package versions.
-func NewHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) http.HandlerFunc {
+func NewHandler(dispatcher *yarpc.Dispatcher, opts ...Option) http.HandlerFunc {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Unary handler panicked: %v\n%s", r, debug.Stack())
+		}
+	}()
 	return newHandler(dispatcher, opts...).handle
 }
 
 type handler struct {
 	dispatcher *yarpc.Dispatcher
-	logFunc    func(string, ...interface{})
+	logger     *zap.Logger
 	tmpl       templateIface
 }
 
-func newHandler(dispatcher *yarpc.Dispatcher, opts ...HandlerOption) *handler {
-	handler := &handler{
+func newHandler(dispatcher *yarpc.Dispatcher, options ...Option) *handler {
+	opts := applyOptions(options...)
+	return &handler{
 		dispatcher: dispatcher,
-		logFunc:    DefaultLogFunc,
-		tmpl:       _defaultTmpl,
+		logger:     opts.logger,
+		tmpl:       opts.template,
 	}
-	for _, opt := range opts {
-		opt(handler)
-	}
-	return handler
 }
 
 func (h *handler) handle(responseWriter http.ResponseWriter, _ *http.Request) {
@@ -219,9 +206,7 @@ func (h *handler) handle(responseWriter http.ResponseWriter, _ *http.Request) {
 	if err := h.tmpl.Execute(responseWriter, newTmplData(h.dispatcher.Introspect())); err != nil {
 		// TODO: does this work, since we already tried a write?
 		responseWriter.WriteHeader(http.StatusInternalServerError)
-		if h.logFunc != nil {
-			h.logFunc("yarpc/debug: failed executing template: %v", err)
-		}
+		h.logger.Error("yarpc/debug: failed executing template", zap.Error(err))
 	}
 }
 
@@ -245,13 +230,4 @@ func newTmplData(dispatcherStatus introspection.DispatcherStatus) *tmplData {
 // or text/template packages.
 type templateIface interface {
 	Execute(io.Writer, interface{}) error
-}
-
-// withTemplate sets the template to be used for rendering.
-//
-// By default, _defaultTmpl is used.
-func withTemplate(tmpl templateIface) HandlerOption {
-	return func(handler *handler) {
-		handler.tmpl = tmpl
-	}
 }

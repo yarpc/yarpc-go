@@ -5,7 +5,9 @@ Releases
 v1.12.0-dev (unreleased)
 -------------------
 
--   No changes yet.
+Experimental:
+
+-   x/debug: Added support for debug pages for introspection.
 
 
 v1.11.0 (2017-07-18)
