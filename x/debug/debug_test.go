@@ -29,8 +29,9 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
+
+	"github.com/stretchr/testify/require"
 	yarpchttp "go.uber.org/yarpc/transport/http"
 )
 
