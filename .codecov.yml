@@ -7,12 +7,7 @@ coverage:
   status:
     project:
       default: off
-      main:
-        target: 75%
-        flags: main
-      experimental:
-        target: 70%
-        flags: experimental
+      target: 80%
     patch: no
 
 # This list is generated using scripts/generate-cover-ignore.sh

@@ -144,6 +144,8 @@ examples: ## run all examples tests
 __eval_packages:
 ifndef PACKAGES
 	$(eval PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor))
+else
+	$(eval PACKAGES := $(shell go list $(PACKAGES)))
 endif
 
 .PHONY: __eval_go_files

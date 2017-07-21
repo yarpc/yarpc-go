@@ -21,6 +21,14 @@ mkdir -p "$COVER"
 
 ignorePkgs=""
 
+filterIgnorePkgs() {
+  if [[ -z "${ignorePkgs}" ]]; then
+    cat -
+  else
+    grep -v "${ignorePkgs}"
+  fi
+}
+
 # If a package directory has a .nocover file, don't count it when calculating
 # coverage.
 filter=""
@@ -83,6 +91,8 @@ if [[ "${CONCURRENCY}" != "1" ]]; then
       | grep -v 'warning: no packages being tested depend on'
 fi
 
+rm -f coverage.txt
+
 # Merge cross-package coverage and then split the result into main and
 # experimental coverages.
 #
@@ -90,5 +100,5 @@ fi
 gocovmerge "$COVER"/*.out \
 	| grep -v '/internal/examples/\|/internal/tests/\|/mocks/' \
 	| grep -v '/[a-z]\+test/' \
-	| grep -v "$ignorePkgs" \
-	| > coverage.txt
+	| filterIgnorePkgs \
+	> coverage.txt
