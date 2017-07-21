@@ -33,6 +33,7 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/atomic"
 	"go.uber.org/thriftrw/plugin"
 
 	"github.com/stretchr/testify/assert"
@@ -44,22 +45,46 @@ import (
 
 const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests"
 
-func serveFakePlugin(t *testing.T) string {
+type fakePluginServer struct {
+	ln      net.Listener
+	running atomic.Bool
+}
+
+func newFakePluginServer(t *testing.T) *fakePluginServer {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to set up TCP server")
 
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			require.NoError(t, err, "failed to open incoming connection")
-			handlePluginConnection(conn)
-		}
-	}()
-
-	return ln.Addr().String()
+	server := &fakePluginServer{ln: ln}
+	go server.serve(t)
+	return server
 }
 
-func handlePluginConnection(conn net.Conn) {
+func (s *fakePluginServer) Addr() string {
+	return s.ln.Addr().String()
+}
+
+func (s *fakePluginServer) Stop(t *testing.T) {
+	s.running.Store(false)
+	if err := s.ln.Close(); err != nil {
+		t.Logf("failed to stop fake plugin server: %v", err)
+	}
+}
+
+func (s *fakePluginServer) serve(t *testing.T) {
+	s.running.Store(true)
+	for s.running.Load() {
+		conn, err := s.ln.Accept()
+		if err != nil {
+			if s.running.Load() {
+				t.Logf("failed to open incoming connection: %v", err)
+			}
+			break
+		}
+		s.handle(conn)
+	}
+}
+
+func (s *fakePluginServer) handle(conn net.Conn) {
 	defer conn.Close()
 
 	// The plugin expects to close both, the reader and the writer. net.Conn
@@ -92,6 +117,8 @@ func TestCodeIsUpToDate(t *testing.T) {
 	// that TCP connection.
 	//
 	// This lets us get more accurate coverage metrics for the plugin.
+	fakePlugin := newFakePluginServer(t)
+	defer fakePlugin.Stop(t)
 	{
 		tempDir, err := ioutil.TempDir("", "current-thriftrw-plugin-yarpc")
 		require.NoError(t, err, "failed to create temporary directory: %v", err)
@@ -105,7 +132,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 
 		fakePluginPath := filepath.Join(tempDir, "thriftrw-plugin-yarpc")
 		require.NoError(t,
-			ioutil.WriteFile(fakePluginPath, callback(serveFakePlugin(t)), 0777),
+			ioutil.WriteFile(fakePluginPath, callback(fakePlugin.Addr()), 0777),
 			"failed to create thriftrw plugin script")
 	}
 
