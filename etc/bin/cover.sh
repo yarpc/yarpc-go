@@ -87,7 +87,7 @@ for pkg in "$@"; do
   fi
 done
 if [[ "${CONCURRENCY}" != "1" ]]; then
-  parallel-exec --fast-fail --no-log --max-concurrent-cmds 2 --dir "${DIR}" "${commands_file}" 2>&1 \
+  parallel-exec --fast-fail --no-log --max-concurrent-cmds ${CONCURRENCY} --dir "${DIR}" "${commands_file}" 2>&1 \
       | grep -v 'warning: no packages being tested depend on'
 fi
 
