@@ -18,7 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package debug
 
-// Version is the current version of YARPC.
-const Version = "1.13.0-dev"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+)
+
+func TestLoggerOption(t *testing.T) {
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	option := Logger(logger)
+	opts := applyOptions(option)
+	assert.Equal(t, logger, opts.logger)
+}
+
+func TestNilLoggerOption(t *testing.T) {
+	opts := applyOptions()
+	assert.NotNil(t, opts.logger)
+}

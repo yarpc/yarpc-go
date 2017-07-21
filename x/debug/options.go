@@ -18,7 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package debug
 
-// Version is the current version of YARPC.
-const Version = "1.13.0-dev"
+import "go.uber.org/zap"
+
+// Option is an interface for customizing debug handlers.
+type Option interface {
+	apply(*options)
+}
+
+type optionFunc func(*options)
+
+// opts represents the combined options supplied by the user.
+type options struct {
+	logger *zap.Logger
+	tmpl   templateIface
+}
+
+// Logger specifies the logger that should be used to log.
+// Default value is noop zap logger.
+func Logger(logger *zap.Logger) Option {
+	return optionFunc(func(opts *options) {
+		opts.logger = logger
+	})
+}
+
+// tmpl specifies the template to use.
+// It is only used for testing.
+func tmpl(tmpl templateIface) Option {
+	return optionFunc(func(opts *options) {
+		opts.tmpl = tmpl
+	})
+}
+func (f optionFunc) apply(options *options) { f(options) }
+
+// applyOptions creates new opts based on the given options.
+func applyOptions(opts ...Option) options {
+	options := options{
+		logger: zap.NewNop(),
+		tmpl:   _defaultTmpl,
+	}
+	for _, opt := range opts {
+		opt.apply(&options)
+	}
+	return options
+}
