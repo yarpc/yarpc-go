@@ -7,7 +7,6 @@ include etc/make/deps.mk
 include etc/make/local.mk
 endif
 ifndef SUPPRESS_CROSSDOCK
-include etc/make/crossdockdeps.mk
 include etc/make/crossdock.mk
 endif
 ifdef TRAVIS

@@ -6,10 +6,7 @@ ifdef DOCKER_HOST
 DOCKER_BUILD_FLAGS ?= --compress
 endif
 
-DOCKER_RUN_FLAGS ?= -e V -e RUN -e EXAMPLES_JOBS -e PACKAGES -e WITHIN_DOCKER=1
-ifneq ($(TEST_TIME_SCALE),)
-DOCKER_RUN_FLAGS += -e TEST_TIME_SCALE
-endif
+DOCKER_RUN_FLAGS ?= $(DOCKER_COMPOSE_RUN_FLAGS)
 ifneq ($(DOCKER_CPUS),)
 DOCKER_RUN_FLAGS += --cpus=$(DOCKER_CPUS)
 endif
@@ -81,8 +78,9 @@ cover: deps ## run all tests and output code coverage
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make cover
 
 .PHONY: codecov
+codecov: SHELL := /bin/bash
 codecov: deps ## run code coverage and upload to coveralls
-	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make codecov
+	PATH=$$PATH:$(BIN) docker run $(shell bash <(curl -s https://codecov.io/env)) $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make codecov
 
 .PHONY: examples
 examples: deps ## run all examples tests
