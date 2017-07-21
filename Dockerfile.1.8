@@ -2,7 +2,7 @@ FROM golang:1.8.3
 
 ENV SUPPRESS_DOCKER 1
 WORKDIR /go/src/go.uber.org/yarpc
-RUN apt-get update -yq && apt-get install -yq jq unzip
+RUN apt-get update -yq && apt-get install -yq jq unzip netcat
 ADD dockerdeps.mk /go/src/go.uber.org/yarpc/
 ADD etc/make/base.mk etc/make/deps.mk /go/src/go.uber.org/yarpc/etc/make/
 RUN make -f dockerdeps.mk predeps
