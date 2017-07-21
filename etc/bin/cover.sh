@@ -23,7 +23,7 @@ ignorePkgs=""
 
 filterIgnorePkgs() {
   if [[ -z "${ignorePkgs}" ]]; then
-    cat -
+    cat
   else
     grep -v "${ignorePkgs}"
   fi
