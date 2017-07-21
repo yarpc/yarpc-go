@@ -30,13 +30,11 @@ import (
 
 func TestNewTransportSpecOptions(t *testing.T) {
 	transportSpec, err := newTransportSpec(
-		WithInboundTracer(nil),
-		WithOutboundTracer(nil),
-		WithOutboundTracer(nil),
+		withInboundUnaryInterceptor(nil),
 	)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(transportSpec.InboundOptions))
-	require.Equal(t, 2, len(transportSpec.OutboundOptions))
+	require.Equal(t, 0, len(transportSpec.OutboundOptions))
 }
 
 func TestConfigBuildInboundOtherTransport(t *testing.T) {

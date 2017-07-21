@@ -77,9 +77,13 @@ func (i *Inbound) IsRunning() bool {
 
 // Introspect returns the state of the inbound for introspection purposes.
 func (i *Inbound) Introspect() introspection.InboundStatus {
+	stateString := ""
+	if i.transport.ch != nil {
+		stateString = i.transport.ch.State().String()
+	}
 	return introspection.InboundStatus{
 		Transport: "tchannel",
 		Endpoint:  i.transport.addr,
-		State:     i.transport.ch.State().String(),
+		State:     stateString,
 	}
 }

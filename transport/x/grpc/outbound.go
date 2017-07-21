@@ -129,14 +129,10 @@ func (o *Outbound) invoke(
 }
 
 func (o *Outbound) start() error {
-	// TODO: redial
 	clientConn, err := grpc.Dial(
 		o.address,
 		grpc.WithInsecure(),
 		grpc.WithCodec(customCodec{}),
-		// TODO: does this actually work for yarpc
-		// this needs a lot of review
-		//grpc.WithUnaryInterceptor(otgrpc.OpenTracingClientInterceptor(o.outboundOptions.getTracer())),
 		grpc.WithUserAgent(UserAgent),
 	)
 	if err != nil {
