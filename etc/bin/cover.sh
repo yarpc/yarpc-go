@@ -12,6 +12,7 @@ fi
 
 COVER=cover
 ROOT_PKG=go.uber.org/yarpc
+CONCURRENCY=1
 
 if [[ -d "$COVER" ]]; then
 	rm -rf "$COVER"
@@ -71,10 +72,16 @@ for pkg in "$@"; do
 		args="-coverprofile $COVER/cover.${i}.out -covermode=count -coverpkg $coverpkg"
 	fi
 
-  echo " - go test ${args} \"${pkg}\"" >> "${commands_file}"
+  if [[ "${CONCURRENCY}" == "1" ]]; then
+    go test ${args} "${pkg}" 2>&1 | grep -v 'warning: no packages being tested depend on'
+  else
+    echo " - go test ${args} \"${pkg}\"" >> "${commands_file}"
+  fi
 done
-parallel-exec --fast-fail --no-log --max-concurrent-cmds 2 --dir "${DIR}" "${commands_file}" 2>&1 \
-		| grep -v 'warning: no packages being tested depend on'
+if [[ "${CONCURRENCY}" != "1" ]]; then
+  parallel-exec --fast-fail --no-log --max-concurrent-cmds 2 --dir "${DIR}" "${commands_file}" 2>&1 \
+      | grep -v 'warning: no packages being tested depend on'
+fi
 
 # Merge cross-package coverage and then split the result into main and
 # experimental coverages.
