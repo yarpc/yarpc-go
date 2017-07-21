@@ -91,5 +91,4 @@ gocovmerge "$COVER"/*.out \
 	| grep -v '/internal/examples/\|/internal/tests/\|/mocks/' \
 	| grep -v '/[a-z]\+test/' \
 	| grep -v "$ignorePkgs" \
-	| tee >(grep -v /x/ > coverage.main.txt) \
-	| (echo 'mode: atomic'; grep /x/) > coverage.x.txt
+	| > coverage.txt
