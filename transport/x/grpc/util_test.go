@@ -25,9 +25,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestProcedureNameFunctions(t *testing.T) {
+func TestProcedureNameFunctionsBidirectional(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
 		ProcedureName string
@@ -65,4 +66,22 @@ func TestProcedureNameFunctions(t *testing.T) {
 			assert.Equal(t, tt.FullMethod, toFullMethod(serviceName, methodName))
 		})
 	}
+}
+
+func TestProcedureNameEmpty(t *testing.T) {
+	_, _, err := procedureNameToServiceNameMethodName("")
+	require.Error(t, err)
+	_, err = procedureNameToFullMethod("")
+	require.Error(t, err)
+}
+
+func TestToFullMethodEmptyServiceName(t *testing.T) {
+	require.Equal(t, "/__default__/foo", toFullMethod("", "foo"))
+}
+
+func TestProcedureToNameInvalidNames(t *testing.T) {
+	_, err := procedureToName("%%A", "foo")
+	require.Error(t, err)
+	_, err = procedureToName("foo", "%%A")
+	require.Error(t, err)
 }
