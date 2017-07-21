@@ -30,6 +30,11 @@ $(DOCKER_COMPOSE): $(DOCKER_COMPOSE_BIN)
 	cp $(DOCKER_COMPOSE_BIN) $(DOCKER_COMPOSE)
 	@chmod +x $(DOCKER_COMPOSE)
 
+DOCKER_COMPOSE_RUN_FLAGS ?= -e V -e RUN -e EXAMPLES_JOBS -e PACKAGES -e WITHIN_DOCKER=1
+ifneq ($(TEST_TIME_SCALE),)
+DOCKER_COMPOSE_RUN_FLAGS += -e TEST_TIME_SCALE
+endif
+
 .PHONY: clean
 clean: ## remove installed binaries and artifacts
 	rm -rf $(CACHE_BASE)
@@ -40,18 +45,18 @@ compose-codecov: $(DOCKER_COMPOSE) ## run code coverage and upload to coveralls 
 	$(DOCKER_COMPOSE) kill
 	$(DOCKER_COMPOSE) rm --force
 	$(DOCKER_COMPOSE) build gotest
-	$(DOCKER_COMPOSE) run $(shell bash <(curl -s https://codecov.io/env)) $(DOCKER_RUN_FLAGS) gotest make codecov
+	$(DOCKER_COMPOSE) run $(shell bash <(curl -s https://codecov.io/env)) $(DOCKER_COMPOSE_RUN_FLAGS) gotest make codecov
 
 .PHONY: compose-cover
 compose-cover: $(DOCKER_COMPOSE) ## run all tests and output code coverage inside docker-compose
 	$(DOCKER_COMPOSE) kill
 	$(DOCKER_COMPOSE) rm --force
 	$(DOCKER_COMPOSE) build gotest
-	$(DOCKER_COMPOSE) run $(DOCKER_RUN_FLAGS) gotest make cover
+	$(DOCKER_COMPOSE) run $(DOCKER_COMPOSE_RUN_FLAGS) gotest make cover
 
 .PHONY: compose-test
 compose-test: $(DOCKER_COMPOSE) ## run all tests inside docker-compose
 	$(DOCKER_COMPOSE) kill
 	$(DOCKER_COMPOSE) rm --force
 	$(DOCKER_COMPOSE) build gotest
-	$(DOCKER_COMPOSE) run $(DOCKER_RUN_FLAGS) gotest make test
+	$(DOCKER_COMPOSE) run $(DOCKER_COMPOSE_RUN_FLAGS) gotest make test

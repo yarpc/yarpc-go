@@ -1,15 +1,16 @@
 codecov:
   branch: dev
-
 coverage:
   range: 50...90
-
   status:
     project:
-      default: off
-      target: 80%
-    patch: no
-
+      default:
+        enabled: yes
+        target: 80%
+    patch:
+      default:
+        enabled: yes
+        target: 80%
 # This list is generated using scripts/generate-cover-ignore.sh
 # All packages with .nocover files in them MUST be listed here
 ignore:
