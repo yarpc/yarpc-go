@@ -1,5 +1,5 @@
-hash: 8d20f47cede94524a67ec67de448ea1555af62810bfe9e5b0b24969f54028a3d
-updated: 2017-07-05T16:11:08.303620637-04:00
+hash: d8c76e53354f35a645144d8de4da8a22e627f7944f94a0348936cbdf83eba602
+updated: 2017-07-21T15:57:37.105294725+02:00
 imports:
 - name: github.com/apache/thrift
   version: b2a4d4ae21c789b689dd162deb819665567f481c
@@ -23,7 +23,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  version: adab96458c51a58dc1783b3335dcce5461522e75
   subpackages:
   - spew
 - name: github.com/facebookgo/clock
@@ -31,29 +31,23 @@ imports:
 - name: github.com/gogo/protobuf
   version: 100ba4e885062801d56799d78530b73b178a78f3
   subpackages:
-  - gogoproto
   - jsonpb
   - proto
   - protoc-gen-gogo/descriptor
-  - protoc-gen-gogo/generator
   - protoc-gen-gogo/plugin
   - sortkeys
   - types
 - name: github.com/golang/mock
-  version: 93f6609a15b7de76bd49259f1f9a6b58df358936
+  version: dbe9dea30dbc5b4b6d54c9ecf9a3b8f9b8e6556c
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 6a1fa9404c0aebf36c879bc50152edcc953910d2
+  version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
   subpackages:
   - proto
   - ptypes/any
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
-- name: github.com/grpc-ecosystem/grpc-opentracing
-  version: 6c130eed1e297e1aa4d415a50c90d0c81c52677e
-  subpackages:
-  - go/otgrpc
 - name: github.com/mattn/go-shellwords
   version: 02e3cf038dcea8290e44424da473dd12be796a8a
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -82,7 +76,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 0866df4b85a18d652b6965be022d007cdf076822
+  version: 3e6a7635bac6573d43f49f97b47eb9bda195dba8
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -92,11 +86,11 @@ imports:
   subpackages:
   - xfs
 - name: github.com/sirupsen/logrus
-  version: 7dd06bf38e1e13df288d471a57d5adbac106be9e
+  version: 00386b3fbd637582f90cb17482dc3087646c0ac2
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
-  version: f6abca593680b2315d2075e0f5e2a9751e3f431a
+  version: 05e8a0eda380579888eb53c394909df027f06991
   subpackages:
   - assert
   - mock
@@ -130,7 +124,7 @@ imports:
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
-  version: 921405f1ad4348f04735f9cc7dd6cc46483daeda
+  version: d021e646f5187d77b55592c3efee1a2810e895d7
   subpackages:
   - internal/spanlog
   - log
@@ -140,7 +134,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/jaeger-lib
-  version: b9a0fa4923ad750facbd5a4b93fc6d450bc45ccc
+  version: 575c678b2873b62aaadd0fa5817a2aeb3155dc4d
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
@@ -195,7 +189,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 570fa1c91359c1869590e9cedf3b53162a51a167
+  version: ab5485076ff3407ad2d02db054635913f017b0ed
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -212,24 +206,24 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 6faef541c73732f438fb660a212750a9ba9f9362
+  version: 7a4fde3fda8ef580a89dbae8138c26041be14299
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 2bf8f2a19ec09c670e931282edfe6567f6be21c9
+  version: 836efe42bb4aa16aaa17b9c155d8813d336ed720
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: c2d03f470b3e28d9e9eb89e22c8023f2642e802c
+  version: 3da34b1b520a543128e8441cd2ffffc383111d03
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: aa2eb687b4d3e17154372564ad8d6bf11c3cf21f
+  version: b0a3dcfcd1a9bd48e63634bd8802960804cf8315
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -258,7 +252,7 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
+  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
 testImports:
 - name: github.com/golang/lint
   version: c5fb716d6688a859aae56d26d3e6070808df29f7
@@ -276,6 +270,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: f583b587b6ff1149f9a9b0c16ebdda74da44e1a2
+  version: d76157f21270516c130933e1ddb14e9fa2d0580f
   subpackages:
   - cmd/staticcheck

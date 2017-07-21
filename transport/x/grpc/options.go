@@ -20,10 +20,7 @@
 
 package grpc
 
-import (
-	"github.com/opentracing/opentracing-go"
-	"google.golang.org/grpc"
-)
+import "google.golang.org/grpc"
 
 // Option is an interface shared by TransportOption, InboundOption, and OutboundOption
 // allowing either to be recognized by TransportSpec().
@@ -50,20 +47,6 @@ type OutboundOption func(*outboundOptions)
 
 func (OutboundOption) grpcOption() {}
 
-// WithInboundTracer specifies the tracer to use for an inbound.
-func WithInboundTracer(tracer opentracing.Tracer) InboundOption {
-	return func(inboundOptions *inboundOptions) {
-		inboundOptions.tracer = tracer
-	}
-}
-
-// WithOutboundTracer specifies the tracer to use for an outbound.
-func WithOutboundTracer(tracer opentracing.Tracer) OutboundOption {
-	return func(outboundOptions *outboundOptions) {
-		outboundOptions.tracer = tracer
-	}
-}
-
 type transportOptions struct{}
 
 func newTransportOptions(options []TransportOption) *transportOptions {
@@ -75,7 +58,6 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 }
 
 type inboundOptions struct {
-	tracer           opentracing.Tracer
 	unaryInterceptor grpc.UnaryServerInterceptor
 }
 
@@ -87,13 +69,6 @@ func newInboundOptions(options []InboundOption) *inboundOptions {
 	return inboundOptions
 }
 
-func (i *inboundOptions) getTracer() opentracing.Tracer {
-	if i.tracer == nil {
-		return opentracing.GlobalTracer()
-	}
-	return i.tracer
-}
-
 // TODO: this should cover the tracer interceptor too
 // grpc-go only allows one interceptor, so need to handle all cases
 // working on this with go-grpc-middleware
@@ -101,9 +76,7 @@ func (i *inboundOptions) getUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return i.unaryInterceptor
 }
 
-type outboundOptions struct {
-	tracer opentracing.Tracer
-}
+type outboundOptions struct{}
 
 func newOutboundOptions(options []OutboundOption) *outboundOptions {
 	outboundOptions := &outboundOptions{}
@@ -111,13 +84,6 @@ func newOutboundOptions(options []OutboundOption) *outboundOptions {
 		option(outboundOptions)
 	}
 	return outboundOptions
-}
-
-func (o *outboundOptions) getTracer() opentracing.Tracer {
-	if o.tracer == nil {
-		return opentracing.GlobalTracer()
-	}
-	return o.tracer
 }
 
 // for testing only for now
