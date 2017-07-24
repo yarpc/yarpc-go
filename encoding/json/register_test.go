@@ -76,6 +76,12 @@ func TestWrapUnaryHandlerInvalid(t *testing.T) {
 				return nil, nil
 			},
 		},
+		{
+			"second-return-value-not-error",
+			func(context.Context, *struct{}) (*struct{}, *struct{}) {
+				return nil, nil
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -18,7 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package protobuf
 
-// Version is the current version of YARPC.
-const Version = "1.13.0-dev"
+import (
+	"bytes"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
+)
+
+func TestUnhandledEncoding(t *testing.T) {
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.ErrorCode(unmarshal(transport.Encoding("foo"), bytes.NewReader([]byte("foo")), nil)))
+	_, _, err := marshal(transport.Encoding("foo"), nil)
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.ErrorCode(err))
+}

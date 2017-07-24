@@ -129,14 +129,12 @@ test: $(THRIFTRW) __eval_packages ## run all tests
 .PHONY: cover
 cover: $(THRIFTRW) $(GOCOVMERGE) $(PARALLEL_EXEC) $(COVER) __eval_packages ## run all tests and output code coverage
 	PATH=$(BIN):$$PATH ./etc/bin/cover.sh $(PACKAGES)
-	go tool cover -html=coverage.main.txt -o cover.main.html
-	go tool cover -html=coverage.x.txt -o cover.x.html
+	go tool cover -html=coverage.txt -o cover.html
 
 .PHONY: codecov
 codecov: SHELL := /bin/bash
 codecov: cover ## run code coverage and upload to codecov.io
-	bash <(curl -s https://codecov.io/bash) -c -f coverage.main.txt -F main
-	bash <(curl -s https://codecov.io/bash) -c -f coverage.x.txt -F experimental
+	bash <(curl -s https://codecov.io/bash) -c -f coverage.txt
 
 .PHONY: examples
 examples: ## run all examples tests
@@ -146,6 +144,8 @@ examples: ## run all examples tests
 __eval_packages:
 ifndef PACKAGES
 	$(eval PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor))
+else
+	$(eval PACKAGES := $(shell go list $(PACKAGES)))
 endif
 
 .PHONY: __eval_go_files

@@ -12,6 +12,7 @@ fi
 
 COVER=cover
 ROOT_PKG=go.uber.org/yarpc
+CONCURRENCY=1
 
 if [[ -d "$COVER" ]]; then
 	rm -rf "$COVER"
@@ -19,6 +20,14 @@ fi
 mkdir -p "$COVER"
 
 ignorePkgs=""
+
+filterIgnorePkgs() {
+  if [[ -z "${ignorePkgs}" ]]; then
+    cat
+  else
+    grep -v "${ignorePkgs}"
+  fi
+}
 
 # If a package directory has a .nocover file, don't count it when calculating
 # coverage.
@@ -68,13 +77,21 @@ for pkg in "$@"; do
 
 	args=""
 	if [[ -n "$coverpkg" ]]; then
-		args="-coverprofile $COVER/cover.${i}.out -covermode=atomic -coverpkg $coverpkg"
+		args="-coverprofile $COVER/cover.${i}.out -covermode=count -coverpkg $coverpkg"
 	fi
 
-  echo " - go test -race ${args} \"${pkg}\"" >> "${commands_file}"
+  if [[ "${CONCURRENCY}" == "1" ]]; then
+    go test ${args} "${pkg}" 2>&1 | grep -v 'warning: no packages being tested depend on'
+  else
+    echo " - go test ${args} \"${pkg}\"" >> "${commands_file}"
+  fi
 done
-parallel-exec --fast-fail --no-log --max-concurrent-cmds 4 --dir "${DIR}" "${commands_file}" 2>&1 \
-		| grep -v 'warning: no packages being tested depend on'
+if [[ "${CONCURRENCY}" != "1" ]]; then
+  parallel-exec --fast-fail --no-log --max-concurrent-cmds ${CONCURRENCY} --dir "${DIR}" "${commands_file}" 2>&1 \
+      | grep -v 'warning: no packages being tested depend on'
+fi
+
+rm -f coverage.txt
 
 # Merge cross-package coverage and then split the result into main and
 # experimental coverages.
@@ -83,6 +100,5 @@ parallel-exec --fast-fail --no-log --max-concurrent-cmds 4 --dir "${DIR}" "${com
 gocovmerge "$COVER"/*.out \
 	| grep -v '/internal/examples/\|/internal/tests/\|/mocks/' \
 	| grep -v '/[a-z]\+test/' \
-	| grep -v "$ignorePkgs" \
-	| tee >(grep -v /x/ > coverage.main.txt) \
-	| (echo 'mode: atomic'; grep /x/) > coverage.x.txt
+	| filterIgnorePkgs \
+	> coverage.txt
