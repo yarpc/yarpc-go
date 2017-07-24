@@ -30,8 +30,6 @@
 //
 //   go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
 //
-// Generated clients are compatible with YARPC's yarpc.InjectClients function.
-//
 // To generate YARPC compatible code from a Protobuf file:
 //
 //   protoc --gogoslick_out=. --yarpc-go_out=. foo.proto
