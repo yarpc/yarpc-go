@@ -79,4 +79,8 @@
 //   type BazYARPCServer interface {
 //     Fire(context.Context, *FireRequest) error
 //   }
+//
+// Except for any ClientOptions (such as UseJSON), the types and functions
+// defined in this package should not be directly used in applications,
+// instead use the code generated from protoc-gen-yarpc-go.
 package protobuf
