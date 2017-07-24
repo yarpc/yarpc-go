@@ -21,7 +21,7 @@
 // Package protobuf implements Protocol Buffers encoding support for YARPC.
 //
 // To use this package, you must have protoc installed, as well as the
-// golang protoc plugin from either github.com/golang/protobuf or
+// Golang protoc plugin from either github.com/golang/protobuf or
 // github.com/gogo/protobuf. We recommend github.com/gogo/protobuf.
 //
 //   go get github.com/gogo/protobuf/protoc-gen-gogoslick
@@ -33,4 +33,54 @@
 // To generate YARPC compatible code from a Protobuf file:
 //
 //   protoc --gogoslick_out=. --yarpc-go_out=. foo.proto
+//
+// The Golang protoc plugin will generate the Golang types in foo.pb.go,
+// while the YARPC plugin will generate the YARPC types in foo.pb.yarpc.go.
+//
+// The client interface for a service named Bar will be generated with
+// the name BarYARPCClient, and can be instantiated with a
+// transport.ClientConfig.
+//
+//   barClient := foo.NewBarYARPCClient(dispatcher.ClientConfig("myservice")
+//
+// The server interface will be generated with the name BarYARPCServer. This
+// is the interace that should be implemented on the server-side. Procedures
+// can be constructed from an implementation of BarYARPCServer using the
+// BuildBarYARPCPRocedures method.
+//
+//   dispatcher.Register(foo.BuildBarYARPCProdedures(barServer))
+//
+// Two Procedures are created for every rpc method for a Protobuf service,
+// one that will handle the standard Protobuf binary encoding, and one that
+// will handle the JSON encoding, as proto3 defines a mapping to JSON.
+// The dispatcher will switch as to switch procedure to use based on the
+// Encoding value on a transport.Request.
+//
+// Oneway methods are supported as well. To use, define your rpc
+// method to return the uber.yarpc.Oneway type defined in
+// go.uber.org/yarpc/yarpcproto/yarpc.proto.
+//
+//   syntax = "proto3;
+//
+//   import "go.uber.org/yarpc/yarpcproto/yarpc.proto";
+//
+//   package foo;
+//
+//   message FireRequest {}
+//
+//   service Baz {
+//     rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
+//   }
+//
+// Corresponding BazYARPCClient and BazYARPCServer interfaces will be generated.
+//
+//   type BazYARPCClient interface {
+//     Fire(context.Context, *FireRequest, ...yarpc.CallOption) (yarpc.Ack, error)
+//   }
+//
+//   type BazYARPCServer interface {
+//     Fire(context.Context, *FireRequest) error
+//   }
+//
+// Generated clients are compatible with YARPC's yarpc.InjectClients function.
 package protobuf
