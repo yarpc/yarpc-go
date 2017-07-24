@@ -26,11 +26,11 @@
 //
 //   go get github.com/gogo/protobuf/protoc-gen-gogoslick
 //
-// You must also install the Protobuf plugin for YARPC.
+// You must also install the Protobuf plugin for YARPC:
 //
 //   go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
 //
-// To generate YARPC compatible code from a Protobuf file:
+// To generate YARPC compatible code from a Protobuf file, use the command:
 //
 //   protoc --gogoslick_out=. --yarpc-go_out=. foo.proto
 //
@@ -41,22 +41,20 @@
 // the name BarYARPCClient, and can be instantiated with a
 // transport.ClientConfig.
 //
-//   barClient := foo.NewBarYARPCClient(dispatcher.ClientConfig("myservice")
+//   barClient := foo.NewBarYARPCClient(dispatcher.ClientConfig("myservice"))
 //
 // The server interface will be generated with the name BarYARPCServer. This
-// is the interace that should be implemented on the server-side. Procedures
+// is the interface that should be implemented on the server-side. Procedures
 // can be constructed from an implementation of BarYARPCServer using the
-// BuildBarYARPCPRocedures method.
+// BuildBarYARPCProcedures method.
 //
-//   dispatcher.Register(foo.BuildBarYARPCProdedures(barServer))
+//   dispatcher.Register(foo.BuildBarYARPCProcedures(barServer))
 //
-// Two Procedures are created for every rpc method for a Protobuf service,
-// one that will handle the standard Protobuf binary encoding, and one that
-// will handle the JSON encoding, as proto3 defines a mapping to JSON.
-// The dispatcher will switch as to switch procedure to use based on the
-// Encoding value on a transport.Request.
+// Proto3 defines a mapping to JSON, so for every RPC method, two Procedures
+// are created for every RPC method: one that will handle the standard Protobuf
+// binary encoding, and one that will handle the JSON encoding.
 //
-// Oneway methods are supported as well. To use, define your rpc
+// Oneway methods are supported as well. To use, define your RPC
 // method to return the uber.yarpc.Oneway type defined in
 // go.uber.org/yarpc/yarpcproto/yarpc.proto.
 //
