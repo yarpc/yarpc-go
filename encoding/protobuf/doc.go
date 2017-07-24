@@ -81,6 +81,4 @@
 //   type BazYARPCServer interface {
 //     Fire(context.Context, *FireRequest) error
 //   }
-//
-// Generated clients are compatible with YARPC's yarpc.InjectClients function.
 package protobuf
