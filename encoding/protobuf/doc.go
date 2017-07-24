@@ -28,7 +28,9 @@
 //
 // You must also install the Protobuf plugin for YARPC.
 //
-//   go get go.uber.org/yarpc/encoding/protoc-gen-yarpc-go
+//   go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
+//
+// Generated clients are compatible with YARPC's yarpc.InjectClients function.
 //
 // To generate YARPC compatible code from a Protobuf file:
 //
