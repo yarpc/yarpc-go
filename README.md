@@ -1,4 +1,4 @@
-# yarpc [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card]][report-card]
+# yarpc [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card-img]][report-card]
 
 A message passing platform for Go that:
 
@@ -32,10 +32,14 @@ APIs can break at any time. The intention here is to iterate closely with intern
 customers validate and mature the contained APIs. Once stable, their contents will be moved out of
 the containing `x` package and their APIs will be locked.
 
-[doc-img]: https://godoc.org/go.uber.org/yarpc?status.svg
+[doc-img]: http://img.shields.io/badge/GoDoc-Reference-blue.svg
 [doc]: https://godoc.org/go.uber.org/yarpc
-[ci-img]: https://travis-ci.org/yarpc/yarpc-go.svg?branch=master
+
+[ci-img]: https://img.shields.io/travis/yarpc/yarpc-go.svg
+[ci]: https://travis-ci.org/yarpc/yarpc-go/branches
+
 [cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev/graph/badge.svg
-[ci]: https://travis-ci.org/yarpc/yarpc-go
-[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/master
-[report-card]: https://goreportcard.com/badge/go.uber.org/yarpc
+[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev
+
+[report-card-img]: https://goreportcard.com/badge/go.uber.org/yarpc
+[report-card]: https://goreportcard.com/report/go.uber.org/yarpc
