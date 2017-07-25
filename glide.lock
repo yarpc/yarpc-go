@@ -86,11 +86,8 @@ imports:
   subpackages:
   - xfs
 - name: github.com/sirupsen/logrus
-<<<<<<< HEAD
   version: 8d4f6a97d3fe8725a31e3185c7a877a5e1dc6f09
-=======
-  version: 3eef8ce63d02f65d2da43214faf7bb19b0b2bb7a
->>>>>>> Address abg's comments
+  version: 8d4f6a97d3fe8725a31e3185c7a877a5e1dc6f09
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
