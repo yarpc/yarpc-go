@@ -33,9 +33,19 @@ const fxTemplate = `
 <$pkgname := printf "%sfx" (lower .Name)>
 package <$pkgname>
 
-<$yarpc  := import "go.uber.org/yarpc">
+<$transport := import "go.uber.org/yarpc/api/transport">
 <$thrift := import "go.uber.org/yarpc/encoding/thrift">
 <$client := import .ClientPackagePath>
+
+// Params defines the dependencies for yarpc.
+type Params struct{
+	ClientConfigProvider <$transport>.ClientConfigProvider
+}
+
+// Result defines the object yarpc provides.
+type Result struct{
+	Client  <$client>.Interface
+}
 
 // Client provides a <.Name> client to an Fx application using the given name
 // for routing.
@@ -45,9 +55,12 @@ package <$pkgname>
 // 		newHandler,
 // 	)
 func Client(name string, opts ...<$thrift>.ClientOption) interface{} {
-	return func(d *<$yarpc>.Dispatcher) <$client>.Interface {
-		return <$client>.New(d.ClientConfig(name), opts...)
-	}
+	return func(p Params) Result {
+		client := <$client>.New(p.ClientConfigProvider.ClientConfig(name), opts...)
+		return Result {
+			Client: client,
+			}
+		}
 }
 `
 

@@ -24,10 +24,20 @@
 package hellofx
 
 import (
-	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloclient"
 )
+
+// Params defines the dependencies for yarpc.
+type Params struct {
+	ClientConfigProvider transport.ClientConfigProvider
+}
+
+// Result defines the object yarpc provides.
+type Result struct {
+	Client helloclient.Interface
+}
 
 // Client provides a Hello client to an Fx application using the given name
 // for routing.
@@ -37,7 +47,10 @@ import (
 // 		newHandler,
 // 	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
-	return func(d *yarpc.Dispatcher) helloclient.Interface {
-		return helloclient.New(d.ClientConfig(name), opts...)
+	return func(p Params) Result {
+		client := helloclient.New(p.ClientConfigProvider.ClientConfig(name), opts...)
+		return Result{
+			Client: client,
+		}
 	}
 }
