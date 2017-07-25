@@ -27,6 +27,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
+	reflect "reflect"
 )
 
 // MockUnaryHandler is a mock of UnaryHandler interface
@@ -61,7 +62,7 @@ func (_m *MockUnaryHandler) Handle(_param0 context.Context, _param1 *transport.R
 
 // Handle indicates an expected call of Handle
 func (_mr *MockUnaryHandlerMockRecorder) Handle(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Handle", arg0, arg1, arg2)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Handle", reflect.TypeOf((*MockUnaryHandler)(nil).Handle), arg0, arg1, arg2)
 }
 
 // MockOnewayHandler is a mock of OnewayHandler interface
@@ -96,5 +97,5 @@ func (_m *MockOnewayHandler) HandleOneway(_param0 context.Context, _param1 *tran
 
 // HandleOneway indicates an expected call of HandleOneway
 func (_mr *MockOnewayHandlerMockRecorder) HandleOneway(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "HandleOneway", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "HandleOneway", reflect.TypeOf((*MockOnewayHandler)(nil).HandleOneway), arg0, arg1)
 }

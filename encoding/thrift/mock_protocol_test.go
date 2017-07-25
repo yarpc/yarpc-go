@@ -27,6 +27,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	wire "go.uber.org/thriftrw/wire"
 	io "io"
+	reflect "reflect"
 )
 
 // MockProtocol is a mock of Protocol interface
@@ -61,7 +62,7 @@ func (_m *MockProtocol) Encode(v wire.Value, w io.Writer) error {
 
 // Encode indicates an expected call of Encode
 func (_mr *MockProtocolMockRecorder) Encode(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Encode", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Encode", reflect.TypeOf((*MockProtocol)(nil).Encode), arg0, arg1)
 }
 
 // EncodeEnveloped mocks base method
@@ -73,7 +74,7 @@ func (_m *MockProtocol) EncodeEnveloped(e wire.Envelope, w io.Writer) error {
 
 // EncodeEnveloped indicates an expected call of EncodeEnveloped
 func (_mr *MockProtocolMockRecorder) EncodeEnveloped(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "EncodeEnveloped", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "EncodeEnveloped", reflect.TypeOf((*MockProtocol)(nil).EncodeEnveloped), arg0, arg1)
 }
 
 // Decode mocks base method
@@ -86,7 +87,7 @@ func (_m *MockProtocol) Decode(r io.ReaderAt, t wire.Type) (wire.Value, error) {
 
 // Decode indicates an expected call of Decode
 func (_mr *MockProtocolMockRecorder) Decode(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Decode", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Decode", reflect.TypeOf((*MockProtocol)(nil).Decode), arg0, arg1)
 }
 
 // DecodeEnveloped mocks base method
@@ -99,5 +100,5 @@ func (_m *MockProtocol) DecodeEnveloped(r io.ReaderAt) (wire.Envelope, error) {
 
 // DecodeEnveloped indicates an expected call of DecodeEnveloped
 func (_mr *MockProtocolMockRecorder) DecodeEnveloped(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "DecodeEnveloped", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "DecodeEnveloped", reflect.TypeOf((*MockProtocol)(nil).DecodeEnveloped), arg0)
 }
