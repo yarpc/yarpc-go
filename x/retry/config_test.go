@@ -282,7 +282,7 @@ func TestConfig(t *testing.T) {
 				default: fakepolicy
 			`,
 			wantError: []string{
-				`invalid default retry policy: "fakepolicy", possiblities are:`,
+				`invalid default retry policy: "fakepolicy", possibilities are:`,
 				`realpolicy`,
 			},
 		},
@@ -303,7 +303,7 @@ func TestConfig(t *testing.T) {
 					  with: fakepolicy
 			`,
 			wantError: []string{
-				`invalid retry policy: "fakepolicy", possiblities are:`,
+				`invalid retry policy: "fakepolicy", possibilities are:`,
 				`realpolicy`,
 			},
 		},
@@ -323,7 +323,7 @@ func TestConfig(t *testing.T) {
 					- service: myservice
 			`,
 			wantError: []string{
-				`invalid retry policy: "", possiblities are:`,
+				`invalid retry policy: "", possibilities are:`,
 				`realpolicy`,
 			},
 		},

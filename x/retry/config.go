@@ -129,14 +129,14 @@ func (cfg MiddlewareConfig) getPolicyProvider(nameToPolicy map[string]*Policy) (
 		if defaultPol, ok := nameToPolicy[cfg.Default]; ok {
 			policyProvider.SetDefault(defaultPol)
 		} else {
-			errs = multierr.Append(errs, fmt.Errorf("invalid default retry policy: %q, possiblities are: %v", cfg.Default, policyNames(nameToPolicy)))
+			errs = multierr.Append(errs, fmt.Errorf("invalid default retry policy: %q, possibilities are: %v", cfg.Default, policyNames(nameToPolicy)))
 		}
 	}
 
 	for _, override := range cfg.PolicyOverrides {
 		pol, ok := nameToPolicy[override.WithPolicy]
 		if !ok {
-			errs = multierr.Append(errs, fmt.Errorf("invalid retry policy: %q, possiblities are: %v", override.WithPolicy, policyNames(nameToPolicy)))
+			errs = multierr.Append(errs, fmt.Errorf("invalid retry policy: %q, possibilities are: %v", override.WithPolicy, policyNames(nameToPolicy)))
 			continue
 		}
 

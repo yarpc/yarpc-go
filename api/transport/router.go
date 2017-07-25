@@ -37,7 +37,7 @@ type Procedure struct {
 	// Service or empty to use the default service name.
 	Service string
 
-	// HandlerSpec specifiying which handler and rpc type.
+	// HandlerSpec specifying which handler and rpc type.
 	HandlerSpec HandlerSpec
 
 	// Encoding of the handler (optional) used for introspection and routing

@@ -149,7 +149,7 @@ func (t *Throttle) Throttle() bool {
 		// Next time through the loop, the time will be farther into the future
 		// and our chance to allow a request may have expired.
 		// We do not advance `now` to reduce the probability of spinning in
-		// this loop, prefering to throttle if we repeatedly lose the race.
+		// this loop, preferring to throttle if we repeatedly lose the race.
 
 		// Coverage over the next line reveals that tests exercise contention.
 		_ = struct{}{}

@@ -26,7 +26,7 @@ not guaranteed to stay here.
 
 This was HEAVILY adapted from github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway.
 
-Eventually, a rewrite of this to be simplier for what we need would be nice, but this was
+Eventually, a rewrite of this to be simpler for what we need would be nice, but this was
 available to get us here, especially with handling go imports.
 
 Note that "FQMN", "FQSN", etc stand for "Fully Qualified Message Name",
