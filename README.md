@@ -2,15 +2,15 @@
 
 A message passing platform for Go that:
 
-* Supports multiple binary encodings like Thrift and Protocol Buffers.
+* Supports multiple encodings like JSON, Thrift, and Protocol Buffers.
 * Enables multi-transport services with support for HTTP/1.1, gRPC, and TChannel.
 * Allows messages to be sent directly and through queues like Redis and Cherami.
 
 High-level features are implemented *above the wire*, enabling:
 
-* Exposing a server over multiple transports simultaneously
-* Migrating outbound calls between transports with no code changes using config
-* Shipping a set of middleware that work regardless of encoding or transport
+* Exposing a server over multiple transports simultaneously.
+* Migrating outbound calls between transports with no code changes using config.
+* Shipping a set of middleware that work regardless of encoding or transport.
 
 ## Installation
 
