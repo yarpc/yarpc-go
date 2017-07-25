@@ -39,7 +39,7 @@ package <$pkgname>
 <$fx := import "go.uber.org/fx">
 
 // Params defines the dependencies for <.Name> client.
-type Params struct{
+type Params struct {
 	<$fx>.In
 
 	Provider <$transport>.ClientConfigProvider
