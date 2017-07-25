@@ -4,18 +4,23 @@
 package extendemptyfx
 
 import (
+	"go.uber.org/fx"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendemptyclient"
 )
 
-// Params defines the dependencies for yarpc.
+// Params defines the dependencies for ExtendEmpty client.
 type Params struct {
-	ClientConfigProvider transport.ClientConfigProvider
+	fx.In
+
+	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object yarpc provides.
+// Result defines the object ExtendEmpty client provides.
 type Result struct {
+	fx.Out
+
 	Client extendemptyclient.Interface
 }
 
@@ -28,9 +33,7 @@ type Result struct {
 // 	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
 	return func(p Params) Result {
-		client := extendemptyclient.New(p.ClientConfigProvider.ClientConfig(name), opts...)
-		return Result{
-			Client: client,
-		}
+		client := extendemptyclient.New(p.Provider.ClientConfig(name), opts...)
+		return Result{Client: client}
 	}
 }

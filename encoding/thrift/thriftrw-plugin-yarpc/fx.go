@@ -36,15 +36,20 @@ package <$pkgname>
 <$transport := import "go.uber.org/yarpc/api/transport">
 <$thrift := import "go.uber.org/yarpc/encoding/thrift">
 <$client := import .ClientPackagePath>
+<$fx := import "go.uber.org/fx">
 
-// Params defines the dependencies for yarpc.
+// Params defines the dependencies for <.Name> client.
 type Params struct{
-	ClientConfigProvider <$transport>.ClientConfigProvider
+	<$fx>.In
+
+	Provider <$transport>.ClientConfigProvider
 }
 
-// Result defines the object yarpc provides.
-type Result struct{
-	Client  <$client>.Interface
+// Result defines the object <.Name> client provides.
+type Result struct {
+	<$fx>.Out
+
+	Client <$client>.Interface
 }
 
 // Client provides a <.Name> client to an Fx application using the given name
@@ -56,11 +61,9 @@ type Result struct{
 // 	)
 func Client(name string, opts ...<$thrift>.ClientOption) interface{} {
 	return func(p Params) Result {
-		client := <$client>.New(p.ClientConfigProvider.ClientConfig(name), opts...)
-		return Result {
-			Client: client,
-			}
-		}
+		client := <$client>.New(p.Provider.ClientConfig(name), opts...)
+		return Result { Client: client }
+	}
 }
 `
 
