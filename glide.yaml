@@ -28,8 +28,6 @@ import:
   version: ^1
 - package: github.com/stretchr/testify
   version: master
-- package: go.uber.org/fx
-  version: master
 - package: github.com/uber/cherami-client-go
   version: '>=1, <3'
 - package: github.com/uber/jaeger-client-go
@@ -78,6 +76,8 @@ testImport:
   subpackages:
   - parallel-exec
   - update-license
+- package: go.uber.org/fx
+  version: master
 - package: honnef.co/go/tools
   subpackages:
   - cmd/staticcheck
