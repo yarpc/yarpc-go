@@ -39,8 +39,11 @@ func TestFxClient(t *testing.T) {
 	})
 
 	assert.NotPanics(t, func() {
-		f := storefx.Client("store").(func(*yarpc.Dispatcher) storeclient.Interface)
-		f(d)
+		p := storefx.Params{
+			ClientConfigProvider: d,
+		}
+		f := storefx.Client("store").(func(storefx.Params) storefx.Result) //.(func(*yarpc.Dispatcher) storeclient.Interface)
+		f(p)
 	}, "failed to build client")
 
 	assert.Panics(t, func() {

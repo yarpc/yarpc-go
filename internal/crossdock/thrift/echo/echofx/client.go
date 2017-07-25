@@ -24,10 +24,20 @@
 package echofx
 
 import (
-	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 )
+
+// Params defines the dependencies for yarpc.
+type Params struct {
+	ClientConfigProvider transport.ClientConfigProvider
+}
+
+// Result defines the object yarpc provides.
+type Result struct {
+	Client echoclient.Interface
+}
 
 // Client provides a Echo client to an Fx application using the given name
 // for routing.
@@ -37,7 +47,10 @@ import (
 // 		newHandler,
 // 	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
-	return func(d *yarpc.Dispatcher) echoclient.Interface {
-		return echoclient.New(d.ClientConfig(name), opts...)
+	return func(p Params) Result {
+		client := echoclient.New(p.ClientConfigProvider.ClientConfig(name), opts...)
+		return Result{
+			Client: client,
+		}
 	}
 }
