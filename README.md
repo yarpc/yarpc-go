@@ -34,8 +34,8 @@ the containing `x` package and their APIs will be locked.
 
 [doc-img]: https://godoc.org/go.uber.org/yarpc?status.svg
 [doc]: https://godoc.org/go.uber.org/yarpc
-[ci-img]: https://travis-ci.org/yarpc/yarpc-go.svg?branch=dev
+[ci-img]: https://travis-ci.org/yarpc/yarpc-go.svg?branch=master
 [cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev/graph/badge.svg
 [ci]: https://travis-ci.org/yarpc/yarpc-go
-[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev
+[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/master
 [report-card]: https://goreportcard.com/badge/go.uber.org/yarpc
