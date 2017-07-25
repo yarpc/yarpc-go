@@ -1,4 +1,4 @@
-# yarpc [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card-img]][report-card]
+# yarpc [![GoDoc][doc-img]][doc] [![GitHub release][release-img][release]] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card-img]][report-card]
 
 A message passing platform for Go that:
 
@@ -34,6 +34,9 @@ the containing `x` package and their APIs will be locked.
 
 [doc-img]: http://img.shields.io/badge/GoDoc-Reference-blue.svg
 [doc]: https://godoc.org/go.uber.org/yarpc
+
+[release-img]: https://img.shields.io/github/release/yarpc/yarpc-go.svg
+[release]: https://github.com/yarpc/yarpc-go/releases
 
 [ci-img]: https://img.shields.io/travis/yarpc/yarpc-go.svg
 [ci]: https://travis-ci.org/yarpc/yarpc-go/branches
