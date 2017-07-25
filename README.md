@@ -3,7 +3,7 @@
 A message passing platform for Go that:
 
 * Supports multiple encodings like JSON, [Thrift](https://thrift.apache.org/), and [Protocol Buffers](https://developers.google.com/protocol-buffers/).
-* Enables multi-transport services with support for [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/docs/guides/wire.html), and [TChannel](https://github.com/uber/tchannel).
+* Enables multiple transports like [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/docs/guides/wire.html), and [TChannel](https://github.com/uber/tchannel).
 * Allows messages to be sent directly and through queues like Redis and Cherami.
 
 High-level features are implemented *above the wire*, enabling:
