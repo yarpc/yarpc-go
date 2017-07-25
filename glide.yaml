@@ -77,7 +77,6 @@ testImport:
   - parallel-exec
   - update-license
 - package: go.uber.org/fx
-  version: master
 - package: honnef.co/go/tools
   subpackages:
   - cmd/staticcheck
