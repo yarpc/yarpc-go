@@ -25,6 +25,7 @@ package redistest
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 	time "time"
 )
 
@@ -61,7 +62,7 @@ func (_m *MockClient) BRPopLPush(_param0 string, _param1 string, _param2 time.Du
 
 // BRPopLPush indicates an expected call of BRPopLPush
 func (_mr *MockClientMockRecorder) BRPopLPush(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "BRPopLPush", arg0, arg1, arg2)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "BRPopLPush", reflect.TypeOf((*MockClient)(nil).BRPopLPush), arg0, arg1, arg2)
 }
 
 // ConnectionState mocks base method
@@ -73,7 +74,7 @@ func (_m *MockClient) ConnectionState() string {
 
 // ConnectionState indicates an expected call of ConnectionState
 func (_mr *MockClientMockRecorder) ConnectionState() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "ConnectionState")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "ConnectionState", reflect.TypeOf((*MockClient)(nil).ConnectionState))
 }
 
 // Endpoint mocks base method
@@ -85,7 +86,7 @@ func (_m *MockClient) Endpoint() string {
 
 // Endpoint indicates an expected call of Endpoint
 func (_mr *MockClientMockRecorder) Endpoint() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Endpoint")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Endpoint", reflect.TypeOf((*MockClient)(nil).Endpoint))
 }
 
 // IsRunning mocks base method
@@ -97,7 +98,7 @@ func (_m *MockClient) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (_mr *MockClientMockRecorder) IsRunning() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsRunning", reflect.TypeOf((*MockClient)(nil).IsRunning))
 }
 
 // LPush mocks base method
@@ -109,7 +110,7 @@ func (_m *MockClient) LPush(_param0 string, _param1 []byte) error {
 
 // LPush indicates an expected call of LPush
 func (_mr *MockClientMockRecorder) LPush(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "LPush", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "LPush", reflect.TypeOf((*MockClient)(nil).LPush), arg0, arg1)
 }
 
 // LRem mocks base method
@@ -121,7 +122,7 @@ func (_m *MockClient) LRem(_param0 string, _param1 []byte) error {
 
 // LRem indicates an expected call of LRem
 func (_mr *MockClientMockRecorder) LRem(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "LRem", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "LRem", reflect.TypeOf((*MockClient)(nil).LRem), arg0, arg1)
 }
 
 // Start mocks base method
@@ -133,7 +134,7 @@ func (_m *MockClient) Start() error {
 
 // Start indicates an expected call of Start
 func (_mr *MockClientMockRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Start", reflect.TypeOf((*MockClient)(nil).Start))
 }
 
 // Stop mocks base method
@@ -145,5 +146,5 @@ func (_m *MockClient) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (_mr *MockClientMockRecorder) Stop() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Stop", reflect.TypeOf((*MockClient)(nil).Stop))
 }

@@ -27,6 +27,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
+	reflect "reflect"
 )
 
 // MockRouter is a mock of Router interface
@@ -62,7 +63,7 @@ func (_m *MockRouter) Choose(_param0 context.Context, _param1 *transport.Request
 
 // Choose indicates an expected call of Choose
 func (_mr *MockRouterMockRecorder) Choose(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Choose", arg0, arg1, arg2)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Choose", reflect.TypeOf((*MockRouter)(nil).Choose), arg0, arg1, arg2)
 }
 
 // Procedures mocks base method
@@ -74,5 +75,5 @@ func (_m *MockRouter) Procedures(_param0 transport.Router) []transport.Procedure
 
 // Procedures indicates an expected call of Procedures
 func (_mr *MockRouterMockRecorder) Procedures(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Procedures", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Procedures", reflect.TypeOf((*MockRouter)(nil).Procedures), arg0)
 }

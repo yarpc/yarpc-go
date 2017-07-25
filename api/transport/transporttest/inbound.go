@@ -26,6 +26,7 @@ package transporttest
 import (
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
+	reflect "reflect"
 )
 
 // MockInbound is a mock of Inbound interface
@@ -60,7 +61,7 @@ func (_m *MockInbound) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (_mr *MockInboundMockRecorder) IsRunning() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsRunning", reflect.TypeOf((*MockInbound)(nil).IsRunning))
 }
 
 // SetRouter mocks base method
@@ -70,7 +71,7 @@ func (_m *MockInbound) SetRouter(_param0 transport.Router) {
 
 // SetRouter indicates an expected call of SetRouter
 func (_mr *MockInboundMockRecorder) SetRouter(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetRouter", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "SetRouter", reflect.TypeOf((*MockInbound)(nil).SetRouter), arg0)
 }
 
 // Start mocks base method
@@ -82,7 +83,7 @@ func (_m *MockInbound) Start() error {
 
 // Start indicates an expected call of Start
 func (_mr *MockInboundMockRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Start", reflect.TypeOf((*MockInbound)(nil).Start))
 }
 
 // Stop mocks base method
@@ -94,7 +95,7 @@ func (_m *MockInbound) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (_mr *MockInboundMockRecorder) Stop() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Stop", reflect.TypeOf((*MockInbound)(nil).Stop))
 }
 
 // Transports mocks base method
@@ -106,5 +107,5 @@ func (_m *MockInbound) Transports() []transport.Transport {
 
 // Transports indicates an expected call of Transports
 func (_mr *MockInboundMockRecorder) Transports() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Transports")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Transports", reflect.TypeOf((*MockInbound)(nil).Transports))
 }

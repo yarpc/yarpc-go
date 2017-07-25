@@ -25,6 +25,7 @@ package transporttest
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockTransport is a mock of Transport interface
@@ -59,7 +60,7 @@ func (_m *MockTransport) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (_mr *MockTransportMockRecorder) IsRunning() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsRunning", reflect.TypeOf((*MockTransport)(nil).IsRunning))
 }
 
 // Start mocks base method
@@ -71,7 +72,7 @@ func (_m *MockTransport) Start() error {
 
 // Start indicates an expected call of Start
 func (_mr *MockTransportMockRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Start", reflect.TypeOf((*MockTransport)(nil).Start))
 }
 
 // Stop mocks base method
@@ -83,5 +84,5 @@ func (_m *MockTransport) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (_mr *MockTransportMockRecorder) Stop() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Stop", reflect.TypeOf((*MockTransport)(nil).Stop))
 }

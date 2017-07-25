@@ -27,6 +27,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
+	reflect "reflect"
 )
 
 // MockRouter is a mock of Router interface
@@ -62,7 +63,7 @@ func (_m *MockRouter) Choose(_param0 context.Context, _param1 *transport.Request
 
 // Choose indicates an expected call of Choose
 func (_mr *MockRouterMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Choose", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Choose", reflect.TypeOf((*MockRouter)(nil).Choose), arg0, arg1)
 }
 
 // Procedures mocks base method
@@ -74,7 +75,7 @@ func (_m *MockRouter) Procedures() []transport.Procedure {
 
 // Procedures indicates an expected call of Procedures
 func (_mr *MockRouterMockRecorder) Procedures() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Procedures")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Procedures", reflect.TypeOf((*MockRouter)(nil).Procedures))
 }
 
 // MockRouteTable is a mock of RouteTable interface
@@ -110,7 +111,7 @@ func (_m *MockRouteTable) Choose(_param0 context.Context, _param1 *transport.Req
 
 // Choose indicates an expected call of Choose
 func (_mr *MockRouteTableMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Choose", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Choose", reflect.TypeOf((*MockRouteTable)(nil).Choose), arg0, arg1)
 }
 
 // Procedures mocks base method
@@ -122,7 +123,7 @@ func (_m *MockRouteTable) Procedures() []transport.Procedure {
 
 // Procedures indicates an expected call of Procedures
 func (_mr *MockRouteTableMockRecorder) Procedures() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Procedures")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Procedures", reflect.TypeOf((*MockRouteTable)(nil).Procedures))
 }
 
 // Register mocks base method
@@ -132,5 +133,5 @@ func (_m *MockRouteTable) Register(_param0 []transport.Procedure) {
 
 // Register indicates an expected call of Register
 func (_mr *MockRouteTableMockRecorder) Register(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Register", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Register", reflect.TypeOf((*MockRouteTable)(nil).Register), arg0)
 }
