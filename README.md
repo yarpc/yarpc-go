@@ -18,14 +18,10 @@ High-level features are implemented *above the wire*, enabling:
 go get -u go.uber.org/yarpc
 ```
 
-If using [Glide](https://github.com/Masterminds/glide), *at least* `glide
-version 0.12.3` is required to install:
+We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](https://github.com/Masterminds/glide):
 
 ```
-$ glide --version
-glide version 0.12.3
-
-$ glide get 'go.uber.org/yarpc#^1'
+glide get 'go.uber.org/yarpc#^1'
 ```
 
 ## Stability: Stable
