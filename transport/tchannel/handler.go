@@ -36,7 +36,7 @@ import (
 	ncontext "golang.org/x/net/context"
 )
 
-// inboundCall provides an interface similiar tchannel.InboundCall.
+// inboundCall provides an interface similar tchannel.InboundCall.
 //
 // We use it instead of *tchannel.InboundCall because tchannel.InboundCall is
 // not an interface, so we have little control over its behavior in tests.

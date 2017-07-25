@@ -39,7 +39,7 @@ var _pool = sync.Pool{
 
 // Copy copies bytes from the Reader to the Writer until the Reader is exhausted.
 func Copy(dst io.Writer, src io.Reader) (int64, error) {
-	// To avoid unecessary memory allocations we maintain our own pool of
+	// To avoid unnecessary memory allocations we maintain our own pool of
 	// buffers.
 	buf := _pool.Get().(*buffer)
 	written, err := io.CopyBuffer(dst, src, buf.b)

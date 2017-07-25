@@ -35,7 +35,7 @@ var (
 )
 
 // ExponentialOption defines options that can be applied to an
-// exponential backoff stragety
+// exponential backoff strategy
 type ExponentialOption func(*exponentialOptions)
 
 // exponentialOptions are the configuration options for an exponential backoff
