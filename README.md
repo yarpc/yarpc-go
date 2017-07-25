@@ -10,7 +10,7 @@ High-level features are implemented *above the wire*, enabling:
 
 * Exposing a server over multiple transports simultaneously.
 * Migrating outbound calls between transports with no code changes using config.
-* Middleware that work even as encodings and transports vary.
+* Middleware that work even as the encoding and transport vary.
 
 ## Installation
 
