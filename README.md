@@ -28,9 +28,9 @@ No breaking changes will be made to exported APIs before `v2.0.0` with the
 **exception of experimental packages**.
 
 Experimental packages reside within packages named `x`, and are *not stable*. This means their
-APIs can break at any time. The purpose of these packages is to incubate new features.
-These packages are vetted with internal customers, and are moved out of
-the `x` package when stable, at which point their public APIs will be locked.
+APIs can break at any time. The intention here is to iterate closely with internal
+customers validate and mature the contained APIs. Once stable, their contents will be moved out of
+the containing `x` package and their APIs will be locked.
 
 [doc-img]: https://godoc.org/go.uber.org/yarpc?status.svg
 [doc]: https://godoc.org/go.uber.org/yarpc
