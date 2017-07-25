@@ -25,7 +25,7 @@ glide get 'go.uber.org/yarpc#^1'
 This library is `v1` and follows [SemVer](http://semver.org/) strictly.
 
 No breaking changes will be made to exported APIs before `v2.0.0` with the
-**exception of expiremental packages**.
+**exception of experimental packages**.
 
 Experimental packages reside within packages named `x`, and are *not stable*. This means their
 APIs can break at any time. The purpose of these packages is to incubate new features.
