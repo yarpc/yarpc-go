@@ -32,6 +32,8 @@ import (
 
 // Params defines the dependencies for SecondService client.
 type Params struct {
+	fx.In
+
 	Provider transport.ClientConfigProvider
 }
 
