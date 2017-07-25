@@ -9,8 +9,8 @@ A message passing platform for Go that:
 High-level features are implemented *above the wire*, enabling:
 
 * Exposing a server over multiple transports simultaneously.
-* Migrating outbound calls between transports with no code changes using config.
-* Middleware that work even as the encoding and transport vary.
+* Migrating outbound calls between transports with just config changes.
+* Middlewares that work even as the encoding and transport vary.
 
 ## Installation
 
@@ -28,8 +28,8 @@ No breaking changes will be made to exported APIs before `v2.0.0` with the
 **exception of experimental packages**.
 
 Experimental packages reside within packages named `x`, and are *not stable*. This means their
-APIs can break at any time. The intention here is to iterate closely with internal
-customers validate and mature the contained APIs. Once stable, their contents will be moved out of
+APIs can break at any time. The intention here is to validate these APIs and iterate on them
+by working closely with internal customers. Once stable, their contents will be moved out of
 the containing `x` package and their APIs will be locked.
 
 [doc-img]: http://img.shields.io/badge/GoDoc-Reference-blue.svg
