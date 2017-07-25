@@ -1,4 +1,4 @@
-# yarpc [![GoDoc][doc-img]][doc] [![GitHub release][release-img]][release]] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card-img]][report-card]
+# yarpc [![GoDoc][doc-img]][doc] [![GitHub release][release-img]][release] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card-img]][report-card]
 
 A message passing platform for Go that:
 
