@@ -7,12 +7,7 @@ language: go
 go_import_path: go.uber.org/yarpc
 env:
   global:
-    - XDG_CACHE_HOME=$HOME/.cache
     - TEST_TIME_SCALE=5
-cache:
-  directories:
-    - $XDG_CACHE_HOME/yarpc-go
-    - $HOME/.glide
 matrix:
   include:
     - env: CI_TYPES='compose-codecov' SUPPRESS_CROSSDOCK=1
