@@ -40,7 +40,7 @@ func TestFxClient(t *testing.T) {
 
 	assert.NotPanics(t, func() {
 		p := storefx.Params{
-			ClientConfigProvider: d,
+			Provider: d,
 		}
 		f := storefx.Client("store").(func(storefx.Params) storefx.Result) //.(func(*yarpc.Dispatcher) storeclient.Interface)
 		f(p)

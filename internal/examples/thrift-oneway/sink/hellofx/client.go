@@ -24,18 +24,23 @@
 package hellofx
 
 import (
+	"go.uber.org/fx"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloclient"
 )
 
-// Params defines the dependencies for yarpc.
+// Params defines the dependencies for Hello client.
 type Params struct {
-	ClientConfigProvider transport.ClientConfigProvider
+	fx.In
+
+	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object yarpc provides.
+// Result defines the object Hello client provides.
 type Result struct {
+	fx.Out
+
 	Client helloclient.Interface
 }
 
@@ -48,9 +53,7 @@ type Result struct {
 // 	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
 	return func(p Params) Result {
-		client := helloclient.New(p.ClientConfigProvider.ClientConfig(name), opts...)
-		return Result{
-			Client: client,
-		}
+		client := helloclient.New(p.Provider.ClientConfig(name), opts...)
+		return Result{Client: client}
 	}
 }
