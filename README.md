@@ -1,10 +1,10 @@
-# yarpc[![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+# YARPC [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 
-YARPC is a message passing platform for Go that:
+A message passing platform for Go that:
 
-* Supports multiple binary encodings like Thrift & Protocol Buffers.
+* Supports multiple binary encodings like Thrift and Protocol Buffers.
 * Enables multi-transport services with support for HTTP/1.1, gRPC, and TChannel.
-* Allows messages to be sent directly and through queues like Redis & Cherami.
+* Allows messages to be sent directly and through queues like Redis and Cherami.
 
 High-level features are implemented *above the wire*, enabling:
 
@@ -30,7 +30,7 @@ $ glide get 'go.uber.org/yarpc#^1'
 
 ## Stability: Stable
 
-This library follows [semver](http://semver.org/) strictly.
+This library follows [SemVer](http://semver.org/) strictly.
 
 No breaking changes will be made to exported APIs before `v2.0.0` with the
 exception of expiremental packages.
