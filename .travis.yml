@@ -5,6 +5,10 @@ services:
   - docker
 language: go
 go_import_path: go.uber.org/yarpc
+branches:
+  only:
+    - master
+    - dev
 env:
   global:
     - TEST_TIME_SCALE=5
