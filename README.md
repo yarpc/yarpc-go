@@ -20,9 +20,11 @@ We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](ht
 glide get 'go.uber.org/yarpc#^1'
 ```
 
-## Stability: Stable
+## Stability
 
-This library follows [SemVer](http://semver.org/) strictly. No breaking changes will be made to exported APIs before `v2.0.0` with the
+This library is `v1` and follows [SemVer](http://semver.org/) strictly.
+
+No breaking changes will be made to exported APIs before `v2.0.0` with the
 **exception of expiremental packages**.
 
 Experimental packages reside within packages named `x`, and are *not stable*. This means their
