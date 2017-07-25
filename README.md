@@ -1,9 +1,9 @@
-# `go.uber.org/yarpc`[![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+# yarpc[![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
 
 YARPC is a message passing platform for Go that:
 
 * Supports multiple binary encodings like Thrift & Protocol Buffers.
-* Enables multi-transport services with support for HTTP/1.1, HTTP/2(application/grpc), and TChannel.
+* Enables multi-transport services with support for HTTP/1.1, gRPC, and TChannel.
 * Allows messages to be sent directly and through queues like Redis & Cherami.
 
 High-level features are implemented *above the wire*, enabling:
