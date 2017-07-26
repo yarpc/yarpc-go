@@ -30,14 +30,14 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoclient"
 )
 
-// Params defines the dependencies for Echo client.
+// Params defines the dependencies for the Echo client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object Echo client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

@@ -30,14 +30,14 @@ import (
 	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient"
 )
 
-// Params defines the dependencies for KeyValue client.
+// Params defines the dependencies for the KeyValue client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object KeyValue client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

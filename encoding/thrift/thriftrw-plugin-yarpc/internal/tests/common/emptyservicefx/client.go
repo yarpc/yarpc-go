@@ -10,14 +10,14 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/emptyserviceclient"
 )
 
-// Params defines the dependencies for EmptyService client.
+// Params defines the dependencies for the EmptyService client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object EmptyService client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

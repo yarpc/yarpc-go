@@ -30,14 +30,14 @@ import (
 	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloclient"
 )
 
-// Params defines the dependencies for Hello client.
+// Params defines the dependencies for the Hello client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object Hello client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 
