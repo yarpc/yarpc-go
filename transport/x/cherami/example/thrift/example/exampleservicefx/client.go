@@ -30,14 +30,14 @@ import (
 	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example/exampleserviceclient"
 )
 
-// Params defines the dependencies for ExampleService client.
+// Params defines the dependencies for the ExampleService client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object ExampleService client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

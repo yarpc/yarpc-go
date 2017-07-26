@@ -30,14 +30,14 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestclient"
 )
 
-// Params defines the dependencies for ThriftTest client.
+// Params defines the dependencies for the ThriftTest client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object ThriftTest client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

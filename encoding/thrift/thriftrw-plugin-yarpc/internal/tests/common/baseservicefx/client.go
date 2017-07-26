@@ -10,14 +10,14 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/baseserviceclient"
 )
 
-// Params defines the dependencies for BaseService client.
+// Params defines the dependencies for the BaseService client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object BaseService client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

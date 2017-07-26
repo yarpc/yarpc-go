@@ -10,14 +10,14 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
 )
 
-// Params defines the dependencies for Store client.
+// Params defines the dependencies for the Store client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object Store client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

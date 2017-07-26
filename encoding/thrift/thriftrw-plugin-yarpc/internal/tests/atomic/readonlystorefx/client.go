@@ -10,14 +10,14 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreclient"
 )
 
-// Params defines the dependencies for ReadOnlyStore client.
+// Params defines the dependencies for the ReadOnlyStore client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object ReadOnlyStore client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

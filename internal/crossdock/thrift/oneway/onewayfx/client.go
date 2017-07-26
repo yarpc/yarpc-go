@@ -30,14 +30,14 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/oneway/onewayclient"
 )
 
-// Params defines the dependencies for Oneway client.
+// Params defines the dependencies for the Oneway client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object Oneway client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 

@@ -30,14 +30,14 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceclient"
 )
 
-// Params defines the dependencies for SecondService client.
+// Params defines the dependencies for the SecondService client.
 type Params struct {
 	fx.In
 
 	Provider transport.ClientConfigProvider
 }
 
-// Result defines the object SecondService client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	fx.Out
 
