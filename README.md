@@ -39,13 +39,13 @@ the containing `x` package and their APIs will be locked.
 [release]: https://github.com/yarpc/yarpc-go/releases
 
 [mit-img]: http://img.shields.io/badge/License-MIT-blue.svg
-[mit]: https://github.com/yarpc/yarpc-go/blob/dev/LICENSE
+[mit]: https://github.com/yarpc/yarpc-go/blob/master/LICENSE
 
 [ci-img]: https://img.shields.io/travis/yarpc/yarpc-go/master.svg
 [ci]: https://travis-ci.org/yarpc/yarpc-go/branches
 
-[cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev/graph/badge.svg
-[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev
+[cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/yarpc/yarpc-go/branch/master
 
 [report-card-img]: https://goreportcard.com/badge/go.uber.org/yarpc
 [report-card]: https://goreportcard.com/report/go.uber.org/yarpc
