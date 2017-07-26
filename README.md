@@ -5,7 +5,6 @@ A message passing platform for Go that lets you:
 * Write servers and clients in multiple encodings, including [JSON](http://www.json.org/), [Thrift](https://thrift.apache.org/), and [Protocol Buffers](https://developers.google.com/protocol-buffers/).
 * Expose servers over many transports simultaneously, including [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
 * Migrate outbound calls between transports without any code changes using config.
-* Author uniform middleware that work even as the encoding and transport varies.
 
 ## Installation
 
