@@ -41,7 +41,7 @@ the containing `x` package and their APIs will be locked.
 [mit-img]: http://img.shields.io/badge/License-MIT-blue.svg
 [mit]: https://github.com/yarpc/yarpc-go/blob/dev/LICENSE
 
-[ci-img]: https://img.shields.io/travis/yarpc/yarpc-go.svg
+[ci-img]: https://img.shields.io/travis/yarpc/yarpc-go/master.svg
 [ci]: https://travis-ci.org/yarpc/yarpc-go/branches
 
 [cov-img]: https://codecov.io/gh/yarpc/yarpc-go/branch/dev/graph/badge.svg
