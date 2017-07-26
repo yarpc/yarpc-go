@@ -1,16 +1,10 @@
 # yarpc [![GoDoc][doc-img]][doc] [![GitHub release][release-img]][release] [![Mit License][mit-img]][mit] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][report-card-img]][report-card]
 
-A message passing platform for Go that:
+A message passing platform for Go that lets you:
 
-* Supports multiple encodings like [JSON](http://www.json.org/), [Thrift](https://thrift.apache.org/), and [Protocol Buffers](https://developers.google.com/protocol-buffers/).
-* Supports multiple transports like [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
-* Allows messages to be sent directly and through queues like [Redis](https://redis.io/) and [Cherami](https://eng.uber.com/cherami/).
-
-High-level features are implemented *above the wire*, enabling:
-
-* Exposing a server over multiple transports simultaneously.
-* Migrating outbound calls between transports with just config changes.
-* Middlewares that work even as the encoding and transport vary.
+* Write servers and clients with various encodings, including [JSON](http://www.json.org/), [Thrift](https://thrift.apache.org/), and [Protobuf](https://developers.google.com/protocol-buffers/).
+* Expose servers over many transports simultaneously, including [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
+* Migrate outbound calls between transports without any code changes using config.
 
 ## Installation
 
