@@ -38,14 +38,14 @@ package <$pkgname>
 <$client := import .ClientPackagePath>
 <$fx := import "go.uber.org/fx">
 
-// Params defines the dependencies for <.Name> client.
+// Params defines the dependencies for the <.Name> client.
 type Params struct {
 	<$fx>.In
 
 	Provider <$transport>.ClientConfigProvider
 }
 
-// Result defines the object <.Name> client provides.
+// Result defines the output of this Fx module.
 type Result struct {
 	<$fx>.Out
 
@@ -62,7 +62,7 @@ type Result struct {
 func Client(name string, opts ...<$thrift>.ClientOption) interface{} {
 	return func(p Params) Result {
 		client := <$client>.New(p.Provider.ClientConfig(name), opts...)
-		return Result { Client: client }
+		return Result{Client: client}
 	}
 }
 `
