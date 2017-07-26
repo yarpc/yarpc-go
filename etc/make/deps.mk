@@ -21,15 +21,17 @@ EXTRA_GO_BIN_DEPS = \
 GLIDE_VERSION := 0.12.3
 THRIFT_VERSION := 1.0.0-dev
 PROTOC_VERSION := 3.3.0
-RAGEL_VERSION := 6.10
+RAGEL_VERSION := 0.1.0
 
 GLIDE_OS := $(UNAME_OS)
 THRIFT_OS := $(UNAME_OS)
 PROTOC_OS := $(UNAME_OS)
+RAGEL_OS := $(UNAME_OS)
 
 GLIDE_ARCH := $(UNAME_ARCH)
 THRIFT_ARCH := $(UNAME_ARCH)
 PROTOC_ARCH := $(UNAME_ARCH)
+RAGEL_ARCH := $(UNAME_ARCH)
 
 ifeq ($(UNAME_OS),Darwin)
 GLIDE_OS := darwin
@@ -53,22 +55,20 @@ PROTOC_LIB = $(LIB)/protoc-$(PROTOC_VERSION)
 PROTOC_ZIP = $(PROTOC_LIB)/protoc.zip
 PROTOC = $(BIN)/protoc
 RAGEL_LIB = $(LIB)/ragel-$(RAGEL_VERSION)
-RAGEL_TAR = $(RAGEL_LIB)/ragel.tar.gz
+RAGEL_BIN = $(RAGEL_LIB)/ragel
 RAGEL = $(BIN)/ragel
 
 GEN_BINS = $(THRIFT) $(PROTOC) $(RAGEL)
 EXTRA_BINS = $(GLIDE)
 
-$(RAGEL_TAR):
+$(RAGEL_BIN):
 	@mkdir -p $(RAGEL_LIB)
-	curl -L "https://www.colm.net/files/ragel/ragel-$(RAGEL_VERSION).tar.gz" > $(RAGEL_TAR)
+	curl -L "https://github.com/yarpc/ragel/releases/download/v$(RAGEL_VERSION)/ragel-$(RAGEL_OS)-$(RAGEL_ARCH)" > $(RAGEL_BIN)
 
-$(RAGEL): $(RAGEL_TAR)
+$(RAGEL): $(RAGEL_BIN)
 	@mkdir -p $(BIN)
-	cd $(RAGEL_LIB); tar xzf $(RAGEL_TAR)
-	cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); ./configure --prefix=$(RAGEL_LIB) --disable-manual
-	cd $(RAGEL_LIB)/ragel-$(RAGEL_VERSION); make install
-	cp $(RAGEL_LIB)/bin/ragel $(RAGEL)
+	cp $(RAGEL_BIN) $(RAGEL)
+	@chmod +x $(RAGEL)
 
 $(GLIDE_TAR):
 	@mkdir -p $(GLIDE_LIB)
