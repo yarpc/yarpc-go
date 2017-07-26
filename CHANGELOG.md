@@ -1,10 +1,11 @@
 Releases
 ========
 
-
-v1.13.0-dev (unreleased)
+v1.12.1 (2017-07-26)
 -------------------
 
+- Fixed issue with github.com/apache/thrift by pinning to version 0.9.3
+  due to breaking change https://issues.apache.org/jira/browse/THRIFT-4261.
 
 v1.12.0 (2017-07-20)
 -------------------
