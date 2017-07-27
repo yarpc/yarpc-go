@@ -6,15 +6,6 @@ A message passing platform for Go that lets you:
 * Expose servers over many transports simultaneously, including [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
 * Migrate outbound calls between transports without any code changes using config.
 
-## Getting Started
-
-1. Installation
-2. Introduction
-3. Basic Usage
-4. Production Essentials
-5. Advanced Usage
-6. Extending YARPC
-
 ## Installation
 
 We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](https://github.com/Masterminds/glide):
@@ -22,6 +13,18 @@ We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](ht
 ```
 glide get 'go.uber.org/yarpc#^1'
 ```
+
+## Getting Started
+
+1. Introduction
+    * Understanding YARPC's architecture
+    * RPC Types: Unary, Oneway, and Streaming
+    * Choosing Transports
+    * Glossary and Terms
+2. Basic Usage
+3. Production Essentials
+4. Advanced Usage
+6. Extending YARPC
 
 ## Stability
 
