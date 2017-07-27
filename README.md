@@ -22,8 +22,8 @@ Explore working code in the [examples](internal/examples) package, or read the f
 | :---- | :------- |
 | [Introduction](.docs/introduction.md) | The problem area, key concepts, and important vocabulary. |
 | [Getting Started](.docs/first-services.md) | Writing basic services using the **HTTP** transport and **Raw** encoding. |
-| [Headers & Baggage](.docs/headers-and-baggage.md) | Propagating metadata between services. |
 | [Adding Structure](.docs/json-encoding.md) | Loosely structured messages using the **JSON** encoding. |
+| [Headers & Baggage](.docs/headers-and-baggage.md) | Propagating metadata between services. |
 | [Middleware](.docs/middleware.md) | Shipping features across services, procedures, encodings, and transports. |
 | [Errors](.docs/errors.md) | Understanding server and application errors. |
 | [Binary Encodings](.docs/binary-encodings.md) | Strictly structured messages using the **Thrift** and **Protobuf** encodings. |
