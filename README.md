@@ -6,19 +6,6 @@ A message passing platform for Go that lets you:
 * Expose servers over many transports simultaneously, including [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
 * Migrate outbound calls between transports without any code changes using config.
 
-Explore working code in the [examples](internal/examples) package, or read the following guides:
-
-| Guide | Description |
-| :---- | :------- |
-| [Installation](.docs/installation.md) | Glide and SemVer |
-| [Introduction](.docs/introduction.md) | Concepts and Vocabulary |
-| [Getting Started](.docs/first-services.md) | Your First Services |
-| [Adding Structure](.docs/json-encoding.md) | Using the JSON Encoding |
-| [Understanding Errors](.docs/errors.md) | |
-| [Middleware](.docs/middleware.md) | |
-| [Binary Encodings](.docs/binary-encodings.md) | Thrift and Protobuf |
-| [Configuring Transports](.docs/transports.md) | Configuring how messages get passed |
-
 ## Stability
 
 This library is `v1` and follows [SemVer](http://semver.org/) strictly.
@@ -30,6 +17,28 @@ Experimental packages reside within packages named `x`, and are *not stable*. Th
 APIs can break at any time. The intention here is to validate these APIs and iterate on them
 by working closely with internal customers. Once stable, their contents will be moved out of
 the containing `x` package and their APIs will be locked.
+
+## Installation
+
+We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](https://github.com/Masterminds/glide):
+
+```
+glide get 'go.uber.org/yarpc#^1'
+```
+
+## Usage
+
+Explore working code in the [examples](internal/examples) package, or read the following guides:
+
+| Guide | Description |
+| :---- | :------- |
+| [Introduction](.docs/introduction.md) | Concepts and Vocabulary |
+| [Getting Started](.docs/first-services.md) | Your First Services |
+| [Adding Structure](.docs/json-encoding.md) | Using the JSON Encoding |
+| [Understanding Errors](.docs/errors.md) | |
+| [Middleware](.docs/middleware.md) | |
+| [Binary Encodings](.docs/binary-encodings.md) | Thrift and Protobuf |
+| [Configuring Transports](.docs/transports.md) | Configuring how messages get passed |
 
 [doc-img]: http://img.shields.io/badge/GoDoc-Reference-blue.svg
 [doc]: https://godoc.org/go.uber.org/yarpc
