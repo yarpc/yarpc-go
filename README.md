@@ -20,15 +20,15 @@ Explore working code in the [examples](internal/examples) package, or read the f
 
 | Material | Topics |
 | :---- | :------- |
-| [Introduction](.docs/introduction.md) | The problem area, key concepts, and important vocabulary |
-| [Getting Started](.docs/first-services.md) | Writing basic services using the **HTTP** transport and **Raw** encoding |
-| [Adding Structure](.docs/json-encoding.md) | Loosely structured messages using the **JSON** encoding |
-| [Middleware](.docs/middleware.md) | Shipping features across services, procedures, encodings, and transports |
-| [Errors](.docs/errors.md) | Understanding server and application errors |
-| [Binary Encodings](.docs/binary-encodings.md) | Strictly structured messages using the **Thrift** and **Protobuf** encodings |
-| [Configuring Transports](.docs/transports.md) | Supporting additional wire formats with the **gRPC** and **TChannel** transports |
-| [Custom Encodings](.docs/custom-encodings.md) | Exploring new serialization formats with a custom encoding |
-| [Custom Transports](.docs/custom-transports.md) | Exposing new wire formats without any code changes |
+| [Introduction](.docs/introduction.md) | The problem area, key concepts, and important vocabulary. |
+| [Getting Started](.docs/first-services.md) | Writing basic services using the **HTTP** transport and **Raw** encoding. |
+| [Adding Structure](.docs/json-encoding.md) | Loosely structured messages using the **JSON** encoding. |
+| [Middleware](.docs/middleware.md) | Shipping features across services, procedures, encodings, and transports. |
+| [Errors](.docs/errors.md) | Understanding server and application errors. |
+| [Binary Encodings](.docs/binary-encodings.md) | Strictly structured messages using the **Thrift** and **Protobuf** encodings. |
+| [Configuring Transports](.docs/transports.md) | Supporting additional wire formats with the **gRPC** and **TChannel** transports. |
+| [Custom Encodings](.docs/custom-encodings.md) | Exploring new serialization formats with a custom encoding. |
+| [Custom Transports](.docs/custom-transports.md) | Exposing new wire formats without any code changes. |
 
 ## Stability
 
