@@ -20,13 +20,15 @@ Explore working code in the [examples](internal/examples) package, or read the f
 
 | Guide | Description |
 | :---- | :------- |
-| [Introduction](.docs/introduction.md) | Concepts and Vocabulary |
-| [Getting Started](.docs/first-services.md) | Your First Services |
-| [Adding Structure](.docs/json-encoding.md) | Using the JSON Encoding |
-| [Understanding Errors](.docs/errors.md) | |
-| [Middleware](.docs/middleware.md) | |
+| [Introduction](.docs/introduction.md) | Problem area, concepts, and vocabulary |
+| [Getting Started](.docs/first-services.md) | Write your first services using the Raw encoding and HTTP transport |
+| [Adding Structure](.docs/json-encoding.md) | Using the JSON encoding to send loosely structured messages |
+| [Middleware](.docs/middleware.md) | Shipping features across services and procedures |
+| [Errors](.docs/errors.md) | Understanding server and application errors |
 | [Binary Encodings](.docs/binary-encodings.md) | Thrift and Protobuf |
-| [Configuring Transports](.docs/transports.md) | Configuring how messages get passed |
+| [Configuring Transports](.docs/transports.md) | gRPC and TChannel |
+| [Custom Encodings](.docs/custom-encodings.md) | Writing a 3rd party encoding |
+| [Custom Transports](.docs/custom-transports.md) | Writing a 3rd party transport |
 
 ## Stability
 
