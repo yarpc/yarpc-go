@@ -18,15 +18,15 @@ glide get 'go.uber.org/yarpc#^1'
 
 Explore working code in the [examples](internal/examples) package, or read the following guides:
 
-| Guide | Description |
+| Material | Topics |
 | :---- | :------- |
-| [Introduction](.docs/introduction.md) | Problem area, concepts, and vocabulary |
-| [Getting Started](.docs/first-services.md) | Write your first services using the Raw encoding and HTTP transport |
-| [Adding Structure](.docs/json-encoding.md) | Using the JSON encoding to send loosely structured messages |
-| [Middleware](.docs/middleware.md) | Shipping features across services and procedures |
+| [Introduction](.docs/introduction.md) | The problem area, key concepts, and important vocabulary |
+| [Getting Started](.docs/first-services.md) | Writing basic services using the **HTTP** transport and **Raw** encoding |
+| [Adding Structure](.docs/json-encoding.md) | Loosely structured messages using the **JSON** encoding |
+| [Middleware](.docs/middleware.md) | Shipping features across services, procedures, encodings, and transports |
 | [Errors](.docs/errors.md) | Understanding server and application errors |
-| [Binary Encodings](.docs/binary-encodings.md) | Thrift and Protobuf |
-| [Configuring Transports](.docs/transports.md) | gRPC and TChannel |
+| [Binary Encodings](.docs/binary-encodings.md) | Strictly structured messages using the **Thrift** and **Protobuf** encodings |
+| [Configuring Transports](.docs/transports.md) | Supporting additional wire formats with the **gRPC** and **TChannel** transports |
 | [Custom Encodings](.docs/custom-encodings.md) | Writing a 3rd party encoding |
 | [Custom Transports](.docs/custom-transports.md) | Writing a 3rd party transport |
 
