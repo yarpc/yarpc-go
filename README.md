@@ -11,13 +11,13 @@ A message passing platform for Go that lets you:
 To understand how to use YARPC, read the following guides:
 
 1. [Installation](.docs/installation.md)
-2. [Introduction - Concepts and Vocabulary](.docs/introduction.md)
-3. [Getting Started - HTTP+raw services](.docs/first-services.md)
-4. [Adding Structure - Using the JSON Encoding](.docs/json-encoding.md)
+2. [Introduction](.docs/introduction.md) - Concepts and Vocabulary
+3. [Getting Started](.docs/first-services.md) - Your First Services
+4. [Adding Structure](.docs/json-encoding.md) - Using the JSON Encoding
 5. [Understanding Errors](.docs/errors.md)
 6. [Middleware](.docs/middleware.md)
-7. [Binary Encodings - ThriftRW and Protobuf](.docs/binary-encodings.md)
-8. [Transports - Configuring *how* messages get passed](.docs/transports.md)
+7. [Binary Encodings](.docs/binary-encodings.md) - Thrift and Protobuf
+8. [Configuring Transports](.docs/transports.md) - Configuring how messages get passed
 
 Additionally, working code can be found in the [examples](internal/examples) package.
 
