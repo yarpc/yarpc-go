@@ -6,35 +6,18 @@ A message passing platform for Go that lets you:
 * Expose servers over many transports simultaneously, including [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
 * Migrate outbound calls between transports without any code changes using config.
 
-## Getting Started
+## Usage
 
-1. [Introduction](.docs/intro.md)
-    * Installation
-    * Understanding YARPC's architecture
-    * RPC Types: Unary, Oneway, and Streaming
-    * Choosing Transports
-    * Glossary and Terms
-2. [Basic Usage](.docs/basic-usage.md)
-    * Implementing and testing handlers
-    * Configuring inbound transports
-    * Using Yab to call handlers
-    * Writing and testing outbound calls
-    * Configuring outbound transports
-    * Available Transports
-3. [Production Essentials](.docs/prod-essentials.md)
-    * Understanding Errors
-    * Graceful Shutdown
-    * Introspection and Debug Pages
-    * Tracing and Metrics
-    * Retries and Circuit Breaking
-    * Rate Limiting and SLAs
-4. [Advanced Usage](.docs/advanced-usage.md)
-    * Middleware
-    * Proxies
-6. [Extending YARPC](.docs/extending-yarpc.md)
-    * Composing Outbounds
-    * Authoring Custom Transports
-    * Creating a Custom Encoding
+1. [Installation](.docs/installation.md)
+* [Introduction - Concepts and Vocabulary](.docs/introduction.md)
+* [Getting Started - HTTP+raw services](.docs/first-services.md)
+* [Adding Structure - Using the JSON Encoding](.docs/json-encoding.md)
+* [Understanding Errors](.docs/errors.md)
+* [Middleware](.docs/middleware.md)
+* [Binary Encodings - ThriftRW and Protobuf](.docs/binary-encodings.md)
+* [Transports - Configuring *how* messages get passed](.docs/transports.md)
+
+Additionally, working code is available in the [examples](internal/examples) package.
 
 ## Stability
 
