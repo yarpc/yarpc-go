@@ -16,7 +16,7 @@ glide get 'go.uber.org/yarpc#^1'
 
 ## Getting Started
 
-1. Introduction
+1. [Introduction](.docs/intro.md)
     * Understanding YARPC's architecture
     * RPC Types: Unary, Oneway, and Streaming
     * Choosing Transports
