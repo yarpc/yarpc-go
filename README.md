@@ -6,25 +6,35 @@ A message passing platform for Go that lets you:
 * Expose servers over many transports simultaneously, including [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
 * Migrate outbound calls between transports without any code changes using config.
 
-## Installation
-
-We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](https://github.com/Masterminds/glide):
-
-```
-glide get 'go.uber.org/yarpc#^1'
-```
-
 ## Getting Started
 
 1. [Introduction](.docs/intro.md)
+    * Installation
     * Understanding YARPC's architecture
     * RPC Types: Unary, Oneway, and Streaming
     * Choosing Transports
     * Glossary and Terms
-2. Basic Usage
-3. Production Essentials
-4. Advanced Usage
-6. Extending YARPC
+2. [Basic Usage](.docs/basic-usage.md)
+    * Implementing and testing handlers
+    * Configuring inbound transports
+    * Using Yab to call handlers
+    * Writing and testing outbound calls
+    * Configuring outbound transports
+    * Available Transports
+3. [Production Essentials](.docs/prod-essentials.md)
+    * Understanding Errors
+    * Graceful Shutdown
+    * Introspection and Debug Pages
+    * Tracing and Metrics
+    * Retries and Circuit Breaking
+    * Rate Limiting and SLAs
+4. [Advanced Usage](.docs/advanced-usage.md)
+    * Middleware
+    * Proxies
+6. [Extending YARPC](.docs/extending-yarpc.md)
+    * Composing Outbounds
+    * Authoring Custom Transports
+    * Creating a Custom Encoding
 
 ## Stability
 
