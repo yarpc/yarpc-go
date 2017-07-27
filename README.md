@@ -8,16 +8,18 @@ A message passing platform for Go that lets you:
 
 ## Usage
 
-1. [Installation](.docs/installation.md)
-* [Introduction - Concepts and Vocabulary](.docs/introduction.md)
-* [Getting Started - HTTP+raw services](.docs/first-services.md)
-* [Adding Structure - Using the JSON Encoding](.docs/json-encoding.md)
-* [Understanding Errors](.docs/errors.md)
-* [Middleware](.docs/middleware.md)
-* [Binary Encodings - ThriftRW and Protobuf](.docs/binary-encodings.md)
-* [Transports - Configuring *how* messages get passed](.docs/transports.md)
+To understand how to use YARPC, read the following guides:
 
-Additionally, working code is available in the [examples](internal/examples) package.
+1. [Installation](.docs/installation.md)
+2. [Introduction - Concepts and Vocabulary](.docs/introduction.md)
+3. [Getting Started - HTTP+raw services](.docs/first-services.md)
+4. [Adding Structure - Using the JSON Encoding](.docs/json-encoding.md)
+5. [Understanding Errors](.docs/errors.md)
+6. [Middleware](.docs/middleware.md)
+7. [Binary Encodings - ThriftRW and Protobuf](.docs/binary-encodings.md)
+8. [Transports - Configuring *how* messages get passed](.docs/transports.md)
+
+Additionally, working code can be found in the [examples](internal/examples) package.
 
 ## Stability
 
