@@ -10,6 +10,8 @@ A message passing platform for Go that lets you:
 
 To understand how to use YARPC, read the following guides:
 
+| Guide | Contents |
+| ----- | -------- |
 | [Installation](.docs/installation.md) | Glide and SemVer |
 | [Introduction](.docs/introduction.md) | Concepts and Vocabulary |
 | [Getting Started](.docs/first-services.md) | Your First Services |
