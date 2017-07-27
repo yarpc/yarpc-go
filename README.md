@@ -6,18 +6,6 @@ A message passing platform for Go that lets you:
 * Expose servers over many transports simultaneously, including [HTTP/1.1](https://www.w3.org/Protocols/rfc2616/rfc2616.html), [gRPC](https://grpc.io/), and [TChannel](https://github.com/uber/tchannel).
 * Migrate outbound calls between transports without any code changes using config.
 
-## Stability
-
-This library is `v1` and follows [SemVer](http://semver.org/) strictly.
-
-No breaking changes will be made to exported APIs before `v2.0.0` with the
-**exception of experimental packages**.
-
-Experimental packages reside within packages named `x`, and are *not stable*. This means their
-APIs can break at any time. The intention here is to validate these APIs and iterate on them
-by working closely with internal customers. Once stable, their contents will be moved out of
-the containing `x` package and their APIs will be locked.
-
 ## Installation
 
 We recommend locking to [SemVer](http://semver.org/) range `^1` using [Glide](https://github.com/Masterminds/glide):
@@ -39,6 +27,18 @@ Explore working code in the [examples](internal/examples) package, or read the f
 | [Middleware](.docs/middleware.md) | |
 | [Binary Encodings](.docs/binary-encodings.md) | Thrift and Protobuf |
 | [Configuring Transports](.docs/transports.md) | Configuring how messages get passed |
+
+## Stability
+
+This library is `v1` and follows [SemVer](http://semver.org/) strictly.
+
+No breaking changes will be made to exported APIs before `v2.0.0` with the
+**exception of experimental packages**.
+
+Experimental packages reside within packages named `x`, and are *not stable*. This means their
+APIs can break at any time. The intention here is to validate these APIs and iterate on them
+by working closely with internal customers. Once stable, their contents will be moved out of
+the containing `x` package and their APIs will be locked.
 
 [doc-img]: http://img.shields.io/badge/GoDoc-Reference-blue.svg
 [doc]: https://godoc.org/go.uber.org/yarpc
