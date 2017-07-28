@@ -76,6 +76,7 @@ testImport:
   subpackages:
   - parallel-exec
   - update-license
+- package: go.uber.org/fx
 - package: honnef.co/go/tools
   subpackages:
   - cmd/staticcheck

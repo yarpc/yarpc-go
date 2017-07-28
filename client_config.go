@@ -18,36 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package yarpc
 
-import (
-	"testing"
+import "go.uber.org/yarpc/api/transport"
 
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storeclient"
-	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/storefx"
-	"go.uber.org/yarpc/transport/http"
-)
-
-func TestFxClient(t *testing.T) {
-	d := yarpc.NewDispatcher(yarpc.Config{
-		Name: "myservice",
-		Outbounds: yarpc.Outbounds{
-			"store": {Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1/yarpc")},
-		},
-	})
-
-	assert.NotPanics(t, func() {
-		p := storefx.Params{
-			Provider: d,
-		}
-		f := storefx.Client("store").(func(storefx.Params) storefx.Result)
-		f(p)
-	}, "failed to build client")
-
-	assert.Panics(t, func() {
-		f := storefx.Client("not-store").(func(*yarpc.Dispatcher) storeclient.Interface)
-		f(d)
-	}, "expected panic")
+// ClientConfig builds transport.ClientConfigs which specify the means of
+// making a request from this service to another service by name.
+type ClientConfig interface {
+	transport.ClientConfigProvider
 }
+
+var _ ClientConfig = (*Dispatcher)(nil)
