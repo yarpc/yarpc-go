@@ -42,7 +42,7 @@ func TestFxClient(t *testing.T) {
 		p := storefx.Params{
 			Provider: d,
 		}
-		f := storefx.Client("store").(func(storefx.Params) storefx.Result) //.(func(*yarpc.Dispatcher) storeclient.Interface)
+		f := storefx.Client("store").(func(storefx.Params) storefx.Result)
 		f(p)
 	}, "failed to build client")
 
