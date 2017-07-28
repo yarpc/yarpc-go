@@ -19,7 +19,7 @@ $ go get go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go
 
 Author a protobuf IDL:
 
-```
+```proto
 syntax = "proto3";
 
 package hello;
@@ -45,7 +45,7 @@ $ protoc --gogoslick_out=. --yarpc-go_out=. hello.proto
 
 This will generate YARPC interfaces in `hello.pb.yarpc.go`:
 
-```
+```go
 type HelloWorldYARPCClient interface {
 	Hello(context.Context, *HelloRequest, ...yarpc.CallOption) (*HelloResponse, error)
 }
@@ -57,7 +57,7 @@ type HelloWorldYARPCServer interface {
 
 Implement the server interface in `server/main.go`:
 
-```
+```go
 type handler struct{}
 
 func (handler) Hello(context.Context, *hello.HelloRequest) (*hello.HelloResponse, error) {
@@ -68,7 +68,7 @@ func (handler) Hello(context.Context, *hello.HelloRequest) (*hello.HelloResponse
 
 Install the handler in a Dispatcher:
 
-```
+```go
 // build a configurator with the HTTP transport registered
 configurator := config.New()
 configurator.MustRegisterTransport(http.TransportSpec())
@@ -109,7 +109,7 @@ $ go run ./server/main.go
 Curl the server:
 
 ```
-examples/protobuf-hello - [proto●] » curl -s localhost:8080 -X POST \
+$ curl -s localhost:8080 -X POST \
 -H RPC-Service:server \
 -H RPC-Procedure:hello.HelloWorld::Hello \
 -H RPC-Caller:curl \
@@ -123,7 +123,7 @@ examples/protobuf-hello - [proto●] » curl -s localhost:8080 -X POST \
 
 Now, instead of using curl, create another service which calls "server":
 
-```
+```go
 package main
 
 import (
