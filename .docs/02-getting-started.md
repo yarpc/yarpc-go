@@ -6,6 +6,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget commodo 
 
 [← Introduction][back] - [:book:][index] - [Adding Structure →][next]
 
-[index]: /README.md
+[index]: /README.md#usage
 [back]: 01-introduction.md
 [next]: 03-adding-structure.md
