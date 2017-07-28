@@ -33,7 +33,7 @@ const fxTemplate = `
 <$pkgname := printf "%sfx" (lower .Name)>
 package <$pkgname>
 
-<$transport := import "go.uber.org/yarpc/api/transport">
+<$yarpc := import "go.uber.org/yarpc">
 <$thrift := import "go.uber.org/yarpc/encoding/thrift">
 <$client := import .ClientPackagePath>
 <$fx := import "go.uber.org/fx">
@@ -42,7 +42,7 @@ package <$pkgname>
 type Params struct {
 	<$fx>.In
 
-	Provider <$transport>.ClientConfigProvider
+	Provider <$yarpc>.ClientConfig
 }
 
 // Result defines the output of this Fx module.

@@ -25,7 +25,7 @@ package secondservicefx
 
 import (
 	"go.uber.org/fx"
-	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceclient"
 )
@@ -34,7 +34,7 @@ import (
 type Params struct {
 	fx.In
 
-	Provider transport.ClientConfigProvider
+	Provider yarpc.ClientConfig
 }
 
 // Result defines the output of this Fx module.
