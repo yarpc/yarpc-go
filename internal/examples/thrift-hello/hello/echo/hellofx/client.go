@@ -37,11 +37,16 @@ type Params struct {
 	Provider yarpc.ClientConfig
 }
 
-// Result defines the output of this Fx module.
+// Result defines the output of this Fx module. It provides a Hello client
+// to an Fx application.
 type Result struct {
 	fx.Out
 
 	Client helloclient.Interface
+
+	// We are using an fx.Out struct here instead of just returning a client
+	// so that we can add more values or add named versions of the client in
+	// the future without breaking any existing code.
 }
 
 // Client provides a Hello client to an Fx application using the given name
