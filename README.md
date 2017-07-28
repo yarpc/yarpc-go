@@ -19,17 +19,18 @@ glide get 'go.uber.org/yarpc#^1'
 Explore working code in the [examples](internal/examples) package, or read the following guides:
 
 | Material | Topics |
-| :---- | :------- |
+| :------- | :----- |
 | [Introduction](.docs/01-introduction.md) | The problem area, key concepts, and important vocabulary. |
 | [Getting Started](.docs/02-getting-started.md) | Writing basic services using the **HTTP** transport and **Raw** encoding. |
 | [Adding Structure](.docs/03-adding-structure.md) | Loosely structured messages using the **JSON** encoding. |
-| [Headers & Baggage](.docs/04-headers-and-baggage.md) | Propagating metadata between services. |
-| [Middleware](.docs/05-middleware.md) | Shipping features across services, procedures, encodings, and transports. |
-| [Errors](.docs/06-errors.md) | Understanding server and application errors. |
-| [Binary Encodings](.docs/07-binary-encodings.md) | Strictly structured messages using the **Thrift** and **Protobuf** encodings. |
-| [Configuring Transports](.docs/08-configuring-transports.md) | Supporting additional wire formats with the **gRPC** and **TChannel** transports. |
-| [Custom Encodings](.docs/09-custom-encodings.md) | Exploring new serialization formats with a custom encoding. |
-| [Custom Transports](.docs/10-custom-transports.md) | Exposing new wire formats without any code changes. |
+| [Testing](.docs/04-testing.md) | Unit and integration tests, the recorder, and other test helpers |
+| [Headers & Baggage](.docs/05-headers-and-baggage.md) | Propagating metadata between services. |
+| [Middleware](.docs/06-middleware.md) | Shipping features across services, procedures, encodings, and transports. |
+| [Errors](.docs/07-errors.md) | Understanding server and application errors. |
+| [Binary Encodings](.docs/08-binary-encodings.md) | Strictly structured messages using the **Thrift** and **Protobuf** encodings. |
+| [Configuring Transports](.docs/09-configuring-transports.md) | Supporting additional wire formats with the **gRPC** and **TChannel** transports. |
+| [Custom Encodings](.docs/10-custom-encodings.md) | Exploring new serialization formats with a custom encoding. |
+| [Custom Transports](.docs/11-custom-transports.md) | Exposing new wire formats without any code changes. |
 
 ## Stability
 

@@ -124,5 +124,5 @@ examples/protobuf-hello - [proto●] » curl -s localhost:8080 -X POST \
 [← Errors][back] - [:book:][index] - [Configuring Transports →][next]
 
 [index]: /README.md#usage
-[back]: 06-errors.md
-[next]: 08-configuring-transports.md
+[back]: 07-errors.md
+[next]: 09-configuring-transports.md
