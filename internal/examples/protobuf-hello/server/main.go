@@ -14,20 +14,19 @@ import (
 	"go.uber.org/yarpc/x/config"
 )
 
+const yaml = `
+inbounds:
+  http:
+    address: ":8080"
+`
+
 func main() {
 	// build a configurator with the HTTP transport registered
 	configurator := config.New()
 	configurator.MustRegisterTransport(http.TransportSpec())
 
 	// create a dispatcher for the "server" service
-	// TODO switch to yaml
-	dispatcher, err := configurator.NewDispatcherFromYAML("server", strings.NewReader(`{
-		"inbounds": {
-			"http": {
-				"address": ":8080",
-			},
-		},
-	}`))
+	dispatcher, err := configurator.NewDispatcherFromYAML("server", strings.NewReader(yaml))
 	if err != nil {
 		log.Panicf("Dispatcher could not be created: %v", err)
 	}
