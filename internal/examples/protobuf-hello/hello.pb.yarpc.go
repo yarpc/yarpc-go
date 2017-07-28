@@ -14,40 +14,40 @@ import (
 	"go.uber.org/yarpc/encoding/protobuf"
 )
 
-// HelloWorldYARPCClient is the YARPC client-side interface for the HelloWorld service.
-type HelloWorldYARPCClient interface {
-	Hello(context.Context, *HelloRequest, ...yarpc.CallOption) (*HelloResponse, error)
+// TacoTruckYARPCClient is the YARPC client-side interface for the TacoTruck service.
+type TacoTruckYARPCClient interface {
+	Order(context.Context, *OrderRequest, ...yarpc.CallOption) (*OrderResponse, error)
 }
 
-// NewHelloWorldYARPCClient builds a new YARPC client for the HelloWorld service.
-func NewHelloWorldYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) HelloWorldYARPCClient {
-	return &_HelloWorldYARPCCaller{protobuf.NewClient(
+// NewTacoTruckYARPCClient builds a new YARPC client for the TacoTruck service.
+func NewTacoTruckYARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) TacoTruckYARPCClient {
+	return &_TacoTruckYARPCCaller{protobuf.NewClient(
 		protobuf.ClientParams{
-			ServiceName:  "hello.HelloWorld",
+			ServiceName:  "hello.TacoTruck",
 			ClientConfig: clientConfig,
 			Options:      options,
 		},
 	)}
 }
 
-// HelloWorldYARPCServer is the YARPC server-side interface for the HelloWorld service.
-type HelloWorldYARPCServer interface {
-	Hello(context.Context, *HelloRequest) (*HelloResponse, error)
+// TacoTruckYARPCServer is the YARPC server-side interface for the TacoTruck service.
+type TacoTruckYARPCServer interface {
+	Order(context.Context, *OrderRequest) (*OrderResponse, error)
 }
 
-// BuildHelloWorldYARPCProcedures prepares an implementation of the HelloWorld service for YARPC registration.
-func BuildHelloWorldYARPCProcedures(server HelloWorldYARPCServer) []transport.Procedure {
-	handler := &_HelloWorldYARPCHandler{server}
+// BuildTacoTruckYARPCProcedures prepares an implementation of the TacoTruck service for YARPC registration.
+func BuildTacoTruckYARPCProcedures(server TacoTruckYARPCServer) []transport.Procedure {
+	handler := &_TacoTruckYARPCHandler{server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "hello.HelloWorld",
+			ServiceName: "hello.TacoTruck",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
-					MethodName: "Hello",
+					MethodName: "Order",
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
-							Handle:     handler.Hello,
-							NewRequest: newHelloWorld_HelloYARPCRequest,
+							Handle:     handler.Order,
+							NewRequest: newTacoTruck_OrderYARPCRequest,
 						},
 					),
 				},
@@ -57,59 +57,59 @@ func BuildHelloWorldYARPCProcedures(server HelloWorldYARPCServer) []transport.Pr
 	)
 }
 
-type _HelloWorldYARPCCaller struct {
+type _TacoTruckYARPCCaller struct {
 	client protobuf.Client
 }
 
-func (c *_HelloWorldYARPCCaller) Hello(ctx context.Context, request *HelloRequest, options ...yarpc.CallOption) (*HelloResponse, error) {
-	responseMessage, err := c.client.Call(ctx, "Hello", request, newHelloWorld_HelloYARPCResponse, options...)
+func (c *_TacoTruckYARPCCaller) Order(ctx context.Context, request *OrderRequest, options ...yarpc.CallOption) (*OrderResponse, error) {
+	responseMessage, err := c.client.Call(ctx, "Order", request, newTacoTruck_OrderYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
-	response, ok := responseMessage.(*HelloResponse)
+	response, ok := responseMessage.(*OrderResponse)
 	if !ok {
-		return nil, protobuf.CastError(emptyHelloWorld_HelloYARPCResponse, responseMessage)
+		return nil, protobuf.CastError(emptyTacoTruck_OrderYARPCResponse, responseMessage)
 	}
 	return response, err
 }
 
-type _HelloWorldYARPCHandler struct {
-	server HelloWorldYARPCServer
+type _TacoTruckYARPCHandler struct {
+	server TacoTruckYARPCServer
 }
 
-func (h *_HelloWorldYARPCHandler) Hello(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
-	var request *HelloRequest
+func (h *_TacoTruckYARPCHandler) Order(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+	var request *OrderRequest
 	var ok bool
 	if requestMessage != nil {
-		request, ok = requestMessage.(*HelloRequest)
+		request, ok = requestMessage.(*OrderRequest)
 		if !ok {
-			return nil, protobuf.CastError(emptyHelloWorld_HelloYARPCRequest, requestMessage)
+			return nil, protobuf.CastError(emptyTacoTruck_OrderYARPCRequest, requestMessage)
 		}
 	}
-	response, err := h.server.Hello(ctx, request)
+	response, err := h.server.Order(ctx, request)
 	if response == nil {
 		return nil, err
 	}
 	return response, err
 }
 
-func newHelloWorld_HelloYARPCRequest() proto.Message {
-	return &HelloRequest{}
+func newTacoTruck_OrderYARPCRequest() proto.Message {
+	return &OrderRequest{}
 }
 
-func newHelloWorld_HelloYARPCResponse() proto.Message {
-	return &HelloResponse{}
+func newTacoTruck_OrderYARPCResponse() proto.Message {
+	return &OrderResponse{}
 }
 
 var (
-	emptyHelloWorld_HelloYARPCRequest  = &HelloRequest{}
-	emptyHelloWorld_HelloYARPCResponse = &HelloResponse{}
+	emptyTacoTruck_OrderYARPCRequest  = &OrderRequest{}
+	emptyTacoTruck_OrderYARPCResponse = &OrderResponse{}
 )
 
 func init() {
 	yarpc.RegisterClientBuilder(
-		func(clientConfig transport.ClientConfig, structField reflect.StructField) HelloWorldYARPCClient {
-			return NewHelloWorldYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
+		func(clientConfig transport.ClientConfig, structField reflect.StructField) TacoTruckYARPCClient {
+			return NewTacoTruckYARPCClient(clientConfig, protobuf.ClientBuilderOptions(clientConfig, structField)...)
 		},
 	)
 }

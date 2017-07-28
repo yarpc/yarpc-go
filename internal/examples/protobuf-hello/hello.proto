@@ -2,14 +2,24 @@ syntax = "proto3";
 
 package hello;
 
-message HelloRequest {
-  string name = 1;
+enum OrderType {
+    ORDER_TYPE_NONE = 0;
+    ORDER_TYPE_TACO = 1;
+    ORDER_TYPE_BURRITO = 2;
 }
 
-message HelloResponse {
-  string message = 1;
+message Order {
+    OrderType type = 1;
 }
 
-service HelloWorld {
-  rpc Hello(HelloRequest) returns (HelloResponse);
+message OrderRequest {
+    Order order = 1;
+}
+
+message OrderResponse {
+    string message = 1;
+}
+
+service TacoTruck {
+    rpc Order(OrderRequest) returns (OrderResponse) {}
 }

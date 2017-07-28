@@ -8,14 +8,17 @@ It is generated from these files:
 	hello.proto
 
 It has these top-level messages:
-	HelloRequest
-	HelloResponse
+	Order
+	OrderRequest
+	OrderResponse
 */
 package hello
 
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
+
+import strconv "strconv"
 
 import strings "strings"
 import reflect "reflect"
@@ -33,30 +36,66 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type HelloRequest struct {
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+type OrderType int32
+
+const (
+	ORDER_TYPE_NONE    OrderType = 0
+	ORDER_TYPE_TACO    OrderType = 1
+	ORDER_TYPE_BURRITO OrderType = 2
+)
+
+var OrderType_name = map[int32]string{
+	0: "ORDER_TYPE_NONE",
+	1: "ORDER_TYPE_TACO",
+	2: "ORDER_TYPE_BURRITO",
+}
+var OrderType_value = map[string]int32{
+	"ORDER_TYPE_NONE":    0,
+	"ORDER_TYPE_TACO":    1,
+	"ORDER_TYPE_BURRITO": 2,
 }
 
-func (m *HelloRequest) Reset()                    { *m = HelloRequest{} }
-func (*HelloRequest) ProtoMessage()               {}
-func (*HelloRequest) Descriptor() ([]byte, []int) { return fileDescriptorHello, []int{0} }
+func (OrderType) EnumDescriptor() ([]byte, []int) { return fileDescriptorHello, []int{0} }
 
-func (m *HelloRequest) GetName() string {
+type Order struct {
+	Type OrderType `protobuf:"varint,1,opt,name=type,proto3,enum=hello.OrderType" json:"type,omitempty"`
+}
+
+func (m *Order) Reset()                    { *m = Order{} }
+func (*Order) ProtoMessage()               {}
+func (*Order) Descriptor() ([]byte, []int) { return fileDescriptorHello, []int{0} }
+
+func (m *Order) GetType() OrderType {
 	if m != nil {
-		return m.Name
+		return m.Type
 	}
-	return ""
+	return ORDER_TYPE_NONE
 }
 
-type HelloResponse struct {
+type OrderRequest struct {
+	Order *Order `protobuf:"bytes,1,opt,name=order" json:"order,omitempty"`
+}
+
+func (m *OrderRequest) Reset()                    { *m = OrderRequest{} }
+func (*OrderRequest) ProtoMessage()               {}
+func (*OrderRequest) Descriptor() ([]byte, []int) { return fileDescriptorHello, []int{1} }
+
+func (m *OrderRequest) GetOrder() *Order {
+	if m != nil {
+		return m.Order
+	}
+	return nil
+}
+
+type OrderResponse struct {
 	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 }
 
-func (m *HelloResponse) Reset()                    { *m = HelloResponse{} }
-func (*HelloResponse) ProtoMessage()               {}
-func (*HelloResponse) Descriptor() ([]byte, []int) { return fileDescriptorHello, []int{1} }
+func (m *OrderResponse) Reset()                    { *m = OrderResponse{} }
+func (*OrderResponse) ProtoMessage()               {}
+func (*OrderResponse) Descriptor() ([]byte, []int) { return fileDescriptorHello, []int{2} }
 
-func (m *HelloResponse) GetMessage() string {
+func (m *OrderResponse) GetMessage() string {
 	if m != nil {
 		return m.Message
 	}
@@ -64,10 +103,19 @@ func (m *HelloResponse) GetMessage() string {
 }
 
 func init() {
-	proto.RegisterType((*HelloRequest)(nil), "hello.HelloRequest")
-	proto.RegisterType((*HelloResponse)(nil), "hello.HelloResponse")
+	proto.RegisterType((*Order)(nil), "hello.Order")
+	proto.RegisterType((*OrderRequest)(nil), "hello.OrderRequest")
+	proto.RegisterType((*OrderResponse)(nil), "hello.OrderResponse")
+	proto.RegisterEnum("hello.OrderType", OrderType_name, OrderType_value)
 }
-func (this *HelloRequest) Equal(that interface{}) bool {
+func (x OrderType) String() string {
+	s, ok := OrderType_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (this *Order) Equal(that interface{}) bool {
 	if that == nil {
 		if this == nil {
 			return true
@@ -75,9 +123,9 @@ func (this *HelloRequest) Equal(that interface{}) bool {
 		return false
 	}
 
-	that1, ok := that.(*HelloRequest)
+	that1, ok := that.(*Order)
 	if !ok {
-		that2, ok := that.(HelloRequest)
+		that2, ok := that.(Order)
 		if ok {
 			that1 = &that2
 		} else {
@@ -92,12 +140,12 @@ func (this *HelloRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Name != that1.Name {
+	if this.Type != that1.Type {
 		return false
 	}
 	return true
 }
-func (this *HelloResponse) Equal(that interface{}) bool {
+func (this *OrderRequest) Equal(that interface{}) bool {
 	if that == nil {
 		if this == nil {
 			return true
@@ -105,9 +153,39 @@ func (this *HelloResponse) Equal(that interface{}) bool {
 		return false
 	}
 
-	that1, ok := that.(*HelloResponse)
+	that1, ok := that.(*OrderRequest)
 	if !ok {
-		that2, ok := that.(HelloResponse)
+		that2, ok := that.(OrderRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	} else if this == nil {
+		return false
+	}
+	if !this.Order.Equal(that1.Order) {
+		return false
+	}
+	return true
+}
+func (this *OrderResponse) Equal(that interface{}) bool {
+	if that == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	}
+
+	that1, ok := that.(*OrderResponse)
+	if !ok {
+		that2, ok := that.(OrderResponse)
 		if ok {
 			that1 = &that2
 		} else {
@@ -127,22 +205,34 @@ func (this *HelloResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *HelloRequest) GoString() string {
+func (this *Order) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&hello.HelloRequest{")
-	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
+	s = append(s, "&hello.Order{")
+	s = append(s, "Type: "+fmt.Sprintf("%#v", this.Type)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *HelloResponse) GoString() string {
+func (this *OrderRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&hello.HelloResponse{")
+	s = append(s, "&hello.OrderRequest{")
+	if this.Order != nil {
+		s = append(s, "Order: "+fmt.Sprintf("%#v", this.Order)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *OrderResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&hello.OrderResponse{")
 	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -155,7 +245,7 @@ func valueToGoStringHello(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *HelloRequest) Marshal() (dAtA []byte, err error) {
+func (m *Order) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -165,21 +255,20 @@ func (m *HelloRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *HelloRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *Order) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
-	if len(m.Name) > 0 {
-		dAtA[i] = 0xa
+	if m.Type != 0 {
+		dAtA[i] = 0x8
 		i++
-		i = encodeVarintHello(dAtA, i, uint64(len(m.Name)))
-		i += copy(dAtA[i:], m.Name)
+		i = encodeVarintHello(dAtA, i, uint64(m.Type))
 	}
 	return i, nil
 }
 
-func (m *HelloResponse) Marshal() (dAtA []byte, err error) {
+func (m *OrderRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -189,7 +278,35 @@ func (m *HelloResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *HelloResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *OrderRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Order != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintHello(dAtA, i, uint64(m.Order.Size()))
+		n1, err := m.Order.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n1
+	}
+	return i, nil
+}
+
+func (m *OrderResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *OrderResponse) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -230,17 +347,26 @@ func encodeVarintHello(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *HelloRequest) Size() (n int) {
+func (m *Order) Size() (n int) {
 	var l int
 	_ = l
-	l = len(m.Name)
-	if l > 0 {
+	if m.Type != 0 {
+		n += 1 + sovHello(uint64(m.Type))
+	}
+	return n
+}
+
+func (m *OrderRequest) Size() (n int) {
+	var l int
+	_ = l
+	if m.Order != nil {
+		l = m.Order.Size()
 		n += 1 + l + sovHello(uint64(l))
 	}
 	return n
 }
 
-func (m *HelloResponse) Size() (n int) {
+func (m *OrderResponse) Size() (n int) {
 	var l int
 	_ = l
 	l = len(m.Message)
@@ -263,21 +389,31 @@ func sovHello(x uint64) (n int) {
 func sozHello(x uint64) (n int) {
 	return sovHello(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *HelloRequest) String() string {
+func (this *Order) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&HelloRequest{`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+	s := strings.Join([]string{`&Order{`,
+		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *HelloResponse) String() string {
+func (this *OrderRequest) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&HelloResponse{`,
+	s := strings.Join([]string{`&OrderRequest{`,
+		`Order:` + strings.Replace(fmt.Sprintf("%v", this.Order), "Order", "Order", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *OrderResponse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&OrderResponse{`,
 		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
 		`}`,
 	}, "")
@@ -291,7 +427,7 @@ func valueToStringHello(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *HelloRequest) Unmarshal(dAtA []byte) error {
+func (m *Order) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -314,17 +450,17 @@ func (m *HelloRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: HelloRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: Order: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: HelloRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Order: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
 			}
-			var stringLen uint64
+			m.Type = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowHello
@@ -334,20 +470,93 @@ func (m *HelloRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				m.Type |= (OrderType(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipHello(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
 				return ErrInvalidLengthHello
 			}
-			postIndex := iNdEx + intStringLen
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *OrderRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowHello
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: OrderRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: OrderRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Order", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHello
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthHello
+			}
+			postIndex := iNdEx + msglen
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Name = string(dAtA[iNdEx:postIndex])
+			if m.Order == nil {
+				m.Order = &Order{}
+			}
+			if err := m.Order.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -370,7 +579,7 @@ func (m *HelloRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *HelloResponse) Unmarshal(dAtA []byte) error {
+func (m *OrderResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -393,10 +602,10 @@ func (m *HelloResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: HelloResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: OrderResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: HelloResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: OrderResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -557,17 +766,22 @@ var (
 func init() { proto.RegisterFile("hello.proto", fileDescriptorHello) }
 
 var fileDescriptorHello = []byte{
-	// 181 bytes of a gzipped FileDescriptorProto
+	// 270 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xce, 0x48, 0xcd, 0xc9,
-	0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0x94, 0x94, 0xb8, 0x78, 0x3c,
-	0x40, 0x8c, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x21, 0x21, 0x2e, 0x96, 0xbc, 0xc4, 0xdc,
-	0x54, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x30, 0x5b, 0x49, 0x93, 0x8b, 0x17, 0xaa, 0xa6,
-	0xb8, 0x20, 0x3f, 0xaf, 0x38, 0x55, 0x48, 0x82, 0x8b, 0x3d, 0x37, 0xb5, 0xb8, 0x38, 0x31, 0x1d,
-	0xa6, 0x0e, 0xc6, 0x35, 0x72, 0xe0, 0xe2, 0x02, 0x2b, 0x0d, 0xcf, 0x2f, 0xca, 0x49, 0x11, 0x32,
-	0xe2, 0x62, 0x05, 0xf3, 0x84, 0x84, 0xf5, 0x20, 0x56, 0x23, 0x5b, 0x25, 0x25, 0x82, 0x2a, 0x08,
-	0x31, 0xdb, 0x49, 0xe7, 0xc2, 0x43, 0x39, 0x86, 0x1b, 0x0f, 0xe5, 0x18, 0x3e, 0x3c, 0x94, 0x63,
-	0x6c, 0x78, 0x24, 0xc7, 0xb8, 0xe2, 0x91, 0x1c, 0xe3, 0x89, 0x47, 0x72, 0x8c, 0x17, 0x1e, 0xc9,
-	0x31, 0x3e, 0x78, 0x24, 0xc7, 0xf8, 0xe2, 0x91, 0x1c, 0xc3, 0x87, 0x47, 0x72, 0x8c, 0x13, 0x1e,
-	0xcb, 0x31, 0x24, 0xb1, 0x81, 0x3d, 0x63, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0x7d, 0x49, 0xd6,
-	0x16, 0xdb, 0x00, 0x00, 0x00,
+	0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0x94, 0x74, 0xb9, 0x58, 0xfd,
+	0x8b, 0x52, 0x52, 0x8b, 0x84, 0x54, 0xb8, 0x58, 0x4a, 0x2a, 0x0b, 0x52, 0x25, 0x18, 0x15, 0x18,
+	0x35, 0xf8, 0x8c, 0x04, 0xf4, 0x20, 0x6a, 0xc1, 0x72, 0x21, 0x95, 0x05, 0xa9, 0x41, 0x60, 0x59,
+	0x25, 0x23, 0x2e, 0x1e, 0xb0, 0x50, 0x50, 0x6a, 0x61, 0x69, 0x6a, 0x71, 0x89, 0x90, 0x12, 0x17,
+	0x6b, 0x3e, 0x88, 0x0f, 0xd6, 0xc6, 0x6d, 0xc4, 0x83, 0xac, 0x2d, 0x08, 0x22, 0xa5, 0xa4, 0xc9,
+	0xc5, 0x0b, 0xd5, 0x53, 0x5c, 0x90, 0x9f, 0x57, 0x9c, 0x2a, 0x24, 0xc1, 0xc5, 0x9e, 0x9b, 0x5a,
+	0x5c, 0x9c, 0x98, 0x0e, 0xb1, 0x8d, 0x33, 0x08, 0xc6, 0xd5, 0xf2, 0xe5, 0xe2, 0x84, 0xdb, 0x28,
+	0x24, 0xcc, 0xc5, 0xef, 0x1f, 0xe4, 0xe2, 0x1a, 0x14, 0x1f, 0x12, 0x19, 0xe0, 0x1a, 0xef, 0xe7,
+	0xef, 0xe7, 0x2a, 0xc0, 0x80, 0x26, 0x18, 0xe2, 0xe8, 0xec, 0x2f, 0xc0, 0x28, 0x24, 0xc6, 0x25,
+	0x84, 0x24, 0xe8, 0x14, 0x1a, 0x14, 0xe4, 0x19, 0xe2, 0x2f, 0xc0, 0x64, 0xe4, 0xc8, 0xc5, 0x19,
+	0x92, 0x98, 0x9c, 0x1f, 0x52, 0x54, 0x9a, 0x9c, 0x2d, 0x64, 0x02, 0xf3, 0xa9, 0x30, 0x8a, 0x23,
+	0x21, 0x1e, 0x91, 0x12, 0x41, 0x15, 0x84, 0xb8, 0x54, 0x89, 0xc1, 0x49, 0xe7, 0xc2, 0x43, 0x39,
+	0x86, 0x1b, 0x0f, 0xe5, 0x18, 0x3e, 0x3c, 0x94, 0x63, 0x6c, 0x78, 0x24, 0xc7, 0xb8, 0xe2, 0x91,
+	0x1c, 0xe3, 0x89, 0x47, 0x72, 0x8c, 0x17, 0x1e, 0xc9, 0x31, 0x3e, 0x78, 0x24, 0xc7, 0xf8, 0xe2,
+	0x91, 0x1c, 0xc3, 0x87, 0x47, 0x72, 0x8c, 0x13, 0x1e, 0xcb, 0x31, 0x24, 0xb1, 0x81, 0xc3, 0xd6,
+	0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0xf6, 0xd3, 0x2e, 0x0e, 0x6a, 0x01, 0x00, 0x00,
 }

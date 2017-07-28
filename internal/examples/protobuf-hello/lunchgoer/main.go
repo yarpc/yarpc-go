@@ -14,7 +14,7 @@ import (
 
 const yaml = `
 outbounds:
-  server:
+  tacotruck:
     http:
       url: "http://localhost:8080/"
 `
@@ -24,14 +24,14 @@ func main() {
 	configurator := config.New()
 	configurator.MustRegisterTransport(http.TransportSpec())
 
-	// create a dispatcher for the "client" service
-	dispatcher, err := configurator.NewDispatcherFromYAML("client", strings.NewReader(yaml))
+	// create a dispatcher for the lunchgoer service
+	dispatcher, err := configurator.NewDispatcherFromYAML("lunchgoer", strings.NewReader(yaml))
 	if err != nil {
 		log.Panicf("Dispatcher could not be created: %v", err)
 	}
 
-	// create a client for the "server" service
-	client := hello.NewHelloWorldYARPCClient(dispatcher.ClientConfig("server"))
+	// create a client for the tacotruck service
+	tacotruck := hello.NewTacoTruckYARPCClient(dispatcher.ClientConfig("tacotruck"))
 
 	// start service
 	dispatcher.Start()
@@ -41,11 +41,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	// make an rpc to the "server" service
-	resp, err := client.Hello(ctx, &hello.HelloRequest{Name: "client"})
+	// make an rpc to the tacotruck service
+	order, err := tacotruck.Order(ctx, &hello.OrderRequest{Order: &hello.Order{Type: hello.ORDER_TYPE_TACO}})
 	if err != nil {
-		log.Panicf("Could not call server: %v", err)
+		log.Panicf("Could not call tacotruck: %v", err)
 	}
 
-	fmt.Printf("Called server successfully: %v\n", resp.Message)
+	fmt.Printf("You ordered successfully: %v\n", order.Message)
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -25,14 +24,14 @@ func main() {
 	configurator := config.New()
 	configurator.MustRegisterTransport(http.TransportSpec())
 
-	// create a dispatcher for the "server" service
-	dispatcher, err := configurator.NewDispatcherFromYAML("server", strings.NewReader(yaml))
+	// create a dispatcher for the tacotruck service
+	dispatcher, err := configurator.NewDispatcherFromYAML("tacotruck", strings.NewReader(yaml))
 	if err != nil {
 		log.Panicf("Dispatcher could not be created: %v", err)
 	}
 
 	// register handler
-	procedures := hello.BuildHelloWorldYARPCProcedures(handler{})
+	procedures := hello.BuildTacoTruckYARPCProcedures(handler{})
 	dispatcher.Register(procedures)
 
 	// start service
@@ -47,7 +46,16 @@ func main() {
 
 type handler struct{}
 
-func (handler) Hello(ctx context.Context, req *hello.HelloRequest) (*hello.HelloResponse, error) {
-	message := fmt.Sprintf("Hello %s!", req.Name)
-	return &hello.HelloResponse{Message: message}, nil
+func (handler) Order(ctx context.Context, req *hello.OrderRequest) (*hello.OrderResponse, error) {
+	message := "Thanks for your order, "
+	if req.Order == nil || req.Order.Type == hello.ORDER_TYPE_NONE {
+		message = message + "but you didn't order anything."
+	} else if req.Order.Type == hello.ORDER_TYPE_TACO {
+		message = message + "the taco is the most popular chowdom!"
+
+	} else if req.Order.Type == hello.ORDER_TYPE_BURRITO {
+		message = message + "here's your burrito."
+	}
+
+	return &hello.OrderResponse{Message: message}, nil
 }
