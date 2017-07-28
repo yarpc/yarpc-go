@@ -1,4 +1,4 @@
-[← Binary Encodings](06-binary-encodings.md)
+[← Binary Encodings](07-binary-encodings.md)
 
 # Configuring Transports
 
