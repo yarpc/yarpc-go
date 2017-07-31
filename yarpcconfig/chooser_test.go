@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config_test
+package yarpcconfig_test
 
 import (
 	"context"
@@ -44,7 +44,7 @@ import (
 	"go.uber.org/yarpc/peer/x/peerheap"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 	"go.uber.org/yarpc/yarpctest"
 )
 
@@ -834,7 +834,7 @@ func TestChooserConfigurator(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			configer := yarpctest.NewFakeConfigurator(config.InterpolationResolver(mapVariableResolver(tt.env)))
+			configer := yarpctest.NewFakeConfigurator(yarpcconfig.InterpolationResolver(mapVariableResolver(tt.env)))
 			configer.MustRegisterTransport(http.TransportSpec())
 			configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
 			configer.MustRegisterPeerList(peerheap.Spec())
@@ -865,12 +865,12 @@ func TestChooserConfigurator(t *testing.T) {
 type invalidPeerListConfig struct {
 }
 
-func buildInvalidPeerListConfig(c *invalidPeerListConfig, t peerapi.Transport, kit *config.Kit) (peerapi.ChooserList, error) {
+func buildInvalidPeerListConfig(c *invalidPeerListConfig, t peerapi.Transport, kit *yarpcconfig.Kit) (peerapi.ChooserList, error) {
 	return nil, errors.New("could not create invalid-list")
 }
 
-func invalidPeerListSpec() config.PeerListSpec {
-	return config.PeerListSpec{
+func invalidPeerListSpec() yarpcconfig.PeerListSpec {
+	return yarpcconfig.PeerListSpec{
 		Name:          "invalid-list",
 		BuildPeerList: buildInvalidPeerListConfig,
 	}
@@ -879,12 +879,12 @@ func invalidPeerListSpec() config.PeerListSpec {
 type invalidPeerListUpdaterConfig struct {
 }
 
-func buildInvalidPeerListUpdater(c *invalidPeerListUpdaterConfig, kit *config.Kit) (peerapi.Binder, error) {
+func buildInvalidPeerListUpdater(c *invalidPeerListUpdaterConfig, kit *yarpcconfig.Kit) (peerapi.Binder, error) {
 	return nil, errors.New("could not create invalid-updater")
 }
 
-func invalidPeerListUpdaterSpec() config.PeerListUpdaterSpec {
-	return config.PeerListUpdaterSpec{
+func invalidPeerListUpdaterSpec() yarpcconfig.PeerListUpdaterSpec {
+	return yarpcconfig.PeerListUpdaterSpec{
 		Name:                 "invalid-updater",
 		BuildPeerListUpdater: buildInvalidPeerListUpdater,
 	}
@@ -897,16 +897,16 @@ func TestBuildPeerListInvalidKit(t *testing.T) {
 	// We build a fake InboundConfig that embeds the PeerList. This will let
 	// us call PeerList.BuildPeerList with the wrong Kit.
 	type inboundConfig struct {
-		config.PeerChooser
+		yarpcconfig.PeerChooser
 	}
 
 	configer := yarpctest.NewFakeConfigurator()
-	configer.MustRegisterTransport(config.TransportSpec{
+	configer.MustRegisterTransport(yarpcconfig.TransportSpec{
 		Name: "foo",
-		BuildTransport: func(struct{}, *config.Kit) (transport.Transport, error) {
+		BuildTransport: func(struct{}, *yarpcconfig.Kit) (transport.Transport, error) {
 			return transporttest.NewMockTransport(mockCtrl), nil
 		},
-		BuildInbound: func(cfg *inboundConfig, _ transport.Transport, k *config.Kit) (transport.Inbound, error) {
+		BuildInbound: func(cfg *inboundConfig, _ transport.Transport, k *yarpcconfig.Kit) (transport.Inbound, error) {
 			_, err := cfg.BuildPeerChooser(peertest.NewMockTransport(mockCtrl), hostport.Identify, k)
 			assert.Error(t, err, "BuildPeerList should fail with an invalid Kit")
 			return transporttest.NewMockInbound(mockCtrl), err

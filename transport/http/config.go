@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 // TransportSpec returns a TransportSpec for the HTTP transport.
@@ -38,7 +38,7 @@ import (
 // These options will be applied BEFORE configuration parameters are
 // interpreted. This allows configuration parameters to override Option
 // provided to TransportSpec.
-func TransportSpec(opts ...Option) config.TransportSpec {
+func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 	var ts transportSpec
 	for _, o := range opts {
 		switch opt := o.(type) {
@@ -65,8 +65,8 @@ type transportSpec struct {
 	OutboundOptions  []OutboundOption
 }
 
-func (ts *transportSpec) Spec() config.TransportSpec {
-	return config.TransportSpec{
+func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
+	return yarpcconfig.TransportSpec{
 		Name:                transportName,
 		BuildTransport:      ts.buildTransport,
 		BuildInbound:        ts.buildInbound,
@@ -93,13 +93,13 @@ func (ts *transportSpec) Spec() config.TransportSpec {
 type TransportConfig struct {
 	// Specifies the keep-alive period for all HTTP clients. This field is
 	// optional.
-	KeepAlive           time.Duration  `config:"keepAlive"`
-	MaxIdleConnsPerHost int            `config:"maxIdleConnsPerHost"`
-	ConnTimeout         time.Duration  `config:"connTimeout"`
-	ConnBackoff         config.Backoff `config:"connBackoff"`
+	KeepAlive           time.Duration       `config:"keepAlive"`
+	MaxIdleConnsPerHost int                 `config:"maxIdleConnsPerHost"`
+	ConnTimeout         time.Duration       `config:"connTimeout"`
+	ConnBackoff         yarpcconfig.Backoff `config:"connBackoff"`
 }
 
-func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
+func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit) (transport.Transport, error) {
 	options := newTransportOptions()
 
 	for _, opt := range ts.TransportOptions {
@@ -135,7 +135,7 @@ type InboundConfig struct {
 	Address string `config:"address,interpolate"`
 }
 
-func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
+func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.Inbound, error) {
 	if ic.Address == "" {
 		return nil, fmt.Errorf("inbound address is required")
 	}
@@ -174,7 +174,7 @@ func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, 
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
 type OutboundConfig struct {
-	config.PeerChooser
+	yarpcconfig.PeerChooser
 
 	// URL to which requests will be sent for this outbound. This field is
 	// required.
@@ -191,7 +191,7 @@ type OutboundConfig struct {
 	AddHeaders map[string]string `config:"addHeaders"`
 }
 
-func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (*Outbound, error) {
+func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (*Outbound, error) {
 	x := t.(*Transport)
 
 	opts := ts.OutboundOptions
@@ -217,10 +217,10 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 	return x.NewOutbound(chooser, opts...), nil
 }
 
-func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
+func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
 	return ts.buildOutbound(oc, t, k)
 }
 
-func (ts *transportSpec) buildOnewayOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.OnewayOutbound, error) {
+func (ts *transportSpec) buildOnewayOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.OnewayOutbound, error) {
 	return ts.buildOutbound(oc, t, k)
 }

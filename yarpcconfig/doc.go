@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package config implements a generic configuration system that may be used
-// to build YARPC Dispatchers from configurations specified in different
+// Package yarpcconfig implements a generic configuration system that may be
+// used to build YARPC Dispatchers from configurations specified in different
 // markup formats.
 //
 // Usage
@@ -315,4 +315,4 @@
 //
 // 	addr: localhost:${PORT}
 // 	timeout: ${TIMEOUT_SECONDS:5}s
-package config
+package yarpcconfig

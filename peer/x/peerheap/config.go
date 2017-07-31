@@ -22,14 +22,14 @@ package peerheap
 
 import (
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 // Spec returns a configuration specification for the least-pending peer heap
 // peer chooser implementation, making it possible to select the least pending
 // peer with transports that use outbound peer list configuration (like HTTP).
 //
-//  cfg := config.New()
+//  cfg := yarpcconfig.New()
 //  cfg.MustRegisterPeerList(peerheap.Spec())
 //
 // This enables the least-pending peer list:
@@ -43,10 +43,10 @@ import (
 //            peers:
 //              - 127.0.0.1:8080
 //              - 127.0.0.1:8081
-func Spec() config.PeerListSpec {
-	return config.PeerListSpec{
+func Spec() yarpcconfig.PeerListSpec {
+	return yarpcconfig.PeerListSpec{
 		Name: "least-pending",
-		BuildPeerList: func(c struct{}, t peer.Transport, k *config.Kit) (peer.ChooserList, error) {
+		BuildPeerList: func(c struct{}, t peer.Transport, k *yarpcconfig.Kit) (peer.ChooserList, error) {
 			return New(t), nil
 		},
 	}

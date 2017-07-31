@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 func TestNewTransportSpecOptions(t *testing.T) {
@@ -140,7 +140,7 @@ func TestTransportSpec(t *testing.T) {
 				env[k] = v
 			}
 
-			configurator := config.New(config.InterpolationResolver(mapResolver(env)))
+			configurator := yarpcconfig.New(yarpcconfig.InterpolationResolver(mapResolver(env)))
 			err := configurator.RegisterTransport(TransportSpec(tt.opts...))
 			require.NoError(t, err)
 

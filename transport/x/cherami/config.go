@@ -29,7 +29,7 @@ import (
 
 	"github.com/uber/cherami-client-go/client/cherami"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 const (
@@ -88,7 +88,7 @@ func cheramiNewHyperbahnClient(f cheramiNewHyperbahnClientFunc) TransportSpecOpt
 //
 // See TransportConfig, InboundConfig, and OutboundConfig for details on the
 // different configuration parameters supported by this Transport.
-func TransportSpec(opts ...TransportSpecOption) config.TransportSpec {
+func TransportSpec(opts ...TransportSpecOption) yarpcconfig.TransportSpec {
 	ts := transportSpec{
 		cheramiNewClient:          cherami.NewClient,
 		cheramiNewHyperbahnClient: cherami.NewHyperbahnClient,
@@ -109,8 +109,8 @@ type transportSpec struct {
 	cheramiNewHyperbahnClient cheramiNewHyperbahnClientFunc
 }
 
-func (ts *transportSpec) Spec() config.TransportSpec {
-	return config.TransportSpec{
+func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
+	return yarpcconfig.TransportSpec{
 		Name:                "cherami",
 		BuildTransport:      ts.buildTransport,
 		BuildInbound:        ts.buildInbound,
@@ -176,7 +176,7 @@ func parseIPAndPort(address string) (ip string, port int, _ error) {
 }
 
 func (ts *transportSpec) buildTransport(
-	tc *TransportConfig, kit *config.Kit,
+	tc *TransportConfig, kit *yarpcconfig.Kit,
 ) (transport.Transport, error) {
 	opts := cherami.ClientOptions{DeploymentStr: tc.DeploymentStr, Timeout: tc.Timeout}
 
@@ -242,7 +242,7 @@ type InboundConfig struct {
 func (ts *transportSpec) buildInbound(
 	tc *InboundConfig,
 	t transport.Transport,
-	kit *config.Kit,
+	kit *yarpcconfig.Kit,
 ) (transport.Inbound, error) {
 	opts := InboundOptions{
 		Destination:   tc.Destination,
@@ -273,7 +273,7 @@ type OutboundConfig struct {
 func (ts *transportSpec) buildOnewayOutbound(
 	tc *OutboundConfig,
 	t transport.Transport,
-	kit *config.Kit,
+	kit *yarpcconfig.Kit,
 ) (transport.OnewayOutbound, error) {
 	opts := OutboundOptions{Destination: tc.Destination}
 

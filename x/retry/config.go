@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/multierr"
 	iconfig "go.uber.org/yarpc/internal/config"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 // PolicyConfig defines how to construct a retry Policy.
@@ -42,7 +42,7 @@ type PolicyConfig struct {
 
 	// BackoffStrategy defines a backoff strategy in place by embedding a
 	// backoff config.
-	BackoffStrategy config.Backoff `config:"backoff"`
+	BackoffStrategy yarpcconfig.Backoff `config:"backoff"`
 }
 
 func (p PolicyConfig) policy() (*Policy, error) {

@@ -25,7 +25,7 @@ import (
 	"net"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 const transportName = "grpc"
@@ -39,12 +39,12 @@ const transportName = "grpc"
 // These options will be applied BEFORE configuration parameters are
 // interpreted. This allows configuration parameters to override Options
 // provided to TransportSpec.
-func TransportSpec(opts ...Option) config.TransportSpec {
+func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 	transportSpec, err := newTransportSpec(opts...)
 	if err != nil {
 		panic(err.Error())
 	}
-	return config.TransportSpec{
+	return yarpcconfig.TransportSpec{
 		Name:               transportName,
 		BuildTransport:     transportSpec.buildTransport,
 		BuildInbound:       transportSpec.buildInbound,
@@ -101,11 +101,11 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 	return transportSpec, nil
 }
 
-func (t *transportSpec) buildTransport(*TransportConfig, *config.Kit) (transport.Transport, error) {
+func (t *transportSpec) buildTransport(*TransportConfig, *yarpcconfig.Kit) (transport.Transport, error) {
 	return NewTransport(t.TransportOptions...), nil
 }
 
-func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *config.Kit) (transport.Inbound, error) {
+func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.Inbound, error) {
 	trans, ok := tr.(*Transport)
 	if !ok {
 		return nil, newTransportCastError(tr)
@@ -120,7 +120,7 @@ func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.
 	return trans.NewInbound(listener, t.InboundOptions...), nil
 }
 
-func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, tr transport.Transport, _ *config.Kit) (transport.UnaryOutbound, error) {
+func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
 	trans, ok := tr.(*Transport)
 	if !ok {
 		return nil, newTransportCastError(tr)
