@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package yarpcconfig
 
 import (
 	"errors"
@@ -83,7 +83,7 @@ func TestCompileTransportSpec(t *testing.T) {
 				BuildOnewayOutbound: func(struct{}) (transport.OnewayOutbound, error) { panic("kthxbye") },
 			},
 			wantErr: []string{
-				"invalid BuildTransport func(struct {}, *config.Kit) (transport.Inbound, error): " +
+				"invalid BuildTransport func(struct {}, *yarpcconfig.Kit) (transport.Inbound, error): " +
 					"must return a transport.Transport as its first result, found transport.Inbound",
 				"invalid BuildInbound: must accept exactly three arguments, found 1",
 				"invalid BuildUnaryOutbound: must accept a transport.Transport as its second argument, found transport.Inbound",
@@ -137,7 +137,7 @@ func TestCompileTransportSpec(t *testing.T) {
 			},
 			wantErr: []string{
 				`failed to compile preset for transport "foo":`,
-				"invalid BuildPeerChooser func(transport.Transport, *config.Kit) (peer.Chooser, error):",
+				"invalid BuildPeerChooser func(transport.Transport, *yarpcconfig.Kit) (peer.Chooser, error):",
 				"must accept a peer.Transport as its first argument, found transport.Transport",
 			},
 		},
@@ -626,7 +626,7 @@ func TestCompilePeerListSpec(t *testing.T) {
 				Name:          "much sadness",
 				BuildPeerList: func(c struct{}, t peer.Transport, k int) {},
 			},
-			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, int): must accept a *config.Kit as its third argument, found int",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, int): must accept a *yarpcconfig.Kit as its third argument, found int",
 		},
 		{
 			desc: "wrong number of returns",
@@ -634,7 +634,7 @@ func TestCompilePeerListSpec(t *testing.T) {
 				Name:          "much sadness",
 				BuildPeerList: func(c struct{}, t peer.Transport, k *Kit) {},
 			},
-			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *config.Kit): must return exactly two results, found 0",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *yarpcconfig.Kit): must return exactly two results, found 0",
 		},
 		{
 			desc: "wrong type of first return",
@@ -644,7 +644,7 @@ func TestCompilePeerListSpec(t *testing.T) {
 					return 0, nil
 				},
 			},
-			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *config.Kit) (int, error): must return a peer.ChooserList as its first result, found int",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *yarpcconfig.Kit) (int, error): must return a peer.ChooserList as its first result, found int",
 		},
 		{
 			desc: "wrong type of second return",
@@ -654,7 +654,7 @@ func TestCompilePeerListSpec(t *testing.T) {
 					return nil, 0
 				},
 			},
-			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *config.Kit) (peer.ChooserList, int): must return an error as its second result, found int",
+			wantErr: "invalid BuildPeerList func(struct {}, peer.Transport, *yarpcconfig.Kit) (peer.ChooserList, int): must return an error as its second result, found int",
 		},
 		{
 			desc: "such gladness",
@@ -728,7 +728,7 @@ func TestCompilePeerListUpdaterSpec(t *testing.T) {
 				Name:                 "much sadness",
 				BuildPeerListUpdater: func(a struct{}, b int) {},
 			},
-			wantErr: "invalid BuildPeerListUpdater func(struct {}, int): must accept a *config.Kit as its second argument, found int",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, int): must accept a *yarpcconfig.Kit as its second argument, found int",
 		},
 		{
 			desc: "wrong number of returns",
@@ -736,7 +736,7 @@ func TestCompilePeerListUpdaterSpec(t *testing.T) {
 				Name:                 "much sadness",
 				BuildPeerListUpdater: func(a struct{}, b *Kit) {},
 			},
-			wantErr: "invalid BuildPeerListUpdater func(struct {}, *config.Kit): must return exactly two results, found 0",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, *yarpcconfig.Kit): must return exactly two results, found 0",
 		},
 		{
 			desc: "wrong type of first return",
@@ -746,7 +746,7 @@ func TestCompilePeerListUpdaterSpec(t *testing.T) {
 					return 0, nil
 				},
 			},
-			wantErr: "invalid BuildPeerListUpdater func(struct {}, *config.Kit) (int, error): must return a peer.Binder as its first result, found int",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, *yarpcconfig.Kit) (int, error): must return a peer.Binder as its first result, found int",
 		},
 		{
 			desc: "wrong type of second return",
@@ -756,7 +756,7 @@ func TestCompilePeerListUpdaterSpec(t *testing.T) {
 					return nil, 0
 				},
 			},
-			wantErr: "invalid BuildPeerListUpdater func(struct {}, *config.Kit) (peer.Binder, int): must return an error as its second result, found int",
+			wantErr: "invalid BuildPeerListUpdater func(struct {}, *yarpcconfig.Kit) (peer.Binder, int): must return an error as its second result, found int",
 		},
 		{
 			desc: "such gladness",
@@ -830,7 +830,7 @@ func TestCompilePeerChooserPreset(t *testing.T) {
 				Name:             "much sadness",
 				BuildPeerChooser: func(peer.Transport, int) {},
 			},
-			wantErr: "invalid BuildPeerChooser func(peer.Transport, int): must accept a *config.Kit as its second argument, found int",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, int): must accept a *yarpcconfig.Kit as its second argument, found int",
 		},
 		{
 			desc: "wrong number of returns",
@@ -838,7 +838,7 @@ func TestCompilePeerChooserPreset(t *testing.T) {
 				Name:             "much sadness",
 				BuildPeerChooser: func(t peer.Transport, k *Kit) {},
 			},
-			wantErr: "invalid BuildPeerChooser func(peer.Transport, *config.Kit): must return exactly two results, found 0",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, *yarpcconfig.Kit): must return exactly two results, found 0",
 		},
 		{
 			desc: "wrong type of first return",
@@ -848,7 +848,7 @@ func TestCompilePeerChooserPreset(t *testing.T) {
 					return 0, nil
 				},
 			},
-			wantErr: "invalid BuildPeerChooser func(peer.Transport, *config.Kit) (int, error): must return a peer.Chooser as its first result, found int",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, *yarpcconfig.Kit) (int, error): must return a peer.Chooser as its first result, found int",
 		},
 		{
 			desc: "wrong type of second return",
@@ -858,7 +858,7 @@ func TestCompilePeerChooserPreset(t *testing.T) {
 					return nil, 0
 				},
 			},
-			wantErr: "invalid BuildPeerChooser func(peer.Transport, *config.Kit) (peer.Chooser, int): must return an error as its second result, found int",
+			wantErr: "invalid BuildPeerChooser func(peer.Transport, *yarpcconfig.Kit) (peer.Chooser, int): must return an error as its second result, found int",
 		},
 		{
 			desc: "such gladness",

@@ -18,25 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package yarpcconfig
 
-import (
-	"testing"
+// Option customizes a Configurator.
+type Option func(*Configurator)
 
-	"github.com/stretchr/testify/assert"
-)
-
-func TestKitWithTransportSpec(t *testing.T) {
-	root := &Kit{name: "foo"}
-	assert.Nil(t, root.transportSpec, "transportSpec must be nil")
-	assert.Equal(t, "foo", root.ServiceName())
-
-	child := root.withTransportSpec(&compiledTransportSpec{})
-	assert.Nil(t, root.transportSpec, "transportSpec must be nil")
-	assert.Equal(t, "foo", child.ServiceName())
-	assert.NotNil(t, child.transportSpec, "transportSpec must be nil")
-
-	child.name = "bar"
-	assert.Equal(t, "foo", root.ServiceName())
-	assert.Equal(t, "bar", child.ServiceName())
+// InterpolationResolver changes how interpolated variables in the
+// configuration are resolved. By default, environment variables are used.
+//
+// Variables will be interpolated using this function if a parsed
+// field inside a configuration structure was annotated with
+// config:",interpolate" or config:"$name,interpolate" where $name is encoded
+// name of that field.
+//
+// Only primitive types (numbers, strings, and time.Duration) are
+// interpolated.
+//
+// 	type myConfig struct {
+// 		Host string `config:"host,interpolate"`
+// 		Port int `config:",interpolate"`
+// 		Timeout time.Duration `config:",interpolate"`
+// 	}
+func InterpolationResolver(f func(k string) (v string, ok bool)) Option {
+	return func(c *Configurator) {
+		c.resolver = f
+	}
 }

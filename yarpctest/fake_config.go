@@ -25,7 +25,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	peerbind "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 // FakeTransportConfig configures the FakeTransport.
@@ -33,18 +33,18 @@ type FakeTransportConfig struct {
 	Nop string `config:"nop,interpolate"`
 }
 
-func buildFakeTransport(c *FakeTransportConfig, kit *config.Kit) (transport.Transport, error) {
+func buildFakeTransport(c *FakeTransportConfig, kit *yarpcconfig.Kit) (transport.Transport, error) {
 	return NewFakeTransport(NopTransportOption(c.Nop)), nil
 }
 
 // FakeOutboundConfig configures the FakeOutbound.
 type FakeOutboundConfig struct {
-	config.PeerChooser
+	yarpcconfig.PeerChooser
 
 	Nop string `config:"nop,interpolate"`
 }
 
-func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config.Kit) (transport.UnaryOutbound, error) {
+func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
 	x := t.(*FakeTransport)
 	chooser, err := c.BuildPeerChooser(x, hostport.Identify, kit)
 	if err != nil {
@@ -55,12 +55,12 @@ func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *config
 
 // FakeTransportSpec returns a configurator spec for the fake-transport
 // transport type, suitable for passing to Configurator.MustRegisterTransport.
-func FakeTransportSpec() config.TransportSpec {
-	return config.TransportSpec{
+func FakeTransportSpec() yarpcconfig.TransportSpec {
+	return yarpcconfig.TransportSpec{
 		Name:               "fake-transport",
 		BuildTransport:     buildFakeTransport,
 		BuildUnaryOutbound: buildFakeOutbound,
-		PeerChooserPresets: []config.PeerChooserPreset{
+		PeerChooserPresets: []yarpcconfig.PeerChooserPreset{
 			FakePeerChooserPreset(),
 		},
 	}
@@ -71,15 +71,15 @@ type FakePeerListConfig struct {
 	Nop string `config:"nop,interpolate"`
 }
 
-func buildFakePeerList(c *FakePeerListConfig, t peer.Transport, kit *config.Kit) (peer.ChooserList, error) {
+func buildFakePeerList(c *FakePeerListConfig, t peer.Transport, kit *yarpcconfig.Kit) (peer.ChooserList, error) {
 	return NewFakePeerList(ListNop(c.Nop)), nil
 }
 
 // FakePeerListSpec returns a configurator spec for the fake-list FakePeerList
 // peer selection strategy, suitable for passing to
 // Configurator.MustRegisterPeerList.
-func FakePeerListSpec() config.PeerListSpec {
-	return config.PeerListSpec{
+func FakePeerListSpec() yarpcconfig.PeerListSpec {
+	return yarpcconfig.PeerListSpec{
 		Name:          "fake-list",
 		BuildPeerList: buildFakePeerList,
 	}
@@ -94,7 +94,7 @@ type FakePeerListUpdaterConfig struct {
 	Watch       bool   `config:"watch"`
 }
 
-func buildFakePeerListUpdater(c *FakePeerListUpdaterConfig, kit *config.Kit) (peer.Binder, error) {
+func buildFakePeerListUpdater(c *FakePeerListUpdaterConfig, kit *yarpcconfig.Kit) (peer.Binder, error) {
 	var opts []FakePeerListUpdaterOption
 	if c.Watch {
 		opts = append(opts, Watch)
@@ -109,8 +109,8 @@ func buildFakePeerListUpdater(c *FakePeerListUpdaterConfig, kit *config.Kit) (pe
 
 // FakePeerListUpdaterSpec returns a configurator spec for the fake-updater
 // FakePeerListUpdater type, suitable for passing to Configurator.MustRegisterPeerListUpdaterSpec.
-func FakePeerListUpdaterSpec() config.PeerListUpdaterSpec {
-	return config.PeerListUpdaterSpec{
+func FakePeerListUpdaterSpec() yarpcconfig.PeerListUpdaterSpec {
+	return yarpcconfig.PeerListUpdaterSpec{
 		Name:                 "fake-updater",
 		BuildPeerListUpdater: buildFakePeerListUpdater,
 	}
@@ -119,8 +119,8 @@ func FakePeerListUpdaterSpec() config.PeerListUpdaterSpec {
 // NewFakeConfigurator returns a configurator with fake-transport,
 // fake-peer-list, and fake-peer-list-updater specs already registered,
 // suitable for testing the configurator.
-func NewFakeConfigurator(opts ...config.Option) *config.Configurator {
-	configurator := config.New(opts...)
+func NewFakeConfigurator(opts ...yarpcconfig.Option) *yarpcconfig.Configurator {
+	configurator := yarpcconfig.New(opts...)
 	configurator.MustRegisterTransport(FakeTransportSpec())
 	configurator.MustRegisterPeerList(FakePeerListSpec())
 	configurator.MustRegisterPeerListUpdater(FakePeerListUpdaterSpec())
@@ -129,10 +129,10 @@ func NewFakeConfigurator(opts ...config.Option) *config.Configurator {
 
 // FakePeerChooserPreset is a PeerChooserPreset which builds a FakePeerList buind to
 // a FakePeerListUpdater.
-func FakePeerChooserPreset() config.PeerChooserPreset {
-	return config.PeerChooserPreset{
+func FakePeerChooserPreset() yarpcconfig.PeerChooserPreset {
+	return yarpcconfig.PeerChooserPreset{
 		Name: "fake-preset",
-		BuildPeerChooser: func(peer.Transport, *config.Kit) (peer.Chooser, error) {
+		BuildPeerChooser: func(peer.Transport, *yarpcconfig.Kit) (peer.Chooser, error) {
 			return peerbind.Bind(
 				NewFakePeerList(), func(peer.List) transport.Lifecycle {
 					return NewFakePeerListUpdater()

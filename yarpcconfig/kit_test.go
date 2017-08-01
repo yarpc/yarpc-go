@@ -18,74 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package yarpcconfig
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/internal/config"
-	"go.uber.org/yarpc/internal/whitespace"
-	"gopkg.in/yaml.v2"
 )
 
-func TestBackoffConfig(t *testing.T) {
-	type testCase struct {
-		name string
-		give string
-		env  map[string]string
-		want Backoff
-		err  bool
-	}
+func TestKitWithTransportSpec(t *testing.T) {
+	root := &Kit{name: "foo"}
+	assert.Nil(t, root.transportSpec, "transportSpec must be nil")
+	assert.Equal(t, "foo", root.ServiceName())
 
-	tests := []testCase{
-		{
-			name: "empty",
-		},
-		{
-			name: "specified",
-			give: `
-				exponential:
-					first: 1s
-					max: 2s
-			`,
-			want: Backoff{
-				Exponential: ExponentialBackoff{
-					First: time.Second,
-					Max:   2 * time.Second,
-				},
-			},
-		},
-		{
-			name: "bogus",
-			give: `
-				whatevenis: true
-			`,
-			err: true,
-		},
-	}
+	child := root.withTransportSpec(&compiledTransportSpec{})
+	assert.Nil(t, root.transportSpec, "transportSpec must be nil")
+	assert.Equal(t, "foo", child.ServiceName())
+	assert.NotNil(t, child.transportSpec, "transportSpec must be nil")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			text := whitespace.Expand(tt.give)
-			var data map[string]interface{}
-			require.NoError(t, yaml.Unmarshal([]byte(text), &data))
-
-			var cfg Backoff
-			err := config.DecodeInto(&cfg, data, config.InterpolateWith(mapVariableResolver(tt.env)))
-
-			if err == nil {
-				_, err = cfg.Strategy()
-			}
-
-			if tt.err {
-				require.NotNil(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, cfg, tt.want)
-			}
-		})
-	}
+	child.name = "bar"
+	assert.Equal(t, "foo", root.ServiceName())
+	assert.Equal(t, "bar", child.ServiceName())
 }
