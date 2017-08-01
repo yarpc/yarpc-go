@@ -1,8 +1,8 @@
 Releases
 ========
 
-v1.13.0-dev (unreleased)
--------------------
+v1.13.0 (2017-08-01)
+--------------------
 
 -   Added a `yarpc.ClientConfig` interface to provide access to ClientConfigs.
     All Dispatchers already implement this interface.
@@ -12,14 +12,14 @@ v1.13.0-dev (unreleased)
 
 
 v1.12.1 (2017-07-26)
--------------------
+--------------------
 
 - Fixed issue with github.com/apache/thrift by pinning to version 0.9.3
   due to breaking change https://issues.apache.org/jira/browse/THRIFT-4261.
 
 
 v1.12.0 (2017-07-20)
--------------------
+--------------------
 
 Experimental:
 
@@ -27,7 +27,7 @@ Experimental:
 
 
 v1.11.0 (2017-07-18)
--------------------
+--------------------
 
 -   Fixed bug where outbound HTTP errors were not being properly wrapped in
     yarpc errors.
@@ -41,7 +41,7 @@ Experimental:
 
 
 v1.10.0 (2017-17-11)
--------------------
+--------------------
 
 -   Thrift: UberFx-compatible modules are now generated for each service inside
     a subpackage. Disable this by passing a `-no-fx` flag to the plugin.
@@ -131,7 +131,7 @@ v1.7.1 (2017-03-29)
 
 
 v1.7.0 (2017-03-20)
------------------------
+-------------------
 
 -   x/config adds support for a pluggable configuration system that allows
     building `yarpc.Config` and `yarpc.Dispatcher` objects from YAML and
@@ -150,7 +150,7 @@ v1.7.0 (2017-03-20)
 
 
 v1.6.0 (2017-03-08)
------------------------
+-------------------
 
 -   Remove buffer size limit from Thrift encoding/decoding buffer pool.
 -   Increased efficiency of inbound/outbound requests by pooling buffers.
@@ -164,7 +164,7 @@ v1.6.0 (2017-03-08)
 
 
 v1.5.0 (2017-03-03)
------------------------
+-------------------
 
 -   Increased efficiency of Thrift encoding/decoding by pooling buffers.
 -   x/yarpcmeta make it easy to expose the list of procedures and other
@@ -177,7 +177,7 @@ v1.5.0 (2017-03-03)
 
 
 v1.4.0 (2017-02-14)
------------------------
+-------------------
 
 -   Relaxed version constraint for `jaeger-client-go` to `>= 1, < 3`.
 -   TChannel transport now supports procedures with a different service name
@@ -186,7 +186,7 @@ v1.4.0 (2017-02-14)
 
 
 v1.3.0 (2017-02-06)
------------------------
+-------------------
 
 -   Added a `tchannel.NewTransport`. The new transport, a replacement for the
     temporary `tchannel.NewChannelTransport`, supports YARPC peer choosers.
@@ -211,7 +211,7 @@ v1.3.0 (2017-02-06)
 
 
 v1.2.0 (2017-02-02)
------------------------
+-------------------
 
 -   Added heap based PeerList under `peer/x/peerheap`.
 -   Added `RouterMiddleware` parameter to `yarpc.Config`, which, if provided,
@@ -249,7 +249,7 @@ v1.2.0 (2017-02-02)
 
 
 v1.1.0 (2017-01-24)
------------------------
+-------------------
 
 -   Thrift: Mock clients compatible with gomock are now generated for each
     service inside a test subpackage. Disable this by passing a `-no-gomock`
