@@ -79,4 +79,3 @@ testImport:
 - package: github.com/stretchr/testify
   version: master
 - package: github.com/golang/mock
-  version: master
