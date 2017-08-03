@@ -246,7 +246,7 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 		}
 
 		procedures = append(procedures, r)
-		d.log.Info("Registration succeeded.", zap.Object("procedure", r))
+		d.log.Info("Registration succeeded.", zap.Object("registeredProcedure", r))
 	}
 
 	d.table.Register(procedures)
