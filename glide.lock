@@ -1,8 +1,8 @@
-hash: d8c76e53354f35a645144d8de4da8a22e627f7944f94a0348936cbdf83eba602
-updated: 2017-07-25T13:18:17.094125659-07:00
+hash: 7b8b466cbd10c2cf069a1f717801d9d7dfe17f0ad54d169d1b53677860f5f8cb
+updated: 2017-08-03T15:29:46.290651511-07:00
 imports:
 - name: github.com/apache/thrift
-  version: 0dd823580c78a79ae9696eb9b3650e400fff140f
+  version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
   repo: git://git.apache.org/thrift.git
   vcs: git
   subpackages:
@@ -42,7 +42,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
+  version: 748d386b5c1ea99658fd69fe9f03991ce86a90c1
   subpackages:
   - proto
   - ptypes/any
@@ -76,7 +76,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 3e6a7635bac6573d43f49f97b47eb9bda195dba8
+  version: 61f87aac8082fa8c3c5655c7608d7478d46ac2ad
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -86,8 +86,7 @@ imports:
   subpackages:
   - xfs
 - name: github.com/sirupsen/logrus
-  version: 8d4f6a97d3fe8725a31e3185c7a877a5e1dc6f09
-  version: 8d4f6a97d3fe8725a31e3185c7a877a5e1dc6f09
+  version: 181d419aa9e2223811b824e8f0b4af96f9ba9302
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -105,7 +104,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 88e9c75b0cfc84139ad1bae3b7f123786cfd0770
+  version: 2605c407d7d219644d03a3680ad7df4779017782
   subpackages:
   - m3
   - m3/customtransports
@@ -160,9 +159,9 @@ imports:
 - name: go.uber.org/atomic
   version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/dig
-  version: 60ffc4c6942410bacc8241123f0ec4b5809ea60d
+  version: 5e65f1a430fd50d4291edc5ee9811f7dd520d77d
 - name: go.uber.org/fx
-  version: 5a8109f8d0184ad8652203354292090d3ac7c385
+  version: a125e08afbf81f9a6b72ad1e9fbec3c875d51095
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -170,7 +169,7 @@ imports:
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/thriftrw
-  version: 2081b57630642a126a29d3be66c6a507524f9e70
+  version: 4975e075853c64488972fde71ff06b6bdbe02701
   subpackages:
   - envelope
   - internal/envelope
@@ -196,8 +195,12 @@ imports:
   - internal/exit
   - zapcore
   - zaptest/observer
+- name: golang.org/x/crypto
+  version: c412588e259ef2d488e15762500456cd3b171bad
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/net
-  version: ab5485076ff3407ad2d02db054635913f017b0ed
+  version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -214,24 +217,24 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 14ac33bf8474b62c65cae263af2e4d3b543cc699
+  version: d8f5ea21b9295e315e612b4bcf4bedea93454d4d
   repo: https://github.com/golang/sys
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 836efe42bb4aa16aaa17b9c155d8813d336ed720
+  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 3da34b1b520a543128e8441cd2ffffc383111d03
+  version: 4e70a1b26a7875f00ca1916637a876b5ffaeec59
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: b0a3dcfcd1a9bd48e63634bd8802960804cf8315
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -278,6 +281,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: d76157f21270516c130933e1ddb14e9fa2d0580f
+  version: ae0caf6437a82200bc1c349a4f761b4106409f0b
   subpackages:
   - cmd/staticcheck
