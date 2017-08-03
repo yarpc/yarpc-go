@@ -1,8 +1,8 @@
 Releases
 ========
 
-v1.14.0-dev (unreleased)
-------------------------
+v1.13.1 (2017-08-03)
+--------------------
 
 -   Rename structured logging field to avoid a type collision.
 
