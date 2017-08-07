@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	internalsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
@@ -46,7 +46,7 @@ var _ transport.UnaryOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
-	once            internalsync.LifecycleOnce
+	once            *lifecycle.Once
 	lock            sync.Mutex
 	t               *Transport
 	address         string // TODO nix
@@ -61,7 +61,7 @@ func newOutbound(t *Transport, pc peer.Chooser, options ...OutboundOption) *Outb
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
 	// TODO refactor using newOutbound and peer.NewSingle
-	return &Outbound{internalsync.Once(), sync.Mutex{}, t, address, nil, newOutboundOptions(options), nil}
+	return &Outbound{lifecycle.NewOnce(), sync.Mutex{}, t, address, nil, newOutboundOptions(options), nil}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -86,7 +86,7 @@ func (o *Outbound) Transports() []transport.Transport {
 
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 	var responseBody []byte
@@ -151,6 +151,14 @@ func (o *Outbound) start() error {
 			// TODO maybe multierr this
 			return err
 		}
+	clientConn, err := grpc.Dial(
+		o.address,
+		grpc.WithInsecure(),
+		grpc.WithCodec(customCodec{}),
+		grpc.WithUserAgent(UserAgent),
+	)
+	if err != nil {
+		return err
 	}
 
 	o.lock.Lock()

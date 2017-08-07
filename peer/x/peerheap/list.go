@@ -29,7 +29,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	ysync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 const unavailablePenalty = math.MaxInt32
@@ -60,7 +60,7 @@ func StartupWait(t time.Duration) HeapOption {
 // introduced peer.
 type List struct {
 	mu   sync.Mutex
-	once ysync.LifecycleOnce
+	once *lifecycle.Once
 
 	transport peer.Transport
 
@@ -95,7 +95,7 @@ func New(transport peer.Transport, opts ...HeapOption) *List {
 	}
 
 	return &List{
-		once:               ysync.Once(),
+		once:               lifecycle.NewOnce(),
 		transport:          transport,
 		byIdentifier:       make(map[string]*peerScore),
 		peerAvailableEvent: make(chan struct{}, 1),
@@ -108,7 +108,7 @@ func New(transport peer.Transport, opts ...HeapOption) *List {
 func (pl *List) Update(updates peer.ListUpdates) error {
 	ctx, cancel := context.WithTimeout(context.Background(), pl.startupWait)
 	defer cancel()
-	if err := pl.once.WhenRunning(ctx); err != nil {
+	if err := pl.once.WaitUntilRunning(ctx); err != nil {
 		return err
 	}
 
@@ -193,7 +193,7 @@ func (pl *List) clearPeers() error {
 // The peer heap does not use the given *transport.Request and can safely
 // receive nil.
 func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
-	if err := pl.once.WhenRunning(ctx); err != nil {
+	if err := pl.once.WaitUntilRunning(ctx); err != nil {
 		return nil, nil, err
 	}
 

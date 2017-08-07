@@ -25,18 +25,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 func TestNewTransportSpecOptions(t *testing.T) {
 	transportSpec, err := newTransportSpec(
-		WithInboundTracer(nil),
-		WithOutboundTracer(nil),
-		WithOutboundTracer(nil),
+		withInboundUnaryInterceptor(nil),
 	)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(transportSpec.InboundOptions))
-	require.Equal(t, 2, len(transportSpec.OutboundOptions))
+	require.Equal(t, 0, len(transportSpec.OutboundOptions))
 }
 
 func TestConfigBuildInboundOtherTransport(t *testing.T) {
@@ -142,7 +140,7 @@ func TestTransportSpec(t *testing.T) {
 				env[k] = v
 			}
 
-			configurator := config.New(config.InterpolationResolver(mapResolver(env)))
+			configurator := yarpcconfig.New(yarpcconfig.InterpolationResolver(mapResolver(env)))
 			err := configurator.RegisterTransport(TransportSpec(tt.opts...))
 			require.NoError(t, err)
 

@@ -28,6 +28,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	peer "go.uber.org/yarpc/api/peer"
 	transport "go.uber.org/yarpc/api/transport"
+	reflect "reflect"
 )
 
 // MockChooser is a mock of Chooser interface
@@ -64,7 +65,7 @@ func (_m *MockChooser) Choose(_param0 context.Context, _param1 *transport.Reques
 
 // Choose indicates an expected call of Choose
 func (_mr *MockChooserMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Choose", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Choose", reflect.TypeOf((*MockChooser)(nil).Choose), arg0, arg1)
 }
 
 // IsRunning mocks base method
@@ -76,7 +77,7 @@ func (_m *MockChooser) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (_mr *MockChooserMockRecorder) IsRunning() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsRunning", reflect.TypeOf((*MockChooser)(nil).IsRunning))
 }
 
 // Start mocks base method
@@ -88,7 +89,7 @@ func (_m *MockChooser) Start() error {
 
 // Start indicates an expected call of Start
 func (_mr *MockChooserMockRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Start", reflect.TypeOf((*MockChooser)(nil).Start))
 }
 
 // Stop mocks base method
@@ -100,7 +101,7 @@ func (_m *MockChooser) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (_mr *MockChooserMockRecorder) Stop() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Stop", reflect.TypeOf((*MockChooser)(nil).Stop))
 }
 
 // MockList is a mock of List interface
@@ -135,7 +136,7 @@ func (_m *MockList) Update(_param0 peer.ListUpdates) error {
 
 // Update indicates an expected call of Update
 func (_mr *MockListMockRecorder) Update(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Update", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Update", reflect.TypeOf((*MockList)(nil).Update), arg0)
 }
 
 // MockChooserList is a mock of ChooserList interface
@@ -172,7 +173,7 @@ func (_m *MockChooserList) Choose(_param0 context.Context, _param1 *transport.Re
 
 // Choose indicates an expected call of Choose
 func (_mr *MockChooserListMockRecorder) Choose(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Choose", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Choose", reflect.TypeOf((*MockChooserList)(nil).Choose), arg0, arg1)
 }
 
 // IsRunning mocks base method
@@ -184,7 +185,7 @@ func (_m *MockChooserList) IsRunning() bool {
 
 // IsRunning indicates an expected call of IsRunning
 func (_mr *MockChooserListMockRecorder) IsRunning() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "IsRunning")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "IsRunning", reflect.TypeOf((*MockChooserList)(nil).IsRunning))
 }
 
 // Start mocks base method
@@ -196,7 +197,7 @@ func (_m *MockChooserList) Start() error {
 
 // Start indicates an expected call of Start
 func (_mr *MockChooserListMockRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Start", reflect.TypeOf((*MockChooserList)(nil).Start))
 }
 
 // Stop mocks base method
@@ -208,7 +209,7 @@ func (_m *MockChooserList) Stop() error {
 
 // Stop indicates an expected call of Stop
 func (_mr *MockChooserListMockRecorder) Stop() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Stop", reflect.TypeOf((*MockChooserList)(nil).Stop))
 }
 
 // Update mocks base method
@@ -220,5 +221,5 @@ func (_m *MockChooserList) Update(_param0 peer.ListUpdates) error {
 
 // Update indicates an expected call of Update
 func (_mr *MockChooserListMockRecorder) Update(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Update", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Update", reflect.TypeOf((*MockChooserList)(nil).Update), arg0)
 }

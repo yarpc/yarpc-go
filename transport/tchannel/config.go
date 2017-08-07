@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 // TransportConfig configures a shared TChannel transport. This is shared
@@ -40,8 +40,8 @@ import (
 //          first: 10ms
 //          max: 30s
 type TransportConfig struct {
-	ConnTimeout time.Duration  `config:"connTimeout"`
-	ConnBackoff config.Backoff `config:"connBackoff"`
+	ConnTimeout time.Duration       `config:"connTimeout"`
+	ConnBackoff yarpcconfig.Backoff `config:"connBackoff"`
 }
 
 // InboundConfig configures a TChannel inbound.
@@ -64,11 +64,11 @@ type InboundConfig struct {
 // 	    tchannel:
 // 	      peer: 127.0.0.1:4040
 type OutboundConfig struct {
-	config.PeerChooser
+	yarpcconfig.PeerChooser
 }
 
 // TransportSpec returns a TransportSpec for the TChannel unary transport.
-func TransportSpec(opts ...Option) config.TransportSpec {
+func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 	var ts transportSpec
 	for _, o := range opts {
 		switch opt := o.(type) {
@@ -89,8 +89,8 @@ type transportSpec struct {
 	transportOptions []TransportOption
 }
 
-func (ts *transportSpec) Spec() config.TransportSpec {
-	return config.TransportSpec{
+func (ts *transportSpec) Spec() yarpcconfig.TransportSpec {
+	return yarpcconfig.TransportSpec{
 		Name:               transportName,
 		BuildTransport:     ts.buildTransport,
 		BuildInbound:       ts.buildInbound,
@@ -98,7 +98,7 @@ func (ts *transportSpec) Spec() config.TransportSpec {
 	}
 }
 
-func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (transport.Transport, error) {
+func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit) (transport.Transport, error) {
 	options := newTransportOptions()
 
 	for _, opt := range ts.transportOptions {
@@ -131,7 +131,7 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *config.Kit) (tra
 	return options.newTransport(), nil
 }
 
-func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k *config.Kit) (transport.Inbound, error) {
+func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.Inbound, error) {
 	if c.Address == "" {
 		return nil, fmt.Errorf("inbound address is required")
 	}
@@ -148,7 +148,7 @@ func (ts *transportSpec) buildInbound(c *InboundConfig, t transport.Transport, k
 	return trans.NewInbound(), nil
 }
 
-func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *config.Kit) (transport.UnaryOutbound, error) {
+func (ts *transportSpec) buildUnaryOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
 	x := t.(*Transport)
 	chooser, err := oc.BuildPeerChooser(x, hostport.Identify, k)
 	if err != nil {

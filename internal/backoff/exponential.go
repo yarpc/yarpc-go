@@ -35,7 +35,7 @@ var (
 )
 
 // ExponentialOption defines options that can be applied to an
-// exponential backoff stragety
+// exponential backoff strategy
 type ExponentialOption func(*exponentialOptions)
 
 // exponentialOptions are the configuration options for an exponential backoff
@@ -142,6 +142,17 @@ func (e *ExponentialStrategy) Backoff() backoff.Backoff {
 		max:   e.opts.max.Nanoseconds(),
 		rand:  e.opts.newRand(),
 	}
+}
+
+// IsEqual returns whether this strategy is equivalent to another strategy.
+func (e *ExponentialStrategy) IsEqual(o *ExponentialStrategy) bool {
+	if e.opts.first != o.opts.first {
+		return false
+	}
+	if e.opts.max != o.opts.max {
+		return false
+	}
+	return true
 }
 
 // ExponentialBackoff is an instance of the exponential backoff strategy with

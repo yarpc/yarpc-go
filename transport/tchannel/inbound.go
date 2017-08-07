@@ -23,13 +23,13 @@ package tchannel
 import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // Inbound receives YARPC requests over TChannel. It may be constructed using
 // the NewInbound method on a tchannel.Transport.
 type Inbound struct {
-	once      sync.LifecycleOnce
+	once      *lifecycle.Once
 	transport *Transport
 }
 
@@ -40,7 +40,7 @@ type Inbound struct {
 // locally- and remotely-initiated persistent connections.
 func (t *Transport) NewInbound() *Inbound {
 	return &Inbound{
-		once:      sync.Once(),
+		once:      lifecycle.NewOnce(),
 		transport: t,
 	}
 }
@@ -77,9 +77,13 @@ func (i *Inbound) IsRunning() bool {
 
 // Introspect returns the state of the inbound for introspection purposes.
 func (i *Inbound) Introspect() introspection.InboundStatus {
+	stateString := ""
+	if i.transport.ch != nil {
+		stateString = i.transport.ch.State().String()
+	}
 	return introspection.InboundStatus{
 		Transport: "tchannel",
 		Endpoint:  i.transport.addr,
-		State:     i.transport.ch.State().String(),
+		State:     stateString,
 	}
 }

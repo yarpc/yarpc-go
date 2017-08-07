@@ -26,6 +26,7 @@ package peertest
 import (
 	gomock "github.com/golang/mock/gomock"
 	peer "go.uber.org/yarpc/api/peer"
+	reflect "reflect"
 )
 
 // MockTransport is a mock of Transport interface
@@ -60,7 +61,7 @@ func (_m *MockTransport) ReleasePeer(_param0 peer.Identifier, _param1 peer.Subsc
 
 // ReleasePeer indicates an expected call of ReleasePeer
 func (_mr *MockTransportMockRecorder) ReleasePeer(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "ReleasePeer", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "ReleasePeer", reflect.TypeOf((*MockTransport)(nil).ReleasePeer), arg0, arg1)
 }
 
 // RetainPeer mocks base method
@@ -73,7 +74,7 @@ func (_m *MockTransport) RetainPeer(_param0 peer.Identifier, _param1 peer.Subscr
 
 // RetainPeer indicates an expected call of RetainPeer
 func (_mr *MockTransportMockRecorder) RetainPeer(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "RetainPeer", arg0, arg1)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "RetainPeer", reflect.TypeOf((*MockTransport)(nil).RetainPeer), arg0, arg1)
 }
 
 // MockSubscriber is a mock of Subscriber interface
@@ -106,5 +107,5 @@ func (_m *MockSubscriber) NotifyStatusChanged(_param0 peer.Identifier) {
 
 // NotifyStatusChanged indicates an expected call of NotifyStatusChanged
 func (_mr *MockSubscriberMockRecorder) NotifyStatusChanged(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "NotifyStatusChanged", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "NotifyStatusChanged", reflect.TypeOf((*MockSubscriber)(nil).NotifyStatusChanged), arg0)
 }

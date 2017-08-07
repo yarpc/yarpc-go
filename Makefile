@@ -1,17 +1,16 @@
-include build/base.mk
+include etc/make/base.mk
 ifndef SUPPRESS_DOCKER
-include build/dockerdeps.mk
-include build/docker.mk
+include etc/make/dockerdeps.mk
+include etc/make/docker.mk
 else
-include build/deps.mk
-include build/local.mk
+include etc/make/deps.mk
+include etc/make/local.mk
 endif
 ifndef SUPPRESS_CROSSDOCK
-include build/crossdockdeps.mk
-include build/crossdock.mk
+include etc/make/crossdock.mk
 endif
 ifdef TRAVIS
-include build/travis.mk
+include etc/make/travis.mk
 endif
 
 CI_TYPES ?= deps lint test examples

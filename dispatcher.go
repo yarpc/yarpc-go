@@ -30,12 +30,12 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
 	"go.uber.org/yarpc/internal/clientconfig"
+	"go.uber.org/yarpc/internal/errorsync"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observability"
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
-	intsync "go.uber.org/yarpc/internal/sync"
 	"go.uber.org/zap"
 )
 
@@ -246,7 +246,7 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 		}
 
 		procedures = append(procedures, r)
-		d.log.Info("Registration succeeded.", zap.Object("procedure", r))
+		d.log.Info("Registration succeeded.", zap.Object("registeredProcedure", r))
 	}
 
 	d.table.Register(procedures)
@@ -301,7 +301,7 @@ func (d *Dispatcher) Start() error {
 
 	abort := func(errs []error) error {
 		// Failed to start so stop everything that was started.
-		wait := intsync.ErrorWaiter{}
+		wait := errorsync.ErrorWaiter{}
 		for _, s := range allStarted {
 			wait.Submit(s.Stop)
 		}
@@ -319,7 +319,7 @@ func (d *Dispatcher) Start() error {
 	d.log.Debug("Set router for inbounds.")
 
 	// Start Transports
-	wait := intsync.ErrorWaiter{}
+	wait := errorsync.ErrorWaiter{}
 	d.log.Debug("Starting transports.")
 	for _, t := range d.transports {
 		wait.Submit(start(t))
@@ -330,7 +330,7 @@ func (d *Dispatcher) Start() error {
 	d.log.Debug("Started transports.")
 
 	// Start Outbounds
-	wait = intsync.ErrorWaiter{}
+	wait = errorsync.ErrorWaiter{}
 	d.log.Debug("Starting outbounds.")
 	for _, o := range d.outbounds {
 		wait.Submit(start(o.Unary))
@@ -342,7 +342,7 @@ func (d *Dispatcher) Start() error {
 	d.log.Debug("Started outbounds.")
 
 	// Start Inbounds
-	wait = intsync.ErrorWaiter{}
+	wait = errorsync.ErrorWaiter{}
 	d.log.Debug("Starting inbounds.")
 	for _, i := range d.inbounds {
 		wait.Submit(start(i))
@@ -351,10 +351,6 @@ func (d *Dispatcher) Start() error {
 		return abort(errs)
 	}
 	d.log.Debug("Started inbounds.")
-
-	d.log.Debug("Registering debug pages.")
-	addDispatcherToDebugPages(d)
-	d.log.Debug("Registered debug pages.")
 
 	d.log.Info("Started up.")
 	return nil
@@ -381,7 +377,7 @@ func (d *Dispatcher) Stop() error {
 
 	// Stop Inbounds
 	d.log.Debug("Stopping inbounds.")
-	wait := intsync.ErrorWaiter{}
+	wait := errorsync.ErrorWaiter{}
 	for _, i := range d.inbounds {
 		wait.Submit(i.Stop)
 	}
@@ -392,7 +388,7 @@ func (d *Dispatcher) Stop() error {
 
 	// Stop Outbounds
 	d.log.Debug("Stopping outbounds.")
-	wait = intsync.ErrorWaiter{}
+	wait = errorsync.ErrorWaiter{}
 	for _, o := range d.outbounds {
 		if o.Unary != nil {
 			wait.Submit(o.Unary.Stop)
@@ -408,7 +404,7 @@ func (d *Dispatcher) Stop() error {
 
 	// Stop Transports
 	d.log.Debug("Stopping transports.")
-	wait = intsync.ErrorWaiter{}
+	wait = errorsync.ErrorWaiter{}
 	for _, t := range d.transports {
 		wait.Submit(t.Stop)
 	}
@@ -425,10 +421,6 @@ func (d *Dispatcher) Stop() error {
 	d.log.Debug("Stopping metrics push loop, if any.")
 	d.stopRegistryPush()
 	d.log.Debug("Stopped metrics push loop, if any.")
-
-	d.log.Debug("Unregistering debug pages.")
-	removeDispatcherFromDebugPages(d)
-	d.log.Debug("Unregistered debug pages.")
 
 	d.log.Info("Completed shutdown.")
 	return nil

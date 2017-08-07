@@ -26,6 +26,7 @@ package transporttest
 import (
 	gomock "github.com/golang/mock/gomock"
 	transport "go.uber.org/yarpc/api/transport"
+	reflect "reflect"
 )
 
 // MockClientConfig is a mock of ClientConfig interface
@@ -60,7 +61,7 @@ func (_m *MockClientConfig) Caller() string {
 
 // Caller indicates an expected call of Caller
 func (_mr *MockClientConfigMockRecorder) Caller() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Caller")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Caller", reflect.TypeOf((*MockClientConfig)(nil).Caller))
 }
 
 // GetOnewayOutbound mocks base method
@@ -72,7 +73,7 @@ func (_m *MockClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
 
 // GetOnewayOutbound indicates an expected call of GetOnewayOutbound
 func (_mr *MockClientConfigMockRecorder) GetOnewayOutbound() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetOnewayOutbound")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "GetOnewayOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetOnewayOutbound))
 }
 
 // GetUnaryOutbound mocks base method
@@ -84,7 +85,7 @@ func (_m *MockClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
 
 // GetUnaryOutbound indicates an expected call of GetUnaryOutbound
 func (_mr *MockClientConfigMockRecorder) GetUnaryOutbound() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUnaryOutbound")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "GetUnaryOutbound", reflect.TypeOf((*MockClientConfig)(nil).GetUnaryOutbound))
 }
 
 // Service mocks base method
@@ -96,7 +97,7 @@ func (_m *MockClientConfig) Service() string {
 
 // Service indicates an expected call of Service
 func (_mr *MockClientConfigMockRecorder) Service() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Service")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Service", reflect.TypeOf((*MockClientConfig)(nil).Service))
 }
 
 // MockClientConfigProvider is a mock of ClientConfigProvider interface
@@ -131,5 +132,5 @@ func (_m *MockClientConfigProvider) ClientConfig(_param0 string) transport.Clien
 
 // ClientConfig indicates an expected call of ClientConfig
 func (_mr *MockClientConfigProviderMockRecorder) ClientConfig(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "ClientConfig", arg0)
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "ClientConfig", reflect.TypeOf((*MockClientConfigProvider)(nil).ClientConfig), arg0)
 }

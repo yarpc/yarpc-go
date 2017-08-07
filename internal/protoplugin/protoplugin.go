@@ -26,7 +26,7 @@ not guaranteed to stay here.
 
 This was HEAVILY adapted from github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway.
 
-Eventually, a rewrite of this to be simplier for what we need would be nice, but this was
+Eventually, a rewrite of this to be simpler for what we need would be nice, but this was
 available to get us here, especially with handling go imports.
 
 Note that "FQMN", "FQSN", etc stand for "Fully Qualified Message Name",
@@ -38,29 +38,27 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 	"text/template"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-	protogenerator "github.com/gogo/protobuf/protoc-gen-gogo/generator"
 	"github.com/gogo/protobuf/protoc-gen-gogo/plugin"
 )
 
 // Do is a helper function for protobuf plugins.
 //
 //   func main() {
-//     if err := protoplugin.Do(runner); err != nil {
+//     if err := protoplugin.Do(runner, os.Stdin, os.Stdout); err != nil {
 //       log.Fatal(err)
 //     }
 //   }
-func Do(runner Runner) error {
-	request, err := ReadRequest(os.Stdin)
+func Do(runner Runner, reader io.Reader, writer io.Writer) error {
+	request, err := ReadRequest(reader)
 	if err != nil {
 		return err
 	}
-	return WriteResponse(os.Stdout, runner.Run(request))
+	return WriteResponse(writer, runner.Run(request))
 }
 
 // ReadRequest reads the request from the reader.
@@ -137,11 +135,6 @@ type File struct {
 	Messages  []*Message
 	Enums     []*Enum
 	Services  []*Service
-}
-
-// IsProto2 determines if the syntax of the file is proto2.
-func (f *File) IsProto2() bool {
-	return f.Syntax == nil || f.GetSyntax() == "proto2"
 }
 
 // Message describes a protocol buffer message types.
@@ -237,60 +230,4 @@ type Field struct {
 	Message *Message
 	// FieldMessage is the message type of the field.
 	FieldMessage *Message
-}
-
-// FieldPath is a path to a field from a request message.
-type FieldPath []*FieldPathComponent
-
-// String returns a string representation of the field path.
-func (p FieldPath) String() string {
-	var components []string
-	for _, c := range p {
-		components = append(components, c.Name)
-	}
-	return strings.Join(components, ".")
-}
-
-// IsNestedProto3 indicates whether the FieldPath is a nested Proto3 path.
-func (p FieldPath) IsNestedProto3() bool {
-	return len(p) > 1 && !p[0].Target.Message.File.IsProto2()
-}
-
-// RHS is a right-hand-side expression in go to be used to assign a value to the target field.
-// It starts with "msgExpr", which is the go expression of the method request object.
-func (p FieldPath) RHS(msgExpr string) string {
-	l := len(p)
-	if l == 0 {
-		return msgExpr
-	}
-	components := []string{msgExpr}
-	for i, c := range p {
-		if i == l-1 {
-			components = append(components, c.RHS())
-			continue
-		}
-		components = append(components, c.LHS())
-	}
-	return strings.Join(components, ".")
-}
-
-// FieldPathComponent is a path component in FieldPath
-type FieldPathComponent struct {
-	// Name is a name of the proto field which this component corresponds to.
-	Name string
-	// Target is the proto field which this component corresponds to.
-	Target *Field
-}
-
-// RHS returns a right-hand-side expression in go for this field.
-func (c *FieldPathComponent) RHS() string {
-	return protogenerator.CamelCase(c.Name)
-}
-
-// LHS returns a left-hand-side expression in go for this field.
-func (c *FieldPathComponent) LHS() string {
-	if c.Target.Message.File.IsProto2() {
-		return fmt.Sprintf("Get%s()", protogenerator.CamelCase(c.Name))
-	}
-	return protogenerator.CamelCase(c.Name)
 }

@@ -22,30 +22,41 @@ package ioutil
 
 import (
 	"bytes"
-	"errors"
 	"io"
 
 	"go.uber.org/atomic"
 	"go.uber.org/yarpc/internal/bufferpool"
 )
 
-// TODO Optimizations:
-// - Attempt to cast the source reader to a *bytes.Buffer and use it directly
-//   instead of needing to copy into a new buffer.
-// - In cases where the first reader was not completely read when we call
-//   reset we should flush the rest of the reader into the buffer, or
-//   combine the buffer and source reader together dynamically.
-
 // NewRereader returns a new re-reader and closer that wraps the given reader.
 // The re-reader consumes the given reader on demand, recording the entire
 // stream so it can be replayed. The re-reader is suitable for retries. The
 // re-reader does not support concurrent consumers, as would be necessary
-// for speculative retries.
+// for speculative retries or fanout requests.
 func NewRereader(src io.Reader) (*Rereader, func()) {
+	// If the src is already a rereader, the api should be safe to reuse. as
+	// long as there will be a single request at a time.
+	if rr, ok := src.(*Rereader); ok {
+		return rr, func() {}
+	}
+
+	// If the src is a *bytes.Buffer, we don't need to copy the src into a buffer
+	// and can use the buffer directly.
+	if bb, ok := src.(*bytes.Buffer); ok {
+		return &Rereader{
+			buf:            bb,
+			bufReader:      bytes.NewReader(bb.Bytes()),
+			useBuffer:      atomic.NewBool(true),
+			hasReadFromSrc: atomic.NewBool(false),
+		}, func() {}
+	}
+
 	buf := bufferpool.Get()
 	return &Rereader{
-		teeReader: io.TeeReader(src, buf),
-		buf:       buf,
+		src:            src,
+		buf:            buf,
+		useBuffer:      atomic.NewBool(false),
+		hasReadFromSrc: atomic.NewBool(false),
 	}, func() { bufferpool.Put(buf) }
 }
 
@@ -56,13 +67,13 @@ func NewRereader(src io.Reader) (*Rereader, func()) {
 //     an io.EOF error).
 //   - Concurrent reads are not supported.
 type Rereader struct {
-	// teeReader is an io.TeeReader that will read from the source io.Reader
-	// and simultaneously return the result and write all the data to the
-	// buf attribute to be replayed.
-	teeReader io.Reader
+	// src is the source io.Reader.  When we read from it, we will tee it's
+	// data into a bytes buffer for reuse. (If the src was originally a bytes
+	// buffer, we will skip the copy step and use the buffer immediately).
+	src io.Reader
 
-	// buf will be filled with the contents from the teeReader as we read
-	// from the tee reader.
+	// buf will be filled with the contents from the src reader as we read
+	// from it.  After the initial read, it will be the source of truth.
 	buf *bytes.Buffer
 
 	// Unfortunately we can't reset a bytes.Buffer to reread from it, so after
@@ -70,14 +81,13 @@ type Rereader struct {
 	// bytes out of the buffer.
 	bufReader *bytes.Reader
 
-	// In order to test whether the reader is finished, we need to call `Read`
-	// and validate that it returns an io.EOF error.  This buffer is used so
-	// we don't need to reallocate a slice for every `Read` check.
-	testbuf [1]byte
+	// hasReadFromSrc indicates whether anything has been read from the src
+	// io.Reader.
+	hasReadFromSrc *atomic.Bool
 
 	// useBuffer indicates whether reads should go to the teeReader or the
 	// bufReader.
-	useBuffer atomic.Bool
+	useBuffer *atomic.Bool
 }
 
 // Read implements the io.Reader interface.  On the first read, we will record
@@ -86,26 +96,40 @@ func (rr *Rereader) Read(p []byte) (n int, err error) {
 	if rr.useBuffer.Load() {
 		return rr.bufReader.Read(p)
 	}
-	return rr.teeReader.Read(p)
+
+	rr.hasReadFromSrc.Store(true)
+	n, err = rr.src.Read(p)
+	if n > 0 {
+		if n, err := rr.buf.Write(p[:n]); err != nil {
+			return n, err
+		}
+	}
+	return
 }
 
 // Reset resets the rereader to read from the beginning of the source data.
-//   - If the current Read is not finished (a call to `Read` does not
-//     return an io.EOF error), Reset will return an error.
+// If the src has not finished reading, we will read the rest of the src data
+// into the buffer.
 func (rr *Rereader) Reset() error {
-	if _, err := rr.Read(rr.testbuf[:]); err != io.EOF {
-		return ErrReset
+	// If we're reading from a buffer, we can reset the buffer reader
+	// immediately.
+	if rr.useBuffer.Load() {
+		_, err := rr.bufReader.Seek(0, io.SeekStart)
+		return err
 	}
 
-	if !rr.useBuffer.Load() {
-		rr.bufReader = bytes.NewReader(rr.buf.Bytes())
-		rr.useBuffer.Store(true)
+	// If we haven't read a single byte from the src reader, we don't need to
+	// reset anything and can reuse the reader.
+	if !rr.hasReadFromSrc.Load() {
 		return nil
 	}
 
-	_, err := rr.bufReader.Seek(0, io.SeekStart)
-	return err
-}
+	// Ensure we've filled the buffer by reading the rest of the src.
+	if _, err := rr.buf.ReadFrom(rr.src); err != nil {
+		return err
+	}
 
-// ErrReset is the error returned when we can't reset a Rereader.
-var ErrReset = errors.New("cannot reset the rereader until we've finished reading the current reader")
+	rr.bufReader = bytes.NewReader(rr.buf.Bytes())
+	rr.useBuffer.Store(true)
+	return nil
+}

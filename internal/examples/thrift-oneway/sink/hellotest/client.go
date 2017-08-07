@@ -25,10 +25,10 @@ package hellotest
 
 import (
 	"context"
+	"github.com/golang/mock/gomock"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloclient"
-	"github.com/golang/mock/gomock"
 )
 
 // MockClient implements a gomock-compatible mock client for service

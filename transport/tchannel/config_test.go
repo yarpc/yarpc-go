@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	tchanneltest "github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/x/config"
+	"go.uber.org/yarpc/yarpcconfig"
 )
 
 type badOption struct{}
@@ -177,7 +177,7 @@ func TestTransportSpec(t *testing.T) {
 				"invalid test: environment variable %q is defined multiple times", k)
 			env[k] = v
 		}
-		configurator := config.New(config.InterpolationResolver(mapResolver(env)))
+		configurator := yarpcconfig.New(yarpcconfig.InterpolationResolver(mapResolver(env)))
 
 		opts := append(inbound.opts, outbound.opts...)
 		err := configurator.RegisterTransport(TransportSpec(opts...))

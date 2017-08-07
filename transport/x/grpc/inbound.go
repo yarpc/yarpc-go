@@ -21,35 +21,40 @@
 package grpc
 
 import (
-	"errors"
 	"net"
 	"sync"
 
 	"go.uber.org/yarpc/api/transport"
-	internalsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 )
 
 var (
-	errRouterNotSet          = errors.New("router not set")
-	errRouterHasNoProcedures = errors.New("router has no procedures")
+	errRouterNotSet = yarpcerrors.InternalErrorf("router not set")
 
 	_ transport.Inbound = (*Inbound)(nil)
 )
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once           internalsync.LifecycleOnce
+	once           *lifecycle.Once
 	lock           sync.Mutex
-	t              *Transport
+	transport      *Transport
 	listener       net.Listener
 	inboundOptions *inboundOptions
 	router         transport.Router
 	server         *grpc.Server
 }
 
-func newInbound(t *Transport, listener net.Listener, options ...InboundOption) *Inbound {
-	return &Inbound{internalsync.Once(), sync.Mutex{}, t, listener, newInboundOptions(options), nil, nil}
+// newInbound returns a new Inbound for the given listener.
+func newInbound(transport *Transport, listener net.Listener, options ...InboundOption) *Inbound {
+	return &Inbound{
+		once:           lifecycle.NewOnce(),
+		transport:      transport,
+		listener:       listener,
+		inboundOptions: newInboundOptions(options),
+	}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -76,7 +81,7 @@ func (i *Inbound) SetRouter(router transport.Router) {
 
 // Transports implements transport.Inbound#Transports.
 func (i *Inbound) Transports() []transport.Transport {
-	return []transport.Transport{i.t}
+	return []transport.Transport{i.transport}
 }
 
 func (i *Inbound) start() error {
@@ -85,22 +90,17 @@ func (i *Inbound) start() error {
 	if i.router == nil {
 		return errRouterNotSet
 	}
-	serviceDescs, err := i.getServiceDescs()
-	if err != nil {
-		return err
-	}
+
+	handler := newHandler(
+		i.router,
+		i.inboundOptions.getUnaryInterceptor(),
+	)
+
 	server := grpc.NewServer(
 		grpc.CustomCodec(customCodec{}),
-		// TODO: does this actually work for yarpc
-		// this needs a lot of review
-		//grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(i.inboundOptions.getTracer())),
-
-		// TODO grpc.UnaryInterceptor handles when parameter is nil, but should not rely on this
-		grpc.UnaryInterceptor(i.inboundOptions.getUnaryInterceptor()),
+		grpc.UnknownServiceHandler(handler.handle),
 	)
-	for _, serviceDesc := range serviceDescs {
-		server.RegisterService(serviceDesc, noopGrpcStruct{})
-	}
+
 	go func() {
 		// TODO there should be some mechanism to block here
 		// there is a race because the listener gets set in the grpc
@@ -127,50 +127,4 @@ func (i *Inbound) stop() error {
 	return nil
 }
 
-func (i *Inbound) getServiceDescs() ([]*grpc.ServiceDesc, error) {
-	// TODO: router.Procedures() is not guaranteed to be immutable
-	// https://github.com/yarpc/yarpc-go/issues/825
-	procedures := i.router.Procedures()
-	if len(procedures) == 0 {
-		return nil, errRouterHasNoProcedures
-	}
-
-	serviceNameToMethodNames := make(map[string]map[string]bool)
-	for _, procedure := range procedures {
-		serviceName, methodName, err := procedureNameToServiceNameMethodName(procedure.Name)
-		if err != nil {
-			return nil, err
-		}
-		methodNames, ok := serviceNameToMethodNames[serviceName]
-		if !ok {
-			methodNames = make(map[string]bool)
-			serviceNameToMethodNames[serviceName] = methodNames
-		}
-		methodNames[methodName] = true
-	}
-
-	serviceDescs := make([]*grpc.ServiceDesc, 0, len(serviceNameToMethodNames))
-	for serviceName, methodNames := range serviceNameToMethodNames {
-		serviceDesc := &grpc.ServiceDesc{
-			ServiceName: serviceName,
-			HandlerType: (*noopGrpcInterface)(nil),
-			Methods:     make([]grpc.MethodDesc, 0, len(methodNames)),
-		}
-		for methodName := range methodNames {
-			serviceDesc.Methods = append(serviceDesc.Methods, grpc.MethodDesc{
-				MethodName: methodName,
-				Handler: newHandler(
-					serviceName,
-					methodName,
-					i.router,
-				).handle,
-			})
-		}
-		serviceDescs = append(serviceDescs, serviceDesc)
-	}
-
-	return serviceDescs, nil
-}
-
-type noopGrpcInterface interface{}
 type noopGrpcStruct struct{}

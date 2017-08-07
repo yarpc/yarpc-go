@@ -26,7 +26,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	intsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycletest"
 )
 
 // FakePeerListOption is an option for NewFakePeerList.
@@ -49,7 +49,7 @@ type FakePeerList struct {
 // NewFakePeerList returns a fake peer list.
 func NewFakePeerList(opts ...FakePeerListOption) *FakePeerList {
 	pl := &FakePeerList{
-		Lifecycle: intsync.NewNopLifecycle(),
+		Lifecycle: lifecycletest.NewNop(),
 	}
 	for _, opt := range opts {
 		opt(pl)

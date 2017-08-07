@@ -35,9 +35,9 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
-	"go.uber.org/yarpc/internal/sync"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -98,7 +98,7 @@ func AddHeader(key, value string) OutboundOption {
 // The concrete peer type is private and intrinsic to the HTTP transport.
 func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
-		once:        sync.Once(),
+		once:        lifecycle.NewOnce(),
 		chooser:     chooser,
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
@@ -156,7 +156,7 @@ type Outbound struct {
 	// Headers to add to all outgoing requests.
 	headers http.Header
 
-	once sync.LifecycleOnce
+	once *lifecycle.Once
 }
 
 // setURLTemplate configures an alternate URL template.
@@ -197,7 +197,7 @@ func (o *Outbound) IsRunning() bool {
 
 // Call makes a HTTP request
 func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transport.Response, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 
@@ -210,7 +210,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 
 // CallOneway makes a oneway request
 func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (transport.Ack, error) {
-	if err := o.once.WhenRunning(ctx); err != nil {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 
@@ -282,7 +282,7 @@ func (o *Outbound) callWithPeer(
 		// maintenance loop resumes probing for availability.
 		p.OnDisconnected()
 
-		return nil, err
+		return nil, yarpcerrors.UnknownErrorf("unknown error from http client: %s", err.Error())
 	}
 
 	span.SetTag("http.status_code", response.StatusCode)

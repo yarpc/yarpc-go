@@ -3,11 +3,10 @@ FROM golang:1.8.3
 EXPOSE 8080-8090
 ENV SUPPRESS_DOCKER 1
 WORKDIR /go/src/go.uber.org/yarpc
-ADD dockercrossdockdeps.mk /go/src/go.uber.org/yarpc/
-ADD build/base.mk build/deps.mk build/crossdockdeps.mk /go/src/go.uber.org/yarpc/build/
-RUN make -f dockercrossdockdeps.mk crossdock-predeps
+ADD dockerdeps.mk /go/src/go.uber.org/yarpc/
+ADD etc/make/base.mk etc/make/deps.mk /go/src/go.uber.org/yarpc/etc/make/
 ADD glide.yaml glide.lock /go/src/go.uber.org/yarpc/
-RUN make -f dockercrossdockdeps.mk glide
+RUN make -f dockerdeps.mk glide
 ADD . /go/src/go.uber.org/yarpc/
 RUN go install ./internal/crossdock
 CMD ["/go/bin/crossdock"]

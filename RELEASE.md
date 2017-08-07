@@ -36,9 +36,10 @@ This document outlines how to create a release of yarpc-go
 13. `git merge master`
 
 14. Update `CHANGELOG.md` and `version.go` to have a new
-    `v<version>-dev (unreleased)` and put into a commit with title
-    `Back to development`
+    `v<version>-dev (unreleased)`
 
-15. Run `make verify_version`
+15. Run `make verifyversion`
 
-16. `git push origin dev`
+16. Create a commit with the title `Back to development`
+
+17. `git push origin dev`

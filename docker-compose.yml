@@ -5,8 +5,7 @@ services:
         image: crossdock/crossdock
         dns_search: .
         depends_on:
-          cherami:
-            condition: service_healthy
+          - proxy_dep
         links:
             - go
             - node
@@ -52,9 +51,8 @@ services:
             - SKIP_GRPC=client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_GOOGLE_GRPC_CLIENT=client,server
             - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
-              # TODO: uncomment when transport errors are implemented and we no longer wrap protobuf responses
-              #- BEHAVIOR_GOOGLE_GRPC_SERVER=client,server
-              #- SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - BEHAVIOR_GOOGLE_GRPC_SERVER=client,server
+            - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
@@ -86,8 +84,7 @@ services:
     go:
         dns_search: .
         depends_on:
-          cherami:
-            condition: service_healthy
+          - proxy_dep
         build:
           context: .
           dockerfile: Dockerfile.crossdock
@@ -124,10 +121,34 @@ services:
             - SYNC=1
 
     redis:
-        image: redis
+        image: healthcheck/redis
         ports:
             - 6379
 
     cherami:
         dns_search: .
         image: ubercherami/cherami-server-standalone
+
+    gotest:
+        dns_search: .
+        depends_on:
+          - proxy_dep
+        links:
+            - redis
+            - cherami
+        build:
+          context: .
+          dockerfile: Dockerfile.1.8
+        environment:
+            - REDIS=enabled
+            - CHERAMI=enabled
+
+    #https://github.com/docker/compose/issues/4369
+
+    proxy_dep:
+        image: busybox
+        depends_on:
+          cherami:
+            condition: service_healthy
+          redis:
+            condition: service_healthy

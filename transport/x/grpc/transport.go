@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc/api/peer"
-	internalsync "go.uber.org/yarpc/internal/sync"
+	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
 // Transport is a grpc transport.Transport.
@@ -34,7 +34,7 @@ import (
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
 	lock             sync.Mutex
-	once             internalsync.LifecycleOnce
+	once             *lifecycle.Once
 	transportOptions *transportOptions
 	peers            map[string]*grpcPeer
 }
@@ -43,7 +43,7 @@ type Transport struct {
 func NewTransport(options ...TransportOption) *Transport {
 	return &Transport{
 		sync.Mutex{},
-		internalsync.Once(),
+		lifecycle.NewOnce(),
 		newTransportOptions(options),
 		make(map[string]*grpcPeer),
 	}

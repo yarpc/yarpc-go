@@ -1,2 +1,2 @@
-include build/base.mk
-include build/deps.mk
+include etc/make/base.mk
+include etc/make/deps.mk

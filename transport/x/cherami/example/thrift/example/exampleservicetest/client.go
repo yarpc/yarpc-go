@@ -25,9 +25,9 @@ package exampleservicetest
 
 import (
 	"context"
+	"github.com/golang/mock/gomock"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/x/cherami/example/thrift/example/exampleserviceclient"
-	"github.com/golang/mock/gomock"
 )
 
 // MockClient implements a gomock-compatible mock client for service

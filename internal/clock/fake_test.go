@@ -34,6 +34,13 @@ func TestFakeClockAdd(t *testing.T) {
 	assert.Equal(t, time.Second, clock.Now().Sub(start))
 }
 
+func TestFakeClockSet(t *testing.T) {
+	clock := NewFake()
+	assert.Equal(t, time.Unix(0, 0), clock.Now())
+	clock.Set(time.Unix(100, 0))
+	assert.Equal(t, time.Unix(100, 0), clock.Now())
+}
+
 func TestFakeClockAfter(t *testing.T) {
 	clock := NewFake()
 	start := clock.Now()
@@ -55,6 +62,7 @@ func TestFakeClockAfter(t *testing.T) {
 }
 
 func TestFakeClockSleep(t *testing.T) {
+	t.Skip("TODO this test is flaky, we need to fix, https://github.com/yarpc/yarpc-go/issues/1171")
 	clock := NewFake()
 
 	go func() {

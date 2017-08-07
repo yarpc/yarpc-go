@@ -31,9 +31,8 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/errors"
 	"go.uber.org/yarpc/internal/iopool"
-	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -117,7 +116,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			return parseTTLErr
 		}
 
-		if err := request.ValidateUnaryContext(ctx); err != nil {
+		if err := transport.ValidateUnaryContext(ctx); err != nil {
 			return err
 		}
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)

@@ -28,7 +28,8 @@ import (
 	"go.uber.org/yarpc"
 	apiencoding "go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/encoding"
+	"go.uber.org/yarpc/pkg/encoding"
+	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -76,7 +77,7 @@ func (c *client) Call(
 	}
 	response := newResponse()
 	if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response); err != nil {
-		return nil, encoding.ResponseBodyDecodeError(transportRequest, err)
+		return nil, errors.ResponseBodyDecodeError(transportRequest, err)
 	}
 	return response, nil
 }
@@ -115,7 +116,7 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 	if request != nil {
 		requestData, cleanup, err := marshal(transportRequest.Encoding, request)
 		if err != nil {
-			return nil, nil, nil, cleanup, encoding.RequestBodyEncodeError(transportRequest, err)
+			return nil, nil, nil, cleanup, errors.RequestBodyEncodeError(transportRequest, err)
 		}
 		if requestData != nil {
 			transportRequest.Body = bytes.NewReader(requestData)

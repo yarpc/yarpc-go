@@ -26,6 +26,7 @@ package peertest
 import (
 	gomock "github.com/golang/mock/gomock"
 	peer "go.uber.org/yarpc/api/peer"
+	reflect "reflect"
 )
 
 // MockIdentifier is a mock of Identifier interface
@@ -60,7 +61,7 @@ func (_m *MockIdentifier) Identifier() string {
 
 // Identifier indicates an expected call of Identifier
 func (_mr *MockIdentifierMockRecorder) Identifier() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Identifier")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Identifier", reflect.TypeOf((*MockIdentifier)(nil).Identifier))
 }
 
 // MockPeer is a mock of Peer interface
@@ -93,7 +94,7 @@ func (_m *MockPeer) EndRequest() {
 
 // EndRequest indicates an expected call of EndRequest
 func (_mr *MockPeerMockRecorder) EndRequest() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "EndRequest")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "EndRequest", reflect.TypeOf((*MockPeer)(nil).EndRequest))
 }
 
 // Identifier mocks base method
@@ -105,7 +106,7 @@ func (_m *MockPeer) Identifier() string {
 
 // Identifier indicates an expected call of Identifier
 func (_mr *MockPeerMockRecorder) Identifier() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Identifier")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Identifier", reflect.TypeOf((*MockPeer)(nil).Identifier))
 }
 
 // StartRequest mocks base method
@@ -115,7 +116,7 @@ func (_m *MockPeer) StartRequest() {
 
 // StartRequest indicates an expected call of StartRequest
 func (_mr *MockPeerMockRecorder) StartRequest() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "StartRequest")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "StartRequest", reflect.TypeOf((*MockPeer)(nil).StartRequest))
 }
 
 // Status mocks base method
@@ -127,5 +128,5 @@ func (_m *MockPeer) Status() peer.Status {
 
 // Status indicates an expected call of Status
 func (_mr *MockPeerMockRecorder) Status() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Status")
+	return _mr.mock.ctrl.RecordCallWithMethodType(_mr.mock, "Status", reflect.TypeOf((*MockPeer)(nil).Status))
 }
