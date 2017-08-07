@@ -56,7 +56,7 @@ type Outbound struct {
 }
 
 func newOutbound(t *Transport, pc peer.Chooser, options ...OutboundOption) *Outbound {
-	return &Outbound{internalsync.Once(), sync.Mutex{}, t, "", pc, newOutboundOptions(options), nil}
+	return &Outbound{lifecycle.NewOnce(), sync.Mutex{}, t, "", pc, newOutboundOptions(options), nil}
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
@@ -151,6 +151,7 @@ func (o *Outbound) start() error {
 			// TODO maybe multierr this
 			return err
 		}
+	}
 	clientConn, err := grpc.Dial(
 		o.address,
 		grpc.WithInsecure(),
