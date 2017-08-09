@@ -38,22 +38,22 @@ var (
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once           *lifecycle.Once
-	lock           sync.Mutex
-	transport      *Transport
-	listener       net.Listener
-	inboundOptions *inboundOptions
-	router         transport.Router
-	server         *grpc.Server
+	once      *lifecycle.Once
+	lock      sync.Mutex
+	transport *Transport
+	listener  net.Listener
+	options   *inboundOptions
+	router    transport.Router
+	server    *grpc.Server
 }
 
 // newInbound returns a new Inbound for the given listener.
 func newInbound(transport *Transport, listener net.Listener, options ...InboundOption) *Inbound {
 	return &Inbound{
-		once:           lifecycle.NewOnce(),
-		transport:      transport,
-		listener:       listener,
-		inboundOptions: newInboundOptions(options),
+		once:      lifecycle.NewOnce(),
+		transport: transport,
+		listener:  listener,
+		options:   newInboundOptions(options),
 	}
 }
 
@@ -93,7 +93,7 @@ func (i *Inbound) start() error {
 
 	handler := newHandler(
 		i.router,
-		i.inboundOptions.getUnaryInterceptor(),
+		i.options.unaryInterceptor,
 	)
 
 	server := grpc.NewServer(

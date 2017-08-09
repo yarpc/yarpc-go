@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
@@ -55,7 +56,7 @@ type Outbound struct {
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	return newOutbound(t, peer.NewSingle(hostport.PeerIdentifier(address), t), options...)
+	return newOutbound(t, peerchooser.NewSingle(hostport.PeerIdentifier(address), t), options...)
 }
 
 func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOption) *Outbound {

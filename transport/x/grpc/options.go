@@ -20,7 +20,11 @@
 
 package grpc
 
-import "google.golang.org/grpc"
+import (
+	"go.uber.org/yarpc/api/backoff"
+	intbackoff "go.uber.org/yarpc/internal/backoff"
+	"google.golang.org/grpc"
+)
 
 // Option is an interface shared by TransportOption, InboundOption, and OutboundOption
 // allowing either to be recognized by TransportSpec().
@@ -37,6 +41,17 @@ type TransportOption func(*transportOptions)
 
 func (TransportOption) grpcOption() {}
 
+// BackoffStrategy specifies the backoff strategy for delays between
+// connection attempts for each peer.
+//
+// The default is exponential backoff starting with 10ms fully jittered,
+// doubling each attempt, with a maximum interval of 30s.
+func BackoffStrategy(backoffStrategy backoff.Strategy) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.backoffStrategy = backoffStrategy
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -47,10 +62,14 @@ type OutboundOption func(*outboundOptions)
 
 func (OutboundOption) grpcOption() {}
 
-type transportOptions struct{}
+type transportOptions struct {
+	backoffStrategy backoff.Strategy
+}
 
 func newTransportOptions(options []TransportOption) *transportOptions {
-	transportOptions := &transportOptions{}
+	transportOptions := &transportOptions{
+		backoffStrategy: intbackoff.DefaultExponential,
+	}
 	for _, option := range options {
 		option(transportOptions)
 	}
@@ -69,13 +88,6 @@ func newInboundOptions(options []InboundOption) *inboundOptions {
 	return inboundOptions
 }
 
-// TODO: this should cover the tracer interceptor too
-// grpc-go only allows one interceptor, so need to handle all cases
-// working on this with go-grpc-middleware
-func (i *inboundOptions) getUnaryInterceptor() grpc.UnaryServerInterceptor {
-	return i.unaryInterceptor
-}
-
 type outboundOptions struct{}
 
 func newOutboundOptions(options []OutboundOption) *outboundOptions {
@@ -87,6 +99,7 @@ func newOutboundOptions(options []OutboundOption) *outboundOptions {
 }
 
 // for testing only for now
+// grpc-go only allows one interceptor, so need to handle all cases
 func withInboundUnaryInterceptor(unaryInterceptor grpc.UnaryServerInterceptor) InboundOption {
 	return func(inboundOptions *inboundOptions) {
 		inboundOptions.unaryInterceptor = unaryInterceptor

@@ -24,6 +24,7 @@ import (
 	"net"
 	"sync"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
@@ -33,17 +34,17 @@ import (
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
-	lock             sync.Mutex
-	once             *lifecycle.Once
-	transportOptions *transportOptions
-	identiferToPeer  map[string]*grpcPeer
+	lock            sync.Mutex
+	once            *lifecycle.Once
+	options         *transportOptions
+	identiferToPeer map[string]*grpcPeer
 }
 
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
 	return &Transport{
 		once:             lifecycle.NewOnce(),
-		transportOptions: newTransportOptions(options),
+		options:          newTransportOptions(options),
 		identifierToPeer: make(map[string]*grpcPeer),
 	}
 }
@@ -62,10 +63,11 @@ func (t *Transport) Stop() error {
 		for _, grpcPeer := range t.identifierToPeer {
 			grpcPeer.stop()
 		}
+		var err error
 		for _, grpcPeer := range t.identifierToPeer {
-			grpcPeer.wait()
+			err = multierr.Combine(err, grpcPeer.wait())
 		}
-		return nil
+		return err
 	})
 }
 
