@@ -104,7 +104,7 @@ func (t *Transport) getPeer(address string) (*grpcPeer, error) {
 
 	peer, ok := t.peers[address]
 	if !ok {
-		peer, err := newPeer(address)
+		peer, err := newPeer(address, t)
 		if err != nil {
 			return nil, err
 		}
