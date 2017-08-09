@@ -1,7 +1,6 @@
 package grpc
 
 import (
-	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"google.golang.org/grpc"
 )
@@ -9,11 +8,13 @@ import (
 type grpcPeer struct {
 	*hostport.Peer
 	clientConn *grpc.ClientConn
+	signalC    chan struct{}
+	stoppedC   chan struct{}
 }
 
-func newPeer(address string, transport *Transport) (*grpcPeer, error) {
+func newPeer(peerIdentifier hostport.PeerIdentifier, transport *Transport) (*grpcPeer, error) {
 	clientConn, err := grpc.Dial(
-		address,
+		peerIdentifier.Identifier(),
 		grpc.WithInsecure(),
 		grpc.WithCodec(customCodec{}),
 		grpc.WithUserAgent(UserAgent),
@@ -22,8 +23,10 @@ func newPeer(address string, transport *Transport) (*grpcPeer, error) {
 		return nil, err
 	}
 	return &grpcPeer{
-		Peer:       hostport.NewPeer(hostport.PeerIdentifier(address), transport),
+		Peer:       hostport.NewPeer(peerIdentifier, transport),
 		clientConn: clientConn,
+		signalC:    make(chan struct{}, 1),
+		stoppedC:   make(chan struct{}, 1),
 	}, nil
 }
 
@@ -32,16 +35,14 @@ func newPeer(address string, transport *Transport) (*grpcPeer, error) {
 // TODO NotifyStatusChange whenenver connection status changes or pending
 // request count changes.
 
-func (p *grpcPeer) Status() peer.Status {
-	return peer.Status{
-		PendingRequestCount: 0,
-		ConnectionStatus:    peer.Available,
-	}
+func (p *grpcPeer) monitor() {
+
 }
 
-func (p *grpcPeer) StartRequest() {
-	// TODO pending request count
+func (p *grpcPeer) stop() {
+	p.signalC <- struct{}{}
 }
 
-func (p *grpcPeer) EndRequest() {
+func (p *grpcPeer) wait() {
+	<-p.stoppedC
 }

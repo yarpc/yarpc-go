@@ -36,16 +36,15 @@ type Transport struct {
 	lock             sync.Mutex
 	once             *lifecycle.Once
 	transportOptions *transportOptions
-	peers            map[string]*grpcPeer
+	identiferToPeer  map[string]*grpcPeer
 }
 
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
 	return &Transport{
-		sync.Mutex{},
-		lifecycle.NewOnce(),
-		newTransportOptions(options),
-		make(map[string]*grpcPeer),
+		once:             lifecycle.NewOnce(),
+		transportOptions: newTransportOptions(options),
+		identifierToPeer: make(map[string]*grpcPeer),
 	}
 }
 
@@ -57,7 +56,17 @@ func (t *Transport) Start() error {
 // Stop implements transport.Lifecycle#Stop.
 func (t *Transport) Stop() error {
 	// TODO release all remaining retained peers (maybe?)
-	return t.once.Stop(nil)
+	return t.once.Stop(func() error {
+		t.lock.Lock()
+		defer t.lock.Unlock()
+		for _, grpcPeer := range t.identifierToPeer {
+			grpcPeer.stop()
+		}
+		for _, grpcPeer := range t.identifierToPeer {
+			grpcPeer.wait()
+		}
+		return nil
+	})
 }
 
 // IsRunning implements transport.Lifecycle#IsRunning.
@@ -70,8 +79,8 @@ func (t *Transport) NewInbound(listener net.Listener, options ...InboundOption) 
 	return newInbound(t, listener, options...)
 }
 
-func (t *Transport) NewOutbound(pc peer.Chooser) *Outbound {
-	return newOutbound(t, pc)
+func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
+	return newOutbound(t, peerChooser, options...)
 }
 
 // NewSingleOutbound returns a new Outbound for the given adrress.
