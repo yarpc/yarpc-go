@@ -94,8 +94,8 @@ func (h *handler) handleBeforeErrorConversion(
 			ctx,
 			transportRequest,
 			&grpc.UnaryServerInfo{
-				noopGrpcStruct{},
-				streamMethod,
+				Server:     noopGrpcStruct{},
+				FullMethod: streamMethod,
 			},
 			func(ctx context.Context, request interface{}) (interface{}, error) {
 				transportRequest, ok := request.(*transport.Request)
