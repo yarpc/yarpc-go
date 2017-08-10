@@ -27,6 +27,7 @@ import (
 	"strings"
 	"sync"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -70,12 +71,18 @@ func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOpti
 
 // Start implements transport.Lifecycle#Start.
 func (o *Outbound) Start() error {
-	return o.once.Start(o.peerChooser.Start)
+	return o.once.Start(func() error {
+		// TODO: Why isn't t.Start called? It seems to be in http
+		return multierr.Combine(o.t.Start(), o.peerChooser.Start())
+	})
 }
 
 // Stop implements transport.Lifecycle#Stop.
 func (o *Outbound) Stop() error {
-	return o.once.Stop(o.peerChooser.Stop)
+	return o.once.Stop(func() error {
+		// TODO: Why isn't t.Stop called? It seems to be in http
+		return multierr.Combine(o.t.Stop(), o.peerChooser.Stop())
+	})
 }
 
 // IsRunning implements transport.Lifecycle#IsRunning.

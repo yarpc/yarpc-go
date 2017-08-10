@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package grpc
 
 import (
@@ -18,9 +38,9 @@ type grpcPeer struct {
 	stoppedC   chan error
 }
 
-func newPeer(peerIdentifier hostport.PeerIdentifier, t *Transport) (*grpcPeer, error) {
+func newPeer(address string, t *Transport) (*grpcPeer, error) {
 	clientConn, err := grpc.Dial(
-		peerIdentifier.Identifier(),
+		address,
 		grpc.WithInsecure(),
 		grpc.WithCodec(customCodec{}),
 		grpc.WithUserAgent(UserAgent),
@@ -29,7 +49,7 @@ func newPeer(peerIdentifier hostport.PeerIdentifier, t *Transport) (*grpcPeer, e
 		return nil, err
 	}
 	grpcPeer := &grpcPeer{
-		Peer:       hostport.NewPeer(peerIdentifier, t),
+		Peer:       hostport.NewPeer(hostport.PeerIdentifier(address), t),
 		t:          t,
 		clientConn: clientConn,
 		stoppingC:  make(chan struct{}, 1),
@@ -49,24 +69,33 @@ func (p *grpcPeer) monitor() {
 	connectivityState := p.clientConn.GetState()
 	changed := true
 	for {
+		ctx := context.Background()
+		var cancel context.CancelFunc
+
 		var peerConnectionStatus peer.ConnectionStatus
 		var err error
 		// will be called the first time since changed is initialized to true
 		if changed {
 			peerConnectionStatus, err = connectivityStateToPeerConnectionStatus(connectivityState)
 			if err != nil {
-				p.stop(err)
+				if cancel != nil {
+					cancel()
+				}
+				p.monitorStop(err)
 				return
 			}
 			p.Peer.SetStatus(peerConnectionStatus)
 		}
 
-		ctx := context.Background()
-		var cancel context.CancelFunc
 		if peerConnectionStatus == peer.Available {
+			// reset attempts since we are available
 			attempts = 0
 		} else {
 			attempts++
+			// this isn't actually a backoff, what we're saying is that
+			// we backoff on TIMING OUT before the next state change
+			// before returning
+			// https://godoc.org/google.golang.org/grpc#ClientConn.WaitForStateChange
 			ctx, cancel = context.WithTimeout(ctx, backoff.Duration(attempts))
 		}
 
@@ -74,27 +103,38 @@ func (p *grpcPeer) monitor() {
 		go func() { changedC <- p.clientConn.WaitForStateChange(ctx, connectivityState) }()
 
 		select {
-		case changed := <-changedC:
+		case changed = <-changedC:
 			if cancel != nil {
 				cancel()
 			}
 			continue
 		case <-p.stoppingC:
 		case <-p.t.once.Stopping():
-			p.stop(nil)
+			if cancel != nil {
+				cancel()
+			}
+			p.monitorStop(nil)
 			return
 		}
 	}
 }
 
-func (p *grpcPeer) signalStop() {
-	p.stoppingC <- struct{}{}
-}
-
-func (p *grpcPeer) stop(err error) {
+// this should only be called by monitor()
+// if you want to stop outside of monitor(), call stop()
+func (p *grpcPeer) monitorStop(err error) {
 	p.Peer.SetStatus(peer.Unavailable)
+	// Close always returns an error
 	_ = p.clientConn.Close()
 	p.stoppedC <- err
+	close(p.stoppedC)
+}
+
+// should only be called once
+// maybe do this with once?
+func (p *grpcPeer) stop() {
+	// this is selected on in monitor()
+	p.stoppingC <- struct{}{}
+	close(p.stoppingC)
 }
 
 func (p *grpcPeer) wait() error {
