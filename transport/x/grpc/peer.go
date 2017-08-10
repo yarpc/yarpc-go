@@ -107,6 +107,9 @@ func (p *grpcPeer) monitor() {
 			if cancel != nil {
 				cancel()
 			}
+			if changed {
+				connectivityState = p.clientConn.GetState()
+			}
 			continue
 		case <-p.stoppingC:
 		case <-p.t.once.Stopping():
