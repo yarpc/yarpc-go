@@ -167,12 +167,14 @@ type grpcTransport struct{ t *testing.T }
 
 func (gt grpcTransport) WithRouter(r transport.Router, f func(transport.UnaryOutbound)) {
 	grpcTransport := grpc.NewTransport()
+	require.NoError(gt.t, grpcTransport.Start(), "failed to start transport")
+	defer grpcTransport.Stop()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(gt.t, err)
 	i := grpcTransport.NewInbound(listener)
 	i.SetRouter(r)
-	require.NoError(gt.t, i.Start(), "failed to start")
+	require.NoError(gt.t, i.Start(), "failed to start inbound")
 	defer i.Stop()
 
 	o := grpcTransport.NewSingleOutbound(listener.Addr().String())

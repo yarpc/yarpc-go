@@ -159,6 +159,14 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 	testRouter := newTestRouter(procedures)
 
 	t := NewTransport()
+	if err := t.Start(); err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			err = multierr.Append(err, t.Stop())
+		}
+	}()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

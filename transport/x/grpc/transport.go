@@ -22,7 +22,11 @@ package grpc
 
 import (
 	"net"
+	"sync"
 
+	"go.uber.org/multierr"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
 
@@ -31,13 +35,19 @@ import (
 // This currently does not have any additional functionality over creating
 // an Inbound or Outbound separately, but may in the future.
 type Transport struct {
-	once             *lifecycle.Once
-	transportOptions *transportOptions
+	lock          sync.Mutex
+	once          *lifecycle.Once
+	options       *transportOptions
+	addressToPeer map[string]*grpcPeer
 }
 
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
-	return &Transport{lifecycle.NewOnce(), newTransportOptions(options)}
+	return &Transport{
+		once:          lifecycle.NewOnce(),
+		options:       newTransportOptions(options),
+		addressToPeer: make(map[string]*grpcPeer),
+	}
 }
 
 // Start implements transport.Lifecycle#Start.
@@ -47,7 +57,18 @@ func (t *Transport) Start() error {
 
 // Stop implements transport.Lifecycle#Stop.
 func (t *Transport) Stop() error {
-	return t.once.Stop(nil)
+	return t.once.Stop(func() error {
+		t.lock.Lock()
+		defer t.lock.Unlock()
+		for _, grpcPeer := range t.addressToPeer {
+			grpcPeer.stop()
+		}
+		var err error
+		for _, grpcPeer := range t.addressToPeer {
+			err = multierr.Append(err, grpcPeer.wait())
+		}
+		return err
+	})
 }
 
 // IsRunning implements transport.Lifecycle#IsRunning.
@@ -63,4 +84,65 @@ func (t *Transport) NewInbound(listener net.Listener, options ...InboundOption) 
 // NewSingleOutbound returns a new Outbound for the given adrress.
 func (t *Transport) NewSingleOutbound(address string, options ...OutboundOption) *Outbound {
 	return newSingleOutbound(t, address, options...)
+}
+
+// NewOutbound returns a new Outbound for the given peer.Chooser.
+func (t *Transport) NewOutbound(peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
+	return newOutbound(t, peerChooser, options...)
+}
+
+// RetainPeer retains the peer.
+func (t *Transport) RetainPeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) (peer.Peer, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	address, err := getPeerAddress(peerIdentifier)
+	if err != nil {
+		return nil, err
+	}
+	p, ok := t.addressToPeer[address]
+	if !ok {
+		p, err = newPeer(address, t)
+		if err != nil {
+			return nil, err
+		}
+		t.addressToPeer[address] = p
+	}
+	p.Subscribe(peerSubscriber)
+	return p, nil
+}
+
+// ReleasePeer releases the peer.
+func (t *Transport) ReleasePeer(peerIdentifier peer.Identifier, peerSubscriber peer.Subscriber) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	address, err := getPeerAddress(peerIdentifier)
+	if err != nil {
+		return err
+	}
+	p, ok := t.addressToPeer[address]
+	if !ok {
+		return peer.ErrTransportHasNoReferenceToPeer{
+			TransportName:  "grpc.Transport",
+			PeerIdentifier: address,
+		}
+	}
+	if err := p.Unsubscribe(peerSubscriber); err != nil {
+		return err
+	}
+	if p.NumSubscribers() == 0 {
+		delete(t.addressToPeer, address)
+		p.stop()
+		return p.wait()
+	}
+	return nil
+}
+
+func getPeerAddress(peerIdentifier peer.Identifier) (string, error) {
+	if _, ok := peerIdentifier.(hostport.PeerIdentifier); !ok {
+		return "", peer.ErrInvalidPeerType{
+			ExpectedType:   "hostport.PeerIdentifier",
+			PeerIdentifier: peerIdentifier,
+		}
+	}
+	return peerIdentifier.Identifier(), nil
 }

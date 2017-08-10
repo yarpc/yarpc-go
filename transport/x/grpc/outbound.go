@@ -28,7 +28,10 @@ import (
 	"sync"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	peerchooser "go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -45,26 +48,34 @@ var _ transport.UnaryOutbound = (*Outbound)(nil)
 
 // Outbound is a transport.UnaryOutbound.
 type Outbound struct {
-	once            *lifecycle.Once
-	lock            sync.Mutex
-	t               *Transport
-	address         string
-	outboundOptions *outboundOptions
-	clientConn      *grpc.ClientConn
+	once        *lifecycle.Once
+	lock        sync.Mutex
+	t           *Transport
+	peerChooser peer.Chooser
+	options     *outboundOptions
 }
 
 func newSingleOutbound(t *Transport, address string, options ...OutboundOption) *Outbound {
-	return &Outbound{lifecycle.NewOnce(), sync.Mutex{}, t, address, newOutboundOptions(options), nil}
+	return newOutbound(t, peerchooser.NewSingle(hostport.PeerIdentifier(address), t), options...)
+}
+
+func newOutbound(t *Transport, peerChooser peer.Chooser, options ...OutboundOption) *Outbound {
+	return &Outbound{
+		once:        lifecycle.NewOnce(),
+		t:           t,
+		peerChooser: peerChooser,
+		options:     newOutboundOptions(options),
+	}
 }
 
 // Start implements transport.Lifecycle#Start.
 func (o *Outbound) Start() error {
-	return o.once.Start(o.start)
+	return o.once.Start(o.peerChooser.Start)
 }
 
 // Stop implements transport.Lifecycle#Stop.
 func (o *Outbound) Stop() error {
-	return o.once.Stop(o.stop)
+	return o.once.Stop(o.peerChooser.Stop)
 }
 
 // IsRunning implements transport.Lifecycle#IsRunning.
@@ -75,6 +86,11 @@ func (o *Outbound) IsRunning() bool {
 // Transports implements transport.Inbound#Transports.
 func (o *Outbound) Transports() []transport.Transport {
 	return []transport.Transport{o.t}
+}
+
+// Chooser returns the associated peer.Chooser.
+func (o *Outbound) Chooser() peer.Chooser {
+	return o.peerChooser
 }
 
 // Call implements transport.UnaryOutbound#Call.
@@ -100,7 +116,7 @@ func (o *Outbound) invoke(
 	request *transport.Request,
 	responseBody *[]byte,
 	responseMD *metadata.MD,
-) error {
+) (retErr error) {
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
@@ -118,39 +134,30 @@ func (o *Outbound) invoke(
 	if responseMD != nil {
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
+	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
+	defer func() {
+		if onFinish != nil {
+			onFinish(retErr)
+		}
+	}()
+	if err != nil {
+		return err
+	}
+	grpcPeer, ok := apiPeer.(*grpcPeer)
+	if !ok {
+		return peer.ErrInvalidPeerConversion{
+			Peer:         apiPeer,
+			ExpectedType: "*grpcPeer",
+		}
+	}
 	return grpc.Invoke(
 		metadata.NewContext(ctx, md),
 		fullMethod,
 		requestBody,
 		responseBody,
-		o.clientConn,
+		grpcPeer.clientConn,
 		callOptions...,
 	)
-}
-
-func (o *Outbound) start() error {
-	clientConn, err := grpc.Dial(
-		o.address,
-		grpc.WithInsecure(),
-		grpc.WithCodec(customCodec{}),
-		grpc.WithUserAgent(UserAgent),
-	)
-	if err != nil {
-		return err
-	}
-	o.lock.Lock()
-	defer o.lock.Unlock()
-	o.clientConn = clientConn
-	return nil
-}
-
-func (o *Outbound) stop() error {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-	if o.clientConn != nil {
-		return o.clientConn.Close()
-	}
-	return nil
 }
 
 func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {

@@ -1,5 +1,5 @@
-hash: 7b8b466cbd10c2cf069a1f717801d9d7dfe17f0ad54d169d1b53677860f5f8cb
-updated: 2017-08-03T15:29:46.290651511-07:00
+hash: efb5a7906c13505a6f6dc7d9907c130df0fe95f71786914b6b8725e8411ab293
+updated: 2017-08-09T21:11:49.873382354-04:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -42,12 +42,15 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 748d386b5c1ea99658fd69fe9f03991ce86a90c1
+  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
   subpackages:
   - proto
+  - ptypes
   - ptypes/any
+  - ptypes/duration
+  - ptypes/timestamp
 - name: github.com/gorilla/websocket
-  version: a69d9f6de432e2c6b296a947d8a5ee88f68522cf
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/mattn/go-shellwords
   version: 02e3cf038dcea8290e44424da473dd12be796a8a
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -90,7 +93,7 @@ imports:
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
-  version: 05e8a0eda380579888eb53c394909df027f06991
+  version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
   - assert
   - mock
@@ -120,7 +123,7 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: 2cb0e2eeb6570800a2dd86544909bf2693f50e7b
+  version: ff1036378813f6390b305bfe68eb18530315498d
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
@@ -138,7 +141,7 @@ imports:
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
-  version: b99c1d7cecb0fdc882bed0098e7cae6ec7459059
+  version: a7ad9ecb640b5f10a0395b38d6319175172b3ab2
   subpackages:
   - hyperbahn
   - hyperbahn/gen-go/hyperbahn
@@ -161,7 +164,7 @@ imports:
 - name: go.uber.org/dig
   version: 5e65f1a430fd50d4291edc5ee9811f7dd520d77d
 - name: go.uber.org/fx
-  version: a125e08afbf81f9a6b72ad1e9fbec3c875d51095
+  version: 873aa153688137884ab4266574ab464f4ee48739
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -196,11 +199,11 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/crypto
-  version: c412588e259ef2d488e15762500456cd3b171bad
+  version: b176d7def5d71bdd214203491f89843ed217f420
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
-  version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -217,10 +220,11 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: d8f5ea21b9295e315e612b4bcf4bedea93454d4d
+  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
   repo: https://github.com/golang/sys
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
   version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
   subpackages:
@@ -229,7 +233,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 4e70a1b26a7875f00ca1916637a876b5ffaeec59
+  version: 5831d16d18029819d39f99bdc2060b8eff410b6b
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
@@ -238,10 +242,11 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: d2e1b51f33ff8c5e4a15560ff049d200e83726c5
+  version: 7657092a1303cc5a6fa3fee988d57c665683a4da
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
+  - connectivity
   - credentials
   - grpclb/grpc_lb_v1
   - grpclog
@@ -281,6 +286,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: ae0caf6437a82200bc1c349a4f761b4106409f0b
+  version: f7b71e06119010390c133f52e9331e27ce810f02
   subpackages:
   - cmd/staticcheck
