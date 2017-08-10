@@ -25,6 +25,7 @@ import (
 	"net"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcconfig"
 )
 
@@ -52,10 +53,21 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 	}
 }
 
-// TransportConfig configures a gRPC Transport.
+// TransportConfig configures a gRPC Transport. This is shared
+// between all gRPC inbounds and outbounds of a Dispatcher.
 //
-// This is currently just a placeholder.
-type TransportConfig struct{}
+//  transports:
+//    grpc:
+//      backoff:
+//        exponential:
+//          first: 10ms
+//          max: 30s
+//
+// All parameters of TransportConfig are optional. This section
+// may be omitted in the transports section.
+type TransportConfig struct {
+	Backoff yarpcconfig.Backoff `config:"backoff"`
+}
 
 // InboundConfig configures a gRPC Inbound.
 //
@@ -73,8 +85,20 @@ type InboundConfig struct {
 //   myservice:
 //     grpc:
 //       address: ":80"
+
+// A gRPC outbound can also configure a peer list.
+//
+//  outbounds:
+//    myservice:
+//      grpc:
+//        round-robin:
+//          peers:
+//            - 127.0.0.1:8080
+//            - 127.0.0.1:8081
 type OutboundConfig struct {
-	// Address to connect to. This field is required.
+	yarpcconfig.PeerChooser
+
+	// Address to connect to if no peer options set.
 	Address string `config:"address,interpolate"`
 }
 
@@ -101,8 +125,14 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 	return transportSpec, nil
 }
 
-func (t *transportSpec) buildTransport(*TransportConfig, *yarpcconfig.Kit) (transport.Transport, error) {
-	return NewTransport(t.TransportOptions...), nil
+func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *yarpcconfig.Kit) (transport.Transport, error) {
+	transportOptions := newTransportOptions(t.TransportOptions)
+	backoffStrategy, err := transportConfig.Backoff.Strategy()
+	if err != nil {
+		return nil, err
+	}
+	transportOptions.backoffStrategy = backoffStrategy
+	return newTransport(transportOptions), nil
 }
 
 func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.Inbound, error) {
@@ -120,15 +150,22 @@ func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.
 	return trans.NewInbound(listener, t.InboundOptions...), nil
 }
 
-func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
+func (t *transportSpec) buildUnaryOutbound(outboundConfig *OutboundConfig, tr transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
 	trans, ok := tr.(*Transport)
 	if !ok {
 		return nil, newTransportCastError(tr)
 	}
-	if outboundConfig.Address == "" {
-		return nil, newRequiredFieldMissingError("address")
+	if outboundConfig.Empty() {
+		if outboundConfig.Address == "" {
+			return nil, newRequiredFieldMissingError("address")
+		}
+		return trans.NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
 	}
-	return trans.NewSingleOutbound(outboundConfig.Address, t.OutboundOptions...), nil
+	chooser, err := outboundConfig.BuildPeerChooser(trans, hostport.Identify, kit)
+	if err != nil {
+		return nil, err
+	}
+	return trans.NewOutbound(chooser, t.OutboundOptions...), nil
 }
 
 func newTransportCastError(tr transport.Transport) error {
