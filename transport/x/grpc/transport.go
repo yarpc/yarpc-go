@@ -24,6 +24,7 @@ import (
 	"net"
 	"sync"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -57,19 +58,15 @@ func (t *Transport) Start() error {
 // Stop implements transport.Lifecycle#Stop.
 func (t *Transport) Stop() error {
 	return t.once.Stop(func() error {
-		// TODO: this might be unnecessary as Outbound calls Stop, which sometimes (?)
-		// calls ReleasePeer from peer.NewSingle
-		// right now we get screwed cuz we call grpcPeer.stop() twice due to this
-		// commenting out until we can figure out what is going on
-		//t.lock.Lock()
-		//defer t.lock.Unlock()
-		//for _, grpcPeer := range t.addressToPeer {
-		//grpcPeer.stop()
-		//}
+		t.lock.Lock()
+		defer t.lock.Unlock()
+		for _, grpcPeer := range t.addressToPeer {
+			grpcPeer.stop()
+		}
 		var err error
-		//for _, grpcPeer := range t.addressToPeer {
-		//err = multierr.Combine(err, grpcPeer.wait())
-		//}
+		for _, grpcPeer := range t.addressToPeer {
+			err = multierr.Combine(err, grpcPeer.wait())
+		}
 		return err
 	})
 }

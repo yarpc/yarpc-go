@@ -22,6 +22,7 @@ package grpc
 
 import (
 	"context"
+	"sync"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -36,6 +37,10 @@ type grpcPeer struct {
 	clientConn *grpc.ClientConn
 	stoppingC  chan struct{}
 	stoppedC   chan error
+	lock       sync.Mutex
+	stopping   bool
+	stopped    bool
+	stoppedErr error
 }
 
 func newPeer(address string, t *Transport) (*grpcPeer, error) {
@@ -69,61 +74,39 @@ func (p *grpcPeer) monitor() {
 	connectivityState := p.clientConn.GetState()
 	changed := true
 	for {
-		ctx := context.Background()
-		var cancel context.CancelFunc
-
 		var peerConnectionStatus peer.ConnectionStatus
 		var err error
 		// will be called the first time since changed is initialized to true
 		if changed {
 			peerConnectionStatus, err = connectivityStateToPeerConnectionStatus(connectivityState)
 			if err != nil {
-				if cancel != nil {
-					cancel()
-				}
 				p.monitorStop(err)
 				return
 			}
 			p.Peer.SetStatus(peerConnectionStatus)
 		}
 
+		var ctx context.Context
+		var cancel context.CancelFunc
 		if peerConnectionStatus == peer.Available {
-			// reset attempts since we are available
 			attempts = 0
+			ctx = context.Background()
 		} else {
 			attempts++
-			// this isn't actually a backoff, what we're saying is that
-			// we backoff on TIMING OUT before the next state change
-			// before returning
-			// https://godoc.org/google.golang.org/grpc#ClientConn.WaitForStateChange
-			ctx, cancel = context.WithTimeout(ctx, backoff.Duration(attempts))
+			ctx, cancel = context.WithTimeout(context.Background(), backoff.Duration(attempts))
 		}
 
-		changedC := make(chan bool, 1)
-		go func() { changedC <- p.clientConn.WaitForStateChange(ctx, connectivityState) }()
-
-		select {
-		case changed = <-changedC:
-			if cancel != nil {
-				cancel()
-			}
-			if changed {
-				connectivityState = p.clientConn.GetState()
-			}
-			continue
-		case <-p.stoppingC:
-		case <-p.t.once.Stopping():
-			if cancel != nil {
-				cancel()
-			}
+		newConnectivityState, loop := p.monitorLoopWait(ctx, cancel, connectivityState)
+		if !loop {
 			p.monitorStop(nil)
 			return
 		}
+		changed = connectivityState != newConnectivityState
+		connectivityState = newConnectivityState
 	}
 }
 
 // this should only be called by monitor()
-// if you want to stop outside of monitor(), call stop()
 func (p *grpcPeer) monitorStop(err error) {
 	p.Peer.SetStatus(peer.Unavailable)
 	// Close always returns an error
@@ -132,16 +115,53 @@ func (p *grpcPeer) monitorStop(err error) {
 	close(p.stoppedC)
 }
 
-// should only be called once
-// maybe do this with once?
+// this should only be called by monitor()
+// this does not correlate to wait() at all
+//
+// return true to continue looping
+func (p *grpcPeer) monitorLoopWait(ctx context.Context, cancel context.CancelFunc, connectivityState connectivity.State) (connectivity.State, bool) {
+	changedC := make(chan bool, 1)
+	go func() { changedC <- p.clientConn.WaitForStateChange(ctx, connectivityState) }()
+
+	loop := false
+	select {
+	case changed := <-changedC:
+		if cancel != nil {
+			cancel()
+		}
+		if changed {
+			connectivityState = p.clientConn.GetState()
+		}
+		loop = true
+	case <-p.stoppingC:
+	case <-p.t.once.Stopping():
+		if cancel != nil {
+			cancel()
+		}
+	}
+	return connectivityState, loop
+}
+
 func (p *grpcPeer) stop() {
-	// this is selected on in monitor()
-	p.stoppingC <- struct{}{}
-	close(p.stoppingC)
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if !p.stopping {
+		// this is selected on in monitor()
+		p.stoppingC <- struct{}{}
+		close(p.stoppingC)
+		p.stopping = true
+	}
 }
 
 func (p *grpcPeer) wait() error {
-	return <-p.stoppedC
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if p.stopped {
+		return p.stoppedErr
+	}
+	p.stoppedErr = <-p.stoppedC
+	p.stopped = true
+	return p.stoppedErr
 }
 
 func connectivityStateToPeerConnectionStatus(connectivityState connectivity.State) (peer.ConnectionStatus, error) {
