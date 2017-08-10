@@ -7,6 +7,7 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
 
 type grpcPeer struct {
@@ -42,24 +43,27 @@ func (p *grpcPeer) monitor() {
 	// wait for start so we can be certain that we have a channel
 	<-p.t.once.Started()
 
-	attempts := 0
+	var attempts uint
 	backoff := p.t.options.backoffStrategy.Backoff()
 
 	connectivityState := p.clientConn.GetState()
 	changed := true
 	for {
+		var peerConnectionStatus peer.ConnectionStatus
+		var err error
+		// will be called the first time since changed is initialized to true
 		if changed {
-			peerStatus, err := connectivityStateToPeerStatus(connectivityState)
+			peerConnectionStatus, err = connectivityStateToPeerConnectionStatus(connectivityState)
 			if err != nil {
 				p.stop(err)
 				return
 			}
-			p.Peer.SetStatus(peerStatus)
+			p.Peer.SetStatus(peerConnectionStatus)
 		}
 
 		ctx := context.Background()
 		var cancel context.CancelFunc
-		if peerStatus == peer.Available {
+		if peerConnectionStatus == peer.Available {
 			attempts = 0
 		} else {
 			attempts++
@@ -97,15 +101,15 @@ func (p *grpcPeer) wait() error {
 	return <-p.stoppedC
 }
 
-func connectivityStateToPeerStatus(connectivityState grpc.ConnectivityState) (peer.Status, error) {
+func connectivityStateToPeerConnectionStatus(connectivityState connectivity.State) (peer.ConnectionStatus, error) {
 	switch connectivityState {
-	case grpc.Idle, grpc.TransientFailure, grpc.Shutdown:
+	case connectivity.Idle, connectivity.TransientFailure, connectivity.Shutdown:
 		return peer.Unavailable, nil
-	case grpc.Connecting:
+	case connectivity.Connecting:
 		return peer.Connecting, nil
-	case grpc.Available:
+	case connectivity.Ready:
 		return peer.Available, nil
 	default:
-		return 0, yarpcerrors.InternalErrorf("unknown grpc.ConnectivityState: %v", connectivityState)
+		return 0, yarpcerrors.InternalErrorf("unknown connectivity.State: %v", connectivityState)
 	}
 }
