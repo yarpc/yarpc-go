@@ -21,18 +21,24 @@
 package grpc
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/yarpcconfig"
 )
 
 func TestNewTransportSpecOptions(t *testing.T) {
 	transportSpec, err := newTransportSpec(
+		BackoffStrategy(nil),
 		withInboundUnaryInterceptor(nil),
 	)
 	require.NoError(t, err)
+	require.Equal(t, 1, len(transportSpec.TransportOptions))
 	require.Equal(t, 1, len(transportSpec.InboundOptions))
 	require.Equal(t, 0, len(transportSpec.OutboundOptions))
 }
@@ -131,6 +137,44 @@ func TestTransportSpec(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "simple outbound with peer",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					transportName: attrs{"peer": "localhost:54569"},
+				},
+			},
+		},
+		{
+			desc: "outbound bad peer list",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					transportName: attrs{
+						"least-pending": []string{
+							"127.0.0.1:8080",
+							"127.0.0.1:8081",
+							"127.0.0.1:8082",
+						},
+					},
+				},
+			},
+			wantErrors: []string{
+				`failed to configure unary outbound for "myservice"`,
+				`failed to read attribute "least-pending"`,
+			},
+		},
+		{
+			desc: "unknown preset",
+			outboundCfg: attrs{
+				"myservice": attrs{
+					transportName: attrs{"with": "derp"},
+				},
+			},
+			wantErrors: []string{
+				`failed to configure unary outbound for "myservice":`,
+				`no recognized peer chooser preset "derp"`,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -174,10 +218,17 @@ func TestTransportSpec(t *testing.T) {
 				require.True(t, ok, "no outbounds for %s", svc)
 				outbound, ok := ob.Unary.(*Outbound)
 				require.True(t, ok, "expected *Outbound, got %T", ob)
-				//assert.Equal(t, wantOutbound.Address, outbound.address)
-				// TODO: add testing for outbounds back
-				_ = wantOutbound
-				_ = outbound
+				if wantOutbound.Address != "" {
+					single, ok := outbound.peerChooser.(*peer.Single)
+					if !ok {
+						require.True(t, ok, "expected *peer.Single, got %T", outbound.peerChooser)
+					}
+					require.NoError(t, single.Start())
+					ctx, _ := context.WithTimeout(context.Background(), time.Second)
+					peer, _, err := single.Choose(ctx, &transport.Request{})
+					require.NoError(t, err)
+					require.Equal(t, wantOutbound.Address, peer.Identifier())
+				}
 			}
 		})
 	}
