@@ -69,7 +69,7 @@ func (t *Transport) Stop() error {
 		}
 		var err error
 		for _, grpcPeer := range t.addressToPeer {
-			err = multierr.Combine(err, grpcPeer.wait())
+			err = multierr.Append(err, grpcPeer.wait())
 		}
 		return err
 	})
