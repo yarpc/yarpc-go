@@ -85,7 +85,7 @@ type InboundConfig struct {
 //   myservice:
 //     grpc:
 //       address: ":80"
-
+//
 // A gRPC outbound can also configure a peer list.
 //
 //  outbounds:
