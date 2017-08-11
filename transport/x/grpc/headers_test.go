@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -42,12 +41,12 @@ func TestMetadataToTransportRequest(t *testing.T) {
 		{
 			Name: "Basic",
 			MD: metadata.Pairs(
-				grpcheader.CallerHeader, "example-caller",
-				grpcheader.ServiceHeader, "example-service",
-				grpcheader.ShardKeyHeader, "example-shard-key",
-				grpcheader.RoutingKeyHeader, "example-routing-key",
-				grpcheader.RoutingDelegateHeader, "example-routing-delegate",
-				grpcheader.EncodingHeader, "example-encoding",
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				ShardKeyHeader, "example-shard-key",
+				RoutingKeyHeader, "example-routing-key",
+				RoutingDelegateHeader, "example-routing-delegate",
+				EncodingHeader, "example-encoding",
 				"foo", "bar",
 				"baz", "bat",
 			),
@@ -67,11 +66,11 @@ func TestMetadataToTransportRequest(t *testing.T) {
 		{
 			Name: "Content-type",
 			MD: metadata.Pairs(
-				grpcheader.CallerHeader, "example-caller",
-				grpcheader.ServiceHeader, "example-service",
-				grpcheader.ShardKeyHeader, "example-shard-key",
-				grpcheader.RoutingKeyHeader, "example-routing-key",
-				grpcheader.RoutingDelegateHeader, "example-routing-delegate",
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				ShardKeyHeader, "example-shard-key",
+				RoutingKeyHeader, "example-routing-key",
+				RoutingDelegateHeader, "example-routing-delegate",
 				contentTypeHeader, "application/grpc+example-encoding",
 				"foo", "bar",
 				"baz", "bat",
@@ -92,12 +91,12 @@ func TestMetadataToTransportRequest(t *testing.T) {
 		{
 			Name: "Content-type overridden",
 			MD: metadata.Pairs(
-				grpcheader.CallerHeader, "example-caller",
-				grpcheader.ServiceHeader, "example-service",
-				grpcheader.ShardKeyHeader, "example-shard-key",
-				grpcheader.RoutingKeyHeader, "example-routing-key",
-				grpcheader.RoutingDelegateHeader, "example-routing-delegate",
-				grpcheader.EncodingHeader, "example-encoding-override",
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				ShardKeyHeader, "example-shard-key",
+				RoutingKeyHeader, "example-routing-key",
+				RoutingDelegateHeader, "example-routing-delegate",
+				EncodingHeader, "example-encoding-override",
 				contentTypeHeader, "application/grpc+example-encoding",
 				"foo", "bar",
 				"baz", "bat",
@@ -136,12 +135,12 @@ func TestTransportRequestToMetadata(t *testing.T) {
 		{
 			Name: "Basic",
 			MD: metadata.Pairs(
-				grpcheader.CallerHeader, "example-caller",
-				grpcheader.ServiceHeader, "example-service",
-				grpcheader.ShardKeyHeader, "example-shard-key",
-				grpcheader.RoutingKeyHeader, "example-routing-key",
-				grpcheader.RoutingDelegateHeader, "example-routing-delegate",
-				grpcheader.EncodingHeader, "example-encoding",
+				CallerHeader, "example-caller",
+				ServiceHeader, "example-service",
+				ShardKeyHeader, "example-shard-key",
+				RoutingKeyHeader, "example-routing-key",
+				RoutingDelegateHeader, "example-routing-delegate",
+				EncodingHeader, "example-encoding",
 				"foo", "bar",
 				"baz", "bat",
 			),
@@ -163,10 +162,10 @@ func TestTransportRequestToMetadata(t *testing.T) {
 			MD:   metadata.Pairs(),
 			TransportRequest: &transport.Request{
 				Headers: transport.HeadersFromMap(map[string]string{
-					grpcheader.CallerHeader: "example-caller",
+					CallerHeader: "example-caller",
 				}),
 			},
-			Error: fmt.Errorf("cannot use reserved header in application headers: %s", grpcheader.CallerHeader),
+			Error: fmt.Errorf("cannot use reserved header in application headers: %s", CallerHeader),
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -190,4 +189,13 @@ func TestGetContentSubtype(t *testing.T) {
 	for _, tt := range tests {
 		assert.Equal(t, tt.contentSubtype, getContentSubtype(tt.contentType))
 	}
+}
+
+func TestIsReserved(t *testing.T) {
+	assert.True(t, isReserved(CallerHeader))
+	assert.True(t, isReserved(ServiceHeader))
+	assert.True(t, isReserved(ShardKeyHeader))
+	assert.True(t, isReserved(RoutingKeyHeader))
+	assert.True(t, isReserved(RoutingDelegateHeader))
+	assert.True(t, isReserved(EncodingHeader))
 }

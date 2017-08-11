@@ -29,11 +29,11 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
-	"google.golang.org/grpc"
+	"go.uber.org/yarpc/transport/x/grpc"
+	ggrpc "google.golang.org/grpc"
 )
 
-var wrap = grpcheader.NewContextWrapper().
+var wrap = grpc.NewContextWrapper().
 	WithCaller("client").
 	WithService("yarpc-test").
 	WithEncoding("proto").Wrap
@@ -45,7 +45,7 @@ func Run(t crossdock.T) {
 	server := t.Param(params.Server)
 	fatals.NotEmpty(server, "server is required")
 
-	clientConn, err := grpc.Dial(fmt.Sprintf("%s:8089", server), grpc.WithInsecure())
+	clientConn, err := ggrpc.Dial(fmt.Sprintf("%s:8089", server), ggrpc.WithInsecure())
 	fatals.NoError(err, "grpc.Dial failed")
 
 	client := crossdockpb.NewEchoClient(clientConn)
