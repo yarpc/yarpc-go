@@ -222,7 +222,7 @@ func fromSystemError(err tchannel.SystemError) error {
 	if !ok {
 		return yarpcerrors.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
-	return yarpcerrors.FromHeaders(code, "", err.Message())
+	return yarpcerrors.FromHeaders(code, err.Message())
 }
 
 func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
