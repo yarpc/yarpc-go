@@ -161,3 +161,23 @@ func getContentSubtype(contentType string) string {
 		return ""
 	}
 }
+
+type mdReadWriter metadata.MD
+
+// ForeachKey implements opentracing.TextMapReader.
+func (md mdReadWriter) ForeachKey(handler func(string, string) error) error {
+	for key, values := range md {
+		for _, value := range values {
+			if err := handler(key, value); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Set implements opentracing.TextMapWriter.
+func (md mdReadWriter) Set(key string, value string) {
+	key = strings.ToLower(key)
+	md[key] = append(md[key], value)
+}

@@ -26,7 +26,9 @@ import (
 	"io/ioutil"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -99,9 +101,11 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
+	start := time.Now()
+
 	var responseBody []byte
 	responseMD := metadata.New(nil)
-	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD)
+	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, err
@@ -117,11 +121,13 @@ func (o *Outbound) invoke(
 	request *transport.Request,
 	responseBody *[]byte,
 	responseMD *metadata.MD,
+	start time.Time,
 ) (retErr error) {
 	md, err := transportRequestToMetadata(request)
 	if err != nil {
 		return err
 	}
+
 	requestBuffer := bufferpool.Get()
 	defer bufferpool.Put(requestBuffer)
 	if _, err := requestBuffer.ReadFrom(request.Body); err != nil {
@@ -151,13 +157,33 @@ func (o *Outbound) invoke(
 			ExpectedType: "*grpcPeer",
 		}
 	}
-	return grpc.Invoke(
-		metadata.NewContext(ctx, md),
-		fullMethod,
-		requestBuffer.Bytes(),
-		responseBody,
-		grpcPeer.clientConn,
-		callOptions...,
+
+	tracer := o.t.options.tracer
+	if tracer == nil {
+		tracer = opentracing.GlobalTracer()
+	}
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        tracer,
+		TransportName: transportName,
+		StartTime:     start,
+	}
+	ctx, span := createOpenTracingSpan.Do(ctx, request)
+	defer span.Finish()
+
+	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+		return err
+	}
+
+	return transport.UpdateSpanWithErr(
+		span,
+		grpc.Invoke(
+			metadata.NewOutgoingContext(ctx, md),
+			fullMethod,
+			requestBuffer.Bytes(),
+			responseBody,
+			grpcPeer.clientConn,
+			callOptions...,
+		),
 	)
 }
 

@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
 	"google.golang.org/grpc"
@@ -52,6 +53,15 @@ func BackoffStrategy(backoffStrategy backoff.Strategy) TransportOption {
 	}
 }
 
+// Tracer specifies the tracer to use.
+//
+// By default, opentracing.GlobalTracer() is used.
+func Tracer(tracer opentracing.Tracer) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.tracer = tracer
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -64,6 +74,7 @@ func (OutboundOption) grpcOption() {}
 
 type transportOptions struct {
 	backoffStrategy backoff.Strategy
+	tracer          opentracing.Tracer
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
