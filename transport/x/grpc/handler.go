@@ -27,7 +27,6 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -216,7 +215,7 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 	// if the yarpc error has a name, set the header
 	if name != "" {
 		// TODO: what to do with error?
-		_ = addToMetadata(responseMD, grpcheader.ErrorNameHeader, name)
+		_ = addToMetadata(responseMD, ErrorNameHeader, name)
 		if message == "" {
 			// if the message is empty, set the message to the name for grpc compatibility
 			message = name
