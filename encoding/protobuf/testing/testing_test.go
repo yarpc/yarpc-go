@@ -69,14 +69,7 @@ func testIntegration(
 	keyValueYARPCServer *example.KeyValueYARPCServer,
 	sinkYARPCServer *example.SinkYARPCServer,
 ) {
-	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
 	_, err := getValue(clients.KeyValueYARPCClient, "foo")
-	assert.Equal(t, yarpcerrors.NamedErrorf("foo-bar", "baz"), err)
-	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
-	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
-	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
-
-	_, err = getValue(clients.KeyValueYARPCClient, "foo")
 	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Equal(t, status.Error(codes.NotFound, "foo"), err)

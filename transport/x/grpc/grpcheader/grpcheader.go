@@ -59,8 +59,6 @@ const (
 	// as the proto encoding.
 	// This header is required unless content-type is set properly.
 	EncodingHeader = "rpc-encoding"
-	// ErrorNameHeader is the header key for the error name.
-	ErrorNameHeader = "rpc-error-name"
 )
 
 var (
@@ -71,7 +69,6 @@ var (
 		RoutingKeyHeader:      true,
 		RoutingDelegateHeader: true,
 		EncodingHeader:        true,
-		ErrorNameHeader:       true,
 	}
 )
 

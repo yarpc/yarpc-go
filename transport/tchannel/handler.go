@@ -108,9 +108,6 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 		// return a SystemError here, might want to do that
 		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
 		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
-		if name := yarpcerrors.ErrorName(yarpcError); name != "" {
-			responseWriter.addHeader(ErrorNameHeaderKey, name)
-		}
 		if message := yarpcerrors.ErrorMessage(yarpcError); message != "" {
 			responseWriter.addHeader(ErrorMessageHeaderKey, message)
 		}

@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"strings"
 	"sync"
 
 	"go.uber.org/yarpc"
@@ -34,7 +33,6 @@ import (
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -109,7 +107,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	return &transport.Response{
 		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
 		Headers: responseHeaders,
-	}, invokeErrorToYARPCError(invokeErr, responseMD)
+	}, invokeErrorToYARPCError(invokeErr)
 }
 
 func (o *Outbound) invoke(
@@ -161,7 +159,7 @@ func (o *Outbound) invoke(
 	)
 }
 
-func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
+func invokeErrorToYARPCError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -177,21 +175,5 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if !ok {
 		code = yarpcerrors.CodeUnknown
 	}
-	var name string
-	if responseMD != nil {
-		value, ok := responseMD[grpcheader.ErrorNameHeader]
-		// TODO: what to do if the length is > 1?
-		if ok && len(value) == 1 {
-			name = value[0]
-		}
-	}
-	message := status.Message()
-	// we put the name as a prefix for grpc compatibility
-	// if there was no message, the message will be the name, so we leave it as the message
-	if name != "" && message != "" && message != name {
-		message = strings.TrimPrefix(message, name+": ")
-	} else if name != "" && message == name {
-		message = ""
-	}
-	return yarpcerrors.FromHeaders(code, name, message)
+	return yarpcerrors.FromHeaders(code, status.Message())
 }

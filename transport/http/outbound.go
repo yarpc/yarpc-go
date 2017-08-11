@@ -407,7 +407,6 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 	}
 	return yarpcerrors.FromHeaders(
 		code,
-		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(string(contents), "\n"),
 	)
 }

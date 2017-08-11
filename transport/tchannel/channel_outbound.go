@@ -222,13 +222,12 @@ func fromSystemError(err tchannel.SystemError) error {
 	if !ok {
 		return yarpcerrors.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
-	return yarpcerrors.FromHeaders(code, "", err.Message())
+	return yarpcerrors.FromHeaders(code, err.Message())
 }
 
 func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 	defer func() {
 		headers.Del(ErrorCodeHeaderKey)
-		headers.Del(ErrorNameHeaderKey)
 		headers.Del(ErrorMessageHeaderKey)
 	}()
 	errorCodeString, ok := headers.Get(ErrorCodeHeaderKey)
@@ -242,7 +241,6 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 	if errorCode == yarpcerrors.CodeOK {
 		return yarpcerrors.InternalErrorf("got CodeOK from error header")
 	}
-	errorName, _ := headers.Get(ErrorNameHeaderKey)
 	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
-	return yarpcerrors.FromHeaders(errorCode, errorName, errorMessage)
+	return yarpcerrors.FromHeaders(errorCode, errorMessage)
 }
