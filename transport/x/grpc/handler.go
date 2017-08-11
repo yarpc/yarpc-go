@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -68,7 +67,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	// Apply a unary request.
 	responseMD := metadata.New(nil)
 	response, err := h.handleBeforeErrorConversion(ctx, serverStream.RecvMsg, responseMD, stream.Method())
-	err = handlerErrorToGRPCError(err, responseMD)
+	err = handlerErrorToGRPCError(err)
 
 	// Send the response attributes back and end the stream.
 	if sendErr := serverStream.SendMsg(response); sendErr != nil {
@@ -181,7 +180,7 @@ func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Req
 	return data, err
 }
 
-func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
+func handlerErrorToGRPCError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -194,25 +193,10 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 	if !yarpcerrors.IsYARPCError(err) {
 		return err
 	}
-	name := yarpcerrors.ErrorName(err)
-	message := yarpcerrors.ErrorMessage(err)
-	// if the yarpc error has a name, set the header
-	if name != "" {
-		// TODO: what to do with error?
-		_ = addToMetadata(responseMD, grpcheader.ErrorNameHeader, name)
-		if message == "" {
-			// if the message is empty, set the message to the name for grpc compatibility
-			message = name
-		} else {
-			// else, we set the name as the prefix for grpc compatibility
-			// we parse this off the front if the name header is set on the client-side
-			message = name + ": " + message
-		}
-	}
 	grpcCode, ok := _codeToGRPCCode[yarpcerrors.ErrorCode(err)]
 	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown
 	}
-	return status.Error(grpcCode, message)
+	return status.Error(grpcCode, yarpcerrors.ErrorMessage(err))
 }

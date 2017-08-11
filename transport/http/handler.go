@@ -63,9 +63,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	} else {
 		responseWriter.AddSystemHeader(ErrorCodeHeader, string(errorCodeText))
 	}
-	if name := yarpcerrors.ErrorName(err); name != "" {
-		responseWriter.AddSystemHeader(ErrorNameHeader, name)
-	}
 	// TODO: would prefer to have error message be on a header so we can
 	// have non-nil responses with errors, discuss
 	_, _ = fmt.Fprintln(responseWriter, yarpcerrors.ErrorMessage(err))

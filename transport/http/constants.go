@@ -65,9 +65,6 @@ const (
 
 	// ErrorCodeHeader contains the string representation of the error code.
 	ErrorCodeHeader = "Rpc-Error-Code"
-
-	// ErrorNameHeader contains the name of a user-defined error.
-	ErrorNameHeader = "Rpc-Error-Name"
 )
 
 // Valid values for the Rpc-Status header.
