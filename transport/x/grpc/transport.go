@@ -43,9 +43,13 @@ type Transport struct {
 
 // NewTransport returns a new Transport.
 func NewTransport(options ...TransportOption) *Transport {
+	return newTransport(newTransportOptions(options))
+}
+
+func newTransport(transportOptions *transportOptions) *Transport {
 	return &Transport{
 		once:          lifecycle.NewOnce(),
-		options:       newTransportOptions(options),
+		options:       transportOptions,
 		addressToPeer: make(map[string]*grpcPeer),
 	}
 }
