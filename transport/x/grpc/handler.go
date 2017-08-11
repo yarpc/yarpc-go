@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/x/grpc/grpcheader"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -43,21 +44,15 @@ var (
 )
 
 type handler struct {
-	router      transport.Router
-	interceptor grpc.UnaryServerInterceptor
+	i *Inbound
 }
 
-func newHandler(
-	router transport.Router,
-	interceptor grpc.UnaryServerInterceptor,
-) *handler {
-	return &handler{
-		router:      router,
-		interceptor: interceptor,
-	}
+func newHandler(i *Inbound) *handler {
+	return &handler{i: i}
 }
 
 func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error {
+	start := time.Now()
 	// Grab context information from the stream's context.
 	ctx := serverStream.Context()
 	stream, ok := gtransport.StreamFromContext(ctx)
@@ -67,7 +62,7 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 
 	// Apply a unary request.
 	responseMD := metadata.New(nil)
-	response, err := h.handleBeforeErrorConversion(ctx, serverStream.RecvMsg, responseMD, stream.Method())
+	response, err := h.handleBeforeErrorConversion(ctx, serverStream.RecvMsg, responseMD, stream.Method(), start)
 	err = handlerErrorToGRPCError(err, responseMD)
 
 	// Send the response attributes back and end the stream.
@@ -84,13 +79,33 @@ func (h *handler) handleBeforeErrorConversion(
 	decodeFunc func(interface{}) error,
 	responseMD metadata.MD,
 	streamMethod string,
+	start time.Time,
 ) (interface{}, error) {
 	transportRequest, err := h.getTransportRequest(ctx, decodeFunc, streamMethod)
 	if err != nil {
 		return nil, err
 	}
-	if h.interceptor != nil {
-		return h.interceptor(
+
+	tracer := h.i.t.options.tracer
+	if tracer == nil {
+		tracer = opentracing.GlobalTracer()
+	}
+	var parentSpanCtx opentracing.SpanContext
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
+	}
+	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
+		ParentSpanContext: parentSpanCtx,
+		Tracer:            tracer,
+		TransportName:     transportName,
+		StartTime:         start,
+	}
+	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
+	defer span.Finish()
+
+	if h.i.options.unaryInterceptor != nil {
+		return h.i.options.unaryInterceptor(
 			ctx,
 			transportRequest,
 			&grpc.UnaryServerInfo{
@@ -102,15 +117,17 @@ func (h *handler) handleBeforeErrorConversion(
 				if !ok {
 					return nil, yarpcerrors.InternalErrorf("expected *transport.Request, got %T", request)
 				}
-				return h.call(ctx, transportRequest, responseMD)
+				response, err := h.call(ctx, transportRequest, responseMD)
+				return response, transport.UpdateSpanWithErr(span, err)
 			},
 		)
 	}
-	return h.call(ctx, transportRequest, responseMD)
+	response, err := h.call(ctx, transportRequest, responseMD)
+	return response, transport.UpdateSpanWithErr(span, err)
 }
 
 func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error, streamMethod string) (*transport.Request, error) {
-	md, ok := metadata.FromContext(ctx)
+	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
 		return nil, yarpcerrors.InternalErrorf("cannot get metadata from ctx: %v", ctx)
 	}
@@ -154,7 +171,7 @@ func procedureFromStreamMethod(streamMethod string) (string, error) {
 }
 
 func (h *handler) call(ctx context.Context, transportRequest *transport.Request, responseMD metadata.MD) (interface{}, error) {
-	handlerSpec, err := h.router.Choose(ctx, transportRequest)
+	handlerSpec, err := h.i.router.Choose(ctx, transportRequest)
 	if err != nil {
 		return nil, err
 	}

@@ -38,22 +38,22 @@ var (
 
 // Inbound is a grpc transport.Inbound.
 type Inbound struct {
-	once      *lifecycle.Once
-	lock      sync.Mutex
-	transport *Transport
-	listener  net.Listener
-	options   *inboundOptions
-	router    transport.Router
-	server    *grpc.Server
+	once     *lifecycle.Once
+	lock     sync.Mutex
+	t        *Transport
+	listener net.Listener
+	options  *inboundOptions
+	router   transport.Router
+	server   *grpc.Server
 }
 
 // newInbound returns a new Inbound for the given listener.
-func newInbound(transport *Transport, listener net.Listener, options ...InboundOption) *Inbound {
+func newInbound(t *Transport, listener net.Listener, options ...InboundOption) *Inbound {
 	return &Inbound{
-		once:      lifecycle.NewOnce(),
-		transport: transport,
-		listener:  listener,
-		options:   newInboundOptions(options),
+		once:     lifecycle.NewOnce(),
+		t:        t,
+		listener: listener,
+		options:  newInboundOptions(options),
 	}
 }
 
@@ -81,7 +81,7 @@ func (i *Inbound) SetRouter(router transport.Router) {
 
 // Transports implements transport.Inbound#Transports.
 func (i *Inbound) Transports() []transport.Transport {
-	return []transport.Transport{i.transport}
+	return []transport.Transport{i.t}
 }
 
 func (i *Inbound) start() error {
@@ -91,10 +91,7 @@ func (i *Inbound) start() error {
 		return errRouterNotSet
 	}
 
-	handler := newHandler(
-		i.router,
-		i.options.unaryInterceptor,
-	)
+	handler := newHandler(i)
 
 	server := grpc.NewServer(
 		grpc.CustomCodec(customCodec{}),
