@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/bufferpool"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -121,9 +122,9 @@ func (o *Outbound) invoke(
 	if err != nil {
 		return err
 	}
-	// TODO: use pooled buffers
-	requestBody, err := ioutil.ReadAll(request.Body)
-	if err != nil {
+	requestBuffer := bufferpool.Get()
+	defer bufferpool.Put(requestBuffer)
+	if _, err := requestBuffer.ReadFrom(request.Body); err != nil {
 		return err
 	}
 	fullMethod, err := procedureNameToFullMethod(request.Procedure)
@@ -153,7 +154,7 @@ func (o *Outbound) invoke(
 	return grpc.Invoke(
 		metadata.NewContext(ctx, md),
 		fullMethod,
-		requestBody,
+		requestBuffer.Bytes(),
 		responseBody,
 		grpcPeer.clientConn,
 		callOptions...,
