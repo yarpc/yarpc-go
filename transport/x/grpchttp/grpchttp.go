@@ -83,7 +83,6 @@ type Inbound struct {
 	grpcInbound   *yarpcgrpc.Inbound
 	httpTransport *yarpchttp.Transport
 	httpInbound   *yarpchttp.Inbound
-	sinkServer    *http.Server
 }
 
 func newInbound(listener net.Listener, options ...InboundOption) *Inbound {
@@ -130,8 +129,7 @@ func (i *Inbound) start() error {
 
 	mux := cmux.New(i.listener)
 	grpcListener := mux.MatchWithWriters(cmux.HTTP2MatchHeaderFieldPrefixSendSettings("content-type", "application/grpc"))
-	httpListener := mux.Match(cmux.HTTP1Fast("POST"))
-	sinkListener := mux.Match(cmux.Any())
+	httpListener := mux.Match(cmux.Any())
 	mux.HandleError(func(err error) bool {
 		if err != cmux.ErrListenerClosed {
 			zap.L().Error(err.Error())
@@ -146,10 +144,6 @@ func (i *Inbound) start() error {
 	httpTransport := yarpchttp.NewTransport(i.options.httpTransportOptions...)
 	httpInbound := httpTransport.NewInboundForListener(httpListener, i.options.httpInboundOptions...)
 	httpInbound.SetRouter(i.router)
-
-	sinkServer := &http.Server{Handler: http.HandlerFunc(func(responseWriter http.ResponseWriter, _ *http.Request) {
-		responseWriter.WriteHeader(http.StatusInternalServerError)
-	})}
 
 	if err := grpcTransport.Start(); err != nil {
 		_ = i.listener.Close()
@@ -179,14 +173,12 @@ func (i *Inbound) start() error {
 	}
 
 	// TODO: there should be some way to block until serving
-	go func() { _ = sinkServer.Serve(sinkListener) }()
 	go func() { _ = mux.Serve() }()
 
 	i.grpcTransport = grpcTransport
 	i.grpcInbound = grpcInbound
 	i.httpTransport = httpTransport
 	i.httpInbound = httpInbound
-	i.sinkServer = sinkServer
 	return nil
 }
 
@@ -197,10 +189,6 @@ func (i *Inbound) stop() error {
 	if i.listener != nil {
 		_ = i.listener.Close()
 		i.listener = nil
-	}
-	if i.sinkServer != nil {
-		_ = i.sinkServer.Close()
-		i.sinkServer = nil
 	}
 	var err error
 	// TODO: what is going on
