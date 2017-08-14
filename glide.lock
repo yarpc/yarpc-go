@@ -1,5 +1,5 @@
-hash: 4fd947b1d0e109ebaa04812f92902f5eaf1476992b44f17361229949de409e1a
-updated: 2017-08-14T12:40:01.649683802-04:00
+hash: 6f1bd1f6345ab50fe7e7ab668dc9c9468c3f2694d40e26ad5ee12be21640bcef
+updated: 2017-08-14T17:24:44.556210223-04:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -91,8 +91,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 181d419aa9e2223811b824e8f0b4af96f9ba9302
 - name: github.com/soheilhy/cmux
-  version: 61f544843b89e3df0d7cb021a4f8df9e7423fd84
-  repo: https://github.com/peter-edge/cmux
+  version: bb79a83465015a27a175925ebd155e660f55e9f1
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -223,7 +222,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: c84c1ab9fd18cdd4c23dd021c10f5f46dea95e46
+  version: 2d3e384235de683634e9080b58f757466840aa48
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -245,7 +244,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 7657092a1303cc5a6fa3fee988d57c665683a4da
+  version: 9d99afc2fd8feeb530975fa3f4f630c093c1d683
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
