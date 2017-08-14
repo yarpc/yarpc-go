@@ -39,10 +39,12 @@ var (
 type HTTPServer struct {
 	*http.Server
 
-	lock     sync.RWMutex
-	listener net.Listener
-	done     chan error
-	stopped  atomic.Bool
+	lock sync.RWMutex
+	// this should be refactored to have a start bool instead
+	givenListener net.Listener
+	listener      net.Listener
+	done          chan error
+	stopped       atomic.Bool
 }
 
 // NewHTTPServer wraps the given http.Server into an HTTPServer.
@@ -50,6 +52,17 @@ func NewHTTPServer(s *http.Server) *HTTPServer {
 	return &HTTPServer{
 		Server: s,
 		done:   make(chan error, 1),
+	}
+}
+
+// NewHTTPServerForListener wraps the given http.Server into an HTTPServer
+// and will listen on the net.Listener. If listener is nil, this has the same
+// effect as NewHTTPServer.
+func NewHTTPServerForListener(s *http.Server, listener net.Listener) *HTTPServer {
+	return &HTTPServer{
+		Server:        s,
+		givenListener: listener,
+		done:          make(chan error, 1),
 	}
 }
 
@@ -77,7 +90,7 @@ func (h *HTTPServer) ListenAndServe() error {
 	defer h.lock.Unlock()
 
 	addr := h.Server.Addr
-	if addr == "" {
+	if addr == "" && h.givenListener == nil {
 		addr = ":http"
 	}
 
@@ -85,10 +98,14 @@ func (h *HTTPServer) ListenAndServe() error {
 		return errAlreadyListening
 	}
 
-	var err error
-	h.listener, err = net.Listen("tcp", addr)
-	if err != nil {
-		return err
+	if h.givenListener != nil {
+		h.listener = h.givenListener
+	} else {
+		var err error
+		h.listener, err = net.Listen("tcp", addr)
+		if err != nil {
+			return err
+		}
 	}
 
 	go h.serve(h.listener)

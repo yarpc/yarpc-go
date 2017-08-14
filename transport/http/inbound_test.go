@@ -116,7 +116,9 @@ func TestInboundMux(t *testing.T) {
 		w.Write([]byte("healthy"))
 	})
 
-	i := httpTransport.NewInbound(":0", Mux("/rpc/v1", mux))
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	i := httpTransport.NewInboundForListener(listener, Mux("/rpc/v1", mux))
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRouter(mockCtrl)
 	i.SetRouter(reg)
