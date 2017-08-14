@@ -37,6 +37,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
+	"go.uber.org/yarpc/transport/x/grpchttp"
 	"go.uber.org/yarpc/x/yarpcmeta"
 )
 
@@ -105,6 +106,28 @@ func do() error {
 		inbound = grpc.NewTransport().NewInbound(listener)
 		go func() {
 			if err := gohttp.ListenAndServe(":3244", nil); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	case "grpchttp-http":
+		listener, err := net.Listen("tcp", "127.0.0.1:25046")
+		if err != nil {
+			return err
+		}
+		inbound = grpchttp.NewInbound(listener)
+		go func() {
+			if err := gohttp.ListenAndServe(":3245", nil); err != nil {
+				log.Fatal(err)
+			}
+		}()
+	case "grpchttp-grpc":
+		listener, err := net.Listen("tcp", "127.0.0.1:25047")
+		if err != nil {
+			return err
+		}
+		inbound = grpchttp.NewInbound(listener)
+		go func() {
+			if err := gohttp.ListenAndServe(":3246", nil); err != nil {
 				log.Fatal(err)
 			}
 		}()

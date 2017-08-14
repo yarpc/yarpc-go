@@ -33,6 +33,7 @@ import (
 	yarpchttp "go.uber.org/yarpc/transport/http"
 	yarpcgrpc "go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -82,6 +83,7 @@ type Inbound struct {
 	grpcInbound   *yarpcgrpc.Inbound
 	httpTransport *yarpchttp.Transport
 	httpInbound   *yarpchttp.Inbound
+	sinkServer    *http.Server
 }
 
 func newInbound(listener net.Listener, options ...InboundOption) *Inbound {
@@ -129,6 +131,13 @@ func (i *Inbound) start() error {
 	mux := cmux.New(i.listener)
 	grpcListener := mux.Match(cmux.HTTP2HeaderFieldPrefix("content-type", "application/grpc"))
 	httpListener := mux.Match(cmux.HTTP1Fast("POST"))
+	sinkListener := mux.Match(cmux.Any())
+	mux.HandleError(func(err error) bool {
+		if err != cmux.ErrListenerClosed {
+			zap.L().Error(err.Error())
+		}
+		return true
+	})
 
 	grpcTransport := yarpcgrpc.NewTransport(i.options.grpcTransportOptions...)
 	grpcInbound := grpcTransport.NewInbound(grpcListener, i.options.grpcInboundOptions...)
@@ -138,32 +147,46 @@ func (i *Inbound) start() error {
 	httpInbound := httpTransport.NewInboundForListener(httpListener, i.options.httpInboundOptions...)
 	httpInbound.SetRouter(i.router)
 
+	sinkServer := &http.Server{Handler: http.HandlerFunc(func(responseWriter http.ResponseWriter, _ *http.Request) {
+		responseWriter.WriteHeader(http.StatusInternalServerError)
+	})}
+
 	if err := grpcTransport.Start(); err != nil {
+		_ = i.listener.Close()
+		i.listener = nil
 		return err
 	}
 	if err := grpcInbound.Start(); err != nil {
 		_ = grpcTransport.Stop()
+		_ = i.listener.Close()
+		i.listener = nil
 		return err
 	}
 	if err := httpTransport.Start(); err != nil {
 		_ = grpcInbound.Stop()
 		_ = grpcTransport.Stop()
+		_ = i.listener.Close()
+		i.listener = nil
 		return err
 	}
 	if err := httpInbound.Start(); err != nil {
 		_ = httpTransport.Stop()
 		_ = grpcInbound.Stop()
 		_ = grpcTransport.Stop()
+		_ = i.listener.Close()
+		i.listener = nil
 		return err
 	}
 
 	// TODO: there should be some way to block until serving
+	go func() { _ = sinkServer.Serve(sinkListener) }()
 	go func() { _ = mux.Serve() }()
 
 	i.grpcTransport = grpcTransport
 	i.grpcInbound = grpcInbound
 	i.httpTransport = httpTransport
 	i.httpInbound = httpInbound
+	i.sinkServer = sinkServer
 	return nil
 }
 
@@ -171,6 +194,14 @@ func (i *Inbound) stop() error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
+	if i.listener != nil {
+		_ = i.listener.Close()
+		i.listener = nil
+	}
+	if i.sinkServer != nil {
+		_ = i.sinkServer.Close()
+		i.sinkServer = nil
+	}
 	var err error
 	if i.httpInbound != nil {
 		err = multierr.Append(err, i.httpInbound.Stop())
