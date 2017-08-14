@@ -25,8 +25,9 @@ import (
 	"net/http"
 	"sync"
 
-	opentracing "github.com/opentracing/opentracing-go"
-
+	"github.com/opentracing/opentracing-go"
+	"github.com/soheilhy/cmux"
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	yarpchttp "go.uber.org/yarpc/transport/http"
@@ -77,10 +78,10 @@ type Inbound struct {
 	options  *inboundOptions
 	router   transport.Router
 
-	httpTransport *yarpchttp.Transport
-	httpInbound   *yarpchttp.Inbound
 	grpcTransport *yarpcgrpc.Transport
 	grpcInbound   *yarpcgrpc.Inbound
+	httpTransport *yarpchttp.Transport
+	httpInbound   *yarpchttp.Inbound
 }
 
 func newInbound(listener net.Listener, options ...InboundOption) *Inbound {
@@ -124,20 +125,73 @@ func (i *Inbound) start() error {
 	if i.router == nil {
 		return errRouterNotSet
 	}
+
+	mux := cmux.New(i.listener)
+	grpcListener := mux.Match(cmux.HTTP2HeaderFieldPrefix("content-type", "application/grpc"))
+	httpListener := mux.Match(cmux.HTTP1Fast("POST"))
+
+	grpcTransport := yarpcgrpc.NewTransport(i.options.grpcTransportOptions...)
+	grpcInbound := grpcTransport.NewInbound(grpcListener, i.options.grpcInboundOptions...)
+	grpcInbound.SetRouter(i.router)
+
+	httpTransport := yarpchttp.NewTransport(i.options.httpTransportOptions...)
+	httpInbound := httpTransport.NewInboundForListener(httpListener, i.options.httpInboundOptions...)
+	httpInbound.SetRouter(i.router)
+
+	if err := grpcTransport.Start(); err != nil {
+		return err
+	}
+	if err := grpcInbound.Start(); err != nil {
+		_ = grpcTransport.Stop()
+		return err
+	}
+	if err := httpTransport.Start(); err != nil {
+		_ = grpcInbound.Stop()
+		_ = grpcTransport.Stop()
+		return err
+	}
+	if err := httpInbound.Start(); err != nil {
+		_ = httpTransport.Stop()
+		_ = grpcInbound.Stop()
+		_ = grpcTransport.Stop()
+		return err
+	}
+
+	// TODO: there should be some way to block until serving
+	go func() { _ = mux.Serve() }()
+
+	i.grpcTransport = grpcTransport
+	i.grpcInbound = grpcInbound
+	i.httpTransport = httpTransport
+	i.httpInbound = httpInbound
 	return nil
 }
 
 func (i *Inbound) stop() error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	return nil
+
+	var err error
+	if i.httpInbound != nil {
+		err = multierr.Append(err, i.httpInbound.Stop())
+	}
+	if i.httpTransport != nil {
+		err = multierr.Append(err, i.httpTransport.Stop())
+	}
+	if i.grpcInbound != nil {
+		err = multierr.Append(err, i.grpcInbound.Stop())
+	}
+	if i.grpcTransport != nil {
+		err = multierr.Append(err, i.grpcTransport.Stop())
+	}
+	return err
 }
 
 type inboundOptions struct {
-	httpTransportOptions []yarpchttp.TransportOption
-	httpInboundOptions   []yarpchttp.InboundOption
 	grpcTransportOptions []yarpcgrpc.TransportOption
 	grpcInboundOptions   []yarpcgrpc.InboundOption
+	httpTransportOptions []yarpchttp.TransportOption
+	httpInboundOptions   []yarpchttp.InboundOption
 }
 
 func newInboundOptions(options []InboundOption) *inboundOptions {

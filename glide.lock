@@ -1,5 +1,5 @@
-hash: efb5a7906c13505a6f6dc7d9907c130df0fe95f71786914b6b8725e8411ab293
-updated: 2017-08-09T21:11:49.873382354-04:00
+hash: 4fd947b1d0e109ebaa04812f92902f5eaf1476992b44f17361229949de409e1a
+updated: 2017-08-14T12:40:01.649683802-04:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -90,6 +90,9 @@ imports:
   - xfs
 - name: github.com/sirupsen/logrus
   version: 181d419aa9e2223811b824e8f0b4af96f9ba9302
+- name: github.com/soheilhy/cmux
+  version: 61f544843b89e3df0d7cb021a4f8df9e7423fd84
+  repo: https://github.com/peter-edge/cmux
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -114,7 +117,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: ebcbfe6c988c8ec8ffef86f9ecea08e6d76afb4a
+  version: c88dc4abaf53f64839bd48c2d6bbbc051bc9a910
   subpackages:
   - client/cherami
   - common
@@ -123,7 +126,7 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: ff1036378813f6390b305bfe68eb18530315498d
+  version: 2cb0e2eeb6570800a2dd86544909bf2693f50e7b
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
@@ -220,13 +223,13 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
+  version: c84c1ab9fd18cdd4c23dd021c10f5f46dea95e46
   repo: https://github.com/golang/sys
   subpackages:
   - unix
   - windows
 - name: golang.org/x/text
-  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
+  version: e56139fd9c5bc7244c76116c68e500765bb6db6b
   subpackages:
   - secure/bidirule
   - transform
@@ -268,7 +271,7 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/golang/lint
   version: c5fb716d6688a859aae56d26d3e6070808df29f7

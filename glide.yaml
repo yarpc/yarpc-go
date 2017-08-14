@@ -12,6 +12,9 @@ import:
   version: ~0.4
 - package: github.com/mattn/go-shellwords
   version: ^1
+- package: github.com/soheilhy/cmux
+  repo: https://github.com/peter-edge/cmux
+  version: header-field-prefix
 - package: github.com/uber-go/mapdecode
   version: ~0.3
 - package: github.com/opentracing/opentracing-go
