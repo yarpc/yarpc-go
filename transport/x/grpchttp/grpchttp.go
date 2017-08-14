@@ -130,7 +130,6 @@ func (i *Inbound) start() error {
 
 	mux := cmux.New(i.listener)
 	grpcListener := mux.MatchWithWriters(cmux.HTTP2MatchHeaderFieldPrefixSendSettings("content-type", "application/grpc"))
-
 	httpListener := mux.Match(cmux.HTTP1Fast("POST"))
 	sinkListener := mux.Match(cmux.Any())
 	mux.HandleError(func(err error) bool {
