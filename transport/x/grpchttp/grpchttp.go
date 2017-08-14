@@ -128,6 +128,10 @@ func (i *Inbound) start() error {
 	}
 
 	mux := cmux.New(i.listener)
+	// TODO: Using MatchWithWriters/SendSettings is a major performance hit
+	// Per the cmux documentation, you have to do this for grpc-java
+	// Since we are only using grpc-go, this might be done elsewhere
+	// Need to look into this further
 	grpcListener := mux.MatchWithWriters(cmux.HTTP2MatchHeaderFieldPrefixSendSettings("content-type", "application/grpc"))
 	httpListener := mux.Match(cmux.Any())
 	mux.HandleError(func(err error) bool {
