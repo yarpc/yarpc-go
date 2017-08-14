@@ -136,7 +136,7 @@ func (i *Inbound) start() error {
 		if err != cmux.ErrListenerClosed {
 			zap.L().Error(err.Error())
 		}
-		return true
+		return false
 	})
 
 	grpcTransport := yarpcgrpc.NewTransport(i.options.grpcTransportOptions...)
@@ -203,9 +203,10 @@ func (i *Inbound) stop() error {
 		i.sinkServer = nil
 	}
 	var err error
-	if i.httpInbound != nil {
-		err = multierr.Append(err, i.httpInbound.Stop())
-	}
+	// TODO: what is going on
+	//if i.httpInbound != nil {
+	//err = multierr.Append(err, i.httpInbound.Stop())
+	//}
 	if i.httpTransport != nil {
 		err = multierr.Append(err, i.httpTransport.Stop())
 	}
