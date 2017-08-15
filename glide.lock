@@ -1,5 +1,5 @@
-hash: efb5a7906c13505a6f6dc7d9907c130df0fe95f71786914b6b8725e8411ab293
-updated: 2017-08-09T21:11:49.873382354-04:00
+hash: fc2cabbb537068d45a6caada93b5a9d139def7f480a0792a3f47a211c3dcb62f
+updated: 2017-08-14T21:59:22.275353373-04:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -45,10 +45,7 @@ imports:
   version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
   subpackages:
   - proto
-  - ptypes
   - ptypes/any
-  - ptypes/duration
-  - ptypes/timestamp
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/mattn/go-shellwords
@@ -114,7 +111,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/cherami-client-go
-  version: ebcbfe6c988c8ec8ffef86f9ecea08e6d76afb4a
+  version: c88dc4abaf53f64839bd48c2d6bbbc051bc9a910
   subpackages:
   - client/cherami
   - common
@@ -123,7 +120,7 @@ imports:
   - common/websocket
   - stream
 - name: github.com/uber/cherami-thrift
-  version: ff1036378813f6390b305bfe68eb18530315498d
+  version: 2cb0e2eeb6570800a2dd86544909bf2693f50e7b
   subpackages:
   - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
@@ -164,7 +161,7 @@ imports:
 - name: go.uber.org/dig
   version: 5e65f1a430fd50d4291edc5ee9811f7dd520d77d
 - name: go.uber.org/fx
-  version: 873aa153688137884ab4266574ab464f4ee48739
+  version: 3cdc81a59a7bbc63d452ec37dbc8ef3af23e6073
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -220,29 +217,29 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
+  version: 2d3e384235de683634e9080b58f757466840aa48
   repo: https://github.com/golang/sys
   subpackages:
   - unix
   - windows
 - name: golang.org/x/text
-  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
+  version: e56139fd9c5bc7244c76116c68e500765bb6db6b
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 5831d16d18029819d39f99bdc2060b8eff410b6b
+  version: 84a35ef54dff3c5596983e180ec10919fc432242
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  version: 6b7d9516179cd47f4714cfeb0103ad1dede756c4
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 7657092a1303cc5a6fa3fee988d57c665683a4da
+  version: b3ddf786825de56a4178401b7e174ee332173b66
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
@@ -268,7 +265,7 @@ imports:
   - internal/pool
   - internal/proto
 - name: gopkg.in/yaml.v2
-  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/golang/lint
   version: c5fb716d6688a859aae56d26d3e6070808df29f7
