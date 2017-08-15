@@ -4,7 +4,7 @@ Releases
 v1.15.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Add tchannel sanitization
 
 
 v1.14.0 (2017-09-08)
