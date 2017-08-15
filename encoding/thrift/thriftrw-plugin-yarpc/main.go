@@ -45,7 +45,8 @@ var (
 		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
 	_noGomock = flag.Bool("no-gomock", false,
 		"Don't generate gomock mocks for service clients")
-	_noFx = flag.Bool("no-fx", false, "Don't generate Fx module")
+	_noFx                 = flag.Bool("no-fx", false, "Don't generate Fx module")
+	_tchannelSanitization = flag.Bool("tchannel-sanitization", false, "Enable tchannel context sanitization")
 )
 
 type g struct{}
@@ -72,6 +73,7 @@ func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse
 			UnaryWrapperFunc:    unaryWrapperFunc,
 			OnewayWrapperImport: onewayWrapperImport,
 			OnewayWrapperFunc:   onewayWrapperFunc,
+			SanitizeTChannel:    *_tchannelSanitization,
 		}
 
 		for _, gen := range generators {

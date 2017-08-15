@@ -107,7 +107,12 @@ func (c client) <.Name>(
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
 	var body <$wire>.Value
+	<if .SanitizeTChannel>
+	<$tchannel := import "github.com/uber/tchannel-go">
+	body, err = c.c.Call(tchannel.WithoutHeaders(ctx), args, opts...)
+	<else>
 	body, err = c.c.Call(ctx, args, opts...)
+	<end>
 	if err != nil {
 		return
 	}
