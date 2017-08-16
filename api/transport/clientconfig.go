@@ -44,4 +44,9 @@ type ClientConfig interface {
 	// have already been started.
 	GetUnaryOutbound() UnaryOutbound
 	GetOnewayOutbound() OnewayOutbound
+
+	// DO NOT COMMIT INTO MAIN BRANCH.  This is a breaking change against the
+	// YARPC API we can use to play around with streaming.  It should be removed
+	// before we land this code in production.
+	GetStreamOutbound() StreamOutbound
 }

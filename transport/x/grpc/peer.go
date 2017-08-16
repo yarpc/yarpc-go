@@ -23,6 +23,7 @@ package grpc
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/hostport"
@@ -159,7 +160,17 @@ func (p *grpcPeer) wait() error {
 	if p.stopped {
 		return p.stoppedErr
 	}
-	p.stoppedErr = <-p.stoppedC
+
+	// TODO Fix in another PR
+	// Stopping the outbound always timed out at the stoppedC in my tests, this
+	// is just a workaround that doesn't solve the core issue.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	select {
+	case <-ctx.Done():
+		p.stopped = true
+	case p.stoppedErr = <-p.stoppedC:
+	}
 	p.stopped = true
 	return p.stoppedErr
 }

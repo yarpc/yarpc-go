@@ -38,6 +38,12 @@ type Client interface {
 
 	// CallOneway performs a oneway outbound Raw request.
 	CallOneway(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) (transport.Ack, error)
+
+	// CallStream performs a stream outbound Raw request.
+	// DO NOT COMMIT THIS TO THE MAIN BRANCH.  This is an added function to an
+	// interface and is thus a breaking change.  We'll need to work around it before
+	// we release it.
+	CallStream(ctx context.Context, procedure string, opts ...yarpc.CallOption) (*ClientStream, error)
 }
 
 // New builds a new Raw client.
@@ -102,4 +108,25 @@ func (c rawClient) CallOneway(ctx context.Context, procedure string, body []byte
 	}
 
 	return c.cc.GetOnewayOutbound().CallOneway(ctx, &treq)
+}
+
+func (c rawClient) CallStream(ctx context.Context, procedure string, opts ...yarpc.CallOption) (*ClientStream, error) {
+	call := encodingapi.NewOutboundCall(encoding.FromOptions(opts)...)
+	treq := transport.Request{
+		Caller:    c.cc.Caller(),
+		Service:   c.cc.Service(),
+		Procedure: procedure,
+		Encoding:  Encoding,
+	}
+
+	ctx, err := call.WriteToRequest(ctx, &treq)
+	if err != nil {
+		return nil, err
+	}
+
+	stream, err := c.cc.GetStreamOutbound().CallStream(ctx, &treq)
+	if err != nil {
+		return nil, err
+	}
+	return newClientStream(stream), nil
 }

@@ -35,6 +35,9 @@ type rawUnaryHandler struct{ UnaryHandler }
 // rawOnewayHandler adapts a Handler into a transport.OnewayHandler
 type rawOnewayHandler struct{ OnewayHandler }
 
+// rawStreamHandler adapts a Handler into a transport.OnewayHandler
+type rawStreamHandler struct{ StreamHandler }
+
 func (r rawUnaryHandler) Handle(ctx context.Context, treq *transport.Request, rw transport.ResponseWriter) error {
 	if err := errors.ExpectEncodings(treq, Encoding); err != nil {
 		return err
@@ -82,4 +85,8 @@ func (r rawOnewayHandler) HandleOneway(ctx context.Context, treq *transport.Requ
 	}
 
 	return r.OnewayHandler(ctx, reqBody)
+}
+
+func (r rawStreamHandler) HandleStream(stream transport.ServerStream) error {
+	return r.StreamHandler(newServerStream(stream))
 }
