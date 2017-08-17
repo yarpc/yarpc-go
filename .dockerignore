@@ -10,6 +10,7 @@ coverage.txt
 vendor
 TAGS
 
+eee
 encoding/thrift/thriftrw-plugin-yarpc/thriftrw-plugin-yarpc
 encoding/protobuf/protoc-gen-yarpc-go/protoc-gen-yarpc-go
 internal/crossdock/crossdock
