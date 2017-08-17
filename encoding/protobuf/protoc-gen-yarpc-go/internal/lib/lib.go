@@ -24,7 +24,6 @@
 package lib
 
 import (
-	"fmt"
 	"strings"
 	"text/template"
 
@@ -48,10 +47,39 @@ import (
 // {{$service.GetName}}YARPCClient is the YARPC client-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}YARPCClient interface {
 	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
-	{{end}}
-	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (yarpc.Ack, error)
+	{{end}}{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (yarpc.Ack, error)
+	{{end}}{{range $method := clientStreamingMethods $service}}{{$method.GetName}}(context.Context, ...yarpc.CallOption) ({{$service.GetName}}_{{$method.GetName}}YARPCClient, error)
+	{{end}}{{range $method := serverStreamingMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) ({{$service.GetName}}_{{$method.GetName}}YARPCClient, error)
+	{{end}}{{range $method := clientServerStreamingMethods $service}}{{$method.GetName}}(context.Context, ...yarpc.CallOption) ({{$service.GetName}}_{{$method.GetName}}YARPCClient, error)
 	{{end}}
 }
+
+{{range $method := clientStreamingMethods $service}}
+// {{$service.GetName}}_{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives the single {{$method.ResponseType.GoType $packagePath}} when sending is done.
+type {{$service.GetName}}_{{$method.GetName}}YARPCClient interface {
+	Context() context.Context
+	Send(*{{$method.RequestType.GoType $packagePath}}) error
+	CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+}
+{{end}}
+
+{{range $method := serverStreamingMethods $service}}
+// {{$service.GetName}}_{{$method.GetName}}YARPCClient receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
+type {{$service.GetName}}_{{$method.GetName}}YARPCClient interface {
+	Context() context.Context
+	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+}
+{{end}}
+
+{{range $method := clientServerStreamingMethods $service}}
+// {{$service.GetName}}_{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
+type {{$service.GetName}}_{{$method.GetName}}YARPCClient interface {
+	Context() context.Context
+	Send(*{{$method.RequestType.GoType $packagePath}}) error
+	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+	CloseSend() error
+}
+{{end}}
 
 // New{{$service.GetName}}YARPCClient builds a new YARPC client for the {{$service.GetName}} service.
 func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
@@ -67,8 +95,7 @@ func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, opt
 // {{$service.GetName}}YARPCServer is the YARPC server-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}YARPCServer interface {
 	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) (*{{$method.ResponseType.GoType $packagePath}}, error)
-	{{end}}
-	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) error
+	{{end}}{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) error
 	{{end}}
 }
 
@@ -126,6 +153,24 @@ func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Conte
 {{range $method := onewayMethods $service}}
 func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (yarpc.Ack, error) {
 	return c.client.CallOneway(ctx, "{{$method.GetName}}", request, options...)
+}
+{{end}}
+{{range $method := clientStreamingMethods $service}}
+func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, options ...yarpc.CallOption) ({{$service.GetName}}_{{$method.GetName}}YARPCClient, error) {
+	// TODO
+	return nil, nil
+}
+{{end}}
+{{range $method := serverStreamingMethods $service}}
+func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) ({{$service.GetName}}_{{$method.GetName}}YARPCClient, error) {
+	// TODO
+	return nil, nil
+}
+{{end}}
+{{range $method := clientServerStreamingMethods $service}}
+func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, options ...yarpc.CallOption) ({{$service.GetName}}_{{$method.GetName}}YARPCClient, error) {
+	// TODO
+	return nil, nil
 }
 {{end}}
 
@@ -192,9 +237,12 @@ var (
 var Runner = protoplugin.NewRunner(
 	template.Must(template.New("tmpl").Funcs(
 		template.FuncMap{
-			"unaryMethods":     unaryMethods,
-			"onewayMethods":    onewayMethods,
-			"trimPrefixPeriod": trimPrefixPeriod,
+			"unaryMethods":                 unaryMethods,
+			"onewayMethods":                onewayMethods,
+			"clientStreamingMethods":       clientStreamingMethods,
+			"serverStreamingMethods":       serverStreamingMethods,
+			"clientServerStreamingMethods": clientServerStreamingMethods,
+			"trimPrefixPeriod":             trimPrefixPeriod,
 		}).Parse(tmpl)),
 	checkTemplateInfo,
 	[]string{
@@ -209,13 +257,6 @@ var Runner = protoplugin.NewRunner(
 )
 
 func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
-	for _, service := range templateInfo.Services {
-		for _, method := range service.Methods {
-			if method.GetClientStreaming() || method.GetServerStreaming() {
-				return fmt.Errorf("yarpc does not support streaming methods and %s:%s is a streaming method", service.GetName(), method.GetName())
-			}
-		}
-	}
 	return nil
 }
 
@@ -233,6 +274,36 @@ func onewayMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) 
 	methods := make([]*protoplugin.Method, 0, len(service.Methods))
 	for _, method := range service.Methods {
 		if !method.GetClientStreaming() && !method.GetServerStreaming() && method.ResponseType.FQMN() == ".uber.yarpc.Oneway" {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
+}
+
+func clientStreamingMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if method.GetClientStreaming() && !method.GetServerStreaming() {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
+}
+
+func serverStreamingMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if !method.GetClientStreaming() && method.GetServerStreaming() {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
+}
+
+func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if method.GetClientStreaming() && method.GetServerStreaming() {
 			methods = append(methods, method)
 		}
 	}

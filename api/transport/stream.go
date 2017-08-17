@@ -51,10 +51,12 @@ type BaseStream interface {
 	// of info here to hold the connection metadata (basically the headers)
 	Request() *Request
 
+	// TODO: factor this out into InternalClientStream/InternalServerStream
 	// SendMsg sends a request over the stream. It blocks until the message
 	// has been sent.
 	SendMsg(m io.Reader) error
 
+	// TODO: factor this out into InternalClientStream/InternalServerStream
 	// RecvMsg blocks until a message is received from the connection. It
 	// returns an io.Reader with the contents of the message.
 	// TODO, should this return a ReadCloser so we can use bufferpooling?
