@@ -13,7 +13,6 @@ services:
             - python
             - python-sync
             - redis
-            - cherami
         environment:
             - WAIT_FOR=go,java,node,python,python-sync
 
