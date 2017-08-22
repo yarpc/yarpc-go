@@ -28,8 +28,9 @@ import (
 	"os"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/raw"
+	//"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport/x/grpc"
+	"go.uber.org/yarpc/internal/examples/streaming"
 )
 
 func main() {
@@ -48,14 +49,16 @@ func do() error {
 		},
 	})
 
-	client := raw.New(dispatcher.ClientConfig("keyvalue"))
+	//client := raw.New(dispatcher.ClientConfig("keyvalue"))
+	client := streaming.NewHelloYARPCClient(dispatcher.ClientConfig("keyvalue"))
 
 	if err := dispatcher.Start(); err != nil {
 		return fmt.Errorf("failed to start Dispatcher: %v", err)
 	}
 	defer dispatcher.Stop()
 
-	stream, err := client.CallStream(context.Background(), "call")
+	//stream, err := client.CallStream(context.Background(), "call")
+	stream, err := client.HelloThere(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to create stream: %s", err.Error())
 	}
@@ -66,21 +69,21 @@ func do() error {
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "stop" {
-			return stream.Close()
+			return stream.CloseSend()
 		}
 
 		fmt.Printf("sending message: %q\n", line)
-		if err := stream.Send([]byte(line)); err != nil {
+		if err := stream.Send(&streaming.HelloRequest{line}); err != nil {
 			return err
 		}
 
 		fmt.Println("waiting for response...")
-		msg, err := stream.Receive()
+		msg, err := stream.Recv()
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("got response: %q\n", string(msg))
+		fmt.Printf("got response: %q\n", msg.Id)
 		fmt.Printf(">>> ")
 	}
 	return scanner.Err()

@@ -27,30 +27,72 @@ import (
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/raw"
+	//"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/transport/x/grpc"
+	"context"
+	"go.uber.org/yarpc/internal/examples/streaming"
+	"errors"
 )
+//
+//type handler struct {
+//}
+//
+//func (h *handler) handle(ss *raw.ServerStream) error {
+//	fmt.Println("Handling stream")
+//	for {
+//		msg, err := ss.Receive()
+//		if err != nil {
+//			fmt.Printf("Error reading from stream: %q\n", err.Error())
+//			return err
+//		}
+//
+//		if string(msg) == "exit" {
+//			fmt.Println("Received 'exit' message, closing connection")
+//			return nil
+//		}
+//		fmt.Printf("Received a message: %q\n", string(msg))
+//
+//		resp := fmt.Sprintf("Got your message: %q, thanks!", string(msg))
+//		if err := ss.Send([]byte(resp)); err != nil {
+//			fmt.Printf("Error sending message to stream: %q\n", err.Error())
+//			return err
+//		}
+//		fmt.Printf("Sent response message: %q\n", resp)
+//	}
+//}
 
 type handler struct {
 }
 
-func (h *handler) handle(ss *raw.ServerStream) error {
+func (h *handler) HelloUnary(context.Context, *streaming.HelloRequest) (*streaming.HelloResponse, error) {
+	return nil, errors.New("NOT READY")
+}
+
+func (h *handler) HelloOutStream(streaming.HelloServiceHelloOutStreamYARPCServer) (*streaming.HelloResponse, error) {
+	return nil, nil
+}
+
+func (h *handler) HelloInStream(*streaming.HelloRequest, streaming.HelloServiceHelloInStreamYARPCServer) error {
+	return nil
+}
+
+func (h *handler) HelloThere(stream streaming.HelloServiceHelloThereYARPCServer) error {
 	fmt.Println("Handling stream")
 	for {
-		msg, err := ss.Receive()
+		msg, err := stream.Recv()
 		if err != nil {
 			fmt.Printf("Error reading from stream: %q\n", err.Error())
 			return err
 		}
 
-		if string(msg) == "exit" {
+		if msg.Id == "exit" {
 			fmt.Println("Received 'exit' message, closing connection")
 			return nil
 		}
-		fmt.Printf("Received a message: %q\n", string(msg))
+		fmt.Printf("Received a message: %q\n", msg.Id)
 
-		resp := fmt.Sprintf("Got your message: %q, thanks!", string(msg))
-		if err := ss.Send([]byte(resp)); err != nil {
+		resp := fmt.Sprintf("Got your message: %q, thanks!", msg.Id)
+		if err := stream.Send(&streaming.HelloResponse{resp}); err != nil {
 			fmt.Printf("Error sending message to stream: %q\n", err.Error())
 			return err
 		}
@@ -79,7 +121,7 @@ func do() error {
 
 	handler := &handler{}
 
-	dispatcher.Register(raw.StreamProcedure("call", raw.StreamHandler(handler.handle)))
+	dispatcher.Register(streaming.BuildHelloYARPCProcedures(handler))
 
 	fmt.Println("Starting Dispatcher")
 	if err := dispatcher.Start(); err != nil {

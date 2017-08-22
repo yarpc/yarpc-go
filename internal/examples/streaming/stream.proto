@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package uber.yarpc.internal.examples.streaming;
+
+option go_package = "streaming";
+
+message HelloRequest {
+  string id = 1;
+}
+
+message HelloResponse {
+  string id = 1;
+}
+
+service Hello {
+  rpc HelloUnary(HelloRequest) returns (HelloResponse) {}
+  rpc HelloThere(stream HelloRequest) returns (stream HelloResponse) {}
+  rpc HelloOutStream(stream HelloRequest) returns (HelloResponse) {}
+  rpc HelloInStream(HelloRequest) returns (stream HelloResponse) {}
+}

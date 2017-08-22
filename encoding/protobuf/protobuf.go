@@ -52,6 +52,7 @@ type BuildProceduresParams struct {
 	ServiceName         string
 	UnaryHandlerParams  []BuildProceduresUnaryHandlerParams
 	OnewayHandlerParams []BuildProceduresOnewayHandlerParams
+	StreamHandlerParams []BuildProceduresStreamHandlerParams
 }
 
 // BuildProceduresUnaryHandlerParams contains the parameters for a UnaryHandler for BuildProcedures.
@@ -64,6 +65,12 @@ type BuildProceduresUnaryHandlerParams struct {
 type BuildProceduresOnewayHandlerParams struct {
 	MethodName string
 	Handler    transport.OnewayHandler
+}
+
+// BuildProceduresStreamHandlerParams contains the parameters for a StreamHandler for BuildProcedures.
+type BuildProceduresStreamHandlerParams struct {
+	MethodName string
+	Handler    transport.StreamHandler
 }
 
 // BuildProcedures builds the transport.Procedures.
@@ -99,6 +106,21 @@ func BuildProcedures(params BuildProceduresParams) []transport.Procedure {
 			},
 		)
 	}
+	for _, streamHandlerParams := range params.StreamHandlerParams {
+		procedures = append(
+			procedures,
+			transport.Procedure{
+				Name:        procedure.ToName(params.ServiceName, streamHandlerParams.MethodName),
+				HandlerSpec: transport.NewStreamHandlerSpec(streamHandlerParams.Handler),
+				Encoding:    Encoding,
+			},
+			transport.Procedure{
+				Name:        procedure.ToName(params.ServiceName, streamHandlerParams.MethodName),
+				HandlerSpec: transport.NewStreamHandlerSpec(streamHandlerParams.Handler),
+				Encoding:    JSONEncoding,
+			},
+		)
+	}
 	return procedures
 }
 
@@ -117,7 +139,15 @@ type Client interface {
 		request proto.Message,
 		options ...yarpc.CallOption,
 	) (transport.Ack, error)
+	CallStream(
+		ctx context.Context,
+		requestMethodName string,
+		opts ...yarpc.CallOption,
+	) (ClientStream, error)
 }
+
+// TODO replace (maybe)
+type ClientStream transport.ClientStream
 
 // ClientOption is an option for a new Client.
 type ClientOption interface {
@@ -145,6 +175,18 @@ type UnaryHandlerParams struct {
 // NewUnaryHandler returns a new UnaryHandler.
 func NewUnaryHandler(params UnaryHandlerParams) transport.UnaryHandler {
 	return newUnaryHandler(params.Handle, params.NewRequest)
+}
+
+// UnaryHandlerParams contains the parameters for creating a new UnaryHandler.
+type StreamHandlerParams struct {
+	Handle     func(ServerStream) (error)
+}
+
+type ServerStream transport.ServerStream
+
+// NewUnaryHandler returns a new UnaryHandler.
+func NewStreamHandler(params StreamHandlerParams) transport.StreamHandler {
+	return newStreamHandler(params.Handle)
 }
 
 // OnewayHandlerParams contains the parameters for creating a new OnewayHandler.
