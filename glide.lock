@@ -1,5 +1,5 @@
-hash: 6f1bd1f6345ab50fe7e7ab668dc9c9468c3f2694d40e26ad5ee12be21640bcef
-updated: 2017-08-14T17:24:44.556210223-04:00
+hash: d33b32cbade3985c3ee8315578340fdd40579a0c86a5ebab08d3e343bd25eb28
+updated: 2017-08-22T14:46:06.325478884-04:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -42,13 +42,10 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
+  version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
   subpackages:
   - proto
-  - ptypes
   - ptypes/any
-  - ptypes/duration
-  - ptypes/timestamp
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/mattn/go-shellwords
@@ -89,7 +86,7 @@ imports:
   subpackages:
   - xfs
 - name: github.com/sirupsen/logrus
-  version: 181d419aa9e2223811b824e8f0b4af96f9ba9302
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 - name: github.com/soheilhy/cmux
   version: bb79a83465015a27a175925ebd155e660f55e9f1
 - name: github.com/stretchr/objx
@@ -166,7 +163,7 @@ imports:
 - name: go.uber.org/dig
   version: 5e65f1a430fd50d4291edc5ee9811f7dd520d77d
 - name: go.uber.org/fx
-  version: 873aa153688137884ab4266574ab464f4ee48739
+  version: 3cdc81a59a7bbc63d452ec37dbc8ef3af23e6073
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -201,7 +198,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/crypto
-  version: b176d7def5d71bdd214203491f89843ed217f420
+  version: eb71ad9bd329b5ac0fd0148dd99bd62e8be8e035
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -222,7 +219,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 2d3e384235de683634e9080b58f757466840aa48
+  version: 07c182904dbd53199946ba614a412c61d3c548f5
   repo: https://github.com/golang/sys
   subpackages:
   - unix
@@ -235,16 +232,16 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 5831d16d18029819d39f99bdc2060b8eff410b6b
+  version: 1807494da808122833b9bd8e3e5fa179ef237d41
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  version: ee236bd376b077c7a89f260c026c4735b195e459
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 9d99afc2fd8feeb530975fa3f4f630c093c1d683
+  version: b3ddf786825de56a4178401b7e174ee332173b66
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
@@ -288,6 +285,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: f7b71e06119010390c133f52e9331e27ce810f02
+  version: 45d689e7d122f228b80eba27806cd9a9ced2d4ce
   subpackages:
   - cmd/staticcheck
