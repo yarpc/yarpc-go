@@ -28,11 +28,12 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	//"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport/x/grpc"
 	"context"
-	"go.uber.org/yarpc/internal/examples/streaming"
 	"errors"
+	"go.uber.org/yarpc/internal/examples/streaming"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
+
 //
 //type handler struct {
 //}

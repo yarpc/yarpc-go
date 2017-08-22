@@ -29,8 +29,8 @@ import (
 
 	"go.uber.org/yarpc"
 	//"go.uber.org/yarpc/encoding/raw"
-	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/internal/examples/streaming"
+	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 func main() {

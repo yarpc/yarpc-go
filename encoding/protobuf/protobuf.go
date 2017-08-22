@@ -139,14 +139,15 @@ type Client interface {
 		request proto.Message,
 		options ...yarpc.CallOption,
 	) (transport.Ack, error)
-	CallStream(
+	CallStream( // Breaking change, make new interface.
 		ctx context.Context,
 		requestMethodName string,
 		opts ...yarpc.CallOption,
 	) (ClientStream, error)
 }
 
-// TODO replace (maybe)
+// ClientStream is a protobuf client stream.
+// TODO maybe replace this with just the transport.ClientStream everywhere
 type ClientStream transport.ClientStream
 
 // ClientOption is an option for a new Client.
@@ -177,14 +178,15 @@ func NewUnaryHandler(params UnaryHandlerParams) transport.UnaryHandler {
 	return newUnaryHandler(params.Handle, params.NewRequest)
 }
 
-// UnaryHandlerParams contains the parameters for creating a new UnaryHandler.
+// StreamHandlerParams contains the parameters for creating a new StreamHandler.
 type StreamHandlerParams struct {
-	Handle     func(ServerStream) (error)
+	Handle func(ServerStream) error
 }
 
+// ServerStream is a protobuf server stream.
 type ServerStream transport.ServerStream
 
-// NewUnaryHandler returns a new UnaryHandler.
+// NewStreamHandler returns a new StreamHandler.
 func NewStreamHandler(params StreamHandlerParams) transport.StreamHandler {
 	return newStreamHandler(params.Handle)
 }

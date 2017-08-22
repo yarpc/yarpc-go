@@ -146,6 +146,7 @@ func (c *client) CallStream(ctx context.Context, requestMethodName string, opts 
 	return c.clientConfig.GetStreamOutbound().CallStream(ctx, transportRequest)
 }
 
+// ToProtoMessage converts an io.Reader into a Protobuf message.
 func ToProtoMessage(
 	src io.Reader,
 	encoding transport.Encoding,
@@ -158,7 +159,8 @@ func ToProtoMessage(
 	return response, nil
 }
 
-func ToReader(request proto.Message, encoding transport.Encoding) (io.Reader, func(), error){
+// ToReader converts a proto message into an io.Reader.
+func ToReader(request proto.Message, encoding transport.Encoding) (io.Reader, func(), error) {
 	requestData, cleanup, err := marshal(encoding, request)
 	if err != nil {
 		return nil, cleanup, err // TODO wrap error
