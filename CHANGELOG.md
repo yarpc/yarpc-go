@@ -4,7 +4,8 @@ Releases
 v1.15.0-dev (unreleased)
 --------------------
 
--   Add tchannel sanitization
+-   ThriftRW Plugin: Added an option to strip TChannel-specific
+    information from Contexts before making outgoing requests.
 
 
 v1.14.0 (2017-09-08)
