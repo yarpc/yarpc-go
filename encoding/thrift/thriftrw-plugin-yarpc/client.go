@@ -110,7 +110,7 @@ func (c client) <.Name>(
 	var body <$wire>.Value
 	<if $sanitize>
 	<$tchannel := import "github.com/uber/tchannel-go">
-	body, err = c.c.Call(tchannel.WithoutHeaders(ctx), args, opts...)
+	body, err = c.c.Call(<$tchannel>.WithoutHeaders(ctx), args, opts...)
 	<else>
 	body, err = c.c.Call(ctx, args, opts...)
 	<end>
