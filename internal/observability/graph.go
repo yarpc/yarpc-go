@@ -152,15 +152,9 @@ func newGraph(reg *pally.Registry, logger *zap.Logger, extract ContextExtractor)
 func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound bool, req *transport.Request) call {
 	now := _timeNow()
 
-	d := newDigester()
-	d.add(req.Caller)
-	d.add(req.Service)
-	d.add(string(req.Encoding))
-	d.add(req.Procedure)
-	d.add(req.RoutingKey)
-	d.add(req.RoutingDelegate)
-	e := g.getOrCreateEdge(d.digest(), req)
-	d.free()
+	key, free := getKey(req)
+	e := g.getOrCreateEdge(key, req)
+	free()
 
 	return call{
 		edge:    e,
@@ -171,6 +165,17 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound boo
 		rpcType: rpcType,
 		inbound: isInbound,
 	}
+}
+
+func getKey(req *transport.Request) (key []byte, free func()) {
+	d := newDigester()
+	d.add(req.Caller)
+	d.add(req.Service)
+	d.add(string(req.Encoding))
+	d.add(req.Procedure)
+	d.add(req.RoutingKey)
+	d.add(req.RoutingDelegate)
+	return d.digest(), d.free
 }
 
 func (g *graph) getOrCreateEdge(key []byte, req *transport.Request) *edge {
