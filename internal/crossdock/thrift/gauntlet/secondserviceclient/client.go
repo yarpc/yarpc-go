@@ -79,7 +79,9 @@ func (c client) BlahBlah(
 	args := gauntlet.SecondService_BlahBlah_Helper.Args()
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -102,7 +104,9 @@ func (c client) SecondtestString(
 	args := gauntlet.SecondService_SecondtestString_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}

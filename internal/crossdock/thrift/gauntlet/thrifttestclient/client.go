@@ -200,7 +200,9 @@ func (c client) TestBinary(
 	args := gauntlet.ThriftTest_TestBinary_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -223,7 +225,9 @@ func (c client) TestByte(
 	args := gauntlet.ThriftTest_TestByte_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -246,7 +250,9 @@ func (c client) TestDouble(
 	args := gauntlet.ThriftTest_TestDouble_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -269,7 +275,9 @@ func (c client) TestEnum(
 	args := gauntlet.ThriftTest_TestEnum_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -292,7 +300,9 @@ func (c client) TestException(
 	args := gauntlet.ThriftTest_TestException_Helper.Args(_Arg)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -315,7 +325,9 @@ func (c client) TestI32(
 	args := gauntlet.ThriftTest_TestI32_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -338,7 +350,9 @@ func (c client) TestI64(
 	args := gauntlet.ThriftTest_TestI64_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -361,7 +375,9 @@ func (c client) TestInsanity(
 	args := gauntlet.ThriftTest_TestInsanity_Helper.Args(_Argument)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -384,7 +400,9 @@ func (c client) TestList(
 	args := gauntlet.ThriftTest_TestList_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -407,7 +425,9 @@ func (c client) TestMap(
 	args := gauntlet.ThriftTest_TestMap_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -430,7 +450,9 @@ func (c client) TestMapMap(
 	args := gauntlet.ThriftTest_TestMapMap_Helper.Args(_Hello)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -458,7 +480,9 @@ func (c client) TestMulti(
 	args := gauntlet.ThriftTest_TestMulti_Helper.Args(_Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -482,7 +506,9 @@ func (c client) TestMultiException(
 	args := gauntlet.ThriftTest_TestMultiException_Helper.Args(_Arg0, _Arg1)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -505,7 +531,9 @@ func (c client) TestNest(
 	args := gauntlet.ThriftTest_TestNest_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -537,7 +565,9 @@ func (c client) TestSet(
 	args := gauntlet.ThriftTest_TestSet_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -560,7 +590,9 @@ func (c client) TestString(
 	args := gauntlet.ThriftTest_TestString_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -583,7 +615,9 @@ func (c client) TestStringMap(
 	args := gauntlet.ThriftTest_TestStringMap_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -606,7 +640,9 @@ func (c client) TestStruct(
 	args := gauntlet.ThriftTest_TestStruct_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -629,7 +665,9 @@ func (c client) TestTypedef(
 	args := gauntlet.ThriftTest_TestTypedef_Helper.Args(_Thing)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -651,7 +689,9 @@ func (c client) TestVoid(
 	args := gauntlet.ThriftTest_TestVoid_Helper.Args()
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}

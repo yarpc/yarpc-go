@@ -82,7 +82,9 @@ func (c client) GetValue(
 	args := kv.KeyValue_GetValue_Helper.Args(_Key)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -106,7 +108,9 @@ func (c client) SetValue(
 	args := kv.KeyValue_SetValue_Helper.Args(_Key, _Value)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}

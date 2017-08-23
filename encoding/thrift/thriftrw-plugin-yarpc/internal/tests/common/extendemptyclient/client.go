@@ -59,7 +59,9 @@ func (c client) Hello(
 	args := common.ExtendEmpty_Hello_Helper.Args()
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}

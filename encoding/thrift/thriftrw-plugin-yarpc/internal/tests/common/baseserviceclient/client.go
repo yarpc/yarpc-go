@@ -53,7 +53,9 @@ func (c client) Healthy(
 	args := common.BaseService_Healthy_Helper.Args()
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}

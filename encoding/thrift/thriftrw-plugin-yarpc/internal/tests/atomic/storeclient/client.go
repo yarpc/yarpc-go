@@ -74,7 +74,9 @@ func (c client) CompareAndSwap(
 	args := atomic.Store_CompareAndSwap_Helper.Args(_Request)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
@@ -107,7 +109,9 @@ func (c client) Increment(
 	args := atomic.Store_Increment_Helper.Args(_Key, _Value)
 
 	var body wire.Value
+
 	body, err = c.c.Call(ctx, args, opts...)
+
 	if err != nil {
 		return
 	}
