@@ -98,7 +98,10 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		yarpcerrors.CodeNotFound,
 		yarpcerrors.CodeAlreadyExists,
 		yarpcerrors.CodePermissionDenied,
+		yarpcerrors.CodeFailedPrecondition,
+		yarpcerrors.CodeAborted,
 		yarpcerrors.CodeOutOfRange,
+		yarpcerrors.CodeUnimplemented,
 		yarpcerrors.CodeUnauthenticated:
 		c.edge.callerErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.callerFailures.Get(errCode.String()); err == nil {
@@ -109,9 +112,6 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		yarpcerrors.CodeUnknown,
 		yarpcerrors.CodeDeadlineExceeded,
 		yarpcerrors.CodeResourceExhausted,
-		yarpcerrors.CodeFailedPrecondition,
-		yarpcerrors.CodeAborted,
-		yarpcerrors.CodeUnimplemented,
 		yarpcerrors.CodeInternal,
 		yarpcerrors.CodeUnavailable,
 		yarpcerrors.CodeDataLoss:

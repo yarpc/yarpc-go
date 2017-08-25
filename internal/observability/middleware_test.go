@@ -313,6 +313,20 @@ func TestMiddlewareMetrics(t *testing.T) {
 	}
 }
 
+// getKey gets the "key" that we will use to get an edge in the graph.  We use
+// a separate function to recreate the logic because extracting it out in the
+// main code could have performance implications.
+func getKey(req *transport.Request) (key []byte, free func()) {
+	d := newDigester()
+	d.add(req.Caller)
+	d.add(req.Service)
+	d.add(string(req.Encoding))
+	d.add(req.Procedure)
+	d.add(req.RoutingKey)
+	d.add(req.RoutingDelegate)
+	return d.digest(), d.free
+}
+
 func TestUnaryInboundApplicationErrors(t *testing.T) {
 	defer stubTime()()
 	req := &transport.Request{
