@@ -94,7 +94,8 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 
 	errCode := yarpcerrors.ErrorCode(err)
 	switch errCode {
-	case yarpcerrors.CodeInvalidArgument,
+	case yarpcerrors.CodeCancelled,
+		yarpcerrors.CodeInvalidArgument,
 		yarpcerrors.CodeNotFound,
 		yarpcerrors.CodeAlreadyExists,
 		yarpcerrors.CodePermissionDenied,
@@ -108,8 +109,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 			counter.Inc()
 		}
 		return
-	case yarpcerrors.CodeCancelled,
-		yarpcerrors.CodeUnknown,
+	case yarpcerrors.CodeUnknown,
 		yarpcerrors.CodeDeadlineExceeded,
 		yarpcerrors.CodeResourceExhausted,
 		yarpcerrors.CodeInternal,
@@ -124,7 +124,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		// If we got "CodeOK" it really means that this is not a yarpcError, in
 		// which case this is another level of "unknown" error.
 		c.edge.serverErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.serverFailures.Get("unknown_strange"); err == nil {
+		if counter, err := c.edge.serverFailures.Get("unknown_internal_yarpc"); err == nil {
 			counter.Inc()
 		}
 		return
