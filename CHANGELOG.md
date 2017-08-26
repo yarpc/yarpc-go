@@ -4,7 +4,8 @@ Releases
 v1.14.0 (unreleased)
 --------------------
 
--   No changes yet.
+-   Increased granularity of error observability metrics to expose yarpc
+    error types.
 
 v1.13.1 (2017-08-03)
 --------------------
