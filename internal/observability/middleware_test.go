@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/pally/pallytest"
+	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -216,6 +217,114 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 	}
+}
+
+func TestMiddlewareMetrics(t *testing.T) {
+	defer stubTime()()
+	req := &transport.Request{
+		Caller:    "caller",
+		Service:   "service",
+		Encoding:  "raw",
+		Procedure: "procedure",
+		Body:      strings.NewReader("body"),
+	}
+
+	tests := []struct {
+		desc               string
+		err                error // downstream error
+		applicationErr     bool  // downstream application error
+		wantCalls          int
+		wantSuccesses      int
+		wantCallerFailures map[string]int
+		wantServerFailures map[string]int
+	}{
+		{
+			desc:          "no downstream errors",
+			wantCalls:     1,
+			wantSuccesses: 1,
+		},
+		{
+			desc:          "invalid argument error",
+			err:           yarpcerrors.InvalidArgumentErrorf("test"),
+			wantCalls:     1,
+			wantSuccesses: 0,
+			wantCallerFailures: map[string]int{
+				yarpcerrors.CodeInvalidArgument.String(): 1,
+			},
+		},
+		{
+			desc:          "invalid argument error",
+			err:           yarpcerrors.InternalErrorf("test"),
+			wantCalls:     1,
+			wantSuccesses: 0,
+			wantServerFailures: map[string]int{
+				yarpcerrors.CodeInternal.String(): 1,
+			},
+		},
+		{
+			desc:          "unknown (unwrapped) error",
+			err:           errors.New("test"),
+			wantCalls:     1,
+			wantSuccesses: 0,
+			wantServerFailures: map[string]int{
+				"unknown_internal_yarpc": 1,
+			},
+		},
+		{
+			desc:          "custom error code error",
+			err:           yarpcerrors.FromHeaders(yarpcerrors.Code(1000), "", "test"),
+			wantCalls:     1,
+			wantSuccesses: 0,
+			wantServerFailures: map[string]int{
+				"1000": 1,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		validate := func(mw *Middleware) {
+			key, free := getKey(req)
+			edge := mw.graph.getEdge(key)
+			free()
+			assert.Equal(t, int64(tt.wantCalls), edge.calls.Load())
+			assert.Equal(t, int64(tt.wantSuccesses), edge.successes.Load())
+			for tagName, val := range tt.wantCallerFailures {
+				assert.Equal(t, int64(val), edge.callerFailures.MustGet(tagName).Load())
+			}
+			for tagName, val := range tt.wantServerFailures {
+				assert.Equal(t, int64(val), edge.serverFailures.MustGet(tagName).Load())
+			}
+		}
+		t.Run(tt.desc+", unary inbound", func(t *testing.T) {
+			mw := NewMiddleware(zap.NewNop(), pally.NewRegistry(), NewNopContextExtractor())
+			mw.Handle(
+				context.Background(),
+				req,
+				&transporttest.FakeResponseWriter{},
+				fakeHandler{tt.err, tt.applicationErr},
+			)
+			validate(mw)
+		})
+		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
+			mw := NewMiddleware(zap.NewNop(), pally.NewRegistry(), NewNopContextExtractor())
+			mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
+			validate(mw)
+		})
+	}
+}
+
+// getKey gets the "key" that we will use to get an edge in the graph.  We use
+// a separate function to recreate the logic because extracting it out in the
+// main code could have performance implications.
+func getKey(req *transport.Request) (key []byte, free func()) {
+	d := newDigester()
+	d.add(req.Caller)
+	d.add(req.Service)
+	d.add(string(req.Encoding))
+	d.add(req.Procedure)
+	d.add(req.RoutingKey)
+	d.add(req.RoutingDelegate)
+	return d.digest(), d.free
 }
 
 func TestUnaryInboundApplicationErrors(t *testing.T) {
