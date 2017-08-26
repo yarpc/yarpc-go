@@ -23,6 +23,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -87,6 +88,14 @@ func AddHeader(key, value string) OutboundOption {
 	}
 }
 
+// Forwarder indicates that this outbound can handle forwarding http requests
+// with complex urls and headers.
+func Forwarder() OutboundOption {
+	return func(o *Outbound) {
+		o.isForwarder = true
+	}
+}
+
 // NewOutbound builds an HTTP outbound that sends requests to peers supplied
 // by the given peer.Chooser. The URL template for used for the different
 // peers may be customized using the URLTemplate option.
@@ -103,6 +112,7 @@ func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *O
 		urlTemplate: defaultURLTemplate,
 		tracer:      t.tracer,
 		transport:   t,
+		isForwarder: false,
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -155,6 +165,10 @@ type Outbound struct {
 
 	// Headers to add to all outgoing requests.
 	headers http.Header
+
+	// isForwarder indicates whether this outbound should expect to grab an
+	// inbound http request from the inbound in order to replicate a request.
+	isForwarder bool
 
 	once *lifecycle.Once
 }
@@ -245,12 +259,12 @@ func (o *Outbound) callWithPeer(
 	ttl time.Duration,
 	p *httpPeer,
 ) (*transport.Response, error) {
-	req, err := o.createRequest(p, treq)
+	req, err := o.getOrCreateRequest(ctx, p, treq)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, nil)
+	req.Header = applicationHeaders.ToHTTPHeaders(treq.Headers, req.Header)
 	ctx, req, span, err := o.withOpentracingSpan(ctx, req, treq, start)
 	if err != nil {
 		return nil, err
@@ -316,6 +330,26 @@ func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Reques
 	}
 
 	return hpPeer, onFinish, nil
+}
+
+func (o *Outbound) getOrCreateRequest(ctx context.Context, p *httpPeer, treq *transport.Request) (*http.Request, error) {
+	if !o.isForwarder {
+		return o.createRequest(p, treq)
+	}
+	req, ok := requestFromContext(ctx)
+	if !ok {
+		return o.createRequest(p, treq)
+	}
+	req.URL.Host = p.HostPort()
+	req.Body = toReadCloser(treq.Body)
+	return req, nil
+}
+
+func toReadCloser(r io.Reader) io.ReadCloser {
+	if rc, ok := r.(io.ReadCloser); ok {
+		return rc
+	}
+	return ioutil.NopCloser(r)
 }
 
 func (o *Outbound) createRequest(p *httpPeer, treq *transport.Request) (*http.Request, error) {

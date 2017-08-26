@@ -50,14 +50,23 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	}
 }
 
+// IsForwarder indicates that this inbound can handle forwarding http requests
+// with complex urls and headers.
+func IsForwarder() InboundOption {
+	return func(i *Inbound) {
+		i.isForwarder = true
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:      lifecycle.NewOnce(),
-		addr:      addr,
-		tracer:    t.tracer,
-		transport: t,
+		once:        lifecycle.NewOnce(),
+		addr:        addr,
+		tracer:      t.tracer,
+		transport:   t,
+		isForwarder: false,
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -75,6 +84,8 @@ type Inbound struct {
 	router     transport.Router
 	tracer     opentracing.Tracer
 	transport  *Transport
+
+	isForwarder bool
 
 	once *lifecycle.Once
 }
@@ -109,8 +120,9 @@ func (i *Inbound) start() error {
 	}
 
 	var httpHandler http.Handler = handler{
-		router: i.router,
-		tracer: i.tracer,
+		router:         i.router,
+		tracer:         i.tracer,
+		forwardRequest: i.isForwarder,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)

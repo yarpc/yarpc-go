@@ -44,8 +44,9 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	router transport.Router
-	tracer opentracing.Tracer
+	router         transport.Router
+	tracer         opentracing.Tracer
+	forwardRequest bool
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -79,7 +80,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) error {
 	start := time.Now()
 	defer req.Body.Close()
-	if req.Method != http.MethodPost {
+	if req.Method != http.MethodPost && !h.forwardRequest {
 		return yarpcerrors.NotFoundErrorf("request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
 	treq := &transport.Request{
@@ -98,6 +99,9 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}
 
 	ctx := req.Context()
+	if h.forwardRequest {
+		ctx = withRequest(ctx, req)
+	}
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
 	// parseTTLErr != nil is a problem only if the request is unary.
 	defer cancel()

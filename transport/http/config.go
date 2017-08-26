@@ -133,13 +133,20 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
+
+	IsForwarder bool `config:"isForwarder"`
 }
 
 func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.Inbound, error) {
 	if ic.Address == "" {
 		return nil, fmt.Errorf("inbound address is required")
 	}
-	return t.(*Transport).NewInbound(ic.Address, ts.InboundOptions...), nil
+	opts := ts.InboundOptions
+	if ic.IsForwarder {
+		opts = append(opts, IsForwarder())
+	}
+
+	return t.(*Transport).NewInbound(ic.Address, opts...), nil
 }
 
 // OutboundConfig configures an HTTP outbound.
@@ -189,6 +196,8 @@ type OutboundConfig struct {
 	//      X-Caller: myserice
 	//      X-Token: foo
 	AddHeaders map[string]string `config:"addHeaders"`
+
+	IsForwarder bool `config:"isForwarder"`
 }
 
 func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport, k *yarpcconfig.Kit) (*Outbound, error) {
@@ -199,6 +208,10 @@ func (ts *transportSpec) buildOutbound(oc *OutboundConfig, t transport.Transport
 		for k, v := range oc.AddHeaders {
 			opts = append(opts, AddHeader(k, v))
 		}
+	}
+
+	if oc.IsForwarder {
+		opts = append(opts, Forwarder())
 	}
 
 	// Special case where the URL implies the single peer.
