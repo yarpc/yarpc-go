@@ -115,7 +115,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}},
 				StopAction{},
 				ChooseAction{
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
@@ -248,11 +248,11 @@ func TestPeerHeapList(t *testing.T) {
 			msg: "choose before start",
 			peerListActions: []PeerListAction{
 				ChooseAction{
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 				ChooseAction{
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
@@ -294,7 +294,7 @@ func TestPeerHeapList(t *testing.T) {
 				StartAction{},
 				ChooseAction{
 					InputContextTimeout: 20 * time.Millisecond,
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 			},
 			expectedRunning: true,
@@ -478,7 +478,7 @@ func TestPeerHeapList(t *testing.T) {
 					Actions: []PeerListAction{
 						ChooseAction{
 							InputContextTimeout: 10 * time.Millisecond,
-							ExpectedErr:         context.DeadlineExceeded,
+							ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 						},
 						UpdateAction{AddedPeerIDs: []string{"1"}},
 					},
@@ -518,7 +518,7 @@ func TestPeerHeapList(t *testing.T) {
 				StartAction{},
 				ChooseAction{
 					InputContext: context.Background(),
-					ExpectedErr:  peer.ErrChooseContextHasNoDeadline("PeerHeap"),
+					ExpectedErr:  _noContextDeadlineError,
 				},
 			},
 			expectedRunning: true,
@@ -554,7 +554,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{RemovedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 			},
 			expectedRunning: true,
@@ -568,7 +568,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1"}},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Available},
 				ChooseAction{ExpectedPeer: "1"},
@@ -599,7 +599,7 @@ func TestPeerHeapList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 			},
 			expectedRunning: true,
@@ -614,7 +614,7 @@ func TestPeerHeapList(t *testing.T) {
 				NotifyStatusChangeAction{PeerID: "1", NewConnectionStatus: peer.Unavailable},
 				ChooseAction{
 					InputContextTimeout: 10 * time.Millisecond,
-					ExpectedErr:         context.DeadlineExceeded,
+					ExpectedErr:         newUnavailableError(context.DeadlineExceeded),
 				},
 			},
 			expectedRunning: true,

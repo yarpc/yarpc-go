@@ -6,6 +6,7 @@ v1.14.0 (unreleased)
 
 -   Increased granularity of error observability metrics to expose yarpc
     error types.
+-   Wrapped peer list `Choose` errors in yarpc error codes.
 
 v1.13.1 (2017-08-03)
 --------------------

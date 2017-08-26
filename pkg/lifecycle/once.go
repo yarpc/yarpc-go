@@ -28,7 +28,7 @@ import (
 	"go.uber.org/atomic"
 )
 
-var errDeadlineRequired = errors.New("deadline required")
+var errDeadlineRequired = errors.New("deadline required on request context")
 
 // State represents `states` that a lifecycle object can be in.
 type State int

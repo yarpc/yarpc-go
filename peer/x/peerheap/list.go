@@ -30,6 +30,11 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/yarpcerrors"
+)
+
+var (
+	_noContextDeadlineError = yarpcerrors.InvalidArgumentErrorf("can't wait for peer without a context deadline for peerheap")
 )
 
 const unavailablePenalty = math.MaxInt32
@@ -194,7 +199,7 @@ func (pl *List) clearPeers() error {
 // receive nil.
 func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
-		return nil, nil, err
+		return nil, nil, newNotRunningError(err)
 	}
 
 	for {
@@ -208,6 +213,10 @@ func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, fu
 			return nil, nil, err
 		}
 	}
+}
+
+func newNotRunningError(err error) error {
+	return yarpcerrors.FailedPreconditionErrorf("peer heap is not running: %s", err.Error())
 }
 
 func (pl *List) get() (*peerScore, bool) {
@@ -231,15 +240,19 @@ func (pl *List) get() (*peerScore, bool) {
 // Must NOT be run in a mutex.Lock()
 func (pl *List) waitForPeerAvailableEvent(ctx context.Context) error {
 	if _, ok := ctx.Deadline(); !ok {
-		return peer.ErrChooseContextHasNoDeadline("PeerHeap")
+		return _noContextDeadlineError
 	}
 
 	select {
 	case <-pl.peerAvailableEvent:
 		return nil
 	case <-ctx.Done():
-		return ctx.Err()
+		return newUnavailableError(ctx.Err())
 	}
+}
+
+func newUnavailableError(err error) error {
+	return yarpcerrors.UnavailableErrorf("peer heap timed out waiting for peer: %s", err.Error())
 }
 
 // notifyPeerAvailable writes to a channel indicating that a Peer is currently
