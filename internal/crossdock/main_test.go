@@ -208,8 +208,5 @@ func getTransportOnewayAxes() []string {
 	if os.Getenv("REDIS") == "enabled" {
 		transportOneway = append(transportOneway, "redis")
 	}
-	if os.Getenv("CHERAMI") == "enabled" {
-		transportOneway = append(transportOneway, "cherami")
-	}
 	return transportOneway
 }
