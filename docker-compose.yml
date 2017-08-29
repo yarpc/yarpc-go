@@ -4,8 +4,6 @@ services:
     crossdock:
         image: crossdock/crossdock
         dns_search: .
-        depends_on:
-          - proxy_dep
         links:
             - go
             - node
@@ -28,7 +26,7 @@ services:
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
             - AXIS_TRANSPORT_ONEWAY=http
-            - AXIS_CTXAVAILABLETRANSPORTS=http,tchannel
+            - AXIS_CTXAVAILABLETRANSPORTS=http;tchannel # ; is test-level delimiter
 
             - BEHAVIOR_RAW=client,server,transport
             - SKIP_RAW=client:java+transport:tchannel,server:java+transport:tchannel
@@ -84,8 +82,6 @@ services:
 
     go:
         dns_search: .
-        depends_on:
-          - proxy_dep
         build:
           context: .
           dockerfile: Dockerfile.crossdock
@@ -106,13 +102,6 @@ services:
 
     gotest:
         dns_search: .
-        depends_on:
-          - proxy_dep
         build:
           context: .
           dockerfile: Dockerfile.1.8
-
-    #https://github.com/docker/compose/issues/4369
-
-    proxy_dep:
-        image: busybox
