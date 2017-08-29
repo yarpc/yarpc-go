@@ -125,11 +125,11 @@ func TestConfigurator(t *testing.T) {
 					outbounds:
 						keyvalue:
 							oneway:
-								redis: {queue: requests}
+								kafka: {queue: requests}
 				`)
 				tt.wantErr = []string{
 					`failed to load configuration for outbound "keyvalue"`,
-					`unknown transport "redis"`,
+					`unknown transport "kafka"`,
 				}
 				return
 			},

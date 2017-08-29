@@ -12,7 +12,6 @@ services:
             - java
             - python
             - python-sync
-            - redis
         environment:
             - WAIT_FOR=go,java,node,python,python-sync
 
@@ -32,7 +31,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis
+            - AXIS_TRANSPORT_ONEWAY=http
 
             # Transports available to the ctxpropagation behavior for multihop
             # requests.
@@ -89,8 +88,6 @@ services:
           dockerfile: Dockerfile.crossdock
         ports:
             - "8080-8090"
-        environment:
-            - REDIS=enabled
 
     node:
         dns_search: .
@@ -118,27 +115,15 @@ services:
         environment:
             - SYNC=1
 
-    redis:
-        image: healthcheck/redis
-        ports:
-            - 6379
-
     gotest:
         dns_search: .
         depends_on:
           - proxy_dep
-        links:
-            - redis
         build:
           context: .
           dockerfile: Dockerfile.1.8
-        environment:
-            - REDIS=enabled
 
     #https://github.com/docker/compose/issues/4369
 
     proxy_dep:
         image: busybox
-        depends_on:
-          redis:
-            condition: service_healthy
