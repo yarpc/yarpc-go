@@ -10,13 +10,11 @@ services:
             - go
             - node
             - java
-            - python
-            - python-sync
         environment:
-            - WAIT_FOR=go,java,node,python,python-sync
+            - WAIT_FOR=go,java,node,
 
-            - AXIS_CLIENT=go,java,node,python,python-sync
-            - AXIS_SERVER=go,java,node,python
+            - AXIS_CLIENT=go,java,node
+            - AXIS_SERVER=go,java,node
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift,protobuf
             - AXIS_ERRORS_HTTPCLIENT=go # pending update to node test
@@ -44,20 +42,20 @@ services:
             - BEHAVIOR_THRIFT=client,server,transport
             - SKIP_THRIFT=client:java+transport:tchannel,server:java+transport:tchannel
             - BEHAVIOR_PROTOBUF=client,server,transport
-            - SKIP_PROTOBUF=client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_PROTOBUF=client:node,server:java,server:node
             - BEHAVIOR_GRPC=client,server,encoding
-            - SKIP_GRPC=client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_GRPC=client:node,server:java,server:node
             - BEHAVIOR_GOOGLE_GRPC_CLIENT=client,server
-            - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,server:java,server:node
             - BEHAVIOR_GOOGLE_GRPC_SERVER=client,server
-            - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,server:java,server:node
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
-            - SKIP_ERRORS_HTTPCLIENT=server:java,server:node,server:python
+            - SKIP_ERRORS_HTTPCLIENT=server:java,server:node
             # BEHAVIOR_ERRORSHTTPIN TODO
             - BEHAVIOR_ERRORS_TCHCLIENT=errors_tchclient,server
-            - SKIP_ERRORS_TCHCLIENT=server:java,server:node,server:python
+            - SKIP_ERRORS_TCHCLIENT=server:java,server:node
             # BEHAVIOR_ERRORSTCHIN TODO
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - SKIP_TCHCLIENT=client:java,server:java,encoding:protobuf
@@ -100,20 +98,6 @@ services:
         image: yarpc/yarpc-java
         ports:
             - "8080-8087"
-
-    python:
-        dns_search: .
-        image: yarpc/yarpc-python
-        ports:
-            - "8080-8087"
-
-    python-sync:
-        dns_search: .
-        image: yarpc/yarpc-python
-        ports:
-            - 8080
-        environment:
-            - SYNC=1
 
     gotest:
         dns_search: .

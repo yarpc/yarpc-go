@@ -123,7 +123,7 @@ func Run(t crossdock.T) {
 		wantBody         string
 		wantBodyContains string
 
-		// hack to get java/python/node crossdock tests passing for now :(
+		// hack to get java/node crossdock tests passing for now :(
 		// this is because we're changing when we validate the TTL
 		wantBodyOneOf []string
 	}{
