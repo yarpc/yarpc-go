@@ -1,5 +1,5 @@
-hash: 69df66d2a4b1e5ff1617470a676f32b0d2903cd99c95a5e1d22406d09b6b0895
-updated: 2017-08-29T11:32:48.835851102-07:00
+hash: 354ccfb438e9e95e44b97409c1e6faa2c961475a54b303b921f44347d43df4b6
+updated: 2017-08-29T15:17:11.535777296-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -86,7 +86,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/mapdecode
-  version: 2d8ecd5e64c88634bd7dfcbc9fd2a9e813830e8d
+  version: 718b4994083e432669f44a00174c5f1bcdb1434d
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
@@ -221,7 +221,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
+  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
 testImports:
 - name: github.com/golang/lint
   version: c5fb716d6688a859aae56d26d3e6070808df29f7
