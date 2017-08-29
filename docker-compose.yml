@@ -13,7 +13,6 @@ services:
             - python
             - python-sync
             - redis
-            - cherami
         environment:
             - WAIT_FOR=go,java,node,python,python-sync
 
@@ -33,7 +32,7 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
+            - AXIS_TRANSPORT_ONEWAY=http,redis
 
             # Transports available to the ctxpropagation behavior for multihop
             # requests.
@@ -92,7 +91,6 @@ services:
             - "8080-8090"
         environment:
             - REDIS=enabled
-            - CHERAMI=enabled
 
     node:
         dns_search: .
@@ -125,30 +123,22 @@ services:
         ports:
             - 6379
 
-    cherami:
-        dns_search: .
-        image: ubercherami/cherami-server-standalone
-
     gotest:
         dns_search: .
         depends_on:
           - proxy_dep
         links:
             - redis
-            - cherami
         build:
           context: .
           dockerfile: Dockerfile.1.8
         environment:
             - REDIS=enabled
-            - CHERAMI=enabled
 
     #https://github.com/docker/compose/issues/4369
 
     proxy_dep:
         image: busybox
         depends_on:
-          cherami:
-            condition: service_healthy
           redis:
             condition: service_healthy

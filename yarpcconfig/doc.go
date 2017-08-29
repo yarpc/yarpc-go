@@ -33,7 +33,6 @@
 //
 // 	cfg := config.New()
 // 	cfg.MustRegisterTransport(http.TransportSpec())
-// 	cfg.MustRegisterTransport(cherami.TransportSpec())
 // 	cfg.MustRegisterPeerList(roundrobin.Spec())
 //
 // This object is re-usable and may be stored as a singleton in your
@@ -95,11 +94,9 @@
 // The 'inbounds' attribute configures the different ways in which the service
 // receives requests. It is represented as a mapping between inbound transport
 // type and its configuration. For example, the following states that we want
-// to receive requests over HTTP and Cherami.
+// to receive requests over HTTP.
 //
 // 	inbounds:
-// 	  cherami:
-// 	    destination: /myservice/requests
 // 	  http:
 // 	    address: :8080
 //
@@ -144,16 +141,16 @@
 // The outbound configuration for a service has at least one of the following
 // keys: unary, oneway. These specify the configurations for the corresponding
 // RPC types for that service. For example, the following specifies that we
-// make Unary requests to keyvalue service over HTTP and Oneway requests over
-// Cherami.
+// make Unary requests to keyvalue service over TChannel and Oneway requests over
+// HTTP.
 //
 // 	keyvalue:
 // 	  unary:
-// 	    http:
-// 	      url: http://127.0.0.1:8082/yarpc
+// 	    tchannel:
+//        peer: 127.0.0.1:4040
 // 	  oneway:
-// 	    cherami:
-// 	      destination: /keyvalue/requests
+// 	    http:
+//        url: http://127.0.0.1:8080/
 //
 // For convenience, if there is only one outbound configuration for a service,
 // it may be specified one level higher (without the 'unary' or 'oneway'
@@ -167,11 +164,11 @@
 // 	    url: http://127.0.0.1:8080/
 //
 // Similarly, the following states that we only make Oneway requests to the
-// "email" service and those are always made over Cherami.
+// "email" service and those are always made over HTTP.
 //
 // 	email:
-// 	  cherami:
-// 	    destination: /email/send_queue
+// 	  http:
+// 	    url: http://127.0.0.1:8080/
 //
 // When the name of the target service differs from the outbound name, it may
 // be overridden with the 'service' key.
@@ -237,8 +234,6 @@
 // represented as a mapping between the transport name and its configuration.
 //
 // 	transports:
-// 	  cherami:
-// 	    timeout: 5s
 // 	  http:
 // 	    keepAlive: 30s
 //

@@ -110,19 +110,6 @@ imports:
   - m3/customtransports
   - m3/thrift
   - m3/thriftudp
-- name: github.com/uber/cherami-client-go
-  version: c88dc4abaf53f64839bd48c2d6bbbc051bc9a910
-  subpackages:
-  - client/cherami
-  - common
-  - common/backoff
-  - common/metrics
-  - common/websocket
-  - stream
-- name: github.com/uber/cherami-thrift
-  version: 2cb0e2eeb6570800a2dd86544909bf2693f50e7b
-  subpackages:
-  - .generated/go/cherami
 - name: github.com/uber/jaeger-client-go
   version: d021e646f5187d77b55592c3efee1a2810e895d7
   subpackages:

@@ -1,8 +1,7 @@
 IGNORE_DIRS="\
   internal/examples \
   internal/service-test \
-  internal/testutils \
-  transport/x/cherami/example"
+  internal/testutils"
 
 WHITELIST="\
   api/peer \
