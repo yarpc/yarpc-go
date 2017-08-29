@@ -9,7 +9,7 @@ services:
             - node
             - java
         environment:
-            - WAIT_FOR=go,java,node,
+            - WAIT_FOR=go,java,node
 
             - AXIS_CLIENT=go,java,node
             - AXIS_SERVER=go,java,node
