@@ -56,7 +56,6 @@ import:
   # then we no longer need to have this dependency in glide.yaml imports
   # we should then move it to testImports
   repo: https://github.com/golang/tools
-- package: gopkg.in/redis.v5
 - package: gopkg.in/yaml.v2
 - package: go.uber.org/multierr
   version: '>= 0.1, < 2.0'

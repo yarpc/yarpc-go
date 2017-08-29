@@ -31,7 +31,6 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
-	"go.uber.org/yarpc/transport/x/redis"
 )
 
 // Create creates an RPC from the given parameters or fails the whole behavior.
@@ -92,11 +91,6 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 	switch trans {
 	case "http":
 		outbound = httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s:8084", server))
-	case "redis":
-		outbound = redis.NewOnewayOutbound(
-			redis.NewRedis5Client("redis:6379"),
-			"yarpc/oneway",
-		)
 	default:
 		fatals.Fail("", "unknown transport %q", trans)
 	}
