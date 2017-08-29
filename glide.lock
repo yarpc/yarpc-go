@@ -1,5 +1,5 @@
-hash: fc2cabbb537068d45a6caada93b5a9d139def7f480a0792a3f47a211c3dcb62f
-updated: 2017-08-14T21:59:22.275353373-04:00
+hash: 69df66d2a4b1e5ff1617470a676f32b0d2903cd99c95a5e1d22406d09b6b0895
+updated: 2017-08-29T11:32:48.835851102-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -11,10 +11,6 @@ imports:
   version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
-- name: github.com/cactus/go-statsd-client
-  version: 91c326c3f7bd20f0226d3d1c289dd9f8ce28d33d
-  subpackages:
-  - statsd
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/crossdock/crossdock-go
@@ -46,8 +42,6 @@ imports:
   subpackages:
   - proto
   - ptypes/any
-- name: github.com/gorilla/websocket
-  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/mattn/go-shellwords
   version: 02e3cf038dcea8290e44424da473dd12be796a8a
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -60,8 +54,6 @@ imports:
   - ext
   - log
   - mocktracer
-- name: github.com/pborman/uuid
-  version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -85,18 +77,12 @@ imports:
   version: e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2
   subpackages:
   - xfs
-- name: github.com/sirupsen/logrus
-  version: 181d419aa9e2223811b824e8f0b4af96f9ba9302
-- name: github.com/stretchr/objx
-  version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
   version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
   - assert
   - mock
   - require
-- name: github.com/uber-common/bark
-  version: dbf558e8a7b65e2b54e1e01c14ee0e4207a865f5
 - name: github.com/uber-go/atomic
   version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
 - name: github.com/uber-go/mapdecode
@@ -111,7 +97,7 @@ imports:
   - m3/thrift
   - m3/thriftudp
 - name: github.com/uber/jaeger-client-go
-  version: d021e646f5187d77b55592c3efee1a2810e895d7
+  version: 3e3870040def0ebdaf65a003863fa64f5cb26139
   subpackages:
   - internal/spanlog
   - log
@@ -127,8 +113,6 @@ imports:
 - name: github.com/uber/tchannel-go
   version: a7ad9ecb640b5f10a0395b38d6319175172b3ab2
   subpackages:
-  - hyperbahn
-  - hyperbahn/gen-go/hyperbahn
   - internal/argreader
   - json
   - raw
@@ -148,7 +132,7 @@ imports:
 - name: go.uber.org/dig
   version: 5e65f1a430fd50d4291edc5ee9811f7dd520d77d
 - name: go.uber.org/fx
-  version: 3cdc81a59a7bbc63d452ec37dbc8ef3af23e6073
+  version: 1d85a1923b419fa98762b158d944e9bffbba057d
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -156,7 +140,7 @@ imports:
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/thriftrw
-  version: 4975e075853c64488972fde71ff06b6bdbe02701
+  version: 8bbe12f61b982c30be95f88bfe62cade3d470e08
   subpackages:
   - envelope
   - internal/envelope
@@ -182,12 +166,8 @@ imports:
   - internal/exit
   - zapcore
   - zaptest/observer
-- name: golang.org/x/crypto
-  version: b176d7def5d71bdd214203491f89843ed217f420
-  subpackages:
-  - ssh/terminal
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -206,9 +186,6 @@ imports:
 - name: golang.org/x/sys
   version: 2d3e384235de683634e9080b58f757466840aa48
   repo: https://github.com/golang/sys
-  subpackages:
-  - unix
-  - windows
 - name: golang.org/x/text
   version: e56139fd9c5bc7244c76116c68e500765bb6db6b
   subpackages:
