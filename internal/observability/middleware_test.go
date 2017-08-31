@@ -25,7 +25,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/digester"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/pally/pallytest"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -40,41 +40,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
-
-func TestDigester(t *testing.T) {
-	const (
-		goroutines = 10
-		iterations = 100
-	)
-
-	expected := []byte{'f', 'o', 'o', 0, 'b', 'a', 'r'}
-
-	var wg sync.WaitGroup
-	for i := 0; i < goroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < iterations; i++ {
-				d := newDigester()
-				defer d.free()
-
-				assert.Equal(t, 0, len(d.digest()), "Expected fresh digester to have no internal state.")
-				assert.True(t, cap(d.digest()) > 0, "Expected fresh digester to have available capacity.")
-
-				d.add("foo")
-				d.add("bar")
-				assert.Equal(
-					t,
-					string(expected),
-					string(d.digest()),
-					"Expected digest to be null-separated concatenation of inputs.",
-				)
-			}
-		}()
-	}
-
-	wg.Wait()
-}
 
 func TestMiddlewareLogging(t *testing.T) {
 	defer stubTime()()
@@ -317,14 +282,14 @@ func TestMiddlewareMetrics(t *testing.T) {
 // a separate function to recreate the logic because extracting it out in the
 // main code could have performance implications.
 func getKey(req *transport.Request) (key []byte, free func()) {
-	d := newDigester()
-	d.add(req.Caller)
-	d.add(req.Service)
-	d.add(string(req.Encoding))
-	d.add(req.Procedure)
-	d.add(req.RoutingKey)
-	d.add(req.RoutingDelegate)
-	return d.digest(), d.free
+	d := digester.New()
+	d.Add(req.Caller)
+	d.Add(req.Service)
+	d.Add(string(req.Encoding))
+	d.Add(req.Procedure)
+	d.Add(req.RoutingKey)
+	d.Add(req.RoutingDelegate)
+	return d.Digest(), d.Free
 }
 
 func TestUnaryInboundApplicationErrors(t *testing.T) {
