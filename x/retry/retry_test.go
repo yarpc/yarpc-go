@@ -25,8 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/crossdock/crossdock-go/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/transport"
@@ -43,9 +42,7 @@ func TestMiddleware(t *testing.T) {
 
 		actions []MiddlewareAction
 
-		// These counters are the tally-compatible "name+tags" that point to
-		// the current counter value.
-		wantCounters map[string]int
+		assertions []counterAssertion
 	}
 	tests := []testStruct{
 		{
@@ -75,9 +72,13 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     1,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(1),
+					wantSuccesses(1),
+				),
 			},
 		},
 		{
@@ -138,9 +139,14 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     2,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantSuccesses(1),
+					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
+				),
 			},
 		},
 		{
@@ -194,9 +200,15 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     5,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(5),
+					wantSuccesses(1),
+					wantRetriesWithError(yarpcerrors.CodeInternal, 2),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 2),
+				),
 			},
 		},
 		{
@@ -226,9 +238,13 @@ func TestMiddleware(t *testing.T) {
 					wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":                     1,
-				"retry_failures+error=unretryable": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(1),
+					wantFailures(_unretryable, yarpcerrors.CodeInvalidArgument, 1),
+				),
 			},
 		},
 		{
@@ -264,9 +280,14 @@ func TestMiddleware(t *testing.T) {
 					wantError: yarpcerrors.InvalidArgumentErrorf("bad request!").Error(),
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":                     2,
-				"retry_failures+error=unretryable": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
+					wantFailures(_unretryable, yarpcerrors.CodeInvalidArgument, 1),
+				),
 			},
 		},
 		{
@@ -297,9 +318,13 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     1,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(1),
+					wantSuccesses(1),
+				),
 			},
 		},
 		{
@@ -338,9 +363,14 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     2,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantSuccesses(1),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
+				),
 			},
 		},
 		{
@@ -378,9 +408,14 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     2,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantSuccesses(1),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
+				),
 			},
 		},
 		{
@@ -418,9 +453,14 @@ func TestMiddleware(t *testing.T) {
 					wantError: yarpcerrors.InternalErrorf("unexpected error 2").Error(),
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":                      2,
-				"retry_failures+error=max_attempts": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
+					wantFailures(_maxAttempts, yarpcerrors.CodeInternal, 1),
+				),
 			},
 		},
 		{
@@ -459,9 +499,14 @@ func TestMiddleware(t *testing.T) {
 					wantError: yarpcerrors.InternalErrorf("unexpected error 1").Error(),
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":                      2,
-				"retry_failures+error=max_attempts": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
+					wantFailures(_maxAttempts, yarpcerrors.CodeInternal, 1),
+				),
 			},
 		},
 		{
@@ -501,9 +546,14 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     2,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantSuccesses(1),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
+				),
 			},
 		},
 		{
@@ -554,9 +604,14 @@ func TestMiddleware(t *testing.T) {
 					wantBody: "respbody",
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":     3,
-				"retry_successes+": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(3),
+					wantSuccesses(1),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 2),
+				),
 			},
 		},
 		{
@@ -591,9 +646,13 @@ func TestMiddleware(t *testing.T) {
 					wantError:     yarpcerrors.InternalErrorf("unexpected error 2").Error(),
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":                 1,
-				"retry_failures+error=no_time": 1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(1),
+					wantFailures(_noTime, yarpcerrors.CodeInternal, 1),
+				),
 			},
 		},
 		{
@@ -701,11 +760,27 @@ func TestMiddleware(t *testing.T) {
 					},
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":                     5,
-				"retry_successes+":                 1,
-				"retry_failures+error=unretryable": 1,
-				"retry_failures+error=no_time":     1,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantCalls(2),
+					wantSuccesses(1),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
+				),
+				edgeAssertion(
+					service("serv2"),
+					procedure("proc2"),
+					wantCalls(1),
+					wantFailures(_unretryable, yarpcerrors.CodeInvalidArgument, 1),
+				),
+				edgeAssertion(
+					service("serv3"),
+					procedure("proc3"),
+					wantCalls(2),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
+					wantFailures(_noTime, yarpcerrors.CodeDeadlineExceeded, 1),
+				),
 			},
 		},
 		{
@@ -906,10 +981,34 @@ func TestMiddleware(t *testing.T) {
 					},
 				},
 			},
-			wantCounters: map[string]int{
-				"retry_calls+":                      10,
-				"retry_successes+":                  0,
-				"retry_failures+error=max_attempts": 4,
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("ns"),
+					procedure("np"),
+					wantCalls(3),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 2),
+					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
+				),
+				edgeAssertion(
+					service("s"),
+					procedure("np"),
+					wantCalls(2),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
+					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
+				),
+				edgeAssertion(
+					service("s"),
+					procedure("p"),
+					wantCalls(1),
+					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
+				),
+				edgeAssertion(
+					service("ss"),
+					procedure("pr"),
+					wantCalls(4),
+					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 3),
+					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
+				),
 			},
 		},
 	}
@@ -918,17 +1017,16 @@ func TestMiddleware(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			testScope := tally.NewTestScope("", map[string]string{})
 
-			retry := NewUnaryMiddleware(
+			retry, stopFunc := NewUnaryMiddleware(
 				WithPolicyProvider(tt.policyProvider),
 				WithTally(testScope),
 			)
+			defer stopFunc()
 
 			ApplyMiddlewareActions(t, retry, tt.actions)
 
-			counters := testScope.Snapshot().Counters()
-			for nameAndTags, value := range tt.wantCounters {
-				require.Contains(t, counters, nameAndTags, "name+tag combo was not in the counters")
-				assert.Equal(t, int64(value), counters[nameAndTags].Value(), "counter %s was not as expected", nameAndTags)
+			for _, assertion := range tt.assertions {
+				assertion(t, retry.observerGraph)
 			}
 		})
 	}
@@ -1025,4 +1123,101 @@ func (pb *policyProviderBuilder) registerProcedure(procedure string, pol *Policy
 func (pb *policyProviderBuilder) setDefault(pol *Policy) *policyProviderBuilder {
 	pb.provider.SetDefault(pol)
 	return pb
+}
+
+// counterAssertion is a helper to validate that retry counters are properly
+// counted
+type counterAssertion func(*testing.T, *observerGraph)
+
+// edgeAssertion will assert on the counters for an edge in the graph.
+func edgeAssertion(options ...counterOption) counterAssertion {
+	opts := newCounterOpts()
+	for _, option := range options {
+		option.apply(&opts)
+	}
+	return func(t *testing.T, graph *observerGraph) {
+		e := graph.getOrCreateEdge(opts.giveRequest)
+		assert.Equal(t, int64(opts.wantCalls), e.calls.Load(), "mismatched calls counter")
+		assert.Equal(t, int64(opts.wantSuccesses), e.successes.Load(), "mismatched successes counter")
+		for errName, count := range opts.wantRetryWithError {
+			counter := e.retriesAfterError.MustGet(errName)
+			assert.Equal(t, int64(count), counter.Load(), "mismatched counter for %s", errName)
+		}
+		for _, failure := range opts.wantFailures {
+			counter := e.failures.MustGet(failure.reason, failure.error)
+			assert.Equal(t, int64(failure.count), counter.Load(), "mismatched counter for reason:%s, error:%s", failure.reason, failure.error)
+		}
+	}
+}
+
+type failureAssertion struct {
+	reason string
+	error  string
+	count  int
+}
+
+type counterOpts struct {
+	giveRequest        *transport.Request
+	wantCalls          int
+	wantSuccesses      int
+	wantRetryWithError map[string]int
+	wantFailures       []failureAssertion
+}
+
+func newCounterOpts() counterOpts {
+	return counterOpts{
+		giveRequest:        &transport.Request{},
+		wantRetryWithError: make(map[string]int, 0),
+	}
+}
+
+type counterOption interface {
+	apply(*counterOpts)
+}
+
+type counterOptionFunc func(*counterOpts)
+
+func (f counterOptionFunc) apply(opts *counterOpts) { f(opts) }
+
+func service(s string) counterOption {
+	return counterOptionFunc(func(opts *counterOpts) {
+		opts.giveRequest.Service = s
+	})
+}
+
+func procedure(p string) counterOption {
+	return counterOptionFunc(func(opts *counterOpts) {
+		opts.giveRequest.Procedure = p
+	})
+}
+
+func wantCalls(n int) counterOption {
+	return counterOptionFunc(func(opts *counterOpts) {
+		opts.wantCalls = n
+	})
+}
+
+func wantSuccesses(n int) counterOption {
+	return counterOptionFunc(func(opts *counterOpts) {
+		opts.wantSuccesses = n
+	})
+}
+
+func wantRetriesWithError(error yarpcerrors.Code, n int) counterOption {
+	return counterOptionFunc(func(opts *counterOpts) {
+		opts.wantRetryWithError[error.String()] = n
+	})
+}
+
+func wantFailures(reason string, error yarpcerrors.Code, n int) counterOption {
+	return counterOptionFunc(func(opts *counterOpts) {
+		opts.wantFailures = append(
+			opts.wantFailures,
+			failureAssertion{
+				reason: reason,
+				error:  error.String(),
+				count:  n,
+			},
+		)
+	})
 }

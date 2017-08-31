@@ -20,63 +20,231 @@
 
 package retry
 
-import "github.com/uber-go/tally"
+import (
+	"context"
+	"sync"
+	"time"
 
-var (
-	_callsName         = "retry_calls"
-	_successesName     = "retry_successes"
-	_failuresName      = "retry_failures"
-	_errTag            = "error"
-	_unretryableErrTag = "unretryable"
-	_yarpcErrTag       = "yarpc_internal"
-	_noTimeErrTag      = "no_time"
-	_maxAttemptErrTag  = "max_attempts"
+	"github.com/uber-go/tally"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/digester"
+	"go.uber.org/yarpc/internal/pally"
+	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
-type observer struct {
-	calls           tally.Counter
-	successes       tally.Counter
-	unretryableErrs tally.Counter
-	yarpcErrs       tally.Counter
-	noTimeErrs      tally.Counter
-	maxAttemptErrs  tally.Counter
+const (
+	// Sleep between pushes to Tally metrics. At some point, we may want this
+	// to be configurable.
+	_tallyPushInterval = 500 * time.Millisecond
+	_packageName       = "yarpc-retry"
+	_defaultGraphSize  = 128
+
+	// Retry failure "reason" labels
+	_unretryable   = "unretryable"
+	_yarpcInternal = "yarpc_internal"
+	_noTime        = "no_time"
+	_maxAttempts   = "max_attempts"
+)
+
+type observerGraph struct {
+	reg    *pally.Registry
+	logger *zap.Logger
+
+	edgesMu sync.RWMutex
+	edges   map[string]*edge
 }
 
-func newObserver(scope tally.Scope) *observer {
-	unretryableErrScope := scope.Tagged(map[string]string{_errTag: _unretryableErrTag})
-	yarpcErrScope := scope.Tagged(map[string]string{_errTag: _yarpcErrTag})
-	noTimeErrScope := scope.Tagged(map[string]string{_errTag: _noTimeErrTag})
-	maxAttemptErrScope := scope.Tagged(map[string]string{_errTag: _maxAttemptErrTag})
-	return &observer{
-		calls:           scope.Counter(_callsName),
-		successes:       scope.Counter(_successesName),
-		unretryableErrs: unretryableErrScope.Counter(_failuresName),
-		yarpcErrs:       yarpcErrScope.Counter(_failuresName),
-		noTimeErrs:      noTimeErrScope.Counter(_failuresName),
-		maxAttemptErrs:  maxAttemptErrScope.Counter(_failuresName),
+func newObserverGraph(logger *zap.Logger, scope tally.Scope) (*observerGraph, context.CancelFunc) {
+	reg, stopPush := newRegistry(logger, scope)
+
+	return &observerGraph{
+		edges:  make(map[string]*edge, _defaultGraphSize),
+		reg:    reg,
+		logger: logger,
+	}, stopPush
+}
+
+func newRegistry(logger *zap.Logger, scope tally.Scope) (*pally.Registry, context.CancelFunc) {
+	r := pally.NewRegistry(
+		pally.Labeled(pally.Labels{
+			"component": _packageName,
+		}),
+	)
+
+	if scope == nil {
+		return r, func() {}
+	}
+
+	stop, err := r.Push(scope, _tallyPushInterval)
+	if err != nil {
+		logger.Error("Failed to start pushing metrics to Tally.", zap.Error(err))
+		return r, func() {}
+	}
+	return r, stop
+}
+
+func (g *observerGraph) begin(req *transport.Request) call {
+	return call{e: g.getOrCreateEdge(req)}
+}
+
+func (g *observerGraph) getOrCreateEdge(req *transport.Request) *edge {
+	d := digester.New()
+	d.Add(req.Caller)
+	d.Add(req.Service)
+	d.Add(string(req.Encoding))
+	d.Add(req.Procedure)
+	d.Add(req.RoutingKey)
+	d.Add(req.RoutingDelegate)
+	e := g.getOrCreateEdgeForKey(d.Digest(), req)
+	d.Free()
+	return e
+}
+
+func (g *observerGraph) getOrCreateEdgeForKey(key []byte, req *transport.Request) *edge {
+	if e := g.getEdge(key); e != nil {
+		return e
+	}
+	return g.createEdge(key, req)
+}
+
+func (g *observerGraph) getEdge(key []byte) *edge {
+	g.edgesMu.RLock()
+	e := g.edges[string(key)]
+	g.edgesMu.RUnlock()
+	return e
+}
+
+func (g *observerGraph) createEdge(key []byte, req *transport.Request) *edge {
+	g.edgesMu.Lock()
+	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
+	defer g.edgesMu.Unlock()
+
+	if e, ok := g.edges[string(key)]; ok {
+		// Someone beat us to the punch.
+		return e
+	}
+
+	e := newEdge(g.logger, g.reg, req)
+	g.edges[string(key)] = e
+	return e
+}
+
+func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *edge {
+	labels := pally.Labels{
+		"source":           pally.ScrubLabelValue(req.Caller),
+		"dest":             pally.ScrubLabelValue(req.Service),
+		"procedure":        pally.ScrubLabelValue(req.Procedure),
+		"encoding":         pally.ScrubLabelValue(string(req.Encoding)),
+		"routing_key":      pally.ScrubLabelValue(req.RoutingKey),
+		"routing_delegate": pally.ScrubLabelValue(req.RoutingDelegate),
+	}
+	calls, err := reg.NewCounter(pally.Opts{
+		Name:        "calls",
+		Help:        "Total number of RPCs.",
+		ConstLabels: labels,
+	})
+	if err != nil {
+		logger.Error("Failed to create calls counter.", zap.Error(err))
+		calls = pally.NewNopCounter()
+	}
+	successes, err := reg.NewCounter(pally.Opts{
+		Name:        "successes",
+		Help:        "Number of successful RPCs.",
+		ConstLabels: labels,
+	})
+	if err != nil {
+		logger.Error("Failed to create successes counter.", zap.Error(err))
+		successes = pally.NewNopCounter()
+	}
+	retriesAfterError, err := reg.NewCounterVector(pally.Opts{
+		Name:           "retries_after_error",
+		Help:           "Number of RPCs retried after error.",
+		ConstLabels:    labels,
+		VariableLabels: []string{"error"},
+	})
+	if err != nil {
+		logger.Error("Failed to create retry after error vector.", zap.Error(err))
+		retriesAfterError = pally.NewNopCounterVector()
+	}
+	failures, err := reg.NewCounterVector(pally.Opts{
+		Name:           "retry_failures",
+		Help:           "Number of failed/exited retries",
+		ConstLabels:    labels,
+		VariableLabels: []string{"reason", "error"},
+	})
+	if err != nil {
+		logger.Error("Failed to create retry failures reason and error vector.", zap.Error(err))
+		failures = pally.NewNopCounterVector()
+	}
+	return &edge{
+		calls:             calls,
+		successes:         successes,
+		retriesAfterError: retriesAfterError,
+		failures:          failures,
 	}
 }
 
-func (o *observer) call() {
-	o.calls.Inc(1)
+type edge struct {
+	calls     pally.Counter
+	successes pally.Counter
+
+	// Retry counter that has the error being retried.
+	retriesAfterError pally.CounterVector
+
+	// Failures are hard exits from the retry loop.  Failures will log the
+	// reason we didn't retry, and the error we just had.
+	failures pally.CounterVector
 }
 
-func (o *observer) success() {
-	o.successes.Inc(1)
+// call is carried through an outbound request with retries.  It will record
+// all appropriate data onto the edge.
+type call struct {
+	e *edge
 }
 
-func (o *observer) unretryableError() {
-	o.unretryableErrs.Inc(1)
+func (c call) call() {
+	c.e.calls.Inc()
 }
 
-func (o *observer) yarpcError() {
-	o.yarpcErrs.Inc(1)
+func (c call) success() {
+	c.e.successes.Inc()
 }
 
-func (o *observer) noTimeError() {
-	o.noTimeErrs.Inc(1)
+func (c call) retryOnError(err error) {
+	if counter, err := c.e.retriesAfterError.Get(getErrorName(err)); err == nil {
+		counter.Inc()
+	}
 }
 
-func (o *observer) maxAttemptsError() {
-	o.maxAttemptErrs.Inc(1)
+func (c call) unretryableError(err error) {
+	if counter, err := c.e.failures.Get(_unretryable, getErrorName(err)); err == nil {
+		counter.Inc()
+	}
+}
+
+func (c call) yarpcInternalError(err error) {
+	if counter, err := c.e.failures.Get(_yarpcInternal, getErrorName(err)); err == nil {
+		counter.Inc()
+	}
+}
+
+func (c call) noTimeError(err error) {
+	if counter, err := c.e.failures.Get(_noTime, getErrorName(err)); err == nil {
+		counter.Inc()
+	}
+}
+
+func (c call) maxAttemptsError(err error) {
+	if counter, err := c.e.failures.Get(_maxAttempts, getErrorName(err)); err == nil {
+		counter.Inc()
+	}
+}
+
+func getErrorName(err error) string {
+	errCode := yarpcerrors.ErrorCode(err)
+	if errCode == yarpcerrors.CodeOK {
+		return "unknown_internal_yarpc"
+	}
+	return errCode.String()
 }

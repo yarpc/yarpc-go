@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/ioutil"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 // MiddlewareOption customizes the behavior of a retry middleware.
@@ -47,11 +48,15 @@ type middlewareOptions struct {
 
 	// scope is an interface for recording metrics to tally.
 	scope tally.Scope
+
+	// logger is a zap logger
+	logger *zap.Logger
 }
 
 var defaultMiddlewareOptions = middlewareOptions{
 	policyProvider: nil,
 	scope:          tally.NoopScope,
+	logger:         zap.NewNop(),
 }
 
 // WithPolicyProvider allows a custom retry policy to be used in the retry
@@ -69,23 +74,31 @@ func WithTally(scope tally.Scope) MiddlewareOption {
 	})
 }
 
+// WithLogger sets a zap Logger that will be used to record retry logs.
+func WithLogger(logger *zap.Logger) MiddlewareOption {
+	return retryOptionFunc(func(opts *middlewareOptions) {
+		opts.logger = logger
+	})
+}
+
 // NewUnaryMiddleware creates a new Retry Middleware
-func NewUnaryMiddleware(opts ...MiddlewareOption) *OutboundMiddleware {
+func NewUnaryMiddleware(opts ...MiddlewareOption) (*OutboundMiddleware, context.CancelFunc) {
 	options := defaultMiddlewareOptions
 	for _, opt := range opts {
 		opt.apply(&options)
 	}
+	observer, stopPush := newObserverGraph(options.logger, options.scope)
 	return &OutboundMiddleware{
-		provider: options.policyProvider,
-		observer: newObserver(options.scope),
-	}
+		provider:      options.policyProvider,
+		observerGraph: observer,
+	}, stopPush
 }
 
 // OutboundMiddleware is a retry middleware that wraps a UnaryOutbound with
 // Middleware.
 type OutboundMiddleware struct {
-	provider PolicyProvider
-	observer *observer
+	provider      PolicyProvider
+	observerGraph *observerGraph
 }
 
 // Call implements the middleware.UnaryOutbound interface.
@@ -101,27 +114,31 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 	defer finish()
 	request.Body = rereader
 	boff := policy.opts.backoffStrategy.Backoff()
+	call := r.observerGraph.begin(request)
 
 	for i := uint(0); i < policy.opts.retries+1; i++ {
-		r.observer.call()
+		call.call()
+		if i > 0 { // Only log retries if this isn't the first attempt
+			call.retryOnError(err)
+		}
 		timeout, _ := getTimeLeft(ctx, policy.opts.maxRequestTimeout)
 		subCtx, cancel := context.WithTimeout(ctx, timeout)
 		resp, err = out.Call(subCtx, request)
 		cancel() // Clear the new ctx immdediately after the call
 
 		if err == nil {
-			r.observer.success()
+			call.success()
 			return resp, err
 		}
 
 		if !isIdempotentProcedureRetryable(err) {
-			r.observer.unretryableError()
+			call.unretryableError(err)
 			return resp, err
 		}
 
 		// Reset the rereader so we can do another request.
 		if resetErr := rereader.Reset(); resetErr != nil {
-			r.observer.yarpcError()
+			call.yarpcInternalError(err)
 			// TODO(#1080) Append the reset error to the err.
 			err = resetErr
 			return resp, err
@@ -129,12 +146,12 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 
 		boffDur := boff.Duration(i)
 		if _, ctxWillTimeout := getTimeLeft(ctx, boffDur); ctxWillTimeout {
-			r.observer.noTimeError()
+			call.noTimeError(err)
 			return resp, err
 		}
 		time.Sleep(boffDur)
 	}
-	r.observer.maxAttemptsError()
+	call.maxAttemptsError(err)
 	return resp, err
 }
 
