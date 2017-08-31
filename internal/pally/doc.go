@@ -44,7 +44,7 @@
 // In many real-world situations, it's impossible to know all the labels for a
 // metric ahead of time. For example, you may want to track the number of
 // requests your server receives by caller; in most cases, you can't list all
-// the possible callers ahead of time. To accommadate these situations, Pally
+// the possible callers ahead of time. To accommodate these situations, Pally
 // offers vectors.
 //
 // Vectors represent a collection of metrics that have some constant labels,
