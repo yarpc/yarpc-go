@@ -50,7 +50,10 @@ services:
             - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,server:java,server:node
 
             - BEHAVIOR_HEADERS=client,server,transport,encoding
-            - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
+            # TODO: figure out if we want to test against java anymore
+            # This is a flaky test right now https://github.com/yarpc/yarpc-go/issues/1278
+            #- SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
+            - SKIP_HEADERS=client:java,server:java,encoding:protobuf
 
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
             - SKIP_ERRORS_HTTPCLIENT=server:java,server:node
