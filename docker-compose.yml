@@ -104,4 +104,4 @@ services:
         dns_search: .
         build:
           context: .
-          dockerfile: Dockerfile.1.8
+          dockerfile: Dockerfile.1.9
