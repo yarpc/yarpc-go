@@ -10,7 +10,7 @@ env:
     - TEST_TIME_SCALE=5
 matrix:
   include:
-    - env: CI_TYPES='compose-codecov' SUPPRESS_CROSSDOCK=1
+    - env: CI_TYPES='codecov' DOCKER_GO_VERSION=1.9 SUPPRESS_CROSSDOCK=1
     - env:
         - CI_TYPES='crossdock'
         - secure: rZOVU0zQTkPvaG43IIt/guPoq3EAE6/So/+elGcmHF14PsfPcPQ6MyexqdwRkVPd/fAuNwiXXwTXHkjI8ECYz5LF+m+g2VwvrhE9H1wfLuGbtgXSSXqB+dqylHGUz4ksm4q1gwiet8fpVHlNfbSfu+lhTpbl4+SUfFK+s9LqnAKbm+Hi8vKzyhGhvlTngi0Y2O4Z2FLUgU2fkUm5fesdUyW0H2/Bn5KRqJRtcyTmmj4eD/qMq5WDe8n5Sy9J+kuCpweC8vBZQzAGuPpGdj8jvbPCO+N2xM26Y7DNKMsgj6IU49D6sbmLvyVMbI1pBeAQ54TCJx5LySuZpLAzyaaqHEDwOs4+cRolZSQwpd7Q8/wOxZ13KqMhYOokBIcDlLs0yB9J3KOTS1lxU8YC6A3j+Wenw9/JjL0sXSSeOAvNkAeVtEu3dqXg326HJjzXgIQbci83TTtWv4MsQKIXMADOgMnQdgd4JRaGyfxM2hswsE2/Y5OlyXqrqtFHvgKy6MpLTB26r3aRA22VY6p5hFhuEGLClbHidyeHgkNI2iHOXZqoEdmno33Eq7WicH64bezmq+Z4nwyjBOLTblcG7V79s9hI296zGdAN+KLXezlS00qhWH3UVmsi/hYTyXbWXay3S0Hc5jB+YUrHZ1y+OM6fm442qzz+M5q+MdtCfRad7ZM=
