@@ -4,23 +4,19 @@ services:
     crossdock:
         image: crossdock/crossdock
         dns_search: .
-        depends_on:
-          - proxy_dep
         links:
             - go
             - node
             - java
         environment:
-            - WAIT_FOR=go,java,node,
+            - WAIT_FOR=go,java,node
 
             - AXIS_CLIENT=go,java,node
             - AXIS_SERVER=go,java,node
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift,protobuf
-            - AXIS_ERRORS_HTTPCLIENT=go # pending update to node test
-            # AXIS_ERRORS_HTTPSERVER TODO
+            - AXIS_ERRORS_HTTPCLIENT=go
             - AXIS_ERRORS_TCHCLIENT=go
-            # AXIS_ERRORS_TCHSERVER TODO
             - AXIS_CTXCLIENT=go
             - AXIS_CTXSERVER=go
             - AXIS_APACHETHRIFTCLIENT=go
@@ -30,46 +26,53 @@ services:
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
             - AXIS_TRANSPORT_ONEWAY=http
-
-            # Transports available to the ctxpropagation behavior for multihop
-            # requests.
-            - AXIS_CTXAVAILABLETRANSPORTS=http;tchannel
+            - AXIS_CTXAVAILABLETRANSPORTS=http;tchannel # ; is test-level delimiter
 
             - BEHAVIOR_RAW=client,server,transport
             - SKIP_RAW=client:java+transport:tchannel,server:java+transport:tchannel
+
             - BEHAVIOR_JSON=client,server,transport
             - SKIP_JSON=client:java+transport:tchannel,server:java+transport:tchannel
+
             - BEHAVIOR_THRIFT=client,server,transport
             - SKIP_THRIFT=client:java+transport:tchannel,server:java+transport:tchannel
+
             - BEHAVIOR_PROTOBUF=client,server,transport
             - SKIP_PROTOBUF=client:node,server:java,server:node
+
             - BEHAVIOR_GRPC=client,server,encoding
             - SKIP_GRPC=client:node,server:java,server:node
+
             - BEHAVIOR_GOOGLE_GRPC_CLIENT=client,server
             - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,server:java,server:node
+
             - BEHAVIOR_GOOGLE_GRPC_SERVER=client,server
             - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,server:java,server:node
+
             - BEHAVIOR_HEADERS=client,server,transport,encoding
             - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
+
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
             - SKIP_ERRORS_HTTPCLIENT=server:java,server:node
-            # BEHAVIOR_ERRORSHTTPIN TODO
+
             - BEHAVIOR_ERRORS_TCHCLIENT=errors_tchclient,server
             - SKIP_ERRORS_TCHCLIENT=server:java,server:node
-            # BEHAVIOR_ERRORSTCHIN TODO
+
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - SKIP_TCHCLIENT=client:java,server:java,encoding:protobuf
+
             - BEHAVIOR_TCHSERVER=client,server,encoding
             - SKIP_TCHSERVER=client:java,server:java,encoding:protobuf
-            # BEHAVIOR_HTTPCLIENT TODO
+
             - BEHAVIOR_HTTPSERVER=client,httpserver
             - SKIP_HTTPSERVER=client:java
+
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
-            # Skip gauntlet behavior only for tchannel once java is released
             - SKIP_THRIFTGAUNTLET=server:java
+
             - BEHAVIOR_TIMEOUT=client,server,transport
             - SKIP_TIMEOUT=client:java,server:java
-            # BEHAVIOR_INBOUNDTTL TODO
+
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport,ctxavailabletransports
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
             - BEHAVIOR_ONEWAY=client_oneway,server_oneway,transport_oneway,encoding
@@ -79,8 +82,6 @@ services:
 
     go:
         dns_search: .
-        depends_on:
-          - proxy_dep
         build:
           context: .
           dockerfile: Dockerfile.crossdock
@@ -101,13 +102,6 @@ services:
 
     gotest:
         dns_search: .
-        depends_on:
-          - proxy_dep
         build:
           context: .
-          dockerfile: Dockerfile.1.8
-
-    #https://github.com/docker/compose/issues/4369
-
-    proxy_dep:
-        image: busybox
+          dockerfile: Dockerfile.1.9
