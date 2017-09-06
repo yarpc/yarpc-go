@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	. "go.uber.org/yarpc/internal/yarpctest/outboundtest"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -1020,6 +1021,7 @@ func TestMiddleware(t *testing.T) {
 			retry, stopFunc := NewUnaryMiddleware(
 				WithPolicyProvider(tt.policyProvider),
 				WithTally(testScope),
+				WithLogger(zap.NewNop()),
 			)
 			defer stopFunc()
 
