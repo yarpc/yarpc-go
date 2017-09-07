@@ -102,7 +102,6 @@ func createGRPCDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Dispat
 				Unary: grpcTransport.NewSingleOutbound(listener.Addr().String()),
 			},
 		},
-		Tracer: tracer,
 	})
 }
 
@@ -121,7 +120,6 @@ func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:18080"),
 			},
 		},
-		Tracer: tracer,
 	})
 
 	return dispatcher
@@ -147,7 +145,6 @@ func createTChannelDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Di
 				Unary: tchannelTransport.NewSingleOutbound(hp),
 			},
 		},
-		Tracer: tracer,
 	})
 
 	return dispatcher
