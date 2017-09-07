@@ -21,6 +21,7 @@
 package retry
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -87,24 +88,25 @@ type MiddlewareConfig struct {
 
 // NewUnaryMiddlewareFromConfig creates a new policy provider that can be used
 // in retry middleware.
-func NewUnaryMiddlewareFromConfig(src interface{}, opts ...MiddlewareOption) (*OutboundMiddleware, error) {
+func NewUnaryMiddlewareFromConfig(src interface{}, opts ...MiddlewareOption) (*OutboundMiddleware, context.CancelFunc, error) {
 	var cfg MiddlewareConfig
 	if err := iconfig.DecodeInto(&cfg, src); err != nil {
-		return nil, err
+		return nil, func() {}, err
 	}
 
 	nameToPolicy, err := cfg.getPolicies()
 	if err != nil {
-		return nil, err
+		return nil, func() {}, err
 	}
 
 	policyProvider, err := cfg.getPolicyProvider(nameToPolicy)
 	if err != nil {
-		return nil, err
+		return nil, func() {}, err
 	}
 
 	opts = append(opts, WithPolicyProvider(policyProvider))
-	return NewUnaryMiddleware(opts...), nil
+	mw, stopFunc := NewUnaryMiddleware(opts...)
+	return mw, stopFunc, nil
 }
 
 func (cfg MiddlewareConfig) getPolicies() (map[string]*Policy, error) {
