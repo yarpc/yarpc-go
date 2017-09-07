@@ -139,18 +139,18 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		"routing_key":      pally.ScrubLabelValue(req.RoutingKey),
 		"routing_delegate": pally.ScrubLabelValue(req.RoutingDelegate),
 	}
-	calls, err := reg.NewCounter(pally.Opts{
-		Name:        "calls",
-		Help:        "Total number of RPCs.",
+	attempts, err := reg.NewCounter(pally.Opts{
+		Name:        "attempts",
+		Help:        "Total number of RPC attempts.",
 		ConstLabels: labels,
 	})
 	if err != nil {
-		logger.Error("Failed to create calls counter.", zap.Error(err))
-		calls = pally.NewNopCounter()
+		logger.Error("Failed to create attempts counter.", zap.Error(err))
+		attempts = pally.NewNopCounter()
 	}
 	successes, err := reg.NewCounter(pally.Opts{
 		Name:        "successes",
-		Help:        "Number of successful RPCs.",
+		Help:        "Number of successful attempts, including successful initial attempts.",
 		ConstLabels: labels,
 	})
 	if err != nil {
@@ -159,7 +159,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 	}
 	retriesAfterError, err := reg.NewCounterVector(pally.Opts{
 		Name:           "retries_after_error",
-		Help:           "Number of RPCs retried after error.",
+		Help:           "Total RPC retry attempts for each prior error.",
 		ConstLabels:    labels,
 		VariableLabels: []string{"error"},
 	})
@@ -169,7 +169,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 	}
 	failures, err := reg.NewCounterVector(pally.Opts{
 		Name:           "retry_failures",
-		Help:           "Number of failed/exited retries",
+		Help:           "Number of RPC final attempt failures.",
 		ConstLabels:    labels,
 		VariableLabels: []string{"reason", "error"},
 	})
@@ -178,7 +178,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		failures = pally.NewNopCounterVector()
 	}
 	return &edge{
-		calls:             calls,
+		attempts:          attempts,
 		successes:         successes,
 		retriesAfterError: retriesAfterError,
 		failures:          failures,
@@ -186,7 +186,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 }
 
 type edge struct {
-	calls     pally.Counter
+	attempts  pally.Counter
 	successes pally.Counter
 
 	// Retry counter that has the error being retried.
@@ -203,8 +203,8 @@ type call struct {
 	e *edge
 }
 
-func (c call) call() {
-	c.e.calls.Inc()
+func (c call) attempt() {
+	c.e.attempts.Inc()
 }
 
 func (c call) success() {

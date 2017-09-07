@@ -53,7 +53,7 @@ func TestNopEdge(t *testing.T) {
 
 	// Should fall back to no-op metrics.
 	e := newEdge(zap.NewNop(), reg, req)
-	assert.NotNil(t, e.calls, "Expected to fall back to no-op metrics.")
+	assert.NotNil(t, e.attempts, "Expected to fall back to no-op metrics.")
 	assert.NotNil(t, e.successes, "Expected to fall back to no-op metrics.")
 	assert.NotNil(t, e.retriesAfterError, "Expected to fall back to no-op metrics.")
 	assert.NotNil(t, e.failures, "Expected to fall back to no-op metrics.")

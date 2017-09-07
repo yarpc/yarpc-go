@@ -117,7 +117,7 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 	call := r.observerGraph.begin(request)
 
 	for i := uint(0); i < policy.opts.retries+1; i++ {
-		call.call()
+		call.attempt()
 		if i > 0 { // Only log retries if this isn't the first attempt
 			call.retryOnError(err)
 		}

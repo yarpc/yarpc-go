@@ -77,7 +77,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(1),
+					wantAttempts(1),
 					wantSuccesses(1),
 				),
 			},
@@ -144,7 +144,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
 				),
@@ -205,7 +205,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(5),
+					wantAttempts(5),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeInternal, 2),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 2),
@@ -243,7 +243,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(1),
+					wantAttempts(1),
 					wantFailures(_unretryable, yarpcerrors.CodeInvalidArgument, 1),
 				),
 			},
@@ -285,7 +285,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
 					wantFailures(_unretryable, yarpcerrors.CodeInvalidArgument, 1),
 				),
@@ -323,7 +323,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(1),
+					wantAttempts(1),
 					wantSuccesses(1),
 				),
 			},
@@ -368,7 +368,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
 				),
@@ -413,7 +413,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
 				),
@@ -458,7 +458,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
 					wantFailures(_maxAttempts, yarpcerrors.CodeInternal, 1),
 				),
@@ -504,7 +504,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
 					wantFailures(_maxAttempts, yarpcerrors.CodeInternal, 1),
 				),
@@ -551,7 +551,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
 				),
@@ -609,7 +609,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(3),
+					wantAttempts(3),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 2),
 				),
@@ -651,7 +651,7 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(1),
+					wantAttempts(1),
 					wantFailures(_noTime, yarpcerrors.CodeInternal, 1),
 				),
 			},
@@ -765,20 +765,20 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("serv"),
 					procedure("proc"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
 				),
 				edgeAssertion(
 					service("serv2"),
 					procedure("proc2"),
-					wantCalls(1),
+					wantAttempts(1),
 					wantFailures(_unretryable, yarpcerrors.CodeInvalidArgument, 1),
 				),
 				edgeAssertion(
 					service("serv3"),
 					procedure("proc3"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
 					wantFailures(_noTime, yarpcerrors.CodeDeadlineExceeded, 1),
 				),
@@ -986,27 +986,27 @@ func TestMiddleware(t *testing.T) {
 				edgeAssertion(
 					service("ns"),
 					procedure("np"),
-					wantCalls(3),
+					wantAttempts(3),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 2),
 					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
 				),
 				edgeAssertion(
 					service("s"),
 					procedure("np"),
-					wantCalls(2),
+					wantAttempts(2),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 1),
 					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
 				),
 				edgeAssertion(
 					service("s"),
 					procedure("p"),
-					wantCalls(1),
+					wantAttempts(1),
 					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
 				),
 				edgeAssertion(
 					service("ss"),
 					procedure("pr"),
-					wantCalls(4),
+					wantAttempts(4),
 					wantRetriesWithError(yarpcerrors.CodeDeadlineExceeded, 3),
 					wantFailures(_maxAttempts, yarpcerrors.CodeDeadlineExceeded, 1),
 				),
@@ -1139,7 +1139,7 @@ func edgeAssertion(options ...counterOption) counterAssertion {
 	}
 	return func(t *testing.T, graph *observerGraph) {
 		e := graph.getOrCreateEdge(opts.giveRequest)
-		assert.Equal(t, int64(opts.wantCalls), e.calls.Load(), "mismatched calls counter")
+		assert.Equal(t, int64(opts.wantAttempts), e.attempts.Load(), "mismatched attempts counter")
 		assert.Equal(t, int64(opts.wantSuccesses), e.successes.Load(), "mismatched successes counter")
 		for errName, count := range opts.wantRetryWithError {
 			counter := e.retriesAfterError.MustGet(errName)
@@ -1160,7 +1160,7 @@ type failureAssertion struct {
 
 type counterOpts struct {
 	giveRequest        *transport.Request
-	wantCalls          int
+	wantAttempts       int
 	wantSuccesses      int
 	wantRetryWithError map[string]int
 	wantFailures       []failureAssertion
@@ -1193,9 +1193,9 @@ func procedure(p string) counterOption {
 	})
 }
 
-func wantCalls(n int) counterOption {
+func wantAttempts(n int) counterOption {
 	return counterOptionFunc(func(opts *counterOpts) {
-		opts.wantCalls = n
+		opts.wantAttempts = n
 	})
 }
 
