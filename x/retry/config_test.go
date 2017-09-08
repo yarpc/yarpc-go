@@ -410,8 +410,8 @@ func TestConfig(t *testing.T) {
 			err := yaml.Unmarshal([]byte(whitespace.Expand(tt.retryConfig)), &data)
 			require.NoError(t, err, "error unmarshalling")
 
-			middleware, stopFunc, err := NewUnaryMiddlewareFromConfig(data)
-			defer stopFunc()
+			middleware, err := NewUnaryMiddlewareFromConfig(data)
+			defer middleware.Stop()
 			if len(tt.wantError) > 0 {
 				require.Error(t, err, "expected error, got none")
 				for _, wantErr := range tt.wantError {
