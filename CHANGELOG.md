@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.14.0 (unreleased)
+v1.14.0 (2017-09-08)
 --------------------
 
 -   Increased granularity of error observability metrics to expose yarpc
