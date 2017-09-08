@@ -8,6 +8,7 @@ v1.14.0 (unreleased)
     error types.
 -   Wrapped peer list `Choose` errors in yarpc error codes.
 -   x/retry: Add granular metric counters for retry middleware.
+-   Removed experimental redis and cherami transports.
 
 v1.13.1 (2017-08-03)
 --------------------
