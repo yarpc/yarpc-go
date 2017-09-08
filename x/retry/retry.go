@@ -82,7 +82,7 @@ func WithLogger(logger *zap.Logger) MiddlewareOption {
 }
 
 // NewUnaryMiddleware creates a new Retry Middleware
-func NewUnaryMiddleware(opts ...MiddlewareOption) (*OutboundMiddleware, context.CancelFunc) {
+func NewUnaryMiddleware(opts ...MiddlewareOption) *OutboundMiddleware {
 	options := defaultMiddlewareOptions
 	for _, opt := range opts {
 		opt.apply(&options)
@@ -91,7 +91,8 @@ func NewUnaryMiddleware(opts ...MiddlewareOption) (*OutboundMiddleware, context.
 	return &OutboundMiddleware{
 		provider:      options.policyProvider,
 		observerGraph: observer,
-	}, stopPush
+		stopPush:      stopPush,
+	}
 }
 
 // OutboundMiddleware is a retry middleware that wraps a UnaryOutbound with
@@ -99,6 +100,19 @@ func NewUnaryMiddleware(opts ...MiddlewareOption) (*OutboundMiddleware, context.
 type OutboundMiddleware struct {
 	provider      PolicyProvider
 	observerGraph *observerGraph
+	stopPush      context.CancelFunc
+}
+
+// Stop tells the retry middleware to clean itself up before the process stops.
+// We currently use this to stop sending metrics to Tally.
+func (r *OutboundMiddleware) Stop() error {
+	if r == nil {
+		return nil
+	}
+	if r.stopPush != nil {
+		r.stopPush()
+	}
+	return nil
 }
 
 // Call implements the middleware.UnaryOutbound interface.

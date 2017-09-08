@@ -1018,12 +1018,12 @@ func TestMiddleware(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			testScope := tally.NewTestScope("", map[string]string{})
 
-			retry, stopFunc := NewUnaryMiddleware(
+			retry := NewUnaryMiddleware(
 				WithPolicyProvider(tt.policyProvider),
 				WithTally(testScope),
 				WithLogger(zap.NewNop()),
 			)
-			defer stopFunc()
+			defer retry.Stop()
 
 			ApplyMiddlewareActions(t, retry, tt.actions)
 
