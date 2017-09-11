@@ -74,6 +74,7 @@ func BuildEchoYARPCProcedures(server EchoYARPCServer) []transport.Procedure {
 				},
 			},
 			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
@@ -166,6 +167,7 @@ func BuildOnewayYARPCProcedures(server OnewayYARPCServer) []transport.Procedure 
 					),
 				},
 			},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }

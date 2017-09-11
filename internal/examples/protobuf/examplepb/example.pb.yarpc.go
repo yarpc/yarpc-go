@@ -85,6 +85,7 @@ func BuildKeyValueYARPCProcedures(server KeyValueYARPCServer) []transport.Proced
 				},
 			},
 			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
@@ -215,6 +216,7 @@ func BuildSinkYARPCProcedures(server SinkYARPCServer) []transport.Procedure {
 					),
 				},
 			},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
