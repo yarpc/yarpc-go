@@ -1,0 +1,3 @@
+service Weather {
+		string check()
+}

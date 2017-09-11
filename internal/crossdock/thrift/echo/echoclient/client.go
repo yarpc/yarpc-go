@@ -75,9 +75,7 @@ func (c client) Echo(
 	args := echo.Echo_Echo_Helper.Args(_Ping)
 
 	var body wire.Value
-
 	body, err = c.c.Call(ctx, args, opts...)
-
 	if err != nil {
 		return
 	}

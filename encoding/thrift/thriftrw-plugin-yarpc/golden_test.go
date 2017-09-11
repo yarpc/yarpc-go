@@ -45,6 +45,12 @@ import (
 
 const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests"
 
+var _pluginArgs = map[string]string{
+	"atomic.thrift":  "yarpc",
+	"common.thrift":  "yarpc",
+	"weather.thrift": "yarpc --sanitize-tchannel",
+}
+
 type fakePluginServer struct {
 	ln      net.Listener
 	running atomic.Bool
@@ -159,7 +165,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 			"--out", outputDir,
 			"--pkg-prefix", _testPackage,
 			"--thrift-root", thriftRoot,
-			"--plugin", "yarpc",
+			"--plugin", _pluginArgs[thriftFile],
 			thriftFile,
 		)
 		require.NoError(t, err, "failed to generate code for %q", thriftFile)

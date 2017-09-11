@@ -61,9 +61,7 @@ func (c client) Integer(
 	args := atomic.ReadOnlyStore_Integer_Helper.Args(_Key)
 
 	var body wire.Value
-
 	body, err = c.c.Call(ctx, args, opts...)
-
 	if err != nil {
 		return
 	}
