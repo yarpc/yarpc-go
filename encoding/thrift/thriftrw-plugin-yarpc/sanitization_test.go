@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	tchannel "github.com/uber/tchannel-go"
-	"github.com/uber/tchannel-go/raw"
 	tutils "github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc/api/transport"
 	wc "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient"
@@ -41,18 +40,17 @@ func TestSanitization(t *testing.T) {
 	defer cancel()
 
 	client := wc.New(clientConf)
-	_, err := client.Check(badCtx)
-	assert.NoError(t, err)
+	client.Check(badCtx)
 }
 
 func newTestServer(t *testing.T) *tutils.TestServer {
 	copts := tutils.NewOpts().DisableLogVerification()
 	server := tutils.NewTestServer(t, copts)
-	server.RegisterFunc("check", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	var hfunc tchannel.HandlerFunc = func(ctx context.Context, call *tchannel.InboundCall) {
 		headered := tchannel.Wrap(ctx)
 		assert.Len(t, headered.Headers(), 0)
-		return nil, nil
-	})
+	}
+	server.Register(hfunc, "Weather::check")
 	return server
 }
 
