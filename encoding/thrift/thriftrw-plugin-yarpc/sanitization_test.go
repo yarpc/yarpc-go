@@ -47,7 +47,7 @@ func newTestServer(t *testing.T) *tutils.TestServer {
 	copts := tutils.NewOpts().DisableLogVerification()
 	server := tutils.NewTestServer(t, copts)
 	var hfunc tchannel.HandlerFunc = func(ctx context.Context, call *tchannel.InboundCall) {
-		headered := tchannel.Wrap(ctx)
+		headered := ctx.(tchannel.ContextWithHeaders)
 		assert.Len(t, headered.Headers(), 0)
 	}
 	server.Register(hfunc, "Weather::check")
