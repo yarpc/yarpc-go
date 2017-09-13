@@ -26,11 +26,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	tchannel "github.com/uber/tchannel-go"
 	tutils "github.com/uber/tchannel-go/testutils"
 	"go.uber.org/yarpc/api/transport"
 	wc "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient"
-	ttrans "go.uber.org/yarpc/transport/tchannel"
+	ytchannel "go.uber.org/yarpc/transport/tchannel"
 )
 
 func TestSanitization(t *testing.T) {
@@ -61,8 +62,8 @@ func newBadContext() (context.Context, func()) {
 }
 
 func newTestClientConfig(hostPort string, t *testing.T) transport.ClientConfig {
-	trans, err := ttrans.NewTransport()
-	assert.NoError(t, err)
+	trans, err := ytchannel.NewTransport()
+	require.NoError(t, err)
 	outbound := trans.NewSingleOutbound(hostPort)
 	return testClientConfig{
 		outbound: outbound,
@@ -70,7 +71,7 @@ func newTestClientConfig(hostPort string, t *testing.T) transport.ClientConfig {
 }
 
 type testClientConfig struct {
-	outbound transport.Outbound
+	outbound transport.UnaryOutbound
 }
 
 func (cc testClientConfig) Caller() string {
@@ -82,9 +83,9 @@ func (cc testClientConfig) Service() string {
 }
 
 func (cc testClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
-	return cc.outbound.(transport.UnaryOutbound)
+	return cc.outbound
 }
 
 func (cc testClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
-	return nil
+	panic("Not implemented")
 }
