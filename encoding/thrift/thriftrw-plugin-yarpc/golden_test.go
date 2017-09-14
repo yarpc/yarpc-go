@@ -46,8 +46,6 @@ import (
 const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests"
 
 var _pluginArgs = map[string]string{
-	"atomic.thrift":  "yarpc",
-	"common.thrift":  "yarpc",
 	"weather.thrift": "yarpc --sanitize-tchannel",
 }
 
@@ -153,15 +151,18 @@ func TestCodeIsUpToDate(t *testing.T) {
 	defer os.RemoveAll(outputDir)
 
 	for _, thriftFile := range thriftFiles {
-		_, fileName := filepath.Split(thriftFile)
-		pluginArg, ok := _pluginArgs[fileName]
-		require.True(t, ok, fmt.Sprintf("No plugin args specified for for %s\n", fileName))
 		packageName := strings.TrimSuffix(filepath.Base(thriftFile), ".thrift")
 		currentPackageDir := filepath.Join("internal/tests", packageName)
 		newPackageDir := filepath.Join(outputDir, packageName)
 
 		currentHash, err := dirhash(currentPackageDir)
 		require.NoError(t, err, "could not hash %q", currentPackageDir)
+
+		_, fileName := filepath.Split(thriftFile)
+		pluginArg, ok := _pluginArgs[fileName]
+		if !ok {
+			pluginArg = "yarpc"
+		}
 
 		err = thriftrw(
 			"--no-recurse",
