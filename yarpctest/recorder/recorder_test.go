@@ -36,6 +36,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
+	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -219,7 +220,7 @@ func withConnectedClient(t *testing.T, recorder *Recorder, f func(raw.Client)) {
 		Name: "client",
 		Outbounds: yarpc.Outbounds{
 			"server": {
-				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", serverHTTP.Addr())),
+				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", yarpctest.ZeroAddrToHostPort(serverHTTP.Addr()))),
 			},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
