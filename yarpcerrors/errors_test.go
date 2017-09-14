@@ -144,7 +144,7 @@ func TestIsErrorWithCode(t *testing.T) {
 
 func TestNonYARPCErrors(t *testing.T) {
 	assert.Equal(t, CodeOK, ErrorCode(nil))
-	assert.Equal(t, CodeOK, ErrorCode(errors.New("")))
+	assert.Equal(t, CodeUnknown, ErrorCode(errors.New("")))
 	assert.Equal(t, "", ErrorName(nil))
 	assert.Equal(t, "", ErrorName(errors.New("")))
 	assert.Equal(t, "", ErrorMessage(nil))

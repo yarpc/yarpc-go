@@ -232,7 +232,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantServerFailures: map[string]int{
-				"unknown_internal_yarpc": 1,
+				yarpcerrors.CodeUnknown.String(): 1,
 			},
 		},
 		{

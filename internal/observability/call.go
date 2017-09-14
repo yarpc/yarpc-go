@@ -120,14 +120,6 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 			counter.Inc()
 		}
 		return
-	case yarpcerrors.CodeOK:
-		// If we got "CodeOK" it really means that this is not a yarpcError, in
-		// which case this is another level of "unknown" error.
-		c.edge.serverErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.serverFailures.Get("unknown_internal_yarpc"); err == nil {
-			counter.Inc()
-		}
-		return
 	}
 	// If this code is executed we've hit an error code outside the usual error
 	// code range, so we'll just log the string representation of that code.
