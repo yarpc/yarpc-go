@@ -43,6 +43,25 @@ func ZeroAddrToHostPort(addr net.Addr) string {
 // See the "net" section in https://golang.org/doc/go1.9#minor_library_changes
 // for more details.
 func ZeroAddrStringToHostPort(addrString string) string {
+	return localhostString + ":" + ZeroAddrStringToPort(addrString)
+}
+
+// ZeroAddrToPort converts a net.Addr created with net.Listen("tcp", ":0")
+// to a port string valid to use for Golang versions <= 1.8
+//
+// See the "net" section in https://golang.org/doc/go1.9#minor_library_changes
+// for more details.
+func ZeroAddrToPort(addr net.Addr) string {
+	return ZeroAddrStringToPort(addr.String())
+}
+
+// ZeroAddrStringToPort converts a string from net.Addr.String() created
+// with net.Listen("tcp", ":0") to a port string valid to use for Golang
+// versions <= 1.8
+//
+// See the "net" section in https://golang.org/doc/go1.9#minor_library_changes
+// for more details.
+func ZeroAddrStringToPort(addrString string) string {
 	split := strings.Split(addrString, ":")
-	return localhostString + ":" + split[len(split)-1]
+	return split[len(split)-1]
 }

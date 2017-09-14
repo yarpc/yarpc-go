@@ -110,5 +110,5 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 	dispatcher.Register(raw.OnewayProcedure("call-back", raw.OnewayHandler(handler)))
 	fatals.NoError(dispatcher.Start(), "could not start oneway Dispatcher")
 
-	return dispatcher, yarpctest.ZeroAddrToHostPort(callBackInbound.Addr())
+	return dispatcher, client + ":" + yarpctest.ZeroAddrToPort(callBackInbound.Addr())
 }
