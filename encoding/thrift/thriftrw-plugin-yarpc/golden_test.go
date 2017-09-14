@@ -153,6 +153,9 @@ func TestCodeIsUpToDate(t *testing.T) {
 	defer os.RemoveAll(outputDir)
 
 	for _, thriftFile := range thriftFiles {
+		_, fileName := filepath.Split(thriftFile)
+		pluginArg, ok := _pluginArgs[fileName]
+		require.True(t, ok, fmt.Sprintf("No plugin args specified for for %s\n", fileName))
 		packageName := strings.TrimSuffix(filepath.Base(thriftFile), ".thrift")
 		currentPackageDir := filepath.Join("internal/tests", packageName)
 		newPackageDir := filepath.Join(outputDir, packageName)
@@ -165,7 +168,7 @@ func TestCodeIsUpToDate(t *testing.T) {
 			"--out", outputDir,
 			"--pkg-prefix", _testPackage,
 			"--thrift-root", thriftRoot,
-			"--plugin", _pluginArgs[thriftFile],
+			"--plugin", pluginArg,
 			thriftFile,
 		)
 		require.NoError(t, err, "failed to generate code for %q", thriftFile)
