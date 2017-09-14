@@ -39,6 +39,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -124,7 +125,7 @@ func TestInboundMux(t *testing.T) {
 
 	defer i.Stop()
 
-	addr := fmt.Sprintf("http://%v/", i.Addr().String())
+	addr := fmt.Sprintf("http://%v/", yarpctest.ZeroAddrToHostPort(i.Addr()))
 	resp, err := http.Get(addr + "health")
 	if assert.NoError(t, err, "/health failed") {
 		defer resp.Body.Close()

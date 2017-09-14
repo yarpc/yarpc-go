@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/crossdock/client/params"
+	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
@@ -109,5 +110,5 @@ func CreateOnewayDispatcher(t crossdock.T, handler raw.OnewayHandler) (*yarpc.Di
 	dispatcher.Register(raw.OnewayProcedure("call-back", raw.OnewayHandler(handler)))
 	fatals.NoError(dispatcher.Start(), "could not start oneway Dispatcher")
 
-	return dispatcher, callBackInbound.Addr().String()
+	return dispatcher, yarpctest.ZeroAddrToHostPort(callBackInbound.Addr())
 }

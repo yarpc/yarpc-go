@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/integrationtest"
+	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/http"
 )
@@ -58,7 +59,7 @@ var spec = integrationtest.TransportSpec{
 		return x.(*http.Transport).NewInbound(addr)
 	},
 	Addr: func(x peer.Transport, ib transport.Inbound) string {
-		return ib.(*http.Inbound).Addr().String()
+		return yarpctest.ZeroAddrToHostPort(ib.(*http.Inbound).Addr())
 	},
 }
 
