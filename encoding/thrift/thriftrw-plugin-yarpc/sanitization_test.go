@@ -32,41 +32,50 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	wc "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestSanitization(t *testing.T) {
-	server := newTestServer(t)
-	clientConf := newTestClientConfig(server.HostPort(), t)
-	badCtx, cancel := newBadContext()
-	defer cancel()
-
-	client := wc.New(clientConf)
-	client.Check(badCtx)
-}
-
-func newTestServer(t *testing.T) *tutils.TestServer {
 	copts := tutils.NewOpts().DisableLogVerification()
-	server := tutils.NewTestServer(t, copts)
-	var hfunc tchannel.HandlerFunc = func(ctx context.Context, call *tchannel.InboundCall) {
+	copts.DisableRelay = true
+
+	var handlerWasCalled bool
+	copts.Handler = tchannel.HandlerFunc(func(ctx context.Context, call *tchannel.InboundCall) {
 		headered := ctx.(tchannel.ContextWithHeaders)
 		assert.Len(t, headered.Headers(), 0)
-	}
-	server.Register(hfunc, "Weather::check")
-	return server
-}
+		handlerWasCalled = true
+		call.Response().SendSystemError(
+			tchannel.NewSystemError(tchannel.ErrCodeBadRequest, "infinite sadness"),
+		)
+	})
 
-func newBadContext() (context.Context, func()) {
+	server := tutils.NewTestServer(t, copts)
+
+	client, done := newWeatherClient(t, server.HostPort())
+	defer done()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	badCtx := tchannel.WrapWithHeaders(ctx, map[string]string{"key": "value"})
-	return badCtx, cancel
+	defer cancel()
+
+	_, err := client.Check(tchannel.WrapWithHeaders(ctx, map[string]string{"key": "value"}))
+	require.Error(t, err, "expected Check to fail")
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.ErrorCode(err),
+		"error code must match")
+	assert.True(t, handlerWasCalled, "newTestServer handler was never called")
 }
 
-func newTestClientConfig(hostPort string, t *testing.T) transport.ClientConfig {
-	trans, err := ytchannel.NewTransport()
+func newWeatherClient(t *testing.T, hostPort string) (_ wc.Interface, done func()) {
+	trans, err := ytchannel.NewTransport(ytchannel.ServiceName(tutils.DefaultClientName))
 	require.NoError(t, err)
+	require.NoError(t, trans.Start(), "failed to start transport")
+
 	outbound := trans.NewSingleOutbound(hostPort)
-	return testClientConfig{
-		outbound: outbound,
+	require.NoError(t, outbound.Start(), "failed to start outbound")
+
+	cc := testClientConfig{outbound: outbound}
+	return wc.New(cc), func() {
+		assert.NoError(t, outbound.Stop(), "failed to stop outbound")
+		assert.NoError(t, trans.Stop(), "failed to stop transport")
 	}
 }
 
@@ -75,11 +84,11 @@ type testClientConfig struct {
 }
 
 func (cc testClientConfig) Caller() string {
-	return "testcaller"
+	return tutils.DefaultClientName
 }
 
 func (cc testClientConfig) Service() string {
-	return "testservice"
+	return tutils.DefaultServerName
 }
 
 func (cc testClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
