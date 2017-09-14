@@ -1,5 +1,5 @@
 hash: 354ccfb438e9e95e44b97409c1e6faa2c961475a54b303b921f44347d43df4b6
-updated: 2017-08-29T15:17:11.535777296-07:00
+updated: 2017-09-12T11:55:36.637639881-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -19,7 +19,7 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: adab96458c51a58dc1783b3335dcce5461522e75
+  version: a476722483882dd40b8111f0eb64e1d7f43f56e4
   subpackages:
   - spew
 - name: github.com/facebookgo/clock
@@ -38,10 +38,13 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
+  version: 17ce1425424ab154092bbb43af630bd647f3bb0d
   subpackages:
   - proto
+  - ptypes
   - ptypes/any
+  - ptypes/duration
+  - ptypes/timestamp
 - name: github.com/mattn/go-shellwords
   version: 02e3cf038dcea8290e44424da473dd12be796a8a
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -68,7 +71,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 61f87aac8082fa8c3c5655c7608d7478d46ac2ad
+  version: 2f17f4a9d485bf34b4bfaccc273805040e4f86c8
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -90,7 +93,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 2605c407d7d219644d03a3680ad7df4779017782
+  version: be9e53c77349ae2dd4b8c03a6dc20ed9a88b9927
   subpackages:
   - m3
   - m3/customtransports
@@ -107,7 +110,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/jaeger-lib
-  version: 575c678b2873b62aaadd0fa5817a2aeb3155dc4d
+  version: 3b2a9ad2a045881ab7a0f81d465be54c8292ee4f
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
@@ -132,7 +135,7 @@ imports:
 - name: go.uber.org/dig
   version: 5e65f1a430fd50d4291edc5ee9811f7dd520d77d
 - name: go.uber.org/fx
-  version: 1d85a1923b419fa98762b158d944e9bffbba057d
+  version: a47f1657ce04f3d82db1ef230ffbb292b15af0ee
   subpackages:
   - internal/fxlog
   - internal/fxreflect
@@ -140,7 +143,7 @@ imports:
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/thriftrw
-  version: 8bbe12f61b982c30be95f88bfe62cade3d470e08
+  version: b032111262f3c4a5c8027c349ca4645aced173bb
   subpackages:
   - envelope
   - internal/envelope
@@ -158,7 +161,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 9d9d6135afe89b6fc4a05e9a8552526caba38048
+  version: 3216c4c73e8ebbafff73c456dd27143f4a7c1f94
   subpackages:
   - buffer
   - internal/bufferpool
@@ -184,32 +187,32 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 2d3e384235de683634e9080b58f757466840aa48
+  version: 7a85bfad8bb9558204b9cc9b3624680d2d443a35
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: e56139fd9c5bc7244c76116c68e500765bb6db6b
+  version: acd49d43e9b95df46670431bf5c7ae59586daad8
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 84a35ef54dff3c5596983e180ec10919fc432242
+  version: 3b1faeda9afbcba128c2d794b38ffe7982141139
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 6b7d9516179cd47f4714cfeb0103ad1dede756c4
+  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: b3ddf786825de56a4178401b7e174ee332173b66
+  version: f92cdcd7dcdc69e81b2d7b338479a19a8723cfa3
   repo: https://github.com/grpc/grpc-go
   subpackages:
   - codes
   - connectivity
   - credentials
-  - grpclb/grpc_lb_v1
+  - grpclb/grpc_lb_v1/messages
   - grpclog
   - internal
   - keepalive
@@ -221,7 +224,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/yaml.v2
-  version: 25c4ec802a7d637f88d584ab26798e94ad14c13b
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/golang/lint
   version: c5fb716d6688a859aae56d26d3e6070808df29f7
@@ -230,7 +233,7 @@ testImports:
 - name: github.com/kisielk/errcheck
   version: 23699b7e2cbfdb89481023524954ba2aeff6be90
 - name: github.com/kisielk/gotool
-  version: 0de1eaf82fa3f583ce21fde859f1e7e0c5e9b220
+  version: d6ce6262d87e3a4e153e86023ff56ae771554a41
 - name: github.com/wadey/gocovmerge
   version: b5bfa59ec0adc420475f97f89b58045c721d761c
 - name: go.uber.org/tools
@@ -239,6 +242,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: f7b71e06119010390c133f52e9331e27ce810f02
+  version: 49f44f893d933fd08cd7d67d65ccefa5d7c23329
   subpackages:
   - cmd/staticcheck
