@@ -95,7 +95,7 @@ func TestErrorName(t *testing.T) {
 		{
 			msg:      "yarpc unknown",
 			giveErr:  errors.New("unknown"),
-			wantName: yarpcerrors.CodeUnknown.String(),
+			wantName: "unknown_internal_yarpc",
 		},
 	}
 
