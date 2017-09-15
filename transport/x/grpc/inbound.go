@@ -96,6 +96,8 @@ func (i *Inbound) start() error {
 	server := grpc.NewServer(
 		grpc.CustomCodec(customCodec{}),
 		grpc.UnknownServiceHandler(handler.handle),
+		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
+		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	)
 
 	go func() {

@@ -23,6 +23,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"strings"
 	"testing"
@@ -45,7 +46,7 @@ import (
 
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
@@ -57,7 +58,7 @@ func TestYARPCBasic(t *testing.T) {
 
 func TestGRPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
@@ -70,7 +71,7 @@ func TestGRPCBasic(t *testing.T) {
 func TestYARPCMetadata(t *testing.T) {
 	t.Parallel()
 	var md metadata.MD
-	doWithTestEnv(t, []InboundOption{withInboundUnaryInterceptor(newMetadataUnaryServerInterceptor(&md))}, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, []InboundOption{withInboundUnaryInterceptor(newMetadataUnaryServerInterceptor(&md))}, nil, func(t *testing.T, e *testEnv) {
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
 		assert.Len(t, md["user-agent"], 1)
 		assert.True(t, strings.Contains(md["user-agent"][0], UserAgent))
@@ -79,7 +80,7 @@ func TestYARPCMetadata(t *testing.T) {
 
 func TestYARPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("bar 1"), err)
@@ -88,7 +89,7 @@ func TestYARPCWellKnownError(t *testing.T) {
 
 func TestYARPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.NamedErrorf("bar", "baz 1"), err)
@@ -97,7 +98,7 @@ func TestYARPCNamedError(t *testing.T) {
 
 func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", ""))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.Equal(t, yarpcerrors.NamedErrorf("bar", ""), err)
@@ -106,7 +107,7 @@ func TestYARPCNamedErrorNoMessage(t *testing.T) {
 
 func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
@@ -115,7 +116,7 @@ func TestGRPCWellKnownError(t *testing.T) {
 
 func TestGRPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
@@ -124,15 +125,34 @@ func TestGRPCNamedError(t *testing.T) {
 
 func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", ""))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
 	})
 }
 
-func doWithTestEnv(t *testing.T, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
-	testEnv, err := newTestEnv(inboundOptions, outboundOptions)
+func TestYARPCMaxMsgSize(t *testing.T) {
+	t.Parallel()
+	value := strings.Repeat("a", defaultServerMaxRecvMsgSize*2)
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.ErrorCode(e.SetValueYARPC(context.Background(), "foo", value)))
+	})
+	doWithTestEnv(t, []TransportOption{
+		ClientMaxRecvMsgSize(math.MaxInt32),
+		ClientMaxSendMsgSize(math.MaxInt32),
+		ServerMaxRecvMsgSize(math.MaxInt32),
+		ServerMaxSendMsgSize(math.MaxInt32),
+	}, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
+		getValue, err := e.GetValueYARPC(context.Background(), "foo")
+		assert.NoError(t, err)
+		assert.Equal(t, value, getValue)
+	})
+}
+
+func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
+	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, testEnv.Close())
@@ -152,12 +172,12 @@ type testEnv struct {
 	KeyValueYARPCServer *example.KeyValueYARPCServer
 }
 
-func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption) (_ *testEnv, err error) {
+func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption) (_ *testEnv, err error) {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)
 
-	t := NewTransport()
+	t := NewTransport(transportOptions...)
 	if err := t.Start(); err != nil {
 		return nil, err
 	}

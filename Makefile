@@ -8,7 +8,7 @@ include etc/make/local.mk
 endif
 include etc/make/crossdock.mk
 
-CI_TYPES ?= deps lint test examples
+CI_TYPES ?= lint test examples
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
 CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
