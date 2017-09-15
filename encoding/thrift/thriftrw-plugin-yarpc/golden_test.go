@@ -45,8 +45,9 @@ import (
 
 const _testPackage = "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests"
 
-var _pluginArgs = map[string]string{
-	"weather.thrift": "yarpc --sanitize-tchannel",
+// Thrift files for which we set --sanitize-tchannel to true.
+var tchannelSanitizeFor = map[string]struct{}{
+	"weather.thrift": {},
 }
 
 type fakePluginServer struct {
@@ -159,17 +160,16 @@ func TestCodeIsUpToDate(t *testing.T) {
 		require.NoError(t, err, "could not hash %q", currentPackageDir)
 
 		_, fileName := filepath.Split(thriftFile)
-		pluginArg, ok := _pluginArgs[fileName]
-		if !ok {
-			pluginArg = "yarpc"
-		}
+
+		// Tell the plugin whether it should --sanitize-tchannel.
+		_, *_sanitizeTChannel = tchannelSanitizeFor[fileName]
 
 		err = thriftrw(
 			"--no-recurse",
 			"--out", outputDir,
 			"--pkg-prefix", _testPackage,
 			"--thrift-root", thriftRoot,
-			"--plugin", pluginArg,
+			"--plugin", "yarpc",
 			thriftFile,
 		)
 		require.NoError(t, err, "failed to generate code for %q", thriftFile)
