@@ -9,9 +9,6 @@ endif
 ifndef SUPPRESS_CROSSDOCK
 include etc/make/crossdock.mk
 endif
-ifdef TRAVIS
-include etc/make/travis.mk
-endif
 
 CI_TYPES ?= deps lint test examples
 ifndef SUPRESS_CROSSDOCK
