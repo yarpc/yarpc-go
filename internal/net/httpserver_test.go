@@ -35,7 +35,7 @@ import (
 )
 
 func TestStartAndStop(t *testing.T) {
-	server := NewHTTPServer(&http.Server{Addr: ":0"})
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())
 
 	require.NotNil(t, server.Listener())
@@ -51,7 +51,7 @@ func TestStartAndStop(t *testing.T) {
 }
 
 func TestStartAddrInUse(t *testing.T) {
-	s1 := NewHTTPServer(&http.Server{Addr: ":0"})
+	s1 := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, s1.ListenAndServe())
 	defer s1.Stop()
 
