@@ -102,12 +102,14 @@ func TestHandlerHeaders(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	tests := []struct {
-		giveHeaders http.Header
+		giveEncoding string
+		giveHeaders  http.Header
 
 		wantTTL     time.Duration
 		wantHeaders map[string]string
 	}{
 		{
+			giveEncoding: "json",
 			giveHeaders: http.Header{
 				TTLMSHeader:      {"1000"},
 				"Rpc-Header-Foo": {"bar"},
@@ -118,11 +120,28 @@ func TestHandlerHeaders(t *testing.T) {
 			},
 		},
 		{
+			giveEncoding: "raw",
 			giveHeaders: http.Header{
 				TTLMSHeader: {"100"},
 				"Rpc-Foo":   {"ignored"},
 			},
 			wantTTL:     100 * time.Millisecond,
+			wantHeaders: map[string]string{},
+		},
+		{
+			giveEncoding: "thrift",
+			giveHeaders: http.Header{
+				TTLMSHeader: {"1000"},
+			},
+			wantTTL:     time.Second,
+			wantHeaders: map[string]string{},
+		},
+		{
+			giveEncoding: "proto",
+			giveHeaders: http.Header{
+				TTLMSHeader: {"1000"},
+			},
+			wantTTL:     time.Second,
 			wantHeaders: map[string]string{},
 		},
 	}
@@ -147,7 +166,7 @@ func TestHandlerHeaders(t *testing.T) {
 				&transport.Request{
 					Caller:    "caller",
 					Service:   "service",
-					Encoding:  raw.Encoding,
+					Encoding:  transport.Encoding(tt.giveEncoding),
 					Procedure: "hello",
 					Headers:   transport.HeadersFromMap(tt.wantHeaders),
 					Body:      bytes.NewReader([]byte("world")),
@@ -163,7 +182,7 @@ func TestHandlerHeaders(t *testing.T) {
 		}
 		headers.Set(CallerHeader, "caller")
 		headers.Set(ServiceHeader, "service")
-		headers.Set(EncodingHeader, "raw")
+		headers.Set(EncodingHeader, tt.giveEncoding)
 		headers.Set(ProcedureHeader, "hello")
 
 		req := &http.Request{
@@ -174,6 +193,7 @@ func TestHandlerHeaders(t *testing.T) {
 		rw := httptest.NewRecorder()
 		httpHandler.ServeHTTP(rw, req)
 		assert.Equal(t, 200, rw.Code, "expected 200 status code")
+		assert.Equal(t, getContentType(transport.Encoding(tt.giveEncoding)), rw.HeaderMap.Get("Content-Type"))
 	}
 }
 
@@ -276,6 +296,7 @@ func TestHandlerFailures(t *testing.T) {
 		assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
 		code := statusCodeToBestCode(httpStatusCode)
 		assert.Equal(t, tt.wantCode, code)
+		assert.Equal(t, "text/plain; charset=utf8", rw.HeaderMap.Get("Content-Type"))
 	}
 }
 
