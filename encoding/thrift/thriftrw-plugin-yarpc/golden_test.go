@@ -53,6 +53,9 @@ var tchannelSanitizeFor = map[string]struct{}{
 type fakePluginServer struct {
 	ln      net.Listener
 	running atomic.Bool
+
+	// Whether the next request should use --sanitize-tchannel.
+	sanitizeTChannelNext atomic.Bool
 }
 
 func newFakePluginServer(t *testing.T) *fakePluginServer {
@@ -73,6 +76,10 @@ func (s *fakePluginServer) Stop(t *testing.T) {
 	if err := s.ln.Close(); err != nil {
 		t.Logf("failed to stop fake plugin server: %v", err)
 	}
+}
+
+func (s *fakePluginServer) SanitizeTChannel() {
+	s.sanitizeTChannelNext.Store(true)
 }
 
 func (s *fakePluginServer) serve(t *testing.T) {
@@ -107,10 +114,12 @@ func (s *fakePluginServer) handle(conn net.Conn) {
 	// We need the writer to be writeable after the reader.Close. So we'll
 	// no-op the reader.Close rather than writer.Close.
 	plugin.Main(&plugin.Plugin{
-		Name:             "yarpc",
-		ServiceGenerator: g{},
-		Reader:           ioutil.NopCloser(conn),
-		Writer:           conn,
+		Name: "yarpc",
+		ServiceGenerator: g{
+			SanitizeTChannel: s.sanitizeTChannelNext.Swap(false),
+		},
+		Reader: ioutil.NopCloser(conn),
+		Writer: conn,
 	})
 }
 
@@ -162,7 +171,9 @@ func TestCodeIsUpToDate(t *testing.T) {
 		_, fileName := filepath.Split(thriftFile)
 
 		// Tell the plugin whether it should --sanitize-tchannel.
-		_, *_sanitizeTChannel = tchannelSanitizeFor[fileName]
+		if _, ok := tchannelSanitizeFor[fileName]; ok {
+			fakePlugin.SanitizeTChannel()
+		}
 
 		err = thriftrw(
 			"--no-recurse",

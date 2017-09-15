@@ -49,9 +49,11 @@ var (
 	_sanitizeTChannel = flag.Bool("sanitize-tchannel", false, "Enable tchannel context sanitization")
 )
 
-type g struct{}
+type g struct {
+	SanitizeTChannel bool
+}
 
-func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
+func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
 	generators := []genFunc{clientGenerator, serverGenerator}
 	if !*_noFx {
 		generators = append(generators, fxGenerator)
@@ -73,7 +75,7 @@ func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse
 			UnaryWrapperFunc:    unaryWrapperFunc,
 			OnewayWrapperImport: onewayWrapperImport,
 			OnewayWrapperFunc:   onewayWrapperFunc,
-			SanitizeTChannel:    *_sanitizeTChannel,
+			SanitizeTChannel:    g.SanitizeTChannel,
 		}
 
 		for _, gen := range generators {
@@ -110,5 +112,7 @@ func buildSvc(serviceID api.ServiceID, req *api.GenerateServiceRequest) *Svc {
 
 func main() {
 	flag.Parse()
-	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: g{}})
+	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: g{
+		SanitizeTChannel: *_sanitizeTChannel,
+	}})
 }
