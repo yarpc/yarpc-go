@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.15.0-dev (unreleased)
+v1.15.0 (2017-09-15)
 --------------------
 
 - yarpcerrors: Update the ErrorCode and ErrorMessage functions to
