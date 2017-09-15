@@ -4,8 +4,8 @@ Releases
 v1.15.0-dev (unreleased)
 --------------------
 
-- yarpcerrors: Change the contract for ErrorCode and ErrorMessage
-  functions to return default values for non-YARPC errors.
+- yarpcerrors: Update the ErrorCode and ErrorMessage functions to
+  return default values for non-YARPC errors.
 - transport/http: Return appropriate Content-Type response headers
   based on the transport encoding.
 - transport/x/grpc: Add options to specify the maximum message size
