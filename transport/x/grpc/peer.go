@@ -49,6 +49,10 @@ func newPeer(address string, t *Transport) (*grpcPeer, error) {
 		grpc.WithInsecure(),
 		grpc.WithCodec(customCodec{}),
 		grpc.WithUserAgent(UserAgent),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
+			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
+		),
 	)
 	if err != nil {
 		return nil, err

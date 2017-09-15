@@ -6,20 +6,11 @@ else
 include etc/make/deps.mk
 include etc/make/local.mk
 endif
-ifndef SUPPRESS_CROSSDOCK
 include etc/make/crossdock.mk
-endif
-ifdef TRAVIS
-include etc/make/travis.mk
-endif
 
-CI_TYPES ?= deps lint test examples
-ifndef SUPRESS_CROSSDOCK
+CI_TYPES ?= lint test examples
 ifneq ($(filter crossdock,$(CI_TYPES)),)
 CI_CROSSDOCK := true
-CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
-endif
-else
 CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
 endif
 

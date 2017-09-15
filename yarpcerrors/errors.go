@@ -27,21 +27,20 @@ import (
 
 // IsYARPCError is a convenience function that returns true if the given error
 // is a non-nil YARPC error.
-//
-// This is equivalent to yarpcerrors.ErrorCode(err) != yarpcerrors.CodeOK.
 func IsYARPCError(err error) bool {
-	return ErrorCode(err) != CodeOK
+	_, ok := err.(*yarpcError)
+	return ok
 }
 
-// ErrorCode returns the Code for the given error, or CodeOK if the given
-// error is not a YARPC error.
+// ErrorCode returns the Code for the given error, CodeOK if the error is nil,
+// or CodeUnknown if the given error is not a YARPC error.
 func ErrorCode(err error) Code {
 	if err == nil {
 		return CodeOK
 	}
 	yarpcError, ok := err.(*yarpcError)
 	if !ok {
-		return CodeOK
+		return CodeUnknown
 	}
 	return yarpcError.Code
 }
@@ -60,14 +59,15 @@ func ErrorName(err error) string {
 }
 
 // ErrorMessage returns the message for the given error, or "" if the given
-// error is not a YARPC error or the YARPC error had no message.
+// error is nil, or err.Error() if the given error is not a YARPC error or
+// the YARPC error had no message.
 func ErrorMessage(err error) string {
 	if err == nil {
 		return ""
 	}
 	yarpcError, ok := err.(*yarpcError)
 	if !ok {
-		return ""
+		return err.Error()
 	}
 	return yarpcError.Message
 }

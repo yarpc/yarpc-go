@@ -69,6 +69,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// TODO: would prefer to have error message be on a header so we can
 	// have non-nil responses with errors, discuss
 	_, _ = fmt.Fprintln(responseWriter, yarpcerrors.ErrorMessage(err))
+	responseWriter.AddSystemHeader("Content-Type", "text/plain; charset=utf8")
 	status, ok := _codeToStatusCode[yarpcerrors.ErrorCode(err)]
 	if !ok {
 		status = http.StatusInternalServerError
@@ -76,7 +77,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter.Close(status)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) error {
+func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) (retErr error) {
 	start := time.Now()
 	defer req.Body.Close()
 	if req.Method != http.MethodPost {
@@ -96,6 +97,13 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err
 	}
+	defer func() {
+		if retErr == nil {
+			if contentType := getContentType(treq.Encoding); contentType != "" {
+				responseWriter.AddSystemHeader("Content-Type", contentType)
+			}
+		}
+	}()
 
 	ctx := req.Context()
 	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
@@ -226,5 +234,20 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 		// TODO: what to do with error?
 		_, _ = rw.w.Write(rw.buffer.Bytes())
 		bufferpool.Put(rw.buffer)
+	}
+}
+
+func getContentType(encoding transport.Encoding) string {
+	switch encoding {
+	case "json":
+		return "application/json"
+	case "raw":
+		return "application/octet-stream"
+	case "thrift":
+		return "application/x-thrift"
+	case "proto":
+		return "application/x-proto"
+	default:
+		return ""
 	}
 }

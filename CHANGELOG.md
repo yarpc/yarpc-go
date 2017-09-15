@@ -1,12 +1,22 @@
 Releases
 ========
 
-v1.15.0-dev (unreleased)
+v1.16.0-dev (unreleased)
 --------------------
 
 -   ThriftRW Plugin: Added an option to strip TChannel-specific
     information from Contexts before making outgoing requests.
 
+
+v1.15.0 (2017-09-15)
+--------------------
+
+- yarpcerrors: Update the ErrorCode and ErrorMessage functions to
+  return default values for non-YARPC errors.
+- transport/http: Return appropriate Content-Type response headers
+  based on the transport encoding.
+- transport/x/grpc: Add options to specify the maximum message size
+  sent and received over the wire.
 
 v1.14.0 (2017-09-08)
 --------------------
