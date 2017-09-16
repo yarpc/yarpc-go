@@ -22,6 +22,7 @@ package retry
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -138,12 +139,17 @@ func (r *OutboundMiddleware) Call(ctx context.Context, request *transport.Reques
 		timeout, _ := getTimeLeft(ctx, policy.opts.maxRequestTimeout)
 		subCtx, cancel := context.WithTimeout(ctx, timeout)
 		resp, err = out.Call(subCtx, request)
-		cancel() // Clear the new ctx immdediately after the call
 
 		if err == nil {
-			call.success()
-			return resp, err
+			if resp.Body, err = readBody(resp.Body); err == nil {
+				// We've finished all use of the context so it should be safe to
+				// cancel it.
+				cancel()
+				call.success()
+				return resp, err
+			}
 		}
+		cancel() // Since the request failed we can safely cancel the context.
 
 		if !isIdempotentProcedureRetryable(err) {
 			call.unretryableError(err)
@@ -198,4 +204,17 @@ func isIdempotentProcedureRetryable(err error) bool {
 	default:
 		return false
 	}
+}
+
+func readBody(src io.ReadCloser) (io.ReadCloser, error) {
+	buffer := ioutil.NewBufferCloser()
+	if _, err := buffer.ReadFrom(src); err != nil {
+		buffer.Close() // Make sure we cleanup the buffer.
+		return nil, err
+	}
+	if err := src.Close(); err != nil {
+		buffer.Close() // Make sure we cleanup the buffer.
+		return nil, err
+	}
+	return buffer, nil
 }
