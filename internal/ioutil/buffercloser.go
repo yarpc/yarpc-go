@@ -18,7 +18,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpc // import "go.uber.org/yarpc"
+package ioutil
 
-// Version is the current version of YARPC.
-const Version = "1.17.0-dev"
+import (
+	"bytes"
+	"io"
+	"sync"
+)
+
+var _pool = sync.Pool{
+	New: func() interface{} {
+		return &BufferCloser{
+			b: &bytes.Buffer{},
+		}
+	},
+}
+
+// BufferCloser is a light wrapping around the bytes.Buffer that implements
+// a "Close" method to return the buffer to a sync.Pool of buffers.
+type BufferCloser struct {
+	b *bytes.Buffer
+}
+
+// NewBufferCloser returns a new BufferCloser from the Buffer pool that has been
+// reset.
+func NewBufferCloser() *BufferCloser {
+	buf := _pool.Get().(*BufferCloser)
+	buf.b.Reset()
+	return buf
+}
+
+// ReadFrom implements io.ReaderFrom
+func (b *BufferCloser) ReadFrom(r io.Reader) (n int64, err error) {
+	return b.b.ReadFrom(r)
+}
+
+// WriteTo implements io.WriterTo
+func (b *BufferCloser) WriteTo(w io.Writer) (n int64, err error) {
+	return b.b.WriteTo(w)
+}
+
+// Read implements io.Reader
+func (b *BufferCloser) Read(p []byte) (n int, err error) {
+	return b.b.Read(p)
+}
+
+// Close implements io.Closer.  This will return the buffer to the buffer pool.
+func (b *BufferCloser) Close() error {
+	_pool.Put(b)
+	return nil
+}
