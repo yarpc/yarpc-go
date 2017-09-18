@@ -36,6 +36,7 @@ import (
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
@@ -164,7 +165,7 @@ type testEnv struct {
 	Inbound             *Inbound
 	Outbound            *Outbound
 	ClientConn          *grpc.ClientConn
-	ContextWrapper      *ContextWrapper
+	ContextWrapper      *grpcctx.ContextWrapper
 	ClientConfig        transport.ClientConfig
 	Procedures          []transport.Procedure
 	KeyValueGRPCClient  examplepb.KeyValueClient
@@ -233,7 +234,7 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 	)
 	keyValueYARPCClient := examplepb.NewKeyValueYARPCClient(clientConfig)
 
-	contextWrapper := NewContextWrapper().
+	contextWrapper := grpcctx.NewContextWrapper().
 		WithCaller("example-client").
 		WithService("example").
 		WithEncoding(string(protobuf.Encoding))
