@@ -189,9 +189,9 @@ func TestTransportSpec(t *testing.T) {
 				"clientMaxRecvMsgSize": "4096",
 				"clientMaxSendMsgSize": "8192",
 			},
-			inboundCfg: attrs{"address": ":54568"},
+			inboundCfg: attrs{"address": ":54571"},
 			wantInbound: &wantInbound{
-				Address:              ":54568",
+				Address:              ":54571",
 				ServerMaxRecvMsgSize: 1024,
 				ServerMaxSendMsgSize: 2048,
 				ClientMaxRecvMsgSize: 4096,
