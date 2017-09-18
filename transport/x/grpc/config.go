@@ -66,7 +66,11 @@ func TransportSpec(opts ...Option) yarpcconfig.TransportSpec {
 // All parameters of TransportConfig are optional. This section
 // may be omitted in the transports section.
 type TransportConfig struct {
-	Backoff yarpcconfig.Backoff `config:"backoff"`
+	ServerMaxRecvMsgSize int                 `config:"serverMaxRecvMsgSize"`
+	ServerMaxSendMsgSize int                 `config:"serverMaxSendMsgSize"`
+	ClientMaxRecvMsgSize int                 `config:"clientMaxRecvMsgSize"`
+	ClientMaxSendMsgSize int                 `config:"clientMaxSendMsgSize"`
+	Backoff              yarpcconfig.Backoff `config:"backoff"`
 }
 
 // InboundConfig configures a gRPC Inbound.
@@ -127,6 +131,18 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 
 func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *yarpcconfig.Kit) (transport.Transport, error) {
 	transportOptions := newTransportOptions(t.TransportOptions)
+	if transportConfig.ServerMaxRecvMsgSize > 0 {
+		transportOptions.serverMaxRecvMsgSize = transportConfig.ServerMaxRecvMsgSize
+	}
+	if transportConfig.ServerMaxSendMsgSize > 0 {
+		transportOptions.serverMaxSendMsgSize = transportConfig.ServerMaxSendMsgSize
+	}
+	if transportConfig.ClientMaxRecvMsgSize > 0 {
+		transportOptions.clientMaxRecvMsgSize = transportConfig.ClientMaxRecvMsgSize
+	}
+	if transportConfig.ClientMaxSendMsgSize > 0 {
+		transportOptions.clientMaxSendMsgSize = transportConfig.ClientMaxSendMsgSize
+	}
 	backoffStrategy, err := transportConfig.Backoff.Strategy()
 	if err != nil {
 		return nil, err

@@ -75,7 +75,11 @@ func TestTransportSpec(t *testing.T) {
 	type attrs map[string]interface{}
 
 	type wantInbound struct {
-		Address string
+		Address              string
+		ServerMaxRecvMsgSize int
+		ServerMaxSendMsgSize int
+		ClientMaxRecvMsgSize int
+		ClientMaxSendMsgSize int
 	}
 
 	type wantOutbound struct {
@@ -83,7 +87,9 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type test struct {
-		desc          string
+		desc string
+		// must specify inboundCfg if transportCfg specified
+		transportCfg  attrs
 		inboundCfg    attrs
 		outboundCfg   attrs
 		env           map[string]string
@@ -175,6 +181,23 @@ func TestTransportSpec(t *testing.T) {
 				`no recognized peer chooser preset "derp"`,
 			},
 		},
+		{
+			desc: "inbound and transport with message size options",
+			transportCfg: attrs{
+				"serverMaxRecvMsgSize": "1024",
+				"serverMaxSendMsgSize": "2048",
+				"clientMaxRecvMsgSize": "4096",
+				"clientMaxSendMsgSize": "8192",
+			},
+			inboundCfg: attrs{"address": ":54568"},
+			wantInbound: &wantInbound{
+				Address:              ":54568",
+				ServerMaxRecvMsgSize: 1024,
+				ServerMaxSendMsgSize: 2048,
+				ClientMaxRecvMsgSize: 4096,
+				ClientMaxSendMsgSize: 8192,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -189,6 +212,9 @@ func TestTransportSpec(t *testing.T) {
 			require.NoError(t, err)
 
 			cfgData := make(attrs)
+			if tt.transportCfg != nil {
+				cfgData["transports"] = attrs{transportName: tt.transportCfg}
+			}
 			if tt.inboundCfg != nil {
 				cfgData["inbounds"] = attrs{transportName: tt.inboundCfg}
 			}
@@ -210,6 +236,27 @@ func TestTransportSpec(t *testing.T) {
 				inbound, ok := cfg.Inbounds[0].(*Inbound)
 				require.True(t, ok, "expected *Inbound, got %T", cfg.Inbounds[0])
 				assert.Contains(t, inbound.listener.Addr().String(), tt.wantInbound.Address)
+
+				if tt.wantInbound.ServerMaxRecvMsgSize > 0 {
+					assert.Equal(t, tt.wantInbound.ServerMaxRecvMsgSize, inbound.t.options.serverMaxRecvMsgSize)
+				} else {
+					assert.Equal(t, defaultServerMaxRecvMsgSize, inbound.t.options.serverMaxRecvMsgSize)
+				}
+				if tt.wantInbound.ServerMaxSendMsgSize > 0 {
+					assert.Equal(t, tt.wantInbound.ServerMaxSendMsgSize, inbound.t.options.serverMaxSendMsgSize)
+				} else {
+					assert.Equal(t, defaultServerMaxSendMsgSize, inbound.t.options.serverMaxSendMsgSize)
+				}
+				if tt.wantInbound.ClientMaxRecvMsgSize > 0 {
+					assert.Equal(t, tt.wantInbound.ClientMaxRecvMsgSize, inbound.t.options.clientMaxRecvMsgSize)
+				} else {
+					assert.Equal(t, defaultClientMaxRecvMsgSize, inbound.t.options.clientMaxRecvMsgSize)
+				}
+				if tt.wantInbound.ClientMaxSendMsgSize > 0 {
+					assert.Equal(t, tt.wantInbound.ClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
+				} else {
+					assert.Equal(t, defaultClientMaxSendMsgSize, inbound.t.options.clientMaxSendMsgSize)
+				}
 			} else {
 				assert.Len(t, cfg.Inbounds, 0)
 			}
