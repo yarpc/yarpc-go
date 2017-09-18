@@ -209,11 +209,11 @@ func isIdempotentProcedureRetryable(err error) bool {
 func readBody(src io.ReadCloser) (io.ReadCloser, error) {
 	buffer := ioutil.NewBufferCloser()
 	if _, err := buffer.ReadFrom(src); err != nil {
-		buffer.Close() // Make sure we cleanup the buffer.
+		buffer.Close() // Make sure we clean up the buffer.
 		return nil, err
 	}
 	if err := src.Close(); err != nil {
-		buffer.Close() // Make sure we cleanup the buffer.
+		buffer.Close() // Make sure we clean up the buffer.
 		return nil, err
 	}
 	return buffer, nil
