@@ -9,6 +9,8 @@ v1.16.0-dev (unreleased)
 -   x/retry: Fix bug where large TChannel responses would cause errors in retries.
 -   transport/http: Correct the Content-Type for Thrift responses, to
     `application/vnd.apache.thrift.binary`.
+-   transport/http: Correct the Content-Type for Proto responses, to
+    `application/x-protobuf`.
 
 
 v1.15.0 (2017-09-15)

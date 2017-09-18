@@ -246,7 +246,7 @@ func getContentType(encoding transport.Encoding) string {
 	case "thrift":
 		return "application/vnd.apache.thrift.binary"
 	case "proto":
-		return "application/x-proto"
+		return "application/x-protobuf"
 	default:
 		return ""
 	}
