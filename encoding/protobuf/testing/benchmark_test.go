@@ -28,8 +28,8 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
+	"go.uber.org/yarpc/internal/grpcutil"
 	"go.uber.org/yarpc/internal/testutils"
-	"go.uber.org/yarpc/transport/x/grpc"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -72,7 +72,7 @@ func benchmarkIntegrationYARPC(b *testing.B, keyValueYARPCClient examplepb.KeyVa
 	})
 }
 
-func benchmarkIntegrationGRPC(b *testing.B, keyValueClient examplepb.KeyValueClient, contextWrapper *grpc.ContextWrapper) {
+func benchmarkIntegrationGRPC(b *testing.B, keyValueClient examplepb.KeyValueClient, contextWrapper *grpcutil.ContextWrapper) {
 	b.Run("Get", func(b *testing.B) {
 		setValueGRPC(keyValueClient, contextWrapper, "foo", "bar")
 		b.ResetTimer()

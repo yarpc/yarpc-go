@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+// Package grpcutil contains helper functionality for testing with grpc-go.
+package grpcutil
 
 import (
 	"context"
