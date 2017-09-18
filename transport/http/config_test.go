@@ -56,9 +56,10 @@ func TestTransportSpec(t *testing.T) {
 	}
 
 	type wantInbound struct {
-		Address    string
-		Mux        *http.ServeMux
-		MuxPattern string
+		Address     string
+		Mux         *http.ServeMux
+		MuxPattern  string
+		GrabHeaders map[string]bool
 	}
 
 	type inboundTest struct {
@@ -132,6 +133,11 @@ func TestTransportSpec(t *testing.T) {
 			desc:        "simple inbound",
 			cfg:         attrs{"address": ":8080"},
 			wantInbound: &wantInbound{Address: ":8080"},
+		},
+		{
+			desc:        "simple inbound with grab headers",
+			cfg:         attrs{"address": ":8080", "grabHeaders": []string{"x-foo", "x-bar"}},
+			wantInbound: &wantInbound{Address: ":8080", GrabHeaders: map[string]bool{"x-foo": true, "x-bar": true}},
 		},
 		{
 			desc:        "inbound interpolation",
@@ -374,8 +380,15 @@ func TestTransportSpec(t *testing.T) {
 				assert.Equal(t, want.Address, ib.addr, "inbound address should match")
 				assert.Equal(t, want.MuxPattern, ib.muxPattern,
 					"inbound mux pattern should match")
-				assert.True(t, want.Mux == ib.mux, "inbound mux should match")
 				// == because we want it to be the same object
+				assert.True(t, want.Mux == ib.mux, "inbound mux should match")
+				// this has to be done because assert.Equal returns false if one map
+				// is nil and the other is empty
+				if len(want.GrabHeaders) > 0 {
+					assert.Equal(t, want.GrabHeaders, ib.grabHeaders, "inbound grab headers should match")
+				} else {
+					assert.Empty(t, ib.grabHeaders)
+				}
 			}
 		}
 
