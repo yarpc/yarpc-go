@@ -32,7 +32,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
-	"go.uber.org/yarpc/internal/grpcutil"
+	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/testutils"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -137,7 +137,7 @@ func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, val
 	return err
 }
 
-func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcutil.ContextWrapper, key string) (string, error) {
+func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
@@ -147,7 +147,7 @@ func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 	return response.Value, nil
 }
 
-func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcutil.ContextWrapper, key string, value string) error {
+func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err := keyValueGRPCClient.SetValue(contextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})

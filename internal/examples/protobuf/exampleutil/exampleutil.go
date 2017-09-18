@@ -24,7 +24,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
-	"go.uber.org/yarpc/internal/grpcutil"
+	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testutils"
 )
 
@@ -36,7 +36,7 @@ type Clients struct {
 	SinkYARPCJSONClient     examplepb.SinkYARPCClient
 	KeyValueGRPCClient      examplepb.KeyValueClient
 	SinkGRPCClient          examplepb.SinkClient
-	ContextWrapper          *grpcutil.ContextWrapper
+	ContextWrapper          *grpcctx.ContextWrapper
 }
 
 // WithClients calls f on the Clients.

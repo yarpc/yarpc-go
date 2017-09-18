@@ -29,11 +29,11 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-	"go.uber.org/yarpc/internal/grpcutil"
+	"go.uber.org/yarpc/internal/grpcctx"
 	ggrpc "google.golang.org/grpc"
 )
 
-var wrap = grpcutil.NewContextWrapper().
+var wrap = grpcctx.NewContextWrapper().
 	WithCaller("client").
 	WithService("yarpc-test").
 	WithEncoding("proto").Wrap

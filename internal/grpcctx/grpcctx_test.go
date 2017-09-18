@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpcutil
+package grpcctx
 
 import (
 	"context"
@@ -40,27 +40,27 @@ func TestContextWrapper(t *testing.T) {
 func testContextWrapper(t *testing.T, create func() *ContextWrapper) {
 	c1 := create().WithCaller("test-caller")
 	checkMetadata(t, c1, metadata.MD{
-		CallerHeader: []string{"test-caller"},
+		"rpc-caller": []string{"test-caller"},
 	})
 	c2 := c1.WithService("test-service")
 	checkMetadata(t, c1, metadata.MD{
-		CallerHeader: []string{"test-caller"},
+		"rpc-caller": []string{"test-caller"},
 	})
 	checkMetadata(t, c2, metadata.MD{
-		CallerHeader:  []string{"test-caller"},
-		ServiceHeader: []string{"test-service"},
+		"rpc-caller":  []string{"test-caller"},
+		"rpc-service": []string{"test-service"},
 	})
 	c2 = c2.WithShardKey("test-shard-key").
 		WithRoutingKey("test-routing-key").
 		WithRoutingDelegate("test-routing-delegate").
 		WithEncoding("test-encoding")
 	checkMetadata(t, c2, metadata.MD{
-		CallerHeader:          []string{"test-caller"},
-		ServiceHeader:         []string{"test-service"},
-		ShardKeyHeader:        []string{"test-shard-key"},
-		RoutingKeyHeader:      []string{"test-routing-key"},
-		RoutingDelegateHeader: []string{"test-routing-delegate"},
-		EncodingHeader:        []string{"test-encoding"},
+		"rpc-caller":           []string{"test-caller"},
+		"rpc-service":          []string{"test-service"},
+		"rpc-shard-key":        []string{"test-shard-key"},
+		"rpc-routing-key":      []string{"test-routing-key"},
+		"rpc-routing-delegate": []string{"test-routing-delegate"},
+		"rpc-encoding":         []string{"test-encoding"},
 	})
 }
 
