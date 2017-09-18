@@ -76,6 +76,9 @@ ignore:
  - /internal/examples/protobuf/example/
  - /internal/examples/protobuf/examplepb/
  - /internal/examples/protobuf/exampleutil/
+ - /internal/examples/streaming/
+ - /internal/examples/streaming/client/
+ - /internal/examples/streaming/server/
  - /internal/examples/thrift-hello/hello/
  - /internal/examples/thrift-hello/hello/echo/
  - /internal/examples/thrift-hello/hello/echo/helloclient/

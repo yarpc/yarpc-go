@@ -68,12 +68,13 @@ func BuildEchoYARPCProcedures(server EchoYARPCServer) []transport.Procedure {
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
 							Handle:     handler.Echo,
-							NewRequest: newEcho_EchoYARPCRequest,
+							NewRequest: newEchoServiceEchoYARPCRequest,
 						},
 					),
 				},
 			},
 			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
@@ -83,13 +84,13 @@ type _EchoYARPCCaller struct {
 }
 
 func (c *_EchoYARPCCaller) Echo(ctx context.Context, request *Ping, options ...yarpc.CallOption) (*Pong, error) {
-	responseMessage, err := c.client.Call(ctx, "Echo", request, newEcho_EchoYARPCResponse, options...)
+	responseMessage, err := c.client.Call(ctx, "Echo", request, newEchoServiceEchoYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*Pong)
 	if !ok {
-		return nil, protobuf.CastError(emptyEcho_EchoYARPCResponse, responseMessage)
+		return nil, protobuf.CastError(emptyEchoServiceEchoYARPCResponse, responseMessage)
 	}
 	return response, err
 }
@@ -104,7 +105,7 @@ func (h *_EchoYARPCHandler) Echo(ctx context.Context, requestMessage proto.Messa
 	if requestMessage != nil {
 		request, ok = requestMessage.(*Ping)
 		if !ok {
-			return nil, protobuf.CastError(emptyEcho_EchoYARPCRequest, requestMessage)
+			return nil, protobuf.CastError(emptyEchoServiceEchoYARPCRequest, requestMessage)
 		}
 	}
 	response, err := h.server.Echo(ctx, request)
@@ -114,17 +115,17 @@ func (h *_EchoYARPCHandler) Echo(ctx context.Context, requestMessage proto.Messa
 	return response, err
 }
 
-func newEcho_EchoYARPCRequest() proto.Message {
+func newEchoServiceEchoYARPCRequest() proto.Message {
 	return &Ping{}
 }
 
-func newEcho_EchoYARPCResponse() proto.Message {
+func newEchoServiceEchoYARPCResponse() proto.Message {
 	return &Pong{}
 }
 
 var (
-	emptyEcho_EchoYARPCRequest  = &Ping{}
-	emptyEcho_EchoYARPCResponse = &Pong{}
+	emptyEchoServiceEchoYARPCRequest  = &Ping{}
+	emptyEchoServiceEchoYARPCResponse = &Pong{}
 )
 
 // OnewayYARPCClient is the YARPC client-side interface for the Oneway service.
@@ -161,11 +162,12 @@ func BuildOnewayYARPCProcedures(server OnewayYARPCServer) []transport.Procedure 
 					Handler: protobuf.NewOnewayHandler(
 						protobuf.OnewayHandlerParams{
 							Handle:     handler.Echo,
-							NewRequest: newOneway_EchoYARPCRequest,
+							NewRequest: newOnewayServiceEchoYARPCRequest,
 						},
 					),
 				},
 			},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
@@ -188,23 +190,23 @@ func (h *_OnewayYARPCHandler) Echo(ctx context.Context, requestMessage proto.Mes
 	if requestMessage != nil {
 		request, ok = requestMessage.(*Token)
 		if !ok {
-			return protobuf.CastError(emptyOneway_EchoYARPCRequest, requestMessage)
+			return protobuf.CastError(emptyOnewayServiceEchoYARPCRequest, requestMessage)
 		}
 	}
 	return h.server.Echo(ctx, request)
 }
 
-func newOneway_EchoYARPCRequest() proto.Message {
+func newOnewayServiceEchoYARPCRequest() proto.Message {
 	return &Token{}
 }
 
-func newOneway_EchoYARPCResponse() proto.Message {
+func newOnewayServiceEchoYARPCResponse() proto.Message {
 	return &yarpcproto.Oneway{}
 }
 
 var (
-	emptyOneway_EchoYARPCRequest  = &Token{}
-	emptyOneway_EchoYARPCResponse = &yarpcproto.Oneway{}
+	emptyOnewayServiceEchoYARPCRequest  = &Token{}
+	emptyOnewayServiceEchoYARPCResponse = &yarpcproto.Oneway{}
 )
 
 func init() {

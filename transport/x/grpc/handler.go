@@ -59,9 +59,87 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 		return errInvalidGRPCStream
 	}
 
+	streamMethod := stream.Method()
+	transportRequest, err := h.getBasicTransportRequest(ctx, streamMethod)
+	if err != nil {
+		return err
+	}
+
+	handlerSpec, err := h.i.router.Choose(ctx, transportRequest)
+	if err != nil {
+		return err
+	}
+	switch handlerSpec.Type() {
+	case transport.Unary:
+		return h.handleUnary(ctx, transportRequest, serverStream, streamMethod, start, handlerSpec.Unary())
+	case transport.Stream:
+		return h.handleStream(ctx, transportRequest, serverStream, handlerSpec.Stream())
+	}
+	return yarpcerrors.UnimplementedErrorf("transport grpc does not handle %s handlers", handlerSpec.Type().String())
+}
+
+func (h *handler) getBasicTransportRequest(ctx context.Context, streamMethod string) (*transport.Request, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if md == nil || !ok {
+		return nil, yarpcerrors.InternalErrorf("cannot get metadata from ctx: %v", ctx)
+	}
+	transportRequest, err := metadataToTransportRequest(md)
+	if err != nil {
+		return nil, err
+	}
+
+	procedure, err := procedureFromStreamMethod(streamMethod)
+	if err != nil {
+		return nil, err
+	}
+
+	transportRequest.Procedure = procedure
+	if err := transport.ValidateRequest(transportRequest); err != nil {
+		return nil, err
+	}
+	return transportRequest, nil
+}
+
+// procedureFromStreamMethod converts a GRPC stream method into a yarpc
+// procedure name.  This is mostly copied from the GRPC-go server processing
+// logic here:
+// https://github.com/grpc/grpc-go/blob/d6723916d2e73e8824d22a1ba5c52f8e6255e6f8/server.go#L931-L956
+func procedureFromStreamMethod(streamMethod string) (string, error) {
+	if streamMethod != "" && streamMethod[0] == '/' {
+		streamMethod = streamMethod[1:]
+	}
+	pos := strings.LastIndex(streamMethod, "/")
+	if pos == -1 {
+		return "", errInvalidGRPCMethod
+	}
+	service := streamMethod[:pos]
+	method := streamMethod[pos+1:]
+	return procedureToName(service, method)
+}
+
+func (h *handler) handleStream(
+	ctx context.Context,
+	transportRequest *transport.Request,
+	serverStream grpc.ServerStream,
+	streamHandler transport.StreamHandler,
+) error {
+	return transport.DispatchStreamHandler(
+		streamHandler,
+		newServerStream(ctx, transportRequest, serverStream),
+	)
+}
+
+func (h *handler) handleUnary(
+	ctx context.Context,
+	transportRequest *transport.Request,
+	serverStream grpc.ServerStream,
+	streamMethod string,
+	start time.Time,
+	handler transport.UnaryHandler,
+) error {
 	// Apply a unary request.
 	responseMD := metadata.New(nil)
-	response, err := h.handleBeforeErrorConversion(ctx, serverStream.RecvMsg, responseMD, stream.Method(), start)
+	response, err := h.handleUnaryBeforeErrorConversion(ctx, transportRequest, serverStream.RecvMsg, responseMD, streamMethod, start, handler)
 	err = handlerErrorToGRPCError(err, responseMD)
 
 	// Send the response attributes back and end the stream.
@@ -73,17 +151,20 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	return err
 }
 
-func (h *handler) handleBeforeErrorConversion(
+func (h *handler) handleUnaryBeforeErrorConversion(
 	ctx context.Context,
+	transportRequest *transport.Request,
 	decodeFunc func(interface{}) error,
 	responseMD metadata.MD,
 	streamMethod string,
 	start time.Time,
+	handler transport.UnaryHandler,
 ) (interface{}, error) {
-	transportRequest, err := h.getTransportRequest(ctx, decodeFunc, streamMethod)
+	body, err := h.readIntoBuffer(decodeFunc)
 	if err != nil {
 		return nil, err
 	}
+	transportRequest.Body = body
 
 	tracer := h.i.t.options.tracer
 	if tracer == nil {
@@ -116,70 +197,21 @@ func (h *handler) handleBeforeErrorConversion(
 				if !ok {
 					return nil, yarpcerrors.InternalErrorf("expected *transport.Request, got %T", request)
 				}
-				response, err := h.call(ctx, transportRequest, responseMD)
+				response, err := h.callUnary(ctx, transportRequest, handler, responseMD)
 				return response, transport.UpdateSpanWithErr(span, err)
 			},
 		)
 	}
-	response, err := h.call(ctx, transportRequest, responseMD)
+	response, err := h.callUnary(ctx, transportRequest, handler, responseMD)
 	return response, transport.UpdateSpanWithErr(span, err)
 }
 
-func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error, streamMethod string) (*transport.Request, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if md == nil || !ok {
-		return nil, yarpcerrors.InternalErrorf("cannot get metadata from ctx: %v", ctx)
-	}
-	transportRequest, err := metadataToTransportRequest(md)
-	if err != nil {
-		return nil, err
-	}
-	var data []byte
+func (h *handler) readIntoBuffer(decodeFunc func(interface{}) error) (*bytes.Buffer, error) {
+	var data []byte // TODO pool buffers
 	if err := decodeFunc(&data); err != nil {
 		return nil, err
 	}
-	transportRequest.Body = bytes.NewBuffer(data)
-
-	procedure, err := procedureFromStreamMethod(streamMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	transportRequest.Procedure = procedure
-	if err := transport.ValidateRequest(transportRequest); err != nil {
-		return nil, err
-	}
-	return transportRequest, nil
-}
-
-// procedureFromStreamMethod converts a GRPC stream method into a yarpc
-// procedure name.  This is mostly copied from the GRPC-go server processing
-// logic here:
-// https://github.com/grpc/grpc-go/blob/d6723916d2e73e8824d22a1ba5c52f8e6255e6f8/server.go#L931-L956
-func procedureFromStreamMethod(streamMethod string) (string, error) {
-	if streamMethod != "" && streamMethod[0] == '/' {
-		streamMethod = streamMethod[1:]
-	}
-	pos := strings.LastIndex(streamMethod, "/")
-	if pos == -1 {
-		return "", errInvalidGRPCMethod
-	}
-	service := streamMethod[:pos]
-	method := streamMethod[pos+1:]
-	return procedureToName(service, method)
-}
-
-func (h *handler) call(ctx context.Context, transportRequest *transport.Request, responseMD metadata.MD) (interface{}, error) {
-	handlerSpec, err := h.i.router.Choose(ctx, transportRequest)
-	if err != nil {
-		return nil, err
-	}
-	switch handlerSpec.Type() {
-	case transport.Unary:
-		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseMD)
-	default:
-		return nil, yarpcerrors.UnimplementedErrorf("transport grpc does not handle %s handlers", handlerSpec.Type().String())
-	}
+	return bytes.NewBuffer(data), nil
 }
 
 func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseMD metadata.MD) (interface{}, error) {

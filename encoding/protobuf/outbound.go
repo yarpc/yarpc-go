@@ -23,6 +23,7 @@ package protobuf
 import (
 	"bytes"
 	"context"
+	"io"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
@@ -124,4 +125,48 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		return ctx, call, transportRequest, cleanup, nil
 	}
 	return ctx, call, transportRequest, nil, nil
+}
+
+func (c *client) CallStream(ctx context.Context, requestMethodName string, opts ...yarpc.CallOption) (ClientStream, error) {
+	transportRequest := &transport.Request{
+		Caller:    c.clientConfig.Caller(),
+		Service:   c.clientConfig.Service(),
+		Procedure: procedure.ToName(c.serviceName, requestMethodName),
+		Encoding:  c.encoding,
+	}
+	call := apiencoding.NewOutboundCall(encoding.FromOptions(opts)...)
+	ctx, err := call.WriteToRequest(ctx, transportRequest)
+	if err != nil {
+		return nil, err
+	}
+	if transportRequest.Encoding != Encoding && transportRequest.Encoding != JSONEncoding {
+		return nil, yarpcerrors.InternalErrorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
+	}
+
+	return c.clientConfig.GetStreamOutbound().CallStream(ctx, transportRequest)
+}
+
+// ToProtoMessage converts an io.Reader into a Protobuf message.
+func ToProtoMessage(
+	src io.Reader,
+	encoding transport.Encoding,
+	newResponse func() proto.Message,
+) (proto.Message, error) {
+	response := newResponse()
+	if err := unmarshal(encoding, src, response); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+// ToReader converts a proto message into an io.Reader.
+func ToReader(request proto.Message, encoding transport.Encoding) (io.Reader, func(), error) {
+	requestData, cleanup, err := marshal(encoding, request)
+	if err != nil {
+		return nil, cleanup, err // TODO wrap error
+	}
+	if requestData != nil {
+		return bytes.NewReader(requestData), cleanup, nil
+	}
+	return nil, cleanup, nil
 }

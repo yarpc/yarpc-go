@@ -55,3 +55,11 @@ func (c multiOutbound) GetOnewayOutbound() transport.OnewayOutbound {
 
 	return c.Outbounds.Oneway
 }
+
+func (c multiOutbound) GetStreamOutbound() transport.StreamOutbound {
+	if c.Outbounds.Stream == nil {
+		panic(fmt.Sprintf("Service %q does not have a stream outbound", c.service))
+	}
+
+	return c.Outbounds.Stream
+}

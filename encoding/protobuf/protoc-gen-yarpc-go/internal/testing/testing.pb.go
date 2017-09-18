@@ -34,6 +34,8 @@ It has these top-level messages:
 	SetValueRequest
 	SetValueResponse
 	FireRequest
+	HelloRequest
+	HelloResponse
 */
 package testing
 
@@ -138,12 +140,44 @@ func (m *FireRequest) GetValue() string {
 	return ""
 }
 
+type HelloRequest struct {
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (m *HelloRequest) Reset()                    { *m = HelloRequest{} }
+func (*HelloRequest) ProtoMessage()               {}
+func (*HelloRequest) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{5} }
+
+func (m *HelloRequest) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+type HelloResponse struct {
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (m *HelloResponse) Reset()                    { *m = HelloResponse{} }
+func (*HelloResponse) ProtoMessage()               {}
+func (*HelloResponse) Descriptor() ([]byte, []int) { return fileDescriptorTesting, []int{6} }
+
+func (m *HelloResponse) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*GetValueRequest)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.GetValueRequest")
 	proto.RegisterType((*GetValueResponse)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.GetValueResponse")
 	proto.RegisterType((*SetValueRequest)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.SetValueRequest")
 	proto.RegisterType((*SetValueResponse)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.SetValueResponse")
 	proto.RegisterType((*FireRequest)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.FireRequest")
+	proto.RegisterType((*HelloRequest)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.HelloRequest")
+	proto.RegisterType((*HelloResponse)(nil), "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.HelloResponse")
 }
 func (this *GetValueRequest) Equal(that interface{}) bool {
 	if that == nil {
@@ -295,6 +329,66 @@ func (this *FireRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *HelloRequest) Equal(that interface{}) bool {
+	if that == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	}
+
+	that1, ok := that.(*HelloRequest)
+	if !ok {
+		that2, ok := that.(HelloRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	} else if this == nil {
+		return false
+	}
+	if this.Id != that1.Id {
+		return false
+	}
+	return true
+}
+func (this *HelloResponse) Equal(that interface{}) bool {
+	if that == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	}
+
+	that1, ok := that.(*HelloResponse)
+	if !ok {
+		that2, ok := that.(HelloResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	} else if this == nil {
+		return false
+	}
+	if this.Id != that1.Id {
+		return false
+	}
+	return true
+}
 func (this *GetValueRequest) GoString() string {
 	if this == nil {
 		return "nil"
@@ -342,6 +436,26 @@ func (this *FireRequest) GoString() string {
 	s := make([]string, 0, 5)
 	s = append(s, "&testing.FireRequest{")
 	s = append(s, "Value: "+fmt.Sprintf("%#v", this.Value)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *HelloRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&testing.HelloRequest{")
+	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *HelloResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&testing.HelloResponse{")
+	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -523,6 +637,329 @@ var _Sink_serviceDesc = grpc.ServiceDesc{
 	Metadata: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
 }
 
+// Client API for Foo service
+
+type FooClient interface {
+	GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error)
+	SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error)
+	Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error)
+	HelloOne(ctx context.Context, opts ...grpc.CallOption) (Foo_HelloOneClient, error)
+	HelloTwo(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (Foo_HelloTwoClient, error)
+	HelloThree(ctx context.Context, opts ...grpc.CallOption) (Foo_HelloThreeClient, error)
+}
+
+type fooClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewFooClient(cc *grpc.ClientConn) FooClient {
+	return &fooClient{cc}
+}
+
+func (c *fooClient) GetValue(ctx context.Context, in *GetValueRequest, opts ...grpc.CallOption) (*GetValueResponse, error) {
+	out := new(GetValueResponse)
+	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/GetValue", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fooClient) SetValue(ctx context.Context, in *SetValueRequest, opts ...grpc.CallOption) (*SetValueResponse, error) {
+	out := new(SetValueResponse)
+	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/SetValue", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fooClient) Fire(ctx context.Context, in *FireRequest, opts ...grpc.CallOption) (*uber_yarpc.Oneway, error) {
+	out := new(uber_yarpc.Oneway)
+	err := grpc.Invoke(ctx, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/Fire", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fooClient) HelloOne(ctx context.Context, opts ...grpc.CallOption) (Foo_HelloOneClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Foo_serviceDesc.Streams[0], c.cc, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/HelloOne", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &fooHelloOneClient{stream}
+	return x, nil
+}
+
+type Foo_HelloOneClient interface {
+	Send(*HelloRequest) error
+	CloseAndRecv() (*HelloResponse, error)
+	grpc.ClientStream
+}
+
+type fooHelloOneClient struct {
+	grpc.ClientStream
+}
+
+func (x *fooHelloOneClient) Send(m *HelloRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *fooHelloOneClient) CloseAndRecv() (*HelloResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(HelloResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *fooClient) HelloTwo(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (Foo_HelloTwoClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Foo_serviceDesc.Streams[1], c.cc, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/HelloTwo", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &fooHelloTwoClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Foo_HelloTwoClient interface {
+	Recv() (*HelloResponse, error)
+	grpc.ClientStream
+}
+
+type fooHelloTwoClient struct {
+	grpc.ClientStream
+}
+
+func (x *fooHelloTwoClient) Recv() (*HelloResponse, error) {
+	m := new(HelloResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *fooClient) HelloThree(ctx context.Context, opts ...grpc.CallOption) (Foo_HelloThreeClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Foo_serviceDesc.Streams[2], c.cc, "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/HelloThree", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &fooHelloThreeClient{stream}
+	return x, nil
+}
+
+type Foo_HelloThreeClient interface {
+	Send(*HelloRequest) error
+	Recv() (*HelloResponse, error)
+	grpc.ClientStream
+}
+
+type fooHelloThreeClient struct {
+	grpc.ClientStream
+}
+
+func (x *fooHelloThreeClient) Send(m *HelloRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *fooHelloThreeClient) Recv() (*HelloResponse, error) {
+	m := new(HelloResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// Server API for Foo service
+
+type FooServer interface {
+	GetValue(context.Context, *GetValueRequest) (*GetValueResponse, error)
+	SetValue(context.Context, *SetValueRequest) (*SetValueResponse, error)
+	Fire(context.Context, *FireRequest) (*uber_yarpc.Oneway, error)
+	HelloOne(Foo_HelloOneServer) error
+	HelloTwo(*HelloRequest, Foo_HelloTwoServer) error
+	HelloThree(Foo_HelloThreeServer) error
+}
+
+func RegisterFooServer(s *grpc.Server, srv FooServer) {
+	s.RegisterService(&_Foo_serviceDesc, srv)
+}
+
+func _Foo_GetValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetValueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FooServer).GetValue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/GetValue",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FooServer).GetValue(ctx, req.(*GetValueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Foo_SetValue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetValueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FooServer).SetValue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/SetValue",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FooServer).SetValue(ctx, req.(*SetValueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Foo_Fire_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FireRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FooServer).Fire(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo/Fire",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FooServer).Fire(ctx, req.(*FireRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Foo_HelloOne_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(FooServer).HelloOne(&fooHelloOneServer{stream})
+}
+
+type Foo_HelloOneServer interface {
+	SendAndClose(*HelloResponse) error
+	Recv() (*HelloRequest, error)
+	grpc.ServerStream
+}
+
+type fooHelloOneServer struct {
+	grpc.ServerStream
+}
+
+func (x *fooHelloOneServer) SendAndClose(m *HelloResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *fooHelloOneServer) Recv() (*HelloRequest, error) {
+	m := new(HelloRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Foo_HelloTwo_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(HelloRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(FooServer).HelloTwo(m, &fooHelloTwoServer{stream})
+}
+
+type Foo_HelloTwoServer interface {
+	Send(*HelloResponse) error
+	grpc.ServerStream
+}
+
+type fooHelloTwoServer struct {
+	grpc.ServerStream
+}
+
+func (x *fooHelloTwoServer) Send(m *HelloResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Foo_HelloThree_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(FooServer).HelloThree(&fooHelloThreeServer{stream})
+}
+
+type Foo_HelloThreeServer interface {
+	Send(*HelloResponse) error
+	Recv() (*HelloRequest, error)
+	grpc.ServerStream
+}
+
+type fooHelloThreeServer struct {
+	grpc.ServerStream
+}
+
+func (x *fooHelloThreeServer) Send(m *HelloResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *fooHelloThreeServer) Recv() (*HelloRequest, error) {
+	m := new(HelloRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+var _Foo_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing.Foo",
+	HandlerType: (*FooServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetValue",
+			Handler:    _Foo_GetValue_Handler,
+		},
+		{
+			MethodName: "SetValue",
+			Handler:    _Foo_SetValue_Handler,
+		},
+		{
+			MethodName: "Fire",
+			Handler:    _Foo_Fire_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "HelloOne",
+			Handler:       _Foo_HelloOne_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "HelloTwo",
+			Handler:       _Foo_HelloTwo_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "HelloThree",
+			Handler:       _Foo_HelloThree_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/testing.proto",
+}
+
 func (m *GetValueRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -643,6 +1080,54 @@ func (m *FireRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *HelloRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HelloRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Id) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintTesting(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
+	}
+	return i, nil
+}
+
+func (m *HelloResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HelloResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Id) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintTesting(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
+	}
+	return i, nil
+}
+
 func encodeFixed64Testing(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	dAtA[offset+1] = uint8(v >> 8)
@@ -720,6 +1205,26 @@ func (m *FireRequest) Size() (n int) {
 	return n
 }
 
+func (m *HelloRequest) Size() (n int) {
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovTesting(uint64(l))
+	}
+	return n
+}
+
+func (m *HelloResponse) Size() (n int) {
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovTesting(uint64(l))
+	}
+	return n
+}
+
 func sovTesting(x uint64) (n int) {
 	for {
 		n++
@@ -779,6 +1284,26 @@ func (this *FireRequest) String() string {
 	}
 	s := strings.Join([]string{`&FireRequest{`,
 		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *HelloRequest) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&HelloRequest{`,
+		`Id:` + fmt.Sprintf("%v", this.Id) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *HelloResponse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&HelloResponse{`,
+		`Id:` + fmt.Sprintf("%v", this.Id) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1186,6 +1711,164 @@ func (m *FireRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *HelloRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTesting
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HelloRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HelloRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTesting
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTesting
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTesting(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthTesting
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *HelloResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTesting
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HelloResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HelloResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTesting
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTesting
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTesting(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthTesting
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func skipTesting(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
@@ -1296,28 +1979,34 @@ func init() {
 }
 
 var fileDescriptorTesting = []byte{
-	// 355 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x91, 0x3f, 0x4f, 0xc2, 0x40,
-	0x18, 0xc6, 0x7b, 0x88, 0x8a, 0xe7, 0x00, 0xb9, 0x38, 0x10, 0x86, 0x8b, 0x29, 0x0b, 0x0b, 0xd7,
-	0x04, 0xe3, 0xe0, 0xe2, 0x60, 0x8c, 0x0e, 0x0c, 0x18, 0x9a, 0x38, 0xb8, 0x95, 0xfa, 0x7a, 0x69,
-	0x20, 0x77, 0xd8, 0x3f, 0x9a, 0x6e, 0x7e, 0x04, 0x3f, 0x86, 0x8b, 0xdf, 0xc3, 0x91, 0xd1, 0x51,
-	0xce, 0xc5, 0x38, 0xf1, 0x11, 0x4c, 0xef, 0x5a, 0x24, 0x24, 0xc6, 0x81, 0x2e, 0xed, 0xd3, 0xe6,
-	0x79, 0x7e, 0xef, 0x93, 0xf7, 0xc5, 0xe7, 0x20, 0x7c, 0x79, 0x1b, 0x08, 0xee, 0x4c, 0x43, 0x19,
-	0xcb, 0x51, 0x72, 0x67, 0x84, 0xdf, 0xe5, 0x20, 0xba, 0xa9, 0x17, 0x4e, 0xfd, 0x2e, 0x97, 0x4e,
-	0x20, 0x62, 0x08, 0x85, 0x37, 0x71, 0x62, 0x88, 0xe2, 0xcc, 0x9d, 0xbf, 0x99, 0x36, 0x93, 0xd3,
-	0x64, 0x04, 0x21, 0xd3, 0x6e, 0x56, 0x00, 0x59, 0x01, 0x34, 0xc2, 0xe7, 0x20, 0xb4, 0x81, 0x4b,
-	0x56, 0xd0, 0x58, 0x4e, 0x69, 0x75, 0xb8, 0x64, 0x1a, 0x21, 0x43, 0xee, 0x68, 0x97, 0x79, 0xea,
-	0xa4, 0x91, 0x86, 0x62, 0xb7, 0x71, 0xfd, 0x12, 0xe2, 0x6b, 0x6f, 0x92, 0xc0, 0x10, 0xee, 0x13,
-	0x88, 0x62, 0xd2, 0xc0, 0x5b, 0x63, 0x48, 0x9b, 0xe8, 0x10, 0x75, 0xf6, 0x86, 0x99, 0xb4, 0x3b,
-	0xb8, 0xf1, 0x6b, 0x8a, 0xa6, 0x52, 0x44, 0x40, 0x0e, 0xf0, 0xf6, 0x43, 0xf6, 0xa3, 0x59, 0xd1,
-	0x3e, 0xf3, 0x61, 0x9f, 0xe0, 0xba, 0xfb, 0x1f, 0xee, 0x8f, 0x28, 0xc1, 0x0d, 0x77, 0x6d, 0x88,
-	0xdd, 0xc6, 0xfb, 0x17, 0x41, 0xb8, 0x44, 0x2d, 0x83, 0x68, 0x25, 0xd8, 0xfb, 0xae, 0xe0, 0x5a,
-	0x1f, 0x52, 0x9d, 0x24, 0xaf, 0x08, 0xd7, 0x8a, 0xae, 0x64, 0xc0, 0x36, 0xdb, 0x23, 0x5b, 0x5b,
-	0x4d, 0xeb, 0xaa, 0x3c, 0x60, 0xbe, 0xc6, 0xac, 0xaf, 0x5b, 0x5a, 0x5f, 0xb7, 0xec, 0xbe, 0xeb,
-	0x17, 0xe9, 0x49, 0x5c, 0x75, 0x03, 0x31, 0x26, 0x1c, 0x57, 0xb3, 0xcb, 0x90, 0xfe, 0xa6, 0x13,
-	0x56, 0xee, 0xdb, 0x22, 0xab, 0xb0, 0x81, 0x80, 0x47, 0x2f, 0x3d, 0x3b, 0x9e, 0xcd, 0xa9, 0xf5,
-	0x3e, 0xa7, 0xd6, 0x62, 0x4e, 0xd1, 0x93, 0xa2, 0xe8, 0x45, 0x51, 0xf4, 0xa6, 0x28, 0x9a, 0x29,
-	0x8a, 0x3e, 0x14, 0x45, 0x5f, 0x8a, 0x5a, 0x0b, 0x45, 0xd1, 0xf3, 0x27, 0xb5, 0x6e, 0x76, 0x73,
-	0xec, 0x68, 0x47, 0x4f, 0x3e, 0xfa, 0x09, 0x00, 0x00, 0xff, 0xff, 0x9c, 0x67, 0x4c, 0x99, 0x90,
-	0x03, 0x00, 0x00,
+	// 455 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x94, 0xbf, 0x8e, 0xd3, 0x40,
+	0x10, 0xc6, 0xbd, 0xbe, 0x83, 0x0b, 0xc3, 0x9f, 0x8b, 0x56, 0x14, 0x27, 0x17, 0x0b, 0xf2, 0x35,
+	0x6e, 0xb2, 0x3e, 0x05, 0x51, 0xd0, 0x50, 0x20, 0x74, 0x20, 0x1d, 0x28, 0xe8, 0x8c, 0x28, 0xe8,
+	0x1c, 0x67, 0x30, 0xd6, 0x59, 0xbb, 0x39, 0xff, 0xe1, 0xe4, 0x8e, 0x47, 0xe0, 0x31, 0x90, 0x28,
+	0x78, 0x0d, 0xca, 0x94, 0x94, 0x64, 0x69, 0xa8, 0x50, 0x1e, 0x01, 0x79, 0x6d, 0x27, 0x56, 0x10,
+	0xa2, 0x88, 0x41, 0x29, 0xae, 0x49, 0x26, 0xf1, 0x37, 0xbf, 0xf9, 0x3c, 0xdf, 0xda, 0xf0, 0x18,
+	0x45, 0x20, 0x27, 0x91, 0x08, 0xdd, 0x69, 0x22, 0x33, 0x39, 0xce, 0xdf, 0x54, 0x45, 0x30, 0x08,
+	0x51, 0x0c, 0x0a, 0x3f, 0x99, 0x06, 0x83, 0x50, 0xba, 0x91, 0xc8, 0x30, 0x11, 0x7e, 0xec, 0x66,
+	0x98, 0x66, 0xa5, 0xba, 0xfe, 0xe6, 0x5a, 0x4c, 0x1f, 0xe6, 0x63, 0x4c, 0xb8, 0x56, 0xf3, 0x06,
+	0xc8, 0x1b, 0x60, 0x55, 0x04, 0x21, 0x0a, 0x2d, 0x08, 0x25, 0x6f, 0x68, 0xbc, 0xa6, 0x58, 0x4e,
+	0x28, 0xb9, 0x46, 0xc8, 0x24, 0x74, 0xb5, 0xaa, 0xfa, 0xd4, 0x9d, 0x55, 0x59, 0x51, 0xec, 0x43,
+	0xd8, 0x7f, 0x82, 0xd9, 0x2b, 0x3f, 0xce, 0xf1, 0x14, 0xcf, 0x73, 0x4c, 0x33, 0xda, 0x87, 0x9d,
+	0x33, 0x2c, 0x0e, 0xc8, 0x5d, 0xe2, 0x5c, 0x3b, 0x2d, 0x4b, 0xdb, 0x81, 0xfe, 0x4a, 0x94, 0x4e,
+	0xa5, 0x48, 0x91, 0xde, 0x86, 0x2b, 0xef, 0xca, 0x3f, 0x0e, 0x4c, 0xad, 0xab, 0x7e, 0xd8, 0x0f,
+	0x60, 0xdf, 0xfb, 0x1b, 0xee, 0x0f, 0xad, 0x14, 0xfa, 0xde, 0xda, 0x10, 0xfb, 0x10, 0xae, 0x1f,
+	0x47, 0xc9, 0x12, 0xb5, 0x6c, 0x24, 0xed, 0x46, 0x06, 0x37, 0x9e, 0x62, 0x1c, 0xcb, 0x46, 0x75,
+	0x0b, 0xcc, 0x68, 0x52, 0x4b, 0xcc, 0x68, 0x62, 0xdf, 0x81, 0x9b, 0xf5, 0xf5, 0xda, 0xfa, 0x9a,
+	0x60, 0xf8, 0xd3, 0x84, 0xde, 0x09, 0x16, 0x7a, 0x34, 0xfd, 0x4c, 0xa0, 0xd7, 0xdc, 0x2c, 0x1d,
+	0xf1, 0xcd, 0x82, 0xe0, 0x6b, 0xbb, 0xb5, 0x5e, 0x74, 0x07, 0xac, 0x57, 0x64, 0x68, 0xc7, 0x5e,
+	0x67, 0x8e, 0xbd, 0xae, 0x1d, 0xff, 0x16, 0xaa, 0x31, 0x3c, 0x87, 0x5d, 0x2f, 0x12, 0x67, 0x34,
+	0x82, 0xdd, 0x32, 0x5e, 0x7a, 0xb2, 0xe9, 0x8c, 0xd6, 0x21, 0xb1, 0x68, 0x1b, 0x36, 0x12, 0x78,
+	0xe1, 0x17, 0xb6, 0x31, 0x54, 0x7b, 0xb0, 0x73, 0x2c, 0xe5, 0x65, 0xbc, 0xff, 0x3e, 0xde, 0xff,
+	0x18, 0x2b, 0xfd, 0x44, 0xa0, 0xa7, 0x1f, 0xee, 0x91, 0x40, 0xfa, 0x6c, 0xd3, 0x79, 0xed, 0xd7,
+	0x88, 0xf5, 0xbc, 0x23, 0x5a, 0xb3, 0x16, 0x87, 0xac, 0xdc, 0xbe, 0xbc, 0x90, 0x5b, 0xee, 0xf6,
+	0x88, 0x94, 0x07, 0x0f, 0x2a, 0xb7, 0x6f, 0x13, 0xdc, 0xfe, 0xed, 0x1e, 0x91, 0x47, 0xf7, 0x67,
+	0x73, 0x66, 0x7c, 0x9d, 0x33, 0x63, 0x31, 0x67, 0xe4, 0xbd, 0x62, 0xe4, 0xa3, 0x62, 0xe4, 0x8b,
+	0x62, 0x64, 0xa6, 0x18, 0xf9, 0xa6, 0x18, 0xf9, 0xa1, 0x98, 0xb1, 0x50, 0x8c, 0x7c, 0xf8, 0xce,
+	0x8c, 0xd7, 0x7b, 0x35, 0x6a, 0x7c, 0x55, 0x4f, 0xbb, 0xf7, 0x2b, 0x00, 0x00, 0xff, 0xff, 0xce,
+	0x72, 0xae, 0x49, 0xbc, 0x07, 0x00, 0x00,
 }

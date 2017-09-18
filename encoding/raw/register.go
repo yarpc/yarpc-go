@@ -61,3 +61,16 @@ func OnewayProcedure(name string, handler OnewayHandler) []transport.Procedure {
 		},
 	}
 }
+
+// StreamHandler implements a handler for stream connections.
+type StreamHandler func(*ServerStream) error
+
+// StreamProcedure builds a Procedure from the given raw handler.
+func StreamProcedure(name string, handler StreamHandler) []transport.Procedure {
+	return []transport.Procedure{
+		{
+			Name:        name,
+			HandlerSpec: transport.NewStreamHandlerSpec(rawStreamHandler{handler}),
+		},
+	}
+}

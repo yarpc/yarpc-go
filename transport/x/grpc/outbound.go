@@ -220,3 +220,59 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	}
 	return yarpcerrors.FromHeaders(code, name, message)
 }
+
+// CallStream implements transport.StreamOutbound#CallStream.
+func (o *Outbound) CallStream(ctx context.Context, request *transport.Request) (transport.ClientStream, error) {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
+		return nil, err
+	}
+
+	return o.stream(ctx, request)
+}
+
+func (o *Outbound) stream(
+	ctx context.Context,
+	request *transport.Request,
+) (_ transport.ClientStream, retErr error) {
+	md, err := transportRequestToMetadata(request)
+	if err != nil {
+		return nil, err
+	}
+
+	fullMethod, err := procedureNameToFullMethod(request.Procedure)
+	if err != nil {
+		return nil, err
+	}
+
+	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
+	defer func() {
+		if onFinish != nil {
+			onFinish(retErr)
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	grpcPeer, ok := apiPeer.(*grpcPeer)
+	if !ok {
+		return nil, peer.ErrInvalidPeerConversion{
+			Peer:         apiPeer,
+			ExpectedType: "*grpcPeer",
+		}
+	}
+
+	clientStream, err := grpc.NewClientStream(
+		metadata.NewOutgoingContext(ctx, md),
+		&grpc.StreamDesc{
+			ClientStreams: true,
+			ServerStreams: true,
+		},
+		grpcPeer.clientConn,
+		fullMethod,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return newClientStream(ctx, request, clientStream), nil
+}

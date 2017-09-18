@@ -24,7 +24,6 @@
 package lib
 
 import (
-	"fmt"
 	"strings"
 	"text/template"
 
@@ -48,10 +47,42 @@ import (
 // {{$service.GetName}}YARPCClient is the YARPC client-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}YARPCClient interface {
 	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error)
-	{{end}}
-	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (yarpc.Ack, error)
+	{{end}}{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) (yarpc.Ack, error)
+	{{end}}{{range $method := clientStreamingMethods $service}}{{$method.GetName}}(context.Context, ...yarpc.CallOption) ({{$service.GetName}}Service{{$method.GetName}}YARPCClient, error)
+	{{end}}{{range $method := serverStreamingMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}, ...yarpc.CallOption) ({{$service.GetName}}Service{{$method.GetName}}YARPCClient, error)
+	{{end}}{{range $method := clientServerStreamingMethods $service}}{{$method.GetName}}(context.Context, ...yarpc.CallOption) ({{$service.GetName}}Service{{$method.GetName}}YARPCClient, error)
 	{{end}}
 }
+
+{{range $method := clientStreamingMethods $service}}
+// {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives the single {{$method.ResponseType.GoType $packagePath}} when sending is done.
+type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
+	Context() context.Context
+	Request() *transport.Request
+	Send(*{{$method.RequestType.GoType $packagePath}}) error
+	CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+}
+{{end}}
+
+{{range $method := serverStreamingMethods $service}}
+// {{$service.GetName}}Service{{$method.GetName}}YARPCClient receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
+type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
+	Context() context.Context
+	Request() *transport.Request
+	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+}
+{{end}}
+
+{{range $method := clientServerStreamingMethods $service}}
+// {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
+type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
+	Context() context.Context
+	Request() *transport.Request
+	Send(*{{$method.RequestType.GoType $packagePath}}) error
+	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
+	CloseSend() error
+}
+{{end}}
 
 // New{{$service.GetName}}YARPCClient builds a new YARPC client for the {{$service.GetName}} service.
 func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, options ...protobuf.ClientOption) {{$service.GetName}}YARPCClient {
@@ -67,10 +98,40 @@ func New{{$service.GetName}}YARPCClient(clientConfig transport.ClientConfig, opt
 // {{$service.GetName}}YARPCServer is the YARPC server-side interface for the {{$service.GetName}} service.
 type {{$service.GetName}}YARPCServer interface {
 	{{range $method := unaryMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) (*{{$method.ResponseType.GoType $packagePath}}, error)
-	{{end}}
-	{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) error
+	{{end}}{{range $method := onewayMethods $service}}{{$method.GetName}}(context.Context, *{{$method.RequestType.GoType $packagePath}}) error
+	{{end}}{{range $method := clientStreamingMethods $service}}{{$method.GetName}}({{$service.GetName}}Service{{$method.GetName}}YARPCServer) (*{{$method.ResponseType.GoType $packagePath}}, error)
+	{{end}}{{range $method := serverStreamingMethods $service}}{{$method.GetName}}(*{{$method.RequestType.GoType $packagePath}}, {{$service.GetName}}Service{{$method.GetName}}YARPCServer) error
+	{{end}}{{range $method := clientServerStreamingMethods $service}}{{$method.GetName}}({{$service.GetName}}Service{{$method.GetName}}YARPCServer) error
 	{{end}}
 }
+
+{{range $method := clientStreamingMethods $service}}
+// {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s.
+type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
+	Context() context.Context
+	Request() *transport.Request
+	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
+}
+{{end}}
+
+{{range $method := serverStreamingMethods $service}}
+// {{$service.GetName}}Service{{$method.GetName}}YARPCServer sends {{$method.ResponseType.GoType $packagePath}}s.
+type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
+	Context() context.Context
+	Request() *transport.Request
+	Send(*{{$method.ResponseType.GoType $packagePath}}) error
+}
+{{end}}
+
+{{range $method := clientServerStreamingMethods $service}}
+// {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s and sends {{$method.ResponseType.GoType $packagePath}}.
+type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
+	Context() context.Context
+	Request() *transport.Request
+	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
+	Send(*{{$method.ResponseType.GoType $packagePath}}) error
+}
+{{end}}
 
 // Build{{$service.GetName}}YARPCProcedures prepares an implementation of the {{$service.GetName}} service for YARPC registration.
 func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCServer) []transport.Procedure {
@@ -84,7 +145,7 @@ func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCSe
 					Handler: protobuf.NewUnaryHandler(
 						protobuf.UnaryHandlerParams{
 							Handle: handler.{{$method.GetName}},
-							NewRequest: new{{$service.GetName}}_{{$method.GetName}}YARPCRequest,
+							NewRequest: new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest,
 						},
 					),
 				},
@@ -96,7 +157,36 @@ func Build{{$service.GetName}}YARPCProcedures(server {{$service.GetName}}YARPCSe
 					Handler: protobuf.NewOnewayHandler(
 						protobuf.OnewayHandlerParams{
 							Handle: handler.{{$method.GetName}},
-							NewRequest: new{{$service.GetName}}_{{$method.GetName}}YARPCRequest,
+							NewRequest: new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest,
+						},
+					),
+				},
+			{{end}}
+			},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{
+			{{range $method := clientServerStreamingMethods $service}}{
+					MethodName: "{{$method.GetName}}",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.{{$method.GetName}},
+						},
+					),
+				},
+			{{end}}
+			{{range $method := serverStreamingMethods $service}}{
+					MethodName: "{{$method.GetName}}",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.{{$method.GetName}},
+						},
+					),
+				},
+			{{end}}
+			{{range $method := clientStreamingMethods $service}}{
+					MethodName: "{{$method.GetName}}",
+					Handler: protobuf.NewStreamHandler(
+						protobuf.StreamHandlerParams{
+							Handle: handler.{{$method.GetName}},
 						},
 					),
 				},
@@ -112,13 +202,13 @@ type _{{$service.GetName}}YARPCCaller struct {
 
 {{range $method := unaryMethods $service}}
 func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (*{{$method.ResponseType.GoType $packagePath}}, error) {
-	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}_{{$method.GetName}}YARPCResponse, options...)
+	responseMessage, err := c.client.Call(ctx, "{{$method.GetName}}", request, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
 	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
 	if !ok {
-		return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}YARPCResponse, responseMessage)
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
 	}
 	return response, err
 }
@@ -126,6 +216,43 @@ func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Conte
 {{range $method := onewayMethods $service}}
 func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) (yarpc.Ack, error) {
 	return c.client.CallOneway(ctx, "{{$method.GetName}}", request, options...)
+}
+{{end}}
+{{range $method := clientStreamingMethods $service}}
+func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, options ...yarpc.CallOption) ({{$service.GetName}}Service{{$method.GetName}}YARPCClient, error) {
+	stream, err := c.client.CallStream(ctx, "{{$method.GetName}}", options...)
+	if err != nil {
+		return nil, err
+	}
+	return &_{{$service.GetName}}Service{{$method.GetName}}YARPCClient{stream: stream}, nil
+}
+{{end}}
+{{range $method := serverStreamingMethods $service}}
+func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, request *{{$method.RequestType.GoType $packagePath}}, options ...yarpc.CallOption) ({{$service.GetName}}Service{{$method.GetName}}YARPCClient, error) {
+	stream, err := c.client.CallStream(ctx, "{{$method.GetName}}", options...)
+	if err != nil {
+		return nil, err
+	}
+	reader, closer, err := protobuf.ToReader(request, stream.Request().Encoding)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := stream.SendMsg(reader); err != nil {
+		return nil, err
+	}
+	return &_{{$service.GetName}}Service{{$method.GetName}}YARPCClient{stream: stream}, nil
+}
+{{end}}
+{{range $method := clientServerStreamingMethods $service}}
+func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Context, options ...yarpc.CallOption) ({{$service.GetName}}Service{{$method.GetName}}YARPCClient, error) {
+	stream, err := c.client.CallStream(ctx, "{{$method.GetName}}", options...)
+	if err != nil {
+		return nil, err
+	}
+	return &_{{$service.GetName}}Service{{$method.GetName}}YARPCClient{stream: stream}, nil
 }
 {{end}}
 
@@ -140,7 +267,7 @@ func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(ctx context.Cont
 	if requestMessage != nil {
 		request, ok = requestMessage.(*{{$method.RequestType.GoType $packagePath}})
 		if !ok {
-			return nil, protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}YARPCRequest, requestMessage)
+			return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, requestMessage)
 		}
 	}
 	response, err := h.server.{{$method.GetName}}(ctx, request)
@@ -157,26 +284,280 @@ func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(ctx context.Cont
 	if requestMessage != nil {
 		request, ok = requestMessage.(*{{$method.RequestType.GoType $packagePath}})
 		if !ok {
-			return protobuf.CastError(empty{{$service.GetName}}_{{$method.GetName}}YARPCRequest, requestMessage)
+			return protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, requestMessage)
 		}
 	}
 	return h.server.{{$method.GetName}}(ctx, request)
 }
 {{end}}
+{{range $method := clientStreamingMethods $service}}
+func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream protobuf.ServerStream) error {
+	response, err := h.server.{{$method.GetName}}(&_{{$service.GetName}}Service{{$method.GetName}}YARPCServer{serverStream: serverStream})
+	if err != nil {
+		return err
+	}
+	reader, closer, err := protobuf.ToReader(response, serverStream.Request().Encoding)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return err
+	}
+	return serverStream.SendMsg(reader)
+}
+{{end}}
+{{range $method := serverStreamingMethods $service}}
+func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream protobuf.ServerStream) error {
+	src, err := serverStream.RecvMsg()
+	if err != nil {
+		return err
+	}
+    requestMessage, err := protobuf.ToProtoMessage(src, serverStream.Request().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
+	if requestMessage == nil {
+		return err
+	}
+	request, ok := requestMessage.(*{{$method.RequestType.GoType $packagePath}})
+	if !ok {
+		return protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, requestMessage)
+	}
+	return h.server.{{$method.GetName}}(request, &_{{$service.GetName}}Service{{$method.GetName}}YARPCServer{serverStream: serverStream})
+}
+{{end}}
+{{range $method := clientServerStreamingMethods $service}}
+func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream protobuf.ServerStream) error {
+	return h.server.{{$method.GetName}}(&_{{$service.GetName}}Service{{$method.GetName}}YARPCServer{serverStream: serverStream})
+}
+{{end}}
+
+{{range $method := clientStreamingMethods $service}}
+type _{{$service.GetName}}Service{{$method.GetName}}YARPCClient struct {
+	stream protobuf.ClientStream
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.Request {
+	return c.stream.Request()
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
+	reader, closer, err := protobuf.ToReader(request, c.stream.Request().Encoding)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return err
+	}
+	return c.stream.SendMsg(reader)
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
+	if err := c.stream.Close(); err != nil { // "Close" the stream first (This is copying what's done in grpc :shrug:)
+		return nil, err
+	}
+
+	src, err := c.stream.RecvMsg()
+	if err != nil {
+		return nil, err
+	}
+    responseMessage, err := protobuf.ToProtoMessage(src, c.stream.Request().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
+	if !ok {
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
+	}
+	return response, err
+}
+{{end}}
+
+{{range $method := serverStreamingMethods $service}}
+type _{{$service.GetName}}Service{{$method.GetName}}YARPCClient struct {
+	stream protobuf.ClientStream
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.Request {
+	return c.stream.Request()
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
+	src, err := c.stream.RecvMsg()
+	if err != nil {
+		return nil, err
+	}
+    responseMessage, err := protobuf.ToProtoMessage(src, c.stream.Request().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
+	if !ok {
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
+	}
+	return response, err
+}
+{{end}}
+
+{{range $method := clientServerStreamingMethods $service}}
+type _{{$service.GetName}}Service{{$method.GetName}}YARPCClient struct {
+	stream protobuf.ClientStream
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() context.Context {
+	return c.stream.Context()
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.Request {
+	return c.stream.Request()
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
+	reader, closer, err := protobuf.ToReader(request, c.stream.Request().Encoding)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return err
+	}
+	return c.stream.SendMsg(reader)
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
+	src, err := c.stream.RecvMsg()
+	if err != nil {
+		return nil, err
+	}
+    responseMessage, err := protobuf.ToProtoMessage(src, c.stream.Request().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
+	if !ok {
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
+	}
+	return response, err
+}
+
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseSend() error {
+	return c.stream.Close()
+}
+{{end}}
+
+{{range $method := clientStreamingMethods $service}}
+type _{{$service.GetName}}Service{{$method.GetName}}YARPCServer struct {
+	serverStream transport.ServerStream
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.Request {
+	return s.serverStream.Request()
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
+	src, err := s.serverStream.RecvMsg()
+	if err != nil {
+		return nil, err
+	}
+    responseMessage, err := protobuf.ToProtoMessage(src, s.serverStream.Request().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*{{$method.RequestType.GoType $packagePath}})
+	if !ok {
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, responseMessage)
+	}
+	return response, err
+}
+{{end}}
+
+{{range $method := serverStreamingMethods $service}}
+type _{{$service.GetName}}Service{{$method.GetName}}YARPCServer struct {
+	serverStream transport.ServerStream
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.Request {
+	return s.serverStream.Request()
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}) error {
+	reader, closer, err := protobuf.ToReader(response, s.serverStream.Request().Encoding)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return err
+	}
+	return s.serverStream.SendMsg(reader)
+}
+{{end}}
+
+{{range $method := clientServerStreamingMethods $service}}
+type _{{$service.GetName}}Service{{$method.GetName}}YARPCServer struct {
+	serverStream protobuf.ServerStream
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() context.Context {
+	return s.serverStream.Context()
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.Request {
+	return s.serverStream.Request()
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
+	src, err := s.serverStream.RecvMsg()
+	if err != nil {
+		return nil, err
+	}
+    responseMessage, err := protobuf.ToProtoMessage(src, s.serverStream.Request().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
+	if responseMessage == nil {
+		return nil, err
+	}
+	response, ok := responseMessage.(*{{$method.RequestType.GoType $packagePath}})
+	if !ok {
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, responseMessage)
+	}
+	return response, err
+}
+
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}) error {
+	reader, closer, err := protobuf.ToReader(response, s.serverStream.Request().Encoding)
+	if closer != nil {
+		defer closer()
+	}
+	if err != nil {
+		return err
+	}
+	return s.serverStream.SendMsg(reader)
+}
+{{end}}
 
 {{range $method := $service.Methods}}
-func new{{$service.GetName}}_{{$method.GetName}}YARPCRequest() proto.Message {
+func new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest() proto.Message {
 	return &{{$method.RequestType.GoType $packagePath}}{}
 }
 
-func new{{$service.GetName}}_{{$method.GetName}}YARPCResponse() proto.Message {
+func new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse() proto.Message {
 	return &{{$method.ResponseType.GoType $packagePath}}{}
 }
 {{end}}
 var (
 {{range $method := $service.Methods}}
-	empty{{$service.GetName}}_{{$method.GetName}}YARPCRequest = &{{$method.RequestType.GoType $packagePath}}{}
-	empty{{$service.GetName}}_{{$method.GetName}}YARPCResponse = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
+	empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest = &{{$method.RequestType.GoType $packagePath}}{}
+	empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse = &{{$method.ResponseType.GoType $packagePath}}{}{{end}}
 )
 {{end}}
 {{if .Services}}func init() { {{range $service := .Services}}
@@ -192,9 +573,12 @@ var (
 var Runner = protoplugin.NewRunner(
 	template.Must(template.New("tmpl").Funcs(
 		template.FuncMap{
-			"unaryMethods":     unaryMethods,
-			"onewayMethods":    onewayMethods,
-			"trimPrefixPeriod": trimPrefixPeriod,
+			"unaryMethods":                 unaryMethods,
+			"onewayMethods":                onewayMethods,
+			"clientStreamingMethods":       clientStreamingMethods,
+			"serverStreamingMethods":       serverStreamingMethods,
+			"clientServerStreamingMethods": clientServerStreamingMethods,
+			"trimPrefixPeriod":             trimPrefixPeriod,
 		}).Parse(tmpl)),
 	checkTemplateInfo,
 	[]string{
@@ -209,13 +593,6 @@ var Runner = protoplugin.NewRunner(
 )
 
 func checkTemplateInfo(templateInfo *protoplugin.TemplateInfo) error {
-	for _, service := range templateInfo.Services {
-		for _, method := range service.Methods {
-			if method.GetClientStreaming() || method.GetServerStreaming() {
-				return fmt.Errorf("yarpc does not support streaming methods and %s:%s is a streaming method", service.GetName(), method.GetName())
-			}
-		}
-	}
 	return nil
 }
 
@@ -233,6 +610,36 @@ func onewayMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) 
 	methods := make([]*protoplugin.Method, 0, len(service.Methods))
 	for _, method := range service.Methods {
 		if !method.GetClientStreaming() && !method.GetServerStreaming() && method.ResponseType.FQMN() == ".uber.yarpc.Oneway" {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
+}
+
+func clientStreamingMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if method.GetClientStreaming() && !method.GetServerStreaming() {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
+}
+
+func serverStreamingMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if !method.GetClientStreaming() && method.GetServerStreaming() {
+			methods = append(methods, method)
+		}
+	}
+	return methods, nil
+}
+
+func clientServerStreamingMethods(service *protoplugin.Service) ([]*protoplugin.Method, error) {
+	methods := make([]*protoplugin.Method, 0, len(service.Methods))
+	for _, method := range service.Methods {
+		if method.GetClientStreaming() && method.GetServerStreaming() {
 			methods = append(methods, method)
 		}
 	}

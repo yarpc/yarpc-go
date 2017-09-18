@@ -107,3 +107,17 @@ func getProtoRequest(ctx context.Context, transportRequest *transport.Request, n
 	}
 	return ctx, call, request, nil
 }
+
+type streamHandler struct {
+	handle func(ServerStream) error
+}
+
+func newStreamHandler(
+	handle func(ServerStream) error,
+) *streamHandler {
+	return &streamHandler{handle}
+}
+
+func (s *streamHandler) HandleStream(stream transport.ServerStream) error {
+	return s.handle(stream)
+}
