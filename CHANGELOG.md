@@ -4,6 +4,8 @@ Releases
 v1.16.0-dev (unreleased)
 --------------------
 
+- ThriftRW Plugin: Added an option to strip TChannel-specific
+  information from Contexts before making outgoing requests.
 - transport/http: Add GrabHeaders option to propagate specific
   headers starting with x- to handlers.
 
