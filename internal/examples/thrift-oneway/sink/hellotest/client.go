@@ -70,11 +70,11 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.Sink(...)
 func (m *MockClient) Sink(
 	ctx context.Context,
-	_Snk *sink.SinkRequest,
+	snkArg *sink.SinkRequest,
 	opts ...yarpc.CallOption,
 ) (ack yarpc.Ack, err error) {
 
-	args := []interface{}{ctx, _Snk}
+	args := []interface{}{ctx, snkArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -88,9 +88,9 @@ func (m *MockClient) Sink(
 
 func (mr *_MockClientRecorder) Sink(
 	ctx interface{},
-	_Snk interface{},
+	snkArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Snk}, opts...)
+	args := append([]interface{}{ctx, snkArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "Sink", args...)
 }

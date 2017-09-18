@@ -50,7 +50,7 @@ type Interface interface {
 		<$context := import "context">
 		<.Name>(
 			ctx <$context>.Context, <range .Arguments>
-			<.Name> <formatType .Type>,<end>
+			<lower .Name> <formatType .Type>,<end>
 			opts ...<$yarpc>.CallOption,
 		)<if .OneWay> (<$yarpc>.Ack, error)
 		<else if .ReturnType> (<formatType .ReturnType>, error)
@@ -97,15 +97,15 @@ type client struct {
 
 func (c client) <.Name>(
 	ctx <$context>.Context, <range .Arguments>
-	_<.Name> <formatType .Type>,<end>
+	<lower .Name>Arg <formatType .Type>,<end>
 	opts ...<$yarpc>.CallOption,
 <if .OneWay>) (<$yarpc>.Ack, error) {
-	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
+	args := <$prefix>Helper.Args(<range .Arguments><lower .Name>Arg, <end>)
 	return c.c.CallOneway(ctx, args, opts...)
 }
 <else>) (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
 	<$wire := import "go.uber.org/thriftrw/wire">
-	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
+	args := <$prefix>Helper.Args(<range .Arguments><lower .Name>Arg, <end>)
 
 	<if $sanitize>ctx = <import "github.com/uber/tchannel-go">.WithoutHeaders(ctx)<end>
 	var body <$wire>.Value

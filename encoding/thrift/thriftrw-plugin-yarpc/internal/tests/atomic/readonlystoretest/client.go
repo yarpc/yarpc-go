@@ -49,11 +49,11 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.Integer(...)
 func (m *MockClient) Integer(
 	ctx context.Context,
-	_Key *string,
+	keyArg *string,
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
 
-	args := []interface{}{ctx, _Key}
+	args := []interface{}{ctx, keyArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -67,10 +67,10 @@ func (m *MockClient) Integer(
 
 func (mr *_MockClientRecorder) Integer(
 	ctx interface{},
-	_Key interface{},
+	keyArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Key}, opts...)
+	args := append([]interface{}{ctx, keyArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "Integer", args...)
 }
 

@@ -37,127 +37,127 @@ import (
 type Interface interface {
 	TestBinary(
 		ctx context.Context,
-		Thing []byte,
+		thing []byte,
 		opts ...yarpc.CallOption,
 	) ([]byte, error)
 
 	TestByte(
 		ctx context.Context,
-		Thing *int8,
+		thing *int8,
 		opts ...yarpc.CallOption,
 	) (int8, error)
 
 	TestDouble(
 		ctx context.Context,
-		Thing *float64,
+		thing *float64,
 		opts ...yarpc.CallOption,
 	) (float64, error)
 
 	TestEnum(
 		ctx context.Context,
-		Thing *gauntlet.Numberz,
+		thing *gauntlet.Numberz,
 		opts ...yarpc.CallOption,
 	) (gauntlet.Numberz, error)
 
 	TestException(
 		ctx context.Context,
-		Arg *string,
+		arg *string,
 		opts ...yarpc.CallOption,
 	) error
 
 	TestI32(
 		ctx context.Context,
-		Thing *int32,
+		thing *int32,
 		opts ...yarpc.CallOption,
 	) (int32, error)
 
 	TestI64(
 		ctx context.Context,
-		Thing *int64,
+		thing *int64,
 		opts ...yarpc.CallOption,
 	) (int64, error)
 
 	TestInsanity(
 		ctx context.Context,
-		Argument *gauntlet.Insanity,
+		argument *gauntlet.Insanity,
 		opts ...yarpc.CallOption,
 	) (map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, error)
 
 	TestList(
 		ctx context.Context,
-		Thing []int32,
+		thing []int32,
 		opts ...yarpc.CallOption,
 	) ([]int32, error)
 
 	TestMap(
 		ctx context.Context,
-		Thing map[int32]int32,
+		thing map[int32]int32,
 		opts ...yarpc.CallOption,
 	) (map[int32]int32, error)
 
 	TestMapMap(
 		ctx context.Context,
-		Hello *int32,
+		hello *int32,
 		opts ...yarpc.CallOption,
 	) (map[int32]map[int32]int32, error)
 
 	TestMulti(
 		ctx context.Context,
-		Arg0 *int8,
-		Arg1 *int32,
-		Arg2 *int64,
-		Arg3 map[int16]string,
-		Arg4 *gauntlet.Numberz,
-		Arg5 *gauntlet.UserId,
+		arg0 *int8,
+		arg1 *int32,
+		arg2 *int64,
+		arg3 map[int16]string,
+		arg4 *gauntlet.Numberz,
+		arg5 *gauntlet.UserId,
 		opts ...yarpc.CallOption,
 	) (*gauntlet.Xtruct, error)
 
 	TestMultiException(
 		ctx context.Context,
-		Arg0 *string,
-		Arg1 *string,
+		arg0 *string,
+		arg1 *string,
 		opts ...yarpc.CallOption,
 	) (*gauntlet.Xtruct, error)
 
 	TestNest(
 		ctx context.Context,
-		Thing *gauntlet.Xtruct2,
+		thing *gauntlet.Xtruct2,
 		opts ...yarpc.CallOption,
 	) (*gauntlet.Xtruct2, error)
 
 	TestOneway(
 		ctx context.Context,
-		SecondsToSleep *int32,
+		secondstosleep *int32,
 		opts ...yarpc.CallOption,
 	) (yarpc.Ack, error)
 
 	TestSet(
 		ctx context.Context,
-		Thing map[int32]struct{},
+		thing map[int32]struct{},
 		opts ...yarpc.CallOption,
 	) (map[int32]struct{}, error)
 
 	TestString(
 		ctx context.Context,
-		Thing *string,
+		thing *string,
 		opts ...yarpc.CallOption,
 	) (string, error)
 
 	TestStringMap(
 		ctx context.Context,
-		Thing map[string]string,
+		thing map[string]string,
 		opts ...yarpc.CallOption,
 	) (map[string]string, error)
 
 	TestStruct(
 		ctx context.Context,
-		Thing *gauntlet.Xtruct,
+		thing *gauntlet.Xtruct,
 		opts ...yarpc.CallOption,
 	) (*gauntlet.Xtruct, error)
 
 	TestTypedef(
 		ctx context.Context,
-		Thing *gauntlet.UserId,
+		thing *gauntlet.UserId,
 		opts ...yarpc.CallOption,
 	) (gauntlet.UserId, error)
 
@@ -193,11 +193,11 @@ type client struct {
 
 func (c client) TestBinary(
 	ctx context.Context,
-	_Thing []byte,
+	thingArg []byte,
 	opts ...yarpc.CallOption,
 ) (success []byte, err error) {
 
-	args := gauntlet.ThriftTest_TestBinary_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestBinary_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -216,11 +216,11 @@ func (c client) TestBinary(
 
 func (c client) TestByte(
 	ctx context.Context,
-	_Thing *int8,
+	thingArg *int8,
 	opts ...yarpc.CallOption,
 ) (success int8, err error) {
 
-	args := gauntlet.ThriftTest_TestByte_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestByte_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -239,11 +239,11 @@ func (c client) TestByte(
 
 func (c client) TestDouble(
 	ctx context.Context,
-	_Thing *float64,
+	thingArg *float64,
 	opts ...yarpc.CallOption,
 ) (success float64, err error) {
 
-	args := gauntlet.ThriftTest_TestDouble_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestDouble_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -262,11 +262,11 @@ func (c client) TestDouble(
 
 func (c client) TestEnum(
 	ctx context.Context,
-	_Thing *gauntlet.Numberz,
+	thingArg *gauntlet.Numberz,
 	opts ...yarpc.CallOption,
 ) (success gauntlet.Numberz, err error) {
 
-	args := gauntlet.ThriftTest_TestEnum_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestEnum_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -285,11 +285,11 @@ func (c client) TestEnum(
 
 func (c client) TestException(
 	ctx context.Context,
-	_Arg *string,
+	argArg *string,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := gauntlet.ThriftTest_TestException_Helper.Args(_Arg)
+	args := gauntlet.ThriftTest_TestException_Helper.Args(argArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -308,11 +308,11 @@ func (c client) TestException(
 
 func (c client) TestI32(
 	ctx context.Context,
-	_Thing *int32,
+	thingArg *int32,
 	opts ...yarpc.CallOption,
 ) (success int32, err error) {
 
-	args := gauntlet.ThriftTest_TestI32_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestI32_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -331,11 +331,11 @@ func (c client) TestI32(
 
 func (c client) TestI64(
 	ctx context.Context,
-	_Thing *int64,
+	thingArg *int64,
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
 
-	args := gauntlet.ThriftTest_TestI64_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestI64_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -354,11 +354,11 @@ func (c client) TestI64(
 
 func (c client) TestInsanity(
 	ctx context.Context,
-	_Argument *gauntlet.Insanity,
+	argumentArg *gauntlet.Insanity,
 	opts ...yarpc.CallOption,
 ) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, err error) {
 
-	args := gauntlet.ThriftTest_TestInsanity_Helper.Args(_Argument)
+	args := gauntlet.ThriftTest_TestInsanity_Helper.Args(argumentArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -377,11 +377,11 @@ func (c client) TestInsanity(
 
 func (c client) TestList(
 	ctx context.Context,
-	_Thing []int32,
+	thingArg []int32,
 	opts ...yarpc.CallOption,
 ) (success []int32, err error) {
 
-	args := gauntlet.ThriftTest_TestList_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestList_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -400,11 +400,11 @@ func (c client) TestList(
 
 func (c client) TestMap(
 	ctx context.Context,
-	_Thing map[int32]int32,
+	thingArg map[int32]int32,
 	opts ...yarpc.CallOption,
 ) (success map[int32]int32, err error) {
 
-	args := gauntlet.ThriftTest_TestMap_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestMap_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -423,11 +423,11 @@ func (c client) TestMap(
 
 func (c client) TestMapMap(
 	ctx context.Context,
-	_Hello *int32,
+	helloArg *int32,
 	opts ...yarpc.CallOption,
 ) (success map[int32]map[int32]int32, err error) {
 
-	args := gauntlet.ThriftTest_TestMapMap_Helper.Args(_Hello)
+	args := gauntlet.ThriftTest_TestMapMap_Helper.Args(helloArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -446,16 +446,16 @@ func (c client) TestMapMap(
 
 func (c client) TestMulti(
 	ctx context.Context,
-	_Arg0 *int8,
-	_Arg1 *int32,
-	_Arg2 *int64,
-	_Arg3 map[int16]string,
-	_Arg4 *gauntlet.Numberz,
-	_Arg5 *gauntlet.UserId,
+	arg0Arg *int8,
+	arg1Arg *int32,
+	arg2Arg *int64,
+	arg3Arg map[int16]string,
+	arg4Arg *gauntlet.Numberz,
+	arg5Arg *gauntlet.UserId,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
-	args := gauntlet.ThriftTest_TestMulti_Helper.Args(_Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5)
+	args := gauntlet.ThriftTest_TestMulti_Helper.Args(arg0Arg, arg1Arg, arg2Arg, arg3Arg, arg4Arg, arg5Arg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -474,12 +474,12 @@ func (c client) TestMulti(
 
 func (c client) TestMultiException(
 	ctx context.Context,
-	_Arg0 *string,
-	_Arg1 *string,
+	arg0Arg *string,
+	arg1Arg *string,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
-	args := gauntlet.ThriftTest_TestMultiException_Helper.Args(_Arg0, _Arg1)
+	args := gauntlet.ThriftTest_TestMultiException_Helper.Args(arg0Arg, arg1Arg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -498,11 +498,11 @@ func (c client) TestMultiException(
 
 func (c client) TestNest(
 	ctx context.Context,
-	_Thing *gauntlet.Xtruct2,
+	thingArg *gauntlet.Xtruct2,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct2, err error) {
 
-	args := gauntlet.ThriftTest_TestNest_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestNest_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -521,20 +521,20 @@ func (c client) TestNest(
 
 func (c client) TestOneway(
 	ctx context.Context,
-	_SecondsToSleep *int32,
+	secondstosleepArg *int32,
 	opts ...yarpc.CallOption,
 ) (yarpc.Ack, error) {
-	args := gauntlet.ThriftTest_TestOneway_Helper.Args(_SecondsToSleep)
+	args := gauntlet.ThriftTest_TestOneway_Helper.Args(secondstosleepArg)
 	return c.c.CallOneway(ctx, args, opts...)
 }
 
 func (c client) TestSet(
 	ctx context.Context,
-	_Thing map[int32]struct{},
+	thingArg map[int32]struct{},
 	opts ...yarpc.CallOption,
 ) (success map[int32]struct{}, err error) {
 
-	args := gauntlet.ThriftTest_TestSet_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestSet_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -553,11 +553,11 @@ func (c client) TestSet(
 
 func (c client) TestString(
 	ctx context.Context,
-	_Thing *string,
+	thingArg *string,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
-	args := gauntlet.ThriftTest_TestString_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestString_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -576,11 +576,11 @@ func (c client) TestString(
 
 func (c client) TestStringMap(
 	ctx context.Context,
-	_Thing map[string]string,
+	thingArg map[string]string,
 	opts ...yarpc.CallOption,
 ) (success map[string]string, err error) {
 
-	args := gauntlet.ThriftTest_TestStringMap_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestStringMap_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -599,11 +599,11 @@ func (c client) TestStringMap(
 
 func (c client) TestStruct(
 	ctx context.Context,
-	_Thing *gauntlet.Xtruct,
+	thingArg *gauntlet.Xtruct,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
-	args := gauntlet.ThriftTest_TestStruct_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestStruct_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -622,11 +622,11 @@ func (c client) TestStruct(
 
 func (c client) TestTypedef(
 	ctx context.Context,
-	_Thing *gauntlet.UserId,
+	thingArg *gauntlet.UserId,
 	opts ...yarpc.CallOption,
 ) (success gauntlet.UserId, err error) {
 
-	args := gauntlet.ThriftTest_TestTypedef_Helper.Args(_Thing)
+	args := gauntlet.ThriftTest_TestTypedef_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

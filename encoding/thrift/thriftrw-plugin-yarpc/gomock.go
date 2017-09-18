@@ -78,12 +78,12 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.<.Name>(...)
 func (m *MockClient) <.Name>(
 	ctx <$context>.Context, <range .Arguments>
-	_<.Name> <formatType .Type>,<end>
+	<lower .Name>Arg <formatType .Type>,<end>
 	opts ...<$yarpc>.CallOption,
 ) <if .OneWay> (ack <$yarpc>.Ack, err error) {
   <else>       (<if .ReturnType>success <formatType .ReturnType>,<end> err error) {
   <end>
-	args := []interface{}{ctx,<range .Arguments> _<.Name>,<end>}
+	args := []interface{}{ctx,<range .Arguments> <lower .Name>Arg,<end>}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -97,10 +97,10 @@ func (m *MockClient) <.Name>(
 
 func (mr *_MockClientRecorder) <.Name>(
 	ctx interface{}, <range .Arguments>
-	_<.Name> interface{},<end>
+	<lower .Name>Arg interface{},<end>
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx,<range .Arguments> _<.Name>,<end>}, opts...)
+	args := append([]interface{}{ctx,<range .Arguments> <lower .Name>Arg,<end>}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "<.Name>", args...)
 }
 <end>

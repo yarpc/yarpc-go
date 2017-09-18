@@ -50,11 +50,11 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.CompareAndSwap(...)
 func (m *MockClient) CompareAndSwap(
 	ctx context.Context,
-	_Request *atomic.CompareAndSwap,
+	requestArg *atomic.CompareAndSwap,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := []interface{}{ctx, _Request}
+	args := []interface{}{ctx, requestArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -66,10 +66,10 @@ func (m *MockClient) CompareAndSwap(
 
 func (mr *_MockClientRecorder) CompareAndSwap(
 	ctx interface{},
-	_Request interface{},
+	requestArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Request}, opts...)
+	args := append([]interface{}{ctx, requestArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "CompareAndSwap", args...)
 }
 
@@ -81,11 +81,11 @@ func (mr *_MockClientRecorder) CompareAndSwap(
 // 	... := client.Forget(...)
 func (m *MockClient) Forget(
 	ctx context.Context,
-	_Key *string,
+	keyArg *string,
 	opts ...yarpc.CallOption,
 ) (ack yarpc.Ack, err error) {
 
-	args := []interface{}{ctx, _Key}
+	args := []interface{}{ctx, keyArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -99,10 +99,10 @@ func (m *MockClient) Forget(
 
 func (mr *_MockClientRecorder) Forget(
 	ctx interface{},
-	_Key interface{},
+	keyArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Key}, opts...)
+	args := append([]interface{}{ctx, keyArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "Forget", args...)
 }
 
@@ -114,12 +114,12 @@ func (mr *_MockClientRecorder) Forget(
 // 	... := client.Increment(...)
 func (m *MockClient) Increment(
 	ctx context.Context,
-	_Key *string,
-	_Value *int64,
+	keyArg *string,
+	valueArg *int64,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := []interface{}{ctx, _Key, _Value}
+	args := []interface{}{ctx, keyArg, valueArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -131,11 +131,11 @@ func (m *MockClient) Increment(
 
 func (mr *_MockClientRecorder) Increment(
 	ctx interface{},
-	_Key interface{},
-	_Value interface{},
+	keyArg interface{},
+	valueArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Key, _Value}, opts...)
+	args := append([]interface{}{ctx, keyArg, valueArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "Increment", args...)
 }
 
@@ -147,11 +147,11 @@ func (mr *_MockClientRecorder) Increment(
 // 	... := client.Integer(...)
 func (m *MockClient) Integer(
 	ctx context.Context,
-	_Key *string,
+	keyArg *string,
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
 
-	args := []interface{}{ctx, _Key}
+	args := []interface{}{ctx, keyArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -165,10 +165,10 @@ func (m *MockClient) Integer(
 
 func (mr *_MockClientRecorder) Integer(
 	ctx interface{},
-	_Key interface{},
+	keyArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Key}, opts...)
+	args := append([]interface{}{ctx, keyArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "Integer", args...)
 }
 

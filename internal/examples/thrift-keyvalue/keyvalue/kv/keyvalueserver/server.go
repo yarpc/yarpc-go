@@ -35,13 +35,13 @@ import (
 type Interface interface {
 	GetValue(
 		ctx context.Context,
-		Key *string,
+		key *string,
 	) (string, error)
 
 	SetValue(
 		ctx context.Context,
-		Key *string,
-		Value *string,
+		key *string,
+		value *string,
 	) error
 }
 
@@ -63,7 +63,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.GetValue),
 				},
-				Signature:    "GetValue(Key *string) (string)",
+				Signature:    "GetValue(key *string) (string)",
 				ThriftModule: kv.ThriftModule,
 			},
 
@@ -74,7 +74,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.SetValue),
 				},
-				Signature:    "SetValue(Key *string, Value *string)",
+				Signature:    "SetValue(key *string, value *string)",
 				ThriftModule: kv.ThriftModule,
 			},
 		},

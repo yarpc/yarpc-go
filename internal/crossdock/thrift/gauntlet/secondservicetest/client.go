@@ -98,11 +98,11 @@ func (mr *_MockClientRecorder) BlahBlah(
 // 	... := client.SecondtestString(...)
 func (m *MockClient) SecondtestString(
 	ctx context.Context,
-	_Thing *string,
+	thingArg *string,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -116,9 +116,9 @@ func (m *MockClient) SecondtestString(
 
 func (mr *_MockClientRecorder) SecondtestString(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "SecondtestString", args...)
 }
