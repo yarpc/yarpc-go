@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.16.0-dev (unreleased)
+v1.16.0 (2017-09-18)
 --------------------
 
 -   ThriftRW Plugin: Added an option to strip TChannel-specific
