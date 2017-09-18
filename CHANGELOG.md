@@ -6,6 +6,8 @@ v1.16.0-dev (unreleased)
 
 -   ThriftRW Plugin: Added an option to strip TChannel-specific
     information from Contexts before making outgoing requests.
+-   x/retry: Fix bug where large TChannel responses would cause errors in retries.
+
 
 
 v1.15.0 (2017-09-15)

@@ -23,6 +23,7 @@ package outboundtest
 import (
 	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"time"
 
@@ -102,10 +103,12 @@ type OutboundEvent struct {
 	WaitForTimeout bool
 
 	// Attributes put into the transport.Response object.
-	GiveError            error
-	GiveApplicationError bool
-	GiveRespHeaders      transport.Headers
-	GiveRespBody         string
+	GiveError              error
+	GiveApplicationError   bool
+	GiveRespHeaders        transport.Headers
+	GiveRespBody           string
+	GiveRespBodyReadError  error
+	GiveRespBodyCloseError error
 }
 
 // Call will validate a single call to the outbound event based on
@@ -153,7 +156,11 @@ func (e *OutboundEvent) Call(ctx context.Context, t require.TestingT, req *trans
 	}
 
 	return &transport.Response{
-		Body:             ioutil.NopCloser(bytes.NewBuffer([]byte(e.GiveRespBody))),
+		Body: &customRespBody{
+			Body:       bytes.NewBuffer([]byte(e.GiveRespBody)),
+			ReadError:  e.GiveRespBodyReadError,
+			CloseError: e.GiveRespBodyCloseError,
+		},
 		Headers:          e.GiveRespHeaders,
 		ApplicationError: e.GiveApplicationError,
 	}, e.GiveError
@@ -163,4 +170,26 @@ func assertEqualIfSet(t require.TestingT, want, got string, msgAndArgs ...interf
 	if want != "" {
 		assert.Equal(t, want, got, msgAndArgs...)
 	}
+}
+
+type customRespBody struct {
+	Body       io.Reader
+	ReadError  error
+	CloseError error
+}
+
+// Read implements io.Reader
+func (c *customRespBody) Read(p []byte) (n int, err error) {
+	if c.ReadError != nil {
+		return 0, c.ReadError
+	}
+	return c.Body.Read(p)
+}
+
+// Close implements io.Closer
+func (c *customRespBody) Close() error {
+	if c.CloseError != nil {
+		return c.CloseError
+	}
+	return nil
 }

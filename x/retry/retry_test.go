@@ -22,6 +22,7 @@ package retry
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 	"time"
 
@@ -147,6 +148,55 @@ func TestMiddleware(t *testing.T) {
 					wantAttempts(2),
 					wantSuccesses(1),
 					wantRetriesWithError(yarpcerrors.CodeInternal, 1),
+				),
+			},
+		},
+		{
+			msg: "retry from resp body ReadCloser errors",
+			policyProvider: newPolicyProviderBuilder().setDefault(
+				NewPolicy(
+					Retries(2),
+					MaxRequestTimeout(testtime.Millisecond*500),
+				),
+			).provider,
+			actions: []MiddlewareAction{
+				RequestAction{
+					request: &transport.Request{
+						Service:   "serv",
+						Procedure: "proc",
+						Body:      bytes.NewBufferString("body"),
+					},
+					reqTimeout: testtime.Second,
+					events: []*OutboundEvent{
+						{
+							WantService:           "serv",
+							WantProcedure:         "proc",
+							WantBody:              "body",
+							GiveRespBodyReadError: errors.New("unknown error"),
+						},
+						{
+							WantService:            "serv",
+							WantProcedure:          "proc",
+							WantBody:               "body",
+							GiveRespBodyCloseError: errors.New("unknown error"),
+						},
+						{
+							WantService:   "serv",
+							WantProcedure: "proc",
+							WantBody:      "body",
+							GiveRespBody:  "respbody",
+						},
+					},
+					wantBody: "respbody",
+				},
+			},
+			assertions: []counterAssertion{
+				edgeAssertion(
+					service("serv"),
+					procedure("proc"),
+					wantAttempts(3),
+					wantSuccesses(1),
+					wantRetriesWithErrorString(_unknownErrorName, 2),
 				),
 			},
 		},
@@ -1208,6 +1258,12 @@ func wantSuccesses(n int) counterOption {
 func wantRetriesWithError(error yarpcerrors.Code, n int) counterOption {
 	return counterOptionFunc(func(opts *counterOpts) {
 		opts.wantRetryWithError[error.String()] = n
+	})
+}
+
+func wantRetriesWithErrorString(errorString string, n int) counterOption {
+	return counterOptionFunc(func(opts *counterOpts) {
+		opts.wantRetryWithError[errorString] = n
 	})
 }
 
