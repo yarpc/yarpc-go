@@ -38,12 +38,12 @@ func TestBuffers(t *testing.T) {
 			for i := 0; i < 100; i++ {
 				buf := NewBufferCloser()
 				b := make([]byte, 1)
-				n, readErr := buf.Read(b)
+				n, err := buf.Read(b)
 				assert.Equal(t, 0, n, "expected empty buffer")
-				assert.Equal(t, io.EOF, readErr, "expected empty buffer")
+				assert.Equal(t, io.EOF, err, "expected empty buffer")
 
 				bytesOfNoise := make([]byte, rand.Intn(5000))
-				_, err := rand.Read(bytesOfNoise)
+				_, err = rand.Read(bytesOfNoise)
 				assert.NoError(t, err, "Unexpected error from rand.Read")
 				_, err = buf.ReadFrom(bytes.NewReader(bytesOfNoise))
 				assert.NoError(t, err, "Unexpected error from buf.ReadFrom")
