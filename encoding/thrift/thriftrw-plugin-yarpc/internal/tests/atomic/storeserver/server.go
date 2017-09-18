@@ -18,18 +18,18 @@ type Interface interface {
 
 	CompareAndSwap(
 		ctx context.Context,
-		Request *atomic.CompareAndSwap,
+		request *atomic.CompareAndSwap,
 	) error
 
 	Forget(
 		ctx context.Context,
-		Key *string,
+		key *string,
 	) error
 
 	Increment(
 		ctx context.Context,
-		Key *string,
-		Value *int64,
+		key *string,
+		value *int64,
 	) error
 }
 
@@ -51,7 +51,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.CompareAndSwap),
 				},
-				Signature:    "CompareAndSwap(Request *atomic.CompareAndSwap)",
+				Signature:    "CompareAndSwap(request *atomic.CompareAndSwap)",
 				ThriftModule: atomic.ThriftModule,
 			},
 
@@ -62,7 +62,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Forget),
 				},
-				Signature:    "Forget(Key *string)",
+				Signature:    "Forget(key *string)",
 				ThriftModule: atomic.ThriftModule,
 			},
 
@@ -73,7 +73,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Increment),
 				},
-				Signature:    "Increment(Key *string, Value *int64)",
+				Signature:    "Increment(key *string, value *int64)",
 				ThriftModule: atomic.ThriftModule,
 			},
 		},

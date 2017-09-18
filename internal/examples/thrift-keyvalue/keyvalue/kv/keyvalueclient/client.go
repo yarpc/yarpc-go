@@ -37,14 +37,14 @@ import (
 type Interface interface {
 	GetValue(
 		ctx context.Context,
-		Key *string,
+		key *string,
 		opts ...yarpc.CallOption,
 	) (string, error)
 
 	SetValue(
 		ctx context.Context,
-		Key *string,
-		Value *string,
+		key *string,
+		value *string,
 		opts ...yarpc.CallOption,
 	) error
 }
@@ -75,11 +75,11 @@ type client struct {
 
 func (c client) GetValue(
 	ctx context.Context,
-	_Key *string,
+	keyArg *string,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
-	args := kv.KeyValue_GetValue_Helper.Args(_Key)
+	args := kv.KeyValue_GetValue_Helper.Args(keyArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -98,12 +98,12 @@ func (c client) GetValue(
 
 func (c client) SetValue(
 	ctx context.Context,
-	_Key *string,
-	_Value *string,
+	keyArg *string,
+	valueArg *string,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := kv.KeyValue_SetValue_Helper.Args(_Key, _Value)
+	args := kv.KeyValue_SetValue_Helper.Args(keyArg, valueArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

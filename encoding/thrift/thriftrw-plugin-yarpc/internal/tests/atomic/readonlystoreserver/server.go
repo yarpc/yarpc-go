@@ -18,7 +18,7 @@ type Interface interface {
 
 	Integer(
 		ctx context.Context,
-		Key *string,
+		key *string,
 	) (int64, error)
 }
 
@@ -40,7 +40,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.Integer),
 				},
-				Signature:    "Integer(Key *string) (int64)",
+				Signature:    "Integer(key *string) (int64)",
 				ThriftModule: atomic.ThriftModule,
 			},
 		},

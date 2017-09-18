@@ -20,20 +20,20 @@ type Interface interface {
 
 	CompareAndSwap(
 		ctx context.Context,
-		Request *atomic.CompareAndSwap,
+		request *atomic.CompareAndSwap,
 		opts ...yarpc.CallOption,
 	) error
 
 	Forget(
 		ctx context.Context,
-		Key *string,
+		key *string,
 		opts ...yarpc.CallOption,
 	) (yarpc.Ack, error)
 
 	Increment(
 		ctx context.Context,
-		Key *string,
-		Value *int64,
+		key *string,
+		value *int64,
 		opts ...yarpc.CallOption,
 	) error
 }
@@ -67,11 +67,11 @@ type client struct {
 
 func (c client) CompareAndSwap(
 	ctx context.Context,
-	_Request *atomic.CompareAndSwap,
+	requestArg *atomic.CompareAndSwap,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := atomic.Store_CompareAndSwap_Helper.Args(_Request)
+	args := atomic.Store_CompareAndSwap_Helper.Args(requestArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -90,21 +90,21 @@ func (c client) CompareAndSwap(
 
 func (c client) Forget(
 	ctx context.Context,
-	_Key *string,
+	keyArg *string,
 	opts ...yarpc.CallOption,
 ) (yarpc.Ack, error) {
-	args := atomic.Store_Forget_Helper.Args(_Key)
+	args := atomic.Store_Forget_Helper.Args(keyArg)
 	return c.c.CallOneway(ctx, args, opts...)
 }
 
 func (c client) Increment(
 	ctx context.Context,
-	_Key *string,
-	_Value *int64,
+	keyArg *string,
+	valueArg *int64,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := atomic.Store_Increment_Helper.Args(_Key, _Value)
+	args := atomic.Store_Increment_Helper.Args(keyArg, valueArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

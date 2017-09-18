@@ -37,7 +37,7 @@ import (
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		Ping *echo.Ping,
+		ping *echo.Ping,
 		opts ...yarpc.CallOption,
 	) (*echo.Pong, error)
 }
@@ -68,11 +68,11 @@ type client struct {
 
 func (c client) Echo(
 	ctx context.Context,
-	_Ping *echo.Ping,
+	pingArg *echo.Ping,
 	opts ...yarpc.CallOption,
 ) (success *echo.Pong, err error) {
 
-	args := echo.Echo_Echo_Helper.Args(_Ping)
+	args := echo.Echo_Echo_Helper.Args(pingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

@@ -37,7 +37,7 @@ import (
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		Echo *echo.EchoRequest,
+		echo *echo.EchoRequest,
 		opts ...yarpc.CallOption,
 	) (*echo.EchoResponse, error)
 }
@@ -68,11 +68,11 @@ type client struct {
 
 func (c client) Echo(
 	ctx context.Context,
-	_Echo *echo.EchoRequest,
+	echoArg *echo.EchoRequest,
 	opts ...yarpc.CallOption,
 ) (success *echo.EchoResponse, err error) {
 
-	args := echo.Hello_Echo_Helper.Args(_Echo)
+	args := echo.Hello_Echo_Helper.Args(echoArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

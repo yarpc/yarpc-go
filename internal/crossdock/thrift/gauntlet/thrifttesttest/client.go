@@ -70,11 +70,11 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.TestBinary(...)
 func (m *MockClient) TestBinary(
 	ctx context.Context,
-	_Thing []byte,
+	thingArg []byte,
 	opts ...yarpc.CallOption,
 ) (success []byte, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -88,10 +88,10 @@ func (m *MockClient) TestBinary(
 
 func (mr *_MockClientRecorder) TestBinary(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestBinary", args...)
 }
 
@@ -103,11 +103,11 @@ func (mr *_MockClientRecorder) TestBinary(
 // 	... := client.TestByte(...)
 func (m *MockClient) TestByte(
 	ctx context.Context,
-	_Thing *int8,
+	thingArg *int8,
 	opts ...yarpc.CallOption,
 ) (success int8, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -121,10 +121,10 @@ func (m *MockClient) TestByte(
 
 func (mr *_MockClientRecorder) TestByte(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestByte", args...)
 }
 
@@ -136,11 +136,11 @@ func (mr *_MockClientRecorder) TestByte(
 // 	... := client.TestDouble(...)
 func (m *MockClient) TestDouble(
 	ctx context.Context,
-	_Thing *float64,
+	thingArg *float64,
 	opts ...yarpc.CallOption,
 ) (success float64, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -154,10 +154,10 @@ func (m *MockClient) TestDouble(
 
 func (mr *_MockClientRecorder) TestDouble(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestDouble", args...)
 }
 
@@ -169,11 +169,11 @@ func (mr *_MockClientRecorder) TestDouble(
 // 	... := client.TestEnum(...)
 func (m *MockClient) TestEnum(
 	ctx context.Context,
-	_Thing *gauntlet.Numberz,
+	thingArg *gauntlet.Numberz,
 	opts ...yarpc.CallOption,
 ) (success gauntlet.Numberz, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -187,10 +187,10 @@ func (m *MockClient) TestEnum(
 
 func (mr *_MockClientRecorder) TestEnum(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestEnum", args...)
 }
 
@@ -202,11 +202,11 @@ func (mr *_MockClientRecorder) TestEnum(
 // 	... := client.TestException(...)
 func (m *MockClient) TestException(
 	ctx context.Context,
-	_Arg *string,
+	argArg *string,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := []interface{}{ctx, _Arg}
+	args := []interface{}{ctx, argArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -218,10 +218,10 @@ func (m *MockClient) TestException(
 
 func (mr *_MockClientRecorder) TestException(
 	ctx interface{},
-	_Arg interface{},
+	argArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Arg}, opts...)
+	args := append([]interface{}{ctx, argArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestException", args...)
 }
 
@@ -233,11 +233,11 @@ func (mr *_MockClientRecorder) TestException(
 // 	... := client.TestI32(...)
 func (m *MockClient) TestI32(
 	ctx context.Context,
-	_Thing *int32,
+	thingArg *int32,
 	opts ...yarpc.CallOption,
 ) (success int32, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -251,10 +251,10 @@ func (m *MockClient) TestI32(
 
 func (mr *_MockClientRecorder) TestI32(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestI32", args...)
 }
 
@@ -266,11 +266,11 @@ func (mr *_MockClientRecorder) TestI32(
 // 	... := client.TestI64(...)
 func (m *MockClient) TestI64(
 	ctx context.Context,
-	_Thing *int64,
+	thingArg *int64,
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -284,10 +284,10 @@ func (m *MockClient) TestI64(
 
 func (mr *_MockClientRecorder) TestI64(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestI64", args...)
 }
 
@@ -299,11 +299,11 @@ func (mr *_MockClientRecorder) TestI64(
 // 	... := client.TestInsanity(...)
 func (m *MockClient) TestInsanity(
 	ctx context.Context,
-	_Argument *gauntlet.Insanity,
+	argumentArg *gauntlet.Insanity,
 	opts ...yarpc.CallOption,
 ) (success map[gauntlet.UserId]map[gauntlet.Numberz]*gauntlet.Insanity, err error) {
 
-	args := []interface{}{ctx, _Argument}
+	args := []interface{}{ctx, argumentArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -317,10 +317,10 @@ func (m *MockClient) TestInsanity(
 
 func (mr *_MockClientRecorder) TestInsanity(
 	ctx interface{},
-	_Argument interface{},
+	argumentArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Argument}, opts...)
+	args := append([]interface{}{ctx, argumentArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestInsanity", args...)
 }
 
@@ -332,11 +332,11 @@ func (mr *_MockClientRecorder) TestInsanity(
 // 	... := client.TestList(...)
 func (m *MockClient) TestList(
 	ctx context.Context,
-	_Thing []int32,
+	thingArg []int32,
 	opts ...yarpc.CallOption,
 ) (success []int32, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -350,10 +350,10 @@ func (m *MockClient) TestList(
 
 func (mr *_MockClientRecorder) TestList(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestList", args...)
 }
 
@@ -365,11 +365,11 @@ func (mr *_MockClientRecorder) TestList(
 // 	... := client.TestMap(...)
 func (m *MockClient) TestMap(
 	ctx context.Context,
-	_Thing map[int32]int32,
+	thingArg map[int32]int32,
 	opts ...yarpc.CallOption,
 ) (success map[int32]int32, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -383,10 +383,10 @@ func (m *MockClient) TestMap(
 
 func (mr *_MockClientRecorder) TestMap(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestMap", args...)
 }
 
@@ -398,11 +398,11 @@ func (mr *_MockClientRecorder) TestMap(
 // 	... := client.TestMapMap(...)
 func (m *MockClient) TestMapMap(
 	ctx context.Context,
-	_Hello *int32,
+	helloArg *int32,
 	opts ...yarpc.CallOption,
 ) (success map[int32]map[int32]int32, err error) {
 
-	args := []interface{}{ctx, _Hello}
+	args := []interface{}{ctx, helloArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -416,10 +416,10 @@ func (m *MockClient) TestMapMap(
 
 func (mr *_MockClientRecorder) TestMapMap(
 	ctx interface{},
-	_Hello interface{},
+	helloArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Hello}, opts...)
+	args := append([]interface{}{ctx, helloArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestMapMap", args...)
 }
 
@@ -431,16 +431,16 @@ func (mr *_MockClientRecorder) TestMapMap(
 // 	... := client.TestMulti(...)
 func (m *MockClient) TestMulti(
 	ctx context.Context,
-	_Arg0 *int8,
-	_Arg1 *int32,
-	_Arg2 *int64,
-	_Arg3 map[int16]string,
-	_Arg4 *gauntlet.Numberz,
-	_Arg5 *gauntlet.UserId,
+	arg0Arg *int8,
+	arg1Arg *int32,
+	arg2Arg *int64,
+	arg3Arg map[int16]string,
+	arg4Arg *gauntlet.Numberz,
+	arg5Arg *gauntlet.UserId,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
-	args := []interface{}{ctx, _Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5}
+	args := []interface{}{ctx, arg0Arg, arg1Arg, arg2Arg, arg3Arg, arg4Arg, arg5Arg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -454,15 +454,15 @@ func (m *MockClient) TestMulti(
 
 func (mr *_MockClientRecorder) TestMulti(
 	ctx interface{},
-	_Arg0 interface{},
-	_Arg1 interface{},
-	_Arg2 interface{},
-	_Arg3 interface{},
-	_Arg4 interface{},
-	_Arg5 interface{},
+	arg0Arg interface{},
+	arg1Arg interface{},
+	arg2Arg interface{},
+	arg3Arg interface{},
+	arg4Arg interface{},
+	arg5Arg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Arg0, _Arg1, _Arg2, _Arg3, _Arg4, _Arg5}, opts...)
+	args := append([]interface{}{ctx, arg0Arg, arg1Arg, arg2Arg, arg3Arg, arg4Arg, arg5Arg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestMulti", args...)
 }
 
@@ -474,12 +474,12 @@ func (mr *_MockClientRecorder) TestMulti(
 // 	... := client.TestMultiException(...)
 func (m *MockClient) TestMultiException(
 	ctx context.Context,
-	_Arg0 *string,
-	_Arg1 *string,
+	arg0Arg *string,
+	arg1Arg *string,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
-	args := []interface{}{ctx, _Arg0, _Arg1}
+	args := []interface{}{ctx, arg0Arg, arg1Arg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -493,11 +493,11 @@ func (m *MockClient) TestMultiException(
 
 func (mr *_MockClientRecorder) TestMultiException(
 	ctx interface{},
-	_Arg0 interface{},
-	_Arg1 interface{},
+	arg0Arg interface{},
+	arg1Arg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Arg0, _Arg1}, opts...)
+	args := append([]interface{}{ctx, arg0Arg, arg1Arg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestMultiException", args...)
 }
 
@@ -509,11 +509,11 @@ func (mr *_MockClientRecorder) TestMultiException(
 // 	... := client.TestNest(...)
 func (m *MockClient) TestNest(
 	ctx context.Context,
-	_Thing *gauntlet.Xtruct2,
+	thingArg *gauntlet.Xtruct2,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct2, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -527,10 +527,10 @@ func (m *MockClient) TestNest(
 
 func (mr *_MockClientRecorder) TestNest(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestNest", args...)
 }
 
@@ -542,11 +542,11 @@ func (mr *_MockClientRecorder) TestNest(
 // 	... := client.TestOneway(...)
 func (m *MockClient) TestOneway(
 	ctx context.Context,
-	_SecondsToSleep *int32,
+	secondstosleepArg *int32,
 	opts ...yarpc.CallOption,
 ) (ack yarpc.Ack, err error) {
 
-	args := []interface{}{ctx, _SecondsToSleep}
+	args := []interface{}{ctx, secondstosleepArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -560,10 +560,10 @@ func (m *MockClient) TestOneway(
 
 func (mr *_MockClientRecorder) TestOneway(
 	ctx interface{},
-	_SecondsToSleep interface{},
+	secondstosleepArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _SecondsToSleep}, opts...)
+	args := append([]interface{}{ctx, secondstosleepArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestOneway", args...)
 }
 
@@ -575,11 +575,11 @@ func (mr *_MockClientRecorder) TestOneway(
 // 	... := client.TestSet(...)
 func (m *MockClient) TestSet(
 	ctx context.Context,
-	_Thing map[int32]struct{},
+	thingArg map[int32]struct{},
 	opts ...yarpc.CallOption,
 ) (success map[int32]struct{}, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -593,10 +593,10 @@ func (m *MockClient) TestSet(
 
 func (mr *_MockClientRecorder) TestSet(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestSet", args...)
 }
 
@@ -608,11 +608,11 @@ func (mr *_MockClientRecorder) TestSet(
 // 	... := client.TestString(...)
 func (m *MockClient) TestString(
 	ctx context.Context,
-	_Thing *string,
+	thingArg *string,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -626,10 +626,10 @@ func (m *MockClient) TestString(
 
 func (mr *_MockClientRecorder) TestString(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestString", args...)
 }
 
@@ -641,11 +641,11 @@ func (mr *_MockClientRecorder) TestString(
 // 	... := client.TestStringMap(...)
 func (m *MockClient) TestStringMap(
 	ctx context.Context,
-	_Thing map[string]string,
+	thingArg map[string]string,
 	opts ...yarpc.CallOption,
 ) (success map[string]string, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -659,10 +659,10 @@ func (m *MockClient) TestStringMap(
 
 func (mr *_MockClientRecorder) TestStringMap(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestStringMap", args...)
 }
 
@@ -674,11 +674,11 @@ func (mr *_MockClientRecorder) TestStringMap(
 // 	... := client.TestStruct(...)
 func (m *MockClient) TestStruct(
 	ctx context.Context,
-	_Thing *gauntlet.Xtruct,
+	thingArg *gauntlet.Xtruct,
 	opts ...yarpc.CallOption,
 ) (success *gauntlet.Xtruct, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -692,10 +692,10 @@ func (m *MockClient) TestStruct(
 
 func (mr *_MockClientRecorder) TestStruct(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestStruct", args...)
 }
 
@@ -707,11 +707,11 @@ func (mr *_MockClientRecorder) TestStruct(
 // 	... := client.TestTypedef(...)
 func (m *MockClient) TestTypedef(
 	ctx context.Context,
-	_Thing *gauntlet.UserId,
+	thingArg *gauntlet.UserId,
 	opts ...yarpc.CallOption,
 ) (success gauntlet.UserId, err error) {
 
-	args := []interface{}{ctx, _Thing}
+	args := []interface{}{ctx, thingArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -725,10 +725,10 @@ func (m *MockClient) TestTypedef(
 
 func (mr *_MockClientRecorder) TestTypedef(
 	ctx interface{},
-	_Thing interface{},
+	thingArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Thing}, opts...)
+	args := append([]interface{}{ctx, thingArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TestTypedef", args...)
 }
 

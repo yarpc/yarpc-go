@@ -69,11 +69,11 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.GetValue(...)
 func (m *MockClient) GetValue(
 	ctx context.Context,
-	_Key *string,
+	keyArg *string,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
-	args := []interface{}{ctx, _Key}
+	args := []interface{}{ctx, keyArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -87,10 +87,10 @@ func (m *MockClient) GetValue(
 
 func (mr *_MockClientRecorder) GetValue(
 	ctx interface{},
-	_Key interface{},
+	keyArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Key}, opts...)
+	args := append([]interface{}{ctx, keyArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetValue", args...)
 }
 
@@ -102,12 +102,12 @@ func (mr *_MockClientRecorder) GetValue(
 // 	... := client.SetValue(...)
 func (m *MockClient) SetValue(
 	ctx context.Context,
-	_Key *string,
-	_Value *string,
+	keyArg *string,
+	valueArg *string,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := []interface{}{ctx, _Key, _Value}
+	args := []interface{}{ctx, keyArg, valueArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -119,10 +119,10 @@ func (m *MockClient) SetValue(
 
 func (mr *_MockClientRecorder) SetValue(
 	ctx interface{},
-	_Key interface{},
-	_Value interface{},
+	keyArg interface{},
+	valueArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Key, _Value}, opts...)
+	args := append([]interface{}{ctx, keyArg, valueArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "SetValue", args...)
 }

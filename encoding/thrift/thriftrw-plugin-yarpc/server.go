@@ -55,7 +55,7 @@ type Interface interface {
 		<$context := import $contextImportPath>
 		<.Name>(
 			ctx <$context>.Context, <range .Arguments>
-			<.Name> <formatType .Type>,<end>
+			<lower .Name> <formatType .Type>,<end>
 		)<if .OneWay> error
 		<else if .ReturnType> (<formatType .ReturnType>, error)
 		<else> error
@@ -87,7 +87,7 @@ func New(impl Interface, opts ...<$thrift>.RegisterOption) []<$transport>.Proced
 					Unary: <import $unaryWrapperImport>.<$unaryWrapperFunc>(h.<.Name>),
 				<end>
 				},
-				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><.Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
+				Signature: "<.Name>(<range $i, $v := .Arguments><if ne $i 0>, <end><lower .Name> <formatType .Type><end>)<if not .OneWay | and .ReturnType> (<formatType .ReturnType>)<end>",
 				ThriftModule: <import $module.ImportPath>.ThriftModule,
 				},
 		<end>},

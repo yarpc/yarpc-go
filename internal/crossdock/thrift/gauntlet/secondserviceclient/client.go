@@ -42,7 +42,7 @@ type Interface interface {
 
 	SecondtestString(
 		ctx context.Context,
-		Thing *string,
+		thing *string,
 		opts ...yarpc.CallOption,
 	) (string, error)
 }
@@ -95,11 +95,11 @@ func (c client) BlahBlah(
 
 func (c client) SecondtestString(
 	ctx context.Context,
-	_Thing *string,
+	thingArg *string,
 	opts ...yarpc.CallOption,
 ) (success string, err error) {
 
-	args := gauntlet.SecondService_SecondtestString_Helper.Args(_Thing)
+	args := gauntlet.SecondService_SecondtestString_Helper.Args(thingArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

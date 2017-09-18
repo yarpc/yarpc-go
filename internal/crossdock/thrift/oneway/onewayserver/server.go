@@ -35,7 +35,7 @@ import (
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		Token *string,
+		token *string,
 	) error
 }
 
@@ -57,7 +57,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:   transport.Oneway,
 					Oneway: thrift.OnewayHandler(h.Echo),
 				},
-				Signature:    "Echo(Token *string)",
+				Signature:    "Echo(token *string)",
 				ThriftModule: oneway.ThriftModule,
 			},
 		},

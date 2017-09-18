@@ -69,11 +69,11 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.Echo(...)
 func (m *MockClient) Echo(
 	ctx context.Context,
-	_Token *string,
+	tokenArg *string,
 	opts ...yarpc.CallOption,
 ) (ack yarpc.Ack, err error) {
 
-	args := []interface{}{ctx, _Token}
+	args := []interface{}{ctx, tokenArg}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -87,9 +87,9 @@ func (m *MockClient) Echo(
 
 func (mr *_MockClientRecorder) Echo(
 	ctx interface{},
-	_Token interface{},
+	tokenArg interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _Token}, opts...)
+	args := append([]interface{}{ctx, tokenArg}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "Echo", args...)
 }

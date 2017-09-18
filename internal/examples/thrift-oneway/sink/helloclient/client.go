@@ -36,7 +36,7 @@ import (
 type Interface interface {
 	Sink(
 		ctx context.Context,
-		Snk *sink.SinkRequest,
+		snk *sink.SinkRequest,
 		opts ...yarpc.CallOption,
 	) (yarpc.Ack, error)
 }
@@ -67,9 +67,9 @@ type client struct {
 
 func (c client) Sink(
 	ctx context.Context,
-	_Snk *sink.SinkRequest,
+	snkArg *sink.SinkRequest,
 	opts ...yarpc.CallOption,
 ) (yarpc.Ack, error) {
-	args := sink.Hello_Sink_Helper.Args(_Snk)
+	args := sink.Hello_Sink_Helper.Args(snkArg)
 	return c.c.CallOneway(ctx, args, opts...)
 }

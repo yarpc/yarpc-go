@@ -20,7 +20,7 @@ type Interface interface {
 
 	Integer(
 		ctx context.Context,
-		Key *string,
+		key *string,
 		opts ...yarpc.CallOption,
 	) (int64, error)
 }
@@ -54,11 +54,11 @@ type client struct {
 
 func (c client) Integer(
 	ctx context.Context,
-	_Key *string,
+	keyArg *string,
 	opts ...yarpc.CallOption,
 ) (success int64, err error) {
 
-	args := atomic.ReadOnlyStore_Integer_Helper.Args(_Key)
+	args := atomic.ReadOnlyStore_Integer_Helper.Args(keyArg)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

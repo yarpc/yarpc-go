@@ -36,7 +36,7 @@ import (
 type Interface interface {
 	Echo(
 		ctx context.Context,
-		Token *string,
+		token *string,
 		opts ...yarpc.CallOption,
 	) (yarpc.Ack, error)
 }
@@ -67,9 +67,9 @@ type client struct {
 
 func (c client) Echo(
 	ctx context.Context,
-	_Token *string,
+	tokenArg *string,
 	opts ...yarpc.CallOption,
 ) (yarpc.Ack, error) {
-	args := oneway.Oneway_Echo_Helper.Args(_Token)
+	args := oneway.Oneway_Echo_Helper.Args(tokenArg)
 	return c.c.CallOneway(ctx, args, opts...)
 }
