@@ -21,12 +21,13 @@
 package grpc
 
 import (
-	"bytes"
+	"io"
 	"strings"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -59,30 +60,42 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 		return errInvalidGRPCStream
 	}
 
-	// Apply a unary request.
-	responseMD := metadata.New(nil)
-	response, err := h.handleBeforeErrorConversion(ctx, serverStream.RecvMsg, responseMD, stream.Method(), start)
-	err = handlerErrorToGRPCError(err, responseMD)
+	var requestData []byte
+	if err := serverStream.RecvMsg(&requestData); err != nil {
+		return err
+	}
+	requestBuffer := bufferpool.Get()
+	defer bufferpool.Put(requestBuffer)
+	// Buffers are documented to always return a nil error.
+	_, _ = requestBuffer.Write(requestData)
+
+	responseWriter := newResponseWriter()
+	defer responseWriter.Close()
+
+	err := h.handleBeforeErrorConversion(ctx, stream.Method(), requestBuffer, responseWriter, start)
+	err = handlerErrorToGRPCError(err, responseWriter)
 
 	// Send the response attributes back and end the stream.
-	if sendErr := serverStream.SendMsg(response); sendErr != nil {
+	if sendErr := serverStream.SendMsg(responseWriter.Bytes()); sendErr != nil {
 		// We couldn't send the response.
 		return sendErr
 	}
-	serverStream.SetTrailer(responseMD)
+	if responseWriter.md != nil {
+		serverStream.SetTrailer(responseWriter.md)
+	}
 	return err
 }
 
 func (h *handler) handleBeforeErrorConversion(
 	ctx context.Context,
-	decodeFunc func(interface{}) error,
-	responseMD metadata.MD,
 	streamMethod string,
+	requestReader io.Reader,
+	responseWriter *responseWriter,
 	start time.Time,
-) (interface{}, error) {
-	transportRequest, err := h.getTransportRequest(ctx, decodeFunc, streamMethod)
+) error {
+	transportRequest, err := h.getTransportRequest(ctx, streamMethod, requestReader)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	tracer := h.i.t.options.tracer
@@ -103,11 +116,11 @@ func (h *handler) handleBeforeErrorConversion(
 	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
 	defer span.Finish()
 
-	response, err := h.call(ctx, transportRequest, responseMD)
-	return response, transport.UpdateSpanWithErr(span, err)
+	err = h.call(ctx, transportRequest, responseWriter)
+	return transport.UpdateSpanWithErr(span, err)
 }
 
-func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(interface{}) error, streamMethod string) (*transport.Request, error) {
+func (h *handler) getTransportRequest(ctx context.Context, streamMethod string, requestReader io.Reader) (*transport.Request, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
 		return nil, yarpcerrors.InternalErrorf("cannot get metadata from ctx: %v", ctx)
@@ -116,17 +129,11 @@ func (h *handler) getTransportRequest(ctx context.Context, decodeFunc func(inter
 	if err != nil {
 		return nil, err
 	}
-	var data []byte
-	if err := decodeFunc(&data); err != nil {
-		return nil, err
-	}
-	transportRequest.Body = bytes.NewBuffer(data)
-
+	transportRequest.Body = requestReader
 	procedure, err := procedureFromStreamMethod(streamMethod)
 	if err != nil {
 		return nil, err
 	}
-
 	transportRequest.Procedure = procedure
 	if err := transport.ValidateRequest(transportRequest); err != nil {
 		return nil, err
@@ -151,35 +158,27 @@ func procedureFromStreamMethod(streamMethod string) (string, error) {
 	return procedureToName(service, method)
 }
 
-func (h *handler) call(ctx context.Context, transportRequest *transport.Request, responseMD metadata.MD) (interface{}, error) {
+func (h *handler) call(ctx context.Context, transportRequest *transport.Request, responseWriter *responseWriter) error {
 	handlerSpec, err := h.i.router.Choose(ctx, transportRequest)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	switch handlerSpec.Type() {
 	case transport.Unary:
-		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseMD)
+		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseWriter)
 	default:
-		return nil, yarpcerrors.UnimplementedErrorf("transport grpc does not handle %s handlers", handlerSpec.Type().String())
+		return yarpcerrors.UnimplementedErrorf("transport grpc does not handle %s handlers", handlerSpec.Type().String())
 	}
 }
 
-func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseMD metadata.MD) (interface{}, error) {
+func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseWriter *responseWriter) error {
 	if err := transport.ValidateUnaryContext(ctx); err != nil {
-		return nil, err
+		return err
 	}
-	responseWriter := newResponseWriter(responseMD)
-	// TODO: do we always want to return the data from responseWriter.Bytes, or return nil for the data if there is an error?
-	// For now, we are always returning the data
-	err := transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
-	// TODO: use pooled buffers
-	// we have to return the data up the stack, but we can probably do something complicated
-	// with the Codec where we put the buffer back on Marshal
-	data := responseWriter.Bytes()
-	return data, err
+	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
 }
 
-func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
+func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	if err == nil {
 		return nil
 	}
@@ -196,8 +195,7 @@ func handlerErrorToGRPCError(err error, responseMD metadata.MD) error {
 	message := yarpcerrors.ErrorMessage(err)
 	// if the yarpc error has a name, set the header
 	if name != "" {
-		// TODO: what to do with error?
-		_ = addToMetadata(responseMD, ErrorNameHeader, name)
+		responseWriter.AddSystemHeader(ErrorNameHeader, name)
 		if message == "" {
 			// if the message is empty, set the message to the name for grpc compatibility
 			message = name
