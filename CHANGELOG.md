@@ -1,24 +1,35 @@
 Releases
 ========
 
-v1.16.0-dev (unreleased)
+v1.17.0-dev (unreleased)
 --------------------
 
-- ThriftRW Plugin: Added an option to strip TChannel-specific
-  information from Contexts before making outgoing requests.
-- transport/http: Add GrabHeaders option to propagate specific
-  headers starting with x- to handlers.
+-   transport/http: Add GrabHeaders option to propagate specific
+    headers starting with x- to handlers.
+
+
+v1.16.0 (2017-09-18)
+--------------------
+
+-   ThriftRW Plugin: Added an option to strip TChannel-specific
+    information from Contexts before making outgoing requests.
+-   x/retry: Fix bug where large TChannel responses would cause errors in retries.
+-   transport/http: Correct the Content-Type for Thrift responses, to
+    `application/vnd.apache.thrift.binary`.
+-   transport/http: Correct the Content-Type for Proto responses, to
+    `application/x-protobuf`.
 
 
 v1.15.0 (2017-09-15)
 --------------------
 
-- yarpcerrors: Update the ErrorCode and ErrorMessage functions to
-  return default values for non-YARPC errors.
-- transport/http: Return appropriate Content-Type response headers
-  based on the transport encoding.
-- transport/x/grpc: Add options to specify the maximum message size
-  sent and received over the wire.
+-   yarpcerrors: Update the ErrorCode and ErrorMessage functions to return
+    default values for non-YARPC errors.
+-   transport/http: Return appropriate Content-Type response headers based on
+    the transport encoding.
+-   transport/x/grpc: Add options to specify the maximum message size sent and
+    received over the wire.
+
 
 
 v1.14.0 (2017-09-08)

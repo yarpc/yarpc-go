@@ -250,9 +250,9 @@ func getContentType(encoding transport.Encoding) string {
 	case "raw":
 		return "application/octet-stream"
 	case "thrift":
-		return "application/x-thrift"
+		return "application/vnd.apache.thrift.binary"
 	case "proto":
-		return "application/x-proto"
+		return "application/x-protobuf"
 	default:
 		return ""
 	}

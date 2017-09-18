@@ -45,6 +45,8 @@ const (
 	_yarpcInternal = "yarpc_internal"
 	_noTime        = "no_time"
 	_maxAttempts   = "max_attempts"
+
+	_unknownErrorName = "unknown_internal_yarpc"
 )
 
 type observerGraph struct {
@@ -243,7 +245,7 @@ func (c call) maxAttemptsError(err error) {
 
 func getErrorName(err error) string {
 	if !yarpcerrors.IsYARPCError(err) {
-		return "unknown_internal_yarpc"
+		return _unknownErrorName
 	}
 	return yarpcerrors.ErrorCode(err).String()
 }
