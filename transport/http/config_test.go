@@ -137,7 +137,7 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc:        "simple inbound with grab headers",
 			cfg:         attrs{"address": ":8080", "grabHeaders": []string{"x-foo", "x-bar"}},
-			wantInbound: &wantInbound{Address: ":8080", GrabHeaders: map[string]struct{}{"x-foo": struct{}{}, "x-bar": struct{}{}}},
+			wantInbound: &wantInbound{Address: ":8080", GrabHeaders: map[string]struct{}{"x-foo": {}, "x-bar": {}}},
 		},
 		{
 			desc:        "inbound interpolation",

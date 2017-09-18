@@ -116,7 +116,7 @@ func TestHandlerHeaders(t *testing.T) {
 				"Rpc-Header-Foo": {"bar"},
 				"X-Baz":          {"bat"},
 			},
-			grabHeaders: map[string]struct{}{"x-baz": struct{}{}},
+			grabHeaders: map[string]struct{}{"x-baz": {}},
 			wantTTL:     time.Second,
 			wantHeaders: map[string]string{
 				"foo":   "bar",
