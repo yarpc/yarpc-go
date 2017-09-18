@@ -103,24 +103,6 @@ func (h *handler) handleBeforeErrorConversion(
 	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
 	defer span.Finish()
 
-	if h.i.options.unaryInterceptor != nil {
-		return h.i.options.unaryInterceptor(
-			ctx,
-			transportRequest,
-			&grpc.UnaryServerInfo{
-				Server:     noopGrpcStruct{},
-				FullMethod: streamMethod,
-			},
-			func(ctx context.Context, request interface{}) (interface{}, error) {
-				transportRequest, ok := request.(*transport.Request)
-				if !ok {
-					return nil, yarpcerrors.InternalErrorf("expected *transport.Request, got %T", request)
-				}
-				response, err := h.call(ctx, transportRequest, responseMD)
-				return response, transport.UpdateSpanWithErr(span, err)
-			},
-		)
-	}
 	response, err := h.call(ctx, transportRequest, responseMD)
 	return response, transport.UpdateSpanWithErr(span, err)
 }
