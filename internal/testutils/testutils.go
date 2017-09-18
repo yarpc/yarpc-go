@@ -136,7 +136,7 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 		&ClientInfo{
 			clientDispatcher.ClientConfig(serviceName),
 			grpcClientConn,
-			grpc.NewContextWrapper().
+			grpcutil.NewContextWrapper().
 				WithCaller(serviceName + "-client").
 				WithService(serviceName).
 				WithEncoding(string(protobuf.Encoding)),
