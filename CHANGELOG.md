@@ -4,6 +4,9 @@ Releases
 v1.16.0-dev (unreleased)
 --------------------
 
+- transport/http: Add GrabHeaders option to propagate specific
+  headers starting with x- to handlers.
+
 v1.15.0 (2017-09-15)
 --------------------
 
