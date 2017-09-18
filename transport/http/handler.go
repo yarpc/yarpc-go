@@ -46,7 +46,7 @@ func popHeader(h http.Header, n string) string {
 type handler struct {
 	router      transport.Router
 	tracer      opentracing.Tracer
-	grabHeaders map[string]bool
+	grabHeaders map[string]struct{}
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

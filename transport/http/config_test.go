@@ -59,7 +59,7 @@ func TestTransportSpec(t *testing.T) {
 		Address     string
 		Mux         *http.ServeMux
 		MuxPattern  string
-		GrabHeaders map[string]bool
+		GrabHeaders map[string]struct{}
 	}
 
 	type inboundTest struct {
@@ -137,7 +137,7 @@ func TestTransportSpec(t *testing.T) {
 		{
 			desc:        "simple inbound with grab headers",
 			cfg:         attrs{"address": ":8080", "grabHeaders": []string{"x-foo", "x-bar"}},
-			wantInbound: &wantInbound{Address: ":8080", GrabHeaders: map[string]bool{"x-foo": true, "x-bar": true}},
+			wantInbound: &wantInbound{Address: ":8080", GrabHeaders: map[string]struct{}{"x-foo": struct{}{}, "x-bar": struct{}{}}},
 		},
 		{
 			desc:        "inbound interpolation",

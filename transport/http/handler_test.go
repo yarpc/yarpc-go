@@ -104,7 +104,7 @@ func TestHandlerHeaders(t *testing.T) {
 	tests := []struct {
 		giveEncoding string
 		giveHeaders  http.Header
-		grabHeaders  map[string]bool
+		grabHeaders  map[string]struct{}
 
 		wantTTL     time.Duration
 		wantHeaders map[string]string
@@ -116,7 +116,7 @@ func TestHandlerHeaders(t *testing.T) {
 				"Rpc-Header-Foo": {"bar"},
 				"X-Baz":          {"bat"},
 			},
-			grabHeaders: map[string]bool{"x-baz": true},
+			grabHeaders: map[string]struct{}{"x-baz": struct{}{}},
 			wantTTL:     time.Second,
 			wantHeaders: map[string]string{
 				"foo":   "bar",

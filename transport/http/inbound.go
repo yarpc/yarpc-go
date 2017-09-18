@@ -62,7 +62,7 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 func GrabHeaders(headers ...string) InboundOption {
 	return func(i *Inbound) {
 		for _, header := range headers {
-			i.grabHeaders[strings.ToLower(header)] = true
+			i.grabHeaders[strings.ToLower(header)] = struct{}{}
 		}
 	}
 }
@@ -75,7 +75,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		addr:        addr,
 		tracer:      t.tracer,
 		transport:   t,
-		grabHeaders: make(map[string]bool),
+		grabHeaders: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -93,7 +93,7 @@ type Inbound struct {
 	router      transport.Router
 	tracer      opentracing.Tracer
 	transport   *Transport
-	grabHeaders map[string]bool
+	grabHeaders map[string]struct{}
 
 	once *lifecycle.Once
 }
