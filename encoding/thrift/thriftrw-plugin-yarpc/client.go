@@ -90,6 +90,7 @@ type client struct {
 
 <$service := .>
 <$module := .Module>
+<$sanitize := .SanitizeTChannel>
 <range .Functions>
 <$context := import "context">
 <$prefix := printf "%s.%s_%s_" (import $module.ImportPath) $service.Name .Name>
@@ -106,6 +107,7 @@ func (c client) <.Name>(
 	<$wire := import "go.uber.org/thriftrw/wire">
 	args := <$prefix>Helper.Args(<range .Arguments>_<.Name>, <end>)
 
+	<if $sanitize>ctx = <import "github.com/uber/tchannel-go">.WithoutHeaders(ctx)<end>
 	var body <$wire>.Value
 	body, err = c.c.Call(ctx, args, opts...)
 	if err != nil {

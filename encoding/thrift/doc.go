@@ -109,4 +109,13 @@
 //
 // 	var h handler
 // 	yarpc.InjectClients(dispatcher, &h)
+//
+// Automatically Sanitizing TChannel Contexts
+//
+// Contexts created with `tchannel.ContextWithHeaders` are incompatible with YARPC clients generated from Thrift.
+// Using such a context will cause a YARPC client to error on any call. Using the `sanitize-tchannel` flag will
+// generate a YARPC client such that all TChannel headers from any context supplied are removed before making a YARPC call.
+// The option can be used like so:
+//
+// 	thriftrw --plugin "yarpc --sanitize-tchannel" myservice.thrift
 package thrift

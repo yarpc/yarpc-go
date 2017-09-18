@@ -45,12 +45,15 @@ var (
 		"Function used to wrap generic Thrift oneway function handlers into YARPC handlers")
 	_noGomock = flag.Bool("no-gomock", false,
 		"Don't generate gomock mocks for service clients")
-	_noFx = flag.Bool("no-fx", false, "Don't generate Fx module")
+	_noFx             = flag.Bool("no-fx", false, "Don't generate Fx module")
+	_sanitizeTChannel = flag.Bool("sanitize-tchannel", false, "Enable tchannel context sanitization")
 )
 
-type g struct{}
+type g struct {
+	SanitizeTChannel bool
+}
 
-func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
+func (g g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse, error) {
 	generators := []genFunc{clientGenerator, serverGenerator}
 	if !*_noFx {
 		generators = append(generators, fxGenerator)
@@ -72,6 +75,7 @@ func (g) Generate(req *api.GenerateServiceRequest) (*api.GenerateServiceResponse
 			UnaryWrapperFunc:    unaryWrapperFunc,
 			OnewayWrapperImport: onewayWrapperImport,
 			OnewayWrapperFunc:   onewayWrapperFunc,
+			SanitizeTChannel:    g.SanitizeTChannel,
 		}
 
 		for _, gen := range generators {
@@ -108,5 +112,7 @@ func buildSvc(serviceID api.ServiceID, req *api.GenerateServiceRequest) *Svc {
 
 func main() {
 	flag.Parse()
-	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: g{}})
+	plugin.Main(&plugin.Plugin{Name: "yarpc", ServiceGenerator: g{
+		SanitizeTChannel: *_sanitizeTChannel,
+	}})
 }

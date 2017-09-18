@@ -104,6 +104,7 @@ type templateData struct {
 	UnaryWrapperFunc    string
 	OnewayWrapperImport string
 	OnewayWrapperFunc   string
+	SanitizeTChannel    bool
 }
 
 // ParentServerPackagePath returns the import path for the immediate parent
