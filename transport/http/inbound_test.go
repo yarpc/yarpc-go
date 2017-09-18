@@ -98,6 +98,13 @@ func TestInboundStartError(t *testing.T) {
 	assert.Error(t, err, "expected failure")
 }
 
+func TestInboundStartErrorBadGrabHeader(t *testing.T) {
+	x := NewTransport()
+	i := x.NewInbound(":0", GrabHeaders("x-valid", "y-invalid"))
+	i.SetRouter(new(transporttest.MockRouter))
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.ErrorCode(i.Start()))
+}
+
 func TestInboundStopWithoutStarting(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound(":8000")
