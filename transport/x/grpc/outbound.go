@@ -103,7 +103,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	start := time.Now()
 
 	var responseBody []byte
-	responseMD := metadata.New(nil)
+	var responseMD metadata.MD
 	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
