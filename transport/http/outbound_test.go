@@ -67,6 +67,7 @@ func TestCallSuccess(t *testing.T) {
 	httpTransport := NewTransport(Tracer(nil))
 	out := httpTransport.NewSingleOutbound(successServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
+	require.Nil(t, out.tracer)
 	defer out.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)

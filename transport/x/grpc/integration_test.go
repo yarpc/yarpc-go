@@ -49,6 +49,14 @@ func init() {
 	opentracing.SetGlobalTracer(nil)
 }
 
+func TestYARPCTracerNil(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.Nil(t, e.Inbound.t.options.tracer)
+		assert.Nil(t, e.Outbound.t.options.tracer)
+	})
+}
+
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
