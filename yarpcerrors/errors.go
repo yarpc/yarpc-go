@@ -25,11 +25,99 @@ import (
 	"fmt"
 )
 
-// IsYARPCError is a convenience function that returns true if the given error
-// is a non-nil YARPC error.
-func IsYARPCError(err error) bool {
-	_, ok := err.(*yarpcError)
+// Newf returns a new Status.
+//
+// The Code should never be CodeOK, if it is, this will return nil.
+func Newf(code Code, format string, args ...interface{}) *Status {
+	if code == CodeOK {
+		return nil
+	}
+	return &Status{
+		code:    code,
+		message: sprintf(format, args...),
+	}
+}
+
+// FromError returns the Status for the error.
+//
+// If the error is a Status, it returns err.
+// If the error is not a Status, it returns a new error with the Code
+// CodeUnknown and the message err.Error()
+func FromError(err error) *Status {
+	if status, ok := err.(*Status); ok {
+		return status
+	}
+	return &Status{
+		code:    CodeUnknown,
+		message: err.Error(),
+	}
+}
+
+// IsStatus returns true if err is a Status.
+func IsStatus(err error) bool {
+	_, ok := err.(*Status)
 	return ok
+}
+
+// Status represents a YARPC error.
+type Status struct {
+	code    Code
+	name    string
+	message string
+}
+
+// WithName returns a new Status with the given name.
+//
+// If s is nil, this will still return nil.
+//
+// This should be used for user-defined errors.
+//
+// The name must only contain lowercase letters from a-z and dashes (-), and
+// cannot start or end in a dash. If the name is something else, an error with
+// code CodeInternal will be returned.
+func (s *Status) WithName(name string) *Status {
+	if s == nil {
+		return nil
+	}
+	if err := validateName(name); err != nil {
+		return err.(*Status)
+	}
+	return &Status{
+		code:    s.code,
+		name:    name,
+		message: s.message,
+	}
+}
+
+// Code returns the code for the Status.
+func (s *Status) Code() Code {
+	return s.code
+}
+
+// Name returns the name for the Status.
+func (s *Status) Name() string {
+	return s.name
+}
+
+// Message returns the message for the Status.
+func (s *Status) Message() string {
+	return s.message
+}
+
+// Error implements the error interface.
+func (s *Status) Error() string {
+	buffer := bytes.NewBuffer(nil)
+	_, _ = buffer.WriteString(`code:`)
+	_, _ = buffer.WriteString(s.code.String())
+	if s.name != "" {
+		_, _ = buffer.WriteString(` name:`)
+		_, _ = buffer.WriteString(s.name)
+	}
+	if s.message != "" {
+		_, _ = buffer.WriteString(` message:`)
+		_, _ = buffer.WriteString(s.message)
+	}
+	return buffer.String()
 }
 
 // ErrorCode returns the Code for the given error, CodeOK if the error is nil,
@@ -38,11 +126,11 @@ func ErrorCode(err error) Code {
 	if err == nil {
 		return CodeOK
 	}
-	yarpcError, ok := err.(*yarpcError)
+	status, ok := err.(*Status)
 	if !ok {
 		return CodeUnknown
 	}
-	return yarpcError.Code
+	return status.code
 }
 
 // ErrorName returns the name for the given error, or "" if the given
@@ -51,11 +139,11 @@ func ErrorName(err error) string {
 	if err == nil {
 		return ""
 	}
-	yarpcError, ok := err.(*yarpcError)
+	status, ok := err.(*Status)
 	if !ok {
 		return ""
 	}
-	return yarpcError.Name
+	return status.name
 }
 
 // ErrorMessage returns the message for the given error, or "" if the given
@@ -65,102 +153,91 @@ func ErrorMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	yarpcError, ok := err.(*yarpcError)
+	status, ok := err.(*Status)
 	if !ok {
 		return err.Error()
 	}
-	return yarpcError.Message
+	return status.message
 }
 
-// NamedErrorf returns a new yarpc error with code CodeUnknown and the given name.
-//
-// This should be used for user-defined errors.
-//
-// The name must only contain lowercase letters from a-z and dashes (-), and
-// cannot start or end in a dash. If the name is something else, an error with
-// code CodeInternal will be returned.
-func NamedErrorf(name string, format string, args ...interface{}) error {
-	return FromHeaders(CodeUnknown, name, sprintf(format, args...))
-}
-
-// CancelledErrorf returns a new yarpc error with code CodeCancelled.
+// CancelledErrorf returns a new Status with code CodeCancelled.
 func CancelledErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeCancelled, "", sprintf(format, args...))
+	return Newf(CodeCancelled, format, args...)
 }
 
-// UnknownErrorf returns a new yarpc error with code CodeUnknown.
+// UnknownErrorf returns a new Status with code CodeUnknown.
 func UnknownErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeUnknown, "", sprintf(format, args...))
+	return Newf(CodeUnknown, format, args...)
 }
 
-// InvalidArgumentErrorf returns a new yarpc error with code CodeInvalidArgument.
+// InvalidArgumentErrorf returns a new Status with code CodeInvalidArgument.
 func InvalidArgumentErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeInvalidArgument, "", sprintf(format, args...))
+	return Newf(CodeInvalidArgument, format, args...)
 }
 
-// DeadlineExceededErrorf returns a new yarpc error with code CodeDeadlineExceeded.
+// DeadlineExceededErrorf returns a new Status with code CodeDeadlineExceeded.
 func DeadlineExceededErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeDeadlineExceeded, "", sprintf(format, args...))
+	return Newf(CodeDeadlineExceeded, format, args...)
 }
 
-// NotFoundErrorf returns a new yarpc error with code CodeNotFound.
+// NotFoundErrorf returns a new Status with code CodeNotFound.
 func NotFoundErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeNotFound, "", sprintf(format, args...))
+	return Newf(CodeNotFound, format, args...)
 }
 
-// AlreadyExistsErrorf returns a new yarpc error with code CodeAlreadyExists.
+// AlreadyExistsErrorf returns a new Status with code CodeAlreadyExists.
 func AlreadyExistsErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeAlreadyExists, "", sprintf(format, args...))
+	return Newf(CodeAlreadyExists, format, args...)
 }
 
-// PermissionDeniedErrorf returns a new yarpc error with code CodePermissionDenied.
+// PermissionDeniedErrorf returns a new Status with code CodePermissionDenied.
 func PermissionDeniedErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodePermissionDenied, "", sprintf(format, args...))
+	return Newf(CodePermissionDenied, format, args...)
 }
 
-// ResourceExhaustedErrorf returns a new yarpc error with code CodeResourceExhausted.
+// ResourceExhaustedErrorf returns a new Status with code CodeResourceExhausted.
 func ResourceExhaustedErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeResourceExhausted, "", sprintf(format, args...))
+	return Newf(CodeResourceExhausted, format, args...)
 }
 
-// FailedPreconditionErrorf returns a new yarpc error with code CodeFailedPrecondition.
+// FailedPreconditionErrorf returns a new Status with code CodeFailedPrecondition.
 func FailedPreconditionErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeFailedPrecondition, "", sprintf(format, args...))
+	return Newf(CodeFailedPrecondition, format, args...)
 }
 
-// AbortedErrorf returns a new yarpc error with code CodeAborted.
+// AbortedErrorf returns a new Status with code CodeAborted.
 func AbortedErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeAborted, "", sprintf(format, args...))
+	return Newf(CodeAborted, format, args...)
 }
 
-// OutOfRangeErrorf returns a new yarpc error with code CodeOutOfRange.
+// OutOfRangeErrorf returns a new Status with code CodeOutOfRange.
 func OutOfRangeErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeOutOfRange, "", sprintf(format, args...))
+	return Newf(CodeOutOfRange, format, args...)
 }
 
-// UnimplementedErrorf returns a new yarpc error with code CodeUnimplemented.
+// UnimplementedErrorf returns a new Status with code CodeUnimplemented.
 func UnimplementedErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeUnimplemented, "", sprintf(format, args...))
+	return Newf(CodeUnimplemented, format, args...)
 }
 
-// InternalErrorf returns a new yarpc error with code CodeInternal.
+// InternalErrorf returns a new Status with code CodeInternal.
 func InternalErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeInternal, "", sprintf(format, args...))
+	return Newf(CodeInternal, format, args...)
 }
 
-// UnavailableErrorf returns a new yarpc error with code CodeUnavailable.
+// UnavailableErrorf returns a new Status with code CodeUnavailable.
 func UnavailableErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeUnavailable, "", sprintf(format, args...))
+	return Newf(CodeUnavailable, format, args...)
 }
 
-// DataLossErrorf returns a new yarpc error with code CodeDataLoss.
+// DataLossErrorf returns a new Status with code CodeDataLoss.
 func DataLossErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeDataLoss, "", sprintf(format, args...))
+	return Newf(CodeDataLoss, format, args...)
 }
 
-// UnauthenticatedErrorf returns a new yarpc error with code CodeUnauthenticated.
+// UnauthenticatedErrorf returns a new Status with code CodeUnauthenticated.
 func UnauthenticatedErrorf(format string, args ...interface{}) error {
-	return FromHeaders(CodeUnauthenticated, "", sprintf(format, args...))
+	return Newf(CodeUnauthenticated, format, args...)
 }
 
 // IsCancelled returns true if ErrorCode(err) == CodeCancelled.
@@ -243,10 +320,30 @@ func IsUnauthenticated(err error) bool {
 	return ErrorCode(err) == CodeUnauthenticated
 }
 
-// FromHeaders returns a new yarpc error from headers transmitted from the server side.
+// IsYARPCError is a convenience function that returns true if the given error
+// is a non-nil YARPC error.
+//
+// Deprecated: use IsStatus instead.
+func IsYARPCError(err error) bool {
+	return IsStatus(err)
+}
+
+// NamedErrorf returns a new Status with code CodeUnknown and the given name.
+//
+// This should be used for user-defined errors.
+//
+// The name must only contain lowercase letters from a-z and dashes (-), and
+// cannot start or end in a dash. If the name is something else, an error with
+// code CodeInternal will be returned.
+//
+// Deprecated: Use Newf and WithName instead.
+func NamedErrorf(name string, format string, args ...interface{}) error {
+	return Newf(CodeUnknown, format, args...).WithName(name)
+}
+
+// FromHeaders returns a new Status from headers transmitted from the server side.
 //
 // If the specified code is CodeOK, this will return nil.
-// If the specified code is not CodeUnknown, this will not set the name field.
 //
 // The name must only contain lowercase letters from a-z and dashes (-), and
 // cannot start or end in a dash. If the name is something else, an error with
@@ -254,54 +351,10 @@ func IsUnauthenticated(err error) bool {
 //
 // This function should not be used by server implementations, use the individual
 // error constructors instead. This should only be used by transport implementations.
-func FromHeaders(code Code, name string, message string) error {
-	if err := validateName(name); err != nil {
-		return err
-	}
-	switch code {
-	case CodeOK:
-		return nil
-	case CodeUnknown:
-		return &yarpcError{
-			Code:    code,
-			Name:    name,
-			Message: message,
-		}
-	default:
-		return &yarpcError{
-			Code:    code,
-			Message: message,
-		}
-	}
-}
-
-// ** All constructors of yarpcErrors must always set a Code that is not CodeOK. **
 //
-// Currently, the only constructor of yarpcErrors is FromHeaders, which enforces this.
-
-type yarpcError struct {
-	// Code is the code of the error. This should never be set to CodeOK.
-	Code Code `json:"code,omitempty"`
-	// Name is the name of the error. This should only be set if the
-	// Code is CodeUnknown.
-	Name string `json:"name,omitempty"`
-	// Message is the message of the error.
-	Message string `json:"message,omitempty"`
-}
-
-func (e *yarpcError) Error() string {
-	buffer := bytes.NewBuffer(nil)
-	_, _ = buffer.WriteString(`code:`)
-	_, _ = buffer.WriteString(e.Code.String())
-	if e.Name != "" {
-		_, _ = buffer.WriteString(` name:`)
-		_, _ = buffer.WriteString(e.Name)
-	}
-	if e.Message != "" {
-		_, _ = buffer.WriteString(` message:`)
-		_, _ = buffer.WriteString(e.Message)
-	}
-	return buffer.String()
+// Deprecated: Use Newf and WithName instead.
+func FromHeaders(code Code, name string, message string) error {
+	return Newf(code, message).WithName(name)
 }
 
 func sprintf(format string, args ...interface{}) string {
