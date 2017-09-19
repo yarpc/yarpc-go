@@ -29,12 +29,12 @@ var None Strategy = &none{}
 
 type none struct{}
 
-// Backoff implements Strategy
+// Backoff implements Strategy.
 func (n *none) Backoff() Backoff {
 	return n
 }
 
-// Duration implements Backoff
+// Duration implements Backoff.
 func (*none) Duration(attempts uint) time.Duration {
 	return time.Duration(0)
 }

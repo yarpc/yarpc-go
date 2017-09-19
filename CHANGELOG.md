@@ -4,7 +4,7 @@ Releases
 v1.17.0-dev (unreleased)
 --------------------
 
--   Expose backoff.None in backoff api.
+-   Export no-op backoff strategy in api/backoff.
 
 
 v1.16.0 (2017-09-18)
