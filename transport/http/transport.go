@@ -55,8 +55,8 @@ var defaultTransportOptions = transportOptions{
 
 func newTransportOptions() transportOptions {
 	options := defaultTransportOptions
-	options.tracer = opentracing.GlobalTracer()
-	return options
+	options.tracer = nooptrace.GetTracer(options.tracer)
+	return defaultTransportOptions
 }
 
 // TransportOption customizes the behavior of an HTTP transport.

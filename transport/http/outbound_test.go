@@ -64,7 +64,7 @@ func TestCallSuccess(t *testing.T) {
 	))
 	defer successServer.Close()
 
-	httpTransport := NewTransport()
+	httpTransport := NewTransport(Tracer(nil))
 	out := httpTransport.NewSingleOutbound(successServer.URL)
 	require.NoError(t, out.Start(), "failed to start outbound")
 	defer out.Stop()

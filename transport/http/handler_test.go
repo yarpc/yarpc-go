@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yarpc "go.uber.org/yarpc"
@@ -40,6 +41,10 @@ import (
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
+
+func init() {
+	opentracing.SetGlobalTracer(nil)
+}
 
 func TestHandlerSuccess(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
