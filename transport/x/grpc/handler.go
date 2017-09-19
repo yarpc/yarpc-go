@@ -28,6 +28,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
+	"go.uber.org/yarpc/internal/nooptrace"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -98,26 +99,30 @@ func (h *handler) handleBeforeErrorConversion(
 		return err
 	}
 
-	tracer := h.i.t.options.tracer
-	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
+	tracer := nooptrace.GetTracer(h.i.t.options.tracer)
+	var span opentracing.Span
+	if tracer != nil {
+		var parentSpanCtx opentracing.SpanContext
+		md, ok := metadata.FromIncomingContext(ctx)
+		if ok {
+			parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
+		}
+		extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
+			ParentSpanContext: parentSpanCtx,
+			Tracer:            tracer,
+			TransportName:     transportName,
+			StartTime:         start,
+		}
+		ctx, span = extractOpenTracingSpan.Do(ctx, transportRequest)
+		defer span.Finish()
 	}
-	var parentSpanCtx opentracing.SpanContext
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		parentSpanCtx, _ = tracer.Extract(opentracing.HTTPHeaders, mdReadWriter(md))
-	}
-	extractOpenTracingSpan := &transport.ExtractOpenTracingSpan{
-		ParentSpanContext: parentSpanCtx,
-		Tracer:            tracer,
-		TransportName:     transportName,
-		StartTime:         start,
-	}
-	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
-	defer span.Finish()
 
 	err = h.call(ctx, transportRequest, responseWriter)
-	return transport.UpdateSpanWithErr(span, err)
+
+	if tracer != nil {
+		return transport.UpdateSpanWithErr(span, err)
+	}
+	return err
 }
 
 func (h *handler) getTransportRequest(ctx context.Context, streamMethod string, requestReader io.Reader) (*transport.Request, error) {

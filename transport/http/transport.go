@@ -31,6 +31,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/nooptrace"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 )
@@ -139,7 +140,7 @@ func (o *transportOptions) newTransport() *Transport {
 		connTimeout:         o.connTimeout,
 		connBackoffStrategy: o.connBackoffStrategy,
 		peers:               make(map[string]*httpPeer),
-		tracer:              o.tracer,
+		tracer:              nooptrace.GetTracer(o.tracer),
 	}
 }
 
