@@ -4,7 +4,7 @@ Releases
 v1.17.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Expose backoff.None in backoff api.
 
 
 v1.16.0 (2017-09-18)
