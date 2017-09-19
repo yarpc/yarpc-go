@@ -24,9 +24,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/internal/integrationtest"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"

@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/backoff"
-	ibackoff "go.uber.org/yarpc/internal/backoff"
 )
 
 // Policy defines how a retry will be applied.  It contains all the information
@@ -45,7 +44,7 @@ func NewPolicy(opts ...PolicyOption) *Policy {
 var defaultPolicyOpts = policyOptions{
 	retries:           0,
 	maxRequestTimeout: time.Second,
-	backoffStrategy:   ibackoff.None,
+	backoffStrategy:   backoff.None,
 }
 
 type policyOptions struct {
