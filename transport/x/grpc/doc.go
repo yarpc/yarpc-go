@@ -18,7 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package grpc implements the grpc transport.
+// Package grpc implements a YARPC transport based on the gRPC protocol.
+// The gRPC transport provides support for Unary RPCs only.
+// Usage
 //
-// This package is experimental and should not be used in production.
+// A gRPC Transport must be constructed to use this transport.
+//
+//   grpcTransport := grpc.NewTransport()
+//
+// To serve your YARPC application over gRPC, pass a gRPC inbound in your
+// yarpc.Config.
+//
+//   listener, err := net.Listen("tcp", ":8080")
+//   if err != nil {
+//     return err
+//   }
+//   myInbound := grpcTransport.NewInbound(listener)
+//   dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//     Name: "myservice",
+//     Inbounds: yarpc.Inbounds{myInbound},
+//   })
+//
+// To make requests to a YARPC application that supports gRPC, pass a gRPC
+// outbound in your yarpc.Config.
+//
+//   myserviceOutbound := grpcTransport.NewSingleOutbound("127.0.0.1:8080")
+//   dispatcher := yarpc.NewDispatcher(yarpc.Config{
+//     Name: "myclient",
+//     Outbounds: yarpc.Outbounds{
+//       "myservice": {Unary: myserviceOutbound},
+//     },
+//   })
+//
+// Configuration
+//
+// A gRPC transport may be configured using YARPC's configuration system.
+// See TransportConfig, InboundConfig, and OutboundConfig for details on the
+// different configuration parameters supported by this transport.
+//
+// See Also
+//
+// gRPC Project Page: https://grpc.io
+// gRPC Wire Protocol Definition: https://grpc.io/docs/guides/wire.html
+// gRPC Golang Library: https://github.com/grpc/grpc-go
 package grpc
