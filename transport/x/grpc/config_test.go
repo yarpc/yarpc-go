@@ -35,11 +35,10 @@ import (
 func TestNewTransportSpecOptions(t *testing.T) {
 	transportSpec, err := newTransportSpec(
 		BackoffStrategy(nil),
-		withInboundUnaryInterceptor(nil),
 	)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(transportSpec.TransportOptions))
-	require.Equal(t, 1, len(transportSpec.InboundOptions))
+	require.Equal(t, 0, len(transportSpec.InboundOptions))
 	require.Equal(t, 0, len(transportSpec.OutboundOptions))
 }
 

@@ -41,7 +41,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -66,16 +65,6 @@ func TestGRPCBasic(t *testing.T) {
 		value, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.NoError(t, err)
 		assert.Equal(t, "bar", value)
-	})
-}
-
-func TestYARPCMetadata(t *testing.T) {
-	t.Parallel()
-	var md metadata.MD
-	doWithTestEnv(t, nil, []InboundOption{withInboundUnaryInterceptor(newMetadataUnaryServerInterceptor(&md))}, nil, func(t *testing.T, e *testEnv) {
-		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
-		assert.Len(t, md["user-agent"], 1)
-		assert.True(t, strings.Contains(md["user-agent"][0], UserAgent))
 	})
 }
 
