@@ -130,25 +130,25 @@ func newTransportSpec(opts ...Option) (*transportSpec, error) {
 }
 
 func (t *transportSpec) buildTransport(transportConfig *TransportConfig, _ *yarpcconfig.Kit) (transport.Transport, error) {
-	transportOptions := newTransportOptions(t.TransportOptions)
+	options := t.TransportOptions
 	if transportConfig.ServerMaxRecvMsgSize > 0 {
-		transportOptions.serverMaxRecvMsgSize = transportConfig.ServerMaxRecvMsgSize
+		options = append(options, ServerMaxRecvMsgSize(transportConfig.ServerMaxRecvMsgSize))
 	}
 	if transportConfig.ServerMaxSendMsgSize > 0 {
-		transportOptions.serverMaxSendMsgSize = transportConfig.ServerMaxSendMsgSize
+		options = append(options, ServerMaxSendMsgSize(transportConfig.ServerMaxSendMsgSize))
 	}
 	if transportConfig.ClientMaxRecvMsgSize > 0 {
-		transportOptions.clientMaxRecvMsgSize = transportConfig.ClientMaxRecvMsgSize
+		options = append(options, ClientMaxRecvMsgSize(transportConfig.ClientMaxRecvMsgSize))
 	}
 	if transportConfig.ClientMaxSendMsgSize > 0 {
-		transportOptions.clientMaxSendMsgSize = transportConfig.ClientMaxSendMsgSize
+		options = append(options, ClientMaxSendMsgSize(transportConfig.ClientMaxSendMsgSize))
 	}
 	backoffStrategy, err := transportConfig.Backoff.Strategy()
 	if err != nil {
 		return nil, err
 	}
-	transportOptions.backoffStrategy = backoffStrategy
-	return newTransport(transportOptions), nil
+	options = append(options, BackoffStrategy(backoffStrategy))
+	return newTransport(newTransportOptions(options)), nil
 }
 
 func (t *transportSpec) buildInbound(inboundConfig *InboundConfig, tr transport.Transport, _ *yarpcconfig.Kit) (transport.Inbound, error) {
