@@ -33,7 +33,6 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/nooptrace"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -159,7 +158,7 @@ func (o *Outbound) invoke(
 	}
 
 	var span opentracing.Span
-	tracer := nooptrace.GetTracer(o.t.options.tracer)
+	tracer := o.t.options.tracer
 	if tracer != nil {
 		createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 			Tracer:        tracer,

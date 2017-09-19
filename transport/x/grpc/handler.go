@@ -28,7 +28,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
-	"go.uber.org/yarpc/internal/nooptrace"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -99,7 +98,7 @@ func (h *handler) handleBeforeErrorConversion(
 		return err
 	}
 
-	tracer := nooptrace.GetTracer(h.i.t.options.tracer)
+	tracer := h.i.t.options.tracer
 	var span opentracing.Span
 	if tracer != nil {
 		var parentSpanCtx opentracing.SpanContext
