@@ -162,7 +162,7 @@ func addApplicationHeaders(md metadata.MD, headers transport.Headers) error {
 
 // getApplicationHeaders returns the headers from md without any reserved headers.
 func getApplicationHeaders(md metadata.MD) (transport.Headers, error) {
-	if md == nil {
+	if len(md) == 0 {
 		return transport.Headers{}, nil
 	}
 	headers := transport.NewHeadersWithCapacity(md.Len())
