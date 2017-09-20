@@ -28,7 +28,7 @@ import (
 )
 
 func TestErrorCodes(t *testing.T) {
-	assert.True(t, IsBadRequestError(yarpcerrors.InvalidArgumentErrorf("")))
-	assert.True(t, IsUnexpectedError(yarpcerrors.InternalErrorf("")))
-	assert.True(t, IsTimeoutError(yarpcerrors.DeadlineExceededErrorf("")))
+	assert.True(t, IsBadRequestError(yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "")))
+	assert.True(t, IsUnexpectedError(yarpcerrors.Newf(yarpcerrors.CodeInternal, "")))
+	assert.True(t, IsTimeoutError(yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "")))
 }

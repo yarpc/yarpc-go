@@ -27,47 +27,47 @@ import "go.uber.org/yarpc/yarpcerrors"
 //
 // IsBadRequestError returns true for these errors.
 //
-// Deprecated: use yarpcerrors.InvalidArgumentErrorf instead.
+// Deprecated: use yarpcerrors.Newf with yarpcerrors.CodeInvalidArgument instead.
 func InboundBadRequestError(err error) error {
-	return yarpcerrors.InvalidArgumentErrorf(err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, err.Error())
 }
 
 // IsBadRequestError returns true if the request could not be processed
 // because it was invalid.
 //
-// Deprecated: use yarpcerrors.IsInvalidArgument(err) instead.
+// Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument instead.
 func IsBadRequestError(err error) bool {
-	return yarpcerrors.IsInvalidArgument(err)
+	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument
 }
 
 // IsUnexpectedError returns true if the server panicked or failed to process
 // the request with an unhandled error.
 //
-// Deprecated: use yarpcerrors.IsInternal(err) instead.
+// Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInternal instead.
 func IsUnexpectedError(err error) bool {
-	return yarpcerrors.IsInternal(err)
+	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInternal
 }
 
 // IsTimeoutError return true if the given error is a TimeoutError.
 //
-// Deprecated: use yarpcerrors.IsDeadlineExceeded(err) instead.
+// Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeDeadlineExceeded instead.
 func IsTimeoutError(err error) bool {
-	return yarpcerrors.IsDeadlineExceeded(err)
+	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeDeadlineExceeded
 }
 
 // UnrecognizedProcedureError returns an error for the given request,
 // such that IsUnrecognizedProcedureError can distinguish it from other errors
 // coming out of router.Choose.
 //
-// Deprecated: use yarpcerrors.UnimplementedErrorf instead.
+// Deprecated: use yarpcerrors.Newf with yarpcerrors.CodeUnimplemented instead.
 func UnrecognizedProcedureError(req *Request) error {
-	return yarpcerrors.UnimplementedErrorf("unrecognized procedure %q for service %q", req.Procedure, req.Service)
+	return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }
 
 // IsUnrecognizedProcedureError returns true for errors returned by
 // Router.Choose if the router cannot find a handler for the request.
 //
-// Deprecated: use yarpcerrors.IsUnimplemented(err) instead.
+// Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeUnimplemented instead.
 func IsUnrecognizedProcedureError(err error) bool {
-	return yarpcerrors.IsUnimplemented(err)
+	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeUnimplemented
 }

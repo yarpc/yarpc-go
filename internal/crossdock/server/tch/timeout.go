@@ -37,11 +37,11 @@ type handlerTimeoutRawHandler struct{}
 
 func (handlerTimeoutRawHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	start := time.Now()
-	err := yarpcerrors.DeadlineExceededErrorf(
+	err := yarpcerrors.Newf(
+		yarpcerrors.CodeDeadlineExceeded,
 		"call to procedure %q of service %q from caller %q timed out after %v",
 		"caller", "service", "handlertimeout/raw", time.Now().Sub(start))
-	err = tchannel.NewSystemError(tchannel.ErrCodeTimeout, err.Error())
-	return nil, err
+	return nil, tchannel.NewSystemError(tchannel.ErrCodeTimeout, err.Error())
 }
 
 func (handlerTimeoutRawHandler) OnError(ctx context.Context, err error) {

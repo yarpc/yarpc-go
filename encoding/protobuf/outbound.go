@@ -111,7 +111,7 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		return nil, nil, nil, nil, err
 	}
 	if transportRequest.Encoding != Encoding && transportRequest.Encoding != JSONEncoding {
-		return nil, nil, nil, nil, yarpcerrors.InternalErrorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
+		return nil, nil, nil, nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequest.Encoding)
 	}
 	if request != nil {
 		requestData, cleanup, err := marshal(transportRequest.Encoding, request)

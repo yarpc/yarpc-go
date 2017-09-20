@@ -72,12 +72,12 @@ func remoteTimeout(t crossdock.T, dispatcher *yarpc.Dispatcher) {
 		return
 	}
 
-	if yarpcerrors.IsInvalidArgument(err) {
+	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument {
 		t.Skipf("handlertimeout/raw procedure not implemented: %v", err)
 		return
 	}
 
-	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
+	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.FromError(err).Code(), "is an error with code CodeDeadlineExceeded: %v", err)
 }
 
 func rawCall(
