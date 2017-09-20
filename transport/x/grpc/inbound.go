@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	errRouterNotSet = yarpcerrors.InternalErrorf("router not set")
+	errRouterNotSet = yarpcerrors.Newf(yarpcerrors.CodeInternal, "router not set")
 
 	_ transport.Inbound = (*Inbound)(nil)
 )

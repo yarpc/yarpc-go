@@ -28,7 +28,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-var errRateLimitExceeded = yarpcerrors.ResourceExhaustedErrorf("rate limit exceeded")
+var errRateLimitExceeded = yarpcerrors.Newf(yarpcerrors.CodeResourceExhausted, "rate limit exceeded")
 
 // NewUnaryInboundMiddleware creates a unary inbound middleware that
 // introduces a throttle, shedding inbound requests if they arrive more often

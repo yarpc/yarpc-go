@@ -198,7 +198,7 @@ func getTimeLeft(ctx context.Context, max time.Duration) (timeleft time.Duration
 }
 
 func isIdempotentProcedureRetryable(err error) bool {
-	switch yarpcerrors.ErrorCode(err) {
+	switch yarpcerrors.FromError(err).Code() {
 	case yarpcerrors.CodeInternal, yarpcerrors.CodeDeadlineExceeded, yarpcerrors.CodeUnavailable, yarpcerrors.CodeUnknown:
 		return true
 	default:

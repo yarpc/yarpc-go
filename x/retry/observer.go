@@ -244,8 +244,8 @@ func (c call) maxAttemptsError(err error) {
 }
 
 func getErrorName(err error) string {
-	if !yarpcerrors.IsYARPCError(err) {
+	if !yarpcerrors.IsStatus(err) {
 		return _unknownErrorName
 	}
-	return yarpcerrors.ErrorCode(err).String()
+	return yarpcerrors.FromError(err).Code().String()
 }
