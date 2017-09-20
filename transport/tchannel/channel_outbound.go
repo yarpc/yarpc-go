@@ -220,9 +220,9 @@ func writeBody(body io.Reader, call *tchannel.OutboundCall) error {
 func fromSystemError(err tchannel.SystemError) error {
 	code, ok := _tchannelCodeToCode[err.Code()]
 	if !ok {
-		return yarpcerrors.InternalErrorf("got tchannel.SystemError %v which did not have a matching YARPC code", err)
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got tchannel.SystemError %v which did not have a matching YARPC code", err)
 	}
-	return yarpcerrors.FromHeaders(code, "", err.Message())
+	return yarpcerrors.Newf(code, err.Message())
 }
 
 func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
@@ -240,9 +240,9 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 		return err
 	}
 	if errorCode == yarpcerrors.CodeOK {
-		return yarpcerrors.InternalErrorf("got CodeOK from error header")
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "got CodeOK from error header")
 	}
 	errorName, _ := headers.Get(ErrorNameHeaderKey)
 	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
-	return yarpcerrors.FromHeaders(errorCode, errorName, errorMessage)
+	return yarpcerrors.Newf(errorCode, errorMessage).WithName(errorName)
 }

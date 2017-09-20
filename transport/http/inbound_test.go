@@ -158,7 +158,7 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
-		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.ErrorCode(err))
+		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.FromError(err).Code())
 	}
 
 	o.setURLTemplate("http://host:port/rpc/v1")

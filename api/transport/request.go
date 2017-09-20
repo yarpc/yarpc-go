@@ -102,7 +102,7 @@ func ValidateRequest(req *Request) error {
 		missingParams = append(missingParams, "encoding")
 	}
 	if len(missingParams) > 0 {
-		return yarpcerrors.InvalidArgumentErrorf("missing %s", strings.Join(missingParams, ", "))
+		return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing %s", strings.Join(missingParams, ", "))
 	}
 	return nil
 }
@@ -112,7 +112,7 @@ func ValidateRequest(req *Request) error {
 // yarpcerrors.CodeInvalidArgument otherwise.
 func ValidateUnaryContext(ctx context.Context) error {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
-		return yarpcerrors.InvalidArgumentErrorf("missing TTL")
+		return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "missing TTL")
 	}
 	return nil
 }

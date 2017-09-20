@@ -190,8 +190,8 @@ func doClient(
 }
 
 func getErrorMessage(err error) string {
-	if yarpcerrors.IsYARPCError(err) {
-		return yarpcerrors.ErrorMessage(err)
+	if yarpcerrors.IsStatus(err) {
+		return yarpcerrors.FromError(err).Message()
 	}
 	if errorDesc := grpc.ErrorDesc(err); errorDesc != "" {
 		return errorDesc

@@ -69,19 +69,19 @@ func testIntegration(
 	keyValueYARPCServer *example.KeyValueYARPCServer,
 	sinkYARPCServer *example.SinkYARPCServer,
 ) {
-	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
+	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
 	_, err := getValue(clients.KeyValueYARPCClient, "foo")
-	assert.Equal(t, yarpcerrors.NamedErrorf("foo-bar", "baz"), err)
-	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"), err)
+	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
 
 	_, err = getValue(clients.KeyValueYARPCClient, "foo")
-	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 	_, err = getValue(clients.KeyValueYARPCJSONClient, "foo")
-	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 
 	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", "bar"))
 	value, err := getValue(clients.KeyValueYARPCClient, "foo")

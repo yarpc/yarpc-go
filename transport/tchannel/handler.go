@@ -103,16 +103,16 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	if err != nil && responseWriter.isApplicationError {
 		// we have an error, so we're going to propagate it as a yarpc error,
 		// regardless of whether or not it is a system error.
-		yarpcError := errors.WrapHandlerError(err, call.ServiceName(), call.MethodString())
+		status := yarpcerrors.FromError(errors.WrapHandlerError(err, call.ServiceName(), call.MethodString()))
 		// TODO: what to do with error? we could have a whole complicated scheme to
 		// return a SystemError here, might want to do that
-		text, _ := yarpcerrors.ErrorCode(yarpcError).MarshalText()
+		text, _ := status.Code().MarshalText()
 		responseWriter.addHeader(ErrorCodeHeaderKey, string(text))
-		if name := yarpcerrors.ErrorName(yarpcError); name != "" {
-			responseWriter.addHeader(ErrorNameHeaderKey, name)
+		if status.Name() != "" {
+			responseWriter.addHeader(ErrorNameHeaderKey, status.Name())
 		}
-		if message := yarpcerrors.ErrorMessage(yarpcError); message != "" {
-			responseWriter.addHeader(ErrorMessageHeaderKey, message)
+		if status.Message() != "" {
+			responseWriter.addHeader(ErrorMessageHeaderKey, status.Message())
 		}
 	}
 	if err := responseWriter.Close(); err != nil {
@@ -162,7 +162,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 
 	spec, err := h.router.Choose(ctx, treq)
 	if err != nil {
-		if yarpcerrors.ErrorCode(err) != yarpcerrors.CodeUnimplemented {
+		if yarpcerrors.FromError(err).Code() != yarpcerrors.CodeUnimplemented {
 			return err
 		}
 		if tcall, ok := call.(tchannelCall); !ok {
@@ -182,7 +182,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		return transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	default:
-		return yarpcerrors.UnimplementedErrorf("transport tchannel does not handle %s handlers", spec.Type().String())
+		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport tchannel does not handle %s handlers", spec.Type().String())
 	}
 }
 
@@ -268,9 +268,10 @@ func getSystemError(err error) error {
 		return err
 	}
 	status := tchannel.ErrCodeUnexpected
-	if yarpcerrors.IsInvalidArgument(err) || yarpcerrors.IsUnimplemented(err) {
+	code := yarpcerrors.FromError(err).Code()
+	if code == yarpcerrors.CodeInvalidArgument || code == yarpcerrors.CodeUnimplemented {
 		status = tchannel.ErrCodeBadRequest
-	} else if yarpcerrors.IsDeadlineExceeded(err) {
+	} else if code == yarpcerrors.CodeDeadlineExceeded {
 		status = tchannel.ErrCodeTimeout
 	}
 	return tchannel.NewSystemError(status, err.Error())

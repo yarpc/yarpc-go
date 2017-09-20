@@ -177,6 +177,6 @@ func connectivityStateToPeerConnectionStatus(connectivityState connectivity.Stat
 	case connectivity.Ready:
 		return peer.Available, nil
 	default:
-		return 0, yarpcerrors.InternalErrorf("unknown connectivity.State: %v", connectivityState)
+		return 0, yarpcerrors.Newf(yarpcerrors.CodeInternal, "unknown connectivity.State: %v", connectivityState)
 	}
 }

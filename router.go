@@ -190,5 +190,5 @@ func (m MapRouter) Choose(ctx context.Context, req *transport.Request) (transpor
 		return m.serviceProcedureEncodings[spe].HandlerSpec, nil
 	}
 
-	return transport.HandlerSpec{}, yarpcerrors.UnimplementedErrorf("unrecognized procedure %q for service %q", req.Procedure, req.Service)
+	return transport.HandlerSpec{}, yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "unrecognized procedure %q for service %q", req.Procedure, req.Service)
 }

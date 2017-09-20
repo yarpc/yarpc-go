@@ -59,7 +59,7 @@ func TestSanitization(t *testing.T) {
 
 	_, err := client.Check(tchannel.WrapWithHeaders(ctx, map[string]string{"key": "value"}))
 	require.Error(t, err, "expected Check to fail")
-	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.ErrorCode(err),
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(err).Code(),
 		"error code must match")
 	assert.True(t, handlerWasCalled, "newTestServer handler was never called")
 }

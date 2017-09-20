@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.InvalidArgumentErrorf("can't wait for peer without a context deadline for peerheap")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for peerheap")
 )
 
 const unavailablePenalty = math.MaxInt32
@@ -216,7 +216,7 @@ func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, fu
 }
 
 func newNotRunningError(err error) error {
-	return yarpcerrors.FailedPreconditionErrorf("peer heap is not running: %s", err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "peer heap is not running: %s", err.Error())
 }
 
 func (pl *List) get() (*peerScore, bool) {
@@ -252,7 +252,7 @@ func (pl *List) waitForPeerAvailableEvent(ctx context.Context) error {
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("peer heap timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "peer heap timed out waiting for peer: %s", err.Error())
 }
 
 // notifyPeerAvailable writes to a channel indicating that a Peer is currently

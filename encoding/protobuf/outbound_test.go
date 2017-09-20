@@ -18,50 +18,52 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package protobuf
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"time"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// parseTTL takes a context parses the given TTL, clamping the context to that
-// TTL and as a side-effect, tracking any errors encountered while attempting
-// to parse and validate that TTL.
-//
-// Leaves the context unchanged if the TTL is empty.
-func parseTTL(ctx context.Context, req *transport.Request, ttl string) (_ context.Context, cancel func(), _ error) {
-	if ttl == "" {
-		return ctx, func() {}, nil
-	}
-
-	ttlms, err := strconv.Atoi(ttl)
-	if err != nil {
-		return ctx, func() {}, newInvalidTTLError(
-			req.Service,
-			req.Procedure,
-			ttl,
-		)
-	}
-
-	// negative TTLs are invalid
-	if ttlms < 0 {
-		return ctx, func() {}, newInvalidTTLError(
-			req.Service,
-			req.Procedure,
-			fmt.Sprint(ttlms),
-		)
-	}
-
-	ctx, cancel = context.WithTimeout(ctx, time.Duration(ttlms)*time.Millisecond)
-	return ctx, cancel, nil
+func TestInvalidOutboundEncoding(t *testing.T) {
+	client := newClient("foo", newTestClientConfig("bar", "baz"))
+	_, _, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
+	assert.NoError(t, err)
+	client.encoding = "bat"
+	_, _, _, _, err = client.buildTransportRequest(context.Background(), "hello", nil, nil)
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 }
 
-func newInvalidTTLError(service string, procedure string, ttl string) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "invalid TTL %q for service %q and procedure %q", ttl, service, procedure)
+type testClientConfig struct {
+	caller  string
+	service string
+}
+
+func newTestClientConfig(caller string, service string) *testClientConfig {
+	return &testClientConfig{
+		caller:  caller,
+		service: service,
+	}
+}
+
+func (c *testClientConfig) Caller() string {
+	return c.caller
+}
+
+func (c *testClientConfig) Service() string {
+	return c.service
+}
+
+func (c *testClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
+	// per ClientConfig docs
+	panic("testClientConfig has no UnaryOutbound")
+}
+
+func (c *testClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
+	// per ClientConfig docs
+	panic("testClientConfig has no OnewayOutbound")
 }

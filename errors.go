@@ -30,9 +30,9 @@ import "go.uber.org/yarpc/yarpcerrors"
 // 		fmt.Println("invalid request:", err)
 // 	}
 //
-// Deprecated: use yarpcerrors.IsInvalidArgument(err) instead.
+// Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument instead.
 func IsBadRequestError(err error) bool {
-	return yarpcerrors.IsInvalidArgument(err)
+	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument
 }
 
 // IsUnexpectedError returns true on an error returned by RPC clients if the
@@ -43,9 +43,9 @@ func IsBadRequestError(err error) bool {
 // 		fmt.Println("internal server error:", err)
 // 	}
 //
-// Deprecated: use yarpcerrors.IsInternal(err) instead.
+// Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInternal instead.
 func IsUnexpectedError(err error) bool {
-	return yarpcerrors.IsInternal(err)
+	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInternal
 }
 
 // IsTimeoutError returns true on an error returned by RPC clients if the given
@@ -56,7 +56,7 @@ func IsUnexpectedError(err error) bool {
 // 		fmt.Println("request timed out:", err)
 // 	}
 //
-// Deprecated: use yarpcerrors.IsDeadlineExceeded(err).
+// Deprecated: use yarpcerrors.FromError(err).Code() == yarpcerrors.CodeDeadlineExceeded instead.
 func IsTimeoutError(err error) bool {
-	return yarpcerrors.IsDeadlineExceeded(err)
+	return yarpcerrors.FromError(err).Code() == yarpcerrors.CodeDeadlineExceeded
 }
