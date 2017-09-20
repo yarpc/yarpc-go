@@ -37,7 +37,7 @@ func TestCallOptionsWriteToRequest(t *testing.T) {
 			[]yarpc.CallOption{
 				yarpc.WithShardKey("foo"),
 				yarpc.WithRoutingKey("bar"),
-				yarpc.WithRoutingDelegate("baz`"),
+				yarpc.WithRoutingDelegate("baz"),
 			},
 		)...,
 	)
@@ -45,6 +45,8 @@ func TestCallOptionsWriteToRequest(t *testing.T) {
 	_, err := outboundCall.WriteToRequest(context.Background(), request)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", request.ShardKey)
+	assert.Equal(t, "bar", request.RoutingKey)
+	assert.Equal(t, "baz", request.RoutingDelegate)
 }
 
 func TestCallFromContext(t *testing.T) {
