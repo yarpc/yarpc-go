@@ -104,6 +104,7 @@ func TestHandlerHeaders(t *testing.T) {
 	tests := []struct {
 		giveEncoding string
 		giveHeaders  http.Header
+		grabHeaders  map[string]struct{}
 
 		wantTTL     time.Duration
 		wantHeaders map[string]string
@@ -113,10 +114,13 @@ func TestHandlerHeaders(t *testing.T) {
 			giveHeaders: http.Header{
 				TTLMSHeader:      {"1000"},
 				"Rpc-Header-Foo": {"bar"},
+				"X-Baz":          {"bat"},
 			},
-			wantTTL: time.Second,
+			grabHeaders: map[string]struct{}{"x-baz": {}},
+			wantTTL:     time.Second,
 			wantHeaders: map[string]string{
-				"foo": "bar",
+				"foo":   "bar",
+				"x-baz": "bat",
 			},
 		},
 		{
@@ -156,7 +160,7 @@ func TestHandlerHeaders(t *testing.T) {
 			WithProcedure("hello"),
 		).Return(spec, nil)
 
-		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
+		httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}, grabHeaders: tt.grabHeaders}
 
 		rpcHandler.EXPECT().Handle(
 			transporttest.NewContextMatcher(t,
