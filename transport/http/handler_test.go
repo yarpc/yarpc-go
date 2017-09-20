@@ -164,7 +164,6 @@ func TestHandlerHeaders(t *testing.T) {
 			WithProcedure("hello"),
 		).Return(spec, nil)
 
-
 		httpHandler := handler{router: router, tracer: nil, grabHeaders: tt.grabHeaders}
 
 		rpcHandler.EXPECT().Handle(
