@@ -25,12 +25,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestBadRequestError(t *testing.T) {
 	err := errors.New("derp")
 	err = InboundBadRequestError(err)
 	assert.True(t, IsBadRequestError(err))
+}
+
+func TestIsUnexpectedError(t *testing.T) {
+	assert.True(t, IsUnexpectedError(yarpcerrors.Newf(yarpcerrors.CodeInternal, "")))
+}
+
+func TestIsTimeoutError(t *testing.T) {
+	assert.True(t, IsTimeoutError(yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "")))
 }
 
 func TestUnrecognizedProcedureError(t *testing.T) {

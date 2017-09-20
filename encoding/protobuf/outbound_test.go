@@ -21,45 +21,49 @@
 package protobuf
 
 import (
-	"reflect"
-	"sort"
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-func TestCastError(t *testing.T) {
-	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(CastError(nil, nil)).Code())
+func TestInvalidOutboundEncoding(t *testing.T) {
+	client := newClient("foo", newTestClientConfig("bar", "baz"))
+	_, _, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
+	assert.NoError(t, err)
+	client.encoding = "bat"
+	_, _, _, _, err = client.buildTransportRequest(context.Background(), "hello", nil, nil)
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
 }
 
-func TestClientBuilderOptions(t *testing.T) {
-	assert.Nil(t, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue"`}))
-	assert.Equal(t, []ClientOption{UseJSON}, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue" proto:"json"`}))
+type testClientConfig struct {
+	caller  string
+	service string
 }
 
-func TestUniqueLowercaseStrings(t *testing.T) {
-	tests := []struct {
-		give []string
-		want []string
-	}{
-		{
-			give: []string{"foo", "bar", "baz"},
-			want: []string{"foo", "bar", "baz"},
-		},
-		{
-			give: []string{"foo", "BAR", "bAz"},
-			want: []string{"foo", "bar", "baz"},
-		},
-		{
-			give: []string{"foo", "BAR", "bAz", "bar"},
-			want: []string{"foo", "bar", "baz"},
-		},
+func newTestClientConfig(caller string, service string) *testClientConfig {
+	return &testClientConfig{
+		caller:  caller,
+		service: service,
 	}
-	for _, tt := range tests {
-		got := uniqueLowercaseStrings(tt.give)
-		sort.Strings(tt.want)
-		sort.Strings(got)
-		assert.Equal(t, tt.want, got)
-	}
+}
+
+func (c *testClientConfig) Caller() string {
+	return c.caller
+}
+
+func (c *testClientConfig) Service() string {
+	return c.service
+}
+
+func (c *testClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
+	// per ClientConfig docs
+	panic("testClientConfig has no UnaryOutbound")
+}
+
+func (c *testClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
+	// per ClientConfig docs
+	panic("testClientConfig has no OnewayOutbound")
 }
