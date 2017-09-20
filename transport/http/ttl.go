@@ -63,5 +63,5 @@ func parseTTL(ctx context.Context, req *transport.Request, ttl string) (_ contex
 }
 
 func newInvalidTTLError(service string, procedure string, ttl string) error {
-	return yarpcerrors.InvalidArgumentErrorf("invalid TTL %q for service %q and procedure %q", ttl, service, procedure)
+	return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "invalid TTL %q for service %q and procedure %q", ttl, service, procedure)
 }

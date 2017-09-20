@@ -273,7 +273,8 @@ func (o *Outbound) callWithPeer(
 		span.LogEvent(err.Error())
 		if err == context.DeadlineExceeded {
 			end := time.Now()
-			return nil, yarpcerrors.DeadlineExceededErrorf(
+			return nil, yarpcerrors.Newf(
+				yarpcerrors.CodeDeadlineExceeded,
 				"client timeout for procedure %q of service %q after %v",
 				treq.Procedure, treq.Service, end.Sub(start))
 		}
@@ -282,7 +283,7 @@ func (o *Outbound) callWithPeer(
 		// maintenance loop resumes probing for availability.
 		p.OnDisconnected()
 
-		return nil, yarpcerrors.UnknownErrorf("unknown error from http client: %s", err.Error())
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
 
 	span.SetTag("http.status_code", response.StatusCode)
@@ -391,10 +392,10 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 func getYARPCErrorFromResponse(response *http.Response) error {
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return yarpcerrors.InternalErrorf(err.Error())
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
 	if err := response.Body.Close(); err != nil {
-		return yarpcerrors.InternalErrorf(err.Error())
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(response.StatusCode)
@@ -405,11 +406,10 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 			code = errorCode
 		}
 	}
-	return yarpcerrors.FromHeaders(
+	return yarpcerrors.Newf(
 		code,
-		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(string(contents), "\n"),
-	)
+	).WithName(response.Header.Get(ErrorNameHeader))
 }
 
 // Introspect returns basic status about this outbound.

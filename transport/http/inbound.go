@@ -105,7 +105,7 @@ func (i *Inbound) Start() error {
 
 func (i *Inbound) start() error {
 	if i.router == nil {
-		return yarpcerrors.InternalErrorf("no router configured for transport inbound")
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for transport inbound")
 	}
 
 	var httpHandler http.Handler = handler{
