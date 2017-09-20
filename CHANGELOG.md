@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.17.0-dev (unreleased)
+v1.17.0 (2017-09-20)
 --------------------
 
 -   yarpcerrors: Make core API much simpler and use a Status struct
