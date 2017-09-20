@@ -4,8 +4,11 @@ Releases
 v1.17.0-dev (unreleased)
 --------------------
 
+-   yarpcerrors: Make core API much simpler and use a Status struct
+    to represent YARPC errors.
 -   transport/http: Add GrabHeaders option to propagate specific
     headers starting with x- to handlers.
+-   tranxport/x/grpc: Remove ContextWrapper.
 -   Export no-op backoff strategy in api/backoff.
 
 
