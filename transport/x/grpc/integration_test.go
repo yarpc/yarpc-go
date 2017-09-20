@@ -28,6 +28,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
@@ -43,6 +44,18 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func init() {
+	opentracing.SetGlobalTracer(nil)
+}
+
+func TestYARPCTracerNil(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.Nil(t, e.Inbound.t.options.tracer)
+		assert.Nil(t, e.Outbound.t.options.tracer)
+	})
+}
 
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()

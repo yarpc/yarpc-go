@@ -26,6 +26,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/yarpc/internal/nooptrace"
 )
 
 const (
@@ -139,6 +140,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	for _, option := range options {
 		option(transportOptions)
 	}
+	transportOptions.tracer = nooptrace.GetTracer(transportOptions.tracer)
 	return transportOptions
 }
 

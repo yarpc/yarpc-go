@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	intnet "go.uber.org/yarpc/internal/net"
+	"go.uber.org/yarpc/internal/nooptrace"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -100,7 +101,7 @@ type Inbound struct {
 
 // Tracer configures a tracer on this inbound.
 func (i *Inbound) Tracer(tracer opentracing.Tracer) *Inbound {
-	i.tracer = tracer
+	i.tracer = nooptrace.GetTracer(tracer)
 	return i
 }
 

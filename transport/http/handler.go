@@ -125,7 +125,9 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 
 	switch spec.Type() {
 	case transport.Unary:
-		defer span.Finish()
+		if span != nil {
+			defer span.Finish()
+		}
 		if parseTTLErr != nil {
 			return parseTTLErr
 		}
@@ -161,11 +163,16 @@ func handleOnewayRequest(
 
 	// create a new context for oneway requests since the HTTP handler cancels
 	// http.Request's context when ServeHTTP returns
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
+	ctx := context.Background()
+	if span != nil {
+		ctx = opentracing.ContextWithSpan(ctx, span)
+	}
 
 	go func() {
 		// ensure the span lasts for length of the handler in case of errors
-		defer span.Finish()
+		if span != nil {
+			defer span.Finish()
+		}
 
 		err := transport.DispatchOnewayHandler(ctx, onewayHandler, treq)
 		updateSpanWithErr(span, err)
@@ -174,6 +181,9 @@ func handleOnewayRequest(
 }
 
 func updateSpanWithErr(span opentracing.Span, err error) {
+	if span == nil {
+		return
+	}
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogEvent(err.Error())
@@ -184,6 +194,9 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 	// Extract opentracing etc baggage from headers
 	// Annotate the inbound context with a trace span
 	tracer := h.tracer
+	if tracer == nil {
+		return ctx, nil
+	}
 	carrier := opentracing.HTTPHeadersCarrier(req.Header)
 	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
 	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent

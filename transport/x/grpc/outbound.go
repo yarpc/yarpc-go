@@ -157,33 +157,35 @@ func (o *Outbound) invoke(
 		}
 	}
 
+	var span opentracing.Span
 	tracer := o.t.options.tracer
-	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
-	}
-	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
-		Tracer:        tracer,
-		TransportName: transportName,
-		StartTime:     start,
-	}
-	ctx, span := createOpenTracingSpan.Do(ctx, request)
-	defer span.Finish()
+	if tracer != nil {
+		createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+			Tracer:        tracer,
+			TransportName: transportName,
+			StartTime:     start,
+		}
+		ctx, span = createOpenTracingSpan.Do(ctx, request)
+		defer span.Finish()
 
-	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
-		return err
+		if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+			return err
+		}
 	}
 
-	return transport.UpdateSpanWithErr(
-		span,
-		grpc.Invoke(
-			metadata.NewOutgoingContext(ctx, md),
-			fullMethod,
-			requestBuffer.Bytes(),
-			responseBody,
-			grpcPeer.clientConn,
-			callOptions...,
-		),
+	err = grpc.Invoke(
+		metadata.NewOutgoingContext(ctx, md),
+		fullMethod,
+		requestBuffer.Bytes(),
+		responseBody,
+		grpcPeer.clientConn,
+		callOptions...,
 	)
+
+	if tracer != nil {
+		return transport.UpdateSpanWithErr(span, err)
+	}
+	return err
 }
 
 func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {

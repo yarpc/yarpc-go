@@ -255,7 +255,9 @@ func (o *Outbound) callWithPeer(
 	if err != nil {
 		return nil, err
 	}
-	defer span.Finish()
+	if span != nil {
+		defer span.Finish()
+	}
 	req = o.withCoreHeaders(req, treq, ttl)
 
 	response, err := p.transport.client.Do(req.WithContext(ctx))
@@ -269,8 +271,10 @@ func (o *Outbound) callWithPeer(
 		default:
 		}
 
-		span.SetTag("error", true)
-		span.LogEvent(err.Error())
+		if span != nil {
+			span.SetTag("error", true)
+			span.LogEvent(err.Error())
+		}
 		if err == context.DeadlineExceeded {
 			end := time.Now()
 			return nil, yarpcerrors.Newf(
@@ -286,7 +290,9 @@ func (o *Outbound) callWithPeer(
 		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "unknown error from http client: %s", err.Error())
 	}
 
-	span.SetTag("http.status_code", response.StatusCode)
+	if span != nil {
+		span.SetTag("http.status_code", response.StatusCode)
+	}
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		appHeaders := applicationHeaders.FromHTTPHeaders(
@@ -328,6 +334,9 @@ func (o *Outbound) createRequest(p *httpPeer, treq *transport.Request) (*http.Re
 func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, treq *transport.Request, start time.Time) (context.Context, *http.Request, opentracing.Span, error) {
 	// Apply HTTP Context headers for tracing and baggage carried by tracing.
 	tracer := o.tracer
+	if tracer == nil {
+		return ctx, req, nil, nil
+	}
 	var parent opentracing.SpanContext // ok to be nil
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 		parent = parentSpan.Context()
