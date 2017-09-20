@@ -128,7 +128,7 @@ func (i *Inbound) start() error {
 	}
 	for header := range i.grabHeaders {
 		if !strings.HasPrefix(header, "x-") {
-			return yarpcerrors.InvalidArgumentErrorf("header %s does not begin with 'x-'", header)
+			return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "header %s does not begin with 'x-'", header)
 		}
 	}
 
