@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/protobuf"
+	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
@@ -89,7 +90,7 @@ func ParseTransportType(s string) (TransportType, error) {
 type ClientInfo struct {
 	ClientConfig   transport.ClientConfig
 	GRPCClientConn *ggrpc.ClientConn
-	ContextWrapper *grpc.ContextWrapper
+	ContextWrapper *grpcctx.ContextWrapper
 }
 
 // WithClientInfo wraps a function by setting up a client and server dispatcher and giving
@@ -135,7 +136,7 @@ func WithClientInfo(serviceName string, procedures []transport.Procedure, transp
 		&ClientInfo{
 			clientDispatcher.ClientConfig(serviceName),
 			grpcClientConn,
-			grpc.NewContextWrapper().
+			grpcctx.NewContextWrapper().
 				WithCaller(serviceName + "-client").
 				WithService(serviceName).
 				WithEncoding(string(protobuf.Encoding)),

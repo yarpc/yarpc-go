@@ -6,6 +6,7 @@ v1.17.0-dev (unreleased)
 
 -   transport/http: Add GrabHeaders option to propagate specific
     headers starting with x- to handlers.
+-   Export no-op backoff strategy in api/backoff.
 
 
 v1.16.0 (2017-09-18)
@@ -29,7 +30,6 @@ v1.15.0 (2017-09-15)
     the transport encoding.
 -   transport/x/grpc: Add options to specify the maximum message size sent and
     received over the wire.
-
 
 
 v1.14.0 (2017-09-08)

@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package grpc
+// Package grpcctx contains helper functionality for testing with grpc-go.
+package grpcctx
 
 import (
 	"context"
@@ -51,32 +52,32 @@ func (c *ContextWrapper) Wrap(ctx context.Context) context.Context {
 
 // WithCaller returns a new ContextWrapper with the given caller.
 func (c *ContextWrapper) WithCaller(caller string) *ContextWrapper {
-	return c.copyAndAdd(CallerHeader, caller)
+	return c.copyAndAdd("rpc-caller", caller)
 }
 
 // WithService returns a new ContextWrapper with the given service.
 func (c *ContextWrapper) WithService(service string) *ContextWrapper {
-	return c.copyAndAdd(ServiceHeader, service)
+	return c.copyAndAdd("rpc-service", service)
 }
 
 // WithShardKey returns a new ContextWrapper with the given shard key.
 func (c *ContextWrapper) WithShardKey(shardKey string) *ContextWrapper {
-	return c.copyAndAdd(ShardKeyHeader, shardKey)
+	return c.copyAndAdd("rpc-shard-key", shardKey)
 }
 
 // WithRoutingKey returns a new ContextWrapper with the given routing key.
 func (c *ContextWrapper) WithRoutingKey(routingKey string) *ContextWrapper {
-	return c.copyAndAdd(RoutingKeyHeader, routingKey)
+	return c.copyAndAdd("rpc-routing-key", routingKey)
 }
 
 // WithRoutingDelegate returns a new ContextWrapper with the given routing delegate.
 func (c *ContextWrapper) WithRoutingDelegate(routingDelegate string) *ContextWrapper {
-	return c.copyAndAdd(RoutingDelegateHeader, routingDelegate)
+	return c.copyAndAdd("rpc-routing-delegate", routingDelegate)
 }
 
 // WithEncoding returns a new ContextWrapper with the given encoding.
 func (c *ContextWrapper) WithEncoding(encoding string) *ContextWrapper {
-	return c.copyAndAdd(EncodingHeader, encoding)
+	return c.copyAndAdd("rpc-encoding", encoding)
 }
 
 func (c *ContextWrapper) copyAndAdd(key string, value string) *ContextWrapper {

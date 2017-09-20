@@ -26,7 +26,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -143,9 +142,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	return transportOptions
 }
 
-type inboundOptions struct {
-	unaryInterceptor grpc.UnaryServerInterceptor
-}
+type inboundOptions struct{}
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
 	inboundOptions := &inboundOptions{}
@@ -163,12 +160,4 @@ func newOutboundOptions(options []OutboundOption) *outboundOptions {
 		option(outboundOptions)
 	}
 	return outboundOptions
-}
-
-// for testing only for now
-// grpc-go only allows one interceptor, so need to handle all cases
-func withInboundUnaryInterceptor(unaryInterceptor grpc.UnaryServerInterceptor) InboundOption {
-	return func(inboundOptions *inboundOptions) {
-		inboundOptions.unaryInterceptor = unaryInterceptor
-	}
 }

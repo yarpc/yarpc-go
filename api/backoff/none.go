@@ -20,18 +20,21 @@
 
 package backoff
 
-import "go.uber.org/yarpc/api/backoff"
-
-// The None backoff strategy could be implemented as a trivial singleton, but
-// for brevity, is just a degenerate case of the exponential backoff.
-
-var noneOpts = exponentialOptions{
-	newRand: newRand,
-}
+import "time"
 
 // None is a shorted backoff strategy that will always produce a 0ms duration.
 // This strategy is intended to minimize arbitrary delays during tests or
 // maximize load on a benchmark.
-var None backoff.Strategy = &ExponentialStrategy{
-	opts: noneOpts,
+var None Strategy = &none{}
+
+type none struct{}
+
+// Backoff implements Strategy.
+func (n *none) Backoff() Backoff {
+	return n
+}
+
+// Duration implements Backoff.
+func (*none) Duration(attempts uint) time.Duration {
+	return time.Duration(0)
 }
