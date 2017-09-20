@@ -44,8 +44,9 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	router transport.Router
-	tracer opentracing.Tracer
+	router      transport.Router
+	tracer      opentracing.Tracer
+	grabHeaders map[string]struct{}
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -93,6 +94,11 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Body:            req.Body,
+	}
+	for header := range h.grabHeaders {
+		if value := req.Header.Get(header); value != "" {
+			treq.Headers = treq.Headers.With(header, value)
+		}
 	}
 	if err := transport.ValidateRequest(treq); err != nil {
 		return err

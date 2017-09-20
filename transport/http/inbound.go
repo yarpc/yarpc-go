@@ -23,6 +23,7 @@ package http
 import (
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/transport"
@@ -51,14 +52,31 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	}
 }
 
+// GrabHeaders specifies additional headers that are not prefixed with
+// ApplicationHeaderPrefix that should be propagated to the caller.
+//
+// All headers given must begin with x- or X- or the Inbound that the
+// returned option is passed to will return an error when Start is called.
+//
+// Headers specified with GrabHeaders are case-insensitive.
+// https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+func GrabHeaders(headers ...string) InboundOption {
+	return func(i *Inbound) {
+		for _, header := range headers {
+			i.grabHeaders[strings.ToLower(header)] = struct{}{}
+		}
+	}
+}
+
 // NewInbound builds a new HTTP inbound that listens on the given address and
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:      lifecycle.NewOnce(),
-		addr:      addr,
-		tracer:    t.tracer,
-		transport: t,
+		once:        lifecycle.NewOnce(),
+		addr:        addr,
+		tracer:      t.tracer,
+		transport:   t,
+		grabHeaders: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -69,13 +87,14 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 // Inbound receives YARPC requests using an HTTP server. It may be constructed
 // using the NewInbound method on the Transport.
 type Inbound struct {
-	addr       string
-	mux        *http.ServeMux
-	muxPattern string
-	server     *intnet.HTTPServer
-	router     transport.Router
-	tracer     opentracing.Tracer
-	transport  *Transport
+	addr        string
+	mux         *http.ServeMux
+	muxPattern  string
+	server      *intnet.HTTPServer
+	router      transport.Router
+	tracer      opentracing.Tracer
+	transport   *Transport
+	grabHeaders map[string]struct{}
 
 	once *lifecycle.Once
 }
@@ -108,10 +127,16 @@ func (i *Inbound) start() error {
 	if i.router == nil {
 		return yarpcerrors.InternalErrorf("no router configured for transport inbound")
 	}
+	for header := range i.grabHeaders {
+		if !strings.HasPrefix(header, "x-") {
+			return yarpcerrors.InvalidArgumentErrorf("header %s does not begin with 'x-'", header)
+		}
+	}
 
 	var httpHandler http.Handler = handler{
-		router: i.router,
-		tracer: i.tracer,
+		router:      i.router,
+		tracer:      i.tracer,
+		grabHeaders: i.grabHeaders,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)

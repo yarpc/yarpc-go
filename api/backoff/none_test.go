@@ -28,8 +28,8 @@ import (
 )
 
 func TestNone(t *testing.T) {
-	none := None.Backoff()
-	assert.Equal(t, time.Duration(0), none.Duration(0))
-	assert.Equal(t, time.Duration(0), none.Duration(1))
-	assert.Equal(t, time.Duration(0), none.Duration(2))
+	boff := None.Backoff()
+	assert.Equal(t, time.Duration(0), boff.Duration(0))
+	assert.Equal(t, time.Duration(0), boff.Duration(1))
+	assert.Equal(t, time.Duration(0), boff.Duration(2))
 }
