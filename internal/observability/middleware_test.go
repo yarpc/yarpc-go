@@ -122,7 +122,11 @@ func TestMiddlewareLogging(t *testing.T) {
 				fakeHandler{tt.err, tt.applicationErr},
 			)
 			checkErr(err)
-			logContext := append(baseFields(), zap.String("rpcType", "Unary"))
+			logContext := append(
+				baseFields(),
+				zap.String("direction", _directionInbound),
+				zap.String("rpcType", "Unary"),
+			)
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
@@ -139,7 +143,11 @@ func TestMiddlewareLogging(t *testing.T) {
 			if tt.err == nil {
 				assert.NotNil(t, res, "Expected non-nil response if call is successful.")
 			}
-			logContext := append(baseFields(), zap.String("rpcType", "Unary"))
+			logContext := append(
+				baseFields(),
+				zap.String("direction", _directionOutbound),
+				zap.String("rpcType", "Unary"),
+			)
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
@@ -153,7 +161,11 @@ func TestMiddlewareLogging(t *testing.T) {
 		t.Run(tt.desc+", oneway inbound", func(t *testing.T) {
 			err := mw.HandleOneway(context.Background(), req, fakeHandler{tt.err, false})
 			checkErr(err)
-			logContext := append(baseFields(), zap.String("rpcType", "Oneway"))
+			logContext := append(
+				baseFields(),
+				zap.String("direction", _directionInbound),
+				zap.String("rpcType", "Oneway"),
+			)
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
 				Entry: zapcore.Entry{
@@ -167,7 +179,11 @@ func TestMiddlewareLogging(t *testing.T) {
 		t.Run(tt.desc+", oneway outbound", func(t *testing.T) {
 			ack, err := mw.CallOneway(context.Background(), req, fakeOutbound{err: tt.err})
 			checkErr(err)
-			logContext := append(baseFields(), zap.String("rpcType", "Oneway"))
+			logContext := append(
+				baseFields(),
+				zap.String("direction", _directionOutbound),
+				zap.String("rpcType", "Oneway"),
+			)
 			logContext = append(logContext, tt.wantFields...)
 			if tt.err == nil {
 				assert.NotNil(t, ack, "Expected non-nil ack if call is successful.")
@@ -247,8 +263,8 @@ func TestMiddlewareMetrics(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		validate := func(mw *Middleware) {
-			key, free := getKey(req)
+		validate := func(mw *Middleware, direction string) {
+			key, free := getKey(req, direction)
 			edge := mw.graph.getEdge(key)
 			free()
 			assert.Equal(t, int64(tt.wantCalls), edge.calls.Load())
@@ -268,12 +284,12 @@ func TestMiddlewareMetrics(t *testing.T) {
 				&transporttest.FakeResponseWriter{},
 				fakeHandler{tt.err, tt.applicationErr},
 			)
-			validate(mw)
+			validate(mw, _directionInbound)
 		})
 		t.Run(tt.desc+", unary outbound", func(t *testing.T) {
 			mw := NewMiddleware(zap.NewNop(), pally.NewRegistry(), NewNopContextExtractor())
 			mw.Call(context.Background(), req, fakeOutbound{err: tt.err})
-			validate(mw)
+			validate(mw, _directionOutbound)
 		})
 	}
 }
@@ -281,7 +297,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 // getKey gets the "key" that we will use to get an edge in the graph.  We use
 // a separate function to recreate the logic because extracting it out in the
 // main code could have performance implications.
-func getKey(req *transport.Request) (key []byte, free func()) {
+func getKey(req *transport.Request, direction string) (key []byte, free func()) {
 	d := digester.New()
 	d.Add(req.Caller)
 	d.Add(req.Service)
@@ -289,6 +305,7 @@ func getKey(req *transport.Request) (key []byte, free func()) {
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
+	d.Add(direction)
 	return d.Digest(), d.Free
 }
 
@@ -312,6 +329,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("direction", _directionInbound),
 		zap.String("rpcType", "Unary"),
 		zap.Duration("latency", 0),
 		zap.Bool("successful", false),

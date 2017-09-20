@@ -14,6 +14,7 @@ v1.17.0 (2017-09-20)
     headers starting with x- to handlers.
 -   tranxport/x/grpc: Remove ContextWrapper.
 -   Export no-op backoff strategy in api/backoff.
+-   Add inbound/outbound direction tag to observability metrics.
 
 
 v1.16.0 (2017-09-18)
