@@ -48,10 +48,10 @@ func Run(t crossdock.T) {
 	_, err := client.Call(ctx, "sleep/raw", nil)
 	fatals.Error(err, "expected a failure for timeout")
 
-	if yarpcerrors.IsInvalidArgument(err) {
+	if yarpcerrors.FromError(err).Code() == yarpcerrors.CodeInvalidArgument {
 		t.Skipf("sleep/raw method not implemented: %v", err)
 		return
 	}
 
-	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.ErrorCode(err), "is an error with code CodeDeadlineExceeded: %v", err)
+	assert.Equal(yarpcerrors.CodeDeadlineExceeded, yarpcerrors.FromError(err).Code(), "is an error with code CodeDeadlineExceeded: %v", err)
 }

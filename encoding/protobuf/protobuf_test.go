@@ -26,7 +26,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+func TestCastError(t *testing.T) {
+	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(CastError(nil, nil)).Code())
+}
 
 func TestClientBuilderOptions(t *testing.T) {
 	assert.Nil(t, ClientBuilderOptions(nil, reflect.StructField{Tag: `service:"keyvalue"`}))

@@ -192,13 +192,13 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if err == nil {
 		return nil
 	}
-	if yarpcerrors.IsYARPCError(err) {
+	if yarpcerrors.IsStatus(err) {
 		return err
 	}
 	status, ok := status.FromError(err)
-	// if not a yarpc error or grpc error, just return the error
+	// if not a yarpc error or grpc error, just return a wrapped error
 	if !ok {
-		return err
+		return yarpcerrors.FromError(err)
 	}
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
@@ -220,5 +220,5 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return yarpcerrors.FromHeaders(code, name, message)
+	return yarpcerrors.Newf(code, message).WithName(name)
 }

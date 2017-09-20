@@ -72,14 +72,14 @@ func TestErrorsString(t *testing.T) {
 	testAllErrorConstructors(
 		t,
 		func(t *testing.T, code Code, errorConstructor func(string, ...interface{}) error) {
-			yarpcError, ok := errorConstructor("hello %d", 1).(*yarpcError)
+			status, ok := errorConstructor("hello %d", 1).(*Status)
 			require.True(t, ok)
-			require.Equal(t, fmt.Sprintf("code:%s message:hello 1", code.String()), yarpcError.Error())
+			require.Equal(t, fmt.Sprintf("code:%s message:hello 1", code.String()), status.Error())
 		},
 		func(t *testing.T) {
-			yarpcError, ok := NamedErrorf("foo", "hello %d", 1).(*yarpcError)
+			status, ok := NamedErrorf("foo", "hello %d", 1).(*Status)
 			require.True(t, ok)
-			require.Equal(t, "code:unknown name:foo message:hello 1", yarpcError.Error())
+			require.Equal(t, "code:unknown name:foo message:hello 1", status.Error())
 		},
 	)
 }

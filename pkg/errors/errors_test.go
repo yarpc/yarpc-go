@@ -31,8 +31,8 @@ import (
 
 func TestWrapHandlerError(t *testing.T) {
 	assert.Nil(t, WrapHandlerError(nil, "foo", "bar"))
-	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.ErrorCode(WrapHandlerError(yarpcerrors.InvalidArgumentErrorf(""), "foo", "bar")))
-	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.ErrorCode(WrapHandlerError(errors.New(""), "foo", "bar")))
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(WrapHandlerError(yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, ""), "foo", "bar")).Code())
+	assert.Equal(t, yarpcerrors.CodeUnknown, yarpcerrors.FromError(WrapHandlerError(errors.New(""), "foo", "bar")).Code())
 }
 
 func TestExpectEncodings(t *testing.T) {
@@ -98,7 +98,7 @@ func TestEncodeErrors(t *testing.T) {
 
 func assertError(t *testing.T, err error, expectedCode yarpcerrors.Code, expectedWords ...string) {
 	assert.Error(t, err)
-	assert.Equal(t, expectedCode, yarpcerrors.ErrorCode(err))
+	assert.Equal(t, expectedCode, yarpcerrors.FromError(err).Code())
 	for _, expectedWord := range expectedWords {
 		assert.Contains(t, err.Error(), expectedWord)
 	}

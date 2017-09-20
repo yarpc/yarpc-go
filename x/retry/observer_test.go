@@ -70,7 +70,7 @@ func TestYarpcInternalErrorCounter(t *testing.T) {
 		Procedure: "procedure",
 	})
 
-	call.yarpcInternalError(yarpcerrors.InternalErrorf("test"))
+	call.yarpcInternalError(yarpcerrors.Newf(yarpcerrors.CodeInternal, "test"))
 
 	assert.Equal(t, int64(1), call.e.failures.MustGet(_yarpcInternal, yarpcerrors.CodeInternal.String()).Load())
 }
@@ -84,12 +84,12 @@ func TestErrorName(t *testing.T) {
 	tests := []testStruct{
 		{
 			msg:      "internal",
-			giveErr:  yarpcerrors.InternalErrorf("test"),
+			giveErr:  yarpcerrors.Newf(yarpcerrors.CodeInternal, "test"),
 			wantName: yarpcerrors.CodeInternal.String(),
 		},
 		{
 			msg:      "invalid request",
-			giveErr:  yarpcerrors.InvalidArgumentErrorf("test"),
+			giveErr:  yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "test"),
 			wantName: yarpcerrors.CodeInvalidArgument.String(),
 		},
 		{

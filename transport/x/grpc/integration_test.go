@@ -61,7 +61,7 @@ func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -86,25 +86,25 @@ func TestYARPCWellKnownError(t *testing.T) {
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("bar 1"), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
 	})
 }
 
 func TestYARPCNamedError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.NamedErrorf("bar", "baz 1"), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"), err)
 	})
 }
 
 func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", ""))
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.NamedErrorf("bar", ""), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"), err)
 	})
 }
 
@@ -120,7 +120,7 @@ func TestGRPCWellKnownError(t *testing.T) {
 func TestGRPCNamedError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
 	})
@@ -129,7 +129,7 @@ func TestGRPCNamedError(t *testing.T) {
 func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", ""))
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
 	})
@@ -139,7 +139,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", defaultServerMaxRecvMsgSize*2)
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
-		assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.ErrorCode(e.SetValueYARPC(context.Background(), "foo", value)))
+		assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.FromError(e.SetValueYARPC(context.Background(), "foo", value)).Code())
 	})
 	doWithTestEnv(t, []TransportOption{
 		ClientMaxRecvMsgSize(math.MaxInt32),

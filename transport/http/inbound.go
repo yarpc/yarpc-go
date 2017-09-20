@@ -125,7 +125,7 @@ func (i *Inbound) Start() error {
 
 func (i *Inbound) start() error {
 	if i.router == nil {
-		return yarpcerrors.InternalErrorf("no router configured for transport inbound")
+		return yarpcerrors.Newf(yarpcerrors.CodeInternal, "no router configured for transport inbound")
 	}
 	for header := range i.grabHeaders {
 		if !strings.HasPrefix(header, "x-") {

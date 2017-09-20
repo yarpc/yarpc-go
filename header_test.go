@@ -18,22 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package http
+package yarpc
 
 import (
-	"fmt"
-	"net/http"
-	"time"
+	"testing"
 
-	"go.uber.org/yarpc/yarpcerrors"
+	"github.com/stretchr/testify/assert"
 )
 
-func handlerTimeoutRawHandler(w http.ResponseWriter, req *http.Request) {
-	start := time.Now()
-	err := yarpcerrors.Newf(
-		yarpcerrors.CodeDeadlineExceeded,
-		"call to procedure %q of service %q from caller %q timed out after %v",
-		"caller", "service", "handlertimeout/raw", time.Now().Sub(start))
-	w.WriteHeader(http.StatusGatewayTimeout)
-	fmt.Fprint(w, err.Error())
+func TestCanonicalizeHeaderKey(t *testing.T) {
+	assert.Equal(t, "foo", CanonicalizeHeaderKey("foo"))
+	assert.Equal(t, "foo", CanonicalizeHeaderKey("Foo"))
+	assert.Equal(t, "foo", CanonicalizeHeaderKey("FOO"))
+	assert.Equal(t, "foo", CanonicalizeHeaderKey("fOo"))
 }

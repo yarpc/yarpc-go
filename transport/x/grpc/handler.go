@@ -40,7 +40,7 @@ import (
 var (
 	// errInvalidGRPCStream is applied before yarpc so it's a raw GRPC error
 	errInvalidGRPCStream = status.Error(codes.InvalidArgument, "received grpc request with invalid stream")
-	errInvalidGRPCMethod = yarpcerrors.InvalidArgumentErrorf("invalid stream method name for request")
+	errInvalidGRPCMethod = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "invalid stream method name for request")
 )
 
 type handler struct {
@@ -127,7 +127,7 @@ func (h *handler) handleBeforeErrorConversion(
 func (h *handler) getTransportRequest(ctx context.Context, streamMethod string, requestReader io.Reader) (*transport.Request, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if md == nil || !ok {
-		return nil, yarpcerrors.InternalErrorf("cannot get metadata from ctx: %v", ctx)
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeInternal, "cannot get metadata from ctx: %v", ctx)
 	}
 	transportRequest, err := metadataToTransportRequest(md)
 	if err != nil {
@@ -171,7 +171,7 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request,
 	case transport.Unary:
 		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseWriter)
 	default:
-		return yarpcerrors.UnimplementedErrorf("transport grpc does not handle %s handlers", handlerSpec.Type().String())
+		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
 	}
 }
 
@@ -192,11 +192,13 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 	}
 	// if this is not a yarpc error, return the error
 	// this will result in the error being a grpc-go error with codes.Unknown
-	if !yarpcerrors.IsYARPCError(err) {
+	if !yarpcerrors.IsStatus(err) {
 		return err
 	}
-	name := yarpcerrors.ErrorName(err)
-	message := yarpcerrors.ErrorMessage(err)
+	// we now know we have a yarpc error
+	yarpcStatus := yarpcerrors.FromError(err)
+	name := yarpcStatus.Name()
+	message := yarpcStatus.Message()
 	// if the yarpc error has a name, set the header
 	if name != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, name)
@@ -209,7 +211,7 @@ func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {
 			message = name + ": " + message
 		}
 	}
-	grpcCode, ok := _codeToGRPCCode[yarpcerrors.ErrorCode(err)]
+	grpcCode, ok := _codeToGRPCCode[yarpcStatus.Code()]
 	// should only happen if _codeToGRPCCode does not cover all codes
 	if !ok {
 		grpcCode = codes.Unknown

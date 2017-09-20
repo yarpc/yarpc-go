@@ -92,7 +92,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		return
 	}
 
-	if !yarpcerrors.IsYARPCError(err) {
+	if !yarpcerrors.IsStatus(err) {
 		c.edge.serverErrLatencies.Observe(elapsed)
 		if counter, err := c.edge.serverFailures.Get("unknown_internal_yarpc"); err == nil {
 			counter.Inc()
@@ -100,7 +100,7 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		return
 	}
 
-	errCode := yarpcerrors.ErrorCode(err)
+	errCode := yarpcerrors.FromError(err).Code()
 	switch errCode {
 	case yarpcerrors.CodeCancelled,
 		yarpcerrors.CodeInvalidArgument,

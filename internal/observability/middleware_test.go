@@ -210,7 +210,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 		},
 		{
 			desc:          "invalid argument error",
-			err:           yarpcerrors.InvalidArgumentErrorf("test"),
+			err:           yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantCallerFailures: map[string]int{
@@ -219,7 +219,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 		},
 		{
 			desc:          "invalid argument error",
-			err:           yarpcerrors.InternalErrorf("test"),
+			err:           yarpcerrors.Newf(yarpcerrors.CodeInternal, "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantServerFailures: map[string]int{
@@ -237,7 +237,7 @@ func TestMiddlewareMetrics(t *testing.T) {
 		},
 		{
 			desc:          "custom error code error",
-			err:           yarpcerrors.FromHeaders(yarpcerrors.Code(1000), "", "test"),
+			err:           yarpcerrors.Newf(yarpcerrors.Code(1000), "test"),
 			wantCalls:     1,
 			wantSuccesses: 0,
 			wantServerFailures: map[string]int{

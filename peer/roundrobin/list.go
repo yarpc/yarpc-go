@@ -35,7 +35,7 @@ import (
 )
 
 var (
-	_noContextDeadlineError = yarpcerrors.InvalidArgumentErrorf("can't wait for peer without a context deadline for roundrobin list")
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for roundrobin list")
 )
 
 type listConfig struct {
@@ -311,7 +311,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 }
 
 func newNotRunningError(err error) error {
-	return yarpcerrors.FailedPreconditionErrorf("round robin peer list is not running: %s", err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "round robin peer list is not running: %s", err.Error())
 }
 
 // IsRunning returns whether the peer list is running.
@@ -361,7 +361,7 @@ func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 }
 
 func newUnavailableError(err error) error {
-	return yarpcerrors.UnavailableErrorf("round robin peer list timed out waiting for peer: %s", err.Error())
+	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "round robin peer list timed out waiting for peer: %s", err.Error())
 }
 
 // NotifyStatusChanged when the peer's status changes
