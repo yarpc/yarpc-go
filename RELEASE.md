@@ -27,19 +27,26 @@ This document outlines how to create a release of yarpc-go
 
 10. `git push origin master`
 
-11. Go to https://github.com/yarpc/yarpc-go/tags and edit the release notes of
+11. Go to https://travis-ci.org/yarpc/yarpc-go/builds and cancel the build for
+    v<version_to_release>. If the Codecov build for v<version_to_release>
+    completes before the Codecov build for master, the code coverage for master
+    will not get updated, only one branch gets updated per commit, this is
+    verified with Codecov support. This will get tested by the build for master
+    anyways.
+
+12. Go to https://github.com/yarpc/yarpc-go/tags and edit the release notes of
     the new tag (copy the changelog into the release notes and make the release
     name the version number)
 
-12. `git checkout dev`
+13. `git checkout dev`
 
-13. `git merge master`
+14. `git merge master`
 
-14. Update `CHANGELOG.md` and `version.go` to have a new
+15. Update `CHANGELOG.md` and `version.go` to have a new
     `v<version>-dev (unreleased)`
 
-15. Run `make verifyversion`
+16. Run `make verifyversion`
 
-16. Create a commit with the title `Back to development`
+17. Create a commit with the title `Back to development`
 
-17. `git push origin dev`
+18. `git push origin dev`
