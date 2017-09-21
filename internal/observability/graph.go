@@ -89,6 +89,9 @@ var (
 		7500 * _ms,
 		10000 * _ms,
 	}
+
+	_directionOutbound = "outbound"
+	_directionInbound  = "inbound"
 )
 
 // A graph represents a collection of services: each service is a node, and we
@@ -114,6 +117,10 @@ func newGraph(reg *pally.Registry, logger *zap.Logger, extract ContextExtractor)
 // begin starts a call along an edge.
 func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound bool, req *transport.Request) call {
 	now := _timeNow()
+	direction := _directionOutbound
+	if isInbound {
+		direction = _directionInbound
+	}
 
 	d := digester.New()
 	d.Add(req.Caller)
@@ -122,7 +129,8 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound boo
 	d.Add(req.Procedure)
 	d.Add(req.RoutingKey)
 	d.Add(req.RoutingDelegate)
-	e := g.getOrCreateEdge(d.Digest(), req)
+	d.Add(direction)
+	e := g.getOrCreateEdge(d.Digest(), req, direction)
 	d.Free()
 
 	return call{
@@ -136,11 +144,11 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound boo
 	}
 }
 
-func (g *graph) getOrCreateEdge(key []byte, req *transport.Request) *edge {
+func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string) *edge {
 	if e := g.getEdge(key); e != nil {
 		return e
 	}
-	return g.createEdge(key, req)
+	return g.createEdge(key, req, direction)
 }
 
 func (g *graph) getEdge(key []byte) *edge {
@@ -150,7 +158,7 @@ func (g *graph) getEdge(key []byte) *edge {
 	return e
 }
 
-func (g *graph) createEdge(key []byte, req *transport.Request) *edge {
+func (g *graph) createEdge(key []byte, req *transport.Request, direction string) *edge {
 	g.edgesMu.Lock()
 	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
 	defer g.edgesMu.Unlock()
@@ -160,7 +168,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request) *edge {
 		return e
 	}
 
-	e := newEdge(g.logger, g.reg, req)
+	e := newEdge(g.logger, g.reg, req, direction)
 	g.edges[string(key)] = e
 	return e
 }
@@ -182,7 +190,7 @@ type edge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *edge {
+func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request, direction string) *edge {
 	labels := pally.Labels{
 		"source":           pally.ScrubLabelValue(req.Caller),
 		"dest":             pally.ScrubLabelValue(req.Service),
@@ -190,6 +198,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		"encoding":         pally.ScrubLabelValue(string(req.Encoding)),
 		"routing_key":      pally.ScrubLabelValue(req.RoutingKey),
 		"routing_delegate": pally.ScrubLabelValue(req.RoutingDelegate),
+		"direction":        pally.ScrubLabelValue(direction),
 	}
 	calls, err := reg.NewCounter(pally.Opts{
 		Name:        "calls",
@@ -275,6 +284,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("direction", direction),
 	)
 	return &edge{
 		logger:             logger,
