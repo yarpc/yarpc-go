@@ -159,227 +159,163 @@ func ErrorMessage(err error) string {
 }
 
 // CancelledErrorf returns a new Status with code CodeCancelled.
-//
-// Deprecated: Use Newf instead.
 func CancelledErrorf(format string, args ...interface{}) error {
 	return Newf(CodeCancelled, format, args...)
 }
 
 // UnknownErrorf returns a new Status with code CodeUnknown.
-//
-// Deprecated: Use Newf instead.
 func UnknownErrorf(format string, args ...interface{}) error {
 	return Newf(CodeUnknown, format, args...)
 }
 
 // InvalidArgumentErrorf returns a new Status with code CodeInvalidArgument.
-//
-// Deprecated: Use Newf instead.
 func InvalidArgumentErrorf(format string, args ...interface{}) error {
 	return Newf(CodeInvalidArgument, format, args...)
 }
 
 // DeadlineExceededErrorf returns a new Status with code CodeDeadlineExceeded.
-//
-// Deprecated: Use Newf instead.
 func DeadlineExceededErrorf(format string, args ...interface{}) error {
 	return Newf(CodeDeadlineExceeded, format, args...)
 }
 
 // NotFoundErrorf returns a new Status with code CodeNotFound.
-//
-// Deprecated: Use Newf instead.
 func NotFoundErrorf(format string, args ...interface{}) error {
 	return Newf(CodeNotFound, format, args...)
 }
 
 // AlreadyExistsErrorf returns a new Status with code CodeAlreadyExists.
-//
-// Deprecated: Use Newf instead.
 func AlreadyExistsErrorf(format string, args ...interface{}) error {
 	return Newf(CodeAlreadyExists, format, args...)
 }
 
 // PermissionDeniedErrorf returns a new Status with code CodePermissionDenied.
-//
-// Deprecated: Use Newf instead.
 func PermissionDeniedErrorf(format string, args ...interface{}) error {
 	return Newf(CodePermissionDenied, format, args...)
 }
 
 // ResourceExhaustedErrorf returns a new Status with code CodeResourceExhausted.
-//
-// Deprecated: Use Newf instead.
 func ResourceExhaustedErrorf(format string, args ...interface{}) error {
 	return Newf(CodeResourceExhausted, format, args...)
 }
 
 // FailedPreconditionErrorf returns a new Status with code CodeFailedPrecondition.
-//
-// Deprecated: Use Newf instead.
 func FailedPreconditionErrorf(format string, args ...interface{}) error {
 	return Newf(CodeFailedPrecondition, format, args...)
 }
 
 // AbortedErrorf returns a new Status with code CodeAborted.
-//
-// Deprecated: Use Newf instead.
 func AbortedErrorf(format string, args ...interface{}) error {
 	return Newf(CodeAborted, format, args...)
 }
 
 // OutOfRangeErrorf returns a new Status with code CodeOutOfRange.
-//
-// Deprecated: Use Newf instead.
 func OutOfRangeErrorf(format string, args ...interface{}) error {
 	return Newf(CodeOutOfRange, format, args...)
 }
 
 // UnimplementedErrorf returns a new Status with code CodeUnimplemented.
-//
-// Deprecated: Use Newf instead.
 func UnimplementedErrorf(format string, args ...interface{}) error {
 	return Newf(CodeUnimplemented, format, args...)
 }
 
 // InternalErrorf returns a new Status with code CodeInternal.
-//
-// Deprecated: Use Newf instead.
 func InternalErrorf(format string, args ...interface{}) error {
 	return Newf(CodeInternal, format, args...)
 }
 
 // UnavailableErrorf returns a new Status with code CodeUnavailable.
-//
-// Deprecated: Use Newf instead.
 func UnavailableErrorf(format string, args ...interface{}) error {
 	return Newf(CodeUnavailable, format, args...)
 }
 
 // DataLossErrorf returns a new Status with code CodeDataLoss.
-//
-// Deprecated: Use Newf instead.
 func DataLossErrorf(format string, args ...interface{}) error {
 	return Newf(CodeDataLoss, format, args...)
 }
 
 // UnauthenticatedErrorf returns a new Status with code CodeUnauthenticated.
-//
-// Deprecated: Use Newf instead.
 func UnauthenticatedErrorf(format string, args ...interface{}) error {
 	return Newf(CodeUnauthenticated, format, args...)
 }
 
-// IsCancelled returns true if ErrorCode(err) == CodeCancelled.
-//
-// Deprecated: Use FromError and Code instead.
+// IsCancelled returns true if Status(err).Code() == CodeCancelled.
 func IsCancelled(err error) bool {
-	return ErrorCode(err) == CodeCancelled
+	return Status(err).Code() == CodeCancelled
 }
 
-// IsUnknown returns true if ErrorCode(err) == CodeUnknown.
-//
-// Deprecated: Use FromError and Code instead.
+// IsUnknown returns true if Status(err).Code() == CodeUnknown.
 func IsUnknown(err error) bool {
-	return ErrorCode(err) == CodeUnknown
+	return Status(err).Code() == CodeUnknown
 }
 
-// IsInvalidArgument returns true if ErrorCode(err) == CodeInvalidArgument.
-//
-// Deprecated: Use FromError and Code instead.
+// IsInvalidArgument returns true if Status(err).Code() == CodeInvalidArgument.
 func IsInvalidArgument(err error) bool {
-	return ErrorCode(err) == CodeInvalidArgument
+	return Status(err).Code() == CodeInvalidArgument
 }
 
-// IsDeadlineExceeded returns true if ErrorCode(err) == CodeDeadlineExceeded.
-//
-// Deprecated: Use FromError and Code instead.
+// IsDeadlineExceeded returns true if Status(err).Code() == CodeDeadlineExceeded.
 func IsDeadlineExceeded(err error) bool {
-	return ErrorCode(err) == CodeDeadlineExceeded
+	return Status(err).Code() == CodeDeadlineExceeded
 }
 
-// IsNotFound returns true if ErrorCode(err) == CodeNotFound.
-//
-// Deprecated: Use FromError and Code instead.
+// IsNotFound returns true if Status(err).Code() == CodeNotFound.
 func IsNotFound(err error) bool {
-	return ErrorCode(err) == CodeNotFound
+	return Status(err).Code() == CodeNotFound
 }
 
-// IsAlreadyExists returns true if ErrorCode(err) == CodeAlreadyExists.
-//
-// Deprecated: Use FromError and Code instead.
+// IsAlreadyExists returns true if Status(err).Code() == CodeAlreadyExists.
 func IsAlreadyExists(err error) bool {
-	return ErrorCode(err) == CodeAlreadyExists
+	return Status(err).Code() == CodeAlreadyExists
 }
 
-// IsPermissionDenied returns true if ErrorCode(err) == CodePermissionDenied.
-//
-// Deprecated: Use FromError and Code instead.
+// IsPermissionDenied returns true if Status(err).Code() == CodePermissionDenied.
 func IsPermissionDenied(err error) bool {
-	return ErrorCode(err) == CodePermissionDenied
+	return Status(err).Code() == CodePermissionDenied
 }
 
-// IsResourceExhausted returns true if ErrorCode(err) == CodeResourceExhausted.
-//
-// Deprecated: Use FromError and Code instead.
+// IsResourceExhausted returns true if Status(err).Code() == CodeResourceExhausted.
 func IsResourceExhausted(err error) bool {
-	return ErrorCode(err) == CodeResourceExhausted
+	return Status(err).Code() == CodeResourceExhausted
 }
 
-// IsFailedPrecondition returns true if ErrorCode(err) == CodeFailedPrecondition.
-//
-// Deprecated: Use FromError and Code instead.
+// IsFailedPrecondition returns true if Status(err).Code() == CodeFailedPrecondition.
 func IsFailedPrecondition(err error) bool {
-	return ErrorCode(err) == CodeFailedPrecondition
+	return Status(err).Code() == CodeFailedPrecondition
 }
 
-// IsAborted returns true if ErrorCode(err) == CodeAborted.
-//
-// Deprecated: Use FromError and Code instead.
+// IsAborted returns true if Status(err).Code() == CodeAborted.
 func IsAborted(err error) bool {
-	return ErrorCode(err) == CodeAborted
+	return Status(err).Code() == CodeAborted
 }
 
-// IsOutOfRange returns true if ErrorCode(err) == CodeOutOfRange.
-//
-// Deprecated: Use FromError and Code instead.
+// IsOutOfRange returns true if Status(err).Code() == CodeOutOfRange.
 func IsOutOfRange(err error) bool {
-	return ErrorCode(err) == CodeOutOfRange
+	return Status(err).Code() == CodeOutOfRange
 }
 
-// IsUnimplemented returns true if ErrorCode(err) == CodeUnimplemented.
-//
-// Deprecated: Use FromError and Code instead.
+// IsUnimplemented returns true if Status(err).Code() == CodeUnimplemented.
 func IsUnimplemented(err error) bool {
-	return ErrorCode(err) == CodeUnimplemented
+	return Status(err).Code() == CodeUnimplemented
 }
 
-// IsInternal returns true if ErrorCode(err) == CodeInternal.
-//
-// Deprecated: Use FromError and Code instead.
+// IsInternal returns true if Status(err).Code() == CodeInternal.
 func IsInternal(err error) bool {
-	return ErrorCode(err) == CodeInternal
+	return Status(err).Code() == CodeInternal
 }
 
-// IsUnavailable returns true if ErrorCode(err) == CodeUnavailable.
-//
-// Deprecated: Use FromError and Code instead.
+// IsUnavailable returns true if Status(err).Code() == CodeUnavailable.
 func IsUnavailable(err error) bool {
-	return ErrorCode(err) == CodeUnavailable
+	return Status(err).Code() == CodeUnavailable
 }
 
-// IsDataLoss returns true if ErrorCode(err) == CodeDataLoss.
-//
-// Deprecated: Use FromError and Code instead.
+// IsDataLoss returns true if Status(err).Code() == CodeDataLoss.
 func IsDataLoss(err error) bool {
-	return ErrorCode(err) == CodeDataLoss
+	return Status(err).Code() == CodeDataLoss
 }
 
-// IsUnauthenticated returns true if ErrorCode(err) == CodeUnauthenticated.
-//
-// Deprecated: Use FromError and Code instead.
+// IsUnauthenticated returns true if Status(err).Code() == CodeUnauthenticated.
 func IsUnauthenticated(err error) bool {
-	return ErrorCode(err) == CodeUnauthenticated
+	return Status(err).Code() == CodeUnauthenticated
 }
 
 // IsYARPCError is a convenience function that returns true if the given error
