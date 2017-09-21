@@ -133,6 +133,190 @@ func (s *Status) Error() string {
 	return buffer.String()
 }
 
+// CancelledErrorf returns a new Status with code CodeCancelled
+// by calling Newf(CodeCancelled, format, args...).
+func CancelledErrorf(format string, args ...interface{}) error {
+	return Newf(CodeCancelled, format, args...)
+}
+
+// UnknownErrorf returns a new Status with code CodeUnknown
+// by calling Newf(CodeUnknown, format, args...).
+func UnknownErrorf(format string, args ...interface{}) error {
+	return Newf(CodeUnknown, format, args...)
+}
+
+// InvalidArgumentErrorf returns a new Status with code CodeInvalidArgument
+// by calling Newf(CodeInvalidArgument, format, args...).
+func InvalidArgumentErrorf(format string, args ...interface{}) error {
+	return Newf(CodeInvalidArgument, format, args...)
+}
+
+// DeadlineExceededErrorf returns a new Status with code CodeDeadlineExceeded
+// by calling Newf(CodeDeadlineExceeded, format, args...).
+func DeadlineExceededErrorf(format string, args ...interface{}) error {
+	return Newf(CodeDeadlineExceeded, format, args...)
+}
+
+// NotFoundErrorf returns a new Status with code CodeNotFound
+// by calling Newf(CodeNotFound, format, args...).
+func NotFoundErrorf(format string, args ...interface{}) error {
+	return Newf(CodeNotFound, format, args...)
+}
+
+// AlreadyExistsErrorf returns a new Status with code CodeAlreadyExists
+// by calling Newf(CodeAlreadyExists, format, args...).
+func AlreadyExistsErrorf(format string, args ...interface{}) error {
+	return Newf(CodeAlreadyExists, format, args...)
+}
+
+// PermissionDeniedErrorf returns a new Status with code CodePermissionDenied
+// by calling Newf(CodePermissionDenied, format, args...).
+func PermissionDeniedErrorf(format string, args ...interface{}) error {
+	return Newf(CodePermissionDenied, format, args...)
+}
+
+// ResourceExhaustedErrorf returns a new Status with code CodeResourceExhausted
+// by calling Newf(CodeResourceExhausted, format, args...).
+func ResourceExhaustedErrorf(format string, args ...interface{}) error {
+	return Newf(CodeResourceExhausted, format, args...)
+}
+
+// FailedPreconditionErrorf returns a new Status with code CodeFailedPrecondition
+// by calling Newf(CodeFailedPrecondition, format, args...).
+func FailedPreconditionErrorf(format string, args ...interface{}) error {
+	return Newf(CodeFailedPrecondition, format, args...)
+}
+
+// AbortedErrorf returns a new Status with code CodeAborted
+// by calling Newf(CodeAborted, format, args...).
+func AbortedErrorf(format string, args ...interface{}) error {
+	return Newf(CodeAborted, format, args...)
+}
+
+// OutOfRangeErrorf returns a new Status with code CodeOutOfRange
+// by calling Newf(CodeOutOfRange, format, args...).
+func OutOfRangeErrorf(format string, args ...interface{}) error {
+	return Newf(CodeOutOfRange, format, args...)
+}
+
+// UnimplementedErrorf returns a new Status with code CodeUnimplemented
+// by calling Newf(CodeUnimplemented, format, args...).
+func UnimplementedErrorf(format string, args ...interface{}) error {
+	return Newf(CodeUnimplemented, format, args...)
+}
+
+// InternalErrorf returns a new Status with code CodeInternal
+// by calling Newf(CodeInternal, format, args...).
+func InternalErrorf(format string, args ...interface{}) error {
+	return Newf(CodeInternal, format, args...)
+}
+
+// UnavailableErrorf returns a new Status with code CodeUnavailable
+// by calling Newf(CodeUnavailable, format, args...).
+func UnavailableErrorf(format string, args ...interface{}) error {
+	return Newf(CodeUnavailable, format, args...)
+}
+
+// DataLossErrorf returns a new Status with code CodeDataLoss
+// by calling Newf(CodeDataLoss, format, args...).
+func DataLossErrorf(format string, args ...interface{}) error {
+	return Newf(CodeDataLoss, format, args...)
+}
+
+// UnauthenticatedErrorf returns a new Status with code CodeUnauthenticated
+// by calling Newf(CodeUnauthenticated, format, args...).
+func UnauthenticatedErrorf(format string, args ...interface{}) error {
+	return Newf(CodeUnauthenticated, format, args...)
+}
+
+// IsCancelled returns true if FromError(err).Code() == CodeCancelled.
+func IsCancelled(err error) bool {
+	return FromError(err).Code() == CodeCancelled
+}
+
+// IsUnknown returns true if FromError(err).Code() == CodeUnknown.
+func IsUnknown(err error) bool {
+	return FromError(err).Code() == CodeUnknown
+}
+
+// IsInvalidArgument returns true if FromError(err).Code() == CodeInvalidArgument.
+func IsInvalidArgument(err error) bool {
+	return FromError(err).Code() == CodeInvalidArgument
+}
+
+// IsDeadlineExceeded returns true if FromError(err).Code() == CodeDeadlineExceeded.
+func IsDeadlineExceeded(err error) bool {
+	return FromError(err).Code() == CodeDeadlineExceeded
+}
+
+// IsNotFound returns true if FromError(err).Code() == CodeNotFound.
+func IsNotFound(err error) bool {
+	return FromError(err).Code() == CodeNotFound
+}
+
+// IsAlreadyExists returns true if FromError(err).Code() == CodeAlreadyExists.
+func IsAlreadyExists(err error) bool {
+	return FromError(err).Code() == CodeAlreadyExists
+}
+
+// IsPermissionDenied returns true if FromError(err).Code() == CodePermissionDenied.
+func IsPermissionDenied(err error) bool {
+	return FromError(err).Code() == CodePermissionDenied
+}
+
+// IsResourceExhausted returns true if FromError(err).Code() == CodeResourceExhausted.
+func IsResourceExhausted(err error) bool {
+	return FromError(err).Code() == CodeResourceExhausted
+}
+
+// IsFailedPrecondition returns true if FromError(err).Code() == CodeFailedPrecondition.
+func IsFailedPrecondition(err error) bool {
+	return FromError(err).Code() == CodeFailedPrecondition
+}
+
+// IsAborted returns true if FromError(err).Code() == CodeAborted.
+func IsAborted(err error) bool {
+	return FromError(err).Code() == CodeAborted
+}
+
+// IsOutOfRange returns true if FromError(err).Code() == CodeOutOfRange.
+func IsOutOfRange(err error) bool {
+	return FromError(err).Code() == CodeOutOfRange
+}
+
+// IsUnimplemented returns true if FromError(err).Code() == CodeUnimplemented.
+func IsUnimplemented(err error) bool {
+	return FromError(err).Code() == CodeUnimplemented
+}
+
+// IsInternal returns true if FromError(err).Code() == CodeInternal.
+func IsInternal(err error) bool {
+	return FromError(err).Code() == CodeInternal
+}
+
+// IsUnavailable returns true if FromError(err).Code() == CodeUnavailable.
+func IsUnavailable(err error) bool {
+	return FromError(err).Code() == CodeUnavailable
+}
+
+// IsDataLoss returns true if FromError(err).Code() == CodeDataLoss.
+func IsDataLoss(err error) bool {
+	return FromError(err).Code() == CodeDataLoss
+}
+
+// IsUnauthenticated returns true if FromError(err).Code() == CodeUnauthenticated.
+func IsUnauthenticated(err error) bool {
+	return FromError(err).Code() == CodeUnauthenticated
+}
+
+// IsYARPCError is a convenience function that returns true if the given error
+// is a non-nil YARPC error.
+//
+// Deprecated: use IsStatus instead.
+func IsYARPCError(err error) bool {
+	return IsStatus(err)
+}
+
 // ErrorCode returns the Code for the given error, CodeOK if the error is nil,
 // or CodeUnknown if the given error is not a YARPC error.
 //
@@ -156,174 +340,6 @@ func ErrorName(err error) string {
 // Deprecated: Use FromError and Message instead.
 func ErrorMessage(err error) string {
 	return FromError(err).Message()
-}
-
-// CancelledErrorf returns a new Status with code CodeCancelled.
-func CancelledErrorf(format string, args ...interface{}) error {
-	return Newf(CodeCancelled, format, args...)
-}
-
-// UnknownErrorf returns a new Status with code CodeUnknown.
-func UnknownErrorf(format string, args ...interface{}) error {
-	return Newf(CodeUnknown, format, args...)
-}
-
-// InvalidArgumentErrorf returns a new Status with code CodeInvalidArgument.
-func InvalidArgumentErrorf(format string, args ...interface{}) error {
-	return Newf(CodeInvalidArgument, format, args...)
-}
-
-// DeadlineExceededErrorf returns a new Status with code CodeDeadlineExceeded.
-func DeadlineExceededErrorf(format string, args ...interface{}) error {
-	return Newf(CodeDeadlineExceeded, format, args...)
-}
-
-// NotFoundErrorf returns a new Status with code CodeNotFound.
-func NotFoundErrorf(format string, args ...interface{}) error {
-	return Newf(CodeNotFound, format, args...)
-}
-
-// AlreadyExistsErrorf returns a new Status with code CodeAlreadyExists.
-func AlreadyExistsErrorf(format string, args ...interface{}) error {
-	return Newf(CodeAlreadyExists, format, args...)
-}
-
-// PermissionDeniedErrorf returns a new Status with code CodePermissionDenied.
-func PermissionDeniedErrorf(format string, args ...interface{}) error {
-	return Newf(CodePermissionDenied, format, args...)
-}
-
-// ResourceExhaustedErrorf returns a new Status with code CodeResourceExhausted.
-func ResourceExhaustedErrorf(format string, args ...interface{}) error {
-	return Newf(CodeResourceExhausted, format, args...)
-}
-
-// FailedPreconditionErrorf returns a new Status with code CodeFailedPrecondition.
-func FailedPreconditionErrorf(format string, args ...interface{}) error {
-	return Newf(CodeFailedPrecondition, format, args...)
-}
-
-// AbortedErrorf returns a new Status with code CodeAborted.
-func AbortedErrorf(format string, args ...interface{}) error {
-	return Newf(CodeAborted, format, args...)
-}
-
-// OutOfRangeErrorf returns a new Status with code CodeOutOfRange.
-func OutOfRangeErrorf(format string, args ...interface{}) error {
-	return Newf(CodeOutOfRange, format, args...)
-}
-
-// UnimplementedErrorf returns a new Status with code CodeUnimplemented.
-func UnimplementedErrorf(format string, args ...interface{}) error {
-	return Newf(CodeUnimplemented, format, args...)
-}
-
-// InternalErrorf returns a new Status with code CodeInternal.
-func InternalErrorf(format string, args ...interface{}) error {
-	return Newf(CodeInternal, format, args...)
-}
-
-// UnavailableErrorf returns a new Status with code CodeUnavailable.
-func UnavailableErrorf(format string, args ...interface{}) error {
-	return Newf(CodeUnavailable, format, args...)
-}
-
-// DataLossErrorf returns a new Status with code CodeDataLoss.
-func DataLossErrorf(format string, args ...interface{}) error {
-	return Newf(CodeDataLoss, format, args...)
-}
-
-// UnauthenticatedErrorf returns a new Status with code CodeUnauthenticated.
-func UnauthenticatedErrorf(format string, args ...interface{}) error {
-	return Newf(CodeUnauthenticated, format, args...)
-}
-
-// IsCancelled returns true if Status(err).Code() == CodeCancelled.
-func IsCancelled(err error) bool {
-	return Status(err).Code() == CodeCancelled
-}
-
-// IsUnknown returns true if Status(err).Code() == CodeUnknown.
-func IsUnknown(err error) bool {
-	return Status(err).Code() == CodeUnknown
-}
-
-// IsInvalidArgument returns true if Status(err).Code() == CodeInvalidArgument.
-func IsInvalidArgument(err error) bool {
-	return Status(err).Code() == CodeInvalidArgument
-}
-
-// IsDeadlineExceeded returns true if Status(err).Code() == CodeDeadlineExceeded.
-func IsDeadlineExceeded(err error) bool {
-	return Status(err).Code() == CodeDeadlineExceeded
-}
-
-// IsNotFound returns true if Status(err).Code() == CodeNotFound.
-func IsNotFound(err error) bool {
-	return Status(err).Code() == CodeNotFound
-}
-
-// IsAlreadyExists returns true if Status(err).Code() == CodeAlreadyExists.
-func IsAlreadyExists(err error) bool {
-	return Status(err).Code() == CodeAlreadyExists
-}
-
-// IsPermissionDenied returns true if Status(err).Code() == CodePermissionDenied.
-func IsPermissionDenied(err error) bool {
-	return Status(err).Code() == CodePermissionDenied
-}
-
-// IsResourceExhausted returns true if Status(err).Code() == CodeResourceExhausted.
-func IsResourceExhausted(err error) bool {
-	return Status(err).Code() == CodeResourceExhausted
-}
-
-// IsFailedPrecondition returns true if Status(err).Code() == CodeFailedPrecondition.
-func IsFailedPrecondition(err error) bool {
-	return Status(err).Code() == CodeFailedPrecondition
-}
-
-// IsAborted returns true if Status(err).Code() == CodeAborted.
-func IsAborted(err error) bool {
-	return Status(err).Code() == CodeAborted
-}
-
-// IsOutOfRange returns true if Status(err).Code() == CodeOutOfRange.
-func IsOutOfRange(err error) bool {
-	return Status(err).Code() == CodeOutOfRange
-}
-
-// IsUnimplemented returns true if Status(err).Code() == CodeUnimplemented.
-func IsUnimplemented(err error) bool {
-	return Status(err).Code() == CodeUnimplemented
-}
-
-// IsInternal returns true if Status(err).Code() == CodeInternal.
-func IsInternal(err error) bool {
-	return Status(err).Code() == CodeInternal
-}
-
-// IsUnavailable returns true if Status(err).Code() == CodeUnavailable.
-func IsUnavailable(err error) bool {
-	return Status(err).Code() == CodeUnavailable
-}
-
-// IsDataLoss returns true if Status(err).Code() == CodeDataLoss.
-func IsDataLoss(err error) bool {
-	return Status(err).Code() == CodeDataLoss
-}
-
-// IsUnauthenticated returns true if Status(err).Code() == CodeUnauthenticated.
-func IsUnauthenticated(err error) bool {
-	return Status(err).Code() == CodeUnauthenticated
-}
-
-// IsYARPCError is a convenience function that returns true if the given error
-// is a non-nil YARPC error.
-//
-// Deprecated: use IsStatus instead.
-func IsYARPCError(err error) bool {
-	return IsStatus(err)
 }
 
 // NamedErrorf returns a new Status with code CodeUnknown and the given name.
