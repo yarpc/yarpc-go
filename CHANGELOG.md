@@ -85,7 +85,7 @@ Experimental:
 -   x/grpc: Altered inbound GRPC code in order to support RouterMiddleware.
 
 
-v1.10.0 (2017-17-11)
+v1.10.0 (2017-07-11)
 --------------------
 
 -   Thrift: UberFx-compatible modules are now generated for each service inside
