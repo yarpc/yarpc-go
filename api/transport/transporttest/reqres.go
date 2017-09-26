@@ -107,6 +107,13 @@ func (m RequestMatcher) Matches(got interface{}) bool {
 		m.t.Logf("Routing Delegate mismatch: %s != %s", l.RoutingDelegate, r.RoutingDelegate)
 		return false
 	}
+	// len check to handle nil vs empty cases gracefully.
+	if len(l.Features) != len(r.Features) {
+		if !reflect.DeepEqual(l.Features, r.Features) {
+			m.t.Logf("Features did not match:\n\t   %v\n\t!= %v", l.Features, r.Features)
+			return false
+		}
+	}
 
 	// len check to handle nil vs empty cases gracefully.
 	if l.Headers.Len() != r.Headers.Len() {

@@ -61,6 +61,10 @@ func TestCallFromContext(t *testing.T) {
 			ShardKey:        "one",
 			RoutingKey:      "two",
 			RoutingDelegate: "three",
+			Features: []transport.Feature{
+				transport.Feature(200),
+				transport.Feature(201),
+			},
 		},
 	)
 	assert.NoError(t, err)
@@ -74,4 +78,8 @@ func TestCallFromContext(t *testing.T) {
 	assert.Equal(t, "one", call.ShardKey())
 	assert.Equal(t, "two", call.RoutingKey())
 	assert.Equal(t, "three", call.RoutingDelegate())
+	assert.Equal(t, []transport.Feature{
+		transport.Feature(200),
+		transport.Feature(201),
+	}, call.Features())
 }

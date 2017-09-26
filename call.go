@@ -129,6 +129,11 @@ func (c *Call) Encoding() transport.Encoding {
 	return (*encoding.Call)(c).Encoding()
 }
 
+// Features returns the Features for this request.
+func (c *Call) Features() []transport.Feature {
+	return (*encoding.Call)(c).Features()
+}
+
 // Header returns the value of the given request header provided with the
 // request.
 func (c *Call) Header(k string) string {
