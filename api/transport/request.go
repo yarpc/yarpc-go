@@ -62,7 +62,7 @@ type Request struct {
 	RoutingDelegate string
 
 	// Features for the request.
-	Features []Feature
+	Features Features
 
 	// Request payload.
 	Body io.Reader
@@ -78,12 +78,7 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("shardKey", r.ShardKey)
 	enc.AddString("routingKey", r.RoutingKey)
 	enc.AddString("routingDelegate", r.RoutingDelegate)
-	if err := enc.AddArray("features", zapcore.ArrayMarshalerFunc(func(arrayEncoder zapcore.ArrayEncoder) error {
-		for _, feature := range r.Features {
-			arrayEncoder.AppendString(feature.String())
-		}
-		return nil
-	})); err != nil {
+	if err := enc.AddObject("features", r.Features); err != nil {
 		return err
 	}
 	return nil

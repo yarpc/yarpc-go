@@ -46,9 +46,8 @@ func TestInboundCallReadFromRequest(t *testing.T) {
 		ShardKey:        "shardKey",
 		RoutingKey:      "routingKey",
 		RoutingDelegate: "routingDelegate",
-		Features: []transport.Feature{
-			transport.Feature(200),
-			transport.Feature(201),
+		Features: transport.Features{
+			SupportsBothResponseAndError: true,
 		},
 	})
 	require.NoError(t, err)
@@ -61,9 +60,8 @@ func TestInboundCallReadFromRequest(t *testing.T) {
 	assert.Equal(t, "shardKey", call.ShardKey())
 	assert.Equal(t, "routingKey", call.RoutingKey())
 	assert.Equal(t, "routingDelegate", call.RoutingDelegate())
-	assert.Equal(t, []transport.Feature{
-		transport.Feature(200),
-		transport.Feature(201),
+	assert.Equal(t, transport.Features{
+		SupportsBothResponseAndError: true,
 	}, call.Features())
 
 	assert.Equal(t, "World", call.Header("Hello"))

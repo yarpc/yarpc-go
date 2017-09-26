@@ -28,6 +28,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/serialize/internal"
@@ -61,13 +62,10 @@ func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req
 		ShardKey:        &req.ShardKey,
 		RoutingKey:      &req.RoutingKey,
 		RoutingDelegate: &req.RoutingDelegate,
-		Body:            body,
-	}
-	if len(req.Features) > 0 {
-		rpc.Features = make([]int16, 0, len(req.Features))
-		for _, feature := range req.Features {
-			rpc.Features = append(rpc.Features, int16(feature))
-		}
+		Features: &internal.Features{
+			SupportsBothResponseAndError: ptr.Bool(req.Features.SupportsBothResponseAndError),
+		},
+		Body: body,
 	}
 
 	wireValue, err := rpc.ToWire()
@@ -127,11 +125,8 @@ func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanConte
 	if rpc.RoutingDelegate != nil {
 		req.RoutingDelegate = *rpc.RoutingDelegate
 	}
-	if len(rpc.Features) > 0 {
-		req.Features = make([]transport.Feature, 0, len(rpc.Features))
-		for _, feature := range rpc.Features {
-			req.Features = append(req.Features, transport.Feature(feature))
-		}
+	if rpc.Features != nil && rpc.Features.SupportsBothResponseAndError != nil {
+		req.Features.SupportsBothResponseAndError = *rpc.Features.SupportsBothResponseAndError
 	}
 
 	spanContext, err := spanContextFromBytes(tracer, rpc.SpanContext)

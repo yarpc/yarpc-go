@@ -31,6 +31,132 @@ import (
 	"strings"
 )
 
+type Features struct {
+	SupportsBothResponseAndError *bool `json:"supportsBothResponseAndError,omitempty"`
+}
+
+// ToWire translates a Features struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *Features) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.SupportsBothResponseAndError != nil {
+		w, err = wire.NewValueBool(*(v.SupportsBothResponseAndError)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a Features struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a Features struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v Features
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *Features) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.SupportsBothResponseAndError = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a Features
+// struct.
+func (v *Features) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.SupportsBothResponseAndError != nil {
+		fields[i] = fmt.Sprintf("SupportsBothResponseAndError: %v", *(v.SupportsBothResponseAndError))
+		i++
+	}
+
+	return fmt.Sprintf("Features{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this Features match the
+// provided Features.
+//
+// This function performs a deep comparison.
+func (v *Features) Equals(rhs *Features) bool {
+	if !_Bool_EqualsPtr(v.SupportsBothResponseAndError, rhs.SupportsBothResponseAndError) {
+		return false
+	}
+
+	return true
+}
+
+// GetSupportsBothResponseAndError returns the value of SupportsBothResponseAndError if it is set or its
+// zero value if it is unset.
+func (v *Features) GetSupportsBothResponseAndError() (o bool) {
+	if v.SupportsBothResponseAndError != nil {
+		return *v.SupportsBothResponseAndError
+	}
+
+	return
+}
+
 type RPC struct {
 	SpanContext     []byte            `json:"spanContext,required"`
 	CallerName      string            `json:"callerName,required"`
@@ -42,7 +168,7 @@ type RPC struct {
 	RoutingKey      *string           `json:"routingKey,omitempty"`
 	RoutingDelegate *string           `json:"routingDelegate,omitempty"`
 	Body            []byte            `json:"body"`
-	Features        []int16           `json:"features"`
+	Features        *Features         `json:"features,omitempty"`
 }
 
 type _Map_String_String_MapItemList map[string]string
@@ -79,32 +205,6 @@ func (_Map_String_String_MapItemList) ValueType() wire.Type {
 }
 
 func (_Map_String_String_MapItemList) Close() {}
-
-type _List_I16_ValueList []int16
-
-func (v _List_I16_ValueList) ForEach(f func(wire.Value) error) error {
-	for _, x := range v {
-		w, err := wire.NewValueI16(x), error(nil)
-		if err != nil {
-			return err
-		}
-		err = f(w)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (v _List_I16_ValueList) Size() int {
-	return len(v)
-}
-
-func (_List_I16_ValueList) ValueType() wire.Type {
-	return wire.TI16
-}
-
-func (_List_I16_ValueList) Close() {}
 
 // ToWire translates a RPC struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
@@ -207,7 +307,7 @@ func (v *RPC) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.Features != nil {
-		w, err = wire.NewValueList(_List_I16_ValueList(v.Features)), error(nil)
+		w, err = v.Features.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -246,22 +346,10 @@ func _Map_String_String_Read(m wire.MapItemList) (map[string]string, error) {
 	return o, err
 }
 
-func _List_I16_Read(l wire.ValueList) ([]int16, error) {
-	if l.ValueType() != wire.TI16 {
-		return nil, nil
-	}
-
-	o := make([]int16, 0, l.Size())
-	err := l.ForEach(func(x wire.Value) error {
-		i, err := x.GetI16(), error(nil)
-		if err != nil {
-			return err
-		}
-		o = append(o, i)
-		return nil
-	})
-	l.Close()
-	return o, err
+func _Features_Read(w wire.Value) (*Features, error) {
+	var v Features
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a RPC struct from its Thrift-level
@@ -379,8 +467,8 @@ func (v *RPC) FromWire(w wire.Value) error {
 
 			}
 		case 11:
-			if field.Value.Type() == wire.TList {
-				v.Features, err = _List_I16_Read(field.Value.GetList())
+			if field.Value.Type() == wire.TStruct {
+				v.Features, err = _Features_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -486,21 +574,6 @@ func _String_EqualsPtr(lhs, rhs *string) bool {
 	return lhs == nil && rhs == nil
 }
 
-func _List_I16_Equals(lhs, rhs []int16) bool {
-	if len(lhs) != len(rhs) {
-		return false
-	}
-
-	for i, lv := range lhs {
-		rv := rhs[i]
-		if !(lv == rv) {
-			return false
-		}
-	}
-
-	return true
-}
-
 // Equals returns true if all the fields of this RPC match the
 // provided RPC.
 //
@@ -536,7 +609,7 @@ func (v *RPC) Equals(rhs *RPC) bool {
 	if !((v.Body == nil && rhs.Body == nil) || (v.Body != nil && rhs.Body != nil && bytes.Equal(v.Body, rhs.Body))) {
 		return false
 	}
-	if !((v.Features == nil && rhs.Features == nil) || (v.Features != nil && rhs.Features != nil && _List_I16_Equals(v.Features, rhs.Features))) {
+	if !((v.Features == nil && rhs.Features == nil) || (v.Features != nil && rhs.Features != nil && v.Features.Equals(rhs.Features))) {
 		return false
 	}
 

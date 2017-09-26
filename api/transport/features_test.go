@@ -21,48 +21,19 @@
 package transport
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap/zapcore"
 )
 
-func TestFeatureIn(t *testing.T) {
-	feature1 := Feature(200)
-	feature2 := Feature(201)
-	require.False(t, feature1.In(nil))
-	require.False(t, feature1.In([]Feature{}))
-	require.False(t, feature1.In([]Feature{feature2}))
-	require.True(t, feature1.In([]Feature{feature1}))
-	require.True(t, feature1.In([]Feature{feature2, feature1}))
-	require.True(t, feature1.In([]Feature{feature1, feature2}))
-}
-
-func TestFeaturesFromString(t *testing.T) {
-	for feature := range _featureToString {
-		t.Run(feature.String(), func(t *testing.T) {
-			gotFeature, ok := FeatureFromString(feature.String())
-			require.True(t, ok)
-			require.Equal(t, feature, gotFeature)
-		})
+func TestRequestLogMarshaling(t *testing.T) {
+	features := Features{
+		SupportsBothResponseAndError: true,
 	}
-}
-
-func TestFeaturesMapOneToOneAndCovered(t *testing.T) {
-	require.Equal(t, len(_featureToString), len(_stringToFeature))
-	for feature, s := range _featureToString {
-		otherFeature, ok := _stringToFeature[s]
-		require.True(t, ok)
-		require.Equal(t, feature, otherFeature)
-	}
-}
-
-func TestFeaturesLowercaseAndNoCommas(t *testing.T) {
-	for feature := range _featureToString {
-		t.Run(feature.String(), func(t *testing.T) {
-			s := feature.String()
-			require.Equal(t, s, strings.ToLower(s))
-			require.False(t, strings.Contains(s, ","))
-		})
-	}
+	objectEncoder := zapcore.NewMapObjectEncoder()
+	assert.NoError(t, features.MarshalLogObject(objectEncoder))
+	assert.Equal(t, map[string]interface{}{
+		"supportsBothResponseAndError": true,
+	}, objectEncoder.Fields)
 }

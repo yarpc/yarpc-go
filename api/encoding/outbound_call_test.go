@@ -44,9 +44,8 @@ func TestOutboundCallWriteToRequest(t *testing.T) {
 				Service:   "service",
 				Encoding:  transport.Encoding("raw"),
 				Procedure: "hello",
-				Features: []transport.Feature{
-					transport.Feature(200),
-					transport.Feature(201),
+				Features: transport.Features{
+					SupportsBothResponseAndError: true,
 				},
 			},
 			wantRequest: transport.Request{
@@ -54,9 +53,8 @@ func TestOutboundCallWriteToRequest(t *testing.T) {
 				Service:   "service",
 				Encoding:  transport.Encoding("raw"),
 				Procedure: "hello",
-				Features: []transport.Feature{
-					transport.Feature(200),
-					transport.Feature(201),
+				Features: transport.Features{
+					SupportsBothResponseAndError: true,
 				},
 			},
 		},

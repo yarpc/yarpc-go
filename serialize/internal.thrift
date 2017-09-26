@@ -11,5 +11,9 @@ struct RPC {
 	8: optional string routingKey
 	9: optional string routingDelegate
 	10: optional binary body
-  11: optional list<i16> features
+  11: optional Features features
+}
+
+struct Features {
+  1: optional bool supportsBothResponseAndError
 }

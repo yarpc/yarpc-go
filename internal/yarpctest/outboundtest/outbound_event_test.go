@@ -63,9 +63,8 @@ func TestOutboundEvent(t *testing.T) {
 				ShardKey:        "shard",
 				RoutingKey:      "routekey",
 				RoutingDelegate: "routedel",
-				Features: []transport.Feature{
-					transport.Feature(200),
-					transport.Feature(201),
+				Features: transport.Features{
+					SupportsBothResponseAndError: true,
 				},
 				Headers: transport.NewHeaders().With("key", "val"),
 				Body:    bytes.NewBufferString("body"),
@@ -81,9 +80,8 @@ func TestOutboundEvent(t *testing.T) {
 				WantShardKey:        "shard",
 				WantRoutingKey:      "routekey",
 				WantRoutingDelegate: "routedel",
-				WantFeatures: []transport.Feature{
-					transport.Feature(200),
-					transport.Feature(201),
+				WantFeatures: transport.Features{
+					SupportsBothResponseAndError: true,
 				},
 				WantHeaders:  transport.NewHeaders().With("key", "val"),
 				WantBody:     "body",
@@ -102,9 +100,8 @@ func TestOutboundEvent(t *testing.T) {
 				ShardKey:        "shard2",
 				RoutingKey:      "routekey2",
 				RoutingDelegate: "routedel2",
-				Features: []transport.Feature{
-					transport.Feature(200),
-					transport.Feature(201),
+				Features: transport.Features{
+					SupportsBothResponseAndError: true,
 				},
 				Headers: transport.NewHeaders().With("key2", "val2"),
 				Body:    bytes.NewBufferString("body"),
@@ -118,9 +115,8 @@ func TestOutboundEvent(t *testing.T) {
 				WantShardKey:        "shard",
 				WantRoutingKey:      "routekey",
 				WantRoutingDelegate: "routedel",
-				WantFeatures: []transport.Feature{
-					transport.Feature(200),
-					transport.Feature(202),
+				WantFeatures: transport.Features{
+					SupportsBothResponseAndError: true,
 				},
 				WantHeaders:  transport.NewHeaders().With("key", "val"),
 				WantBody:     "body",

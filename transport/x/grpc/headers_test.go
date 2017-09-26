@@ -47,7 +47,6 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingKeyHeader, "example-routing-key",
 				RoutingDelegateHeader, "example-routing-delegate",
 				EncodingHeader, "example-encoding",
-				FeaturesHeader, transport.FeaturesToString(transport.AllFeatures),
 				"foo", "bar",
 				"baz", "bat",
 			),
@@ -58,7 +57,6 @@ func TestMetadataToTransportRequest(t *testing.T) {
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
-				Features:        transport.AllFeatures,
 				Headers: transport.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
@@ -143,7 +141,6 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				RoutingKeyHeader, "example-routing-key",
 				RoutingDelegateHeader, "example-routing-delegate",
 				EncodingHeader, "example-encoding",
-				FeaturesHeader, transport.FeaturesToString(transport.AllFeatures),
 				"foo", "bar",
 				"baz", "bat",
 			),
@@ -154,7 +151,6 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
 				Encoding:        "example-encoding",
-				Features:        transport.AllFeatures,
 				Headers: transport.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",
@@ -202,5 +198,4 @@ func TestIsReserved(t *testing.T) {
 	assert.True(t, isReserved(RoutingKeyHeader))
 	assert.True(t, isReserved(RoutingDelegateHeader))
 	assert.True(t, isReserved(EncodingHeader))
-	assert.True(t, isReserved(FeaturesHeader))
 }

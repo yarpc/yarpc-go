@@ -60,9 +60,6 @@ const (
 	EncodingHeader = "rpc-encoding"
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
-	// FeaturesHeader is the header key for Features. The value will
-	// be a comma-separated list of Feature string representations.
-	FeaturesHeader = "rpc-features"
 
 	baseContentType   = "application/grpc"
 	contentTypeHeader = "content-type"
@@ -76,7 +73,6 @@ var (
 		RoutingKeyHeader:      true,
 		RoutingDelegateHeader: true,
 		EncodingHeader:        true,
-		FeaturesHeader:        true,
 		ErrorNameHeader:       true,
 	}
 )
@@ -101,7 +97,6 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 		addToMetadata(md, RoutingKeyHeader, request.RoutingKey),
 		addToMetadata(md, RoutingDelegateHeader, request.RoutingDelegate),
 		addToMetadata(md, EncodingHeader, string(request.Encoding)),
-		addToMetadata(md, FeaturesHeader, transport.FeaturesToString(request.Features)),
 	); err != nil {
 		return md, err
 	}
@@ -138,8 +133,6 @@ func metadataToTransportRequest(md metadata.MD) (*transport.Request, error) {
 			request.RoutingDelegate = value
 		case EncodingHeader:
 			request.Encoding = transport.Encoding(value)
-		case FeaturesHeader:
-			request.Features = transport.FeaturesFromString(value)
 		case contentTypeHeader:
 			// if request.Encoding was set, do not parse content-type
 			// this results in EncodingHeader overriding content-type

@@ -256,14 +256,7 @@ func (r *Recorder) hashRequestRecord(requestRecord *requestRecord) string {
 	ha(requestRecord.Service)
 	ha(string(requestRecord.Encoding))
 	ha(requestRecord.Procedure)
-	orderedFeatures := make([]string, 0, len(requestRecord.Features))
-	for _, feature := range requestRecord.Features {
-		orderedFeatures = append(orderedFeatures, feature)
-	}
-	sort.Strings(orderedFeatures)
-	for _, feature := range orderedFeatures {
-		ha(feature)
-	}
+	ha(requestRecord.SupportsBothResponseAndError)
 	orderedHeadersKeys := make([]string, 0, len(requestRecord.Headers))
 	for k := range requestRecord.Headers {
 		orderedHeadersKeys = append(orderedHeadersKeys, k)
@@ -347,24 +340,21 @@ func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRec
 		r.logger.Fatal(err)
 	}
 	request.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
-	var features []string
-	if request.Features != nil {
-		features = make([]string, 0, len(request.Features))
-		for _, feature := range request.Features {
-			features = append(features, feature.String())
-		}
+	supportsBothResponseAndError := "0"
+	if request.Features.SupportsBothResponseAndError {
+		supportsBothResponseAndError = "1"
 	}
 	return requestRecord{
-		Caller:          request.Caller,
-		Service:         request.Service,
-		Procedure:       request.Procedure,
-		Encoding:        string(request.Encoding),
-		Headers:         request.Headers.Items(),
-		ShardKey:        request.ShardKey,
-		RoutingKey:      request.RoutingKey,
-		RoutingDelegate: request.RoutingDelegate,
-		Features:        features,
-		Body:            requestBody,
+		Caller:                       request.Caller,
+		Service:                      request.Service,
+		Procedure:                    request.Procedure,
+		Encoding:                     string(request.Encoding),
+		Headers:                      request.Headers.Items(),
+		ShardKey:                     request.ShardKey,
+		RoutingKey:                   request.RoutingKey,
+		RoutingDelegate:              request.RoutingDelegate,
+		SupportsBothResponseAndError: supportsBothResponseAndError,
+		Body: requestBody,
 	}
 }
 
@@ -443,16 +433,16 @@ func (e errRecordNotFound) Error() string {
 }
 
 type requestRecord struct {
-	Caller          string
-	Service         string
-	Procedure       string
-	Encoding        string
-	Headers         map[string]string
-	ShardKey        string
-	RoutingKey      string
-	RoutingDelegate string
-	Features        []string
-	Body            base64blob
+	Caller                       string
+	Service                      string
+	Procedure                    string
+	Encoding                     string
+	Headers                      map[string]string
+	ShardKey                     string
+	RoutingKey                   string
+	RoutingDelegate              string
+	SupportsBothResponseAndError string
+	Body                         base64blob
 }
 
 type responseRecord struct {

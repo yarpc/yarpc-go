@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 )
 
 func TestNilCall(t *testing.T) {
@@ -39,7 +40,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.ShardKey())
 	assert.Equal(t, "", call.RoutingKey())
 	assert.Equal(t, "", call.RoutingDelegate())
-	assert.Empty(t, call.Features())
+	assert.Equal(t, transport.Features{}, call.Features())
 	assert.Equal(t, "", call.Header("foo"))
 	assert.Empty(t, call.HeaderNames())
 

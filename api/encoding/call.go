@@ -142,9 +142,9 @@ func (c *Call) RoutingDelegate() string {
 }
 
 // Features returns the Features for this request.
-func (c *Call) Features() []transport.Feature {
+func (c *Call) Features() transport.Features {
 	if c == nil {
-		return nil
+		return transport.Features{}
 	}
 	return c.ic.req.Features
 }
