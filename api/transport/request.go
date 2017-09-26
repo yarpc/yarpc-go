@@ -78,12 +78,14 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("shardKey", r.ShardKey)
 	enc.AddString("routingKey", r.RoutingKey)
 	enc.AddString("routingDelegate", r.RoutingDelegate)
-	enc.AddArray("features", zapcore.ArrayMarshalerFunc(func(arrayEncoder zapcore.ArrayEncoder) error {
+	if err := enc.AddArray("features", zapcore.ArrayMarshalerFunc(func(arrayEncoder zapcore.ArrayEncoder) error {
 		for _, feature := range r.Features {
 			arrayEncoder.AppendString(feature.String())
 		}
 		return nil
-	}))
+	})); err != nil {
+		return err
+	}
 	return nil
 }
 
