@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
-	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errorsync"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observability"
@@ -211,10 +210,24 @@ func (d *Dispatcher) Inbounds() Inbounds {
 //
 // This function panics if the outboundKey is not known.
 func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
-	if rs, ok := d.outbounds[outboundKey]; ok {
-		return clientconfig.MultiOutbound(d.name, rs.ServiceName, rs)
+	return d.MustOutboundConfig(outboundKey)
+}
+
+func (d *Dispatcher) MustOutboundConfig(outboundKey string) *transport.OutboundConfig {
+	if oc, ok := d.OutboundConfig(outboundKey); ok {
+		return oc
 	}
 	panic(fmt.Sprintf("no configured outbound transport for outbound key %q", outboundKey))
+}
+
+func (d *Dispatcher) OutboundConfig(outboundKey string) (oc *transport.OutboundConfig, ok bool) {
+	if out, ok := d.outbounds[outboundKey]; ok {
+		return &transport.OutboundConfig{
+			CallerName: d.name,
+			Outbounds:  out,
+		}, true
+	}
+	return nil, false
 }
 
 // InboundMiddleware returns the middleware applied to all inbound handlers.

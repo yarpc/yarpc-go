@@ -349,6 +349,50 @@ func TestClientConfig(t *testing.T) {
 	assert.Equal(t, "my-test-service", cc.Service())
 }
 
+func TestClientConfigError(t *testing.T) {
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1:1234"),
+			},
+		},
+	})
+
+	assert.Panics(t, func() { dispatcher.ClientConfig("wrong test name") })
+}
+
+func TestOutboundConfig(t *testing.T) {
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1:1234"),
+			},
+		},
+	})
+
+	cc := dispatcher.MustOutboundConfig("my-test-service")
+	assert.Equal(t, "test", cc.CallerName)
+	assert.Equal(t, "my-test-service", cc.Outbounds.ServiceName)
+}
+
+func TestOutboundConfigError(t *testing.T) {
+	dispatcher := NewDispatcher(Config{
+		Name: "test",
+		Outbounds: Outbounds{
+			"my-test-service": {
+				Unary: http.NewTransport().NewSingleOutbound("http://127.0.0.1:1234"),
+			},
+		},
+	})
+
+	assert.Panics(t, func() { dispatcher.MustOutboundConfig("wrong test name") })
+	oc, ok := dispatcher.OutboundConfig("wrong test name")
+	assert.False(t, ok, "getting outbound config should not have succeeded")
+	assert.Nil(t, oc, "getting outbound config should not have succeeded")
+}
+
 func TestInboundMiddleware(t *testing.T) {
 	dispatcher := NewDispatcher(Config{
 		Name: "test",
