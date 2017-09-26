@@ -36,10 +36,10 @@ const (
 
 var (
 	_featureToString = map[Feature]string{
-		FeatureThriftApplicationError: "thrift-application-error",
+		FeatureThriftApplicationError: "1",
 	}
 	_stringToFeature = map[string]Feature{
-		"thrift-application-error": FeatureThriftApplicationError,
+		"1": FeatureThriftApplicationError,
 	}
 )
 

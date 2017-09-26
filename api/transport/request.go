@@ -61,6 +61,9 @@ type Request struct {
 	// override the routing key and service.
 	RoutingDelegate string
 
+	// Features for the request.
+	Features []Feature
+
 	// Request payload.
 	Body io.Reader
 }
@@ -75,6 +78,15 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("shardKey", r.ShardKey)
 	enc.AddString("routingKey", r.RoutingKey)
 	enc.AddString("routingDelegate", r.RoutingDelegate)
+	enc.AddArray("features", zapcore.ArrayMarshalerFunc(func(arrayEncoder zapcore.ArrayEncoder) error {
+		for _, feature := range r.Features {
+			// We might get a feature over the wire that the client supports
+			// but the server does not support, so we cannot assume that
+			// MarshalText() will not return an error.
+			arrayEncoder.AppendString(feature.String())
+		}
+		return nil
+	}))
 	return nil
 }
 
