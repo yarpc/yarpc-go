@@ -34,6 +34,11 @@ const (
 )
 
 var (
+	// AllFeatures contains all features.
+	AllFeatures = []Feature{
+		FeatureThriftApplicationError,
+	}
+
 	_featureToString = map[Feature]string{
 		FeatureThriftApplicationError: "1",
 	}
@@ -123,7 +128,7 @@ func FeaturesFromString(s string) []Feature {
 	var features []Feature
 	for _, e := range strings.Split(s, ",") {
 		feature, ok := FeatureFromString(e)
-		if !ok {
+		if ok {
 			features = append(features, feature)
 		}
 	}
