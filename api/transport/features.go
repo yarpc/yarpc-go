@@ -21,7 +21,6 @@
 package transport
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -50,6 +49,8 @@ var (
 type Feature int
 
 // String returns the the string representation of the Feature.
+//
+// Strings will be all lowercase and not contain commas.
 func (c Feature) String() string {
 	s, ok := _featureToString[c]
 	if ok {
@@ -58,44 +59,12 @@ func (c Feature) String() string {
 	return strconv.Itoa(int(c))
 }
 
-// MarshalText implements encoding.TextMarshaler.
-func (c Feature) MarshalText() ([]byte, error) {
-	s, ok := _featureToString[c]
-	if ok {
-		return []byte(s), nil
-	}
-	return nil, fmt.Errorf("unknown feature: %d", int(c))
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (c *Feature) UnmarshalText(text []byte) error {
-	i, ok := _stringToFeature[strings.ToLower(string(text))]
+// FeatureFromString returns the Feature for the string, or false
+// if the Feature is not known.
+func FeatureFromString(s string) (Feature, bool) {
+	f, ok := _stringToFeature[strings.ToLower(s)]
 	if !ok {
-		return fmt.Errorf("unknown feature string: %s", string(text))
+		return Feature(0), false
 	}
-	*c = i
-	return nil
-}
-
-// MarshalJSON implements json.Marshaler.
-func (c Feature) MarshalJSON() ([]byte, error) {
-	s, ok := _featureToString[c]
-	if ok {
-		return []byte(`"` + s + `"`), nil
-	}
-	return nil, fmt.Errorf("unknown feature: %d", int(c))
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (c *Feature) UnmarshalJSON(text []byte) error {
-	s := string(text)
-	if len(s) < 3 || s[0] != '"' || s[len(s)-1] != '"' {
-		return fmt.Errorf("invalid feature string: %s", s)
-	}
-	i, ok := _stringToFeature[strings.ToLower(s[1:len(s)-1])]
-	if !ok {
-		return fmt.Errorf("unknown feature string: %s", s)
-	}
-	*c = i
-	return nil
+	return f, true
 }

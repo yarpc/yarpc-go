@@ -21,32 +21,18 @@
 package transport
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestFeaturesMarshalText(t *testing.T) {
+func TestFeaturesFromString(t *testing.T) {
 	for feature := range _featureToString {
 		t.Run(feature.String(), func(t *testing.T) {
-			text, err := feature.MarshalText()
-			require.NoError(t, err)
-			var unmarshalledFeature Feature
-			require.NoError(t, unmarshalledFeature.UnmarshalText(text))
-			require.Equal(t, feature, unmarshalledFeature)
-		})
-	}
-}
-
-func TestFeaturesMarshalJSON(t *testing.T) {
-	for feature := range _featureToString {
-		t.Run(feature.String(), func(t *testing.T) {
-			text, err := feature.MarshalJSON()
-			require.NoError(t, err)
-			var unmarshalledFeature Feature
-			require.NoError(t, unmarshalledFeature.UnmarshalJSON(text))
-			require.Equal(t, feature, unmarshalledFeature)
+			gotFeature, ok := FeatureFromString(feature.String())
+			require.True(t, ok)
+			require.Equal(t, feature, gotFeature)
 		})
 	}
 }
@@ -60,14 +46,12 @@ func TestFeaturesMapOneToOneAndCovered(t *testing.T) {
 	}
 }
 
-func TestFeaturesFailures(t *testing.T) {
-	badFeature := Feature(100)
-	assert.Equal(t, "100", badFeature.String())
-	_, err := badFeature.MarshalText()
-	assert.Error(t, err)
-	_, err = badFeature.MarshalJSON()
-	assert.Error(t, err)
-	assert.Error(t, badFeature.UnmarshalText([]byte("200")))
-	assert.Error(t, badFeature.UnmarshalJSON([]byte("200")))
-	assert.Error(t, badFeature.UnmarshalJSON([]byte(`"200"`)))
+func TestFeaturesLowercaseAndNoCommas(t *testing.T) {
+	for feature := range _featureToString {
+		t.Run(feature.String(), func(t *testing.T) {
+			s := feature.String()
+			require.Equal(t, s, strings.ToLower(s))
+			require.False(t, strings.Contains(s, ","))
+		})
+	}
 }
