@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.18.0-dev (unreleased)
+v1.18.0 (2017-09-26)
 --------------------
 
 -   Add inbound/outbound direction tag to observability metrics.
