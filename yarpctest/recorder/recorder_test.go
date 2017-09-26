@@ -315,6 +315,7 @@ request:
   shardkey: ""
   routingkey: ""
   routingdelegate: ""
+  features: []
   body: SGVsbG8=
 response:
   headers: {}
