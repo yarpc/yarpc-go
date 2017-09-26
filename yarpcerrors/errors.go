@@ -79,6 +79,9 @@ type Status struct {
 // The name must only contain lowercase letters from a-z and dashes (-), and
 // cannot start or end in a dash. If the name is something else, an error with
 // code CodeInternal will be returned.
+//
+// Deprecated: Only use Codes to represent the type of the error. We plan to add
+// a WithDetails method to add semantic metadata to Statuses soon.
 func (s *Status) WithName(name string) *Status {
 	if s == nil {
 		return nil
