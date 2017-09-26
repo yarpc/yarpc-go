@@ -319,7 +319,11 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
-		Body:            strings.NewReader("body"),
+		Features: []transport.Feature{
+			transport.Feature(200),
+			transport.Feature(201),
+		},
+		Body: strings.NewReader("body"),
 	}
 
 	expectedFields := []zapcore.Field{
@@ -376,7 +380,11 @@ func TestMiddlewareStats(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Body:            strings.NewReader("body"),
+			Features: []transport.Feature{
+				transport.Feature(200),
+				transport.Feature(201),
+			},
+			Body: strings.NewReader("body"),
 		},
 		&transporttest.FakeResponseWriter{},
 		fakeHandler{nil, false},

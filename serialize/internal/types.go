@@ -42,6 +42,7 @@ type RPC struct {
 	RoutingKey      *string           `json:"routingKey,omitempty"`
 	RoutingDelegate *string           `json:"routingDelegate,omitempty"`
 	Body            []byte            `json:"body"`
+	Features        []int16           `json:"features"`
 }
 
 type _Map_String_String_MapItemList map[string]string
@@ -79,6 +80,32 @@ func (_Map_String_String_MapItemList) ValueType() wire.Type {
 
 func (_Map_String_String_MapItemList) Close() {}
 
+type _List_I16_ValueList []int16
+
+func (v _List_I16_ValueList) ForEach(f func(wire.Value) error) error {
+	for _, x := range v {
+		w, err := wire.NewValueI16(x), error(nil)
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_I16_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_I16_ValueList) ValueType() wire.Type {
+	return wire.TI16
+}
+
+func (_List_I16_ValueList) Close() {}
+
 // ToWire translates a RPC struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
@@ -96,7 +123,7 @@ func (_Map_String_String_MapItemList) Close() {}
 //   }
 func (v *RPC) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -179,6 +206,14 @@ func (v *RPC) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
+	if v.Features != nil {
+		w, err = wire.NewValueList(_List_I16_ValueList(v.Features)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 11, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -208,6 +243,24 @@ func _Map_String_String_Read(m wire.MapItemList) (map[string]string, error) {
 		return nil
 	})
 	m.Close()
+	return o, err
+}
+
+func _List_I16_Read(l wire.ValueList) ([]int16, error) {
+	if l.ValueType() != wire.TI16 {
+		return nil, nil
+	}
+
+	o := make([]int16, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := x.GetI16(), error(nil)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
 	return o, err
 }
 
@@ -325,6 +378,14 @@ func (v *RPC) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 11:
+			if field.Value.Type() == wire.TList {
+				v.Features, err = _List_I16_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -358,7 +419,7 @@ func (v *RPC) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [11]string
 	i := 0
 	fields[i] = fmt.Sprintf("SpanContext: %v", v.SpanContext)
 	i++
@@ -390,6 +451,10 @@ func (v *RPC) String() string {
 		fields[i] = fmt.Sprintf("Body: %v", v.Body)
 		i++
 	}
+	if v.Features != nil {
+		fields[i] = fmt.Sprintf("Features: %v", v.Features)
+		i++
+	}
 
 	return fmt.Sprintf("RPC{%v}", strings.Join(fields[:i], ", "))
 }
@@ -419,6 +484,21 @@ func _String_EqualsPtr(lhs, rhs *string) bool {
 		return (x == y)
 	}
 	return lhs == nil && rhs == nil
+}
+
+func _List_I16_Equals(lhs, rhs []int16) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !(lv == rv) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Equals returns true if all the fields of this RPC match the
@@ -454,6 +534,9 @@ func (v *RPC) Equals(rhs *RPC) bool {
 		return false
 	}
 	if !((v.Body == nil && rhs.Body == nil) || (v.Body != nil && rhs.Body != nil && bytes.Equal(v.Body, rhs.Body))) {
+		return false
+	}
+	if !((v.Features == nil && rhs.Features == nil) || (v.Features != nil && rhs.Features != nil && _List_I16_Equals(v.Features, rhs.Features))) {
 		return false
 	}
 

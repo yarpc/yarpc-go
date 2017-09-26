@@ -63,6 +63,12 @@ func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req
 		RoutingDelegate: &req.RoutingDelegate,
 		Body:            body,
 	}
+	if len(req.Features) > 0 {
+		rpc.Features = make([]int16, 0, len(req.Features))
+		for _, feature := range req.Features {
+			rpc.Features = append(rpc.Features, int16(feature))
+		}
+	}
 
 	wireValue, err := rpc.ToWire()
 	if err != nil {
@@ -120,6 +126,12 @@ func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanConte
 	}
 	if rpc.RoutingDelegate != nil {
 		req.RoutingDelegate = *rpc.RoutingDelegate
+	}
+	if len(rpc.Features) > 0 {
+		req.Features = make([]transport.Feature, 0, len(rpc.Features))
+		for _, feature := range rpc.Features {
+			req.Features = append(req.Features, transport.Feature(feature))
+		}
 	}
 
 	spanContext, err := spanContextFromBytes(tracer, rpc.SpanContext)

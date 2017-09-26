@@ -91,6 +91,7 @@ type OutboundEvent struct {
 	WantShardKey        string
 	WantRoutingKey      string
 	WantRoutingDelegate string
+	WantFeatures        []transport.Feature
 	WantHeaders         transport.Headers
 
 	// WantBody validates the request's body
@@ -133,6 +134,9 @@ func (e *OutboundEvent) Call(ctx context.Context, t require.TestingT, req *trans
 	assertEqualIfSet(t, e.WantShardKey, req.ShardKey, "invalid ShardKey")
 	assertEqualIfSet(t, e.WantRoutingKey, req.RoutingKey, "invalid RoutingKey")
 	assertEqualIfSet(t, e.WantRoutingDelegate, req.RoutingDelegate, "invalid RoutingDelegate")
+	if len(e.WantFeatures) != 0 {
+		assert.Equal(t, e.WantFeatures, req.Features, "invalid Features")
+	}
 
 	if e.WantHeaders.Len() != 0 {
 		assert.Equal(t, e.WantHeaders.Len(), req.Headers.Len(), "unexpected number of headers")
