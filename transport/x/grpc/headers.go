@@ -60,6 +60,9 @@ const (
 	EncodingHeader = "rpc-encoding"
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
+	// FeaturesHeader is the header key for Features. The value will
+	// be a comma-separated list of Feature string representations.
+	FeaturesHeader = "rpc-features"
 
 	baseContentType   = "application/grpc"
 	contentTypeHeader = "content-type"
@@ -73,6 +76,7 @@ var (
 		RoutingKeyHeader:      true,
 		RoutingDelegateHeader: true,
 		EncodingHeader:        true,
+		FeaturesHeader:        true,
 		ErrorNameHeader:       true,
 	}
 )

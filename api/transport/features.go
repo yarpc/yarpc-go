@@ -60,6 +60,9 @@ func (f Feature) In(features []Feature) bool {
 
 // String returns the the string representation of the Feature.
 //
+// This is just for printing, use the safer ToString method
+// for transport implementations.
+//
 // Strings will be all lowercase and not contain commas.
 func (f Feature) String() string {
 	s, ok := _featureToString[f]
@@ -67,6 +70,18 @@ func (f Feature) String() string {
 		return s
 	}
 	return strconv.Itoa(int(f))
+}
+
+// ToString returns the the string representation of the Feature, or false
+// if the Feature is not known
+//
+// Strings will be all lowercase and not contain commas.
+func (f Feature) ToString() (string, bool) {
+	s, ok := _featureToString[f]
+	if !ok {
+		return "", false
+	}
+	return s, true
 }
 
 // FeatureFromString returns the Feature for the string, or false
@@ -77,4 +92,40 @@ func FeatureFromString(s string) (Feature, bool) {
 		return Feature(0), false
 	}
 	return f, true
+}
+
+// FeaturesToString returns a comma-separated list of the string
+// representations of the given Features.
+//
+// Unknown features will not be included.
+func FeaturesToString(features []Feature) string {
+	if len(features) == 0 {
+		return ""
+	}
+	var featureStrings []string
+	for _, feature := range features {
+		s, ok := feature.ToString()
+		if ok {
+			featureStrings = append(featureStrings, s)
+		}
+	}
+	return strings.Join(featureStrings, ",")
+}
+
+// FeaturesFromString returns a slice of Features for the given
+// comma-separated string representation.
+//
+// Unknown features will not be included.
+func FeaturesFromString(s string) []Feature {
+	if s == "" {
+		return nil
+	}
+	var features []Feature
+	for _, e := range strings.Split(s, ",") {
+		feature, ok := FeatureFromString(e)
+		if !ok {
+			features = append(features, feature)
+		}
+	}
+	return features
 }
