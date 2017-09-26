@@ -6,6 +6,7 @@ v1.18.0-dev (unreleased)
 
 -   Add inbound/outbound direction tag to observability metrics.
 -   Remove x/retry to incubate internally.
+-   yarpcerrors: Undeprecate per error type creation and validation functions.
 
 
 v1.17.0 (2017-09-20)
