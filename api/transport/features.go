@@ -48,15 +48,25 @@ var (
 // manner so that servers know how to construct responses.
 type Feature int
 
+// In returns true if f is in the given Features slice.
+func (f Feature) In(features []Feature) bool {
+	for _, feature := range features {
+		if f == feature {
+			return true
+		}
+	}
+	return false
+}
+
 // String returns the the string representation of the Feature.
 //
 // Strings will be all lowercase and not contain commas.
-func (c Feature) String() string {
-	s, ok := _featureToString[c]
+func (f Feature) String() string {
+	s, ok := _featureToString[f]
 	if ok {
 		return s
 	}
-	return strconv.Itoa(int(c))
+	return strconv.Itoa(int(f))
 }
 
 // FeatureFromString returns the Feature for the string, or false

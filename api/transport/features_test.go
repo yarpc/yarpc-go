@@ -27,6 +27,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFeatureIn(t *testing.T) {
+	feature1 := Feature(200)
+	feature2 := Feature(201)
+	require.False(t, feature1.In(nil))
+	require.False(t, feature1.In([]Feature{}))
+	require.False(t, feature1.In([]Feature{feature2}))
+	require.True(t, feature1.In([]Feature{feature1}))
+	require.True(t, feature1.In([]Feature{feature2, feature1}))
+	require.True(t, feature1.In([]Feature{feature1, feature2}))
+}
+
 func TestFeaturesFromString(t *testing.T) {
 	for feature := range _featureToString {
 		t.Run(feature.String(), func(t *testing.T) {
