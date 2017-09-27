@@ -55,6 +55,6 @@ type ResponseWriter interface {
 type FeaturesResponseWriter interface {
 	ResponseWriter
 
-	// SetFeatures sets the Features to be returned.
-	SetFeatures(Features)
+	// ModifyFeatures modifies the returned features.
+	ModifyFeatures(func(Features))
 }
