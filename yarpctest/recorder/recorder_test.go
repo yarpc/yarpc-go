@@ -303,7 +303,7 @@ func TestEmptyReplay(t *testing.T) {
 	})
 }
 
-const refRecordFilename = `server.hello.254fa3bab61fc27f.yaml`
+const refRecordFilename = `server.hello.c7acafd4066f5f1d.yaml`
 const refRecordContent = recordComment +
 	`version: 1
 request:
@@ -315,15 +315,15 @@ request:
   shardkey: ""
   routingkey: ""
   routingdelegate: ""
-  acceptResponseError: 0
+  acceptresponseerror: "0"
   body: SGVsbG8=
 response:
   headers: {}
+  acceptresponseerror: "0"
   body: SGVsbG8sIFdvcmxk
 `
 
 func TestRecording(t *testing.T) {
-	t.Skip() // TODO
 	tMock := testingTMock{t, 0}
 
 	dir, err := ioutil.TempDir("", "yarpcgorecorder")
@@ -353,7 +353,6 @@ func TestRecording(t *testing.T) {
 }
 
 func TestReplaying(t *testing.T) {
-	t.Skip() // TODO
 	tMock := testingTMock{t, 0}
 
 	dir, err := ioutil.TempDir("", "yarpcgorecorder")
