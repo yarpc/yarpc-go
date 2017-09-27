@@ -144,7 +144,7 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	})
 }
 
-func TestApplicationErrorPropogation(t *testing.T) {
+func TestApplicationErrorPropagation(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		response, err := e.Call(
