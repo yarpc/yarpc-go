@@ -72,7 +72,7 @@ func TestYARPCWellKnownError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
-		_, err := e.GetValueYARPC(context.Background(), "foo")
+		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
 	})
 }
@@ -81,7 +81,7 @@ func TestYARPCNamedError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"))
-		_, err := e.GetValueYARPC(context.Background(), "foo")
+		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"), err)
 	})
 }
@@ -90,7 +90,7 @@ func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"))
-		_, err := e.GetValueYARPC(context.Background(), "foo")
+		err := e.SetValueYARPC(context.Background(), "foo", "bar")
 		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"), err)
 	})
 }
@@ -99,7 +99,7 @@ func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
-		_, err := e.GetValueGRPC(context.Background(), "foo")
+		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
 	})
 }
@@ -108,7 +108,7 @@ func TestGRPCNamedError(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"))
-		_, err := e.GetValueGRPC(context.Background(), "foo")
+		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
 	})
 }
@@ -117,7 +117,7 @@ func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"))
-		_, err := e.GetValueGRPC(context.Background(), "foo")
+		err := e.SetValueGRPC(context.Background(), "foo", "bar")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
 	})
 }

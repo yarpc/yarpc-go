@@ -56,14 +56,6 @@ func NewKeyValueYARPCServer() *KeyValueYARPCServer {
 
 // GetValue implements GetValue.
 func (k *KeyValueYARPCServer) GetValue(ctx context.Context, request *examplepb.GetValueRequest) (*examplepb.GetValueResponse, error) {
-	k.Lock()
-	if k.nextError != nil {
-		err := k.nextError
-		k.nextError = nil
-		k.Unlock()
-		return nil, err
-	}
-	k.Unlock()
 	if request == nil {
 		return nil, errRequestNil
 	}
@@ -73,7 +65,14 @@ func (k *KeyValueYARPCServer) GetValue(ctx context.Context, request *examplepb.G
 	k.RLock()
 	if value, ok := k.items[request.Key]; ok {
 		k.RUnlock()
-		return &examplepb.GetValueResponse{value}, nil
+		var nextError error
+		k.Lock()
+		if k.nextError != nil {
+			nextError = k.nextError
+			k.nextError = nil
+		}
+		k.Unlock()
+		return &examplepb.GetValueResponse{value}, nextError
 	}
 	k.RUnlock()
 	return nil, yarpcerrors.Newf(yarpcerrors.CodeNotFound, request.Key)
@@ -81,14 +80,6 @@ func (k *KeyValueYARPCServer) GetValue(ctx context.Context, request *examplepb.G
 
 // SetValue implements SetValue.
 func (k *KeyValueYARPCServer) SetValue(ctx context.Context, request *examplepb.SetValueRequest) (*examplepb.SetValueResponse, error) {
-	k.Lock()
-	if k.nextError != nil {
-		err := k.nextError
-		k.nextError = nil
-		k.Unlock()
-		return nil, err
-	}
-	k.Unlock()
 	if request == nil {
 		return nil, errRequestNil
 	}
@@ -101,8 +92,13 @@ func (k *KeyValueYARPCServer) SetValue(ctx context.Context, request *examplepb.S
 	} else {
 		k.items[request.Key] = request.Value
 	}
+	var nextError error
+	if k.nextError != nil {
+		nextError = k.nextError
+		k.nextError = nil
+	}
 	k.Unlock()
-	return nil, nil
+	return nil, nextError
 }
 
 // SetNextError sets the error to return on the next call to KeyValueYARPCServer.

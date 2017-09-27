@@ -70,11 +70,13 @@ func testIntegration(
 	sinkYARPCServer *example.SinkYARPCServer,
 ) {
 	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
-	_, err := getValue(clients.KeyValueYARPCClient, "foo")
+	err := setValue(clients.KeyValueYARPCClient, "foo", "bar")
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"), err)
 	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
-	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
+	err = setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "bar")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
+
+	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", ""))
 
 	_, err = getValue(clients.KeyValueYARPCClient, "foo")
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
