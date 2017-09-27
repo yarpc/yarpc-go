@@ -151,16 +151,30 @@ func TestApplicationErrorPropogation(t *testing.T) {
 			context.Background(),
 			"GetValue",
 			&examplepb.GetValueRequest{Key: "foo"},
+			protobuf.Encoding,
+			transport.Headers{},
 		)
-		require.Error(t, err)
+		require.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
 		require.True(t, response.ApplicationError)
 
 		response, err = e.Call(
 			context.Background(),
 			"SetValue",
 			&examplepb.SetValueRequest{Key: "foo", Value: "hello"},
+			protobuf.Encoding,
+			transport.Headers{},
 		)
 		require.NoError(t, err)
+		require.False(t, response.ApplicationError)
+
+		response, err = e.Call(
+			context.Background(),
+			"GetValue",
+			&examplepb.GetValueRequest{Key: "foo"},
+			"bad_encoding",
+			transport.Headers{},
+		)
+		require.True(t, yarpcerrors.IsInvalidArgument(err))
 		require.False(t, response.ApplicationError)
 	})
 }
@@ -272,7 +286,13 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 	}, nil
 }
 
-func (e *testEnv) Call(ctx context.Context, methodName string, message proto.Message) (*transport.Response, error) {
+func (e *testEnv) Call(
+	ctx context.Context,
+	methodName string,
+	message proto.Message,
+	encoding transport.Encoding,
+	headers transport.Headers,
+) (*transport.Response, error) {
 	data, err := proto.Marshal(message)
 	if err != nil {
 		return nil, err
@@ -284,12 +304,13 @@ func (e *testEnv) Call(ctx context.Context, methodName string, message proto.Mes
 		&transport.Request{
 			Caller:   e.Caller,
 			Service:  e.Service,
-			Encoding: protobuf.Encoding,
+			Encoding: encoding,
 			Procedure: procedure.ToName(
 				"uber.yarpc.internal.examples.protobuf.example.KeyValue",
 				methodName,
 			),
-			Body: bytes.NewReader(data),
+			Headers: headers,
+			Body:    bytes.NewReader(data),
 		},
 	)
 }
