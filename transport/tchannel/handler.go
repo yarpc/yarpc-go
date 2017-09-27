@@ -221,6 +221,10 @@ func (rw *responseWriter) SetApplicationError() {
 	rw.isApplicationError = true
 }
 
+func (*responseWriter) UpdateFeatures(func(*transport.ResponseFeatures)) {
+	// nothing to do since we take no action on AcceptResponseError for tchannel
+}
+
 func (rw *responseWriter) Write(s []byte) (int, error) {
 	if rw.failedWith != nil {
 		return 0, rw.failedWith
