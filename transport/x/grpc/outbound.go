@@ -110,7 +110,11 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		return nil, err
 	}
 	return &transport.Response{
-		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		Body: ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		Features: transport.ResponseFeatures{
+			// this is always true for grpc
+			AcceptResponseError: true,
+		},
 		Headers: responseHeaders,
 	}, invokeErrorToYARPCError(invokeErr, responseMD)
 }
