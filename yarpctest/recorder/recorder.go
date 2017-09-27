@@ -329,7 +329,10 @@ func (r *Recorder) Call(
 func (r *Recorder) recordToResponse(cachedRecord *record) transport.Response {
 	response := transport.Response{
 		Headers: transport.HeadersFromMap(cachedRecord.Response.Headers),
-		Body:    ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
+		Features: transport.ResponseFeatures{
+			AcceptResponseError: cachedRecord.Response.AcceptResponseError == "1",
+		},
+		Body: ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
 	}
 	return response
 }
@@ -359,14 +362,19 @@ func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRec
 }
 
 func (r *Recorder) responseToResponseRecord(response *transport.Response) responseRecord {
+	acceptResponseError := "0"
+	if response.Features.AcceptResponseError {
+		acceptResponseError = "1"
+	}
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		r.logger.Fatal(err)
 	}
 	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
 	return responseRecord{
-		Headers: response.Headers.Items(),
-		Body:    responseBody,
+		Headers:             response.Headers.Items(),
+		AcceptResponseError: acceptResponseError,
+		Body:                responseBody,
 	}
 }
 
@@ -446,8 +454,9 @@ type requestRecord struct {
 }
 
 type responseRecord struct {
-	Headers map[string]string
-	Body    base64blob
+	Headers             map[string]string
+	AcceptResponseError string
+	Body                base64blob
 }
 
 type record struct {

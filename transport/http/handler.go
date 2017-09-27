@@ -206,12 +206,13 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w      http.ResponseWriter
-	buffer *bytes.Buffer
+	w                  http.ResponseWriter
+	features           transport.ResponseFeatures
+	isApplicationError bool
+	buffer             *bytes.Buffer
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
-	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
 	return &responseWriter{w: w}
 }
 
@@ -227,7 +228,11 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 }
 
 func (rw *responseWriter) SetApplicationError() {
-	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
+	rw.isApplicationError = true
+}
+
+func (rw *responseWriter) UpdateFeatures(f func(*transport.ResponseFeatures)) {
+	f(&rw.features)
 }
 
 func (rw *responseWriter) AddSystemHeader(key string, value string) {
@@ -235,6 +240,8 @@ func (rw *responseWriter) AddSystemHeader(key string, value string) {
 }
 
 func (rw *responseWriter) Close(httpStatusCode int) {
+	rw.w.Header().Set(ApplicationStatusHeader, applicationStatusValue(rw.isApplicationError))
+	rw.w.Header().Set(AcceptResponseErrorHeader, acceptValue(rw.features.AcceptResponseError))
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?

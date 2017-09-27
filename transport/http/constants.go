@@ -68,6 +68,10 @@ const (
 
 	// ErrorNameHeader contains the name of a user-defined error.
 	ErrorNameHeader = "Rpc-Error-Name"
+
+	// AcceptResponseErrorHeader says that the AcceptResponseError feature
+	// is supported.
+	AcceptResponseErrorHeader = "Rpc-Accept-Response-Header"
 )
 
 // Valid values for the Rpc-Status header.
@@ -77,8 +81,38 @@ const (
 
 	// An error occurred. The response body contains an application header.
 	ApplicationErrorStatus = "error"
+
+	// AcceptTrue is the true value for accept headers.
+	AcceptTrue = "true"
+
+	// AcceptFalse is the false value for accept headers.
+	AcceptFalse = "false"
 )
 
 // ApplicationHeaderPrefix is the prefix added to application header keys to
 // send them in requests or responses.
 const ApplicationHeaderPrefix = "Rpc-Header-"
+
+func applicationStatusValue(isApplicationError bool) string {
+	if isApplicationError {
+		return ApplicationErrorStatus
+	}
+	return ApplicationSuccessStatus
+}
+
+func fromApplicationStatusValue(applicationStatusValue string) bool {
+	// TODO(pedge): should we ignore if not equal to success and error?
+	return applicationStatusValue == ApplicationErrorStatus
+}
+
+func acceptValue(accept bool) string {
+	if accept {
+		return AcceptTrue
+	}
+	return AcceptFalse
+}
+
+func fromAcceptValue(acceptValue string) bool {
+	// TODO(pedge): should we ignore if not equal to true and false?
+	return acceptValue == AcceptTrue
+}
