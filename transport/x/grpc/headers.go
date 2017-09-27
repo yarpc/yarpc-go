@@ -60,6 +60,9 @@ const (
 	EncodingHeader = "rpc-encoding"
 	// ErrorNameHeader is the header key for the error name.
 	ErrorNameHeader = "rpc-error-name"
+	// ApplicationErrorHeader is the header key that will contain a non-empty value
+	// if there was an application error.
+	ApplicationErrorHeader = "rpc-application-error"
 
 	baseContentType   = "application/grpc"
 	contentTypeHeader = "content-type"
@@ -67,13 +70,14 @@ const (
 
 var (
 	_reservedHeaders = map[string]bool{
-		CallerHeader:          true,
-		ServiceHeader:         true,
-		ShardKeyHeader:        true,
-		RoutingKeyHeader:      true,
-		RoutingDelegateHeader: true,
-		EncodingHeader:        true,
-		ErrorNameHeader:       true,
+		CallerHeader:           true,
+		ServiceHeader:          true,
+		ShardKeyHeader:         true,
+		RoutingKeyHeader:       true,
+		RoutingDelegateHeader:  true,
+		EncodingHeader:         true,
+		ErrorNameHeader:        true,
+		ApplicationErrorHeader: true,
 	}
 )
 

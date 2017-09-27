@@ -29,9 +29,8 @@ import (
 )
 
 type responseWriter struct {
-	buffer             *bytes.Buffer
-	md                 metadata.MD
-	isApplicationError bool
+	buffer *bytes.Buffer
+	md     metadata.MD
 }
 
 func newResponseWriter() *responseWriter {
@@ -54,7 +53,7 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 }
 
 func (r *responseWriter) SetApplicationError() {
-	r.isApplicationError = true
+	r.AddSystemHeader(ApplicationErrorHeader, "1")
 }
 
 func (r *responseWriter) AddSystemHeader(key string, value string) {
