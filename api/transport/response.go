@@ -48,3 +48,13 @@ type ResponseWriter interface {
 	// of Write().
 	SetApplicationError()
 }
+
+// FeaturesResponseWriter is a ResponseWriter with Features functionality.
+//
+// This was needed for backwards compatibility.
+type FeaturesResponseWriter interface {
+	ResponseWriter
+
+	// SetFeatures sets the Features to be returned.
+	SetFeatures(Features)
+}
