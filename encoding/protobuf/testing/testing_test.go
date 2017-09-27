@@ -56,7 +56,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 			keyValueYARPCServer,
 			sinkYARPCServer,
 			func(clients *exampleutil.Clients) error {
-				testIntegration(t, clients, keyValueYARPCServer, sinkYARPCServer)
+				testIntegration(t, transportType, clients, keyValueYARPCServer, sinkYARPCServer)
 				return nil
 			},
 		),
@@ -65,6 +65,7 @@ func testIntegrationForTransportType(t *testing.T, transportType testutils.Trans
 
 func testIntegration(
 	t *testing.T,
+	transportType testutils.TransportType,
 	clients *exampleutil.Clients,
 	keyValueYARPCServer *example.KeyValueYARPCServer,
 	sinkYARPCServer *example.SinkYARPCServer,
@@ -94,6 +95,15 @@ func testIntegration(
 	value, err = getValue(clients.KeyValueYARPCJSONClient, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, "baz", value)
+
+	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "baz"))
+	value, err = getValue(clients.KeyValueYARPCClient, "foo")
+	switch transportType {
+	case testutils.TransportTypeGRPC, testutils.TransportTypeTChannel:
+		assert.Equal(t, "baz", value)
+	default:
+		assert.Equal(t, "", value)
+	}
 
 	assert.NoError(t, setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "barGRPC"))
 	value, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
@@ -126,10 +136,10 @@ func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, opt
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key}, options...)
-	if err != nil {
-		return "", err
+	if response != nil {
+		return response.Value, err
 	}
-	return response.Value, nil
+	return "", err
 }
 
 func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, value string, options ...yarpc.CallOption) error {
@@ -143,10 +153,10 @@ func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
-	if err != nil {
-		return "", err
+	if response != nil {
+		return response.Value, err
 	}
-	return response.Value, nil
+	return "", err
 }
 
 func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string, value string) error {
