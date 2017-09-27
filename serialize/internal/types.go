@@ -31,132 +31,6 @@ import (
 	"strings"
 )
 
-type Features struct {
-	SupportsBothResponseAndError *bool `json:"supportsBothResponseAndError,omitempty"`
-}
-
-// ToWire translates a Features struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *Features) ToWire() (wire.Value, error) {
-	var (
-		fields [1]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.SupportsBothResponseAndError != nil {
-		w, err = wire.NewValueBool(*(v.SupportsBothResponseAndError)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 1, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-// FromWire deserializes a Features struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a Features struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v Features
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *Features) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 1:
-			if field.Value.Type() == wire.TBool {
-				var x bool
-				x, err = field.Value.GetBool(), error(nil)
-				v.SupportsBothResponseAndError = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a Features
-// struct.
-func (v *Features) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [1]string
-	i := 0
-	if v.SupportsBothResponseAndError != nil {
-		fields[i] = fmt.Sprintf("SupportsBothResponseAndError: %v", *(v.SupportsBothResponseAndError))
-		i++
-	}
-
-	return fmt.Sprintf("Features{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _Bool_EqualsPtr(lhs, rhs *bool) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
-}
-
-// Equals returns true if all the fields of this Features match the
-// provided Features.
-//
-// This function performs a deep comparison.
-func (v *Features) Equals(rhs *Features) bool {
-	if !_Bool_EqualsPtr(v.SupportsBothResponseAndError, rhs.SupportsBothResponseAndError) {
-		return false
-	}
-
-	return true
-}
-
-// GetSupportsBothResponseAndError returns the value of SupportsBothResponseAndError if it is set or its
-// zero value if it is unset.
-func (v *Features) GetSupportsBothResponseAndError() (o bool) {
-	if v.SupportsBothResponseAndError != nil {
-		return *v.SupportsBothResponseAndError
-	}
-
-	return
-}
-
 type RPC struct {
 	SpanContext     []byte            `json:"spanContext,required"`
 	CallerName      string            `json:"callerName,required"`
@@ -168,7 +42,7 @@ type RPC struct {
 	RoutingKey      *string           `json:"routingKey,omitempty"`
 	RoutingDelegate *string           `json:"routingDelegate,omitempty"`
 	Body            []byte            `json:"body"`
-	Features        *Features         `json:"features,omitempty"`
+	Features        *RequestFeatures  `json:"features,omitempty"`
 }
 
 type _Map_String_String_MapItemList map[string]string
@@ -346,8 +220,8 @@ func _Map_String_String_Read(m wire.MapItemList) (map[string]string, error) {
 	return o, err
 }
 
-func _Features_Read(w wire.Value) (*Features, error) {
-	var v Features
+func _RequestFeatures_Read(w wire.Value) (*RequestFeatures, error) {
+	var v RequestFeatures
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -468,7 +342,7 @@ func (v *RPC) FromWire(w wire.Value) error {
 			}
 		case 11:
 			if field.Value.Type() == wire.TStruct {
-				v.Features, err = _Features_Read(field.Value)
+				v.Features, err = _RequestFeatures_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -641,6 +515,132 @@ func (v *RPC) GetRoutingKey() (o string) {
 func (v *RPC) GetRoutingDelegate() (o string) {
 	if v.RoutingDelegate != nil {
 		return *v.RoutingDelegate
+	}
+
+	return
+}
+
+type RequestFeatures struct {
+	AcceptResponseError *bool `json:"acceptResponseError,omitempty"`
+}
+
+// ToWire translates a RequestFeatures struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *RequestFeatures) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.AcceptResponseError != nil {
+		w, err = wire.NewValueBool(*(v.AcceptResponseError)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a RequestFeatures struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a RequestFeatures struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v RequestFeatures
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *RequestFeatures) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.AcceptResponseError = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a RequestFeatures
+// struct.
+func (v *RequestFeatures) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.AcceptResponseError != nil {
+		fields[i] = fmt.Sprintf("AcceptResponseError: %v", *(v.AcceptResponseError))
+		i++
+	}
+
+	return fmt.Sprintf("RequestFeatures{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this RequestFeatures match the
+// provided RequestFeatures.
+//
+// This function performs a deep comparison.
+func (v *RequestFeatures) Equals(rhs *RequestFeatures) bool {
+	if !_Bool_EqualsPtr(v.AcceptResponseError, rhs.AcceptResponseError) {
+		return false
+	}
+
+	return true
+}
+
+// GetAcceptResponseError returns the value of AcceptResponseError if it is set or its
+// zero value if it is unset.
+func (v *RequestFeatures) GetAcceptResponseError() (o bool) {
+	if v.AcceptResponseError != nil {
+		return *v.AcceptResponseError
 	}
 
 	return

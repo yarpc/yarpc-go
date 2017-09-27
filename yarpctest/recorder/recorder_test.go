@@ -315,7 +315,7 @@ request:
   shardkey: ""
   routingkey: ""
   routingdelegate: ""
-  supportsBothResponseAndError: 0
+  acceptResponseError: 0
   body: SGVsbG8=
 response:
   headers: {}

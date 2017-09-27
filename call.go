@@ -129,8 +129,8 @@ func (c *Call) Encoding() transport.Encoding {
 	return (*encoding.Call)(c).Encoding()
 }
 
-// Features returns the Features for this request.
-func (c *Call) Features() transport.Features {
+// Features returns the RequestFeatures for this request.
+func (c *Call) Features() transport.RequestFeatures {
 	return (*encoding.Call)(c).Features()
 }
 

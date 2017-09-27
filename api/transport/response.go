@@ -25,7 +25,7 @@ import "io"
 // Response is the low level response representation.
 type Response struct {
 	Headers          Headers
-	Features         Features
+	Features         ResponseFeatures
 	Body             io.ReadCloser
 	ApplicationError bool
 }
@@ -49,12 +49,12 @@ type ResponseWriter interface {
 	SetApplicationError()
 }
 
-// FeaturesResponseWriter is a ResponseWriter with Features functionality.
+// FeaturesResponseWriter is a ResponseWriter with features functionality.
 //
 // This was needed for backwards compatibility.
 type FeaturesResponseWriter interface {
 	ResponseWriter
 
-	// ModifyFeatures modifies the returned features.
-	ModifyFeatures(func(Features))
+	// UpdateFeatures updates the returned features.
+	UpdateFeatures(func(*ResponseFeatures))
 }

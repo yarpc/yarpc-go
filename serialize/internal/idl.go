@@ -30,8 +30,8 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "internal",
 	Package:  "go.uber.org/yarpc/serialize/internal",
 	FilePath: "internal.thrift",
-	SHA1:     "4b38ca0173a5216c6fef21a4acfe27b0b3d02a92",
+	SHA1:     "3a16aec953330ae3b9959c40a6f8a943080264a6",
 	Raw:      rawIDL,
 }
 
-const rawIDL = "struct RPC {\n\t1: required binary spanContext\n\n\t2: required string callerName\n\t3: required string serviceName\n\t4: required string encoding\n\t5: required string procedure\n\n\t6: optional map<string,string> headers\n\t7: optional string shardKey\n\t8: optional string routingKey\n\t9: optional string routingDelegate\n\t10: optional binary body\n  11: optional Features features\n}\n\nstruct Features {\n  1: optional bool supportsBothResponseAndError\n}\n"
+const rawIDL = "struct RPC {\n\t1: required binary spanContext\n\n\t2: required string callerName\n\t3: required string serviceName\n\t4: required string encoding\n\t5: required string procedure\n\n\t6: optional map<string,string> headers\n\t7: optional string shardKey\n\t8: optional string routingKey\n\t9: optional string routingDelegate\n\t10: optional binary body\n  11: optional RequestFeatures features\n}\n\nstruct RequestFeatures {\n  1: optional bool acceptResponseError\n}\n"

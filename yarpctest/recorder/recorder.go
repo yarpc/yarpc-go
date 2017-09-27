@@ -256,7 +256,7 @@ func (r *Recorder) hashRequestRecord(requestRecord *requestRecord) string {
 	ha(requestRecord.Service)
 	ha(string(requestRecord.Encoding))
 	ha(requestRecord.Procedure)
-	ha(requestRecord.SupportsBothResponseAndError)
+	ha(requestRecord.AcceptResponseError)
 	orderedHeadersKeys := make([]string, 0, len(requestRecord.Headers))
 	for k := range requestRecord.Headers {
 		orderedHeadersKeys = append(orderedHeadersKeys, k)
@@ -340,21 +340,21 @@ func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRec
 		r.logger.Fatal(err)
 	}
 	request.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
-	supportsBothResponseAndError := "0"
-	if request.Features.SupportsBothResponseAndError {
-		supportsBothResponseAndError = "1"
+	acceptResponseError := "0"
+	if request.Features.AcceptResponseError {
+		acceptResponseError = "1"
 	}
 	return requestRecord{
-		Caller:                       request.Caller,
-		Service:                      request.Service,
-		Procedure:                    request.Procedure,
-		Encoding:                     string(request.Encoding),
-		Headers:                      request.Headers.Items(),
-		ShardKey:                     request.ShardKey,
-		RoutingKey:                   request.RoutingKey,
-		RoutingDelegate:              request.RoutingDelegate,
-		SupportsBothResponseAndError: supportsBothResponseAndError,
-		Body: requestBody,
+		Caller:              request.Caller,
+		Service:             request.Service,
+		Procedure:           request.Procedure,
+		Encoding:            string(request.Encoding),
+		Headers:             request.Headers.Items(),
+		ShardKey:            request.ShardKey,
+		RoutingKey:          request.RoutingKey,
+		RoutingDelegate:     request.RoutingDelegate,
+		AcceptResponseError: acceptResponseError,
+		Body:                requestBody,
 	}
 }
 
@@ -433,16 +433,16 @@ func (e errRecordNotFound) Error() string {
 }
 
 type requestRecord struct {
-	Caller                       string
-	Service                      string
-	Procedure                    string
-	Encoding                     string
-	Headers                      map[string]string
-	ShardKey                     string
-	RoutingKey                   string
-	RoutingDelegate              string
-	SupportsBothResponseAndError string
-	Body                         base64blob
+	Caller              string
+	Service             string
+	Procedure           string
+	Encoding            string
+	Headers             map[string]string
+	ShardKey            string
+	RoutingKey          string
+	RoutingDelegate     string
+	AcceptResponseError string
+	Body                base64blob
 }
 
 type responseRecord struct {

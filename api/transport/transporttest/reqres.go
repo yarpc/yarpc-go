@@ -185,6 +185,10 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 		panic(fmt.Sprintf("expected *transport.Response, got %v", got))
 	}
 
+	if !reflect.DeepEqual(l.Features, r.Features) {
+		m.t.Logf("Features did not match:\n\t   %v\n\t!= %v", l.Features, r.Features)
+		return false
+	}
 	if err := checkSuperSet(l.Headers, r.Headers); err != nil {
 		m.t.Logf("Headers mismatch: %v != %v\n\t%v", l.Headers, r.Headers, err)
 		return false
@@ -209,6 +213,7 @@ func (m ResponseMatcher) Matches(got interface{}) bool {
 type FakeResponseWriter struct {
 	IsApplicationError bool
 	Headers            transport.Headers
+	Features           transport.ResponseFeatures
 	Body               bytes.Buffer
 }
 
@@ -222,6 +227,10 @@ func (fw *FakeResponseWriter) AddHeaders(h transport.Headers) {
 	for k, v := range h.Items() {
 		fw.Headers = fw.Headers.With(k, v)
 	}
+}
+
+func (fw *FakeResponseWriter) UpdateFeatures(f func(*transport.ResponseFeatures)) {
+	f(&fw.Features)
 }
 
 // Write for FakeResponseWriter.

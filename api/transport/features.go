@@ -22,17 +22,24 @@ package transport
 
 import "go.uber.org/zap/zapcore"
 
-// Features are features that may or may not be supported on either the
-// client or server side.
-//
-// This makes it easier to add new features to YARPC in a backwards-compatible
-// manner.
-type Features struct {
-	SupportsBothResponseAndError bool
+// RequestFeatures are request features.
+type RequestFeatures struct {
+	AcceptResponseError bool
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
-func (f Features) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) error {
-	objectEncoder.AddBool("supportsBothResponseAndError", f.SupportsBothResponseAndError)
+func (f RequestFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) error {
+	objectEncoder.AddBool("acceptResponseError", f.AcceptResponseError)
+	return nil
+}
+
+// ResponseFeatures are response features that were applied.
+type ResponseFeatures struct {
+	AcceptResponseError bool
+}
+
+// MarshalLogObject implements zap.ObjectMarshaler.
+func (f ResponseFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) error {
+	objectEncoder.AddBool("acceptResponseError", f.AcceptResponseError)
 	return nil
 }

@@ -40,7 +40,7 @@ func TestNilCall(t *testing.T) {
 	assert.Equal(t, "", call.ShardKey())
 	assert.Equal(t, "", call.RoutingKey())
 	assert.Equal(t, "", call.RoutingDelegate())
-	assert.Equal(t, transport.Features{}, call.Features())
+	assert.Equal(t, transport.RequestFeatures{}, call.Features())
 	assert.Equal(t, "", call.Header("foo"))
 	assert.Empty(t, call.HeaderNames())
 

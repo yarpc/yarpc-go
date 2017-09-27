@@ -135,8 +135,8 @@ func TestRequestLogMarshaling(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
-		Features: transport.Features{
-			SupportsBothResponseAndError: true,
+		Features: transport.RequestFeatures{
+			AcceptResponseError: true,
 		},
 		Body: strings.NewReader("body"),
 	}
@@ -151,7 +151,7 @@ func TestRequestLogMarshaling(t *testing.T) {
 		"routingKey":      "routing-key",
 		"routingDelegate": "routing-delegate",
 		"features": map[string]interface{}{
-			"supportsBothResponseAndError": true,
+			"acceptResponseError": true,
 		},
 	}, enc.Fields, "Unexpected output after marshaling request.")
 }

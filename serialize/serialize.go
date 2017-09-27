@@ -62,8 +62,8 @@ func ToBytes(tracer opentracing.Tracer, spanContext opentracing.SpanContext, req
 		ShardKey:        &req.ShardKey,
 		RoutingKey:      &req.RoutingKey,
 		RoutingDelegate: &req.RoutingDelegate,
-		Features: &internal.Features{
-			SupportsBothResponseAndError: ptr.Bool(req.Features.SupportsBothResponseAndError),
+		Features: &internal.RequestFeatures{
+			AcceptResponseError: ptr.Bool(req.Features.AcceptResponseError),
 		},
 		Body: body,
 	}
@@ -125,8 +125,8 @@ func FromBytes(tracer opentracing.Tracer, request []byte) (opentracing.SpanConte
 	if rpc.RoutingDelegate != nil {
 		req.RoutingDelegate = *rpc.RoutingDelegate
 	}
-	if rpc.Features != nil && rpc.Features.SupportsBothResponseAndError != nil {
-		req.Features.SupportsBothResponseAndError = *rpc.Features.SupportsBothResponseAndError
+	if rpc.Features != nil && rpc.Features.AcceptResponseError != nil {
+		req.Features.AcceptResponseError = *rpc.Features.AcceptResponseError
 	}
 
 	spanContext, err := spanContextFromBytes(tracer, rpc.SpanContext)

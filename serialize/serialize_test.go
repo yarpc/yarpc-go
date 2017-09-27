@@ -55,8 +55,8 @@ func TestSerialization(t *testing.T) {
 		ShardKey:        "ShardKey",
 		RoutingKey:      "RoutingKey",
 		RoutingDelegate: "RoutingDelegate",
-		Features: transport.Features{
-			SupportsBothResponseAndError: true,
+		Features: transport.RequestFeatures{
+			AcceptResponseError: true,
 		},
 		Body: bytes.NewReader(body),
 	}

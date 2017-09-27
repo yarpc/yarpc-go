@@ -319,8 +319,8 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
-		Features: transport.Features{
-			SupportsBothResponseAndError: true,
+		Features: transport.RequestFeatures{
+			AcceptResponseError: true,
 		},
 		Body: strings.NewReader("body"),
 	}
@@ -379,8 +379,8 @@ func TestMiddlewareStats(t *testing.T) {
 			ShardKey:        "sk",
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
-			Features: transport.Features{
-				SupportsBothResponseAndError: true,
+			Features: transport.RequestFeatures{
+				AcceptResponseError: true,
 			},
 			Body: strings.NewReader("body"),
 		},

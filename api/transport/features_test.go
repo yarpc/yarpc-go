@@ -27,13 +27,24 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func TestRequestLogMarshaling(t *testing.T) {
-	features := Features{
-		SupportsBothResponseAndError: true,
+func TestRequestFeaturesLogMarshaling(t *testing.T) {
+	requestFeatures := RequestFeatures{
+		AcceptResponseError: true,
 	}
 	objectEncoder := zapcore.NewMapObjectEncoder()
-	assert.NoError(t, features.MarshalLogObject(objectEncoder))
+	assert.NoError(t, requestFeatures.MarshalLogObject(objectEncoder))
 	assert.Equal(t, map[string]interface{}{
-		"supportsBothResponseAndError": true,
+		"acceptResponseError": true,
+	}, objectEncoder.Fields)
+}
+
+func TestResponseFeaturesLogMarshaling(t *testing.T) {
+	responseFeatures := ResponseFeatures{
+		AcceptResponseError: true,
+	}
+	objectEncoder := zapcore.NewMapObjectEncoder()
+	assert.NoError(t, responseFeatures.MarshalLogObject(objectEncoder))
+	assert.Equal(t, map[string]interface{}{
+		"acceptResponseError": true,
 	}, objectEncoder.Fields)
 }
