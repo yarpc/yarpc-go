@@ -59,6 +59,7 @@ type roundTripTransport interface {
 	// knows how to talk to that Inbound.
 	WithRouter(r transport.Router, f func(transport.UnaryOutbound))
 	WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound))
+	AcceptResponseError() bool
 }
 
 type staticRouter struct {
@@ -126,6 +127,10 @@ func (ht httpTransport) WithRouterOneway(r transport.Router, f func(transport.On
 	f(o)
 }
 
+func (ht httpTransport) AcceptResponseError() bool {
+	return false
+}
+
 // tchannelTransport implements a roundTripTransport for TChannel.
 type tchannelTransport struct{ t *testing.T }
 
@@ -162,6 +167,10 @@ func (tt tchannelTransport) WithRouterOneway(r transport.Router, f func(transpor
 	panic("tchannel does not support oneway calls")
 }
 
+func (tt tchannelTransport) AcceptResponseError() bool {
+	return false
+}
+
 // grpcTransport implements a roundTripTransport for gRPC.
 type grpcTransport struct{ t *testing.T }
 
@@ -185,6 +194,10 @@ func (gt grpcTransport) WithRouter(r transport.Router, f func(transport.UnaryOut
 
 func (gt grpcTransport) WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound)) {
 	panic("grpc does not support oneway calls")
+}
+
+func (gt grpcTransport) AcceptResponseError() bool {
+	return true
 }
 
 func TestSimpleRoundTrip(t *testing.T) {
@@ -252,7 +265,10 @@ func TestSimpleRoundTrip(t *testing.T) {
 				Procedure: testProcedure,
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
-				Body:      bytes.NewReader([]byte(tt.requestBody)),
+				Features: transport.RequestFeatures{
+					AcceptResponseError: trans.AcceptResponseError(),
+				},
+				Body: bytes.NewReader([]byte(tt.requestBody)),
 			})
 
 			handler := unaryHandlerFunc(func(_ context.Context, r *transport.Request, w transport.ResponseWriter) error {
@@ -294,7 +310,10 @@ func TestSimpleRoundTrip(t *testing.T) {
 				} else {
 					responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
 						Headers: tt.responseHeaders,
-						Body:    ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
+						Features: transport.ResponseFeatures{
+							AcceptResponseError: trans.AcceptResponseError(),
+						},
+						Body: ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
 					})
 
 					if assert.NoError(t, err, "%T: call failed", trans) {
