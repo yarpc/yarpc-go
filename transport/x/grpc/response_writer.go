@@ -57,7 +57,7 @@ func (r *responseWriter) SetApplicationError() {
 	r.isApplicationError = true
 }
 
-func (r *responseWriter) UpdateFeatures(func(*transport.ResponseFeatures)) {
+func (*responseWriter) UpdateFeatures(func(*transport.ResponseFeatures)) {
 	// nothing to do since we take no action on AcceptResponseError for grpc
 }
 

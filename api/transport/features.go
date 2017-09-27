@@ -22,8 +22,16 @@ package transport
 
 import "go.uber.org/zap/zapcore"
 
-// RequestFeatures are request features.
+// RequestFeatures are features that the client implements.
+//
+// By setting a feature, the client signifies that it can handle certain
+// features, and the server can choose how to proceed. If the feature is
+// used, the server will return a corresponding signal on ResponseFeatures.
+//
+// This is needed for backwards compatibility.
 type RequestFeatures struct {
+	// AcceptResponseError indicates that the client can handle both
+	// a response body and error at the same time.
 	AcceptResponseError bool
 }
 
@@ -33,8 +41,15 @@ func (f RequestFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) e
 	return nil
 }
 
-// ResponseFeatures are response features that were applied.
+// ResponseFeatures are features that were applied on the server.
+//
+// The server can only use features that were signaled from RequestFeatures.
+// If the feature is used, the server must indicate so on ResponseFeatures.
+//
+// This is needed for backwards compatibility.
 type ResponseFeatures struct {
+	// AcceptResponseError indicates that the client can handle both
+	// a response body and error at the same time.
 	AcceptResponseError bool
 }
 

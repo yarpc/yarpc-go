@@ -51,7 +51,13 @@ type ResponseWriter interface {
 
 // FeaturesResponseWriter is a ResponseWriter with features functionality.
 //
-// This was needed for backwards compatibility.
+// This was needed for backwards compatibility. If you want to use a
+// FeaturesResponseWriter instead of a ResponseWriter in an implementation,
+// you need to upcast:
+//
+//   if featuresResponseWriter, ok := responseWriter.(transport.FeaturesResponseWriter); ok {
+//     // do something
+//   }
 type FeaturesResponseWriter interface {
 	ResponseWriter
 
