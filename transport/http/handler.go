@@ -126,6 +126,9 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		return err
 	}
 
+	responseWriter.UpdateFeatures(func(features *transport.ResponseFeatures) {
+		features.AcceptResponseError = treq.Features.AcceptResponseError
+	})
 	switch spec.Type() {
 	case transport.Unary:
 		defer span.Finish()
