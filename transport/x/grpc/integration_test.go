@@ -122,6 +122,31 @@ func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	})
 }
 
+func TestYARPCResponseAndError(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		err := e.SetValueYARPC(context.Background(), "foo", "bar")
+		assert.NoError(t, err)
+		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
+		value, err := e.GetValueYARPC(context.Background(), "foo")
+		assert.Equal(t, "bar", value)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
+	})
+}
+
+func TestGRPCResponseAndError(t *testing.T) {
+	t.Skip()
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		err := e.SetValueGRPC(context.Background(), "foo", "bar")
+		assert.NoError(t, err)
+		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
+		value, err := e.GetValueGRPC(context.Background(), "foo")
+		assert.Equal(t, "bar", value)
+		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
+	})
+}
+
 func TestYARPCMaxMsgSize(t *testing.T) {
 	t.Parallel()
 	value := strings.Repeat("a", defaultServerMaxRecvMsgSize*2)
@@ -245,10 +270,10 @@ func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error)
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 	response, err := e.KeyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key})
-	if err != nil {
-		return "", err
+	if response != nil {
+		return response.Value, err
 	}
-	return response.Value, nil
+	return "", err
 }
 
 func (e *testEnv) SetValueYARPC(ctx context.Context, key string, value string) error {
@@ -262,10 +287,10 @@ func (e *testEnv) GetValueGRPC(ctx context.Context, key string) (string, error) 
 	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
 	defer cancel()
 	response, err := e.KeyValueGRPCClient.GetValue(e.ContextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
-	if err != nil {
-		return "", err
+	if response != nil {
+		return response.Value, err
 	}
-	return response.Value, nil
+	return "", err
 }
 
 func (e *testEnv) SetValueGRPC(ctx context.Context, key string, value string) error {
