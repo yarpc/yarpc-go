@@ -390,6 +390,9 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		req.Header.Set(EncodingHeader, encoding)
 	}
 
+	// TODO(pedge): update to true when this is supported
+	req.Header.Set(AcceptResponseErrorHeader, AcceptFalse)
+
 	return req
 }
 

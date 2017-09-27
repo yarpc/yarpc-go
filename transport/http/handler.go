@@ -93,7 +93,10 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
-		Body:            req.Body,
+		Features: transport.RequestFeatures{
+			AcceptResponseError: fromAcceptValue(popHeader(req.Header, AcceptResponseErrorHeader)),
+		},
+		Body: req.Body,
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {

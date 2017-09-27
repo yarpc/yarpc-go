@@ -71,7 +71,7 @@ const (
 
 	// AcceptResponseErrorHeader says that the AcceptResponseError feature
 	// is supported.
-	AcceptResponseErrorHeader = "Rpc-Accept-Response-Header"
+	AcceptResponseErrorHeader = "Rpc-Accept-Response-Error"
 )
 
 // Valid values for the Rpc-Status header.
