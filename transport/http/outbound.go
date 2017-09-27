@@ -291,10 +291,10 @@ func (o *Outbound) callWithPeer(
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		appHeaders := applicationHeaders.FromHTTPHeaders(
 			response.Header, transport.NewHeaders())
-		appError := fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader)
+		appError := fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader))
 		acceptResponseError := fromAcceptValue(response.Header.Get(AcceptResponseErrorHeader))
 		return &transport.Response{
-			Headers:          appHeaders,
+			Headers: appHeaders,
 			Features: transport.ResponseFeatures{
 				AcceptResponseError: acceptResponseError,
 			},

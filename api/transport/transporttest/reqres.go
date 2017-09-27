@@ -229,6 +229,7 @@ func (fw *FakeResponseWriter) AddHeaders(h transport.Headers) {
 	}
 }
 
+// UpdateFeatures for FakeResponseWriter.
 func (fw *FakeResponseWriter) UpdateFeatures(f func(*transport.ResponseFeatures)) {
 	f(&fw.Features)
 }
