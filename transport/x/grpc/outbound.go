@@ -110,8 +110,9 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		return nil, err
 	}
 	return &transport.Response{
-		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
-		Headers: responseHeaders,
+		Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		Headers:          responseHeaders,
+		ApplicationError: metadataToIsApplicationError(responseMD),
 	}, invokeErrorToYARPCError(invokeErr, responseMD)
 }
 
@@ -184,6 +185,14 @@ func (o *Outbound) invoke(
 			callOptions...,
 		),
 	)
+}
+
+func metadataToIsApplicationError(responseMD metadata.MD) bool {
+	if responseMD == nil {
+		return false
+	}
+	value, ok := responseMD[ApplicationErrorHeader]
+	return ok && len(value) > 0 && len(value[0]) > 0
 }
 
 func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
