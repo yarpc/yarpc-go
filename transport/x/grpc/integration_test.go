@@ -21,6 +21,7 @@
 package grpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -28,6 +29,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
@@ -38,6 +40,7 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -141,6 +144,41 @@ func TestYARPCMaxMsgSize(t *testing.T) {
 	})
 }
 
+func TestApplicationErrorPropagation(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		response, err := e.Call(
+			context.Background(),
+			"GetValue",
+			&examplepb.GetValueRequest{Key: "foo"},
+			protobuf.Encoding,
+			transport.Headers{},
+		)
+		require.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+		require.True(t, response.ApplicationError)
+
+		response, err = e.Call(
+			context.Background(),
+			"SetValue",
+			&examplepb.SetValueRequest{Key: "foo", Value: "hello"},
+			protobuf.Encoding,
+			transport.Headers{},
+		)
+		require.NoError(t, err)
+		require.False(t, response.ApplicationError)
+
+		response, err = e.Call(
+			context.Background(),
+			"GetValue",
+			&examplepb.GetValueRequest{Key: "foo"},
+			"bad_encoding",
+			transport.Headers{},
+		)
+		require.True(t, yarpcerrors.IsInvalidArgument(err))
+		require.False(t, response.ApplicationError)
+	})
+}
+
 func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
 	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions)
 	require.NoError(t, err)
@@ -151,6 +189,8 @@ func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOpti
 }
 
 type testEnv struct {
+	Caller              string
+	Service             string
 	Inbound             *Inbound
 	Outbound            *Outbound
 	ClientConn          *grpc.ClientConn
@@ -213,11 +253,14 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 			err = multierr.Append(err, outbound.Stop())
 		}
 	}()
+
+	caller := "example-client"
+	service := "example"
 	clientConfig := clientconfig.MultiOutbound(
-		"example-client",
-		"example",
+		caller,
+		service,
 		transport.Outbounds{
-			ServiceName: "example-client",
+			ServiceName: caller,
 			Unary:       outbound,
 		},
 	)
@@ -229,6 +272,8 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 		WithEncoding(string(protobuf.Encoding))
 
 	return &testEnv{
+		caller,
+		service,
 		inbound,
 		outbound,
 		clientConn,
@@ -239,6 +284,35 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 		keyValueYARPCClient,
 		keyValueYARPCServer,
 	}, nil
+}
+
+func (e *testEnv) Call(
+	ctx context.Context,
+	methodName string,
+	message proto.Message,
+	encoding transport.Encoding,
+	headers transport.Headers,
+) (*transport.Response, error) {
+	data, err := proto.Marshal(message)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
+	defer cancel()
+	return e.Outbound.Call(
+		ctx,
+		&transport.Request{
+			Caller:   e.Caller,
+			Service:  e.Service,
+			Encoding: encoding,
+			Procedure: procedure.ToName(
+				"uber.yarpc.internal.examples.protobuf.example.KeyValue",
+				methodName,
+			),
+			Headers: headers,
+			Body:    bytes.NewReader(data),
+		},
+	)
 }
 
 func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error) {
