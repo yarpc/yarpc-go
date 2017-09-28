@@ -53,7 +53,7 @@ func (r *responseWriter) AddHeaders(headers transport.Headers) {
 }
 
 func (r *responseWriter) SetApplicationError() {
-	r.AddSystemHeader(ApplicationErrorHeader, "1")
+	r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
 }
 
 func (r *responseWriter) AddSystemHeader(key string, value string) {
