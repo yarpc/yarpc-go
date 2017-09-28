@@ -115,7 +115,8 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 			// this is always true for grpc
 			AcceptResponseError: true,
 		},
-		Headers: responseHeaders,
+		Headers:          responseHeaders,
+		ApplicationError: metadataToIsApplicationError(responseMD),
 	}, invokeErrorToYARPCError(invokeErr, responseMD)
 }
 
@@ -188,6 +189,14 @@ func (o *Outbound) invoke(
 			callOptions...,
 		),
 	)
+}
+
+func metadataToIsApplicationError(responseMD metadata.MD) bool {
+	if responseMD == nil {
+		return false
+	}
+	value, ok := responseMD[ApplicationErrorHeader]
+	return ok && len(value) > 0 && len(value[0]) > 0
 }
 
 func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
