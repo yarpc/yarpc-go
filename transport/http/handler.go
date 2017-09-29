@@ -250,7 +250,7 @@ func (rw *responseWriter) Close(httpStatusCode int) {
 		rw.w.Header().Set(ApplicationStatusHeader, value)
 	}
 	if value := acceptValue(rw.features.BothResponseError); value != "" {
-		rw.w.Header().Set(AcceptsBothResponseErrorHeader, value)
+		rw.w.Header().Set(BothResponseErrorHeader, value)
 	}
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
