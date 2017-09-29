@@ -292,11 +292,11 @@ func (o *Outbound) callWithPeer(
 		appHeaders := applicationHeaders.FromHTTPHeaders(
 			response.Header, transport.NewHeaders())
 		appError := fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader))
-		acceptsBothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
+		bothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
 		return &transport.Response{
 			Headers: appHeaders,
 			Features: transport.ResponseFeatures{
-				BothResponseError: acceptsBothResponseError,
+				BothResponseError: bothResponseError,
 			},
 			Body:             response.Body,
 			ApplicationError: appError,
