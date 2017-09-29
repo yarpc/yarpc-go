@@ -330,7 +330,7 @@ func (r *Recorder) recordToResponse(cachedRecord *record) transport.Response {
 	response := transport.Response{
 		Headers: transport.HeadersFromMap(cachedRecord.Response.Headers),
 		Features: transport.ResponseFeatures{
-			AcceptsBothResponseError: cachedRecord.Response.AcceptsBothResponseError == "1",
+			BothResponseError: cachedRecord.Response.BothResponseError == "1",
 		},
 		Body: ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
 	}
@@ -362,9 +362,9 @@ func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRec
 }
 
 func (r *Recorder) responseToResponseRecord(response *transport.Response) responseRecord {
-	acceptsBothResponseError := "0"
-	if response.Features.AcceptsBothResponseError {
-		acceptsBothResponseError = "1"
+	bothResponseError := "0"
+	if response.Features.BothResponseError {
+		bothResponseError = "1"
 	}
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -372,9 +372,9 @@ func (r *Recorder) responseToResponseRecord(response *transport.Response) respon
 	}
 	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
 	return responseRecord{
-		Headers:                  response.Headers.Items(),
-		AcceptsBothResponseError: acceptsBothResponseError,
-		Body: responseBody,
+		Headers:           response.Headers.Items(),
+		BothResponseError: bothResponseError,
+		Body:              responseBody,
 	}
 }
 
@@ -454,9 +454,9 @@ type requestRecord struct {
 }
 
 type responseRecord struct {
-	Headers                  map[string]string
-	AcceptsBothResponseError string
-	Body                     base64blob
+	Headers           map[string]string
+	BothResponseError string
+	Body              base64blob
 }
 
 type record struct {

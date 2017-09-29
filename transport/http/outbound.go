@@ -296,7 +296,7 @@ func (o *Outbound) callWithPeer(
 		return &transport.Response{
 			Headers: appHeaders,
 			Features: transport.ResponseFeatures{
-				AcceptsBothResponseError: acceptsBothResponseError,
+				BothResponseError: acceptsBothResponseError,
 			},
 			Body:             response.Body,
 			ApplicationError: appError,

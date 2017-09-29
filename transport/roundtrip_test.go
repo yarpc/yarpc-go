@@ -311,7 +311,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
 						Headers: tt.responseHeaders,
 						Features: transport.ResponseFeatures{
-							AcceptsBothResponseError: trans.AcceptsBothResponseError(),
+							BothResponseError: trans.AcceptsBothResponseError(),
 						},
 						Body: ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
 					})

@@ -48,13 +48,13 @@ func (f RequestFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) e
 //
 // This is needed for backwards compatibility.
 type ResponseFeatures struct {
-	// AcceptsBothResponseError indicates that the client can handle both
-	// a response body and error at the same time.
-	AcceptsBothResponseError bool
+	// BothResponseError indicates that the server potentially retuurned both a
+	// response body and error at the same time.
+	BothResponseError bool
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (f ResponseFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) error {
-	objectEncoder.AddBool("acceptsBothResponseError", f.AcceptsBothResponseError)
+	objectEncoder.AddBool("bothResponseError", f.BothResponseError)
 	return nil
 }

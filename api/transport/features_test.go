@@ -40,11 +40,11 @@ func TestRequestFeaturesLogMarshaling(t *testing.T) {
 
 func TestResponseFeaturesLogMarshaling(t *testing.T) {
 	responseFeatures := ResponseFeatures{
-		AcceptsBothResponseError: true,
+		BothResponseError: true,
 	}
 	objectEncoder := zapcore.NewMapObjectEncoder()
 	assert.NoError(t, responseFeatures.MarshalLogObject(objectEncoder))
 	assert.Equal(t, map[string]interface{}{
-		"acceptsBothResponseError": true,
+		"bothResponseError": true,
 	}, objectEncoder.Fields)
 }

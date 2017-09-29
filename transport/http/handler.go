@@ -127,7 +127,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}
 
 	responseWriter.UpdateFeatures(func(features *transport.ResponseFeatures) {
-		features.AcceptsBothResponseError = treq.Features.AcceptsBothResponseError
+		features.BothResponseError = treq.Features.AcceptsBothResponseError
 	})
 	switch spec.Type() {
 	case transport.Unary:
@@ -247,7 +247,7 @@ func (rw *responseWriter) AddSystemHeader(key string, value string) {
 
 func (rw *responseWriter) Close(httpStatusCode int) {
 	rw.w.Header().Set(ApplicationStatusHeader, applicationStatusValue(rw.isApplicationError))
-	rw.w.Header().Set(AcceptsBothResponseErrorHeader, acceptValue(rw.features.AcceptsBothResponseError))
+	rw.w.Header().Set(AcceptsBothResponseErrorHeader, acceptValue(rw.features.BothResponseError))
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?

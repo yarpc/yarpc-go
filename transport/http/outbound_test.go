@@ -89,7 +89,7 @@ func TestCallSuccess(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Equal(t, []byte("great success"), body)
 	}
-	assert.Equal(t, false, res.Features.AcceptsBothResponseError)
+	assert.Equal(t, false, res.Features.BothResponseError)
 }
 
 func TestAddReservedHeader(t *testing.T) {
