@@ -70,11 +70,13 @@ const (
 	ErrorNameHeader = "Rpc-Error-Name"
 
 	// AcceptsBothResponseErrorHeader says that the AcceptsBothResponseError
-	// feature is supported on the client.
+	// feature is supported on the client. If any non-empty value is set,
+	// this indicates true.
 	AcceptsBothResponseErrorHeader = "Rpc-Accepts-Both-Response-Error"
 
 	// BothResponseErrorHeader says that the BothResponseError
-	// feature is supported on the server.
+	// feature is supported on the server. If any non-empty value is set,
+	// this indicates true.
 	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
 
@@ -86,7 +88,9 @@ const (
 	// An error occurred. The response body contains an application header.
 	ApplicationErrorStatus = "error"
 
-	// AcceptTrue is the true value for accept headers.
+	// AcceptTrue is the true value used for accept headers. Note that any
+	// non-empty value indicates true, but we end up sending this specific
+	// value.
 	AcceptTrue = "true"
 )
 
@@ -113,5 +117,5 @@ func acceptValue(accept bool) string {
 }
 
 func fromAcceptValue(acceptValue string) bool {
-	return acceptValue == AcceptTrue
+	return len(acceptValue) > 0
 }
