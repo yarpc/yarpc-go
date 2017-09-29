@@ -15,5 +15,5 @@ struct RPC {
 }
 
 struct RequestFeatures {
-  1: optional bool acceptsBothResponseError
+	1: optional bool acceptsBothResponseError
 }
