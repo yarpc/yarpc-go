@@ -11,7 +11,7 @@ struct RPC {
 	8: optional string routingKey
 	9: optional string routingDelegate
 	10: optional binary body
-  11: optional RequestFeatures features
+	11: optional RequestFeatures features
 }
 
 struct RequestFeatures {
