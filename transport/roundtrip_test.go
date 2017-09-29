@@ -168,7 +168,7 @@ func (tt tchannelTransport) WithRouterOneway(r transport.Router, f func(transpor
 }
 
 func (tt tchannelTransport) AcceptResponseError() bool {
-	return false
+	return true
 }
 
 // grpcTransport implements a roundTripTransport for gRPC.

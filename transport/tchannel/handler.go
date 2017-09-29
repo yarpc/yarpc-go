@@ -136,6 +136,10 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		ShardKey:        call.ShardKey(),
 		RoutingKey:      call.RoutingKey(),
 		RoutingDelegate: call.RoutingDelegate(),
+		// this is always true for tchannel
+		Features: transport.RequestFeatures{
+			AcceptResponseError: true,
+		},
 	}
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)

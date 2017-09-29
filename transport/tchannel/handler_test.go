@@ -90,7 +90,10 @@ func TestHandlerErrors(t *testing.T) {
 					ShardKey:        "shard",
 					RoutingKey:      "routekey",
 					RoutingDelegate: "routedelegate",
-					Body:            bytes.NewReader([]byte("world")),
+					Features: transport.RequestFeatures{
+						AcceptResponseError: true,
+					},
+					Body: bytes.NewReader([]byte("world")),
 				}),
 			gomock.Any(),
 		).Return(nil)
@@ -197,7 +200,10 @@ func TestHandlerFailures(t *testing.T) {
 							Service:   "foo",
 							Encoding:  raw.Encoding,
 							Procedure: "hello",
-							Body:      bytes.NewReader([]byte{0x00}),
+							Features: transport.RequestFeatures{
+								AcceptResponseError: true,
+							},
+							Body: bytes.NewReader([]byte{0x00}),
 						},
 					), gomock.Any(),
 				).Return(fmt.Errorf("great sadness"))
@@ -220,7 +226,10 @@ func TestHandlerFailures(t *testing.T) {
 					Service:   "foo",
 					Encoding:  json.Encoding,
 					Procedure: "hello",
-					Body:      bytes.NewReader([]byte("{}")),
+					Features: transport.RequestFeatures{
+						AcceptResponseError: true,
+					},
+					Body: bytes.NewReader([]byte("{}")),
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(t, transporttest.ContextTTL(testtime.Second)),
@@ -252,7 +261,10 @@ func TestHandlerFailures(t *testing.T) {
 					Caller:    "bar",
 					Procedure: "waituntiltimeout",
 					Encoding:  raw.Encoding,
-					Body:      bytes.NewReader([]byte{0x00}),
+					Features: transport.RequestFeatures{
+						AcceptResponseError: true,
+					},
+					Body: bytes.NewReader([]byte{0x00}),
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
@@ -281,7 +293,10 @@ func TestHandlerFailures(t *testing.T) {
 					Caller:    "bar",
 					Procedure: "panic",
 					Encoding:  raw.Encoding,
-					Body:      bytes.NewReader([]byte{0x00}),
+					Features: transport.RequestFeatures{
+						AcceptResponseError: true,
+					},
+					Body: bytes.NewReader([]byte{0x00}),
 				}
 				h.EXPECT().Handle(
 					transporttest.NewContextMatcher(
