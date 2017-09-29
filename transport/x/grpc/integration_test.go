@@ -268,8 +268,7 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 
 	contextWrapper := grpcctx.NewContextWrapper().
 		WithCaller("example-client").
-		WithService("example").
-		WithEncoding(string(protobuf.Encoding))
+		WithService("example")
 
 	return &testEnv{
 		caller,

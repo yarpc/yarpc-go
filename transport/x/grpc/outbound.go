@@ -137,9 +137,9 @@ func (o *Outbound) invoke(
 	if err != nil {
 		return err
 	}
-	var callOptions []grpc.CallOption
+	callOptions := []grpc.CallOption{grpc.CallContentSubtype(string(request.Encoding))}
 	if responseMD != nil {
-		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
+		callOptions = append(callOptions, grpc.Trailer(responseMD))
 	}
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
 	defer func() {

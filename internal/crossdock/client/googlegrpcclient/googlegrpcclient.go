@@ -35,8 +35,7 @@ import (
 
 var wrap = grpcctx.NewContextWrapper().
 	WithCaller("client").
-	WithService("yarpc-test").
-	WithEncoding("proto").Wrap
+	WithService("yarpc-test").Wrap
 
 // Run tests a grpc-go call to the yarpc server.
 func Run(t crossdock.T) {

@@ -140,7 +140,6 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				ShardKeyHeader, "example-shard-key",
 				RoutingKeyHeader, "example-routing-key",
 				RoutingDelegateHeader, "example-routing-delegate",
-				EncodingHeader, "example-encoding",
 				"foo", "bar",
 				"baz", "bat",
 			),
@@ -150,7 +149,6 @@ func TestTransportRequestToMetadata(t *testing.T) {
 				ShardKey:        "example-shard-key",
 				RoutingKey:      "example-routing-key",
 				RoutingDelegate: "example-routing-delegate",
-				Encoding:        "example-encoding",
 				Headers: transport.HeadersFromMap(map[string]string{
 					"foo": "bar",
 					"baz": "bat",

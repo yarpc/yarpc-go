@@ -107,7 +107,6 @@ func transportRequestToMetadata(request *transport.Request) (metadata.MD, error)
 		addToMetadata(md, ShardKeyHeader, request.ShardKey),
 		addToMetadata(md, RoutingKeyHeader, request.RoutingKey),
 		addToMetadata(md, RoutingDelegateHeader, request.RoutingDelegate),
-		addToMetadata(md, EncodingHeader, string(request.Encoding)),
 	); err != nil {
 		return md, err
 	}
