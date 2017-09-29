@@ -69,9 +69,13 @@ const (
 	// ErrorNameHeader contains the name of a user-defined error.
 	ErrorNameHeader = "Rpc-Error-Name"
 
-	// AcceptsBothResponseErrorHeader says that the AcceptsBothResponseError feature
-	// is supported.
-	AcceptsBothResponseErrorHeader = "Rpc-Accept-Response-Error"
+	// AcceptsBothResponseErrorHeader says that the AcceptsBothResponseError
+	// feature is supported on the client.
+	AcceptsBothResponseErrorHeader = "Rpc-Accepts-Both-Response-Error"
+
+	// BothResponseErrorHeader says that the BothResponseError
+	// feature is supported on the server.
+	BothResponseErrorHeader = "Rpc-Both-Response-Error"
 )
 
 // Valid values for the Rpc-Status header.
@@ -84,9 +88,6 @@ const (
 
 	// AcceptTrue is the true value for accept headers.
 	AcceptTrue = "true"
-
-	// AcceptFalse is the false value for accept headers.
-	AcceptFalse = "false"
 )
 
 // ApplicationHeaderPrefix is the prefix added to application header keys to
@@ -101,7 +102,6 @@ func applicationStatusValue(isApplicationError bool) string {
 }
 
 func fromApplicationStatusValue(applicationStatusValue string) bool {
-	// TODO(pedge): should we ignore if not equal to success and error?
 	return applicationStatusValue == ApplicationErrorStatus
 }
 
@@ -109,10 +109,9 @@ func acceptValue(accept bool) string {
 	if accept {
 		return AcceptTrue
 	}
-	return AcceptFalse
+	return ""
 }
 
 func fromAcceptValue(acceptValue string) bool {
-	// TODO(pedge): should we ignore if not equal to true and false?
 	return acceptValue == AcceptTrue
 }

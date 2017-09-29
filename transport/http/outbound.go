@@ -390,8 +390,8 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		req.Header.Set(EncodingHeader, encoding)
 	}
 
-	// TODO(pedge): update to true when this is supported
-	req.Header.Set(AcceptsBothResponseErrorHeader, AcceptFalse)
+	// TODO(pedge): uncomment when this is supported
+	//req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
 
 	return req
 }

@@ -246,8 +246,12 @@ func (rw *responseWriter) AddSystemHeader(key string, value string) {
 }
 
 func (rw *responseWriter) Close(httpStatusCode int) {
-	rw.w.Header().Set(ApplicationStatusHeader, applicationStatusValue(rw.isApplicationError))
-	rw.w.Header().Set(AcceptsBothResponseErrorHeader, acceptValue(rw.features.BothResponseError))
+	if value := applicationStatusValue(rw.isApplicationError); value != "" {
+		rw.w.Header().Set(ApplicationStatusHeader, value)
+	}
+	if value := acceptValue(rw.features.BothResponseError); value != "" {
+		rw.w.Header().Set(AcceptsBothResponseErrorHeader, value)
+	}
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?
