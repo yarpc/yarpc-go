@@ -94,7 +94,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
 		Features: transport.RequestFeatures{
-			AcceptResponseError: fromAcceptValue(popHeader(req.Header, AcceptResponseErrorHeader)),
+			AcceptsBothResponseError: fromAcceptValue(popHeader(req.Header, AcceptsBothResponseErrorHeader)),
 		},
 		Body: req.Body,
 	}
@@ -127,7 +127,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 	}
 
 	responseWriter.UpdateFeatures(func(features *transport.ResponseFeatures) {
-		features.AcceptResponseError = treq.Features.AcceptResponseError
+		features.AcceptsBothResponseError = treq.Features.AcceptsBothResponseError
 	})
 	switch spec.Type() {
 	case transport.Unary:
@@ -247,7 +247,7 @@ func (rw *responseWriter) AddSystemHeader(key string, value string) {
 
 func (rw *responseWriter) Close(httpStatusCode int) {
 	rw.w.Header().Set(ApplicationStatusHeader, applicationStatusValue(rw.isApplicationError))
-	rw.w.Header().Set(AcceptResponseErrorHeader, acceptValue(rw.features.AcceptResponseError))
+	rw.w.Header().Set(AcceptsBothResponseErrorHeader, acceptValue(rw.features.AcceptsBothResponseError))
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?

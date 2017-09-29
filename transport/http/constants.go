@@ -69,9 +69,9 @@ const (
 	// ErrorNameHeader contains the name of a user-defined error.
 	ErrorNameHeader = "Rpc-Error-Name"
 
-	// AcceptResponseErrorHeader says that the AcceptResponseError feature
+	// AcceptsBothResponseErrorHeader says that the AcceptsBothResponseError feature
 	// is supported.
-	AcceptResponseErrorHeader = "Rpc-Accept-Response-Error"
+	AcceptsBothResponseErrorHeader = "Rpc-Accept-Response-Error"
 )
 
 // Valid values for the Rpc-Status header.

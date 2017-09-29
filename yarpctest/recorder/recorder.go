@@ -256,7 +256,7 @@ func (r *Recorder) hashRequestRecord(requestRecord *requestRecord) string {
 	ha(requestRecord.Service)
 	ha(string(requestRecord.Encoding))
 	ha(requestRecord.Procedure)
-	ha(requestRecord.AcceptResponseError)
+	ha(requestRecord.AcceptsBothResponseError)
 	orderedHeadersKeys := make([]string, 0, len(requestRecord.Headers))
 	for k := range requestRecord.Headers {
 		orderedHeadersKeys = append(orderedHeadersKeys, k)
@@ -330,7 +330,7 @@ func (r *Recorder) recordToResponse(cachedRecord *record) transport.Response {
 	response := transport.Response{
 		Headers: transport.HeadersFromMap(cachedRecord.Response.Headers),
 		Features: transport.ResponseFeatures{
-			AcceptResponseError: cachedRecord.Response.AcceptResponseError == "1",
+			AcceptsBothResponseError: cachedRecord.Response.AcceptsBothResponseError == "1",
 		},
 		Body: ioutil.NopCloser(bytes.NewReader(cachedRecord.Response.Body)),
 	}
@@ -343,28 +343,28 @@ func (r *Recorder) requestToRequestRecord(request *transport.Request) requestRec
 		r.logger.Fatal(err)
 	}
 	request.Body = ioutil.NopCloser(bytes.NewReader(requestBody))
-	acceptResponseError := "0"
-	if request.Features.AcceptResponseError {
-		acceptResponseError = "1"
+	acceptsBothResponseError := "0"
+	if request.Features.AcceptsBothResponseError {
+		acceptsBothResponseError = "1"
 	}
 	return requestRecord{
-		Caller:              request.Caller,
-		Service:             request.Service,
-		Procedure:           request.Procedure,
-		Encoding:            string(request.Encoding),
-		Headers:             request.Headers.Items(),
-		ShardKey:            request.ShardKey,
-		RoutingKey:          request.RoutingKey,
-		RoutingDelegate:     request.RoutingDelegate,
-		AcceptResponseError: acceptResponseError,
-		Body:                requestBody,
+		Caller:                   request.Caller,
+		Service:                  request.Service,
+		Procedure:                request.Procedure,
+		Encoding:                 string(request.Encoding),
+		Headers:                  request.Headers.Items(),
+		ShardKey:                 request.ShardKey,
+		RoutingKey:               request.RoutingKey,
+		RoutingDelegate:          request.RoutingDelegate,
+		AcceptsBothResponseError: acceptsBothResponseError,
+		Body: requestBody,
 	}
 }
 
 func (r *Recorder) responseToResponseRecord(response *transport.Response) responseRecord {
-	acceptResponseError := "0"
-	if response.Features.AcceptResponseError {
-		acceptResponseError = "1"
+	acceptsBothResponseError := "0"
+	if response.Features.AcceptsBothResponseError {
+		acceptsBothResponseError = "1"
 	}
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -372,9 +372,9 @@ func (r *Recorder) responseToResponseRecord(response *transport.Response) respon
 	}
 	response.Body = ioutil.NopCloser(bytes.NewReader(responseBody))
 	return responseRecord{
-		Headers:             response.Headers.Items(),
-		AcceptResponseError: acceptResponseError,
-		Body:                responseBody,
+		Headers:                  response.Headers.Items(),
+		AcceptsBothResponseError: acceptsBothResponseError,
+		Body: responseBody,
 	}
 }
 
@@ -441,22 +441,22 @@ func (e errRecordNotFound) Error() string {
 }
 
 type requestRecord struct {
-	Caller              string
-	Service             string
-	Procedure           string
-	Encoding            string
-	Headers             map[string]string
-	ShardKey            string
-	RoutingKey          string
-	RoutingDelegate     string
-	AcceptResponseError string
-	Body                base64blob
+	Caller                   string
+	Service                  string
+	Procedure                string
+	Encoding                 string
+	Headers                  map[string]string
+	ShardKey                 string
+	RoutingKey               string
+	RoutingDelegate          string
+	AcceptsBothResponseError string
+	Body                     base64blob
 }
 
 type responseRecord struct {
-	Headers             map[string]string
-	AcceptResponseError string
-	Body                base64blob
+	Headers                  map[string]string
+	AcceptsBothResponseError string
+	Body                     base64blob
 }
 
 type record struct {

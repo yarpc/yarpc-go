@@ -136,7 +136,7 @@ func (h *handler) getTransportRequest(ctx context.Context, streamMethod string, 
 	}
 	transportRequest.Procedure = procedure
 	// this is always true for grpc
-	transportRequest.Features.AcceptResponseError = true
+	transportRequest.Features.AcceptsBothResponseError = true
 	if err := transport.ValidateRequest(transportRequest); err != nil {
 		return nil, err
 	}

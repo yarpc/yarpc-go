@@ -320,7 +320,7 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
 		Features: transport.RequestFeatures{
-			AcceptResponseError: true,
+			AcceptsBothResponseError: true,
 		},
 		Body: strings.NewReader("body"),
 	}
@@ -380,7 +380,7 @@ func TestMiddlewareStats(t *testing.T) {
 			RoutingKey:      "rk",
 			RoutingDelegate: "rd",
 			Features: transport.RequestFeatures{
-				AcceptResponseError: true,
+				AcceptsBothResponseError: true,
 			},
 			Body: strings.NewReader("body"),
 		},

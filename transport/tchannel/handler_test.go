@@ -91,7 +91,7 @@ func TestHandlerErrors(t *testing.T) {
 					RoutingKey:      "routekey",
 					RoutingDelegate: "routedelegate",
 					Features: transport.RequestFeatures{
-						AcceptResponseError: true,
+						AcceptsBothResponseError: true,
 					},
 					Body: bytes.NewReader([]byte("world")),
 				}),
@@ -201,7 +201,7 @@ func TestHandlerFailures(t *testing.T) {
 							Encoding:  raw.Encoding,
 							Procedure: "hello",
 							Features: transport.RequestFeatures{
-								AcceptResponseError: true,
+								AcceptsBothResponseError: true,
 							},
 							Body: bytes.NewReader([]byte{0x00}),
 						},
@@ -227,7 +227,7 @@ func TestHandlerFailures(t *testing.T) {
 					Encoding:  json.Encoding,
 					Procedure: "hello",
 					Features: transport.RequestFeatures{
-						AcceptResponseError: true,
+						AcceptsBothResponseError: true,
 					},
 					Body: bytes.NewReader([]byte("{}")),
 				}
@@ -262,7 +262,7 @@ func TestHandlerFailures(t *testing.T) {
 					Procedure: "waituntiltimeout",
 					Encoding:  raw.Encoding,
 					Features: transport.RequestFeatures{
-						AcceptResponseError: true,
+						AcceptsBothResponseError: true,
 					},
 					Body: bytes.NewReader([]byte{0x00}),
 				}
@@ -294,7 +294,7 @@ func TestHandlerFailures(t *testing.T) {
 					Procedure: "panic",
 					Encoding:  raw.Encoding,
 					Features: transport.RequestFeatures{
-						AcceptResponseError: true,
+						AcceptsBothResponseError: true,
 					},
 					Body: bytes.NewReader([]byte{0x00}),
 				}

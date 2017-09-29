@@ -29,22 +29,22 @@ import (
 
 func TestRequestFeaturesLogMarshaling(t *testing.T) {
 	requestFeatures := RequestFeatures{
-		AcceptResponseError: true,
+		AcceptsBothResponseError: true,
 	}
 	objectEncoder := zapcore.NewMapObjectEncoder()
 	assert.NoError(t, requestFeatures.MarshalLogObject(objectEncoder))
 	assert.Equal(t, map[string]interface{}{
-		"acceptResponseError": true,
+		"acceptsBothResponseError": true,
 	}, objectEncoder.Fields)
 }
 
 func TestResponseFeaturesLogMarshaling(t *testing.T) {
 	responseFeatures := ResponseFeatures{
-		AcceptResponseError: true,
+		AcceptsBothResponseError: true,
 	}
 	objectEncoder := zapcore.NewMapObjectEncoder()
 	assert.NoError(t, responseFeatures.MarshalLogObject(objectEncoder))
 	assert.Equal(t, map[string]interface{}{
-		"acceptResponseError": true,
+		"acceptsBothResponseError": true,
 	}, objectEncoder.Fields)
 }

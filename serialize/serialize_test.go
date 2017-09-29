@@ -56,7 +56,7 @@ func TestSerialization(t *testing.T) {
 		RoutingKey:      "RoutingKey",
 		RoutingDelegate: "RoutingDelegate",
 		Features: transport.RequestFeatures{
-			AcceptResponseError: true,
+			AcceptsBothResponseError: true,
 		},
 		Body: bytes.NewReader(body),
 	}

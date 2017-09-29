@@ -138,7 +138,7 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		RoutingDelegate: call.RoutingDelegate(),
 		// this is always true for tchannel
 		Features: transport.RequestFeatures{
-			AcceptResponseError: true,
+			AcceptsBothResponseError: true,
 		},
 	}
 
@@ -226,7 +226,7 @@ func (rw *responseWriter) SetApplicationError() {
 }
 
 func (*responseWriter) UpdateFeatures(func(*transport.ResponseFeatures)) {
-	// nothing to do since we take no action on AcceptResponseError for tchannel
+	// nothing to do since we take no action on AcceptsBothResponseError for tchannel
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {

@@ -315,11 +315,11 @@ request:
   shardkey: ""
   routingkey: ""
   routingdelegate: ""
-  acceptresponseerror: "0"
+  acceptsbothresponseerror: "0"
   body: SGVsbG8=
 response:
   headers: {}
-  acceptresponseerror: "0"
+  acceptsbothresponseerror: "0"
   body: SGVsbG8sIFdvcmxk
 `
 

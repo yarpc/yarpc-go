@@ -59,7 +59,7 @@ type roundTripTransport interface {
 	// knows how to talk to that Inbound.
 	WithRouter(r transport.Router, f func(transport.UnaryOutbound))
 	WithRouterOneway(r transport.Router, f func(transport.OnewayOutbound))
-	AcceptResponseError() bool
+	AcceptsBothResponseError() bool
 }
 
 type staticRouter struct {
@@ -127,7 +127,7 @@ func (ht httpTransport) WithRouterOneway(r transport.Router, f func(transport.On
 	f(o)
 }
 
-func (ht httpTransport) AcceptResponseError() bool {
+func (ht httpTransport) AcceptsBothResponseError() bool {
 	return false
 }
 
@@ -167,7 +167,7 @@ func (tt tchannelTransport) WithRouterOneway(r transport.Router, f func(transpor
 	panic("tchannel does not support oneway calls")
 }
 
-func (tt tchannelTransport) AcceptResponseError() bool {
+func (tt tchannelTransport) AcceptsBothResponseError() bool {
 	return true
 }
 
@@ -196,7 +196,7 @@ func (gt grpcTransport) WithRouterOneway(r transport.Router, f func(transport.On
 	panic("grpc does not support oneway calls")
 }
 
-func (gt grpcTransport) AcceptResponseError() bool {
+func (gt grpcTransport) AcceptsBothResponseError() bool {
 	return true
 }
 
@@ -266,7 +266,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
 				Features: transport.RequestFeatures{
-					AcceptResponseError: trans.AcceptResponseError(),
+					AcceptsBothResponseError: trans.AcceptsBothResponseError(),
 				},
 				Body: bytes.NewReader([]byte(tt.requestBody)),
 			})
@@ -311,7 +311,7 @@ func TestSimpleRoundTrip(t *testing.T) {
 					responseMatcher := transporttest.NewResponseMatcher(t, &transport.Response{
 						Headers: tt.responseHeaders,
 						Features: transport.ResponseFeatures{
-							AcceptResponseError: trans.AcceptResponseError(),
+							AcceptsBothResponseError: trans.AcceptsBothResponseError(),
 						},
 						Body: ioutil.NopCloser(bytes.NewReader([]byte(tt.responseBody))),
 					})

@@ -30,14 +30,14 @@ import "go.uber.org/zap/zapcore"
 //
 // This is needed for backwards compatibility.
 type RequestFeatures struct {
-	// AcceptResponseError indicates that the client can handle both
+	// AcceptsBothResponseError indicates that the client can handle both
 	// a response body and error at the same time.
-	AcceptResponseError bool
+	AcceptsBothResponseError bool
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (f RequestFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) error {
-	objectEncoder.AddBool("acceptResponseError", f.AcceptResponseError)
+	objectEncoder.AddBool("acceptsBothResponseError", f.AcceptsBothResponseError)
 	return nil
 }
 
@@ -48,13 +48,13 @@ func (f RequestFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) e
 //
 // This is needed for backwards compatibility.
 type ResponseFeatures struct {
-	// AcceptResponseError indicates that the client can handle both
+	// AcceptsBothResponseError indicates that the client can handle both
 	// a response body and error at the same time.
-	AcceptResponseError bool
+	AcceptsBothResponseError bool
 }
 
 // MarshalLogObject implements zap.ObjectMarshaler.
 func (f ResponseFeatures) MarshalLogObject(objectEncoder zapcore.ObjectEncoder) error {
-	objectEncoder.AddBool("acceptResponseError", f.AcceptResponseError)
+	objectEncoder.AddBool("acceptsBothResponseError", f.AcceptsBothResponseError)
 	return nil
 }

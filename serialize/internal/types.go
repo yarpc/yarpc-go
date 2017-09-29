@@ -521,7 +521,7 @@ func (v *RPC) GetRoutingDelegate() (o string) {
 }
 
 type RequestFeatures struct {
-	AcceptResponseError *bool `json:"acceptResponseError,omitempty"`
+	AcceptsBothResponseError *bool `json:"acceptsBothResponseError,omitempty"`
 }
 
 // ToWire translates a RequestFeatures struct into a Thrift-level intermediate
@@ -547,8 +547,8 @@ func (v *RequestFeatures) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.AcceptResponseError != nil {
-		w, err = wire.NewValueBool(*(v.AcceptResponseError)), error(nil)
+	if v.AcceptsBothResponseError != nil {
+		w, err = wire.NewValueBool(*(v.AcceptsBothResponseError)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -585,7 +585,7 @@ func (v *RequestFeatures) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBool {
 				var x bool
 				x, err = field.Value.GetBool(), error(nil)
-				v.AcceptResponseError = &x
+				v.AcceptsBothResponseError = &x
 				if err != nil {
 					return err
 				}
@@ -606,8 +606,8 @@ func (v *RequestFeatures) String() string {
 
 	var fields [1]string
 	i := 0
-	if v.AcceptResponseError != nil {
-		fields[i] = fmt.Sprintf("AcceptResponseError: %v", *(v.AcceptResponseError))
+	if v.AcceptsBothResponseError != nil {
+		fields[i] = fmt.Sprintf("AcceptsBothResponseError: %v", *(v.AcceptsBothResponseError))
 		i++
 	}
 
@@ -629,18 +629,18 @@ func _Bool_EqualsPtr(lhs, rhs *bool) bool {
 //
 // This function performs a deep comparison.
 func (v *RequestFeatures) Equals(rhs *RequestFeatures) bool {
-	if !_Bool_EqualsPtr(v.AcceptResponseError, rhs.AcceptResponseError) {
+	if !_Bool_EqualsPtr(v.AcceptsBothResponseError, rhs.AcceptsBothResponseError) {
 		return false
 	}
 
 	return true
 }
 
-// GetAcceptResponseError returns the value of AcceptResponseError if it is set or its
+// GetAcceptsBothResponseError returns the value of AcceptsBothResponseError if it is set or its
 // zero value if it is unset.
-func (v *RequestFeatures) GetAcceptResponseError() (o bool) {
-	if v.AcceptResponseError != nil {
-		return *v.AcceptResponseError
+func (v *RequestFeatures) GetAcceptsBothResponseError() (o bool) {
+	if v.AcceptsBothResponseError != nil {
+		return *v.AcceptsBothResponseError
 	}
 
 	return

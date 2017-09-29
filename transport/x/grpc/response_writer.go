@@ -57,7 +57,7 @@ func (r *responseWriter) SetApplicationError() {
 }
 
 func (*responseWriter) UpdateFeatures(func(*transport.ResponseFeatures)) {
-	// nothing to do since we take no action on AcceptResponseError for grpc
+	// nothing to do since we take no action on AcceptsBothResponseError for grpc
 }
 
 func (r *responseWriter) AddSystemHeader(key string, value string) {

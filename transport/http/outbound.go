@@ -292,11 +292,11 @@ func (o *Outbound) callWithPeer(
 		appHeaders := applicationHeaders.FromHTTPHeaders(
 			response.Header, transport.NewHeaders())
 		appError := fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader))
-		acceptResponseError := fromAcceptValue(response.Header.Get(AcceptResponseErrorHeader))
+		acceptsBothResponseError := fromAcceptValue(response.Header.Get(AcceptsBothResponseErrorHeader))
 		return &transport.Response{
 			Headers: appHeaders,
 			Features: transport.ResponseFeatures{
-				AcceptResponseError: acceptResponseError,
+				AcceptsBothResponseError: acceptsBothResponseError,
 			},
 			Body:             response.Body,
 			ApplicationError: appError,
@@ -391,7 +391,7 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	}
 
 	// TODO(pedge): update to true when this is supported
-	req.Header.Set(AcceptResponseErrorHeader, AcceptFalse)
+	req.Header.Set(AcceptsBothResponseErrorHeader, AcceptFalse)
 
 	return req
 }

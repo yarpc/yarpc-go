@@ -162,7 +162,7 @@ func (o *Outbound) callWithPeer(ctx context.Context, req *transport.Request, pee
 		ApplicationError: res.ApplicationError(),
 		// this is always true for tchannel
 		Features: transport.ResponseFeatures{
-			AcceptResponseError: true,
+			AcceptsBothResponseError: true,
 		},
 	}, getResponseErrorAndDeleteHeaderKeys(headers)
 }
