@@ -43,8 +43,8 @@ import:
   subpackages:
   - context
 - package: google.golang.org/grpc
-  version: ^1.5.2
-  repo: https://github.com/grpc/grpc-go
+  version: content-subtype
+  repo: https://github.com/peter-edge/grpc-go
 - package: golang.org/x/sys
   # explicitly specifying this because glide is having issues with golang.org repos
   # this is just a dependency of golang.org/x/net and if this problem is fixed

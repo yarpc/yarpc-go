@@ -1,5 +1,5 @@
-hash: 354ccfb438e9e95e44b97409c1e6faa2c961475a54b303b921f44347d43df4b6
-updated: 2017-09-12T11:55:36.637639881-07:00
+hash: b53777b1b445c2ea810086ddebbf7c923b877bb7b55c68619600d99689c3b498
+updated: 2017-09-29T13:52:36.493401+02:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -38,7 +38,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 17ce1425424ab154092bbb43af630bd647f3bb0d
+  version: 130e6b02ab059e7b717a096f397c5b60111cae74
   subpackages:
   - proto
   - ptypes
@@ -110,7 +110,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/jaeger-lib
-  version: 3b2a9ad2a045881ab7a0f81d465be54c8292ee4f
+  version: 21a3da6d66fe0e278072676fdc84cd4c9ccb9b67
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
@@ -133,7 +133,7 @@ imports:
 - name: go.uber.org/atomic
   version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/dig
-  version: 5e65f1a430fd50d4291edc5ee9811f7dd520d77d
+  version: f57771ac8fdc4c484fcd111a700659c6282e1509
 - name: go.uber.org/fx
   version: a47f1657ce04f3d82db1ef230ffbb292b15af0ee
   subpackages:
@@ -161,7 +161,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/zap
-  version: 3216c4c73e8ebbafff73c456dd27143f4a7c1f94
+  version: 35aad584952c3e7020db7b839f6b102de6271f89
   subpackages:
   - buffer
   - internal/bufferpool
@@ -170,7 +170,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+  version: 0a9397675ba34b2845f758fe3cd68828369c6517
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -187,28 +187,29 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 7a85bfad8bb9558204b9cc9b3624680d2d443a35
+  version: 314a259e304ff91bd6985da2a7149bbf91237993
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: acd49d43e9b95df46670431bf5c7ae59586daad8
+  version: 1cbadb444a806fd9430d14ad08967ed91da4fa0a
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 3b1faeda9afbcba128c2d794b38ffe7982141139
+  version: 68e087e2a5786de2c035ed544b1c5a42e31f1933
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
+  version: 1e559d0a00eef8a9a43151db4665280bd8dd5886
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: f92cdcd7dcdc69e81b2d7b338479a19a8723cfa3
-  repo: https://github.com/grpc/grpc-go
+  version: 55c25781d5ca14a3abb1c4e9dfdbcc815df5cbc0
+  repo: https://github.com/peter-edge/grpc-go
   subpackages:
+  - balancer
   - codes
   - connectivity
   - credentials
@@ -219,6 +220,7 @@ imports:
   - metadata
   - naming
   - peer
+  - resolver
   - stats
   - status
   - tap
@@ -227,11 +229,11 @@ imports:
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/golang/lint
-  version: c5fb716d6688a859aae56d26d3e6070808df29f7
+  version: e5d664eb928e9d79eea4a648ca451da7208d5789
   subpackages:
   - golint
 - name: github.com/kisielk/errcheck
-  version: 23699b7e2cbfdb89481023524954ba2aeff6be90
+  version: b1445a9dd8285a50c6d1661d16f0a9ceb08125f7
 - name: github.com/kisielk/gotool
   version: d6ce6262d87e3a4e153e86023ff56ae771554a41
 - name: github.com/wadey/gocovmerge
@@ -242,6 +244,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: 49f44f893d933fd08cd7d67d65ccefa5d7c23329
+  version: bf3d85daf373f9ad9fc6da6da7c010f9ee3e8e0c
   subpackages:
   - cmd/staticcheck
