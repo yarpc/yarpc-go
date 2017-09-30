@@ -67,7 +67,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if status.Name() != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, status.Name())
 	}
-	if responseWriter.Features.BothResponseError {
+	if responseWriter.features.BothResponseError {
 		responseWriter.AddSystemHeader(ErrorMessageHeader, status.Message())
 	} else {
 		_, _ = fmt.Fprintln(responseWriter, status.Message())

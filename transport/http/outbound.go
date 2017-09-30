@@ -400,14 +400,14 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 
 func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) error {
 	var contents string
-	var err error
 	if bothResponseError {
-		contents = responser.Header.Get(ErrorMessageHeader)
+		contents = response.Header.Get(ErrorMessageHeader)
 	} else {
-		contents, err = ioutil.ReadAll(response.Body)
+		contentsBytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
+		contents = string(contentsBytes)
 		if err := response.Body.Close(); err != nil {
 			return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 		}
@@ -423,7 +423,7 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 	}
 	return yarpcerrors.Newf(
 		code,
-		strings.TrimSuffix(string(contents), "\n"),
+		strings.TrimSuffix(contents, "\n"),
 	).WithName(response.Header.Get(ErrorNameHeader))
 }
 
