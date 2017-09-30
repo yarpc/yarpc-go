@@ -96,13 +96,13 @@ func testIntegration(
 	assert.NoError(t, err)
 	assert.Equal(t, "baz", value)
 
-	switch transportType {
-	case testutils.TransportTypeGRPC, testutils.TransportTypeTChannel:
-		keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "baz"))
-		value, err = getValue(clients.KeyValueYARPCClient, "foo")
-		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "baz"), err)
-		assert.Equal(t, "baz", value)
-	}
+	//switch transportType {
+	//case testutils.TransportTypeGRPC, testutils.TransportTypeTChannel:
+	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "baz"))
+	value, err = getValue(clients.KeyValueYARPCClient, "foo")
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "baz"), err)
+	assert.Equal(t, "baz", value)
+	//}
 
 	assert.NoError(t, setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "barGRPC"))
 	value, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
