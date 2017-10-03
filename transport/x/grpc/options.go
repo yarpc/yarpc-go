@@ -21,10 +21,21 @@
 package grpc
 
 import (
+	"math"
+
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
-	"google.golang.org/grpc"
+)
+
+const (
+	// defensive programming
+	// these are copied from grpc-go but we set them explicitly here
+	// in case these change in grpc-go so that yarpc stays consistent
+	defaultServerMaxRecvMsgSize = 1024 * 1024 * 4
+	defaultServerMaxSendMsgSize = math.MaxInt32
+	defaultClientMaxRecvMsgSize = 1024 * 1024 * 4
+	defaultClientMaxSendMsgSize = math.MaxInt32
 )
 
 // Option is an interface shared by TransportOption, InboundOption, and OutboundOption
@@ -62,6 +73,42 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// ServerMaxRecvMsgSize is the maximum message size the server can receive.
+//
+// The default is 4MB.
+func ServerMaxRecvMsgSize(serverMaxRecvMsgSize int) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serverMaxRecvMsgSize = serverMaxRecvMsgSize
+	}
+}
+
+// ServerMaxSendMsgSize is the maximum message size the server can send.
+//
+// The default is unlimited.
+func ServerMaxSendMsgSize(serverMaxSendMsgSize int) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.serverMaxSendMsgSize = serverMaxSendMsgSize
+	}
+}
+
+// ClientMaxRecvMsgSize is the maximum message size the client can receive.
+//
+// The default is 4MB.
+func ClientMaxRecvMsgSize(clientMaxRecvMsgSize int) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientMaxRecvMsgSize = clientMaxRecvMsgSize
+	}
+}
+
+// ClientMaxSendMsgSize is the maximum message size the client can send.
+//
+// The default is unlimited.
+func ClientMaxSendMsgSize(clientMaxSendMsgSize int) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.clientMaxSendMsgSize = clientMaxSendMsgSize
+	}
+}
+
 // InboundOption is an option for an inbound.
 type InboundOption func(*inboundOptions)
 
@@ -73,13 +120,21 @@ type OutboundOption func(*outboundOptions)
 func (OutboundOption) grpcOption() {}
 
 type transportOptions struct {
-	backoffStrategy backoff.Strategy
-	tracer          opentracing.Tracer
+	backoffStrategy      backoff.Strategy
+	tracer               opentracing.Tracer
+	serverMaxRecvMsgSize int
+	serverMaxSendMsgSize int
+	clientMaxRecvMsgSize int
+	clientMaxSendMsgSize int
 }
 
 func newTransportOptions(options []TransportOption) *transportOptions {
 	transportOptions := &transportOptions{
-		backoffStrategy: intbackoff.DefaultExponential,
+		backoffStrategy:      intbackoff.DefaultExponential,
+		serverMaxRecvMsgSize: defaultServerMaxRecvMsgSize,
+		serverMaxSendMsgSize: defaultServerMaxSendMsgSize,
+		clientMaxRecvMsgSize: defaultClientMaxRecvMsgSize,
+		clientMaxSendMsgSize: defaultClientMaxSendMsgSize,
 	}
 	for _, option := range options {
 		option(transportOptions)
@@ -87,9 +142,7 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	return transportOptions
 }
 
-type inboundOptions struct {
-	unaryInterceptor grpc.UnaryServerInterceptor
-}
+type inboundOptions struct{}
 
 func newInboundOptions(options []InboundOption) *inboundOptions {
 	inboundOptions := &inboundOptions{}
@@ -107,12 +160,4 @@ func newOutboundOptions(options []OutboundOption) *outboundOptions {
 		option(outboundOptions)
 	}
 	return outboundOptions
-}
-
-// for testing only for now
-// grpc-go only allows one interceptor, so need to handle all cases
-func withInboundUnaryInterceptor(unaryInterceptor grpc.UnaryServerInterceptor) InboundOption {
-	return func(inboundOptions *inboundOptions) {
-		inboundOptions.unaryInterceptor = unaryInterceptor
-	}
 }

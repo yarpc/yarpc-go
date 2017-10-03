@@ -130,16 +130,26 @@ func (ts *transportSpec) buildTransport(tc *TransportConfig, k *yarpcconfig.Kit)
 //  inbounds:
 //    http:
 //      address: ":80"
+//      grabHeaders:
+//        - x-foo
+//        - x-bar
 type InboundConfig struct {
 	// Address to listen on. This field is required.
 	Address string `config:"address,interpolate"`
+	// The additional headers, starting with x, that should be
+	// propagated to handlers. This field is optional.
+	GrabHeaders []string `config:"grabHeaders"`
 }
 
 func (ts *transportSpec) buildInbound(ic *InboundConfig, t transport.Transport, k *yarpcconfig.Kit) (transport.Inbound, error) {
 	if ic.Address == "" {
 		return nil, fmt.Errorf("inbound address is required")
 	}
-	return t.(*Transport).NewInbound(ic.Address, ts.InboundOptions...), nil
+	inboundOptions := ts.InboundOptions
+	if len(ic.GrabHeaders) > 0 {
+		inboundOptions = append(inboundOptions, GrabHeaders(ic.GrabHeaders...))
+	}
+	return t.(*Transport).NewInbound(ic.Address, inboundOptions...), nil
 }
 
 // OutboundConfig configures an HTTP outbound.

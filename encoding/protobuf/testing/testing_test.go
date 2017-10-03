@@ -32,9 +32,9 @@ import (
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
 	"go.uber.org/yarpc/internal/examples/protobuf/exampleutil"
+	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/testutils"
-	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -69,19 +69,19 @@ func testIntegration(
 	keyValueYARPCServer *example.KeyValueYARPCServer,
 	sinkYARPCServer *example.SinkYARPCServer,
 ) {
-	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
+	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
 	_, err := getValue(clients.KeyValueYARPCClient, "foo")
-	assert.Equal(t, yarpcerrors.NamedErrorf("foo-bar", "baz"), err)
-	keyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("foo-bar", "baz"))
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"), err)
+	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
 
 	_, err = getValue(clients.KeyValueYARPCClient, "foo")
-	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
 	assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 	_, err = getValue(clients.KeyValueYARPCJSONClient, "foo")
-	assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 
 	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", "bar"))
 	value, err := getValue(clients.KeyValueYARPCClient, "foo")
@@ -137,7 +137,7 @@ func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, val
 	return err
 }
 
-func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpc.ContextWrapper, key string) (string, error) {
+func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
@@ -147,7 +147,7 @@ func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 	return response.Value, nil
 }
 
-func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpc.ContextWrapper, key string, value string) error {
+func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	_, err := keyValueGRPCClient.SetValue(contextWrapper.Wrap(ctx), &examplepb.SetValueRequest{key, value})

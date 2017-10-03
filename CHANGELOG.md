@@ -1,15 +1,69 @@
 Releases
 ========
 
-v1.14.0 (unreleased)
+v1.19.0-dev (unreleased)
 --------------------
 
 -   No changes yet.
+
+
+v1.18.0 (2017-09-26)
+--------------------
+
+-   Add inbound/outbound direction tag to observability metrics.
+-   Remove x/retry to incubate internally.
+-   yarpcerrors: Undeprecate per error type creation and validation functions.
+
+
+v1.17.0 (2017-09-20)
+--------------------
+
+-   yarpcerrors: Make core API much simpler and use a Status struct
+    to represent YARPC errors.
+-   transport/http: Add GrabHeaders option to propagate specific
+    headers starting with x- to handlers.
+-   tranxport/x/grpc: Remove ContextWrapper.
+-   Export no-op backoff strategy in api/backoff.
+
+
+v1.16.0 (2017-09-18)
+--------------------
+
+-   ThriftRW Plugin: Added an option to strip TChannel-specific
+    information from Contexts before making outgoing requests.
+-   x/retry: Fix bug where large TChannel responses would cause errors in retries.
+-   transport/http: Correct the Content-Type for Thrift responses, to
+    `application/vnd.apache.thrift.binary`.
+-   transport/http: Correct the Content-Type for Proto responses, to
+    `application/x-protobuf`.
+
+
+v1.15.0 (2017-09-15)
+--------------------
+
+-   yarpcerrors: Update the ErrorCode and ErrorMessage functions to return
+    default values for non-YARPC errors.
+-   transport/http: Return appropriate Content-Type response headers based on
+    the transport encoding.
+-   transport/x/grpc: Add options to specify the maximum message size sent and
+    received over the wire.
+
+
+v1.14.0 (2017-09-08)
+--------------------
+
+-   Increased granularity of error observability metrics to expose yarpc
+    error types.
+-   Wrapped peer list `Choose` errors in yarpc error codes.
+-   x/retry: Add granular metric counters for retry middleware.
+-   Removed experimental redis and cherami transports.
+
 
 v1.13.1 (2017-08-03)
 --------------------
 
 -   Rename structured logging field to avoid a type collision.
+
 
 v1.13.0 (2017-08-01)
 --------------------

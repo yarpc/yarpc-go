@@ -103,15 +103,16 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 	start := time.Now()
 
 	var responseBody []byte
-	responseMD := metadata.New(nil)
+	var responseMD metadata.MD
 	invokeErr := o.invoke(ctx, request, &responseBody, &responseMD, start)
 	responseHeaders, err := getApplicationHeaders(responseMD)
 	if err != nil {
 		return nil, err
 	}
 	return &transport.Response{
-		Body:    ioutil.NopCloser(bytes.NewBuffer(responseBody)),
-		Headers: responseHeaders,
+		Body:             ioutil.NopCloser(bytes.NewBuffer(responseBody)),
+		Headers:          responseHeaders,
+		ApplicationError: metadataToIsApplicationError(responseMD),
 	}, invokeErrorToYARPCError(invokeErr, responseMD)
 }
 
@@ -186,17 +187,25 @@ func (o *Outbound) invoke(
 	)
 }
 
+func metadataToIsApplicationError(responseMD metadata.MD) bool {
+	if responseMD == nil {
+		return false
+	}
+	value, ok := responseMD[ApplicationErrorHeader]
+	return ok && len(value) > 0 && len(value[0]) > 0
+}
+
 func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	if err == nil {
 		return nil
 	}
-	if yarpcerrors.IsYARPCError(err) {
+	if yarpcerrors.IsStatus(err) {
 		return err
 	}
 	status, ok := status.FromError(err)
-	// if not a yarpc error or grpc error, just return the error
+	// if not a yarpc error or grpc error, just return a wrapped error
 	if !ok {
-		return err
+		return yarpcerrors.FromError(err)
 	}
 	code, ok := _grpcCodeToCode[status.Code()]
 	if !ok {
@@ -218,5 +227,5 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	} else if name != "" && message == name {
 		message = ""
 	}
-	return yarpcerrors.FromHeaders(code, name, message)
+	return yarpcerrors.Newf(code, message).WithName(name)
 }

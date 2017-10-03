@@ -39,6 +39,7 @@ import (
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/routertest"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -97,6 +98,13 @@ func TestInboundStartError(t *testing.T) {
 	assert.Error(t, err, "expected failure")
 }
 
+func TestInboundStartErrorBadGrabHeader(t *testing.T) {
+	x := NewTransport()
+	i := x.NewInbound(":0", GrabHeaders("x-valid", "y-invalid"))
+	i.SetRouter(new(transporttest.MockRouter))
+	assert.Equal(t, yarpcerrors.CodeInvalidArgument, yarpcerrors.FromError(i.Start()).Code())
+}
+
 func TestInboundStopWithoutStarting(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound(":8000")
@@ -126,7 +134,7 @@ func TestInboundMux(t *testing.T) {
 
 	defer i.Stop()
 
-	addr := fmt.Sprintf("http://%v/", i.Addr().String())
+	addr := fmt.Sprintf("http://%v/", yarpctest.ZeroAddrToHostPort(i.Addr()))
 	resp, err := http.Get(addr + "health")
 	if assert.NoError(t, err, "/health failed") {
 		defer resp.Body.Close()
@@ -152,7 +160,7 @@ func TestInboundMux(t *testing.T) {
 	})
 
 	if assert.Error(t, err, "RPC call to / should have failed") {
-		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.ErrorCode(err))
+		assert.Equal(t, yarpcerrors.CodeNotFound, yarpcerrors.FromError(err).Code())
 	}
 
 	o.setURLTemplate("http://host:port/rpc/v1")

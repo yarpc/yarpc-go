@@ -1,8 +1,7 @@
 IGNORE_DIRS="\
   internal/examples \
   internal/service-test \
-  internal/testutils \
-  transport/x/cherami/example"
+  internal/testutils"
 
 WHITELIST="\
   api/peer \
@@ -13,8 +12,7 @@ WHITELIST="\
   encoding/thrift \
   encoding/thrift/thriftrw-plugin-yarpc \
   internal/interpolate \
-  pkg/lifecycle \
-  transport/x/redis/redistest"
+  pkg/lifecycle"
 
 is_ignore_dir() {
   for i in ${IGNORE_DIRS}; do

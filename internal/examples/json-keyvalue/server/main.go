@@ -68,7 +68,7 @@ func (h *handler) Get(ctx context.Context, body *getRequest) (*getResponse, erro
 	value, ok := h.items[body.Key]
 	h.RUnlock()
 	if !ok {
-		return nil, yarpcerrors.NotFoundErrorf(body.Key)
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeNotFound, body.Key)
 	}
 	return &getResponse{Value: value}, nil
 }

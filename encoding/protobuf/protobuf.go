@@ -173,7 +173,7 @@ func ClientBuilderOptions(_ transport.ClientConfig, structField reflect.StructFi
 
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.
 func CastError(expectedType proto.Message, actualType proto.Message) error {
-	return yarpcerrors.InternalErrorf("expected proto.Message to have type %T but had type %T", expectedType, actualType)
+	return yarpcerrors.Newf(yarpcerrors.CodeInternal, "expected proto.Message to have type %T but had type %T", expectedType, actualType)
 }
 
 type useJSON struct{}

@@ -30,10 +30,10 @@ func validateName(name string) error {
 	lenNameMinusOne := len(name) - 1
 	for i, b := range name {
 		if (i == 0 || i == lenNameMinusOne) && b == '-' {
-			return InternalErrorf("invalid error name, must only start or end with lowercase letters: %s", name)
+			return Newf(CodeInternal, "invalid error name, must only start or end with lowercase letters: %s", name)
 		}
 		if !((b >= 'a' && b <= 'z') || b == '-') {
-			return InternalErrorf("invalid error name, must only contain lowercase letters and dashes: %s", name)
+			return Newf(CodeInternal, "invalid error name, must only contain lowercase letters and dashes: %s", name)
 		}
 	}
 	return nil

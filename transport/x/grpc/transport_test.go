@@ -21,9 +21,14 @@
 package grpc
 
 import (
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/hostport"
+	"google.golang.org/grpc"
 )
 
 func TestTransportLifecycle(t *testing.T) {
@@ -32,4 +37,80 @@ func TestTransportLifecycle(t *testing.T) {
 	assert.True(t, transport.IsRunning())
 	assert.NoError(t, transport.Stop())
 	assert.False(t, transport.IsRunning())
+}
+
+func TestRetainReleasePeerSuccess(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	go grpcServer.Serve(listener)
+	defer grpcServer.Stop()
+
+	transport := NewTransport()
+	assert.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	address := listener.Addr().String()
+	peerSubscriber := testPeerSubscriber{}
+
+	peer, err := transport.RetainPeer(hostport.Identify(address), peerSubscriber)
+	assert.NoError(t, err)
+	assert.Equal(t, peer, transport.addressToPeer[address])
+	assert.NoError(t, transport.ReleasePeer(hostport.Identify(address), peerSubscriber))
+}
+
+func TestRetainReleasePeerErrorPeerIdentifier(t *testing.T) {
+	transport := NewTransport()
+	assert.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	address := "foo:1234"
+	peerSubscriber := testPeerSubscriber{}
+
+	_, err := transport.RetainPeer(testPeerIdentifier(address), peerSubscriber)
+	assert.Equal(t, peer.ErrInvalidPeerType{
+		ExpectedType:   "hostport.PeerIdentifier",
+		PeerIdentifier: testPeerIdentifier(address),
+	}, err)
+	err = transport.ReleasePeer(testPeerIdentifier(address), peerSubscriber)
+	assert.Equal(t, peer.ErrInvalidPeerType{
+		ExpectedType:   "hostport.PeerIdentifier",
+		PeerIdentifier: testPeerIdentifier(address),
+	}, err)
+}
+
+func TestReleasePeerErrorNoPeer(t *testing.T) {
+	transport := NewTransport()
+	assert.NoError(t, transport.Start())
+	defer func() { assert.NoError(t, transport.Stop()) }()
+
+	address := "not_retained"
+	peerSubscriber := testPeerSubscriber{}
+
+	assert.Equal(t, peer.ErrTransportHasNoReferenceToPeer{
+		TransportName:  "grpc.Transport",
+		PeerIdentifier: address,
+	}, transport.ReleasePeer(hostport.Identify(address), peerSubscriber))
+}
+
+func TestGetPeerAddress(t *testing.T) {
+	s, err := getPeerAddress(hostport.Identify("foo:1234"))
+	assert.NoError(t, err)
+	assert.Equal(t, "foo:1234", s)
+	_, err = getPeerAddress(testPeerIdentifier("foo:1234"))
+	assert.Equal(t, peer.ErrInvalidPeerType{
+		ExpectedType:   "hostport.PeerIdentifier",
+		PeerIdentifier: testPeerIdentifier("foo:1234"),
+	}, err)
+}
+
+type testPeerSubscriber struct{}
+
+func (testPeerSubscriber) NotifyStatusChanged(peer.Identifier) {}
+
+type testPeerIdentifier string
+
+func (p testPeerIdentifier) Identifier() string {
+	return string(p)
 }

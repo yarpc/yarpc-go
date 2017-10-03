@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/internal/digester"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/zap"
 )
@@ -33,9 +34,6 @@ import (
 var (
 	_timeNow          = time.Now // for tests
 	_defaultGraphSize = 128
-	_digesterPool     = sync.Pool{New: func() interface{} {
-		return &digester{make([]byte, 0, 128)}
-	}}
 	// Latency buckets for histograms. At some point, we may want to make these
 	// configurable.
 	_ms      = time.Millisecond
@@ -91,42 +89,10 @@ var (
 		7500 * _ms,
 		10000 * _ms,
 	}
+
+	_directionOutbound = "outbound"
+	_directionInbound  = "inbound"
 )
-
-// A digester creates a null-delimited byte slice from a series of strings. It's
-// an efficient way to create map keys.
-//
-// This helps because (1) appending to a string allocates and (2) converting a
-// byte slice to a string allocates, but (3) the Go compiler optimizes away
-// byte-to-string conversions in map lookups. Using this type to build up a key
-// and doing map lookups with myMap[string(d.digest())] is fast and
-// zero-allocation.
-type digester struct {
-	bs []byte
-}
-
-// For optimal performance, be sure to free each digester.
-func newDigester() *digester {
-	d := _digesterPool.Get().(*digester)
-	d.bs = d.bs[:0]
-	return d
-}
-
-func (d *digester) add(s string) {
-	if len(d.bs) > 0 {
-		// separate labels with a null byte
-		d.bs = append(d.bs, '\x00')
-	}
-	d.bs = append(d.bs, s...)
-}
-
-func (d *digester) digest() []byte {
-	return d.bs
-}
-
-func (d *digester) free() {
-	_digesterPool.Put(d)
-}
 
 // A graph represents a collection of services: each service is a node, and we
 // collect stats for each caller-callee-encoding-procedure-rk-sk-rd edge.
@@ -151,16 +117,21 @@ func newGraph(reg *pally.Registry, logger *zap.Logger, extract ContextExtractor)
 // begin starts a call along an edge.
 func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound bool, req *transport.Request) call {
 	now := _timeNow()
+	direction := _directionOutbound
+	if isInbound {
+		direction = _directionInbound
+	}
 
-	d := newDigester()
-	d.add(req.Caller)
-	d.add(req.Service)
-	d.add(string(req.Encoding))
-	d.add(req.Procedure)
-	d.add(req.RoutingKey)
-	d.add(req.RoutingDelegate)
-	e := g.getOrCreateEdge(d.digest(), req)
-	d.free()
+	d := digester.New()
+	d.Add(req.Caller)
+	d.Add(req.Service)
+	d.Add(string(req.Encoding))
+	d.Add(req.Procedure)
+	d.Add(req.RoutingKey)
+	d.Add(req.RoutingDelegate)
+	d.Add(direction)
+	e := g.getOrCreateEdge(d.Digest(), req, direction)
+	d.Free()
 
 	return call{
 		edge:    e,
@@ -173,11 +144,11 @@ func (g *graph) begin(ctx context.Context, rpcType transport.Type, isInbound boo
 	}
 }
 
-func (g *graph) getOrCreateEdge(key []byte, req *transport.Request) *edge {
+func (g *graph) getOrCreateEdge(key []byte, req *transport.Request, direction string) *edge {
 	if e := g.getEdge(key); e != nil {
 		return e
 	}
-	return g.createEdge(key, req)
+	return g.createEdge(key, req, direction)
 }
 
 func (g *graph) getEdge(key []byte) *edge {
@@ -187,7 +158,7 @@ func (g *graph) getEdge(key []byte) *edge {
 	return e
 }
 
-func (g *graph) createEdge(key []byte, req *transport.Request) *edge {
+func (g *graph) createEdge(key []byte, req *transport.Request, direction string) *edge {
 	g.edgesMu.Lock()
 	// Since we'll rarely hit this code path, the overhead of defer is acceptable.
 	defer g.edgesMu.Unlock()
@@ -197,7 +168,7 @@ func (g *graph) createEdge(key []byte, req *transport.Request) *edge {
 		return e
 	}
 
-	e := newEdge(g.logger, g.reg, req)
+	e := newEdge(g.logger, g.reg, req, direction)
 	g.edges[string(key)] = e
 	return e
 }
@@ -219,7 +190,7 @@ type edge struct {
 
 // newEdge constructs a new edge. Since Registries enforce metric uniqueness,
 // edges should be cached and re-used for each RPC.
-func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *edge {
+func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request, direction string) *edge {
 	labels := pally.Labels{
 		"source":           pally.ScrubLabelValue(req.Caller),
 		"dest":             pally.ScrubLabelValue(req.Service),
@@ -227,6 +198,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		"encoding":         pally.ScrubLabelValue(string(req.Encoding)),
 		"routing_key":      pally.ScrubLabelValue(req.RoutingKey),
 		"routing_delegate": pally.ScrubLabelValue(req.RoutingDelegate),
+		"direction":        pally.ScrubLabelValue(direction),
 	}
 	calls, err := reg.NewCounter(pally.Opts{
 		Name:        "calls",
@@ -312,6 +284,7 @@ func newEdge(logger *zap.Logger, reg *pally.Registry, req *transport.Request) *e
 		zap.String("encoding", string(req.Encoding)),
 		zap.String("routingKey", req.RoutingKey),
 		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("direction", direction),
 	)
 	return &edge{
 		logger:             logger,

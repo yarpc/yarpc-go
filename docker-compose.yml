@@ -4,27 +4,19 @@ services:
     crossdock:
         image: crossdock/crossdock
         dns_search: .
-        depends_on:
-          - proxy_dep
         links:
             - go
             - node
             - java
-            - python
-            - python-sync
-            - redis
-            - cherami
         environment:
-            - WAIT_FOR=go,java,node,python,python-sync
+            - WAIT_FOR=go,java,node
 
-            - AXIS_CLIENT=go,java,node,python,python-sync
-            - AXIS_SERVER=go,java,node,python
+            - AXIS_CLIENT=go,java,node
+            - AXIS_SERVER=go,java,node
             - AXIS_TRANSPORT=http,tchannel
             - AXIS_ENCODING=raw,json,thrift,protobuf
-            - AXIS_ERRORS_HTTPCLIENT=go # pending update to node test
-            # AXIS_ERRORS_HTTPSERVER TODO
+            - AXIS_ERRORS_HTTPCLIENT=go
             - AXIS_ERRORS_TCHCLIENT=go
-            # AXIS_ERRORS_TCHSERVER TODO
             - AXIS_CTXCLIENT=go
             - AXIS_CTXSERVER=go
             - AXIS_APACHETHRIFTCLIENT=go
@@ -33,47 +25,57 @@ services:
             - AXIS_HTTPSERVER=go
             - AXIS_CLIENT_ONEWAY=go
             - AXIS_SERVER_ONEWAY=go
-            - AXIS_TRANSPORT_ONEWAY=http,redis,cherami
-
-            # Transports available to the ctxpropagation behavior for multihop
-            # requests.
-            - AXIS_CTXAVAILABLETRANSPORTS=http;tchannel
+            - AXIS_TRANSPORT_ONEWAY=http
+            - AXIS_CTXAVAILABLETRANSPORTS=http;tchannel # ; is test-level delimiter
 
             - BEHAVIOR_RAW=client,server,transport
             - SKIP_RAW=client:java+transport:tchannel,server:java+transport:tchannel
+
             - BEHAVIOR_JSON=client,server,transport
             - SKIP_JSON=client:java+transport:tchannel,server:java+transport:tchannel
+
             - BEHAVIOR_THRIFT=client,server,transport
             - SKIP_THRIFT=client:java+transport:tchannel,server:java+transport:tchannel
+
             - BEHAVIOR_PROTOBUF=client,server,transport
-            - SKIP_PROTOBUF=client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_PROTOBUF=client:node,server:java,server:node
+
             - BEHAVIOR_GRPC=client,server,encoding
-            - SKIP_GRPC=client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_GRPC=client:node,server:java,server:node
+
             - BEHAVIOR_GOOGLE_GRPC_CLIENT=client,server
-            - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_GOOGLE_GRPC_CLIENT=client:java,client:node,server:java,server:node
+
             - BEHAVIOR_GOOGLE_GRPC_SERVER=client,server
-            - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,client:python,client:python-sync,server:java,server:node,server:python
+            - SKIP_GOOGLE_GRPC_SERVER=client:java,client:node,server:java,server:node
+
             - BEHAVIOR_HEADERS=client,server,transport,encoding
-            - SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
+            # TODO: figure out if we want to test against java anymore
+            # This is a flaky test right now https://github.com/yarpc/yarpc-go/issues/1278
+            #- SKIP_HEADERS=client:java+transport:tchannel,server:java+transport:tchannel,encoding:protobuf
+            - SKIP_HEADERS=client:java,server:java,encoding:protobuf
+
             - BEHAVIOR_ERRORS_HTTPCLIENT=errors_httpclient,server
-            - SKIP_ERRORS_HTTPCLIENT=server:java,server:node,server:python
-            # BEHAVIOR_ERRORSHTTPIN TODO
+            - SKIP_ERRORS_HTTPCLIENT=server:java,server:node
+
             - BEHAVIOR_ERRORS_TCHCLIENT=errors_tchclient,server
-            - SKIP_ERRORS_TCHCLIENT=server:java,server:node,server:python
-            # BEHAVIOR_ERRORSTCHIN TODO
+            - SKIP_ERRORS_TCHCLIENT=server:java,server:node
+
             - BEHAVIOR_TCHCLIENT=client,server,encoding
             - SKIP_TCHCLIENT=client:java,server:java,encoding:protobuf
+
             - BEHAVIOR_TCHSERVER=client,server,encoding
             - SKIP_TCHSERVER=client:java,server:java,encoding:protobuf
-            # BEHAVIOR_HTTPCLIENT TODO
+
             - BEHAVIOR_HTTPSERVER=client,httpserver
             - SKIP_HTTPSERVER=client:java
+
             - BEHAVIOR_THRIFTGAUNTLET=gauntlet,server,transport
-            # Skip gauntlet behavior only for tchannel once java is released
             - SKIP_THRIFTGAUNTLET=server:java
+
             - BEHAVIOR_TIMEOUT=client,server,transport
             - SKIP_TIMEOUT=client:java,server:java
-            # BEHAVIOR_INBOUNDTTL TODO
+
             - BEHAVIOR_CTXPROPAGATION=ctxclient,ctxserver,transport,ctxavailabletransports
             - BEHAVIOR_APACHETHRIFT=apachethriftclient,apachethriftserver
             - BEHAVIOR_ONEWAY=client_oneway,server_oneway,transport_oneway,encoding
@@ -83,16 +85,11 @@ services:
 
     go:
         dns_search: .
-        depends_on:
-          - proxy_dep
         build:
           context: .
           dockerfile: Dockerfile.crossdock
         ports:
             - "8080-8090"
-        environment:
-            - REDIS=enabled
-            - CHERAMI=enabled
 
     node:
         dns_search: .
@@ -106,49 +103,8 @@ services:
         ports:
             - "8080-8087"
 
-    python:
-        dns_search: .
-        image: yarpc/yarpc-python
-        ports:
-            - "8080-8087"
-
-    python-sync:
-        dns_search: .
-        image: yarpc/yarpc-python
-        ports:
-            - 8080
-        environment:
-            - SYNC=1
-
-    redis:
-        image: healthcheck/redis
-        ports:
-            - 6379
-
-    cherami:
-        dns_search: .
-        image: ubercherami/cherami-server-standalone
-
     gotest:
         dns_search: .
-        depends_on:
-          - proxy_dep
-        links:
-            - redis
-            - cherami
         build:
           context: .
-          dockerfile: Dockerfile.1.8
-        environment:
-            - REDIS=enabled
-            - CHERAMI=enabled
-
-    #https://github.com/docker/compose/issues/4369
-
-    proxy_dep:
-        image: busybox
-        depends_on:
-          cherami:
-            condition: service_healthy
-          redis:
-            condition: service_healthy
+          dockerfile: Dockerfile.1.9

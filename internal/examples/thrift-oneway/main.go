@@ -30,13 +30,10 @@ import (
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloclient"
 	"go.uber.org/yarpc/internal/examples/thrift-oneway/sink/helloserver"
 	"go.uber.org/yarpc/transport/http"
-	"go.uber.org/yarpc/transport/x/redis"
 )
 
 // This example illustrates how to make oneway calls using different oneway
 // transports.
-//
-// Note: Enabling redis requires a local instance running on 'localhost:6379'
 func main() {
 	if err := do(); err != nil {
 		log.Fatal(err)
@@ -49,23 +46,11 @@ func do() error {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "hello",
 		Inbounds: yarpc.Inbounds{
-			// Listen for HTTP connections
 			httpTransport.NewInbound(":8888"),
-			// listen for redis
-			redis.NewInbound(
-				redis.NewRedis5Client("localhost:6379"),
-				"yarpc-queue",
-				"yarpc-queue-processing",
-				time.Duration(time.Second),
-			),
 		},
 		Outbounds: yarpc.Outbounds{
 			"hello": {
 				Oneway: httpTransport.NewSingleOutbound("http://127.0.0.1:8888"),
-				// Swap http with redis to make outbound calls over redis
-				// Oneway: redis.NewOnewayOutbound(
-				// 	redis.NewRedis5Client("localhost:6379"),
-				// 	"yarpc-queue"),
 			},
 		},
 	})

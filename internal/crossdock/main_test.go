@@ -22,7 +22,6 @@ package main
 
 import (
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/crossdock/crossdock-go"
@@ -205,11 +204,5 @@ func TestCrossdock(t *testing.T) {
 
 func getTransportOnewayAxes() []string {
 	transportOneway := []string{"http"}
-	if os.Getenv("REDIS") == "enabled" {
-		transportOneway = append(transportOneway, "redis")
-	}
-	if os.Getenv("CHERAMI") == "enabled" {
-		transportOneway = append(transportOneway, "cherami")
-	}
 	return transportOneway
 }

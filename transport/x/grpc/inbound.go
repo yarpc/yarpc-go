@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	errRouterNotSet = yarpcerrors.InternalErrorf("router not set")
+	errRouterNotSet = yarpcerrors.Newf(yarpcerrors.CodeInternal, "router not set")
 
 	_ transport.Inbound = (*Inbound)(nil)
 )
@@ -96,6 +96,8 @@ func (i *Inbound) start() error {
 	server := grpc.NewServer(
 		grpc.CustomCodec(customCodec{}),
 		grpc.UnknownServiceHandler(handler.handle),
+		grpc.MaxRecvMsgSize(i.t.options.serverMaxRecvMsgSize),
+		grpc.MaxSendMsgSize(i.t.options.serverMaxSendMsgSize),
 	)
 
 	go func() {

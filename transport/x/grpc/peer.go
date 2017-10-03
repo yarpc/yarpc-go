@@ -49,6 +49,10 @@ func newPeer(address string, t *Transport) (*grpcPeer, error) {
 		grpc.WithInsecure(),
 		grpc.WithCodec(customCodec{}),
 		grpc.WithUserAgent(UserAgent),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(t.options.clientMaxRecvMsgSize),
+			grpc.MaxCallSendMsgSize(t.options.clientMaxSendMsgSize),
+		),
 	)
 	if err != nil {
 		return nil, err
@@ -173,6 +177,6 @@ func connectivityStateToPeerConnectionStatus(connectivityState connectivity.Stat
 	case connectivity.Ready:
 		return peer.Available, nil
 	default:
-		return 0, yarpcerrors.InternalErrorf("unknown connectivity.State: %v", connectivityState)
+		return 0, yarpcerrors.Newf(yarpcerrors.CodeInternal, "unknown connectivity.State: %v", connectivityState)
 	}
 }

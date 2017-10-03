@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
@@ -99,10 +100,9 @@ func createGRPCDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Dispat
 		},
 		Outbounds: yarpc.Outbounds{
 			"yarpc-test": {
-				Unary: grpcTransport.NewSingleOutbound(listener.Addr().String()),
+				Unary: grpcTransport.NewSingleOutbound(yarpctest.ZeroAddrToHostPort(listener.Addr())),
 			},
 		},
-		Tracer: tracer,
 	})
 }
 
@@ -121,7 +121,6 @@ func createHTTPDispatcher(tracer opentracing.Tracer) *yarpc.Dispatcher {
 				Unary: httpTransport.NewSingleOutbound("http://127.0.0.1:18080"),
 			},
 		},
-		Tracer: tracer,
 	})
 
 	return dispatcher
@@ -147,7 +146,6 @@ func createTChannelDispatcher(t *testing.T, tracer opentracing.Tracer) *yarpc.Di
 				Unary: tchannelTransport.NewSingleOutbound(hp),
 			},
 		},
-		Tracer: tracer,
 	})
 
 	return dispatcher

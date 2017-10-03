@@ -31,14 +31,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/yarpctest"
 )
 
 func TestStartAndStop(t *testing.T) {
-	server := NewHTTPServer(&http.Server{Addr: ":0"})
+	server := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, server.ListenAndServe())
 
 	require.NotNil(t, server.Listener())
-	addr := server.Listener().Addr().String()
+	addr := yarpctest.ZeroAddrToHostPort(server.Listener().Addr())
 
 	conn, err := net.Dial("tcp", addr)
 	require.NoError(t, err)
@@ -50,11 +51,12 @@ func TestStartAndStop(t *testing.T) {
 }
 
 func TestStartAddrInUse(t *testing.T) {
-	s1 := NewHTTPServer(&http.Server{Addr: ":0"})
+	s1 := NewHTTPServer(&http.Server{Addr: "127.0.0.1:0"})
 	require.NoError(t, s1.ListenAndServe())
 	defer s1.Stop()
 
-	s2 := NewHTTPServer(&http.Server{Addr: s1.Listener().Addr().String()})
+	addr := yarpctest.ZeroAddrToHostPort(s1.Listener().Addr())
+	s2 := NewHTTPServer(&http.Server{Addr: addr})
 	err := s2.ListenAndServe()
 
 	require.Error(t, err)

@@ -123,7 +123,10 @@ type Config struct {
 	InboundMiddleware  InboundMiddleware
 	OutboundMiddleware OutboundMiddleware
 
-	// Tracer is deprecated. The dispatcher does nothing with this property.
+	// Tracer is meant to add/record tracing information to a request.
+	//
+	// Deprecated: The dispatcher does nothing with this property.  Set the
+	// tracer directly on the transports used to build inbounds and outbounds.
 	Tracer opentracing.Tracer
 
 	// RouterMiddleware is middleware to control how requests are routed.

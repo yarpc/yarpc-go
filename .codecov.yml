@@ -42,6 +42,11 @@ ignore:
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyfx/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver/
  - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlytest/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherclient/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherfx/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weatherserver/
+ - /encoding/thrift/thriftrw-plugin-yarpc/internal/tests/weather/weathertest/
  - /internal/crossdock/crossdockpb/
  - /internal/crossdock/thrift/echo/
  - /internal/crossdock/thrift/echo/echoclient/
@@ -93,10 +98,4 @@ ignore:
  - /internal/service-test/
  - /internal/testutils/
  - /serialize/internal/
- - /transport/x/cherami/example/
- - /transport/x/cherami/example/thrift/example/
- - /transport/x/cherami/example/thrift/example/exampleserviceclient/
- - /transport/x/cherami/example/thrift/example/exampleservicefx/
- - /transport/x/cherami/example/thrift/example/exampleserviceserver/
- - /transport/x/cherami/example/thrift/example/exampleservicetest/
  - /yarpcproto/

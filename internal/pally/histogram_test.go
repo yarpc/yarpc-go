@@ -60,7 +60,6 @@ func TestLatencies(t *testing.T) {
 		Name:   "test_latency_ns",
 		Labels: Labels{"foo": "bar", "service": "users"},
 		Durations: map[time.Duration]int64{
-			0:   0,
 			10:  3,
 			50:  0,
 			100: 1,
@@ -111,7 +110,6 @@ func TestLatenciesVector(t *testing.T) {
 				Name:   "test_latency_ms",
 				Labels: Labels{"var": "x"},
 				Durations: map[time.Duration]int64{
-					0:                            0,
 					time.Second:                  2,
 					time.Minute:                  0,
 					time.Duration(math.MaxInt64): 0,
@@ -149,7 +147,6 @@ func TestLatenciesVector(t *testing.T) {
 				Name:   "test_latency_ms",
 				Labels: Labels{"var": "x-"},
 				Durations: map[time.Duration]int64{
-					0:                            0,
 					time.Second:                  2,
 					time.Minute:                  0,
 					time.Duration(math.MaxInt64): 0,

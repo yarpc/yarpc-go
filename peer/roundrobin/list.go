@@ -31,6 +31,11 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/yarpc/yarpcerrors"
+)
+
+var (
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for roundrobin list")
 )
 
 type listConfig struct {
@@ -289,7 +294,7 @@ func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 // Choose selects the next available peer in the round robin
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
-		return nil, nil, err
+		return nil, nil, newNotRunningError(err)
 	}
 
 	for {
@@ -303,6 +308,10 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			return nil, nil, err
 		}
 	}
+}
+
+func newNotRunningError(err error) error {
+	return yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "round robin peer list is not running: %s", err.Error())
 }
 
 // IsRunning returns whether the peer list is running.
@@ -340,15 +349,19 @@ func (pl *List) getOnFinishFunc(p peer.Peer) func(error) {
 // Must NOT be run in a mutex.Lock()
 func (pl *List) waitForPeerAddedEvent(ctx context.Context) error {
 	if _, ok := ctx.Deadline(); !ok {
-		return peer.ErrChooseContextHasNoDeadline("RoundRobinList")
+		return _noContextDeadlineError
 	}
 
 	select {
 	case <-pl.peerAvailableEvent:
 		return nil
 	case <-ctx.Done():
-		return ctx.Err()
+		return newUnavailableError(ctx.Err())
 	}
+}
+
+func newUnavailableError(err error) error {
+	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "round robin peer list timed out waiting for peer: %s", err.Error())
 }
 
 // NotifyStatusChanged when the peer's status changes

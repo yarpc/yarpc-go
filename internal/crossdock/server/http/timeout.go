@@ -30,7 +30,8 @@ import (
 
 func handlerTimeoutRawHandler(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
-	err := yarpcerrors.DeadlineExceededErrorf(
+	err := yarpcerrors.Newf(
+		yarpcerrors.CodeDeadlineExceeded,
 		"call to procedure %q of service %q from caller %q timed out after %v",
 		"caller", "service", "handlertimeout/raw", time.Now().Sub(start))
 	w.WriteHeader(http.StatusGatewayTimeout)

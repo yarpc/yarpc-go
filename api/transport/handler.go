@@ -117,7 +117,8 @@ func DispatchUnaryHandler(
 	// The handler stopped work on context deadline.
 	if err == context.DeadlineExceeded && err == ctx.Err() {
 		deadline, _ := ctx.Deadline()
-		err = yarpcerrors.DeadlineExceededErrorf(
+		err = yarpcerrors.Newf(
+			yarpcerrors.CodeDeadlineExceeded,
 			"call to procedure %q of service %q from caller %q timed out after %v",
 			req.Procedure, req.Service, req.Caller, deadline.Sub(start))
 	}

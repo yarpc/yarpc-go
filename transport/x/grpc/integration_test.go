@@ -21,12 +21,15 @@
 package grpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
@@ -35,19 +38,20 @@ import (
 	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/examples/protobuf/example"
 	"go.uber.org/yarpc/internal/examples/protobuf/examplepb"
+	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 func TestYARPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
 		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
 		value, err := e.GetValueYARPC(context.Background(), "foo")
 		assert.NoError(t, err)
@@ -57,7 +61,7 @@ func TestYARPCBasic(t *testing.T) {
 
 func TestGRPCBasic(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.NotFound, "foo"), err)
 		assert.NoError(t, e.SetValueGRPC(context.Background(), "foo", "bar"))
@@ -67,46 +71,36 @@ func TestGRPCBasic(t *testing.T) {
 	})
 }
 
-func TestYARPCMetadata(t *testing.T) {
-	t.Parallel()
-	var md metadata.MD
-	doWithTestEnv(t, []InboundOption{withInboundUnaryInterceptor(newMetadataUnaryServerInterceptor(&md))}, nil, func(t *testing.T, e *testEnv) {
-		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", "bar"))
-		assert.Len(t, md["user-agent"], 1)
-		assert.True(t, strings.Contains(md["user-agent"][0], UserAgent))
-	})
-}
-
 func TestYARPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("bar 1"), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "bar 1"), err)
 	})
 }
 
 func TestYARPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.NamedErrorf("bar", "baz 1"), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"), err)
 	})
 }
 
 func TestYARPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", ""))
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"))
 		_, err := e.GetValueYARPC(context.Background(), "foo")
-		assert.Equal(t, yarpcerrors.NamedErrorf("bar", ""), err)
+		assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"), err)
 	})
 }
 
 func TestGRPCWellKnownError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		e.KeyValueYARPCServer.SetNextError(status.Error(codes.FailedPrecondition, "bar 1"))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.FailedPrecondition, "bar 1"), err)
@@ -115,8 +109,8 @@ func TestGRPCWellKnownError(t *testing.T) {
 
 func TestGRPCNamedError(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", "baz 1"))
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz 1").WithName("bar"))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.Unknown, "bar: baz 1"), err)
 	})
@@ -124,15 +118,69 @@ func TestGRPCNamedError(t *testing.T) {
 
 func TestGRPCNamedErrorNoMessage(t *testing.T) {
 	t.Parallel()
-	doWithTestEnv(t, nil, nil, func(t *testing.T, e *testEnv) {
-		e.KeyValueYARPCServer.SetNextError(yarpcerrors.NamedErrorf("bar", ""))
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		e.KeyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "").WithName("bar"))
 		_, err := e.GetValueGRPC(context.Background(), "foo")
 		assert.Equal(t, status.Error(codes.Unknown, "bar"), err)
 	})
 }
 
-func doWithTestEnv(t *testing.T, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
-	testEnv, err := newTestEnv(inboundOptions, outboundOptions)
+func TestYARPCMaxMsgSize(t *testing.T) {
+	t.Parallel()
+	value := strings.Repeat("a", defaultServerMaxRecvMsgSize*2)
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.Equal(t, yarpcerrors.CodeResourceExhausted, yarpcerrors.FromError(e.SetValueYARPC(context.Background(), "foo", value)).Code())
+	})
+	doWithTestEnv(t, []TransportOption{
+		ClientMaxRecvMsgSize(math.MaxInt32),
+		ClientMaxSendMsgSize(math.MaxInt32),
+		ServerMaxRecvMsgSize(math.MaxInt32),
+		ServerMaxSendMsgSize(math.MaxInt32),
+	}, nil, nil, func(t *testing.T, e *testEnv) {
+		assert.NoError(t, e.SetValueYARPC(context.Background(), "foo", value))
+		getValue, err := e.GetValueYARPC(context.Background(), "foo")
+		assert.NoError(t, err)
+		assert.Equal(t, value, getValue)
+	})
+}
+
+func TestApplicationErrorPropagation(t *testing.T) {
+	t.Parallel()
+	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
+		response, err := e.Call(
+			context.Background(),
+			"GetValue",
+			&examplepb.GetValueRequest{Key: "foo"},
+			protobuf.Encoding,
+			transport.Headers{},
+		)
+		require.Equal(t, yarpcerrors.NotFoundErrorf("foo"), err)
+		require.True(t, response.ApplicationError)
+
+		response, err = e.Call(
+			context.Background(),
+			"SetValue",
+			&examplepb.SetValueRequest{Key: "foo", Value: "hello"},
+			protobuf.Encoding,
+			transport.Headers{},
+		)
+		require.NoError(t, err)
+		require.False(t, response.ApplicationError)
+
+		response, err = e.Call(
+			context.Background(),
+			"GetValue",
+			&examplepb.GetValueRequest{Key: "foo"},
+			"bad_encoding",
+			transport.Headers{},
+		)
+		require.True(t, yarpcerrors.IsInvalidArgument(err))
+		require.False(t, response.ApplicationError)
+	})
+}
+
+func doWithTestEnv(t *testing.T, transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption, f func(*testing.T, *testEnv)) {
+	testEnv, err := newTestEnv(transportOptions, inboundOptions, outboundOptions)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, testEnv.Close())
@@ -141,10 +189,12 @@ func doWithTestEnv(t *testing.T, inboundOptions []InboundOption, outboundOptions
 }
 
 type testEnv struct {
+	Caller              string
+	Service             string
 	Inbound             *Inbound
 	Outbound            *Outbound
 	ClientConn          *grpc.ClientConn
-	ContextWrapper      *ContextWrapper
+	ContextWrapper      *grpcctx.ContextWrapper
 	ClientConfig        transport.ClientConfig
 	Procedures          []transport.Procedure
 	KeyValueGRPCClient  examplepb.KeyValueClient
@@ -152,12 +202,12 @@ type testEnv struct {
 	KeyValueYARPCServer *example.KeyValueYARPCServer
 }
 
-func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption) (_ *testEnv, err error) {
+func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOption, outboundOptions []OutboundOption) (_ *testEnv, err error) {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)
 
-	t := NewTransport()
+	t := NewTransport(transportOptions...)
 	if err := t.Start(); err != nil {
 		return nil, err
 	}
@@ -203,22 +253,27 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 			err = multierr.Append(err, outbound.Stop())
 		}
 	}()
+
+	caller := "example-client"
+	service := "example"
 	clientConfig := clientconfig.MultiOutbound(
-		"example-client",
-		"example",
+		caller,
+		service,
 		transport.Outbounds{
-			ServiceName: "example-client",
+			ServiceName: caller,
 			Unary:       outbound,
 		},
 	)
 	keyValueYARPCClient := examplepb.NewKeyValueYARPCClient(clientConfig)
 
-	contextWrapper := NewContextWrapper().
+	contextWrapper := grpcctx.NewContextWrapper().
 		WithCaller("example-client").
 		WithService("example").
 		WithEncoding(string(protobuf.Encoding))
 
 	return &testEnv{
+		caller,
+		service,
 		inbound,
 		outbound,
 		clientConn,
@@ -229,6 +284,35 @@ func newTestEnv(inboundOptions []InboundOption, outboundOptions []OutboundOption
 		keyValueYARPCClient,
 		keyValueYARPCServer,
 	}, nil
+}
+
+func (e *testEnv) Call(
+	ctx context.Context,
+	methodName string,
+	message proto.Message,
+	encoding transport.Encoding,
+	headers transport.Headers,
+) (*transport.Response, error) {
+	data, err := proto.Marshal(message)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, testtime.Second)
+	defer cancel()
+	return e.Outbound.Call(
+		ctx,
+		&transport.Request{
+			Caller:   e.Caller,
+			Service:  e.Service,
+			Encoding: encoding,
+			Procedure: procedure.ToName(
+				"uber.yarpc.internal.examples.protobuf.example.KeyValue",
+				methodName,
+			),
+			Headers: headers,
+			Body:    bytes.NewReader(data),
+		},
+	)
 }
 
 func (e *testEnv) GetValueYARPC(ctx context.Context, key string) (string, error) {

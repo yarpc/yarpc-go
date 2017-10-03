@@ -35,7 +35,7 @@ import (
 )
 
 var (
-	errDoNotUseContextWithHeaders = yarpcerrors.InvalidArgumentErrorf("tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
+	errDoNotUseContextWithHeaders = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "tchannel.ContextWithHeaders is not compatible with YARPC, use yarpc.CallOption instead")
 
 	_ transport.UnaryOutbound              = (*Outbound)(nil)
 	_ introspection.IntrospectableOutbound = (*Outbound)(nil)

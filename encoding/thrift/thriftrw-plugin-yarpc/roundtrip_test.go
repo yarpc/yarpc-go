@@ -48,6 +48,7 @@ import (
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyclient"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/common/extendonlyserver"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/internal/yarpctest"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -274,7 +275,7 @@ func testRoundTrip(t *testing.T, enveloped, multiplexed bool) {
 			defer server.Stop()
 
 			outbound := http.NewTransport().NewSingleOutbound(
-				fmt.Sprintf("http://%v/", httpInbound.Addr().String()))
+				fmt.Sprintf("http://%v", yarpctest.ZeroAddrToHostPort(httpInbound.Addr())))
 
 			dispatcher := yarpc.NewDispatcher(yarpc.Config{
 				Name: "roundtrip-client",

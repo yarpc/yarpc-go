@@ -91,24 +91,48 @@ func (c call) endStats(elapsed time.Duration, err error, isApplicationError bool
 		}
 		return
 	}
-	// Bad request errors are the caller's fault.
-	if yarpcerrors.IsInvalidArgument(err) {
+
+	if !yarpcerrors.IsStatus(err) {
+		c.edge.serverErrLatencies.Observe(elapsed)
+		if counter, err := c.edge.serverFailures.Get("unknown_internal_yarpc"); err == nil {
+			counter.Inc()
+		}
+		return
+	}
+
+	errCode := yarpcerrors.FromError(err).Code()
+	switch errCode {
+	case yarpcerrors.CodeCancelled,
+		yarpcerrors.CodeInvalidArgument,
+		yarpcerrors.CodeNotFound,
+		yarpcerrors.CodeAlreadyExists,
+		yarpcerrors.CodePermissionDenied,
+		yarpcerrors.CodeFailedPrecondition,
+		yarpcerrors.CodeAborted,
+		yarpcerrors.CodeOutOfRange,
+		yarpcerrors.CodeUnimplemented,
+		yarpcerrors.CodeUnauthenticated:
 		c.edge.callerErrLatencies.Observe(elapsed)
-		if counter, err := c.edge.callerFailures.Get("bad_request"); err == nil {
+		if counter, err := c.edge.callerFailures.Get(errCode.String()); err == nil {
+			counter.Inc()
+		}
+		return
+	case yarpcerrors.CodeUnknown,
+		yarpcerrors.CodeDeadlineExceeded,
+		yarpcerrors.CodeResourceExhausted,
+		yarpcerrors.CodeInternal,
+		yarpcerrors.CodeUnavailable,
+		yarpcerrors.CodeDataLoss:
+		c.edge.serverErrLatencies.Observe(elapsed)
+		if counter, err := c.edge.serverFailures.Get(errCode.String()); err == nil {
 			counter.Inc()
 		}
 		return
 	}
-	// For now, assume that all other errors are the server's fault.
+	// If this code is executed we've hit an error code outside the usual error
+	// code range, so we'll just log the string representation of that code.
 	c.edge.serverErrLatencies.Observe(elapsed)
-	if yarpcerrors.IsInternal(err) {
-		if counter, err := c.edge.serverFailures.Get("unexpected"); err == nil {
-			counter.Inc()
-		}
-		return
-	}
-	// We've encountered an error that isn't otherwise categorized.
-	if counter, err := c.edge.serverFailures.Get("unknown"); err == nil {
+	if counter, err := c.edge.serverFailures.Get(errCode.String()); err == nil {
 		counter.Inc()
 	}
 }
