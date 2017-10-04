@@ -78,12 +78,6 @@ golint: $(GOLINT) __eval_packages __eval_go_files ## check golint
 	done
 	@[ ! -s "$(LINT_LOG)" ] || (echo "golint failed:" | cat - $(LINT_LOG) && false)
 
-.PHONY: staticcheck
-staticcheck: $(STATICCHECK) __eval_packages __eval_go_files ## check staticcheck
-	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
-	@PATH=$(BIN):$$PATH staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
-	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
-
 .PHONY: errcheck
 errcheck: $(ERRCHECK) __eval_packages __eval_go_files ## check errcheck
 	$(eval ERRCHECK_LOG := $(shell mktemp -t errcheck.XXXXX))
@@ -117,7 +111,7 @@ verifycodecovignores: ## verify that .codecov.yml contains all .nocover packages
 		done
 
 .PHONY: basiclint
-basiclint: gofmt govet golint staticcheck errcheck # run gofmt govet golint staticcheck errcheck
+basiclint: gofmt govet golint errcheck # run gofmt govet golint errcheck
 
 .PHONY: lint
 lint: basiclint generatenodiff nogogenerate verifyversion verifycodecovignores ## run all linters
