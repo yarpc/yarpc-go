@@ -7,6 +7,12 @@ v1.19.0-dev (unreleased)
 -   No changes yet.
 
 
+v1.18.1 (2017-10-04)
+--------------------
+
+-   Remove staticcheck from glide.yaml.
+
+
 v1.18.0 (2017-09-26)
 --------------------
 

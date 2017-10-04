@@ -241,7 +241,3 @@ testImports:
   subpackages:
   - parallel-exec
   - update-license
-- name: honnef.co/go/tools
-  version: bf3d85daf373f9ad9fc6da6da7c010f9ee3e8e0c
-  subpackages:
-  - cmd/staticcheck
