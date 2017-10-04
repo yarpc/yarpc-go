@@ -38,12 +38,10 @@ func Newf(code Code, format string, args ...interface{}) *Status {
 	}
 }
 
-// FromError returns the Status for the error.
+// FromError returns the Status for the provided error. If the provided error
+// is not a Status, a new error with code CodeUnknown is returned.
 //
-// If the error is nil, ut returns nil
-// If the error is a Status, it returns err.
-// If the error is not a Status, it returns a new error with the Code
-// CodeUnknown and the message err.Error()
+// Returns nil if the provided error is nil.
 func FromError(err error) *Status {
 	if err == nil {
 		return nil
@@ -57,7 +55,9 @@ func FromError(err error) *Status {
 	}
 }
 
-// IsStatus returns true if err is a Status.
+// IsStatus returns whether the provided error is a YARPC error.
+//
+// This is always false if the error is nil.
 func IsStatus(err error) bool {
 	_, ok := err.(*Status)
 	return ok
@@ -72,17 +72,16 @@ type Status struct {
 
 // WithName returns a new Status with the given name.
 //
-// If s is nil, this will still return nil.
-//
 // This should be used for user-defined errors.
 //
 // The name must only contain lowercase letters from a-z and dashes (-), and
 // cannot start or end in a dash. If the name is something else, an error with
 // code CodeInternal will be returned.
 //
-// Deprecated: Only use Codes to represent the type of the error. We plan to add
-// a WithDetails method to add semantic metadata to Statuses soon.
+// Deprecated: Use only error codes to represent the type of the error.
 func (s *Status) WithName(name string) *Status {
+	// TODO: We plan to add a WithDetails method to add semantic metadata to
+	// Statuses soon.
 	if s == nil {
 		return nil
 	}
@@ -96,7 +95,7 @@ func (s *Status) WithName(name string) *Status {
 	}
 }
 
-// Code returns the code for the Status.
+// Code returns the error code for this Status.
 func (s *Status) Code() Code {
 	if s == nil {
 		return CodeOK
@@ -104,7 +103,10 @@ func (s *Status) Code() Code {
 	return s.code
 }
 
-// Name returns the name for the Status.
+// Name returns the name of the error for this Status.
+//
+// This is an empty string for all built-in YARPC errors. It may be customized
+// by using WithName.
 func (s *Status) Name() string {
 	if s == nil {
 		return ""
@@ -112,7 +114,7 @@ func (s *Status) Name() string {
 	return s.name
 }
 
-// Message returns the message for the Status.
+// Message returns the error message for this Status.
 func (s *Status) Message() string {
 	if s == nil {
 		return ""
@@ -312,8 +314,9 @@ func IsUnauthenticated(err error) bool {
 	return FromError(err).Code() == CodeUnauthenticated
 }
 
-// IsYARPCError is a convenience function that returns true if the given error
-// is a non-nil YARPC error.
+// IsYARPCError returns whether the provided error is a YARPC error.
+//
+// This is always false if the error is nil.
 //
 // Deprecated: use IsStatus instead.
 func IsYARPCError(err error) bool {
