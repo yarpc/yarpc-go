@@ -24,9 +24,10 @@ import "io"
 
 // Response is the low level response representation.
 type Response struct {
-	Headers          Headers
-	Body             io.ReadCloser
-	ApplicationError bool
+	Headers              Headers
+	Body                 io.ReadCloser
+	ApplicationError     bool
+	FullApplicationError error
 }
 
 // ResponseWriter allows Handlers to write responses in a streaming fashion.
@@ -46,4 +47,18 @@ type ResponseWriter interface {
 	// application error. If called, this MUST be called before any invocation
 	// of Write().
 	SetApplicationError()
+}
+
+// ResponseWriterWithResponse is an advanced representation of a ResponseWriter
+// that has all of it's attributes stored in a *Response. From the middleware
+// stack, the contract is that the Response will be filled after the "Call" has
+// finished.
+// This allows us to alter the ResponseWriter interface once and have a
+// backwards compatible way for adding new attributes in the future (we just add
+// them to the Response).
+// Altering the "Response" is not thread-safe.
+type ResponseWriterWithResponse interface {
+	ResponseWriter
+
+	Response() *Response
 }
