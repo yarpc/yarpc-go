@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestCallSuccess(t *testing.T) {
@@ -51,6 +52,7 @@ func TestCallSuccess(t *testing.T) {
 			assert.Equal(t, "service", req.Header.Get(ServiceHeader))
 			assert.Equal(t, "raw", req.Header.Get(EncodingHeader))
 			assert.Equal(t, "hello", req.Header.Get(ProcedureHeader))
+			assert.Equal(t, AcceptTrue, req.Header.Get(AcceptsBothResponseErrorHeader))
 
 			body, err := ioutil.ReadAll(req.Body)
 			if assert.NoError(t, err) {
@@ -186,64 +188,103 @@ func TestOutboundHeaders(t *testing.T) {
 
 func TestOutboundApplicationError(t *testing.T) {
 	tests := []struct {
-		desc     string
-		status   string
-		appError bool
+		desc                     string
+		giveCodeHeader           string
+		giveHTTPStatusCode       int
+		giveStatus               string
+		giveResponseAcceptHeader bool
+		wantErrorCode            yarpcerrors.Code
+		wantAppError             bool
+		wantAppErrorCode         yarpcerrors.Code
 	}{
 		{
-			desc:     "ok",
-			status:   "success",
-			appError: false,
+			desc:               "ok",
+			giveHTTPStatusCode: http.StatusOK,
+			giveStatus:         "success",
+			wantAppError:       false,
 		},
 		{
-			desc:     "error",
-			status:   "error",
-			appError: true,
+			desc:               "app error",
+			giveHTTPStatusCode: http.StatusOK,
+			giveStatus:         "error",
+			wantAppError:       true,
 		},
 		{
-			desc:     "not an error",
-			status:   "lolwut",
-			appError: false,
+			desc:               "not an app error",
+			giveHTTPStatusCode: http.StatusOK,
+			giveStatus:         "lolwut",
+			wantAppError:       false,
+		},
+		{
+			desc:                     "advanced app error",
+			giveCodeHeader:           "not-found",
+			giveHTTPStatusCode:       http.StatusNotFound,
+			giveResponseAcceptHeader: true,
+			giveStatus:               "error",
+			wantAppError:             true,
+			wantAppErrorCode:         yarpcerrors.CodeNotFound,
+		},
+		{
+			desc:                     "advanced app error (but no resp Accept Header)",
+			giveCodeHeader:           "not-found",
+			giveHTTPStatusCode:       http.StatusNotFound,
+			giveResponseAcceptHeader: false,
+			giveStatus:               "error",
+			wantErrorCode:            yarpcerrors.CodeNotFound,
 		},
 	}
 
 	httpTransport := NewTransport()
 
 	for _, tt := range tests {
-		server := httptest.NewServer(http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Add("Rpc-Status", tt.status)
-				defer r.Body.Close()
-			},
-		))
-		defer server.Close()
+		t.Run(tt.desc, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Add("Rpc-Status", tt.giveStatus)
+					if tt.giveCodeHeader != "" {
+						w.Header().Add("Rpc-Error-Code", tt.giveCodeHeader)
+					}
+					if tt.giveResponseAcceptHeader {
+						w.Header().Add(BothResponseErrorHeader, AcceptTrue)
+					}
+					w.WriteHeader(tt.giveHTTPStatusCode)
+					defer r.Body.Close()
+				},
+			))
+			defer server.Close()
 
-		out := httpTransport.NewSingleOutbound(server.URL)
+			out := httpTransport.NewSingleOutbound(server.URL)
 
-		require.NoError(t, out.Start(), "failed to start outbound")
-		defer out.Stop()
+			require.NoError(t, out.Start(), "failed to start outbound")
+			defer out.Stop()
 
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
-		defer cancel()
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 100*testtime.Millisecond)
+			defer cancel()
 
-		res, err := out.Call(ctx, &transport.Request{
-			Caller:    "caller",
-			Service:   "service",
-			Encoding:  raw.Encoding,
-			Procedure: "hello",
-			Body:      bytes.NewReader([]byte("world")),
+			res, err := out.Call(ctx, &transport.Request{
+				Caller:    "caller",
+				Service:   "service",
+				Encoding:  raw.Encoding,
+				Procedure: "hello",
+				Body:      bytes.NewReader([]byte("world")),
+			})
+
+			if tt.wantErrorCode != yarpcerrors.CodeOK {
+				assert.Error(t, err)
+				assert.Equal(t, tt.wantErrorCode, yarpcerrors.FromError(err).Code())
+				return
+			}
+
+			require.NoError(t, err, "%v: call failed", tt.desc)
+			assert.Equal(t, res.ApplicationError, tt.wantAppError, "%v: application status", tt.desc)
+			if tt.wantAppErrorCode != yarpcerrors.CodeOK {
+				require.NotNil(t, res.FullApplicationError)
+				assert.Equal(t, tt.wantAppErrorCode, yarpcerrors.FromError(res.FullApplicationError).Code())
+			}
+
+			require.NoError(t, res.Body.Close(), "%v: failed to close response body")
 		})
-
-		assert.Equal(t, res.ApplicationError, tt.appError, "%v: application status", tt.desc)
-
-		if !assert.NoError(t, err, "%v: call failed", tt.desc) {
-			continue
-		}
-
-		if !assert.NoError(t, res.Body.Close(), "%v: failed to close response body") {
-			continue
-		}
 	}
 }
 

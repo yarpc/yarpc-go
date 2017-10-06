@@ -288,14 +288,22 @@ func (o *Outbound) callWithPeer(
 
 	span.SetTag("http.status_code", response.StatusCode)
 
+	isAppErr := isApplicationError(response.Header.Get(ApplicationStatusHeader))
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
-		appHeaders := applicationHeaders.FromHTTPHeaders(
-			response.Header, transport.NewHeaders())
-		appError := response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus
 		return &transport.Response{
-			Headers:          appHeaders,
+			Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 			Body:             response.Body,
-			ApplicationError: appError,
+			ApplicationError: isAppErr,
+		}, nil
+	}
+
+	// Check if we've gotten an advanced error response.
+	if isAcceptTrue(response.Header.Get(BothResponseErrorHeader)) && isAppErr {
+		return &transport.Response{
+			Headers:              applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
+			Body:                 response.Body,
+			ApplicationError:     isAppErr,
+			FullApplicationError: getYARPCAppErrFromResp(response),
 		}, nil
 	}
 
@@ -386,7 +394,18 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		req.Header.Set(EncodingHeader, encoding)
 	}
 
+	// Indicate that the outbound supports reading ResponseErrors and body at
+	// the same time.
+	req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
+
 	return req
+}
+
+func getYARPCAppErrFromResp(response *http.Response) error {
+	return yarpcerrors.Newf(
+		getBestErrorCode(response),
+		"application error",
+	).WithName(response.Header.Get(ErrorNameHeader))
 }
 
 func getYARPCErrorFromResponse(response *http.Response) error {
@@ -397,6 +416,13 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 	if err := response.Body.Close(); err != nil {
 		return yarpcerrors.Newf(yarpcerrors.CodeInternal, err.Error())
 	}
+	return yarpcerrors.Newf(
+		getBestErrorCode(response),
+		strings.TrimSuffix(string(contents), "\n"),
+	).WithName(response.Header.Get(ErrorNameHeader))
+}
+
+func getBestErrorCode(response *http.Response) yarpcerrors.Code {
 	// use the status code if we can't get a code from the headers
 	code := statusCodeToBestCode(response.StatusCode)
 	if errorCodeText := response.Header.Get(ErrorCodeHeader); errorCodeText != "" {
@@ -406,10 +432,7 @@ func getYARPCErrorFromResponse(response *http.Response) error {
 			code = errorCode
 		}
 	}
-	return yarpcerrors.Newf(
-		code,
-		strings.TrimSuffix(string(contents), "\n"),
-	).WithName(response.Header.Get(ErrorNameHeader))
+	return code
 }
 
 // Introspect returns basic status about this outbound.

@@ -471,3 +471,94 @@ func TestResponse(t *testing.T) {
 	assert.Equal(t, string(resp), "hello")
 	assert.Equal(t, respHeaders["hello"], "haha")
 }
+
+func TestFullAppError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	headers := make(http.Header)
+	headers.Set(CallerHeader, "somecaller")
+	headers.Set(EncodingHeader, "raw")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(ServiceHeader, "fake")
+	headers.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
+
+	request := http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
+	}
+
+	rpcHandler := unaryHandlerFunc(
+		func(_ context.Context, _ *transport.Request, resw transport.ResponseWriter) error {
+			fmt.Fprint(resw, "hello")
+			reswwr := resw.(transport.ResponseWriterWithResponse)
+			reswwr.Response().ApplicationError = true
+			reswwr.Response().FullApplicationError = yarpcerrors.NotFoundErrorf("test")
+			return nil
+		},
+	)
+	router := transporttest.NewMockRouter(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("fake").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
+	httpResponse := httptest.NewRecorder()
+	httpHandler.ServeHTTP(httpResponse, &request)
+
+	code := httpResponse.Code
+	assert.Equal(t, 404, code, "expected 404 response")
+	assert.Equal(t, "hello", httpResponse.Body.String())
+	assert.Equal(t, httpResponse.HeaderMap[BothResponseErrorHeader][0], AcceptTrue, "expected both response and err flag")
+	assert.Equal(t, httpResponse.HeaderMap[ErrorCodeHeader][0], yarpcerrors.CodeNotFound.String(), "expected error code header")
+	assert.Equal(t, httpResponse.HeaderMap[ApplicationStatusHeader][0], ApplicationErrorStatus, "expected error status")
+}
+
+func TestNoFullAppErrorWithoutAcceptHeader(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	headers := make(http.Header)
+	headers.Set(CallerHeader, "somecaller")
+	headers.Set(EncodingHeader, "raw")
+	headers.Set(TTLMSHeader, "1000")
+	headers.Set(ProcedureHeader, "hello")
+	headers.Set(ServiceHeader, "fake")
+
+	request := http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   ioutil.NopCloser(bytes.NewReader([]byte{})),
+	}
+
+	rpcHandler := unaryHandlerFunc(
+		func(_ context.Context, _ *transport.Request, resw transport.ResponseWriter) error {
+			fmt.Fprint(resw, "hello")
+			reswwr := resw.(transport.ResponseWriterWithResponse)
+			reswwr.Response().ApplicationError = true
+			reswwr.Response().FullApplicationError = yarpcerrors.NotFoundErrorf("test")
+			return nil
+		},
+	)
+	router := transporttest.NewMockRouter(mockCtrl)
+	spec := transport.NewUnaryHandlerSpec(rpcHandler)
+
+	router.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+		WithService("fake").
+		WithProcedure("hello"),
+	).Return(spec, nil)
+
+	httpHandler := handler{router: router, tracer: &opentracing.NoopTracer{}}
+	httpResponse := httptest.NewRecorder()
+	httpHandler.ServeHTTP(httpResponse, &request)
+
+	code := httpResponse.Code
+	assert.Equal(t, 200, code, "expected 200 response")
+	assert.Equal(t, "hello", httpResponse.Body.String())
+	assert.Equal(t, httpResponse.HeaderMap[ApplicationStatusHeader][0], ApplicationErrorStatus, "expected error status")
+}
