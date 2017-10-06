@@ -70,6 +70,11 @@ func NewMiddleware(logger *zap.Logger, reg *pally.Registry, extract ContextExtra
 // Handle implements middleware.UnaryInbound.
 func (m *Middleware) Handle(ctx context.Context, req *transport.Request, w transport.ResponseWriter, h transport.UnaryHandler) error {
 	call := m.graph.begin(ctx, transport.Unary, true /* isInbound */, req)
+	if rwwr, ok := w.(transport.ResponseWriterWithResponse); ok {
+		err := h.Handle(ctx, req, rwwr)
+		call.End(err, rwwr.Response().ApplicationError)
+		return err
+	}
 	wrappedWriter := newWriter(w)
 	err := h.Handle(ctx, req, wrappedWriter)
 	call.End(err, wrappedWriter.isApplicationError)

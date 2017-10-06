@@ -224,3 +224,33 @@ func (fw *FakeResponseWriter) AddHeaders(h transport.Headers) {
 func (fw *FakeResponseWriter) Write(s []byte) (int, error) {
 	return fw.Body.Write(s)
 }
+
+// FakeResponseWriterWithResponse is a ResponseWriterWithResponse that
+// records the headers and the body written to it.
+type FakeResponseWriterWithResponse struct {
+	Resp transport.Response
+	Body bytes.Buffer
+}
+
+// SetApplicationError for FakeResponseWriterWithResponse.
+func (fw *FakeResponseWriterWithResponse) SetApplicationError() {
+	fw.Resp.ApplicationError = true
+}
+
+// AddHeaders for FakeResponseWriterWithResponse.
+func (fw *FakeResponseWriterWithResponse) AddHeaders(h transport.Headers) {
+	for k, v := range h.Items() {
+		fw.Resp.Headers = fw.Resp.Headers.With(k, v)
+	}
+}
+
+// Write for FakeResponseWriterWithResponse.
+func (fw *FakeResponseWriterWithResponse) Write(s []byte) (int, error) {
+	return fw.Body.Write(s)
+}
+
+// Response for FakeResponseWriterWithResponse.
+func (fw *FakeResponseWriterWithResponse) Response() *transport.Response {
+	fw.Resp.Body = ioutil.NopCloser(&fw.Body)
+	return &fw.Resp
+}

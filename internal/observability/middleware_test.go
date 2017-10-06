@@ -361,6 +361,58 @@ func TestUnaryInboundApplicationErrors(t *testing.T) {
 	assert.Equal(t, expected, entry, "Unexpected log entry written.")
 }
 
+func TestUnaryInboundApplicationErrorsWithAdvancedResWriter(t *testing.T) {
+	defer stubTime()()
+	req := &transport.Request{
+		Caller:          "caller",
+		Service:         "service",
+		Encoding:        "raw",
+		Procedure:       "procedure",
+		ShardKey:        "shard01",
+		RoutingKey:      "routing-key",
+		RoutingDelegate: "routing-delegate",
+		Body:            strings.NewReader("body"),
+	}
+
+	expectedFields := []zapcore.Field{
+		zap.String("source", req.Caller),
+		zap.String("dest", req.Service),
+		zap.String("procedure", req.Procedure),
+		zap.String("encoding", string(req.Encoding)),
+		zap.String("routingKey", req.RoutingKey),
+		zap.String("routingDelegate", req.RoutingDelegate),
+		zap.String("direction", _directionInbound),
+		zap.String("rpcType", "Unary"),
+		zap.Duration("latency", 0),
+		zap.Bool("successful", false),
+		zap.Skip(),
+		zap.String("error", "application_error"),
+	}
+
+	core, logs := observer.New(zap.DebugLevel)
+	mw := NewMiddleware(zap.New(core), pally.NewRegistry(), NewNopContextExtractor())
+
+	assert.NoError(t, mw.Handle(
+		context.Background(),
+		req,
+		&transporttest.FakeResponseWriterWithResponse{},
+		fakeHandler{err: nil, applicationErr: true},
+	), "Unexpected transport error.")
+
+	expected := observer.LoggedEntry{
+		Entry: zapcore.Entry{
+			Level:   zapcore.DebugLevel,
+			Message: "Handled inbound request.",
+		},
+		Context: expectedFields,
+	}
+	entries := logs.TakeAll()
+	require.Equal(t, 1, len(entries), "Unexpected number of log entries written.")
+	entry := entries[0]
+	entry.Time = time.Time{}
+	assert.Equal(t, expected, entry, "Unexpected log entry written.")
+}
+
 func TestMiddlewareStats(t *testing.T) {
 	defer stubTime()()
 	reg := pally.NewRegistry()
