@@ -73,5 +73,8 @@ testImport:
   subpackages:
   - parallel-exec
   - update-license
+- package: honnef.co/go/tools
+  subpackages:
+  - cmd/staticcheck
 - package: github.com/stretchr/testify
   version: master

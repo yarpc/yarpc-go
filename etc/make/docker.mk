@@ -45,6 +45,10 @@ govet: deps ## check go vet
 golint: deps ## check golint
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make golint
 
+.PHONY: staticcheck
+staticcheck: deps ## check staticchck
+	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make staticcheck
+
 .PHONY: errcheck
 errcheck: deps ## check errcheck
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make errcheck
@@ -58,7 +62,7 @@ verifyversion: deps ## verify the version in the changelog is the same as in ver
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make verifyversion
 
 .PHONY: basiclint
-basiclint: deps ## run gofmt govet golint errcheck
+basiclint: deps ## run gofmt govet golint staticcheck errcheck
 	PATH=$$PATH:$(BIN) docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE) make basiclint
 
 .PHONY: lint
