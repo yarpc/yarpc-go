@@ -79,12 +79,27 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	applicationHeaders.ToHTTPHeaders(resp.Headers, w.Header())
 
-	// Set the application Status Header
 	if resp.ApplicationError {
 		w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
 	}
+
+	if supportsRespAndErr(req) && resp.FullApplicationError != nil {
+		status := yarpcerrors.FromError(resp.FullApplicationError)
+		w.Header().Set(BothResponseErrorHeader, AcceptTrue)
+		writeErrorHeaders(w, status)
+		w.WriteHeader(getHTTPStatusCode(status))
+		writeBody(w, resp.Body)
+		return
+	}
+
+	// If we're not using the advanced path, set status code to ok, and write
+	// the body as usual.
 	w.WriteHeader(http.StatusOK)
 	writeBody(w, resp.Body)
+}
+
+func supportsRespAndErr(req *http.Request) bool {
+	return isAcceptTrue(req.Header.Get(AcceptsBothResponseErrorHeader))
 }
 
 func writeBody(w http.ResponseWriter, resp io.ReadCloser) {
