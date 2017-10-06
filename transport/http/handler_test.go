@@ -218,17 +218,20 @@ func TestHandlerFailures(t *testing.T) {
 	headersWithBadTTL.Set(TTLMSHeader, "not a number")
 
 	tests := []struct {
-		req *http.Request
+		name string
+		req  *http.Request
 
 		// if we expect an error as a result of the TTL
 		errTTL   bool
 		wantCode yarpcerrors.Code
 	}{
 		{
+			name:     "get",
 			req:      &http.Request{Method: "GET"},
 			wantCode: yarpcerrors.CodeNotFound,
 		},
 		{
+			name: "no caller",
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, CallerHeader),
@@ -236,6 +239,7 @@ func TestHandlerFailures(t *testing.T) {
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
+			name: "no service",
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ServiceHeader),
@@ -243,6 +247,7 @@ func TestHandlerFailures(t *testing.T) {
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
+			name: "no procedure",
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, ProcedureHeader),
@@ -250,6 +255,7 @@ func TestHandlerFailures(t *testing.T) {
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
+			name: "no ttl",
 			req: &http.Request{
 				Method: "POST",
 				Header: headerCopyWithout(baseHeaders, TTLMSHeader),
@@ -258,12 +264,14 @@ func TestHandlerFailures(t *testing.T) {
 			errTTL:   true,
 		},
 		{
+			name: "nothing",
 			req: &http.Request{
 				Method: "POST",
 			},
 			wantCode: yarpcerrors.CodeInvalidArgument,
 		},
 		{
+			name: "bad ttl",
 			req: &http.Request{
 				Method: "POST",
 				Header: headersWithBadTTL,
@@ -274,33 +282,35 @@ func TestHandlerFailures(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		req := tt.req
-		if req.Body == nil {
-			req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			req := tt.req
+			if req.Body == nil {
+				req.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))
+			}
 
-		reg := transporttest.NewMockRouter(mockCtrl)
+			reg := transporttest.NewMockRouter(mockCtrl)
 
-		if tt.errTTL {
-			// since TTL is checked after we've determined the transport type, if we have an
-			// error with TTL it will be discovered after we read from the router
-			spec := transport.NewUnaryHandlerSpec(panickedHandler{})
-			reg.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
-				WithService(service).
-				WithProcedure(procedure),
-			).Return(spec, nil)
-		}
+			if tt.errTTL {
+				// since TTL is checked after we've determined the transport type, if we have an
+				// error with TTL it will be discovered after we read from the router
+				spec := transport.NewUnaryHandlerSpec(panickedHandler{})
+				reg.EXPECT().Choose(gomock.Any(), routertest.NewMatcher().
+					WithService(service).
+					WithProcedure(procedure),
+				).Return(spec, nil)
+			}
 
-		h := handler{router: reg, tracer: &opentracing.NoopTracer{}}
+			h := handler{router: reg, tracer: &opentracing.NoopTracer{}}
 
-		rw := httptest.NewRecorder()
-		h.ServeHTTP(rw, tt.req)
+			rw := httptest.NewRecorder()
+			h.ServeHTTP(rw, tt.req)
 
-		httpStatusCode := rw.Code
-		assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
-		code := statusCodeToBestCode(httpStatusCode)
-		assert.Equal(t, tt.wantCode, code)
-		assert.Equal(t, "text/plain; charset=utf8", rw.HeaderMap.Get("Content-Type"))
+			httpStatusCode := rw.Code
+			assert.True(t, httpStatusCode >= 400 && httpStatusCode < 500, "expected 400 level code")
+			code := statusCodeToBestCode(httpStatusCode)
+			assert.Equal(t, tt.wantCode, code)
+			assert.Equal(t, "text/plain; charset=utf8", rw.HeaderMap.Get("Content-Type"))
+		})
 	}
 }
 
@@ -412,21 +422,52 @@ func headerCopyWithout(headers http.Header, names ...string) http.Header {
 	return newHeaders
 }
 
-func TestResponseWriter(t *testing.T) {
-	recorder := httptest.NewRecorder()
-	writer := newResponseWriter(recorder)
+type unaryHandlerFunc func(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error
 
-	headers := transport.HeadersFromMap(map[string]string{
-		"foo":       "bar",
-		"shard-key": "123",
+func (f unaryHandlerFunc) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
+	return f(ctx, req, resw)
+}
+
+func TestResponse(t *testing.T) {
+	httpTransport := NewTransport()
+	inbound := httpTransport.NewInbound("localhost:0")
+	serverDispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "yarpc-test",
+		Inbounds: yarpc.Inbounds{inbound},
 	})
-	writer.AddHeaders(headers)
+	serverDispatcher.Register([]transport.Procedure{
+		{
+			Name: "hello",
+			HandlerSpec: transport.NewUnaryHandlerSpec(unaryHandlerFunc(
+				func(_ context.Context, _ *transport.Request, resw transport.ResponseWriter) error {
+					fmt.Fprint(resw, "hello")
+					resw.AddHeaders(transport.NewHeaders().With("hello", "haha"))
+					return nil
+				},
+			)),
+		},
+	})
+	require.NoError(t, serverDispatcher.Start())
+	defer serverDispatcher.Stop()
 
-	_, err := writer.Write([]byte("hello"))
-	require.NoError(t, err)
-	writer.Close(http.StatusOK)
+	clientDispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name: "yarpc-test-client",
+		Outbounds: yarpc.Outbounds{
+			"yarpc-test": {
+				Unary: httpTransport.NewSingleOutbound(fmt.Sprintf("http://%s", inbound.Addr().String())),
+			},
+		},
+	})
+	require.NoError(t, clientDispatcher.Start())
+	defer clientDispatcher.Stop()
 
-	assert.Equal(t, "bar", recorder.Header().Get("rpc-header-foo"))
-	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
-	assert.Equal(t, "hello", recorder.Body.String())
+	client := raw.New(clientDispatcher.ClientConfig("yarpc-test"))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	var respHeaders map[string]string
+	resp, err := client.Call(ctx, "hello", []byte{}, yarpc.ResponseHeaders(&respHeaders))
+
+	assert.NoError(t, err)
+	assert.Equal(t, string(resp), "hello")
+	assert.Equal(t, respHeaders["hello"], "haha")
 }

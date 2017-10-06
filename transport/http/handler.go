@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -50,44 +51,123 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	responseWriter := newResponseWriter(w)
-	service := popHeader(req.Header, ServiceHeader)
-	procedure := popHeader(req.Header, ProcedureHeader)
-	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
-	if status == nil {
-		responseWriter.Close(http.StatusOK)
+	// Should we have Content Type/Encoding on the transport.Response?
+	resp, contentType, err := h.call(req)
+
+	// We set this on every response, might be able to remove it for pure
+	// errors, but, it's technically a backwards breaking change.
+	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
+
+	// In non-application errors, we serialize the error on the wire.
+	if err != nil {
+		status := yarpcerrors.FromError(err)
+		writeErrorHeaders(w, status)
+		w.Header().Set("Content-Type", "text/plain; charset=utf8")
+		w.WriteHeader(getHTTPStatusCode(status))
+		_, _ = fmt.Fprintln(w, status.Message())
 		return
 	}
-	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
-		status = yarpcerrors.Newf(yarpcerrors.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
-		responseWriter.AddSystemHeader(ErrorCodeHeader, "internal")
-	} else {
-		responseWriter.AddSystemHeader(ErrorCodeHeader, string(statusCodeText))
+
+	// If there is no response this is a Oneway Request.
+	if resp == nil {
+		w.WriteHeader(http.StatusOK)
+		return
 	}
-	if status.Name() != "" {
-		responseWriter.AddSystemHeader(ErrorNameHeader, status.Name())
+
+	if contentType != "" {
+		w.Header().Set("Content-Type", contentType)
 	}
-	// TODO: would prefer to have error message be on a header so we can
-	// have non-nil responses with errors, discuss
-	_, _ = fmt.Fprintln(responseWriter, status.Message())
-	responseWriter.AddSystemHeader("Content-Type", "text/plain; charset=utf8")
-	httpStatusCode, ok := _codeToStatusCode[status.Code()]
-	if !ok {
-		httpStatusCode = http.StatusInternalServerError
+	applicationHeaders.ToHTTPHeaders(resp.Headers, w.Header())
+
+	// Set the application Status Header
+	if resp.ApplicationError {
+		w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
 	}
-	responseWriter.Close(httpStatusCode)
+	w.WriteHeader(http.StatusOK)
+	writeBody(w, resp.Body)
 }
 
-func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, service string, procedure string) (retErr error) {
+func writeBody(w http.ResponseWriter, resp io.ReadCloser) {
+	if resp == nil {
+		return
+	}
+	_, _ = io.Copy(w, resp) // TODO do something with the error
+	resp.Close()
+}
+
+func writeErrorHeaders(w http.ResponseWriter, status *yarpcerrors.Status) {
+	if statusCodeText, marshalErr := status.Code().MarshalText(); marshalErr != nil {
+		status = yarpcerrors.Newf(yarpcerrors.CodeInternal, "error %s had code %v which is unknown", status.Error(), status.Code())
+		w.Header().Set(ErrorCodeHeader, "internal")
+	} else {
+		w.Header().Set(ErrorCodeHeader, string(statusCodeText))
+	}
+	if status.Name() != "" {
+		w.Header().Set(ErrorNameHeader, status.Name())
+	}
+}
+
+func getHTTPStatusCode(status *yarpcerrors.Status) int {
+	httpStatusCode, ok := _codeToStatusCode[status.Code()]
+	if !ok {
+		return http.StatusInternalServerError
+	}
+	return httpStatusCode
+}
+
+func (h handler) call(req *http.Request) (resp *transport.Response, contentType string, err error) {
 	start := time.Now()
 	defer req.Body.Close()
 	if req.Method != http.MethodPost {
-		return yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
+		return nil, "", yarpcerrors.Newf(yarpcerrors.CodeNotFound, "request method was %s but only %s is allowed", req.Method, http.MethodPost)
 	}
+
+	treq := h.toTransportRequest(req)
+	if err := transport.ValidateRequest(treq); err != nil {
+		return nil, "", errors.WrapHandlerError(err, treq.Service, treq.Procedure)
+	}
+
+	ctx := req.Context()
+	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
+	// parseTTLErr != nil is a problem only if the request is unary.
+
+	defer cancel()
+	ctx, span := h.createSpan(ctx, req, treq, start)
+
+	spec, err := h.router.Choose(ctx, treq)
+	if err != nil {
+		updateSpanWithErr(span, err)
+		return nil, "", errors.WrapHandlerError(err, treq.Service, treq.Procedure)
+	}
+
+	switch spec.Type() {
+	case transport.Unary:
+		defer span.Finish()
+		if parseTTLErr != nil {
+			return nil, "", parseTTLErr
+		}
+
+		if err := transport.ValidateUnaryContext(ctx); err != nil {
+			return nil, "", err
+		}
+		responseWriter := newResponseWriter()
+		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
+		resp = responseWriter.Response()
+	case transport.Oneway:
+		err = handleOnewayRequest(span, treq, spec.Oneway())
+	default:
+		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
+	}
+
+	updateSpanWithErr(span, err)
+	return resp, getContentType(treq.Encoding), errors.WrapHandlerError(err, treq.Service, treq.Procedure)
+}
+
+func (h handler) toTransportRequest(req *http.Request) *transport.Request {
 	treq := &transport.Request{
 		Caller:          popHeader(req.Header, CallerHeader),
-		Service:         service,
-		Procedure:       procedure,
+		Service:         popHeader(req.Header, ServiceHeader),
+		Procedure:       popHeader(req.Header, ProcedureHeader),
 		Encoding:        transport.Encoding(popHeader(req.Header, EncodingHeader)),
 		ShardKey:        popHeader(req.Header, ShardKeyHeader),
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
@@ -100,50 +180,7 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 			treq.Headers = treq.Headers.With(header, value)
 		}
 	}
-	if err := transport.ValidateRequest(treq); err != nil {
-		return err
-	}
-	defer func() {
-		if retErr == nil {
-			if contentType := getContentType(treq.Encoding); contentType != "" {
-				responseWriter.AddSystemHeader("Content-Type", contentType)
-			}
-		}
-	}()
-
-	ctx := req.Context()
-	ctx, cancel, parseTTLErr := parseTTL(ctx, treq, popHeader(req.Header, TTLMSHeader))
-	// parseTTLErr != nil is a problem only if the request is unary.
-	defer cancel()
-	ctx, span := h.createSpan(ctx, req, treq, start)
-
-	spec, err := h.router.Choose(ctx, treq)
-	if err != nil {
-		updateSpanWithErr(span, err)
-		return err
-	}
-
-	switch spec.Type() {
-	case transport.Unary:
-		defer span.Finish()
-		if parseTTLErr != nil {
-			return parseTTLErr
-		}
-
-		if err := transport.ValidateUnaryContext(ctx); err != nil {
-			return err
-		}
-		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
-
-	case transport.Oneway:
-		err = handleOnewayRequest(span, treq, spec.Oneway())
-
-	default:
-		err = yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport http does not handle %s handlers", spec.Type().String())
-	}
-
-	updateSpanWithErr(span, err)
-	return err
+	return treq
 }
 
 func handleOnewayRequest(
@@ -206,41 +243,52 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w      http.ResponseWriter
-	buffer *bytes.Buffer
+	resp   *transport.Response
+	buffer *bufferCloser
 }
 
-func newResponseWriter(w http.ResponseWriter) *responseWriter {
-	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
-	return &responseWriter{w: w}
+func newResponseWriter() *responseWriter {
+	return &responseWriter{
+		resp: &transport.Response{
+			ApplicationError: false,
+			Headers:          transport.NewHeaders(),
+		},
+	}
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {
 	if rw.buffer == nil {
-		rw.buffer = bufferpool.Get()
+		rw.buffer = &bufferCloser{
+			Buffer: bufferpool.Get(),
+		}
 	}
 	return rw.buffer.Write(s)
 }
 
 func (rw *responseWriter) AddHeaders(h transport.Headers) {
-	applicationHeaders.ToHTTPHeaders(h, rw.w.Header())
+	for k, v := range h.Items() {
+		rw.resp.Headers = rw.resp.Headers.With(k, v)
+	}
 }
 
 func (rw *responseWriter) SetApplicationError() {
-	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
+	rw.resp.ApplicationError = true
 }
 
-func (rw *responseWriter) AddSystemHeader(key string, value string) {
-	rw.w.Header().Set(key, value)
-}
-
-func (rw *responseWriter) Close(httpStatusCode int) {
-	rw.w.WriteHeader(httpStatusCode)
+func (rw *responseWriter) Response() *transport.Response {
 	if rw.buffer != nil {
-		// TODO: what to do with error?
-		_, _ = rw.w.Write(rw.buffer.Bytes())
-		bufferpool.Put(rw.buffer)
+		rw.resp.Body = rw.buffer
 	}
+	return rw.resp
+}
+
+type bufferCloser struct {
+	*bytes.Buffer
+}
+
+func (b *bufferCloser) Close() error {
+	bufferpool.Put(b.Buffer)
+	return nil
 }
 
 func getContentType(encoding transport.Encoding) string {
