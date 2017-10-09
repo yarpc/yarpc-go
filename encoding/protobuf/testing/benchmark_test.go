@@ -50,10 +50,14 @@ func BenchmarkIntegrationYARPC(b *testing.B) {
 }
 
 func BenchmarkIntegrationGRPC(b *testing.B) {
-	benchmarkForTransportType(b, testutils.TransportTypeGRPC, func(clients *exampleutil.Clients) error {
-		benchmarkIntegrationGRPC(b, clients.KeyValueGRPCClient, clients.ContextWrapper)
-		return nil
-	})
+	for _, transportType := range []testutils.TransportType{testutils.TransportTypeGRPC, testutils.TransportTypeGRPCHTTP} {
+		b.Run(transportType.String(), func(b *testing.B) {
+			benchmarkForTransportType(b, transportType, func(clients *exampleutil.Clients) error {
+				benchmarkIntegrationGRPC(b, clients.KeyValueGRPCClient, clients.ContextWrapper)
+				return nil
+			})
+		})
+	}
 }
 
 func benchmarkForTransportType(b *testing.B, transportType testutils.TransportType, f func(*exampleutil.Clients) error) {

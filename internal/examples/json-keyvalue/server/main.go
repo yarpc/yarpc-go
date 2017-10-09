@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/yarpc/transport/x/grpc"
+	"go.uber.org/yarpc/transport/x/grpchttp"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -114,6 +115,18 @@ func do() error {
 			return err
 		}
 		inbound = grpc.NewTransport().NewInbound(listener)
+	case "grpchttp-http":
+		listener, err := net.Listen("tcp", "127.0.0.1:25038")
+		if err != nil {
+			return err
+		}
+		inbound = grpchttp.NewInbound(listener)
+	case "grpchttp-grpc":
+		listener, err := net.Listen("tcp", "127.0.0.1:25039")
+		if err != nil {
+			return err
+		}
+		inbound = grpchttp.NewInbound(listener)
 	default:
 		return fmt.Errorf("invalid inbound: %q", *flagInbound)
 	}

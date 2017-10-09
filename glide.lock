@@ -1,5 +1,5 @@
-hash: 354ccfb438e9e95e44b97409c1e6faa2c961475a54b303b921f44347d43df4b6
-updated: 2017-09-30T19:06:39.949809+02:00
+hash: d9bdfa083d27d225705c75d95e588773bce08ce694f7b65e4d7eae81bca80c19
+updated: 2017-10-03T14:44:18.079056+02:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -80,6 +80,8 @@ imports:
   version: e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2
   subpackages:
   - xfs
+- name: github.com/soheilhy/cmux
+  version: bb79a83465015a27a175925ebd155e660f55e9f1
 - name: github.com/stretchr/testify
   version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
@@ -110,7 +112,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/jaeger-lib
-  version: 21a3da6d66fe0e278072676fdc84cd4c9ccb9b67
+  version: 3b2a9ad2a045881ab7a0f81d465be54c8292ee4f
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
@@ -202,7 +204,7 @@ imports:
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 1e559d0a00eef8a9a43151db4665280bd8dd5886
+  version: f676e0f3ac6395ff1a529ae59a6670878a8371a6
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
