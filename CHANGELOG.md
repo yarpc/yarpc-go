@@ -4,7 +4,8 @@ Releases
 v1.19.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Promote `transport/x/grpc` out of experimental status, moving it to
+    `transport/grpc`.
 
 
 v1.18.1 (2017-10-04)

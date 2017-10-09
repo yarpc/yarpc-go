@@ -32,9 +32,9 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/thrift/echo/echoserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/secondserviceserver"
 	"go.uber.org/yarpc/internal/crossdock/thrift/gauntlet/thrifttestserver"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 var dispatcher *yarpc.Dispatcher
