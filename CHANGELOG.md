@@ -4,7 +4,7 @@ Releases
 v1.20.0-dev (unreleased)
 --------------------
 
-- No changes yet.
+-   transport/grpc: Add Chooser function to Outbound for testing.
 
 
 v1.19.0 (2017-10-10)
