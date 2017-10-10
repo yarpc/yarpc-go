@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.20.0-dev (unreleased)
+v1.19.2 (2017-10-10)
 --------------------
 
 -   transport/grpc: Fix deadlock where Peers can never be stopped if their
