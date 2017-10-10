@@ -4,7 +4,8 @@ Releases
 v1.20.0-dev (unreleased)
 --------------------
 
-- No changes yet.
+-   transport/grpc: Fix deadlock where Peers can never be stopped if their
+    corresponding Transport was not started.
 
 
 v1.19.1 (2017-10-10)
