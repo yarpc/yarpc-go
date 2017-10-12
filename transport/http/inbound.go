@@ -51,6 +51,23 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	}
 }
 
+// FallbackHandler specifies an http.Handler that will be executed when
+// the provided accepts function returns false. If accepts returns true,
+// then the request will be executed regularly.
+//
+// This allows existing HTTP services to add YARPC procedures to a shared
+// mux by testing if the request should be routed to YARPC or their existing
+// handler.
+//
+// For example, one might test for the presence of RPC-Encoding to determine if
+// the request should go to YARPC or their existing handler.
+func FallbackHandler(accepts func(req *http.Request) bool, handler http.Handler) InboundOption {
+	return func(i *Inbound) {
+		i.accepts = accepts
+		i.fallback = handler
+	}
+}
+
 // GrabHeaders specifies additional headers that are not prefixed with
 // ApplicationHeaderPrefix that should be propagated to the caller.
 //
@@ -94,6 +111,8 @@ type Inbound struct {
 	tracer      opentracing.Tracer
 	transport   *Transport
 	grabHeaders map[string]struct{}
+	accepts     func(req *http.Request) bool
+	fallback    http.Handler
 
 	once *lifecycle.Once
 }
@@ -136,6 +155,8 @@ func (i *Inbound) start() error {
 		router:      i.router,
 		tracer:      i.tracer,
 		grabHeaders: i.grabHeaders,
+		accepts:     i.accepts,
+		fallback:    i.fallback,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
