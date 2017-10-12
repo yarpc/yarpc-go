@@ -22,6 +22,7 @@ package http_test
 
 import (
 	"fmt"
+	"io"
 	"log"
 	nethttp "net/http"
 	"os"
@@ -82,4 +83,47 @@ func ExampleMux() {
 		log.Fatal(err)
 	}
 	// Output: hello from /health
+}
+
+func ExampleFallbackHandler() {
+	// We test the HTTP request to determine if it's a YARPC request or not.
+	// If accepts returns false, then our fallback handler will be executed.
+	accepts := func(req *nethttp.Request) bool {
+		if req.Header.Get("RPC-Encoding") == "" {
+			return false
+		}
+		return true
+	}
+
+	// This handler would represent some existing HTTP handler
+	handler := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, req *nethttp.Request) {
+		io.WriteString(w, "hello, world")
+	})
+
+	// This inbound will serve YARPC requests when the RPC-Encoding header is present,
+	// else it will fallback to the provided handler.
+	transport := http.NewTransport()
+	inbound := transport.NewInbound(":8888", http.FallbackHandler(accepts, handler))
+
+	// Fire up a dispatcher with the new inbound.
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "server",
+		Inbounds: yarpc.Inbounds{inbound},
+	})
+	if err := dispatcher.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer dispatcher.Stop()
+
+	// Make a non-YARPC request to /
+	res, err := nethttp.Get("http://127.0.0.1:8888/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	if _, err := iopool.Copy(os.Stdout, res.Body); err != nil {
+		log.Fatal(err)
+	}
+	// Output: hello, world
 }
