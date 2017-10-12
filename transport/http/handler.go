@@ -47,9 +47,18 @@ type handler struct {
 	router      transport.Router
 	tracer      opentracing.Tracer
 	grabHeaders map[string]struct{}
+
+	accepts  func(req *http.Request) bool
+	fallback http.Handler
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// if accepts returns false, execute the fallback, if provided
+	if h.fallback != nil && h.accepts != nil && !h.accepts(req) {
+		h.fallback.ServeHTTP(w, req)
+		return
+	}
+
 	responseWriter := newResponseWriter(w)
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)

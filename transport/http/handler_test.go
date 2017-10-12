@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -429,4 +430,34 @@ func TestResponseWriter(t *testing.T) {
 	assert.Equal(t, "bar", recorder.Header().Get("rpc-header-foo"))
 	assert.Equal(t, "123", recorder.Header().Get("rpc-header-shard-key"))
 	assert.Equal(t, "hello", recorder.Body.String())
+}
+
+func TestFallback(t *testing.T) {
+	// if RPC-Encoding is not set, fallback
+	h := handler{
+		accepts: func(req *http.Request) bool {
+			if req.Header.Get("RPC-Encoding") == "" {
+				return false
+			}
+			return true
+		},
+		fallback: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			body, err := ioutil.ReadAll(req.Body)
+			require.NoError(t, err)
+			io.WriteString(w, fmt.Sprintf("fell back: %s", body))
+		}),
+	}
+
+	// don't send RPC-Encoding to fallback
+	headers := make(http.Header)
+	// headers.Set(EncodingHeader, "raw")
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, &http.Request{
+		Method: "POST",
+		Header: headers,
+		Body:   ioutil.NopCloser(bytes.NewReader([]byte("Nyuck Nyuck"))),
+	})
+
+	assert.Equal(t, "fell back: Nyuck Nyuck", rec.Body.String(), "Expected fallback handler to be executed")
 }
