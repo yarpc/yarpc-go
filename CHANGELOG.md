@@ -4,8 +4,8 @@ Releases
 v1.20.0-dev (unreleased)
 --------------------
 
-- No changes yet.
-
+-   http: Add `http.Interceptor` option to inbounds, which allows intercepting
+    incoming HTTP requests for that inbound.
 
 v1.19.2 (2017-10-10)
 --------------------

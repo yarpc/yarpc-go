@@ -22,6 +22,7 @@ package http_test
 
 import (
 	"fmt"
+	"io"
 	"log"
 	nethttp "net/http"
 	"os"
@@ -82,4 +83,53 @@ func ExampleMux() {
 		log.Fatal(err)
 	}
 	// Output: hello from /health
+}
+
+func ExampleInterceptor() {
+	// import nethttp "net/http"
+
+	// We create an interceptor which executes an override http.Handler if
+	// the HTTP request is not a well-formed YARPC request.
+	override := func(overrideHandler nethttp.Handler) http.InboundOption {
+		return http.Interceptor(func(transportHandler nethttp.Handler) nethttp.Handler {
+			return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+				if r.Header.Get("RPC-Encoding") == "" {
+					overrideHandler.ServeHTTP(w, r)
+				} else {
+					transportHandler.ServeHTTP(w, r)
+				}
+			})
+		})
+	}
+
+	// This handler will be executed for non-YARPC HTTP requests.
+	handler := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, req *nethttp.Request) {
+		io.WriteString(w, "hello, world!")
+	})
+
+	// We create the inbound, attaching the override interceptor.
+	transport := http.NewTransport()
+	inbound := transport.NewInbound(":8889", override(handler))
+
+	// Fire up a dispatcher with the new inbound.
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "server",
+		Inbounds: yarpc.Inbounds{inbound},
+	})
+	if err := dispatcher.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer dispatcher.Stop()
+
+	// Make a non-YARPC request to the / endpoint.
+	res, err := nethttp.Get("http://127.0.0.1:8889/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	if _, err := iopool.Copy(os.Stdout, res.Body); err != nil {
+		log.Fatal(err)
+	}
+	// Output: hello, world!
 }

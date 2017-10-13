@@ -51,6 +51,17 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	}
 }
 
+// Interceptor specifies a function which can wrap the YARPC handler. If
+// provided, this function will be called with an http.Handler which will
+// route requests through YARPC. The http.Handler returned by this function
+// may delegate requests to the provided YARPC handler to route them through
+// YARPC.
+func Interceptor(interceptor func(yarpcHandler http.Handler) http.Handler) InboundOption {
+	return func(i *Inbound) {
+		i.interceptor = interceptor
+	}
+}
+
 // GrabHeaders specifies additional headers that are not prefixed with
 // ApplicationHeaderPrefix that should be propagated to the caller.
 //
@@ -94,6 +105,7 @@ type Inbound struct {
 	tracer      opentracing.Tracer
 	transport   *Transport
 	grabHeaders map[string]struct{}
+	interceptor func(http.Handler) http.Handler
 
 	once *lifecycle.Once
 }
@@ -140,6 +152,10 @@ func (i *Inbound) start() error {
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
 		httpHandler = i.mux
+	}
+
+	if i.interceptor != nil {
+		httpHandler = i.interceptor(httpHandler)
 	}
 
 	i.server = intnet.NewHTTPServer(&http.Server{
