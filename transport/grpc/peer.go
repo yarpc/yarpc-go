@@ -69,8 +69,10 @@ func newPeer(address string, t *Transport) (*grpcPeer, error) {
 }
 
 func (p *grpcPeer) monitor() {
-	// wait for start so we can be certain that we have a channel
-	<-p.t.once.Started()
+	if !p.monitorStart() {
+		p.monitorStop(nil)
+		return
+	}
 
 	var attempts uint
 	backoff := p.t.options.backoffStrategy.Backoff()
@@ -107,6 +109,19 @@ func (p *grpcPeer) monitor() {
 		}
 		changed = connectivityState != newConnectivityState
 		connectivityState = newConnectivityState
+	}
+}
+
+// return true if the transport is started
+// return false is monitor was stopped in the meantime
+// this should only be called by monitor()
+func (p *grpcPeer) monitorStart() bool {
+	select {
+	// wait for start so we can be certain that we have a channel
+	case <-p.t.once.Started():
+		return true
+	case <-p.stoppingC:
+		return false
 	}
 }
 

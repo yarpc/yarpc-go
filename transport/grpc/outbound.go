@@ -90,7 +90,7 @@ func (o *Outbound) Transports() []transport.Transport {
 	return []transport.Transport{o.t}
 }
 
-// Chooser returns the associated peer.Chooser.
+// Chooser returns the peer.Chooser associated with this Outbound.
 func (o *Outbound) Chooser() peer.Chooser {
 	return o.peerChooser
 }

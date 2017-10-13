@@ -33,9 +33,9 @@ import (
 	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/yarpctest"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/http"
 	ytchannel "go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/transport/x/grpc"
 )
 
 type echoReqBody struct{}
