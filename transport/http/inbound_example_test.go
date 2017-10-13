@@ -93,7 +93,7 @@ func ExampleInterceptor() {
 	})
 
 	// Create an interceptor that falls back to a handler when the HTTP request is
-	// missin the RPC-Encoding header.
+	// missing the RPC-Encoding header.
 	intercept := func(transportHandler nethttp.Handler) nethttp.Handler {
 		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 			if r.Header.Get(http.EncodingHeader) == "" {
