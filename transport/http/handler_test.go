@@ -432,23 +432,25 @@ func TestResponseWriter(t *testing.T) {
 	assert.Equal(t, "hello", recorder.Body.String())
 }
 
-func TestFallback(t *testing.T) {
-	// if RPC-Encoding is not set, fallback
+func TestOverride(t *testing.T) {
+	// if RPC-Encoding is not set, override
 	h := handler{
-		accepts: func(req *http.Request) bool {
-			if req.Header.Get("RPC-Encoding") == "" {
+		override: &override{
+			check: func(req *http.Request) bool {
+				if req.Header.Get("RPC-Encoding") == "" {
+					return true
+				}
 				return false
-			}
-			return true
+			},
+			handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				body, err := ioutil.ReadAll(req.Body)
+				require.NoError(t, err)
+				io.WriteString(w, fmt.Sprintf("fell back: %s", body))
+			}),
 		},
-		fallback: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			body, err := ioutil.ReadAll(req.Body)
-			require.NoError(t, err)
-			io.WriteString(w, fmt.Sprintf("fell back: %s", body))
-		}),
 	}
 
-	// don't send RPC-Encoding to fallback
+	// don't send RPC-Encoding to override
 	headers := make(http.Header)
 	// headers.Set(EncodingHeader, "raw")
 

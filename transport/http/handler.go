@@ -47,15 +47,18 @@ type handler struct {
 	router      transport.Router
 	tracer      opentracing.Tracer
 	grabHeaders map[string]struct{}
+	override    *override
+}
 
-	accepts  func(req *http.Request) bool
-	fallback http.Handler
+type override struct {
+	check   func(req *http.Request) bool
+	handler http.Handler
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// if accepts returns false, execute the fallback, if provided
-	if h.fallback != nil && h.accepts != nil && !h.accepts(req) {
-		h.fallback.ServeHTTP(w, req)
+	// if override is provided and check returns true, execute override handler
+	if h.override != nil && h.override.check(req) {
+		h.override.handler.ServeHTTP(w, req)
 		return
 	}
 

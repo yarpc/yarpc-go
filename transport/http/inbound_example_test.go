@@ -85,25 +85,25 @@ func ExampleMux() {
 	// Output: hello from /health
 }
 
-func ExampleFallbackHandler() {
+func ExampleOverride() {
 	// We test the HTTP request to determine if it's a YARPC request or not.
-	// If accepts returns false, then our fallback handler will be executed.
-	accepts := func(req *nethttp.Request) bool {
+	// If check returns true, then our override handler will be executed.
+	check := func(req *nethttp.Request) bool {
 		if req.Header.Get("RPC-Encoding") == "" {
 			return false
 		}
 		return true
 	}
 
-	// This handler would represent some existing HTTP handler
+	// This handler would represent some existing HTTP handler.
 	handler := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, req *nethttp.Request) {
 		io.WriteString(w, "hello, world")
 	})
 
 	// This inbound will serve YARPC requests when the RPC-Encoding header is present,
-	// else it will fallback to the provided handler.
+	// else it will execute the override handler.
 	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8888", http.FallbackHandler(accepts, handler))
+	inbound := transport.NewInbound(":8888", http.Override(check, handler))
 
 	// Fire up a dispatcher with the new inbound.
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
