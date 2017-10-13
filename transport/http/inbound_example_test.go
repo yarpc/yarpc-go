@@ -88,28 +88,27 @@ func ExampleMux() {
 func ExampleInterceptor() {
 	// import nethttp "net/http"
 
-	// We create an interceptor which executes an override http.Handler if
-	// the HTTP request is not a well-formed YARPC request.
-	override := func(overrideHandler nethttp.Handler) http.InboundOption {
-		return http.Interceptor(func(transportHandler nethttp.Handler) nethttp.Handler {
-			return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
-				if r.Header.Get("RPC-Encoding") == "" {
-					overrideHandler.ServeHTTP(w, r)
-				} else {
-					transportHandler.ServeHTTP(w, r)
-				}
-			})
-		})
-	}
-
-	// This handler will be executed for non-YARPC HTTP requests.
-	handler := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, req *nethttp.Request) {
+	// Given a fallback http.Handler
+	fallback := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		io.WriteString(w, "hello, world!")
 	})
 
-	// We create the inbound, attaching the override interceptor.
+	// Create an interceptor that falls back to a handler when the HTTP request is
+	// missin the RPC-Encoding header.
+	intercept := func(transportHandler nethttp.Handler) nethttp.Handler {
+		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+			if r.Header.Get(http.EncodingHeader) == "" {
+				// Not a YARPC request, use fallback handler.
+				fallback.ServeHTTP(w, r)
+			} else {
+				transportHandler.ServeHTTP(w, r)
+			}
+		})
+	}
+
+	// Create a new inbound, attaching the interceptor
 	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8889", override(handler))
+	inbound := transport.NewInbound(":8889", http.Interceptor(intercept))
 
 	// Fire up a dispatcher with the new inbound.
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
