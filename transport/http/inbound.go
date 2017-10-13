@@ -51,10 +51,12 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	}
 }
 
-// Interceptor specifies a func that takes the transport http.Handler and
-// produces an http.Handler. This can be used to create custom behavior
-// when inbound HTTP requests are recieved.
-func Interceptor(interceptor func(http.Handler) http.Handler) InboundOption {
+// Interceptor specifies a function which can wrap the YARPC handler. If
+// provided, this function will be called with an http.Handler which will
+// route requests through YARPC. The http.Handler returned by this function
+// may delegate requests to the provided YARPC handler to route them through
+// YARPC.
+func Interceptor(interceptor func(yarpcHandler http.Handler) http.Handler) InboundOption {
 	return func(i *Inbound) {
 		i.interceptor = interceptor
 	}
