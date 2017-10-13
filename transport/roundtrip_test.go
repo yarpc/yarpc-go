@@ -37,9 +37,9 @@ import (
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/http"
 	tch "go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/yarpc/transport/x/grpc"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 

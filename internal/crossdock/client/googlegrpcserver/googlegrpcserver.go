@@ -30,7 +30,7 @@ import (
 	"go.uber.org/yarpc/internal/crossdock/client/params"
 	"go.uber.org/yarpc/internal/crossdock/client/random"
 	"go.uber.org/yarpc/internal/crossdock/crossdockpb"
-	"go.uber.org/yarpc/transport/x/grpc"
+	"go.uber.org/yarpc/transport/grpc"
 )
 
 // Run tests a yarpc call to the grpc-go server.

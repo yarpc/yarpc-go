@@ -1,10 +1,36 @@
 Releases
 ========
 
-v1.19.0-dev (unreleased)
+v1.20.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+- No changes yet.
+
+
+v1.19.2 (2017-10-10)
+--------------------
+
+-   transport/grpc: Fix deadlock where Peers can never be stopped if their
+    corresponding Transport was not started.
+
+
+v1.19.1 (2017-10-10)
+--------------------
+
+-   transport/grpc: Add Chooser function to Outbound for testing.
+
+
+v1.19.0 (2017-10-10)
+--------------------
+
+-   Promote `transport/x/grpc` out of experimental status, moving it to
+    `transport/grpc`.
+
+
+v1.18.1 (2017-10-04)
+--------------------
+
+-   Remove staticcheck from glide.yaml.
 
 
 v1.18.0 (2017-09-26)
