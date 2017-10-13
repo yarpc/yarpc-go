@@ -90,9 +90,9 @@ func ExampleOverride() {
 	// If check returns true, then our override handler will be executed.
 	check := func(req *nethttp.Request) bool {
 		if req.Header.Get("RPC-Encoding") == "" {
-			return false
+			return true
 		}
-		return true
+		return false
 	}
 
 	// This handler would represent some existing HTTP handler.
@@ -103,7 +103,7 @@ func ExampleOverride() {
 	// This inbound will serve YARPC requests when the RPC-Encoding header is present,
 	// else it will execute the override handler.
 	transport := http.NewTransport()
-	inbound := transport.NewInbound(":8888", http.Override(check, handler))
+	inbound := transport.NewInbound(":8889", http.Override(check, handler))
 
 	// Fire up a dispatcher with the new inbound.
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
@@ -116,7 +116,7 @@ func ExampleOverride() {
 	defer dispatcher.Stop()
 
 	// Make a non-YARPC request to /
-	res, err := nethttp.Get("http://127.0.0.1:8888/")
+	res, err := nethttp.Get("http://127.0.0.1:8889/")
 	if err != nil {
 		log.Fatal(err)
 	}
