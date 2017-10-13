@@ -4,7 +4,9 @@ Releases
 v1.20.0-dev (unreleased)
 --------------------
 
-- No changes yet.
+-  http: Override the HTTP transport's handler using the `http.Override`
+   option, which allows a provided `http.Handler` to be executed instead of
+   the transport's handler, when the supplied check function returns true.
 
 
 v1.19.2 (2017-10-10)

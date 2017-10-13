@@ -51,6 +51,22 @@ func Mux(pattern string, mux *http.ServeMux) InboundOption {
 	}
 }
 
+// Override specifies an http.Handler that will be executed when
+// the provided check function returns true. If check returns false,
+// then the request will be executed regularly.
+//
+// This allows existing HTTP services to add YARPC procedures to a shared
+// mux by testing if the request should be routed to YARPC or their existing
+// handler.
+//
+// For example, one might test for the presence of RPC-Encoding to determine if
+// the request should go to YARPC or their existing handler.
+func Override(check func(req *http.Request) bool, handler http.Handler) InboundOption {
+	return func(i *Inbound) {
+		i.override = &override{check: check, handler: handler}
+	}
+}
+
 // GrabHeaders specifies additional headers that are not prefixed with
 // ApplicationHeaderPrefix that should be propagated to the caller.
 //
@@ -94,6 +110,7 @@ type Inbound struct {
 	tracer      opentracing.Tracer
 	transport   *Transport
 	grabHeaders map[string]struct{}
+	override    *override
 
 	once *lifecycle.Once
 }
@@ -132,10 +149,16 @@ func (i *Inbound) start() error {
 		}
 	}
 
+	// error if override option provided, but check or handler is nil
+	if i.override != nil && (i.override.check == nil || i.override.handler == nil) {
+		return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "http.Override check and handler must not be nil")
+	}
+
 	var httpHandler http.Handler = handler{
 		router:      i.router,
 		tracer:      i.tracer,
 		grabHeaders: i.grabHeaders,
+		override:    i.override,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
