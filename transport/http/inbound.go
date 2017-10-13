@@ -149,6 +149,11 @@ func (i *Inbound) start() error {
 		}
 	}
 
+	// error if override option provided, but check or handler is nil
+	if i.override != nil && (i.override.check == nil || i.override.handler == nil) {
+		return yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "http.Override check and handler must not be nil")
+	}
+
 	var httpHandler http.Handler = handler{
 		router:      i.router,
 		tracer:      i.tracer,

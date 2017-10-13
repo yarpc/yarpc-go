@@ -190,3 +190,15 @@ func TestInboundMux(t *testing.T) {
 		}
 	}
 }
+
+func TestInboundOverrideErr(t *testing.T) {
+	transport := NewTransport()
+
+	// use the override option with nil params
+	inbound := transport.NewInbound(":8888", Override(nil, nil))
+	inbound.SetRouter(new(transporttest.MockRouter))
+
+	err := inbound.start()
+	require.NotNil(t, err, "Expected error")
+	assert.Equal(t, "code:invalid-argument message:http.Override check and handler must not be nil", err.Error())
+}
