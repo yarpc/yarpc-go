@@ -69,6 +69,10 @@ const (
 	// ErrorNameHeader contains the name of a user-defined error.
 	ErrorNameHeader = "Rpc-Error-Name"
 
+	// ErrorMessageHeader contains the message of an error, if the
+	// BothResponseError feature is enabled.
+	ErrorMessageHeader = "Rpc-Error-Message"
+
 	// AcceptsBothResponseErrorHeader says that the AcceptsBothResponseError
 	// feature is supported on the client. If any non-empty value is set,
 	// this indicates true.

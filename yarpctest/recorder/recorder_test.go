@@ -319,7 +319,7 @@ request:
   body: SGVsbG8=
 response:
   headers: {}
-  bothresponseerror: "0"
+  bothresponseerror: "1"
   body: SGVsbG8sIFdvcmxk
 `
 

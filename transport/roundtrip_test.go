@@ -128,7 +128,7 @@ func (ht httpTransport) WithRouterOneway(r transport.Router, f func(transport.On
 }
 
 func (ht httpTransport) AcceptsBothResponseError() bool {
-	return false
+	return true
 }
 
 // tchannelTransport implements a roundTripTransport for TChannel.
@@ -356,7 +356,10 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 				Procedure: testProcedureOneway,
 				Encoding:  raw.Encoding,
 				Headers:   tt.requestHeaders,
-				Body:      bytes.NewReader([]byte(tt.requestBody)),
+				Features: transport.RequestFeatures{
+					AcceptsBothResponseError: true,
+				},
+				Body: bytes.NewReader([]byte(tt.requestBody)),
 			})
 
 			handlerDone := make(chan struct{})

@@ -67,9 +67,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if status.Name() != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, status.Name())
 	}
-	// TODO: would prefer to have error message be on a header so we can
-	// have non-nil responses with errors, discuss
-	_, _ = fmt.Fprintln(responseWriter, status.Message())
+	if responseWriter.features.BothResponseError {
+		responseWriter.AddSystemHeader(ErrorMessageHeader, status.Message())
+	} else {
+		_, _ = fmt.Fprintln(responseWriter, status.Message())
+	}
 	responseWriter.AddSystemHeader("Content-Type", "text/plain; charset=utf8")
 	httpStatusCode, ok := _codeToStatusCode[status.Code()]
 	if !ok {
