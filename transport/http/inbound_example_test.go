@@ -102,7 +102,7 @@ func ExampleInterceptor() {
 		})
 	}
 
-	// This handler represents some existing http.Handler.
+	// This handler will be executed for non-YARPC HTTP requests.
 	handler := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, req *nethttp.Request) {
 		io.WriteString(w, "hello, world!")
 	})

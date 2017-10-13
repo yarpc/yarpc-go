@@ -4,7 +4,8 @@ Releases
 v1.20.0-dev (unreleased)
 --------------------
 
-- No changes yet.
+-   Added the `http.Interceptor` inbound option which allows the
+    behavior of incoming HTTP requests to be customized.
 
 
 v1.19.2 (2017-10-10)
