@@ -53,6 +53,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)
+	bothResponseError := fromAcceptValue(popHeader(req.Header, AcceptsBothResponseErrorHeader))
 	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
@@ -67,9 +68,13 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if status.Name() != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, status.Name())
 	}
-	// TODO: would prefer to have error message be on a header so we can
-	// have non-nil responses with errors, discuss
-	_, _ = fmt.Fprintln(responseWriter, status.Message())
+	if bothResponseError {
+		responseWriter.AddSystemHeader(BothResponseErrorHeader, AcceptTrue)
+		responseWriter.AddSystemHeader(ErrorMessageHeader, status.Message())
+	} else {
+		responseWriter.ResetBuffer()
+		_, _ = fmt.Fprintln(responseWriter, status.Message())
+	}
 	responseWriter.AddSystemHeader("Content-Type", "text/plain; charset=utf8")
 	httpStatusCode, ok := _codeToStatusCode[status.Code()]
 	if !ok {
@@ -211,7 +216,6 @@ type responseWriter struct {
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
-	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
 	return &responseWriter{w: w}
 }
 
@@ -232,6 +236,12 @@ func (rw *responseWriter) SetApplicationError() {
 
 func (rw *responseWriter) AddSystemHeader(key string, value string) {
 	rw.w.Header().Set(key, value)
+}
+
+func (rw *responseWriter) ResetBuffer() {
+	if rw.buffer != nil {
+		rw.buffer.Reset()
+	}
 }
 
 func (rw *responseWriter) Close(httpStatusCode int) {

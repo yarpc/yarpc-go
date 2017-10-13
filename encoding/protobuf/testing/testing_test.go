@@ -70,11 +70,13 @@ func testIntegration(
 	sinkYARPCServer *example.SinkYARPCServer,
 ) {
 	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
-	_, err := getValue(clients.KeyValueYARPCClient, "foo")
+	err := setValue(clients.KeyValueYARPCClient, "foo", "bar")
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"), err)
 	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
-	_, err = getValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo")
+	err = setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "bar")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
+
+	assert.NoError(t, setValue(clients.KeyValueYARPCClient, "foo", ""))
 
 	_, err = getValue(clients.KeyValueYARPCClient, "foo")
 	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeNotFound, "foo"), err)
@@ -91,6 +93,11 @@ func testIntegration(
 	assert.NoError(t, setValue(clients.KeyValueYARPCJSONClient, "foo", "baz"))
 	value, err = getValue(clients.KeyValueYARPCJSONClient, "foo")
 	assert.NoError(t, err)
+	assert.Equal(t, "baz", value)
+
+	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "baz"))
+	value, err = getValue(clients.KeyValueYARPCClient, "foo")
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "baz"), err)
 	assert.Equal(t, "baz", value)
 
 	assert.NoError(t, setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "barGRPC"))
@@ -124,10 +131,10 @@ func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, opt
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueYARPCClient.GetValue(ctx, &examplepb.GetValueRequest{key}, options...)
-	if err != nil {
-		return "", err
+	if response != nil {
+		return response.Value, err
 	}
-	return response.Value, nil
+	return "", err
 }
 
 func setValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, value string, options ...yarpc.CallOption) error {
@@ -141,10 +148,10 @@ func getValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *g
 	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
 	defer cancel()
 	response, err := keyValueGRPCClient.GetValue(contextWrapper.Wrap(ctx), &examplepb.GetValueRequest{key})
-	if err != nil {
-		return "", err
+	if response != nil {
+		return response.Value, err
 	}
-	return response.Value, nil
+	return "", err
 }
 
 func setValueGRPC(keyValueGRPCClient examplepb.KeyValueClient, contextWrapper *grpcctx.ContextWrapper, key string, value string) error {
