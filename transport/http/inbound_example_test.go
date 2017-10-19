@@ -22,12 +22,12 @@ package http_test
 
 import (
 	"fmt"
+	"io"
 	"log"
 	nethttp "net/http"
 	"os"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/internal/iopool"
 	"go.uber.org/yarpc/transport/http"
 )
 
@@ -78,8 +78,56 @@ func ExampleMux() {
 	}
 	defer res.Body.Close()
 
-	if _, err := iopool.Copy(os.Stdout, res.Body); err != nil {
+	if _, err := io.Copy(os.Stdout, res.Body); err != nil {
 		log.Fatal(err)
 	}
 	// Output: hello from /health
+}
+
+func ExampleInterceptor() {
+	// import nethttp "net/http"
+
+	// Given a fallback http.Handler
+	fallback := nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		io.WriteString(w, "hello, world!")
+	})
+
+	// Create an interceptor that falls back to a handler when the HTTP request is
+	// missing the RPC-Encoding header.
+	intercept := func(transportHandler nethttp.Handler) nethttp.Handler {
+		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+			if r.Header.Get(http.EncodingHeader) == "" {
+				// Not a YARPC request, use fallback handler.
+				fallback.ServeHTTP(w, r)
+			} else {
+				transportHandler.ServeHTTP(w, r)
+			}
+		})
+	}
+
+	// Create a new inbound, attaching the interceptor
+	transport := http.NewTransport()
+	inbound := transport.NewInbound(":8889", http.Interceptor(intercept))
+
+	// Fire up a dispatcher with the new inbound.
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "server",
+		Inbounds: yarpc.Inbounds{inbound},
+	})
+	if err := dispatcher.Start(); err != nil {
+		log.Fatal(err)
+	}
+	defer dispatcher.Stop()
+
+	// Make a non-YARPC request to the / endpoint.
+	res, err := nethttp.Get("http://127.0.0.1:8889/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	if _, err := io.Copy(os.Stdout, res.Body); err != nil {
+		log.Fatal(err)
+	}
+	// Output: hello, world!
 }
