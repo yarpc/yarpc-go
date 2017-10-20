@@ -67,20 +67,21 @@ func (c *client) Call(
 		return nil, err
 	}
 	transportResponse, appErr := c.clientConfig.GetUnaryOutbound().Call(ctx, transportRequest)
+	if transportResponse == nil {
+		return nil, appErr
+	}
+	if transportResponse.Body != nil {
+		// thrift is not checking the error, should be consistent
+		defer transportResponse.Body.Close()
+	}
+	if _, err := call.ReadFromResponse(ctx, transportResponse); err != nil {
+		return nil, err
+	}
 	var response proto.Message
-	if transportResponse != nil {
-		if transportResponse.Body != nil {
-			// thrift is not checking the error, should be consistent
-			defer transportResponse.Body.Close()
-		}
-		if _, err := call.ReadFromResponse(ctx, transportResponse); err != nil {
-			return nil, err
-		}
-		if transportResponse.Body != nil {
-			response = newResponse()
-			if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response); err != nil {
-				return nil, errors.ResponseBodyDecodeError(transportRequest, err)
-			}
+	if transportResponse.Body != nil {
+		response = newResponse()
+		if err := unmarshal(transportRequest.Encoding, transportResponse.Body, response); err != nil {
+			return nil, errors.ResponseBodyDecodeError(transportRequest, err)
 		}
 	}
 	return response, appErr

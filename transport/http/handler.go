@@ -216,6 +216,7 @@ type responseWriter struct {
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
+	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
 	return &responseWriter{w: w}
 }
 

@@ -288,12 +288,12 @@ func (o *Outbound) callWithPeer(
 
 	span.SetTag("http.status_code", response.StatusCode)
 
-	bothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 		Body:             response.Body,
 		ApplicationError: fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader)),
 	}
+	bothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
 	if bothResponseError {
 		if response.StatusCode >= 300 {
 			return tres, getYARPCErrorFromResponse(response, true)
