@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -34,6 +35,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
@@ -188,5 +190,58 @@ func TestInboundMux(t *testing.T) {
 		if assert.NoError(t, err) {
 			assert.Empty(t, s)
 		}
+	}
+}
+
+func TestMuxWithInterceptor(t *testing.T) {
+	tests := []struct {
+		path string
+		want string
+	}{
+		{
+			path: "/health",
+			want: "OK",
+		},
+		{
+			path: "/",
+			want: "intercepted",
+		},
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "OK")
+	})
+	intercept := func(transportHandler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			io.WriteString(w, "intercepted")
+		})
+	}
+
+	transport := NewTransport()
+	inbound := transport.NewInbound("127.0.0.1:0", Mux("/", mux), Interceptor(intercept))
+	inbound.SetRouter(new(transporttest.MockRouter))
+	require.NoError(t, inbound.Start(), "Failed to start inbound")
+	defer inbound.Stop()
+
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
+		Name:     "server",
+		Inbounds: yarpc.Inbounds{inbound},
+	})
+	require.NoError(t, dispatcher.Start(), "Failed to start dispatcher")
+	defer dispatcher.Stop()
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+
+			url := fmt.Sprintf("http://%v%v", inbound.Addr(), tt.path)
+			resp, err := http.Get(url)
+			require.NoError(t, err, "GET failed")
+			defer resp.Body.Close()
+
+			body, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err, "Failed to read body")
+			assert.Equal(t, tt.want, string(body))
+		})
 	}
 }

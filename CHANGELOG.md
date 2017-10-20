@@ -1,11 +1,10 @@
 Releases
 ========
 
-v1.21.0-dev (unreleased)
+v1.20.1 (2017-10-20)
 --------------------
 
-- No changes yet.
-
+-   http: Fix `http.Interceptor` ignoreing `http.Mux`.
 
 v1.20.0 (2017-10-16)
 --------------------
