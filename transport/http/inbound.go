@@ -82,11 +82,12 @@ func GrabHeaders(headers ...string) InboundOption {
 // sharing this transport.
 func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 	i := &Inbound{
-		once:        lifecycle.NewOnce(),
-		addr:        addr,
-		tracer:      t.tracer,
-		transport:   t,
-		grabHeaders: make(map[string]struct{}),
+		once:              lifecycle.NewOnce(),
+		addr:              addr,
+		tracer:            t.tracer,
+		transport:         t,
+		grabHeaders:       make(map[string]struct{}),
+		bothResponseError: true,
 	}
 	for _, opt := range opts {
 		opt(i)
@@ -108,6 +109,9 @@ type Inbound struct {
 	interceptor func(http.Handler) http.Handler
 
 	once *lifecycle.Once
+
+	// should only be false in testing
+	bothResponseError bool
 }
 
 // Tracer configures a tracer on this inbound.
@@ -145,9 +149,10 @@ func (i *Inbound) start() error {
 	}
 
 	var httpHandler http.Handler = handler{
-		router:      i.router,
-		tracer:      i.tracer,
-		grabHeaders: i.grabHeaders,
+		router:            i.router,
+		tracer:            i.tracer,
+		grabHeaders:       i.grabHeaders,
+		bothResponseError: i.bothResponseError,
 	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)

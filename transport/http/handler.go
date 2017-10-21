@@ -44,9 +44,10 @@ func popHeader(h http.Header, n string) string {
 
 // handler adapts a transport.Handler into a handler for net/http.
 type handler struct {
-	router      transport.Router
-	tracer      opentracing.Tracer
-	grabHeaders map[string]struct{}
+	router            transport.Router
+	tracer            opentracing.Tracer
+	grabHeaders       map[string]struct{}
+	bothResponseError bool
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -68,7 +69,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if status.Name() != "" {
 		responseWriter.AddSystemHeader(ErrorNameHeader, status.Name())
 	}
-	if bothResponseError {
+	if bothResponseError && h.bothResponseError {
 		responseWriter.AddSystemHeader(BothResponseErrorHeader, AcceptTrue)
 		responseWriter.AddSystemHeader(ErrorMessageHeader, status.Message())
 	} else {

@@ -98,11 +98,12 @@ func AddHeader(key, value string) OutboundOption {
 // The concrete peer type is private and intrinsic to the HTTP transport.
 func (t *Transport) NewOutbound(chooser peer.Chooser, opts ...OutboundOption) *Outbound {
 	o := &Outbound{
-		once:        lifecycle.NewOnce(),
-		chooser:     chooser,
-		urlTemplate: defaultURLTemplate,
-		tracer:      t.tracer,
-		transport:   t,
+		once:              lifecycle.NewOnce(),
+		chooser:           chooser,
+		urlTemplate:       defaultURLTemplate,
+		tracer:            t.tracer,
+		transport:         t,
+		bothResponseError: true,
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -157,6 +158,9 @@ type Outbound struct {
 	headers http.Header
 
 	once *lifecycle.Once
+
+	// should only be false in testing
+	bothResponseError bool
 }
 
 // setURLTemplate configures an alternate URL template.
@@ -294,7 +298,7 @@ func (o *Outbound) callWithPeer(
 		ApplicationError: fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader)),
 	}
 	bothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
-	if bothResponseError {
+	if bothResponseError && o.bothResponseError {
 		if response.StatusCode >= 300 {
 			return tres, getYARPCErrorFromResponse(response, true)
 		}
@@ -390,7 +394,9 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 		req.Header.Set(EncodingHeader, encoding)
 	}
 
-	req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
+	if o.bothResponseError {
+		req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
+	}
 
 	return req
 }
