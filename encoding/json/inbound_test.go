@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"reflect"
 	"testing"
@@ -136,6 +137,34 @@ func TestHandleSuccessWithResponseHeaders(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, transport.NewHeaders().With("foo", "bar"), resw.Headers)
+}
+
+func TestHandleBothResponseError(t *testing.T) {
+	h := func(ctx context.Context, body *simpleRequest) (*simpleResponse, error) {
+		assert.Equal(t, "simpleCall", yarpc.CallFromContext(ctx).Procedure())
+		assert.Equal(t, "foo", body.Name)
+		assert.Equal(t, map[string]int32{"bar": 42}, body.Attributes)
+
+		return &simpleResponse{Success: true}, errors.New("bar")
+	}
+
+	handler := jsonHandler{
+		reader:  structReader{reflect.TypeOf(simpleRequest{})},
+		handler: reflect.ValueOf(h),
+	}
+
+	resw := new(transporttest.FakeResponseWriter)
+	err := handler.Handle(context.Background(), &transport.Request{
+		Procedure: "simpleCall",
+		Encoding:  "json",
+		Body:      jsonBody(`{"name": "foo", "attributes": {"bar": 42}}`),
+	}, resw)
+	require.Equal(t, errors.New("bar"), err)
+
+	var response simpleResponse
+	require.NoError(t, json.Unmarshal(resw.Body.Bytes(), &response))
+
+	assert.Equal(t, simpleResponse{Success: true}, response)
 }
 
 func jsonBody(s string) io.Reader {
