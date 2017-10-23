@@ -22,20 +22,92 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/json"
 	"go.uber.org/yarpc/internal/clientconfig"
+	pkgerrors "go.uber.org/yarpc/pkg/errors"
 )
 
 func TestBothResponseError(t *testing.T) {
-	doWithTestEnv(t, testEnvOptions{}, func(t *testing.T, testEnv *testEnv) {
+	tests := []struct {
+		inboundBothResponseError  bool
+		outboundBothResponseError bool
+	}{
+		{
+			inboundBothResponseError:  false,
+			outboundBothResponseError: false,
+		},
+		{
+			inboundBothResponseError:  false,
+			outboundBothResponseError: true,
+		},
+		{
+			inboundBothResponseError:  true,
+			outboundBothResponseError: false,
+		},
+		{
+			inboundBothResponseError:  true,
+			outboundBothResponseError: true,
+		},
+	}
 
-	})
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("inbound(%v)-outbound(%v)", tt.inboundBothResponseError, tt.outboundBothResponseError), func(t *testing.T) {
+			doWithTestEnv(t, testEnvOptions{
+				Procedures: json.Procedure("testFoo", testFooHandler),
+				InboundOptions: []InboundOption{
+					func(i *Inbound) {
+						i.bothResponseError = tt.inboundBothResponseError
+					},
+				},
+				OutboundOptions: []OutboundOption{
+					func(o *Outbound) {
+						o.bothResponseError = tt.outboundBothResponseError
+					},
+				},
+			}, func(t *testing.T, testEnv *testEnv) {
+				client := json.New(testEnv.ClientConfig)
+				var response testFooResponse
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+				err := client.Call(ctx, "testFoo", &testFooRequest{One: "one", Error: "bar"}, &response)
+
+				assert.Equal(t, pkgerrors.WrapHandlerError(errors.New("bar"), "example", "testFoo"), err)
+				if tt.inboundBothResponseError && tt.outboundBothResponseError {
+					assert.Equal(t, "one", response.One)
+				} else {
+					assert.Empty(t, response.One)
+				}
+			})
+		})
+	}
+}
+
+type testFooRequest struct {
+	One   string
+	Error string
+}
+
+type testFooResponse struct {
+	One string
+}
+
+func testFooHandler(_ context.Context, request *testFooRequest) (*testFooResponse, error) {
+	var err error
+	if request.Error != "" {
+		err = errors.New(request.Error)
+	}
+	return &testFooResponse{
+		One: request.One,
+	}, err
 }
 
 func doWithTestEnv(t *testing.T, options testEnvOptions, f func(*testing.T, *testEnv)) {
