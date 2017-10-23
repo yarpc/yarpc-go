@@ -138,7 +138,7 @@ func TestYARPCResponseAndError(t *testing.T) {
 }
 
 func TestGRPCResponseAndError(t *testing.T) {
-	t.Skip()
+	t.Skip("grpc-go clients do not support returning both a response and error as of now")
 	t.Parallel()
 	doWithTestEnv(t, nil, nil, nil, func(t *testing.T, e *testEnv) {
 		err := e.SetValueGRPC(context.Background(), "foo", "bar")

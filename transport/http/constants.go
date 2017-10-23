@@ -102,10 +102,6 @@ const (
 // send them in requests or responses.
 const ApplicationHeaderPrefix = "Rpc-Header-"
 
-func fromApplicationStatusValue(applicationStatusValue string) bool {
-	return applicationStatusValue == ApplicationErrorStatus
-}
-
 func fromAcceptValue(acceptValue string) bool {
 	return len(acceptValue) > 0
 }

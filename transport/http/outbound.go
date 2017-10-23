@@ -295,7 +295,7 @@ func (o *Outbound) callWithPeer(
 	tres := &transport.Response{
 		Headers:          applicationHeaders.FromHTTPHeaders(response.Header, transport.NewHeaders()),
 		Body:             response.Body,
-		ApplicationError: fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader)),
+		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 	}
 	bothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
 	if bothResponseError && o.bothResponseError {
