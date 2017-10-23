@@ -149,13 +149,12 @@ func (i *Inbound) start() error {
 		tracer:      i.tracer,
 		grabHeaders: i.grabHeaders,
 	}
+	if i.interceptor != nil {
+		httpHandler = i.interceptor(httpHandler)
+	}
 	if i.mux != nil {
 		i.mux.Handle(i.muxPattern, httpHandler)
 		httpHandler = i.mux
-	}
-
-	if i.interceptor != nil {
-		httpHandler = i.interceptor(httpHandler)
 	}
 
 	i.server = intnet.NewHTTPServer(&http.Server{
