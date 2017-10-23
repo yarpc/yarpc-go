@@ -50,6 +50,7 @@ func TestCall(t *testing.T) {
 		headers      map[string]string
 		body         []byte
 		responseBody [][]byte
+		responseErr  error
 
 		want        []byte
 		wantErr     string
@@ -60,6 +61,14 @@ func TestCall(t *testing.T) {
 			body:         []byte{1, 2, 3},
 			responseBody: [][]byte{{4}, {5}, {6}},
 			want:         []byte{4, 5, 6},
+		},
+		{
+			procedure:    "foo",
+			body:         []byte{1, 2, 3},
+			responseBody: [][]byte{{4}, {5}, {6}},
+			responseErr:  errors.New("bar"),
+			want:         []byte{4, 5, 6},
+			wantErr:      "bar",
 		},
 		{
 			procedure:    "bar",
@@ -104,7 +113,7 @@ func TestCall(t *testing.T) {
 			&transport.Response{
 				Body:    ioutil.NopCloser(responseBody),
 				Headers: transport.HeadersFromMap(tt.wantHeaders),
-			}, nil)
+			}, tt.responseErr)
 
 		var (
 			opts       []yarpc.CallOption
@@ -122,10 +131,13 @@ func TestCall(t *testing.T) {
 				assert.Equal(t, err.Error(), tt.wantErr)
 			}
 		} else {
-			if assert.NoError(t, err) {
-				assert.Equal(t, tt.want, resBody)
-				assert.Equal(t, tt.wantHeaders, resHeaders)
-			}
+			assert.NoError(t, err)
+		}
+		if tt.want != nil {
+			assert.Equal(t, tt.want, resBody)
+		}
+		if tt.wantHeaders != nil {
+			assert.Equal(t, tt.wantHeaders, resHeaders)
 		}
 	}
 }
