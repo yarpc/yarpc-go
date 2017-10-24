@@ -136,6 +136,10 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 		ShardKey:        call.ShardKey(),
 		RoutingKey:      call.RoutingKey(),
 		RoutingDelegate: call.RoutingDelegate(),
+		// this is always true for tchannel
+		Features: transport.RequestFeatures{
+			AcceptsBothResponseError: true,
+		},
 	}
 
 	ctx, headers, err := readRequestHeaders(ctx, call.Format(), call.Arg2Reader)
@@ -219,6 +223,10 @@ func (rw *responseWriter) addHeader(key string, value string) {
 
 func (rw *responseWriter) SetApplicationError() {
 	rw.isApplicationError = true
+}
+
+func (*responseWriter) UpdateFeatures(func(*transport.ResponseFeatures)) {
+	// nothing to do since we take no action on AcceptsBothResponseError for tchannel
 }
 
 func (rw *responseWriter) Write(s []byte) (int, error) {

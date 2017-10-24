@@ -93,7 +93,10 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		RoutingKey:      popHeader(req.Header, RoutingKeyHeader),
 		RoutingDelegate: popHeader(req.Header, RoutingDelegateHeader),
 		Headers:         applicationHeaders.FromHTTPHeaders(req.Header, transport.Headers{}),
-		Body:            req.Body,
+		Features: transport.RequestFeatures{
+			AcceptsBothResponseError: fromAcceptValue(popHeader(req.Header, AcceptsBothResponseErrorHeader)),
+		},
+		Body: req.Body,
 	}
 	for header := range h.grabHeaders {
 		if value := req.Header.Get(header); value != "" {
@@ -123,6 +126,9 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		return err
 	}
 
+	responseWriter.UpdateFeatures(func(features *transport.ResponseFeatures) {
+		features.BothResponseError = treq.Features.AcceptsBothResponseError
+	})
 	switch spec.Type() {
 	case transport.Unary:
 		defer span.Finish()
@@ -206,12 +212,13 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 
 // responseWriter adapts a http.ResponseWriter into a transport.ResponseWriter.
 type responseWriter struct {
-	w      http.ResponseWriter
-	buffer *bytes.Buffer
+	w                  http.ResponseWriter
+	features           transport.ResponseFeatures
+	isApplicationError bool
+	buffer             *bytes.Buffer
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
-	w.Header().Set(ApplicationStatusHeader, ApplicationSuccessStatus)
 	return &responseWriter{w: w}
 }
 
@@ -227,7 +234,11 @@ func (rw *responseWriter) AddHeaders(h transport.Headers) {
 }
 
 func (rw *responseWriter) SetApplicationError() {
-	rw.w.Header().Set(ApplicationStatusHeader, ApplicationErrorStatus)
+	rw.isApplicationError = true
+}
+
+func (rw *responseWriter) UpdateFeatures(f func(*transport.ResponseFeatures)) {
+	f(&rw.features)
 }
 
 func (rw *responseWriter) AddSystemHeader(key string, value string) {
@@ -235,6 +246,12 @@ func (rw *responseWriter) AddSystemHeader(key string, value string) {
 }
 
 func (rw *responseWriter) Close(httpStatusCode int) {
+	if value := applicationStatusValue(rw.isApplicationError); value != "" {
+		rw.w.Header().Set(ApplicationStatusHeader, value)
+	}
+	if value := acceptValue(rw.features.BothResponseError); value != "" {
+		rw.w.Header().Set(BothResponseErrorHeader, value)
+	}
 	rw.w.WriteHeader(httpStatusCode)
 	if rw.buffer != nil {
 		// TODO: what to do with error?

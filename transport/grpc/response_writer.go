@@ -56,6 +56,10 @@ func (r *responseWriter) SetApplicationError() {
 	r.AddSystemHeader(ApplicationErrorHeader, ApplicationErrorHeaderValue)
 }
 
+func (*responseWriter) UpdateFeatures(func(*transport.ResponseFeatures)) {
+	// nothing to do since we take no action on AcceptsBothResponseError for grpc
+}
+
 func (r *responseWriter) AddSystemHeader(key string, value string) {
 	if r.md == nil {
 		r.md = metadata.New(nil)

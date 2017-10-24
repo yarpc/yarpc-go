@@ -55,7 +55,10 @@ func TestSerialization(t *testing.T) {
 		ShardKey:        "ShardKey",
 		RoutingKey:      "RoutingKey",
 		RoutingDelegate: "RoutingDelegate",
-		Body:            bytes.NewReader(body),
+		Features: transport.RequestFeatures{
+			AcceptsBothResponseError: true,
+		},
+		Body: bytes.NewReader(body),
 	}
 
 	matcher := transporttest.NewRequestMatcher(t, haveReq)

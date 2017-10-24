@@ -135,7 +135,10 @@ func TestRequestLogMarshaling(t *testing.T) {
 		ShardKey:        "shard01",
 		RoutingKey:      "routing-key",
 		RoutingDelegate: "routing-delegate",
-		Body:            strings.NewReader("body"),
+		Features: transport.RequestFeatures{
+			AcceptsBothResponseError: true,
+		},
+		Body: strings.NewReader("body"),
 	}
 	enc := zapcore.NewMapObjectEncoder()
 	assert.NoError(t, r.MarshalLogObject(enc), "Unexpected error marshaling request.")
@@ -147,5 +150,8 @@ func TestRequestLogMarshaling(t *testing.T) {
 		"shardKey":        "shard01",
 		"routingKey":      "routing-key",
 		"routingDelegate": "routing-delegate",
+		"features": map[string]interface{}{
+			"acceptsBothResponseError": true,
+		},
 	}, enc.Fields, "Unexpected output after marshaling request.")
 }

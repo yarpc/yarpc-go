@@ -188,6 +188,10 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		Headers:          headers,
 		Body:             resBody,
 		ApplicationError: res.ApplicationError(),
+		// this is always true for tchannel
+		Features: transport.ResponseFeatures{
+			BothResponseError: true,
+		},
 	}, getResponseErrorAndDeleteHeaderKeys(headers)
 }
 

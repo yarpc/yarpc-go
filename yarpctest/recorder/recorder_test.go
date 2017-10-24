@@ -108,7 +108,7 @@ func TestHash(t *testing.T) {
 	requestRecord := recorder.requestToRequestRecord(&request)
 	referenceHash := recorder.hashRequestRecord(&requestRecord)
 
-	require.Equal(t, "7195d5a712201d2a", referenceHash)
+	require.Equal(t, "7c5d25b2a01cfb54", referenceHash)
 
 	// Caller
 	r := request
@@ -303,7 +303,7 @@ func TestEmptyReplay(t *testing.T) {
 	})
 }
 
-const refRecordFilename = `server.hello.254fa3bab61fc27f.yaml`
+const refRecordFilename = `server.hello.c7acafd4066f5f1d.yaml`
 const refRecordContent = recordComment +
 	`version: 1
 request:
@@ -315,9 +315,11 @@ request:
   shardkey: ""
   routingkey: ""
   routingdelegate: ""
+  acceptsbothresponseerror: "0"
   body: SGVsbG8=
 response:
   headers: {}
+  bothresponseerror: "0"
   body: SGVsbG8sIFdvcmxk
 `
 

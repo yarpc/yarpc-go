@@ -53,6 +53,12 @@ func (w *writer) SetApplicationError() {
 	w.ResponseWriter.SetApplicationError()
 }
 
+func (w *writer) UpdateFeatures(f func(*(transport.ResponseFeatures))) {
+	if featuresResponseWriter, ok := w.ResponseWriter.(transport.FeaturesResponseWriter); ok {
+		featuresResponseWriter.UpdateFeatures(f)
+	}
+}
+
 func (w *writer) free() {
 	_writerPool.Put(w)
 }

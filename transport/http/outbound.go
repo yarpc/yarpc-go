@@ -291,9 +291,13 @@ func (o *Outbound) callWithPeer(
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		appHeaders := applicationHeaders.FromHTTPHeaders(
 			response.Header, transport.NewHeaders())
-		appError := response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus
+		appError := fromApplicationStatusValue(response.Header.Get(ApplicationStatusHeader))
+		bothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
 		return &transport.Response{
-			Headers:          appHeaders,
+			Headers: appHeaders,
+			Features: transport.ResponseFeatures{
+				BothResponseError: bothResponseError,
+			},
 			Body:             response.Body,
 			ApplicationError: appError,
 		}, nil
@@ -385,6 +389,9 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	if encoding != "" {
 		req.Header.Set(EncodingHeader, encoding)
 	}
+
+	// TODO(pedge): uncomment when this is supported
+	//req.Header.Set(AcceptsBothResponseErrorHeader, AcceptTrue)
 
 	return req
 }

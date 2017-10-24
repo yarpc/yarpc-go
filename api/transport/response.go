@@ -25,6 +25,7 @@ import "io"
 // Response is the low level response representation.
 type Response struct {
 	Headers          Headers
+	Features         ResponseFeatures
 	Body             io.ReadCloser
 	ApplicationError bool
 }
@@ -46,4 +47,20 @@ type ResponseWriter interface {
 	// application error. If called, this MUST be called before any invocation
 	// of Write().
 	SetApplicationError()
+}
+
+// FeaturesResponseWriter is a ResponseWriter with features functionality.
+//
+// This was needed for backwards compatibility. If you want to use a
+// FeaturesResponseWriter instead of a ResponseWriter in an implementation,
+// you need to upcast:
+//
+//   if featuresResponseWriter, ok := responseWriter.(transport.FeaturesResponseWriter); ok {
+//     // do something
+//   }
+type FeaturesResponseWriter interface {
+	ResponseWriter
+
+	// UpdateFeatures updates the returned features.
+	UpdateFeatures(func(*ResponseFeatures))
 }

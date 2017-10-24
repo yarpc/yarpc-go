@@ -61,6 +61,9 @@ type Request struct {
 	// override the routing key and service.
 	RoutingDelegate string
 
+	// Features for the request.
+	Features RequestFeatures
+
 	// Request payload.
 	Body io.Reader
 }
@@ -75,7 +78,7 @@ func (r *Request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("shardKey", r.ShardKey)
 	enc.AddString("routingKey", r.RoutingKey)
 	enc.AddString("routingDelegate", r.RoutingDelegate)
-	return nil
+	return enc.AddObject("features", r.Features)
 }
 
 // Encoding represents an encoding format for requests.
