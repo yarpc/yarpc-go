@@ -74,7 +74,7 @@ const (
 	ErrorMessageHeader = "Rpc-Error-Message"
 
 	// AcceptsBothResponseErrorHeader says that the BothResponseError
-	// feature is supported on the client. If any non-empty value is set,
+	// feature is supported on the client. If the value is "true",
 	// this indicates true.
 	AcceptsBothResponseErrorHeader = "Rpc-Accepts-Both-Response-Error"
 
@@ -92,16 +92,10 @@ const (
 	// An error occurred. The response body contains an application header.
 	ApplicationErrorStatus = "error"
 
-	// AcceptTrue is the true value used for accept headers. Note that any
-	// non-empty value indicates true, but we end up sending this specific
-	// value.
+	// AcceptTrue is the true value used for accept headers.
 	AcceptTrue = "true"
 )
 
 // ApplicationHeaderPrefix is the prefix added to application header keys to
 // send them in requests or responses.
 const ApplicationHeaderPrefix = "Rpc-Header-"
-
-func fromAcceptValue(acceptValue string) bool {
-	return len(acceptValue) > 0
-}

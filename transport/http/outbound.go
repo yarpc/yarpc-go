@@ -297,7 +297,7 @@ func (o *Outbound) callWithPeer(
 		Body:             response.Body,
 		ApplicationError: response.Header.Get(ApplicationStatusHeader) == ApplicationErrorStatus,
 	}
-	bothResponseError := fromAcceptValue(response.Header.Get(BothResponseErrorHeader))
+	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if bothResponseError && o.bothResponseError {
 		if response.StatusCode >= 300 {
 			return tres, getYARPCErrorFromResponse(response, true)

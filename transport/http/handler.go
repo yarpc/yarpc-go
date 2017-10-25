@@ -54,7 +54,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseWriter := newResponseWriter(w)
 	service := popHeader(req.Header, ServiceHeader)
 	procedure := popHeader(req.Header, ProcedureHeader)
-	bothResponseError := fromAcceptValue(popHeader(req.Header, AcceptsBothResponseErrorHeader))
+	bothResponseError := popHeader(req.Header, AcceptsBothResponseErrorHeader) == AcceptTrue
 	status := yarpcerrors.FromError(errors.WrapHandlerError(h.callHandler(responseWriter, req, service, procedure), service, procedure))
 	if status == nil {
 		responseWriter.Close(http.StatusOK)
