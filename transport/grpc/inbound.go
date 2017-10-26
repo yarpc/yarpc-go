@@ -104,6 +104,9 @@ func (i *Inbound) start() error {
 	go func() {
 		if i.t.options.logger != nil {
 			i.t.options.logger.Info("grpc inbound started", zap.String("address", i.listener.Addr().String()))
+			if len(i.router.Procedures()) == 0 {
+				i.t.options.logger.Warn("no procedures specified for grpc inbound")
+			}
 		}
 		// TODO there should be some mechanism to block here
 		// there is a race because the listener gets set in the grpc

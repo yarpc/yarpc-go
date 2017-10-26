@@ -77,6 +77,9 @@ func (i *ChannelInbound) Start() error {
 	return i.once.Start(func() error {
 		if i.transport.logger != nil {
 			i.transport.logger.Info("tchannel inbound started", zap.String("address", i.transport.ListenAddr()))
+			if i.transport.router == nil || len(i.transport.router.Procedures()) == 0 {
+				i.transport.logger.Warn("no procedures specified for tchannel inbound")
+			}
 		}
 		return nil
 	})
