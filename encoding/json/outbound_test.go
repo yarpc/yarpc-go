@@ -54,6 +54,7 @@ func TestCall(t *testing.T) {
 		body            interface{}
 		encodedRequest  string
 		encodedResponse string
+		responseErr     error
 
 		// whether the outbound receives the request
 		noCall bool
@@ -70,6 +71,15 @@ func TestCall(t *testing.T) {
 			encodedRequest:  `["foo","bar"]`,
 			encodedResponse: `{"success": true}`,
 			want:            map[string]interface{}{"success": true},
+		},
+		{
+			procedure:       "foo",
+			body:            []string{"foo", "bar"},
+			encodedRequest:  `["foo","bar"]`,
+			encodedResponse: `{"success": true}`,
+			responseErr:     errors.New("bar"),
+			want:            map[string]interface{}{"success": true},
+			wantErr:         "bar",
 		},
 		{
 			procedure:       "bar",
@@ -120,7 +130,7 @@ func TestCall(t *testing.T) {
 					Body: ioutil.NopCloser(
 						bytes.NewReader([]byte(tt.encodedResponse))),
 					Headers: transport.HeadersFromMap(tt.wantHeaders),
-				}, nil)
+				}, tt.responseErr)
 		}
 
 		var wantType reflect.Type
@@ -148,10 +158,13 @@ func TestCall(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.wantErr)
 			}
 		} else {
-			if assert.NoError(t, err) {
-				assert.Equal(t, tt.wantHeaders, resHeaders)
-				assert.Equal(t, tt.want, resBody)
-			}
+			assert.NoError(t, err)
+		}
+		if tt.wantHeaders != nil {
+			assert.Equal(t, tt.wantHeaders, resHeaders)
+		}
+		if tt.want != nil {
+			assert.Equal(t, tt.want, resBody)
 		}
 	}
 }

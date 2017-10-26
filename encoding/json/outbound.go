@@ -77,20 +77,30 @@ func (c jsonClient) Call(ctx context.Context, procedure string, reqBody interfac
 	}
 
 	treq.Body = bytes.NewReader(encoded)
-	tres, err := c.cc.GetUnaryOutbound().Call(ctx, &treq)
-	if err != nil {
-		return err
+	tres, appErr := c.cc.GetUnaryOutbound().Call(ctx, &treq)
+	if tres == nil {
+		return appErr
 	}
 
+	// we want to return the appErr if it exists as this is what
+	// the previous behavior was so we deprioritize this error
+	var decodeErr error
 	if _, err = call.ReadFromResponse(ctx, tres); err != nil {
-		return err
+		decodeErr = err
+	}
+	if tres.Body != nil {
+		if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil && decodeErr == nil {
+			decodeErr = errors.ResponseBodyDecodeError(&treq, err)
+		}
+		if err := tres.Body.Close(); err != nil && decodeErr == nil {
+			decodeErr = err
+		}
 	}
 
-	if err := json.NewDecoder(tres.Body).Decode(resBodyOut); err != nil {
-		return errors.ResponseBodyDecodeError(&treq, err)
+	if appErr != nil {
+		return appErr
 	}
-
-	return tres.Body.Close()
+	return decodeErr
 }
 
 func (c jsonClient) CallOneway(ctx context.Context, procedure string, reqBody interface{}, opts ...yarpc.CallOption) (transport.Ack, error) {

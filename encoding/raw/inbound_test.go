@@ -22,6 +22,7 @@ package raw
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -64,6 +65,20 @@ func TestRawHandler(t *testing.T) {
 				return []byte("hello"), nil
 			},
 			wantBody: []byte("hello"),
+		},
+		{
+			procedure: "foo",
+			bodyChunks: [][]byte{
+				{1, 2, 3},
+				{4, 5, 6},
+			},
+			handler: func(ctx context.Context, body []byte) ([]byte, error) {
+				assert.Equal(t, "foo", yarpc.CallFromContext(ctx).Procedure())
+				assert.Equal(t, []byte{1, 2, 3, 4, 5, 6}, body)
+				return []byte("hello"), errors.New("bar")
+			},
+			wantBody: []byte("hello"),
+			wantErr:  "bar",
 		},
 		{
 			procedure: "bar",
@@ -121,11 +136,12 @@ func TestRawHandler(t *testing.T) {
 				assert.Equal(t, err.Error(), tt.wantErr)
 			}
 		} else {
-			if assert.NoError(t, err) {
-				assert.Equal(t, tt.wantHeaders, resw.Headers)
-				assert.Equal(t, tt.wantBody, resw.Body.Bytes(),
-					"body does not match for %s", tt.procedure)
-			}
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, tt.wantHeaders, resw.Headers)
+		if tt.wantBody != nil {
+			assert.Equal(t, tt.wantBody, resw.Body.Bytes(),
+				"body does not match for %s", tt.procedure)
 		}
 	}
 }

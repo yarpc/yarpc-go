@@ -68,22 +68,29 @@ func (c rawClient) Call(ctx context.Context, procedure string, body []byte, opts
 		return nil, err
 	}
 
-	tres, err := c.cc.GetUnaryOutbound().Call(ctx, &treq)
-	if err != nil {
-		return nil, err
+	tres, appErr := c.cc.GetUnaryOutbound().Call(ctx, &treq)
+	if tres == nil {
+		return nil, appErr
 	}
-	defer tres.Body.Close()
+	if tres.Body != nil {
+		defer tres.Body.Close()
+	}
 
 	if _, err = call.ReadFromResponse(ctx, tres); err != nil {
 		return nil, err
 	}
 
-	resBody, err := ioutil.ReadAll(tres.Body)
-	if err != nil {
-		return nil, err
+	// we want to return the appErr if it exists as this is what
+	// the previous behavior was so we deprioritize this error
+	var resBody []byte
+	var readErr error
+	if tres.Body != nil {
+		resBody, readErr = ioutil.ReadAll(tres.Body)
 	}
-
-	return resBody, nil
+	if appErr != nil {
+		return resBody, appErr
+	}
+	return resBody, readErr
 }
 
 func (c rawClient) CallOneway(ctx context.Context, procedure string, body []byte, opts ...yarpc.CallOption) (transport.Ack, error) {
