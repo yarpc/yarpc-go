@@ -26,6 +26,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/yarpc/api/backoff"
 	intbackoff "go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/zap"
 )
 
 const (
@@ -70,6 +71,15 @@ func BackoffStrategy(backoffStrategy backoff.Strategy) TransportOption {
 func Tracer(tracer opentracing.Tracer) TransportOption {
 	return func(transportOptions *transportOptions) {
 		transportOptions.tracer = tracer
+	}
+}
+
+// Logger sets a logger to use for internal logging.
+//
+// The default is to not write any logs.
+func Logger(logger *zap.Logger) TransportOption {
+	return func(transportOptions *transportOptions) {
+		transportOptions.logger = logger
 	}
 }
 
@@ -122,6 +132,7 @@ func (OutboundOption) grpcOption() {}
 type transportOptions struct {
 	backoffStrategy      backoff.Strategy
 	tracer               opentracing.Tracer
+	logger               *zap.Logger
 	serverMaxRecvMsgSize int
 	serverMaxSendMsgSize int
 	clientMaxRecvMsgSize int
@@ -138,6 +149,9 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	}
 	for _, option := range options {
 		option(transportOptions)
+	}
+	if transportOptions.logger == nil {
+		transportOptions.logger = zap.NewNop()
 	}
 	return transportOptions
 }

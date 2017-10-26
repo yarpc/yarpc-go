@@ -33,6 +33,7 @@ import (
 	"go.uber.org/yarpc/internal/backoff"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/zap"
 )
 
 type transportOptions struct {
@@ -42,6 +43,7 @@ type transportOptions struct {
 	connBackoffStrategy backoffapi.Strategy
 	tracer              opentracing.Tracer
 	buildClient         func(*transportOptions) *http.Client
+	logger              *zap.Logger
 }
 
 var defaultTransportOptions = transportOptions{
@@ -115,6 +117,15 @@ func Tracer(tracer opentracing.Tracer) TransportOption {
 	}
 }
 
+// Logger sets a logger to use for internal logging.
+//
+// The default is to not write any logs.
+func Logger(logger *zap.Logger) TransportOption {
+	return func(options *transportOptions) {
+		options.logger = logger
+	}
+}
+
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
 func buildClient(f func(*transportOptions) *http.Client) TransportOption {
@@ -133,6 +144,10 @@ func NewTransport(opts ...TransportOption) *Transport {
 }
 
 func (o *transportOptions) newTransport() *Transport {
+	logger := o.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &Transport{
 		once:                lifecycle.NewOnce(),
 		client:              o.buildClient(o),
@@ -140,6 +155,7 @@ func (o *transportOptions) newTransport() *Transport {
 		connBackoffStrategy: o.connBackoffStrategy,
 		peers:               make(map[string]*httpPeer),
 		tracer:              o.tracer,
+		logger:              logger,
 	}
 }
 
@@ -174,6 +190,7 @@ type Transport struct {
 	connectorsGroup     sync.WaitGroup
 
 	tracer opentracing.Tracer
+	logger *zap.Logger
 }
 
 var _ transport.Transport = (*Transport)(nil)

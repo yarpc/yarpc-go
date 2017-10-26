@@ -26,6 +26,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	backoffapi "go.uber.org/yarpc/api/backoff"
 	"go.uber.org/yarpc/internal/backoff"
+	"go.uber.org/zap"
 )
 
 // Option allows customizing the YARPC TChannel transport.
@@ -48,6 +49,7 @@ var _ Option = (TransportOption)(nil)
 type transportOptions struct {
 	ch                  Channel
 	tracer              opentracing.Tracer
+	logger              *zap.Logger
 	addr                string
 	name                string
 	connTimeout         time.Duration
@@ -75,6 +77,15 @@ func (TransportOption) tchannelOption() {}
 func Tracer(tracer opentracing.Tracer) TransportOption {
 	return func(t *transportOptions) {
 		t.tracer = tracer
+	}
+}
+
+// Logger sets a logger to use for internal logging.
+//
+// The default is to not write any logs.
+func Logger(logger *zap.Logger) TransportOption {
+	return func(t *transportOptions) {
+		t.logger = logger
 	}
 }
 
