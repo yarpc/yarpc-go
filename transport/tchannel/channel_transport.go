@@ -77,12 +77,16 @@ func NewChannelTransport(opts ...TransportOption) (*ChannelTransport, error) {
 }
 
 func (options transportOptions) newChannelTransport() *ChannelTransport {
+	logger := options.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &ChannelTransport{
 		once:   lifecycle.NewOnce(),
 		ch:     options.ch,
 		addr:   options.addr,
 		tracer: options.tracer,
-		logger: options.logger,
+		logger: logger,
 	}
 }
 

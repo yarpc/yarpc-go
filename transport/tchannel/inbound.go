@@ -64,11 +64,9 @@ func (i *Inbound) Transports() []transport.Transport {
 // started.
 func (i *Inbound) Start() error {
 	return i.once.Start(func() error {
-		if i.transport.logger != nil {
-			i.transport.logger.Info("tchannel inbound started", zap.String("address", i.transport.addr))
-			if i.transport.router == nil || len(i.transport.router.Procedures()) == 0 {
-				i.transport.logger.Warn("no procedures specified for tchannel inbound")
-			}
+		i.transport.logger.Info("started TChannel inbound", zap.String("address", i.transport.addr))
+		if i.transport.router == nil || len(i.transport.router.Procedures()) == 0 {
+			i.transport.logger.Warn("no procedures specified for tchannel inbound")
 		}
 		return nil
 	})

@@ -144,6 +144,10 @@ func NewTransport(opts ...TransportOption) *Transport {
 }
 
 func (o *transportOptions) newTransport() *Transport {
+	logger := o.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &Transport{
 		once:                lifecycle.NewOnce(),
 		client:              o.buildClient(o),
@@ -151,7 +155,7 @@ func (o *transportOptions) newTransport() *Transport {
 		connBackoffStrategy: o.connBackoffStrategy,
 		peers:               make(map[string]*httpPeer),
 		tracer:              o.tracer,
-		logger:              o.logger,
+		logger:              logger,
 	}
 }
 

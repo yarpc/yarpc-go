@@ -42,7 +42,6 @@ import (
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/pkg/procedure"
 	"go.uber.org/yarpc/yarpcerrors"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -233,7 +232,7 @@ func newTestEnv(transportOptions []TransportOption, inboundOptions []InboundOpti
 	procedures := examplepb.BuildKeyValueYARPCProcedures(keyValueYARPCServer)
 	testRouter := newTestRouter(procedures)
 
-	t := NewTransport(append(transportOptions, Logger(zap.NewExample()))...)
+	t := NewTransport(transportOptions...)
 	if err := t.Start(); err != nil {
 		return nil, err
 	}

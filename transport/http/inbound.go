@@ -174,11 +174,9 @@ func (i *Inbound) start() error {
 	}
 
 	i.addr = i.server.Listener().Addr().String() // in case it changed
-	if i.logger != nil {
-		i.logger.Info("http inbound started", zap.String("address", i.addr))
-		if len(i.router.Procedures()) == 0 {
-			i.logger.Warn("no procedures specified for http inbound")
-		}
+	i.logger.Info("started HTTP inbound", zap.String("address", i.addr))
+	if len(i.router.Procedures()) == 0 {
+		i.logger.Warn("no procedures specified for HTTP inbound")
 	}
 	return nil
 }

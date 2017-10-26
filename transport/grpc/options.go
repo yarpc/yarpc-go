@@ -150,6 +150,9 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	for _, option := range options {
 		option(transportOptions)
 	}
+	if transportOptions.logger == nil {
+		transportOptions.logger = zap.NewNop()
+	}
 	return transportOptions
 }
 

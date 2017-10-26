@@ -83,6 +83,10 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 }
 
 func (o transportOptions) newTransport() *Transport {
+	logger := o.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &Transport{
 		once:                lifecycle.NewOnce(),
 		name:                o.name,
@@ -91,7 +95,7 @@ func (o transportOptions) newTransport() *Transport {
 		connBackoffStrategy: o.connBackoffStrategy,
 		peers:               make(map[string]*tchannelPeer),
 		tracer:              o.tracer,
-		logger:              o.logger,
+		logger:              logger,
 	}
 }
 
