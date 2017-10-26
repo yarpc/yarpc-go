@@ -79,6 +79,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		once:               lifecycle.NewOnce(),
 		uninitializedPeers: make(map[string]peer.Identifier, cfg.capacity),
 		unavailablePeers:   make(map[string]peer.Peer, cfg.capacity),
+		availablePeers:     make(map[string]peer.Peer, cfg.capacity),
 		identifierChooser:  newPeerRing(cfg.capacity),
 		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
@@ -93,6 +94,7 @@ type List struct {
 	uninitializedPeers map[string]peer.Identifier
 
 	unavailablePeers   map[string]peer.Peer
+	availablePeers     map[string]peer.Peer
 	identifierChooser  identifierChooser
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
@@ -186,6 +188,7 @@ func (pl *List) addToAvailablePeers(p peer.Peer) error {
 		return err
 	}
 
+	pl.availablePeers[p.Identifier()] = p
 	pl.notifyPeerAvailable()
 	return nil
 }
@@ -282,7 +285,7 @@ func (pl *List) removePeerIdentifier(pid peer.Identifier) error {
 // Must be run in a mutex.Lock()
 func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) error {
 	if p := pl.identifierChooser.GetPeer(pid); p != nil {
-		return pl.identifierChooser.Remove(p)
+		return pl.removeFromAvailablePeers(p)
 	}
 
 	if p, ok := pl.unavailablePeers[pid.Identifier()]; ok && p != nil {
@@ -293,8 +296,16 @@ func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) error {
 	return peer.ErrPeerRemoveNotInList(pid.Identifier())
 }
 
-// removeFromUnavailablePeers remove a peer from the Unavailable Peers list
-// the Peer should already be validated as non-nil and in the Unavailable list
+// removeFromAvailablePeers remove a peer from the Available Peers list the
+// Peer should already be validated as non-nil and in the Available list.
+// Must be run in a mutex.Lock()
+func (pl *List) removeFromAvailablePeers(p peer.Peer) error {
+	delete(pl.availablePeers, p.Identifier())
+	return pl.identifierChooser.Remove(p)
+}
+
+// removeFromUnavailablePeers remove a peer from the Unavailable Peers list the
+// Peer should already be validated as non-nil and in the Unavailable list.
 // Must be run in a mutex.Lock()
 func (pl *List) removeFromUnavailablePeers(p peer.Peer) {
 	delete(pl.unavailablePeers, p.Identifier())
