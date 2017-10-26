@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -101,6 +102,10 @@ func (i *Inbound) start() error {
 	)
 
 	go func() {
+		i.t.options.logger.Info("started GRPC inbound", zap.Stringer("address", i.listener.Addr()))
+		if len(i.router.Procedures()) == 0 {
+			i.t.options.logger.Warn("no procedures specified for GRPC inbound")
+		}
 		// TODO there should be some mechanism to block here
 		// there is a race because the listener gets set in the grpc
 		// Server implementation and we should be able to block
