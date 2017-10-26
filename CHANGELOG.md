@@ -4,7 +4,9 @@ Releases
 v1.21.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Allow both a valid response body and error to be returned over all
+    transports as well as protobuf, json, raw encodings.
+-   Add a Logger option in all transports to allow for internal logging.
 
 v1.20.1 (2017-10-23)
 --------------------
