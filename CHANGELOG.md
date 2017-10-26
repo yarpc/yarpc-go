@@ -1,10 +1,16 @@
 Releases
 ========
 
-v1.21.0-dev (unreleased)
+v1.22.0-dev (unreleased)
 --------------------
 
 -   No changes yet.
+
+v1.21.0 (2017-10-26)
+--------------------
+
+-   Add a Logger option to the HTTP, GRPC, and TChannel transports to allow for
+    internal logging.
 
 v1.20.1 (2017-10-23)
 --------------------
