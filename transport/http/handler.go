@@ -75,8 +75,8 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	} else {
 		responseWriter.ResetBuffer()
 		_, _ = fmt.Fprintln(responseWriter, status.Message())
+		responseWriter.AddSystemHeader("Content-Type", "text/plain; charset=utf8")
 	}
-	responseWriter.AddSystemHeader("Content-Type", "text/plain; charset=utf8")
 	httpStatusCode, ok := _codeToStatusCode[status.Code()]
 	if !ok {
 		httpStatusCode = http.StatusInternalServerError
