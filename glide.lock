@@ -1,5 +1,5 @@
-hash: 354ccfb438e9e95e44b97409c1e6faa2c961475a54b303b921f44347d43df4b6
-updated: 2017-09-30T19:06:39.949809+02:00
+hash: 03e53a22016b7b24bcc33371ea1fdb68f68345986902271fc20aaed8dd98b7b8
+updated: 2017-10-25T17:02:44.199257+02:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -19,13 +19,13 @@ imports:
   - assert
   - require
 - name: github.com/davecgh/go-spew
-  version: a476722483882dd40b8111f0eb64e1d7f43f56e4
+  version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
   subpackages:
   - spew
 - name: github.com/facebookgo/clock
   version: 600d898af40aa09a7a93ecb9265d87b0504b6f03
 - name: github.com/gogo/protobuf
-  version: 100ba4e885062801d56799d78530b73b178a78f3
+  version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
   subpackages:
   - jsonpb
   - proto
@@ -38,7 +38,7 @@ imports:
   subpackages:
   - gomock
 - name: github.com/golang/protobuf
-  version: 130e6b02ab059e7b717a096f397c5b60111cae74
+  version: 18c9bb3261723cd5401db4d0c9fbc5c3b6c70fe8
   subpackages:
   - proto
   - ptypes
@@ -71,17 +71,17 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 2f17f4a9d485bf34b4bfaccc273805040e4f86c8
+  version: 1bab55dd05dbff384524a6a1c99006d9eb5f139b
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/stretchr/testify
-  version: 890a5c3458b43e6104ff5da8dfa139d013d77544
+  version: 2aa2c176b9dab406a6970f6a55f513e8a8c8b18f
   subpackages:
   - assert
   - mock
@@ -110,7 +110,7 @@ imports:
   - thrift-gen/zipkincore
   - utils
 - name: github.com/uber/jaeger-lib
-  version: 21a3da6d66fe0e278072676fdc84cd4c9ccb9b67
+  version: bc381f836083a0f7d5778d4216022388c4aeaf46
   subpackages:
   - metrics
 - name: github.com/uber/tchannel-go
@@ -170,7 +170,7 @@ imports:
   - zapcore
   - zaptest/observer
 - name: golang.org/x/net
-  version: 0a9397675ba34b2845f758fe3cd68828369c6517
+  version: 4b14673ba32bee7f5ac0f990a48f033919fd418b
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -187,28 +187,29 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 314a259e304ff91bd6985da2a7149bbf91237993
+  version: f0d39a4bd5f1a0a15ef46503d12cffc780be4b9b
   repo: https://github.com/golang/sys
 - name: golang.org/x/text
-  version: 1cbadb444a806fd9430d14ad08967ed91da4fa0a
+  version: 6eab0e8f74e86c598ec3b6fad4888e0c11482d48
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/tools
-  version: 68e087e2a5786de2c035ed544b1c5a42e31f1933
+  version: 9b61fcc4c548d69663d915801fc4b42a43b6cd9c
   repo: https://github.com/golang/tools
   subpackages:
   - go/ast/astutil
 - name: google.golang.org/genproto
-  version: 1e559d0a00eef8a9a43151db4665280bd8dd5886
+  version: f676e0f3ac6395ff1a529ae59a6670878a8371a6
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: f92cdcd7dcdc69e81b2d7b338479a19a8723cfa3
+  version: f7bf885db0b7479a537ec317c6e48ce53145f3db
   repo: https://github.com/grpc/grpc-go
   subpackages:
+  - balancer
   - codes
   - connectivity
   - credentials
@@ -219,6 +220,7 @@ imports:
   - metadata
   - naming
   - peer
+  - resolver
   - stats
   - status
   - tap
@@ -231,7 +233,7 @@ testImports:
   subpackages:
   - golint
 - name: github.com/kisielk/errcheck
-  version: b1445a9dd8285a50c6d1661d16f0a9ceb08125f7
+  version: db0ca22445717d1b2c51ac1034440e0a2a2de645
 - name: github.com/kisielk/gotool
   version: d6ce6262d87e3a4e153e86023ff56ae771554a41
 - name: github.com/wadey/gocovmerge
@@ -242,6 +244,6 @@ testImports:
   - parallel-exec
   - update-license
 - name: honnef.co/go/tools
-  version: 49f44f893d933fd08cd7d67d65ccefa5d7c23329
+  version: f3398275e64e1167d1b8b9951663163e3a01c861
   subpackages:
   - cmd/staticcheck

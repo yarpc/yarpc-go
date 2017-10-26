@@ -9,7 +9,7 @@ import:
 - package: github.com/crossdock/crossdock-go
   version: master
 - package: github.com/gogo/protobuf
-  version: ~0.4
+  version: ~0.5
 - package: github.com/mattn/go-shellwords
   version: ^1
 - package: github.com/uber-go/mapdecode
