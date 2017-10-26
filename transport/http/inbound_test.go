@@ -54,11 +54,11 @@ func TestStartAddrInUse(t *testing.T) {
 	// comparison
 	assert.True(t, t1 == i1.Transports()[0], "transports must match")
 
-	i1.SetRouter(new(transporttest.MockRouter))
+	i1.SetRouter(newTestRouter(nil))
 	require.NoError(t, i1.Start(), "inbound 1 must start without an error")
 	t2 := NewTransport()
 	i2 := t2.NewInbound(i1.Addr().String())
-	i2.SetRouter(new(transporttest.MockRouter))
+	i2.SetRouter(newTestRouter(nil))
 	err := i2.Start()
 
 	require.Error(t, err)
@@ -75,7 +75,7 @@ func TestStartAddrInUse(t *testing.T) {
 func TestNilAddrAfterStop(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound(":0")
-	i.SetRouter(new(transporttest.MockRouter))
+	i.SetRouter(newTestRouter(nil))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NotNil(t, i.Addr())
@@ -86,7 +86,7 @@ func TestNilAddrAfterStop(t *testing.T) {
 func TestInboundStartAndStop(t *testing.T) {
 	x := NewTransport()
 	i := x.NewInbound(":0")
-	i.SetRouter(new(transporttest.MockRouter))
+	i.SetRouter(newTestRouter(nil))
 	require.NoError(t, i.Start())
 	assert.NotEqual(t, ":0", i.Addr().String())
 	assert.NoError(t, i.Stop())
@@ -129,6 +129,7 @@ func TestInboundMux(t *testing.T) {
 	i := httpTransport.NewInbound(":0", Mux("/rpc/v1", mux))
 	h := transporttest.NewMockUnaryHandler(mockCtrl)
 	reg := transporttest.NewMockRouter(mockCtrl)
+	reg.EXPECT().Procedures()
 	i.SetRouter(reg)
 	require.NoError(t, i.Start())
 
@@ -220,7 +221,7 @@ func TestMuxWithInterceptor(t *testing.T) {
 
 	transport := NewTransport()
 	inbound := transport.NewInbound("127.0.0.1:0", Mux("/", mux), Interceptor(intercept))
-	inbound.SetRouter(new(transporttest.MockRouter))
+	inbound.SetRouter(newTestRouter(nil))
 	require.NoError(t, inbound.Start(), "Failed to start inbound")
 	defer inbound.Stop()
 

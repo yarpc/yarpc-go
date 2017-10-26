@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/zap"
 )
 
 // Transport is a TChannel transport suitable for use with YARPC's peer
@@ -47,6 +48,7 @@ type Transport struct {
 	ch     Channel
 	router transport.Router
 	tracer opentracing.Tracer
+	logger *zap.Logger
 	name   string
 	addr   string
 
@@ -81,6 +83,10 @@ func NewTransport(opts ...TransportOption) (*Transport, error) {
 }
 
 func (o transportOptions) newTransport() *Transport {
+	logger := o.logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &Transport{
 		once:                lifecycle.NewOnce(),
 		name:                o.name,
@@ -89,6 +95,7 @@ func (o transportOptions) newTransport() *Transport {
 		connBackoffStrategy: o.connBackoffStrategy,
 		peers:               make(map[string]*tchannelPeer),
 		tracer:              o.tracer,
+		logger:              logger,
 	}
 }
 
