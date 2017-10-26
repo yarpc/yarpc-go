@@ -18,52 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package roundrobin
-
-import (
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/peerlist"
-)
-
-type listConfig struct {
-	capacity int
-}
-
-var defaultListConfig = listConfig{
-	capacity: 10,
-}
-
-// ListOption customizes the behavior of a roundrobin list.
-type ListOption func(*listConfig)
-
-// Capacity specifies the default capacity of the underlying
-// data structures for this list.
+// Package peerlist provides a utility for managing peer availability with a
+// separate implementation of peer selection from just among available peers.
+// The peer list implements the peer.ChooserList interface and accepts a
+// peer.ListImplementation to provide the implementation-specific concern of,
+// for example, a *roundrobin.List.
 //
-// Defaults to 10.
-func Capacity(capacity int) ListOption {
-	return func(c *listConfig) {
-		c.capacity = capacity
-	}
-}
-
-// New creates a new round robin peer list.
-func New(transport peer.Transport, opts ...ListOption) *List {
-	cfg := defaultListConfig
-	for _, o := range opts {
-		o(&cfg)
-	}
-
-	return &List{
-		List: peerlist.New(
-			"roundrobin",
-			transport,
-			newPeerRing(),
-			peerlist.Capacity(cfg.capacity),
-		),
-	}
-}
-
-// List is a PeerList which rotates which peers are to be selected in a circle
-type List struct {
-	*peerlist.List
-}
+// The example is an implementation of peer.ChooserList using a random peer selection
+// strategy, returned by newRandomListImplementation(), implementing
+// peer.ListImplementation.
+//
+//   type List struct {
+//   	*peerlist.List
+//   }
+//
+//   func New(transport peer.Transport) *List {
+//   	return &List{
+//   		List: peerlist.New(
+//   			"random",
+//   			transport,
+//   			newRandomListImplementation(),
+//   		),
+//   	}
+//   }
+//
+package peerlist

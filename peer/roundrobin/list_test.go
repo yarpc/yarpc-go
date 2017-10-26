@@ -32,7 +32,21 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
 	"go.uber.org/yarpc/internal/introspection"
+	"go.uber.org/yarpc/peer/hostport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+var (
+	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a roundrobin peer list")
+)
+
+func newNotRunningError(err error) error {
+	return yarpcerrors.FailedPreconditionErrorf("roundrobin peer list is not running: %s", err.Error())
+}
+
+func newUnavailableError(err error) error {
+	return yarpcerrors.UnavailableErrorf("roundrobin peer list timed out waiting for peer: %s", err.Error())
+}
 
 func TestRoundRobinList(t *testing.T) {
 	type testStruct struct {
@@ -353,7 +367,7 @@ func TestRoundRobinList(t *testing.T) {
 		},
 		{
 			msg: "add duplicate peer",
-			retainedAvailablePeerIDs: []string{"1", "2", "2"},
+			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
 				StartAction{},
@@ -856,32 +870,22 @@ func TestRoundRobinList(t *testing.T) {
 			}
 			ApplyPeerListActions(t, pl, tt.peerListActions, deps)
 
-			assert.Len(t, pl.availablePeerRing.peerToNode, len(tt.expectedAvailablePeers), "invalid available peerlist size")
+			assert.Equal(t, pl.NumAvailable(), len(tt.expectedAvailablePeers), "invalid available peerlist size")
 			for _, expectedRingPeer := range tt.expectedAvailablePeers {
-				node, ok := pl.availablePeerRing.peerToNode[expectedRingPeer]
+				ok := pl.Available(hostport.PeerIdentifier(expectedRingPeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in available peerlist", expectedRingPeer))
-				if ok {
-					actualPeer := getPeerForRingNode(node)
-					assert.Equal(t, expectedRingPeer, actualPeer.Identifier())
-				}
 			}
 
-			assert.Len(t, pl.unavailablePeers, len(tt.expectedUnavailablePeers), "invalid unavailable peerlist size")
+			assert.Equal(t, pl.NumUnavailable(), len(tt.expectedUnavailablePeers), "invalid unavailable peerlist size")
 			for _, expectedUnavailablePeer := range tt.expectedUnavailablePeers {
-				p, ok := pl.unavailablePeers[expectedUnavailablePeer]
+				ok := !pl.Available(hostport.PeerIdentifier(expectedUnavailablePeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in unavailable peerlist", expectedUnavailablePeer))
-				if ok {
-					assert.Equal(t, expectedUnavailablePeer, p.Identifier())
-				}
 			}
 
-			assert.Len(t, pl.uninitializedPeers, len(tt.expectedUninitializedPeers), "invalid uninitialized peerlist size")
+			assert.Equal(t, pl.NumUninitialized(), len(tt.expectedUninitializedPeers), "invalid uninitialized peerlist size")
 			for _, expectedUninitializedPeer := range tt.expectedUninitializedPeers {
-				p, ok := pl.uninitializedPeers[expectedUninitializedPeer]
+				ok := pl.Uninitialized(hostport.PeerIdentifier(expectedUninitializedPeer))
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in uninitialized peerlist", expectedUninitializedPeer))
-				if ok {
-					assert.Equal(t, expectedUninitializedPeer, p.Identifier())
-				}
 			}
 
 			assert.Equal(t, tt.expectedRunning, pl.IsRunning(), "List was not in the expected state")

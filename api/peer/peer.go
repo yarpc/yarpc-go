@@ -48,14 +48,27 @@ type Identifier interface {
 	Identifier() string
 }
 
-// Peer is a level on top of Identifier.  It should be created by a Transport so we
-// can maintain multiple references to the same downstream peer (e.g. hostport).  This is
-// useful for load balancing requests to downstream services.
-type Peer interface {
+// StatusPeer captures a concrete peer implementation for a particular
+// transport, exposing its Identifier and Status.
+// StatusPeer provides observability without mutability.
+type StatusPeer interface {
 	Identifier
 
 	// Get the status of the Peer
 	Status() Status
+}
+
+// Peer captures a concrete peer implementation for a particular transport,
+// providing both observability (Identifier and Status), along with load change
+// notifications (StartRequest) (EndRequest).
+// Transports reveal peers to peer lists, which in turn offer them to outbounds
+// when they choose a peer.
+// Having Start/End request messages allows the outbound to broadcast load
+// changes to all subscribed load balancers.
+// The peer should be created by a transport so we can maintain multiple
+// references to the same peer (e.g., hostport).
+type Peer interface {
+	StatusPeer
 
 	// Tell the peer that a request is starting
 	StartRequest()

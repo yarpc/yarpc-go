@@ -28,6 +28,7 @@ import (
 
 // Chooser is a collection of Peers. Outbounds request peers from the
 // peer.Chooser to determine where to send requests.
+// The chooser is responsible for managing the lifecycle of any retained peers.
 type Chooser interface {
 	transport.Lifecycle
 
@@ -43,13 +44,6 @@ type List interface {
 	Update(updates ListUpdates) error
 }
 
-// ChooserList is both a Chooser and a List, useful for expressing both
-// capabilities of a single instance.
-type ChooserList interface {
-	Chooser
-	List
-}
-
 // ListUpdates specifies the updates to be made to a List
 type ListUpdates struct {
 	// Additions are the identifiers that should be added to the list
@@ -57,6 +51,33 @@ type ListUpdates struct {
 
 	// Removals are the identifiers that should be removed to the list
 	Removals []Identifier
+}
+
+// ChooserList is both a Chooser and a List, useful for expressing both
+// capabilities of a single instance.
+type ChooserList interface {
+	Chooser
+	List
+}
+
+// ListImplementation is a collection of available peers, with its own
+// subscribers for peer status change notifications.
+// The available peer list encapsulates the logic for selecting from among
+// available peers, whereas a ChooserList is responsible for retaining,
+// releasing, and monitoring peer availability.
+// Use "go.uber.org/yarpc/peer/peerlist".List in conjunction with a
+// ListImplementation to produce a "go.uber.org/yarpc/api/peer".List.
+//
+// peerlist.List and ListImplementation compose well with sharding schemes the
+// degenerate to returning the only available peer.
+type ListImplementation interface {
+	transport.Lifecycle
+
+	Add(StatusPeer) Subscriber
+	Remove(StatusPeer, Subscriber)
+	// Choose must return an available peer under a list read lock, so must
+	// not block.
+	Choose(context.Context, *transport.Request) StatusPeer
 }
 
 // Binder is a callback for peer.Bind that accepts a peer list and binds it to
