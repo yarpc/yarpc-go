@@ -22,8 +22,10 @@ package roundrobin
 
 import (
 	"container/ring"
+	"context"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
 )
 
 // newPeerRing creates a new peerRing with an initial capacity
@@ -132,9 +134,9 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 	return pr.nextNode == node
 }
 
-// Next returns the next peer in the ring, or nil if there is no peer in the ring
+// Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
-func (pr *peerRing) Next() peer.Peer {
+func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) peer.Peer {
 	if pr.nextNode == nil {
 		return nil
 	}

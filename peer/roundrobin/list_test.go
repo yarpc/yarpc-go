@@ -856,9 +856,9 @@ func TestRoundRobinList(t *testing.T) {
 			}
 			ApplyPeerListActions(t, pl, tt.peerListActions, deps)
 
-			assert.Len(t, pl.availablePeers.(*peerRing).peerToNode, len(tt.expectedAvailablePeers), "invalid available peerlist size")
+			assert.Len(t, pl.chooser.(*peerRing).peerToNode, len(tt.expectedAvailablePeers), "invalid available peerlist size")
 			for _, expectedRingPeer := range tt.expectedAvailablePeers {
-				node, ok := pl.availablePeers.(*peerRing).peerToNode[expectedRingPeer]
+				node, ok := pl.chooser.(*peerRing).peerToNode[expectedRingPeer]
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in available peerlist", expectedRingPeer))
 				if ok {
 					actualPeer := getPeerForRingNode(node)
