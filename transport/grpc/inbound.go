@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -101,6 +102,9 @@ func (i *Inbound) start() error {
 	)
 
 	go func() {
+		if i.t.options.logger != nil {
+			i.t.options.logger.Info("grpc inbound started", zap.String("address", i.listener.Addr().String()))
+		}
 		// TODO there should be some mechanism to block here
 		// there is a race because the listener gets set in the grpc
 		// Server implementation and we should be able to block

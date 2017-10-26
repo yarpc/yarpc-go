@@ -27,6 +27,7 @@ import (
 	"github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/zap"
 )
 
 var errChannelOrServiceNameIsRequired = errors.New(
@@ -81,6 +82,7 @@ func (options transportOptions) newChannelTransport() *ChannelTransport {
 		ch:     options.ch,
 		addr:   options.addr,
 		tracer: options.tracer,
+		logger: options.logger,
 	}
 }
 
@@ -93,6 +95,7 @@ type ChannelTransport struct {
 	name   string
 	addr   string
 	tracer opentracing.Tracer
+	logger *zap.Logger
 	router transport.Router
 
 	once *lifecycle.Once

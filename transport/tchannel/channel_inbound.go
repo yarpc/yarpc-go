@@ -24,6 +24,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/pkg/lifecycle"
+	"go.uber.org/zap"
 )
 
 // ChannelInbound receives YARPC requests over TChannel.
@@ -73,7 +74,12 @@ func (i *ChannelInbound) Channel() Channel {
 // connections; that occurs when you start the underlying ChannelTransport is
 // started.
 func (i *ChannelInbound) Start() error {
-	return i.once.Start(nil)
+	return i.once.Start(func() error {
+		if i.transport.logger != nil {
+			i.transport.logger.Info("tchannel inbound started", zap.String("address", i.transport.ListenAddr()))
+		}
+		return nil
+	})
 }
 
 // Stop stops the TChannel outbound. This currently does nothing.

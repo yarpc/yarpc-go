@@ -31,6 +31,7 @@ import (
 	intnet "go.uber.org/yarpc/internal/net"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
+	"go.uber.org/zap"
 )
 
 // InboundOption customizes the behavior of an HTTP Inbound constructed with
@@ -85,6 +86,7 @@ func (t *Transport) NewInbound(addr string, opts ...InboundOption) *Inbound {
 		once:              lifecycle.NewOnce(),
 		addr:              addr,
 		tracer:            t.tracer,
+		logger:            t.logger,
 		transport:         t,
 		grabHeaders:       make(map[string]struct{}),
 		bothResponseError: true,
@@ -104,6 +106,7 @@ type Inbound struct {
 	server      *intnet.HTTPServer
 	router      transport.Router
 	tracer      opentracing.Tracer
+	logger      *zap.Logger
 	transport   *Transport
 	grabHeaders map[string]struct{}
 	interceptor func(http.Handler) http.Handler
@@ -171,6 +174,9 @@ func (i *Inbound) start() error {
 	}
 
 	i.addr = i.server.Listener().Addr().String() // in case it changed
+	if i.logger != nil {
+		i.logger.Info("http inbound started", zap.String("address", i.addr))
+	}
 	return nil
 }
 
