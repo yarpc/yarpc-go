@@ -24,7 +24,6 @@ import (
 	"container/ring"
 	"context"
 
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 )
@@ -44,6 +43,12 @@ type peerRing struct {
 	nextNode   *ring.Ring
 }
 
+type ringSubscriber struct{}
+
+func (r ringSubscriber) NotifyStatusChanged(peer.Identifier) {}
+
+var nopSubscriber = ringSubscriber{}
+
 func (pr *peerRing) Update(updates peer.ListUpdates) error {
 	if len(updates.Additions) == 0 && len(updates.Removals) == 0 {
 		return nil
@@ -51,20 +56,22 @@ func (pr *peerRing) Update(updates peer.ListUpdates) error {
 
 	var errs error
 	for _, p := range updates.Removals {
-		errs = multierr.Append(errs, pr.Remove(p))
+		pr.Remove(p, nopSubscriber)
 	}
 	for _, p := range updates.Additions {
-		errs = multierr.Append(errs, pr.Add(p))
+		_ = pr.Add(p)
 	}
 	return errs
 }
 
 // Add a string to the end of the peerRing, if the ring is empty
 // it initializes the nextNode marker
-func (pr *peerRing) Add(p peer.Identifier) error {
+func (pr *peerRing) Add(p peer.Identifier) peer.Subscriber {
 	if _, ok := pr.peerToNode[p.Identifier()]; ok {
-		// Peer Already in ring, ignore the add
-		return peer.ErrPeerAddAlreadyInList(p.Identifier())
+		// Peer Already in ring, ignore the add.
+		// Peer list should check before attempting Add.
+		// This check is here only for defense in depth.
+		return nil
 	}
 
 	newNode := newPeerRingNode(p)
@@ -77,7 +84,7 @@ func (pr *peerRing) Add(p peer.Identifier) error {
 		// Push the node to the ring
 		pushBeforeNode(pr.nextNode, newNode)
 	}
-	return nil
+	return nopSubscriber
 }
 
 func newPeerRingNode(p peer.Identifier) *ring.Ring {
@@ -88,16 +95,16 @@ func newPeerRingNode(p peer.Identifier) *ring.Ring {
 
 // Remove a peer.Identifier from the peerRing, if the PeerID is not
 // in the ring return an error
-func (pr *peerRing) Remove(p peer.Identifier) error {
+func (pr *peerRing) Remove(p peer.Identifier, s peer.Subscriber) {
 	node, ok := pr.peerToNode[p.Identifier()]
 	if !ok {
-		// Peer doesn't exist in the list
-		return peer.ErrPeerRemoveNotInList(p.Identifier())
+		// Peer doesn't exist in the list.
+		// The peer list checks before calling Remove.
+		// This is here for defense in depth.
+		return
 	}
 
 	pr.popNode(node)
-
-	return nil
 }
 
 func (pr *peerRing) popNode(node *ring.Ring) peer.Identifier {

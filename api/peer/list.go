@@ -44,6 +44,15 @@ type List interface {
 	Update(updates ListUpdates) error
 }
 
+// ListUpdates specifies the updates to be made to a List
+type ListUpdates struct {
+	// Additions are the identifiers that should be added to the list
+	Additions []Identifier
+
+	// Removals are the identifiers that should be removed to the list
+	Removals []Identifier
+}
+
 // ChooserList is both a Chooser and a List, useful for expressing both
 // capabilities of a single instance.
 type ChooserList interface {
@@ -59,20 +68,20 @@ type IdentifierChooser interface {
 	Choose(context.Context, *transport.Request) Identifier
 }
 
+// IdentifierList supports adding and removing individual peer identifiers,
+// obtaining and releasing a single subscriber.
+// An identifier list does not manage the identified peers, but is useful as a
+// utility for implementing a List.
+type IdentifierList interface {
+	Add(Identifier) Subscriber
+	Remove(Identifier, Subscriber)
+}
+
 // IdentifierChooserList both an IdentifierChooser and a List, useful for
 // capturing both capabilities in a single instance.
 type IdentifierChooserList interface {
 	IdentifierChooser
-	List
-}
-
-// ListUpdates specifies the updates to be made to a List
-type ListUpdates struct {
-	// Additions are the identifiers that should be added to the list
-	Additions []Identifier
-
-	// Removals are the identifiers that should be removed to the list
-	Removals []Identifier
+	IdentifierList
 }
 
 // Binder is a callback for peer.Bind that accepts a peer list and binds it to
