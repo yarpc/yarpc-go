@@ -61,8 +61,7 @@ func Capacity(capacity int) ListOption {
 
 type identifierChooser interface {
 	Choose(ctx context.Context, req *transport.Request) string
-	Add(string) error
-	Remove(string) error
+	Update(peer.ListUpdates) error
 }
 
 // New creates a new round robin PeerList
@@ -181,7 +180,9 @@ func (pl *List) addToUnavailablePeers(p peer.Peer) error {
 
 // Must be run in a mutex.Lock()
 func (pl *List) addToAvailablePeers(p peer.Peer) error {
-	if err := pl.identifierChooser.Add(p.Identifier()); err != nil {
+	if err := pl.identifierChooser.Update(peer.ListUpdates{
+		Additions: []peer.Identifier{p},
+	}); err != nil {
 		return err
 	}
 
@@ -249,7 +250,9 @@ func (pl *List) removeAllAvailablePeers(toRemove map[string]peer.Peer) []peer.Pe
 	for id, p := range toRemove {
 		peers = append(peers, p)
 		delete(pl.availablePeers, id)
-		_ = pl.identifierChooser.Remove(id)
+		_ = pl.identifierChooser.Update(peer.ListUpdates{
+			Removals: []peer.Identifier{p},
+		})
 	}
 	return peers
 }
@@ -311,7 +314,9 @@ func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) error {
 // Must be run in a mutex.Lock()
 func (pl *List) removeFromAvailablePeers(p peer.Peer) error {
 	delete(pl.availablePeers, p.Identifier())
-	return pl.identifierChooser.Remove(p.Identifier())
+	return pl.identifierChooser.Update(peer.ListUpdates{
+		Removals: []peer.Identifier{p},
+	})
 }
 
 // removeFromUnavailablePeers remove a peer from the Unavailable Peers list the
@@ -422,7 +427,9 @@ func (pl *List) handleAvailablePeerStatusChange(p peer.Peer) error {
 		return nil
 	}
 
-	if err := pl.identifierChooser.Remove(p.Identifier()); err != nil {
+	if err := pl.identifierChooser.Update(peer.ListUpdates{
+		Removals: []peer.Identifier{p},
+	}); err != nil {
 		// Peer was not in list
 		return err
 	}

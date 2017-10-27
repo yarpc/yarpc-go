@@ -24,6 +24,7 @@ import (
 	"container/ring"
 	"context"
 
+	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 )
@@ -41,6 +42,21 @@ func newPeerRing(capacity int) *peerRing {
 type peerRing struct {
 	peerToNode map[string]*ring.Ring
 	nextNode   *ring.Ring
+}
+
+func (pr *peerRing) Update(updates peer.ListUpdates) error {
+	if len(updates.Additions) == 0 && len(updates.Removals) == 0 {
+		return nil
+	}
+
+	var errs error
+	for _, p := range updates.Removals {
+		errs = multierr.Append(errs, pr.Remove(p.Identifier()))
+	}
+	for _, p := range updates.Additions {
+		errs = multierr.Append(errs, pr.Add(p.Identifier()))
+	}
+	return errs
 }
 
 // Add a string to the end of the peerRing, if the ring is empty
