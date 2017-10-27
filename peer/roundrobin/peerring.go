@@ -43,16 +43,6 @@ type peerRing struct {
 	nextNode   *ring.Ring
 }
 
-// GetPeer returns the Peer from the Ring or Nil
-func (pr *peerRing) GetPeer(pid peer.Identifier) peer.Peer {
-	node, ok := pr.peerToNode[pid.Identifier()]
-	if !ok {
-		return nil
-	}
-
-	return getPeerForRingNode(node)
-}
-
 // Add a peer.Peer to the end of the peerRing, if the ring is empty
 // it initializes the nextNode marker
 func (pr *peerRing) Add(p peer.Peer) error {

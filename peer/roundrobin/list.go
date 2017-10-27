@@ -62,7 +62,6 @@ func Capacity(capacity int) ListOption {
 type identifierChooser interface {
 	Choose(ctx context.Context, req *transport.Request) peer.Peer
 	Add(peer.Peer) error
-	GetPeer(peer.Identifier) peer.Peer
 	Remove(peer.Peer) error
 	RemoveAll() []peer.Peer
 	All() []peer.Peer
@@ -225,11 +224,12 @@ func (pl *List) clearPeers() error {
 
 	var errs []error
 
-	availablePeers := pl.identifierChooser.RemoveAll()
+	availablePeers := pl.removeAll(pl.availablePeers)
+	pl.identifierChooser.RemoveAll()
 	errs = append(errs, pl.releaseAll(availablePeers)...)
 	pl.addToUninitialized(availablePeers)
 
-	unvavailablePeers := pl.removeAllUnavailable()
+	unvavailablePeers := pl.removeAll(pl.unavailablePeers)
 	errs = append(errs, pl.releaseAll(unvavailablePeers)...)
 	pl.addToUninitialized(unvavailablePeers)
 
@@ -244,14 +244,14 @@ func (pl *List) addToUninitialized(peers []peer.Peer) {
 	}
 }
 
-// removeAllUnavailable will clear the unavailablePeers list and
+// removeAllwill clear the unavailablePeers list and
 // return all the Peers in the list in a slice
 // Must be run in a mutex.Lock()
-func (pl *List) removeAllUnavailable() []peer.Peer {
-	peers := make([]peer.Peer, 0, len(pl.unavailablePeers))
-	for id, p := range pl.unavailablePeers {
+func (pl *List) removeAll(toRemove map[string]peer.Peer) []peer.Peer {
+	peers := make([]peer.Peer, 0, len(toRemove))
+	for id, p := range toRemove {
 		peers = append(peers, p)
-		delete(pl.unavailablePeers, id)
+		delete(toRemove, id)
 	}
 	return peers
 }
@@ -284,7 +284,7 @@ func (pl *List) removePeerIdentifier(pid peer.Identifier) error {
 // for the PeerID and remove it
 // Must be run in a mutex.Lock()
 func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) error {
-	if p := pl.identifierChooser.GetPeer(pid); p != nil {
+	if p := pl.availablePeers[pid.Identifier()]; p != nil {
 		return pl.removeFromAvailablePeers(p)
 	}
 
@@ -389,7 +389,7 @@ func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	if p := pl.identifierChooser.GetPeer(pid); p != nil {
+	if p := pl.availablePeers[pid.Identifier()]; p != nil {
 		// TODO: log error
 		_ = pl.handleAvailablePeerStatusChange(p)
 		return
@@ -415,6 +415,7 @@ func (pl *List) handleAvailablePeerStatusChange(p peer.Peer) error {
 		// Peer was not in list
 		return err
 	}
+	delete(pl.availablePeers, p.Identifier())
 
 	return pl.addToUnavailablePeers(p)
 
