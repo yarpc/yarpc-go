@@ -862,7 +862,7 @@ func TestRoundRobinList(t *testing.T) {
 				assert.True(t, ok, fmt.Sprintf("expected peer: %s was not in available peerlist", expectedRingPeer))
 				if ok {
 					actualPeer := getPeerForRingNode(node)
-					assert.Equal(t, expectedRingPeer, actualPeer)
+					assert.Equal(t, expectedRingPeer, actualPeer.Identifier())
 				}
 			}
 

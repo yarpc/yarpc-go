@@ -60,7 +60,7 @@ func Capacity(capacity int) ListOption {
 }
 
 type identifierChooser interface {
-	Choose(ctx context.Context, req *transport.Request) string
+	Choose(ctx context.Context, req *transport.Request) peer.Identifier
 	Update(peer.ListUpdates) error
 }
 
@@ -333,8 +333,8 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 
 	for {
-		if nextPeerId := pl.choose(ctx, req); nextPeerId != "" {
-			nextPeer := pl.availablePeers[nextPeerId]
+		if nextPeerId := pl.choose(ctx, req); nextPeerId != nil {
+			nextPeer := pl.availablePeers[nextPeerId.Identifier()]
 			pl.notifyPeerAvailable()
 			nextPeer.StartRequest()
 			return nextPeer, pl.getOnFinishFunc(nextPeer), nil
@@ -357,7 +357,7 @@ func (pl *List) IsRunning() bool {
 
 // choose grabs the next available peer from the PeerRing and returns it,
 // if there are no available peers it returns nil
-func (pl *List) choose(ctx context.Context, req *transport.Request) string {
+func (pl *List) choose(ctx context.Context, req *transport.Request) peer.Identifier {
 	pl.lock.Lock()
 	pid := pl.identifierChooser.Choose(ctx, req)
 	pl.lock.Unlock()

@@ -51,24 +51,24 @@ func (pr *peerRing) Update(updates peer.ListUpdates) error {
 
 	var errs error
 	for _, p := range updates.Removals {
-		errs = multierr.Append(errs, pr.Remove(p.Identifier()))
+		errs = multierr.Append(errs, pr.Remove(p))
 	}
 	for _, p := range updates.Additions {
-		errs = multierr.Append(errs, pr.Add(p.Identifier()))
+		errs = multierr.Append(errs, pr.Add(p))
 	}
 	return errs
 }
 
 // Add a string to the end of the peerRing, if the ring is empty
 // it initializes the nextNode marker
-func (pr *peerRing) Add(p string) error {
-	if _, ok := pr.peerToNode[p]; ok {
+func (pr *peerRing) Add(p peer.Identifier) error {
+	if _, ok := pr.peerToNode[p.Identifier()]; ok {
 		// Peer Already in ring, ignore the add
-		return peer.ErrPeerAddAlreadyInList(p)
+		return peer.ErrPeerAddAlreadyInList(p.Identifier())
 	}
 
 	newNode := newPeerRingNode(p)
-	pr.peerToNode[p] = newNode
+	pr.peerToNode[p.Identifier()] = newNode
 
 	if pr.nextNode == nil {
 		// Empty ring, add the first node
@@ -80,19 +80,19 @@ func (pr *peerRing) Add(p string) error {
 	return nil
 }
 
-func newPeerRingNode(p string) *ring.Ring {
+func newPeerRingNode(p peer.Identifier) *ring.Ring {
 	newNode := ring.New(1)
 	newNode.Value = p
 	return newNode
 }
 
-// Remove a string from the peerRing, if the PeerID is not
+// Remove a peer.Identifier from the peerRing, if the PeerID is not
 // in the ring return an error
-func (pr *peerRing) Remove(p string) error {
-	node, ok := pr.peerToNode[p]
+func (pr *peerRing) Remove(p peer.Identifier) error {
+	node, ok := pr.peerToNode[p.Identifier()]
 	if !ok {
 		// Peer doesn't exist in the list
-		return peer.ErrPeerRemoveNotInList(p)
+		return peer.ErrPeerRemoveNotInList(p.Identifier())
 	}
 
 	pr.popNode(node)
@@ -100,7 +100,7 @@ func (pr *peerRing) Remove(p string) error {
 	return nil
 }
 
-func (pr *peerRing) popNode(node *ring.Ring) string {
+func (pr *peerRing) popNode(node *ring.Ring) peer.Identifier {
 	p := getPeerForRingNode(node)
 
 	if isLastRingNode(node) {
@@ -113,7 +113,7 @@ func (pr *peerRing) popNode(node *ring.Ring) string {
 	}
 
 	// Remove the node from our node map
-	delete(pr.peerToNode, p)
+	delete(pr.peerToNode, p.Identifier())
 
 	return p
 }
@@ -124,9 +124,9 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 
 // Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
-func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) string {
+func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) peer.Identifier {
 	if pr.nextNode == nil {
-		return ""
+		return nil
 	}
 
 	p := getPeerForRingNode(pr.nextNode)
@@ -136,8 +136,8 @@ func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) string {
 	return p
 }
 
-func getPeerForRingNode(rNode *ring.Ring) string {
-	return rNode.Value.(string)
+func getPeerForRingNode(rNode *ring.Ring) peer.Identifier {
+	return rNode.Value.(peer.Identifier)
 }
 
 func isLastRingNode(rNode *ring.Ring) bool {
