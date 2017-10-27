@@ -63,7 +63,6 @@ type identifierChooser interface {
 	Choose(ctx context.Context, req *transport.Request) string
 	Add(string) error
 	Remove(string) error
-	RemoveAll() []string
 }
 
 // New creates a new round robin PeerList
@@ -223,12 +222,11 @@ func (pl *List) clearPeers() error {
 
 	var errs []error
 
-	availablePeers := pl.removeAll(pl.availablePeers)
-	pl.identifierChooser.RemoveAll()
+	availablePeers := pl.removeAllAvailablePeers(pl.availablePeers)
 	errs = append(errs, pl.releaseAll(availablePeers)...)
 	pl.addToUninitialized(availablePeers)
 
-	unvavailablePeers := pl.removeAll(pl.unavailablePeers)
+	unvavailablePeers := pl.removeAllUnavailablePeers(pl.unavailablePeers)
 	errs = append(errs, pl.releaseAll(unvavailablePeers)...)
 	pl.addToUninitialized(unvavailablePeers)
 
@@ -243,10 +241,23 @@ func (pl *List) addToUninitialized(peers []peer.Peer) {
 	}
 }
 
-// removeAllwill clear the unavailablePeers list and
+// removeAllAvailablePeers will clear the availablePeers list and return all
+// the Peers in the list in a slice
+// Must be run in a mutex.Lock()
+func (pl *List) removeAllAvailablePeers(toRemove map[string]peer.Peer) []peer.Peer {
+	peers := make([]peer.Peer, 0, len(toRemove))
+	for id, p := range toRemove {
+		peers = append(peers, p)
+		delete(pl.availablePeers, id)
+		_ = pl.identifierChooser.Remove(id)
+	}
+	return peers
+}
+
+// removeAllUnavailablePeers will clear the unavailablePeers list and
 // return all the Peers in the list in a slice
 // Must be run in a mutex.Lock()
-func (pl *List) removeAll(toRemove map[string]peer.Peer) []peer.Peer {
+func (pl *List) removeAllUnavailablePeers(toRemove map[string]peer.Peer) []peer.Peer {
 	peers := make([]peer.Peer, 0, len(toRemove))
 	for id, p := range toRemove {
 		peers = append(peers, p)

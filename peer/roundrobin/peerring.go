@@ -84,15 +84,6 @@ func (pr *peerRing) Remove(p string) error {
 	return nil
 }
 
-// RemoveAll pops all the peers from the ring and returns them in a list
-func (pr *peerRing) RemoveAll() []string {
-	peers := make([]string, 0, len(pr.peerToNode))
-	for _, node := range pr.peerToNode {
-		peers = append(peers, pr.popNode(node))
-	}
-	return peers
-}
-
 func (pr *peerRing) popNode(node *ring.Ring) string {
 	p := getPeerForRingNode(node)
 
