@@ -31,7 +31,7 @@
 // YARPC breaks RPC into interchangeable encodings, transports, and peer
 // choosers.
 // YARPC for Go provides reference implementations for HTTP/1.1, TChannel and gRPC
-// transports, and also raw, JSON, Thrift and Protobuf encodings.
+// transports, and also raw, JSON, Thrift, and Protobuf encodings.
 // YARPC for Go provides a round robin peer chooser and experimental
 // implementations for debug pages and rate limiting.
 // YARPC for Go plans to provide a load balancer that uses a
