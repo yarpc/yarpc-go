@@ -28,6 +28,7 @@ import (
 
 // Chooser is a collection of Peers. Outbounds request peers from the
 // peer.Chooser to determine where to send requests.
+// The chooser is responsible for managing the lifecycle of any retained peers.
 type Chooser interface {
 	transport.Lifecycle
 
@@ -47,6 +48,21 @@ type List interface {
 // capabilities of a single instance.
 type ChooserList interface {
 	Chooser
+	List
+}
+
+// IdentifierChooser determines the identifier of a peer for a request.
+// A Chooser may use an IdentifierChooser internally.
+// An identifier chooser is not responsible for managing the lifecycle of the
+// identified peers.
+type IdentifierChooser interface {
+	Choose(context.Context, *transport.Request) Identifier
+}
+
+// IdentifierChooserList both an IdentifierChooser and a List, useful for
+// capturing both capabilities in a single instance.
+type IdentifierChooserList interface {
+	IdentifierChooser
 	List
 }
 

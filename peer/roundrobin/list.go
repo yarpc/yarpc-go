@@ -59,11 +59,6 @@ func Capacity(capacity int) ListOption {
 	}
 }
 
-type identifierChooser interface {
-	Choose(ctx context.Context, req *transport.Request) peer.Identifier
-	Update(peer.ListUpdates) error
-}
-
 // New creates a new round robin PeerList
 func New(transport peer.Transport, opts ...ListOption) *List {
 	cfg := defaultListConfig
@@ -91,7 +86,7 @@ type List struct {
 
 	unavailablePeers   map[string]peer.Peer
 	availablePeers     map[string]peer.Peer
-	identifierChooser  identifierChooser
+	identifierChooser  peer.IdentifierChooserList
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
