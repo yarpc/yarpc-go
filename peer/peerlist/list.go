@@ -331,8 +331,8 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 
 	for {
-		if nextPeerId := pl.choose(ctx, req); nextPeerId != nil {
-			nextPeer := pl.availablePeers[nextPeerId.Identifier()]
+		if nextPID := pl.choose(ctx, req); nextPID != nil {
+			nextPeer := pl.availablePeers[nextPID.Identifier()]
 			pl.notifyPeerAvailable()
 			nextPeer.StartRequest()
 			return nextPeer, pl.getOnFinishFunc(nextPeer), nil
