@@ -44,6 +44,7 @@ type transportOptions struct {
 	tracer              opentracing.Tracer
 	buildClient         func(*transportOptions) *http.Client
 	logger              *zap.Logger
+	clientInterceptor   func(http.RoundTripper) http.RoundTripper
 }
 
 var defaultTransportOptions = transportOptions{
@@ -126,6 +127,15 @@ func Logger(logger *zap.Logger) TransportOption {
 	}
 }
 
+// ClientInterceptor sets an interceptor to use for outbound (client) calls.
+//
+// The default is no interceptor.
+func ClientInterceptor(cinter func(http.RoundTripper) http.RoundTripper) TransportOption {
+	return func(options *transportOptions) {
+		options.clientInterceptor = cinter
+	}
+}
+
 // Hidden option to override the buildHTTPClient function. This is used only
 // for testing.
 func buildClient(f func(*transportOptions) *http.Client) TransportOption {
@@ -160,18 +170,23 @@ func (o *transportOptions) newTransport() *Transport {
 }
 
 func buildHTTPClient(options *transportOptions) *http.Client {
+	var t http.RoundTripper
+	t = &http.Transport{
+		// options lifted from https://golang.org/src/net/http/transport.go
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: options.keepAlive,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
+	}
+	if options.clientInterceptor != nil {
+		t = options.clientInterceptor(t)
+	}
 	return &http.Client{
-		Transport: &http.Transport{
-			// options lifted from https://golang.org/src/net/http/transport.go
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: options.keepAlive,
-			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			MaxIdleConnsPerHost:   options.maxIdleConnsPerHost,
-		},
+		Transport: t,
 	}
 }
 
