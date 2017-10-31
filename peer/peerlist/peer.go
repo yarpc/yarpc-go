@@ -24,7 +24,7 @@ func (t *peerThunk) NotifyStatusChanged(pid peer.Identifier) {
 	s := t.subscriber
 	t.lock.RUnlock()
 
-	pl.NotifyStatusChanged(pid)
+	pl.notifyStatusChanged(pid)
 
 	if s != nil {
 		s.NotifyStatusChanged(pid)

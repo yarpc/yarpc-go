@@ -60,7 +60,7 @@ func Capacity(capacity int) ListOption {
 }
 
 // New creates a new peer list with an identifier chooser for available peers.
-func New(name string, transport peer.Transport, identifierChooser peer.IdentifierChooserList, opts ...ListOption) *List {
+func New(name string, transport peer.Transport, availableChooser peer.RetainedChooserList, opts ...ListOption) *List {
 	cfg := defaultListConfig
 	for _, o := range opts {
 		o(&cfg)
@@ -72,7 +72,7 @@ func New(name string, transport peer.Transport, identifierChooser peer.Identifie
 		uninitializedPeers: make(map[string]peer.Identifier, cfg.capacity),
 		unavailablePeers:   make(map[string]*peerThunk, cfg.capacity),
 		availablePeers:     make(map[string]*peerThunk, cfg.capacity),
-		identifierChooser:  identifierChooser,
+		availableChooser:   availableChooser,
 		transport:          transport,
 		peerAvailableEvent: make(chan struct{}, 1),
 	}
@@ -80,7 +80,7 @@ func New(name string, transport peer.Transport, identifierChooser peer.Identifie
 
 // List is a peer list which rotates which peers are to be selected in a circle
 type List struct {
-	lock sync.Mutex
+	lock sync.RWMutex
 
 	name string
 
@@ -89,7 +89,7 @@ type List struct {
 
 	unavailablePeers   map[string]*peerThunk
 	availablePeers     map[string]*peerThunk
-	identifierChooser  peer.IdentifierChooserList
+	availableChooser   peer.RetainedChooserList
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 
@@ -183,7 +183,7 @@ func (pl *List) addToAvailablePeers(t *peerThunk) error {
 		return peer.ErrPeerAddAlreadyInList(t.peer.Identifier())
 	}
 	_, peer, _ := t.Get()
-	sub := pl.identifierChooser.Add(peer)
+	sub := pl.availableChooser.Add(peer)
 	t.SetSubscriber(sub)
 	pl.availablePeers[peer.Identifier()] = t
 	pl.notifyPeerAvailable()
@@ -251,7 +251,7 @@ func (pl *List) removeAllAvailablePeers(toRemove map[string]*peerThunk) []*peerT
 		thunks = append(thunks, t)
 		_, peer, sub := t.Get()
 		delete(pl.availablePeers, id)
-		pl.identifierChooser.Remove(peer, sub)
+		pl.availableChooser.Remove(peer, sub)
 	}
 	return thunks
 }
@@ -316,7 +316,7 @@ func (pl *List) removePeerIdentifierReferences(pid peer.Identifier) (*peerThunk,
 // Must be run in a mutex.Lock()
 func (pl *List) removeFromAvailablePeers(t *peerThunk) error {
 	delete(pl.availablePeers, t.peer.Identifier())
-	pl.identifierChooser.Remove(t.peer, t.subscriber)
+	pl.availableChooser.Remove(t.peer, t.subscriber)
 	t.SetSubscriber(nil)
 	return nil
 }
@@ -335,8 +335,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 
 	for {
-		if nextPID := pl.choose(ctx, req); nextPID != nil {
-			nextPeer := pl.availablePeers[nextPID.Identifier()].peer
+		if nextPeer := pl.choose(ctx, req); nextPeer != nil {
 			pl.notifyPeerAvailable()
 			nextPeer.StartRequest()
 			return nextPeer, pl.getOnFinishFunc(nextPeer), nil
@@ -359,11 +358,10 @@ func (pl *List) IsRunning() bool {
 
 // choose grabs the next available peer from the PeerRing and returns it,
 // if there are no available peers it returns nil
-func (pl *List) choose(ctx context.Context, req *transport.Request) peer.Identifier {
-	pl.lock.Lock()
-	pid := pl.identifierChooser.Choose(ctx, req)
-	pl.lock.Unlock()
-	return pid
+func (pl *List) choose(ctx context.Context, req *transport.Request) peer.Peer {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+	return pl.availableChooser.Choose(ctx, req)
 }
 
 // notifyPeerAvailable writes to a channel indicating that a Peer is currently
@@ -406,7 +404,34 @@ func (pl *List) newUnavailableError(err error) error {
 	return yarpcerrors.UnavailableErrorf("%s peer list timed out waiting for peer: %s", pl.name, err.Error())
 }
 
+// NotifyStatusChanged receives status change notifications for peers in the
+// list.
 func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
+	pl.lock.Lock()
+	t := pl.getThunk(pid)
+	pl.lock.Unlock()
+
+	if t != nil {
+		t.NotifyStatusChanged(pid)
+	}
+}
+
+// getThunk returns either the available or unavailable peer thunk.
+// Must be called under a lock.
+func (pl *List) getThunk(pid peer.Identifier) *peerThunk {
+	if t := pl.availablePeers[pid.Identifier()]; t != nil {
+		return t
+	}
+
+	if t := pl.unavailablePeers[pid.Identifier()]; t != nil {
+		return t
+	}
+
+	return nil
+}
+
+// notifyStatusChanged gets called by peer thunks
+func (pl *List) notifyStatusChanged(pid peer.Identifier) {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
@@ -416,9 +441,9 @@ func (pl *List) NotifyStatusChanged(pid peer.Identifier) {
 		return
 	}
 
-	if p, ok := pl.unavailablePeers[pid.Identifier()]; ok && p != nil {
+	if t := pl.unavailablePeers[pid.Identifier()]; t != nil {
 		// TODO: log error
-		_ = pl.handleUnavailablePeerStatusChange(p)
+		_ = pl.handleUnavailablePeerStatusChange(t)
 	}
 	// No action required
 }
@@ -432,7 +457,7 @@ func (pl *List) handleAvailablePeerStatusChange(t *peerThunk) error {
 		return nil
 	}
 
-	pl.identifierChooser.Remove(t.peer, t.subscriber)
+	pl.availableChooser.Remove(t.peer, t.subscriber)
 	t.SetSubscriber(nil)
 	delete(pl.availablePeers, t.peer.Identifier())
 

@@ -57,7 +57,7 @@ func New(transport peer.Transport, opts ...ListOption) *List {
 		List: peerlist.New(
 			"roundrobin",
 			transport,
-			newPeerRing(cfg.capacity),
+			newPeerRing(),
 			peerlist.Capacity(cfg.capacity),
 		),
 	}

@@ -29,53 +29,32 @@ import (
 )
 
 // newPeerRing creates a new peerRing with an initial capacity
-func newPeerRing(capacity int) *peerRing {
-	return &peerRing{
-		peerToNode: make(map[string]*ring.Ring, capacity),
-	}
+func newPeerRing() *peerRing {
+	return &peerRing{}
+}
+
+type subscriber struct {
+	peer peer.Peer
+	node *ring.Ring
+}
+
+func (s *subscriber) NotifyStatusChanged(pid peer.Identifier) {
 }
 
 // peerRing provides a safe way to interact (Add/Remove/Get) with a potentially
 // changing list of peer objects
 // peerRing is NOT Thread-safe, make sure to only call peerRing functions with a lock
 type peerRing struct {
-	peerToNode map[string]*ring.Ring
-	nextNode   *ring.Ring
-}
-
-type ringSubscriber struct{}
-
-func (r ringSubscriber) NotifyStatusChanged(peer.Identifier) {}
-
-var nopSubscriber = ringSubscriber{}
-
-func (pr *peerRing) Update(updates peer.ListUpdates) error {
-	if len(updates.Additions) == 0 && len(updates.Removals) == 0 {
-		return nil
-	}
-
-	var errs error
-	for _, p := range updates.Removals {
-		pr.Remove(p, nopSubscriber)
-	}
-	for _, p := range updates.Additions {
-		_ = pr.Add(p)
-	}
-	return errs
+	nextNode *ring.Ring
 }
 
 // Add a string to the end of the peerRing, if the ring is empty
 // it initializes the nextNode marker
-func (pr *peerRing) Add(p peer.Identifier) peer.Subscriber {
-	if _, ok := pr.peerToNode[p.Identifier()]; ok {
-		// Peer Already in ring, ignore the add.
-		// Peer list should check before attempting Add.
-		// This check is here only for defense in depth.
-		return nil
-	}
-
-	newNode := newPeerRingNode(p)
-	pr.peerToNode[p.Identifier()] = newNode
+func (pr *peerRing) Add(p peer.Peer) peer.Subscriber {
+	sub := &subscriber{peer: p}
+	newNode := ring.New(1)
+	newNode.Value = sub
+	sub.node = newNode
 
 	if pr.nextNode == nil {
 		// Empty ring, add the first node
@@ -84,32 +63,19 @@ func (pr *peerRing) Add(p peer.Identifier) peer.Subscriber {
 		// Push the node to the ring
 		pushBeforeNode(pr.nextNode, newNode)
 	}
-	return nopSubscriber
+	return sub
 }
 
-func newPeerRingNode(p peer.Identifier) *ring.Ring {
-	newNode := ring.New(1)
-	newNode.Value = p
-	return newNode
-}
-
-// Remove a peer.Identifier from the peerRing, if the PeerID is not
-// in the ring return an error
-func (pr *peerRing) Remove(p peer.Identifier, s peer.Subscriber) {
-	node, ok := pr.peerToNode[p.Identifier()]
+// Remove the peer from the ring. Use the subscriber to address the node of the
+// ring directly.
+func (pr *peerRing) Remove(p peer.Peer, s peer.Subscriber) {
+	sub, ok := s.(*subscriber)
 	if !ok {
-		// Peer doesn't exist in the list.
-		// The peer list checks before calling Remove.
-		// This is here for defense in depth.
+		// Don't panic.
 		return
 	}
 
-	pr.popNode(node)
-}
-
-func (pr *peerRing) popNode(node *ring.Ring) peer.Identifier {
-	p := getPeerForRingNode(node)
-
+	node := sub.node
 	if isLastRingNode(node) {
 		pr.nextNode = nil
 	} else {
@@ -118,11 +84,6 @@ func (pr *peerRing) popNode(node *ring.Ring) peer.Identifier {
 		}
 		popNodeFromRing(node)
 	}
-
-	// Remove the node from our node map
-	delete(pr.peerToNode, p.Identifier())
-
-	return p
 }
 
 func (pr *peerRing) isNextNode(node *ring.Ring) bool {
@@ -131,7 +92,7 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 
 // Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
-func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) peer.Identifier {
+func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) peer.Peer {
 	if pr.nextNode == nil {
 		return nil
 	}
@@ -143,8 +104,8 @@ func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) peer.Ide
 	return p
 }
 
-func getPeerForRingNode(rNode *ring.Ring) peer.Identifier {
-	return rNode.Value.(peer.Identifier)
+func getPeerForRingNode(rNode *ring.Ring) peer.Peer {
+	return rNode.Value.(*subscriber).peer
 }
 
 func isLastRingNode(rNode *ring.Ring) bool {
