@@ -19,12 +19,18 @@ type peerThunk struct {
 
 func (t *peerThunk) onStart() {
 	t.peer.StartRequest()
-	t.Subscriber().NotifyStatusChanged(t.id)
+	s := t.Subscriber()
+	if s != nil {
+		s.NotifyStatusChanged(t.id)
+	}
 }
 
 func (t *peerThunk) onFinish(error) {
 	t.peer.EndRequest()
-	t.Subscriber().NotifyStatusChanged(t.id)
+	s := t.Subscriber()
+	if s != nil {
+		s.NotifyStatusChanged(t.id)
+	}
 }
 
 func (t *peerThunk) Identifier() string {
