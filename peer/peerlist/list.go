@@ -490,6 +490,21 @@ func (pl *List) Uninitialized(p peer.Identifier) bool {
 	return ok
 }
 
+// Peers returns a snapshot of all retained (available and
+// unavailable) peers.
+func (pl *List) Peers() []peer.Peer {
+	pl.lock.RLock()
+	defer pl.lock.RUnlock()
+	peers := make([]peer.Peer, 0)
+	for _, t := range pl.availablePeers {
+		peers = append(peers, t.peer)
+	}
+	for _, t := range pl.unavailablePeers {
+		peers = append(peers, t.peer)
+	}
+	return peers
+}
+
 // NumAvailable returns how many peers are available.
 func (pl *List) NumAvailable() int {
 	return len(pl.availablePeers)
