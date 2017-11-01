@@ -11,6 +11,9 @@ v1.23.0-dev (unreleased)
     tests.
 -   Adds a `peer/pendingheap` implementation that performs peer selection,
     sending requests to the available peer with the fewest pending requests.
+-   Adds a `peer/hashring32` implementation that can perform peer selection
+    based on the `req.ShardKey` and a consistent hash function over all
+    *available* peers.
 
 v1.22.0 (2017-11-14)
 --------------------
