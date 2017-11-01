@@ -98,7 +98,6 @@ func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) peer.Pee
 	}
 
 	p := getPeerForRingNode(pr.nextNode)
-
 	pr.nextNode = pr.nextNode.Next()
 
 	return p
