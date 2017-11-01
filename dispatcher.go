@@ -229,7 +229,7 @@ func (d *Dispatcher) MustOutboundConfig(outboundKey string) *transport.OutboundC
 	panic(fmt.Sprintf("no configured outbound transport for outbound key %q", outboundKey))
 }
 
-// MustOutboundConfig provides the configuration needed to talk to the given
+// OutboundConfig provides the configuration needed to talk to the given
 // service through an outboundKey. This configuration may be directly
 // passed into encoding-specific RPC clients.
 //
