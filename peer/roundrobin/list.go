@@ -37,7 +37,7 @@ var defaultListConfig = listConfig{
 type ListOption func(*listConfig)
 
 // Capacity specifies the default capacity of the underlying
-// data structures for this list
+// data structures for this list.
 //
 // Defaults to 10.
 func Capacity(capacity int) ListOption {
@@ -46,7 +46,7 @@ func Capacity(capacity int) ListOption {
 	}
 }
 
-// New creates a new round robin PeerList
+// New creates a new round robin peer list.
 func New(transport peer.Transport, opts ...ListOption) *List {
 	cfg := defaultListConfig
 	for _, o := range opts {
