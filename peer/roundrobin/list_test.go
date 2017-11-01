@@ -367,7 +367,7 @@ func TestRoundRobinList(t *testing.T) {
 		},
 		{
 			msg: "add duplicate peer",
-			retainedAvailablePeerIDs: []string{"1", "2", "2"},
+			retainedAvailablePeerIDs: []string{"1", "2"},
 			expectedAvailablePeers:   []string{"1", "2"},
 			peerListActions: []PeerListAction{
 				StartAction{},

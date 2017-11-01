@@ -96,6 +96,36 @@ type List struct {
 	once *lifecycle.Once
 }
 
+// Add includes a single peer in the list.
+// Typically, you'll update in bulk with Update.
+// This exists to simplify calling Update in tests.
+func (pl *List) Add(pid peer.Identifier) error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	updates := peer.ListUpdates{Additions: []peer.Identifier{pid}}
+
+	if pl.shouldRetainPeers.Load() {
+		return pl.updateInitialized(updates)
+	}
+	return pl.updateUninitialized(updates)
+}
+
+// Remove excludes a single peer in the list.
+// Typically, you'll update in bulk with Update.
+// This exists to simplify calling Update in tests.
+func (pl *List) Remove(pid peer.Identifier) error {
+	pl.lock.Lock()
+	defer pl.lock.Unlock()
+
+	updates := peer.ListUpdates{Removals: []peer.Identifier{pid}}
+
+	if pl.shouldRetainPeers.Load() {
+		return pl.updateInitialized(updates)
+	}
+	return pl.updateUninitialized(updates)
+}
+
 // Update applies the additions and removals of peer Identifiers to the list
 // it returns a multi-error result of every failure that happened without
 // circuit breaking due to failures.
@@ -153,6 +183,10 @@ func (pl *List) updateUninitialized(updates peer.ListUpdates) error {
 
 // Must be run inside a mutex.Lock()
 func (pl *List) addPeerIdentifier(pid peer.Identifier) error {
+	if t := pl.getThunk(pid); t != nil {
+		return peer.ErrPeerAddAlreadyInList(pid.Identifier())
+	}
+
 	t := &peerThunk{list: pl, id: pid}
 	t.boundOnFinish = t.onFinish
 	p, err := pl.transport.RetainPeer(pid, t)
