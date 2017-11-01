@@ -92,8 +92,7 @@ func New(name string, transport peer.Transport, availableChooser peer.ListImplem
 // The peer list will not choose an unavailable peer, prefering to block until
 // one becomes available.
 //
-// The list is a suitable basis for concrete implementations like round-robin
-// and join-shortest-queue.
+// The list is a suitable basis for concrete implementations like round-robin.
 type List struct {
 	lock sync.RWMutex
 
