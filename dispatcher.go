@@ -209,10 +209,19 @@ func (d *Dispatcher) Inbounds() Inbounds {
 // 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
 //
 // This function panics if the outboundKey is not known.
+//
+// Deprecated: Use MustOutboundConfig instead.
 func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
 	return d.MustOutboundConfig(outboundKey)
 }
 
+// MustOutboundConfig provides the configuration needed to talk to the given
+// service through an outboundKey. This configuration may be directly
+// passed into encoding-specific RPC clients.
+//
+// 	keyvalueClient := json.New(dispatcher.MustOutboundConfig("keyvalue"))
+//
+// This function panics if the outboundKey is not known.
 func (d *Dispatcher) MustOutboundConfig(outboundKey string) *transport.OutboundConfig {
 	if oc, ok := d.OutboundConfig(outboundKey); ok {
 		return oc
@@ -220,6 +229,15 @@ func (d *Dispatcher) MustOutboundConfig(outboundKey string) *transport.OutboundC
 	panic(fmt.Sprintf("no configured outbound transport for outbound key %q", outboundKey))
 }
 
+// MustOutboundConfig provides the configuration needed to talk to the given
+// service through an outboundKey. This configuration may be directly
+// passed into encoding-specific RPC clients.
+//
+//  outboundConfig, ok := dispatcher.OutboundConfig("keyvalue")
+//  if !ok {
+//    // do something
+//  }
+// 	keyvalueClient := json.New(outboundConfig)
 func (d *Dispatcher) OutboundConfig(outboundKey string) (oc *transport.OutboundConfig, ok bool) {
 	if out, ok := d.outbounds[outboundKey]; ok {
 		return &transport.OutboundConfig{

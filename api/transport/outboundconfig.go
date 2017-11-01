@@ -26,47 +26,52 @@ import "fmt"
 // is used in conjunction with an encoding to send a request through one of the
 // outbounds.
 type OutboundConfig struct {
-	CallerName  string
-	Outbounds   Outbounds
+	CallerName string
+	Outbounds  Outbounds
 }
+
+var _ ClientConfig = (*OutboundConfig)(nil)
 
 // Caller is the name of the service making the request.
-// implements ClientConfig#Caller (for backwards compatibility)
-// TODO: This function should be deprecated, it's for legacy support.
-// Use oc.CallerName instead
-func (oc *OutboundConfig) Caller() string {
-	return oc.CallerName
+//
+// Implements ClientConfig#Caller (for backwards compatibility).
+func (o *OutboundConfig) Caller() string {
+	// TODO: This function should be deprecated, it's for legacy support.
+	// Use CallerName instead.
+	return o.CallerName
 }
 
-// Caller is the name of the service to which the request is being made.
-// implements ClientConfig#Service (for backwards compatibility)
-// TODO: This function should be deprecated, it's for legacy support.
-// Use oc.Outbounds.ServiceName instead
-func (oc *OutboundConfig) Service() string {
-	return oc.Outbounds.ServiceName
+// Service is the name of the service to which the request is being made.
+//
+// Implements ClientConfig#Service (for backwards compatibility).
+func (o *OutboundConfig) Service() string {
+	// TODO: This function should be deprecated, it's for legacy support.
+	// Use Outbounds.ServiceName instead.
+	return o.Outbounds.ServiceName
 }
 
 // GetUnaryOutbound returns an outbound to send the request through or panics
-// if there is no unary outbound for this service
-// Implements ClientConfig#GetUnaryOutbound
-// TODO: This function should be deprecated, it's for legacy support.
-// Use oc.Outbounds.Unary instead (and panic if you want)
-func (oc *OutboundConfig) GetUnaryOutbound() UnaryOutbound {
-	if oc.Outbounds.Unary == nil {
-		panic(fmt.Sprintf("Service %q does not have a unary outbound", oc.Outbounds.ServiceName))
+// if there is no unary outbound for this service.
+//
+// Implements ClientConfig#GetUnaryOutbound.
+func (o *OutboundConfig) GetUnaryOutbound() UnaryOutbound {
+	// TODO: This function should be deprecated, it's for legacy support.
+	// Use Outbounds.Unary instead (and panic if you want).
+	if o.Outbounds.Unary == nil {
+		panic(fmt.Sprintf("service %q does not have a unary outbound", o.Outbounds.ServiceName))
 	}
-	return oc.Outbounds.Unary
+	return o.Outbounds.Unary
 }
 
 // GetOnewayOutbound returns an outbound to send the request through or panics
-// if there is no oneway outbound for this service
-// Implements ClientConfig#GetOnewayOutbound
-// TODO: This function should be deprecated, it's for legacy support.
-// Use oc.Outbounds.Oneway instead (and panic if you want)
-func (oc *OutboundConfig) GetOnewayOutbound() OnewayOutbound {
-	if oc.Outbounds.Oneway == nil {
-		panic(fmt.Sprintf("Service %q does not have a oneway outbound", oc.Outbounds.ServiceName))
+// if there is no oneway outbound for this service.
+//
+// Implements ClientConfig#GetOnewayOutbound.
+func (o *OutboundConfig) GetOnewayOutbound() OnewayOutbound {
+	// TODO: This function should be deprecated, it's for legacy support.
+	// Use o.Outbounds.Oneway instead (and panic if you want).
+	if o.Outbounds.Oneway == nil {
+		panic(fmt.Sprintf("service %q does not have a oneway outbound", o.Outbounds.ServiceName))
 	}
-
-	return oc.Outbounds.Oneway
+	return o.Outbounds.Oneway
 }
