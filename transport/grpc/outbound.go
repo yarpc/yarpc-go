@@ -234,3 +234,79 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 	}
 	return intyarpcerrors.NewWithNamef(code, name, message)
 }
+
+// CallStream implements transport.StreamOutbound#CallStream.
+func (o *Outbound) CallStream(ctx context.Context, requestMeta *transport.RequestMeta) (transport.ClientStream, error) {
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
+		return nil, err
+	}
+	start := time.Now()
+
+	return o.stream(ctx, requestMeta, start)
+}
+
+func (o *Outbound) stream(
+	ctx context.Context,
+	reqMeta *transport.RequestMeta,
+	start time.Time,
+) (_ transport.ClientStream, err error) {
+	req := reqMeta.ToRequest()
+	md, err := transportRequestToMetadata(req)
+	if err != nil {
+		return nil, err
+	}
+
+	fullMethod, err := procedureNameToFullMethod(reqMeta.Procedure)
+	if err != nil {
+		return nil, err
+	}
+
+	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, req)
+	defer func() {
+		if onFinish != nil {
+			onFinish(err)
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	grpcPeer, ok := apiPeer.(*grpcPeer)
+	if !ok {
+		return nil, peer.ErrInvalidPeerConversion{
+			Peer:         apiPeer,
+			ExpectedType: "*grpcPeer",
+		}
+	}
+
+	tracer := o.t.options.tracer
+	if tracer == nil {
+		tracer = opentracing.GlobalTracer()
+	}
+	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
+		Tracer:        tracer,
+		TransportName: transportName,
+		StartTime:     start,
+	}
+	ctx, span := createOpenTracingSpan.Do(ctx, req)
+
+	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
+		span.Finish()
+		return nil, err
+	}
+
+	clientStream, err := grpc.NewClientStream(
+		metadata.NewOutgoingContext(ctx, md),
+		&grpc.StreamDesc{
+			ClientStreams: true,
+			ServerStreams: true,
+		},
+		grpcPeer.clientConn,
+		fullMethod,
+	)
+	if err != nil {
+		span.Finish()
+		return nil, err
+	}
+	return newClientStream(ctx, reqMeta, clientStream, span), nil
+}
