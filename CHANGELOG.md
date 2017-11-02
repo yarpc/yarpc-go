@@ -7,6 +7,8 @@ v1.22.0-dev (unreleased)
 -   Introduces `api/peer.ListImplementation` with `peer/peerlist.List`, a
     building block that provides peer availability management for peer lists
     like round-robin, hash-ring.
+-   Adds a `peer/shortestqueue` implementation that performs peer selection,
+    sending requests to the available peer with the fewest pending requests.
 
 v1.21.0 (2017-10-26)
 --------------------
