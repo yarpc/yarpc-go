@@ -92,7 +92,7 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 
 // Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
-func (pr *peerRing) Choose(ctx context.Context, req *transport.Request) peer.Peer {
+func (pr *peerRing) Choose(_ context.Context, _ *transport.Request) peer.Peer {
 	if pr.nextNode == nil {
 		return nil
 	}
