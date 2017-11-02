@@ -33,6 +33,7 @@ type buildableOutbounds struct {
 	Service string
 	Unary   *buildableOutbound
 	Oneway  *buildableOutbound
+	Stream  *buildableOutbound
 }
 
 type buildableInbound struct {
@@ -125,6 +126,13 @@ func (b *builder) Build() (yarpc.Config, error) {
 				continue
 			}
 		}
+		if o := c.Stream; o != nil {
+			ob.Stream, err = buildStreamOutbound(o, transports[o.TransportSpec.Name], b.kit)
+			if err != nil {
+				errs = multierr.Append(errs, fmt.Errorf(`failed to configure stream outbound for %q: %v`, ccname, err))
+				continue
+			}
+		}
 
 		outbounds[ccname] = ob
 	}
@@ -175,6 +183,16 @@ func buildOnewayOutbound(o *buildableOutbound, t transport.Transport, k *Kit) (t
 	return result.(transport.OnewayOutbound), nil
 }
 
+// buildStreamOutbound builds an StreamOutbound from the given value. This will
+// panic if the output type for this is not transport.StreamOutbound.
+func buildStreamOutbound(o *buildableOutbound, t transport.Transport, k *Kit) (transport.StreamOutbound, error) {
+	result, err := o.Value.Build(t, k.withTransportSpec(o.TransportSpec))
+	if err != nil {
+		return nil, err
+	}
+	return result.(transport.StreamOutbound), nil
+}
+
 func (b *builder) AddTransportConfig(spec *compiledTransportSpec, attrs config.AttributeMap) error {
 	cv, err := spec.Transport.Decode(attrs, config.InterpolateWith(b.kit.resolver))
 	if err != nil {
@@ -219,6 +237,12 @@ func (b *builder) AddImplicitOutbound(
 	if spec.SupportsOnewayOutbound() {
 		supportsOutbound = true
 		if err := b.AddOnewayOutbound(spec, outboundKey, service, attrs); err != nil {
+			errs = multierr.Append(errs, err)
+		}
+	}
+	if spec.SupportsStreamOutbound() {
+		supportsOutbound = true
+		if err := b.AddStreamOutbound(spec, outboundKey, service, attrs); err != nil {
 			errs = multierr.Append(errs, err)
 		}
 	}
@@ -273,6 +297,29 @@ func (b *builder) AddOnewayOutbound(
 	}
 
 	cc.Oneway = &buildableOutbound{TransportSpec: spec, Value: cv}
+	return nil
+}
+
+func (b *builder) AddStreamOutbound(
+	spec *compiledTransportSpec, outboundKey, service string, attrs config.AttributeMap,
+) error {
+	if spec.StreamOutbound == nil {
+		return fmt.Errorf("transport %q does not support stream outbound requests", spec.Name)
+	}
+
+	b.needTransport(spec)
+	cv, err := spec.StreamOutbound.Decode(attrs, config.InterpolateWith(b.kit.resolver))
+	if err != nil {
+		return fmt.Errorf("failed to decode stream outbound configuration: %v", err)
+	}
+
+	cc, ok := b.clients[outboundKey]
+	if !ok {
+		cc = &buildableOutbounds{Service: service}
+		b.clients[outboundKey] = cc
+	}
+
+	cc.Stream = &buildableOutbound{TransportSpec: spec, Value: cv}
 	return nil
 }
 

@@ -112,6 +112,7 @@ type TransportSpec struct {
 	// outbounds for this transport.
 	BuildUnaryOutbound  interface{}
 	BuildOnewayOutbound interface{}
+	BuildStreamOutbound interface{}
 
 	// Named presets.
 	//
@@ -222,6 +223,7 @@ var (
 	_typeOfInbound         = reflect.TypeOf((*transport.Inbound)(nil)).Elem()
 	_typeOfUnaryOutbound   = reflect.TypeOf((*transport.UnaryOutbound)(nil)).Elem()
 	_typeOfOnewayOutbound  = reflect.TypeOf((*transport.OnewayOutbound)(nil)).Elem()
+	_typeOfStreamOutbound  = reflect.TypeOf((*transport.StreamOutbound)(nil)).Elem()
 	_typeOfPeerTransport   = reflect.TypeOf((*peer.Transport)(nil)).Elem()
 	_typeOfPeerChooserList = reflect.TypeOf((*peer.ChooserList)(nil)).Elem()
 	_typeOfPeerChooser     = reflect.TypeOf((*peer.Chooser)(nil)).Elem()
@@ -241,6 +243,7 @@ type compiledTransportSpec struct {
 	Inbound        *configSpec
 	UnaryOutbound  *configSpec
 	OnewayOutbound *configSpec
+	StreamOutbound *configSpec
 
 	PeerChooserPresets map[string]*compiledPeerChooserPreset
 }
@@ -253,6 +256,10 @@ func (s *compiledTransportSpec) SupportsOnewayOutbound() bool {
 	return s.OnewayOutbound != nil
 }
 
+func (s *compiledTransportSpec) SupportsStreamOutbound() bool {
+	return s.StreamOutbound != nil
+}
+
 func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	out := compiledTransportSpec{Name: spec.Name}
 
@@ -261,7 +268,7 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	}
 
 	switch strings.ToLower(spec.Name) {
-	case "unary", "oneway":
+	case "unary", "oneway", "stream":
 		return nil, fmt.Errorf("transport name cannot be %q: %q is a reserved name", spec.Name, spec.Name)
 	}
 
@@ -286,6 +293,9 @@ func compileTransportSpec(spec *TransportSpec) (*compiledTransportSpec, error) {
 	}
 	if spec.BuildOnewayOutbound != nil {
 		out.OnewayOutbound = appendError(compileOnewayOutboundConfig(spec.BuildOnewayOutbound))
+	}
+	if spec.BuildStreamOutbound != nil {
+		out.StreamOutbound = appendError(compileStreamOutboundConfig(spec.BuildStreamOutbound))
 	}
 
 	if len(spec.PeerChooserPresets) == 0 {
@@ -383,6 +393,17 @@ func compileOnewayOutboundConfig(build interface{}) (*configSpec, error) {
 
 	if err := validateConfigFunc(t, _typeOfOnewayOutbound); err != nil {
 		return nil, fmt.Errorf("invalid BuildOnewayOutbound: %v", err)
+	}
+
+	return &configSpec{inputType: t.In(0), factory: v}, nil
+}
+
+func compileStreamOutboundConfig(build interface{}) (*configSpec, error) {
+	v := reflect.ValueOf(build)
+	t := v.Type()
+
+	if err := validateConfigFunc(t, _typeOfStreamOutbound); err != nil {
+		return nil, fmt.Errorf("invalid BuildStreamOutbound: %v", err)
 	}
 
 	return &configSpec{inputType: t.In(0), factory: v}, nil
