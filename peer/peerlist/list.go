@@ -233,6 +233,10 @@ func (pl *List) start() error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
+	if err := pl.availableChooser.Start(); err != nil {
+		return err
+	}
+
 	var errs error
 	for k, pid := range pl.uninitializedPeers {
 		errs = multierr.Append(errs, pl.addPeerIdentifier(pid))
@@ -246,15 +250,19 @@ func (pl *List) start() error {
 
 // Stop notifies the List that requests will stop coming
 func (pl *List) Stop() error {
-	return pl.once.Stop(pl.clearPeers)
+	return pl.once.Stop(pl.stop)
 }
 
-// clearPeers will release all the peers from the list
-func (pl *List) clearPeers() error {
+// stop will release all the peers from the list
+func (pl *List) stop() error {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
 	var errs []error
+
+	if err := pl.availableChooser.Stop(); err != nil {
+		errs = append(errs, err)
+	}
 
 	availablePeers := pl.removeAllAvailablePeers(pl.availablePeers)
 	errs = append(errs, pl.releaseAll(availablePeers)...)

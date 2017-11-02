@@ -121,3 +121,15 @@ func popNodeFromRing(rNode *ring.Ring) {
 func pushBeforeNode(curNode, newNode *ring.Ring) {
 	curNode.Prev().Link(newNode)
 }
+
+func (pr *peerRing) Start() error {
+	return nil
+}
+
+func (pr *peerRing) Stop() error {
+	return nil
+}
+
+func (pr *peerRing) IsRunning() bool {
+	return true
+}

@@ -68,6 +68,8 @@ type ChooserList interface {
 // Use "go.uber.org/yarpc/peer/peerlist".List in conjunction with a
 // RetainedList to produce a "go.uber.org/yarpc/api/peer".List.
 type RetainedChooserList interface {
+	transport.Lifecycle
+
 	Add(Peer) Subscriber
 	Remove(Peer, Subscriber)
 	Choose(context.Context, *transport.Request) (Peer, error)
