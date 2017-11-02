@@ -26,7 +26,10 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+var errUnavailable = yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "no peer available in round-robin peer list")
 
 // newPeerRing creates a new peerRing with an initial capacity
 func newPeerRing() *peerRing {
@@ -92,15 +95,15 @@ func (pr *peerRing) isNextNode(node *ring.Ring) bool {
 
 // Choose returns the next peer in the ring, or nil if there is no peer in the ring
 // after it has the next peer, it increments the nextPeer marker in the ring
-func (pr *peerRing) Choose(_ context.Context, _ *transport.Request) peer.Peer {
+func (pr *peerRing) Choose(_ context.Context, _ *transport.Request) (peer.Peer, error) {
 	if pr.nextNode == nil {
-		return nil
+		return nil, errUnavailable
 	}
 
 	p := getPeerForRingNode(pr.nextNode)
 	pr.nextNode = pr.nextNode.Next()
 
-	return p
+	return p, nil
 }
 
 func getPeerForRingNode(rNode *ring.Ring) peer.Peer {

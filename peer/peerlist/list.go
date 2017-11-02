@@ -365,14 +365,16 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 	}
 
 	for {
-		p := pl.choose(ctx, req)
+		p, err := pl.choose(ctx, req)
 		if p != nil {
 			t := p.(*peerThunk)
 			pl.notifyPeerAvailable()
 			t.onStart()
 			return t.peer, t.boundOnFinish, nil
 		}
-
+		if !yarpcerrors.IsUnavailable(err) {
+			return nil, nil, err
+		}
 		if err := pl.waitForPeerAddedEvent(ctx); err != nil {
 			return nil, nil, err
 		}
@@ -390,7 +392,7 @@ func (pl *List) IsRunning() bool {
 
 // choose grabs the next available peer from the PeerRing and returns it,
 // if there are no available peers it returns nil
-func (pl *List) choose(ctx context.Context, req *transport.Request) peer.Peer {
+func (pl *List) choose(ctx context.Context, req *transport.Request) (peer.Peer, error) {
 	pl.lock.RLock()
 	defer pl.lock.RUnlock()
 	return pl.availableChooser.Choose(ctx, req)

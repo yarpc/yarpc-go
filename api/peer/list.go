@@ -70,7 +70,7 @@ type ChooserList interface {
 type RetainedChooserList interface {
 	Add(Peer) Subscriber
 	Remove(Peer, Subscriber)
-	Choose(context.Context, *transport.Request) Peer
+	Choose(context.Context, *transport.Request) (Peer, error)
 }
 
 // Binder is a callback for peer.Bind that accepts a peer list and binds it to
