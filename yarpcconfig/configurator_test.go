@@ -163,6 +163,22 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "unknown stream outbound",
+			test: func(*testing.T, *gomock.Controller) (tt testCase) {
+				tt.give = whitespace.Expand(`
+					outbounds:
+						keyvalue:
+							stream:
+								kafka: {queue: requests}
+				`)
+				tt.wantErr = []string{
+					`failed to load configuration for outbound "keyvalue"`,
+					`unknown transport "kafka"`,
+				}
+				return
+			},
+		},
+		{
 			desc: "unused transport",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type fooTransportConfig struct{ Items []int }
@@ -504,7 +520,57 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
-			desc: "implicit outbound unary and oneway",
+			desc: "implicit outbound stream",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type transportConfig struct{ Address string }
+				type outboundConfig struct{ Queue string }
+				tt.serviceName = "foo"
+				tt.give = whitespace.Expand(`
+					outbounds:
+						bar:
+							redis:
+								queue: requests
+					transports:
+						redis:
+							address: localhost:6379
+				`)
+
+				redis := mockTransportSpecBuilder{
+					Name:                 "redis",
+					TransportConfig:      reflect.TypeOf(transportConfig{}),
+					StreamOutboundConfig: reflect.TypeOf(&outboundConfig{}),
+				}.Build(mockCtrl)
+
+				transport := transporttest.NewMockTransport(mockCtrl)
+				outbound := transporttest.NewMockStreamOutbound(mockCtrl)
+
+				redis.EXPECT().
+					BuildTransport(
+						transportConfig{Address: "localhost:6379"},
+						kitMatcher{ServiceName: "foo"}).
+					Return(transport, nil)
+				redis.EXPECT().
+					BuildStreamOutbound(
+						&outboundConfig{Queue: "requests"},
+						transport,
+						kitMatcher{ServiceName: "foo"}).
+					Return(outbound, nil)
+
+				tt.specs = []TransportSpec{redis.Spec()}
+				tt.wantConfig = yarpc.Config{
+					Name: "foo",
+					Outbounds: yarpc.Outbounds{
+						"bar": {
+							Stream: outbound,
+						},
+					},
+				}
+
+				return
+			},
+		},
+		{
+			desc: "implicit outbound unary, oneway, stream",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type transportConfig struct{ KeepAlive time.Duration }
 				type outboundConfig struct{ URL string }
@@ -523,12 +589,14 @@ func TestConfigurator(t *testing.T) {
 					Name:                 "http",
 					TransportConfig:      reflect.TypeOf(&transportConfig{}),
 					OnewayOutboundConfig: reflect.TypeOf(&outboundConfig{}),
+					StreamOutboundConfig: reflect.TypeOf(&outboundConfig{}),
 					UnaryOutboundConfig:  reflect.TypeOf(&outboundConfig{}),
 				}.Build(mockCtrl)
 
 				transport := transporttest.NewMockTransport(mockCtrl)
 				unary := transporttest.NewMockUnaryOutbound(mockCtrl)
 				oneway := transporttest.NewMockOnewayOutbound(mockCtrl)
+				stream := transporttest.NewMockStreamOutbound(mockCtrl)
 
 				http.EXPECT().
 					BuildTransport(
@@ -543,6 +611,9 @@ func TestConfigurator(t *testing.T) {
 				http.EXPECT().
 					BuildOnewayOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo"}).
 					Return(oneway, nil)
+				http.EXPECT().
+					BuildStreamOutbound(&outcfg, transport, kitMatcher{ServiceName: "foo"}).
+					Return(stream, nil)
 
 				tt.specs = []TransportSpec{http.Spec()}
 				tt.wantConfig = yarpc.Config{
@@ -551,6 +622,7 @@ func TestConfigurator(t *testing.T) {
 						"baz": {
 							Unary:  unary,
 							Oneway: oneway,
+							Stream: stream,
 						},
 					},
 				}
@@ -612,6 +684,9 @@ func TestConfigurator(t *testing.T) {
 							oneway:
 								http:
 									url: http://localhost:8081/yarpc/v2
+							stream:
+								http:
+									url: http://localhost:8081/yarpc/v3
 						bar:
 							oneway:
 								redis:
@@ -622,6 +697,7 @@ func TestConfigurator(t *testing.T) {
 					Name:                 "http",
 					TransportConfig:      reflect.TypeOf(httpTransportConfig{}),
 					OnewayOutboundConfig: reflect.TypeOf(httpOutboundConfig{}),
+					StreamOutboundConfig: reflect.TypeOf(httpOutboundConfig{}),
 					UnaryOutboundConfig:  reflect.TypeOf(httpOutboundConfig{}),
 				}.Build(mockCtrl)
 
@@ -634,6 +710,7 @@ func TestConfigurator(t *testing.T) {
 				httpTransport := transporttest.NewMockTransport(mockCtrl)
 				httpUnary := transporttest.NewMockUnaryOutbound(mockCtrl)
 				httpOneway := transporttest.NewMockOnewayOutbound(mockCtrl)
+				httpStream := transporttest.NewMockStreamOutbound(mockCtrl)
 				http.EXPECT().
 					BuildTransport(
 						httpTransportConfig{KeepAlive: 5 * time.Minute},
@@ -660,6 +737,12 @@ func TestConfigurator(t *testing.T) {
 						httpTransport,
 						kitMatcher{ServiceName: "myservice"}).
 					Return(httpOneway, nil)
+				http.EXPECT().
+					BuildStreamOutbound(
+						httpOutboundConfig{URL: "http://localhost:8081/yarpc/v3"},
+						httpTransport,
+						kitMatcher{ServiceName: "myservice"}).
+					Return(httpStream, nil)
 
 				redis.EXPECT().
 					BuildOnewayOutbound(
@@ -672,7 +755,7 @@ func TestConfigurator(t *testing.T) {
 				tt.wantConfig = yarpc.Config{
 					Name: "myservice",
 					Outbounds: yarpc.Outbounds{
-						"foo": {Unary: httpUnary, Oneway: httpOneway},
+						"foo": {Unary: httpUnary, Oneway: httpOneway, Stream: httpStream},
 						"bar": {Oneway: redisOneway},
 					},
 				}
@@ -740,6 +823,34 @@ func TestConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "explicit stream error",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type outboundConfig struct{ Address string }
+				tt.give = whitespace.Expand(`
+					outbounds:
+						hello:
+							stream:
+								redis:
+									host: localhost
+									port: 6379
+				`)
+
+				redis := mockTransportSpecBuilder{
+					Name:                 "redis",
+					TransportConfig:      _typeOfEmptyStruct,
+					StreamOutboundConfig: reflect.TypeOf(&outboundConfig{}),
+				}.Build(mockCtrl)
+
+				tt.specs = []TransportSpec{redis.Spec()}
+				tt.wantErr = []string{
+					"failed to decode stream outbound configuration",
+					"invalid keys: host, port",
+				}
+
+				return
+			},
+		},
+		{
 			desc: "explicit unary not supported",
 			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
 				type outboundConfig struct{ Queue string }
@@ -786,6 +897,32 @@ func TestConfigurator(t *testing.T) {
 				tt.specs = []TransportSpec{tchan.Spec()}
 				tt.wantErr = []string{
 					`transport "tchannel" does not support oneway outbound requests`,
+				}
+
+				return
+			},
+		},
+		{
+			desc: "explicit stream not supported",
+			test: func(t *testing.T, mockCtrl *gomock.Controller) (tt testCase) {
+				type outboundConfig struct{ Address string }
+				tt.give = whitespace.Expand(`
+					outbounds:
+						bar:
+							stream:
+								tchannel:
+									address: localhost:4040
+				`)
+
+				tchan := mockTransportSpecBuilder{
+					Name:                "tchannel",
+					TransportConfig:     _typeOfEmptyStruct,
+					UnaryOutboundConfig: reflect.TypeOf(&outboundConfig{}),
+				}.Build(mockCtrl)
+
+				tt.specs = []TransportSpec{tchan.Spec()}
+				tt.wantErr = []string{
+					`transport "tchannel" does not support stream outbound requests`,
 				}
 
 				return

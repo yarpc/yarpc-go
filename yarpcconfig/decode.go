@@ -101,6 +101,7 @@ type outbounds struct {
 	// transport supports.
 	Unary    *outbound
 	Oneway   *outbound
+	Stream   *outbound
 	Implicit *outbound
 }
 
@@ -126,7 +127,12 @@ func (o *outbounds) Decode(into mapdecode.Into) error {
 		return fmt.Errorf("failed to oneway outbound configuration: %v", err)
 	}
 
-	if hasUnary || hasOneway {
+	hasStream, err := attrs.Pop("stream", &o.Stream)
+	if err != nil {
+		return fmt.Errorf("failed to stream outbound configuration: %v", err)
+	}
+
+	if hasUnary || hasOneway || hasStream {
 		// No more attributes should be remaining
 		var empty struct{}
 		if err := attrs.Decode(&empty); err != nil {
