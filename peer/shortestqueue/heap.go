@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 type peerHeap struct {
@@ -41,17 +42,17 @@ type peerHeap struct {
 	next int
 }
 
-func (ph *peerHeap) Choose(ctx context.Context, req *transport.Request) peer.Peer {
+func (ph *peerHeap) Choose(ctx context.Context, req *transport.Request) (peer.Peer, error) {
 	ps, ok := ph.popPeer()
 	if !ok {
-		return nil
+		return nil, yarpcerrors.Newf(yarpcerrors.CodeUnavailable, "no peer available in join-shortest-queue")
 	}
 
 	// Note: We push the peer back to reset the "next" counter.
 	// This gives us round-robin behavior.
 	ph.pushPeer(ps)
 
-	return ps.peer
+	return ps.peer, nil
 }
 
 func (ph *peerHeap) Add(p peer.Peer) peer.Subscriber {
