@@ -44,7 +44,11 @@ func (h fakeHandler) Handle(_ context.Context, _ *transport.Request, rw transpor
 	return h.err
 }
 
-func (h fakeHandler) HandleOneway(_ context.Context, _ *transport.Request) error {
+func (h fakeHandler) HandleOneway(context.Context, *transport.Request) error {
+	return h.err
+}
+
+func (h fakeHandler) HandleStream(transport.ServerStream) error {
 	return h.err
 }
 
@@ -54,18 +58,62 @@ type fakeOutbound struct {
 	err error
 }
 
-func (o fakeOutbound) Call(_ context.Context, _ *transport.Request) (*transport.Response, error) {
+func (o fakeOutbound) Call(context.Context, *transport.Request) (*transport.Response, error) {
 	if o.err != nil {
 		return nil, o.err
 	}
 	return &transport.Response{}, nil
 }
 
-func (o fakeOutbound) CallOneway(_ context.Context, _ *transport.Request) (transport.Ack, error) {
+func (o fakeOutbound) CallOneway(context.Context, *transport.Request) (transport.Ack, error) {
 	if o.err != nil {
 		return nil, o.err
 	}
 	return fakeAck{}, nil
+}
+
+func (o fakeOutbound) CallStream(ctx context.Context, requestMeta *transport.RequestMeta) (transport.ClientStream, error) {
+	if o.err != nil {
+		return nil, o.err
+	}
+	return &fakeStream{
+		ctx:         ctx,
+		requestMeta: requestMeta,
+	}, nil
+}
+
+type fakeStream struct {
+	ctx          context.Context
+	requestMeta  *transport.RequestMeta
+	responseMeta *transport.ResponseMeta
+}
+
+func (s *fakeStream) Context() context.Context {
+	return s.ctx
+}
+
+func (s *fakeStream) RequestMeta() *transport.RequestMeta {
+	return s.requestMeta
+}
+
+func (s *fakeStream) ResponseMeta() *transport.ResponseMeta {
+	return s.responseMeta
+}
+
+func (s *fakeStream) SetResponseMeta(responseMeta *transport.ResponseMeta) {
+	s.responseMeta = responseMeta
+}
+
+func (s *fakeStream) SendMsg(*transport.StreamMessage) error {
+	return nil
+}
+
+func (s *fakeStream) RecvMsg() (*transport.StreamMessage, error) {
+	return nil, nil
+}
+
+func (s *fakeStream) Close() error {
+	return nil
 }
 
 func stubTime() func() {
