@@ -21,44 +21,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package keyvaluefx
+package hellofx
 
 import (
 	"go.uber.org/fx"
-	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient"
+	"go.uber.org/yarpc/internal/examples/thrift-hello/hello/echo/helloserver"
 )
 
-// Params defines the dependencies for the KeyValue client.
-type Params struct {
+// ServerParams defines the dependencies for the Hello server.
+type ServerParams struct {
 	fx.In
 
-	Provider yarpc.ClientConfig
+	Handler helloserver.Interface
 }
 
-// Result defines the output of the KeyValue client module. It provides a
-// KeyValue client to an Fx application.
-type Result struct {
+// ServerResult defines the output of Hello server module. It provides the
+// procedures of a Hello handler to an Fx application.
+//
+// The procedures are provided to the "yarpcfx" value group. Dig 1.2 or newer
+// must be used for this feature to work.
+type ServerResult struct {
 	fx.Out
 
-	Client keyvalueclient.Interface
-
-	// We are using an fx.Out struct here instead of just returning a client
-	// so that we can add more values or add named versions of the client in
-	// the future without breaking any existing code.
+	Procedures []transport.Procedure `group:"yarpcfx"`
 }
 
-// Client provides a KeyValue client to an Fx application using the given name
-// for routing.
+// Server provides procedures for Hello to an Fx application. It expects a
+// hellofx.Interface to be present in the container.
 //
 // 	fx.Provide(
-// 		keyvaluefx.Client("..."),
-// 		newHandler,
+// 		func(h *MyHelloHandler) helloserver.Interface {
+// 			return h
+// 		},
+// 		hellofx.Server(),
 // 	)
-func Client(name string, opts ...thrift.ClientOption) interface{} {
-	return func(p Params) Result {
-		client := keyvalueclient.New(p.Provider.ClientConfig(name), opts...)
-		return Result{Client: client}
+func Server(opts ...thrift.RegisterOption) interface{} {
+	return func(p ServerParams) ServerResult {
+		procedures := helloserver.New(p.Handler, opts...)
+		return ServerResult{Procedures: procedures}
 	}
 }
