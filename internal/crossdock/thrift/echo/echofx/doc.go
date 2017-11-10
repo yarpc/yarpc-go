@@ -21,44 +21,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package keyvaluefx
-
-import (
-	"go.uber.org/fx"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc/internal/examples/thrift-keyvalue/keyvalue/kv/keyvalueclient"
-)
-
-// Params defines the dependencies for the KeyValue client.
-type Params struct {
-	fx.In
-
-	Provider yarpc.ClientConfig
-}
-
-// Result defines the output of the KeyValue client module. It provides a
-// KeyValue client to an Fx application.
-type Result struct {
-	fx.Out
-
-	Client keyvalueclient.Interface
-
-	// We are using an fx.Out struct here instead of just returning a client
-	// so that we can add more values or add named versions of the client in
-	// the future without breaking any existing code.
-}
-
-// Client provides a KeyValue client to an Fx application using the given name
-// for routing.
+// Package echofx provides better integration for Fx for services
+// implementing or calling Echo.
+//
+// Clients
+//
+// If you are making requests to Echo, use the Client function to inject a
+// Echo client into your container.
+//
+// 	fx.Provide(echofx.Client("..."))
+//
+// Servers
+//
+// If you are implementing Echo, provide a echoserver.Interface into
+// the container and use the Server function.
+//
+// Given,
+//
+// 	func NewEchoHandler() echoserver.Interface
+//
+// You can do the following to have the procedures of Echo made available
+// to an Fx application.
 //
 // 	fx.Provide(
-// 		keyvaluefx.Client("..."),
-// 		newHandler,
+// 		NewEchoHandler,
+// 		echofx.Server(),
 // 	)
-func Client(name string, opts ...thrift.ClientOption) interface{} {
-	return func(p Params) Result {
-		client := keyvalueclient.New(p.Provider.ClientConfig(name), opts...)
-		return Result{Client: client}
-	}
-}
+package echofx
