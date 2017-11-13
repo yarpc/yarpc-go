@@ -4,7 +4,9 @@ Releases
 v1.22.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Fix a bug in protoc-gen-yarpc-go where request or response types for
+    methods in the same package but in a different file would result in an
+    extraneous import.
 
 v1.21.0 (2017-10-26)
 --------------------
