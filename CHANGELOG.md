@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.21.1 (unreleased)
+v1.21.1 (2017-11-13)
 --------------------
 
 -   Fix a bug in protoc-gen-yarpc-go where request or response types for
