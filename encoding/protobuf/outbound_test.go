@@ -30,40 +30,10 @@ import (
 )
 
 func TestInvalidOutboundEncoding(t *testing.T) {
-	client := newClient("foo", newTestClientConfig("bar", "baz"))
+	client := newClient("foo", &transport.OutboundConfig{CallerName: "foo", Outbounds: transport.Outbounds{ServiceName: "bar"}})
 	_, _, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
 	assert.NoError(t, err)
 	client.encoding = "bat"
 	_, _, _, _, err = client.buildTransportRequest(context.Background(), "hello", nil, nil)
 	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
-}
-
-type testClientConfig struct {
-	caller  string
-	service string
-}
-
-func newTestClientConfig(caller string, service string) *testClientConfig {
-	return &testClientConfig{
-		caller:  caller,
-		service: service,
-	}
-}
-
-func (c *testClientConfig) Caller() string {
-	return c.caller
-}
-
-func (c *testClientConfig) Service() string {
-	return c.service
-}
-
-func (c *testClientConfig) GetUnaryOutbound() transport.UnaryOutbound {
-	// per ClientConfig docs
-	panic("testClientConfig has no UnaryOutbound")
-}
-
-func (c *testClientConfig) GetOnewayOutbound() transport.OnewayOutbound {
-	// per ClientConfig docs
-	panic("testClientConfig has no OnewayOutbound")
 }
