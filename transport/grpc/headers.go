@@ -80,11 +80,7 @@ const (
 // transport.CanonicalizeHeaderKey
 
 func isReserved(header string) bool {
-	lower := strings.ToLower(header)
-	// We reserve rpc- for future headers
-	// gRPC reserved grpc- for future gRPC headers
-	// https://grpc.io/docs/guides/wire.html
-	return strings.HasPrefix(lower, "rpc-") || strings.HasPrefix(lower, "grpc-")
+	return strings.HasPrefix(strings.ToLower(header), "rpc-")
 }
 
 // transportRequestToMetadata will populate all reserved and application headers

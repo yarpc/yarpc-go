@@ -199,5 +199,4 @@ func TestIsReserved(t *testing.T) {
 	assert.True(t, isReserved(RoutingDelegateHeader))
 	assert.True(t, isReserved(EncodingHeader))
 	assert.True(t, isReserved("rpc-foo"))
-	assert.True(t, isReserved("grpc-foo"))
 }
