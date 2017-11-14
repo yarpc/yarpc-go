@@ -93,3 +93,12 @@ func TestStreamNopInboundMiddleware(t *testing.T) {
 
 	assert.Equal(t, err, wrappedH.HandleStream(s))
 }
+
+func TestStreamDefaultsToHandlerWhenNil(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockStreamHandler(mockCtrl)
+	wrappedH := middleware.ApplyStreamInbound(h, nil)
+	assert.Equal(t, wrappedH, h)
+}

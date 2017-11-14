@@ -29,7 +29,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 )
 
-func TestOutboundCallWriteToRequest(t *testing.T) {
+func TestOutboundCallWriteToRequestAndRequestMeta(t *testing.T) {
 	tests := []struct {
 		desc        string
 		giveOptions []CallOption
@@ -125,9 +125,16 @@ func TestOutboundCallWriteToRequest(t *testing.T) {
 		call := NewOutboundCall(tt.giveOptions...)
 
 		request := tt.giveRequest
+		requestMeta := tt.giveRequest.ToRequestMeta()
+
 		_, err := call.WriteToRequest(context.Background(), &request)
 		if assert.NoError(t, err, tt.desc) {
 			assert.Equal(t, tt.wantRequest, request, tt.desc)
+		}
+
+		_, err = call.WriteToRequestMeta(context.Background(), requestMeta)
+		if assert.NoError(t, err, tt.desc) {
+			assert.Equal(t, tt.wantRequest.ToRequestMeta(), requestMeta, tt.desc)
 		}
 	}
 }
