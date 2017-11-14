@@ -47,6 +47,11 @@ func (c *countInboundMiddleware) HandleOneway(ctx context.Context, req *transpor
 	return h.HandleOneway(ctx, req)
 }
 
+func (c *countInboundMiddleware) HandleStream(s transport.ServerStream, h transport.StreamHandler) error {
+	c.Count++
+	return h.HandleStream(s)
+}
+
 var retryUnaryInbound middleware.UnaryInboundFunc = func(
 	ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	if err := h.Handle(ctx, req, resw); err != nil {
@@ -138,6 +143,47 @@ func TestOnewayChain(t *testing.T) {
 			).Return(nil)
 
 			err := middleware.ApplyOnewayInbound(h, tt.mw).HandleOneway(ctx, req)
+
+			assert.NoError(t, err, "expected success")
+			assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
+			assert.Equal(t, 2, after.Count, "expected inner inbound middleware to be called twice")
+		})
+	}
+}
+
+var retryStreamInbound middleware.StreamInboundFunc = func(
+	s transport.ServerStream, h transport.StreamHandler) error {
+	if err := h.HandleStream(s); err != nil {
+		return h.HandleStream(s)
+	}
+	return nil
+}
+
+func TestStreamChain(t *testing.T) {
+	before := &countInboundMiddleware{}
+	after := &countInboundMiddleware{}
+
+	tests := []struct {
+		desc string
+		mw   middleware.StreamInbound
+	}{
+		{"flat chain", StreamChain(before, retryStreamInbound, after, nil)},
+		{"nested chain", StreamChain(before, StreamChain(retryStreamInbound, nil, after))},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			before.Count, after.Count = 0, 0
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			s := transporttest.NewMockServerStream(mockCtrl)
+
+			h := transporttest.NewMockStreamHandler(mockCtrl)
+			h.EXPECT().HandleStream(s).After(
+				h.EXPECT().HandleStream(s).Return(errors.New("great sadness")),
+			).Return(nil)
+
+			err := middleware.ApplyStreamInbound(h, tt.mw).HandleStream(s)
 
 			assert.NoError(t, err, "expected success")
 			assert.Equal(t, 1, before.Count, "expected outer inbound middleware to be called once")
