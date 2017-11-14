@@ -1,0 +1,68 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+package api
+
+import "go.uber.org/yarpc/api/transport"
+
+// ClientStreamRequestOpts are configuration options for a yarpc stream request.
+type ClientStreamRequestOpts struct {
+	Port             uint16
+	GiveRequestMeta  *transport.RequestMeta
+	StreamActions    []ClientStreamAction
+	WantResponseMeta *transport.ResponseMeta
+}
+
+// NewClientStreamRequestOpts initializes a ClientStreamRequestOpts struct.
+func NewClientStreamRequestOpts() ClientStreamRequestOpts {
+	return ClientStreamRequestOpts{
+		GiveRequestMeta: &transport.RequestMeta{
+			Caller:   "unknown",
+			Encoding: transport.Encoding("raw"),
+		},
+		WantResponseMeta: &transport.ResponseMeta{
+			Headers: transport.NewHeaders(),
+		},
+	}
+}
+
+// ClientStreamRequestOption can be used to configure a request.
+type ClientStreamRequestOption interface {
+	ApplyClientStreamRequest(*ClientStreamRequestOpts)
+}
+
+// ClientStreamRequestOptionFunc converts a function into a ClientStreamRequestOption.
+type ClientStreamRequestOptionFunc func(*ClientStreamRequestOpts)
+
+// ApplyClientStreamRequest implements ClientStreamRequestOption.
+func (f ClientStreamRequestOptionFunc) ApplyClientStreamRequest(opts *ClientStreamRequestOpts) {
+	f(opts)
+}
+
+// ClientStreamAction is an action applied to a ClientStream.
+type ClientStreamAction interface {
+	ApplyClientStream(TestingT, transport.ClientStream)
+}
+
+// ClientStreamActionFunc converts a function into a StreamAction.
+type ClientStreamActionFunc func(TestingT, transport.ClientStream)
+
+// ApplyClientStream implements ClientStreamAction.
+func (f ClientStreamActionFunc) ApplyClientStream(t TestingT, c transport.ClientStream) { f(t, c) }
