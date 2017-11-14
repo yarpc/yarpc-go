@@ -66,6 +66,18 @@ func TestConfigBuildUnaryOutboundRequiredAddress(t *testing.T) {
 	require.Equal(t, newRequiredFieldMissingError("address"), err)
 }
 
+func TestConfigBuildStreamOutboundOtherTransport(t *testing.T) {
+	transportSpec := &transportSpec{}
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, testTransport{}, nil)
+	require.Equal(t, newTransportCastError(testTransport{}), err)
+}
+
+func TestConfigBuildStreamOutboundRequiredAddress(t *testing.T) {
+	transportSpec := &transportSpec{}
+	_, err := transportSpec.buildStreamOutbound(&OutboundConfig{}, NewTransport(), nil)
+	require.Equal(t, newRequiredFieldMissingError("address"), err)
+}
+
 func TestTransportSpecUnknownOption(t *testing.T) {
 	assert.Panics(t, func() { TransportSpec(testOption{}) })
 }
