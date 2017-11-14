@@ -22,6 +22,7 @@ package testing
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -50,12 +51,14 @@ func TestIntegration(t *testing.T) {
 func testIntegrationForTransportType(t *testing.T, transportType testutils.TransportType) {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(true)
+	fooYARPCServer := example.NewFooYARPCServer()
 	assert.NoError(
 		t,
 		exampleutil.WithClients(
 			transportType,
 			keyValueYARPCServer,
 			sinkYARPCServer,
+			fooYARPCServer,
 			func(clients *exampleutil.Clients) error {
 				testIntegration(t, clients, keyValueYARPCServer, sinkYARPCServer)
 				return nil
@@ -126,6 +129,31 @@ func testIntegration(
 	assert.NoError(t, fire(clients.SinkYARPCJSONClient, "baz"))
 	assert.NoError(t, sinkYARPCServer.WaitFireDone())
 	assert.Equal(t, []string{"foo", "bar", "baz"}, sinkYARPCServer.Values())
+
+	messages := []string{"foo", "bar", "baz"}
+	gotMessages, err := echoOut(clients.FooYARPCClient, messages)
+	assert.NoError(t, err)
+	assert.Equal(t, messages, gotMessages)
+
+	gotMessages, err = echoIn(clients.FooYARPCClient, "foo", 3)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"foo", "foo", "foo"}, gotMessages)
+
+	gotMessages, err = echoBoth(clients.FooYARPCClient, "foo", 2, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"foo", "foo", "foo", "foo"}, gotMessages)
+
+	gotMessages, err = echoOutGRPC(clients.FooGRPCClient, clients.ContextWrapper, messages)
+	assert.NoError(t, err)
+	assert.Equal(t, messages, gotMessages)
+
+	gotMessages, err = echoInGRPC(clients.FooGRPCClient, clients.ContextWrapper, "foo", 3)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"foo", "foo", "foo"}, gotMessages)
+
+	gotMessages, err = echoBothGRPC(clients.FooGRPCClient, clients.ContextWrapper, "foo", 2, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"foo", "foo", "foo", "foo"}, gotMessages)
 }
 
 func getValue(keyValueYARPCClient examplepb.KeyValueYARPCClient, key string, options ...yarpc.CallOption) (string, error) {
@@ -167,4 +195,134 @@ func fire(sinkYARPCClient examplepb.SinkYARPCClient, value string, options ...ya
 	defer cancel()
 	_, err := sinkYARPCClient.Fire(ctx, &examplepb.FireRequest{value}, options...)
 	return err
+}
+
+func echoOut(fooYARPCClient examplepb.FooYARPCClient, messages []string, options ...yarpc.CallOption) ([]string, error) {
+	client, err := fooYARPCClient.EchoOut(context.Background(), options...)
+	if err != nil {
+		return nil, err
+	}
+	for _, message := range messages {
+		if err := client.Send(&examplepb.EchoOutRequest{Message: message}); err != nil {
+			return nil, err
+		}
+	}
+	response, err := client.CloseAndRecv()
+	if err != nil {
+		return nil, err
+	}
+	return response.AllMessages, nil
+}
+
+func echoIn(fooYARPCClient examplepb.FooYARPCClient, message string, numResponses int, options ...yarpc.CallOption) ([]string, error) {
+	client, err := fooYARPCClient.EchoIn(context.Background(), &examplepb.EchoInRequest{Message: message, NumResponses: int64(numResponses)}, options...)
+	if err != nil {
+		return nil, err
+	}
+	var messages []string
+	for response, err := client.Recv(); err != io.EOF; response, err = client.Recv() {
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, response.Message)
+	}
+	return messages, nil
+}
+
+func echoBoth(fooYARPCClient examplepb.FooYARPCClient, message string, numResponses int, count int, options ...yarpc.CallOption) ([]string, error) {
+	client, err := fooYARPCClient.EchoBoth(context.Background(), options...)
+	if err != nil {
+		return nil, err
+	}
+
+	var messages []string
+	var recvErr error
+	done := make(chan struct{})
+	go func() {
+		for response, err := client.Recv(); err != io.EOF; response, err = client.Recv() {
+			if err != nil {
+				recvErr = err
+				break
+			}
+			messages = append(messages, response.Message)
+		}
+		close(done)
+	}()
+
+	for i := 0; i < count; i++ {
+		if err := client.Send(&examplepb.EchoBothRequest{Message: message, NumResponses: int64(numResponses)}); err != nil {
+			return nil, err
+		}
+	}
+	if err := client.CloseSend(); err != nil {
+		return nil, err
+	}
+
+	<-done
+	return messages, recvErr
+}
+
+func echoOutGRPC(fooClient examplepb.FooClient, contextWrapper *grpcctx.ContextWrapper, messages []string) ([]string, error) {
+	client, err := fooClient.EchoOut(contextWrapper.Wrap(context.Background()))
+	if err != nil {
+		return nil, err
+	}
+	for _, message := range messages {
+		if err := client.Send(&examplepb.EchoOutRequest{Message: message}); err != nil {
+			return nil, err
+		}
+	}
+	response, err := client.CloseAndRecv()
+	if err != nil {
+		return nil, err
+	}
+	return response.AllMessages, nil
+}
+
+func echoInGRPC(fooClient examplepb.FooClient, contextWrapper *grpcctx.ContextWrapper, message string, numResponses int) ([]string, error) {
+	client, err := fooClient.EchoIn(contextWrapper.Wrap(context.Background()), &examplepb.EchoInRequest{Message: message, NumResponses: int64(numResponses)})
+	if err != nil {
+		return nil, err
+	}
+	var messages []string
+	for response, err := client.Recv(); err != io.EOF; response, err = client.Recv() {
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, response.Message)
+	}
+	return messages, nil
+}
+
+func echoBothGRPC(fooClient examplepb.FooClient, contextWrapper *grpcctx.ContextWrapper, message string, numResponses int, count int) ([]string, error) {
+	client, err := fooClient.EchoBoth(contextWrapper.Wrap(context.Background()))
+	if err != nil {
+		return nil, err
+	}
+
+	var messages []string
+	var recvErr error
+	done := make(chan struct{})
+	go func() {
+		for response, err := client.Recv(); err != io.EOF; response, err = client.Recv() {
+			if err != nil {
+				recvErr = err
+				break
+			}
+			messages = append(messages, response.Message)
+		}
+		close(done)
+	}()
+
+	for i := 0; i < count; i++ {
+		if err := client.Send(&examplepb.EchoBothRequest{Message: message, NumResponses: int64(numResponses)}); err != nil {
+			return nil, err
+		}
+	}
+	if err := client.CloseSend(); err != nil {
+		return nil, err
+	}
+
+	<-done
+	return messages, recvErr
 }

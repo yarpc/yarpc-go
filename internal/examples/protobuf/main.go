@@ -73,10 +73,12 @@ func run(
 ) error {
 	keyValueYARPCServer := example.NewKeyValueYARPCServer()
 	sinkYARPCServer := example.NewSinkYARPCServer(true)
+	fooYARPCServer := example.NewFooYARPCServer()
 	return exampleutil.WithClients(
 		transportType,
 		keyValueYARPCServer,
 		sinkYARPCServer,
+		fooYARPCServer,
 		func(clients *exampleutil.Clients) error {
 			return doClient(
 				keyValueYARPCServer,
