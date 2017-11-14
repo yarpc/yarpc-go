@@ -72,6 +72,18 @@ func (d *Dispatcher) Introspect() introspection.DispatcherStatus {
 			status.OutboundKey = outboundKey
 			outbounds = append(outbounds, status)
 		}
+		if o.Stream != nil {
+			var status introspection.OutboundStatus
+			if o, ok := o.Stream.(introspection.IntrospectableOutbound); ok {
+				status = o.Introspect()
+			} else {
+				status.Transport = "Introspection not supported"
+			}
+			status.RPCType = "stream"
+			status.Service = o.ServiceName
+			status.OutboundKey = outboundKey
+			outbounds = append(outbounds, status)
+		}
 	}
 	procedures := introspection.IntrospectProcedures(d.table.Procedures())
 	return introspection.DispatcherStatus{
