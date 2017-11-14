@@ -182,3 +182,29 @@ func TestStreamNopOutboundMiddleware(t *testing.T) {
 		assert.Equal(t, nil, got)
 	}
 }
+
+func TestStreamDefaultsToOutboundWhenNil(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	o := transporttest.NewMockStreamOutbound(mockCtrl)
+	wrappedO := middleware.ApplyStreamOutbound(o, nil)
+	assert.Equal(t, wrappedO, o)
+}
+
+func TestStreamMiddlewareCallsUnderlyingFunctions(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	o := transporttest.NewMockStreamOutbound(mockCtrl)
+	o.EXPECT().Start().Times(1)
+	o.EXPECT().Stop().Times(1)
+	o.EXPECT().Transports().Times(1)
+	o.EXPECT().IsRunning().Times(1)
+	wrappedO := middleware.ApplyStreamOutbound(o, middleware.NopStreamOutbound)
+
+	wrappedO.IsRunning()
+	wrappedO.Transports()
+	wrappedO.Start()
+	wrappedO.Stop()
+}
