@@ -158,3 +158,27 @@ func TestOutboundMiddleware(t *testing.T) {
 		assert.NoError(t, outWithMW.Stop(), "unexpected error stopping outbound")
 	})
 }
+
+func TestStreamNopOutboundMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	o := transporttest.NewMockStreamOutbound(mockCtrl)
+	wrappedO := middleware.ApplyStreamOutbound(o, middleware.NopStreamOutbound)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	req := &transport.RequestMeta{
+		Caller:    "somecaller",
+		Service:   "someservice",
+		Encoding:  raw.Encoding,
+		Procedure: "hello",
+	}
+
+	o.EXPECT().CallStream(ctx, req).Return(nil, nil)
+
+	got, err := wrappedO.CallStream(ctx, req)
+	if assert.NoError(t, err) {
+		assert.Equal(t, nil, got)
+	}
+}
