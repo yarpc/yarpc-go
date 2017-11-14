@@ -25,11 +25,43 @@ message FireRequest {
   string value = 1;
 }
 
+message EchoOutRequest {
+  string message = 1;
+}
+
+message EchoOutResponse {
+  repeated string all_messages = 2;
+}
+
+message EchoInRequest {
+  string message = 1;
+  int64 num_responses = 2;
+}
+
+message EchoInResponse {
+  string message = 1;
+}
+
+message EchoBothRequest {
+  string message = 1;
+  int64 num_responses = 2;
+}
+
+message EchoBothResponse {
+  string message = 1;
+}
+
 service KeyValue {
-  rpc GetValue(GetValueRequest) returns (GetValueResponse);
-  rpc SetValue(SetValueRequest) returns (SetValueResponse);
+  rpc GetValue(GetValueRequest) returns (GetValueResponse) {}
+  rpc SetValue(SetValueRequest) returns (SetValueResponse) {}
 }
 
 service Sink {
-  rpc Fire(FireRequest) returns (uber.yarpc.Oneway);
+  rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
+}
+
+service Foo {
+  rpc EchoOut(stream EchoOutRequest) returns (EchoOutResponse) {}
+  rpc EchoIn(EchoInRequest) returns (stream EchoInResponse) {}
+  rpc EchoBoth(stream EchoBothRequest) returns (stream EchoBothResponse) {}
 }
