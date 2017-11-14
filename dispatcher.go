@@ -51,12 +51,14 @@ type Outbounds map[string]transport.Outbounds
 type OutboundMiddleware struct {
 	Unary  middleware.UnaryOutbound
 	Oneway middleware.OnewayOutbound
+	Stream middleware.StreamOutbound
 }
 
 // InboundMiddleware contains the different types of inbound middlewares.
 type InboundMiddleware struct {
 	Unary  middleware.UnaryInbound
 	Oneway middleware.OnewayInbound
+	Stream middleware.StreamInbound
 }
 
 // RouterMiddleware wraps the Router middleware
@@ -112,13 +114,14 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 	outboundSpecs := make(Outbounds, len(outbounds))
 
 	for outboundKey, outs := range outbounds {
-		if outs.Unary == nil && outs.Oneway == nil {
+		if outs.Unary == nil && outs.Oneway == nil && outs.Stream == nil {
 			panic(fmt.Sprintf("no outbound set for outbound key %q in dispatcher", outboundKey))
 		}
 
 		var (
 			unaryOutbound  transport.UnaryOutbound
 			onewayOutbound transport.OnewayOutbound
+			streamOutbound transport.StreamOutbound
 		)
 		serviceName := outboundKey
 
@@ -133,6 +136,11 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 			onewayOutbound = request.OnewayValidatorOutbound{OnewayOutbound: onewayOutbound}
 		}
 
+		if outs.Stream != nil {
+			streamOutbound = middleware.ApplyStreamOutbound(outs.Stream, mw.Stream)
+			streamOutbound = request.StreamValidatorOutbound{StreamOutbound: streamOutbound}
+		}
+
 		if outs.ServiceName != "" {
 			serviceName = outs.ServiceName
 		}
@@ -141,6 +149,7 @@ func convertOutbounds(outbounds Outbounds, mw OutboundMiddleware) Outbounds {
 			ServiceName: serviceName,
 			Unary:       unaryOutbound,
 			Oneway:      onewayOutbound,
+			Stream:      streamOutbound,
 		}
 	}
 
@@ -167,6 +176,11 @@ func collectTransports(inbounds Inbounds, outbounds Outbounds) []transport.Trans
 		}
 		if oneway := outbound.Oneway; oneway != nil {
 			for _, transport := range oneway.Transports() {
+				transports[transport] = struct{}{}
+			}
+		}
+		if stream := outbound.Stream; stream != nil {
+			for _, transport := range stream.Transports() {
 				transports[transport] = struct{}{}
 			}
 		}
@@ -273,6 +287,10 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 			h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
 				d.inboundMiddleware.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
+		case transport.Stream:
+			h := middleware.ApplyStreamInbound(r.HandlerSpec.Stream(),
+				d.inboundMiddleware.Stream)
+			r.HandlerSpec = transport.NewStreamHandlerSpec(h)
 		default:
 			panic(fmt.Sprintf("unknown handler type %q for service %q, procedure %q",
 				r.HandlerSpec.Type(), r.Service, r.Name))
@@ -372,6 +390,7 @@ func (d *Dispatcher) start() error {
 	for _, o := range d.outbounds {
 		wait.Submit(start(o.Unary))
 		wait.Submit(start(o.Oneway))
+		wait.Submit(start(o.Stream))
 	}
 	if errs := wait.Wait(); len(errs) != 0 {
 		return abort(errs)
@@ -436,6 +455,9 @@ func (d *Dispatcher) stop() error {
 		}
 		if o.Oneway != nil {
 			wait.Submit(o.Oneway.Stop)
+		}
+		if o.Stream != nil {
+			wait.Submit(o.Stream.Stop)
 		}
 	}
 	if errs := wait.Wait(); len(errs) > 0 {

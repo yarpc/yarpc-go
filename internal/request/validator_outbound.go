@@ -30,9 +30,6 @@ import (
 // UnaryValidatorOutbound wraps an Outbound to validate all outgoing unary requests.
 type UnaryValidatorOutbound struct{ transport.UnaryOutbound }
 
-// OnewayValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
-type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
-
 // Call performs the given request, failing early if the request is invalid.
 func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if err := transport.ValidateRequest(request); err != nil {
@@ -54,6 +51,9 @@ func (o UnaryValidatorOutbound) Introspect() introspection.OutboundStatus {
 	return introspection.OutboundStatusNotSupported
 }
 
+// OnewayValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
+type OnewayValidatorOutbound struct{ transport.OnewayOutbound }
+
 // CallOneway performs the given request, failing early if the request is invalid.
 func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	if err := transport.ValidateRequest(request); err != nil {
@@ -73,4 +73,16 @@ func (o OnewayValidatorOutbound) Introspect() introspection.OutboundStatus {
 		return o.Introspect()
 	}
 	return introspection.OutboundStatusNotSupported
+}
+
+// StreamValidatorOutbound wraps an Outbound to validate all outgoing oneway requests.
+type StreamValidatorOutbound struct{ transport.StreamOutbound }
+
+// CallStream performs the given request, failing early if the request is invalid.
+func (o StreamValidatorOutbound) CallStream(ctx context.Context, requestMeta *transport.RequestMeta) (transport.ClientStream, error) {
+	if err := transport.ValidateRequest(requestMeta.ToRequest()); err != nil {
+		return nil, err
+	}
+
+	return o.StreamOutbound.CallStream(ctx, requestMeta)
 }
