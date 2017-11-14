@@ -79,3 +79,17 @@ func TestOnewayNopInboundMiddleware(t *testing.T) {
 
 	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
 }
+
+func TestStreamNopInboundMiddleware(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	h := transporttest.NewMockStreamHandler(mockCtrl)
+	wrappedH := middleware.ApplyStreamInbound(h, middleware.NopStreamInbound)
+	s := transporttest.NewMockServerStream(mockCtrl)
+
+	err := errors.New("great sadness")
+	h.EXPECT().HandleStream(s).Return(err)
+
+	assert.Equal(t, err, wrappedH.HandleStream(s))
+}
