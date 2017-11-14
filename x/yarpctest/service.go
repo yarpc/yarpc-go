@@ -47,7 +47,7 @@ func HTTPService(options ...api.ServiceOption) api.Lifecycle {
 			panic(err)
 		}
 	}
-	inbound := http.NewTransport().NewInbound(fmt.Sprintf(":%d", opts.Port))
+	inbound := http.NewTransport().NewInbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
 	return createService(opts.Name, inbound, opts.Procedures, options)
 }
 
@@ -64,7 +64,7 @@ func TChannelService(options ...api.ServiceOption) api.Lifecycle {
 		}
 	}
 	trans, err := tchannel.NewTransport(
-		tchannel.ListenAddr(fmt.Sprintf(":%d", opts.Port)),
+		tchannel.ListenAddr(fmt.Sprintf("127.0.0.1:%d", opts.Port)),
 		tchannel.ServiceName(opts.Name),
 	)
 	if err != nil {
@@ -84,7 +84,7 @@ func GRPCService(options ...api.ServiceOption) api.Lifecycle {
 	listener := opts.Listener
 	var err error
 	if listener == nil {
-		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", opts.Port))
+		listener, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", opts.Port))
 		if err != nil {
 			panic(err)
 		}

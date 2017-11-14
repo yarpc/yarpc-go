@@ -27,7 +27,7 @@ import "go.uber.org/yarpc/x/yarpctest/api"
 type Port struct {
 	api.NoopLifecycle
 
-	Port int
+	Port uint16
 }
 
 // ApplyService implements api.ServiceOption.

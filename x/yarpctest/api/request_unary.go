@@ -29,7 +29,7 @@ import (
 // RequestOpts are configuration options for a yarpc Request and assertions
 // to make on the response.
 type RequestOpts struct {
-	Port             int
+	Port             uint16
 	GiveRequest      *transport.Request
 	ExpectedResponse *transport.Response
 	ExpectedError    error

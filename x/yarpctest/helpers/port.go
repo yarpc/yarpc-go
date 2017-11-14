@@ -59,14 +59,14 @@ func (p *PortProvider) Port(id string) *Port {
 }
 
 func newPort(t api.TestingT) *Port {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":0"))
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 	pieces := strings.Split(listener.Addr().String(), ":")
 	port, err := strconv.ParseInt(pieces[len(pieces)-1], 10, 0)
 	require.NoError(t, err)
 	return &Port{
 		listener: listener,
-		port:     int(port),
+		port:     uint16(port),
 	}
 }
 
@@ -75,7 +75,7 @@ func newPort(t api.TestingT) *Port {
 type Port struct {
 	api.NoopLifecycle
 	listener net.Listener
-	port     int
+	port     uint16
 }
 
 // ApplyService implements api.ServiceOption.
