@@ -113,7 +113,7 @@ func (h *OrderedHandler) ApplyProc(opts *api.ProcOpts) {
 // Handle implements transport.UnaryHandler#Handle.
 func (h *OrderedHandler) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
 	if len(h.Handlers) <= 0 {
-		return fmt.Errorf("No handlers for the request")
+		return fmt.Errorf("no handlers for the request")
 	}
 	n := h.attempt.Inc()
 	if int(n) > len(h.Handlers) {

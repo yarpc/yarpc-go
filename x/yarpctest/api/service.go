@@ -30,7 +30,7 @@ import (
 type ServiceOpts struct {
 	Name       string
 	Listener   net.Listener
-	Port       int
+	Port       uint16
 	Procedures []transport.Procedure
 }
 

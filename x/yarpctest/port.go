@@ -28,7 +28,7 @@ import (
 
 // Port is a shared option across services and requests. It can be embedded
 // in the constructor of both types.
-func Port(port int) *types.Port {
+func Port(port uint16) *types.Port {
 	return &types.Port{Port: port}
 }
 
