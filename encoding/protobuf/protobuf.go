@@ -21,7 +21,9 @@
 package protobuf
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"reflect"
 	"strings"
 
@@ -52,6 +54,7 @@ type BuildProceduresParams struct {
 	ServiceName         string
 	UnaryHandlerParams  []BuildProceduresUnaryHandlerParams
 	OnewayHandlerParams []BuildProceduresOnewayHandlerParams
+	StreamHandlerParams []BuildProceduresStreamHandlerParams
 }
 
 // BuildProceduresUnaryHandlerParams contains the parameters for a UnaryHandler for BuildProcedures.
@@ -64,6 +67,12 @@ type BuildProceduresUnaryHandlerParams struct {
 type BuildProceduresOnewayHandlerParams struct {
 	MethodName string
 	Handler    transport.OnewayHandler
+}
+
+// BuildProceduresStreamHandlerParams contains the parameters for a StreamHandler for BuildProcedures.
+type BuildProceduresStreamHandlerParams struct {
+	MethodName string
+	Handler    transport.StreamHandler
 }
 
 // BuildProcedures builds the transport.Procedures.
@@ -99,6 +108,21 @@ func BuildProcedures(params BuildProceduresParams) []transport.Procedure {
 			},
 		)
 	}
+	for _, streamHandlerParams := range params.StreamHandlerParams {
+		procedures = append(
+			procedures,
+			transport.Procedure{
+				Name:        procedure.ToName(params.ServiceName, streamHandlerParams.MethodName),
+				HandlerSpec: transport.NewStreamHandlerSpec(streamHandlerParams.Handler),
+				Encoding:    Encoding,
+			},
+			transport.Procedure{
+				Name:        procedure.ToName(params.ServiceName, streamHandlerParams.MethodName),
+				HandlerSpec: transport.NewStreamHandlerSpec(streamHandlerParams.Handler),
+				Encoding:    JSONEncoding,
+			},
+		)
+	}
 	return procedures
 }
 
@@ -119,6 +143,17 @@ type Client interface {
 	) (transport.Ack, error)
 }
 
+// StreamClient is a protobuf client with streaming.
+type StreamClient interface {
+	Client
+
+	CallStream(
+		ctx context.Context,
+		requestMethodName string,
+		opts ...yarpc.CallOption,
+	) (transport.ClientStream, error)
+}
+
 // ClientOption is an option for a new Client.
 type ClientOption interface {
 	apply(*client)
@@ -133,6 +168,11 @@ type ClientParams struct {
 
 // NewClient creates a new client.
 func NewClient(params ClientParams) Client {
+	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
+}
+
+// NewStreamClient creates a new stream client.
+func NewStreamClient(params ClientParams) StreamClient {
 	return newClient(params.ServiceName, params.ClientConfig, params.Options...)
 }
 
@@ -158,6 +198,16 @@ func NewOnewayHandler(params OnewayHandlerParams) transport.OnewayHandler {
 	return newOnewayHandler(params.Handle, params.NewRequest)
 }
 
+// StreamHandlerParams contains the parameters for creating a new StreamHandler.
+type StreamHandlerParams struct {
+	Handle func(transport.ServerStream) error
+}
+
+// NewStreamHandler returns a new StreamHandler.
+func NewStreamHandler(params StreamHandlerParams) transport.StreamHandler {
+	return newStreamHandler(params.Handle)
+}
+
 // ClientBuilderOptions returns ClientOptions that yarpc.InjectClients should use for a
 // specific client given information about the field into which the client is being injected.
 func ClientBuilderOptions(_ transport.ClientConfig, structField reflect.StructField) []ClientOption {
@@ -169,6 +219,43 @@ func ClientBuilderOptions(_ transport.ClientConfig, structField reflect.StructFi
 		}
 	}
 	return opts
+}
+
+// ToProtoMessage converts an io.ReadCloser into a proto.Message.
+func ToProtoMessage(
+	readCloser io.ReadCloser,
+	encoding transport.Encoding,
+	newMessage func() proto.Message,
+) (proto.Message, error) {
+	message := newMessage()
+	if err := unmarshal(encoding, readCloser, message); err != nil {
+		readCloser.Close()
+		return nil, err
+	}
+	readCloser.Close()
+	return message, nil
+}
+
+type readCloser struct {
+	io.Reader
+	closer func()
+}
+
+func (r readCloser) Close() error {
+	r.closer()
+	return nil
+}
+
+// ToReader converts a proto.Message into an io.ReadCloser.
+func ToReader(message proto.Message, encoding transport.Encoding) (io.ReadCloser, error) {
+	messageData, cleanup, err := marshal(encoding, message)
+	if err != nil {
+		return nil, err
+	}
+	if messageData != nil {
+		return readCloser{Reader: bytes.NewReader(messageData), closer: cleanup}, nil
+	}
+	return nil, nil
 }
 
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.

@@ -23,6 +23,7 @@ package protobuf
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/yarpc"
@@ -35,16 +36,20 @@ import (
 )
 
 type client struct {
-	serviceName  string
-	clientConfig transport.ClientConfig
-	encoding     transport.Encoding
+	serviceName    string
+	outboundConfig *transport.OutboundConfig
+	encoding       transport.Encoding
 }
 
 func newClient(serviceName string, clientConfig transport.ClientConfig, options ...ClientOption) *client {
+	outboundConfig, ok := clientConfig.(*transport.OutboundConfig)
+	if !ok {
+		panic(fmt.Sprintf("%T should be a *transport.OutboundConfig", clientConfig))
+	}
 	client := &client{
-		serviceName:  serviceName,
-		clientConfig: clientConfig,
-		encoding:     Encoding,
+		serviceName:    serviceName,
+		outboundConfig: outboundConfig,
+		encoding:       Encoding,
 	}
 	for _, option := range options {
 		option.apply(client)
@@ -66,7 +71,12 @@ func (c *client) Call(
 	if err != nil {
 		return nil, err
 	}
-	transportResponse, appErr := c.clientConfig.GetUnaryOutbound().Call(ctx, transportRequest)
+	unaryOutbound := c.outboundConfig.Outbounds.Unary
+	if unaryOutbound == nil {
+		// TODO(pedge)
+		return nil, yarpcerrors.InternalErrorf("no unary outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
+	}
+	transportResponse, appErr := unaryOutbound.Call(ctx, transportRequest)
 	if transportResponse == nil {
 		return nil, appErr
 	}
@@ -100,13 +110,45 @@ func (c *client) CallOneway(
 	if err != nil {
 		return nil, err
 	}
-	return c.clientConfig.GetOnewayOutbound().CallOneway(ctx, transportRequest)
+	onewayOutbound := c.outboundConfig.Outbounds.Oneway
+	if onewayOutbound == nil {
+		// TODO(pedge)
+		return nil, yarpcerrors.InternalErrorf("no oneway outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
+	}
+	return onewayOutbound.CallOneway(ctx, transportRequest)
+}
+
+func (c *client) CallStream(
+	ctx context.Context,
+	requestMethodName string,
+	opts ...yarpc.CallOption,
+) (transport.ClientStream, error) {
+	transportRequestMeta := &transport.RequestMeta{
+		Caller:    c.outboundConfig.CallerName,
+		Service:   c.outboundConfig.Outbounds.ServiceName,
+		Procedure: procedure.ToName(c.serviceName, requestMethodName),
+		Encoding:  c.encoding,
+	}
+	call := apiencoding.NewOutboundCall(encoding.FromOptions(opts)...)
+	ctx, err := call.WriteToRequestMeta(ctx, transportRequestMeta)
+	if err != nil {
+		return nil, err
+	}
+	if transportRequestMeta.Encoding != Encoding && transportRequestMeta.Encoding != JSONEncoding {
+		return nil, yarpcerrors.InternalErrorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequestMeta.Encoding)
+	}
+	streamOutbound := c.outboundConfig.Outbounds.Stream
+	if streamOutbound == nil {
+		// TODO(pedge)
+		return nil, yarpcerrors.InternalErrorf("no stream outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
+	}
+	return streamOutbound.CallStream(ctx, transportRequestMeta)
 }
 
 func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, func(), error) {
 	transportRequest := &transport.Request{
-		Caller:    c.clientConfig.Caller(),
-		Service:   c.clientConfig.Service(),
+		Caller:    c.outboundConfig.CallerName,
+		Service:   c.outboundConfig.Outbounds.ServiceName,
 		Procedure: procedure.ToName(c.serviceName, requestMethodName),
 		Encoding:  c.encoding,
 	}

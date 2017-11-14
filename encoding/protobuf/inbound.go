@@ -93,6 +93,18 @@ func (o *onewayHandler) HandleOneway(ctx context.Context, transportRequest *tran
 	return o.handleOneway(ctx, request)
 }
 
+type streamHandler struct {
+	handle func(transport.ServerStream) error
+}
+
+func newStreamHandler(handle func(transport.ServerStream) error) *streamHandler {
+	return &streamHandler{handle}
+}
+
+func (s *streamHandler) HandleStream(stream transport.ServerStream) error {
+	return s.handle(stream)
+}
+
 func getProtoRequest(ctx context.Context, transportRequest *transport.Request, newRequest func() proto.Message) (context.Context, *apiencoding.InboundCall, proto.Message, error) {
 	if err := errors.ExpectEncodings(transportRequest, Encoding, JSONEncoding); err != nil {
 		return nil, nil, nil, err
