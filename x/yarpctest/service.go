@@ -138,6 +138,11 @@ func (w *wrappedDispatcher) Start(t api.TestingT) error {
 				err = multierr.Append(err, lc.Start(t))
 			}
 		}
+		if stream := procedure.HandlerSpec.Stream(); stream != nil {
+			if lc, ok := stream.(api.Lifecycle); ok {
+				err = multierr.Append(err, lc.Start(t))
+			}
+		}
 	}
 	err = multierr.Append(err, w.Dispatcher.Start())
 	assert.NoError(t, err, "error starting dispatcher: %s", w.Name())
@@ -157,6 +162,11 @@ func (w *wrappedDispatcher) Stop(t api.TestingT) error {
 		}
 		if oneway := procedure.HandlerSpec.Oneway(); oneway != nil {
 			if lc, ok := oneway.(api.Lifecycle); ok {
+				err = multierr.Append(err, lc.Stop(t))
+			}
+		}
+		if stream := procedure.HandlerSpec.Stream(); stream != nil {
+			if lc, ok := stream.(api.Lifecycle); ok {
 				err = multierr.Append(err, lc.Stop(t))
 			}
 		}

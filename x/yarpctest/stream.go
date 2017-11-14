@@ -18,29 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package types
+package yarpctest
 
-import "go.uber.org/yarpc/x/yarpctest/api"
+import (
+	"go.uber.org/yarpc/x/yarpctest/types"
+)
 
-// Port is a concrete type that implements multiple interfaces as ease
-// of use for synchronizing ports.
-type Port struct {
-	api.NoopLifecycle
-
-	Port uint16
+// SendStreamMsg sends a message to a stream.
+func SendStreamMsg(sendMsg string) *types.SendStreamMsg {
+	return &types.SendStreamMsg{Msg: sendMsg}
 }
 
-// ApplyService implements api.ServiceOption.
-func (n *Port) ApplyService(opts *api.ServiceOpts) {
-	opts.Port = n.Port
+// SendStreamMsgAndExpectError sends a message on a stream and asserts on the
+// error returned.
+func SendStreamMsgAndExpectError(sendMsg string, wantErrMsgs ...string) *types.SendStreamMsg {
+	return &types.SendStreamMsg{Msg: sendMsg, WantErrMsgs: wantErrMsgs}
 }
 
-// ApplyRequest implements RequestOption
-func (n *Port) ApplyRequest(opts *api.RequestOpts) {
-	opts.Port = n.Port
+// RecvStreamMsg waits to receive a message on a client stream.
+func RecvStreamMsg(wantMsg string) *types.RecvStreamMsg {
+	return &types.RecvStreamMsg{Msg: wantMsg}
 }
 
-// ApplyClientStreamRequest implements ClientStreamRequestOption
-func (n *Port) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
-	opts.Port = n.Port
+// RecvStreamErr waits to receive a message on a client stream.  It expects
+// an error.
+func RecvStreamErr(wantErrMsgs ...string) *types.RecvStreamMsg {
+	return &types.RecvStreamMsg{WantErrMsgs: wantErrMsgs}
 }
