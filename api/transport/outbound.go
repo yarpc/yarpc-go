@@ -64,6 +64,16 @@ type OnewayOutbound interface {
 	CallOneway(ctx context.Context, request *Request) (Ack, error)
 }
 
+// StreamOutbound is a transport that knows how to send stream requests for
+// procedure calls.
+type StreamOutbound interface {
+	Outbound
+
+	// CallStream creates a stream connection based on the metadata in the
+	// "Request" if the Request.Body is set, this should error.
+	CallStream(ctx context.Context, requestMeta *RequestMeta) (ClientStream, error)
+}
+
 // Outbounds encapsulates the outbound specification for a service.
 //
 // This includes the service name that will be used for outbound requests as
@@ -79,4 +89,8 @@ type Outbounds struct {
 	// If set, this is the oneway outbound which sends the request and
 	// continues once the message has been delivered.
 	Oneway OnewayOutbound
+
+	// If set, this is the stream outbound which creates a ClientStream that can
+	// be used to continuously send/recv requests over the connection.
+	Stream StreamOutbound
 }
