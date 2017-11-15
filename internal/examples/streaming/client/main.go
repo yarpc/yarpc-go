@@ -43,7 +43,7 @@ func do() error {
 		Name: "keyvalue-client",
 		Outbounds: yarpc.Outbounds{
 			"keyvalue": {
-				Stream: grpc.NewTransport().NewSingleOutbound("127.0.0.1:24038"),
+				Stream: grpc.NewTransport().NewSingleOutbound("127.0.0.1:24039"),
 			},
 		},
 	})
@@ -61,9 +61,7 @@ func do() error {
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("Connected and waiting for input")
 	fmt.Printf(">>> ")
-	defer func(){ fmt.Println("ending:", stream.ResponseMeta()) } ()
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "stop" {

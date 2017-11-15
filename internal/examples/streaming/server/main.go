@@ -49,8 +49,6 @@ func (h *handler) HelloInStream(*streaming.HelloRequest, streaming.HelloServiceH
 }
 
 func (h *handler) HelloThere(stream streaming.HelloServiceHelloThereYARPCServer) error {
-	fmt.Println("Handling stream")
-	fmt.Println("request: ", stream.RequestMeta())
 	defer func() {
 		stream.SetResponseMeta(&transport.ResponseMeta{Headers: transport.HeadersFromMap(map[string]string{"testresp": "resssssssp"})})
 	}()
@@ -84,7 +82,7 @@ func main() {
 
 func do() error {
 	var inbound transport.Inbound
-	listener, err := net.Listen("tcp", "127.0.0.1:24038")
+	listener, err := net.Listen("tcp", "127.0.0.1:24039")
 	if err != nil {
 		return err
 	}
@@ -99,11 +97,9 @@ func do() error {
 
 	dispatcher.Register(streaming.BuildHelloYARPCProcedures(handler))
 
-	fmt.Println("Starting Dispatcher")
 	if err := dispatcher.Start(); err != nil {
 		return err
 	}
-	fmt.Println("Started Dispatcher")
 
 	select {}
 }
