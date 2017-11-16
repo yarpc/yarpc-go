@@ -4,7 +4,7 @@ Releases
 v1.22.0-dev (unreleased)
 --------------------
 
--   Introduces `api/peer.RetainedChooserList` with `peer/peerlist.List`, a
+-   Introduces `api/peer.ListImplementation` with `peer/peerlist.List`, a
     building block that provides peer availability management for peer lists
     like round-robin, hash-ring.
 

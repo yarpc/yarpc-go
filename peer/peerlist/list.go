@@ -60,7 +60,7 @@ func Capacity(capacity int) ListOption {
 }
 
 // New creates a new peer list with an identifier chooser for available peers.
-func New(name string, transport peer.Transport, availableChooser peer.RetainedChooserList, opts ...ListOption) *List {
+func New(name string, transport peer.Transport, availableChooser peer.ListImplementation, opts ...ListOption) *List {
 	cfg := defaultListConfig
 	for _, o := range opts {
 		o(&cfg)
@@ -89,7 +89,7 @@ type List struct {
 
 	unavailablePeers   map[string]*peerThunk
 	availablePeers     map[string]*peerThunk
-	availableChooser   peer.RetainedChooserList
+	availableChooser   peer.ListImplementation
 	peerAvailableEvent chan struct{}
 	transport          peer.Transport
 

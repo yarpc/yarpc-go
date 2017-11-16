@@ -60,14 +60,14 @@ type ChooserList interface {
 	List
 }
 
-// RetainedChooserList is a collection of retained peers, with its own
+// ListImplementation is a collection of retained peers, with its own
 // subscribers for peer status change notifications.
 // The retained peer chooser list encapsulates the logic for selecting from
 // among available peers, whereas a ChooserList is responsible for retaining,
 // releasing, and monitoring peer availability.
 // Use "go.uber.org/yarpc/peer/peerlist".List in conjunction with a
 // RetainedList to produce a "go.uber.org/yarpc/api/peer".List.
-type RetainedChooserList interface {
+type ListImplementation interface {
 	transport.Lifecycle
 
 	Add(Peer) Subscriber
