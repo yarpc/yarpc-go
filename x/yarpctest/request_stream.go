@@ -37,7 +37,7 @@ func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 	for _, option := range options {
 		option.ApplyClientStreamRequest(&opts)
 	}
-	return api.ActionFunc(func(t api.TestingT) {
+	return api.ActionFunc(func(t testing.TB) {
 		trans := grpc.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
 
@@ -58,7 +58,7 @@ func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 }
 
 func callStream(
-	t api.TestingT,
+	t testing.TB,
 	out transport.StreamOutbound,
 	reqMeta *transport.RequestMeta,
 	actions []api.ClientStreamAction,
@@ -83,7 +83,7 @@ func ClientStreamActions(actions ...api.ClientStreamAction) api.ClientStreamRequ
 
 // CloseStream is an action to close a client stream.
 func CloseStream() api.ClientStreamAction {
-	return api.ClientStreamActionFunc(func(t api.TestingT, c transport.ClientStream) {
+	return api.ClientStreamActionFunc(func(t testing.TB, c transport.ClientStream) {
 		require.NoError(t, c.Close())
 	})
 }

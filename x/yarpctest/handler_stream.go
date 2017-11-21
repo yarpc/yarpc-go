@@ -38,7 +38,7 @@ func EchoStreamHandler() api.ProcOption {
 }
 
 type echoStreamHandler struct {
-	api.SafeTestingTOnStart
+	api.SafeTestingTBOnStart
 
 	wg      sync.WaitGroup
 	stopped atomic.Bool
@@ -48,7 +48,7 @@ func (h *echoStreamHandler) ApplyProc(opts *api.ProcOpts) {
 	opts.HandlerSpec = transport.NewStreamHandlerSpec(h)
 }
 
-func (h *echoStreamHandler) Stop(api.TestingT) error {
+func (h *echoStreamHandler) Stop(testing.TB) error {
 	h.stopped.Store(true)
 	h.wg.Wait()
 	return nil
@@ -85,7 +85,7 @@ type orderedStreamHandler struct {
 
 	wg      sync.WaitGroup
 	stopped atomic.Bool
-	t       api.TestingT
+	t       testing.TB
 }
 
 // ApplyProc implements ProcOption.
@@ -94,7 +94,7 @@ func (o *orderedStreamHandler) ApplyProc(opts *api.ProcOpts) {
 }
 
 // Start sets the TestingT to use for assertions.
-func (o *orderedStreamHandler) Start(t api.TestingT) error {
+func (o *orderedStreamHandler) Start(t testing.TB) error {
 	o.t = t
 
 	var err error
@@ -105,7 +105,7 @@ func (o *orderedStreamHandler) Start(t api.TestingT) error {
 }
 
 // Stop cleans up the handler, waiting until all streams have ended.
-func (o *orderedStreamHandler) Stop(t api.TestingT) error {
+func (o *orderedStreamHandler) Stop(t testing.TB) error {
 	var err error
 	for _, action := range o.actions {
 		err = multierr.Append(err, action.Stop(t))

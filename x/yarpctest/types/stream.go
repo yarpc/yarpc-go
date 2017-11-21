@@ -32,7 +32,7 @@ import (
 // SendStreamMsg is an action to send a message to a stream.  It can be
 // applied to either a server or client stream.
 type SendStreamMsg struct {
-	api.SafeTestingTOnStart
+	api.SafeTestingTBOnStart
 	api.NoopStop
 
 	Msg         string
@@ -40,7 +40,7 @@ type SendStreamMsg struct {
 }
 
 // ApplyClientStream implements ClientStreamAction
-func (s *SendStreamMsg) ApplyClientStream(t api.TestingT, c transport.ClientStream) {
+func (s *SendStreamMsg) ApplyClientStream(t testing.TB, c transport.ClientStream) {
 	s.applyStream(t, c)
 }
 
@@ -50,7 +50,7 @@ func (s *SendStreamMsg) ApplyServerStream(c transport.ServerStream) error {
 	return nil
 }
 
-func (s *SendStreamMsg) applyStream(t api.TestingT, c transport.BaseStream) {
+func (s *SendStreamMsg) applyStream(t testing.TB, c transport.BaseStream) {
 	err := c.SendMsg(&transport.StreamMessage{
 		ReadCloser: ioutil.NopCloser(bytes.NewBufferString(s.Msg)),
 	})
@@ -67,7 +67,7 @@ func (s *SendStreamMsg) applyStream(t api.TestingT, c transport.BaseStream) {
 // RecvStreamMsg is an action to receive a message from a stream.  It can
 // be applied to either a server or client stream.
 type RecvStreamMsg struct {
-	api.SafeTestingTOnStart
+	api.SafeTestingTBOnStart
 	api.NoopStop
 
 	Msg         string
@@ -75,7 +75,7 @@ type RecvStreamMsg struct {
 }
 
 // ApplyClientStream implements ClientStreamAction
-func (s *RecvStreamMsg) ApplyClientStream(t api.TestingT, c transport.ClientStream) {
+func (s *RecvStreamMsg) ApplyClientStream(t testing.TB, c transport.ClientStream) {
 	s.applyStream(t, c)
 }
 
@@ -85,7 +85,7 @@ func (s *RecvStreamMsg) ApplyServerStream(c transport.ServerStream) error {
 	return nil
 }
 
-func (s *RecvStreamMsg) applyStream(t api.TestingT, c transport.BaseStream) {
+func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.BaseStream) {
 	msg, err := c.RecvMsg()
 	if len(s.WantErrMsgs) > 0 {
 		require.Error(t, err)
