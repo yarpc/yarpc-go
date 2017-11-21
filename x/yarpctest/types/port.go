@@ -20,22 +20,72 @@
 
 package types
 
-import "go.uber.org/yarpc/x/yarpctest/api"
+import (
+	"fmt"
+	"net"
+	"strconv"
+	"strings"
+	"testing"
 
-// Port is a concrete type that implements multiple interfaces as ease
-// of use for synchronizing ports.
+	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/x/yarpctest/api"
+)
+
+// NewPortProvider creates an object that can be used to synchronize ports in
+// yarpctest infrastructure.  Ports can be acquired through the "Port" function
+// which will create new ports for the test based on the id passed into the
+// function.
+func NewPortProvider(t testing.TB) *PortProvider {
+	return &PortProvider{
+		idToPort: make(map[string]*Port),
+		t:        t,
+	}
+}
+
+// PortProvider maintains a list of IDs to Ports.
+type PortProvider struct {
+	idToPort map[string]*Port
+	t        testing.TB
+}
+
+// NamedPort will return a *Port object that exists for the passed in 'id', or
+// it will create a *Port object if one does not already exist.
+func (p *PortProvider) NamedPort(id string) *Port {
+	port, ok := p.idToPort[id]
+	if !ok {
+		port = newPort(p.t)
+		p.idToPort[id] = port
+	}
+	return port
+}
+
+func newPort(t testing.TB) *Port {
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
+	require.NoError(t, err)
+	pieces := strings.Split(listener.Addr().String(), ":")
+	port, err := strconv.ParseInt(pieces[len(pieces)-1], 10, 0)
+	require.NoError(t, err)
+	return &Port{
+		listener: listener,
+		Port:     uint16(port),
+	}
+}
+
+// Port is an option injectable primitive for synchronizing port numbers between
+// requests and services.
 type Port struct {
 	api.NoopLifecycle
-
-	Port uint16
+	listener net.Listener
+	Port     uint16
 }
 
 // ApplyService implements api.ServiceOption.
 func (n *Port) ApplyService(opts *api.ServiceOpts) {
+	opts.Listener = n.listener
 	opts.Port = n.Port
 }
 
-// ApplyRequest implements RequestOption
+// ApplyRequest implements api.RequestOption
 func (n *Port) ApplyRequest(opts *api.RequestOpts) {
 	opts.Port = n.Port
 }

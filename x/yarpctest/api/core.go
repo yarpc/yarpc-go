@@ -32,7 +32,7 @@ type Lifecycle interface {
 // Action defines an object that can be "Run" to assert things against the
 // world through action.
 type Action interface {
-	Run(t testing.TB)
+	Run(testing.TB)
 }
 
 // ActionFunc is a helper to convert a function to implement the Action

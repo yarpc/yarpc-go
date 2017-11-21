@@ -48,8 +48,8 @@ func (h *GiveHeader) Handle(ctx context.Context, req *transport.Request, resw tr
 	return err
 }
 
-// ExpectHeader is an API for asserting headers sent on a Request or a Response.
-type ExpectHeader struct {
+// WantHeader is an API for asserting headers sent on a Request or a Response.
+type WantHeader struct {
 	api.SafeTestingTBOnStart
 	api.NoopStop
 
@@ -58,12 +58,12 @@ type ExpectHeader struct {
 }
 
 // ApplyRequest implements RequestOption.
-func (h *ExpectHeader) ApplyRequest(opts *api.RequestOpts) {
-	opts.ExpectedResponse.Headers = opts.ExpectedResponse.Headers.With(h.Key, h.Value)
+func (h *WantHeader) ApplyRequest(opts *api.RequestOpts) {
+	opts.WantResponse.Headers = opts.WantResponse.Headers.With(h.Key, h.Value)
 }
 
 // Handle implements middleware.UnaryInbound.
-func (h *ExpectHeader) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.UnaryHandler) error {
+func (h *WantHeader) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, handler transport.UnaryHandler) error {
 	actualValue, ok := req.Headers.Get(h.Key)
 	require.True(h.GetTestingTB(), ok, "header %q was not set on the request", h.Key)
 	require.Equal(h.GetTestingTB(), actualValue, h.Value, "headers did not match for %q", h.Key)

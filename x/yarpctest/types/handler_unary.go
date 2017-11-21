@@ -37,15 +37,15 @@ import (
 // interfaces (so it can be used directly as a procedure, or as a single use
 // handler (depending on the use case)).
 type UnaryHandler struct {
-	H  api.UnaryHandler
-	MW []api.UnaryInboundMiddleware
+	Handler    api.UnaryHandler
+	Middleware []api.UnaryInboundMiddleware
 }
 
 // Start implements Lifecycle.
 func (h *UnaryHandler) Start(t testing.TB) error {
 	var err error
-	err = multierr.Append(err, h.H.Start(t))
-	for _, mw := range h.MW {
+	err = multierr.Append(err, h.Handler.Start(t))
+	for _, mw := range h.Middleware {
 		err = multierr.Append(err, mw.Start(t))
 	}
 	return err
@@ -54,8 +54,8 @@ func (h *UnaryHandler) Start(t testing.TB) error {
 // Stop implements Lifecycle.
 func (h *UnaryHandler) Stop(t testing.TB) error {
 	var err error
-	err = multierr.Append(err, h.H.Stop(t))
-	for _, mw := range h.MW {
+	err = multierr.Append(err, h.Handler.Stop(t))
+	for _, mw := range h.Middleware {
 		err = multierr.Append(err, mw.Stop(t))
 	}
 	return err
@@ -73,11 +73,11 @@ func (h *UnaryHandler) ApplyHandler(opts *api.HandlerOpts) {
 
 // Handle implements transport.UnaryHandler.
 func (h *UnaryHandler) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter) error {
-	mws := make([]middleware.UnaryInbound, 0, len(h.MW))
-	for _, mw := range h.MW {
+	mws := make([]middleware.UnaryInbound, 0, len(h.Middleware))
+	for _, mw := range h.Middleware {
 		mws = append(mws, mw)
 	}
-	handler := middleware.ApplyUnaryInbound(h.H, inboundmiddleware.UnaryChain(mws...))
+	handler := middleware.ApplyUnaryInbound(h.Handler, inboundmiddleware.UnaryChain(mws...))
 	return handler.Handle(ctx, req, resw)
 }
 

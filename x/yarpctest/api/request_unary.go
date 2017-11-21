@@ -29,10 +29,10 @@ import (
 // RequestOpts are configuration options for a yarpc Request and assertions
 // to make on the response.
 type RequestOpts struct {
-	Port             uint16
-	GiveRequest      *transport.Request
-	ExpectedResponse *transport.Response
-	ExpectedError    error
+	Port         uint16
+	GiveRequest  *transport.Request
+	WantResponse *transport.Response
+	WantError    error
 }
 
 // NewRequestOpts initializes a RequestOpts struct.
@@ -44,7 +44,7 @@ func NewRequestOpts() RequestOpts {
 			Headers:  transport.NewHeaders(),
 			Body:     bytes.NewBufferString(""),
 		},
-		ExpectedResponse: &transport.Response{
+		WantResponse: &transport.Response{
 			Headers: transport.NewHeaders(),
 		},
 	}

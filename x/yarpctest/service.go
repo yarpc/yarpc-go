@@ -43,8 +43,7 @@ func HTTPService(options ...api.ServiceOption) api.Lifecycle {
 		option.ApplyService(&opts)
 	}
 	if opts.Listener != nil {
-		err := opts.Listener.Close()
-		if err != nil {
+		if err := opts.Listener.Close(); err != nil {
 			panic(err)
 		}
 	}
@@ -59,8 +58,7 @@ func TChannelService(options ...api.ServiceOption) api.Lifecycle {
 		option.ApplyService(&opts)
 	}
 	if opts.Listener != nil {
-		err := opts.Listener.Close()
-		if err != nil {
+		if err := opts.Listener.Close(); err != nil {
 			panic(err)
 		}
 	}
@@ -85,8 +83,7 @@ func GRPCService(options ...api.ServiceOption) api.Lifecycle {
 	listener := opts.Listener
 	var err error
 	if listener == nil {
-		listener, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", opts.Port))
-		if err != nil {
+		if listener, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", opts.Port)); err != nil {
 			panic(err)
 		}
 	}

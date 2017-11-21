@@ -33,7 +33,7 @@ import (
 // EchoHandler is a Unary Handler that will echo the body of the request
 // into the response.
 func EchoHandler(mw ...api.UnaryInboundMiddleware) *types.UnaryHandler {
-	return &types.UnaryHandler{H: newEchoHandler(), MW: mw}
+	return &types.UnaryHandler{Handler: newEchoHandler(), Middleware: mw}
 }
 
 func newEchoHandler() api.UnaryHandler {
@@ -47,7 +47,7 @@ func newEchoHandler() api.UnaryHandler {
 
 // StaticHandler will always return the same response.
 func StaticHandler(msg string, mw ...api.UnaryInboundMiddleware) *types.UnaryHandler {
-	return &types.UnaryHandler{H: newStaticHandler(msg), MW: mw}
+	return &types.UnaryHandler{Handler: newStaticHandler(msg), Middleware: mw}
 }
 
 func newStaticHandler(msg string) api.UnaryHandler {
@@ -61,7 +61,7 @@ func newStaticHandler(msg string) api.UnaryHandler {
 
 // ErrorHandler will always return an Error.
 func ErrorHandler(err error, mw ...api.UnaryInboundMiddleware) *types.UnaryHandler {
-	return &types.UnaryHandler{H: newErrorHandler(err), MW: mw}
+	return &types.UnaryHandler{Handler: newErrorHandler(err), Middleware: mw}
 }
 
 func newErrorHandler(err error) api.UnaryHandler {
@@ -75,7 +75,7 @@ func newErrorHandler(err error) api.UnaryHandler {
 // EchoHandlerWithPrefix will echo the request it receives into the
 // response, but, it will insert a prefix in front of the message.
 func EchoHandlerWithPrefix(prefix string, mw ...api.UnaryInboundMiddleware) *types.UnaryHandler {
-	return &types.UnaryHandler{H: newEchoHandlerWithPrefix(prefix), MW: mw}
+	return &types.UnaryHandler{Handler: newEchoHandlerWithPrefix(prefix), Middleware: mw}
 }
 
 func newEchoHandlerWithPrefix(prefix string) api.UnaryHandler {

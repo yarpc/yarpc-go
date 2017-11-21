@@ -56,9 +56,9 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 
 		resp, cancel, err := sendRequest(out, opts.GiveRequest)
 		defer cancel()
-		validateError(t, err, opts.ExpectedError)
-		if opts.ExpectedError == nil {
-			validateResponse(t, resp, opts.ExpectedResponse)
+		validateError(t, err, opts.WantError)
+		if opts.WantError == nil {
+			validateResponse(t, resp, opts.WantResponse)
 		}
 	})
 }
@@ -82,9 +82,9 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 
 		resp, cancel, err := sendRequest(out, opts.GiveRequest)
 		defer cancel()
-		validateError(t, err, opts.ExpectedError)
-		if opts.ExpectedError == nil {
-			validateResponse(t, resp, opts.ExpectedResponse)
+		validateError(t, err, opts.WantError)
+		if opts.WantError == nil {
+			validateResponse(t, resp, opts.WantResponse)
 		}
 	})
 }
@@ -107,9 +107,9 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 
 		resp, cancel, err := sendRequest(out, opts.GiveRequest)
 		defer cancel()
-		validateError(t, err, opts.ExpectedError)
-		if opts.ExpectedError == nil {
-			validateResponse(t, resp, opts.ExpectedResponse)
+		validateError(t, err, opts.WantError)
+		if opts.WantError == nil {
+			validateResponse(t, resp, opts.WantResponse)
 		}
 	})
 }
@@ -158,28 +158,28 @@ func Body(msg string) api.RequestOption {
 	})
 }
 
-// ExpectError creates an assertion on the request response to validate the
+// WantError creates an assertion on the request response to validate the
 // error.
-func ExpectError(errMsg string) api.RequestOption {
+func WantError(errMsg string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.ExpectedError = errors.New(errMsg)
+		opts.WantError = errors.New(errMsg)
 	})
 }
 
-// ExpectRespBody will assert that the response body matches at the end of the
+// WantRespBody will assert that the response body matches at the end of the
 // request.
-func ExpectRespBody(body string) api.RequestOption {
+func WantRespBody(body string) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
-		opts.ExpectedResponse.Body = ioutil.NopCloser(bytes.NewBufferString(body))
+		opts.WantResponse.Body = ioutil.NopCloser(bytes.NewBufferString(body))
 	})
 }
 
-// GiveAndExpectLargeBodyIsEchoed creates an extremely large random byte buffer
+// GiveAndWantLargeBodyIsEchoed creates an extremely large random byte buffer
 // and validates that the body is echoed back to the response.
-func GiveAndExpectLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
+func GiveAndWantLargeBodyIsEchoed(numOfBytes int) api.RequestOption {
 	return api.RequestOptionFunc(func(opts *api.RequestOpts) {
 		body := bytes.Repeat([]byte("t"), numOfBytes)
 		opts.GiveRequest.Body = bytes.NewReader(body)
-		opts.ExpectedResponse.Body = ioutil.NopCloser(bytes.NewReader(body))
+		opts.WantResponse.Body = ioutil.NopCloser(bytes.NewReader(body))
 	})
 }

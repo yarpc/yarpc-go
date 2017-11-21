@@ -27,7 +27,7 @@ func WithHeader(key, value string) *types.GiveHeader {
 	return &types.GiveHeader{Key: key, Value: value}
 }
 
-// ExpectHeader will set up a header assertion for request/response headers.
-func ExpectHeader(key, value string) *types.ExpectHeader {
-	return &types.ExpectHeader{Key: key, Value: value}
+// WantHeader will set up a header assertion for request/response headers.
+func WantHeader(key, value string) *types.WantHeader {
+	return &types.WantHeader{Key: key, Value: value}
 }

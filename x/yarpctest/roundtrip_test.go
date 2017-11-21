@@ -40,17 +40,17 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				HTTPService(
 					Name("myservice"),
-					p.Port("1"),
+					p.NamedPort("1"),
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
 			requests: Actions(
 				HTTPRequest(
-					p.Port("1"),
+					p.NamedPort("1"),
 					Body("test body"),
 					Service("myservice"),
 					Procedure("echo"),
-					ExpectRespBody("test body"),
+					WantRespBody("test body"),
 				),
 			),
 		},
@@ -59,17 +59,17 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				TChannelService(
 					Name("myservice"),
-					p.Port("2"),
+					p.NamedPort("2"),
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
 			requests: Actions(
 				TChannelRequest(
-					p.Port("2"),
+					p.NamedPort("2"),
 					Body("test body"),
 					Service("myservice"),
 					Procedure("echo"),
-					ExpectRespBody("test body"),
+					WantRespBody("test body"),
 				),
 			),
 		},
@@ -78,17 +78,17 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				GRPCService(
 					Name("myservice"),
-					p.Port("3"),
+					p.NamedPort("3"),
 					Proc(Name("echo"), EchoHandler()),
 				),
 			),
 			requests: Actions(
 				GRPCRequest(
-					p.Port("3"),
+					p.NamedPort("3"),
 					Body("test body"),
 					Service("myservice"),
 					Procedure("echo"),
-					ExpectRespBody("test body"),
+					WantRespBody("test body"),
 				),
 			),
 		},
@@ -97,7 +97,7 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				HTTPService(
 					Name("myservice"),
-					p.Port("4-http"),
+					p.NamedPort("4-http"),
 					Proc(
 						Name("error"),
 						ErrorHandler(
@@ -107,33 +107,33 @@ func TestServiceRouting(t *testing.T) {
 				),
 				TChannelService(
 					Name("myotherservice"),
-					p.Port("4-tch"),
+					p.NamedPort("4-tch"),
 					Proc(Name("error"), ErrorHandler(errors.New("error from myotherservice"))),
 				),
 				GRPCService(
 					Name("myotherservice2"),
-					p.Port("4-grpc"),
+					p.NamedPort("4-grpc"),
 					Proc(Name("error"), ErrorHandler(errors.New("error from myotherservice2"))),
 				),
 			),
 			requests: Actions(
 				HTTPRequest(
-					p.Port("4-http"),
+					p.NamedPort("4-http"),
 					Service("myservice"),
 					Procedure("error"),
-					ExpectError("error from myservice"),
+					WantError("error from myservice"),
 				),
 				TChannelRequest(
-					p.Port("4-tch"),
+					p.NamedPort("4-tch"),
 					Service("myotherservice"),
 					Procedure("error"),
-					ExpectError("error from myotherservice"),
+					WantError("error from myotherservice"),
 				),
 				GRPCRequest(
-					p.Port("4-grpc"),
+					p.NamedPort("4-grpc"),
 					Service("myotherservice2"),
 					Procedure("error"),
-					ExpectError("error from myotherservice2"),
+					WantError("error from myotherservice2"),
 				),
 			),
 		},
@@ -142,7 +142,7 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				HTTPService(
 					Name("myservice"),
-					p.Port("5"),
+					p.NamedPort("5"),
 					Proc(
 						Name("proc"),
 						OrderedRequestHandler(
@@ -156,30 +156,30 @@ func TestServiceRouting(t *testing.T) {
 			),
 			requests: Actions(
 				HTTPRequest(
-					p.Port("5"),
+					p.NamedPort("5"),
 					Service("myservice"),
 					Procedure("proc"),
 					ShardKey("ignoreme"),
-					ExpectError(yarpcerrors.InternalErrorf("internal error").Error()),
+					WantError(yarpcerrors.InternalErrorf("internal error").Error()),
 				),
 				HTTPRequest(
-					p.Port("5"),
+					p.NamedPort("5"),
 					Service("myservice"),
 					Procedure("proc"),
-					ExpectRespBody("success"),
+					WantRespBody("success"),
 				),
 				HTTPRequest(
-					p.Port("5"),
+					p.NamedPort("5"),
 					Service("myservice"),
 					Procedure("proc"),
 					Body("hello"),
-					ExpectRespBody("echo: hello"),
+					WantRespBody("echo: hello"),
 				),
 				HTTPRequest(
-					p.Port("5"),
+					p.NamedPort("5"),
 					Service("myservice"),
 					Procedure("proc"),
-					GiveAndExpectLargeBodyIsEchoed(1<<17),
+					GiveAndWantLargeBodyIsEchoed(1<<17),
 				),
 			),
 		},
@@ -188,20 +188,20 @@ func TestServiceRouting(t *testing.T) {
 			services: Lifecycles(
 				HTTPService(
 					Name("myservice"),
-					p.Port("6"),
+					p.NamedPort("6"),
 					Proc(
 						Name("proc"),
 						OrderedRequestHandler(
 							ErrorHandler(
 								yarpcerrors.InternalErrorf("internal error"),
-								ExpectHeader("key1", "val1"),
-								ExpectHeader("key2", "val2"),
+								WantHeader("key1", "val1"),
+								WantHeader("key2", "val2"),
 								WithHeader("resp_key1", "resp_val1"),
 								WithHeader("resp_key2", "resp_val2"),
 							),
 							StaticHandler(
 								"success",
-								ExpectHeader("successKey", "successValue"),
+								WantHeader("successKey", "successValue"),
 								WithHeader("responseKey", "responseValue"),
 							),
 						),
@@ -210,21 +210,21 @@ func TestServiceRouting(t *testing.T) {
 			),
 			requests: Actions(
 				HTTPRequest(
-					p.Port("6"),
+					p.NamedPort("6"),
 					Service("myservice"),
 					Procedure("proc"),
 					ShardKey("ignoreme"),
 					WithHeader("key1", "val1"),
 					WithHeader("key2", "val2"),
-					ExpectError(yarpcerrors.InternalErrorf("internal error").Error()),
+					WantError(yarpcerrors.InternalErrorf("internal error").Error()),
 				),
 				HTTPRequest(
-					p.Port("6"),
+					p.NamedPort("6"),
 					Service("myservice"),
 					Procedure("proc"),
 					WithHeader("successKey", "successValue"),
-					ExpectRespBody("success"),
-					ExpectHeader("responseKey", "responseValue"),
+					WantRespBody("success"),
+					WantHeader("responseKey", "responseValue"),
 				),
 			),
 		},
