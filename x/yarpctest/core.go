@@ -22,6 +22,7 @@ package yarpctest
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/multierr"
@@ -44,7 +45,7 @@ type lifecycles []api.Lifecycle
 
 // Start the lifecycles. If there are any errors, stop any started lifecycles
 // and fail the test.
-func (ls lifecycles) Start(t api.TestingT) error {
+func (ls lifecycles) Start(t testing.TB) error {
 	startedLifecycles := make(lifecycles, 0, len(ls))
 	for _, l := range ls {
 		err := l.Start(t)
@@ -59,7 +60,7 @@ func (ls lifecycles) Start(t api.TestingT) error {
 
 // Stop the lifecycles. Record all errors. If any lifecycle failed to stop
 // fail the test.
-func (ls lifecycles) Stop(t api.TestingT) error {
+func (ls lifecycles) Stop(t testing.TB) error {
 	var err error
 	for _, l := range ls {
 		err = multierr.Append(err, l.Stop(t))
@@ -75,7 +76,7 @@ func Actions(actions ...api.Action) api.Action {
 
 type multi []api.Action
 
-func (m multi) Run(t api.TestingT) {
+func (m multi) Run(t testing.TB) {
 	for i, req := range m {
 		api.Run(fmt.Sprintf("Action #%d", i), t, req.Run)
 	}

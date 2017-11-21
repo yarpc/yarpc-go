@@ -25,6 +25,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/x/yarpctest/api"
@@ -34,7 +35,7 @@ import (
 // yarpctest infrastructure.  Ports can be acquired through the "Port" function
 // which will create new ports for the test based on the id passed into the
 // function.
-func NewPortProvider(t api.TestingT) *PortProvider {
+func NewPortProvider(t testing.TB) *PortProvider {
 	return &PortProvider{
 		idToPort: make(map[string]*Port),
 		t:        t,
@@ -44,7 +45,7 @@ func NewPortProvider(t api.TestingT) *PortProvider {
 // PortProvider maintains a list of IDs to Ports.
 type PortProvider struct {
 	idToPort map[string]*Port
-	t        api.TestingT
+	t        testing.TB
 }
 
 // Port will return a *Port object that exists for the passed in 'id', or it
@@ -58,7 +59,7 @@ func (p *PortProvider) Port(id string) *Port {
 	return port
 }
 
-func newPort(t api.TestingT) *Port {
+func newPort(t testing.TB) *Port {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:0"))
 	require.NoError(t, err)
 	pieces := strings.Split(listener.Addr().String(), ":")

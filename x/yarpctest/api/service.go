@@ -22,6 +22,7 @@ package api
 
 import (
 	"net"
+	"testing"
 
 	"go.uber.org/yarpc/api/transport"
 )
@@ -48,7 +49,7 @@ type ServiceOptionFunc func(*ServiceOpts)
 func (f ServiceOptionFunc) ApplyService(opts *ServiceOpts) { f(opts) }
 
 // Start is a noop for wrapped functions
-func (f ServiceOptionFunc) Start(TestingT) error { return nil }
+func (f ServiceOptionFunc) Start(testing.TB) error { return nil }
 
 // Stop is a noop for wrapped functions
-func (f ServiceOptionFunc) Stop(TestingT) error { return nil }
+func (f ServiceOptionFunc) Stop(testing.TB) error { return nil }

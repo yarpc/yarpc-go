@@ -23,6 +23,7 @@ package yarpctest
 import (
 	"fmt"
 	"net"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
@@ -122,7 +123,7 @@ type wrappedDispatcher struct {
 	procedures []transport.Procedure
 }
 
-func (w *wrappedDispatcher) Start(t api.TestingT) error {
+func (w *wrappedDispatcher) Start(t testing.TB) error {
 	var err error
 	for _, option := range w.options {
 		err = multierr.Append(err, option.Start(t))
@@ -144,7 +145,7 @@ func (w *wrappedDispatcher) Start(t api.TestingT) error {
 	return err
 }
 
-func (w *wrappedDispatcher) Stop(t api.TestingT) error {
+func (w *wrappedDispatcher) Stop(t testing.TB) error {
 	var err error
 	for _, option := range w.options {
 		err = multierr.Append(err, option.Stop(t))

@@ -23,6 +23,7 @@ package types
 import (
 	"context"
 	"fmt"
+	"testing"
 
 	"go.uber.org/atomic"
 	"go.uber.org/multierr"
@@ -41,7 +42,7 @@ type UnaryHandler struct {
 }
 
 // Start implements Lifecycle.
-func (h *UnaryHandler) Start(t api.TestingT) error {
+func (h *UnaryHandler) Start(t testing.TB) error {
 	var err error
 	err = multierr.Append(err, h.H.Start(t))
 	for _, mw := range h.MW {
@@ -51,7 +52,7 @@ func (h *UnaryHandler) Start(t api.TestingT) error {
 }
 
 // Stop implements Lifecycle.
-func (h *UnaryHandler) Stop(t api.TestingT) error {
+func (h *UnaryHandler) Stop(t testing.TB) error {
 	var err error
 	err = multierr.Append(err, h.H.Stop(t))
 	for _, mw := range h.MW {
@@ -88,7 +89,7 @@ type OrderedHandler struct {
 }
 
 // Start implements Lifecycle.
-func (h *OrderedHandler) Start(t api.TestingT) error {
+func (h *OrderedHandler) Start(t testing.TB) error {
 	var err error
 	for _, handler := range h.Handlers {
 		err = multierr.Append(err, handler.Start(t))
@@ -97,7 +98,7 @@ func (h *OrderedHandler) Start(t api.TestingT) error {
 }
 
 // Stop implements Lifecycle.
-func (h *OrderedHandler) Stop(t api.TestingT) error {
+func (h *OrderedHandler) Stop(t testing.TB) error {
 	var err error
 	for _, handler := range h.Handlers {
 		err = multierr.Append(err, handler.Stop(t))

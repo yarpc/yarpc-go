@@ -22,6 +22,7 @@ package api
 
 import (
 	"context"
+	"testing"
 
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
@@ -44,10 +45,10 @@ func (f UnaryHandlerFunc) Handle(ctx context.Context, req *transport.Request, re
 }
 
 // Start is a noop for wrapped functions.
-func (f UnaryHandlerFunc) Start(TestingT) error { return nil }
+func (f UnaryHandlerFunc) Start(testing.TB) error { return nil }
 
 // Stop is a noop for wrapped functions.
-func (f UnaryHandlerFunc) Stop(TestingT) error { return nil }
+func (f UnaryHandlerFunc) Stop(testing.TB) error { return nil }
 
 // UnaryInboundMiddleware is a wrapper around the middleware.UnaryInbound and
 // Lifecycle interfaces.
@@ -66,10 +67,10 @@ func (f UnaryInboundMiddlewareFunc) Handle(ctx context.Context, req *transport.R
 }
 
 // Start is a noop for wrapped functions.
-func (f UnaryInboundMiddlewareFunc) Start(TestingT) error { return nil }
+func (f UnaryInboundMiddlewareFunc) Start(testing.TB) error { return nil }
 
 // Stop is a noop for wrapped functions.
-func (f UnaryInboundMiddlewareFunc) Stop(TestingT) error { return nil }
+func (f UnaryInboundMiddlewareFunc) Stop(testing.TB) error { return nil }
 
 // HandlerOpts are configuration options for a series of handlers.
 type HandlerOpts struct {

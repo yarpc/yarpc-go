@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -43,7 +44,7 @@ func HTTPRequest(options ...api.RequestOption) api.Action {
 	for _, option := range options {
 		option.ApplyRequest(&opts)
 	}
-	return api.ActionFunc(func(t api.TestingT) {
+	return api.ActionFunc(func(t testing.TB) {
 		trans := http.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("http://127.0.0.1:%d/", opts.Port))
 
@@ -68,7 +69,7 @@ func TChannelRequest(options ...api.RequestOption) api.Action {
 	for _, option := range options {
 		option.ApplyRequest(&opts)
 	}
-	return api.ActionFunc(func(t api.TestingT) {
+	return api.ActionFunc(func(t testing.TB) {
 		trans, err := tchannel.NewTransport(tchannel.ServiceName(opts.GiveRequest.Caller))
 		require.NoError(t, err)
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
@@ -94,7 +95,7 @@ func GRPCRequest(options ...api.RequestOption) api.Action {
 	for _, option := range options {
 		option.ApplyRequest(&opts)
 	}
-	return api.ActionFunc(func(t api.TestingT) {
+	return api.ActionFunc(func(t testing.TB) {
 		trans := grpc.NewTransport()
 		out := trans.NewSingleOutbound(fmt.Sprintf("127.0.0.1:%d", opts.Port))
 
@@ -119,7 +120,7 @@ func sendRequest(out transport.UnaryOutbound, request *transport.Request) (*tran
 	return resp, cancel, err
 }
 
-func validateError(t api.TestingT, actualErr error, wantError error) {
+func validateError(t testing.TB, actualErr error, wantError error) {
 	if wantError != nil {
 		require.Error(t, actualErr)
 		require.Contains(t, actualErr.Error(), wantError.Error())
@@ -128,7 +129,7 @@ func validateError(t api.TestingT, actualErr error, wantError error) {
 	require.NoError(t, actualErr)
 }
 
-func validateResponse(t api.TestingT, actualResp *transport.Response, expectedResp *transport.Response) {
+func validateResponse(t testing.TB, actualResp *transport.Response, expectedResp *transport.Response) {
 	var actualBody []byte
 	var expectedBody []byte
 	var err error

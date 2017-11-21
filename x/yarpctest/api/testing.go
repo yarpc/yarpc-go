@@ -25,13 +25,8 @@ import (
 	"testing"
 )
 
-// TestingT is an interface wrapper around *testing.T and *testing.B
-type TestingT interface {
-	testing.TB
-}
-
-// Run will cast the TestingT to it's sub and call the appropriate Run func.
-func Run(name string, t TestingT, f func(TestingT)) {
+// Run will cast the testing.TB to it's sub and call the appropriate Run func.
+func Run(name string, t testing.TB, f func(testing.TB)) {
 	if tt, ok := t.(*testing.T); ok {
 		tt.Run(name, func(ttt *testing.T) { f(ttt) })
 		return
@@ -44,37 +39,37 @@ func Run(name string, t TestingT, f func(TestingT)) {
 	t.FailNow()
 }
 
-// SafeTestingT is a struct that wraps a TestingT in a mutex for safe concurrent
+// SafeTestingTB is a struct that wraps a testing.TB in a mutex for safe concurrent
 // usage.
-type SafeTestingT struct {
+type SafeTestingTB struct {
 	sync.Mutex
-	t TestingT
+	t testing.TB
 }
 
-// SetTestingT safely sets the TestingT.
-func (s *SafeTestingT) SetTestingT(t TestingT) {
+// SetTestingTB safely sets the testing.TB.
+func (s *SafeTestingTB) SetTestingTB(t testing.TB) {
 	s.Lock()
 	s.t = t
 	s.Unlock()
 }
 
-// GetTestingT safely gets the TestingT for the testable.
-func (s *SafeTestingT) GetTestingT() TestingT {
+// GetTestingTB safely gets the testing.TB for the testable.
+func (s *SafeTestingTB) GetTestingTB() testing.TB {
 	s.Lock()
 	t := s.t
 	s.Unlock()
 	return t
 }
 
-// SafeTestingTOnStart is an embeddable struct that automatically grabs TestingT
+// SafeTestingTBOnStart is an embeddable struct that automatically grabs testing.TB
 // objects on "Start" for lifecycles.
-type SafeTestingTOnStart struct {
-	SafeTestingT
+type SafeTestingTBOnStart struct {
+	SafeTestingTB
 }
 
-// Start safely sets the TestingT for the testable.
-func (s *SafeTestingTOnStart) Start(t TestingT) error {
-	s.SetTestingT(t)
+// Start safely sets the testing.TB for the testable.
+func (s *SafeTestingTBOnStart) Start(t testing.TB) error {
+	s.SetTestingTB(t)
 	return nil
 }
 
@@ -83,12 +78,12 @@ func (s *SafeTestingTOnStart) Start(t TestingT) error {
 type NoopLifecycle struct{}
 
 // Start is a Noop.
-func (b *NoopLifecycle) Start(t TestingT) error {
+func (b *NoopLifecycle) Start(t testing.TB) error {
 	return nil
 }
 
 // Stop is a Noop.
-func (b *NoopLifecycle) Stop(t TestingT) error {
+func (b *NoopLifecycle) Stop(t testing.TB) error {
 	return nil
 }
 
@@ -97,6 +92,6 @@ func (b *NoopLifecycle) Stop(t TestingT) error {
 type NoopStop struct{}
 
 // Stop is a Noop.
-func (b *NoopStop) Stop(t TestingT) error {
+func (b *NoopStop) Stop(t testing.TB) error {
 	return nil
 }

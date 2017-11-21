@@ -21,6 +21,8 @@
 package yarpctest
 
 import (
+	"testing"
+
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/x/yarpctest/api"
@@ -56,7 +58,7 @@ func (p *proc) ApplyService(opts *api.ServiceOpts) {
 }
 
 // Start implements Lifecycle.
-func (p *proc) Start(t api.TestingT) error {
+func (p *proc) Start(t testing.TB) error {
 	var err error
 	for _, option := range p.options {
 		err = multierr.Append(err, option.Start(t))
@@ -65,7 +67,7 @@ func (p *proc) Start(t api.TestingT) error {
 }
 
 // Stop implements Lifecycle.
-func (p *proc) Stop(t api.TestingT) error {
+func (p *proc) Stop(t testing.TB) error {
 	var err error
 	for _, option := range p.options {
 		err = multierr.Append(err, option.Stop(t))

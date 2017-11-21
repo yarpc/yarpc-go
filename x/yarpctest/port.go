@@ -21,7 +21,8 @@
 package yarpctest
 
 import (
-	"go.uber.org/yarpc/x/yarpctest/api"
+	"testing"
+
 	"go.uber.org/yarpc/x/yarpctest/helpers"
 	"go.uber.org/yarpc/x/yarpctest/types"
 )
@@ -36,6 +37,6 @@ func Port(port uint16) *types.Port {
 // yarpctest infrastructure.  Ports can be acquired through the "Port" function
 // which will create new ports for the test based on the id passed into the
 // function.
-func NewPortProvider(t api.TestingT) *helpers.PortProvider {
+func NewPortProvider(t testing.TB) *helpers.PortProvider {
 	return helpers.NewPortProvider(t)
 }
