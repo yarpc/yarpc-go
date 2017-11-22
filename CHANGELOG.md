@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.23.0-dev (unreleased)
+v1.24.0 (2017-11-22)
 --------------------
 
 -   Introduces `api/peer.ListImplementation` with `peer/peerlist.List`, a
