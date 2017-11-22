@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal"
-	"go.uber.org/yarpc/internal/clientconfig"
 	"go.uber.org/yarpc/internal/errorsync"
 	"go.uber.org/yarpc/internal/inboundmiddleware"
 	"go.uber.org/yarpc/internal/observability"
@@ -210,11 +209,43 @@ func (d *Dispatcher) Inbounds() Inbounds {
 // 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
 //
 // This function panics if the outboundKey is not known.
+//
+// Deprecated: Use MustOutboundConfig instead.
 func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
-	if rs, ok := d.outbounds[outboundKey]; ok {
-		return clientconfig.MultiOutbound(d.name, rs.ServiceName, rs)
+	return d.MustOutboundConfig(outboundKey)
+}
+
+// MustOutboundConfig provides the configuration needed to talk to the given
+// service through an outboundKey. This configuration may be directly
+// passed into encoding-specific RPC clients.
+//
+// 	keyvalueClient := json.New(dispatcher.MustOutboundConfig("keyvalue"))
+//
+// This function panics if the outboundKey is not known.
+func (d *Dispatcher) MustOutboundConfig(outboundKey string) *transport.OutboundConfig {
+	if oc, ok := d.OutboundConfig(outboundKey); ok {
+		return oc
 	}
 	panic(fmt.Sprintf("no configured outbound transport for outbound key %q", outboundKey))
+}
+
+// OutboundConfig provides the configuration needed to talk to the given
+// service through an outboundKey. This configuration may be directly
+// passed into encoding-specific RPC clients.
+//
+//  outboundConfig, ok := dispatcher.OutboundConfig("keyvalue")
+//  if !ok {
+//    // do something
+//  }
+// 	keyvalueClient := json.New(outboundConfig)
+func (d *Dispatcher) OutboundConfig(outboundKey string) (oc *transport.OutboundConfig, ok bool) {
+	if out, ok := d.outbounds[outboundKey]; ok {
+		return &transport.OutboundConfig{
+			CallerName: d.name,
+			Outbounds:  out,
+		}, true
+	}
+	return nil, false
 }
 
 // InboundMiddleware returns the middleware applied to all inbound handlers.

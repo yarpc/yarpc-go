@@ -7,10 +7,12 @@ v1.23.0-dev (unreleased)
 -   Introduces `api/peer.ListImplementation` with `peer/peerlist.List`, a
     building block that provides peer availability management for peer lists
     like round-robin, hash-ring.
--   Add /x/yarpctest infrastructure to create fake services and requests for
+-   Adds /x/yarpctest infrastructure to create fake services and requests for
     tests.
 -   Adds a `peer/pendingheap` implementation that performs peer selection,
     sending requests to the available peer with the fewest pending requests.
+-   Adds `OutboundConfig` and `MustOutboundConfig` functions to the dispatcher
+    to replace the ClientConfig function.
 
 v1.22.0 (2017-11-14)
 --------------------
