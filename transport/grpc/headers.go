@@ -75,26 +75,12 @@ const (
 	contentTypeHeader = "content-type"
 )
 
-var (
-	_reservedHeaders = map[string]bool{
-		CallerHeader:           true,
-		ServiceHeader:          true,
-		ShardKeyHeader:         true,
-		RoutingKeyHeader:       true,
-		RoutingDelegateHeader:  true,
-		EncodingHeader:         true,
-		ErrorNameHeader:        true,
-		ApplicationErrorHeader: true,
-	}
-)
-
 // TODO: there are way too many repeat calls to strings.ToLower
 // Note that these calls are done indirectly, primarily through
 // transport.CanonicalizeHeaderKey
 
 func isReserved(header string) bool {
-	_, ok := _reservedHeaders[strings.ToLower(header)]
-	return ok
+	return strings.HasPrefix(strings.ToLower(header), "rpc-")
 }
 
 // transportRequestToMetadata will populate all reserved and application headers

@@ -83,6 +83,9 @@ func (h *handler) handle(srv interface{}, serverStream grpc.ServerStream) error 
 	if responseWriter.md != nil {
 		serverStream.SetTrailer(responseWriter.md)
 	}
+	if responseWriter.headerErr != nil {
+		err = handlerErrorToGRPCError(responseWriter.headerErr, responseWriter)
+	}
 	return err
 }
 
