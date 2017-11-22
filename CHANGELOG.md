@@ -9,6 +9,8 @@ v1.23.0-dev (unreleased)
     like round-robin, hash-ring.
 -   Add /x/yarpctest infrastructure to create fake services and requests for
     tests.
+-   Adds a `peer/pendingheap` implementation that performs peer selection,
+    sending requests to the available peer with the fewest pending requests.
 
 v1.22.0 (2017-11-14)
 --------------------
