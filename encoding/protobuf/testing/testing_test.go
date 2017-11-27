@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/internal/grpcctx"
 	"go.uber.org/yarpc/internal/testtime"
 	"go.uber.org/yarpc/internal/testutils"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -69,10 +70,10 @@ func testIntegration(
 	keyValueYARPCServer *example.KeyValueYARPCServer,
 	sinkYARPCServer *example.SinkYARPCServer,
 ) {
-	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
+	keyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "foo-bar", "baz"))
 	err := setValue(clients.KeyValueYARPCClient, "foo", "bar")
-	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"), err)
-	keyValueYARPCServer.SetNextError(yarpcerrors.Newf(yarpcerrors.CodeUnknown, "baz").WithName("foo-bar"))
+	assert.Equal(t, intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "foo-bar", "baz"), err)
+	keyValueYARPCServer.SetNextError(intyarpcerrors.NewWithNamef(yarpcerrors.CodeUnknown, "foo-bar", "baz"))
 	err = setValueGRPC(clients.KeyValueGRPCClient, clients.ContextWrapper, "foo", "bar")
 	assert.Equal(t, status.Error(codes.Unknown, "foo-bar: baz"), err)
 
