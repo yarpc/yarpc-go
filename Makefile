@@ -6,21 +6,13 @@ else
 include etc/make/deps.mk
 include etc/make/local.mk
 endif
-include etc/make/crossdock.mk
 
 CI_TYPES ?= lint test examples
-ifneq ($(filter crossdock,$(CI_TYPES)),)
-CI_CROSSDOCK := true
-CI_TYPES := $(filter-out crossdock,$(CI_TYPES))
-endif
 
 .DEFAULT_GOAL := ci
 
 .PHONY: ci
 ci: __print_ci $(CI_TYPES) ## run continuous integration tasks
-ifdef CI_CROSSDOCK
-	$(MAKE) crossdock-fresh || ($(MAKE) crossdock-logs && false)
-endif
 
 .PHONY: help
 help: __print_info ## show this help message
@@ -43,9 +35,5 @@ endif
 
 .PHONY: __print_ci
 __print_ci: __print_info
-ifdef CI_CROSSDOCK
-	$(info CI_TYPES=$(CI_TYPES) crossdock)
-else
 	$(info CI_TYPES=$(CI_TYPES))
-endif
 	@echo

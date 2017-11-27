@@ -18,19 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package crossdock
 
 import (
-	"github.com/opentracing/opentracing-go"
-	jaeger "github.com/uber/jaeger-client-go"
-	"go.uber.org/yarpc/internal/crossdock/client"
-	"go.uber.org/yarpc/internal/crossdock/server"
+	// this is to make sure etc/bin/cover.sh picks this up with .Deps
+	_ "go.uber.org/yarpc/internal/crossdock/client"
+	// this is to make sure etc/bin/cover.sh picks this up with .Deps
+	_ "go.uber.org/yarpc/internal/crossdock/server"
 )
-
-func main() {
-	tracer, _ := jaeger.NewTracer("crossdock", jaeger.NewConstSampler(true), jaeger.NewNullReporter())
-	opentracing.InitGlobalTracer(tracer)
-
-	server.Start()
-	client.Start()
-}
