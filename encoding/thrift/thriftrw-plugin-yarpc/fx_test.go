@@ -130,7 +130,7 @@ func TestFxServer(t *testing.T) {
 		assert.Error(t, err, "request failed")
 
 		exc, ok := err.(*atomic.KeyDoesNotExist)
-		require.True(t, ok, "error must be a *KeyDoesNotExist, not %T", err)
+		require.True(t, ok, "error '%+v' must be a *KeyDoesNotExist, not %T", err, err)
 		assert.Equal(t, "baz", *exc.Key, "exception key did not match")
 	})
 }

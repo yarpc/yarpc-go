@@ -32,6 +32,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
@@ -274,7 +275,7 @@ func (o *Outbound) callWithPeer(
 		}
 
 		span.SetTag("error", true)
-		span.LogEvent(err.Error())
+		span.LogFields(opentracinglog.String("event", err.Error()))
 		if err == context.DeadlineExceeded {
 			end := time.Now()
 			return nil, yarpcerrors.Newf(
