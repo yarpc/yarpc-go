@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/atomic"
+	"go.uber.org/atomic"
 	"go.uber.org/yarpc/internal/testtime"
 )
 
