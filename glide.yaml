@@ -77,4 +77,3 @@ testImport:
   subpackages:
   - cmd/staticcheck
 - package: github.com/stretchr/testify
-  version: master
