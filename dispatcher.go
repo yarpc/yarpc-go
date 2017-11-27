@@ -209,8 +209,6 @@ func (d *Dispatcher) Inbounds() Inbounds {
 // 	keyvalueClient := json.New(dispatcher.ClientConfig("keyvalue"))
 //
 // This function panics if the outboundKey is not known.
-//
-// Deprecated: Use MustOutboundConfig instead.
 func (d *Dispatcher) ClientConfig(outboundKey string) transport.ClientConfig {
 	return d.MustOutboundConfig(outboundKey)
 }

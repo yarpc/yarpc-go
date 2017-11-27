@@ -4,7 +4,7 @@ Releases
 v1.25.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Undeprecate ClientConfig function.
 
 
 v1.24.0 (2017-11-22)
