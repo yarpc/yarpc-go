@@ -110,7 +110,7 @@ func TestValidator(t *testing.T) {
 				defer cancel()
 			}
 
-			err = transport.ValidateUnaryContext(ctx)
+			err = transport.ValidateRequestContext(ctx)
 		}
 
 		if len(tt.wantMissingParams) > 0 {

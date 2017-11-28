@@ -22,6 +22,7 @@ package oneway
 
 import (
 	"context"
+	"time"
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
@@ -43,7 +44,9 @@ func Protobuf(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-ch
 	default:
 	}
 
-	ack, err := client.Echo(context.Background(), &crossdockpb.Token{Value: token}, yarpc.WithHeader("callBackAddr", callBackAddr))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	ack, err := client.Echo(ctx, &crossdockpb.Token{Value: token}, yarpc.WithHeader("callBackAddr", callBackAddr))
 
 	fatals.NoError(err, "call to Oneway::echo failed: %v", err)
 	fatals.NotNil(ack, "ack is nil")

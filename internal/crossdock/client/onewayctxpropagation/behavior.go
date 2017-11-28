@@ -22,6 +22,7 @@ package onewayctxpropagation
 
 import (
 	"context"
+	"time"
 
 	"github.com/crossdock/crossdock-go"
 	opentracing "github.com/opentracing/opentracing-go"
@@ -48,7 +49,8 @@ func Run(t crossdock.T) {
 	client := raw.New(dispatcher.ClientConfig("oneway-server"))
 
 	// make call
-	ctx := newContextWithBaggage(baggage)
+	ctx, cancel := context.WithTimeout(newContextWithBaggage(baggage), time.Second)
+	defer cancel()
 	ack, err := client.CallOneway(
 		ctx, "echo/raw", []byte{}, yarpc.WithHeader("callBackAddr", callBackAddr))
 
