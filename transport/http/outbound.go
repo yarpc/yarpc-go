@@ -33,6 +33,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
@@ -342,16 +343,20 @@ func (o *Outbound) withOpentracingSpan(ctx context.Context, req *http.Request, t
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
 		parent = parentSpan.Context()
 	}
+	tags := opentracing.Tags{
+		"rpc.caller":    treq.Caller,
+		"rpc.service":   treq.Service,
+		"rpc.encoding":  treq.Encoding,
+		"rpc.transport": "http",
+	}
+	for k, v := range yarpc.OpentracingTags {
+		tags[k] = v
+	}
 	span := tracer.StartSpan(
 		treq.Procedure,
 		opentracing.StartTime(start),
 		opentracing.ChildOf(parent),
-		opentracing.Tags{
-			"rpc.caller":    treq.Caller,
-			"rpc.service":   treq.Service,
-			"rpc.encoding":  treq.Encoding,
-			"rpc.transport": "http",
-		},
+		tags,
 	)
 	ext.PeerService.Set(span, treq.Service)
 	ext.SpanKindRPCClient.Set(span)

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -115,6 +116,7 @@ func (h *handler) handleBeforeErrorConversion(
 		Tracer:            tracer,
 		TransportName:     transportName,
 		StartTime:         start,
+		ExtraTags:         yarpc.OpentracingTags,
 	}
 	ctx, span := extractOpenTracingSpan.Do(ctx, transportRequest)
 	defer span.Finish()

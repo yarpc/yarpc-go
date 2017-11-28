@@ -167,6 +167,7 @@ func (o *Outbound) invoke(
 		Tracer:        tracer,
 		TransportName: transportName,
 		StartTime:     start,
+		ExtraTags:     yarpc.OpentracingTags,
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, request)
 	defer span.Finish()

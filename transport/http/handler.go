@@ -30,6 +30,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	opentracinglog "github.com/opentracing/opentracing-go/log"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/bufferpool"
 	"go.uber.org/yarpc/internal/iopool"
@@ -195,16 +196,20 @@ func (h handler) createSpan(ctx context.Context, req *http.Request, treq *transp
 	parentSpanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, carrier)
 	// parentSpanCtx may be nil, ext.RPCServerOption handles a nil parent
 	// gracefully.
+	tags := opentracing.Tags{
+		"rpc.caller":    treq.Caller,
+		"rpc.service":   treq.Service,
+		"rpc.encoding":  treq.Encoding,
+		"rpc.transport": "http",
+	}
+	for k, v := range yarpc.OpentracingTags {
+		tags[k] = v
+	}
 	span := tracer.StartSpan(
 		treq.Procedure,
 		opentracing.StartTime(start),
-		opentracing.Tags{
-			"rpc.caller":    treq.Caller,
-			"rpc.service":   treq.Service,
-			"rpc.encoding":  treq.Encoding,
-			"rpc.transport": "http",
-		},
 		ext.RPCServerOption(parentSpanCtx), // implies ChildOf
+		tags,
 	)
 	ext.PeerService.Set(span, treq.Caller)
 	ctx = opentracing.ContextWithSpan(ctx, span)
