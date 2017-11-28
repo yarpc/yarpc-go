@@ -2,7 +2,8 @@ syntax = "proto3";
 
 package uber.yarpc.encoding.protobuf.protocgenyarpcgo.internal.testing;
 
-import "go.uber.org/yarpc/yarpcproto/yarpc.proto";
+import "encoding/protobuf/protoc-gen-yarpc-go/internal/testing/dep.proto";
+import "yarpcproto/yarpc.proto";
 
 option go_package = "testing";
 
@@ -19,17 +20,17 @@ message SetValueRequest {
   string value = 2;
 }
 
-message SetValueResponse {}
+// SetValueResponse in dep.proto
 
 message FireRequest {
   string value = 1;
 }
 
 service KeyValue {
-  rpc GetValue(GetValueRequest) returns (GetValueResponse);
-  rpc SetValue(SetValueRequest) returns (SetValueResponse);
+  rpc GetValue(GetValueRequest) returns (GetValueResponse) {}
+  rpc SetValue(SetValueRequest) returns (SetValueResponse) {}
 }
 
 service Sink {
-  rpc Fire(FireRequest) returns (uber.yarpc.Oneway);
+  rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
 }
