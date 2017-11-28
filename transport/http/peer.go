@@ -21,6 +21,7 @@
 package http
 
 import (
+	"fmt"
 	"net"
 	"time"
 
@@ -74,6 +75,7 @@ func (p *httpPeer) isAvailable() bool {
 }
 
 func (p *httpPeer) OnDisconnected() {
+	fmt.Println("DISCONNECTED")
 	p.Peer.SetStatus(peer.Unavailable)
 
 	// Kick the state change channel (if it hasn't been kicked already).
