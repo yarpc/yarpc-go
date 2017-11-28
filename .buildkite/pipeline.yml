@@ -1,0 +1,42 @@
+steps:
+  - name: ":docker: :package: 1.8"
+    plugins:
+      docker-compose#v1.5.2:
+        build: yarpc-go-1.8
+        image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
+  - name: ":docker: :package: 1.9"
+    plugins:
+      docker-compose#v1.5.2:
+        build: yarpc-go-1.9
+        image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
+  - wait
+  - name: ":go: 1.8 test"
+    command: "make test"
+    plugins:
+      docker-compose#v1.5.2:
+        run: yarpc-go-1.8
+  - name: ":go: 1.8 lint"
+    command: "make lint"
+    plugins:
+      docker-compose#v1.5.2:
+        run: yarpc-go-1.8
+  - name: ":go: 1.8 examples"
+    command: "make examples"
+    plugins:
+      docker-compose#v1.5.2:
+        run: yarpc-go-1.8
+  - name: ":go: 1.9 test"
+    command: "make test"
+    plugins:
+      docker-compose#v1.5.2:
+        run: yarpc-go-1.9
+  - name: ":go: 1.9 lint"
+    command: "make lint"
+    plugins:
+      docker-compose#v1.5.2:
+        run: yarpc-go-1.9
+  - name: ":go: 1.9 examples"
+    command: "make examples"
+    plugins:
+      docker-compose#v1.5.2:
+        run: yarpc-go-1.9

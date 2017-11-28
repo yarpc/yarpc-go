@@ -1,0 +1,16 @@
+version: '3'
+services:
+  yarpc-go-1.8:
+    build:
+      context: .
+      dockerfile: Dockerfile.1.8
+    network_mode: "host"
+    environment:
+      TEST_TIME_SCALE: 5
+  yarpc-go-1.9:
+    build:
+      context: .
+      dockerfile: Dockerfile.1.9
+    network_mode: "host"
+    environment:
+      TEST_TIME_SCALE: 5
