@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
+	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/zap"
 )
 
@@ -90,6 +91,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 		log:               logger,
 		registry:          registry,
 		stopRegistryPush:  stopPush,
+		once:              lifecycle.NewOnce(),
 	}
 }
 
@@ -190,6 +192,8 @@ type Dispatcher struct {
 	log              *zap.Logger
 	registry         *pally.Registry
 	stopRegistryPush context.CancelFunc
+
+	once *lifecycle.Once
 }
 
 // Inbounds returns a copy of the list of inbounds for this RPC object.
@@ -296,6 +300,10 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 //
 // 	select {}
 func (d *Dispatcher) Start() error {
+	return d.once.Start(d.start)
+}
+
+func (d *Dispatcher) start() error {
 	// NOTE: These MUST be started in the order transports, outbounds, and
 	// then inbounds.
 	//
@@ -391,6 +399,10 @@ func (d *Dispatcher) Start() error {
 //
 // This function returns after everything has been stopped.
 func (d *Dispatcher) Stop() error {
+	return d.once.Stop(d.stop)
+}
+
+func (d *Dispatcher) stop() error {
 	// NOTE: These MUST be stopped in the order inbounds, outbounds, and then
 	// transports.
 	//
