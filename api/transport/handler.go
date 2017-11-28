@@ -39,9 +39,9 @@ const (
 	Unary Type = iota + 1
 	// Oneway types are fire and forget RPCs (no response)
 	Oneway
-	// Stream types are Stream based RPCs (bidirectional messages over long
+	// Streaming types are Stream based RPCs (bidirectional messages over long
 	// lived connections)
-	Stream
+	Streaming
 )
 
 // HandlerSpec holds a handler and its Type
@@ -84,7 +84,7 @@ func NewOnewayHandlerSpec(handler OnewayHandler) HandlerSpec {
 
 // NewStreamHandlerSpec returns an new HandlerSpec with a StreamHandler
 func NewStreamHandlerSpec(handler StreamHandler) HandlerSpec {
-	return HandlerSpec{t: Stream, streamHandler: handler}
+	return HandlerSpec{t: Streaming, streamHandler: handler}
 }
 
 // UnaryHandler handles a single, transport-level, unary request.

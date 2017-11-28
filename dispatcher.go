@@ -287,7 +287,7 @@ func (d *Dispatcher) Register(rs []transport.Procedure) {
 			h := middleware.ApplyOnewayInbound(r.HandlerSpec.Oneway(),
 				d.inboundMiddleware.Oneway)
 			r.HandlerSpec = transport.NewOnewayHandlerSpec(h)
-		case transport.Stream:
+		case transport.Streaming:
 			h := middleware.ApplyStreamInbound(r.HandlerSpec.Stream(),
 				d.inboundMiddleware.Stream)
 			r.HandlerSpec = transport.NewStreamHandlerSpec(h)

@@ -27,7 +27,7 @@ import (
 
 // ServerStream represents the Server API of interacting with a Stream.
 type ServerStream interface {
-	BaseStream
+	Stream
 
 	// SetResponseMeta sets the response metadata for the stream before the
 	// stream has been stopped.  This will be propagated back to the client.
@@ -36,7 +36,7 @@ type ServerStream interface {
 
 // ClientStream represents the Client API of interacting with a Stream.
 type ClientStream interface {
-	BaseStream
+	Stream
 	io.Closer
 
 	// ResponseMeta returns the ResponseMeta that was set by the server when the
@@ -46,8 +46,8 @@ type ClientStream interface {
 	ResponseMeta() *ResponseMeta
 }
 
-// BaseStream is an interface for interacting with a stream.
-type BaseStream interface {
+// Stream is an interface for interacting with a stream.
+type Stream interface {
 	// Context returns the context for the stream.
 	Context() context.Context
 
