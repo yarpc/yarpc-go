@@ -32,9 +32,11 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/lifecycle"
@@ -274,7 +276,7 @@ func (o *Outbound) callWithPeer(
 		}
 
 		span.SetTag("error", true)
-		span.LogEvent(err.Error())
+		span.LogFields(opentracinglog.String("event", err.Error()))
 		if err == context.DeadlineExceeded {
 			end := time.Now()
 			return nil, yarpcerrors.Newf(
@@ -424,10 +426,11 @@ func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) 
 			code = errorCode
 		}
 	}
-	return yarpcerrors.Newf(
+	return intyarpcerrors.NewWithNamef(
 		code,
+		response.Header.Get(ErrorNameHeader),
 		strings.TrimSuffix(contents, "\n"),
-	).WithName(response.Header.Get(ErrorNameHeader))
+	)
 }
 
 // Introspect returns basic status about this outbound.

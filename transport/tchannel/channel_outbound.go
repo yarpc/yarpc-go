@@ -28,6 +28,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/iopool"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -244,5 +245,5 @@ func getResponseErrorAndDeleteHeaderKeys(headers transport.Headers) error {
 	}
 	errorName, _ := headers.Get(ErrorNameHeaderKey)
 	errorMessage, _ := headers.Get(ErrorMessageHeaderKey)
-	return yarpcerrors.Newf(errorCode, errorMessage).WithName(errorName)
+	return intyarpcerrors.NewWithNamef(errorCode, errorName, errorMessage)
 }

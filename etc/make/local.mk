@@ -10,6 +10,9 @@ ERRCHECK_FLAGS := -ignoretests
 ERRCHECK_EXCLUDES := \.Close\(\) \.Stop\(\)
 FILTER_ERRCHECK := grep -v $(patsubst %,-e %, $(ERRCHECK_EXCLUDES))
 
+STATICCHECK_FLAGS := \
+	-ignore go.uber.org/yarpc/internal/yarpcerrors/yarpcerrors.go:SA1019
+
 # The number of jobs allocated to run examples tests in parallel
 # The goal is to have all examples tests run in parallel, and
 # this is currently greater than the number of examples tests
@@ -81,7 +84,7 @@ golint: $(GOLINT) __eval_packages __eval_go_files ## check golint
 .PHONY: staticcheck
 staticcheck: $(STATICCHECK) __eval_packages __eval_go_files ## check staticcheck
 	$(eval STATICCHECK_LOG := $(shell mktemp -t staticcheck.XXXXX))
-	@PATH=$(BIN):$$PATH staticcheck $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
+	@PATH=$(BIN):$$PATH staticcheck $(STATICCHECK_FLAGS) $(PACKAGES) 2>&1 | $(FILTER_LINT) > $(STATICCHECK_LOG) || true
 	@[ ! -s "$(STATICCHECK_LOG)" ] || (echo "staticcheck failed:" | cat - $(STATICCHECK_LOG) && false)
 
 .PHONY: errcheck

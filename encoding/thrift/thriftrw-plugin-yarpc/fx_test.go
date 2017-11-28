@@ -33,6 +33,7 @@ import (
 	"go.uber.org/thriftrw/ptr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystorefx"
 	"go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc/internal/tests/atomic/readonlystoreserver"
@@ -63,22 +64,52 @@ func TestFxClient(t *testing.T) {
 	}, "expected panic")
 }
 
+func extractProcedures(procs *[]transport.Procedure) fx.Option {
+	type params struct {
+		fx.In
+
+		// We need to handle both cases: A single transport.Procedure provided
+		// to the "yarpcfx" group and a []transport.Procedure provided to the
+		// "yarpcfx" group.
+		SingleProcedures []transport.Procedure   `group:"yarpcfx"`
+		ProcedureLists   [][]transport.Procedure `group:"yarpcfx"`
+	}
+
+	return fx.Invoke(func(p params) {
+		for _, proc := range p.SingleProcedures {
+			*procs = append(*procs, proc)
+		}
+		for _, procList := range p.ProcedureLists {
+			*procs = append(*procs, procList...)
+		}
+	})
+}
+
+func echoRaw(ctx context.Context, req []byte) ([]byte, error) { return req, nil }
+
 func TestFxServer(t *testing.T) {
+	type rawProcedures struct {
+		fx.Out
+
+		Procedures []transport.Procedure `group:"yarpcfx"`
+	}
+
 	handler := readOnlyStoreHandler{
 		"foo":    1,
 		"bar":    2,
 		"answer": 42,
 	}
 
-	var out struct {
-		Procedures []transport.Procedure `group:"yarpcfx"`
-	}
+	var procedures []transport.Procedure
 	serverApp := fxtest.New(t,
 		fx.Provide(
 			func() readonlystoreserver.Interface { return handler },
 			readonlystorefx.Server(),
+			func() rawProcedures {
+				return rawProcedures{Procedures: raw.Procedure("echoRaw", echoRaw)}
+			},
 		),
-		fx.Extract(&out),
+		extractProcedures(&procedures),
 	)
 	defer serverApp.RequireStart().RequireStop()
 
@@ -87,7 +118,7 @@ func TestFxServer(t *testing.T) {
 		Name:     "myserver",
 		Inbounds: yarpc.Inbounds{inbound},
 	})
-	serverD.Register(out.Procedures)
+	serverD.Register(procedures)
 	require.NoError(t, serverD.Start(), "failed to start server")
 	defer func() {
 		assert.NoError(t, serverD.Stop(), "failed to stop server")
@@ -130,8 +161,19 @@ func TestFxServer(t *testing.T) {
 		assert.Error(t, err, "request failed")
 
 		exc, ok := err.(*atomic.KeyDoesNotExist)
-		require.True(t, ok, "error must be a *KeyDoesNotExist, not %T", err)
+		require.True(t, ok, "error '%+v' must be a *KeyDoesNotExist, not %T", err, err)
 		assert.Equal(t, "baz", *exc.Key, "exception key did not match")
+	})
+
+	rawClient := raw.New(clientD.ClientConfig("myserver"))
+
+	t.Run("raw", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+
+		res, err := rawClient.Call(ctx, "echoRaw", []byte("hello"))
+		require.NoError(t, err, "request failed")
+		assert.Equal(t, "hello", string(res), "response body did not match")
 	})
 }
 
