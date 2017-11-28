@@ -74,6 +74,8 @@ func (o *onewayHandler) callHome(ctx context.Context, callBackAddr string, body 
 	}
 	defer out.Stop()
 
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 	_, err := out.CallOneway(ctx, &transport.Request{
 		Caller:    "oneway-server",
 		Service:   "oneway-client",

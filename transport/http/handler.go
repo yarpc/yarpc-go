@@ -130,16 +130,16 @@ func (h handler) callHandler(responseWriter *responseWriter, req *http.Request, 
 		return err
 	}
 
+	if parseTTLErr != nil {
+		return parseTTLErr
+	}
+	if err := transport.ValidateRequestContext(ctx); err != nil {
+		return err
+	}
 	switch spec.Type() {
 	case transport.Unary:
 		defer span.Finish()
-		if parseTTLErr != nil {
-			return parseTTLErr
-		}
 
-		if err := transport.ValidateUnaryContext(ctx); err != nil {
-			return err
-		}
 		err = transport.DispatchUnaryHandler(ctx, spec.Unary(), start, treq, responseWriter)
 
 	case transport.Oneway:

@@ -22,6 +22,7 @@ package oneway
 
 import (
 	"context"
+	"time"
 
 	"github.com/crossdock/crossdock-go"
 	"go.uber.org/yarpc"
@@ -36,7 +37,8 @@ func Raw(t crossdock.T, dispatcher *yarpc.Dispatcher, serverCalledBack <-chan []
 	client := raw.New(dispatcher.ClientConfig("oneway-server"))
 	token := []byte(getRandomID())
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	ack, err := client.CallOneway(
 		ctx, "echo/raw", token, yarpc.WithHeader("callBackAddr", callBackAddr))
 

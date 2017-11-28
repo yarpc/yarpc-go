@@ -166,19 +166,15 @@ func (h *handler) call(ctx context.Context, transportRequest *transport.Request,
 	if err != nil {
 		return err
 	}
+	if err := transport.ValidateRequestContext(ctx); err != nil {
+		return err
+	}
 	switch handlerSpec.Type() {
 	case transport.Unary:
-		return h.callUnary(ctx, transportRequest, handlerSpec.Unary(), responseWriter)
+		return transport.DispatchUnaryHandler(ctx, handlerSpec.Unary(), time.Now(), transportRequest, responseWriter)
 	default:
 		return yarpcerrors.Newf(yarpcerrors.CodeUnimplemented, "transport grpc does not handle %s handlers", handlerSpec.Type().String())
 	}
-}
-
-func (h *handler) callUnary(ctx context.Context, transportRequest *transport.Request, unaryHandler transport.UnaryHandler, responseWriter *responseWriter) error {
-	if err := transport.ValidateUnaryContext(ctx); err != nil {
-		return err
-	}
-	return transport.DispatchUnaryHandler(ctx, unaryHandler, time.Now(), transportRequest, responseWriter)
 }
 
 func handlerErrorToGRPCError(err error, responseWriter *responseWriter) error {

@@ -39,7 +39,7 @@ func (o UnaryValidatorOutbound) Call(ctx context.Context, request *transport.Req
 		return nil, err
 	}
 
-	if err := transport.ValidateUnaryContext(ctx); err != nil {
+	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return nil, err
 	}
 
@@ -57,6 +57,10 @@ func (o UnaryValidatorOutbound) Introspect() introspection.OutboundStatus {
 // CallOneway performs the given request, failing early if the request is invalid.
 func (o OnewayValidatorOutbound) CallOneway(ctx context.Context, request *transport.Request) (transport.Ack, error) {
 	if err := transport.ValidateRequest(request); err != nil {
+		return nil, err
+	}
+
+	if err := transport.ValidateRequestContext(ctx); err != nil {
 		return nil, err
 	}
 

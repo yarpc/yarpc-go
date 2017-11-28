@@ -359,7 +359,9 @@ func TestSimpleRoundTripOneway(t *testing.T) {
 			router := staticRouter{OnewayHandler: onewayHandler}
 
 			trans.WithRouterOneway(router, func(o transport.OnewayOutbound) {
-				ack, err := o.CallOneway(rootCtx, &transport.Request{
+				ctx, cancel := context.WithTimeout(rootCtx, time.Second)
+				defer cancel()
+				ack, err := o.CallOneway(ctx, &transport.Request{
 					Caller:    testCaller,
 					Service:   testService,
 					Procedure: testProcedureOneway,

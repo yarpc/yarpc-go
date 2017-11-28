@@ -221,7 +221,8 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 	}
 
 	start := time.Now()
-	var ttl time.Duration
+	deadline, _ := ctx.Deadline()
+	ttl := deadline.Sub(start)
 
 	_, err := o.call(ctx, treq, start, ttl)
 	if err != nil {
