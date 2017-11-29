@@ -291,10 +291,6 @@ func TestStreamChain(t *testing.T) {
 				},
 			}
 			o := transporttest.NewMockStreamOutbound(mockCtrl)
-			o.EXPECT().Stop()
-			o.EXPECT().Start()
-			o.EXPECT().Transports()
-			o.EXPECT().IsRunning().Return(true)
 
 			before.Count, after.Count = 0, 0
 			o.EXPECT().CallStream(ctx, req).After(
@@ -308,10 +304,24 @@ func TestStreamChain(t *testing.T) {
 			assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")
 			assert.Equal(t, 2, after.Count, "expected inner middleware to be called twice")
 			assert.Equal(t, res, gotRes, "expected response to match")
-			assert.Nil(t, mw.Start())
-			assert.True(t, mw.IsRunning())
-			assert.Nil(t, mw.Stop())
-			assert.Len(t, mw.Transports(), 0)
 		})
 	}
+}
+
+func TestStreamChainExecFuncs(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	o := transporttest.NewMockStreamOutbound(mockCtrl)
+	o.EXPECT().Stop()
+	o.EXPECT().Start()
+	o.EXPECT().Transports()
+	o.EXPECT().IsRunning().Return(true)
+
+	mw := streamChainExec{Final: o}
+
+	assert.Nil(t, mw.Start())
+	assert.True(t, mw.IsRunning())
+	assert.Nil(t, mw.Stop())
+	assert.Len(t, mw.Transports(), 0)
 }
