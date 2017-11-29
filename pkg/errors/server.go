@@ -28,7 +28,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-var msgInboundDispatcherNotRunning = "peer for service %q is not running"
+var msgInboundDispatcherNotRunning = "dispatcher for service %q is not running"
 
 // NotRunningInboundError builds a YARPC error with code
 // yarpcerrors.CodeUnavailable when the dispatcher is not running.

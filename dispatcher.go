@@ -81,8 +81,7 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	extractor := cfg.Logging.extractor()
 
 	registry, stopPush := cfg.Metrics.registry(cfg.Name, logger)
-	cfg = addObservingMiddleware(cfg, registry, logger, extractor)
-	cfg = addIsRunningMiddleware(cfg, once.IsRunning)
+	cfg = addInternalMiddleware(cfg, registry, logger, extractor, once.IsRunning)
 
 	return &Dispatcher{
 		name:              cfg.Name,
@@ -98,30 +97,35 @@ func NewDispatcher(cfg Config) *Dispatcher {
 	}
 }
 
-func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Logger, extractor observability.ContextExtractor) Config {
-	observer := observability.NewMiddleware(logger, registry, extractor)
-
-	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(observer, cfg.InboundMiddleware.Unary)
-	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(observer, cfg.InboundMiddleware.Oneway)
-
-	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(cfg.OutboundMiddleware.Unary, observer)
-	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, observer)
-
-	return cfg
-}
-
-func addIsRunningMiddleware(cfg Config, isRunning func() bool) Config {
+func addInternalMiddleware(cfg Config, registry *pally.Registry, logger *zap.Logger, extractor observability.ContextExtractor, isRunning func() bool) Config {
 	outboundErr := pkgerrors.NotRunningOutboundError(cfg.Name)
 	inboundErr := pkgerrors.NotRunningInboundError(cfg.Name)
+	outboundIsRunning := newIsRunningMiddleware(isRunning, outboundErr)
+	inboundIsRunning := newIsRunningMiddleware(isRunning, inboundErr)
+	observer := observability.NewMiddleware(logger, registry, extractor)
 
-	outboundIsRunningMiddleware := newIsRunningMiddleware(isRunning, outboundErr)
-	inboundIsRunningMiddleware := newIsRunningMiddleware(isRunning, inboundErr)
+	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(
+		inboundIsRunning,
+		observer,
+		cfg.InboundMiddleware.Unary,
+	)
+	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(
+		inboundIsRunning,
+		observer,
+		cfg.InboundMiddleware.Oneway,
+	)
 
-	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(inboundIsRunningMiddleware, cfg.InboundMiddleware.Unary)
-	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(inboundIsRunningMiddleware, cfg.InboundMiddleware.Oneway)
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(
+		outboundIsRunning,
+		cfg.OutboundMiddleware.Unary,
+		observer,
+	)
+	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(
+		outboundIsRunning,
+		cfg.OutboundMiddleware.Oneway,
+		observer,
+	)
 
-	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(cfg.OutboundMiddleware.Unary, outboundIsRunningMiddleware)
-	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, outboundIsRunningMiddleware)
 	return cfg
 }
 
