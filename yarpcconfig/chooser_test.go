@@ -806,7 +806,7 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
-			desc: "invalid stream peer list config",
+			desc: "invalid oneway peer list config",
 			given: whitespace.Expand(`
 				outbounds:
 					their-service:
@@ -825,13 +825,13 @@ func TestChooserConfigurator(t *testing.T) {
 			given: whitespace.Expand(`
 				outbounds:
 					their-service:
-						oneway:
+						stream:
 							fake-transport:
 								fake-list:
 									invalid-updater: {}
 			`),
 			wantErr: []string{
-				`failed to configure oneway outbound for "their-service": `,
+				`failed to configure stream outbound for "their-service": `,
 				`could not create invalid-updater`,
 			},
 		},
