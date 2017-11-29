@@ -35,14 +35,9 @@ import (
 	"go.uber.org/yarpc/internal/outboundmiddleware"
 	"go.uber.org/yarpc/internal/pally"
 	"go.uber.org/yarpc/internal/request"
+	pkgerrors "go.uber.org/yarpc/pkg/errors"
 	"go.uber.org/yarpc/pkg/lifecycle"
-	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
-)
-
-var (
-	msgDispatcherNotRunning = "dispatcher for service %q is not running"
-	msgServerShuttingDown   = "peer for service %q is shutting down"
 )
 
 // Inbounds contains a list of inbound transports. Each inbound transport
@@ -116,8 +111,8 @@ func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Lo
 }
 
 func addIsRunningMiddleware(cfg Config, isRunning func() bool) Config {
-	outboundErr := yarpcerrors.UnavailableErrorf(msgDispatcherNotRunning, cfg.Name)
-	inboundErr := yarpcerrors.UnavailableErrorf(msgServerShuttingDown, cfg.Name)
+	outboundErr := pkgerrors.NotRunningOutboundError(cfg.Name)
+	inboundErr := pkgerrors.NotRunningInboundError(cfg.Name)
 
 	outboundIsRunningMiddleware := newIsRunningMiddleware(isRunning, outboundErr)
 	inboundIsRunningMiddleware := newIsRunningMiddleware(isRunning, inboundErr)
