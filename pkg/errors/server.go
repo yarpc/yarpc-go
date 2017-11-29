@@ -28,6 +28,14 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
+var msgInboundDispatcherNotRunning = "dispatcher for service %q is not running"
+
+// NotRunningInboundError builds a YARPC error with code
+// yarpcerrors.CodeUnavailable when the dispatcher is not running.
+func NotRunningInboundError(service string) error {
+	return yarpcerrors.UnavailableErrorf(msgInboundDispatcherNotRunning, service)
+}
+
 // RequestBodyDecodeError builds a YARPC error with code
 // yarpcerrors.CodeInvalidArgument that represents a failure to decode
 // the request body.
