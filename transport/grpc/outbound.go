@@ -237,6 +237,9 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 
 // CallStream implements transport.StreamOutbound#CallStream.
 func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (transport.ClientStream, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		return nil, yarpcerrors.InvalidArgumentErrorf("stream requests require a connection establishment timeout on the passed in context.")
+	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
@@ -290,6 +293,7 @@ func (o *Outbound) stream(
 		Tracer:        tracer,
 		TransportName: transportName,
 		StartTime:     start,
+		ExtraTags:     yarpc.OpentracingTags,
 	}
 	ctx, span := createOpenTracingSpan.Do(ctx, treq)
 
@@ -299,7 +303,7 @@ func (o *Outbound) stream(
 	}
 
 	clientStream, err := grpc.NewClientStream(
-		metadata.NewOutgoingContext(ctx, md),
+		metadata.NewOutgoingContext(context.Background(), md),
 		&grpc.StreamDesc{
 			ClientStreams: true,
 			ServerStreams: true,

@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +65,9 @@ func callStream(
 	req *transport.StreamRequest,
 	actions []api.ClientStreamAction,
 ) *transport.StreamResponse {
-	client, err := out.CallStream(context.Background(), req)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	client, err := out.CallStream(ctx, req)
 	require.NoError(t, err)
 	for _, a := range actions {
 		a.ApplyClientStream(t, client)
