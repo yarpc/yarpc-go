@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testutils"
 	pkgerrors "go.uber.org/yarpc/pkg/errors"
@@ -36,9 +37,14 @@ func TestStartStopErrors(t *testing.T) {
 	wantOutboundError := pkgerrors.NotRunningOutboundError("example-client")
 	wantInboundError := pkgerrors.NotRunningInboundError("example")
 
-	procedures := raw.Procedure("echo", func(_ context.Context, data []byte) ([]byte, error) {
-		return data, nil
-	})
+	procedures := []transport.Procedure{
+		raw.Procedure("echo", func(_ context.Context, data []byte) ([]byte, error) {
+			return data, nil
+		})[0],
+		raw.OnewayProcedure("nop", func(context.Context, []byte) error {
+			return nil
+		})[0],
+	}
 
 	dispatcherConfig, err := testutils.NewDispatcherConfig("example")
 	require.NoError(t, err)
@@ -53,6 +59,8 @@ func TestStartStopErrors(t *testing.T) {
 	defer cancel()
 	_, err = client.Call(ctx, "echo", []byte("hello"))
 	require.Equal(t, wantOutboundError, err)
+	_, err = client.CallOneway(ctx, "nop", []byte("hello"))
+	require.Equal(t, wantOutboundError, err)
 
 	require.NoError(t, serverDispatcher.Start())
 	require.NoError(t, clientDispatcher.Start())
@@ -62,6 +70,8 @@ func TestStartStopErrors(t *testing.T) {
 	response, err := client.Call(ctx, "echo", []byte("hello"))
 	require.NoError(t, err)
 	require.Equal(t, "hello", string(response))
+	_, err = client.CallOneway(ctx, "nop", []byte("hello"))
+	require.NoError(t, err)
 
 	require.NoError(t, serverDispatcher.Stop())
 
@@ -69,11 +79,17 @@ func TestStartStopErrors(t *testing.T) {
 	defer cancel()
 	_, err = client.Call(ctx, "echo", []byte("hello"))
 	require.Equal(t, wantInboundError, err)
+	// Inbound middleware is run on a goroutine for HTTP
+	// Maybe the semantics will change in the future
+	//_, err = client.CallOneway(ctx, "nop", []byte("hello"))
+	//require.Equal(t, wantInboundError, err)
 
 	require.NoError(t, clientDispatcher.Stop())
 
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_, err = client.Call(ctx, "echo", []byte("hello"))
+	require.Equal(t, wantOutboundError, err)
+	_, err = client.CallOneway(ctx, "nop", []byte("hello"))
 	require.Equal(t, wantOutboundError, err)
 }
