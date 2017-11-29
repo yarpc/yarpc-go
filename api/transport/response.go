@@ -51,8 +51,6 @@ type ResponseWriter interface {
 // ResponseMeta is the low level response metadata representation.  It does not
 // include any "body" information (or application error), and should only be
 // used for information about a connection's metadata.
-//
-// In YARPC 2.0 this struct will be embedded inside the Response.
 type ResponseMeta struct {
 	Headers Headers
 }

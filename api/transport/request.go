@@ -146,8 +146,6 @@ func ValidateRequestContext(ctx context.Context) error {
 // RequestMeta is the low level request metadata representation.  It does not
 // include any "body" information, and should only be used for information about
 // a connection's metadata.
-//
-// In YARPC 2.0 this struct will be embedded inside the Request.
 type RequestMeta struct {
 	// Name of the service making the request.
 	Caller string
@@ -182,6 +180,9 @@ type RequestMeta struct {
 
 // ToRequest converts a RequestMeta into a Request.
 func (r *RequestMeta) ToRequest() *Request {
+	if r == nil {
+		return &Request{}
+	}
 	return &Request{
 		Caller:          r.Caller,
 		Service:         r.Service,

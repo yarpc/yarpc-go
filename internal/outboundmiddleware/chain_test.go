@@ -51,9 +51,9 @@ func (c *countOutboundMiddleware) CallOneway(ctx context.Context, req *transport
 	return o.CallOneway(ctx, req)
 }
 
-func (c *countOutboundMiddleware) CallStream(ctx context.Context, reqMeta *transport.RequestMeta, o transport.StreamOutbound) (transport.ClientStream, error) {
+func (c *countOutboundMiddleware) CallStream(ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (transport.ClientStream, error) {
 	c.Count++
-	return o.CallStream(ctx, reqMeta)
+	return o.CallStream(ctx, req)
 }
 
 var retryUnaryOutbound middleware.UnaryOutboundFunc = func(
@@ -162,7 +162,6 @@ func TestOnewayChain(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 func TestEmptyChain(t *testing.T) {
 	errMsg := "expected nop Outbound"
 
@@ -254,7 +253,7 @@ func TestIntrospect(t *testing.T) {
 }
 
 var retryStreamOutbound middleware.StreamOutboundFunc = func(
-	ctx context.Context, req *transport.RequestMeta, o transport.StreamOutbound) (transport.ClientStream, error) {
+	ctx context.Context, req *transport.StreamRequest, o transport.StreamOutbound) (transport.ClientStream, error) {
 	res, err := o.CallStream(ctx, req)
 	if err != nil {
 		res, err = o.CallStream(ctx, req)
@@ -271,7 +270,8 @@ func TestStreamChain(t *testing.T) {
 		mw   middleware.StreamOutbound
 	}{
 		{"flat chain", StreamChain(before, retryStreamOutbound, nil, after)},
-		{"flat chain", StreamChain(before, StreamChain(retryStreamOutbound, after, nil))},
+		{"nested chain", StreamChain(before, StreamChain(retryStreamOutbound, after, nil))},
+		{"single chain", StreamChain(StreamChain(before), retryStreamOutbound, StreamChain(after), StreamChain())},
 	}
 
 	for _, tt := range tests {
@@ -282,24 +282,36 @@ func TestStreamChain(t *testing.T) {
 			defer cancel()
 
 			var res transport.ClientStream
-			req := &transport.RequestMeta{
-				Caller:    "somecaller",
-				Service:   "someservice",
-				Encoding:  transport.Encoding("raw"),
-				Procedure: "hello",
+			req := &transport.StreamRequest{
+				Meta: &transport.RequestMeta{
+					Caller:    "somecaller",
+					Service:   "someservice",
+					Encoding:  transport.Encoding("raw"),
+					Procedure: "hello",
+				},
 			}
 			o := transporttest.NewMockStreamOutbound(mockCtrl)
+			o.EXPECT().Stop()
+			o.EXPECT().Start()
+			o.EXPECT().Transports()
+			o.EXPECT().IsRunning().Return(true)
+
 			before.Count, after.Count = 0, 0
 			o.EXPECT().CallStream(ctx, req).After(
 				o.EXPECT().CallStream(ctx, req).Return(nil, errors.New("great sadness")),
 			).Return(res, nil)
 
-			gotRes, err := middleware.ApplyStreamOutbound(o, tt.mw).CallStream(ctx, req)
+			mw := middleware.ApplyStreamOutbound(o, tt.mw)
+			gotRes, err := mw.CallStream(ctx, req)
 
 			assert.NoError(t, err, "expected success")
 			assert.Equal(t, 1, before.Count, "expected outer middleware to be called once")
 			assert.Equal(t, 2, after.Count, "expected inner middleware to be called twice")
 			assert.Equal(t, res, gotRes, "expected response to match")
+			assert.Nil(t, mw.Start())
+			assert.True(t, mw.IsRunning())
+			assert.Nil(t, mw.Stop())
+			assert.Len(t, mw.Transports(), 0)
 		})
 	}
 }

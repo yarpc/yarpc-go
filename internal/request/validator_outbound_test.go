@@ -123,3 +123,51 @@ func newValidTestRequest() *transport.Request {
 		Encoding:  "encoding",
 	}
 }
+
+func TestStreamValidate(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Service:   "service",
+			Procedure: "proc",
+			Caller:    "caller",
+			Encoding:  "raw",
+		},
+	}
+	stream := transporttest.NewMockClientStream(mockCtrl)
+
+	out := transporttest.NewMockStreamOutbound(mockCtrl)
+	out.EXPECT().CallStream(ctx, req).Times(1).Return(stream, nil)
+
+	validator := StreamValidatorOutbound{StreamOutbound: out}
+
+	gotStream, gotErr := validator.CallStream(ctx, req)
+
+	assert.NoError(t, gotErr)
+	assert.Equal(t, stream, gotStream)
+}
+
+func TestStreamValidateError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+	req := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Service:  "service",
+			Caller:   "caller",
+			Encoding: "raw",
+		},
+	}
+
+	out := transporttest.NewMockStreamOutbound(mockCtrl)
+
+	validator := StreamValidatorOutbound{StreamOutbound: out}
+
+	_, gotErr := validator.CallStream(ctx, req)
+
+	assert.Error(t, gotErr)
+}

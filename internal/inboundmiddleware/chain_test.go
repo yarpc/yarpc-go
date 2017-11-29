@@ -169,6 +169,7 @@ func TestStreamChain(t *testing.T) {
 	}{
 		{"flat chain", StreamChain(before, retryStreamInbound, after, nil)},
 		{"nested chain", StreamChain(before, StreamChain(retryStreamInbound, nil, after))},
+		{"single chain", StreamChain(StreamChain(before), retryStreamInbound, StreamChain(after), StreamChain())},
 	}
 
 	for _, tt := range tests {

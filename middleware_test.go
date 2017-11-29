@@ -267,3 +267,50 @@ func TestOnewayOutboundMiddleware(t *testing.T) {
 		})
 	}
 }
+
+func TestStreamInboundMiddlewareChain(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	stream := transporttest.NewMockServerStream(mockCtrl)
+	handler := transporttest.NewMockStreamHandler(mockCtrl)
+	handler.EXPECT().HandleStream(stream)
+
+	inboundMW := StreamInboundMiddleware(
+		middleware.NopStreamInbound,
+		middleware.NopStreamInbound,
+		middleware.NopStreamInbound,
+		middleware.NopStreamInbound,
+	)
+
+	h := middleware.ApplyStreamInbound(handler, inboundMW)
+
+	assert.NoError(t, h.HandleStream(stream))
+}
+
+func TestStreamOutboundMiddlewareChain(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+	req := &transport.StreamRequest{}
+
+	stream := transporttest.NewMockClientStream(mockCtrl)
+
+	out := transporttest.NewMockStreamOutbound(mockCtrl)
+	out.EXPECT().CallStream(ctx, req).Return(stream, nil)
+
+	mw := StreamOutboundMiddleware(
+		middleware.NopStreamOutbound,
+		middleware.NopStreamOutbound,
+		middleware.NopStreamOutbound,
+		middleware.NopStreamOutbound,
+	)
+
+	o := middleware.ApplyStreamOutbound(out, mw)
+
+	s, err := o.CallStream(ctx, req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, stream, s)
+}

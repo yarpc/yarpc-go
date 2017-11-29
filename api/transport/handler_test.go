@@ -71,7 +71,7 @@ func TestHandlerSpecLogMarshaling(t *testing.T) {
 			spec: NewStreamHandlerSpec(streamHandlerFunc(func(_ ServerStream) error {
 				return nil
 			})),
-			want: map[string]interface{}{"rpcType": "Stream"},
+			want: map[string]interface{}{"rpcType": "Streaming"},
 		},
 	}
 

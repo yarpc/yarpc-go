@@ -24,9 +24,9 @@ package transport
 
 import "strconv"
 
-const _Type_name = "UnaryOnewayStream"
+const _Type_name = "UnaryOnewayStreaming"
 
-var _Type_index = [...]uint8{0, 5, 11, 17}
+var _Type_index = [...]uint8{0, 5, 11, 20}
 
 func (i Type) String() string {
 	i -= 1

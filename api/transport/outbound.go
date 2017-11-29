@@ -70,8 +70,9 @@ type StreamOutbound interface {
 	Outbound
 
 	// CallStream creates a stream connection based on the metadata in the
-	// "Request" if the Request.Body is set, this should error.
-	CallStream(ctx context.Context, requestMeta *RequestMeta) (ClientStream, error)
+	// request passed in.  If there is a timeout on the context, this timeout
+	// is for establishing a connection, and not for the lifetime of the stream.
+	CallStream(ctx context.Context, request *StreamRequest) (ClientStream, error)
 }
 
 // Outbounds encapsulates the outbound specification for a service.

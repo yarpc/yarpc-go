@@ -25,13 +25,27 @@ import (
 	"io"
 )
 
+// StreamRequest is used to establish a streaming request.  It contains basic
+// Metadata information, and any Stream-specfic configuration for creating a
+// stream.
+type StreamRequest struct {
+	Meta *RequestMeta
+}
+
+// StreamResponse is the information returned at the end of a stream connection.
+// It contains basic Metadata information, and any Stream-specfic configuration
+// for ending a stream.
+type StreamResponse struct {
+	Meta *ResponseMeta
+}
+
 // ServerStream represents the Server API of interacting with a Stream.
 type ServerStream interface {
 	Stream
 
-	// SetResponseMeta sets the response metadata for the stream before the
-	// stream has been stopped.  This will be propagated back to the client.
-	SetResponseMeta(*ResponseMeta)
+	// SetResponse sets the stream response metadata for the stream before
+	// the stream has been stopped.  This will be propagated back to the client.
+	SetResponse(*StreamResponse)
 }
 
 // ClientStream represents the Client API of interacting with a Stream.
@@ -39,11 +53,11 @@ type ClientStream interface {
 	Stream
 	io.Closer
 
-	// ResponseMeta returns the ResponseMeta that was set by the server when the
+	// Response returns the StreamResponse that was set by the server when the
 	// stream was closed.  It will return nil if it was called before the Close
-	// was called, or before one of the SendMsg/RecvMsg functions returned an
-	// error.
-	ResponseMeta() *ResponseMeta
+	// was called, or before one of the SendMessage/ReceiveMessage functions
+	// returned an error.
+	Response() *StreamResponse
 }
 
 // Stream is an interface for interacting with a stream.
@@ -51,20 +65,21 @@ type Stream interface {
 	// Context returns the context for the stream.
 	Context() context.Context
 
-	// RequestMeta contains all the metadata about the request.
-	RequestMeta() *RequestMeta
+	// Request contains all the metadata about the request.
+	Request() *StreamRequest
 
-	// SendMsg sends a request over the stream. It blocks until the message
-	// has been sent.
-	SendMsg(*StreamMessage) error
+	// SendMessage sends a request over the stream. It blocks until the message
+	// has been sent.  In certain implementations, the timeout on the context
+	// will be used to timeout the request.
+	SendMessage(context.Context, *StreamMessage) error
 
-	// RecvMsg blocks until a message is received from the connection. It
+	// ReceiveMessage blocks until a message is received from the connection. It
 	// returns an io.Reader with the contents of the message.
-	RecvMsg() (*StreamMessage, error)
+	ReceiveMessage(context.Context) (*StreamMessage, error)
 }
 
 // StreamMessage represents information that can be read off of an individual
 // message in the stream.
 type StreamMessage struct {
-	io.ReadCloser
+	Body io.ReadCloser
 }

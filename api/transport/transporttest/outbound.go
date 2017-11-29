@@ -222,7 +222,7 @@ func (_m *MockStreamOutbound) EXPECT() *MockStreamOutboundMockRecorder {
 }
 
 // CallStream mocks base method
-func (_m *MockStreamOutbound) CallStream(_param0 context.Context, _param1 *transport.RequestMeta) (transport.ClientStream, error) {
+func (_m *MockStreamOutbound) CallStream(_param0 context.Context, _param1 *transport.StreamRequest) (transport.ClientStream, error) {
 	ret := _m.ctrl.Call(_m, "CallStream", _param0, _param1)
 	ret0, _ := ret[0].(transport.ClientStream)
 	ret1, _ := ret[1].(error)

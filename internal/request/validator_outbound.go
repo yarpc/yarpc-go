@@ -79,10 +79,10 @@ func (o OnewayValidatorOutbound) Introspect() introspection.OutboundStatus {
 type StreamValidatorOutbound struct{ transport.StreamOutbound }
 
 // CallStream performs the given request, failing early if the request is invalid.
-func (o StreamValidatorOutbound) CallStream(ctx context.Context, requestMeta *transport.RequestMeta) (transport.ClientStream, error) {
-	if err := transport.ValidateRequest(requestMeta.ToRequest()); err != nil {
+func (o StreamValidatorOutbound) CallStream(ctx context.Context, request *transport.StreamRequest) (transport.ClientStream, error) {
+	if err := transport.ValidateRequest(request.Meta.ToRequest()); err != nil {
 		return nil, err
 	}
 
-	return o.StreamOutbound.CallStream(ctx, requestMeta)
+	return o.StreamOutbound.CallStream(ctx, request)
 }
