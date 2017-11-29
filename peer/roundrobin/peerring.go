@@ -23,7 +23,6 @@ package roundrobin
 import (
 	"container/ring"
 	"context"
-	"fmt"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -55,7 +54,6 @@ type peerRing struct {
 // Add a peer.StatusPeer to the end of the peerRing, if the ring is empty it
 // initializes the nextNode marker
 func (pr *peerRing) Add(p peer.StatusPeer) peer.Subscriber {
-	fmt.Printf("ADDING %v\n", p)
 	sub := &subscriber{peer: p}
 	newNode := ring.New(1)
 	newNode.Value = sub
@@ -79,7 +77,6 @@ func (pr *peerRing) Remove(p peer.StatusPeer, s peer.Subscriber) {
 		// Don't panic.
 		return
 	}
-	fmt.Printf("REMOVING %v %v\n", p, s)
 
 	node := sub.node
 	if isLastRingNode(node) {

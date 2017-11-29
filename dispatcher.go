@@ -40,8 +40,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var msgDispatcherNotRunning = "dispatcher for service %q is not running"
-var msgServerShuttingDown = "peer for service %q is shutting down"
+var (
+	msgDispatcherNotRunning = "dispatcher for service %q is not running"
+	msgServerShuttingDown   = "peer for service %q is shutting down"
+)
 
 // Inbounds contains a list of inbound transports. Each inbound transport
 // specifies a source through which incoming requests are received.
