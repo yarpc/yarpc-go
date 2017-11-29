@@ -44,7 +44,19 @@ type FakeOutboundConfig struct {
 	Nop string `config:"nop,interpolate"`
 }
 
-func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
+func buildFakeUnaryOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.UnaryOutbound, error) {
+	return buildFakeOutbound(c, t, kit)
+}
+
+func buildFakeOnewayOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.OnewayOutbound, error) {
+	return buildFakeOutbound(c, t, kit)
+}
+
+func buildFakeStreamOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (transport.StreamOutbound, error) {
+	return buildFakeOutbound(c, t, kit)
+}
+
+func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcconfig.Kit) (*FakeOutbound, error) {
 	x := t.(*FakeTransport)
 	chooser, err := c.BuildPeerChooser(x, hostport.Identify, kit)
 	if err != nil {
@@ -57,9 +69,11 @@ func buildFakeOutbound(c *FakeOutboundConfig, t transport.Transport, kit *yarpcc
 // transport type, suitable for passing to Configurator.MustRegisterTransport.
 func FakeTransportSpec() yarpcconfig.TransportSpec {
 	return yarpcconfig.TransportSpec{
-		Name:               "fake-transport",
-		BuildTransport:     buildFakeTransport,
-		BuildUnaryOutbound: buildFakeOutbound,
+		Name:                "fake-transport",
+		BuildTransport:      buildFakeTransport,
+		BuildUnaryOutbound:  buildFakeUnaryOutbound,
+		BuildOnewayOutbound: buildFakeOnewayOutbound,
+		BuildStreamOutbound: buildFakeStreamOutbound,
 		PeerChooserPresets: []yarpcconfig.PeerChooserPreset{
 			FakePeerChooserPreset(),
 		},

@@ -646,6 +646,7 @@ func TestConfigurator(t *testing.T) {
 					TransportConfig:      _typeOfEmptyStruct,
 					OnewayOutboundConfig: reflect.TypeOf(&outboundConfig{}),
 					UnaryOutboundConfig:  reflect.TypeOf(&outboundConfig{}),
+					StreamOutboundConfig: reflect.TypeOf(&outboundConfig{}),
 				}.Build(mockCtrl)
 
 				tt.specs = []TransportSpec{http.Spec()}
@@ -653,6 +654,7 @@ func TestConfigurator(t *testing.T) {
 					`failed to add outbound "qux"`,
 					"failed to decode oneway outbound configuration",
 					"failed to decode unary outbound configuration",
+					"failed to decode stream outbound configuration",
 					"invalid keys: uri",
 				}
 
