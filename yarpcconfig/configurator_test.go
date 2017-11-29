@@ -528,15 +528,15 @@ func TestConfigurator(t *testing.T) {
 				tt.give = whitespace.Expand(`
 					outbounds:
 						bar:
-							redis:
+							fake-stream-transport:
 								queue: requests
 					transports:
-						redis:
+						fake-stream-transport:
 							address: localhost:6379
 				`)
 
 				redis := mockTransportSpecBuilder{
-					Name:                 "redis",
+					Name:                 "fake-stream-transport",
 					TransportConfig:      reflect.TypeOf(transportConfig{}),
 					StreamOutboundConfig: reflect.TypeOf(&outboundConfig{}),
 				}.Build(mockCtrl)
