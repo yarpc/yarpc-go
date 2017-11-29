@@ -22,7 +22,6 @@ package http_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -91,7 +90,6 @@ func TestHTTPWithRoundRobin(t *testing.T) {
 	temporary.Stop()
 	// One of these requests may fail since one of the peers has gone down but
 	// the HTTP transport will not know until a request is attempted.
-	fmt.Println("HERE")
 	err1 := integrationtest.Call(ctx, c)
 	err2 := integrationtest.Call(ctx, c)
 	if err1 == nil && err2 == nil {
@@ -100,15 +98,17 @@ func TestHTTPWithRoundRobin(t *testing.T) {
 	if err1 != nil && err2 != nil {
 		t.Fatal("neither call succeeded after bringing one peer down")
 	}
-	fmt.Println("HERE2")
 	// All subsequent should succeed since the peer should be removed on
 	// connection fail.
 	integrationtest.Blast(ctx, t, c)
 
 	// Restore the server on the temporary port.
-	restored, _ := spec.NewServer(t, temporaryAddr)
-	defer restored.Stop()
-	integrationtest.Blast(ctx, t, c)
+	// TODO the http client unfortunately reuses idle connections from the
+	// prior generation of the http server on this port, rendering this test
+	// useless.
+	// restored, _ := spec.NewServer(t, temporaryAddr)
+	// defer restored.Stop()
+	// integrationtest.Blast(ctx, t, c)
 }
 
 func TestIntegration(t *testing.T) {

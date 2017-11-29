@@ -40,7 +40,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var errDispatcherNotRunning = yarpcerrors.InternalErrorf("dispatcher not running")
+var msgDispatcherNotRunning = "dispatcher for service %q is not running"
+var msgServerShuttingDown = "peer for service %q is shutting down"
 
 // Inbounds contains a list of inbound transports. Each inbound transport
 // specifies a source through which incoming requests are received.
@@ -113,11 +114,17 @@ func addObservingMiddleware(cfg Config, registry *pally.Registry, logger *zap.Lo
 }
 
 func addIsRunningMiddleware(cfg Config, isRunning func() bool) Config {
-	isRunningMiddleware := newIsRunningMiddleware(isRunning, errDispatcherNotRunning)
-	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(isRunningMiddleware, cfg.InboundMiddleware.Unary)
-	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(isRunningMiddleware, cfg.InboundMiddleware.Oneway)
-	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(cfg.OutboundMiddleware.Unary, isRunningMiddleware)
-	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, isRunningMiddleware)
+	outboundErr := yarpcerrors.UnavailableErrorf(msgDispatcherNotRunning, cfg.Name)
+	inboundErr := yarpcerrors.UnavailableErrorf(msgServerShuttingDown, cfg.Name)
+
+	outboundIsRunningMiddleware := newIsRunningMiddleware(isRunning, outboundErr)
+	inboundIsRunningMiddleware := newIsRunningMiddleware(isRunning, inboundErr)
+
+	cfg.InboundMiddleware.Unary = inboundmiddleware.UnaryChain(inboundIsRunningMiddleware, cfg.InboundMiddleware.Unary)
+	cfg.InboundMiddleware.Oneway = inboundmiddleware.OnewayChain(inboundIsRunningMiddleware, cfg.InboundMiddleware.Oneway)
+
+	cfg.OutboundMiddleware.Unary = outboundmiddleware.UnaryChain(cfg.OutboundMiddleware.Unary, outboundIsRunningMiddleware)
+	cfg.OutboundMiddleware.Oneway = outboundmiddleware.OnewayChain(cfg.OutboundMiddleware.Oneway, outboundIsRunningMiddleware)
 	return cfg
 }
 

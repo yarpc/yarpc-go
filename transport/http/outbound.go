@@ -304,14 +304,15 @@ func (o *Outbound) callWithPeer(
 	bothResponseError := response.Header.Get(BothResponseErrorHeader) == AcceptTrue
 	if bothResponseError && o.bothResponseError {
 		if response.StatusCode >= 300 {
-			return tres, getYARPCErrorFromResponse(response, true)
+			return tres, treatYARPCErrorFromResponse(p, response, true)
 		}
 		return tres, nil
 	}
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return tres, nil
 	}
-	return nil, getYARPCErrorFromResponse(response, false)
+
+	return nil, treatYARPCErrorFromResponse(p, response, false)
 }
 
 func (o *Outbound) getPeerForRequest(ctx context.Context, treq *transport.Request) (*httpPeer, func(error), error) {
@@ -407,6 +408,14 @@ func (o *Outbound) withCoreHeaders(req *http.Request, treq *transport.Request, t
 	}
 
 	return req
+}
+
+func treatYARPCErrorFromResponse(p *httpPeer, response *http.Response, bothResponseError bool) error {
+	err := getYARPCErrorFromResponse(response, bothResponseError)
+	if yarpcerrors.IsUnavailable(err) {
+		p.OnDisconnected()
+	}
+	return err
 }
 
 func getYARPCErrorFromResponse(response *http.Response, bothResponseError bool) error {
