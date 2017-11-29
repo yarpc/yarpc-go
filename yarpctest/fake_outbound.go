@@ -71,11 +71,11 @@ func (t *FakeTransport) NewOutbound(c peer.Chooser, opts ...FakeOutboundOption) 
 
 // FakeOutbound is a unary outbound for the FakeTransport. It is fake.
 type FakeOutbound struct {
-	once               *lifecycle.Once
-	transport          *FakeTransport
-	chooser            peer.Chooser
-	nopOption          string
-	callOverride       OutboundCallable
+	once         *lifecycle.Once
+	transport    *FakeTransport
+	chooser      peer.Chooser
+	nopOption    string
+	callOverride OutboundCallable
 }
 
 // Chooser returns theis FakeOutbound's peer chooser.
@@ -118,10 +118,10 @@ func (o *FakeOutbound) Call(ctx context.Context, req *transport.Request) (*trans
 
 // CallOneway pretends to send a oneway RPC, but actually just returns an error.
 func (o *FakeOutbound) CallOneway(ctx context.Context, req *transport.Request) (transport.Ack, error) {
-	return nil, fmt.Errorf(`call oneway outbound is unsupported.`)
+	return nil, fmt.Errorf(`call oneway outbound is unsupported`)
 }
 
 // CallStream pretends to send a Stream RPC, but actually just returns an error.
 func (o *FakeOutbound) CallStream(ctx context.Context, req *transport.StreamRequest) (transport.ClientStream, error) {
-	return nil, fmt.Errorf(`call stream outbound is unsupported.`)
+	return nil, fmt.Errorf(`call stream outbound is unsupported`)
 }
