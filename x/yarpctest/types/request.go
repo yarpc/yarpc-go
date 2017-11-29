@@ -35,7 +35,7 @@ func (n *Service) ApplyRequest(opts *api.RequestOpts) {
 
 // ApplyClientStreamRequest implements api.ClientStreamRequestOption
 func (n *Service) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
-	opts.GiveRequestMeta.Service = n.Service
+	opts.GiveRequest.Meta.Service = n.Service
 }
 
 // Procedure is a concrete type that represents the "procedure" for a request.
@@ -51,7 +51,7 @@ func (n *Procedure) ApplyRequest(opts *api.RequestOpts) {
 
 // ApplyClientStreamRequest implements api.ClientStreamRequestOption
 func (n *Procedure) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
-	opts.GiveRequestMeta.Procedure = n.Procedure
+	opts.GiveRequest.Meta.Procedure = n.Procedure
 }
 
 // ShardKey is a concrete type that represents the "shard key" for a request.
@@ -67,5 +67,5 @@ func (n *ShardKey) ApplyRequest(opts *api.RequestOpts) {
 
 // ApplyClientStreamRequest implements api.ClientStreamRequestOption
 func (n *ShardKey) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
-	opts.GiveRequestMeta.ShardKey = n.ShardKey
+	opts.GiveRequest.Meta.ShardKey = n.ShardKey
 }

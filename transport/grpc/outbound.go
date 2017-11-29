@@ -236,32 +236,35 @@ func invokeErrorToYARPCError(err error, responseMD metadata.MD) error {
 }
 
 // CallStream implements transport.StreamOutbound#CallStream.
-func (o *Outbound) CallStream(ctx context.Context, requestMeta *transport.RequestMeta) (transport.ClientStream, error) {
+func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequest) (transport.ClientStream, error) {
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
 	start := time.Now()
 
-	return o.stream(ctx, requestMeta, start)
+	return o.stream(ctx, request, start)
 }
 
 func (o *Outbound) stream(
 	ctx context.Context,
-	reqMeta *transport.RequestMeta,
+	req *transport.StreamRequest,
 	start time.Time,
 ) (_ transport.ClientStream, err error) {
-	req := reqMeta.ToRequest()
-	md, err := transportRequestToMetadata(req)
+	if req.Meta == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("request requires a request metadata")
+	}
+	treq := req.Meta.ToRequest()
+	md, err := transportRequestToMetadata(treq)
 	if err != nil {
 		return nil, err
 	}
 
-	fullMethod, err := procedureNameToFullMethod(reqMeta.Procedure)
+	fullMethod, err := procedureNameToFullMethod(req.Meta.Procedure)
 	if err != nil {
 		return nil, err
 	}
 
-	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, req)
+	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, treq)
 	defer func() {
 		if onFinish != nil {
 			onFinish(err)
@@ -288,7 +291,7 @@ func (o *Outbound) stream(
 		TransportName: transportName,
 		StartTime:     start,
 	}
-	ctx, span := createOpenTracingSpan.Do(ctx, req)
+	ctx, span := createOpenTracingSpan.Do(ctx, treq)
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
@@ -308,5 +311,5 @@ func (o *Outbound) stream(
 		span.Finish()
 		return nil, err
 	}
-	return newClientStream(ctx, reqMeta, clientStream, span), nil
+	return newClientStream(ctx, req, clientStream, span), nil
 }

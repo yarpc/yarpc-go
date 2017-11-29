@@ -20,7 +20,11 @@
 
 package api
 
-import "go.uber.org/yarpc/api/transport"
+import (
+	"testing"
+
+	"go.uber.org/yarpc/api/transport"
+)
 
 // ServerStreamAction is an action applied to a ServerStream.
 // If the action returns an error, that error will be used to end the ServerStream.
@@ -37,22 +41,24 @@ type ServerStreamActionFunc func(transport.ServerStream) error
 func (f ServerStreamActionFunc) ApplyServerStream(c transport.ServerStream) error { return f(c) }
 
 // Start is a noop for wrapped functions
-func (f ServerStreamActionFunc) Start(TestingT) error { return nil }
+func (f ServerStreamActionFunc) Start(testing.TB) error { return nil }
 
 // Stop is a noop for wrapped functions
-func (f ServerStreamActionFunc) Stop(TestingT) error { return nil }
+func (f ServerStreamActionFunc) Stop(testing.TB) error { return nil }
 
 // StreamResponseOpts are the configuration options for a server stream
 // response.
 type StreamResponseOpts struct {
-	Resp *transport.ResponseMeta
+	Resp *transport.StreamResponse
 }
 
 // NewStreamResponseOpts creates a new StreamResponseOpts.
 func NewStreamResponseOpts() StreamResponseOpts {
 	return StreamResponseOpts{
-		Resp: &transport.ResponseMeta{
-			Headers: transport.NewHeaders(),
+		Resp: &transport.StreamResponse{
+			Meta: &transport.ResponseMeta{
+				Headers: transport.NewHeaders(),
+			},
 		},
 	}
 }

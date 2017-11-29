@@ -40,7 +40,7 @@ func TestStream(t *testing.T) {
 			services: Lifecycles(
 				GRPCService(
 					Name("myservice"),
-					p.Port("1"),
+					p.NamedPort("1"),
 					Proc(
 						Name("proc"),
 						EchoStreamHandler(),
@@ -49,7 +49,7 @@ func TestStream(t *testing.T) {
 			),
 			requests: Actions(
 				GRPCStreamRequest(
-					p.Port("1"),
+					p.NamedPort("1"),
 					Service("myservice"),
 					Procedure("proc"),
 					ClientStreamActions(
@@ -67,7 +67,7 @@ func TestStream(t *testing.T) {
 			services: Lifecycles(
 				GRPCService(
 					Name("myservice"),
-					p.Port("2"),
+					p.NamedPort("2"),
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
@@ -83,7 +83,7 @@ func TestStream(t *testing.T) {
 			),
 			requests: Actions(
 				GRPCStreamRequest(
-					p.Port("2"),
+					p.NamedPort("2"),
 					Service("myservice"),
 					Procedure("proc"),
 					ClientStreamActions(
@@ -101,7 +101,7 @@ func TestStream(t *testing.T) {
 			services: Lifecycles(
 				GRPCService(
 					Name("myservice"),
-					p.Port("3"),
+					p.NamedPort("3"),
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
@@ -115,7 +115,7 @@ func TestStream(t *testing.T) {
 			),
 			requests: Actions(
 				GRPCStreamRequest(
-					p.Port("3"),
+					p.NamedPort("3"),
 					Service("myservice"),
 					Procedure("proc"),
 					ClientStreamActions(
@@ -133,7 +133,7 @@ func TestStream(t *testing.T) {
 			services: Lifecycles(
 				GRPCService(
 					Name("myservice"),
-					p.Port("4"),
+					p.NamedPort("4"),
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
@@ -148,7 +148,7 @@ func TestStream(t *testing.T) {
 			),
 			requests: Actions(
 				GRPCStreamRequest(
-					p.Port("4"),
+					p.NamedPort("4"),
 					Service("myservice"),
 					Procedure("proc"),
 					ClientStreamActions(
@@ -166,7 +166,7 @@ func TestStream(t *testing.T) {
 			services: Lifecycles(
 				GRPCService(
 					Name("myservice"),
-					p.Port("5"),
+					p.NamedPort("5"),
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
@@ -182,7 +182,7 @@ func TestStream(t *testing.T) {
 			),
 			requests: Actions(
 				GRPCStreamRequest(
-					p.Port("5"),
+					p.NamedPort("5"),
 					Service("myservice"),
 					Procedure("proc"),
 					ClientStreamActions(
@@ -202,12 +202,12 @@ func TestStream(t *testing.T) {
 			services: Lifecycles(
 				GRPCService(
 					Name("myservice"),
-					p.Port("6"),
+					p.NamedPort("6"),
 					Proc(
 						Name("proc"),
 						OrderedStreamHandler(
-							ExpectHeader("req_key", "req_val"),
-							ExpectHeader("req_key2", "req_val2"),
+							WantHeader("req_key", "req_val"),
+							WantHeader("req_key2", "req_val2"),
 							RecvStreamMsg("test"),
 							StreamResponse(
 								WithHeader("resp_key", "resp_val"),
@@ -219,13 +219,13 @@ func TestStream(t *testing.T) {
 			),
 			requests: Actions(
 				GRPCStreamRequest(
-					p.Port("6"),
+					p.NamedPort("6"),
 					Service("myservice"),
 					Procedure("proc"),
 					WithHeader("req_key", "req_val"),
 					WithHeader("req_key2", "req_val2"),
-					ExpectHeader("resp_key", "resp_val"),
-					ExpectHeader("resp_key2", "resp_val2"),
+					WantHeader("resp_key", "resp_val"),
+					WantHeader("resp_key2", "resp_val2"),
 					ClientStreamActions(
 						SendStreamMsg("test"),
 						RecvStreamErr(io.EOF.Error()),

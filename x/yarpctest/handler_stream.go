@@ -21,8 +21,10 @@
 package yarpctest
 
 import (
+	"context"
 	"errors"
 	"sync"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
@@ -61,11 +63,11 @@ func (h *echoStreamHandler) HandleStream(s transport.ServerStream) error {
 	h.wg.Add(1)
 	defer h.wg.Done()
 	for {
-		msg, err := s.RecvMsg()
+		msg, err := s.ReceiveMessage(context.Background())
 		if err != nil {
 			return err
 		}
-		err = s.SendMsg(msg)
+		err = s.SendMessage(context.Background(), msg)
 		if err != nil {
 			return err
 		}
@@ -150,7 +152,7 @@ func StreamResponse(options ...api.StreamResponseOption) api.ServerStreamAction 
 		option.ApplyStreamResponse(&opts)
 	}
 	return api.ServerStreamActionFunc(func(c transport.ServerStream) error {
-		c.SetResponseMeta(opts.Resp)
+		c.SetResponse(opts.Resp)
 		return nil
 	})
 }

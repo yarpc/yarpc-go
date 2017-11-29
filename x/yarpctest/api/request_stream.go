@@ -20,25 +20,33 @@
 
 package api
 
-import "go.uber.org/yarpc/api/transport"
+import (
+	"testing"
+
+	"go.uber.org/yarpc/api/transport"
+)
 
 // ClientStreamRequestOpts are configuration options for a yarpc stream request.
 type ClientStreamRequestOpts struct {
-	Port             uint16
-	GiveRequestMeta  *transport.RequestMeta
-	StreamActions    []ClientStreamAction
-	WantResponseMeta *transport.ResponseMeta
+	Port          uint16
+	GiveRequest   *transport.StreamRequest
+	StreamActions []ClientStreamAction
+	WantResponse  *transport.StreamResponse
 }
 
 // NewClientStreamRequestOpts initializes a ClientStreamRequestOpts struct.
 func NewClientStreamRequestOpts() ClientStreamRequestOpts {
 	return ClientStreamRequestOpts{
-		GiveRequestMeta: &transport.RequestMeta{
-			Caller:   "unknown",
-			Encoding: transport.Encoding("raw"),
+		GiveRequest: &transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Caller:   "unknown",
+				Encoding: transport.Encoding("raw"),
+			},
 		},
-		WantResponseMeta: &transport.ResponseMeta{
-			Headers: transport.NewHeaders(),
+		WantResponse: &transport.StreamResponse{
+			Meta: &transport.ResponseMeta{
+				Headers: transport.NewHeaders(),
+			},
 		},
 	}
 }
@@ -58,11 +66,11 @@ func (f ClientStreamRequestOptionFunc) ApplyClientStreamRequest(opts *ClientStre
 
 // ClientStreamAction is an action applied to a ClientStream.
 type ClientStreamAction interface {
-	ApplyClientStream(TestingT, transport.ClientStream)
+	ApplyClientStream(testing.TB, transport.ClientStream)
 }
 
 // ClientStreamActionFunc converts a function into a StreamAction.
-type ClientStreamActionFunc func(TestingT, transport.ClientStream)
+type ClientStreamActionFunc func(testing.TB, transport.ClientStream)
 
 // ApplyClientStream implements ClientStreamAction.
-func (f ClientStreamActionFunc) ApplyClientStream(t TestingT, c transport.ClientStream) { f(t, c) }
+func (f ClientStreamActionFunc) ApplyClientStream(t testing.TB, c transport.ClientStream) { f(t, c) }

@@ -38,12 +38,12 @@ type GiveHeader struct {
 
 // ApplyClientStreamRequest implements api.ClientStreamRequestOption.
 func (h *GiveHeader) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
-	opts.GiveRequestMeta.Headers = opts.GiveRequestMeta.Headers.With(h.Key, h.Value)
+	opts.GiveRequest.Meta.Headers = opts.GiveRequest.Meta.Headers.With(h.Key, h.Value)
 }
 
 // ApplyStreamResponse implements StreamResponseOption.
 func (h *GiveHeader) ApplyStreamResponse(opts *api.StreamResponseOpts) {
-	opts.Resp.Headers = opts.Resp.Headers.With(h.Key, h.Value)
+	opts.Resp.Meta.Headers = opts.Resp.Meta.Headers.With(h.Key, h.Value)
 }
 
 // ApplyRequest implements RequestOption.
@@ -68,16 +68,16 @@ type WantHeader struct {
 }
 
 // ApplyServerStream implements ServerStreamAction.
-func (h *ExpectHeader) ApplyServerStream(c transport.ServerStream) error {
-	actualValue, ok := c.RequestMeta().Headers.Get(h.Key)
-	require.True(h.GetTestingT(), ok, "header %q was not set on the request", h.Key)
-	require.Equal(h.GetTestingT(), actualValue, h.Value, "headers did not match for %q", h.Key)
+func (h *WantHeader) ApplyServerStream(c transport.ServerStream) error {
+	actualValue, ok := c.Request().Meta.Headers.Get(h.Key)
+	require.True(h.GetTestingTB(), ok, "header %q was not set on the request", h.Key)
+	require.Equal(h.GetTestingTB(), actualValue, h.Value, "headers did not match for %q", h.Key)
 	return nil
 }
 
 // ApplyClientStreamRequest implements api.ClientStreamRequestOption.
-func (h *ExpectHeader) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
-	opts.WantResponseMeta.Headers = opts.WantResponseMeta.Headers.With(h.Key, h.Value)
+func (h *WantHeader) ApplyClientStreamRequest(opts *api.ClientStreamRequestOpts) {
+	opts.WantResponse.Meta.Headers = opts.WantResponse.Meta.Headers.With(h.Key, h.Value)
 }
 
 // ApplyRequest implements RequestOption.

@@ -22,7 +22,9 @@ package types
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
@@ -46,14 +48,17 @@ func (s *SendStreamMsg) ApplyClientStream(t testing.TB, c transport.ClientStream
 
 // ApplyServerStream implements ServerStreamAction
 func (s *SendStreamMsg) ApplyServerStream(c transport.ServerStream) error {
-	s.applyStream(s.GetTestingT(), c)
+	s.applyStream(s.GetTestingTB(), c)
 	return nil
 }
 
-func (s *SendStreamMsg) applyStream(t testing.TB, c transport.BaseStream) {
-	err := c.SendMsg(&transport.StreamMessage{
-		ReadCloser: ioutil.NopCloser(bytes.NewBufferString(s.Msg)),
-	})
+func (s *SendStreamMsg) applyStream(t testing.TB, c transport.Stream) {
+	err := c.SendMessage(
+		context.Background(),
+		&transport.StreamMessage{
+			Body: ioutil.NopCloser(bytes.NewBufferString(s.Msg)),
+		},
+	)
 	if len(s.WantErrMsgs) > 0 {
 		for _, wantErrMsg := range s.WantErrMsgs {
 			require.Contains(t, err.Error(), wantErrMsg)
@@ -81,12 +86,12 @@ func (s *RecvStreamMsg) ApplyClientStream(t testing.TB, c transport.ClientStream
 
 // ApplyServerStream implements ServerStreamAction
 func (s *RecvStreamMsg) ApplyServerStream(c transport.ServerStream) error {
-	s.applyStream(s.GetTestingT(), c)
+	s.applyStream(s.GetTestingTB(), c)
 	return nil
 }
 
-func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.BaseStream) {
-	msg, err := c.RecvMsg()
+func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.Stream) {
+	msg, err := c.ReceiveMessage(context.Background())
 	if len(s.WantErrMsgs) > 0 {
 		require.Error(t, err)
 		for _, wantErrMsg := range s.WantErrMsgs {
@@ -96,7 +101,7 @@ func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.BaseStream) {
 	}
 	require.NoError(t, err)
 
-	actualMsg, err := ioutil.ReadAll(msg)
+	actualMsg, err := ioutil.ReadAll(msg.Body)
 	require.NoError(t, err)
 	require.Equal(t, bytes.NewBufferString(s.Msg).Bytes(), actualMsg, "mismatch on stream messages")
 	return

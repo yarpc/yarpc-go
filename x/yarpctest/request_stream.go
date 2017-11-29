@@ -23,6 +23,7 @@ package yarpctest
 import (
 	"context"
 	"fmt"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,10 +48,10 @@ func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		resMeta := callStream(t, out, opts.GiveRequestMeta, opts.StreamActions)
+		res := callStream(t, out, opts.GiveRequest, opts.StreamActions)
 
-		for k, v := range opts.WantResponseMeta.Headers.Items() {
-			h, ok := resMeta.Headers.Get(k)
+		for k, v := range opts.WantResponse.Meta.Headers.Items() {
+			h, ok := res.Meta.Headers.Get(k)
 			require.True(t, ok, "did not receive expected response header %q", k)
 			require.Equal(t, h, v, "response header did not match for %q", k)
 		}
@@ -60,15 +61,15 @@ func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 func callStream(
 	t testing.TB,
 	out transport.StreamOutbound,
-	reqMeta *transport.RequestMeta,
+	req *transport.StreamRequest,
 	actions []api.ClientStreamAction,
-) *transport.ResponseMeta {
-	client, err := out.CallStream(context.Background(), reqMeta)
+) *transport.StreamResponse {
+	client, err := out.CallStream(context.Background(), req)
 	require.NoError(t, err)
 	for _, a := range actions {
 		a.ApplyClientStream(t, client)
 	}
-	return client.ResponseMeta()
+	return client.Response()
 }
 
 // ClientStreamActions combines a series of client stream actions into actions
