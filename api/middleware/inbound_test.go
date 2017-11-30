@@ -26,13 +26,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnaryNopInboundMiddleware(t *testing.T) {
@@ -78,4 +80,32 @@ func TestOnewayNopInboundMiddleware(t *testing.T) {
 	h.EXPECT().HandleOneway(ctx, req).Return(err)
 
 	assert.Equal(t, err, wrappedH.HandleOneway(ctx, req))
+}
+
+func TestNilInboundMiddleware(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	req := &transport.Request{}
+
+	t.Run("unary", func(t *testing.T) {
+		handler := transporttest.NewMockUnaryHandler(ctrl)
+		mw := middleware.ApplyUnaryInbound(handler, nil)
+
+		resWriter := &transporttest.FakeResponseWriter{}
+
+		handler.EXPECT().Handle(ctx, req, resWriter)
+		err := mw.Handle(ctx, req, resWriter)
+		require.NoError(t, err, "unexpected error calling handler")
+	})
+
+	t.Run("oneway", func(t *testing.T) {
+		handler := transporttest.NewMockOnewayHandler(ctrl)
+		mw := middleware.ApplyOnewayInbound(handler, nil)
+
+		handler.EXPECT().HandleOneway(ctx, req)
+		err := mw.HandleOneway(ctx, req)
+		require.NoError(t, err, "unexpected error calling handler")
+	})
 }
