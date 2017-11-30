@@ -21,37 +21,66 @@
 package main
 
 import (
-	"fmt"
-	"io"
-	"log"
-	"os"
-	"strconv"
+	"bytes"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var usage = fmt.Sprintf("Usage: %s shardNum totalShards args...", os.Args[0])
-
-func main() {
-	if err := do(os.Args[1:], os.Stdout); err != nil {
-		log.Fatal(err)
+func TestDo(t *testing.T) {
+	tests := []struct {
+		Args       []string
+		WantOutput string
+		WantError  bool
+	}{
+		{
+			WantError: true,
+		},
+		{
+			Args:      []string{},
+			WantError: true,
+		},
+		{
+			Args:      []string{"1"},
+			WantError: true,
+		},
+		{
+			Args:      []string{"1", "x"},
+			WantError: true,
+		},
+		{
+			Args:      []string{"x", "1"},
+			WantError: true,
+		},
+		{
+			Args: []string{"1", "3"},
+		},
+		{
+			Args:       []string{"1", "3", "a"},
+			WantOutput: "a",
+		},
+		{
+			Args:       []string{"1", "3", "a", "b"},
+			WantOutput: "a",
+		},
+		{
+			Args:       []string{"1", "3", "a", "b", "c"},
+			WantOutput: "a",
+		},
+		{
+			Args:       []string{"1", "3", "a", "b", "c", "d"},
+			WantOutput: "a d",
+		},
 	}
-}
-
-func do(args []string, writer io.Writer) error {
-	if len(args) < 2 {
-		return fmt.Errorf(usage)
-	}
-	shardNum, err := strconv.Atoi(args[0])
-	if err != nil {
-		return fmt.Errorf("%v\n%s", err, usage)
-	}
-	totalShards, err := strconv.Atoi(args[1])
-	if err != nil {
-		return fmt.Errorf("%v\n%s", err, usage)
-	}
-	for i := 2; i < len(args); i++ {
-		if (((i - 2) % totalShards) + 1) == shardNum {
-			fmt.Fprintf(writer, "%s ", args[i])
+	for _, tt := range tests {
+		buffer := bytes.NewBuffer(nil)
+		err := do(tt.Args, buffer)
+		if tt.WantError {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
 		}
+		assert.Equal(t, tt.WantOutput, strings.TrimSpace(buffer.String()))
 	}
-	return nil
 }
