@@ -27,8 +27,8 @@ steps:
       docker-compose#v1.5.2:
         run: yarpc-go-1.8
   - name: ":go: 1.9 test - %n"
-    command: "make test"
-    parallelism: 2
+    command: "make codecov"
+    parallelism: 4
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.9

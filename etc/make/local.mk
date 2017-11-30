@@ -130,8 +130,8 @@ test: $(THRIFTRW) __eval_chunked_packages ## run chunked tests
 	PATH=$(BIN):$$PATH go test -race $(CHUNKED_PACKAGES)
 
 .PHONY: cover
-cover: $(THRIFTRW) $(GOCOVMERGE) $(PARALLEL_EXEC) $(COVER) __eval_packages ## run all tests and output code coverage
-	PATH=$(BIN):$$PATH ./etc/bin/cover.sh $(PACKAGES)
+cover: $(THRIFTRW) $(GOCOVMERGE) $(PARALLEL_EXEC) $(COVER) __eval_chunked_packages ## run chunked tests and output code coverage
+	PATH=$(BIN):$$PATH ./etc/bin/cover.sh $(CHUNKED_PACKAGES)
 	go tool cover -html=coverage.txt -o cover.html
 
 .PHONY: codecov
