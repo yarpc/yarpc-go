@@ -156,6 +156,11 @@ __eval_chunked_packages: __eval_packages
 ifndef CHUNKED_PACKAGES
 	$(eval CHUNK := $(or $(THIS_CHUNK),0))
 	$(eval CHUNKS := $(or $(TOTAL_CHUNKS),1))
+
+	# Adjust start index
+	# Our chunk script starts from 1, while CI providers start at 0.
+	$(eval CHUNK := $(shell expr $(CHUNK) + 1))
+
 	$(eval CHUNKED_PACKAGES := $(shell go run internal/shard/main.go $(CHUNK) $(CHUNKS) $(PACKAGES)))
 else
 	$(eval CHUNKED_PACKAGES := $(shell go list $(CHUNKED_PACKAGES)))
