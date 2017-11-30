@@ -10,8 +10,9 @@ steps:
         build: yarpc-go-1.9
         image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
   - wait
-  - name: ":go: 1.8 test"
+  - name: ":go: 1.8 test - %n"
     command: "make test"
+    parallelism: 2
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.8
@@ -25,8 +26,9 @@ steps:
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.8
-  - name: ":go: 1.9 test"
+  - name: ":go: 1.9 test - %n"
     command: "make test"
+    parallelism: 2
     plugins:
       docker-compose#v1.5.2:
         run: yarpc-go-1.9

@@ -126,8 +126,8 @@ basiclint: gofmt govet golint staticcheck errcheck # run gofmt govet golint stat
 lint: basiclint generatenodiff nogogenerate verifyversion verifycodecovignores ## run all linters
 
 .PHONY: test
-test: $(THRIFTRW) __eval_packages ## run all tests
-	PATH=$(BIN):$$PATH go test -race $(PACKAGES)
+test: $(THRIFTRW) __eval_chunked_packages ## run chunked tests
+	PATH=$(BIN):$$PATH go test -race $(CHUNKED_PACKAGES)
 
 .PHONY: cover
 cover: $(THRIFTRW) $(GOCOVMERGE) $(PARALLEL_EXEC) $(COVER) __eval_packages ## run all tests and output code coverage
@@ -149,6 +149,16 @@ ifndef PACKAGES
 	$(eval PACKAGES := $(shell go list ./... | grep -v go\.uber\.org\/yarpc\/vendor))
 else
 	$(eval PACKAGES := $(shell go list $(PACKAGES)))
+endif
+
+.PHONY: __eval_chunked_packages
+__eval_chunked_packages: __eval_packages
+ifndef CHUNKED_PACKAGES
+	$(eval CHUNK := $(or $(THIS_CHUNK),0))
+	$(eval CHUNKS := $(or $(TOTAL_CHUNKS),1))
+	$(eval CHUNKED_PACKAGES := $(shell go run internal/shard/main.go $(CHUNK) $(CHUNKS) $(PACKAGES)))
+else
+	$(eval CHUNKED_PACKAGES := $(shell go list $(CHUNKED_PACKAGES)))
 endif
 
 .PHONY: __eval_go_files
