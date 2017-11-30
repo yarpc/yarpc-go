@@ -26,13 +26,16 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/middleware/middlewaretest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnaryNopOutboundMiddleware(t *testing.T) {
@@ -84,4 +87,74 @@ func TestOnewayNopOutboundMiddleware(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Equal(t, nil, got)
 	}
+}
+
+func TestNilOutboundMiddleware(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("unary", func(t *testing.T) {
+		out := transporttest.NewMockUnaryOutbound(ctrl)
+		out.EXPECT().Start()
+
+		mw := middleware.ApplyUnaryOutbound(out, nil)
+		require.NoError(t, mw.Start())
+	})
+
+	t.Run("oneway", func(t *testing.T) {
+		out := transporttest.NewMockOnewayOutbound(ctrl)
+		out.EXPECT().Start()
+
+		mw := middleware.ApplyOnewayOutbound(out, nil)
+		require.NoError(t, mw.Start())
+	})
+}
+
+func TestOutboundMiddleware(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("unary", func(t *testing.T) {
+		out := transporttest.NewMockUnaryOutbound(ctrl)
+		mw := middlewaretest.NewMockUnaryOutbound(ctrl)
+		outWithMW := middleware.ApplyUnaryOutbound(out, mw)
+
+		// start
+		out.EXPECT().Start().Return(nil)
+		assert.NoError(t, outWithMW.Start(), "could not start outbound")
+
+		// transports
+		out.EXPECT().Transports()
+		outWithMW.Transports()
+
+		// is running
+		out.EXPECT().IsRunning().Return(true)
+		assert.True(t, outWithMW.IsRunning(), "expected outbound to be running")
+
+		// stop
+		out.EXPECT().Stop().Return(nil)
+		assert.NoError(t, outWithMW.Stop(), "unexpected error stopping outbound")
+	})
+
+	t.Run("oneway", func(t *testing.T) {
+		out := transporttest.NewMockOnewayOutbound(ctrl)
+		mw := middlewaretest.NewMockOnewayOutbound(ctrl)
+		outWithMW := middleware.ApplyOnewayOutbound(out, mw)
+
+		// start
+		out.EXPECT().Start().Return(nil)
+		assert.NoError(t, outWithMW.Start(), "could not start outbound")
+
+		// transports
+		out.EXPECT().Transports()
+		outWithMW.Transports()
+
+		// is running
+		out.EXPECT().IsRunning().Return(true)
+		assert.True(t, outWithMW.IsRunning(), "expected outbound to be running")
+
+		// stop
+		out.EXPECT().Stop().Return(nil)
+		assert.NoError(t, outWithMW.Stop(), "unexpected error stopping outbound")
+	})
 }
