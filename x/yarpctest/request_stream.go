@@ -49,7 +49,15 @@ func GRPCStreamRequest(options ...api.ClientStreamRequestOption) api.Action {
 		require.NoError(t, out.Start())
 		defer func() { assert.NoError(t, out.Stop()) }()
 
-		res := callStream(t, out, opts.GiveRequest, opts.StreamActions)
+		res, err := callStream(t, out, opts.GiveRequest, opts.StreamActions)
+		if len(opts.WantErrMsgs) > 0 {
+			require.Error(t, err)
+			for _, wantErrMsg := range opts.WantErrMsgs {
+				require.Contains(t, err.Error(), wantErrMsg)
+			}
+			return
+		}
+		require.NoError(t, err)
 
 		for k, v := range opts.WantResponse.Meta.Headers.Items() {
 			h, ok := res.Meta.Headers.Get(k)
@@ -64,15 +72,17 @@ func callStream(
 	out transport.StreamOutbound,
 	req *transport.StreamRequest,
 	actions []api.ClientStreamAction,
-) *transport.StreamResponse {
+) (*transport.StreamResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	client, err := out.CallStream(ctx, req)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	for _, a := range actions {
 		a.ApplyClientStream(t, client)
 	}
-	return client.Response()
+	return client.Response(), nil
 }
 
 // ClientStreamActions combines a series of client stream actions into actions
@@ -80,6 +90,13 @@ func callStream(
 func ClientStreamActions(actions ...api.ClientStreamAction) api.ClientStreamRequestOption {
 	return api.ClientStreamRequestOptionFunc(func(opts *api.ClientStreamRequestOpts) {
 		opts.StreamActions = actions
+	})
+}
+
+// WantStreamError asserts that the stream request had an error immediately.
+func WantStreamError(wantErrMsgs ...string) api.ClientStreamRequestOption {
+	return api.ClientStreamRequestOptionFunc(func(opts *api.ClientStreamRequestOpts) {
+		opts.WantErrMsgs = wantErrMsgs
 	})
 }
 

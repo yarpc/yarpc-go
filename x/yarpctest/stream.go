@@ -21,23 +21,46 @@
 package yarpctest
 
 import (
+	"bytes"
+	"io/ioutil"
+
 	"go.uber.org/yarpc/x/yarpctest/types"
 )
 
 // SendStreamMsg sends a message to a stream.
 func SendStreamMsg(sendMsg string) *types.SendStreamMsg {
-	return &types.SendStreamMsg{Msg: sendMsg}
+	return &types.SendStreamMsg{Body: ioutil.NopCloser(bytes.NewBufferString(sendMsg))}
 }
 
 // SendStreamMsgAndExpectError sends a message on a stream and asserts on the
 // error returned.
 func SendStreamMsgAndExpectError(sendMsg string, wantErrMsgs ...string) *types.SendStreamMsg {
-	return &types.SendStreamMsg{Msg: sendMsg, WantErrMsgs: wantErrMsgs}
+	return &types.SendStreamMsg{
+		Body:        ioutil.NopCloser(bytes.NewBufferString(sendMsg)),
+		WantErrMsgs: wantErrMsgs,
+	}
+}
+
+// SendStreamDecodeErrorAndExpectError induces a decode error on the stream
+// message and asserts on the result.
+func SendStreamDecodeErrorAndExpectError(decodeErr error, wantErrMsgs ...string) *types.SendStreamMsg {
+	return &types.SendStreamMsg{
+		Body:        ioutil.NopCloser(readErr{decodeErr}),
+		WantErrMsgs: wantErrMsgs,
+	}
+}
+
+type readErr struct {
+	err error
+}
+
+func (r readErr) Read(p []byte) (n int, err error) {
+	return 0, r.err
 }
 
 // RecvStreamMsg waits to receive a message on a client stream.
 func RecvStreamMsg(wantMsg string) *types.RecvStreamMsg {
-	return &types.RecvStreamMsg{Msg: wantMsg}
+	return &types.RecvStreamMsg{WantBody: bytes.NewBufferString(wantMsg).Bytes()}
 }
 
 // RecvStreamErr waits to receive a message on a client stream.  It expects

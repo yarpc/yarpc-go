@@ -121,6 +121,9 @@ func (cs *clientStream) Request() *transport.StreamRequest {
 }
 
 func (cs *clientStream) SendMessage(_ context.Context, m *transport.StreamMessage) error {
+	if cs.closed.Load() { // If the stream is closed, we should not be sending messages on it.
+		return io.EOF
+	}
 	// TODO can we make a "Bytes" interface to get direct access to the bytes
 	// (instead of resorting to ReadAll (which is not necessarily performant))
 	// Alternatively we can pool Buffers to read the message and clear the

@@ -254,7 +254,7 @@ func (o *Outbound) stream(
 	start time.Time,
 ) (_ transport.ClientStream, err error) {
 	if req.Meta == nil {
-		return nil, yarpcerrors.InvalidArgumentErrorf("request requires a request metadata")
+		return nil, yarpcerrors.InvalidArgumentErrorf("stream request requires a request metadata")
 	}
 	treq := req.Meta.ToRequest()
 	md, err := transportRequestToMetadata(treq)
@@ -295,15 +295,16 @@ func (o *Outbound) stream(
 		StartTime:     start,
 		ExtraTags:     yarpc.OpentracingTags,
 	}
-	ctx, span := createOpenTracingSpan.Do(ctx, treq)
+	_, span := createOpenTracingSpan.Do(ctx, treq)
 
 	if err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, mdReadWriter(md)); err != nil {
 		span.Finish()
 		return nil, err
 	}
 
+	streamCtx := metadata.NewOutgoingContext(context.Background(), md)
 	clientStream, err := grpc.NewClientStream(
-		metadata.NewOutgoingContext(context.Background(), md),
+		streamCtx,
 		&grpc.StreamDesc{
 			ClientStreams: true,
 			ServerStreams: true,
@@ -315,5 +316,5 @@ func (o *Outbound) stream(
 		span.Finish()
 		return nil, err
 	}
-	return newClientStream(ctx, req, clientStream, span), nil
+	return newClientStream(streamCtx, req, clientStream, span), nil
 }

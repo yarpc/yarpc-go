@@ -32,6 +32,7 @@ type ClientStreamRequestOpts struct {
 	GiveRequest   *transport.StreamRequest
 	StreamActions []ClientStreamAction
 	WantResponse  *transport.StreamResponse
+	WantErrMsgs   []string
 }
 
 // NewClientStreamRequestOpts initializes a ClientStreamRequestOpts struct.

@@ -21,11 +21,14 @@
 package grpc_test
 
 import (
+	"errors"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/api/transport"
 	. "go.uber.org/yarpc/x/yarpctest"
+	"go.uber.org/yarpc/x/yarpctest/api"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -189,7 +192,7 @@ func TestStreaming(t *testing.T) {
 					ClientStreamActions(
 						SendStreamMsg("test"),
 						CloseStream(),
-						SendStreamMsg("lala"), // <- Why does this not fail?
+						SendStreamMsgAndExpectError("lala", io.EOF.Error()),
 						RecvStreamMsg("test1"),
 						RecvStreamMsg("test2"),
 						RecvStreamMsg("test3"),
@@ -229,6 +232,159 @@ func TestStreaming(t *testing.T) {
 					WantHeader("resp_key2", "resp_val2"),
 					ClientStreamActions(
 						SendStreamMsg("test"),
+						RecvStreamErr(io.EOF.Error()),
+					),
+				),
+			),
+		},
+		{
+			name: "stream invalid request",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("7"),
+				),
+			),
+			requests: Actions(
+				GRPCStreamRequest(
+					p.NamedPort("7"),
+					Service("myservice"),
+					Procedure("proc"),
+					ClientStreamActions(
+						RecvStreamErr(yarpcerrors.UnimplementedErrorf("unrecognized procedure \"proc\" for service \"myservice\"").Error()),
+					),
+				),
+			),
+		},
+		{
+			name: "stream invalid client decode",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("8"),
+				),
+			),
+			requests: Actions(
+				GRPCStreamRequest(
+					p.NamedPort("8"),
+					Service("myservice"),
+					Procedure("proc"),
+					ClientStreamActions(
+						SendStreamDecodeErrorAndExpectError(errors.New("nooooo"), "nooooo", "unknown"),
+					),
+				),
+			),
+		},
+		{
+			name: "stream invalid client decode yarpcerr",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("9"),
+				),
+			),
+			requests: Actions(
+				GRPCStreamRequest(
+					p.NamedPort("9"),
+					Service("myservice"),
+					Procedure("proc"),
+					ClientStreamActions(
+						SendStreamDecodeErrorAndExpectError(yarpcerrors.InternalErrorf("test"), yarpcerrors.InternalErrorf("test").Error()),
+					),
+				),
+			),
+		},
+		{
+			name: "stream client request and context functions",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("10"),
+					Proc(
+						Name("proc"),
+						OrderedStreamHandler(
+							RecvStreamMsg("test"),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				GRPCStreamRequest(
+					p.NamedPort("10"),
+					Service("myservice"),
+					Procedure("proc"),
+					WithHeader("key", "value"),
+					ClientStreamActions(
+						api.ClientStreamActionFunc(func(t testing.TB, c transport.ClientStream) {
+							val, _ := c.Request().Meta.Headers.Get("key")
+							require.Equal(t, "value", val)
+
+							deadline, hasDeadline := c.Context().Deadline()
+							require.False(t, hasDeadline, "context had a deadline %s, what?", deadline.String())
+						}),
+						SendStreamMsg("test"),
+					),
+				),
+			),
+		},
+		{
+			name: "server invalid response and context check",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("11"),
+					Proc(
+						Name("proc"),
+						OrderedStreamHandler(
+							api.ServerStreamActionFunc(func(s transport.ServerStream) error {
+								if _, ok := s.Context().Deadline(); ok {
+									return errors.New("should not have deadline on stream")
+								}
+								return nil
+							}),
+							RecvStreamMsg("test"),
+							api.ServerStreamActionFunc(func(s transport.ServerStream) error {
+								// invalid response setting
+								s.SetResponse(&transport.StreamResponse{})
+								return nil
+							}),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				GRPCStreamRequest(
+					p.NamedPort("11"),
+					Service("myservice"),
+					Procedure("proc"),
+					WithHeader("key", "value"),
+					ClientStreamActions(
+						SendStreamMsg("test"),
+						RecvStreamErr(io.EOF.Error()),
+					),
+				),
+			),
+		},
+		{
+			name: "server invalid send read",
+			services: Lifecycles(
+				GRPCService(
+					Name("myservice"),
+					p.NamedPort("12"),
+					Proc(
+						Name("proc"),
+						OrderedStreamHandler(
+							SendStreamDecodeErrorAndExpectError(yarpcerrors.InternalErrorf("test"), yarpcerrors.InternalErrorf("test").Error()),
+						),
+					),
+				),
+			),
+			requests: Actions(
+				GRPCStreamRequest(
+					p.NamedPort("12"),
+					Service("myservice"),
+					Procedure("proc"),
+					ClientStreamActions(
 						RecvStreamErr(io.EOF.Error()),
 					),
 				),

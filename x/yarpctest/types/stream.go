@@ -21,8 +21,8 @@
 package types
 
 import (
-	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"testing"
 
@@ -37,7 +37,7 @@ type SendStreamMsg struct {
 	api.SafeTestingTBOnStart
 	api.NoopStop
 
-	Msg         string
+	Body        io.ReadCloser
 	WantErrMsgs []string
 }
 
@@ -56,10 +56,11 @@ func (s *SendStreamMsg) applyStream(t testing.TB, c transport.Stream) {
 	err := c.SendMessage(
 		context.Background(),
 		&transport.StreamMessage{
-			Body: ioutil.NopCloser(bytes.NewBufferString(s.Msg)),
+			Body: s.Body,
 		},
 	)
 	if len(s.WantErrMsgs) > 0 {
+		require.Error(t, err)
 		for _, wantErrMsg := range s.WantErrMsgs {
 			require.Contains(t, err.Error(), wantErrMsg)
 		}
@@ -75,8 +76,9 @@ type RecvStreamMsg struct {
 	api.SafeTestingTBOnStart
 	api.NoopStop
 
-	Msg         string
-	WantErrMsgs []string
+	WantBody          []byte
+	WantDecodeErrMsgs []string
+	WantErrMsgs       []string
 }
 
 // ApplyClientStream implements ClientStreamAction
@@ -102,7 +104,14 @@ func (s *RecvStreamMsg) applyStream(t testing.TB, c transport.Stream) {
 	require.NoError(t, err)
 
 	actualMsg, err := ioutil.ReadAll(msg.Body)
+	if len(s.WantDecodeErrMsgs) > 0 {
+		require.Error(t, err)
+		for _, wantErrMsg := range s.WantDecodeErrMsgs {
+			require.Contains(t, err.Error(), wantErrMsg)
+		}
+		return
+	}
 	require.NoError(t, err)
-	require.Equal(t, bytes.NewBufferString(s.Msg).Bytes(), actualMsg, "mismatch on stream messages")
+	require.Equal(t, s.WantBody, actualMsg, "mismatch on stream messages")
 	return
 }

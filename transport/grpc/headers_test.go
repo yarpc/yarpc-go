@@ -21,12 +21,12 @@
 package grpc
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpcerrors"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -165,7 +165,7 @@ func TestTransportRequestToMetadata(t *testing.T) {
 					CallerHeader: "example-caller",
 				}),
 			},
-			Error: fmt.Errorf("cannot use reserved header in application headers: %s", CallerHeader),
+			Error: yarpcerrors.InvalidArgumentErrorf("cannot use reserved header in application headers: %s", CallerHeader),
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
