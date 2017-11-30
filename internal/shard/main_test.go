@@ -22,7 +22,6 @@ package main
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -81,6 +80,6 @@ func TestDo(t *testing.T) {
 		} else {
 			assert.NoError(t, err)
 		}
-		assert.Equal(t, tt.WantOutput, strings.TrimSpace(buffer.String()))
+		assert.Equal(t, tt.WantOutput, buffer.String())
 	}
 }

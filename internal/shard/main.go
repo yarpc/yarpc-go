@@ -50,7 +50,10 @@ func do(args []string, writer io.Writer) error {
 	}
 	for i := 2; i < len(args); i++ {
 		if (((i - 2) % totalShards) + 1) == shardNum {
-			fmt.Fprintf(writer, "%s ", args[i])
+			if i != 2 {
+				fmt.Fprint(writer, " ")
+			}
+			fmt.Fprint(writer, args[i])
 		}
 	}
 	return nil
