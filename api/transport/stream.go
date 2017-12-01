@@ -44,20 +44,26 @@ type ServerStream interface {
 	Stream
 
 	// SetResponse sets the stream response metadata for the stream before
-	// the stream has been stopped.  This will be propagated back to the client.
+	// the stream has been stopped.  Depending on the implementation this will
+	// be propagated back to the client.
 	SetResponse(*StreamResponse)
 }
 
 // ClientStream represents the Client API of interacting with a Stream.
 type ClientStream interface {
 	Stream
-	io.Closer
 
 	// Response returns the StreamResponse that was set by the server when the
 	// stream was closed.  It will return nil if it was called before the Close
 	// was called, or before one of the SendMessage/ReceiveMessage functions
 	// returned an error.
 	Response() *StreamResponse
+
+	// Close will close the connection. It blocks until the server has
+	// acknowledged the close. In certain implementations, the timeout on the
+	// context will be used to timeout the request. If the server timed out the
+	// connection will be forced closed by the client.
+	Close(context.Context) error
 }
 
 // Stream is an interface for interacting with a stream.
