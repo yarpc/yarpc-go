@@ -342,7 +342,7 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(reques
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
-	if err := c.stream.Close(); err != nil {
+	if err := c.stream.Close(context.Background()); err != nil {
 		return nil, err
 	}
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
@@ -421,7 +421,7 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseSend() error {
-	return c.stream.Close()
+	return c.stream.Close(context.Background())
 }
 {{end}}
 

@@ -566,7 +566,7 @@ func (c *_AllServiceHelloOneYARPCClient) Send(request *HelloRequest) error {
 }
 
 func (c *_AllServiceHelloOneYARPCClient) CloseAndRecv() (*HelloResponse, error) {
-	if err := c.stream.Close(); err != nil {
+	if err := c.stream.Close(context.Background()); err != nil {
 		return nil, err
 	}
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newAllServiceHelloOneYARPCResponse)
@@ -641,7 +641,7 @@ func (c *_AllServiceHelloThreeYARPCClient) Recv() (*HelloResponse, error) {
 }
 
 func (c *_AllServiceHelloThreeYARPCClient) CloseSend() error {
-	return c.stream.Close()
+	return c.stream.Close(context.Background())
 }
 
 type _AllServiceHelloOneYARPCServer struct {

@@ -459,7 +459,7 @@ func (c *_FooServiceEchoOutYARPCClient) Send(request *EchoOutRequest) error {
 }
 
 func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv() (*EchoOutResponse, error) {
-	if err := c.stream.Close(); err != nil {
+	if err := c.stream.Close(context.Background()); err != nil {
 		return nil, err
 	}
 	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoOutYARPCResponse)
@@ -534,7 +534,7 @@ func (c *_FooServiceEchoBothYARPCClient) Recv() (*EchoBothResponse, error) {
 }
 
 func (c *_FooServiceEchoBothYARPCClient) CloseSend() error {
-	return c.stream.Close()
+	return c.stream.Close(context.Background())
 }
 
 type _FooServiceEchoOutYARPCServer struct {
