@@ -21,9 +21,7 @@
 package protobuf
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"reflect"
 	"strings"
 
@@ -219,43 +217,6 @@ func ClientBuilderOptions(_ transport.ClientConfig, structField reflect.StructFi
 		}
 	}
 	return opts
-}
-
-// ToProtoMessage converts an io.ReadCloser into a proto.Message.
-func ToProtoMessage(
-	readCloser io.ReadCloser,
-	encoding transport.Encoding,
-	newMessage func() proto.Message,
-) (proto.Message, error) {
-	message := newMessage()
-	if err := unmarshal(encoding, readCloser, message); err != nil {
-		readCloser.Close()
-		return nil, err
-	}
-	readCloser.Close()
-	return message, nil
-}
-
-type readCloser struct {
-	io.Reader
-	closer func()
-}
-
-func (r readCloser) Close() error {
-	r.closer()
-	return nil
-}
-
-// ToReader converts a proto.Message into an io.ReadCloser.
-func ToReader(message proto.Message, encoding transport.Encoding) (io.ReadCloser, error) {
-	messageData, cleanup, err := marshal(encoding, message)
-	if err != nil {
-		return nil, err
-	}
-	if messageData != nil {
-		return readCloser{Reader: bytes.NewReader(messageData), closer: cleanup}, nil
-	}
-	return nil, nil
 }
 
 // CastError returns an error saying that generated code could not properly cast a proto.Message to it's expected type.

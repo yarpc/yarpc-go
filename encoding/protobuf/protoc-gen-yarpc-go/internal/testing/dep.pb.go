@@ -35,6 +35,8 @@ It has these top-level messages:
 	GetValueResponse
 	SetValueRequest
 	FireRequest
+	HelloRequest
+	HelloResponse
 	Foo
 */
 package testing

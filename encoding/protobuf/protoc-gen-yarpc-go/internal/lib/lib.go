@@ -60,8 +60,8 @@ type {{$service.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives the single {{$method.ResponseType.GoType $packagePath}} when sending is done.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	ResponseMeta() *transport.ResponseMeta
+	Request() *transport.StreamRequest
+	Response() *transport.StreamResponse
 	Send(*{{$method.RequestType.GoType $packagePath}}) error
 	CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error)
 }
@@ -71,8 +71,8 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	ResponseMeta() *transport.ResponseMeta
+	Request() *transport.StreamRequest
+	Response() *transport.StreamResponse
 	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
 }
 {{end}}
@@ -81,8 +81,8 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCClient sends {{$method.RequestType.GoType $packagePath}}s and receives {{$method.ResponseType.GoType $packagePath}}s, returning io.EOF when the stream is complete.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCClient interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	ResponseMeta() *transport.ResponseMeta
+	Request() *transport.StreamRequest
+	Response() *transport.StreamResponse
 	Send(*{{$method.RequestType.GoType $packagePath}}) error
 	Recv() (*{{$method.ResponseType.GoType $packagePath}}, error)
 	CloseSend() error
@@ -114,8 +114,8 @@ type {{$service.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	SetResponseMeta(*transport.ResponseMeta)
+	Request() *transport.StreamRequest
+	SetResponse(*transport.StreamResponse)
 	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
 }
 {{end}}
@@ -124,8 +124,8 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer sends {{$method.ResponseType.GoType $packagePath}}s.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	SetResponseMeta(*transport.ResponseMeta)
+	Request() *transport.StreamRequest
+	SetResponse(*transport.StreamResponse)
 	Send(*{{$method.ResponseType.GoType $packagePath}}) error
 }
 {{end}}
@@ -134,8 +134,8 @@ type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 // {{$service.GetName}}Service{{$method.GetName}}YARPCServer receives {{$method.RequestType.GoType $packagePath}}s and sends {{$method.ResponseType.GoType $packagePath}}.
 type {{$service.GetName}}Service{{$method.GetName}}YARPCServer interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	SetResponseMeta(*transport.ResponseMeta)
+	Request() *transport.StreamRequest
+	SetResponse(*transport.StreamResponse)
 	Recv() (*{{$method.RequestType.GoType $packagePath}}, error)
 	Send(*{{$method.ResponseType.GoType $packagePath}}) error
 }
@@ -241,11 +241,7 @@ func (c *_{{$service.GetName}}YARPCCaller) {{$method.GetName}}(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	readCloser, err := protobuf.ToReader(request, stream.RequestMeta().Encoding)
-	if err != nil {
-		return nil, err
-	}
-	if err := stream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser}); err != nil {
+	if err := protobuf.WriteToStream(context.Background(), request, stream); err != nil {
 		return nil, err
 	}
 	return &_{{$service.GetName}}Service{{$method.GetName}}YARPCClient{stream: stream}, nil
@@ -301,23 +297,16 @@ func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream tra
 	if err != nil {
 		return err
 	}
-	readCloser, err := protobuf.ToReader(response, serverStream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return serverStream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), response, serverStream)
 }
 {{end}}
 {{range $method := serverStreamingMethods $service}}
 func (h *_{{$service.GetName}}YARPCHandler) {{$method.GetName}}(serverStream transport.ServerStream) error {
-	src, err := serverStream.RecvMsg()
-	if err != nil {
-		return err
-	}
-    requestMessage, err := protobuf.ToProtoMessage(src, serverStream.RequestMeta().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
+	requestMessage, err := protobuf.ReadFromStream(context.Background(), serverStream, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
 	if requestMessage == nil {
-		return err
-	}
+        return err
+    }
+
 	request, ok := requestMessage.(*{{$method.RequestType.GoType $packagePath}})
 	if !ok {
 		return protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, requestMessage)
@@ -340,34 +329,26 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() c
 	return c.stream.Context()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) RequestMeta() *transport.RequestMeta {
-	return c.stream.RequestMeta()
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.StreamRequest {
+	return c.stream.Request()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) ResponseMeta() *transport.ResponseMeta {
-	return c.stream.ResponseMeta()
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Response() *transport.StreamResponse {
+	return c.stream.Response()
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
-	readCloser, err := protobuf.ToReader(request, c.stream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return c.stream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) CloseAndRecv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
 	if err := c.stream.Close(); err != nil {
 		return nil, err
 	}
-	src, err := c.stream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-    responseMessage, err := protobuf.ToProtoMessage(src, c.stream.RequestMeta().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
+	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
 	if responseMessage == nil {
-		return nil, err
-	}
+        return nil, err
+    }
 	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
 	if !ok {
 		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
@@ -385,23 +366,19 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() c
 	return c.stream.Context()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) RequestMeta() *transport.RequestMeta {
-	return c.stream.RequestMeta()
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.StreamRequest {
+	return c.stream.Request()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) ResponseMeta() *transport.ResponseMeta {
-	return c.stream.ResponseMeta()
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Response() *transport.StreamResponse {
+	return c.stream.Response()
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
-	src, err := c.stream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-    responseMessage, err := protobuf.ToProtoMessage(src, c.stream.RequestMeta().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
+	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
 	if responseMessage == nil {
-		return nil, err
-	}
+        return nil, err
+    }
 	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
 	if !ok {
 		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
@@ -419,31 +396,23 @@ func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Context() c
 	return c.stream.Context()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) RequestMeta() *transport.RequestMeta {
-	return c.stream.RequestMeta()
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Request() *transport.StreamRequest {
+	return c.stream.Request()
 }
 
-func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) ResponseMeta() *transport.ResponseMeta {
-	return c.stream.ResponseMeta()
+func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Response() *transport.StreamResponse {
+	return c.stream.Response()
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Send(request *{{$method.RequestType.GoType $packagePath}}) error {
-	readCloser, err := protobuf.ToReader(request, c.stream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return c.stream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
 func (c *_{{$service.GetName}}Service{{$method.GetName}}YARPCClient) Recv() (*{{$method.ResponseType.GoType $packagePath}}, error) {
-	src, err := c.stream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-    responseMessage, err := protobuf.ToProtoMessage(src, c.stream.RequestMeta().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
+	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, new{{$service.GetName}}Service{{$method.GetName}}YARPCResponse)
 	if responseMessage == nil {
-		return nil, err
-	}
+        return nil, err
+    }
 	response, ok := responseMessage.(*{{$method.ResponseType.GoType $packagePath}})
 	if !ok {
 		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCResponse, responseMessage)
@@ -465,28 +434,24 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() c
 	return s.serverStream.Context()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) RequestMeta() *transport.RequestMeta {
-	return s.serverStream.RequestMeta()
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.StreamRequest {
+	return s.serverStream.Request()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponseMeta(responseMeta *transport.ResponseMeta) {
-	s.serverStream.SetResponseMeta(responseMeta)
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponse(response *transport.StreamResponse) {
+	s.serverStream.SetResponse(response)
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
-	src, err := s.serverStream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-    responseMessage, err := protobuf.ToProtoMessage(src, s.serverStream.RequestMeta().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
-	if responseMessage == nil {
-		return nil, err
-	}
-	response, ok := responseMessage.(*{{$method.RequestType.GoType $packagePath}})
+	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
+	if requestMessage == nil {
+        return nil, err
+    }
+	request, ok := requestMessage.(*{{$method.RequestType.GoType $packagePath}})
 	if !ok {
-		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, responseMessage)
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, requestMessage)
 	}
-	return response, err
+	return request, err
 }
 {{end}}
 
@@ -499,20 +464,16 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() c
 	return s.serverStream.Context()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) RequestMeta() *transport.RequestMeta {
-	return s.serverStream.RequestMeta()
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.StreamRequest {
+	return s.serverStream.Request()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponseMeta(responseMeta *transport.ResponseMeta) {
-	s.serverStream.SetResponseMeta(responseMeta)
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponse(response *transport.StreamResponse) {
+	s.serverStream.SetResponse(response)
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}) error {
-	readCloser, err := protobuf.ToReader(response, s.serverStream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return s.serverStream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 {{end}}
 
@@ -525,36 +486,28 @@ func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Context() c
 	return s.serverStream.Context()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) RequestMeta() *transport.RequestMeta {
-	return s.serverStream.RequestMeta()
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Request() *transport.StreamRequest {
+	return s.serverStream.Request()
 }
 
-func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponseMeta(responseMeta *transport.ResponseMeta) {
-	s.serverStream.SetResponseMeta(responseMeta)
+func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) SetResponse(response *transport.StreamResponse) {
+	s.serverStream.SetResponse(response)
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Recv() (*{{$method.RequestType.GoType $packagePath}}, error) {
-	src, err := s.serverStream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-    responseMessage, err := protobuf.ToProtoMessage(src, s.serverStream.RequestMeta().Encoding, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
-	if responseMessage == nil {
-		return nil, err
-	}
-	response, ok := responseMessage.(*{{$method.RequestType.GoType $packagePath}})
+	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, new{{$service.GetName}}Service{{$method.GetName}}YARPCRequest)
+	if requestMessage == nil {
+        return nil, err
+    }
+	request, ok := requestMessage.(*{{$method.RequestType.GoType $packagePath}})
 	if !ok {
-		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, responseMessage)
+		return nil, protobuf.CastError(empty{{$service.GetName}}Service{{$method.GetName}}YARPCRequest, requestMessage)
 	}
-	return response, err
+	return request, err
 }
 
 func (s *_{{$service.GetName}}Service{{$method.GetName}}YARPCServer) Send(response *{{$method.ResponseType.GoType $packagePath}}) error {
-	readCloser, err := protobuf.ToReader(response, s.serverStream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return s.serverStream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 {{end}}
 

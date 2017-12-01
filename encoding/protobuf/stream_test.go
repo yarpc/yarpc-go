@@ -22,8 +22,11 @@ package protobuf
 
 import (
 	"context"
+	"errors"
+	"io/ioutil"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
@@ -31,52 +34,54 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-func TestInvalidOutboundEncoding(t *testing.T) {
-	client := newClient("foo", &transport.OutboundConfig{CallerName: "foo", Outbounds: transport.Outbounds{ServiceName: "bar"}})
-	_, _, _, _, err := client.buildTransportRequest(context.Background(), "hello", nil, nil)
-	assert.NoError(t, err)
-	client.encoding = "bat"
-	_, _, _, _, err = client.buildTransportRequest(context.Background(), "hello", nil, nil)
-	assert.Equal(t, yarpcerrors.CodeInternal, yarpcerrors.FromError(err).Code())
-}
-
-func TestNonOutboundConfigClient(t *testing.T) {
+func TestReadFromStreamDecodeError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	cc := transporttest.NewMockClientConfig(mockCtrl)
+	ctx := context.Background()
+	wantErr := errors.New("error")
 
-	assert.Panics(t, func() {
-		newClient("test", cc)
-	})
+	stream := transporttest.NewMockClientStream(mockCtrl)
+	stream.EXPECT().ReceiveMessage(ctx).Return(&transport.StreamMessage{
+		Body: ioutil.NopCloser(readErr{err: wantErr}),
+	}, nil)
+	stream.EXPECT().Request().Return(
+		&transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Encoding: Encoding,
+			},
+		},
+	)
+
+	_, err := ReadFromStream(ctx, stream, func() proto.Message { return nil })
+
+	assert.Equal(t, wantErr, err)
 }
 
-func TestInvalidStreamClientEncoding(t *testing.T) {
-	client := &client{
-		serviceName: "test",
-		outboundConfig: &transport.OutboundConfig{
-			Outbounds: transport.Outbounds{},
-		},
-		encoding: transport.Encoding("raw"),
-	}
-
-	_, err := client.CallStream(context.Background(), "somemethod")
-
-	assert.Contains(t, err.Error(), "code:internal")
-	assert.Contains(t, err.Error(), "can only use encodings")
+type readErr struct {
+	err error
 }
 
-func TestNoStreamOutbound(t *testing.T) {
-	client := &client{
-		serviceName: "test",
-		outboundConfig: &transport.OutboundConfig{
-			Outbounds: transport.Outbounds{},
+func (r readErr) Read(p []byte) (n int, err error) {
+	return 0, r.err
+}
+
+func TestWriteToStreamInvalidEncoding(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	ctx := context.Background()
+
+	stream := transporttest.NewMockClientStream(mockCtrl)
+	stream.EXPECT().Request().Return(
+		&transport.StreamRequest{
+			Meta: &transport.RequestMeta{
+				Encoding: transport.Encoding("raw"),
+			},
 		},
-		encoding: Encoding,
-	}
+	)
 
-	_, err := client.CallStream(context.Background(), "somemethod")
+	err := WriteToStream(ctx, nil, stream)
 
-	assert.Contains(t, err.Error(), "code:internal")
-	assert.Contains(t, err.Error(), "no stream outbounds for OutboundConfig")
+	assert.Equal(t, yarpcerrors.Newf(yarpcerrors.CodeInternal, "encoding.Expect should have handled encoding \"raw\" but did not"), err)
 }

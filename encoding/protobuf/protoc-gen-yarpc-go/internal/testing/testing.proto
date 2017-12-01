@@ -43,7 +43,7 @@ service Sink {
   rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}
 }
 
-service Foo {
+service All {
   rpc GetValue(GetValueRequest) returns (GetValueResponse) {}
   rpc SetValue(SetValueRequest) returns (SetValueResponse) {}
   rpc Fire(FireRequest) returns (uber.yarpc.Oneway) {}

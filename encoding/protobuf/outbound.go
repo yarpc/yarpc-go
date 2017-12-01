@@ -73,7 +73,6 @@ func (c *client) Call(
 	}
 	unaryOutbound := c.outboundConfig.Outbounds.Unary
 	if unaryOutbound == nil {
-		// TODO(pedge)
 		return nil, yarpcerrors.InternalErrorf("no unary outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
 	}
 	transportResponse, appErr := unaryOutbound.Call(ctx, transportRequest)
@@ -112,37 +111,9 @@ func (c *client) CallOneway(
 	}
 	onewayOutbound := c.outboundConfig.Outbounds.Oneway
 	if onewayOutbound == nil {
-		// TODO(pedge)
 		return nil, yarpcerrors.InternalErrorf("no oneway outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
 	}
 	return onewayOutbound.CallOneway(ctx, transportRequest)
-}
-
-func (c *client) CallStream(
-	ctx context.Context,
-	requestMethodName string,
-	opts ...yarpc.CallOption,
-) (transport.ClientStream, error) {
-	transportRequestMeta := &transport.RequestMeta{
-		Caller:    c.outboundConfig.CallerName,
-		Service:   c.outboundConfig.Outbounds.ServiceName,
-		Procedure: procedure.ToName(c.serviceName, requestMethodName),
-		Encoding:  c.encoding,
-	}
-	call := apiencoding.NewOutboundCall(encoding.FromOptions(opts)...)
-	ctx, err := call.WriteToRequestMeta(ctx, transportRequestMeta)
-	if err != nil {
-		return nil, err
-	}
-	if transportRequestMeta.Encoding != Encoding && transportRequestMeta.Encoding != JSONEncoding {
-		return nil, yarpcerrors.InternalErrorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, transportRequestMeta.Encoding)
-	}
-	streamOutbound := c.outboundConfig.Outbounds.Stream
-	if streamOutbound == nil {
-		// TODO(pedge)
-		return nil, yarpcerrors.InternalErrorf("no stream outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
-	}
-	return streamOutbound.CallStream(ctx, transportRequestMeta)
 }
 
 func (c *client) buildTransportRequest(ctx context.Context, requestMethodName string, request proto.Message, options []yarpc.CallOption) (context.Context, *apiencoding.OutboundCall, *transport.Request, func(), error) {
@@ -171,4 +142,32 @@ func (c *client) buildTransportRequest(ctx context.Context, requestMethodName st
 		return ctx, call, transportRequest, cleanup, nil
 	}
 	return ctx, call, transportRequest, nil, nil
+}
+
+func (c *client) CallStream(
+	ctx context.Context,
+	requestMethodName string,
+	opts ...yarpc.CallOption,
+) (transport.ClientStream, error) {
+	streamRequest := &transport.StreamRequest{
+		Meta: &transport.RequestMeta{
+			Caller:    c.outboundConfig.CallerName,
+			Service:   c.outboundConfig.Outbounds.ServiceName,
+			Procedure: procedure.ToName(c.serviceName, requestMethodName),
+			Encoding:  c.encoding,
+		},
+	}
+	call := apiencoding.NewOutboundCall(encoding.FromOptions(opts)...)
+	ctx, err := call.WriteToRequestMeta(ctx, streamRequest.Meta)
+	if err != nil {
+		return nil, err
+	}
+	if streamRequest.Meta.Encoding != Encoding && streamRequest.Meta.Encoding != JSONEncoding {
+		return nil, yarpcerrors.InternalErrorf("can only use encodings %q or %q, but %q was specified", Encoding, JSONEncoding, streamRequest.Meta.Encoding)
+	}
+	streamOutbound := c.outboundConfig.Outbounds.Stream
+	if streamOutbound == nil {
+		return nil, yarpcerrors.InternalErrorf("no stream outbounds for OutboundConfig %s", c.outboundConfig.CallerName)
+	}
+	return streamOutbound.CallStream(ctx, streamRequest)
 }

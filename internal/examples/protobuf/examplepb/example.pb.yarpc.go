@@ -271,8 +271,8 @@ type FooYARPCClient interface {
 // FooServiceEchoOutYARPCClient sends EchoOutRequests and receives the single EchoOutResponse when sending is done.
 type FooServiceEchoOutYARPCClient interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	ResponseMeta() *transport.ResponseMeta
+	Request() *transport.StreamRequest
+	Response() *transport.StreamResponse
 	Send(*EchoOutRequest) error
 	CloseAndRecv() (*EchoOutResponse, error)
 }
@@ -280,16 +280,16 @@ type FooServiceEchoOutYARPCClient interface {
 // FooServiceEchoInYARPCClient receives EchoInResponses, returning io.EOF when the stream is complete.
 type FooServiceEchoInYARPCClient interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	ResponseMeta() *transport.ResponseMeta
+	Request() *transport.StreamRequest
+	Response() *transport.StreamResponse
 	Recv() (*EchoInResponse, error)
 }
 
 // FooServiceEchoBothYARPCClient sends EchoBothRequests and receives EchoBothResponses, returning io.EOF when the stream is complete.
 type FooServiceEchoBothYARPCClient interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	ResponseMeta() *transport.ResponseMeta
+	Request() *transport.StreamRequest
+	Response() *transport.StreamResponse
 	Send(*EchoBothRequest) error
 	Recv() (*EchoBothResponse, error)
 	CloseSend() error
@@ -316,24 +316,24 @@ type FooYARPCServer interface {
 // FooServiceEchoOutYARPCServer receives EchoOutRequests.
 type FooServiceEchoOutYARPCServer interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	SetResponseMeta(*transport.ResponseMeta)
+	Request() *transport.StreamRequest
+	SetResponse(*transport.StreamResponse)
 	Recv() (*EchoOutRequest, error)
 }
 
 // FooServiceEchoInYARPCServer sends EchoInResponses.
 type FooServiceEchoInYARPCServer interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	SetResponseMeta(*transport.ResponseMeta)
+	Request() *transport.StreamRequest
+	SetResponse(*transport.StreamResponse)
 	Send(*EchoInResponse) error
 }
 
 // FooServiceEchoBothYARPCServer receives EchoBothRequests and sends EchoBothResponse.
 type FooServiceEchoBothYARPCServer interface {
 	Context() context.Context
-	RequestMeta() *transport.RequestMeta
-	SetResponseMeta(*transport.ResponseMeta)
+	Request() *transport.StreamRequest
+	SetResponse(*transport.StreamResponse)
 	Recv() (*EchoBothRequest, error)
 	Send(*EchoBothResponse) error
 }
@@ -395,11 +395,7 @@ func (c *_FooYARPCCaller) EchoIn(ctx context.Context, request *EchoInRequest, op
 	if err != nil {
 		return nil, err
 	}
-	readCloser, err := protobuf.ToReader(request, stream.RequestMeta().Encoding)
-	if err != nil {
-		return nil, err
-	}
-	if err := stream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser}); err != nil {
+	if err := protobuf.WriteToStream(context.Background(), request, stream); err != nil {
 		return nil, err
 	}
 	return &_FooServiceEchoInYARPCClient{stream: stream}, nil
@@ -422,22 +418,15 @@ func (h *_FooYARPCHandler) EchoOut(serverStream transport.ServerStream) error {
 	if err != nil {
 		return err
 	}
-	readCloser, err := protobuf.ToReader(response, serverStream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return serverStream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), response, serverStream)
 }
 
 func (h *_FooYARPCHandler) EchoIn(serverStream transport.ServerStream) error {
-	src, err := serverStream.RecvMsg()
-	if err != nil {
-		return err
-	}
-	requestMessage, err := protobuf.ToProtoMessage(src, serverStream.RequestMeta().Encoding, newFooServiceEchoInYARPCRequest)
+	requestMessage, err := protobuf.ReadFromStream(context.Background(), serverStream, newFooServiceEchoInYARPCRequest)
 	if requestMessage == nil {
 		return err
 	}
+
 	request, ok := requestMessage.(*EchoInRequest)
 	if !ok {
 		return protobuf.CastError(emptyFooServiceEchoInYARPCRequest, requestMessage)
@@ -457,31 +446,23 @@ func (c *_FooServiceEchoOutYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_FooServiceEchoOutYARPCClient) RequestMeta() *transport.RequestMeta {
-	return c.stream.RequestMeta()
+func (c *_FooServiceEchoOutYARPCClient) Request() *transport.StreamRequest {
+	return c.stream.Request()
 }
 
-func (c *_FooServiceEchoOutYARPCClient) ResponseMeta() *transport.ResponseMeta {
-	return c.stream.ResponseMeta()
+func (c *_FooServiceEchoOutYARPCClient) Response() *transport.StreamResponse {
+	return c.stream.Response()
 }
 
 func (c *_FooServiceEchoOutYARPCClient) Send(request *EchoOutRequest) error {
-	readCloser, err := protobuf.ToReader(request, c.stream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return c.stream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
 func (c *_FooServiceEchoOutYARPCClient) CloseAndRecv() (*EchoOutResponse, error) {
 	if err := c.stream.Close(); err != nil {
 		return nil, err
 	}
-	src, err := c.stream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-	responseMessage, err := protobuf.ToProtoMessage(src, c.stream.RequestMeta().Encoding, newFooServiceEchoOutYARPCResponse)
+	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoOutYARPCResponse)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -500,20 +481,16 @@ func (c *_FooServiceEchoInYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_FooServiceEchoInYARPCClient) RequestMeta() *transport.RequestMeta {
-	return c.stream.RequestMeta()
+func (c *_FooServiceEchoInYARPCClient) Request() *transport.StreamRequest {
+	return c.stream.Request()
 }
 
-func (c *_FooServiceEchoInYARPCClient) ResponseMeta() *transport.ResponseMeta {
-	return c.stream.ResponseMeta()
+func (c *_FooServiceEchoInYARPCClient) Response() *transport.StreamResponse {
+	return c.stream.Response()
 }
 
 func (c *_FooServiceEchoInYARPCClient) Recv() (*EchoInResponse, error) {
-	src, err := c.stream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-	responseMessage, err := protobuf.ToProtoMessage(src, c.stream.RequestMeta().Encoding, newFooServiceEchoInYARPCResponse)
+	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoInYARPCResponse)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -532,28 +509,20 @@ func (c *_FooServiceEchoBothYARPCClient) Context() context.Context {
 	return c.stream.Context()
 }
 
-func (c *_FooServiceEchoBothYARPCClient) RequestMeta() *transport.RequestMeta {
-	return c.stream.RequestMeta()
+func (c *_FooServiceEchoBothYARPCClient) Request() *transport.StreamRequest {
+	return c.stream.Request()
 }
 
-func (c *_FooServiceEchoBothYARPCClient) ResponseMeta() *transport.ResponseMeta {
-	return c.stream.ResponseMeta()
+func (c *_FooServiceEchoBothYARPCClient) Response() *transport.StreamResponse {
+	return c.stream.Response()
 }
 
 func (c *_FooServiceEchoBothYARPCClient) Send(request *EchoBothRequest) error {
-	readCloser, err := protobuf.ToReader(request, c.stream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return c.stream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), request, c.stream)
 }
 
 func (c *_FooServiceEchoBothYARPCClient) Recv() (*EchoBothResponse, error) {
-	src, err := c.stream.RecvMsg()
-	if err != nil {
-		return nil, err
-	}
-	responseMessage, err := protobuf.ToProtoMessage(src, c.stream.RequestMeta().Encoding, newFooServiceEchoBothYARPCResponse)
+	responseMessage, err := protobuf.ReadFromStream(context.Background(), c.stream, newFooServiceEchoBothYARPCResponse)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -576,28 +545,24 @@ func (s *_FooServiceEchoOutYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_FooServiceEchoOutYARPCServer) RequestMeta() *transport.RequestMeta {
-	return s.serverStream.RequestMeta()
+func (s *_FooServiceEchoOutYARPCServer) Request() *transport.StreamRequest {
+	return s.serverStream.Request()
 }
 
-func (s *_FooServiceEchoOutYARPCServer) SetResponseMeta(responseMeta *transport.ResponseMeta) {
-	s.serverStream.SetResponseMeta(responseMeta)
+func (s *_FooServiceEchoOutYARPCServer) SetResponse(response *transport.StreamResponse) {
+	s.serverStream.SetResponse(response)
 }
 
 func (s *_FooServiceEchoOutYARPCServer) Recv() (*EchoOutRequest, error) {
-	src, err := s.serverStream.RecvMsg()
-	if err != nil {
+	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newFooServiceEchoOutYARPCRequest)
+	if requestMessage == nil {
 		return nil, err
 	}
-	responseMessage, err := protobuf.ToProtoMessage(src, s.serverStream.RequestMeta().Encoding, newFooServiceEchoOutYARPCRequest)
-	if responseMessage == nil {
-		return nil, err
-	}
-	response, ok := responseMessage.(*EchoOutRequest)
+	request, ok := requestMessage.(*EchoOutRequest)
 	if !ok {
-		return nil, protobuf.CastError(emptyFooServiceEchoOutYARPCRequest, responseMessage)
+		return nil, protobuf.CastError(emptyFooServiceEchoOutYARPCRequest, requestMessage)
 	}
-	return response, err
+	return request, err
 }
 
 type _FooServiceEchoInYARPCServer struct {
@@ -608,20 +573,16 @@ func (s *_FooServiceEchoInYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_FooServiceEchoInYARPCServer) RequestMeta() *transport.RequestMeta {
-	return s.serverStream.RequestMeta()
+func (s *_FooServiceEchoInYARPCServer) Request() *transport.StreamRequest {
+	return s.serverStream.Request()
 }
 
-func (s *_FooServiceEchoInYARPCServer) SetResponseMeta(responseMeta *transport.ResponseMeta) {
-	s.serverStream.SetResponseMeta(responseMeta)
+func (s *_FooServiceEchoInYARPCServer) SetResponse(response *transport.StreamResponse) {
+	s.serverStream.SetResponse(response)
 }
 
 func (s *_FooServiceEchoInYARPCServer) Send(response *EchoInResponse) error {
-	readCloser, err := protobuf.ToReader(response, s.serverStream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return s.serverStream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 
 type _FooServiceEchoBothYARPCServer struct {
@@ -632,36 +593,28 @@ func (s *_FooServiceEchoBothYARPCServer) Context() context.Context {
 	return s.serverStream.Context()
 }
 
-func (s *_FooServiceEchoBothYARPCServer) RequestMeta() *transport.RequestMeta {
-	return s.serverStream.RequestMeta()
+func (s *_FooServiceEchoBothYARPCServer) Request() *transport.StreamRequest {
+	return s.serverStream.Request()
 }
 
-func (s *_FooServiceEchoBothYARPCServer) SetResponseMeta(responseMeta *transport.ResponseMeta) {
-	s.serverStream.SetResponseMeta(responseMeta)
+func (s *_FooServiceEchoBothYARPCServer) SetResponse(response *transport.StreamResponse) {
+	s.serverStream.SetResponse(response)
 }
 
 func (s *_FooServiceEchoBothYARPCServer) Recv() (*EchoBothRequest, error) {
-	src, err := s.serverStream.RecvMsg()
-	if err != nil {
+	requestMessage, err := protobuf.ReadFromStream(context.Background(), s.serverStream, newFooServiceEchoBothYARPCRequest)
+	if requestMessage == nil {
 		return nil, err
 	}
-	responseMessage, err := protobuf.ToProtoMessage(src, s.serverStream.RequestMeta().Encoding, newFooServiceEchoBothYARPCRequest)
-	if responseMessage == nil {
-		return nil, err
-	}
-	response, ok := responseMessage.(*EchoBothRequest)
+	request, ok := requestMessage.(*EchoBothRequest)
 	if !ok {
-		return nil, protobuf.CastError(emptyFooServiceEchoBothYARPCRequest, responseMessage)
+		return nil, protobuf.CastError(emptyFooServiceEchoBothYARPCRequest, requestMessage)
 	}
-	return response, err
+	return request, err
 }
 
 func (s *_FooServiceEchoBothYARPCServer) Send(response *EchoBothResponse) error {
-	readCloser, err := protobuf.ToReader(response, s.serverStream.RequestMeta().Encoding)
-	if err != nil {
-		return err
-	}
-	return s.serverStream.SendMsg(&transport.StreamMessage{ReadCloser: readCloser})
+	return protobuf.WriteToStream(context.Background(), response, s.serverStream)
 }
 
 func newFooServiceEchoOutYARPCRequest() proto.Message {
