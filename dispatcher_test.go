@@ -60,6 +60,42 @@ func basicDispatcher(t testing.TB) *Dispatcher {
 	return NewDispatcher(basicConfig(t))
 }
 
+func TestDispatcherNamePanic(t *testing.T) {
+	tests := []struct {
+		name        string
+		serviceName string
+	}{
+		{
+			name: "no service name",
+		},
+		{
+			name:        "invalid service name",
+			serviceName: "--",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Panics(t, func() {
+				NewDispatcher(Config{Name: tt.serviceName})
+			},
+				"expected to panic")
+		})
+	}
+}
+
+func TestDispatcherRegisterPanic(t *testing.T) {
+	d := basicDispatcher(t)
+
+	require.Panics(t, func() {
+		d.Register([]transport.Procedure{
+			{
+				HandlerSpec: transport.HandlerSpec{},
+			},
+		})
+	}, "expected unknown handler type to panic")
+}
+
 func TestInboundsReturnsACopy(t *testing.T) {
 	dispatcher := basicDispatcher(t)
 
