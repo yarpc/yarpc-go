@@ -112,7 +112,7 @@ func (s *fakeStream) ReceiveMessage(context.Context) (*transport.StreamMessage, 
 	return nil, nil
 }
 
-func (s *fakeStream) Close() error {
+func (s *fakeStream) Close(context.Context) error {
 	return nil
 }
 
