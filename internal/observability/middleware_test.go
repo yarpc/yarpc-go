@@ -54,7 +54,7 @@ func TestMiddlewareLogging(t *testing.T) {
 		RoutingDelegate: "routing-delegate",
 		Body:            strings.NewReader("body"),
 	}
-	reqMeta := req.ToRequestMeta()
+	sreq := &transport.StreamRequest{Meta: req.ToRequestMeta()}
 	failed := errors.New("fail")
 
 	baseFields := func() []zapcore.Field {
@@ -199,12 +199,12 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream inbound", func(t *testing.T) {
-			err := mw.HandleStream(&fakeStream{ctx: context.Background(), requestMeta: reqMeta}, fakeHandler{tt.err, false})
+			err := mw.HandleStream(&fakeStream{ctx: context.Background(), request: sreq}, fakeHandler{tt.err, false})
 			checkErr(err)
 			logContext := append(
 				baseFields(),
 				zap.String("direction", _directionInbound),
-				zap.String("rpcType", "Stream"),
+				zap.String("rpcType", "Streaming"),
 			)
 			logContext = append(logContext, tt.wantFields...)
 			expected := observer.LoggedEntry{
@@ -217,12 +217,12 @@ func TestMiddlewareLogging(t *testing.T) {
 			assert.Equal(t, expected, getLog(), "Unexpected log entry written.")
 		})
 		t.Run(tt.desc+", stream outbound", func(t *testing.T) {
-			clientStream, err := mw.CallStream(context.Background(), reqMeta, fakeOutbound{err: tt.err})
+			clientStream, err := mw.CallStream(context.Background(), sreq, fakeOutbound{err: tt.err})
 			checkErr(err)
 			logContext := append(
 				baseFields(),
 				zap.String("direction", _directionOutbound),
-				zap.String("rpcType", "Stream"),
+				zap.String("rpcType", "Streaming"),
 			)
 			logContext = append(logContext, tt.wantFields...)
 			if tt.err == nil {
