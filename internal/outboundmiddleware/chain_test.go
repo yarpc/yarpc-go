@@ -29,9 +29,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/middleware/middlewaretest"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/api/transport/transporttest"
+	"go.uber.org/yarpc/internal/introspection"
 	"go.uber.org/yarpc/internal/testtime"
 )
 
@@ -152,4 +155,94 @@ func TestOnewayChain(t *testing.T) {
 			assert.Equal(t, res, gotRes, "expected response to match")
 		})
 	}
+}
+
+func TestEmptyChain(t *testing.T) {
+	errMsg := "expected nop Outbound"
+
+	t.Run("unary", func(t *testing.T) {
+		require.Equal(t, middleware.NopUnaryOutbound, UnaryChain(), errMsg)
+	})
+
+	t.Run("oneway", func(t *testing.T) {
+		require.Equal(t, middleware.NopOnewayOutbound, OnewayChain(), errMsg)
+	})
+}
+
+func TestSingleOutboundChain(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	t.Run("unary", func(t *testing.T) {
+		out := middlewaretest.NewMockUnaryOutbound(ctrl)
+		require.Equal(t, out, UnaryChain(out))
+	})
+
+	t.Run("oneway", func(t *testing.T) {
+		out := middlewaretest.NewMockOnewayOutbound(ctrl)
+		require.Equal(t, out, OnewayChain(out))
+	})
+}
+
+func TestUnaryChainExec(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	out := transporttest.NewMockUnaryOutbound(ctrl)
+
+	chain := &unaryChainExec{Final: out}
+
+	// start
+	out.EXPECT().Start().Return(nil)
+	assert.NoError(t, chain.Start(), "could not start outbound")
+
+	// transports
+	out.EXPECT().Transports()
+	chain.Transports()
+
+	// is running
+	out.EXPECT().IsRunning().Return(true)
+	assert.True(t, chain.IsRunning(), "expected outbound to be running")
+
+	// stop
+	out.EXPECT().Stop().Return(nil)
+	assert.NoError(t, chain.Stop(), "unexpected error stopping outbound")
+}
+
+func TestOnewayChainExec(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	out := transporttest.NewMockOnewayOutbound(ctrl)
+
+	chain := &onewayChainExec{Final: out}
+
+	// start
+	out.EXPECT().Start().Return(nil)
+	assert.NoError(t, chain.Start(), "could not start outbound")
+
+	// transports
+	out.EXPECT().Transports()
+	chain.Transports()
+
+	// is running
+	out.EXPECT().IsRunning().Return(true)
+	assert.True(t, chain.IsRunning(), "expected outbound to be running")
+
+	// stop
+	out.EXPECT().Stop().Return(nil)
+	assert.NoError(t, chain.Stop(), "unexpected error stopping outbound")
+}
+
+func TestIntrospect(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	expectStatus := introspection.OutboundStatusNotSupported
+	errMsg := "expected not supported status"
+
+	t.Run("unary", func(t *testing.T) {
+		out := transporttest.NewMockUnaryOutbound(ctrl)
+		chain := &unaryChainExec{Final: out}
+		assert.Equal(t, expectStatus, chain.Introspect(), errMsg)
+	})
+
+	t.Run("oneway", func(t *testing.T) {
+		out := transporttest.NewMockOnewayOutbound(ctrl)
+		chain := &onewayChainExec{Final: out}
+		assert.Equal(t, expectStatus, chain.Introspect(), errMsg)
+	})
 }
