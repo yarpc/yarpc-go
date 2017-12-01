@@ -139,7 +139,7 @@ func (cs *clientStream) SendMessage(_ context.Context, m *transport.StreamMessag
 	return nil
 }
 
-func (cs *clientStream) ReceiveMessage(_ context.Context) (*transport.StreamMessage, error) {
+func (cs *clientStream) ReceiveMessage(context.Context) (*transport.StreamMessage, error) {
 	// TODO use buffers for performance reasons.
 	var msg []byte
 	if err := cs.stream.RecvMsg(&msg); err != nil {
@@ -148,7 +148,7 @@ func (cs *clientStream) ReceiveMessage(_ context.Context) (*transport.StreamMess
 	return &transport.StreamMessage{Body: ioutil.NopCloser(bytes.NewReader(msg))}, nil
 }
 
-func (cs *clientStream) Close() error {
+func (cs *clientStream) Close(context.Context) error {
 	_ = cs.closeWithErr(nil)
 	return cs.stream.CloseSend()
 }

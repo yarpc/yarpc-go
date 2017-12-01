@@ -105,6 +105,6 @@ func WantStreamError(wantErrMsgs ...string) api.ClientStreamRequestOption {
 // CloseStream is an action to close a client stream.
 func CloseStream() api.ClientStreamAction {
 	return api.ClientStreamActionFunc(func(t testing.TB, c transport.ClientStream) {
-		require.NoError(t, c.Close())
+		require.NoError(t, c.Close(context.Background()))
 	})
 }
