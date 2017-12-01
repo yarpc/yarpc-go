@@ -23,7 +23,9 @@ package http
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestCodes(t *testing.T) {
@@ -36,6 +38,32 @@ func TestCodes(t *testing.T) {
 			require.True(t, ok)
 			require.Contains(t, getCodes, code)
 			require.Contains(t, getCodes, statusCodeToBestCode(statusCode))
+		})
+	}
+}
+
+func TestUnspecifiedCodes(t *testing.T) {
+	tests := []struct {
+		name string
+		give int
+		want yarpcerrors.Code
+	}{
+		{
+			name: "code invalid argument",
+			give: 450, // test for an x in range: [400, 500)
+			want: yarpcerrors.CodeInvalidArgument,
+		},
+		{
+			name: "code unkown",
+			give: 1000,
+			want: yarpcerrors.CodeUnknown,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errCode := statusCodeToBestCode(tt.give)
+			assert.Equal(t, tt.want, errCode, "yarpc error code did not match")
 		})
 	}
 }
