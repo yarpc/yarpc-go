@@ -44,7 +44,8 @@ func TestCall(t *testing.T) {
 		out := transporttest.NewMockUnaryOutbound(ctrl)
 		validatorOut := UnaryValidatorOutbound{out}
 
-		ctx, _ := context.WithTimeout(ctx, time.Second)
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
 		out.EXPECT().Call(ctx, req).Return(nil, nil)
 
 		_, err := validatorOut.Call(ctx, req)
@@ -55,7 +56,8 @@ func TestCall(t *testing.T) {
 		out := transporttest.NewMockOnewayOutbound(ctrl)
 		validatorOut := OnewayValidatorOutbound{out}
 
-		ctx, _ := context.WithTimeout(ctx, time.Second)
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
 		out.EXPECT().CallOneway(ctx, req).Return(nil, nil)
 
 		_, err := validatorOut.CallOneway(ctx, req)
