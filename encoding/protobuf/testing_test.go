@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package testing
+package protobuf_test
 
 import (
 	"context"
@@ -198,7 +198,9 @@ func fire(sinkYARPCClient examplepb.SinkYARPCClient, value string, options ...ya
 }
 
 func echoOut(fooYARPCClient examplepb.FooYARPCClient, messages []string, options ...yarpc.CallOption) ([]string, error) {
-	client, err := fooYARPCClient.EchoOut(context.Background(), options...)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	client, err := fooYARPCClient.EchoOut(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +217,9 @@ func echoOut(fooYARPCClient examplepb.FooYARPCClient, messages []string, options
 }
 
 func echoIn(fooYARPCClient examplepb.FooYARPCClient, message string, numResponses int, options ...yarpc.CallOption) ([]string, error) {
-	client, err := fooYARPCClient.EchoIn(context.Background(), &examplepb.EchoInRequest{Message: message, NumResponses: int64(numResponses)}, options...)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	client, err := fooYARPCClient.EchoIn(ctx, &examplepb.EchoInRequest{Message: message, NumResponses: int64(numResponses)}, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +234,9 @@ func echoIn(fooYARPCClient examplepb.FooYARPCClient, message string, numResponse
 }
 
 func echoBoth(fooYARPCClient examplepb.FooYARPCClient, message string, numResponses int, count int, options ...yarpc.CallOption) ([]string, error) {
-	client, err := fooYARPCClient.EchoBoth(context.Background(), options...)
+	ctx, cancel := context.WithTimeout(context.Background(), testtime.Second)
+	defer cancel()
+	client, err := fooYARPCClient.EchoBoth(ctx, options...)
 	if err != nil {
 		return nil, err
 	}
