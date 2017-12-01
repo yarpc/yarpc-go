@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/internal/examples/streaming"
@@ -55,7 +56,9 @@ func do() error {
 	}
 	defer dispatcher.Stop()
 
-	stream, err := client.HelloThere(context.Background(), yarpc.WithHeader("test", "testtest"))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	stream, err := client.HelloThere(ctx, yarpc.WithHeader("test", "testtest"))
 	if err != nil {
 		return fmt.Errorf("failed to create stream: %s", err.Error())
 	}
