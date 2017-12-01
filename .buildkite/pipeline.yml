@@ -4,11 +4,15 @@ steps:
       docker-compose#v1.5.2:
         build: yarpc-go-1.8
         image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
+    agents:
+      queue: 'uber-builders'
   - name: ":docker: :package: 1.9"
     plugins:
       docker-compose#v1.5.2:
         build: yarpc-go-1.9
         image-repository: 296822479253.dkr.ecr.us-east-2.amazonaws.com/fusionjs
+    agents:
+      queue: 'uber-builders'
   - wait
   - name: ":go: 1.8 test - %n"
     command: "make test"
