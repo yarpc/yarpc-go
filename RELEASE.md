@@ -32,7 +32,6 @@ This document outlines how to create a release of yarpc-go
 4.  Alter the release date in CHANGELOG.md for `$VERSION` using the format
     `YYYY-MM-DD` and remove the trailing `-dev`, making the latest version
     match `$VERSION`.
-    -
 
     ```diff
     -v1.21.0-dev (unreleased)
