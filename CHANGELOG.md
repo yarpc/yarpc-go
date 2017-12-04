@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.25.0-dev (unreleased)
+v1.25.0 (2017-12-04)
 --------------------
 
 -   Validate all oneway calls have a TTL.
