@@ -38,7 +38,7 @@ func TestErrPeerHasNoReferenceToSubscriber(t *testing.T) {
 
 	wantErr := fmt.Sprintf("peer (%v) has no reference to peer subscriber (%v)", identifier, subscriber)
 
-	err := &peer.ErrPeerHasNoReferenceToSubscriber{identifier, subscriber}
+	err := &peer.ErrPeerHasNoReferenceToSubscriber{PeerIdentifier: identifier, PeerSubscriber: subscriber}
 	assert.Equal(t, wantErr, err.Error())
 }
 
@@ -48,7 +48,7 @@ func TestErrTransportHasNoReferenceToPeer2(t *testing.T) {
 
 	wantErr := fmt.Sprintf("transport %q has no reference to peer %q", transportName, peerIdentifier)
 
-	err := &peer.ErrTransportHasNoReferenceToPeer{transportName, peerIdentifier}
+	err := &peer.ErrTransportHasNoReferenceToPeer{TransportName: transportName, PeerIdentifier: peerIdentifier}
 	assert.Equal(t, wantErr, err.Error())
 }
 
@@ -58,7 +58,7 @@ func TestErrInvalidPeerType(t *testing.T) {
 
 	wantErr := fmt.Sprintf("expected peer type (%s) but got peer (%v)", expectedType, peerIdentifier)
 
-	err := &peer.ErrInvalidPeerType{expectedType, peerIdentifier}
+	err := &peer.ErrInvalidPeerType{ExpectedType: expectedType, PeerIdentifier: peerIdentifier}
 	assert.Equal(t, wantErr, err.Error())
 }
 
@@ -84,7 +84,7 @@ func TestErrInvalidPeerConversion(t *testing.T) {
 
 	wantErr := fmt.Sprintf("cannot convert peer (%v) to type %s", p, expectedType)
 
-	err := &peer.ErrInvalidPeerConversion{p, expectedType}
+	err := &peer.ErrInvalidPeerConversion{Peer: p, ExpectedType: expectedType}
 	assert.Equal(t, wantErr, err.Error())
 }
 
@@ -94,7 +94,7 @@ func TestErrInvalidTransportConversion(t *testing.T) {
 
 	wantErr := fmt.Sprintf("cannot convert transport (%v) to type %s", transport, expectedType)
 
-	err := &peer.ErrInvalidTransportConversion{transport, expectedType}
+	err := &peer.ErrInvalidTransportConversion{Transport: transport, ExpectedType: expectedType}
 	assert.Equal(t, wantErr, err.Error())
 }
 
