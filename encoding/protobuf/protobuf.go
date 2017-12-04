@@ -21,7 +21,9 @@
 package protobuf
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"reflect"
 	"strings"
 
@@ -242,4 +244,49 @@ func uniqueLowercaseStrings(s []string) []string {
 		c = append(c, key)
 	}
 	return c
+}
+
+// ReadFromStream reads a proto.Message from a stream.
+func ReadFromStream(
+	ctx context.Context,
+	stream transport.Stream,
+	newMessage func() proto.Message,
+) (proto.Message, error) {
+	streamMsg, err := stream.ReceiveMessage(ctx)
+	if err != nil {
+		return nil, err
+	}
+	message := newMessage()
+	if err := unmarshal(stream.Request().Meta.Encoding, streamMsg.Body, message); err != nil {
+		streamMsg.Body.Close()
+		return nil, err
+	}
+	if streamMsg.Body != nil {
+		streamMsg.Body.Close()
+	}
+	return message, nil
+}
+
+// WriteToStream writes a proto.Message to a stream.
+func WriteToStream(ctx context.Context, message proto.Message, stream transport.Stream) error {
+	messageData, cleanup, err := marshal(stream.Request().Meta.Encoding, message)
+	if err != nil {
+		return err
+	}
+	return stream.SendMessage(
+		ctx,
+		&transport.StreamMessage{
+			Body: readCloser{Reader: bytes.NewReader(messageData), closer: cleanup},
+		},
+	)
+}
+
+type readCloser struct {
+	io.Reader
+	closer func()
+}
+
+func (r readCloser) Close() error {
+	r.closer()
+	return nil
 }
