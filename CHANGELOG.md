@@ -4,7 +4,12 @@ Releases
 v1.25.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Validate all oneway calls have a TTL.
+-   Make Dispatcher start/stop thread-safe.
+-   Add opentracing tags to denote the YARPC version and Golang version to the
+    gRPC and HTTP transports.
+-   Provide a better error message if outbound calls are made or inbound calls
+    are received before Dispatcher start or after Dispatcher stop.
 
 
 v1.24.1 (2017-11-27)
