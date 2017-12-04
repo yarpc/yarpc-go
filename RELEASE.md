@@ -7,54 +7,57 @@ This document outlines how to create a release of yarpc-go
 
     ```
     # This is the version being released.
-    $ VERSION=1.21.0
+    VERSION=1.21.0
 
     # This is the branch from which $VERSION will be released.
     # This is almost always dev.
-    $ BRANCH=dev
+    BRANCH=dev
     ```
+
+    ** If you are copying/pasting commands, make sure you actually set the right value for VERSION above. **
 
 2.  Make sure you have the latest master.
 
     ```
-    $ git checkout master
-    $ git pull
+    git checkout master
+    git pull
     ```
 
 3.  Merge the branch being released into master.
 
     ```
-    $ git merge $BRANCH
+    git merge $BRANCH
     ```
 
 4.  Alter the release date in CHANGELOG.md for `$VERSION` using the format
-    `YYYY-MM-DD`.
+    `YYYY-MM-DD` and remove the trailing `-dev`, making the latest version
+    match `$VERSION`.
 
     ```diff
     -v1.21.0-dev (unreleased)
-    +v1.21.0-dev (2017-10-23)
+    +v1.21.0 (2017-10-23)
     ```
 
 5.  Update the version number in version.go and verify that it matches what is
     in the changelog.
 
     ```
-    $ sed -i '' -e "s/^const Version =.*/const Version = \"$VERSION\"/" version.go
-    $ make verifyversion
+    sed -i '' -e "s/^const Version =.*/const Version = \"$VERSION\"/" version.go
+    make verifyversion
     ```
 
 6.  Create a commit for the release.
 
     ```
-    $ git add version.go CHANGELOG.md
-    $ git commit -m "Preparing release v$VERSION"
+    git add version.go CHANGELOG.md
+    git commit -m "Preparing release v$VERSION"
     ```
 
 7.  Tag and push the release.
 
     ```
-    $ git tag -a "v$VERSION" -m "v$VERSION"
-    $ git push origin master "v$VERSION"
+    git tag -a "v$VERSION" -m "v$VERSION"
+    git push origin master "v$VERSION"
     ```
 
 8.  Go to <https://travis-ci.org/yarpc/yarpc-go/builds> and cancel the build
@@ -71,8 +74,8 @@ This document outlines how to create a release of yarpc-go
 10. Switch back to development.
 
     ```
-    $ git checkout $BRANCH
-    $ git merge master
+    git checkout $BRANCH
+    git merge master
     ```
 
 11. Add a placeholder for the next version to CHANGELOG.md.  This is typically
@@ -99,13 +102,13 @@ This document outlines how to create a release of yarpc-go
 13. Verify the version number matches.
 
     ```
-    $ make verifyversion
+    make verifyversion
     ```
 
 14. Commit and push your changes.
 
     ```
-    $ git add CHANGELOG.md version.go
-    $ git commit -m 'Back to development'
-    $ git push origin $BRANCH
+    git add CHANGELOG.md version.go
+    git commit -m 'Back to development'
+    git push origin $BRANCH
     ```
