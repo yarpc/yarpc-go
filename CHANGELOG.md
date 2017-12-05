@@ -4,7 +4,8 @@ Releases
 v1.26.0-dev (unreleased)
 --------------------
 
-- No changes yet.
+-   Revert Providing a better error message if outbound calls are made or inbound calls
+    are received before Dispatcher start or after Dispatcher stop.
 
 
 v1.25.0 (2017-12-04)
