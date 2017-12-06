@@ -39,6 +39,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 func TestNewOutbound(t *testing.T) {
@@ -372,7 +373,7 @@ func TestCallWithoutStarting(t *testing.T) {
 		},
 	)
 
-	assert.Equal(t, context.DeadlineExceeded, err)
+	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for http unary outbound to start for service: service: err: context finished while waiting for instance to start: context deadline exceeded"), err)
 }
 
 func TestGetPeerForRequestErr(t *testing.T) {
@@ -433,4 +434,15 @@ func TestWithCoreHeaders(t *testing.T) {
 	assert.Equal(t, shardKey, result.Header.Get(ShardKeyHeader))
 	assert.Equal(t, routingKey, result.Header.Get(RoutingKeyHeader))
 	assert.Equal(t, routingDelegate, result.Header.Get(RoutingDelegateHeader))
+}
+
+func TestNoRequest(t *testing.T) {
+	tran := NewTransport()
+	out := tran.NewSingleOutbound("localhost:0")
+
+	_, err := out.Call(context.Background(), nil)
+	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil"), err)
+
+	_, err = out.CallOneway(context.Background(), nil)
+	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil"), err)
 }

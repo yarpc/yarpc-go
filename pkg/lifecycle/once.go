@@ -26,9 +26,8 @@ import (
 	syncatomic "sync/atomic"
 
 	"go.uber.org/atomic"
+	"go.uber.org/yarpc/yarpcerrors"
 )
-
-var errDeadlineRequired = errors.New("deadline required on request context")
 
 // State represents `states` that a lifecycle object can be in.
 type State int
@@ -56,6 +55,22 @@ const (
 	// reasonably determine what state the lifecycle is in.
 	Errored
 )
+
+var stateToName = map[State]string{
+	Idle:     "idle",
+	Starting: "starting",
+	Running:  "running",
+	Stopping: "stopping",
+	Stopped:  "stopped",
+	Errored:  "errored",
+}
+
+func getStateName(s State) string {
+	if name, ok := stateToName[s]; ok {
+		return name
+	}
+	return "unknown"
+}
 
 // Once is a helper for implementing objects that advance monotonically through
 // lifecycle states using at-most-once start and stop implementations in a
@@ -132,11 +147,11 @@ func (o *Once) WaitUntilRunning(ctx context.Context) error {
 		return nil
 	}
 	if state > Running {
-		return context.DeadlineExceeded
+		return yarpcerrors.FailedPreconditionErrorf("could not wait for instance to start running: current state is %q", getStateName(state))
 	}
 
 	if _, ok := ctx.Deadline(); !ok {
-		return errDeadlineRequired
+		return yarpcerrors.InvalidArgumentErrorf("could not wait for instance to start running: deadline required on request context")
 	}
 
 	select {
@@ -145,9 +160,9 @@ func (o *Once) WaitUntilRunning(ctx context.Context) error {
 		if state == Running {
 			return nil
 		}
-		return context.DeadlineExceeded
+		return yarpcerrors.FailedPreconditionErrorf("instance did not enter running state, current state is %q", getStateName(state))
 	case <-ctx.Done():
-		return ctx.Err()
+		return yarpcerrors.FailedPreconditionErrorf("context finished while waiting for instance to start: %s", ctx.Err().Error())
 	}
 }
 

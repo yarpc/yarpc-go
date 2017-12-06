@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -373,7 +374,7 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 }
 
 func (pl *List) newNotRunningError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "%s peer list is not running: %s", pl.name, err.Error())
+	return intyarpcerrors.AnnotateWithInfo(err, "%s peer list is not running", pl.name)
 }
 
 // IsRunning returns whether the peer list is running.

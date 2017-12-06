@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	peerchooser "go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/pkg/errors"
@@ -74,8 +75,11 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
-	if err := o.transport.once.WaitUntilRunning(ctx); err != nil {
-		return nil, err
+	if req == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil")
+	}
+	if err := o.once.WaitUntilRunning(ctx); err != nil {
+		return nil, intyarpcerrors.AnnotateWithInfo(err, "error waiting for tchannel outbound to start for service: %s", req.Service)
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
 		return nil, errDoNotUseContextWithHeaders

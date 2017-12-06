@@ -21,31 +21,47 @@
 package yarpcerrors
 
 import (
-	"fmt"
+	"errors"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// NewWithNamef calls yarpcerrors.Newf and WithName on the resulting Status.
-//
-// This is put in a separate package so that we can ignore this specific file
-// with staticcheck and existing transports can still use this logic, as
-// WithName is deprecated but we still want to handle name behavior for
-// backwards compatibility.
-func NewWithNamef(code yarpcerrors.Code, name string, format string, args ...interface{}) *yarpcerrors.Status {
-	return yarpcerrors.Newf(code, format, args...).WithName(name)
-}
-
-// AnnotateWithInfo will take an error and add info to it's error message while
-// keeping the same status code.
-func AnnotateWithInfo(err error, format string, args ...interface{}) *yarpcerrors.Status {
-	status := yarpcerrors.FromError(err)
-	return yarpcerrors.Newf(status.Code(), "%s: err: %s", sprintf(format, args...), status.Message())
-}
-
-func sprintf(format string, args ...interface{}) string {
-	if len(args) == 0 {
-		return format
+func TestAnnotateWithError(t *testing.T) {
+	tests := []struct {
+		name       string
+		giveErr    error
+		giveFormat string
+		giveArgs   []interface{}
+		wantErr    error
+	}{
+		{
+			name:       "basic",
+			giveErr:    yarpcerrors.FailedPreconditionErrorf("test"),
+			giveFormat: "mytest",
+			wantErr:    yarpcerrors.FailedPreconditionErrorf("mytest: err: test"),
+		},
+		{
+			name:       "basic with args",
+			giveErr:    yarpcerrors.FailedPreconditionErrorf("test"),
+			giveFormat: "mytest %s",
+			giveArgs: []interface{}{
+				"arg1",
+			},
+			wantErr: yarpcerrors.FailedPreconditionErrorf("mytest arg1: err: test"),
+		},
+		{
+			name:       "unannotated",
+			giveErr:    errors.New("test"),
+			giveFormat: "mytest",
+			wantErr:    yarpcerrors.UnknownErrorf("mytest: err: test"),
+		},
 	}
-	return fmt.Sprintf(format, args...)
+	for _, n := range tests {
+		t.Run(n.name, func(t *testing.T) {
+			gotErr := AnnotateWithInfo(n.giveErr, n.giveFormat, n.giveArgs...)
+			assert.Equal(t, n.wantErr, gotErr)
+		})
+	}
 }

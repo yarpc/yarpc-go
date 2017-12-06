@@ -105,8 +105,11 @@ func (o *ChannelOutbound) IsRunning() bool {
 
 // Call sends an RPC over this TChannel outbound.
 func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*transport.Response, error) {
+	if req == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
+	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, err
+		return nil, intyarpcerrors.AnnotateWithInfo(err, "error waiting for tchannel channel outbound to start for service: %s", req.Service)
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
 		return nil, errDoNotUseContextWithHeaders

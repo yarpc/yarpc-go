@@ -98,8 +98,11 @@ func (o *Outbound) Chooser() peer.Chooser {
 
 // Call implements transport.UnaryOutbound#Call.
 func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
+	if request == nil {
+		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
+	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, err
+		return nil, intyarpcerrors.AnnotateWithInfo(err, "error waiting for grpc outbound to start for service: %s", request.Service)
 	}
 	start := time.Now()
 
