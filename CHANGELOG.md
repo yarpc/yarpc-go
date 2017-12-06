@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.26.0-dev (unreleased)
+v1.25.1 (2017-12-05)
 --------------------
 
 -   Revert Providing a better error message if outbound calls are made or inbound calls
