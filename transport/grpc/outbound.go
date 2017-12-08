@@ -181,12 +181,11 @@ func (o *Outbound) invoke(
 
 	return transport.UpdateSpanWithErr(
 		span,
-		grpc.Invoke(
+		grpcPeer.clientConn.Invoke(
 			metadata.NewOutgoingContext(ctx, md),
 			fullMethod,
 			requestBuffer.Bytes(),
 			responseBody,
-			grpcPeer.clientConn,
 			callOptions...,
 		),
 	)
@@ -303,13 +302,12 @@ func (o *Outbound) stream(
 	}
 
 	streamCtx := metadata.NewOutgoingContext(context.Background(), md)
-	clientStream, err := grpc.NewClientStream(
+	clientStream, err := grpcPeer.clientConn.NewStream(
 		streamCtx,
 		&grpc.StreamDesc{
 			ClientStreams: true,
 			ServerStreams: true,
 		},
-		grpcPeer.clientConn,
 		fullMethod,
 	)
 	if err != nil {
