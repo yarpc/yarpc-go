@@ -30,6 +30,7 @@ import (
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/internal/introspection"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -352,7 +353,7 @@ func (pl *List) removeFromUnavailablePeers(t *peerThunk) {
 // Choose selects the next available peer in the peer list
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
-		return nil, nil, pl.newNotRunningError(err)
+		return nil, nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%s peer list is not running", pl.name)
 	}
 
 	for {
@@ -370,10 +371,6 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			return nil, nil, err
 		}
 	}
-}
-
-func (pl *List) newNotRunningError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "%s peer list is not running: %s", pl.name, err.Error())
 }
 
 // IsRunning returns whether the peer list is running.

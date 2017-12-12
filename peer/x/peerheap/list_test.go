@@ -31,7 +31,14 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	. "go.uber.org/yarpc/api/peer/peertest"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
+	"go.uber.org/yarpc/yarpcerrors"
 )
+
+func newNotRunningError(err error) error {
+	return intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%s peer list is not running", "peer heap")
+
+}
 
 func TestPeerHeapList(t *testing.T) {
 	type testStruct struct {
@@ -115,7 +122,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}},
 				StopAction{},
 				ChooseAction{
-					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
+					ExpectedErr:         newNotRunningError(yarpcerrors.FailedPreconditionErrorf("could not wait for instance to start running: current state is \"stopped\"")),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
@@ -159,7 +166,10 @@ func TestPeerHeapList(t *testing.T) {
 			releasedPeerIDs:          []string{},
 			peerListActions: []PeerListAction{
 				StopAction{},
-				UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: context.DeadlineExceeded},
+				UpdateAction{
+					AddedPeerIDs: []string{"1"},
+					ExpectedErr:  newNotRunningError(yarpcerrors.FailedPreconditionErrorf("could not wait for instance to start running: current state is \"stopped\"")),
+				},
 			},
 			expectedRunning: false,
 		},
@@ -248,11 +258,11 @@ func TestPeerHeapList(t *testing.T) {
 			msg: "choose before start",
 			peerListActions: []PeerListAction{
 				ChooseAction{
-					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
+					ExpectedErr:         newNotRunningError(yarpcerrors.FailedPreconditionErrorf("context finished while waiting for instance to start: context deadline exceeded")),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 				ChooseAction{
-					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
+					ExpectedErr:         newNotRunningError(yarpcerrors.FailedPreconditionErrorf("context finished while waiting for instance to start: context deadline exceeded")),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
@@ -280,7 +290,10 @@ func TestPeerHeapList(t *testing.T) {
 			peerListActions: []PeerListAction{
 				ConcurrentAction{
 					Actions: []PeerListAction{
-						UpdateAction{AddedPeerIDs: []string{"1"}, ExpectedErr: context.DeadlineExceeded},
+						UpdateAction{
+							AddedPeerIDs: []string{"1"},
+							ExpectedErr:  newNotRunningError(yarpcerrors.FailedPreconditionErrorf("context finished while waiting for instance to start: context deadline exceeded")),
+						},
 						StartAction{},
 					},
 					Wait: 50 * time.Millisecond,

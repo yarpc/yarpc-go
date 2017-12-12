@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/raw"
 	"go.uber.org/yarpc/internal/testtime"
+	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 )
 
@@ -448,7 +449,21 @@ func TestChannelCallWithoutStarting(t *testing.T) {
 				},
 			)
 
-			assert.Equal(t, context.DeadlineExceeded, err)
+			assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for tchannel channel outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
+		})
+	}
+}
+
+func TestChannelOutboundNoRequest(t *testing.T) {
+	for _, constructor := range constructors {
+		t.Run(constructor.desc, func(t *testing.T) {
+			out, err := constructor.new(testutils.NewClient(t, &testutils.ChannelOpts{
+				ServiceName: "caller",
+			}), "localhost:4040")
+			require.NoError(t, err)
+
+			_, err = out.Call(context.Background(), nil)
+			assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil"), err)
 		})
 	}
 }

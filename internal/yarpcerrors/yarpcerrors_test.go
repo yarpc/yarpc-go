@@ -21,23 +21,47 @@
 package yarpcerrors
 
 import (
-	"fmt"
+	"errors"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// NewWithNamef calls yarpcerrors.Newf and WithName on the resulting Status.
-//
-// This is put in a separate package so that we can ignore this specific file
-// with staticcheck and existing transports can still use this logic, as
-// WithName is deprecated but we still want to handle name behavior for
-// backwards compatibility.
-func NewWithNamef(code yarpcerrors.Code, name string, format string, args ...interface{}) *yarpcerrors.Status {
-	return yarpcerrors.Newf(code, format, args...).WithName(name)
-}
-
-// AnnotateWithInfo will take an error and add info to it's error message while
-// keeping the same status code.
-func AnnotateWithInfo(status *yarpcerrors.Status, format string, args ...interface{}) *yarpcerrors.Status {
-	return yarpcerrors.Newf(status.Code(), "%s: %s", fmt.Sprintf(format, args...), status.Message())
+func TestAnnotateWithError(t *testing.T) {
+	tests := []struct {
+		name       string
+		giveErr    error
+		giveFormat string
+		giveArgs   []interface{}
+		wantErr    error
+	}{
+		{
+			name:       "basic",
+			giveErr:    yarpcerrors.FailedPreconditionErrorf("test"),
+			giveFormat: "mytest",
+			wantErr:    yarpcerrors.FailedPreconditionErrorf("mytest: test"),
+		},
+		{
+			name:       "basic with args",
+			giveErr:    yarpcerrors.FailedPreconditionErrorf("test"),
+			giveFormat: "mytest %s",
+			giveArgs: []interface{}{
+				"arg1",
+			},
+			wantErr: yarpcerrors.FailedPreconditionErrorf("mytest arg1: test"),
+		},
+		{
+			name:       "unannotated",
+			giveErr:    errors.New("test"),
+			giveFormat: "mytest",
+			wantErr:    yarpcerrors.UnknownErrorf("mytest: test"),
+		},
+	}
+	for _, n := range tests {
+		t.Run(n.name, func(t *testing.T) {
+			gotErr := AnnotateWithInfo(yarpcerrors.FromError(n.giveErr), n.giveFormat, n.giveArgs...)
+			assert.Equal(t, n.wantErr, gotErr)
+		})
+	}
 }

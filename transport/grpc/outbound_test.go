@@ -18,26 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package yarpcerrors
+package grpc
 
 import (
-	"fmt"
+	"context"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
-// NewWithNamef calls yarpcerrors.Newf and WithName on the resulting Status.
-//
-// This is put in a separate package so that we can ignore this specific file
-// with staticcheck and existing transports can still use this logic, as
-// WithName is deprecated but we still want to handle name behavior for
-// backwards compatibility.
-func NewWithNamef(code yarpcerrors.Code, name string, format string, args ...interface{}) *yarpcerrors.Status {
-	return yarpcerrors.Newf(code, format, args...).WithName(name)
-}
+func TestNoRequest(t *testing.T) {
+	tran := NewTransport()
+	out := tran.NewSingleOutbound("localhost:0")
 
-// AnnotateWithInfo will take an error and add info to it's error message while
-// keeping the same status code.
-func AnnotateWithInfo(status *yarpcerrors.Status, format string, args ...interface{}) *yarpcerrors.Status {
-	return yarpcerrors.Newf(status.Code(), "%s: %s", fmt.Sprintf(format, args...), status.Message())
+	_, err := out.Call(context.Background(), nil)
+	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil"), err)
 }

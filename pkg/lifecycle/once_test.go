@@ -488,3 +488,8 @@ func TestStopping(t *testing.T) {
 		return nil
 	})
 }
+
+func TestGetStateName(t *testing.T) {
+	assert.Equal(t, "idle", getStateName(Idle))
+	assert.Equal(t, "unknown", getStateName(State(1000)))
+}

@@ -38,8 +38,8 @@ var (
 	_noContextDeadlineError = yarpcerrors.Newf(yarpcerrors.CodeInvalidArgument, "can't wait for peer without a context deadline for a fewest-pending-requests peer list")
 )
 
-func newNotRunningError(err error) error {
-	return yarpcerrors.FailedPreconditionErrorf("fewest-pending-requests peer list is not running: %s", err.Error())
+func newNotRunningError(err string) error {
+	return yarpcerrors.FailedPreconditionErrorf("fewest-pending-requests peer list is not running: %s", err)
 }
 
 func newUnavailableError(err error) error {
@@ -125,7 +125,7 @@ func TestPeerHeapList(t *testing.T) {
 				UpdateAction{AddedPeerIDs: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}},
 				StopAction{},
 				ChooseAction{
-					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
+					ExpectedErr:         newNotRunningError("could not wait for instance to start running: current state is \"stopped\""),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},
@@ -269,11 +269,11 @@ func TestPeerHeapList(t *testing.T) {
 			msg: "choose before start",
 			peerListActions: []PeerListAction{
 				ChooseAction{
-					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
+					ExpectedErr:         newNotRunningError("context finished while waiting for instance to start: context deadline exceeded"),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 				ChooseAction{
-					ExpectedErr:         newNotRunningError(context.DeadlineExceeded),
+					ExpectedErr:         newNotRunningError("context finished while waiting for instance to start: context deadline exceeded"),
 					InputContextTimeout: 10 * time.Millisecond,
 				},
 			},

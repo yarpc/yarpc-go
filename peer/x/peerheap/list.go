@@ -29,6 +29,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	intyarpcerrors "go.uber.org/yarpc/internal/yarpcerrors"
 	"go.uber.org/yarpc/pkg/lifecycle"
 	"go.uber.org/yarpc/yarpcerrors"
 )
@@ -114,7 +115,7 @@ func (pl *List) Update(updates peer.ListUpdates) error {
 	ctx, cancel := context.WithTimeout(context.Background(), pl.startupWait)
 	defer cancel()
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
-		return err
+		return intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%s peer list is not running", "peer heap")
 	}
 
 	var errs error
@@ -199,7 +200,7 @@ func (pl *List) clearPeers() error {
 // receive nil.
 func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, func(error), error) {
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
-		return nil, nil, newNotRunningError(err)
+		return nil, nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%s peer list is not running", "peer heap")
 	}
 
 	for {
@@ -213,10 +214,6 @@ func (pl *List) Choose(ctx context.Context, _ *transport.Request) (peer.Peer, fu
 			return nil, nil, err
 		}
 	}
-}
-
-func newNotRunningError(err error) error {
-	return yarpcerrors.Newf(yarpcerrors.CodeFailedPrecondition, "peer heap is not running: %s", err.Error())
 }
 
 func (pl *List) get() (*peerScore, bool) {
