@@ -97,6 +97,46 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "custom chooser",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								fake-chooser:
+									nop: "*.*"
+			`),
+			test: func(t *testing.T, c yarpc.Config) {
+				outbound, ok := c.Outbounds["their-service"]
+				require.True(t, ok, "config has outbound")
+
+				require.NotNil(t, outbound.Unary, "must have unary outbound")
+				unary, ok := outbound.Unary.(*yarpctest.FakeOutbound)
+				require.True(t, ok, "unary outbound must be fake outbound")
+
+				transports := unary.Transports()
+				require.Equal(t, len(transports), 1, "must have one transport")
+
+				transport, ok := transports[0].(*yarpctest.FakeTransport)
+				require.True(t, ok, "must be a fake transport")
+				assert.Equal(t, transport.NopOption(), ":1234", "transport configured")
+
+				require.NotNil(t, unary.Chooser(), "must have chooser")
+				chooser, ok := unary.Chooser().(*yarpctest.FakePeerChooser)
+				require.True(t, ok, "unary chooser must be a fake peer chooser")
+				require.Equal(t, "*.*", chooser.Nop())
+
+				dispatcher := yarpc.NewDispatcher(c)
+				assert.NoError(t, dispatcher.Start(), "error starting")
+				assert.NoError(t, dispatcher.Stop(), "error stopping")
+
+				_ = chooser
+			},
+		},
+		{
 			desc: "multiple static peers",
 			given: whitespace.Expand(`
 				transports:
@@ -429,6 +469,24 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "invalid peer chooser",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								bogus-list: {}
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`no recognized peer list or chooser "bogus-list"`,
+				`need one of`,
+				`fake-list`,
+				`least-pending`,
+				`round-robin`,
+			},
+		},
+		{
 			desc: "invalid peer list",
 			given: whitespace.Expand(`
 				outbounds:
@@ -440,7 +498,7 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`no recognized peer list "bogus-list"`,
+				`no recognized peer list or chooser "bogus-list"`,
 				`need one of`,
 				`fake-list`,
 				`least-pending`,
@@ -461,6 +519,26 @@ func TestChooserConfigurator(t *testing.T) {
 				`no recognized peer chooser preset "bogus"`,
 				`need one of`,
 				`fake`,
+			},
+		},
+		{
+			desc: "invalid peer chooser decode",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								fake-chooser:
+									- 127.0.0.1:8080
+									- 127.0.0.1:8081
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`failed to read attribute "fake-chooser"`,
 			},
 		},
 		{
@@ -657,11 +735,25 @@ func TestChooserConfigurator(t *testing.T) {
 			`),
 			wantErr: []string{
 				`failed to configure unary outbound for "their-service": `,
-				`no peer list provided in config`,
+				`no peer list or chooser provided in config`,
 				`need one of`,
 				`fake-list`,
 				`least-pending`,
 				`round-robin`,
+			},
+		},
+		{
+			desc: "invalid peer chooser builder",
+			given: whitespace.Expand(`
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								invalid-chooser: {}
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`could not create invalid-chooser`,
 			},
 		},
 		{
@@ -839,6 +931,7 @@ func TestChooserConfigurator(t *testing.T) {
 			configer.MustRegisterTransport(tchannel.TransportSpec(tchannel.Tracer(opentracing.NoopTracer{})))
 			configer.MustRegisterPeerList(peerheap.Spec())
 			configer.MustRegisterPeerList(roundrobin.Spec())
+			configer.MustRegisterPeerChooser(invalidPeerChooserSpec())
 			configer.MustRegisterPeerList(invalidPeerListSpec())
 			configer.MustRegisterPeerListUpdater(invalidPeerListUpdaterSpec())
 
@@ -859,6 +952,20 @@ func TestChooserConfigurator(t *testing.T) {
 				tt.test(t, config)
 			}
 		})
+	}
+}
+
+type invalidPeerChooserConfig struct {
+}
+
+func buildInvalidPeerChooserConfig(c *invalidPeerChooserConfig, t peerapi.Transport, kit *yarpcconfig.Kit) (peerapi.Chooser, error) {
+	return nil, errors.New("could not create invalid-chooser")
+}
+
+func invalidPeerChooserSpec() yarpcconfig.PeerChooserSpec {
+	return yarpcconfig.PeerChooserSpec{
+		Name:             "invalid-chooser",
+		BuildPeerChooser: buildInvalidPeerChooserConfig,
 	}
 }
 

@@ -57,13 +57,17 @@ func (k *Kit) ServiceName() string { return k.name }
 
 var _typeOfKit = reflect.TypeOf((*Kit)(nil))
 
+func (k *Kit) maybePeerChooserSpec(name string) *compiledPeerChooserSpec {
+	return k.c.knownPeerChoosers[name]
+}
+
 func (k *Kit) peerListSpec(name string) (*compiledPeerListSpec, error) {
 	if spec := k.c.knownPeerLists[name]; spec != nil {
 		return spec, nil
 	}
 
-	msg := fmt.Sprintf("no recognized peer list %q", name)
-	if available := k.peerListSpecNames(); len(available) > 0 {
+	msg := fmt.Sprintf("no recognized peer list or chooser %q", name)
+	if available := k.peerChooserAndListSpecNames(); len(available) > 0 {
 		msg = fmt.Sprintf("%s; need one of %s", msg, strings.Join(available, ", "))
 	}
 
@@ -94,8 +98,11 @@ func (k *Kit) peerChooserPreset(name string) (*compiledPeerChooserPreset, error)
 	return nil, errors.New(msg)
 }
 
-func (k *Kit) peerListSpecNames() (names []string) {
+func (k *Kit) peerChooserAndListSpecNames() (names []string) {
 	for name := range k.c.knownPeerLists {
+		names = append(names, name)
+	}
+	for name := range k.c.knownPeerChoosers {
 		names = append(names, name)
 	}
 	sort.Strings(names)

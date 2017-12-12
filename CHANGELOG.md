@@ -4,7 +4,7 @@ Releases
 v1.27.0-dev (unreleased)
 --------------------
 
--   No changes yet.
+-   Add support for creating peer choosers through config with PeerChooserSpec.
 
 
 v1.26.0 (2017-12-13)
