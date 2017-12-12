@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+	opentracinglog "github.com/opentracing/opentracing-go/log"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc/api/transport"
@@ -121,7 +122,7 @@ func (h handler) handle(ctx context.Context, call inboundCall) {
 	}
 }
 
-func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) error {
+func (h handler) callHandler(ctx context.Context, call inboundCall, responseWriter *responseWriter) (err error) {
 	start := time.Now()
 	_, ok := ctx.Deadline()
 	if !ok {
@@ -147,6 +148,15 @@ func (h handler) callHandler(ctx context.Context, call inboundCall, responseWrit
 	if tcall, ok := call.(tchannelCall); ok {
 		tracer := h.tracer
 		ctx = tchannel.ExtractInboundSpan(ctx, tcall.InboundCall, headers.Items(), tracer)
+		span := opentracing.SpanFromContext(ctx)
+		if span != nil {
+			defer func() {
+				if err != nil {
+					span.SetTag("error", true)
+					span.LogFields(opentracinglog.String("event", err.Error()))
+				}
+			}()
+		}
 	}
 
 	body, err := call.Arg3Reader()
