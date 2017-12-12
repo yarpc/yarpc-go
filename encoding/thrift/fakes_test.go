@@ -20,7 +20,11 @@
 
 package thrift
 
-import "go.uber.org/thriftrw/wire"
+import (
+	"io"
+
+	"go.uber.org/thriftrw/wire"
+)
 
 type fakeEnveloper wire.EnvelopeType
 
@@ -34,4 +38,29 @@ func (e fakeEnveloper) EnvelopeType() wire.EnvelopeType {
 
 func (fakeEnveloper) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{}), nil
+}
+
+type errorEnveloper struct {
+	envelopeType wire.EnvelopeType
+	err          error
+}
+
+func (errorEnveloper) MethodName() string {
+	return "someMethod"
+}
+
+func (e errorEnveloper) EnvelopeType() wire.EnvelopeType {
+	return e.envelopeType
+}
+
+func (e errorEnveloper) ToWire() (wire.Value, error) {
+	return wire.Value{}, e.err
+}
+
+type errorResponder struct {
+	err error
+}
+
+func (e errorResponder) EncodeResponse(v wire.Value, et wire.EnvelopeType, w io.Writer) error {
+	return e.err
 }
