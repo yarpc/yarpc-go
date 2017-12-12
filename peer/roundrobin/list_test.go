@@ -41,7 +41,7 @@ var (
 )
 
 func newNotRunningError(err string) error {
-	return yarpcerrors.FailedPreconditionErrorf("roundrobin peer list is not running: err: %s", err)
+	return yarpcerrors.FailedPreconditionErrorf("roundrobin peer list is not running: %s", err)
 }
 
 func newUnavailableError(err error) error {

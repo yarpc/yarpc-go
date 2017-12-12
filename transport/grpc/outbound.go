@@ -102,7 +102,7 @@ func (o *Outbound) Call(ctx context.Context, request *transport.Request) (*trans
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for grpc outbound was nil")
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(err, "error waiting for grpc outbound to start for service: %s", request.Service)
+		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for grpc outbound to start for service: %s", request.Service)
 	}
 	start := time.Now()
 

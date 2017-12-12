@@ -208,7 +208,7 @@ func (o *Outbound) Call(ctx context.Context, treq *transport.Request) (*transpor
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http unary outbound was nil")
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(err, "error waiting for http unary outbound to start for service: %s", treq.Service)
+		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http unary outbound to start for service: %s", treq.Service)
 	}
 
 	start := time.Now()
@@ -224,7 +224,7 @@ func (o *Outbound) CallOneway(ctx context.Context, treq *transport.Request) (tra
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for http oneway outbound was nil")
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(err, "error waiting for http oneway outbound to start for service: %s", treq.Service)
+		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for http oneway outbound to start for service: %s", treq.Service)
 	}
 
 	start := time.Now()

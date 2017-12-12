@@ -109,7 +109,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		return nil, yarpcerrors.InvalidArgumentErrorf("request for tchannel channel outbound was nil")
 	}
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
-		return nil, intyarpcerrors.AnnotateWithInfo(err, "error waiting for tchannel channel outbound to start for service: %s", req.Service)
+		return nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "error waiting for tchannel channel outbound to start for service: %s", req.Service)
 	}
 	if _, ok := ctx.(tchannel.ContextWithHeaders); ok {
 		return nil, errDoNotUseContextWithHeaders

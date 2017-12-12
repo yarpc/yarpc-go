@@ -353,7 +353,7 @@ func (pl *List) removeFromUnavailablePeers(t *peerThunk) {
 // Choose selects the next available peer in the peer list
 func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if err := pl.once.WaitUntilRunning(ctx); err != nil {
-		return nil, nil, pl.newNotRunningError(err)
+		return nil, nil, intyarpcerrors.AnnotateWithInfo(yarpcerrors.FromError(err), "%s peer list is not running", pl.name)
 	}
 
 	for {
@@ -371,10 +371,6 @@ func (pl *List) Choose(ctx context.Context, req *transport.Request) (peer.Peer, 
 			return nil, nil, err
 		}
 	}
-}
-
-func (pl *List) newNotRunningError(err error) error {
-	return intyarpcerrors.AnnotateWithInfo(err, "%s peer list is not running", pl.name)
 }
 
 // IsRunning returns whether the peer list is running.

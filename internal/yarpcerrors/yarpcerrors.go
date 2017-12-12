@@ -38,9 +38,8 @@ func NewWithNamef(code yarpcerrors.Code, name string, format string, args ...int
 
 // AnnotateWithInfo will take an error and add info to it's error message while
 // keeping the same status code.
-func AnnotateWithInfo(err error, format string, args ...interface{}) *yarpcerrors.Status {
-	status := yarpcerrors.FromError(err)
-	return yarpcerrors.Newf(status.Code(), "%s: err: %s", sprintf(format, args...), status.Message())
+func AnnotateWithInfo(status *yarpcerrors.Status, format string, args ...interface{}) *yarpcerrors.Status {
+	return yarpcerrors.Newf(status.Code(), "%s: %s", sprintf(format, args...), status.Message())
 }
 
 func sprintf(format string, args ...interface{}) string {

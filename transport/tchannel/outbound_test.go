@@ -393,7 +393,7 @@ func TestCallWithoutStarting(t *testing.T) {
 		},
 	)
 
-	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for tchannel outbound to start for service: service: err: context finished while waiting for instance to start: context deadline exceeded"), err)
+	assert.Equal(t, yarpcerrors.FailedPreconditionErrorf("error waiting for tchannel outbound to start for service: service: context finished while waiting for instance to start: context deadline exceeded"), err)
 }
 
 func TestNoRequest(t *testing.T) {

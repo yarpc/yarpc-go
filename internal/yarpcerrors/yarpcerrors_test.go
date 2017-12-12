@@ -40,7 +40,7 @@ func TestAnnotateWithError(t *testing.T) {
 			name:       "basic",
 			giveErr:    yarpcerrors.FailedPreconditionErrorf("test"),
 			giveFormat: "mytest",
-			wantErr:    yarpcerrors.FailedPreconditionErrorf("mytest: err: test"),
+			wantErr:    yarpcerrors.FailedPreconditionErrorf("mytest: test"),
 		},
 		{
 			name:       "basic with args",
@@ -49,18 +49,18 @@ func TestAnnotateWithError(t *testing.T) {
 			giveArgs: []interface{}{
 				"arg1",
 			},
-			wantErr: yarpcerrors.FailedPreconditionErrorf("mytest arg1: err: test"),
+			wantErr: yarpcerrors.FailedPreconditionErrorf("mytest arg1: test"),
 		},
 		{
 			name:       "unannotated",
 			giveErr:    errors.New("test"),
 			giveFormat: "mytest",
-			wantErr:    yarpcerrors.UnknownErrorf("mytest: err: test"),
+			wantErr:    yarpcerrors.UnknownErrorf("mytest: test"),
 		},
 	}
 	for _, n := range tests {
 		t.Run(n.name, func(t *testing.T) {
-			gotErr := AnnotateWithInfo(n.giveErr, n.giveFormat, n.giveArgs...)
+			gotErr := AnnotateWithInfo(yarpcerrors.FromError(n.giveErr), n.giveFormat, n.giveArgs...)
 			assert.Equal(t, n.wantErr, gotErr)
 		})
 	}
