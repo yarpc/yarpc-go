@@ -153,7 +153,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, toYARPCError(req, err)
 	}
 
 	// Inject tracing system baggage
@@ -166,7 +166,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 	}
 
 	if err := writeBody(req.Body, call); err != nil {
-		return nil, err
+		return nil, toYARPCError(req, err)
 	}
 
 	res := call.Response()
@@ -185,7 +185,7 @@ func (o *ChannelOutbound) Call(ctx context.Context, req *transport.Request) (*tr
 		if err, ok := err.(tchannel.SystemError); ok {
 			return nil, fromSystemError(err)
 		}
-		return nil, err
+		return nil, toYARPCError(req, err)
 	}
 
 	return &transport.Response{

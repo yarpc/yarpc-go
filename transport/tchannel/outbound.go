@@ -95,22 +95,6 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	return res, toYARPCError(req, err)
 }
 
-func toYARPCError(req *transport.Request, err error) error {
-	if err == nil {
-		return err
-	}
-	if yarpcerrors.IsStatus(err) {
-		return err
-	}
-	if err, ok := err.(tchannel.SystemError); ok {
-		return fromSystemError(err)
-	}
-	if err == context.DeadlineExceeded {
-		return yarpcerrors.DeadlineExceededErrorf("deadline exceeded for service: %q, procedure: %q", req.Service, req.Procedure)
-	}
-	return yarpcerrors.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", req.Service, req.Procedure, err.Error())
-}
-
 // callWithPeer sends a request with the chosen peer.
 func (o *Outbound) callWithPeer(ctx context.Context, req *transport.Request, peer *tchannel.Peer) (*transport.Response, error) {
 	// NB(abg): Under the current API, the local service's name is required

@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"bytes"
-	"errors"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -404,47 +403,4 @@ func TestNoRequest(t *testing.T) {
 
 	_, err = out.Call(context.Background(), nil)
 	assert.Equal(t, yarpcerrors.InvalidArgumentErrorf("request for tchannel outbound was nil"), err)
-}
-
-func TestToYARPCError(t *testing.T) {
-	tests := []struct {
-		name    string
-		giveErr error
-		giveReq *transport.Request
-		wantErr error
-	}{
-		{
-			name:    "nil",
-			giveErr: nil,
-			wantErr: nil,
-		},
-		{
-			name:    "yarpcerror",
-			giveErr: yarpcerrors.InvalidArgumentErrorf("test"),
-			wantErr: yarpcerrors.InvalidArgumentErrorf("test"),
-		},
-		{
-			name:    "tchannel error",
-			giveErr: tchannel.NewSystemError(tchannel.ErrCodeBadRequest, "test"),
-			wantErr: fromSystemError(tchannel.NewSystemError(tchannel.ErrCodeBadRequest, "test").(tchannel.SystemError)),
-		},
-		{
-			name:    "deadline exceeded",
-			giveErr: context.DeadlineExceeded,
-			giveReq: &transport.Request{Service: "serv", Procedure: "proc"},
-			wantErr: yarpcerrors.DeadlineExceededErrorf("deadline exceeded for service: %q, procedure: %q", "serv", "proc"),
-		},
-		{
-			name:    "unknown",
-			giveErr: errors.New("test"),
-			giveReq: &transport.Request{Service: "serv", Procedure: "proc"},
-			wantErr: yarpcerrors.UnknownErrorf("received unknown error calling service: %q, procedure: %q, err: %s", "serv", "proc", "test"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotErr := toYARPCError(tt.giveReq, tt.giveErr)
-			assert.Equal(t, tt.wantErr, gotErr)
-		})
-	}
 }
