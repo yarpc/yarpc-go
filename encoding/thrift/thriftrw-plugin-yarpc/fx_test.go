@@ -113,7 +113,7 @@ func TestFxServer(t *testing.T) {
 	)
 	defer serverApp.RequireStart().RequireStop()
 
-	inbound := http.NewTransport().NewInbound(":0")
+	inbound := http.NewTransport().NewInbound("127.0.0.1:0")
 	serverD := yarpc.NewDispatcher(yarpc.Config{
 		Name:     "myserver",
 		Inbounds: yarpc.Inbounds{inbound},
