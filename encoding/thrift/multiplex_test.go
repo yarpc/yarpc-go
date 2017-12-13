@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/thriftrw/thrifttest"
 	"go.uber.org/thriftrw/wire"
 )
 
@@ -51,7 +52,7 @@ func TestMultiplexedEncode(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		mockProto := NewMockProtocol(mockCtrl)
+		mockProto := thrifttest.NewMockProtocol(mockCtrl)
 		proto := multiplexedOutboundProtocol{
 			Protocol: mockProto,
 			Service:  tt.service,
@@ -94,7 +95,7 @@ func TestMultiplexedDecode(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		mockProto := NewMockProtocol(mockCtrl)
+		mockProto := thrifttest.NewMockProtocol(mockCtrl)
 		proto := multiplexedOutboundProtocol{
 			Protocol: mockProto,
 			Service:  tt.service,
