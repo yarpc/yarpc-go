@@ -6,6 +6,8 @@ v1.26.0-dev (unreleased)
 
 -   Wrap errors returned from lifecycle.Once functions in the yarpcerrors API.
 -   Wrap errors returned from tchannel outbounds in the yarpcerrors API.
+-   Support envelope-agnostic Thrift inbounds. Thrift inbounds will now accept
+    Thrift requests with or without envelopes.
 
 
 v1.25.1 (2017-12-05)
