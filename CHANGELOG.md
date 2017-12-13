@@ -1,7 +1,7 @@
 Releases
 ========
 
-v1.26.0-dev (unreleased)
+v1.26.0 (2017-12-13)
 --------------------
 
 -   Wrap errors returned from lifecycle.Once functions in the yarpcerrors API.
