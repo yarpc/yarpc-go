@@ -36,10 +36,38 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func TestConfiguratorRegisterTransportMissingName(t *testing.T) {
+func TestConfiguratorRegisterErrors(t *testing.T) {
+	require.Panics(t, func() { New().MustRegisterTransport(TransportSpec{}) })
 	err := New().RegisterTransport(TransportSpec{})
 	require.Error(t, err, "expected failure")
 	assert.Contains(t, err.Error(), "name is required")
+	err = New().RegisterTransport(TransportSpec{Name: "test"})
+	require.Error(t, err, "expected failure")
+	assert.Contains(t, err.Error(), "invalid TransportSpec for \"test\":")
+
+	require.Panics(t, func() { New().MustRegisterPeerChooser(PeerChooserSpec{}) })
+	err = New().RegisterPeerChooser(PeerChooserSpec{})
+	require.Error(t, err, "expected failure")
+	assert.Contains(t, err.Error(), "name is required")
+	err = New().RegisterPeerChooser(PeerChooserSpec{Name: "test"})
+	require.Error(t, err, "expected failure")
+	assert.Contains(t, err.Error(), "invalid PeerChooserSpec for \"test\":")
+
+	require.Panics(t, func() { New().MustRegisterPeerList(PeerListSpec{}) })
+	err = New().RegisterPeerList(PeerListSpec{})
+	require.Error(t, err, "expected failure")
+	assert.Contains(t, err.Error(), "name is required")
+	err = New().RegisterPeerList(PeerListSpec{Name: "test"})
+	require.Error(t, err, "expected failure")
+	assert.Contains(t, err.Error(), "invalid PeerListSpec for \"test\":")
+
+	require.Panics(t, func() { New().MustRegisterPeerListUpdater(PeerListUpdaterSpec{}) })
+	err = New().RegisterPeerListUpdater(PeerListUpdaterSpec{})
+	require.Error(t, err, "expected failure")
+	assert.Contains(t, err.Error(), "name is required")
+	err = New().RegisterPeerListUpdater(PeerListUpdaterSpec{Name: "test"})
+	require.Error(t, err, "expected failure")
+	assert.Contains(t, err.Error(), "invalid PeerListUpdaterSpec for \"test\":")
 }
 
 func TestConfigurator(t *testing.T) {

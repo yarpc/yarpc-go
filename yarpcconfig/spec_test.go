@@ -621,6 +621,14 @@ func TestCompilePeerChooserSpec(t *testing.T) {
 			wantErr: "invalid BuildPeerChooser func(int, int, int): must accept a struct or struct pointer as its first argument, found int",
 		},
 		{
+			desc: "wrong kind of second argument",
+			spec: PeerChooserSpec{
+				Name:             "much sadness",
+				BuildPeerChooser: func(c struct{}, t int, k *Kit) {},
+			},
+			wantErr: "invalid BuildPeerChooser func(struct {}, int, *yarpcconfig.Kit): must accept a peer.Transport as its second argument, found int",
+		},
+		{
 			desc: "wrong kind of third argument",
 			spec: PeerChooserSpec{
 				Name:             "much sadness",
@@ -721,6 +729,14 @@ func TestCompilePeerListSpec(t *testing.T) {
 				BuildPeerList: func(a, b, c int) {},
 			},
 			wantErr: "invalid BuildPeerList func(int, int, int): must accept a struct or struct pointer as its first argument, found int",
+		},
+		{
+			desc: "wrong kind of second argument",
+			spec: PeerListSpec{
+				Name:          "much sadness",
+				BuildPeerList: func(c struct{}, t int, k *Kit) {},
+			},
+			wantErr: "invalid BuildPeerList func(struct {}, int, *yarpcconfig.Kit): must accept a peer.Transport as its second argument, found int",
 		},
 		{
 			desc: "wrong kind of third argument",

@@ -522,6 +522,25 @@ func TestChooserConfigurator(t *testing.T) {
 			},
 		},
 		{
+			desc: "invalid peer chooser decode error",
+			given: whitespace.Expand(`
+				transports:
+					fake-transport:
+						nop: ":1234"
+				outbounds:
+					their-service:
+						unary:
+							fake-transport:
+								nop: "*.*"
+								fake-chooser:
+									invalidValue: test
+			`),
+			wantErr: []string{
+				`failed to configure unary outbound for "their-service": `,
+				`failed to decode`,
+			},
+		},
+		{
 			desc: "invalid peer chooser decode",
 			given: whitespace.Expand(`
 				transports:
