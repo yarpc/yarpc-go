@@ -87,12 +87,12 @@ func (o *Outbound) Call(ctx context.Context, req *transport.Request) (*transport
 	root := o.transport.ch.RootPeers()
 	p, onFinish, err := o.getPeerForRequest(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, toYARPCError(req, err)
 	}
 	tp := root.GetOrAdd(p.HostPort())
 	res, err := o.callWithPeer(ctx, req, tp)
 	onFinish(err)
-	return res, err
+	return res, toYARPCError(req, err)
 }
 
 // callWithPeer sends a request with the chosen peer.
