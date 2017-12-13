@@ -146,14 +146,10 @@ func (o *Outbound) invoke(
 		callOptions = []grpc.CallOption{grpc.Trailer(responseMD)}
 	}
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, request)
-	defer func() {
-		if onFinish != nil {
-			onFinish(retErr)
-		}
-	}()
 	if err != nil {
 		return err
 	}
+	defer func() { onFinish(retErr) }()
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
 		return peer.ErrInvalidPeerConversion{
@@ -163,9 +159,6 @@ func (o *Outbound) invoke(
 	}
 
 	tracer := o.t.options.tracer
-	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
-	}
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
 		TransportName: transportName,
@@ -242,9 +235,7 @@ func (o *Outbound) CallStream(ctx context.Context, request *transport.StreamRequ
 	if err := o.once.WaitUntilRunning(ctx); err != nil {
 		return nil, err
 	}
-	start := time.Now()
-
-	return o.stream(ctx, request, start)
+	return o.stream(ctx, request, time.Now())
 }
 
 func (o *Outbound) stream(
@@ -267,14 +258,10 @@ func (o *Outbound) stream(
 	}
 
 	apiPeer, onFinish, err := o.peerChooser.Choose(ctx, treq)
-	defer func() {
-		if onFinish != nil {
-			onFinish(err)
-		}
-	}()
 	if err != nil {
 		return nil, err
 	}
+	defer func() { onFinish(err) }()
 
 	grpcPeer, ok := apiPeer.(*grpcPeer)
 	if !ok {
@@ -285,9 +272,6 @@ func (o *Outbound) stream(
 	}
 
 	tracer := o.t.options.tracer
-	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
-	}
 	createOpenTracingSpan := &transport.CreateOpenTracingSpan{
 		Tracer:        tracer,
 		TransportName: transportName,

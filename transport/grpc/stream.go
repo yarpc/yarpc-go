@@ -88,8 +88,8 @@ func (ss *serverStream) SetResponse(resp *transport.StreamResponse) {
 	}
 	md := metadata.New(nil)
 
-	// This can fail for validation reasons, we should probably set an error on
-	// the metadata if that's the case?
+	// TODO: This can fail for validation reasons, we should set an error on the
+	// metadata if that's the case.
 	_ = addApplicationHeaders(md, resp.Meta.Headers)
 
 	ss.stream.SetTrailer(md)

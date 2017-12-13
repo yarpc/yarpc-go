@@ -153,6 +153,12 @@ func newTransportOptions(options []TransportOption) *transportOptions {
 	if transportOptions.logger == nil {
 		transportOptions.logger = zap.NewNop()
 	}
+	if transportOptions.tracer == nil {
+		transportOptions.tracer = opentracing.GlobalTracer()
+	}
+	if transportOptions.tracer == nil {
+		transportOptions.tracer = opentracing.NoopTracer{}
+	}
 	return transportOptions
 }
 

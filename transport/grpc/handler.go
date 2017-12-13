@@ -128,9 +128,6 @@ func (h *handler) handleStream(
 	streamHandler transport.StreamHandler,
 ) error {
 	tracer := h.i.t.options.tracer
-	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
-	}
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
@@ -196,9 +193,6 @@ func (h *handler) handleUnaryBeforeErrorConversion(
 	handler transport.UnaryHandler,
 ) error {
 	tracer := h.i.t.options.tracer
-	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
-	}
 	var parentSpanCtx opentracing.SpanContext
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {

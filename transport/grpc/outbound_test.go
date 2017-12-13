@@ -182,7 +182,7 @@ func TestCallStreamWithInvalidPeer(t *testing.T) {
 	chooser := peertest.NewMockChooser(mockCtrl)
 	chooser.EXPECT().Start()
 	chooser.EXPECT().Stop()
-	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(fakePeer, nil, nil)
+	chooser.EXPECT().Choose(gomock.Any(), gomock.Any()).Return(fakePeer, func(error) {}, nil)
 
 	tran := NewTransport()
 	out := tran.NewOutbound(chooser)
