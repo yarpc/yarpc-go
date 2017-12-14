@@ -65,6 +65,7 @@ func do() error {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Printf(">>> ")
+	defer fmt.Println("")
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "stop" {
