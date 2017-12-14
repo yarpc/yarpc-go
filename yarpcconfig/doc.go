@@ -28,8 +28,8 @@
 // responsible for loading your configuration. It does not yet know about the
 // different transports, peer lists, etc. that you want to use. You can inform
 // the Configurator about the different transports, peer lists, etc. by
-// registering them using RegisterTransport, RegisterPeerList, and
-// RegisterPeerListUpdater.
+// registering them using RegisterTransport, RegisterPeerChooser,
+// RegisterPeerList, and RegisterPeerListUpdater.
 //
 // 	cfg := config.New()
 // 	cfg.MustRegisterTransport(http.TransportSpec())
@@ -38,7 +38,8 @@
 // This object is re-usable and may be stored as a singleton in your
 // application. Custom transports, peer lists, and peer list updaters may be
 // integrated with the configuration system by registering more
-// TransportSpecs, PeerListSpecs, and PeerListUpdaterSpecs with it.
+// TransportSpecs, PeerChooserSpecs, PeerListSpecs, and PeerListUpdaterSpecs
+// with it.
 //
 // Use LoadConfigFromYAML to load a yarpc.Config from YAML and pass that to
 // yarpc.NewDispatcher.

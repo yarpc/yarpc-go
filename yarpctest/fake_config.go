@@ -66,6 +66,25 @@ func FakeTransportSpec() yarpcconfig.TransportSpec {
 	}
 }
 
+// FakePeerChooserConfig configures the FakePeerChooser.
+type FakePeerChooserConfig struct {
+	Nop string `config:"nop,interpolate"`
+}
+
+func buildFakePeerChooser(c *FakePeerChooserConfig, t peer.Transport, kit *yarpcconfig.Kit) (peer.Chooser, error) {
+	return NewFakePeerChooser(ChooserNop(c.Nop)), nil
+}
+
+// FakePeerChooserSpec returns a configurator spec for the fake-chooser FakePeerChooser
+// peer selection strategy, suitable for passing to
+// Configurator.MustRegisterPeerChooser.
+func FakePeerChooserSpec() yarpcconfig.PeerChooserSpec {
+	return yarpcconfig.PeerChooserSpec{
+		Name:             "fake-chooser",
+		BuildPeerChooser: buildFakePeerChooser,
+	}
+}
+
 // FakePeerListConfig configures the FakePeerList.
 type FakePeerListConfig struct {
 	Nop string `config:"nop,interpolate"`
@@ -122,6 +141,7 @@ func FakePeerListUpdaterSpec() yarpcconfig.PeerListUpdaterSpec {
 func NewFakeConfigurator(opts ...yarpcconfig.Option) *yarpcconfig.Configurator {
 	configurator := yarpcconfig.New(opts...)
 	configurator.MustRegisterTransport(FakeTransportSpec())
+	configurator.MustRegisterPeerChooser(FakePeerChooserSpec())
 	configurator.MustRegisterPeerList(FakePeerListSpec())
 	configurator.MustRegisterPeerListUpdater(FakePeerListUpdaterSpec())
 	return configurator
